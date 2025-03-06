@@ -78,6 +78,17 @@ android {
     compileSdk rootProject.ext.compileSdkVersion
 
     namespace "com.souschefrn"
+
+    //  Create an APK for each CPU architecture
+    splits {
+        abi {
+            reset()
+            enable true
+            universalApk false
+            include "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
+        }
+    }
+
     defaultConfig {
         applicationId "com.souschefrn"
         minSdkVersion rootProject.ext.minSdkVersion

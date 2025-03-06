@@ -8,6 +8,7 @@
     "lint": "eslint .",
     "start": "react-native start",
     "android:clean": "cd android && ./gradlew clean",
+    "android:build": "npx react-native build-android --mode=release",
     "adb:gql": "adb reverse tcp:4000 tcp:4000",
     "test": "jest"
   },
