@@ -1,6 +1,6 @@
 name: Build Android .apk
 
-run-name: "Building the .apk with the tag triggered by @${{ github.actor }}"
+run-name: 'Building the .apk with the tag triggered by @${{ github.actor }}'
 
 permissions:
   contents: write
@@ -8,7 +8,7 @@ permissions:
 on:
   push:
     tags:
-      - "v*"
+      - 'v*'
 
 jobs:
   build:
@@ -21,9 +21,9 @@ jobs:
       - name: Install Java
         uses: actions/setup-java@v3
         with:
-          java-version: "11"
-          distribution: "adopt"
-          cache: "gradle"
+          java-version: '11'
+          distribution: 'adopt'
+          cache: 'gradle'
 
       - name: Validate Gradle wrapper
         uses: gradle/wrapper-validation-action@v1
@@ -31,7 +31,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v3
         with:
-          node-version: "16"
+          node-version: '20'
 
       - name: Setup gradlew as executable
         run: chmod +x ./android/gradlew
@@ -43,8 +43,8 @@ jobs:
         id: decode_keystore
         uses: timheuer/base64-to-file@v1.2
         with:
-          fileName: "release.keystore"
-          fileDir: "./android/app/"
+          fileName: 'release.keystore'
+          fileDir: './android/app/'
           encodedString: ${{ secrets.KEYSTORE }}
 
       - name: Build application apk and aab
