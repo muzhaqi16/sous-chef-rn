@@ -1,0 +1,69 @@
+name: Build Android .apk
+
+run-name: "Building the .apk with the tag triggered by @${{ github.actor }}"
+
+permissions:
+  contents: write
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: "11"
+          distribution: "adopt"
+          cache: "gradle"
+
+      - name: Validate Gradle wrapper
+        uses: gradle/wrapper-validation-action@v1
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: "16"
+
+      - name: Setup gradlew as executable
+        run: chmod +x ./android/gradlew
+
+      - name: Run Yarn Install
+        run: yarn install
+
+      - name: Decode Keystore
+        id: decode_keystore
+        uses: timheuer/base64-to-file@v1.2
+        with:
+          fileName: "release.keystore"
+          fileDir: "./android/app/"
+          encodedString: ${{ secrets.KEYSTORE }}
+
+      - name: Build application apk and aab
+        run: yarn android:apk
+
+      - name: List the .apks compiled
+        run: ls ./android/app/build/outputs/apk/release/ -hal
+
+      - name: Rename the .apk and .aab to the tag version
+        run: mv ./android/app/build/outputs/apk/release/app-universal-release.apk ./android/app/build/outputs/apk/release/sous-chef-${{ github.ref_name }}.apk
+
+      # Creating and Uploading the releases
+      - name: Create Release and Uploading Files
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            android/app/build/outputs/apk/release/app-arm64-v8a-release.apk
+            android/app/build/outputs/apk/release/app-armeabi-v7a-release.apk
+            android/app/build/outputs/apk/release/app-x86_64-release.apk
+            android/app/build/outputs/apk/release/app-x86-release.apk
+            android/app/build/outputs/apk/release/sous-chef-${{ github.ref_name }}.apk
