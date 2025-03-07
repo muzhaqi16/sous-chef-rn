@@ -2,10 +2,11 @@ name: 'Build iOS app'
 
 on:
   push:
-    branches:
-      - main
+    # branches:
+    #   - main
     tags:
       - 'v*'
+      - 'ios-v*'
 
 jobs:
   build_with_signing:
@@ -14,7 +15,7 @@ jobs:
       - name: check Xcode version
         run: /usr/bin/xcodebuild -version
       - name: checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Debug Workflow Variables
         run: |
           echo "CERTIFICATE_PATH: $CERTIFICATE_PATH"
@@ -54,9 +55,9 @@ jobs:
           security find-identity -v -p codesigning
           ls -l ~/Library/MobileDevice/Provisioning\ Profiles
 
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
           cache: 'yarn'
 
       - name: Clean workspace

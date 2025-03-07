@@ -7,10 +7,11 @@ permissions:
 
 on:
   push:
-    branches:
-      - main
+    # branches:
+    #   - main
     tags:
       - 'v*'
+      - 'android-v*'
 
 jobs:
   build:
@@ -44,7 +45,7 @@ jobs:
 
       - name: Build application apk and aab
         run: |
-          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o ./android/app/releases.keystore
+          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode > ./android/app/releases.keystore
           cd android
           ./gradlew assembleRelease
         env:
