@@ -50,7 +50,7 @@ jobs:
       - name: Build application apk and aab
         run: yarn android:build
         env:
-          MYAPP_UPLOAD_STORE_FILE: './android/app/github-releases.keystore'
+          MYAPP_UPLOAD_STORE_FILE: 'github-releases.keystore'
           MYAPP_UPLOAD_STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           MYAPP_UPLOAD_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           MYAPP_UPLOAD_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
