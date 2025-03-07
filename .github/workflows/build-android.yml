@@ -7,6 +7,8 @@ permissions:
 
 on:
   push:
+    branches:
+      - main
     tags:
       - 'v*'
 
@@ -39,26 +41,22 @@ jobs:
       - name: Run Yarn Install
         run: yarn install
 
-      - name: Decode Keystore
-        id: decode_keystore
-        uses: timheuer/base64-to-file@v1.2
-        with:
-          fileName: 'github-releases.keystore'
-          fileDir: './android/app/'
-          encodedString: ${{ secrets.KEYSTORE }}
-
       - name: Build application apk and aab
-        run: yarn android:build
+        run: |
+          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o ./android/app/releases.keystore
+          cd android
+          ./gradlew assembleRelease
         env:
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
           MYAPP_UPLOAD_STORE_FILE: './android/app/github-releases.keystore'
           MYAPP_UPLOAD_STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          MYAPP_UPLOAD_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          MYAPP_UPLOAD_KEY_ALIAS: ${{ env.KEY_ALIAS }}
           MYAPP_UPLOAD_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
       - name: List the .apks compiled
         run: ls ./android/app/build/outputs/apk/release/ -hal
 
-      - name: Rename the .apk and .aab to the tag version
+      - name: Rename the .apk release files to the tag version
         run: mv ./android/app/build/outputs/apk/release/app-universal-release.apk ./android/app/build/outputs/apk/release/sous-chef-${{ github.ref_name }}.apk
 
       # Creating and Uploading the releases

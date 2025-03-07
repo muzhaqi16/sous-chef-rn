@@ -104,10 +104,20 @@ android {
             keyPassword 'android'
         }
         release {
-            storeFile file(System.getenv("MYAPP_UPLOAD_STORE_FILE"))
-            storePassword System.getenv("MYAPP_UPLOAD_STORE_PASSWORD")
-            keyAlias System.getenv("MYAPP_UPLOAD_KEY_ALIAS")
-            keyPassword System.getenv("MYAPP_UPLOAD_KEY_PASSWORD")
+            def keystoreFilePath = System.getenv("MYAPP_UPLOAD_STORE_FILE") ?: (project.hasProperty("MYAPP_UPLOAD_STORE_FILE") ? MYAPP_UPLOAD_STORE_FILE : null)
+            def keystoreStorePassword = System.getenv("MYAPP_UPLOAD_STORE_PASSWORD") ?: (project.hasProperty("MYAPP_UPLOAD_STORE_PASSWORD") ? MYAPP_UPLOAD_STORE_PASSWORD : null)
+            def keystoreKeyAlias = System.getenv("MYAPP_UPLOAD_KEY_ALIAS") ?: (project.hasProperty("MYAPP_UPLOAD_KEY_ALIAS") ? MYAPP_UPLOAD_KEY_ALIAS : null)
+            def keystoreKeyPassword = System.getenv("MYAPP_UPLOAD_KEY_PASSWORD") ?: (project.hasProperty("MYAPP_UPLOAD_KEY_PASSWORD") ? MYAPP_UPLOAD_KEY_PASSWORD : null)
+
+            if (keystoreFilePath && keystoreStorePassword && keystoreKeyAlias && keystoreKeyPassword) {
+                storeFile file(keystoreFilePath)
+                storePassword keystoreStorePassword
+                keyAlias keystoreKeyAlias
+                keyPassword keystoreKeyPassword
+            } else {
+                // Optionally, you can print a warning or set default values.
+                println "Warning: Signing configuration variables are not fully set."
+    }
         }
     }
     buildTypes {
