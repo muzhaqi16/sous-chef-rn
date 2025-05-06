@@ -5,15 +5,22 @@ export const GET_SHOPPING_LISTS = gql`
     shoppingLists {
       id
       name
-      createdBy
+      metadata
       createdAt
       updatedAt
-      sharedWith {
+      owner {
+        email
         id
-        user {
-          id
+      }
+      shoppingListItems {
+        item {
           name
+        }
+      }
+      sharedWith {
+        user {
           email
+          name
         }
       }
     }
