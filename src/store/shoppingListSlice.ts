@@ -27,7 +27,10 @@ export const createShoppingListSlice: StateCreator<
   // Fetch all shopping lists from the backend
   fetchShoppingLists: async () => {
     try {
-      const {data} = await client.query({query: GET_SHOPPING_LISTS});
+      const {data} = await client.query({
+        query: GET_SHOPPING_LISTS,
+      });
+
       const lists: ShoppingList[] = data.shoppingLists;
       set({shoppingLists: lists});
       // If there is no default yet, set the first one as default.

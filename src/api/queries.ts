@@ -5,52 +5,49 @@ export const GET_SHOPPING_LISTS = gql`
     shoppingLists {
       id
       name
-      metadata
-      createdAt
-      updatedAt
       owner {
         email
         id
       }
       shoppingListItems {
+        itemName
         item {
           name
+          price
         }
       }
-      sharedWith {
-        user {
-          email
-          name
-        }
+      collaborators {
+        userId
       }
+      metadata
+      tags
+      createdAt
+      updatedAt
     }
   }
 `;
 
 export const GET_SHOPPING_LIST_ITEMS = gql`
-  query ShoppingListItems($id: ID!) {
-    shoppingList(id: $id) {
-      shoppingListItems {
-        id
-        item {
-          id
-          name
-          description
-          barcode
-          type
-          quantity
-          unit
-          category
-          imageUrl
-          status
-          createdBy
-          createdAt
-          updatedAt
-        }
-        notes
-        quantity
-        weight
+  query ShoppingListItems($shoppingListId: ID!) {
+    shoppingListItems(shoppingListId: $shoppingListId) {
+      id
+      item {
+        name
+        imageUrl
       }
+      label
+      quantity
+      unit {
+        name
+        symbol
+      }
+      itemName
+      unitSymbol
+      isPurchased
+      createdAt
+      updatedAt
+      deletedAt
+      version
     }
   }
 `;

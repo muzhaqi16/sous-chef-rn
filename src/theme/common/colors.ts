@@ -30,7 +30,7 @@ export const lightColors: Colors = {
   button: '#007BFF',
   backgroundColor: '#f0f0f0',
   buttonText: '#FFFFFF',
-  background: '#FFFFFF',
+  background: '#F4EFF3',
   primary: '#FF8A4C', // The orange color in the design
   secondary: '#FFA559',
   typography: '#2E2E2E',

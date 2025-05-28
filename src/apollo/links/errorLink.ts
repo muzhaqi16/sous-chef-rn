@@ -3,9 +3,15 @@ import {attemptTokenRefresh} from './refreshToken';
 
 export const errorLink = onError(
   ({graphQLErrors, networkError, operation, forward}) => {
+    console.log('Error link triggered:', {
+      graphQLErrors,
+      networkError,
+      operationName: operation.operationName,
+    });
+
     if (graphQLErrors) {
       for (const err of graphQLErrors) {
-        if (err.message === 'Unauthorized') {
+        if (err.message === 'Expired token') {
           console.log('Unauthorized error received, attempting token refresh.');
           return attemptTokenRefresh(operation, forward);
         }

@@ -26,7 +26,6 @@ function RightAction(prog: SharedValue<number>, drag: SharedValue<number>) {
 export default function SwipeableRow({children}: {children: ReactNode}) {
   return (
     <ReanimatedSwipeable
-      containerStyle={styles.swipeable}
       friction={2}
       enableTrackpadTwoFingerGesture
       rightThreshold={40}
@@ -41,8 +40,5 @@ const styles = StyleSheet.create({
   separator: {
     width: '100%',
     borderTopWidth: 1,
-  },
-  swipeable: {
-    alignItems: 'center',
   },
 });

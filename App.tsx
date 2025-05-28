@@ -1,5 +1,5 @@
 import React from 'react';
-import {SafeAreaView, StatusBar, useColorScheme} from 'react-native';
+import {SafeAreaView, StatusBar, useColorScheme, Platform} from 'react-native';
 import {ApolloProvider} from '@apollo/client';
 import {client} from './src/apollo/client';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
@@ -27,6 +27,8 @@ const stylesheet = createStyleSheet(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+    // SafeAreaView padding for Android to avoid the status bar or notch overlapping the content.
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
 }));
 

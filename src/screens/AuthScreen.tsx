@@ -1,20 +1,15 @@
-import React, {useState} from 'react';
-import {View, Button, Text} from 'react-native';
+import React from 'react';
+import {SafeAreaView} from 'react-native';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
-import AuthForm from '../components/organisms/AuthForm';
+import LoginForm from '../components/organisms/LoginForm';
 
 const AuthScreen = () => {
   const {styles} = useStyles(stylesheet);
-  const [isLogin, setIsLogin] = useState(true);
 
   return (
-    <View style={styles.container}>
-      <AuthForm isLogin={isLogin} />
-      <Button
-        title={isLogin ? 'Switch to Sign Up' : 'Switch to Login'}
-        onPress={() => setIsLogin(!isLogin)}
-      />
-    </View>
+    <SafeAreaView style={styles.container}>
+      <LoginForm />
+    </SafeAreaView>
   );
 };
 
@@ -22,8 +17,6 @@ const stylesheet = createStyleSheet(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
 }));
 
