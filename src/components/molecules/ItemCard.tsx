@@ -28,7 +28,7 @@ const ItemCard: React.FC<ItemCardProps> = ({
       style={styles.card}>
       <Image
         alt={item?.name}
-        resizeMode="cover"
+        resizeMode="contain"
         source={{uri: item?.item?.imageUrl}}
         style={styles.cardImg}
       />
@@ -58,25 +58,27 @@ const stylesheet = createStyleSheet(theme => ({
   card: {
     position: 'relative',
     flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#fff',
     borderWidth: 1,
     borderColor: '#EFEFEF',
     borderStyle: 'solid',
     borderRadius: 12,
     marginBottom: 12,
+    height: 87,
   },
   cardBody: {
     flexGrow: 1,
     flexShrink: 1,
     flexBasis: 0,
     flexDirection: 'column',
-    justifyContent: 'flex-start',
-    alignItems: 'flex-start',
+    justifyContent: 'center',
+    alignItems: 'center',
     padding: 16,
   },
   cardTitle: {
     fontWeight: '600',
-    fontSize: 17,
+    fontSize: theme.font.size.md,
     lineHeight: 24,
     color: '#1d1d1d',
     marginBottom: 4,
@@ -87,9 +89,11 @@ const stylesheet = createStyleSheet(theme => ({
     color: '#706f7b',
   },
   cardImg: {
-    width: 120,
-    height: '100%',
+    width: 64,
+    height: 68,
+    alignSelf: 'center',
     borderRadius: 12,
+    marginLeft: theme.spacing.sm,
   },
   cardActions: {
     flexDirection: 'column',

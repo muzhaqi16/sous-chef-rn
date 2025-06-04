@@ -1,36 +1,32 @@
 import {
   fonts,
-  margins,
-  spacing,
+  Fonts,
+  breakpoints,
+  Breakpoints,
+  Colors,
+  spacings,
+  Spacings,
   lightColors,
   darkColors,
-  breakpoints,
-  Colors,
-  Breakpoints,
-  Fonts,
-  Margins,
-  Spacing,
 } from './common';
+
 interface Theme {
   colors: Colors;
   breakpoints: Breakpoints;
-  spacing: Spacing;
-  fonts: Fonts;
-  margins: Margins;
+  spacing: Spacings;
+  font: Fonts;
 }
 
 export const lightTheme: Theme = {
   colors: lightColors,
   breakpoints,
-  spacing,
-  fonts,
-  margins,
+  spacing: spacings,
+  font: fonts,
 };
 
 export const darkTheme: Theme = {
   colors: darkColors,
   breakpoints,
-  spacing,
-  fonts,
-  margins,
+  spacing: spacings,
+  font: fonts,
 };

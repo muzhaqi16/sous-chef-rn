@@ -2,34 +2,19 @@ import React from 'react';
 import {View} from 'react-native';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
 import TextInput from '../atoms/TextInput';
-import IconButton from '../atoms/IconButton';
 
 type SearchBarProps = {
-  value: string;
-  onChangeText: (text: string) => void;
+  value?: string;
+  onChangeText?: (text: string) => void;
   placeholder?: string;
   onAddPress?: () => void; // For the plus button on the right
 };
 
-const stylesheet = createStyleSheet(theme => ({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.background,
-    padding: theme.spacing.sm,
-    borderRadius: 8,
-  },
-  input: {
-    flex: 1,
-    marginRight: theme.spacing.sm,
-  },
-}));
-
 const SearchBar: React.FC<SearchBarProps> = ({
-  value,
-  onChangeText,
+  value = '',
+  onChangeText = () => {},
   placeholder = 'Search in shopping list...',
-  onAddPress,
+  onAddPress = undefined,
 }) => {
   const {styles} = useStyles(stylesheet);
   return (
@@ -40,15 +25,23 @@ const SearchBar: React.FC<SearchBarProps> = ({
         onChangeText={onChangeText}
         placeholder={placeholder}
       />
-      {onAddPress && (
-        <IconButton
-          iconName="add-circle-outline"
-          onPress={onAddPress}
-          size={28}
-        />
-      )}
     </View>
   );
 };
-
+const stylesheet = createStyleSheet(theme => ({
+  container: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 48,
+    backgroundColor: theme.colors.white,
+    padding: theme.spacing.padding.sm,
+    borderRadius: 8,
+  },
+  input: {
+    flex: 1,
+    padding: 0,
+    fontSize: theme.font.size.md,
+  },
+}));
 export default SearchBar;

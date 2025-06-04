@@ -54,11 +54,29 @@ export const CREATE_SHOPPING_LIST = gql`
     }
   }
 `;
-
+// Add an item to shopping list
 export const ADD_ITEM_MUTATION = gql`
   mutation AddItemToShoppingList($data: ShoppingListItemInput!) {
     addItemToShoppingList(data: $data) {
       id
+    }
+  }
+`;
+
+export const ADD_COLLABORATOR_MUTATION = gql`
+  mutation AddCollaborator($data: AddCollaboratorInput!) {
+    addCollaborator(data: $data) {
+      id
+      role
+      status
+      invitedAt
+      statusChangedAt
+      email
+      collaborator {
+        email
+        id
+        role
+      }
     }
   }
 `;

@@ -11,13 +11,6 @@ type IconButtonProps = {
   style?: StyleProp<ViewStyle>;
 };
 
-const stylesheet = createStyleSheet(theme => ({
-  button: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-}));
-
 const IconButton: React.FC<IconButtonProps> = ({
   iconName,
   onPress,
@@ -37,4 +30,10 @@ const IconButton: React.FC<IconButtonProps> = ({
   );
 };
 
+const stylesheet = createStyleSheet(theme => ({
+  button: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+}));
 export default IconButton;

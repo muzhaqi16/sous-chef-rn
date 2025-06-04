@@ -2,13 +2,11 @@
 import {StateCreator} from 'zustand';
 import {client} from '../apollo/client';
 import {GET_SHOPPING_LISTS} from '../api/queries';
-import {CREATE_SHOPPING_LIST} from '../api/mutations';
-
-export interface ShoppingList {
-  id: string;
-  name: string;
-  createdAt: string;
-}
+import {
+  CREATE_SHOPPING_LIST,
+  ADD_COLLABORATOR_MUTATION,
+} from '../api/mutations';
+import {CollaboratorRole, ShoppingList} from '../types';
 
 export interface ShoppingListState {
   shoppingLists: ShoppingList[];
@@ -59,7 +57,19 @@ export const createShoppingListSlice: StateCreator<
       console.error('Error creating shopping list:', error);
     }
   },
-
+  // Share shopping list with another user by email
+  shareShoppingList: async (shoppingListId: string, email: string) => {
+    try {
+      await client.mutate({
+        mutation: ADD_COLLABORATOR_MUTATION,
+        variables: {
+          data: {shoppingListId, email, role: CollaboratorRole.EDITOR},
+        },
+      });
+    } catch (error) {
+      console.error('Error sharing shopping list:', error);
+    }
+  },
   // Manually set a shopping list as the default
   setDefaultShoppingList: (shoppingList: ShoppingList) => {
     set({defaultShoppingList: shoppingList});

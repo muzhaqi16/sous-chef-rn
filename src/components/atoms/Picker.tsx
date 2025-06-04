@@ -25,7 +25,7 @@ export const PickerSelect = ({
           key={item.id}
           label={item.name}
           value={item.id}
-          style={styles.item}
+          color={styles.item.color}
         />
       ))}
     </Picker>
@@ -34,7 +34,8 @@ export const PickerSelect = ({
 
 const stylesheet = createStyleSheet(theme => ({
   item: {
-    color: theme.colors.typography,
-    backgroundColor: theme.colors.background,
+    color: theme.colors.white,
   },
 }));
+
+export default PickerSelect;

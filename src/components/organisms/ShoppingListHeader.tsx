@@ -1,28 +1,38 @@
-// src/organisms/ShoppingListHeader.tsx
 import React from 'react';
 import {View, Text, Image} from 'react-native';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
-import SearchBar from '../molecules/SearchBar';
 import IconButton from '../atoms/IconButton';
 
-type Props = {
-  searchValue: string;
-  onChangeSearch: (text: string) => void;
-  onAddItem: () => void;
-};
+const ShoppingListHeader: React.FC = ({}) => {
+  const {styles, theme} = useStyles(stylesheet);
 
+  return (
+    <View style={styles.container}>
+      <View style={styles.titleContainer}>
+        <Text style={styles.title}>PANT</Text>
+        <Text style={[styles.title, {color: theme.colors.primary}]}>RY</Text>
+      </View>
+      {/* Placeholder avatar; replace with actual user image */}
+      <Image
+        style={styles.avatar}
+        source={{
+          uri: 'https://i.pravatar.cc/300',
+        }}
+      />
+    </View>
+  );
+};
 const stylesheet = createStyleSheet(theme => ({
   container: {
-    paddingTop: theme.spacing.lg,
-    paddingHorizontal: theme.spacing.md,
-    paddingBottom: theme.spacing.md,
-    backgroundColor: theme.colors.background,
-  },
-  topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    paddingTop: theme.spacing.padding.sm,
+    paddingBottom: theme.spacing.lg,
+    backgroundColor: theme.colors.background,
+  },
+  titleContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: theme.spacing.md,
   },
   title: {
     fontSize: 24,
@@ -35,33 +45,5 @@ const stylesheet = createStyleSheet(theme => ({
     borderRadius: 20,
   },
 }));
-
-const ShoppingListHeader: React.FC<Props> = ({
-  searchValue,
-  onChangeSearch,
-  onAddItem,
-}) => {
-  const {styles} = useStyles(stylesheet);
-
-  return (
-    <View style={styles.container}>
-      <View style={styles.topRow}>
-        <Text style={styles.title}>PANTRY</Text>
-        {/* Placeholder avatar; replace with actual user image */}
-        <Image
-          style={styles.avatar}
-          source={{
-            uri: 'https://i.pravatar.cc/300',
-          }}
-        />
-      </View>
-      <SearchBar
-        value={searchValue}
-        onChangeText={onChangeSearch}
-        onAddPress={onAddItem}
-      />
-    </View>
-  );
-};
 
 export default ShoppingListHeader;
