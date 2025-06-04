@@ -9,17 +9,7 @@ export const GET_SHOPPING_LISTS = gql`
         email
         id
       }
-      shoppingListItems {
-        itemName
-        item {
-          name
-          price
-        }
-      }
-      collaborators {
-        userId
-      }
-      metadata
+      isDefault
       tags
       createdAt
       updatedAt
@@ -31,23 +21,16 @@ export const GET_SHOPPING_LIST_ITEMS = gql`
   query ShoppingListItems($shoppingListId: ID!) {
     shoppingListItems(shoppingListId: $shoppingListId) {
       id
-      item {
-        name
-        imageUrl
-      }
       label
       quantity
-      unit {
-        name
-        symbol
-      }
       itemName
       unitSymbol
       isPurchased
       createdAt
       updatedAt
-      deletedAt
-      version
+      item {
+        imageUrl
+      }
     }
   }
 `;
@@ -72,8 +55,8 @@ export const GET_ITEMS = gql`
 `;
 
 export const GET_ITEMS_FOR_AUTOCOMPLETE = gql`
-  query ItemsAutocomplete($name: String!) {
-    itemsAutocomplete(name: $name) {
+  query AutocompleteItems($name: String!) {
+    autocompleteItems(name: $name) {
       id
       name
     }

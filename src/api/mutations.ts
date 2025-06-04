@@ -8,7 +8,6 @@ export const LOGIN_MUTATION = gql`
       user {
         email
         id
-        password
         role
       }
     }
@@ -34,8 +33,6 @@ export const ADD_ITEM = gql`
     addItem(name: $name, quantity: $quantity) {
       id
       name
-      quantity
-      price
     }
   }
 `;
@@ -59,34 +56,9 @@ export const CREATE_SHOPPING_LIST = gql`
 `;
 
 export const ADD_ITEM_MUTATION = gql`
-  mutation CreateShoppingListItem($data: CreateShoppingListItemInput!) {
-    createShoppingListItem(data: $data) {
-      item {
-        id
-        name
-        description
-        barcode
-        type
-        brand
-        price
-        aisle
-        quantity
-        shelfLife
-        unit
-        category
-        imageUrl
-        status
-        createdBy
-        createdAt
-        updatedAt
-      }
+  mutation AddItemToShoppingList($data: ShoppingListItemInput!) {
+    addItemToShoppingList(data: $data) {
       id
-      location
-      notes
-      purchased
-      purchasedAt
-      quantity
-      weight
     }
   }
 `;

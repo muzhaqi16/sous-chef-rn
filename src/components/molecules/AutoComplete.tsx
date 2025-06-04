@@ -32,8 +32,8 @@ const Autocomplete: React.FC<AutocompleteProps> = ({
   const filteredItems = useMemo(() => {
     // If searchTerm is less than 2 characters, return an empty array.
     if (searchTerm.length < 2) return [];
-    if (!data?.itemsAutocomplete) return [];
-    return data.itemsAutocomplete.filter((item: Item) =>
+    if (!data?.autocompleteItems) return [];
+    return data.autocompleteItems.filter((item: Item) =>
       item.name.toLowerCase().includes(searchTerm.toLowerCase()),
     );
   }, [data, searchTerm]);

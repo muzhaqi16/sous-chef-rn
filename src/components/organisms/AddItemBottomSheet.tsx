@@ -39,24 +39,13 @@ const AddItemBottomSheet: React.FC = () => {
 
   const handleAddItem = async () => {
     const itemName = selectedItem?.name || query;
-    console.log('Adding item:', itemName);
     if (!itemName.trim()) return;
     addItem({
       variables: {
         data: {
           shoppingListId,
-          itemData: {
-            name: itemName,
-            unit: 'lbs',
-          },
-          shoppingListItemData: {
-            quantity: 1,
-            // add one week to the current date ISO-8601 DateTime.
-            expirationDate: new Date(
-              Date.now() + 7 * 24 * 60 * 60 * 1000,
-            ).toISOString(),
-            weight: 2.3,
-          },
+          itemId: selectedItem?.id || '',
+          label: itemName,
         },
       },
     });

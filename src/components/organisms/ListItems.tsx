@@ -33,7 +33,6 @@ const ShoppingListItems: React.FC = () => {
       });
     }
   }, [defaultShoppingList, getShoppingListItems]);
-  console.log('ShoppingListItems data:', data);
   return (
     <View style={styles.container}>
       <FlatList
@@ -44,7 +43,7 @@ const ShoppingListItems: React.FC = () => {
         renderItem={({item}) => (
           <SwipeableRow>
             <ItemCard
-              shoppingListItem={item}
+              item={item}
               onIncrement={() => () => {}}
               onDecrement={() => () => {}}
               onRemove={() => () => {}}

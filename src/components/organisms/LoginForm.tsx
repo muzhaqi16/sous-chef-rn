@@ -9,6 +9,7 @@ import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import AuthFormFields from '../molecules/AuthFormFields';
 import {getLoginValidationSchema} from '../../utils/validation';
 import Loader from '../atoms/Loader';
+import {Header} from '../molecules/Header';
 
 export interface FormValues {
   email: string;
@@ -67,8 +68,14 @@ const LoginForm: React.FC<LoginFormProps> = ({}) => {
           style={styles.headerAction}>
           <FeatherIcon color="#F82E08" name="arrow-left" size={24} />
         </TouchableOpacity>
+        <Header />
+        <Text style={styles.title}>
+          Sign in to <Text style={{color: '#075eec'}}>MyApp</Text>
+        </Text>
 
-        <Text style={styles.title}>Sign In</Text>
+        <Text style={styles.subtitle}>
+          Get access to your portfolio and more
+        </Text>
       </View>
       <KeyboardAwareScrollView>
         <View style={styles.form}>
@@ -106,7 +113,7 @@ const stylesheet = createStyleSheet(theme => ({
   /** Header */
   header: {
     paddingHorizontal: 24,
-    marginBottom: 28,
+    marginVertical: 28,
   },
   headerAction: {
     width: 40,
@@ -166,7 +173,13 @@ const stylesheet = createStyleSheet(theme => ({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
+    alignSelf: 'center',
     marginBottom: 16,
+    color: theme.colors.typography,
+  },
+  subtitle: {
+    fontSize: 15,
+    fontWeight: '500',
     color: theme.colors.typography,
   },
   error: {

@@ -4,31 +4,7 @@ import {createStyleSheet, useStyles} from 'react-native-unistyles';
 import {Counter} from './Counter';
 
 type ItemCardProps = {
-  shoppingListItem: {
-    id: string;
-    weight?: number;
-    notes?: string;
-    expirationDate: string;
-    item: {
-      id: string;
-      name: string;
-      barcode?: string;
-      category?: {
-        name: string;
-      };
-      price: number;
-      type?: string;
-      unit?: string;
-      shelfLife?: string;
-      description?: string;
-      imageUrl?: string;
-      quantity: number;
-      weight: number | undefined;
-      notes: string | undefined;
-    };
-    quantity: number;
-  };
-
+  item: any;
   onIncrement: () => void;
   onDecrement: () => void;
   onMoreOptions?: () => void; // For ellipsis menu
@@ -36,53 +12,45 @@ type ItemCardProps = {
 };
 
 const ItemCard: React.FC<ItemCardProps> = ({
-  shoppingListItem,
+  item,
   onIncrement,
   onDecrement,
   onMoreOptions,
 }) => {
   // console.log('ItemCard shoppingListItem:', shoppingListItem);
   const {styles} = useStyles(stylesheet);
-  const {item} = shoppingListItem;
   return (
     <TouchableOpacity
-      key={shoppingListItem.id}
+      key={item?.id}
       onPress={() => {
         // handle onPress
       }}
       style={styles.card}>
       <Image
-        alt={item.name}
+        alt={item?.name}
         resizeMode="cover"
-        source={{uri: item.imageUrl}}
+        source={{uri: item?.item?.imageUrl}}
         style={styles.cardImg}
       />
       <View style={styles.cardBody}>
-        <Text style={styles.cardTitle}>{item.name}</Text>
+        <Text style={styles.cardTitle}>{item?.itemName}</Text>
 
-        <Text style={styles.cardDescription}>{item.description}</Text>
-
-        <Text style={styles.cardPrice}>
-          ${item?.price?.toLocaleString('en-US')}
-        </Text>
+        <Text style={styles.cardDescription}>{item?.description}</Text>
       </View>
-      <Counter
-        count={shoppingListItem.quantity}
-        onIncrement={onIncrement}
-        onDecrement={onDecrement}
-      />
-      {/* show unit */}
-      {item.unit && (
-        <Text style={styles.cardDescription}>
-          {item.quantity} {item.unit}
-        </Text>
-      )}
-      {/* show weight if available */}
-      {item.weight && (
-        <Text style={styles.cardDescription}>
-          {item.weight} {item.unit || 'kg'}
-        </Text>
-      )}
+      <View style={styles.cardActions}>
+        <Counter
+          count={item?.quantity}
+          onIncrement={onIncrement}
+          onDecrement={onDecrement}
+        />
+        {item?.unitSymbol &&
+          // if quantity is higher than 1, show plural unit symbol
+          (item?.quantity > 1 ? (
+            <Text style={styles.cardDescription}>{item?.unitSymbol}s</Text>
+          ) : (
+            <Text style={styles.cardDescription}>{item?.unitSymbol}</Text>
+          ))}
+      </View>
     </TouchableOpacity>
   );
 };
@@ -104,8 +72,7 @@ const stylesheet = createStyleSheet(theme => ({
     flexDirection: 'column',
     justifyContent: 'flex-start',
     alignItems: 'flex-start',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    padding: 16,
   },
   cardTitle: {
     fontWeight: '600',
@@ -117,18 +84,18 @@ const stylesheet = createStyleSheet(theme => ({
   cardDescription: {
     fontSize: 14,
     fontWeight: '400',
-    lineHeight: 16,
-    marginBottom: 6,
     color: '#706f7b',
-  },
-  cardPrice: {
-    fontWeight: '700',
-    fontSize: 14,
   },
   cardImg: {
     width: 120,
     height: '100%',
     borderRadius: 12,
+  },
+  cardActions: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingVertical: 12,
   },
 }));
 export default ItemCard;
