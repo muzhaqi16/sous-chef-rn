@@ -10,7 +10,7 @@ interface InputProps extends TextInputProps {
   placeholder?: string;
 }
 
-const EmailInput: React.FC<InputProps> = props => {
+export const EmailInput: React.FC<InputProps> = props => {
   const {styles} = useStyles(stylesheet);
   const {label, value, onChangeText} = props;
   return (
@@ -40,7 +40,7 @@ const stylesheet = createStyleSheet(theme => ({
   inputLabel: {
     fontSize: 15,
     fontWeight: 'bold',
-    color: '#1c1c1e',
+    color: theme.colors.textPrimary,
     marginBottom: 6,
   },
   inputControl: {
@@ -50,9 +50,7 @@ const stylesheet = createStyleSheet(theme => ({
     borderRadius: 12,
     fontSize: 15,
     fontWeight: '500',
-    borderColor: theme.colors.typography,
-    color: theme.colors.typography,
+    borderColor: theme.colors.border,
+    color: theme.colors.placeholder,
   },
 }));
-
-export default EmailInput;

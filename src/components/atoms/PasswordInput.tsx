@@ -10,7 +10,7 @@ interface InputProps extends TextInputProps {
   placeholder?: string;
 }
 
-const PasswordInput: React.FC<InputProps> = props => {
+export const PasswordInput: React.FC<InputProps> = props => {
   const {styles} = useStyles(stylesheet);
   const {label, value, onChangeText} = props;
   return (
@@ -49,9 +49,7 @@ const stylesheet = createStyleSheet(theme => ({
     borderRadius: 12,
     fontSize: 15,
     fontWeight: '500',
-    borderColor: theme.colors.typography,
-    color: theme.colors.typography,
+    borderColor: theme.colors.border,
+    color: theme.colors.placeholder,
   },
 }));
-
-export default PasswordInput;

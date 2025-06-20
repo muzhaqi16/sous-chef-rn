@@ -2,7 +2,7 @@ import React, {useState, useRef} from 'react';
 import {Text, StyleSheet} from 'react-native';
 import BottomSheet, {BottomSheetRef} from '../pages/BottomSheet';
 import Button from '../atoms/Button';
-import EmailInput from '../molecules/EmailInput';
+import EmailInput from '../atoms/EmailInput';
 import {useStore} from '../../store/useStore';
 
 const ShareShoppingListBottomSheet: React.FC = () => {
