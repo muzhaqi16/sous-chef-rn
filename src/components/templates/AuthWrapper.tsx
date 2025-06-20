@@ -1,16 +1,11 @@
 import React from 'react';
 import {SafeAreaView} from 'react-native';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
-import LoginForm from '../components/organisms/LoginForm';
 
-const AuthScreen = () => {
+const AuthWrapper = ({children}: any) => {
   const {styles} = useStyles(stylesheet);
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <LoginForm />
-    </SafeAreaView>
-  );
+  return <SafeAreaView style={styles.container}>{children}</SafeAreaView>;
 };
 
 const stylesheet = createStyleSheet(theme => ({
@@ -20,4 +15,4 @@ const stylesheet = createStyleSheet(theme => ({
   },
 }));
 
-export default AuthScreen;
+export default AuthWrapper;

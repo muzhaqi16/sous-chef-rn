@@ -17,9 +17,9 @@ export interface FormValues {
   password: string;
 }
 
-interface LoginFormProps {}
+interface SignUpFormProps {}
 
-const LoginForm: React.FC<LoginFormProps> = ({}) => {
+const SignUpForm: React.FC<SignUpFormProps> = ({}) => {
   const {styles} = useStyles(stylesheet);
   const navigation = useNavigation<NavigationProp<AuthStackParamList>>();
   const [loading, setLoading] = useState(false);
@@ -71,7 +71,7 @@ const LoginForm: React.FC<LoginFormProps> = ({}) => {
         </TouchableOpacity>
         <Header />
         <Text style={styles.title}>
-          Sign in to <Text style={{color: '#075eec'}}>MyApp</Text>
+          Sign up to <Text style={{color: '#075eec'}}>MyApp</Text>
         </Text>
 
         <Text style={styles.subtitle}>
@@ -101,9 +101,9 @@ const LoginForm: React.FC<LoginFormProps> = ({}) => {
         {/* Server / Store Error */}
         {error && <Text style={styles.error}>{error}</Text>}
       </KeyboardAwareScrollView>
-      <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
+      <TouchableOpacity onPress={() => navigation.navigate('Login')}>
         <Text style={styles.formFooter}>
-          Don't have an account? <Text style={styles.formLink}>Sign Up</Text>
+          Already have an account? <Text style={styles.formLink}>Sign In</Text>
         </Text>
       </TouchableOpacity>
     </>
@@ -190,4 +190,4 @@ const stylesheet = createStyleSheet(theme => ({
   },
 }));
 
-export default LoginForm;
+export default SignUpForm;

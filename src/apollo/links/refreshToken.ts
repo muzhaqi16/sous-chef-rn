@@ -1,13 +1,15 @@
 import {Observable, FetchResult} from '@apollo/client';
 import {storage} from '../../storage/mmkv';
 import {useStore} from '../../store/useStore';
-import {API_URL} from '../config';
+import Config from 'react-native-config';
 
 /**
  * Attempts to refresh the access token.
  * Returns an Observable<FetchResult> that resolves when the token is refreshed
  * and the failed operation is retried.
  */
+const API_URL = Config.API_URL;
+
 export const attemptTokenRefresh = (
   operation: any,
   forward: any,

@@ -1,11 +1,11 @@
 import {
   fonts,
-  Fonts,
+  type Fonts,
   breakpoints,
-  Breakpoints,
-  Colors,
+  type Breakpoints,
+  type ThemeColors as Colors,
   spacings,
-  Spacings,
+  type Spacings,
   lightColors,
   darkColors,
 } from './common';

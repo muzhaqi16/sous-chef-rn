@@ -1,21 +1,32 @@
 import React from 'react';
 import {SafeAreaView, StatusBar, useColorScheme, Platform} from 'react-native';
 import {ApolloProvider} from '@apollo/client';
+import {useStore} from './src/store/useStore';
 import {client} from './src/apollo/client';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
 import AppNavigator from './src/navigation/AppNavigator';
+import SplashScreen from './src/screens/SplashScreen';
 
 const App = () => {
   const isDarkMode = useColorScheme() === 'dark';
   const {styles, theme} = useStyles(stylesheet);
   const {colors} = theme;
+  // Check if the store is hydrated (i.e., if the initial state has been loaded)
+  // This is important to ensure we don't render the app before the store is ready
+  // and we have the necessary data (like user authentication status).
+  // If the store is not hydrated, we show a splash screen.
+  const isHydrated = useStore(s => s.isHydrated);
+  if (!isHydrated) {
+    // We haven't finished checking for the token yet
+    return <SplashScreen />;
+  }
 
   return (
     <ApolloProvider client={client}>
       <SafeAreaView style={styles.container}>
         <StatusBar
           barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-          backgroundColor={colors.backgroundColor}
+          backgroundColor={colors.background}
         />
         <AppNavigator />
       </SafeAreaView>
