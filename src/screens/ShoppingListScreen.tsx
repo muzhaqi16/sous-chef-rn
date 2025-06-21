@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useEffect, useState} from 'react';
 import {View} from 'react-native';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
@@ -9,11 +9,11 @@ import {useNavigation} from '@react-navigation/native';
 import {ShoppingListSelector} from '../components/organisms/ShoppingListSelector';
 import ShoppingListHeader from '../components/organisms/ShoppingListHeader';
 import AddButton from '../components/molecules/AddButton';
+import {AddItemBottomSheet} from '../components';
 
 const ShoppingListScreen = () => {
   const {styles} = useStyles(stylesheet);
-  const navigation =
-    useNavigation<HomeTabScreenProps<'ShoppingList'>['navigation']>();
+  const [showBottomSheet, setShowBottomSheet] = useState(false);
 
   return (
     <GestureHandlerRootView style={styles.container}>
@@ -21,9 +21,19 @@ const ShoppingListScreen = () => {
       <View style={styles.actionBar}>
         <SearchBar style={styles.searchBar} />
         <ShoppingListSelector />
-        <AddButton onPress={() => {}} />
+        <AddButton
+          onPress={() => {
+            setShowBottomSheet(true);
+          }}
+        />
       </View>
       <ListItems />
+      <AddItemBottomSheet
+        isVisible={showBottomSheet}
+        onClose={() => {
+          setShowBottomSheet(false);
+        }}
+      />
     </GestureHandlerRootView>
   );
 };

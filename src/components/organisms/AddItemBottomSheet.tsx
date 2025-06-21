@@ -1,4 +1,4 @@
-import React, {useState, useRef} from 'react';
+import React, {useState, useRef, useEffect} from 'react';
 import {Text, StyleSheet} from 'react-native';
 import {useMutation} from '@apollo/client';
 import BottomSheet, {BottomSheetRef} from '../pages/BottomSheet';
@@ -13,19 +13,21 @@ interface Item {
   name: string;
 }
 
-const AddItemBottomSheet: React.FC = () => {
+type BottomSheetProps = {
+  isVisible: boolean;
+  onClose: () => void;
+};
+
+const AddItemBottomSheet: React.FC<BottomSheetProps> = ({
+  isVisible,
+  onClose,
+}) => {
   const bottomSheetRef = useRef<BottomSheetRef>(null);
   const [query, setQuery] = useState('');
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [renderBottomSheet, setRenderBottomSheet] = useState(false);
 
   const shoppingListId = useStore(state => state.defaultShoppingList?.id);
-
-  // Show the bottom sheet when pressing the button
-  const handleShowBottomSheet = () => {
-    setRenderBottomSheet(true);
-    bottomSheetRef.current?.expand();
-  };
 
   // Setup your GraphQL mutation using Apollo's useMutation hook.
   const [addItem, {loading, error}] = useMutation(ADD_ITEM_MUTATION, {
@@ -36,6 +38,17 @@ const AddItemBottomSheet: React.FC = () => {
     },
     onError: err => console.error(err),
   });
+
+  // Open the bottom sheet when the component mounts or when isVisible changes.
+  useEffect(() => {
+    if (isVisible) {
+      setRenderBottomSheet(true);
+      bottomSheetRef.current?.expand();
+    } else {
+      bottomSheetRef.current?.close();
+      setRenderBottomSheet(false);
+    }
+  }, [isVisible]);
 
   const handleAddItem = async () => {
     const itemName = selectedItem?.name || query;
@@ -58,18 +71,11 @@ const AddItemBottomSheet: React.FC = () => {
 
   return (
     <>
-      {/* Button to open the bottom sheet */}
-      <Button
-        title="Add Item"
-        onPress={handleShowBottomSheet}
-        style={{margin: 16}}
-      />
-
-      {/* Bottom sheet with input, autocomplete, and submit button */}
       {renderBottomSheet && (
         <BottomSheet
           ref={bottomSheetRef}
           snapPoints={['50%', '75%']}
+          onClose={onClose} // add this if supported!
           enableDynamicSizing={false}>
           <BaseInput
             placeholder="Start typing item name..."
