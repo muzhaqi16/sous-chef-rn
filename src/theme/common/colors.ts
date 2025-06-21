@@ -21,6 +21,12 @@ export type ThemeColors = {
   placeholder: string;
   iconPrimary: string;
   iconSecondary: string;
+  inputBackground: string;
+  inputBorder: string;
+  inputText: string;
+  inputPlaceholder: string;
+  inputDisabled: string;
+  inputIcon: string;
   primary: string;
   onPrimary: string;
   primaryVariant: string;
@@ -34,6 +40,10 @@ export type ThemeColors = {
   onError: string;
   info: string;
   onInfo: string;
+  chipBackground: string;
+  chipSelectedBackground: string;
+  chipText: string;
+  chipSelectedText: string;
 };
 const common = {
   white: '#FFFFFF',
@@ -67,6 +77,14 @@ export const lightColors: ThemeColors = {
   iconPrimary: common.grey700,
   iconSecondary: common.grey400,
 
+  // input
+  inputBackground: common.white,
+  inputBorder: common.grey300,
+  inputText: common.grey900,
+  inputPlaceholder: common.grey400,
+  inputDisabled: common.grey500,
+  inputIcon: common.grey600,
+
   // brand
   primary: '#FF8A4C',
   onPrimary: common.white,
@@ -83,6 +101,12 @@ export const lightColors: ThemeColors = {
   onError: common.white,
   info: '#17A2B8',
   onInfo: common.white,
+
+  // chips
+  chipBackground: common.grey200,
+  chipSelectedBackground: '#FF8A4C',
+  chipText: common.grey900,
+  chipSelectedText: common.white,
 };
 
 export const darkColors: ThemeColors = {
@@ -102,6 +126,14 @@ export const darkColors: ThemeColors = {
   iconPrimary: common.grey100,
   iconSecondary: common.grey400,
 
+  // input
+  inputBackground: common.white,
+  inputBorder: common.grey300,
+  inputText: common.black,
+  inputPlaceholder: common.grey400,
+  inputDisabled: common.grey500,
+  inputIcon: common.grey600,
+
   // brand
   primary: '#FF8A4C',
   onPrimary: common.white,
@@ -118,4 +150,10 @@ export const darkColors: ThemeColors = {
   onError: common.white,
   info: '#17A2B8',
   onInfo: common.white,
+
+  // chips
+  chipBackground: common.grey200,
+  chipSelectedBackground: '#FF8A4C',
+  chipText: common.grey900,
+  chipSelectedText: common.white,
 };

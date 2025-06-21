@@ -37,6 +37,10 @@ export const getLoginValidationSchema = () => loginSchema;
 
 // 2) sign-up (email + password + confirmPassword)
 export const signUpSchema = yup.object({
+  name: yup
+    .string()
+    .required('Full name is required')
+    .min(2, 'Full name must be at least 2 characters'),
   email: emailRule,
   password: passwordRule,
   confirmPassword: yup

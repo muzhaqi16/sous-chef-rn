@@ -14,11 +14,13 @@ import {createStyleSheet, useStyles} from 'react-native-unistyles';
 export type FieldDef<T extends FieldValues> = {
   name: Path<T>;
   label: string;
+  placeholder?: string;
   component: React.ComponentType<{
     label: string;
     value: any;
     onChangeText: (val: any) => void;
     onBlur: () => void;
+    placeholder?: string;
   }>;
 };
 
@@ -37,7 +39,7 @@ export function DynamicFormFields<T extends FieldValues>({
 
   return (
     <View style={styles.container}>
-      {fields.map(({name, label, component: Input}, idx) => (
+      {fields.map(({name, label, placeholder, component: Input}, idx) => (
         <React.Fragment key={String(name)}>
           <Controller
             control={control}
@@ -46,6 +48,8 @@ export function DynamicFormFields<T extends FieldValues>({
               <Input
                 label={label}
                 value={value}
+                // if placeholder is provided, pass it to the component without overriding EmailInput and PasswordInput
+                {...(placeholder && {placeholder})}
                 onBlur={onBlur}
                 onChangeText={onChange}
               />

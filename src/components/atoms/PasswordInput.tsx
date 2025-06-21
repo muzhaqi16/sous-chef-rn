@@ -1,55 +1,27 @@
-import React from 'react';
-import {TextInput, TextInputProps, View, Text} from 'react-native';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
+// components/atoms/PasswordInput.tsx
+import React, {useState} from 'react';
+import {TouchableOpacity} from 'react-native';
+import Feather from '@react-native-vector-icons/feather';
+import {BaseInput, BaseInputProps} from './BaseInput';
 
-interface InputProps extends TextInputProps {
-  label: string;
-  value: string;
-  onChangeText: (text: string) => void;
-  onBlur?: () => void;
-  placeholder?: string;
-}
-
-export const PasswordInput: React.FC<InputProps> = props => {
-  const {styles} = useStyles(stylesheet);
-  const {label, value, onChangeText} = props;
+export const PasswordInput: React.FC<
+  Omit<BaseInputProps, 'secureTextEntry'>
+> = props => {
+  const [visible, setVisible] = useState(false);
   return (
-    <View style={styles.input}>
-      <Text style={styles.inputLabel}>{label}</Text>
-      <TextInput
-        autoCorrect={false}
-        clearButtonMode="while-editing"
-        onChangeText={email => onChangeText(email)}
-        onBlur={props.onBlur}
-        placeholder={props.placeholder || '********'}
-        placeholderTextColor="#6b7280"
-        style={styles.inputControl}
-        secureTextEntry={true}
-        value={value}
-      />
-    </View>
+    <BaseInput
+      secureTextEntry={!visible}
+      placeholder="••••••••"
+      rightIcon={
+        <TouchableOpacity onPress={() => setVisible(v => !v)}>
+          <Feather
+            name={visible ? 'eye' : 'eye-off'}
+            size={20}
+            color={visible ? '#333' : '#999'}
+          />
+        </TouchableOpacity>
+      }
+      {...props}
+    />
   );
 };
-
-const stylesheet = createStyleSheet(theme => ({
-  /** Input */
-  input: {
-    marginBottom: 16,
-  },
-  inputLabel: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#1c1c1e',
-    marginBottom: 6,
-  },
-  inputControl: {
-    height: 44,
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    fontSize: 15,
-    fontWeight: '500',
-    borderColor: theme.colors.border,
-    color: theme.colors.placeholder,
-  },
-}));

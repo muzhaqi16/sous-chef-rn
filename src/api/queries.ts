@@ -17,6 +17,21 @@ export const GET_SHOPPING_LISTS = gql`
   }
 `;
 
+export const GET_USER_PROFILE = gql`
+  query UserProfile {
+    userProfile {
+      id
+      userId
+      firstName
+      lastName
+      avatarUrl
+      phone
+      dateOfBirth
+      createdAt
+      updatedAt
+    }
+  }
+`;
 export const GET_SHOPPING_LIST_ITEMS = gql`
   query ShoppingListItems($shoppingListId: ID!) {
     shoppingListItems(shoppingListId: $shoppingListId) {
@@ -47,7 +62,6 @@ export const GET_ITEMS = gql`
       unit
       category
       imageUrl
-      status
       createdAt
       updatedAt
     }

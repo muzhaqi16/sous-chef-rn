@@ -3,10 +3,10 @@ import {Text, StyleSheet} from 'react-native';
 import {useMutation} from '@apollo/client';
 import BottomSheet, {BottomSheetRef} from '../pages/BottomSheet';
 import Button from '../atoms/Button';
-import Input from '../atoms/Input';
 import {ADD_ITEM_MUTATION} from '../../api/mutations';
 import Autocomplete from '../molecules/AutoComplete';
 import {useStore} from '../../store/useStore';
+import {BaseInput} from '../atoms';
 
 interface Item {
   id: string;
@@ -71,8 +71,9 @@ const AddItemBottomSheet: React.FC = () => {
           ref={bottomSheetRef}
           snapPoints={['50%', '75%']}
           enableDynamicSizing={false}>
-          <Input
+          <BaseInput
             placeholder="Start typing item name..."
+            label="Item Name"
             value={selectedItem?.name || query}
             onChangeText={text => {
               setQuery(text);

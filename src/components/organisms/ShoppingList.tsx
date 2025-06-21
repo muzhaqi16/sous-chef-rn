@@ -6,9 +6,15 @@ import {createStyleSheet, useStyles} from 'react-native-unistyles';
 
 const ShoppingList = () => {
   const {styles} = useStyles(stylesheet);
-  const {items, fetchItems, addItem} = useStore();
+  const {items, fetchItems, addItem, defaultShoppingList} = useStore();
   useEffect(() => {
-    fetchItems();
+    if (!defaultShoppingList?.id) {
+      console.log('No default shopping list found');
+      return;
+    }
+    fetchItems({
+      shoppingListId: defaultShoppingList?.id,
+    });
   }, []);
 
   return (
@@ -36,7 +42,7 @@ const stylesheet = createStyleSheet(theme => ({
     padding: 16,
   },
   title: {
-    color: theme.colors.typography,
+    color: theme.colors.textPrimary,
     textAlign: 'center',
     fontSize: 24,
     fontWeight: 'bold',

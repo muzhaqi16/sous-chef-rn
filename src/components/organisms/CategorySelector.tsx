@@ -29,7 +29,7 @@ const stylesheet = createStyleSheet(theme => ({
   title: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: theme.colors.typography,
+    color: theme.colors.textPrimary,
   },
   seeAll: {
     fontSize: 14,

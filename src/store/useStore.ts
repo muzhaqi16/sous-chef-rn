@@ -3,12 +3,14 @@ import {createJSONStorage, persist} from 'zustand/middleware';
 import {ShoppingListState, createShoppingListSlice} from './shoppingListSlice';
 import {AuthState, createAuthSlice} from './authSlice';
 import {PreferencesState, createPreferencesSlice} from './preferencesSlice';
+import {createProfileSlice, ProfileState} from './profileSlice';
 import {createItemsSlice, ItemsState} from './itemsSlice';
 import {zustandStorage} from '../storage/mmkv';
 import {logger} from './logger';
 
 type State = ShoppingListState &
   AuthState &
+  ProfileState &
   PreferencesState &
   ItemsState & {
     // our hydration slice
@@ -26,6 +28,7 @@ export const useStore = create<State>()(
       return {
         ...createShoppingListSlice(...a),
         ...createAuthSlice(...a),
+        ...createProfileSlice(...a),
         ...createPreferencesSlice(...a),
         ...createItemsSlice(...a),
         isHydrated: false,

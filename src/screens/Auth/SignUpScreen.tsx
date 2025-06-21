@@ -5,11 +5,12 @@ import {yupResolver} from '@hookform/resolvers/yup';
 import {useNavigation, NavigationProp} from '@react-navigation/native';
 import {type AuthStackParamList} from '../../navigation/types';
 import {AuthFormTemplate} from '../../components/templates/AuthFormTemplate';
-import {EmailInput, PasswordInput} from '../../components/atoms';
+import {EmailInput, PasswordInput, BaseInput} from '../../components/atoms';
 import {getSignUpValidationSchema} from '../../utils/validation';
 import {AuthWrapper} from '../../components/templates/AuthWrapper';
 
 type SignUpValues = {
+  name: string;
   email: string;
   password: string;
   confirmPassword: string;
@@ -23,7 +24,11 @@ export const SignUpScreen = () => {
     formState: {errors},
   } = useForm<SignUpValues>({
     resolver: yupResolver(getSignUpValidationSchema()),
-    defaultValues: {email: '', password: '', confirmPassword: ''},
+    defaultValues: {
+      email: '',
+      password: '',
+      confirmPassword: '',
+    },
   });
 
   const onSubmit = (data: SignUpValues) => {
@@ -35,7 +40,14 @@ export const SignUpScreen = () => {
       <AuthFormTemplate<SignUpValues>
         title="Create account"
         subtitle="Join MyApp today"
+        onBackPress={() => navigation.goBack()}
         fields={[
+          {
+            name: 'name',
+            label: 'Full Name',
+            placeholder: 'e.g John Doe',
+            component: BaseInput,
+          },
           {name: 'email', label: 'Email address', component: EmailInput},
           {name: 'password', label: 'Password', component: PasswordInput},
           {
@@ -48,10 +60,10 @@ export const SignUpScreen = () => {
         errors={errors}
         linkText="Forgot password?"
         onLinkPress={() => navigation.navigate('ForgotPassword')}
-        submitText="Login"
+        submitText="Sign Up"
         onSubmit={handleSubmit(onSubmit)}
-        footerText="Don't have an account?"
-        footerLinkText="Sign Up"
+        footerText="Already have an account?"
+        footerLinkText="Sign In"
         onFooterLinkPress={() => navigation.navigate('Login')}
       />
     </AuthWrapper>

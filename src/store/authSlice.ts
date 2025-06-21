@@ -3,8 +3,18 @@ import {client} from '../apollo/client';
 import {LOGIN_MUTATION, SIGNUP_MUTATION} from '../api/mutations';
 import {storage} from '../storage/mmkv';
 
+export type User = {
+  id: string;
+  email: string;
+  password: string;
+  role: string; // e.g., 'user', 'admin'
+  appleConnected?: boolean;
+  discordConnected?: boolean;
+  facebookVerified?: boolean;
+};
+
 export interface AuthState {
-  user: string | null;
+  user: User | null;
   accessToken: string | null;
   refreshToken: string | null;
   login: (email: string, password: string) => Promise<string | null>;

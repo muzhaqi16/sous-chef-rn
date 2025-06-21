@@ -45,6 +45,6 @@ const stylesheet = createStyleSheet(theme => ({
   inner: {
     flex: 1,
     paddingHorizontal: 24,
-    justifyContent: 'center', // vertically center on tall screens
+    justifyContent: 'space-around',
   },
 }));

@@ -1,4 +1,3 @@
-// src/atoms/Chip.tsx
 import React from 'react';
 import {TouchableOpacity, Text, StyleProp, ViewStyle} from 'react-native';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
@@ -9,31 +8,6 @@ type ChipProps = {
   onPress: () => void;
   style?: StyleProp<ViewStyle>;
 };
-
-const stylesheet = createStyleSheet(theme => ({
-  chip: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    marginRight: 8,
-  },
-  chipText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  selected: {
-    backgroundColor: theme.colors.chipSelectedBackground,
-  },
-  unselected: {
-    backgroundColor: theme.colors.chipBackground,
-  },
-  selectedText: {
-    color: theme.colors.white,
-  },
-  unselectedText: {
-    color: theme.colors.chipText,
-  },
-}));
 
 const Chip: React.FC<ChipProps> = ({label, selected, onPress, style}) => {
   const {styles} = useStyles(stylesheet);
@@ -55,5 +29,30 @@ const Chip: React.FC<ChipProps> = ({label, selected, onPress, style}) => {
     </TouchableOpacity>
   );
 };
+
+const stylesheet = createStyleSheet(theme => ({
+  chip: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    marginRight: 8,
+  },
+  chipText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  selected: {
+    backgroundColor: theme.colors.chipSelectedBackground,
+  },
+  unselected: {
+    backgroundColor: theme.colors.chipBackground,
+  },
+  selectedText: {
+    color: theme.colors.chipSelectedText,
+  },
+  unselectedText: {
+    color: theme.colors.chipText,
+  },
+}));
 
 export default Chip;

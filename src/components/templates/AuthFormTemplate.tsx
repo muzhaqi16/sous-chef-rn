@@ -7,6 +7,7 @@ import {DynamicFormFields, FieldDef} from '../molecules/DynamicFormFields';
 interface Props<T extends FieldValues> {
   title: string;
   subtitle?: string;
+  onBackPress?: () => void;
   fields: FieldDef<T>[];
   control: Control<T>;
   errors: FieldErrors<T>;
@@ -21,6 +22,7 @@ interface Props<T extends FieldValues> {
 export function AuthFormTemplate<T extends FieldValues>({
   title,
   subtitle,
+  onBackPress,
   fields,
   control,
   errors,
@@ -37,8 +39,8 @@ export function AuthFormTemplate<T extends FieldValues>({
   return (
     <>
       <View style={styles.header}>
-        {onLinkPress && (
-          <TouchableOpacity onPress={onLinkPress} style={styles.headerAction}>
+        {onBackPress && (
+          <TouchableOpacity onPress={onBackPress} style={styles.headerAction}>
             {/* you could even parametrize the icon */}
             <Text>{'<'}</Text>
           </TouchableOpacity>
@@ -74,7 +76,7 @@ export function AuthFormTemplate<T extends FieldValues>({
 
 const stylesheet = createStyleSheet(theme => ({
   header: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 0,
     marginVertical: 28,
   },
   headerAction: {

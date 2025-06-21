@@ -1,6 +1,6 @@
 import {StateCreator} from 'zustand';
-import {client} from '../api/apolloClient';
-import {GET_ITEMS} from '../api/queries';
+import {client} from '../apollo/client';
+import {GET_SHOPPING_LIST_ITEMS} from '../api/queries';
 import {ADD_ITEM, REMOVE_ITEM} from '../api/mutations';
 
 export interface Item {
@@ -12,7 +12,7 @@ export interface Item {
 
 export interface ItemsState {
   items: Item[];
-  fetchItems: () => Promise<void>;
+  fetchItems: ({shoppingListId}: {shoppingListId: string}) => Promise<void>;
   addItem: (name: string, quantity: number) => Promise<void>;
   removeItem: (id: string) => Promise<void>;
   setItems: (items: Item[]) => void;
@@ -22,9 +22,9 @@ export const createItemsSlice: StateCreator<ItemsState> = set => ({
   items: [],
 
   // Fetch all items for the current shopping list
-  fetchItems: async () => {
+  fetchItems: async ({shoppingListId}) => {
     try {
-      const {data} = await client.query({query: GET_ITEMS});
+      const {data} = await client.query({query: GET_SHOPPING_LIST_ITEMS});
       set({items: data.items});
     } catch (error) {
       console.error('Error fetching items:', error);

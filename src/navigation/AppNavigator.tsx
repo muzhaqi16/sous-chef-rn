@@ -2,15 +2,16 @@ import React from 'react';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {NavigationContainer} from '@react-navigation/native';
 import {useStore} from '../store/useStore';
-import CreateShoppingList from '../screens/OnBoarding/CreateShoppingList';
+import {CreateShoppingListScreen} from '../screens/OnBoarding/CreateShoppingList';
 import {type RootStackParamList} from './types';
 import HomeTab from './TabNavigator';
 import AuthStack from './AuthStack';
+
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const AppNavigator = () => {
   const {user, onBoardingCompleted} = useStore();
-  const isSignedIn = false;
+  const isSignedIn = !!user;
   return (
     <NavigationContainer>
       <Stack.Navigator>
@@ -19,7 +20,7 @@ const AppNavigator = () => {
             {!onBoardingCompleted && (
               <Stack.Screen
                 name="OnBoarding"
-                component={CreateShoppingList}
+                component={CreateShoppingListScreen}
                 options={{headerShown: false}}
               />
             )}
