@@ -10,7 +10,7 @@ import {
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
 
 export interface BaseInputProps extends TextInputProps {
-  label: string;
+  label?: string;
   containerStyle?: StyleProp<ViewStyle>;
   errorMessage?: string;
   rightIcon?: ReactNode;
@@ -27,8 +27,8 @@ export const BaseInput: React.FC<BaseInputProps> = ({
   const {styles, theme} = useStyles(stylesheet);
 
   return (
-    <View style={[styles.container, containerStyle]}>
-      <Text style={styles.label}>{label}</Text>
+    <View style={containerStyle}>
+      {label != null && <Text style={styles.label}>{label}</Text>}
       <View style={styles.inputRow}>
         <RNTextInput
           style={[styles.input, style]}
@@ -47,9 +47,6 @@ export const BaseInput: React.FC<BaseInputProps> = ({
 };
 
 const stylesheet = createStyleSheet(theme => ({
-  container: {
-    marginBottom: 16,
-  },
   label: {
     fontSize: 15,
     fontWeight: '600',

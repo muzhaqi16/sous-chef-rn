@@ -46,11 +46,18 @@ export const REMOVE_ITEM = gql`
 `;
 
 export const CREATE_SHOPPING_LIST = gql`
-  mutation CreateShoppingList($name: String!) {
-    createShoppingList(name: $name) {
+  mutation CreateShoppingList($data: CreateShoppingListInput!) {
+    createShoppingList(data: $data) {
       id
       name
+      isDefault
+      tags
       createdAt
+      updatedAt
+      owner {
+        email
+        id
+      }
     }
   }
 `;

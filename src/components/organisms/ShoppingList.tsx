@@ -19,7 +19,9 @@ const ShoppingList = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Shopping List</Text>
+      <Text style={styles.title}>
+        {defaultShoppingList?.name || 'Shopping List'}
+      </Text>
       <FlatList
         data={items}
         keyExtractor={item => item.id}

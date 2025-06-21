@@ -14,11 +14,12 @@ const ShoppingListScreen = () => {
   const {styles} = useStyles(stylesheet);
   const navigation =
     useNavigation<HomeTabScreenProps<'ShoppingList'>['navigation']>();
+
   return (
     <GestureHandlerRootView style={styles.container}>
       <ShoppingListHeader />
       <View style={styles.actionBar}>
-        <SearchBar />
+        <SearchBar style={styles.searchBar} />
         <ShoppingListSelector />
         <AddButton onPress={() => {}} />
       </View>
@@ -29,12 +30,14 @@ const ShoppingListScreen = () => {
 const stylesheet = createStyleSheet(theme => ({
   container: {
     flex: 1,
-    padding: 16,
+    padding: theme.spacing.padding.sm,
+    backgroundColor: theme.colors.background,
   },
   actionBar: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     marginBottom: theme.spacing.md,
   },
+  searchBar: {},
 }));
 export default ShoppingListScreen;

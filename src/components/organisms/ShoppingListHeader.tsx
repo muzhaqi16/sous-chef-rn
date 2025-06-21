@@ -2,9 +2,12 @@ import React from 'react';
 import {View, Text, Image} from 'react-native';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
 import IconButton from '../atoms/IconButton';
+import {useStore} from '../../store/useStore';
 
 const ShoppingListHeader: React.FC = ({}) => {
   const {styles, theme} = useStyles(stylesheet);
+
+  const avatarUrl = useStore(state => state.avatarUrl);
 
   return (
     <View style={styles.container}>
@@ -16,7 +19,7 @@ const ShoppingListHeader: React.FC = ({}) => {
       <Image
         style={styles.avatar}
         source={{
-          uri: 'https://i.pravatar.cc/300',
+          uri: avatarUrl || 'https://via.placeholder.com/40',
         }}
       />
     </View>
@@ -26,7 +29,7 @@ const stylesheet = createStyleSheet(theme => ({
   container: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingTop: theme.spacing.padding.sm,
+    paddingTop: theme.spacing.padding.lg,
     paddingBottom: theme.spacing.lg,
     backgroundColor: theme.colors.background,
   },
@@ -37,7 +40,7 @@ const stylesheet = createStyleSheet(theme => ({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: theme.colors.typography,
+    color: theme.colors.textPrimary,
   },
   avatar: {
     width: 40,

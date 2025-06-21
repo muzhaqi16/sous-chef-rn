@@ -59,16 +59,18 @@ export const OnBoardingWrapper = ({
           <View style={styles.content}>{children}</View>
         </ScrollView>
       </KeyboardAvoidingView>
-      {onSkip && (
-        <TouchableOpacity onPress={onSkip} style={styles.skipButton}>
-          <Text style={styles.skipText}>Skip</Text>
-        </TouchableOpacity>
-      )}
-      {step != null && totalSteps != null && (
-        <View style={styles.progressBarBackground}>
-          <View style={[styles.progressBarFill, {width: `${progress}%`}]} />
-        </View>
-      )}
+      <View style={styles.bottomNavigation}>
+        {onSkip && (
+          <TouchableOpacity onPress={onSkip} style={styles.skipButton}>
+            <Text style={styles.skipText}>Skip</Text>
+          </TouchableOpacity>
+        )}
+        {step != null && totalSteps != null && (
+          <View style={styles.progressBarBackground}>
+            <View style={[styles.progressBarFill, {width: `${progress}%`}]} />
+          </View>
+        )}
+      </View>
     </SafeAreaView>
   );
 };
@@ -79,12 +81,12 @@ const stylesheet = createStyleSheet(theme => ({
     backgroundColor: theme.colors.background,
   },
   headerContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'column',
+    justifyContent: 'flex-start',
     paddingHorizontal: 24,
     paddingTop: 16,
   },
+
   iconButton: {
     width: 40,
     height: 40,
@@ -114,12 +116,19 @@ const stylesheet = createStyleSheet(theme => ({
   },
   keyboardAvoid: {
     flex: 1,
+    flexDirection: 'column',
   },
   scrollContainer: {
     flexGrow: 1,
     flex: 1,
     paddingHorizontal: 24,
     paddingVertical: 16,
+  },
+  bottomNavigation: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
   title: {
     fontSize: 28,
@@ -137,5 +146,6 @@ const stylesheet = createStyleSheet(theme => ({
   },
   content: {
     flex: 1,
+    justifyContent: 'space-around',
   },
 }));

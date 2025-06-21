@@ -24,7 +24,10 @@ export const createItemsSlice: StateCreator<ItemsState> = set => ({
   // Fetch all items for the current shopping list
   fetchItems: async ({shoppingListId}) => {
     try {
-      const {data} = await client.query({query: GET_SHOPPING_LIST_ITEMS});
+      const {data} = await client.query({
+        query: GET_SHOPPING_LIST_ITEMS,
+        variables: {shoppingListId},
+      });
       set({items: data.items});
     } catch (error) {
       console.error('Error fetching items:', error);

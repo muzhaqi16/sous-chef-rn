@@ -10,20 +10,20 @@ import AuthStack from './AuthStack';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const AppNavigator = () => {
-  const {user, onBoardingCompleted} = useStore();
+  const {user, onBoardingCompleted, defaultShoppingList} = useStore();
   const isSignedIn = !!user;
   return (
     <NavigationContainer>
       <Stack.Navigator>
         {isSignedIn ? (
           <>
-            {!onBoardingCompleted && (
+            {!onBoardingCompleted && !defaultShoppingList ? (
               <Stack.Screen
                 name="OnBoarding"
                 component={CreateShoppingListScreen}
                 options={{headerShown: false}}
               />
-            )}
+            ) : null}
             <Stack.Screen
               name="Home"
               component={HomeTab}

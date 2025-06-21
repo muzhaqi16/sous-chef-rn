@@ -199,6 +199,14 @@ export default function ProfileScreen() {
         <Section title="Personal Information" rows={personalRows} />
         <Section title="Login Information" rows={loginRows} />
         <Section title="Social Accounts" rows={socialRows} />
+        {/* Log out */}
+        <TouchableOpacity
+          style={styles.logOutButton}
+          onPress={() => {
+            /* log out */
+          }}>
+          <Text style={styles.logOutText}>Log Out</Text>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -245,5 +253,21 @@ const stylesheet = createStyleSheet(theme => ({
   avatarPlaceholder: {
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  logOutButton: {
+    marginTop: 32,
+    padding: 16,
+    backgroundColor: theme.colors.primary,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    maxWidth: 300,
+    alignSelf: 'center',
+  },
+  logOutText: {
+    color: theme.colors.textPrimary,
+    fontSize: theme.font.size.xl,
+    fontWeight: '600',
   },
 }));

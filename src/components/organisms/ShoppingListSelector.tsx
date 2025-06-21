@@ -41,8 +41,8 @@ export const ShoppingListSelector = () => {
 
 const stylesheet = createStyleSheet(theme => ({
   container: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
     borderRadius: 12,
     marginLeft: theme.spacing.margin.sm,
     backgroundColor: theme.colors.primary,

@@ -5,6 +5,7 @@ import Ionicons from '@react-native-vector-icons/ionicons';
 
 import MainScreen from '../screens/MainScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import ShoppingListScreen from '../screens/ShoppingListScreen';
 import type {HomeTabParamList} from './types';
 
 const Tab = createBottomTabNavigator<HomeTabParamList>();
@@ -41,8 +42,13 @@ const HomeTab = () => {
         },
       })}>
       <Tab.Screen
-        name="ShoppingList"
+        name="Main"
         component={MainScreen}
+        options={{title: 'Main'}}
+      />
+      <Tab.Screen
+        name="ShoppingList"
+        component={ShoppingListScreen}
         options={{title: 'Shopping List'}}
       />
       <Tab.Screen
