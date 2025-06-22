@@ -8,7 +8,7 @@ import {BaseInput} from '../../components/atoms';
 import {useStore} from '../../store/useStore';
 import {CreateShoppingListNavProp} from '../../navigation/types';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
-import {CREATE_SHOPPING_LIST} from '../../api/mutations';
+import {CREATE_SHOPPING_LIST} from '../../api/graphql/mutations/shoppingList';
 import {useMutation} from '@apollo/client';
 import {yupResolver} from '@hookform/resolvers/yup';
 import * as yup from 'yup';

@@ -3,7 +3,7 @@ import React, {useEffect} from 'react';
 import {FlatList, StyleSheet, View} from 'react-native';
 import SwipeableRow from '../molecules/SwippeableRow';
 import ItemCard from '../molecules/ItemCard';
-import {GET_SHOPPING_LIST_ITEMS} from '../../api/queries';
+import {GET_SHOPPING_LIST_ITEMS} from '../../api/graphql/queries/shoppingListItems';
 import {useLazyQuery} from '@apollo/client';
 import {useStore} from '../../store/useStore';
 

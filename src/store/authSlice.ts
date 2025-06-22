@@ -1,17 +1,7 @@
 import {StateCreator} from 'zustand';
-import {client} from '../apollo/client';
-import {LOGIN_MUTATION, SIGNUP_MUTATION} from '../api/mutations';
-import {storage} from '../storage/mmkv';
-
-export type User = {
-  id: string;
-  email: string;
-  password: string;
-  role: string; // e.g., 'user', 'admin'
-  appleConnected?: boolean;
-  discordConnected?: boolean;
-  facebookVerified?: boolean;
-};
+import {loginApi, signupApi} from '../api/services/authService';
+import {RootState} from './useStore';
+import {User} from '../api/graphql/generated';
 
 export interface AuthState {
   user: User | null;
@@ -26,64 +16,45 @@ export interface AuthState {
   logout: () => void;
 }
 
-export const createAuthSlice: StateCreator<AuthState> = set => ({
+const initialAuthState = {
   user: null,
   accessToken: null,
   refreshToken: null,
+};
+
+export const createAuthSlice: StateCreator<RootState, [], [], AuthState> = (
+  set,
+  get,
+) => ({
+  ...initialAuthState,
 
   login: async (email, password) => {
     try {
-      const {data} = await client.mutate({
-        mutation: LOGIN_MUTATION,
-        variables: {email, password},
-      });
-      // Expecting data.login to return { token, refreshToken, user }
-      const {accessToken, refreshToken, user} = data.login;
-      set({
-        user,
-        accessToken,
-        refreshToken,
-      });
-      storage.set('accessToken', accessToken);
-      storage.set('refreshToken', refreshToken);
+      const {accessToken, refreshToken, user} = await loginApi(email, password);
+      set({user, accessToken, refreshToken});
       return null;
-    } catch (error) {
-      console.error('Login failed:', error);
-      if (error instanceof Error) {
-        return error.message;
-      }
-      return 'An unknown error occurred';
+    } catch (err) {
+      console.error(err);
+      return err instanceof Error ? err.message : 'Unknown error';
     }
   },
 
   signup: async (username, email, password) => {
     try {
-      const {data} = await client.mutate({
-        mutation: SIGNUP_MUTATION,
-        variables: {username, email, password},
-      });
-      // Expecting data.signup to return { token, refreshToken, user }
-      const {accessToken, refreshToken, user} = data.signup;
-      set({
-        user,
-        accessToken: accessToken,
-        refreshToken: refreshToken,
-      });
-      storage.set('accessToken', accessToken);
-      storage.set('refreshToken', refreshToken);
+      const {accessToken, refreshToken, user} = await signupApi(
+        username,
+        email,
+        password,
+      );
+      set({user, accessToken, refreshToken});
       return null;
-    } catch (error) {
-      console.error('Signup failed:', error);
-      if (error instanceof Error) {
-        return error.message;
-      }
-      return 'An unknown error occurred';
+    } catch (err) {
+      console.error(err);
+      return err instanceof Error ? err.message : 'Unknown error';
     }
   },
 
   logout: () => {
-    set({user: null, accessToken: null, refreshToken: null});
-    storage.delete('authToken');
-    storage.delete('refreshToken');
+    get().reset();
   },
 });

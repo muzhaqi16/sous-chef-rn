@@ -3,7 +3,7 @@ import {Text, StyleSheet} from 'react-native';
 import {useMutation} from '@apollo/client';
 import BottomSheet, {BottomSheetRef} from '../pages/BottomSheet';
 import Button from '../atoms/Button';
-import {ADD_ITEM_MUTATION} from '../../api/mutations';
+import {ADD_ITEM_TO_SHOPPING_LIST_MUTATION} from '../../api/graphql/mutations/shoppingListItem';
 import Autocomplete from '../molecules/AutoComplete';
 import {useStore} from '../../store/useStore';
 import {BaseInput} from '../atoms';
@@ -30,14 +30,17 @@ const AddItemBottomSheet: React.FC<BottomSheetProps> = ({
   const shoppingListId = useStore(state => state.defaultShoppingList?.id);
 
   // Setup your GraphQL mutation using Apollo's useMutation hook.
-  const [addItem, {loading, error}] = useMutation(ADD_ITEM_MUTATION, {
-    onCompleted: () => {
-      bottomSheetRef.current?.close();
-      setQuery('');
-      setSelectedItem(null);
+  const [addItem, {loading, error}] = useMutation(
+    ADD_ITEM_TO_SHOPPING_LIST_MUTATION,
+    {
+      onCompleted: () => {
+        bottomSheetRef.current?.close();
+        setQuery('');
+        setSelectedItem(null);
+      },
+      onError: err => console.error(err),
     },
-    onError: err => console.error(err),
-  });
+  );
 
   // Open the bottom sheet when the component mounts or when isVisible changes.
   useEffect(() => {

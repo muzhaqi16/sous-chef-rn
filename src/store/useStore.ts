@@ -8,7 +8,7 @@ import {createItemsSlice, ItemsState} from './itemsSlice';
 import {zustandStorage} from '../storage/mmkv';
 import {logger} from './logger';
 
-type State = ShoppingListState &
+export type RootState = ShoppingListState &
   AuthState &
   ProfileState &
   PreferencesState &
@@ -16,10 +16,10 @@ type State = ShoppingListState &
     // our hydration slice
     isHydrated: boolean;
     setHydrated: (flag: boolean) => void;
+    reset: () => void;
   };
-type PersistedState = Omit<State, 'isHydrated' | 'setHydrated'>;
 
-export const useStore = create<State>()(
+export const useStore = create<RootState>()(
   persist(
     logger((...a) => {
       // Initial state
@@ -33,6 +33,26 @@ export const useStore = create<State>()(
         ...createItemsSlice(...a),
         isHydrated: false,
         setHydrated: (flag: boolean) => set({isHydrated: flag}),
+        reset: () => {
+          zustandStorage.removeItem('sous-chef-storage'); // clear the storage
+          // Reset the state to initial values
+          set({
+            accessToken: null,
+            refreshToken: null,
+            user: null,
+            defaultShoppingList: null,
+            shoppingLists: [],
+            items: [],
+            profileId: null,
+            firstName: null,
+            lastName: null,
+            avatarUrl: null,
+            phone: null,
+            dateOfBirth: null,
+            theme: 'light',
+            onBoardingCompleted: false,
+          });
+        },
       };
     }),
     {

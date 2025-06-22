@@ -1,6 +1,6 @@
 import React, {useMemo, useEffect} from 'react';
 import {useLazyQuery} from '@apollo/client';
-import {GET_ITEMS_FOR_AUTOCOMPLETE} from '../../api/queries';
+import {GET_ITEMS_FOR_AUTOCOMPLETE} from '../../api/graphql/queries/items';
 import {FlatList, Text, TouchableOpacity, StyleSheet} from 'react-native';
 
 interface Item {

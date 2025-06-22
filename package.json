@@ -10,6 +10,8 @@
     "android:clean": "cd android && ./gradlew clean",
     "android:build": "npx react-native build-android --mode=release",
     "adb:gql": "adb reverse tcp:4000 tcp:4000",
+    "codegen": "graphql-codegen --config codegen.ts",
+    "codegen:watch": "graphql-codegen --watch --config codegen.ts",
     "test": "jest"
   },
   "dependencies": {
@@ -44,6 +46,10 @@
     "@babel/core": "^7.27.1",
     "@babel/preset-env": "^7.27.2",
     "@babel/runtime": "^7.27.1",
+    "@graphql-codegen/cli": "^5.0.7",
+    "@graphql-codegen/typescript": "^4.1.6",
+    "@graphql-codegen/typescript-operations": "^4.6.1",
+    "@graphql-codegen/typescript-react-apollo": "^4.3.3",
     "@react-native-community/cli": "18.0.0",
     "@react-native-community/cli-platform-android": "18.0.0",
     "@react-native-community/cli-platform-ios": "18.0.0",

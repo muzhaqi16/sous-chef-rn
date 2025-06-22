@@ -17,6 +17,7 @@ export default function ProfileScreen() {
   const {styles, theme} = useStyles(stylesheet);
   // Select each piece of state separately to avoid signature issues
   const user = useStore(s => s.user);
+  const logout = useStore(s => s.logout);
   const firstName = useStore(s => s.firstName);
   const lastName = useStore(s => s.lastName);
   const avatarUrl = useStore(s => s.avatarUrl);
@@ -141,8 +142,7 @@ export default function ProfileScreen() {
       },
     },
   ];
-  console.log('ProfileScreen rendered with user:', user);
-  console.log('Avatar URL:', avatarUrl);
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -203,7 +203,10 @@ export default function ProfileScreen() {
         <TouchableOpacity
           style={styles.logOutButton}
           onPress={() => {
-            /* log out */
+            logout();
+            // Optionally navigate to login screen or show a confirmation
+            // e.g., navigation.navigate('Login');
+            console.log('User logged out');
           }}>
           <Text style={styles.logOutText}>Log Out</Text>
         </TouchableOpacity>

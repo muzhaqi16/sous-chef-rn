@@ -1,4 +1,4 @@
-import {create, StateCreator, StoreMutatorIdentifier} from 'zustand';
+import {StateCreator, StoreMutatorIdentifier} from 'zustand';
 
 type Logger = <
   T,

@@ -1,64 +1,89 @@
 import {StateCreator} from 'zustand';
-import {client} from '../apollo/client';
-import {GET_SHOPPING_LIST_ITEMS} from '../api/queries';
-import {ADD_ITEM, REMOVE_ITEM} from '../api/mutations';
-
-export interface Item {
-  id: string;
-  name: string;
-  quantity: number;
-  price: number;
-}
+import {
+  fetchItemsApi,
+  addItemApi,
+  removeItemApi,
+} from '../api/services/shoppingListItemService';
+import {ShoppingListItem} from '../graphql/generated';
 
 export interface ItemsState {
-  items: Item[];
+  items: ShoppingListItem[];
+
+  /**
+   * Fetch items for a shopping list.
+   * @param params.shoppingListId
+   */
   fetchItems: ({shoppingListId}: {shoppingListId: string}) => Promise<void>;
-  addItem: (name: string, quantity: number) => Promise<void>;
+
+  /**
+   * Add a new item.
+   * @param name
+   * @param quantity
+   * @param price
+   * @param shoppingListId optional ID if needed
+   */
+  addItem: (
+    name: string,
+    quantity: number,
+    price: number,
+    shoppingListId?: string,
+  ) => Promise<void>;
+
+  /**
+   * Remove an item by ID.
+   * @param id
+   */
   removeItem: (id: string) => Promise<void>;
-  setItems: (items: Item[]) => void;
+
+  /**
+   * Directly set the items array (e.g., for initialization or reset).
+   */
+  setItems: (items: ShoppingListItem[]) => void;
 }
+
+// Optionally define an initial state object:
+export const initialItemsState: Pick<ItemsState, 'items'> = {
+  items: [],
+};
 
 export const createItemsSlice: StateCreator<ItemsState> = set => ({
   items: [],
 
-  // Fetch all items for the current shopping list
   fetchItems: async ({shoppingListId}) => {
     try {
-      const {data} = await client.query({
-        query: GET_SHOPPING_LIST_ITEMS,
-        variables: {shoppingListId},
-      });
-      set({items: data.items});
+      const itemsFromApi: ShoppingListItem[] =
+        await fetchItemsApi(shoppingListId);
+      set({items: itemsFromApi});
     } catch (error) {
       console.error('Error fetching items:', error);
+      // Optionally: set an error state if you add one
     }
   },
 
-  // Add a new item to the list
-  addItem: async (name, quantity) => {
+  addItem: async (name, quantity, price, shoppingListId) => {
     try {
-      const {data} = await client.mutate({
-        mutation: ADD_ITEM,
-        variables: {name, quantity},
-      });
-      set(state => ({items: [...state.items, data.addItem]}));
+      const newItem: ShoppingListItem = await addItemApi(
+        name,
+        quantity,
+        price,
+        shoppingListId,
+      );
+      set(state => ({items: [...state.items, newItem]}));
     } catch (error) {
       console.error('Error adding item:', error);
     }
   },
 
-  // Remove an item from the list
   removeItem: async id => {
     try {
-      await client.mutate({
-        mutation: REMOVE_ITEM,
-        variables: {id},
-      });
+      await removeItemApi(id);
       set(state => ({items: state.items.filter(i => i.id !== id)}));
     } catch (error) {
       console.error('Error removing item:', error);
     }
   },
 
-  setItems: (items: Item[]) => set({items}),
+  setItems: (items: ShoppingListItem[]) => {
+    set({items});
+  },
 });
