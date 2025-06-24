@@ -9,20 +9,26 @@ export const LOGIN_MUTATION = gql`
         email
         id
         role
+        profile {
+          firstName
+        }
       }
     }
   }
 `;
 
 export const SIGNUP_MUTATION = gql`
-  mutation Register($email: String!, $password: String!) {
-    register(email: $email, password: $password) {
+  mutation Register($email: String!, $password: String!, $name: String) {
+    register(email: $email, password: $password, name: $name) {
       accessToken
       refreshToken
       user {
-        email
         id
+        email
         role
+        profile {
+          firstName
+        }
       }
     }
   }

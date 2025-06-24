@@ -1,26 +1,35 @@
-import React from 'react';
+import React, {ReactNode} from 'react';
 import {View, Text} from 'react-native';
 import {Row, RowProps} from './Row';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
 
 export interface SectionProps {
   title: string;
-  rows: RowProps[];
+  rows?: RowProps[];
+  children?: ReactNode;
 }
 
-export const Section: React.FC<SectionProps> = ({title, rows}) => {
+export const Section: React.FC<SectionProps> = ({
+  title,
+  rows = [],
+  children,
+}) => {
   const {styles} = useStyles(stylesheet);
 
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>{title}</Text>
       <View style={styles.sectionBody}>
-        {rows.map((row, index) => {
-          const key = `${title}-${row.label}-${index}`;
-          const isFirst = index === 0;
-          const isLast = index === rows.length - 1;
-          return <Row key={key} {...row} isFirst={isFirst} isLast={isLast} />;
-        })}
+        {children
+          ? children
+          : rows.map((row, index) => {
+              const key = `${title}-${row.label}-${index}`;
+              const isFirst = index === 0;
+              const isLast = index === rows.length - 1;
+              return (
+                <Row key={key} {...row} isFirst={isFirst} isLast={isLast} />
+              );
+            })}
       </View>
     </View>
   );

@@ -1,4 +1,3 @@
-// screens/Auth/LoginScreen.tsx
 import React from 'react';
 import {useForm} from 'react-hook-form';
 import {yupResolver} from '@hookform/resolvers/yup';
@@ -8,6 +7,7 @@ import {AuthFormTemplate} from '../../components/templates/AuthFormTemplate';
 import {EmailInput, PasswordInput, BaseInput} from '../../components/atoms';
 import {getSignUpValidationSchema} from '../../utils/validation';
 import {AuthWrapper} from '../../components/templates/AuthWrapper';
+import {signupApi} from '../../api/services/authService';
 
 type SignUpValues = {
   name: string;
@@ -31,8 +31,21 @@ export const SignUpScreen = () => {
     },
   });
 
-  const onSubmit = (data: SignUpValues) => {
-    // login…
+  const onSubmit = async (data: SignUpValues) => {
+    // Here you would typically call your signup API
+    // For example:
+    await signupApi(data.name, data.email, data.password)
+      .then(response => {
+        // Handle successful signup
+        console.log('Signup successful:', response);
+      })
+      .catch(error => {
+        // Handle error
+        console.error('Signup error:', error);
+      });
+
+    console.log('Form submitted with data:', data);
+    navigation.navigate('Login'); // Navigate to login after successful signup
   };
 
   return (
@@ -44,7 +57,7 @@ export const SignUpScreen = () => {
         fields={[
           {
             name: 'name',
-            label: 'Full Name',
+            label: 'Name',
             placeholder: 'e.g John Doe',
             component: BaseInput,
           },

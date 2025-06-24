@@ -1,16 +1,28 @@
-import React from 'react';
+import React, {useEffect} from 'react';
 import {SafeAreaView, StatusBar, useColorScheme, Platform} from 'react-native';
 import {ApolloProvider} from '@apollo/client';
 import {useStore} from './src/store/useStore';
 import {client} from './src/apollo/client';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {
+  useInitialTheme,
+  createStyleSheet,
+  UnistylesRuntime,
+  useStyles,
+} from 'react-native-unistyles';
 import AppNavigator from './src/navigation/AppNavigator';
 import SplashScreen from './src/screens/SplashScreen';
 
 const App = () => {
-  const isDarkMode = useColorScheme() === 'dark';
+  const systemIsDark = useColorScheme() === 'dark';
+  const {darkMode} = useStore(s => s.preferences);
+  // prefer stored preference, otherwise use system
+  const effectiveDark = darkMode !== undefined ? darkMode : systemIsDark;
+  // must come before useStyles!
+  useInitialTheme(effectiveDark ? 'dark' : 'light');
   const {styles, theme} = useStyles(stylesheet);
+  // Use the initial theme based on the effective dark mode setting
   const {colors} = theme;
+
   // Check if the store is hydrated (i.e., if the initial state has been loaded)
   // This is important to ensure we don't render the app before the store is ready
   // and we have the necessary data (like user authentication status).
@@ -21,11 +33,16 @@ const App = () => {
     return <SplashScreen />;
   }
 
+  // Subscribe to theme changes
+  useEffect(() => {
+    UnistylesRuntime.setTheme(effectiveDark ? 'dark' : 'light');
+  }, [effectiveDark]);
+
   return (
     <ApolloProvider client={client}>
       <SafeAreaView style={styles.container}>
         <StatusBar
-          barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+          barStyle={effectiveDark ? 'light-content' : 'dark-content'}
           backgroundColor={colors.background}
         />
         <AppNavigator />

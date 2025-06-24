@@ -44,6 +44,7 @@ export type ThemeColors = {
   chipSelectedBackground: string;
   chipText: string;
   chipSelectedText: string;
+  divider?: string;
 };
 const common = {
   white: '#FFFFFF',
@@ -107,6 +108,9 @@ export const lightColors: ThemeColors = {
   chipSelectedBackground: '#FF8A4C',
   chipText: common.grey900,
   chipSelectedText: common.white,
+
+  // divider
+  divider: common.grey300, // Optional divider color
 };
 
 export const darkColors: ThemeColors = {
@@ -156,4 +160,7 @@ export const darkColors: ThemeColors = {
   chipSelectedBackground: '#FF8A4C',
   chipText: common.grey900,
   chipSelectedText: common.white,
+
+  // divider
+  divider: common.grey700, // Optional divider color
 };

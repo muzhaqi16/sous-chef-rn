@@ -10,10 +10,17 @@ const config: CodegenConfig = {
   //   schema: './schema.graphql',
 
   // Include both inline gql in TS/TSX and any standalone .graphql files:
-  documents: ['src/**/*.{ts,tsx,graphql,gql}'],
+  documents: [
+    // include all your real .ts/.tsx/.graphql/.gql files…
+    'src/**/*.{ts,tsx,graphql,gql}',
+    // …but explicitly ignore the generated file
+    '!src/api/graphql/generated.ts',
+  ],
+  // ignore the generates file
+  ignoreNoDocuments: true,
 
   generates: {
-    'src/graphql/generated.ts': {
+    'src/api/graphql/generated.ts': {
       plugins: [
         'typescript',
         'typescript-operations',

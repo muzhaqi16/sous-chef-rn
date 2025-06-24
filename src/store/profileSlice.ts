@@ -4,15 +4,19 @@ import {
   fetchUserProfileApi,
   updateUserProfileApi,
 } from '../api/services/profileService';
-import {UserProfile} from '../graphql/generated';
+import {UserProfile} from '../api/graphql/generated';
+
+const formatDate = (date: string | Date): string => {
+  if (typeof date === 'string') {
+    return new Date(date).toISOString().split('T')[0];
+  } else if (date instanceof Date) {
+    return date.toISOString().split('T')[0];
+  }
+  return '';
+};
 
 export interface ProfileState {
-  profileId: string | null;
-  firstName: string | null;
-  lastName: string | null;
-  avatarUrl: string | null;
-  phone: string | null;
-  dateOfBirth: string | null; // e.g. 'YYYY-MM-DD' or null
+  userProfile: UserProfile | null;
 
   /** Update profile fields; returns null on success or an error message */
   updateProfile: (
@@ -30,16 +34,8 @@ export interface ProfileState {
 }
 
 // Initial empty state
-export const initialProfileState: Pick<
-  ProfileState,
-  'profileId' | 'firstName' | 'lastName' | 'avatarUrl' | 'phone' | 'dateOfBirth'
-> = {
-  profileId: null,
-  firstName: null,
-  lastName: null,
-  avatarUrl: null,
-  phone: null,
-  dateOfBirth: null,
+export const initialProfileState: Pick<ProfileState, 'userProfile'> = {
+  userProfile: null,
 };
 
 export const createProfileSlice: StateCreator<ProfileState> = set => ({
@@ -49,16 +45,11 @@ export const createProfileSlice: StateCreator<ProfileState> = set => ({
     try {
       const updated: UserProfile = await updateUserProfileApi(data);
       // Optionally format dateOfBirth to 'YYYY-MM-DD' if desired:
-      const dobFormatted = updated.dateOfBirth
-        ? new Date(updated.dateOfBirth).toISOString().split('T')[0]
-        : null;
       set({
-        profileId: updated.id,
-        firstName: updated.firstName,
-        lastName: updated.lastName,
-        avatarUrl: updated.avatarUrl,
-        phone: updated.phone,
-        dateOfBirth: dobFormatted,
+        userProfile: {
+          ...updated,
+          dateOfBirth: formatDate(updated.dateOfBirth),
+        },
       });
       return null;
     } catch (error) {
@@ -73,16 +64,11 @@ export const createProfileSlice: StateCreator<ProfileState> = set => ({
   getUserProfile: async () => {
     try {
       const profile: UserProfile = await fetchUserProfileApi();
-      const dobFormatted = profile.dateOfBirth
-        ? new Date(profile.dateOfBirth).toISOString().split('T')[0]
-        : null;
       set({
-        profileId: profile.id,
-        firstName: profile.firstName,
-        lastName: profile.lastName,
-        avatarUrl: profile.avatarUrl,
-        phone: profile.phone,
-        dateOfBirth: dobFormatted,
+        userProfile: {
+          ...profile,
+          dateOfBirth: formatDate(profile.dateOfBirth),
+        },
       });
     } catch (error) {
       console.error('Failed to fetch user profile:', error);

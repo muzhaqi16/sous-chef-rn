@@ -1,276 +1,163 @@
-import React, {useEffect} from 'react';
-import {
-  SafeAreaView,
-  ScrollView,
-  TouchableOpacity,
-  View,
-  Text,
-  Image,
-} from 'react-native';
-import FeatherIcon from '@react-native-vector-icons/feather';
-import MaterialCommunityIcon from '@react-native-vector-icons/material-icons';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import React, {useEffect, useState} from 'react';
+import {SafeAreaView, ScrollView} from 'react-native';
 import {useStore} from '../store/useStore';
-import {Section, RowProps} from '../components/organisms/ProfileInfo';
+import {ProfileHeader} from '../components/organisms/ProfileHeader';
+import {SettingsSection} from '../components/organisms/SettingsSection';
+import {SettingItem} from '../components/molecules/SettingRow';
+import {ModalPicker} from '../components/molecules/ModalPicker';
+import {useStyles, createStyleSheet} from 'react-native-unistyles';
 
 export default function ProfileScreen() {
-  const {styles, theme} = useStyles(stylesheet);
-  // Select each piece of state separately to avoid signature issues
+  const {styles} = useStyles(stylesheet);
   const user = useStore(s => s.user);
   const logout = useStore(s => s.logout);
-  const firstName = useStore(s => s.firstName);
-  const lastName = useStore(s => s.lastName);
-  const avatarUrl = useStore(s => s.avatarUrl);
-  const phone = useStore(s => s.phone);
-  const dateOfBirth = useStore(s => s.dateOfBirth);
+  const profile = useStore(s => s.userProfile);
+  const preferences = useStore(s => s.preferences);
+  const updatePreferences = useStore(s => s.updatePreferences);
   const updateProfile = useStore(s => s.updateProfile);
-  const getUserProfile = useStore(s => s.getUserProfile);
+  const fetchProf = useStore(s => s.getUserProfile);
+
+  const [langPickerVisible, setLangPickerVisible] = useState(false);
+
+  const languageOptions = [
+    {label: 'English', value: 'en'},
+    {label: 'Spanish', value: 'es'},
+    {label: 'French', value: 'fr'},
+    // …more
+  ];
 
   useEffect(() => {
-    getUserProfile(); // Fetch user profile on mount
-  }, [getUserProfile]);
-  // Fetch user profile on mount
+    fetchProf();
+  }, [fetchProf]);
 
-  // Helper to build save handlers; field is now any for flexibility
-  const makeSaveHandler = (field: any) => async (val: string) => {
-    const err = await updateProfile({[field]: val});
-    if (err) console.warn(`Failed to update ${field}:`, err);
-  };
-  const personalRows: RowProps[] = [
+  const personalItems: SettingItem[] = [
     {
+      key: 'firstName',
       label: 'First Name',
-      value: firstName || '',
-      onSave: makeSaveHandler('firstName'),
-      leadingIcon: (
-        <FeatherIcon name="user" size={20} color={theme.colors.textPrimary} />
-      ),
+      type: 'text',
+      value: profile?.firstName || '',
+      onSave: val => updateProfile({firstName: val}),
     },
     {
+      key: 'lastName',
       label: 'Last Name',
-      value: lastName || '',
-      onSave: makeSaveHandler('lastName'),
-      leadingIcon: (
-        <FeatherIcon name="edit" size={20} color={theme.colors.textPrimary} />
-      ),
+      type: 'text',
+      value: profile?.lastName || '',
+      onSave: val => updateProfile({lastName: val}),
     },
     {
+      key: 'phone',
       label: 'Phone',
-      value: phone || '',
-      onSave: makeSaveHandler('phone'),
-      leadingIcon: (
-        <FeatherIcon name="phone" size={20} color={theme.colors.textPrimary} />
-      ),
+      type: 'text',
+      value: profile?.phone || '',
+      onSave: val => updateProfile({phone: val}),
     },
     {
+      key: 'birthday',
       label: 'Birthday',
-      value: dateOfBirth || '',
-      onSave: makeSaveHandler('dateOfBirth'),
-      leadingIcon: (
-        <FeatherIcon
-          name="calendar"
-          size={20}
-          color={theme.colors.textPrimary}
-        />
-      ),
+      type: 'text',
+      value: profile?.dateOfBirth || '',
+      onSave: val => updateProfile({dateOfBirth: val}),
     },
   ];
 
-  const socialRows: RowProps[] = [
+  const themeItems: SettingItem[] = [
     {
-      label: 'Apple',
-      leadingIcon: (
-        <MaterialCommunityIcon
-          name="apple"
-          size={20}
-          color={theme.colors.textPrimary}
-        />
-      ),
-      value: user?.appleConnected ? 'Connected' : 'Connect',
-      badgeColor: user?.appleConnected
-        ? theme.colors.primary
-        : theme.colors.textSecondary,
-      onPress: () => {
-        /* toggle Apple */
-      },
+      key: 'darkMode',
+      label: 'Dark Mode',
+      type: 'switch',
+      value: preferences.darkMode,
+      onPress: () => updatePreferences({darkMode: !preferences.darkMode}),
     },
     {
-      label: 'Discord',
-      leadingIcon: (
-        <MaterialCommunityIcon
-          name="discord"
-          size={20}
-          color={theme.colors.textPrimary}
-        />
-      ),
-      value: user?.discordConnected ? 'Connected' : 'Connect',
-      badgeColor: user?.discordConnected
-        ? theme.colors.primary
-        : theme.colors.textSecondary,
-      onPress: () => {
-        /* toggle Discord */
-      },
-    },
-    {
-      label: 'Facebook',
-      leadingIcon: (
-        <MaterialCommunityIcon
-          name="facebook"
-          size={20}
-          color={theme.colors.textPrimary}
-        />
-      ),
-      value: user?.facebookVerified ? 'Verified' : 'Verify',
-      badgeColor: user?.facebookVerified
-        ? theme.colors.success
-        : theme.colors.error,
-      onPress: () => {
-        /* verify Facebook */
-      },
+      key: 'language',
+      label: 'Language',
+      type: 'modal',
+      value: preferences.language,
+      options: languageOptions,
+      onSave: val => updatePreferences({language: val}),
     },
   ];
 
-  const loginRows: RowProps[] = [
+  const notificationItems: SettingItem[] = [
     {
-      label: 'Email',
-      value: user?.email || '',
-      onSave: makeSaveHandler('email'),
+      key: 'emailNotif',
+      label: 'Email Notifications',
+      type: 'switch',
+      value: preferences.emailNotifications,
+      onPress: () =>
+        updatePreferences({
+          emailNotifications: !preferences.emailNotifications,
+        }),
     },
     {
-      label: 'Password',
-      onPress: () => {
-        /* navigate to change password */
-      },
+      key: 'pushNotif',
+      label: 'Push Notifications',
+      type: 'switch',
+      value: preferences.pushNotifications,
+      onPress: () =>
+        updatePreferences({pushNotifications: !preferences.pushNotifications}),
     },
   ];
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.headerButton}
-          onPress={() => {
-            /* back */
-          }}>
-          <FeatherIcon
-            name="arrow-left"
-            size={24}
-            color={theme.colors.textPrimary}
-          />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Account</Text>
-        <TouchableOpacity
-          style={styles.headerButton}
-          onPress={() => {
-            /* more */
-          }}>
-          <FeatherIcon
-            name="more-vertical"
-            size={24}
-            color={theme.colors.textPrimary}
-          />
-        </TouchableOpacity>
-      </View>
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.avatarContainer}>
-          {avatarUrl ? (
-            <Image source={{uri: avatarUrl}} style={styles.avatar} />
-          ) : (
-            <View style={[styles.avatar, styles.avatarPlaceholder]}>
-              <FeatherIcon
-                name="user"
-                size={32}
-                color={theme.colors.textSecondary}
-              />
-            </View>
-          )}
-          <TouchableOpacity
-            style={styles.avatarIcon}
-            onPress={() => {
-              /* change avatar */
-            }}>
-            <FeatherIcon
-              name="camera"
-              size={16}
-              color={theme.colors.onPrimary}
-            />
-          </TouchableOpacity>
-        </View>
+      <ProfileHeader
+        avatarUrl={profile?.avatarUrl ?? undefined}
+        name={`${profile?.firstName || ''} ${profile?.lastName || ''}`}
+        subtitle={user?.email || ''}
+        onBack={() => {}}
+        onMore={() => {}}
+        onAvatarPress={() => {}}
+      />
 
-        <Section title="Personal Information" rows={personalRows} />
-        <Section title="Login Information" rows={loginRows} />
-        <Section title="Social Accounts" rows={socialRows} />
-        {/* Log out */}
-        <TouchableOpacity
-          style={styles.logOutButton}
-          onPress={() => {
-            logout();
-            // Optionally navigate to login screen or show a confirmation
-            // e.g., navigation.navigate('Login');
-            console.log('User logged out');
-          }}>
-          <Text style={styles.logOutText}>Log Out</Text>
-        </TouchableOpacity>
+      <ScrollView contentContainerStyle={{padding: 24}}>
+        <SettingsSection title="Personal Information" items={personalItems} />
+        <SettingsSection title="Theme & Language" items={themeItems} />
+        <SettingsSection title="Notifications" items={notificationItems} />
+
+        {/* Log out as its own section or button */}
+        <SettingsSection
+          title=""
+          items={[
+            {
+              key: 'logout',
+              label: 'Log Out',
+              type: 'text',
+              onPress: () => logout(),
+            },
+          ]}
+        />
       </ScrollView>
+
+      {/* Global picker (if you prefer a separate ModalPicker) */}
+      <ModalPicker
+        label="Select Language"
+        visible={langPickerVisible}
+        options={languageOptions}
+        selected={preferences.language || ''}
+        onSelect={val => {
+          updatePreferences({language: val});
+          setLangPickerVisible(false);
+        }}
+        onCancel={() => setLangPickerVisible(false)}
+      />
     </SafeAreaView>
   );
 }
-
 const stylesheet = createStyleSheet(theme => ({
-  container: {flex: 1, backgroundColor: theme.colors.background},
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 24,
     paddingVertical: 16,
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    flex: 1,
-    textAlign: 'center',
-    fontSize: 18,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
-  },
-  content: {paddingHorizontal: 24, paddingBottom: 32},
-  avatarContainer: {alignItems: 'center', marginVertical: 24},
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
     backgroundColor: theme.colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
   },
-  avatarIcon: {
-    position: 'absolute',
-    right: 0,
-    bottom: 0,
-    backgroundColor: theme.colors.primary,
-    borderRadius: 16,
-    padding: 4,
-  },
-  avatarPlaceholder: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  logOutButton: {
-    marginTop: 32,
-    padding: 16,
-    backgroundColor: theme.colors.primary,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
-    maxWidth: 300,
-    alignSelf: 'center',
-  },
-  logOutText: {
-    color: theme.colors.textPrimary,
-    fontSize: theme.font.size.xl,
-    fontWeight: '600',
+  scrollViewContent: {
+    padding: 24,
   },
 }));

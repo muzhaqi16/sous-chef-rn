@@ -43,12 +43,7 @@ export const useStore = create<RootState>()(
             defaultShoppingList: null,
             shoppingLists: [],
             items: [],
-            profileId: null,
-            firstName: null,
-            lastName: null,
-            avatarUrl: null,
-            phone: null,
-            dateOfBirth: null,
+            userProfile: null,
             theme: 'light',
             onBoardingCompleted: false,
           });

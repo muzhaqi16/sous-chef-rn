@@ -896,8 +896,10 @@ export type User = {
   __typename?: 'User';
   email: Scalars['String']['output'];
   id: Scalars['ID']['output'];
+  moderation?: Maybe<UserModeration>;
   notifications?: Maybe<Array<Notification>>;
   pantryItems?: Maybe<Array<PantryItem>>;
+  profile?: Maybe<UserProfile>;
   purchases?: Maybe<Array<Purchase>>;
   role: Role;
   shoppingLists?: Maybe<Array<ShoppingList>>;
@@ -959,15 +961,16 @@ export type LoginMutationVariables = Exact<{
 }>;
 
 
-export type LoginMutation = { __typename?: 'Mutation', login: { __typename?: 'AuthPayload', accessToken: string, refreshToken: string, user: { __typename?: 'User', email: string, id: string, role: Role } } };
+export type LoginMutation = { __typename?: 'Mutation', login: { __typename?: 'AuthPayload', accessToken: string, refreshToken: string, user: { __typename?: 'User', email: string, id: string, role: Role, profile?: { __typename?: 'UserProfile', firstName?: string | null } | null } } };
 
 export type RegisterMutationVariables = Exact<{
   email: Scalars['String']['input'];
   password: Scalars['String']['input'];
+  name?: InputMaybe<Scalars['String']['input']>;
 }>;
 
 
-export type RegisterMutation = { __typename?: 'Mutation', register: { __typename?: 'AuthPayload', accessToken: string, refreshToken: string, user: { __typename?: 'User', email: string, id: string, role: Role } } };
+export type RegisterMutation = { __typename?: 'Mutation', register: { __typename?: 'AuthPayload', accessToken: string, refreshToken: string, user: { __typename?: 'User', id: string, email: string, role: Role, profile?: { __typename?: 'UserProfile', firstName?: string | null } | null } } };
 
 export type ForgotPasswordMutationVariables = Exact<{
   email: Scalars['String']['input'];
@@ -1040,6 +1043,11 @@ export type UserProfileQueryVariables = Exact<{ [key: string]: never; }>;
 
 export type UserProfileQuery = { __typename?: 'Query', userProfile?: { __typename?: 'UserProfile', id: string, userId: string, firstName?: string | null, lastName?: string | null, avatarUrl?: string | null, phone?: string | null, dateOfBirth?: any | null, createdAt: any, updatedAt: any } | null };
 
+export type ShoppingListsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type ShoppingListsQuery = { __typename?: 'Query', shoppingLists: Array<{ __typename?: 'ShoppingList', id: string, name: string, isDefault: boolean, tags?: Array<string> | null, createdAt: any, updatedAt: any, owner: { __typename?: 'User', email: string, id: string } }> };
+
 export type ShoppingListItemsQueryVariables = Exact<{
   shoppingListId: Scalars['ID']['input'];
 }>;
@@ -1057,6 +1065,9 @@ export const LoginDocument = gql`
       email
       id
       role
+      profile {
+        firstName
+      }
     }
   }
 }
@@ -1089,14 +1100,17 @@ export type LoginMutationHookResult = ReturnType<typeof useLoginMutation>;
 export type LoginMutationResult = Apollo.MutationResult<LoginMutation>;
 export type LoginMutationOptions = Apollo.BaseMutationOptions<LoginMutation, LoginMutationVariables>;
 export const RegisterDocument = gql`
-    mutation Register($email: String!, $password: String!) {
-  register(email: $email, password: $password) {
+    mutation Register($email: String!, $password: String!, $name: String) {
+  register(email: $email, password: $password, name: $name) {
     accessToken
     refreshToken
     user {
-      email
       id
+      email
       role
+      profile {
+        firstName
+      }
     }
   }
 }
@@ -1118,6 +1132,7 @@ export type RegisterMutationFn = Apollo.MutationFunction<RegisterMutation, Regis
  *   variables: {
  *      email: // value for 'email'
  *      password: // value for 'password'
+ *      name: // value for 'name'
  *   },
  * });
  */
@@ -1541,6 +1556,54 @@ export type UserProfileQueryHookResult = ReturnType<typeof useUserProfileQuery>;
 export type UserProfileLazyQueryHookResult = ReturnType<typeof useUserProfileLazyQuery>;
 export type UserProfileSuspenseQueryHookResult = ReturnType<typeof useUserProfileSuspenseQuery>;
 export type UserProfileQueryResult = Apollo.QueryResult<UserProfileQuery, UserProfileQueryVariables>;
+export const ShoppingListsDocument = gql`
+    query ShoppingLists {
+  shoppingLists {
+    id
+    name
+    owner {
+      email
+      id
+    }
+    isDefault
+    tags
+    createdAt
+    updatedAt
+  }
+}
+    `;
+
+/**
+ * __useShoppingListsQuery__
+ *
+ * To run a query within a React component, call `useShoppingListsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useShoppingListsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useShoppingListsQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useShoppingListsQuery(baseOptions?: Apollo.QueryHookOptions<ShoppingListsQuery, ShoppingListsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ShoppingListsQuery, ShoppingListsQueryVariables>(ShoppingListsDocument, options);
+      }
+export function useShoppingListsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ShoppingListsQuery, ShoppingListsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ShoppingListsQuery, ShoppingListsQueryVariables>(ShoppingListsDocument, options);
+        }
+export function useShoppingListsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<ShoppingListsQuery, ShoppingListsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<ShoppingListsQuery, ShoppingListsQueryVariables>(ShoppingListsDocument, options);
+        }
+export type ShoppingListsQueryHookResult = ReturnType<typeof useShoppingListsQuery>;
+export type ShoppingListsLazyQueryHookResult = ReturnType<typeof useShoppingListsLazyQuery>;
+export type ShoppingListsSuspenseQueryHookResult = ReturnType<typeof useShoppingListsSuspenseQuery>;
+export type ShoppingListsQueryResult = Apollo.QueryResult<ShoppingListsQuery, ShoppingListsQueryVariables>;
 export const ShoppingListItemsDocument = gql`
     query ShoppingListItems($shoppingListId: ID!) {
   shoppingListItems(shoppingListId: $shoppingListId) {

@@ -1,6 +1,6 @@
 import React, {useState} from 'react';
 import {TouchableOpacity, Text} from 'react-native';
-import {set, useForm} from 'react-hook-form';
+import {useForm} from 'react-hook-form';
 import {useNavigation} from '@react-navigation/native';
 import {OnBoardingWrapper} from '../../components/templates';
 import {DynamicFormFields} from '../../components/molecules/DynamicFormFields';
@@ -17,7 +17,7 @@ type FormValues = {shoppingListName: string};
 
 export const CreateShoppingListScreen = () => {
   const navigation = useNavigation<CreateShoppingListNavProp>();
-  const firstName = useStore(store => store?.firstName);
+  const firstName = useStore(store => store?.user?.profile?.firstName);
   const setDefaultShoppingList = useStore(
     store => store.setDefaultShoppingList,
   );
