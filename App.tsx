@@ -1,8 +1,15 @@
 import React, {useEffect} from 'react';
-import {SafeAreaView, StatusBar, useColorScheme, Platform} from 'react-native';
+import {
+  SafeAreaView,
+  StatusBar,
+  useColorScheme,
+  Platform,
+  Text,
+} from 'react-native';
 import {ApolloProvider} from '@apollo/client';
 import {useStore} from './src/store/useStore';
 import {client} from './src/apollo/client';
+import Config from 'react-native-config';
 import {
   useInitialTheme,
   createStyleSheet,
@@ -45,6 +52,7 @@ const App = () => {
           barStyle={effectiveDark ? 'light-content' : 'dark-content'}
           backgroundColor={colors.background}
         />
+        <Text>API URL: {Config.API_URL}</Text>
         <AppNavigator />
       </SafeAreaView>
     </ApolloProvider>

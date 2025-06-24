@@ -1,6 +1,5 @@
 import React from 'react';
 import {TouchableOpacity, StyleProp, ViewStyle} from 'react-native';
-import Icon from '@react-native-vector-icons/ionicons';
 import Feather from '@react-native-vector-icons/feather';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
 
