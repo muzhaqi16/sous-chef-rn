@@ -52,7 +52,7 @@ const App = () => {
           barStyle={effectiveDark ? 'light-content' : 'dark-content'}
           backgroundColor={colors.background}
         />
-        <Text>API URL: {Config.API_URL}</Text>
+        <Text style={styles.text}>API URL: {Config.API_URL}</Text>
         <AppNavigator />
       </SafeAreaView>
     </ApolloProvider>
@@ -65,6 +65,12 @@ const stylesheet = createStyleSheet(theme => ({
     backgroundColor: theme.colors.background,
     // SafeAreaView padding for Android to avoid the status bar or notch overlapping the content.
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+  },
+  text: {
+    color: theme.colors.textPrimary,
+    fontSize: 16,
+    textAlign: 'center',
+    margin: 10,
   },
 }));
 
