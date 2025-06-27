@@ -9,6 +9,10 @@ import {ShoppingList} from '../types';
 export interface ShoppingListState {
   shoppingLists: ShoppingList[];
   defaultShoppingList: ShoppingList | null;
+  addQuantity: (id: string) => Promise<void>;
+  removeQuantity: (id: string) => Promise<void>;
+  deleteFromList: (id: string) => Promise<void>;
+  moveToPantry: (id: string) => Promise<void>;
   fetchShoppingLists: () => Promise<void>;
   createShoppingList: (name: string) => Promise<void>;
   shareShoppingList: (shoppingListId: string, email: string) => Promise<void>;
@@ -68,5 +72,25 @@ export const createShoppingListSlice: StateCreator<
 
   setDefaultShoppingList: shoppingList => {
     set({defaultShoppingList: shoppingList});
+  },
+  addQuantity: async id => {
+    // Implement logic to add quantity to an item in the shopping list
+    console.log(`Adding quantity for item with id: ${id}`);
+    // This is a placeholder; actual implementation would involve API calls
+  },
+  removeQuantity: async id => {
+    // Implement logic to remove quantity from an item in the shopping list
+    console.log(`Removing quantity for item with id: ${id}`);
+    // This is a placeholder; actual implementation would involve API calls
+  },
+  deleteFromList: async id => {
+    // Implement logic to delete an item from the shopping list
+    console.log(`Deleting item with id: ${id}`);
+    // This is a placeholder; actual implementation would involve API calls
+  },
+  moveToPantry: async id => {
+    // Implement logic to move an item from the shopping list to the pantry
+    console.log(`Moving item with id: ${id} to pantry`);
+    // This is a placeholder; actual implementation would involve API calls
   },
 });

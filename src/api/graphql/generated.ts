@@ -25,6 +25,10 @@ export type AddCollaboratorInput = {
   shoppingListId: Scalars['ID']['input'];
 };
 
+export type AddItemToPantryInput = {
+  itemId: Scalars['ID']['input'];
+};
+
 export type AuthPayload = {
   __typename?: 'AuthPayload';
   accessToken: Scalars['String']['output'];
@@ -195,6 +199,7 @@ export type Mutation = {
   __typename?: 'Mutation';
   _empty?: Maybe<Scalars['String']['output']>;
   addCollaborator: ShoppingListCollaborator;
+  addItemToPantry: PantryItem;
   addItemToShoppingList: ShoppingListItem;
   addUserAddress: UserAddress;
   createBrand: Brand;
@@ -249,6 +254,11 @@ export type Mutation = {
 
 export type MutationAddCollaboratorArgs = {
   data: AddCollaboratorInput;
+};
+
+
+export type MutationAddItemToPantryArgs = {
+  input: AddItemToPantryInput;
 };
 
 
@@ -620,14 +630,30 @@ export type PantryItem = {
   deletedAt?: Maybe<Scalars['DateTime']['output']>;
   expirationDate?: Maybe<Scalars['DateTime']['output']>;
   id: Scalars['ID']['output'];
+  item: PantryItemEmbeddedItem;
   itemId: Scalars['ID']['output'];
   itemName: Scalars['String']['output'];
   lastUsedAt?: Maybe<Scalars['DateTime']['output']>;
   quantity: Scalars['Float']['output'];
   storageState?: Maybe<StorageState>;
+  unit: PantryItemEmbeddedUnit;
   unitId: Scalars['ID']['output'];
   unitSymbol: Scalars['String']['output'];
   version: Scalars['Int']['output'];
+};
+
+export type PantryItemEmbeddedItem = {
+  __typename?: 'PantryItemEmbeddedItem';
+  id: Scalars['ID']['output'];
+  imageUrl?: Maybe<Scalars['String']['output']>;
+  name: Scalars['String']['output'];
+  storageState: StorageState;
+};
+
+export type PantryItemEmbeddedUnit = {
+  __typename?: 'PantryItemEmbeddedUnit';
+  id: Scalars['ID']['output'];
+  symbol: Scalars['String']['output'];
 };
 
 export type Purchase = {
@@ -666,7 +692,9 @@ export type Query = {
   loginHistory?: Maybe<Array<LoginHistory>>;
   me?: Maybe<User>;
   notificationsByUser: Array<Notification>;
+  onBoardingPantryItems: Array<Item>;
   pantryItems: Array<PantryItem>;
+  popularItems: Array<ItemSuggestion>;
   purchasesByUser: Array<Purchase>;
   shoppingList?: Maybe<ShoppingList>;
   shoppingListCollaborators: Array<ShoppingListCollaborator>;
@@ -737,6 +765,11 @@ export type QueryLoginHistoryArgs = {
 
 export type QueryNotificationsByUserArgs = {
   userId: Scalars['ID']['input'];
+};
+
+
+export type QueryPopularItemsArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
 };
 
 
@@ -833,10 +866,14 @@ export type ShoppingListItemInput = {
 
 export enum StorageState {
   Ambient = 'AMBIENT',
+  Chilled = 'CHILLED',
   Cold = 'COLD',
   Frozen = 'FROZEN',
   Hot = 'HOT',
-  None = 'NONE'
+  None = 'NONE',
+  Refrigerated = 'REFRIGERATED',
+  RoomTemperature = 'ROOM_TEMPERATURE',
+  Warm = 'WARM'
 }
 
 export type Store = {
@@ -880,7 +917,7 @@ export type UpdatePantryItemInput = {
   itemName?: InputMaybe<Scalars['String']['input']>;
   lastUsedAt?: InputMaybe<Scalars['DateTime']['input']>;
   quantity?: InputMaybe<Scalars['Float']['input']>;
-  storageState?: InputMaybe<Scalars['String']['input']>;
+  storageState?: InputMaybe<StorageState>;
   unitSymbol?: InputMaybe<Scalars['String']['input']>;
 };
 
@@ -987,6 +1024,13 @@ export type ResetPasswordMutationVariables = Exact<{
 
 export type ResetPasswordMutation = { __typename?: 'Mutation', resetPassword: boolean };
 
+export type AddItemToPantryMutationVariables = Exact<{
+  input: AddItemToPantryInput;
+}>;
+
+
+export type AddItemToPantryMutation = { __typename?: 'Mutation', addItemToPantry: { __typename?: 'PantryItem', id: string, itemId: string, quantity: number, unitId: string, itemName: string, unitSymbol: string, addedDate: any, lastUsedAt?: any | null, expirationDate?: any | null, storageState?: StorageState | null, deletedAt?: any | null, version: number } };
+
 export type UpdateUserProfileMutationVariables = Exact<{
   data: UpdateUserSettingsInput;
 }>;
@@ -1037,6 +1081,16 @@ export type AutocompleteItemsQueryVariables = Exact<{
 
 
 export type AutocompleteItemsQuery = { __typename?: 'Query', autocompleteItems?: Array<{ __typename?: 'ItemSuggestion', id: string, name: string }> | null };
+
+export type PantryItemsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type PantryItemsQuery = { __typename?: 'Query', pantryItems: Array<{ __typename?: 'PantryItem', id: string, itemId: string, quantity: number, unitId: string, itemName: string, unitSymbol: string, addedDate: any, lastUsedAt?: any | null, expirationDate?: any | null, storageState?: StorageState | null, deletedAt?: any | null, version: number }> };
+
+export type OnBoardingPantryItemsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type OnBoardingPantryItemsQuery = { __typename?: 'Query', onBoardingPantryItems: Array<{ __typename?: 'Item', id: string, name: string, imageUrl?: string | null }> };
 
 export type UserProfileQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -1206,6 +1260,50 @@ export function useResetPasswordMutation(baseOptions?: Apollo.MutationHookOption
 export type ResetPasswordMutationHookResult = ReturnType<typeof useResetPasswordMutation>;
 export type ResetPasswordMutationResult = Apollo.MutationResult<ResetPasswordMutation>;
 export type ResetPasswordMutationOptions = Apollo.BaseMutationOptions<ResetPasswordMutation, ResetPasswordMutationVariables>;
+export const AddItemToPantryDocument = gql`
+    mutation AddItemToPantry($input: AddItemToPantryInput!) {
+  addItemToPantry(input: $input) {
+    id
+    itemId
+    quantity
+    unitId
+    itemName
+    unitSymbol
+    addedDate
+    lastUsedAt
+    expirationDate
+    storageState
+    deletedAt
+    version
+  }
+}
+    `;
+export type AddItemToPantryMutationFn = Apollo.MutationFunction<AddItemToPantryMutation, AddItemToPantryMutationVariables>;
+
+/**
+ * __useAddItemToPantryMutation__
+ *
+ * To run a mutation, you first call `useAddItemToPantryMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useAddItemToPantryMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [addItemToPantryMutation, { data, loading, error }] = useAddItemToPantryMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useAddItemToPantryMutation(baseOptions?: Apollo.MutationHookOptions<AddItemToPantryMutation, AddItemToPantryMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<AddItemToPantryMutation, AddItemToPantryMutationVariables>(AddItemToPantryDocument, options);
+      }
+export type AddItemToPantryMutationHookResult = ReturnType<typeof useAddItemToPantryMutation>;
+export type AddItemToPantryMutationResult = Apollo.MutationResult<AddItemToPantryMutation>;
+export type AddItemToPantryMutationOptions = Apollo.BaseMutationOptions<AddItemToPantryMutation, AddItemToPantryMutationVariables>;
 export const UpdateUserProfileDocument = gql`
     mutation UpdateUserProfile($data: UpdateUserSettingsInput!) {
   updateUserProfile(data: $data) {
@@ -1509,6 +1607,97 @@ export type AutocompleteItemsQueryHookResult = ReturnType<typeof useAutocomplete
 export type AutocompleteItemsLazyQueryHookResult = ReturnType<typeof useAutocompleteItemsLazyQuery>;
 export type AutocompleteItemsSuspenseQueryHookResult = ReturnType<typeof useAutocompleteItemsSuspenseQuery>;
 export type AutocompleteItemsQueryResult = Apollo.QueryResult<AutocompleteItemsQuery, AutocompleteItemsQueryVariables>;
+export const PantryItemsDocument = gql`
+    query PantryItems {
+  pantryItems {
+    id
+    itemId
+    quantity
+    unitId
+    itemName
+    unitSymbol
+    addedDate
+    lastUsedAt
+    expirationDate
+    storageState
+    deletedAt
+    version
+  }
+}
+    `;
+
+/**
+ * __usePantryItemsQuery__
+ *
+ * To run a query within a React component, call `usePantryItemsQuery` and pass it any options that fit your needs.
+ * When your component renders, `usePantryItemsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = usePantryItemsQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function usePantryItemsQuery(baseOptions?: Apollo.QueryHookOptions<PantryItemsQuery, PantryItemsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<PantryItemsQuery, PantryItemsQueryVariables>(PantryItemsDocument, options);
+      }
+export function usePantryItemsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<PantryItemsQuery, PantryItemsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<PantryItemsQuery, PantryItemsQueryVariables>(PantryItemsDocument, options);
+        }
+export function usePantryItemsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<PantryItemsQuery, PantryItemsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<PantryItemsQuery, PantryItemsQueryVariables>(PantryItemsDocument, options);
+        }
+export type PantryItemsQueryHookResult = ReturnType<typeof usePantryItemsQuery>;
+export type PantryItemsLazyQueryHookResult = ReturnType<typeof usePantryItemsLazyQuery>;
+export type PantryItemsSuspenseQueryHookResult = ReturnType<typeof usePantryItemsSuspenseQuery>;
+export type PantryItemsQueryResult = Apollo.QueryResult<PantryItemsQuery, PantryItemsQueryVariables>;
+export const OnBoardingPantryItemsDocument = gql`
+    query OnBoardingPantryItems {
+  onBoardingPantryItems {
+    id
+    name
+    imageUrl
+  }
+}
+    `;
+
+/**
+ * __useOnBoardingPantryItemsQuery__
+ *
+ * To run a query within a React component, call `useOnBoardingPantryItemsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useOnBoardingPantryItemsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useOnBoardingPantryItemsQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useOnBoardingPantryItemsQuery(baseOptions?: Apollo.QueryHookOptions<OnBoardingPantryItemsQuery, OnBoardingPantryItemsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<OnBoardingPantryItemsQuery, OnBoardingPantryItemsQueryVariables>(OnBoardingPantryItemsDocument, options);
+      }
+export function useOnBoardingPantryItemsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<OnBoardingPantryItemsQuery, OnBoardingPantryItemsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<OnBoardingPantryItemsQuery, OnBoardingPantryItemsQueryVariables>(OnBoardingPantryItemsDocument, options);
+        }
+export function useOnBoardingPantryItemsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<OnBoardingPantryItemsQuery, OnBoardingPantryItemsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<OnBoardingPantryItemsQuery, OnBoardingPantryItemsQueryVariables>(OnBoardingPantryItemsDocument, options);
+        }
+export type OnBoardingPantryItemsQueryHookResult = ReturnType<typeof useOnBoardingPantryItemsQuery>;
+export type OnBoardingPantryItemsLazyQueryHookResult = ReturnType<typeof useOnBoardingPantryItemsLazyQuery>;
+export type OnBoardingPantryItemsSuspenseQueryHookResult = ReturnType<typeof useOnBoardingPantryItemsSuspenseQuery>;
+export type OnBoardingPantryItemsQueryResult = Apollo.QueryResult<OnBoardingPantryItemsQuery, OnBoardingPantryItemsQueryVariables>;
 export const UserProfileDocument = gql`
     query UserProfile {
   userProfile {

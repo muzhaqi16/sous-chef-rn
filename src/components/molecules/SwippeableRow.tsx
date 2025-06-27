@@ -1,44 +1,51 @@
-import React, {ReactNode} from 'react';
-import {Text, StyleSheet} from 'react-native';
+import React from 'react';
+import {GestureHandlerRootView} from 'react-native-gesture-handler';
+import ReanimatedSwipeable, {
+  SwipeableProps,
+} from 'react-native-gesture-handler/ReanimatedSwipeable';
+import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {View, StyleProp, ViewStyle} from 'react-native';
 
-import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
-import Reanimated, {
-  SharedValue,
-  useAnimatedStyle,
-} from 'react-native-reanimated';
-
-function RightAction(prog: SharedValue<number>, drag: SharedValue<number>) {
-  const styleAnimation = useAnimatedStyle(() => {
-    // console.log('showRightProgress:', prog.value);
-    // console.log('appliedTranslation:', drag.value);
-    return {
-      transform: [{translateX: drag.value + 50}],
-    };
-  });
-
-  return (
-    <Reanimated.View style={styleAnimation}>
-      <Text style={styles.rightAction}>Text</Text>
-    </Reanimated.View>
-  );
+export interface SwipeableRowProps extends Omit<SwipeableProps, 'children'> {
+  children: React.ReactNode;
+  containerStyle?: StyleProp<ViewStyle>;
 }
 
-export default function SwipeableRow({children}: {children: ReactNode}) {
-  return (
-    <ReanimatedSwipeable
-      friction={2}
-      enableTrackpadTwoFingerGesture
-      rightThreshold={40}
-      renderRightActions={RightAction}>
-      {children}
-    </ReanimatedSwipeable>
-  );
-}
+export const SwipeableRow: React.FC<SwipeableRowProps> = ({
+  children,
+  containerStyle,
+  renderLeftActions,
+  renderRightActions,
+  leftThreshold = 40,
+  rightThreshold = 40,
+  friction = 2,
+  ...rest
+}) => {
+  const {styles} = useStyles(stylesheet);
 
-const styles = StyleSheet.create({
-  rightAction: {width: 50, height: 50, backgroundColor: 'purple'},
-  separator: {
-    width: '100%',
-    borderTopWidth: 1,
+  return (
+    <GestureHandlerRootView>
+      <ReanimatedSwipeable
+        friction={friction}
+        leftThreshold={leftThreshold}
+        rightThreshold={rightThreshold}
+        renderLeftActions={renderLeftActions}
+        renderRightActions={renderRightActions}
+        containerStyle={[styles.swipeContainer, containerStyle]}
+        {...rest}>
+        <View style={styles.contentContainer}>{children}</View>
+      </ReanimatedSwipeable>
+    </GestureHandlerRootView>
+  );
+};
+
+const stylesheet = createStyleSheet(theme => ({
+  swipeContainer: {
+    // make sure your swipeable row doesn't collapse
+    overflow: 'hidden',
   },
-});
+  contentContainer: {
+    // default padding/background can go here
+    backgroundColor: '#FFF',
+  },
+}));

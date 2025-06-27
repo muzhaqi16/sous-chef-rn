@@ -1,13 +1,10 @@
-import React, {useEffect, useState} from 'react';
+import React, {useState} from 'react';
 import {View} from 'react-native';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
-import {ListItems} from '../components';
+import {ShoppingListItems} from '../components';
 import SearchBar from '../components/molecules/SearchBar';
-import {type HomeTabScreenProps} from '../navigation/types';
-import {useNavigation} from '@react-navigation/native';
 import {ShoppingListSelector} from '../components/organisms/ShoppingListSelector';
-import ShoppingListHeader from '../components/organisms/ShoppingListHeader';
 import AddButton from '../components/molecules/AddButton';
 import {AddItemBottomSheet} from '../components';
 
@@ -17,7 +14,6 @@ const ShoppingListScreen = () => {
 
   return (
     <GestureHandlerRootView style={styles.container}>
-      <ShoppingListHeader />
       <View style={styles.actionBar}>
         <SearchBar style={styles.searchBar} />
         <ShoppingListSelector />
@@ -27,7 +23,7 @@ const ShoppingListScreen = () => {
           }}
         />
       </View>
-      <ListItems />
+      <ShoppingListItems />
       <AddItemBottomSheet
         isVisible={showBottomSheet}
         onClose={() => {

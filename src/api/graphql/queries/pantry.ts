@@ -15,6 +15,16 @@ export const GET_USER_PANTRY_ITEMS = gql`
       storageState
       deletedAt
       version
+      item {
+        imageUrl
+        id
+        name
+        storageState
+      }
+      unit {
+        id
+        symbol
+      }
     }
   }
 `;

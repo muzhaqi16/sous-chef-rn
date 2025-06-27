@@ -45,6 +45,13 @@ export type ThemeColors = {
   chipText: string;
   chipSelectedText: string;
   divider?: string;
+  surfaceVariant: string;
+  textOnSurfaceVariant: string;
+
+  primaryContainer: string;
+  onPrimaryContainer: string;
+
+  errorContainer: string;
 };
 const common = {
   white: '#FFFFFF',
@@ -111,6 +118,15 @@ export const lightColors: ThemeColors = {
 
   // divider
   divider: common.grey300, // Optional divider color
+  // badge background & text
+  surfaceVariant: common.grey100,
+  textOnSurfaceVariant: common.grey700,
+
+  // swipe actions
+  primaryContainer: '#FFEAE0', // light “peach” for the edit action
+  onPrimaryContainer: common.grey900,
+
+  errorContainer: '#FDECEA', // light pink for the delete action
 };
 
 export const darkColors: ThemeColors = {
@@ -163,4 +179,11 @@ export const darkColors: ThemeColors = {
 
   // divider
   divider: common.grey700, // Optional divider color
+  surfaceVariant: common.grey700,
+  textOnSurfaceVariant: common.grey200,
+
+  primaryContainer: '#44250D', // darker peach for contrast
+  onPrimaryContainer: common.white,
+
+  errorContainer: '#442528', // darker red for delete on dark
 };

@@ -1,13 +1,12 @@
 import React from 'react';
 import {View, Text, Image} from 'react-native';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
-import IconButton from '../atoms/IconButton';
 import {useStore} from '../../store/useStore';
 
 const ShoppingListHeader: React.FC = ({}) => {
   const {styles, theme} = useStyles(stylesheet);
 
-  const avatarUrl = useStore(state => state.avatarUrl);
+  const avatarUrl = useStore(state => state?.userProfile?.avatarUrl);
 
   return (
     <View style={styles.container}>

@@ -1,44 +1,70 @@
 import React, {useEffect} from 'react';
-import {View, Text} from 'react-native';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {ScrollView} from 'react-native';
 import {useStore} from '../store/useStore';
+import {SwipeablePantryItem} from '../components/organisms/SwipeablePantryItem';
+import {StorageState} from '../api/graphql/generated';
+import {useStyles, createStyleSheet} from 'react-native-unistyles';
 
 export const MainScreen = () => {
+  const {pantryItems, fetchPantryItems, deletePantryItem, editPantryItem} =
+    useStore();
   const {styles} = useStyles(stylesheet);
-
-  const {pantryItems, fetchPantryItems} = useStore();
-
-  // Fetch pantry items when the component mounts
-  // This ensures that pantry items are available when the component is rendered
   useEffect(() => {
-    fetchPantryItems().catch(error => {
-      console.error('Error fetching pantry items:', error);
-    });
+    fetchPantryItems().catch(console.error);
   }, [fetchPantryItems]);
 
-  // Log the pantry items to verify they are fetched correctly
-  console.log('Pantry Items:', pantryItems);
-
   return (
-    <View style={styles.container}>
-      <Text style={styles.text}>Welcome to the Pantry!</Text>
-    </View>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.listContent}>
+      {pantryItems.map(pantryItem => (
+        <SwipeablePantryItem
+          key={pantryItem.id}
+          item={{
+            id: pantryItem.id,
+            itemName: pantryItem.itemName,
+            quantity: `${pantryItem.quantity} ${pantryItem.unitSymbol}`,
+            location:
+              pantryItem.item.storageState === StorageState.Frozen
+                ? 'Frozen'
+                : pantryItem.item.storageState === StorageState.Cold
+                  ? 'Refrigerated'
+                  : 'Pantry',
+            expirationText: pantryItem.expirationDate
+              ? `Expiring in …`
+              : 'No expiration',
+            expiredCount:
+              pantryItem.expirationDate &&
+              new Date(pantryItem.expirationDate) < new Date()
+                ? 1
+                : 0, // Example logic for expired count
+            icon: {uri: pantryItem?.item?.imageUrl || 'default_icon.png'}, // Fallback icon
+          }}
+          onDelete={deletePantryItem}
+          onEdit={(id: string) => {
+            // Handle edit action, e.g., open a modal or navigate to edit screen
+            console.log('Edit item with id:', id);
+            editPantryItem(id, {
+              itemName: 'Edited Item Name', // Example edit data
+              unitSymbol: 'kg',
+              storageState: StorageState.Ambient,
+              expirationDate: null, // Example edit data
+            });
+          }}
+        />
+      ))}
+    </ScrollView>
   );
 };
-
 const stylesheet = createStyleSheet(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
-  text: {
-    color: theme.colors.textPrimary,
-    fontSize: 16,
-    textAlign: 'center',
-    marginTop: 20,
+  rowContainer: {
+    marginBottom: theme.spacing.md,
+  },
+  listContent: {
+    paddingBottom: theme.spacing.padding.sm,
   },
 }));
-
-export default MainScreen;

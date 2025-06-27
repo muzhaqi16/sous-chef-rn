@@ -1,15 +1,8 @@
 import React, {useEffect} from 'react';
-import {
-  SafeAreaView,
-  StatusBar,
-  useColorScheme,
-  Platform,
-  Text,
-} from 'react-native';
+import {SafeAreaView, StatusBar, useColorScheme, Platform} from 'react-native';
 import {ApolloProvider} from '@apollo/client';
 import {useStore} from './src/store/useStore';
 import {client} from './src/apollo/client';
-import Config from 'react-native-config';
 import {
   useInitialTheme,
   createStyleSheet,
@@ -54,7 +47,6 @@ const App = () => {
           backgroundColor={colors.background}
         />
         <ToastProvider>
-          <Text style={styles.text}>API URL: {Config.API_URL}</Text>
           <AppNavigator />
         </ToastProvider>
       </SafeAreaView>
