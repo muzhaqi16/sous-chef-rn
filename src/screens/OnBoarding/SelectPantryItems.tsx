@@ -74,7 +74,7 @@ export const SelectPantryItems = () => {
       step={2}
       totalSteps={4}
       onBack={() => navigation.goBack()}
-      onSkip={() => navigation.replace('Home', {screen: 'ShoppingList'})}>
+      onSkip={() => navigation.replace('Home', {screen: 'Main'})}>
       {loading && <ActivityIndicator style={styles.loader} />}
 
       {queryError && (

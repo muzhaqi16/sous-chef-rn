@@ -4,7 +4,7 @@ import {
   addItemApi,
   removeItemApi,
 } from '../api/services/shoppingListItemService';
-import {ShoppingListItem} from '../graphql/generated';
+import {ShoppingListItem} from '../api/graphql/generated';
 
 export interface ItemsState {
   items: ShoppingListItem[];

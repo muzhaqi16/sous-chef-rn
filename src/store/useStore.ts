@@ -1,28 +1,25 @@
 import {create} from 'zustand';
 import {createJSONStorage, persist} from 'zustand/middleware';
-import {ShoppingListState, createShoppingListSlice} from './shoppingListSlice';
-import {AuthState, createAuthSlice} from './authSlice';
-import {PreferencesState, createPreferencesSlice} from './preferencesSlice';
-import {createProfileSlice, ProfileState} from './profileSlice';
-import {createItemsSlice, ItemsState} from './itemsSlice';
+// Import all slices from index file
+import {
+  initialStoreState,
+  type RootState,
+  createShoppingListSlice,
+  createAuthSlice,
+  createPreferencesSlice,
+  createProfileSlice,
+  createItemsSlice,
+  createPantrySlice,
+} from './';
+// State is saved in MMKV storage locally
 import {zustandStorage} from '../storage/mmkv';
+// Import the logger middleware, used for debugging
 import {logger} from './logger';
-
-export type RootState = ShoppingListState &
-  AuthState &
-  ProfileState &
-  PreferencesState &
-  ItemsState & {
-    // our hydration slice
-    isHydrated: boolean;
-    setHydrated: (flag: boolean) => void;
-    reset: () => void;
-  };
 
 export const useStore = create<RootState>()(
   persist(
     logger((...a) => {
-      // Initial state
+      // Extract the set function from the arguments
       const [set] = a;
 
       return {
@@ -31,22 +28,13 @@ export const useStore = create<RootState>()(
         ...createProfileSlice(...a),
         ...createPreferencesSlice(...a),
         ...createItemsSlice(...a),
+        ...createPantrySlice(...a),
         isHydrated: false,
         setHydrated: (flag: boolean) => set({isHydrated: flag}),
         reset: () => {
           zustandStorage.removeItem('sous-chef-storage'); // clear the storage
           // Reset the state to initial values
-          set({
-            accessToken: null,
-            refreshToken: null,
-            user: null,
-            defaultShoppingList: null,
-            shoppingLists: [],
-            items: [],
-            userProfile: null,
-            theme: 'light',
-            onBoardingCompleted: false,
-          });
+          set(initialStoreState);
         },
       };
     }),

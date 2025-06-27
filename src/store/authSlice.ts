@@ -17,7 +17,7 @@ export interface AuthState {
   logout: () => void;
 }
 
-const initialAuthState = {
+export const initialAuthState = {
   user: null,
   accessToken: null,
   refreshToken: null,

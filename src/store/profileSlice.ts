@@ -1,4 +1,3 @@
-// src/store/profileSlice.ts
 import {StateCreator} from 'zustand';
 import {
   fetchUserProfileApi,
