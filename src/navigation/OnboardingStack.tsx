@@ -1,14 +1,16 @@
 import React from 'react';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {useStore} from '../store/useStore';
-import {type AuthStackParamList} from './types';
+import {type OnBoardingStackParamList} from './types';
 import {LoginScreen, SignUpScreen, ForgotPasswordScreen} from '../screens/Auth';
+import {CreateShoppingListScreen} from '../screens/OnBoarding/CreateShoppingList';
+import {SelectPantryItems} from '../screens/OnBoarding/SelectPantryItems';
 
-const Stack = createNativeStackNavigator<AuthStackParamList>();
+const Stack = createNativeStackNavigator<OnBoardingStackParamList>();
 
-const AuthStack = () => {
+const OnboardingStack = () => {
   const {user} = useStore();
-  console.log('AuthStack user:', user);
+  console.log('OnboardingStack user:', user);
   return (
     <Stack.Navigator
       screenOptions={{
@@ -31,22 +33,32 @@ const AuthStack = () => {
         gestureDirection: 'vertical', // vertical swipe to dismiss
       }}>
       <Stack.Screen
-        name="Login"
-        component={LoginScreen}
+        name="CreateShoppingList"
+        component={CreateShoppingListScreen}
         options={{headerShown: false, animation: 'slide_from_left'}}
       />
       <Stack.Screen
-        name="SignUp"
-        component={SignUpScreen}
+        name="SelectPantryItems"
+        component={SelectPantryItems}
         options={{headerShown: false, animation: 'slide_from_right'}}
       />
       <Stack.Screen
-        name="ForgotPassword"
+        name="AddFriends"
         component={ForgotPasswordScreen}
+        options={{headerShown: false, animation: 'slide_from_right'}}
+      />
+      <Stack.Screen
+        name="AddProfilePicture"
+        component={LoginScreen}
+        options={{headerShown: false, animation: 'slide_from_right'}}
+      />
+      <Stack.Screen
+        name="OnBoardingCompleted"
+        component={SignUpScreen}
         options={{headerShown: false, animation: 'slide_from_right'}}
       />
     </Stack.Navigator>
   );
 };
 
-export default AuthStack;
+export default OnboardingStack;

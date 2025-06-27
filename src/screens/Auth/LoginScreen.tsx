@@ -1,5 +1,5 @@
-// screens/Auth/LoginScreen.tsx
 import React from 'react';
+import {ToastAndroid} from 'react-native';
 import {useForm} from 'react-hook-form';
 import {yupResolver} from '@hookform/resolvers/yup';
 import {useNavigation} from '@react-navigation/native';
@@ -9,6 +9,7 @@ import {EmailInput, PasswordInput} from '../../components/atoms';
 import {getLoginValidationSchema} from '../../utils/validation';
 import {AuthWrapper} from '../../components/templates/AuthWrapper';
 import {useStore} from '../../store/useStore';
+import {useToast} from '../../hooks/useToast';
 
 type LoginValues = {email: string; password: string};
 
@@ -20,14 +21,22 @@ export function LoginScreen() {
     formState: {errors},
   } = useForm<LoginValues>({
     resolver: yupResolver(getLoginValidationSchema()),
-    defaultValues: {email: 'artan@muzhaqi.com', password: 'Test123!'},
+    defaultValues: {email: 'artan@muzhaqi.com', password: 'Tess123!'},
   });
   const {login} = useStore();
+  const showToast = useToast();
+
   const onSubmit = async (data: LoginValues) => {
     const {email, password} = data;
     const error = await login(email, password);
     if (error) {
       console.error('Login failed:', error);
+      showToast({
+        duration: ToastAndroid.SHORT,
+        type: 'error',
+        message:
+          typeof error === 'string' ? error : 'Login failed. Please try again.',
+      });
     }
   };
 

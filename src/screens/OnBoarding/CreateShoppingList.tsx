@@ -17,18 +17,20 @@ type FormValues = {shoppingListName: string};
 
 export const CreateShoppingListScreen = () => {
   const navigation = useNavigation<CreateShoppingListNavProp>();
-  const firstName = useStore(store => store?.user?.profile?.firstName);
-  const setDefaultShoppingList = useStore(
-    store => store.setDefaultShoppingList,
+  const firstName = useStore(
+    store => store?.user?.profile?.firstName || 'Your',
   );
+  const setDefaultShoppingList = useStore(s => s.setDefaultShoppingList);
+
   const [graphqlError, setGraphqlError] = useState<string | null>(null);
 
   const [createShoppingList, {error}] = useMutation(CREATE_SHOPPING_LIST, {
-    onCompleted: data => {
-      console.log('Shopping List Created:', data.createShoppingList);
-      setDefaultShoppingList(data.createShoppingList); // Set the created list as default
+    onCompleted: ({createShoppingList}) => {
+      console.log('Shopping List Created:', createShoppingList);
+      setDefaultShoppingList(createShoppingList); // Set the created list as default
       setGraphqlError(null); // Reset error on success
-      navigation.replace('Home', {screen: 'ShoppingList'});
+
+      navigation.replace('OnBoarding', {screen: 'SelectPantryItems'});
     },
     onError: error => {
       // Check for network error or graphql error
@@ -80,7 +82,9 @@ export const CreateShoppingListScreen = () => {
       step={1}
       totalSteps={4}
       onBack={() => navigation.goBack()}
-      onSkip={() => navigation.replace('Home', {screen: 'ShoppingList'})}>
+      onSkip={() =>
+        navigation.replace('OnBoarding', {screen: 'SelectPantryItems'})
+      }>
       <DynamicFormFields<FormValues>
         fields={[
           {

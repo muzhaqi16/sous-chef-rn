@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "android": "react-native run-android",
-    "android:release": "npx react-native run-android --mode release",
+    "android:stg": "SET ENVFILE=.env.staging && npx react-native run-android",
+    "android:release": "SET ENVFILE=.env.production && npx react-native run-android --mode release",
     "ios": "react-native run-ios",
     "lint": "eslint .",
     "start": "react-native start",

@@ -2,12 +2,15 @@ import React from 'react';
 import {View, Text} from 'react-native';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
 
-export const MainScreen = () => {
+export const NotFoundScreen = () => {
   const {styles} = useStyles(stylesheet);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>Welcome to the Pantry!</Text>
+      <Text style={styles.text}>
+        This screen doesn't exist. Please check the URL or navigate back to a
+        valid screen.
+      </Text>
     </View>
   );
 };
@@ -16,8 +19,6 @@ const stylesheet = createStyleSheet(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   text: {
     color: theme.colors.textPrimary,
@@ -27,4 +28,4 @@ const stylesheet = createStyleSheet(theme => ({
   },
 }));
 
-export default MainScreen;
+export default NotFoundScreen;

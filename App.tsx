@@ -18,6 +18,7 @@ import {
 } from 'react-native-unistyles';
 import AppNavigator from './src/navigation/AppNavigator';
 import SplashScreen from './src/screens/SplashScreen';
+import {ToastProvider} from './src/components/atoms';
 
 const App = () => {
   const systemIsDark = useColorScheme() === 'dark';
@@ -52,8 +53,10 @@ const App = () => {
           barStyle={effectiveDark ? 'light-content' : 'dark-content'}
           backgroundColor={colors.background}
         />
-        <Text style={styles.text}>API URL: {Config.API_URL}</Text>
-        <AppNavigator />
+        <ToastProvider>
+          <Text style={styles.text}>API URL: {Config.API_URL}</Text>
+          <AppNavigator />
+        </ToastProvider>
       </SafeAreaView>
     </ApolloProvider>
   );

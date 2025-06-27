@@ -38,6 +38,7 @@ export type AuthStackParamList = {
 
 export type OnBoardingStackParamList = {
   CreateShoppingList: undefined;
+  SelectPantryItems: undefined;
   AddRecipes: undefined;
   AddFriends: undefined;
   AddProfilePicture: undefined;
