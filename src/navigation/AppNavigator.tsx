@@ -16,7 +16,7 @@ const AppNavigator = () => {
   return (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName="Home"
+        initialRouteName={isSignedIn ? 'Home' : 'Auth'}
         screenOptions={({route}) => ({})}>
         {isSignedIn ? (
           <>
