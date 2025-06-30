@@ -10,23 +10,33 @@ export const ShoppingListSelector = () => {
     setDefaultShoppingList,
     shoppingLists,
     fetchShoppingLists,
+    getShoppingListItems,
   } = useStore();
 
+  // Fetch shopping lists when the component mounts
+  // This ensures that the shopping lists are available when the component is rendered
   useEffect(() => {
     fetchShoppingLists();
   }, []);
+
+  // Trigger fetching items when the default shopping list changes
+  useEffect(() => {
+    if (defaultShoppingList) {
+      getShoppingListItems();
+    }
+  }, [defaultShoppingList, getShoppingListItems]);
   const {styles} = useStyles(stylesheet);
 
   return (
     <View style={styles.container}>
       <PickerSelect
-        items={shoppingLists.map((list: any) => ({
+        items={shoppingLists?.map((list: any) => ({
           id: list.id,
           name: list.name,
         }))}
         initialValue={defaultShoppingList?.id || ''}
         onValueChange={id => {
-          const selectedList = shoppingLists.find(list => list.id === id);
+          const selectedList = shoppingLists?.find(list => list.id === id);
           if (selectedList) {
             setDefaultShoppingList(selectedList);
           } else {

@@ -1,5 +1,6 @@
 import React, {useEffect} from 'react';
-import {SafeAreaView, StatusBar, useColorScheme, Platform} from 'react-native';
+import {StatusBar, useColorScheme} from 'react-native';
+import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
 import {ApolloProvider} from '@apollo/client';
 import {useStore} from './src/store/useStore';
 import {client} from './src/apollo/client';
@@ -15,41 +16,36 @@ import {ToastProvider} from './src/components/atoms';
 
 const App = () => {
   const systemIsDark = useColorScheme() === 'dark';
-  const {darkMode} = useStore(s => s.preferences);
-  // prefer stored preference, otherwise use system
+  const {darkMode} = useStore(store => store.preferences);
   const effectiveDark = darkMode !== undefined ? darkMode : systemIsDark;
-  // must come before useStyles!
+
   useInitialTheme(effectiveDark ? 'dark' : 'light');
   const {styles, theme} = useStyles(stylesheet);
-  // Use the initial theme based on the effective dark mode setting
   const {colors} = theme;
 
-  // Check if the store is hydrated (i.e., if the initial state has been loaded)
-  // This is important to ensure we don't render the app before the store is ready
-  // and we have the necessary data (like user authentication status).
-  // If the store is not hydrated, we show a splash screen.
-  const isHydrated = useStore(s => s.isHydrated);
-  if (!isHydrated) {
-    // We haven't finished checking for the token yet
-    return <SplashScreen />;
-  }
-
-  // Subscribe to theme changes
   useEffect(() => {
     UnistylesRuntime.setTheme(effectiveDark ? 'dark' : 'light');
   }, [effectiveDark]);
 
+  const isHydrated = useStore(store => store.isHydrated);
+
+  if (!isHydrated) {
+    return <SplashScreen />;
+  }
+
   return (
     <ApolloProvider client={client}>
-      <SafeAreaView style={styles.container}>
+      <SafeAreaProvider>
         <StatusBar
           barStyle={effectiveDark ? 'light-content' : 'dark-content'}
           backgroundColor={colors.background}
         />
-        <ToastProvider>
-          <AppNavigator />
-        </ToastProvider>
-      </SafeAreaView>
+        <SafeAreaView style={styles.container}>
+          <ToastProvider>
+            <AppNavigator />
+          </ToastProvider>
+        </SafeAreaView>
+      </SafeAreaProvider>
     </ApolloProvider>
   );
 };
@@ -59,7 +55,7 @@ const stylesheet = createStyleSheet(theme => ({
     flex: 1,
     backgroundColor: theme.colors.background,
     // SafeAreaView padding for Android to avoid the status bar or notch overlapping the content.
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    // paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   text: {
     color: theme.colors.textPrimary,

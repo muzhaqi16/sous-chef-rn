@@ -1,7 +1,8 @@
 import React from 'react';
-import {Text, StyleSheet, View} from 'react-native';
+import {Text, View} from 'react-native';
 import {useStyles, createStyleSheet} from 'react-native-unistyles';
 import IconButton from '../atoms/IconButton';
+import Ionicons from '@react-native-vector-icons/ionicons';
 
 type AddButtonProps = {
   onPress: () => void;
@@ -13,10 +14,11 @@ const AddButton: React.FC<AddButtonProps> = ({onPress}) => {
   return (
     <View style={styles.button}>
       <IconButton
-        iconName="add"
+        name="add"
         size={24}
         color={theme.colors.primary}
         onPress={onPress}
+        library={Ionicons}
       />
     </View>
   );

@@ -79,6 +79,8 @@ const AddItemBottomSheet: React.FC<BottomSheetProps> = ({
           ref={bottomSheetRef}
           snapPoints={['50%', '75%']}
           onClose={onClose} // add this if supported!
+          enablePanDownToClose={true}
+          enableContentPanningGesture={true}
           enableDynamicSizing={false}>
           <BaseInput
             placeholder="Start typing item name..."

@@ -1,6 +1,6 @@
 import {StateCreator} from 'zustand';
 import {loginApi, signupApi} from '../api/services/authService';
-import {RootState} from './useStore';
+import {RootState} from '.';
 import {User} from '../api/graphql/generated';
 import {storage} from '../storage/mmkv';
 

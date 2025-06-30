@@ -4,10 +4,11 @@ import {
   createShoppingListApi,
   shareShoppingListApi,
 } from '../api/services/shoppingListService';
-import {ShoppingList} from '../types';
+import {RootState} from '.';
+import {ShoppingList} from '../api/graphql/generated';
 
 export interface ShoppingListState {
-  shoppingLists: ShoppingList[];
+  shoppingLists: ShoppingList[] | null;
   defaultShoppingList: ShoppingList | null;
   addQuantity: (id: string) => Promise<void>;
   removeQuantity: (id: string) => Promise<void>;
@@ -23,13 +24,16 @@ export const initialShoppingListState: Pick<
   ShoppingListState,
   'shoppingLists' | 'defaultShoppingList'
 > = {
-  shoppingLists: [],
+  shoppingLists: null,
   defaultShoppingList: null,
 };
 
 export const createShoppingListSlice: StateCreator<
+  RootState,
+  [],
+  [],
   ShoppingListState
-> = set => ({
+> = (set, get) => ({
   ...initialShoppingListState,
 
   fetchShoppingLists: async () => {
@@ -51,7 +55,7 @@ export const createShoppingListSlice: StateCreator<
     try {
       const newList = await createShoppingListApi(name);
       set(state => ({
-        shoppingLists: [...state.shoppingLists, newList],
+        shoppingLists: [...(state.shoppingLists ?? []), newList],
         defaultShoppingList: state.defaultShoppingList || newList,
       }));
     } catch (error) {

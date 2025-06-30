@@ -1,8 +1,8 @@
 import {create} from 'zustand';
 import {createJSONStorage, persist} from 'zustand/middleware';
+export const STORAGE_KEY = 'sous-chef-storage';
 // Import all slices from index file
 import {
-  initialStoreState,
   type RootState,
   createShoppingListSlice,
   createAuthSlice,
@@ -10,6 +10,8 @@ import {
   createProfileSlice,
   createItemsSlice,
   createPantrySlice,
+  createAppSlice,
+  createShoppingListItemSlice,
 } from './';
 // State is saved in MMKV storage locally
 import {zustandStorage} from '../storage/mmkv';
@@ -29,17 +31,12 @@ export const useStore = create<RootState>()(
         ...createPreferencesSlice(...a),
         ...createItemsSlice(...a),
         ...createPantrySlice(...a),
-        isHydrated: false,
-        setHydrated: (flag: boolean) => set({isHydrated: flag}),
-        reset: () => {
-          zustandStorage.removeItem('sous-chef-storage'); // clear the storage
-          // Reset the state to initial values
-          set(initialStoreState);
-        },
+        ...createAppSlice(...a),
+        ...createShoppingListItemSlice(...a),
       };
     }),
     {
-      name: 'sous-chef-storage', // unique name
+      name: STORAGE_KEY, // unique name
       version: 2, // number (or a string)
       // https://github.com/pmndrs/zustand/blob/main/docs/integrations/persisting-store-data.md
       storage: createJSONStorage(() => zustandStorage), // use zustandStorage as the storage

@@ -1,37 +1,60 @@
 import React from 'react';
-import {View, StyleProp, ViewStyle} from 'react-native';
+import {View, StyleProp, ViewStyle, TextInputProps} from 'react-native';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
 import {BaseInput} from '../atoms/BaseInput';
 
-type SearchBarProps = {
-  value?: string;
-  onChangeText?: (text: string) => void;
-  placeholder?: string;
-  onAddPress?: () => void; // For the plus button on the right
-  style?: StyleProp<ViewStyle>; // <---- ADD THIS
+type SearchBarProps = Omit<TextInputProps, 'style'> & {
+  value: string;
+  onChangeText: (text: string) => void;
+  containerStyle?: StyleProp<ViewStyle>;
+  inputStyle?: StyleProp<ViewStyle>;
+  leftComponent?: React.ReactNode;
+  rightComponent?: React.ReactNode;
 };
 
 const SearchBar: React.FC<SearchBarProps> = ({
-  value = '',
-  onChangeText = () => {},
-  placeholder = 'Search in shopping list...',
-  onAddPress = undefined,
-  style = {},
+  value,
+  onChangeText,
+  placeholder = 'Search…',
+  containerStyle,
+  inputStyle,
+  leftComponent,
+  rightComponent,
+  ...textInputProps
 }) => {
   const {styles} = useStyles(stylesheet);
+
   return (
-    <BaseInput
-      style={style} // <--- add style here
-      value={value}
-      containerStyle={styles.inputContainer}
-      onChangeText={onChangeText}
-      placeholder={placeholder}
-    />
+    <View style={[styles.container, containerStyle]}>
+      {!!leftComponent && <View style={styles.side}>{leftComponent}</View>}
+      <BaseInput
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        style={[styles.input, inputStyle]}
+        containerStyle={styles.inputContainer}
+        {...textInputProps}
+      />
+      {!!rightComponent && <View style={styles.side}>{rightComponent}</View>}
+    </View>
   );
 };
+
 const stylesheet = createStyleSheet(theme => ({
+  container: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: theme.spacing.sm,
+    borderRadius: theme.spacing.sizes.sm,
+  },
+  side: {
+    marginHorizontal: theme.spacing.xs,
+  },
   inputContainer: {
-    flex: 1, // Allows the input to expand if needed
+    flex: 1,
+  },
+  input: {
+    // any default text-input styling you want
   },
 }));
 

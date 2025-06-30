@@ -64,8 +64,6 @@ const stylesheet = createStyleSheet(theme => ({
     borderColor: '#EFEFEF',
     borderStyle: 'solid',
     borderRadius: 12,
-    marginBottom: 12,
-    height: 87,
   },
   cardBody: {
     flexGrow: 1,
