@@ -6,7 +6,8 @@ import {EmailInput, PasswordInput, BaseInput} from '../../components/atoms';
 import {getSignUpValidationSchema} from '../../utils/validation';
 import {AuthWrapper} from '../../components/templates/AuthWrapper';
 import {signupApi} from '../../api/services/authService';
-import {useSafeNavigation, SignUpNavProp} from '../../navigation';
+import {SignUpNavProp} from '../../navigation';
+import {useSafeNavigation} from '../../hooks';
 
 type SignUpValues = {
   name: string;
