@@ -2,12 +2,20 @@ import {StateCreator} from 'zustand';
 import {loginApi, signupApi} from '../api/services/authService';
 import {RootState} from '.';
 import {User} from '../api/graphql/generated';
-import {storage} from '../storage/mmkv';
 
 export interface AuthState {
   user: User | null;
   accessToken: string | null;
   refreshToken: string | null;
+  authenticate: (
+    email: string,
+    password: string,
+  ) => Promise<
+    {user: User; accessToken: string; refreshToken: string} | {error: string}
+  >;
+
+  setAuth: (user: User, accessToken: string, refreshToken: string) => void;
+
   login: (email: string, password: string) => Promise<string | null>;
   signup: (
     username: string,
@@ -28,19 +36,27 @@ export const createAuthSlice: StateCreator<RootState, [], [], AuthState> = (
   get,
 ) => ({
   ...initialAuthState,
+  authenticate: async (email, password) => {
+    try {
+      const {accessToken, refreshToken, user} = await loginApi(email, password);
+      return {user, accessToken, refreshToken};
+    } catch (err) {
+      console.error('authenticate error', err);
+      return {
+        error: err instanceof Error ? err.message : 'Unknown error',
+      };
+    }
+  },
 
+  setAuth: (user, accessToken, refreshToken) => {
+    set({user, accessToken, refreshToken});
+  },
   login: async (email, password) => {
     try {
       // Reset any previous errors or state
       get().reset();
       const {accessToken, refreshToken, user} = await loginApi(email, password);
       set({user, accessToken, refreshToken});
-      // Store tokens in MMKV storage
-      storage.set('accessToken', accessToken);
-      storage.set('refreshToken', refreshToken);
-      // Optionally, you can also store user data
-      storage.set('user', JSON.stringify(user));
-      // Return null to indicate success
       return null;
     } catch (err) {
       console.error(err);

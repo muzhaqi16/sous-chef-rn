@@ -22,6 +22,7 @@ export type FieldDef<T extends FieldValues> = {
     onBlur: () => void;
     placeholder?: string;
   }>;
+  props?: Record<string, any>;
 };
 
 interface DynamicFormFieldsProps<T extends FieldValues> {
@@ -36,32 +37,35 @@ export function DynamicFormFields<T extends FieldValues>({
   errors,
 }: DynamicFormFieldsProps<T>) {
   const {styles} = useStyles(stylesheet);
-
   return (
     <View style={styles.container}>
-      {fields.map(({name, label, placeholder, component: Input}, idx) => (
-        <React.Fragment key={String(name)}>
-          <Controller
-            control={control}
-            name={name}
-            render={({field: {onChange, onBlur, value}}) => (
-              <Input
-                label={label}
-                value={value}
-                // if placeholder is provided, pass it to the component without overriding EmailInput and PasswordInput
-                {...(placeholder && {placeholder})}
-                onBlur={onBlur}
-                onChangeText={onChange}
-              />
+      {fields.map(
+        ({name, label, placeholder, component: Input, props}, idx) => (
+          <React.Fragment key={String(name)}>
+            <Controller
+              control={control}
+              name={name}
+              render={({field: {onChange, onBlur, value}}) => (
+                <Input
+                  label={label}
+                  value={value}
+                  // if placeholder is provided, pass it to the component without overriding EmailInput and PasswordInput
+                  {...(placeholder && {placeholder})}
+                  onBlur={onBlur}
+                  onChangeText={onChange}
+                  // pass any extra props defined in the field definition
+                  {...props}
+                />
+              )}
+            />
+            {errors[name] && (
+              <Text style={styles.errorText}>
+                {errors[name]?.message?.toString()}
+              </Text>
             )}
-          />
-          {errors[name] && (
-            <Text style={styles.errorText}>
-              {errors[name]?.message?.toString()}
-            </Text>
-          )}
-        </React.Fragment>
-      ))}
+          </React.Fragment>
+        ),
+      )}
     </View>
   );
 }

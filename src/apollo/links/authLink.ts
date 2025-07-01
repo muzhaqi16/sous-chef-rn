@@ -1,8 +1,8 @@
 import {setContext} from '@apollo/client/link/context';
-import {storage} from '../../storage/mmkv';
+import {useStore} from '../../store/useStore';
 
 export const authLink = setContext(async (_, {headers}) => {
-  const token = storage.getString('accessToken');
+  const token = useStore.getState().accessToken;
   return {
     headers: {
       ...headers,

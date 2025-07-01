@@ -15,35 +15,22 @@ const AppNavigator = () => {
   const isSignedIn = !!user;
   return (
     <NavigationContainer>
-      <Stack.Navigator
-        initialRouteName={isSignedIn ? 'Home' : 'Auth'}
-        screenOptions={({route}) => ({})}>
-        {isSignedIn ? (
-          <>
-            <Stack.Screen
-              name="Home"
-              component={HomeTab}
-              options={{headerShown: false}}
-            />
-            <Stack.Screen
-              name="OnBoarding"
-              component={OnboardingStack}
-              options={{headerShown: false}}
-            />
-          </>
-        ) : (
-          <Stack.Screen
-            name="Auth"
-            component={AuthStack}
-            options={{headerShown: false}}
-          />
-        )}
-        <Stack.Screen
-          name="NotFound"
-          component={NotFoundScreen}
-          options={{headerShown: false}}
-        />
-      </Stack.Navigator>
+      {isSignedIn ? (
+        <Stack.Navigator
+          initialRouteName="Home"
+          screenOptions={{headerShown: false}}>
+          <Stack.Screen name="Home" component={HomeTab} />
+          <Stack.Screen name="OnBoarding" component={OnboardingStack} />
+          <Stack.Screen name="NotFound" component={NotFoundScreen} />
+        </Stack.Navigator>
+      ) : (
+        <Stack.Navigator
+          initialRouteName="Auth"
+          screenOptions={{headerShown: false}}>
+          <Stack.Screen name="Auth" component={AuthStack} />
+          <Stack.Screen name="NotFound" component={NotFoundScreen} />
+        </Stack.Navigator>
+      )}
     </NavigationContainer>
   );
 };

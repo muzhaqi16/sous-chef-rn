@@ -2,15 +2,20 @@ import React from 'react';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {useStore} from '../store/useStore';
 import {type AuthStackParamList} from './types';
-import {LoginScreen, SignUpScreen, ForgotPasswordScreen} from '../screens/Auth';
+import {
+  LoginScreen,
+  SignUpScreen,
+  RememberLoginInfoScreen,
+  ForgotPasswordScreen,
+} from '../screens/Auth';
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
 
 const AuthStack = () => {
   const {user} = useStore();
-  console.log('AuthStack user:', user);
   return (
     <Stack.Navigator
+      initialRouteName={user ? 'RememberLoginInfo' : 'Login'}
       screenOptions={{
         headerShown: false,
 
@@ -43,6 +48,11 @@ const AuthStack = () => {
       <Stack.Screen
         name="ForgotPassword"
         component={ForgotPasswordScreen}
+        options={{headerShown: false, animation: 'slide_from_right'}}
+      />
+      <Stack.Screen
+        name="RememberLoginInfo"
+        component={RememberLoginInfoScreen}
         options={{headerShown: false, animation: 'slide_from_right'}}
       />
     </Stack.Navigator>

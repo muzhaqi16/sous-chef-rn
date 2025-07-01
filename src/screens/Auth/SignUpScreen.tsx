@@ -1,13 +1,12 @@
 import React from 'react';
 import {useForm} from 'react-hook-form';
 import {yupResolver} from '@hookform/resolvers/yup';
-import {useNavigation, NavigationProp} from '@react-navigation/native';
-import {type AuthStackParamList} from '../../navigation/types';
 import {AuthFormTemplate} from '../../components/templates/AuthFormTemplate';
 import {EmailInput, PasswordInput, BaseInput} from '../../components/atoms';
 import {getSignUpValidationSchema} from '../../utils/validation';
 import {AuthWrapper} from '../../components/templates/AuthWrapper';
 import {signupApi} from '../../api/services/authService';
+import {useSafeNavigation, SignUpNavProp} from '../../navigation';
 
 type SignUpValues = {
   name: string;
@@ -17,7 +16,7 @@ type SignUpValues = {
 };
 
 export const SignUpScreen = () => {
-  const navigation = useNavigation<NavigationProp<AuthStackParamList>>();
+  const {navigation, canGoBack, goBack} = useSafeNavigation<SignUpNavProp>();
   const {
     control,
     handleSubmit,
@@ -53,7 +52,7 @@ export const SignUpScreen = () => {
       <AuthFormTemplate<SignUpValues>
         title="Create account"
         subtitle="Join MyApp today"
-        onBackPress={() => navigation.goBack()}
+        {...(canGoBack ? {onBackPress: goBack} : {})}
         fields={[
           {
             name: 'name',

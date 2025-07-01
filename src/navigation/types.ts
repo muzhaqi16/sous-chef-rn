@@ -2,7 +2,10 @@ import type {
   CompositeScreenProps,
   NavigatorScreenParams,
   CompositeNavigationProp,
+  RouteProp,
 } from '@react-navigation/native';
+import {User} from '../api/graphql/generated';
+import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {
   StackScreenProps,
   StackNavigationProp,
@@ -30,6 +33,13 @@ export type AuthStackParamList = {
   Login: undefined;
   SignUp: undefined;
   ForgotPassword: undefined;
+  RememberLoginInfo: {
+    email: string;
+    password: string;
+    accessToken: string;
+    refreshToken: string;
+    user: User;
+  };
   ResetPassword: {token: string};
   ChangePassword: undefined;
   ConfirmEmail: {email: string};
@@ -57,15 +67,30 @@ export type AuthStackScreenProps<T extends keyof AuthStackParamList> =
     RootStackScreenProps<keyof RootStackParamList>
   >;
 
-export type AuthNavProp = StackNavigationProp<AuthStackParamList, 'Login'>;
+export type LoginNavProp = StackNavigationProp<AuthStackParamList, 'Login'>;
 export type RootNavProp = StackNavigationProp<RootStackParamList>;
 
+export type OnBoardingNavProp = StackNavigationProp<
+  OnBoardingStackParamList,
+  'CreateShoppingList'
+>;
+
 export type CreateShoppingListNavProp = CompositeNavigationProp<
-  AuthNavProp,
+  OnBoardingNavProp,
   RootNavProp
 >;
 
-export type LoginNavProp = CompositeNavigationProp<AuthNavProp, RootNavProp>;
+export type SignUpNavProp = StackNavigationProp<AuthStackParamList, 'SignUp'>;
+export type RememberNavProp = NativeStackNavigationProp<
+  AuthStackParamList,
+  'RememberLoginInfo'
+>;
+type RememberRouteProp = RouteProp<AuthStackParamList, 'RememberLoginInfo'>;
+
+export type RememberLoginInfoProps = {
+  navigation: RememberNavProp;
+  route: RememberRouteProp;
+};
 
 export type LoginScreenProps = AuthStackScreenProps<'Login'>;
 export type LoginScreenNavigationProps = LoginScreenProps['navigation'];
