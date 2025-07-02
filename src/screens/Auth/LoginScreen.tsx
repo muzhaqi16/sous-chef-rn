@@ -7,9 +7,9 @@ import {LoginNavProp} from '../../navigation/types';
 import {AuthFormTemplate, AuthWrapper} from '../../components/templates';
 import {EmailInput, PasswordInput} from '../../components/atoms';
 import {getLoginValidationSchema} from '../../utils/validation';
-import {useStore} from '../../store/useStore';
+import {useStore} from '../../store';
 import {useToast, useSafeNavigation} from '../../hooks';
-import {loadCredentials, saveCredentials} from '../../storage/keychain';
+import {loadCredentials} from '../../storage/keychain';
 
 type LoginValues = {email: string; password: string};
 

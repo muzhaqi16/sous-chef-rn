@@ -28,7 +28,7 @@ export async function fetchItemsApi(
   if (!Array.isArray(items)) {
     throw new Error('Invalid data format for items');
   }
-  return items;
+  return items as ShoppingListItem[];
 }
 
 export async function addItemApi(

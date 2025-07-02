@@ -34,7 +34,7 @@ export const PickerSelect = ({
 
 const stylesheet = createStyleSheet(theme => ({
   item: {
-    color: theme.colors.white,
+    color: theme.colors.textPrimary,
   },
 }));
 

@@ -1,45 +1,79 @@
-export {createItemsSlice} from './itemsSlice';
-export {createShoppingListSlice} from './shoppingListSlice';
-export {createAuthSlice} from './authSlice';
-export {createProfileSlice} from './profileSlice';
-export {createPreferencesSlice} from './preferencesSlice';
-export {createPantrySlice} from './pantrySlice';
-export {createAppSlice} from './appSlice';
-export {createShoppingListItemSlice} from './shoppingListItemSlice';
-import {initialPantryListState, type PantryState} from './pantrySlice';
+import {create} from 'zustand';
+import {immer} from 'zustand/middleware/immer';
 import {
-  initialPreferencesState,
-  type PreferencesState,
-} from './preferencesSlice';
-import {initialAuthState, type AuthState} from './authSlice';
-import {initialItemsState, type ItemsState} from './itemsSlice';
+  createJSONStorage,
+  persist,
+  subscribeWithSelector,
+} from 'zustand/middleware';
+
+import {createAuthSlice, AuthState} from './slices/authSlice';
 import {
-  initialShoppingListState,
-  type ShoppingListState,
-} from './shoppingListSlice';
-import {initialAppState, type AppState} from './appSlice';
-import {initialProfileState, type ProfileState} from './profileSlice';
+  createPreferencesSlice,
+  PreferencesState,
+} from './slices/preferencesSlice';
+import {createProfileSlice, ProfileState} from './slices/profileSlice';
+import {createItemsSlice, ItemsState} from './slices/entities/itemsSlice';
+import {createPantrySlice, PantryState} from './slices/pantrySlice';
+import {createShoppingListSlice, ShoppingListState} from './slices/listsSlice';
 import {
+  createShoppingListItemSlice,
   ShoppingListItemState,
-  initialShoppingListItemState,
-} from './shoppingListItemSlice';
+} from './slices/shoppingListItemSlice';
+import {createAppSlice, AppState} from './slices/appSlice';
+import {
+  createConnectivitySlice,
+  ConnectivityState,
+} from './slices/connectivitySlice';
+import {createOfflineSlice, OfflineState} from './slices/offlineSlice';
+import {logger} from './logger';
+import {zustandStorage} from '../storage/mmkv';
 
-export const initialStoreState = {
-  ...initialAuthState,
-  ...initialItemsState,
-  ...initialPantryListState,
-  ...initialPreferencesState,
-  ...initialProfileState,
-  ...initialShoppingListState,
-  ...initialAppState,
-  ...initialShoppingListItemState,
-};
+export const STORAGE_KEY = 'sous-chef-storage';
 
-export type RootState = ShoppingListState &
-  AuthState &
-  ProfileState &
+export type RootState = AuthState &
   PreferencesState &
-  PantryState &
+  ProfileState &
   ItemsState &
+  PantryState &
+  ShoppingListState &
   ShoppingListItemState &
+  ConnectivityState &
+  OfflineState &
   AppState;
+
+export const useStore = create<RootState>()(
+  subscribeWithSelector(
+    persist(
+      immer(
+        logger((...a) => ({
+          ...createAuthSlice(...a),
+          ...createPreferencesSlice(...a),
+          ...createProfileSlice(...a),
+          ...createItemsSlice(...a),
+          ...createPantrySlice(...a),
+          ...createShoppingListSlice(...a),
+          ...createShoppingListItemSlice(...a),
+          ...createAppSlice(...a),
+          ...createConnectivitySlice(...a),
+          ...createOfflineSlice(...a),
+        })),
+      ),
+      {
+        name: STORAGE_KEY,
+        version: 2,
+        storage: createJSONStorage(() => zustandStorage),
+        onRehydrateStorage: state => {
+          return (state, error) => {
+            if (!error) state?.setHydrated(true);
+          };
+        },
+        skipHydration: false,
+        partialize: state => {
+          // exclude ephemeral UI flags if desired
+          const {isLoading, isError, isFetching, ...rest} = state;
+          return rest;
+        },
+      },
+    ),
+  ),
+);

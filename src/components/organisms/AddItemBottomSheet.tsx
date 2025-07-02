@@ -5,7 +5,7 @@ import BottomSheet, {BottomSheetRef} from '../pages/BottomSheet';
 import Button from '../atoms/Button';
 import {ADD_ITEM_TO_SHOPPING_LIST_MUTATION} from '../../api/graphql/mutations/shoppingListItem';
 import Autocomplete from '../molecules/AutoComplete';
-import {useStore} from '../../store/useStore';
+import {useStore} from '../../store';
 import {BaseInput} from '../atoms';
 
 interface Item {
@@ -27,7 +27,7 @@ const AddItemBottomSheet: React.FC<BottomSheetProps> = ({
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [renderBottomSheet, setRenderBottomSheet] = useState(false);
 
-  const shoppingListId = useStore(state => state.defaultShoppingList?.id);
+  const shoppingListId = useStore(state => state.listById?.id);
 
   // Setup your GraphQL mutation using Apollo's useMutation hook.
   const [addItem, {loading, error}] = useMutation(

@@ -2,8 +2,8 @@ import React, {useState, useRef} from 'react';
 import {Text, StyleSheet} from 'react-native';
 import BottomSheet, {BottomSheetRef} from '../pages/BottomSheet';
 import Button from '../atoms/Button';
-import EmailInput from '../atoms/EmailInput';
-import {useStore} from '../../store/useStore';
+import {EmailInput} from '../atoms';
+import {useStore} from '../../store';
 
 const ShareShoppingListBottomSheet: React.FC = () => {
   const bottomSheetRef = useRef<BottomSheetRef>(null);
@@ -11,8 +11,8 @@ const ShareShoppingListBottomSheet: React.FC = () => {
   const [renderBottomSheet, setRenderBottomSheet] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const shoppingListId = useStore(state => state.defaultShoppingList?.id);
-  const shareShoppingList = useStore(state => state.shareShoppingList);
+  const shoppingListId = useStore(state => state.getDefaultShoppingList()?.id);
+  const shareShoppingList = useStore(state => state.setCollaborators);
 
   const handleShow = () => {
     setRenderBottomSheet(true);
@@ -24,7 +24,7 @@ const ShareShoppingListBottomSheet: React.FC = () => {
       return;
     }
     try {
-      await shareShoppingList(shoppingListId, email.trim());
+      shareShoppingList(shoppingListId, [email.trim()]);
       bottomSheetRef.current?.close();
       setEmail('');
       setError(null);

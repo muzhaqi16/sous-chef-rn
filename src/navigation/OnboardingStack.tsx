@@ -1,6 +1,6 @@
 import React from 'react';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
-import {useStore} from '../store/useStore';
+import {useStore} from '../store';
 import {type OnBoardingStackParamList} from './types';
 import {LoginScreen, SignUpScreen, ForgotPasswordScreen} from '../screens/Auth';
 import {CreateShoppingListScreen} from '../screens/OnBoarding/CreateShoppingList';

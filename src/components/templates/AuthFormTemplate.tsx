@@ -22,7 +22,7 @@ interface Props<T extends FieldValues> {
 export function AuthFormTemplate<T extends FieldValues>({
   title,
   subtitle,
-  onBackPress,
+  onBackPress = undefined,
   fields,
   control,
   errors,

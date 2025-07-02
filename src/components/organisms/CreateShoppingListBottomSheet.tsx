@@ -3,7 +3,7 @@ import {Text, StyleSheet} from 'react-native';
 import BottomSheet, {BottomSheetRef} from '../pages/BottomSheet';
 import Button from '../atoms/Button';
 import {BaseInput as Input} from '../atoms';
-import {useStore} from '../../store/useStore';
+import {useStore} from '../../store';
 
 const CreateShoppingListBottomSheet: React.FC = ({}) => {
   const bottomSheetRef = useRef<BottomSheetRef>(null);

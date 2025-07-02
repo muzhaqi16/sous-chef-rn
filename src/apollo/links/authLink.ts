@@ -1,5 +1,5 @@
 import {setContext} from '@apollo/client/link/context';
-import {useStore} from '../../store/useStore';
+import {useStore} from '../../store';
 
 export const authLink = setContext(async (_, {headers}) => {
   const token = useStore.getState().accessToken;

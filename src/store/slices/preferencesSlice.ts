@@ -1,4 +1,5 @@
 import {StateCreator} from 'zustand';
+import {RootState} from '../index';
 
 export interface PreferencesState {
   preferences: {
@@ -7,7 +8,6 @@ export interface PreferencesState {
     language?: string;
     emailNotifications?: boolean;
     pushNotifications?: boolean;
-    darkMode?: boolean;
   };
   setTheme: (theme: 'light' | 'dark') => void;
   setOnBoardingCompleted: (completed: boolean) => void;
@@ -16,47 +16,54 @@ export interface PreferencesState {
   updatePreferences: (prefs: Partial<PreferencesState['preferences']>) => void;
 }
 
-// Initial empty state
-export const initialPreferencesState: Pick<PreferencesState, 'preferences'> = {
-  preferences: {
-    theme: 'light',
-    onBoardingCompleted: false,
-    pushNotifications: false,
-    emailNotifications: false,
-  },
+export const initialPreferencesState: PreferencesState['preferences'] = {
+  theme: 'light',
+  onBoardingCompleted: false,
+  emailNotifications: false,
+  pushNotifications: false,
 };
 
-export const createPreferencesSlice: StateCreator<PreferencesState> = set => ({
-  ...initialPreferencesState,
+export const createPreferencesSlice: StateCreator<
+  RootState,
+  [],
+  [],
+  PreferencesState
+> = set => ({
+  preferences: {...initialPreferencesState},
+
   setTheme: theme =>
-    set({
+    set(state => ({
       preferences: {
-        ...initialPreferencesState.preferences,
+        ...state.preferences,
         theme,
       },
-    }),
+    })),
+
   setOnBoardingCompleted: completed =>
-    set({
+    set(state => ({
       preferences: {
-        ...initialPreferencesState.preferences,
+        ...state.preferences,
         onBoardingCompleted: completed,
       },
-    }),
+    })),
+
   setLanguage: language =>
-    set({
+    set(state => ({
       preferences: {
-        ...initialPreferencesState.preferences,
+        ...state.preferences,
         language,
       },
-    }),
+    })),
+
   setNotificationsEnabled: enabled =>
-    set({
+    set(state => ({
       preferences: {
-        ...initialPreferencesState.preferences,
+        ...state.preferences,
         emailNotifications: enabled,
         pushNotifications: enabled,
       },
-    }),
+    })),
+
   updatePreferences: prefs =>
     set(state => ({
       preferences: {

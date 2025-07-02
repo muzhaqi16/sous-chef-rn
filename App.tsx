@@ -1,8 +1,8 @@
-import React, {useEffect} from 'react';
+import React, {useEffect, useState} from 'react';
 import {StatusBar, useColorScheme} from 'react-native';
 import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
 import {ApolloProvider} from '@apollo/client';
-import {useStore} from './src/store/useStore';
+import {useStore} from './src/store';
 import {client} from './src/apollo/client';
 import {
   useInitialTheme,
@@ -15,9 +15,10 @@ import SplashScreen from './src/screens/SplashScreen';
 import {ToastProvider} from './src/components/atoms';
 
 const App = () => {
-  const systemIsDark = useColorScheme() === 'dark';
-  const {darkMode} = useStore(store => store.preferences);
-  const effectiveDark = darkMode !== undefined ? darkMode : systemIsDark;
+  const darkMode = useColorScheme() === 'dark';
+  const {theme: userTheme} = useStore(store => store.preferences);
+  const effectiveDark =
+    darkMode !== undefined ? darkMode : userTheme === 'dark';
 
   useInitialTheme(effectiveDark ? 'dark' : 'light');
   const {styles, theme} = useStyles(stylesheet);
@@ -32,7 +33,9 @@ const App = () => {
   if (!isHydrated) {
     return <SplashScreen />;
   }
-
+  if (!client) {
+    return <SplashScreen />;
+  }
   return (
     <ApolloProvider client={client}>
       <SafeAreaProvider>

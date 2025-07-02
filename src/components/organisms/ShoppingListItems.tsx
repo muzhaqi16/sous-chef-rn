@@ -1,6 +1,6 @@
 import React from 'react';
 import {FlatList, StyleSheet, View} from 'react-native';
-import {useStore} from '../../store/useStore';
+import {useStore} from '../../store';
 import {SwipeableShoppingListItem} from './SwipeableShoppingListItem';
 import {ShoppingListItem} from '../../api/graphql/generated';
 

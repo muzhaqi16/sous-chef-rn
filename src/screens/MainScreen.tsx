@@ -1,6 +1,6 @@
-import React, {useEffect} from 'react';
+import React, {useEffect, useState, useMemo} from 'react';
 import {ScrollView, RefreshControl, View} from 'react-native';
-import {useStore} from '../store/useStore';
+import {useStore} from '../store';
 import {SwipeablePantryItem} from '../components/organisms/SwipeablePantryItem';
 import {StorageState} from '../api/graphql/generated';
 import {useStyles, createStyleSheet} from 'react-native-unistyles';
@@ -8,46 +8,55 @@ import SearchBar from '../components/molecules/SearchBar';
 import {useSearchableList} from '../hooks/useSearchableList';
 
 export const MainScreen = () => {
-  const {pantryItems, fetchPantryItems, deletePantryItem, editPantryItem} =
-    useStore();
-  const [isRefreshing, setIsRefreshing] = React.useState(false);
+  // 1) Subscribe to the normalized slices separately
+  const pantryIds = useStore(s => s.pantryIds);
+  const pantryById = useStore(s => s.pantryById);
+
+  // 2) Turn them into your flat array with useMemo
+  const pantryItems = useMemo(
+    () => pantryIds.map(id => pantryById[id]),
+    [pantryIds, pantryById],
+  );
+
+  // 2) grab your async thunks:
+  const fetchPantryItems = useStore(s => s.fetchPantryItems);
+  const deletePantryItem = useStore(s => s.deletePantryItem);
+  const editPantryItem = useStore(s => s.editPantryItem);
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const {query, setQuery, filtered} = useSearchableList(
     pantryItems,
     (item, q) => item.itemName.toLowerCase().includes(q.toLowerCase()),
   );
   const {styles} = useStyles(stylesheet);
+
+  // 3) initial load
   useEffect(() => {
-    // Fetch pantry items when the component mounts
     setIsRefreshing(true);
-    fetchPantryItems()
-      .then(() => {
-        console.log('Pantry items fetched successfully');
-      })
-      .catch(error => {
-        console.error('Error fetching pantry items:', error);
-      });
-    setIsRefreshing(false);
+    fetchPantryItems().finally(() => setIsRefreshing(false));
   }, [fetchPantryItems]);
 
   return (
     <View style={styles.container}>
-      {/* Action Bar */}
       <SearchBar
         value={query}
         onChangeText={setQuery}
         placeholder="Find an item…"
         containerStyle={{marginHorizontal: 12}}
       />
-      {/* Pantry Items List */}
+
       <ScrollView
         contentContainerStyle={styles.listContent}
         refreshControl={
           <RefreshControl
-            onRefresh={fetchPantryItems}
+            onRefresh={() => {
+              setIsRefreshing(true);
+              fetchPantryItems().finally(() => setIsRefreshing(false));
+            }}
             refreshing={isRefreshing}
           />
         }>
-        {pantryItems.map(pantryItem => (
+        {filtered.map(pantryItem => (
           <SwipeablePantryItem
             key={pantryItem.id}
             item={{
@@ -55,48 +64,38 @@ export const MainScreen = () => {
               itemName: pantryItem.itemName,
               quantity: `${pantryItem.quantity} ${pantryItem.unitSymbol}`,
               location:
-                pantryItem.item.storageState === StorageState.Frozen
+                pantryItem.storageState === StorageState.Frozen
                   ? 'Frozen'
-                  : pantryItem.item.storageState === StorageState.Cold
+                  : pantryItem.storageState === StorageState.Cold
                     ? 'Refrigerated'
                     : 'Pantry',
               expirationText: pantryItem.expirationDate
-                ? `Expiring in …`
+                ? `Expiring on ${new Date(pantryItem.expirationDate).toLocaleDateString()}`
                 : 'No expiration',
               expiredCount:
                 pantryItem.expirationDate &&
                 new Date(pantryItem.expirationDate) < new Date()
                   ? 1
-                  : 0, // Example logic for expired count
-              icon: {uri: pantryItem?.item?.imageUrl || 'default_icon.png'}, // Fallback icon
+                  : 0,
+              icon: {uri: pantryItem.item.imageUrl || 'default_icon.png'},
             }}
-            onDelete={deletePantryItem}
-            onEdit={(id: string) => {
-              // Handle edit action, e.g., open a modal or navigate to edit screen
-              console.log('Edit item with id:', id);
-              editPantryItem(id, {
-                itemName: 'Edited Item Name', // Example edit data
+            onDelete={() => deletePantryItem(pantryItem.id)}
+            onEdit={() =>
+              editPantryItem(pantryItem.id, {
+                itemName: 'Edited Item Name',
                 unitSymbol: 'kg',
                 storageState: StorageState.Ambient,
-                expirationDate: null, // Example edit data
-              });
-            }}
+                expirationDate: null,
+              })
+            }
           />
         ))}
       </ScrollView>
     </View>
   );
 };
-const stylesheet = createStyleSheet(theme => ({
-  container: {
-    flex: 1,
-  },
-  searchBar: {},
 
-  rowContainer: {
-    marginBottom: theme.spacing.md,
-  },
-  listContent: {
-    paddingBottom: theme.spacing.padding.sm,
-  },
+const stylesheet = createStyleSheet(theme => ({
+  container: {flex: 1},
+  listContent: {paddingBottom: theme.spacing.padding.sm},
 }));

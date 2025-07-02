@@ -11,7 +11,7 @@ import {
 } from '../../navigation';
 import {useSafeNavigation} from '../../hooks';
 import {saveCredentials} from '../../storage/keychain';
-import {useStore} from '../../store/useStore';
+import {useStore} from '../../store';
 
 type RememberValues = {};
 
@@ -47,7 +47,6 @@ export const RememberLoginInfoScreen: React.FC<Props> = ({
       <AuthFormTemplate<RememberValues>
         title="Remember login info?"
         subtitle="We'll remember the login info for your account, so you won't need to enter it on your iCloud devices."
-        {...(canGoBack ? {onBackPress: goBack} : {})}
         fields={[]}
         control={control}
         errors={errors}

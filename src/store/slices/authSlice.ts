@@ -1,12 +1,13 @@
 import {StateCreator} from 'zustand';
-import {loginApi, signupApi} from '../api/services/authService';
-import {RootState} from '.';
-import {User} from '../api/graphql/generated';
+import {loginApi, signupApi} from '../../api/services/authService';
+import {RootState} from '../index';
+import {User} from '../../api/graphql/generated';
 
 export interface AuthState {
   user: User | null;
   accessToken: string | null;
   refreshToken: string | null;
+
   authenticate: (
     email: string,
     password: string,
@@ -36,30 +37,36 @@ export const createAuthSlice: StateCreator<RootState, [], [], AuthState> = (
   get,
 ) => ({
   ...initialAuthState,
+
   authenticate: async (email, password) => {
     try {
       const {accessToken, refreshToken, user} = await loginApi(email, password);
       return {user, accessToken, refreshToken};
     } catch (err) {
-      console.error('authenticate error', err);
       return {
         error: err instanceof Error ? err.message : 'Unknown error',
       };
     }
   },
 
-  setAuth: (user, accessToken, refreshToken) => {
-    set({user, accessToken, refreshToken});
-  },
+  setAuth: (user, accessToken, refreshToken) =>
+    set(() => ({
+      user,
+      accessToken,
+      refreshToken,
+    })),
+
   login: async (email, password) => {
+    get().reset();
     try {
-      // Reset any previous errors or state
-      get().reset();
       const {accessToken, refreshToken, user} = await loginApi(email, password);
-      set({user, accessToken, refreshToken});
+      set(() => ({
+        user,
+        accessToken,
+        refreshToken,
+      }));
       return null;
     } catch (err) {
-      console.error(err);
       return err instanceof Error ? err.message : 'Unknown error';
     }
   },
@@ -71,15 +78,16 @@ export const createAuthSlice: StateCreator<RootState, [], [], AuthState> = (
         email,
         password,
       );
-      set({user, accessToken, refreshToken});
+      set(() => ({
+        user,
+        accessToken,
+        refreshToken,
+      }));
       return null;
     } catch (err) {
-      console.error(err);
       return err instanceof Error ? err.message : 'Unknown error';
     }
   },
 
-  logout: () => {
-    get().reset();
-  },
+  logout: () => get().reset(),
 });

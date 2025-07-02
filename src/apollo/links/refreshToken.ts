@@ -1,6 +1,6 @@
 import {Observable, FetchResult} from '@apollo/client';
 import {storage} from '../../storage/mmkv';
-import {useStore} from '../../store/useStore';
+import {useStore} from '../../store';
 import Config from 'react-native-config';
 
 /**

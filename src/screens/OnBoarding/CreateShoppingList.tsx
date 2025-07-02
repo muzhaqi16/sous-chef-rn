@@ -5,7 +5,7 @@ import {useNavigation} from '@react-navigation/native';
 import {OnBoardingWrapper} from '../../components/templates';
 import {DynamicFormFields} from '../../components/molecules/DynamicFormFields';
 import {BaseInput} from '../../components/atoms';
-import {useStore} from '../../store/useStore';
+import {useStore} from '../../store';
 import {CreateShoppingListNavProp} from '../../navigation/types';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
 import {CREATE_SHOPPING_LIST} from '../../api/graphql/mutations/shoppingList';

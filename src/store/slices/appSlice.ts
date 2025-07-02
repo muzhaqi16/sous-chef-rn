@@ -1,13 +1,13 @@
 import {StateCreator} from 'zustand';
-import {RootState} from '.';
-import {STORAGE_KEY} from './useStore';
-import {zustandStorage} from '../storage/mmkv';
+import {RootState, STORAGE_KEY} from '../index';
+import {zustandStorage} from '../../storage/mmkv';
 
 export interface AppState {
   isHydrated: boolean;
   isLoading: boolean;
   isError: boolean;
   isFetching: boolean;
+
   setHydrated: (flag: boolean) => void;
   setLoading: (flag: boolean) => void;
   setFetching: (flag: boolean) => void;
@@ -22,28 +22,34 @@ export const initialAppState = {
   isFetching: false,
 };
 
-export const createAppSlice: StateCreator<RootState, [], [], AppState> = (
-  set,
-  get,
-) => ({
+export const createAppSlice: StateCreator<
+  RootState,
+  [],
+  [],
+  AppState
+> = set => ({
   ...initialAppState,
-  setHydrated: (flag: boolean) => set({isHydrated: flag}),
+
+  setHydrated: flag => set({isHydrated: flag}),
   setLoading: flag => set({isLoading: flag}),
   setFetching: flag => set({isFetching: flag}),
   setError: flag => set({isError: flag}),
+
   reset: () => {
-    zustandStorage.removeItem(STORAGE_KEY); // clear the storage
-    // Reset the state to initial values
+    zustandStorage.removeItem(STORAGE_KEY);
     set(initialAppState);
     set({
-      shoppingListItems: [],
-      pantryItems: [],
-      shoppingLists: [],
+      itemsById: {},
+      itemIds: [],
+      pantryById: {},
+      pantryIds: [],
+      listById: {},
+      listIds: [],
+      itemsByList: {},
       user: null,
       accessToken: null,
-    });
-    set({
-      isHydrated: true,
-    });
+      refreshToken: null,
+    } as unknown as Partial<RootState>);
+    set({isHydrated: true});
   },
 });

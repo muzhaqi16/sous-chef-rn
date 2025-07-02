@@ -1,6 +1,6 @@
 import React, {useEffect, useState} from 'react';
 import {SafeAreaView, ScrollView} from 'react-native';
-import {useStore} from '../store/useStore';
+import {useStore} from '../store';
 import {ProfileHeader} from '../components/organisms/ProfileHeader';
 import {SettingsSection} from '../components/organisms/SettingsSection';
 import {SettingItem} from '../components/molecules/SettingRow';
