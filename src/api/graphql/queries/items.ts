@@ -1,13 +1,13 @@
 import {gql} from '@apollo/client';
 
 export const GET_ITEMS = gql`
-  query Items($filter: ItemFilterInput, $limit: Int, $offset: Int) {
-    items(filter: $filter, limit: $limit, offset: $offset) {
-      totalCount
+  query Items($filter: ItemFilterInput, $offset: Int, $limit: Int) {
+    items(filter: $filter, offset: $offset, limit: $limit) {
       items {
         id
+        fdcId
         name
-        description
+        dataType
         barcode
         aisle
         storageState
@@ -18,23 +18,41 @@ export const GET_ITEMS = gql`
         status
         visibility
         showInOnboarding
-        unit {
-          conversionFactor
+        units {
           id
+          isDefault
+          conversionFactor
+          notes
+        }
+        brands {
           name
-          symbol
-          type
+          id
         }
         categories {
           name
+          id
         }
-        skus {
-          sku
+        nutritions
+        marketCountry
+        publishedDate
+        modifiedDate
+        foodCategory
+        servingSize
+        servingSizeUnit
+        healthBenefits
+        metadata
+        createdBy {
+          id
         }
+        updatedBy {
+          id
+        }
+        createdAt
         updatedAt
         deletedAt
         version
       }
+      totalCount
     }
   }
 `;

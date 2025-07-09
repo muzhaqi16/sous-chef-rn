@@ -1,33 +1,55 @@
+import NetInfo, {NetInfoState} from '@react-native-community/netinfo';
 import {StateCreator} from 'zustand';
-import NetInfo from '@react-native-community/netinfo';
 import {RootState} from '../index';
 
 export interface ConnectivityState {
+  /** Are we currently online? */
   isOnline: boolean;
+  /**
+   * If set, called whenever we transition back _online_.
+   * You can use this to flush any queued mutations.
+   */
+  syncQueue?: () => Promise<void>;
+  /** Register your queue‐flush function here */
+  setSyncQueue: (callback: () => Promise<void>) => void;
 }
 
 export const createConnectivitySlice: StateCreator<
   RootState,
-  [],
+  [['zustand/immer', never]],
   [],
   ConnectivityState
 > = (set, get) => {
-  // 1) Seed initial state from NetInfo.fetch()
-  NetInfo.fetch().then(state => {
-    set({isOnline: state.isConnected ?? false});
+  // 1) Grab the initial state
+  NetInfo.fetch().then((state: NetInfoState) => {
+    set(s => {
+      s.isOnline = state.isConnected ?? false;
+    });
   });
 
-  // 2) Subscribe to changes and trigger sync when back online
-  const unsubscribe = NetInfo.addEventListener(state => {
+  // 2) Listen for changes
+  const unsubscribe = NetInfo.addEventListener((state: NetInfoState) => {
     const online = state.isConnected ?? false;
-    set({isOnline: online});
-    if (online) {
-      get().syncQueue?.();
+    set(s => {
+      s.isOnline = online;
+    });
+
+    // if we just came back online, run the syncQueue
+    if (online && get().syncQueue) {
+      get().syncQueue!();
     }
   });
 
-  // 3) Return slice props
+  // (Optional) you could store unsubscribe in state or call it on unmount,
+  // but for a global slice it’s usually fine to leave the listener active.
+
+  // 3) Return the slice’s initial state + actions
   return {
-    isOnline: true, // optimistic default until fetch resolves
+    isOnline: true,
+    syncQueue: undefined,
+    setSyncQueue: callback =>
+      set(state => {
+        state.syncQueue = callback;
+      }),
   };
 };

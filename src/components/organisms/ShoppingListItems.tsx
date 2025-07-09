@@ -9,24 +9,27 @@ type ShoppingListItemsProps = {
 };
 
 const ShoppingListItems = ({data}: ShoppingListItemsProps) => {
-  const {addQuantity, removeQuantity, deleteFromList, moveToPantry} =
-    useStore();
-  const {getShoppingListItems, isLoading} = useStore();
+  const {fetchItemsForList, isLoading} = useStore();
 
   return (
     <View style={styles.container}>
       <FlatList
         data={data}
         keyExtractor={item => item.id}
-        onRefresh={getShoppingListItems}
+        onRefresh={() => {
+          if (data && data.length > 0) {
+            fetchItemsForList(data[0].shoppingListId);
+          }
+        }}
+        showsVerticalScrollIndicator={false}
         refreshing={isLoading}
         renderItem={({item}) => (
           <SwipeableShoppingListItem
             item={item}
-            onIncrement={addQuantity}
-            onDecrement={removeQuantity}
-            onRemove={deleteFromList}
-            onMoveToPantry={moveToPantry}
+            onIncrement={() => {}}
+            onDecrement={() => {}}
+            onRemove={() => {}}
+            onMoveToPantry={() => {}}
           />
         )}
         contentContainerStyle={styles.listContent}

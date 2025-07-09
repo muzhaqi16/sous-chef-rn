@@ -8,6 +8,7 @@ import AddButton from '../components/molecules/AddButton';
 import {AddItemBottomSheet} from '../components';
 import {useSearchableList} from '../hooks';
 import {useStore} from '../store';
+import {useShoppingListUpdates} from '../hooks/useShoppingListUpdates';
 
 const ShoppingListScreen = () => {
   const {styles} = useStyles(stylesheet);
@@ -17,7 +18,7 @@ const ShoppingListScreen = () => {
   const selectedListId = useStore(s => s.selectedListId);
   const defaultList = useStore(s => s.getDefaultShoppingList());
   const fetchItemsForList = useStore(s => s.fetchItemsForList);
-
+  const {error} = useShoppingListUpdates(defaultList?.id || '');
   // Ensure a selected list is set after lists are loaded
   useEffect(() => {
     if (!selectedListId && defaultList) {

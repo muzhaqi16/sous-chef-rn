@@ -5,16 +5,20 @@ import {
   persist,
   subscribeWithSelector,
 } from 'zustand/middleware';
-
+// import {syncAll} from '../api/services/syncService';
 import {createAuthSlice, AuthState} from './slices/authSlice';
 import {
   createPreferencesSlice,
   PreferencesState,
 } from './slices/preferencesSlice';
+import {createHomeSlice, HomeState} from './slices/homeSlice';
 import {createProfileSlice, ProfileState} from './slices/profileSlice';
 import {createItemsSlice, ItemsState} from './slices/entities/itemsSlice';
 import {createPantrySlice, PantryState} from './slices/pantrySlice';
-import {createShoppingListSlice, ShoppingListState} from './slices/listsSlice';
+import {
+  createShoppingListSlice,
+  ShoppingListState,
+} from './slices/shoppingListSlice';
 import {
   createShoppingListItemSlice,
   ShoppingListItemState,
@@ -39,6 +43,7 @@ export type RootState = AuthState &
   ShoppingListItemState &
   ConnectivityState &
   OfflineState &
+  HomeState &
   AppState;
 
 export const useStore = create<RootState>()(
@@ -47,6 +52,7 @@ export const useStore = create<RootState>()(
       immer(
         logger((...a) => ({
           ...createAuthSlice(...a),
+          ...createHomeSlice(...a),
           ...createPreferencesSlice(...a),
           ...createProfileSlice(...a),
           ...createItemsSlice(...a),
@@ -63,8 +69,21 @@ export const useStore = create<RootState>()(
         version: 2,
         storage: createJSONStorage(() => zustandStorage),
         onRehydrateStorage: state => {
-          return (state, error) => {
-            if (!error) state?.setHydrated(true);
+          return async (restoredState, error) => {
+            if (!error) {
+              restoredState?.setHydrated(true);
+
+              const isOnline = restoredState?.isOnline ?? false;
+
+              // Register syncQueue callback
+              // restoredState?.setSyncQueue(syncAll);
+
+              // Optionally trigger sync immediately if online
+              if (isOnline) {
+                // await syncAll();
+                console.log('Store rehydrated and online, syncing data...');
+              }
+            }
           };
         },
         skipHydration: false,

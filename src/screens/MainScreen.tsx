@@ -11,6 +11,8 @@ export const MainScreen = () => {
   // 1) Subscribe to the normalized slices separately
   const pantryIds = useStore(s => s.pantryIds);
   const pantryById = useStore(s => s.pantryById);
+  const deletePantryItem = useStore(s => s.removePantryItem);
+  const editPantryItem = useStore(s => s.updatePantryItem);
 
   // 2) Turn them into your flat array with useMemo
   const pantryItems = useMemo(
@@ -18,23 +20,12 @@ export const MainScreen = () => {
     [pantryIds, pantryById],
   );
 
-  // 2) grab your async thunks:
-  const fetchPantryItems = useStore(s => s.fetchPantryItems);
-  const deletePantryItem = useStore(s => s.deletePantryItem);
-  const editPantryItem = useStore(s => s.editPantryItem);
-
   const [isRefreshing, setIsRefreshing] = useState(false);
   const {query, setQuery, filtered} = useSearchableList(
     pantryItems,
-    (item, q) => item.itemName.toLowerCase().includes(q.toLowerCase()),
+    (item, q) => item.item.name.toLowerCase().includes(q.toLowerCase()),
   );
   const {styles} = useStyles(stylesheet);
-
-  // 3) initial load
-  useEffect(() => {
-    setIsRefreshing(true);
-    fetchPantryItems().finally(() => setIsRefreshing(false));
-  }, [fetchPantryItems]);
 
   return (
     <View style={styles.container}>
@@ -51,7 +42,6 @@ export const MainScreen = () => {
           <RefreshControl
             onRefresh={() => {
               setIsRefreshing(true);
-              fetchPantryItems().finally(() => setIsRefreshing(false));
             }}
             refreshing={isRefreshing}
           />
@@ -61,20 +51,20 @@ export const MainScreen = () => {
             key={pantryItem.id}
             item={{
               id: pantryItem.id,
-              itemName: pantryItem.itemName,
-              quantity: `${pantryItem.quantity} ${pantryItem.unitSymbol}`,
+              itemName: pantryItem.item.name,
+              quantity: `${pantryItem.quantity} ${pantryItem.unit.symbol}`,
               location:
                 pantryItem.storageState === StorageState.Frozen
                   ? 'Frozen'
                   : pantryItem.storageState === StorageState.Cold
                     ? 'Refrigerated'
                     : 'Pantry',
-              expirationText: pantryItem.expirationDate
-                ? `Expiring on ${new Date(pantryItem.expirationDate).toLocaleDateString()}`
+              expirationText: pantryItem.expiresAt
+                ? `Expiring on ${new Date(pantryItem.expiresAt).toLocaleDateString()}`
                 : 'No expiration',
               expiredCount:
-                pantryItem.expirationDate &&
-                new Date(pantryItem.expirationDate) < new Date()
+                pantryItem.expiresAt &&
+                new Date(pantryItem.expiresAt) < new Date()
                   ? 1
                   : 0,
               icon: {uri: pantryItem.item.imageUrl || 'default_icon.png'},
@@ -82,10 +72,8 @@ export const MainScreen = () => {
             onDelete={() => deletePantryItem(pantryItem.id)}
             onEdit={() =>
               editPantryItem(pantryItem.id, {
-                itemName: 'Edited Item Name',
-                unitSymbol: 'kg',
+                ...pantryItem,
                 storageState: StorageState.Ambient,
-                expirationDate: null,
               })
             }
           />

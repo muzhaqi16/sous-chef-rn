@@ -1,7 +1,12 @@
 import {StateCreator} from 'zustand';
-import {RootState} from '../index';
-import {fetchItemsApi} from '../../api/services/shoppingListItemService';
-import {ShoppingListItem} from '../../api/graphql/generated';
+import {v4 as uuidv4} from 'uuid';
+import {
+  fetchItemsApi,
+  addItemApi,
+  removeItemApi,
+} from '../../api/services/shoppingListItemService';
+import type {ShoppingListItem} from '../../api/graphql/generated';
+import type {RootState} from '../index';
 
 export interface ShoppingListItemState {
   itemsByList: Record<
@@ -12,6 +17,15 @@ export interface ShoppingListItemState {
   upsertItemInList: (item: ShoppingListItem) => void;
   removeItemFromList: (listId: string, id: string) => void;
   fetchItemsForList: (listId: string) => Promise<void>;
+
+  // new async actions
+  addItem: (
+    listId: string,
+    name: string,
+    quantity: number,
+    price: number,
+  ) => Promise<void>;
+  deleteItem: (listId: string, id: string) => Promise<void>;
 }
 
 export const createShoppingListItemSlice: StateCreator<
@@ -33,11 +47,16 @@ export const createShoppingListItemSlice: StateCreator<
 
   upsertItemInList: item =>
     set(state => {
-      const bucket = (state.itemsByList[item.id] ||= {
+      const bucket = state.itemsByList[item.shoppingListId] || {
         byId: {},
         allIds: [],
-      });
-      if (!bucket.byId[item.id]) bucket.allIds.push(item.id);
+      };
+      if (!state.itemsByList[item.shoppingListId]) {
+        state.itemsByList[item.shoppingListId] = bucket;
+      }
+      if (!bucket.byId[item.id]) {
+        bucket.allIds.push(item.id);
+      }
       bucket.byId[item.id] = item;
     }),
 
@@ -48,11 +67,9 @@ export const createShoppingListItemSlice: StateCreator<
       delete bucket.byId[id];
       bucket.allIds = bucket.allIds.filter(x => x !== id);
     }),
+
   fetchItemsForList: async listId => {
     const items = await fetchItemsApi(listId);
-    // transform GraphQL items into your slice shape if needed
-    console.log('fetchItemsForList', {listId, items});
-
     set(state => {
       state.itemsByList[listId] = {byId: {}, allIds: []};
       items.forEach(it => {
@@ -60,5 +77,57 @@ export const createShoppingListItemSlice: StateCreator<
         state.itemsByList[listId].allIds.push(it.id);
       });
     });
+  },
+
+  addItem: async (listId, name, quantity, price) => {
+    // 1) optimistic insert
+    const tempId = uuidv4();
+    const now = new Date().toISOString();
+    const optimistic: ShoppingListItem = {
+      id: tempId,
+      shoppingListId: listId,
+      label: name,
+      quantity,
+      itemName: name,
+      unitSymbol: null,
+      isPurchased: false,
+      createdAt: now,
+      updatedAt: now,
+    };
+    get().upsertItemInList(optimistic);
+
+    try {
+      // 2) call your addItemApi
+      const saved = await addItemApi(name, quantity, price, listId);
+
+      // 3) replace temp with real
+      set(state => {
+        const bucket = state.itemsByList[listId];
+        if (!bucket) return;
+        // remove temp
+        delete bucket.byId[tempId];
+        bucket.allIds = bucket.allIds.filter(id => id !== tempId);
+        // insert real
+        bucket.byId[saved.id] = saved;
+        bucket.allIds.push(saved.id);
+      });
+    } catch (err) {
+      // 4) rollback
+      get().removeItemFromList(listId, tempId);
+      throw err;
+    }
+  },
+
+  deleteItem: async (listId, id) => {
+    // 1) optimistic remove
+    get().removeItemFromList(listId, id);
+
+    try {
+      await removeItemApi(id);
+    } catch (err) {
+      // 2) rollback by refetching
+      await get().fetchItemsForList(listId);
+      throw err;
+    }
   },
 });

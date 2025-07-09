@@ -1,29 +1,32 @@
 import {gql} from '@apollo/client';
 
 export const GET_USER_PANTRY_ITEMS = gql`
-  query PantryItems {
-    pantryItems {
+  query PantryItems($pantryId: ID!) {
+    pantryItems(pantryId: $pantryId) {
       id
+      pantryId
       itemId
-      quantity
       unitId
-      itemName
-      unitSymbol
-      addedDate
+      quantity
+      grams
+      addedAt
       lastUsedAt
-      expirationDate
+      expiresAt
       storageState
       deletedAt
       version
       item {
-        imageUrl
         id
+        imageUrl
         name
-        storageState
       }
       unit {
         id
+        name
         symbol
+        conversionFactor
+        notes
+        type
       }
     }
   }

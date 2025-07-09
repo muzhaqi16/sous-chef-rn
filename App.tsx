@@ -4,6 +4,7 @@ import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
 import {ApolloProvider} from '@apollo/client';
 import {useStore} from './src/store';
 import {client} from './src/apollo/client';
+import Config from 'react-native-config';
 import {
   useInitialTheme,
   createStyleSheet,
@@ -13,6 +14,7 @@ import {
 import AppNavigator from './src/navigation/AppNavigator';
 import SplashScreen from './src/screens/SplashScreen';
 import {ToastProvider} from './src/components/atoms';
+import {Text} from 'react-native-gesture-handler';
 
 const App = () => {
   const darkMode = useColorScheme() === 'dark';
@@ -44,6 +46,7 @@ const App = () => {
           backgroundColor={colors.background}
         />
         <SafeAreaView style={styles.container}>
+          <Text style={styles.text}>API_URL: {Config.API_URL}</Text>
           <ToastProvider>
             <AppNavigator />
           </ToastProvider>

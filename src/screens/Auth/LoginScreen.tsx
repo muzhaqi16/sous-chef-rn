@@ -30,7 +30,7 @@ export function LoginScreen() {
     formState: {errors},
   } = useForm<LoginValues>({
     resolver: yupResolver(getLoginValidationSchema()),
-    defaultValues: {email: '', password: ''},
+    defaultValues: {email: 'artanmuzhaqi@gmail.com', password: 'Test123!'},
   });
 
   // 1) Try to load (and prompt) via our helper
@@ -38,6 +38,7 @@ export function LoginScreen() {
     (async () => {
       try {
         const creds = await loadCredentials();
+        console.log('Loaded credentials from Keychain:', creds);
         if (creds) {
           reset({email: creds.username, password: creds.password});
           setPwFromKeychain(true);
@@ -53,6 +54,7 @@ export function LoginScreen() {
     async ({email, password}: LoginValues) => {
       if (isLoggingIn) return;
       setIsLoggingIn(true);
+      console.log('Login attempt with:', {email, password});
 
       const result = await authenticate(email, password);
       if ('error' in result) {

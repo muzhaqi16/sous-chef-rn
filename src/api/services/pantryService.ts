@@ -1,6 +1,6 @@
 import {client} from '../../apollo/client';
 import {GET_USER_PANTRY_ITEMS} from '../graphql/queries/pantry';
-
+import {SYNC_PANTRY} from '../graphql/mutations/pantry';
 import {PantryItem} from '../graphql/generated';
 
 export const getPantryItemsApi = async () => {
@@ -53,4 +53,19 @@ export const deletePantryItemApi = async (id: string) => {
     console.error('Error deleting pantry item:', error);
     throw error;
   }
+};
+
+export const syncPantryMutation = async (pantry: {
+  id: string;
+  name: string;
+  homeId: string;
+  version?: number;
+  deletedAt?: string | null;
+}) => {
+  const result = await client.mutate({
+    mutation: SYNC_PANTRY,
+    variables: {pantry},
+  });
+
+  return result.data?.syncPantry === true;
 };

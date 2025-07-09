@@ -25,10 +25,6 @@ export type AddCollaboratorInput = {
   shoppingListId: Scalars['ID']['input'];
 };
 
-export type AddItemToPantryInput = {
-  itemId: Scalars['ID']['input'];
-};
-
 export type AuthPayload = {
   __typename?: 'AuthPayload';
   accessToken: Scalars['String']['output'];
@@ -38,27 +34,17 @@ export type AuthPayload = {
 
 export type Brand = {
   __typename?: 'Brand';
-  children: Array<Brand>;
-  createdAt: Scalars['DateTime']['output'];
-  deletedAt?: Maybe<Scalars['DateTime']['output']>;
   description?: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
   name: Scalars['String']['output'];
-  parent?: Maybe<Brand>;
-  updatedAt: Scalars['DateTime']['output'];
-  version: Scalars['Int']['output'];
 };
 
 export type Category = {
   __typename?: 'Category';
-  children: Array<Category>;
-  createdAt: Scalars['DateTime']['output'];
-  deletedAt?: Maybe<Scalars['DateTime']['output']>;
+  children?: Maybe<Array<Category>>;
   id: Scalars['ID']['output'];
   name: Scalars['String']['output'];
   parent?: Maybe<Category>;
-  updatedAt: Scalars['DateTime']['output'];
-  version: Scalars['Int']['output'];
 };
 
 export enum CollaboratorRole {
@@ -72,36 +58,58 @@ export enum CollaboratorStatus {
   Removed = 'REMOVED'
 }
 
+export type CreateHomeInviteInput = {
+  email: Scalars['String']['input'];
+  expiresAt: Scalars['DateTime']['input'];
+  homeId: Scalars['ID']['input'];
+  role: Role;
+};
+
+export type CreatePantryInput = {
+  homeId: Scalars['ID']['input'];
+  name?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type CreatePantryItemInput = {
-  expirationDate?: InputMaybe<Scalars['DateTime']['input']>;
+  expiresAt?: InputMaybe<Scalars['DateTime']['input']>;
   itemId: Scalars['ID']['input'];
-  itemName: Scalars['String']['input'];
-  lastUsedAt?: InputMaybe<Scalars['DateTime']['input']>;
+  pantryId: Scalars['ID']['input'];
   quantity: Scalars['Float']['input'];
   storageState?: InputMaybe<StorageState>;
   unitId: Scalars['ID']['input'];
-  unitSymbol: Scalars['String']['input'];
 };
 
 export type CreateShoppingListInput = {
+  addTags?: InputMaybe<Array<Scalars['String']['input']>>;
   isDefault?: InputMaybe<Scalars['Boolean']['input']>;
   name: Scalars['String']['input'];
-  tags?: InputMaybe<Array<Scalars['String']['input']>>;
 };
 
 export type CreateUpdateItemInput = {
   aisle?: InputMaybe<Scalars['String']['input']>;
   barcode?: InputMaybe<Scalars['String']['input']>;
+  brandIds?: InputMaybe<Array<Scalars['ID']['input']>>;
   categoryIds?: InputMaybe<Array<Scalars['ID']['input']>>;
+  dataType?: InputMaybe<Scalars['String']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
+  fdcId?: InputMaybe<Scalars['Int']['input']>;
+  foodCategory?: InputMaybe<Scalars['String']['input']>;
+  healthBenefits?: InputMaybe<Scalars['JSON']['input']>;
   imageUrl?: InputMaybe<Scalars['String']['input']>;
+  marketCountry?: InputMaybe<Scalars['String']['input']>;
+  metadata?: InputMaybe<Scalars['JSON']['input']>;
+  modifiedDate?: InputMaybe<Scalars['DateTime']['input']>;
   name: Scalars['String']['input'];
+  nutritions?: InputMaybe<Scalars['JSON']['input']>;
+  publishedDate?: InputMaybe<Scalars['DateTime']['input']>;
+  servingSize?: InputMaybe<Scalars['Float']['input']>;
+  servingSizeUnit?: InputMaybe<Scalars['String']['input']>;
   shelfLifeDays?: InputMaybe<Scalars['Int']['input']>;
   showInOnboarding?: InputMaybe<Scalars['Boolean']['input']>;
   status?: InputMaybe<ItemStatus>;
   storageState: StorageState;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
-  unitId?: InputMaybe<Scalars['ID']['input']>;
+  unitIds?: InputMaybe<Array<Scalars['ID']['input']>>;
   visibility?: InputMaybe<Visibility>;
 };
 
@@ -123,30 +131,85 @@ export enum CurrencyCode {
   Usd = 'USD'
 }
 
+export type Home = {
+  __typename?: 'Home';
+  createdAt: Scalars['DateTime']['output'];
+  defaultPantry: Pantry;
+  defaultPantryId: Scalars['ID']['output'];
+  id: Scalars['ID']['output'];
+  invites: Array<HomeInvite>;
+  members: Array<Membership>;
+  name: Scalars['String']['output'];
+  ownerId: Scalars['ID']['output'];
+  pantries: Array<Pantry>;
+  updatedAt: Scalars['DateTime']['output'];
+};
+
+export type HomeInvite = {
+  __typename?: 'HomeInvite';
+  acceptedAt?: Maybe<Scalars['DateTime']['output']>;
+  createdAt: Scalars['DateTime']['output'];
+  email: Scalars['String']['output'];
+  expiresAt: Scalars['DateTime']['output'];
+  home: Home;
+  homeId: Scalars['ID']['output'];
+  id: Scalars['ID']['output'];
+  inviter: User;
+  inviterId: Scalars['ID']['output'];
+  role: Role;
+  status: InviteStatus;
+  token: Scalars['String']['output'];
+};
+
+export enum InviteStatus {
+  Accepted = 'ACCEPTED',
+  Expired = 'EXPIRED',
+  Pending = 'PENDING',
+  Revoked = 'REVOKED'
+}
+
 export type Item = {
   __typename?: 'Item';
   aisle?: Maybe<Scalars['String']['output']>;
   barcode?: Maybe<Scalars['String']['output']>;
+  brands?: Maybe<Array<Brand>>;
   categories?: Maybe<Array<Category>>;
   createdAt: Scalars['DateTime']['output'];
   createdBy?: Maybe<User>;
+  dataType?: Maybe<Scalars['String']['output']>;
   deletedAt?: Maybe<Scalars['DateTime']['output']>;
   description?: Maybe<Scalars['String']['output']>;
+  fdcId?: Maybe<Scalars['Int']['output']>;
+  foodCategory?: Maybe<Scalars['String']['output']>;
+  healthBenefits?: Maybe<Scalars['JSON']['output']>;
   id: Scalars['ID']['output'];
   imageUrl?: Maybe<Scalars['String']['output']>;
+  marketCountry?: Maybe<Scalars['String']['output']>;
+  metadata?: Maybe<Scalars['JSON']['output']>;
+  modifiedDate?: Maybe<Scalars['DateTime']['output']>;
   name: Scalars['String']['output'];
+  nutritions?: Maybe<Scalars['JSON']['output']>;
   popularityCount: Scalars['Int']['output'];
+  publishedDate?: Maybe<Scalars['DateTime']['output']>;
+  servingSize?: Maybe<Scalars['Float']['output']>;
+  servingSizeUnit?: Maybe<Scalars['String']['output']>;
   shelfLifeDays?: Maybe<Scalars['Int']['output']>;
   showInOnboarding: Scalars['Boolean']['output'];
   skus?: Maybe<Array<ItemStoreSku>>;
   status: ItemStatus;
   storageState: StorageState;
-  tags: Array<Scalars['String']['output']>;
-  unit?: Maybe<Unit>;
+  tags?: Maybe<Array<Scalars['String']['output']>>;
+  units?: Maybe<Array<ItemUnit>>;
   updatedAt: Scalars['DateTime']['output'];
   updatedBy?: Maybe<User>;
   version: Scalars['Int']['output'];
   visibility: Visibility;
+};
+
+export type ItemCategory = {
+  __typename?: 'ItemCategory';
+  category: Category;
+  id: Scalars['ID']['output'];
 };
 
 export type ItemFilterInput = {
@@ -182,6 +245,19 @@ export type ItemSuggestion = {
   name: Scalars['String']['output'];
 };
 
+export type ItemUnit = {
+  __typename?: 'ItemUnit';
+  conversionFactor?: Maybe<Scalars['Float']['output']>;
+  id: Scalars['ID']['output'];
+  isDefault: Scalars['Boolean']['output'];
+  notes?: Maybe<Scalars['String']['output']>;
+  unit: Unit;
+};
+
+export type LeaveHomeInput = {
+  homeId: Scalars['ID']['input'];
+};
+
 export type LoginHistory = {
   __typename?: 'LoginHistory';
   id: Scalars['ID']['output'];
@@ -195,9 +271,18 @@ export type LoginHistoryInput = {
   userId: Scalars['ID']['input'];
 };
 
+export type Membership = {
+  __typename?: 'Membership';
+  id: Scalars['ID']['output'];
+  joinedAt: Scalars['DateTime']['output'];
+  role: Role;
+  user: User;
+};
+
 export type Mutation = {
   __typename?: 'Mutation';
   _empty?: Maybe<Scalars['String']['output']>;
+  acceptHomeInvite: Home;
   addCollaborator: ShoppingListCollaborator;
   addItemToPantry: PantryItem;
   addItemToShoppingList: ShoppingListItem;
@@ -205,8 +290,10 @@ export type Mutation = {
   createBrand: Brand;
   createCategory: Category;
   createCurrency: Currency;
+  createHomeInvite: HomeInvite;
   createItem: Item;
   createNotification: Notification;
+  createPantry: Pantry;
   createPantryItem: PantryItem;
   createPurchase: Purchase;
   createShoppingList: ShoppingList;
@@ -217,7 +304,8 @@ export type Mutation = {
   deleteCurrency: Currency;
   deleteItem: Item;
   deleteNotification: Notification;
-  deletePantryItem: PantryItem;
+  deletePantry: Scalars['Boolean']['output'];
+  deletePantryItem: Scalars['Boolean']['output'];
   deletePurchase: Purchase;
   deleteShoppingList: ShoppingList;
   deleteStore: Store;
@@ -225,19 +313,28 @@ export type Mutation = {
   deleteUser: User;
   deleteUserAddress: UserAddress;
   forgotPassword: Scalars['Boolean']['output'];
+  leaveHome: Scalars['Boolean']['output'];
   login: AuthPayload;
   markItemPurchased: ShoppingListItem;
   markNotificationRead: Notification;
+  refresh: AuthPayload;
   register: AuthPayload;
-  removeCollaborator: ShoppingListCollaborator;
+  removeCollaborator: Scalars['Boolean']['output'];
   removeItemFromShoppingList: Scalars['Boolean']['output'];
+  resendVerificationEmail: Scalars['Boolean']['output'];
   resetPassword: Scalars['Boolean']['output'];
-  shareShoppingList: ShoppingList;
-  unshareShoppingList: ShoppingList;
+  revokeHomeInvite: HomeInvite;
+  syncHome: Scalars['Boolean']['output'];
+  syncPantry: Scalars['Boolean']['output'];
+  syncPantryItems: Scalars['Boolean']['output'];
+  syncShoppingLists: Scalars['Boolean']['output'];
   updateBrand: Brand;
   updateCategory: Category;
   updateCurrency: Currency;
+  updateHome: Home;
   updateItem: Item;
+  updateMembershipRole: Membership;
+  updatePantry: Pantry;
   updatePantryItem: PantryItem;
   updatePurchase: Purchase;
   updateShoppingList: ShoppingList;
@@ -249,6 +346,12 @@ export type Mutation = {
   updateUserModeration: UserModeration;
   updateUserProfile?: Maybe<UserProfile>;
   updateUserSettings: UserSettings;
+  verifyEmail: Scalars['Boolean']['output'];
+};
+
+
+export type MutationAcceptHomeInviteArgs = {
+  token: Scalars['String']['input'];
 };
 
 
@@ -258,7 +361,7 @@ export type MutationAddCollaboratorArgs = {
 
 
 export type MutationAddItemToPantryArgs = {
-  input: AddItemToPantryInput;
+  input: CreatePantryItemInput;
 };
 
 
@@ -300,6 +403,11 @@ export type MutationCreateCurrencyArgs = {
 };
 
 
+export type MutationCreateHomeInviteArgs = {
+  input: CreateHomeInviteInput;
+};
+
+
 export type MutationCreateItemArgs = {
   data: CreateUpdateItemInput;
 };
@@ -310,6 +418,11 @@ export type MutationCreateNotificationArgs = {
   status?: InputMaybe<Scalars['String']['input']>;
   type: Scalars['String']['input'];
   userId: Scalars['ID']['input'];
+};
+
+
+export type MutationCreatePantryArgs = {
+  input: CreatePantryInput;
 };
 
 
@@ -347,6 +460,7 @@ export type MutationCreateStoreArgs = {
 export type MutationCreateUnitArgs = {
   conversionFactor: Scalars['Float']['input'];
   name: Scalars['String']['input'];
+  notes?: InputMaybe<Scalars['String']['input']>;
   symbol: Scalars['String']['input'];
   type: UnitType;
 };
@@ -373,6 +487,11 @@ export type MutationDeleteItemArgs = {
 
 
 export type MutationDeleteNotificationArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
+export type MutationDeletePantryArgs = {
   id: Scalars['ID']['input'];
 };
 
@@ -417,6 +536,11 @@ export type MutationForgotPasswordArgs = {
 };
 
 
+export type MutationLeaveHomeArgs = {
+  input: LeaveHomeInput;
+};
+
+
 export type MutationLoginArgs = {
   email: Scalars['String']['input'];
   password: Scalars['String']['input'];
@@ -430,6 +554,11 @@ export type MutationMarkItemPurchasedArgs = {
 
 export type MutationMarkNotificationReadArgs = {
   id: Scalars['ID']['input'];
+};
+
+
+export type MutationRefreshArgs = {
+  token: Scalars['String']['input'];
 };
 
 
@@ -450,21 +579,39 @@ export type MutationRemoveItemFromShoppingListArgs = {
 };
 
 
+export type MutationResendVerificationEmailArgs = {
+  email: Scalars['String']['input'];
+};
+
+
 export type MutationResetPasswordArgs = {
   password: Scalars['String']['input'];
   token: Scalars['String']['input'];
 };
 
 
-export type MutationShareShoppingListArgs = {
-  listId: Scalars['ID']['input'];
-  userId: Scalars['ID']['input'];
+export type MutationRevokeHomeInviteArgs = {
+  token: Scalars['String']['input'];
 };
 
 
-export type MutationUnshareShoppingListArgs = {
-  listId: Scalars['ID']['input'];
-  userId: Scalars['ID']['input'];
+export type MutationSyncHomeArgs = {
+  home: SyncHomeInput;
+};
+
+
+export type MutationSyncPantryArgs = {
+  pantry: SyncPantryInput;
+};
+
+
+export type MutationSyncPantryItemsArgs = {
+  items: Array<SyncPantryItemInput>;
+};
+
+
+export type MutationSyncShoppingListsArgs = {
+  lists: Array<SyncShoppingListInput>;
 };
 
 
@@ -491,9 +638,24 @@ export type MutationUpdateCurrencyArgs = {
 };
 
 
+export type MutationUpdateHomeArgs = {
+  input: UpdateHomeInput;
+};
+
+
 export type MutationUpdateItemArgs = {
   data: CreateUpdateItemInput;
   id: Scalars['ID']['input'];
+};
+
+
+export type MutationUpdateMembershipRoleArgs = {
+  input: UpdateMembershipRoleInput;
+};
+
+
+export type MutationUpdatePantryArgs = {
+  input: UpdatePantryInput;
 };
 
 
@@ -515,9 +677,8 @@ export type MutationUpdatePurchaseArgs = {
 
 
 export type MutationUpdateShoppingListArgs = {
+  data: UpdateShoppingListInput;
   id: Scalars['ID']['input'];
-  name?: InputMaybe<Scalars['String']['input']>;
-  sharedWith?: InputMaybe<Array<Scalars['ID']['input']>>;
 };
 
 
@@ -543,6 +704,7 @@ export type MutationUpdateUnitArgs = {
   conversionFactor?: InputMaybe<Scalars['Float']['input']>;
   id: Scalars['ID']['input'];
   name?: InputMaybe<Scalars['String']['input']>;
+  notes?: InputMaybe<Scalars['String']['input']>;
   symbol?: InputMaybe<Scalars['String']['input']>;
   type?: InputMaybe<UnitType>;
 };
@@ -590,6 +752,11 @@ export type MutationUpdateUserSettingsArgs = {
   timeZone?: InputMaybe<Scalars['String']['input']>;
 };
 
+
+export type MutationVerifyEmailArgs = {
+  token: Scalars['String']['input'];
+};
+
 export type Notification = {
   __typename?: 'Notification';
   createdAt: Scalars['DateTime']['output'];
@@ -624,36 +791,34 @@ export type PaginatedItems = {
   totalCount: Scalars['Int']['output'];
 };
 
-export type PantryItem = {
-  __typename?: 'PantryItem';
-  addedDate: Scalars['DateTime']['output'];
+export type Pantry = {
+  __typename?: 'Pantry';
+  createdAt: Scalars['DateTime']['output'];
   deletedAt?: Maybe<Scalars['DateTime']['output']>;
-  expirationDate?: Maybe<Scalars['DateTime']['output']>;
+  homeId: Scalars['ID']['output'];
   id: Scalars['ID']['output'];
-  item: PantryItemEmbeddedItem;
-  itemId: Scalars['ID']['output'];
-  itemName: Scalars['String']['output'];
-  lastUsedAt?: Maybe<Scalars['DateTime']['output']>;
-  quantity: Scalars['Float']['output'];
-  storageState?: Maybe<StorageState>;
-  unit: PantryItemEmbeddedUnit;
-  unitId: Scalars['ID']['output'];
-  unitSymbol: Scalars['String']['output'];
+  items: Array<PantryItem>;
+  name: Scalars['String']['output'];
+  updatedAt: Scalars['DateTime']['output'];
   version: Scalars['Int']['output'];
 };
 
-export type PantryItemEmbeddedItem = {
-  __typename?: 'PantryItemEmbeddedItem';
+export type PantryItem = {
+  __typename?: 'PantryItem';
+  addedAt: Scalars['DateTime']['output'];
+  deletedAt?: Maybe<Scalars['DateTime']['output']>;
+  expiresAt?: Maybe<Scalars['DateTime']['output']>;
+  grams: Scalars['Float']['output'];
   id: Scalars['ID']['output'];
-  imageUrl?: Maybe<Scalars['String']['output']>;
-  name: Scalars['String']['output'];
+  item: Item;
+  itemId: Scalars['ID']['output'];
+  lastUsedAt?: Maybe<Scalars['DateTime']['output']>;
+  pantryId: Scalars['ID']['output'];
+  quantity: Scalars['Float']['output'];
   storageState: StorageState;
-};
-
-export type PantryItemEmbeddedUnit = {
-  __typename?: 'PantryItemEmbeddedUnit';
-  id: Scalars['ID']['output'];
-  symbol: Scalars['String']['output'];
+  unit: Unit;
+  unitId: Scalars['ID']['output'];
+  version: Scalars['Int']['output'];
 };
 
 export type Purchase = {
@@ -684,6 +849,11 @@ export type Query = {
   category?: Maybe<Category>;
   currencies: Array<Currency>;
   currency?: Maybe<Currency>;
+  expiringSoon: Array<PantryItem>;
+  home: Home;
+  homeInvite?: Maybe<HomeInvite>;
+  homeInvites: Array<HomeInvite>;
+  homes: Array<Home>;
   item?: Maybe<Item>;
   itemByBarcode?: Maybe<Item>;
   itemByName?: Maybe<Item>;
@@ -691,8 +861,11 @@ export type Query = {
   itemsByIds?: Maybe<Array<Item>>;
   loginHistory?: Maybe<Array<LoginHistory>>;
   me?: Maybe<User>;
+  myPantryItems: Array<PantryItem>;
   notificationsByUser: Array<Notification>;
   onBoardingPantryItems: Array<Item>;
+  pantries: Array<Pantry>;
+  pantry?: Maybe<Pantry>;
   pantryItems: Array<PantryItem>;
   popularItems: Array<ItemSuggestion>;
   purchasesByUser: Array<Purchase>;
@@ -702,6 +875,7 @@ export type Query = {
   shoppingListItems: Array<ShoppingListItem>;
   shoppingLists: Array<ShoppingList>;
   stores: Array<Store>;
+  topPantryItems: Array<PantryItem>;
   unit?: Maybe<Unit>;
   units: Array<Unit>;
   user?: Maybe<User>;
@@ -728,6 +902,26 @@ export type QueryCategoryArgs = {
 
 export type QueryCurrencyArgs = {
   id: Scalars['ID']['input'];
+};
+
+
+export type QueryExpiringSoonArgs = {
+  days?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type QueryHomeArgs = {
+  id?: InputMaybe<Scalars['ID']['input']>;
+};
+
+
+export type QueryHomeInviteArgs = {
+  token: Scalars['String']['input'];
+};
+
+
+export type QueryHomeInvitesArgs = {
+  homeId: Scalars['ID']['input'];
 };
 
 
@@ -768,6 +962,21 @@ export type QueryNotificationsByUserArgs = {
 };
 
 
+export type QueryPantriesArgs = {
+  homeId: Scalars['ID']['input'];
+};
+
+
+export type QueryPantryArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
+export type QueryPantryItemsArgs = {
+  pantryId: Scalars['ID']['input'];
+};
+
+
 export type QueryPopularItemsArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
 };
@@ -798,6 +1007,11 @@ export type QueryShoppingListItemsArgs = {
 };
 
 
+export type QueryTopPantryItemsArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
 export type QueryUnitArgs = {
   id: Scalars['ID']['input'];
 };
@@ -822,13 +1036,16 @@ export type ShoppingList = {
   __typename?: 'ShoppingList';
   collaborators?: Maybe<Array<ShoppingListCollaborator>>;
   createdAt: Scalars['DateTime']['output'];
+  deletedAt?: Maybe<Scalars['DateTime']['output']>;
   id: Scalars['ID']['output'];
   isDefault: Scalars['Boolean']['output'];
   items?: Maybe<Array<ShoppingListItem>>;
+  metadata?: Maybe<Scalars['JSON']['output']>;
   name: Scalars['String']['output'];
   owner: User;
   tags?: Maybe<Array<Scalars['String']['output']>>;
   updatedAt: Scalars['DateTime']['output'];
+  version: Scalars['Int']['output'];
 };
 
 export type ShoppingListCollaborator = {
@@ -851,6 +1068,7 @@ export type ShoppingListItem = {
   itemName?: Maybe<Scalars['String']['output']>;
   label?: Maybe<Scalars['String']['output']>;
   quantity?: Maybe<Scalars['Float']['output']>;
+  shoppingListId: Scalars['ID']['output'];
   unit?: Maybe<Unit>;
   unitSymbol?: Maybe<Scalars['String']['output']>;
   updatedAt: Scalars['DateTime']['output'];
@@ -895,11 +1113,62 @@ export type StoreInfo = {
   website?: Maybe<Scalars['String']['output']>;
 };
 
+export type Subscription = {
+  __typename?: 'Subscription';
+  _empty?: Maybe<Scalars['String']['output']>;
+  shoppingListUpdated: ShoppingListItem;
+};
+
+
+export type SubscriptionShoppingListUpdatedArgs = {
+  listId: Scalars['ID']['input'];
+};
+
+export type SyncHomeInput = {
+  defaultPantryId: Scalars['ID']['input'];
+  id: Scalars['ID']['input'];
+  name: Scalars['String']['input'];
+  ownerId: Scalars['ID']['input'];
+};
+
+export type SyncPantryInput = {
+  deletedAt?: InputMaybe<Scalars['DateTime']['input']>;
+  homeId: Scalars['ID']['input'];
+  id: Scalars['ID']['input'];
+  name: Scalars['String']['input'];
+  version?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type SyncPantryItemInput = {
+  addedAt: Scalars['String']['input'];
+  addedById?: InputMaybe<Scalars['ID']['input']>;
+  deletedAt?: InputMaybe<Scalars['String']['input']>;
+  expiresAt?: InputMaybe<Scalars['String']['input']>;
+  grams?: InputMaybe<Scalars['Float']['input']>;
+  id: Scalars['ID']['input'];
+  itemId: Scalars['ID']['input'];
+  lastUsedAt?: InputMaybe<Scalars['String']['input']>;
+  pantryId: Scalars['ID']['input'];
+  quantity: Scalars['Float']['input'];
+  storageState?: InputMaybe<StorageState>;
+  unitId: Scalars['ID']['input'];
+  version?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type SyncShoppingListInput = {
+  createdAt: Scalars['String']['input'];
+  deletedAt?: InputMaybe<Scalars['String']['input']>;
+  id: Scalars['ID']['input'];
+  name: Scalars['String']['input'];
+  updatedAt?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type Unit = {
   __typename?: 'Unit';
-  conversionFactor: Scalars['Float']['output'];
+  conversionFactor?: Maybe<Scalars['Float']['output']>;
   id: Scalars['ID']['output'];
   name: Scalars['String']['output'];
+  notes?: Maybe<Scalars['String']['output']>;
   symbol: Scalars['String']['output'];
   type: UnitType;
 };
@@ -911,14 +1180,34 @@ export enum UnitType {
   Volume = 'VOLUME'
 }
 
-export type UpdatePantryItemInput = {
-  expirationDate?: InputMaybe<Scalars['DateTime']['input']>;
+export type UpdateHomeInput = {
   id: Scalars['ID']['input'];
-  itemName?: InputMaybe<Scalars['String']['input']>;
-  lastUsedAt?: InputMaybe<Scalars['DateTime']['input']>;
+  name: Scalars['String']['input'];
+};
+
+export type UpdateMembershipRoleInput = {
+  homeId: Scalars['ID']['input'];
+  membershipId: Scalars['ID']['input'];
+  role: Role;
+};
+
+export type UpdatePantryInput = {
+  id: Scalars['ID']['input'];
+  name: Scalars['String']['input'];
+};
+
+export type UpdatePantryItemInput = {
+  expiresAt?: InputMaybe<Scalars['DateTime']['input']>;
+  id: Scalars['ID']['input'];
   quantity?: InputMaybe<Scalars['Float']['input']>;
   storageState?: InputMaybe<StorageState>;
-  unitSymbol?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type UpdateShoppingListInput = {
+  addTags?: InputMaybe<Array<Scalars['String']['input']>>;
+  isDefault?: InputMaybe<Scalars['Boolean']['input']>;
+  name?: InputMaybe<Scalars['String']['input']>;
+  removeTags?: InputMaybe<Array<Scalars['String']['input']>>;
 };
 
 export type UpdateUserSettingsInput = {
@@ -932,14 +1221,10 @@ export type UpdateUserSettingsInput = {
 export type User = {
   __typename?: 'User';
   email: Scalars['String']['output'];
+  emailVerified: Scalars['Boolean']['output'];
   id: Scalars['ID']['output'];
   moderation?: Maybe<UserModeration>;
-  notifications?: Maybe<Array<Notification>>;
-  pantryItems?: Maybe<Array<PantryItem>>;
-  profile?: Maybe<UserProfile>;
-  purchases?: Maybe<Array<Purchase>>;
   role: Role;
-  shoppingLists?: Maybe<Array<ShoppingList>>;
 };
 
 export type UserAddress = {
@@ -960,8 +1245,10 @@ export type UserModeration = {
   __typename?: 'UserModeration';
   banReason?: Maybe<Scalars['String']['output']>;
   bannedAt?: Maybe<Scalars['DateTime']['output']>;
+  deletedAt?: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
   isBanned: Scalars['Boolean']['output'];
+  updatedAt?: Maybe<Scalars['String']['output']>;
   violationCount: Scalars['Int']['output'];
 };
 
@@ -998,7 +1285,7 @@ export type LoginMutationVariables = Exact<{
 }>;
 
 
-export type LoginMutation = { __typename?: 'Mutation', login: { __typename?: 'AuthPayload', accessToken: string, refreshToken: string, user: { __typename?: 'User', email: string, id: string, role: Role, profile?: { __typename?: 'UserProfile', firstName?: string | null } | null } } };
+export type LoginMutation = { __typename?: 'Mutation', login: { __typename?: 'AuthPayload', accessToken: string, refreshToken: string, user: { __typename?: 'User', email: string, id: string, role: Role, emailVerified: boolean } } };
 
 export type RegisterMutationVariables = Exact<{
   email: Scalars['String']['input'];
@@ -1007,7 +1294,7 @@ export type RegisterMutationVariables = Exact<{
 }>;
 
 
-export type RegisterMutation = { __typename?: 'Mutation', register: { __typename?: 'AuthPayload', accessToken: string, refreshToken: string, user: { __typename?: 'User', id: string, email: string, role: Role, profile?: { __typename?: 'UserProfile', firstName?: string | null } | null } } };
+export type RegisterMutation = { __typename?: 'Mutation', register: { __typename?: 'AuthPayload', accessToken: string, refreshToken: string, user: { __typename?: 'User', id: string, email: string, role: Role, emailVerified: boolean } } };
 
 export type ForgotPasswordMutationVariables = Exact<{
   email: Scalars['String']['input'];
@@ -1024,12 +1311,26 @@ export type ResetPasswordMutationVariables = Exact<{
 
 export type ResetPasswordMutation = { __typename?: 'Mutation', resetPassword: boolean };
 
-export type AddItemToPantryMutationVariables = Exact<{
-  input: AddItemToPantryInput;
+export type SyncHomeMutationVariables = Exact<{
+  home: SyncHomeInput;
 }>;
 
 
-export type AddItemToPantryMutation = { __typename?: 'Mutation', addItemToPantry: { __typename?: 'PantryItem', id: string, itemId: string, quantity: number, unitId: string, itemName: string, unitSymbol: string, addedDate: any, lastUsedAt?: any | null, expirationDate?: any | null, storageState?: StorageState | null, deletedAt?: any | null, version: number } };
+export type SyncHomeMutation = { __typename?: 'Mutation', syncHome: boolean };
+
+export type AddItemToPantryMutationVariables = Exact<{
+  input: CreatePantryItemInput;
+}>;
+
+
+export type AddItemToPantryMutation = { __typename?: 'Mutation', addItemToPantry: { __typename?: 'PantryItem', id: string, pantryId: string, itemId: string, unitId: string, quantity: number, grams: number, addedAt: any, lastUsedAt?: any | null, expiresAt?: any | null, storageState: StorageState, deletedAt?: any | null, version: number, item: { __typename?: 'Item', id: string, imageUrl?: string | null }, unit: { __typename?: 'Unit', name: string, id: string, symbol: string } } };
+
+export type SyncPantryMutationVariables = Exact<{
+  pantry: SyncPantryInput;
+}>;
+
+
+export type SyncPantryMutation = { __typename?: 'Mutation', syncPantry: boolean };
 
 export type UpdateUserProfileMutationVariables = Exact<{
   data: UpdateUserSettingsInput;
@@ -1068,12 +1369,12 @@ export type RemoveItemFromShoppingListMutation = { __typename?: 'Mutation', remo
 
 export type ItemsQueryVariables = Exact<{
   filter?: InputMaybe<ItemFilterInput>;
-  limit?: InputMaybe<Scalars['Int']['input']>;
   offset?: InputMaybe<Scalars['Int']['input']>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
 }>;
 
 
-export type ItemsQuery = { __typename?: 'Query', items?: { __typename?: 'PaginatedItems', totalCount: number, items: Array<{ __typename?: 'Item', id: string, name: string, description?: string | null, barcode?: string | null, aisle?: string | null, storageState: StorageState, imageUrl?: string | null, shelfLifeDays?: number | null, popularityCount: number, tags: Array<string>, status: ItemStatus, visibility: Visibility, showInOnboarding: boolean, updatedAt: any, deletedAt?: any | null, version: number, unit?: { __typename?: 'Unit', conversionFactor: number, id: string, name: string, symbol: string, type: UnitType } | null, categories?: Array<{ __typename?: 'Category', name: string }> | null, skus?: Array<{ __typename?: 'ItemStoreSku', sku: string }> | null }> } | null };
+export type ItemsQuery = { __typename?: 'Query', items?: { __typename?: 'PaginatedItems', totalCount: number, items: Array<{ __typename?: 'Item', id: string, fdcId?: number | null, name: string, dataType?: string | null, barcode?: string | null, aisle?: string | null, storageState: StorageState, imageUrl?: string | null, shelfLifeDays?: number | null, popularityCount: number, tags?: Array<string> | null, status: ItemStatus, visibility: Visibility, showInOnboarding: boolean, nutritions?: any | null, marketCountry?: string | null, publishedDate?: any | null, modifiedDate?: any | null, foodCategory?: string | null, servingSize?: number | null, servingSizeUnit?: string | null, healthBenefits?: any | null, metadata?: any | null, createdAt: any, updatedAt: any, deletedAt?: any | null, version: number, units?: Array<{ __typename?: 'ItemUnit', id: string, isDefault: boolean, conversionFactor?: number | null, notes?: string | null }> | null, brands?: Array<{ __typename?: 'Brand', name: string, id: string }> | null, categories?: Array<{ __typename?: 'Category', name: string, id: string }> | null, createdBy?: { __typename?: 'User', id: string } | null, updatedBy?: { __typename?: 'User', id: string } | null }> } | null };
 
 export type AutocompleteItemsQueryVariables = Exact<{
   name: Scalars['String']['input'];
@@ -1082,10 +1383,12 @@ export type AutocompleteItemsQueryVariables = Exact<{
 
 export type AutocompleteItemsQuery = { __typename?: 'Query', autocompleteItems?: Array<{ __typename?: 'ItemSuggestion', id: string, name: string }> | null };
 
-export type PantryItemsQueryVariables = Exact<{ [key: string]: never; }>;
+export type PantryItemsQueryVariables = Exact<{
+  pantryId: Scalars['ID']['input'];
+}>;
 
 
-export type PantryItemsQuery = { __typename?: 'Query', pantryItems: Array<{ __typename?: 'PantryItem', id: string, itemId: string, quantity: number, unitId: string, itemName: string, unitSymbol: string, addedDate: any, lastUsedAt?: any | null, expirationDate?: any | null, storageState?: StorageState | null, deletedAt?: any | null, version: number }> };
+export type PantryItemsQuery = { __typename?: 'Query', pantryItems: Array<{ __typename?: 'PantryItem', id: string, pantryId: string, itemId: string, unitId: string, quantity: number, grams: number, addedAt: any, lastUsedAt?: any | null, expiresAt?: any | null, storageState: StorageState, deletedAt?: any | null, version: number, item: { __typename?: 'Item', id: string, imageUrl?: string | null, name: string }, unit: { __typename?: 'Unit', id: string, name: string, symbol: string, conversionFactor?: number | null, notes?: string | null, type: UnitType } }> };
 
 export type OnBoardingPantryItemsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -1109,6 +1412,13 @@ export type ShoppingListItemsQueryVariables = Exact<{
 
 export type ShoppingListItemsQuery = { __typename?: 'Query', shoppingListItems: Array<{ __typename?: 'ShoppingListItem', id: string, label?: string | null, quantity?: number | null, itemName?: string | null, unitSymbol?: string | null, isPurchased: boolean, createdAt: any, updatedAt: any, item?: { __typename?: 'Item', imageUrl?: string | null } | null }> };
 
+export type ShoppingListUpdatedSubscriptionVariables = Exact<{
+  listId: Scalars['ID']['input'];
+}>;
+
+
+export type ShoppingListUpdatedSubscription = { __typename?: 'Subscription', shoppingListUpdated: { __typename?: 'ShoppingListItem', id: string, shoppingListId: string, label?: string | null, quantity?: number | null, itemName?: string | null, unitSymbol?: string | null, isPurchased: boolean, createdAt: any, updatedAt: any } };
+
 
 export const LoginDocument = gql`
     mutation Login($email: String!, $password: String!) {
@@ -1119,9 +1429,7 @@ export const LoginDocument = gql`
       email
       id
       role
-      profile {
-        firstName
-      }
+      emailVerified
     }
   }
 }
@@ -1162,9 +1470,7 @@ export const RegisterDocument = gql`
       id
       email
       role
-      profile {
-        firstName
-      }
+      emailVerified
     }
   }
 }
@@ -1260,21 +1566,61 @@ export function useResetPasswordMutation(baseOptions?: Apollo.MutationHookOption
 export type ResetPasswordMutationHookResult = ReturnType<typeof useResetPasswordMutation>;
 export type ResetPasswordMutationResult = Apollo.MutationResult<ResetPasswordMutation>;
 export type ResetPasswordMutationOptions = Apollo.BaseMutationOptions<ResetPasswordMutation, ResetPasswordMutationVariables>;
+export const SyncHomeDocument = gql`
+    mutation SyncHome($home: SyncHomeInput!) {
+  syncHome(home: $home)
+}
+    `;
+export type SyncHomeMutationFn = Apollo.MutationFunction<SyncHomeMutation, SyncHomeMutationVariables>;
+
+/**
+ * __useSyncHomeMutation__
+ *
+ * To run a mutation, you first call `useSyncHomeMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useSyncHomeMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [syncHomeMutation, { data, loading, error }] = useSyncHomeMutation({
+ *   variables: {
+ *      home: // value for 'home'
+ *   },
+ * });
+ */
+export function useSyncHomeMutation(baseOptions?: Apollo.MutationHookOptions<SyncHomeMutation, SyncHomeMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<SyncHomeMutation, SyncHomeMutationVariables>(SyncHomeDocument, options);
+      }
+export type SyncHomeMutationHookResult = ReturnType<typeof useSyncHomeMutation>;
+export type SyncHomeMutationResult = Apollo.MutationResult<SyncHomeMutation>;
+export type SyncHomeMutationOptions = Apollo.BaseMutationOptions<SyncHomeMutation, SyncHomeMutationVariables>;
 export const AddItemToPantryDocument = gql`
-    mutation AddItemToPantry($input: AddItemToPantryInput!) {
+    mutation AddItemToPantry($input: CreatePantryItemInput!) {
   addItemToPantry(input: $input) {
     id
+    pantryId
     itemId
-    quantity
     unitId
-    itemName
-    unitSymbol
-    addedDate
+    quantity
+    grams
+    addedAt
     lastUsedAt
-    expirationDate
+    expiresAt
     storageState
     deletedAt
     version
+    item {
+      id
+      imageUrl
+    }
+    unit {
+      name
+      id
+      symbol
+    }
   }
 }
     `;
@@ -1304,6 +1650,37 @@ export function useAddItemToPantryMutation(baseOptions?: Apollo.MutationHookOpti
 export type AddItemToPantryMutationHookResult = ReturnType<typeof useAddItemToPantryMutation>;
 export type AddItemToPantryMutationResult = Apollo.MutationResult<AddItemToPantryMutation>;
 export type AddItemToPantryMutationOptions = Apollo.BaseMutationOptions<AddItemToPantryMutation, AddItemToPantryMutationVariables>;
+export const SyncPantryDocument = gql`
+    mutation SyncPantry($pantry: SyncPantryInput!) {
+  syncPantry(pantry: $pantry)
+}
+    `;
+export type SyncPantryMutationFn = Apollo.MutationFunction<SyncPantryMutation, SyncPantryMutationVariables>;
+
+/**
+ * __useSyncPantryMutation__
+ *
+ * To run a mutation, you first call `useSyncPantryMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useSyncPantryMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [syncPantryMutation, { data, loading, error }] = useSyncPantryMutation({
+ *   variables: {
+ *      pantry: // value for 'pantry'
+ *   },
+ * });
+ */
+export function useSyncPantryMutation(baseOptions?: Apollo.MutationHookOptions<SyncPantryMutation, SyncPantryMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<SyncPantryMutation, SyncPantryMutationVariables>(SyncPantryDocument, options);
+      }
+export type SyncPantryMutationHookResult = ReturnType<typeof useSyncPantryMutation>;
+export type SyncPantryMutationResult = Apollo.MutationResult<SyncPantryMutation>;
+export type SyncPantryMutationOptions = Apollo.BaseMutationOptions<SyncPantryMutation, SyncPantryMutationVariables>;
 export const UpdateUserProfileDocument = gql`
     mutation UpdateUserProfile($data: UpdateUserSettingsInput!) {
   updateUserProfile(data: $data) {
@@ -1494,13 +1871,13 @@ export type RemoveItemFromShoppingListMutationHookResult = ReturnType<typeof use
 export type RemoveItemFromShoppingListMutationResult = Apollo.MutationResult<RemoveItemFromShoppingListMutation>;
 export type RemoveItemFromShoppingListMutationOptions = Apollo.BaseMutationOptions<RemoveItemFromShoppingListMutation, RemoveItemFromShoppingListMutationVariables>;
 export const ItemsDocument = gql`
-    query Items($filter: ItemFilterInput, $limit: Int, $offset: Int) {
-  items(filter: $filter, limit: $limit, offset: $offset) {
-    totalCount
+    query Items($filter: ItemFilterInput, $offset: Int, $limit: Int) {
+  items(filter: $filter, offset: $offset, limit: $limit) {
     items {
       id
+      fdcId
       name
-      description
+      dataType
       barcode
       aisle
       storageState
@@ -1511,23 +1888,41 @@ export const ItemsDocument = gql`
       status
       visibility
       showInOnboarding
-      unit {
-        conversionFactor
+      units {
         id
+        isDefault
+        conversionFactor
+        notes
+      }
+      brands {
         name
-        symbol
-        type
+        id
       }
       categories {
         name
+        id
       }
-      skus {
-        sku
+      nutritions
+      marketCountry
+      publishedDate
+      modifiedDate
+      foodCategory
+      servingSize
+      servingSizeUnit
+      healthBenefits
+      metadata
+      createdBy {
+        id
       }
+      updatedBy {
+        id
+      }
+      createdAt
       updatedAt
       deletedAt
       version
     }
+    totalCount
   }
 }
     `;
@@ -1545,8 +1940,8 @@ export const ItemsDocument = gql`
  * const { data, loading, error } = useItemsQuery({
  *   variables: {
  *      filter: // value for 'filter'
- *      limit: // value for 'limit'
  *      offset: // value for 'offset'
+ *      limit: // value for 'limit'
  *   },
  * });
  */
@@ -1608,20 +2003,33 @@ export type AutocompleteItemsLazyQueryHookResult = ReturnType<typeof useAutocomp
 export type AutocompleteItemsSuspenseQueryHookResult = ReturnType<typeof useAutocompleteItemsSuspenseQuery>;
 export type AutocompleteItemsQueryResult = Apollo.QueryResult<AutocompleteItemsQuery, AutocompleteItemsQueryVariables>;
 export const PantryItemsDocument = gql`
-    query PantryItems {
-  pantryItems {
+    query PantryItems($pantryId: ID!) {
+  pantryItems(pantryId: $pantryId) {
     id
+    pantryId
     itemId
-    quantity
     unitId
-    itemName
-    unitSymbol
-    addedDate
+    quantity
+    grams
+    addedAt
     lastUsedAt
-    expirationDate
+    expiresAt
     storageState
     deletedAt
     version
+    item {
+      id
+      imageUrl
+      name
+    }
+    unit {
+      id
+      name
+      symbol
+      conversionFactor
+      notes
+      type
+    }
   }
 }
     `;
@@ -1638,10 +2046,11 @@ export const PantryItemsDocument = gql`
  * @example
  * const { data, loading, error } = usePantryItemsQuery({
  *   variables: {
+ *      pantryId: // value for 'pantryId'
  *   },
  * });
  */
-export function usePantryItemsQuery(baseOptions?: Apollo.QueryHookOptions<PantryItemsQuery, PantryItemsQueryVariables>) {
+export function usePantryItemsQuery(baseOptions: Apollo.QueryHookOptions<PantryItemsQuery, PantryItemsQueryVariables> & ({ variables: PantryItemsQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<PantryItemsQuery, PantryItemsQueryVariables>(PantryItemsDocument, options);
       }
@@ -1843,3 +2252,41 @@ export type ShoppingListItemsQueryHookResult = ReturnType<typeof useShoppingList
 export type ShoppingListItemsLazyQueryHookResult = ReturnType<typeof useShoppingListItemsLazyQuery>;
 export type ShoppingListItemsSuspenseQueryHookResult = ReturnType<typeof useShoppingListItemsSuspenseQuery>;
 export type ShoppingListItemsQueryResult = Apollo.QueryResult<ShoppingListItemsQuery, ShoppingListItemsQueryVariables>;
+export const ShoppingListUpdatedDocument = gql`
+    subscription ShoppingListUpdated($listId: ID!) {
+  shoppingListUpdated(listId: $listId) {
+    id
+    shoppingListId
+    label
+    quantity
+    itemName
+    unitSymbol
+    isPurchased
+    createdAt
+    updatedAt
+  }
+}
+    `;
+
+/**
+ * __useShoppingListUpdatedSubscription__
+ *
+ * To run a query within a React component, call `useShoppingListUpdatedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useShoppingListUpdatedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useShoppingListUpdatedSubscription({
+ *   variables: {
+ *      listId: // value for 'listId'
+ *   },
+ * });
+ */
+export function useShoppingListUpdatedSubscription(baseOptions: Apollo.SubscriptionHookOptions<ShoppingListUpdatedSubscription, ShoppingListUpdatedSubscriptionVariables> & ({ variables: ShoppingListUpdatedSubscriptionVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useSubscription<ShoppingListUpdatedSubscription, ShoppingListUpdatedSubscriptionVariables>(ShoppingListUpdatedDocument, options);
+      }
+export type ShoppingListUpdatedSubscriptionHookResult = ReturnType<typeof useShoppingListUpdatedSubscription>;
+export type ShoppingListUpdatedSubscriptionResult = Apollo.SubscriptionResult<ShoppingListUpdatedSubscription>;

@@ -6,12 +6,10 @@ export const LOGIN_MUTATION = gql`
       accessToken
       refreshToken
       user {
-        email
         id
+        email
         role
-        profile {
-          firstName
-        }
+        emailVerified
       }
     }
   }
@@ -26,9 +24,7 @@ export const SIGNUP_MUTATION = gql`
         id
         email
         role
-        profile {
-          firstName
-        }
+        emailVerified
       }
     }
   }

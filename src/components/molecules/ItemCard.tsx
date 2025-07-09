@@ -29,7 +29,7 @@ const ItemCard: React.FC<ItemCardProps> = ({
       <Image
         alt={item?.name}
         resizeMode="contain"
-        source={{uri: item?.item?.imageUrl}}
+        source={{uri: item?.item?.imageUrl || undefined}}
         style={styles.cardImg}
       />
       <View style={styles.cardBody}>
