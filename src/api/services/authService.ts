@@ -1,5 +1,12 @@
 import {client} from '../../apollo/client';
-import {LOGIN_MUTATION, SIGNUP_MUTATION} from '../graphql/mutations/auth';
+import {
+  LOGIN_MUTATION,
+  FORGOT_PASSWORD_MUTATION,
+  RESET_PASSWORD_MUTATION,
+  SIGNUP_MUTATION,
+  VERIFY_EMAIL_MUTATION,
+  RESEND_VERIFICATION_EMAIL_MUTATION,
+} from '../graphql/mutations/auth';
 
 import {User, AuthPayload} from '../graphql/generated';
 
@@ -24,4 +31,36 @@ export async function signupApi(
     variables: {name, email, password},
   });
   return data.signup;
+}
+
+export async function forgotPasswordApi(email: string): Promise<void> {
+  await client.mutate({
+    mutation: FORGOT_PASSWORD_MUTATION,
+    variables: {email},
+  });
+}
+
+export async function resetPasswordApi(
+  token: string,
+  password: string,
+): Promise<void> {
+  await client.mutate({
+    mutation: RESET_PASSWORD_MUTATION,
+    variables: {token, password},
+  });
+}
+
+export async function verifyEmailApi(code: string): Promise<User> {
+  const {data} = await client.mutate({
+    mutation: VERIFY_EMAIL_MUTATION,
+    variables: {code},
+  });
+  return data.verifyEmail;
+}
+
+export async function resendVerificationEmailApi(email: string): Promise<void> {
+  await client.mutate({
+    mutation: RESEND_VERIFICATION_EMAIL_MUTATION,
+    variables: {email},
+  });
 }

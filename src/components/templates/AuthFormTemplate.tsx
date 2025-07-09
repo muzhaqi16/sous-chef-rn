@@ -6,7 +6,7 @@ import {DynamicFormFields, FieldDef} from '../molecules/DynamicFormFields';
 
 interface Props<T extends FieldValues> {
   title: string;
-  subtitle?: string;
+  subtitle?: string | React.ReactNode;
   onBackPress?: () => void;
   fields: FieldDef<T>[];
   control: Control<T>;

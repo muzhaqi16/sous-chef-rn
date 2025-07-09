@@ -3,12 +3,15 @@ import {FlatList, StyleSheet, View} from 'react-native';
 import {useStore} from '../../store';
 import {SwipeableShoppingListItem} from './SwipeableShoppingListItem';
 import {ShoppingListItem} from '../../api/graphql/generated';
+import {createStyleSheet, useStyles} from 'react-native-unistyles';
 
 type ShoppingListItemsProps = {
   data?: ShoppingListItem[];
 };
 
 const ShoppingListItems = ({data}: ShoppingListItemsProps) => {
+  const {styles} = useStyles(stylesheet);
+
   const {fetchItemsForList, isLoading} = useStore();
 
   return (
@@ -38,7 +41,7 @@ const ShoppingListItems = ({data}: ShoppingListItemsProps) => {
   );
 };
 
-const styles = StyleSheet.create({
+const stylesheet = createStyleSheet(theme => ({
   container: {
     paddingVertical: 24,
     flex: 1,
@@ -49,6 +52,6 @@ const styles = StyleSheet.create({
     color: 'red',
     marginTop: 24,
   },
-});
+}));
 
 export default ShoppingListItems;

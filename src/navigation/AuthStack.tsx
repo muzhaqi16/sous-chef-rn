@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useEffect} from 'react';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {useStore} from '../store';
 import {type AuthStackParamList} from './types';
@@ -7,15 +7,31 @@ import {
   SignUpScreen,
   RememberLoginInfoScreen,
   ForgotPasswordScreen,
+  CodeVerificationScreen,
 } from '../screens/Auth';
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
 
 const AuthStack = () => {
-  const {user} = useStore();
+  const isHydrated = useStore(state => state.isHydrated);
+  const user = useStore(state => state.user);
+  const {rememberMe} = useStore(state => state.preferences);
+  // don’t render the stack until hydration is done
+  if (!isHydrated) return null;
+
+  // pick initialRoute synchronously
+  const initialRoute: keyof AuthStackParamList = !user
+    ? 'Login'
+    : !user.emailVerified
+      ? 'CodeVerification'
+      : !rememberMe
+        ? 'RememberLoginInfo'
+        : 'Login';
+
   return (
     <Stack.Navigator
-      initialRouteName={user ? 'RememberLoginInfo' : 'Login'}
+      key={initialRoute}
+      initialRouteName={initialRoute}
       screenOptions={{
         headerShown: false,
 
@@ -53,6 +69,11 @@ const AuthStack = () => {
       <Stack.Screen
         name="RememberLoginInfo"
         component={RememberLoginInfoScreen}
+        options={{headerShown: false, animation: 'slide_from_right'}}
+      />
+      <Stack.Screen
+        name="CodeVerification"
+        component={CodeVerificationScreen}
         options={{headerShown: false, animation: 'slide_from_right'}}
       />
     </Stack.Navigator>

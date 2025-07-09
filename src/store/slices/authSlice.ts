@@ -23,6 +23,7 @@ export interface AuthState {
     email: string,
     password: string,
   ) => Promise<string | null>;
+  setEmailVerified: (emailVerified: boolean) => void;
   logout: () => void;
 }
 
@@ -41,6 +42,10 @@ export const createAuthSlice: StateCreator<RootState, [], [], AuthState> = (
   authenticate: async (email, password) => {
     try {
       const {accessToken, refreshToken, user} = await loginApi(email, password);
+      if (!user || !accessToken || !refreshToken) {
+        throw new Error('Authentication failed');
+      }
+      get().setAuth(user, accessToken, refreshToken);
       return {user, accessToken, refreshToken};
     } catch (err) {
       return {
@@ -88,6 +93,10 @@ export const createAuthSlice: StateCreator<RootState, [], [], AuthState> = (
       return err instanceof Error ? err.message : 'Unknown error';
     }
   },
+  setEmailVerified: (emailVerified: boolean) =>
+    set(state => ({
+      user: state.user ? {...state.user, emailVerified} : null,
+    })),
 
   logout: () => get().reset(),
 });

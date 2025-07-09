@@ -12,7 +12,8 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const AppNavigator = () => {
   const {user} = useStore();
-  const isSignedIn = !!user;
+  // If there isn't a user or it hasn't been verified yet route to AuthStack
+  const isSignedIn = !!user && user?.emailVerified;
   return (
     <NavigationContainer>
       {isSignedIn ? (

@@ -9,15 +9,26 @@ export const errorLink = onError(
       operationName: operation.operationName,
     });
 
+    // 1) Handle GraphQL errors
     if (graphQLErrors) {
       for (const err of graphQLErrors) {
-        if (err.message === 'Expired token') {
-          console.log('Unauthorized error received, attempting token refresh.');
+        const code = err.extensions?.code;
+        const msg = err.message || '';
+        // match either the standard UNAUTHENTICATED code
+        // or look for "expired" in the message text
+        if (
+          code === 'UNAUTHENTICATED' ||
+          msg.toLowerCase().includes('expired')
+        ) {
+          console.log(
+            'Received unauthenticated/expired error, attempting token refresh…',
+          );
+          // must return so we swap to the refresh Observable
           return attemptTokenRefresh(operation, forward);
         }
       }
     }
-
+    // 2) Handle other network errors (rate-limit, etc)
     if (networkError) {
       const errorAny = networkError as any;
       if (errorAny.statusCode === 429) {

@@ -8,6 +8,7 @@ export interface PreferencesState {
     language?: string;
     emailNotifications?: boolean;
     pushNotifications?: boolean;
+    rememberMe?: boolean;
   };
   setTheme: (theme: 'light' | 'dark') => void;
   setOnBoardingCompleted: (completed: boolean) => void;
@@ -21,6 +22,7 @@ export const initialPreferencesState: PreferencesState['preferences'] = {
   onBoardingCompleted: false,
   emailNotifications: false,
   pushNotifications: false,
+  rememberMe: false,
 };
 
 export const createPreferencesSlice: StateCreator<

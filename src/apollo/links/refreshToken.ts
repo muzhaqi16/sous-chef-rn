@@ -1,7 +1,9 @@
 import {Observable, FetchResult} from '@apollo/client';
+import {client} from '../../apollo/client';
 import {storage} from '../../storage/mmkv';
-import {useStore} from '../../store';
 import Config from 'react-native-config';
+import {useStore} from '../../store';
+import {REFRESH_TOKEN_MUTATION} from '../../api/graphql/mutations/auth';
 
 /**
  * Attempts to refresh the access token.
@@ -26,18 +28,18 @@ export const attemptTokenRefresh = (
   }
 
   return new Observable<FetchResult>(observer => {
-    fetch(`${API_URL}/refresh`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({refreshToken}),
-    })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('Failed to refresh token');
-        }
-        return response.json();
+    client
+      .mutate({
+        mutation: REFRESH_TOKEN_MUTATION,
+        variables: {refreshToken},
       })
-      .then(({accessToken: newToken, refreshToken: newRefreshToken}) => {
+      .then(response => {
+        const data = response.data?.refreshToken;
+        if (!data?.accessToken || !data?.refreshToken) {
+          throw new Error('Invalid refresh response');
+        }
+
+        const {accessToken: newToken, refreshToken: newRefreshToken} = data;
         // Update tokens in storage.
         storage.set('accessToken', newToken);
         storage.set('refreshToken', newRefreshToken);

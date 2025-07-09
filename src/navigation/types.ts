@@ -43,7 +43,7 @@ export type AuthStackParamList = {
   ResetPassword: {token: string};
   ChangePassword: undefined;
   ConfirmEmail: {email: string};
-  ConfirmCode: {email: string; code: string};
+  CodeVerification: {email: string; code: string};
 };
 
 export type OnBoardingStackParamList = {

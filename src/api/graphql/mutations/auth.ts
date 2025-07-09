@@ -41,3 +41,24 @@ export const RESET_PASSWORD_MUTATION = gql`
     resetPassword(token: $token, password: $password)
   }
 `;
+
+export const REFRESH_TOKEN_MUTATION = gql`
+  mutation RefreshToken($token: String!) {
+    refresh(token: $token) {
+      accessToken
+      refreshToken
+    }
+  }
+`;
+
+export const VERIFY_EMAIL_MUTATION = gql`
+  mutation VerifyEmail($code: String!) {
+    verifyEmail(code: $code)
+  }
+`;
+
+export const RESEND_VERIFICATION_EMAIL_MUTATION = gql`
+  mutation ResendVerificationEmail($email: String!) {
+    resendVerificationEmail(email: $email)
+  }
+`;

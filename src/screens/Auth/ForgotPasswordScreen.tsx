@@ -7,6 +7,7 @@ import {AuthFormTemplate} from '../../components/templates/AuthFormTemplate';
 import {EmailInput} from '../../components/atoms';
 import {getForgotPasswordValidationSchema} from '../../utils/validation';
 import {AuthWrapper} from '../../components/templates/AuthWrapper';
+import {forgotPasswordApi} from '../../api/services/authService';
 
 type ForgotPasswordValues = {
   email: string;
@@ -28,6 +29,14 @@ export function ForgotPasswordScreen() {
     const {email} = data;
     // Simulate sending reset email
     console.log(`Sending reset email to: ${email}`);
+    try {
+      await forgotPasswordApi(email);
+      console.log('Reset email sent successfully');
+      navigation.navigate('Login'); // Navigate back to login after sending
+    } catch (error) {
+      console.error('Error sending reset email:', error);
+      // Handle error, e.g., show a toast or alert
+    }
     // Here you would typically call your API to send the reset email
     // For example: await api.sendResetEmail(email);
   };
