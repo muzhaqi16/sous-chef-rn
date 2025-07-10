@@ -5,14 +5,16 @@ export const CREATE_SHOPPING_LIST = gql`
     createShoppingList(data: $data) {
       id
       name
-      isDefault
       tags
-      createdAt
+      version
       updatedAt
+      isDefault
       owner {
-        email
         id
       }
+      createdAt
+      deletedAt
+      metadata
     }
   }
 `;

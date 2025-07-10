@@ -8,11 +8,17 @@ export interface AuthState {
   accessToken: string | null;
   refreshToken: string | null;
 
+  pendingEmail?: string;
+  pendingPassword?: string;
+
   /** Call this once you have a fresh (user, accessToken, refreshToken) */
   setAuth: (user: User, accessToken: string, refreshToken: string) => void;
 
   /** Flip this flag on the user if you verify their email later */
   setEmailVerified: (emailVerified: boolean) => void;
+
+  setPendingCredentials: (email: string, password: string) => void;
+  clearPendingCredentials: () => void;
 
   /** Clears everything */
   logout: () => void;
@@ -22,6 +28,8 @@ const initialAuthState = {
   user: null,
   accessToken: null,
   refreshToken: null,
+  pendingEmail: undefined,
+  pendingPassword: undefined,
 };
 
 export const createAuthSlice: StateCreator<
@@ -43,7 +51,17 @@ export const createAuthSlice: StateCreator<
     set(state => {
       if (state.user) state.user.emailVerified = emailVerified;
     }),
+  setPendingCredentials: (email, password) =>
+    set(state => {
+      state.pendingEmail = email;
+      state.pendingPassword = password;
+    }),
 
+  clearPendingCredentials: () =>
+    set(state => {
+      state.pendingEmail = undefined;
+      state.pendingPassword = undefined;
+    }),
   logout: () =>
     set(state => {
       state.user = null;

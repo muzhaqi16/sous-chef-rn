@@ -13,7 +13,6 @@ export const ADD_ITEM_TO_PANTRY = gql`
       lastUsedAt
       expiresAt
       storageState
-      deletedAt
       version
       item {
         id
@@ -25,11 +24,5 @@ export const ADD_ITEM_TO_PANTRY = gql`
         symbol
       }
     }
-  }
-`;
-
-export const SYNC_PANTRY = gql`
-  mutation SyncPantry($pantry: SyncPantryInput!) {
-    syncPantry(pantry: $pantry)
   }
 `;

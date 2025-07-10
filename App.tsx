@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect} from 'react';
 import {StatusBar, useColorScheme} from 'react-native';
 import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
 import {ApolloProvider} from '@apollo/client';
@@ -18,7 +18,7 @@ import {Text} from 'react-native-gesture-handler';
 
 const App = () => {
   const darkMode = useColorScheme() === 'dark';
-  const {theme: userTheme} = useStore(store => store.preferences);
+  const {theme: userTheme} = useStore();
   const effectiveDark =
     darkMode !== undefined ? darkMode : userTheme === 'dark';
 

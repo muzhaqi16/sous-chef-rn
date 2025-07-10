@@ -2,27 +2,25 @@ import React from 'react';
 import {Text, TouchableOpacity} from 'react-native';
 import {useForm} from 'react-hook-form';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
-
-import {AuthWrapper} from '../../components/templates/AuthWrapper';
-import {AuthFormTemplate} from '../../components/templates/AuthFormTemplate';
-import {
-  RememberLoginInfoProps as Props,
-  type RememberNavProp,
-} from '../../navigation';
-import {useSafeNavigation} from '../../hooks';
+import {useNavigation, CommonActions} from '@react-navigation/native';
+import {AuthWrapper, AuthFormTemplate} from '../../components/templates';
 import {saveCredentials} from '../../storage/keychain';
 import {useStore} from '../../store';
+import {RememberLoginInfoProps} from '../../navigation';
 
 type RememberValues = {};
 
-export const RememberLoginInfoScreen: React.FC<Props> = ({
+export const RememberLoginInfoScreen = ({
   navigation,
-  route,
-}) => {
-  const {email, password, user, accessToken, refreshToken} = route.params;
-  const setAuth = useStore(s => s.setAuth);
-  const {goBack} = useSafeNavigation<RememberNavProp>();
-  const canGoBack = navigation.canGoBack();
+}: RememberLoginInfoProps) => {
+  const {
+    user,
+    setRememberMe,
+    onBoardingCompleted,
+    pendingEmail,
+    pendingPassword,
+    clearPendingCredentials,
+  } = useStore();
   const {styles} = useStyles(stylesheet);
   const {
     control,
@@ -32,14 +30,27 @@ export const RememberLoginInfoScreen: React.FC<Props> = ({
     defaultValues: {},
   });
 
-  const onRemember = async () => {
-    await saveCredentials(email, password);
-    setAuth(user, accessToken, refreshToken);
-    goBack();
-  };
-  const onSkip = () => {
-    setAuth(user, accessToken, refreshToken);
-    goBack();
+  const onRemember = async (choice: boolean) => {
+    if (choice && pendingEmail && pendingPassword) {
+      await saveCredentials(pendingEmail, pendingPassword);
+    }
+    setRememberMe(choice);
+    clearPendingCredentials();
+    // 2) figure out which branch AppNavigator will pick next
+    const nextRoute: 'Auth' | 'OnBoarding' | 'Home' =
+      !user || !user.emailVerified || choice === undefined
+        ? 'Auth'
+        : !onBoardingCompleted
+          ? 'OnBoarding'
+          : 'Home';
+
+    // 3) reset the *root* navigator into that branch
+    navigation.getParent()?.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{name: nextRoute}],
+      }),
+    );
   };
 
   return (
@@ -51,10 +62,12 @@ export const RememberLoginInfoScreen: React.FC<Props> = ({
         control={control}
         errors={errors}
         submitText="Remember"
-        onSubmit={handleSubmit(onRemember)}
+        onSubmit={handleSubmit(() => onRemember(true))}
       />
 
-      <TouchableOpacity style={styles.btnSecondary} onPress={onSkip}>
+      <TouchableOpacity
+        style={styles.btnSecondary}
+        onPress={() => onRemember(false)}>
         <Text style={styles.btnSecondaryText}>Skip for now</Text>
       </TouchableOpacity>
     </AuthWrapper>

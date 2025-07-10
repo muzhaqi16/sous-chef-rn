@@ -4,7 +4,7 @@ import type {
   CompositeNavigationProp,
   RouteProp,
 } from '@react-navigation/native';
-import {User} from '../api/graphql/generated';
+import {User} from '../graphql/generated';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import type {
   StackScreenProps,
@@ -33,17 +33,11 @@ export type AuthStackParamList = {
   Login: undefined;
   SignUp: undefined;
   ForgotPassword: undefined;
-  RememberLoginInfo: {
-    email: string;
-    password: string;
-    accessToken: string;
-    refreshToken: string;
-    user: User;
-  };
+  RememberLoginInfo: {email: string; password: string};
   ResetPassword: {token: string};
   ChangePassword: undefined;
   ConfirmEmail: {email: string};
-  CodeVerification: {email: string; code: string};
+  CodeVerification: {email: string; password: string};
 };
 
 export type OnBoardingStackParamList = {
@@ -87,14 +81,25 @@ export type RememberNavProp = NativeStackNavigationProp<
 >;
 type RememberRouteProp = RouteProp<AuthStackParamList, 'RememberLoginInfo'>;
 
+export type LoginScreenProps = AuthStackScreenProps<'Login'>;
+export type LoginScreenNavigationProps = LoginScreenProps['navigation'];
+export type SignUpScreenProps = AuthStackScreenProps<'SignUp'>;
+
+export type CodeVerificationNavProp = StackNavigationProp<
+  AuthStackParamList,
+  'CodeVerification'
+>;
+
+export type CodeVerificationScreenProps =
+  AuthStackScreenProps<'CodeVerification'>;
+
+export type RememberLoginInfoScreenProps =
+  AuthStackScreenProps<'RememberLoginInfo'>;
+// Same as RememberLoginInfoScreenProps but different way to define it
 export type RememberLoginInfoProps = {
   navigation: RememberNavProp;
   route: RememberRouteProp;
 };
-
-export type LoginScreenProps = AuthStackScreenProps<'Login'>;
-export type LoginScreenNavigationProps = LoginScreenProps['navigation'];
-export type SignUpScreenProps = AuthStackScreenProps<'SignUp'>;
 
 declare global {
   namespace ReactNavigation {

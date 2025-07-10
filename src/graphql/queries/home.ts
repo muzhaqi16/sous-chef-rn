@@ -6,7 +6,9 @@ export const GET_OR_CREATE_DEFAULT_HOME = gql`
       id
       name
       ownerId
-      defaultPantryId
+      defaultPantry {
+        id
+      }
       createdAt
       updatedAt
     }
@@ -19,7 +21,9 @@ export const GET_HOME_BY_ID = gql`
       id
       name
       ownerId
-      defaultPantryId
+      defaultPantry {
+        id
+      }
       createdAt
       updatedAt
     }
@@ -32,7 +36,9 @@ export const GET_HOMES = gql`
       id
       name
       ownerId
-      defaultPantryId
+      defaultPantry {
+        id
+      }
       createdAt
       updatedAt
     }

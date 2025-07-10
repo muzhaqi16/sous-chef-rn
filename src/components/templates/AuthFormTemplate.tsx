@@ -1,5 +1,12 @@
 import React from 'react';
-import {View, Text, TouchableOpacity} from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Platform,
+  KeyboardAvoidingView,
+  ScrollView,
+} from 'react-native';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
 import type {FieldValues, Control, FieldErrors} from 'react-hook-form';
 import {DynamicFormFields, FieldDef} from '../molecules/DynamicFormFields';
@@ -35,7 +42,8 @@ export function AuthFormTemplate<T extends FieldValues>({
   onLinkPress,
 }: Props<T>) {
   const {styles} = useStyles(stylesheet);
-
+  // adjust this if you have a fixed header height
+  const keyboardVerticalOffset = Platform.select({ios: 64, android: 0});
   return (
     <>
       <View style={styles.header}>
@@ -77,7 +85,6 @@ export function AuthFormTemplate<T extends FieldValues>({
 const stylesheet = createStyleSheet(theme => ({
   header: {
     paddingHorizontal: 0,
-    marginVertical: 28,
   },
   headerAction: {
     width: 40,

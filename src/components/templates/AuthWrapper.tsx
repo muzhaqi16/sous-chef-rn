@@ -15,12 +15,14 @@ interface AuthWrapperProps {
 
 export const AuthWrapper = ({children}: AuthWrapperProps) => {
   const {styles} = useStyles(stylesheet);
+  const keyboardVerticalOffset = Platform.select({ios: 64, android: 0});
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={keyboardVerticalOffset}>
         <ScrollView
           contentContainerStyle={styles.scrollContainer}
           keyboardShouldPersistTaps="handled">

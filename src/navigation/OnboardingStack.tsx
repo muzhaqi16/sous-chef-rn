@@ -5,17 +5,29 @@ import {type OnBoardingStackParamList} from './types';
 import {LoginScreen, SignUpScreen, ForgotPasswordScreen} from '../screens/Auth';
 import {CreateShoppingListScreen} from '../screens/OnBoarding/CreateShoppingList';
 import {SelectPantryItems} from '../screens/OnBoarding/SelectPantryItems';
+import {OnBoardingSteps} from '../store/slices/preferencesSlice';
 
 const Stack = createNativeStackNavigator<OnBoardingStackParamList>();
 
-const OnboardingStack = () => {
-  const {user} = useStore();
-  console.log('OnboardingStack user:', user);
+const OnBoardingStack = () => {
+  const {onBoardingStep, onBoardingCompleted} = useStore();
+
+  // Set the intial route based on the onboarding step or completion status that the user has reached
+  const initialRouteName = onBoardingCompleted
+    ? 'OnBoardingCompleted'
+    : onBoardingStep === OnBoardingSteps.createShoppingList
+      ? 'CreateShoppingList'
+      : onBoardingStep === OnBoardingSteps.selectPantryItems
+        ? 'SelectPantryItems'
+        : 'CreateShoppingList';
+  console.log('OnBoardingStack initialRouteName:', initialRouteName);
+
   return (
     <Stack.Navigator
+      key={initialRouteName}
+      initialRouteName={initialRouteName}
       screenOptions={{
         headerShown: false,
-
         // pick one of the native presets:
         // animation: 'fade_from_bottom', // fade in from bottom
         // animation: 'fade',               // simple cross-fade
@@ -61,4 +73,4 @@ const OnboardingStack = () => {
   );
 };
 
-export default OnboardingStack;
+export default OnBoardingStack;

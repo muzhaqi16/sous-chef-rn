@@ -20,8 +20,6 @@ export function CodeVerificationScreen() {
   const [verifyEmail] = useVerifyEmailMutation();
   const [resendVerificationEmail] = useResendVerificationEmailMutation();
 
-  const email = user?.email ?? '';
-
   const {
     control,
     handleSubmit,
@@ -32,6 +30,7 @@ export function CodeVerificationScreen() {
 
   const onVerifyCode = async (data: CodeVerificationValues) => {
     const {code} = data;
+
     try {
       const response = await verifyEmail({
         variables: {code},
@@ -50,8 +49,12 @@ export function CodeVerificationScreen() {
 
   const onResend = async () => {
     try {
+      if (!user?.email) {
+        console.error('No email available to resend verification');
+        return;
+      }
       const response = await resendVerificationEmail({
-        variables: {email},
+        variables: {email: user.email},
       });
 
       if (response.data?.resendVerificationEmail) {
@@ -70,7 +73,8 @@ export function CodeVerificationScreen() {
         title="Enter Code"
         subtitle={
           <>
-            We emailed a code to <Text style={{color: '#222'}}>{email}</Text>.
+            We emailed a code to{' '}
+            <Text style={{color: '#222'}}>{user?.email || 'your email'}</Text>.
             Please enter the code to continue.
           </>
         }

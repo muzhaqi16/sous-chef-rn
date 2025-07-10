@@ -1,39 +1,49 @@
 import React from 'react';
-import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {NavigationContainer} from '@react-navigation/native';
+import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {useStore} from '../store';
-import {type RootStackParamList} from './types';
-import HomeTab from './TabNavigator';
+
 import AuthStack from './AuthStack';
-import OnboardingStack from './OnboardingStack';
-import {NotFoundScreen} from '../screens/NotFoundScreen'; // Adjust the import path as necessary
+import HomeTab from './TabNavigator';
+import OnBoardingStack from './OnBoardingStack';
+import {NotFoundScreen} from '../screens/NotFoundScreen';
+import type {RootStackParamList} from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-const AppNavigator = () => {
-  const {user} = useStore();
-  // If there isn't a user or it hasn't been verified yet route to AuthStack
-  const isSignedIn = !!user && user?.emailVerified;
+export default function AppNavigator() {
+  const {isHydrated, user} = useStore();
+  const {rememberMe, onBoardingCompleted} = useStore();
+
+  if (!isHydrated) {
+    // still loading your persisted zustand store
+    return null;
+  }
+
+  // if there's no user, OR they haven't verified, OR they haven't opted into
+  // "remember me", keep them in AuthStack.  Otherwise send them to HomeTab.
+  const initialRoute: keyof RootStackParamList =
+    !user || !user.emailVerified || rememberMe === undefined
+      ? 'Auth'
+      : /* here’s your onboarding check: */
+        !onBoardingCompleted
+        ? 'OnBoarding'
+        : 'Home';
+  console.log('AppNavigator Initial route:', initialRoute);
   return (
     <NavigationContainer>
-      {isSignedIn ? (
-        <Stack.Navigator
-          initialRouteName="Home"
-          screenOptions={{headerShown: false}}>
-          <Stack.Screen name="Home" component={HomeTab} />
-          <Stack.Screen name="OnBoarding" component={OnboardingStack} />
-          <Stack.Screen name="NotFound" component={NotFoundScreen} />
-        </Stack.Navigator>
-      ) : (
-        <Stack.Navigator
-          initialRouteName="Auth"
-          screenOptions={{headerShown: false}}>
-          <Stack.Screen name="Auth" component={AuthStack} />
-          <Stack.Screen name="NotFound" component={NotFoundScreen} />
-        </Stack.Navigator>
-      )}
+      <Stack.Navigator
+        key={initialRoute} // remount & clear history on change
+        initialRouteName={initialRoute} // must be one of 'Auth' | 'Home' | 'OnBoarding' | 'NotFound'
+        screenOptions={{headerShown: false}}>
+        {/* your two “flow” entry-points */}
+        <Stack.Screen name="Auth" component={AuthStack} />
+        <Stack.Screen name="OnBoarding" component={OnBoardingStack} />
+        <Stack.Screen name="Home" component={HomeTab} />
+
+        {/* always have a catch-all */}
+        <Stack.Screen name="NotFound" component={NotFoundScreen} />
+      </Stack.Navigator>
     </NavigationContainer>
   );
-};
-
-export default AppNavigator;
+}

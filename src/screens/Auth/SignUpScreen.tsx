@@ -8,6 +8,7 @@ import {AuthWrapper} from '../../components/templates/AuthWrapper';
 import {SignUpNavProp} from '../../navigation';
 import {useSafeNavigation} from '../../hooks';
 import {useRegisterMutation} from '../../graphql/generated';
+import {useStore} from '../../store';
 
 type SignUpValues = {
   name: string;
@@ -19,6 +20,7 @@ type SignUpValues = {
 export const SignUpScreen = () => {
   const {navigation, canGoBack, goBack} = useSafeNavigation<SignUpNavProp>();
   const [register, {loading: isRegistering}] = useRegisterMutation();
+  const {setAuth} = useStore();
   const {
     control,
     handleSubmit,
@@ -43,14 +45,21 @@ export const SignUpScreen = () => {
 
       if (response.data?.register) {
         console.log('Registration successful:', response.data.register);
-        // Handle successful registration, e.g., navigate to login
+        setAuth(
+          response.data.register.user,
+          response.data.register.accessToken,
+          response.data.register.refreshToken,
+        );
+        navigation.navigate('CodeVerification', {
+          email: data.email,
+          password: data.password,
+        });
       } else {
         console.error('Registration failed:', response.errors);
       }
     } catch (error) {
       console.error('Error during registration:', error);
     }
-    navigation.navigate('Login'); // Navigate to login after successful signup
   };
 
   return (

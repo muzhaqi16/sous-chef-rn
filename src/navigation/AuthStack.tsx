@@ -1,4 +1,4 @@
-import React, {useEffect} from 'react';
+import React from 'react';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {useStore} from '../store';
 import {type AuthStackParamList} from './types';
@@ -13,20 +13,20 @@ import {
 const Stack = createNativeStackNavigator<AuthStackParamList>();
 
 const AuthStack = () => {
-  const isHydrated = useStore(state => state.isHydrated);
-  const user = useStore(state => state.user);
-  const {rememberMe} = useStore(state => state.preferences);
-  // don’t render the stack until hydration is done
-  if (!isHydrated) return null;
+  const {isHydrated, rememberMe, user} = useStore();
+  // Wait for the store to be hydrated before rendering the stack
+  if (!isHydrated) {
+    return null; // or a loading spinner
+  }
 
   // pick initialRoute synchronously
   const initialRoute: keyof AuthStackParamList = !user
     ? 'Login'
     : !user.emailVerified
       ? 'CodeVerification'
-      : !rememberMe
+      : rememberMe === undefined // only here when we haven’t asked yet
         ? 'RememberLoginInfo'
-        : 'Login';
+        : 'Login'; // or wherever makes sense after “no thanks”
 
   return (
     <Stack.Navigator
@@ -69,12 +69,11 @@ const AuthStack = () => {
       <Stack.Screen
         name="RememberLoginInfo"
         component={RememberLoginInfoScreen}
-        options={{headerShown: false, animation: 'slide_from_right'}}
       />
       <Stack.Screen
         name="CodeVerification"
         component={CodeVerificationScreen}
-        options={{headerShown: false, animation: 'slide_from_right'}}
+        options={{animation: 'slide_from_bottom'}}
       />
     </Stack.Navigator>
   );

@@ -1,7 +1,16 @@
 import {gql} from '@apollo/client';
 
-export const SYNC_HOME = gql`
-  mutation SyncHome($home: SyncHomeInput!) {
-    syncHome(home: $home)
+export const CREATE_HOME = gql`
+  mutation CreateHome($input: CreateHomeInput!) {
+    createHome(input: $input) {
+      id
+      name
+      type
+      ownerId
+      createdAt
+      updatedAt
+      version
+      deletedAt
+    }
   }
 `;

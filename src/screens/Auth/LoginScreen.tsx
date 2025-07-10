@@ -19,7 +19,7 @@ type LoginValues = {email: string; password: string};
 export function LoginScreen() {
   const {navigation} = useSafeNavigation<LoginNavProp>();
   const showToast = useToast();
-  const setAuth = useStore(s => s.setAuth);
+  const {rememberMe, setAuth, setPendingCredentials} = useStore();
 
   const [loadingCreds, setLoadingCreds] = useState(true);
   const [pwFromKeychain, setPwFromKeychain] = useState(false);
@@ -41,6 +41,11 @@ export function LoginScreen() {
   // 1) Preload credentials from Keychain
   useEffect(() => {
     (async () => {
+      setLoadingCreds(true);
+      if (!rememberMe) {
+        setLoadingCreds(false);
+        return;
+      }
       try {
         const creds = await loadCredentials();
         if (creds) {
@@ -73,19 +78,16 @@ export function LoginScreen() {
         // Persist into your Zustand auth slice
         setAuth(user, accessToken, refreshToken);
 
+        // If "remember me" is undefined that means that the user hasn't been asked yet
+        // so we need to set pending credentials.
+        if (rememberMe === undefined) {
+          setPendingCredentials(email, password);
+        }
+
         if (pwFromKeychain) {
           // already saving credentials, just let navigator switch
           return;
         }
-
-        // first-time login → offer “Remember me?”
-        navigation.navigate('RememberLoginInfo', {
-          email,
-          password,
-          user,
-          accessToken,
-          refreshToken,
-        });
       } catch (err: any) {
         showToast({
           type: 'error',

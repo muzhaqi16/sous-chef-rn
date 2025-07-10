@@ -58,6 +58,24 @@ export enum CollaboratorStatus {
   Removed = 'REMOVED'
 }
 
+/**
+ * Input payload for creating a new Home.
+ * - name: user-friendly display name
+ * - type: category (PERSONAL, HOUSEHOLD, BOAT, OFFICE)
+ */
+export type CreateHomeInput = {
+  /** A human-friendly name for this Home. */
+  name: Scalars['String']['input'];
+  /**
+   * The HomeType controls UI / feature flags:
+   * - PERSONAL: private, auto-created on signup
+   * - HOUSEHOLD: shared with family/roommates
+   * - BOAT: inventory for marine use
+   * - OFFICE: company or team pantry
+   */
+  type?: HomeType;
+};
+
 export type CreateHomeInviteInput = {
   email: Scalars['String']['input'];
   expiresAt: Scalars['DateTime']['input'];
@@ -67,7 +85,7 @@ export type CreateHomeInviteInput = {
 
 export type CreatePantryInput = {
   homeId: Scalars['ID']['input'];
-  name?: InputMaybe<Scalars['String']['input']>;
+  name: Scalars['String']['input'];
 };
 
 export type CreatePantryItemInput = {
@@ -79,10 +97,16 @@ export type CreatePantryItemInput = {
   unitId: Scalars['ID']['input'];
 };
 
+/**
+ * Input payload for creating a new Shopping List.
+ * - name: user-friendly display name
+ * - isDefault: whether this is the user's default shopping list
+ * - tags: optional list of tags for categorization
+ */
 export type CreateShoppingListInput = {
-  addTags?: InputMaybe<Array<Scalars['String']['input']>>;
   isDefault?: InputMaybe<Scalars['Boolean']['input']>;
   name: Scalars['String']['input'];
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
 };
 
 export type CreateUpdateItemInput = {
@@ -134,15 +158,18 @@ export enum CurrencyCode {
 export type Home = {
   __typename?: 'Home';
   createdAt: Scalars['DateTime']['output'];
-  defaultPantry: Pantry;
-  defaultPantryId: Scalars['ID']['output'];
+  defaultPantry?: Maybe<Pantry>;
+  deletedAt?: Maybe<Scalars['DateTime']['output']>;
   id: Scalars['ID']['output'];
   invites: Array<HomeInvite>;
   members: Array<Membership>;
   name: Scalars['String']['output'];
   ownerId: Scalars['ID']['output'];
   pantries: Array<Pantry>;
+  tags: Array<Scalars['String']['output']>;
+  type: HomeType;
   updatedAt: Scalars['DateTime']['output'];
+  version: Scalars['Int']['output'];
 };
 
 export type HomeInvite = {
@@ -160,6 +187,13 @@ export type HomeInvite = {
   status: InviteStatus;
   token: Scalars['String']['output'];
 };
+
+export enum HomeType {
+  Boat = 'BOAT',
+  Household = 'HOUSEHOLD',
+  Office = 'OFFICE',
+  Personal = 'PERSONAL'
+}
 
 export enum InviteStatus {
   Accepted = 'ACCEPTED',
@@ -290,6 +324,8 @@ export type Mutation = {
   createBrand: Brand;
   createCategory: Category;
   createCurrency: Currency;
+  /** Create a new Home (and its default pantry) for the signed-in user. */
+  createHome: Home;
   createHomeInvite: HomeInvite;
   createItem: Item;
   createNotification: Notification;
@@ -324,9 +360,6 @@ export type Mutation = {
   resendVerificationEmail: Scalars['Boolean']['output'];
   resetPassword: Scalars['Boolean']['output'];
   revokeHomeInvite: HomeInvite;
-  syncHome: Scalars['Boolean']['output'];
-  syncPantry: Scalars['Boolean']['output'];
-  syncPantryItems: Scalars['Boolean']['output'];
   updateBrand: Brand;
   updateCategory: Category;
   updateCurrency: Currency;
@@ -399,6 +432,11 @@ export type MutationCreateCurrencyArgs = {
   code: Scalars['String']['input'];
   name: Scalars['String']['input'];
   symbol: Scalars['String']['input'];
+};
+
+
+export type MutationCreateHomeArgs = {
+  input: CreateHomeInput;
 };
 
 
@@ -594,21 +632,6 @@ export type MutationRevokeHomeInviteArgs = {
 };
 
 
-export type MutationSyncHomeArgs = {
-  home: SyncHomeInput;
-};
-
-
-export type MutationSyncPantryArgs = {
-  pantry: SyncPantryInput;
-};
-
-
-export type MutationSyncPantryItemsArgs = {
-  items: Array<SyncPantryItemInput>;
-};
-
-
 export type MutationUpdateBrandArgs = {
   description?: InputMaybe<Scalars['String']['input']>;
   id: Scalars['ID']['input'];
@@ -791,8 +814,10 @@ export type Pantry = {
   deletedAt?: Maybe<Scalars['DateTime']['output']>;
   homeId: Scalars['ID']['output'];
   id: Scalars['ID']['output'];
+  isDefault: Scalars['Boolean']['output'];
   items: Array<PantryItem>;
   name: Scalars['String']['output'];
+  tags: Array<Scalars['String']['output']>;
   updatedAt: Scalars['DateTime']['output'];
   version: Scalars['Int']['output'];
 };
@@ -800,7 +825,6 @@ export type Pantry = {
 export type PantryItem = {
   __typename?: 'PantryItem';
   addedAt: Scalars['DateTime']['output'];
-  deletedAt?: Maybe<Scalars['DateTime']['output']>;
   expiresAt?: Maybe<Scalars['DateTime']['output']>;
   grams: Scalars['Float']['output'];
   id: Scalars['ID']['output'];
@@ -843,7 +867,6 @@ export type Query = {
   category?: Maybe<Category>;
   currencies: Array<Currency>;
   currency?: Maybe<Currency>;
-  expiringSoon: Array<PantryItem>;
   home: Home;
   homeInvite?: Maybe<HomeInvite>;
   homeInvites: Array<HomeInvite>;
@@ -855,9 +878,8 @@ export type Query = {
   itemsByIds?: Maybe<Array<Item>>;
   loginHistory?: Maybe<Array<LoginHistory>>;
   me?: Maybe<User>;
-  myPantryItems: Array<PantryItem>;
   notificationsByUser: Array<Notification>;
-  onBoardingPantryItems: Array<Item>;
+  onBoardingPantryItems?: Maybe<Array<Item>>;
   pantries: Array<Pantry>;
   pantry?: Maybe<Pantry>;
   pantryItems: Array<PantryItem>;
@@ -869,7 +891,6 @@ export type Query = {
   shoppingListItems: Array<ShoppingListItem>;
   shoppingLists: Array<ShoppingList>;
   stores: Array<Store>;
-  topPantryItems: Array<PantryItem>;
   unit?: Maybe<Unit>;
   units: Array<Unit>;
   user?: Maybe<User>;
@@ -899,11 +920,6 @@ export type QueryCurrencyArgs = {
 };
 
 
-export type QueryExpiringSoonArgs = {
-  days?: InputMaybe<Scalars['Int']['input']>;
-};
-
-
 export type QueryHomeArgs = {
   id?: InputMaybe<Scalars['ID']['input']>;
 };
@@ -916,6 +932,11 @@ export type QueryHomeInviteArgs = {
 
 export type QueryHomeInvitesArgs = {
   homeId: Scalars['ID']['input'];
+};
+
+
+export type QueryHomesArgs = {
+  type?: InputMaybe<HomeType>;
 };
 
 
@@ -998,11 +1019,6 @@ export type QueryShoppingListItemArgs = {
 
 export type QueryShoppingListItemsArgs = {
   shoppingListId: Scalars['ID']['input'];
-};
-
-
-export type QueryTopPantryItemsArgs = {
-  limit?: InputMaybe<Scalars['Int']['input']>;
 };
 
 
@@ -1116,37 +1132,6 @@ export type Subscription = {
 
 export type SubscriptionShoppingListUpdatedArgs = {
   listId: Scalars['ID']['input'];
-};
-
-export type SyncHomeInput = {
-  defaultPantryId: Scalars['ID']['input'];
-  id: Scalars['ID']['input'];
-  name: Scalars['String']['input'];
-  ownerId: Scalars['ID']['input'];
-};
-
-export type SyncPantryInput = {
-  deletedAt?: InputMaybe<Scalars['DateTime']['input']>;
-  homeId: Scalars['ID']['input'];
-  id: Scalars['ID']['input'];
-  name: Scalars['String']['input'];
-  version?: InputMaybe<Scalars['Int']['input']>;
-};
-
-export type SyncPantryItemInput = {
-  addedAt: Scalars['String']['input'];
-  addedById?: InputMaybe<Scalars['ID']['input']>;
-  deletedAt?: InputMaybe<Scalars['String']['input']>;
-  expiresAt?: InputMaybe<Scalars['String']['input']>;
-  grams?: InputMaybe<Scalars['Float']['input']>;
-  id: Scalars['ID']['input'];
-  itemId: Scalars['ID']['input'];
-  lastUsedAt?: InputMaybe<Scalars['String']['input']>;
-  pantryId: Scalars['ID']['input'];
-  quantity: Scalars['Float']['input'];
-  storageState?: InputMaybe<StorageState>;
-  unitId: Scalars['ID']['input'];
-  version?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type SyncShoppingListInput = {
@@ -1326,26 +1311,19 @@ export type ResendVerificationEmailMutationVariables = Exact<{
 
 export type ResendVerificationEmailMutation = { __typename?: 'Mutation', resendVerificationEmail: boolean };
 
-export type SyncHomeMutationVariables = Exact<{
-  home: SyncHomeInput;
+export type CreateHomeMutationVariables = Exact<{
+  input: CreateHomeInput;
 }>;
 
 
-export type SyncHomeMutation = { __typename?: 'Mutation', syncHome: boolean };
+export type CreateHomeMutation = { __typename?: 'Mutation', createHome: { __typename?: 'Home', id: string, name: string, type: HomeType, ownerId: string, createdAt: any, updatedAt: any, version: number, deletedAt?: any | null } };
 
 export type AddItemToPantryMutationVariables = Exact<{
   input: CreatePantryItemInput;
 }>;
 
 
-export type AddItemToPantryMutation = { __typename?: 'Mutation', addItemToPantry: { __typename?: 'PantryItem', id: string, pantryId: string, itemId: string, unitId: string, quantity: number, grams: number, addedAt: any, lastUsedAt?: any | null, expiresAt?: any | null, storageState: StorageState, deletedAt?: any | null, version: number, item: { __typename?: 'Item', id: string, imageUrl?: string | null }, unit: { __typename?: 'Unit', name: string, id: string, symbol: string } } };
-
-export type SyncPantryMutationVariables = Exact<{
-  pantry: SyncPantryInput;
-}>;
-
-
-export type SyncPantryMutation = { __typename?: 'Mutation', syncPantry: boolean };
+export type AddItemToPantryMutation = { __typename?: 'Mutation', addItemToPantry: { __typename?: 'PantryItem', id: string, pantryId: string, itemId: string, unitId: string, quantity: number, grams: number, addedAt: any, lastUsedAt?: any | null, expiresAt?: any | null, storageState: StorageState, version: number, item: { __typename?: 'Item', id: string, imageUrl?: string | null }, unit: { __typename?: 'Unit', name: string, id: string, symbol: string } } };
 
 export type UpdateUserProfileMutationVariables = Exact<{
   data: UpdateUserSettingsInput;
@@ -1359,7 +1337,7 @@ export type CreateShoppingListMutationVariables = Exact<{
 }>;
 
 
-export type CreateShoppingListMutation = { __typename?: 'Mutation', createShoppingList: { __typename?: 'ShoppingList', id: string, name: string, isDefault: boolean, tags?: Array<string> | null, createdAt: any, updatedAt: any, owner: { __typename?: 'User', email: string, id: string } } };
+export type CreateShoppingListMutation = { __typename?: 'Mutation', createShoppingList: { __typename?: 'ShoppingList', id: string, name: string, tags?: Array<string> | null, version: number, updatedAt: any, isDefault: boolean, createdAt: any, deletedAt?: any | null, metadata?: any | null, owner: { __typename?: 'User', id: string } } };
 
 export type AddCollaboratorMutationVariables = Exact<{
   data: AddCollaboratorInput;
@@ -1392,19 +1370,19 @@ export type ShoppingListCollaboratorsQuery = { __typename?: 'Query', shoppingLis
 export type HomeQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type HomeQuery = { __typename?: 'Query', home: { __typename?: 'Home', id: string, name: string, ownerId: string, defaultPantryId: string, createdAt: any, updatedAt: any } };
+export type HomeQuery = { __typename?: 'Query', home: { __typename?: 'Home', id: string, name: string, ownerId: string, createdAt: any, updatedAt: any, defaultPantry?: { __typename?: 'Pantry', id: string } | null } };
 
 export type HomeByIdQueryVariables = Exact<{
   id: Scalars['ID']['input'];
 }>;
 
 
-export type HomeByIdQuery = { __typename?: 'Query', home: { __typename?: 'Home', id: string, name: string, ownerId: string, defaultPantryId: string, createdAt: any, updatedAt: any } };
+export type HomeByIdQuery = { __typename?: 'Query', home: { __typename?: 'Home', id: string, name: string, ownerId: string, createdAt: any, updatedAt: any, defaultPantry?: { __typename?: 'Pantry', id: string } | null } };
 
 export type HomesQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type HomesQuery = { __typename?: 'Query', homes: Array<{ __typename?: 'Home', id: string, name: string, ownerId: string, defaultPantryId: string, createdAt: any, updatedAt: any }> };
+export type HomesQuery = { __typename?: 'Query', homes: Array<{ __typename?: 'Home', id: string, name: string, ownerId: string, createdAt: any, updatedAt: any, defaultPantry?: { __typename?: 'Pantry', id: string } | null }> };
 
 export type ItemsQueryVariables = Exact<{
   filter?: InputMaybe<ItemFilterInput>;
@@ -1422,13 +1400,6 @@ export type AutocompleteItemsQueryVariables = Exact<{
 
 export type AutocompleteItemsQuery = { __typename?: 'Query', autocompleteItems?: Array<{ __typename?: 'ItemSuggestion', id: string, name: string }> | null };
 
-export type PantryItemsQueryVariables = Exact<{
-  pantryId: Scalars['ID']['input'];
-}>;
-
-
-export type PantryItemsQuery = { __typename?: 'Query', pantryItems: Array<{ __typename?: 'PantryItem', id: string, pantryId: string, itemId: string, unitId: string, quantity: number, grams: number, addedAt: any, lastUsedAt?: any | null, expiresAt?: any | null, storageState: StorageState, deletedAt?: any | null, version: number, item: { __typename?: 'Item', name: string }, unit: { __typename?: 'Unit', symbol: string, name: string } }> };
-
 export type PantriesQueryVariables = Exact<{
   homeId: Scalars['ID']['input'];
 }>;
@@ -1436,10 +1407,17 @@ export type PantriesQueryVariables = Exact<{
 
 export type PantriesQuery = { __typename?: 'Query', pantries: Array<{ __typename?: 'Pantry', id: string, homeId: string, name: string, version: number, createdAt: any, updatedAt: any, deletedAt?: any | null, items: Array<{ __typename?: 'PantryItem', itemId: string, storageState: StorageState, expiresAt?: any | null, id: string, grams: number, unit: { __typename?: 'Unit', symbol: string, name: string }, item: { __typename?: 'Item', name: string, status: ItemStatus, storageState: StorageState } }> }> };
 
+export type PantryItemsQueryVariables = Exact<{
+  pantryId: Scalars['ID']['input'];
+}>;
+
+
+export type PantryItemsQuery = { __typename?: 'Query', pantryItems: Array<{ __typename?: 'PantryItem', id: string, pantryId: string, itemId: string, unitId: string, quantity: number, grams: number, addedAt: any, lastUsedAt?: any | null, expiresAt?: any | null, storageState: StorageState, version: number, item: { __typename?: 'Item', id: string }, unit: { __typename?: 'Unit', symbol: string, name: string } }> };
+
 export type OnBoardingPantryItemsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type OnBoardingPantryItemsQuery = { __typename?: 'Query', onBoardingPantryItems: Array<{ __typename?: 'Item', id: string, name: string, imageUrl?: string | null }> };
+export type OnBoardingPantryItemsQuery = { __typename?: 'Query', onBoardingPantryItems?: Array<{ __typename?: 'Item', id: string, imageUrl?: string | null, name: string, units?: Array<{ __typename?: 'ItemUnit', id: string }> | null }> | null };
 
 export type UserProfileQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -1708,37 +1686,46 @@ export function useResendVerificationEmailMutation(baseOptions?: Apollo.Mutation
 export type ResendVerificationEmailMutationHookResult = ReturnType<typeof useResendVerificationEmailMutation>;
 export type ResendVerificationEmailMutationResult = Apollo.MutationResult<ResendVerificationEmailMutation>;
 export type ResendVerificationEmailMutationOptions = Apollo.BaseMutationOptions<ResendVerificationEmailMutation, ResendVerificationEmailMutationVariables>;
-export const SyncHomeDocument = gql`
-    mutation SyncHome($home: SyncHomeInput!) {
-  syncHome(home: $home)
+export const CreateHomeDocument = gql`
+    mutation CreateHome($input: CreateHomeInput!) {
+  createHome(input: $input) {
+    id
+    name
+    type
+    ownerId
+    createdAt
+    updatedAt
+    version
+    deletedAt
+  }
 }
     `;
-export type SyncHomeMutationFn = Apollo.MutationFunction<SyncHomeMutation, SyncHomeMutationVariables>;
+export type CreateHomeMutationFn = Apollo.MutationFunction<CreateHomeMutation, CreateHomeMutationVariables>;
 
 /**
- * __useSyncHomeMutation__
+ * __useCreateHomeMutation__
  *
- * To run a mutation, you first call `useSyncHomeMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useSyncHomeMutation` returns a tuple that includes:
+ * To run a mutation, you first call `useCreateHomeMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateHomeMutation` returns a tuple that includes:
  * - A mutate function that you can call at any time to execute the mutation
  * - An object with fields that represent the current status of the mutation's execution
  *
  * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
  *
  * @example
- * const [syncHomeMutation, { data, loading, error }] = useSyncHomeMutation({
+ * const [createHomeMutation, { data, loading, error }] = useCreateHomeMutation({
  *   variables: {
- *      home: // value for 'home'
+ *      input: // value for 'input'
  *   },
  * });
  */
-export function useSyncHomeMutation(baseOptions?: Apollo.MutationHookOptions<SyncHomeMutation, SyncHomeMutationVariables>) {
+export function useCreateHomeMutation(baseOptions?: Apollo.MutationHookOptions<CreateHomeMutation, CreateHomeMutationVariables>) {
         const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useMutation<SyncHomeMutation, SyncHomeMutationVariables>(SyncHomeDocument, options);
+        return Apollo.useMutation<CreateHomeMutation, CreateHomeMutationVariables>(CreateHomeDocument, options);
       }
-export type SyncHomeMutationHookResult = ReturnType<typeof useSyncHomeMutation>;
-export type SyncHomeMutationResult = Apollo.MutationResult<SyncHomeMutation>;
-export type SyncHomeMutationOptions = Apollo.BaseMutationOptions<SyncHomeMutation, SyncHomeMutationVariables>;
+export type CreateHomeMutationHookResult = ReturnType<typeof useCreateHomeMutation>;
+export type CreateHomeMutationResult = Apollo.MutationResult<CreateHomeMutation>;
+export type CreateHomeMutationOptions = Apollo.BaseMutationOptions<CreateHomeMutation, CreateHomeMutationVariables>;
 export const AddItemToPantryDocument = gql`
     mutation AddItemToPantry($input: CreatePantryItemInput!) {
   addItemToPantry(input: $input) {
@@ -1752,7 +1739,6 @@ export const AddItemToPantryDocument = gql`
     lastUsedAt
     expiresAt
     storageState
-    deletedAt
     version
     item {
       id
@@ -1792,37 +1778,6 @@ export function useAddItemToPantryMutation(baseOptions?: Apollo.MutationHookOpti
 export type AddItemToPantryMutationHookResult = ReturnType<typeof useAddItemToPantryMutation>;
 export type AddItemToPantryMutationResult = Apollo.MutationResult<AddItemToPantryMutation>;
 export type AddItemToPantryMutationOptions = Apollo.BaseMutationOptions<AddItemToPantryMutation, AddItemToPantryMutationVariables>;
-export const SyncPantryDocument = gql`
-    mutation SyncPantry($pantry: SyncPantryInput!) {
-  syncPantry(pantry: $pantry)
-}
-    `;
-export type SyncPantryMutationFn = Apollo.MutationFunction<SyncPantryMutation, SyncPantryMutationVariables>;
-
-/**
- * __useSyncPantryMutation__
- *
- * To run a mutation, you first call `useSyncPantryMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useSyncPantryMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [syncPantryMutation, { data, loading, error }] = useSyncPantryMutation({
- *   variables: {
- *      pantry: // value for 'pantry'
- *   },
- * });
- */
-export function useSyncPantryMutation(baseOptions?: Apollo.MutationHookOptions<SyncPantryMutation, SyncPantryMutationVariables>) {
-        const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useMutation<SyncPantryMutation, SyncPantryMutationVariables>(SyncPantryDocument, options);
-      }
-export type SyncPantryMutationHookResult = ReturnType<typeof useSyncPantryMutation>;
-export type SyncPantryMutationResult = Apollo.MutationResult<SyncPantryMutation>;
-export type SyncPantryMutationOptions = Apollo.BaseMutationOptions<SyncPantryMutation, SyncPantryMutationVariables>;
 export const UpdateUserProfileDocument = gql`
     mutation UpdateUserProfile($data: UpdateUserSettingsInput!) {
   updateUserProfile(data: $data) {
@@ -1866,14 +1821,16 @@ export const CreateShoppingListDocument = gql`
   createShoppingList(data: $data) {
     id
     name
-    isDefault
     tags
-    createdAt
+    version
     updatedAt
+    isDefault
     owner {
-      email
       id
     }
+    createdAt
+    deletedAt
+    metadata
   }
 }
     `;
@@ -2069,7 +2026,9 @@ export const HomeDocument = gql`
     id
     name
     ownerId
-    defaultPantryId
+    defaultPantry {
+      id
+    }
     createdAt
     updatedAt
   }
@@ -2113,7 +2072,9 @@ export const HomeByIdDocument = gql`
     id
     name
     ownerId
-    defaultPantryId
+    defaultPantry {
+      id
+    }
     createdAt
     updatedAt
   }
@@ -2158,7 +2119,9 @@ export const HomesDocument = gql`
     id
     name
     ownerId
-    defaultPantryId
+    defaultPantry {
+      id
+    }
     createdAt
     updatedAt
   }
@@ -2328,64 +2291,6 @@ export type AutocompleteItemsQueryHookResult = ReturnType<typeof useAutocomplete
 export type AutocompleteItemsLazyQueryHookResult = ReturnType<typeof useAutocompleteItemsLazyQuery>;
 export type AutocompleteItemsSuspenseQueryHookResult = ReturnType<typeof useAutocompleteItemsSuspenseQuery>;
 export type AutocompleteItemsQueryResult = Apollo.QueryResult<AutocompleteItemsQuery, AutocompleteItemsQueryVariables>;
-export const PantryItemsDocument = gql`
-    query PantryItems($pantryId: ID!) {
-  pantryItems(pantryId: $pantryId) {
-    id
-    pantryId
-    itemId
-    unitId
-    quantity
-    grams
-    addedAt
-    lastUsedAt
-    expiresAt
-    storageState
-    deletedAt
-    version
-    item {
-      name
-    }
-    unit {
-      symbol
-      name
-    }
-  }
-}
-    `;
-
-/**
- * __usePantryItemsQuery__
- *
- * To run a query within a React component, call `usePantryItemsQuery` and pass it any options that fit your needs.
- * When your component renders, `usePantryItemsQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = usePantryItemsQuery({
- *   variables: {
- *      pantryId: // value for 'pantryId'
- *   },
- * });
- */
-export function usePantryItemsQuery(baseOptions: Apollo.QueryHookOptions<PantryItemsQuery, PantryItemsQueryVariables> & ({ variables: PantryItemsQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
-        const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useQuery<PantryItemsQuery, PantryItemsQueryVariables>(PantryItemsDocument, options);
-      }
-export function usePantryItemsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<PantryItemsQuery, PantryItemsQueryVariables>) {
-          const options = {...defaultOptions, ...baseOptions}
-          return Apollo.useLazyQuery<PantryItemsQuery, PantryItemsQueryVariables>(PantryItemsDocument, options);
-        }
-export function usePantryItemsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<PantryItemsQuery, PantryItemsQueryVariables>) {
-          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
-          return Apollo.useSuspenseQuery<PantryItemsQuery, PantryItemsQueryVariables>(PantryItemsDocument, options);
-        }
-export type PantryItemsQueryHookResult = ReturnType<typeof usePantryItemsQuery>;
-export type PantryItemsLazyQueryHookResult = ReturnType<typeof usePantryItemsLazyQuery>;
-export type PantryItemsSuspenseQueryHookResult = ReturnType<typeof usePantryItemsSuspenseQuery>;
-export type PantryItemsQueryResult = Apollo.QueryResult<PantryItemsQuery, PantryItemsQueryVariables>;
 export const PantriesDocument = gql`
     query Pantries($homeId: ID!) {
   pantries(homeId: $homeId) {
@@ -2448,12 +2353,72 @@ export type PantriesQueryHookResult = ReturnType<typeof usePantriesQuery>;
 export type PantriesLazyQueryHookResult = ReturnType<typeof usePantriesLazyQuery>;
 export type PantriesSuspenseQueryHookResult = ReturnType<typeof usePantriesSuspenseQuery>;
 export type PantriesQueryResult = Apollo.QueryResult<PantriesQuery, PantriesQueryVariables>;
+export const PantryItemsDocument = gql`
+    query PantryItems($pantryId: ID!) {
+  pantryItems(pantryId: $pantryId) {
+    id
+    pantryId
+    itemId
+    unitId
+    quantity
+    grams
+    addedAt
+    lastUsedAt
+    expiresAt
+    storageState
+    version
+    item {
+      id
+    }
+    unit {
+      symbol
+      name
+    }
+  }
+}
+    `;
+
+/**
+ * __usePantryItemsQuery__
+ *
+ * To run a query within a React component, call `usePantryItemsQuery` and pass it any options that fit your needs.
+ * When your component renders, `usePantryItemsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = usePantryItemsQuery({
+ *   variables: {
+ *      pantryId: // value for 'pantryId'
+ *   },
+ * });
+ */
+export function usePantryItemsQuery(baseOptions: Apollo.QueryHookOptions<PantryItemsQuery, PantryItemsQueryVariables> & ({ variables: PantryItemsQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<PantryItemsQuery, PantryItemsQueryVariables>(PantryItemsDocument, options);
+      }
+export function usePantryItemsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<PantryItemsQuery, PantryItemsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<PantryItemsQuery, PantryItemsQueryVariables>(PantryItemsDocument, options);
+        }
+export function usePantryItemsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<PantryItemsQuery, PantryItemsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<PantryItemsQuery, PantryItemsQueryVariables>(PantryItemsDocument, options);
+        }
+export type PantryItemsQueryHookResult = ReturnType<typeof usePantryItemsQuery>;
+export type PantryItemsLazyQueryHookResult = ReturnType<typeof usePantryItemsLazyQuery>;
+export type PantryItemsSuspenseQueryHookResult = ReturnType<typeof usePantryItemsSuspenseQuery>;
+export type PantryItemsQueryResult = Apollo.QueryResult<PantryItemsQuery, PantryItemsQueryVariables>;
 export const OnBoardingPantryItemsDocument = gql`
     query OnBoardingPantryItems {
   onBoardingPantryItems {
     id
-    name
     imageUrl
+    name
+    units {
+      id
+    }
   }
 }
     `;

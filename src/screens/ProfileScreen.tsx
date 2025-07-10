@@ -10,9 +10,11 @@ import {
   useUpdateUserProfileMutation,
   useUserProfileQuery,
 } from '../graphql/generated';
+import {useNavigation} from '@react-navigation/native';
 
 export default function ProfileScreen() {
   const {styles} = useStyles(stylesheet);
+  const navigation = useNavigation();
 
   const {data: profileData} = useUserProfileQuery({
     fetchPolicy: 'cache-and-network',
@@ -163,7 +165,12 @@ export default function ProfileScreen() {
               key: 'logout',
               label: 'Log Out',
               type: 'text',
-              onPress: () => logout(),
+              onPress: () => {
+                logout();
+                navigation.navigate('Auth', {
+                  screen: 'Login',
+                }); // Adjust navigation as needed
+              },
             },
           ]}
         />

@@ -2,21 +2,34 @@
 import {StateCreator} from 'zustand';
 import {RootState} from '../index';
 
+type OnBoardingSteps = 'createShoppingList' | 'selectPantryItems' | null;
+
+export const OnBoardingSteps = {
+  createShoppingList: 'createShoppingList' as OnBoardingSteps,
+  selectPantryItems: 'selectPantryItems' as OnBoardingSteps,
+  null: null as OnBoardingSteps,
+};
+
 export interface PreferencesState {
   theme: 'light' | 'dark';
   onBoardingCompleted: boolean;
+  onBoardingStep: OnBoardingSteps;
   language?: string;
   emailNotifications?: boolean;
   pushNotifications?: boolean;
+  /** true = user asked “yes”, false = user asked “no”, undefined = not yet asked */
   rememberMe?: boolean;
   selectedShoppingListId: string | null;
+  selectedPantryId: string | null;
 
   setRememberMe: (remember: boolean) => void;
   setEmailNotifications: (enabled: boolean) => void;
   setNotificationsEnabled: (enabled: boolean) => void;
   setSelectedShoppingListId: (id: string | null) => void;
+  setSelectedPantryId: (id: string | null) => void;
   setTheme: (theme: 'light' | 'dark') => void;
   setOnBoardingCompleted: (completed: boolean) => void;
+  setOnBoardingStep: (step: OnBoardingSteps) => void;
   setLanguage: (language: string) => void;
 
   resetPreferences: () => void;
@@ -31,8 +44,10 @@ const initialPreferencesState: Omit<
   | 'setEmailNotifications'
   | 'setNotificationsEnabled'
   | 'setSelectedShoppingListId'
+  | 'setSelectedPantryId'
   | 'setTheme'
   | 'setOnBoardingCompleted'
+  | 'setOnBoardingStep'
   | 'setLanguage'
   | 'resetPreferences'
   | 'updatePreferences'
@@ -41,11 +56,13 @@ const initialPreferencesState: Omit<
 > = {
   theme: 'light',
   onBoardingCompleted: false,
+  onBoardingStep: null,
   language: undefined,
   emailNotifications: false,
   pushNotifications: false,
-  rememberMe: false,
+  rememberMe: undefined, // ← start as “haven’t asked yet”
   selectedShoppingListId: null,
+  selectedPantryId: null,
 };
 
 export const createPreferencesSlice: StateCreator<
@@ -76,6 +93,10 @@ export const createPreferencesSlice: StateCreator<
     set(draft => {
       draft.selectedShoppingListId = id;
     }),
+  setSelectedPantryId: id =>
+    set(draft => {
+      draft.selectedPantryId = id;
+    }),
 
   setTheme: theme =>
     set(draft => {
@@ -85,6 +106,11 @@ export const createPreferencesSlice: StateCreator<
   setOnBoardingCompleted: completed =>
     set(draft => {
       draft.onBoardingCompleted = completed;
+    }),
+
+  setOnBoardingStep: step =>
+    set(draft => {
+      draft.onBoardingStep = step;
     }),
 
   setLanguage: language =>
