@@ -6,16 +6,45 @@ import {SettingsSection} from '../components/organisms/SettingsSection';
 import {SettingItem} from '../components/molecules/SettingRow';
 import {ModalPicker} from '../components/molecules/ModalPicker';
 import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {
+  useUpdateUserProfileMutation,
+  useUserProfileQuery,
+} from '../graphql/generated';
 
 export default function ProfileScreen() {
   const {styles} = useStyles(stylesheet);
-  const user = useStore(s => s.user);
-  const logout = useStore(s => s.logout);
-  const profile = useStore(s => s.userProfile);
-  const preferences = useStore(s => s.preferences);
-  const updatePreferences = useStore(s => s.updatePreferences);
-  const updateProfile = useStore(s => s.updateProfile);
-  const fetchProf = useStore(s => s.getUserProfile);
+
+  const {data: profileData} = useUserProfileQuery({
+    fetchPolicy: 'cache-and-network',
+  });
+
+  const profile = profileData?.userProfile;
+  const {firstName, lastName, phone, dateOfBirth, avatarUrl} = profile || {};
+  const {
+    user,
+    logout,
+    theme,
+    setTheme,
+    language,
+    setLanguage,
+    emailNotifications,
+    setEmailNotifications,
+    pushNotifications,
+  } = useStore();
+  const {updatePreferences} = useStore();
+
+  const [updateProfile] = useUpdateUserProfileMutation({
+    onCompleted: data => {
+      if (data.updateUserProfile) {
+        console.log('Profile updated successfully');
+      } else {
+        console.error('Failed to update profile');
+      }
+    },
+    onError: error => {
+      console.error('Error updating profile:', error);
+    },
+  });
 
   const [langPickerVisible, setLangPickerVisible] = useState(false);
 
@@ -26,38 +55,46 @@ export default function ProfileScreen() {
     // …more
   ];
 
-  useEffect(() => {
-    fetchProf();
-  }, [fetchProf]);
-
   const personalItems: SettingItem[] = [
     {
       key: 'firstName',
       label: 'First Name',
       type: 'text',
       value: profile?.firstName || '',
-      onSave: val => updateProfile({firstName: val}),
+      onSave: val =>
+        updateProfile({
+          variables: {data: {firstName: val}},
+        }),
     },
     {
       key: 'lastName',
       label: 'Last Name',
       type: 'text',
       value: profile?.lastName || '',
-      onSave: val => updateProfile({lastName: val}),
+      onSave: val =>
+        updateProfile({
+          variables: {data: {lastName: val}},
+        }),
     },
     {
       key: 'phone',
       label: 'Phone',
       type: 'text',
       value: profile?.phone || '',
-      onSave: val => updateProfile({phone: val}),
+      onSave: val =>
+        updateProfile({
+          variables: {data: {phone: val}},
+        }),
     },
     {
       key: 'birthday',
       label: 'Birthday',
       type: 'text',
       value: profile?.dateOfBirth || '',
-      onSave: val => updateProfile({dateOfBirth: val}),
+      onSave: val =>
+        updateProfile({
+          variables: {data: {dateOfBirth: val}},
+        }),
     },
   ];
 
@@ -66,14 +103,17 @@ export default function ProfileScreen() {
       key: 'darkMode',
       label: 'Dark Mode',
       type: 'switch',
-      value: preferences.darkMode,
-      onPress: () => updatePreferences({darkMode: !preferences.darkMode}),
+      value: theme === 'dark',
+      onPress: () =>
+        updatePreferences({
+          theme: theme === 'dark' ? 'light' : 'dark',
+        }),
     },
     {
       key: 'language',
       label: 'Language',
       type: 'modal',
-      value: preferences.language,
+      value: language,
       options: languageOptions,
       onSave: val => updatePreferences({language: val}),
     },
@@ -84,19 +124,18 @@ export default function ProfileScreen() {
       key: 'emailNotif',
       label: 'Email Notifications',
       type: 'switch',
-      value: preferences.emailNotifications,
+      value: emailNotifications,
       onPress: () =>
         updatePreferences({
-          emailNotifications: !preferences.emailNotifications,
+          emailNotifications: !emailNotifications,
         }),
     },
     {
       key: 'pushNotif',
       label: 'Push Notifications',
       type: 'switch',
-      value: preferences.pushNotifications,
-      onPress: () =>
-        updatePreferences({pushNotifications: !preferences.pushNotifications}),
+      value: pushNotifications,
+      onPress: () => updatePreferences({pushNotifications: !pushNotifications}),
     },
   ];
 
@@ -135,7 +174,7 @@ export default function ProfileScreen() {
         label="Select Language"
         visible={langPickerVisible}
         options={languageOptions}
-        selected={preferences.language || ''}
+        selected={language || ''}
         onSelect={val => {
           updatePreferences({language: val});
           setLangPickerVisible(false);

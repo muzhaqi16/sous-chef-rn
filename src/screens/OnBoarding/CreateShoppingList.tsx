@@ -5,42 +5,32 @@ import {useNavigation} from '@react-navigation/native';
 import {OnBoardingWrapper} from '../../components/templates';
 import {DynamicFormFields} from '../../components/molecules/DynamicFormFields';
 import {BaseInput} from '../../components/atoms';
-import {useStore} from '../../store';
 import {CreateShoppingListNavProp} from '../../navigation/types';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
-import {CREATE_SHOPPING_LIST} from '../../api/graphql/mutations/shoppingList';
-import {useMutation} from '@apollo/client';
 import {yupResolver} from '@hookform/resolvers/yup';
+import {useCreateShoppingListMutation} from '../../graphql/generated';
 import * as yup from 'yup';
 
 type FormValues = {shoppingListName: string};
 
 export const CreateShoppingListScreen = () => {
   const navigation = useNavigation<CreateShoppingListNavProp>();
-  const firstName = useStore(
-    store => store?.user?.profile?.firstName || 'Your',
-  );
-  const setDefaultShoppingList = useStore(s => s.setDefaultShoppingList);
+  const firstName = 'Your';
 
   const [graphqlError, setGraphqlError] = useState<string | null>(null);
 
-  const [createShoppingList, {error}] = useMutation(CREATE_SHOPPING_LIST, {
-    onCompleted: ({createShoppingList}) => {
-      console.log('Shopping List Created:', createShoppingList);
-      setDefaultShoppingList(createShoppingList); // Set the created list as default
-      setGraphqlError(null); // Reset error on success
-
-      navigation.replace('OnBoarding', {screen: 'SelectPantryItems'});
+  const [createShoppingList] = useCreateShoppingListMutation({
+    onCompleted: data => {
+      if (data?.createShoppingList) {
+        navigation.replace('OnBoarding', {screen: 'SelectPantryItems'});
+      } else {
+        setGraphqlError('Failed to create shopping list');
+      }
     },
     onError: error => {
-      // Check for network error or graphql error
-      if (error.networkError) {
-        setGraphqlError('Network error: Please check your connection.');
-      } else if (error.graphQLErrors.length > 0) {
-        setGraphqlError(error.graphQLErrors[0].message);
-      } else {
-        setGraphqlError('An unknown error occurred.');
-      }
+      setGraphqlError(
+        error.message || 'An error occurred while creating the shopping list',
+      );
     },
   });
 
@@ -67,7 +57,7 @@ export const CreateShoppingListScreen = () => {
         data: {
           name: data?.shoppingListName.trim(),
           isDefault: true, // Assuming you want to set this as default
-          tags: [
+          addTags: [
             'onboarding', // Example tag, you can modify or add more
           ], // Add any initial tags if needed
         },

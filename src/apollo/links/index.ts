@@ -6,6 +6,9 @@ import {errorLink} from './errorLink';
 import {httpLink} from './httpLink';
 import {persistLink} from './persistLink';
 import {wsLink} from './wsLink';
+import {retryLink} from './retryLink';
+
+const retriableHttp = retryLink.concat(httpLink);
 
 // create a link that sends •subscriptions• to wsLink, and •queries/mutations• to httpLink
 const transportLink = split(
@@ -16,7 +19,7 @@ const transportLink = split(
     );
   },
   wsLink,
-  httpLink,
+  retriableHttp,
 );
 
 // Combine links: errorLink comes first to catch errors from subsequent links

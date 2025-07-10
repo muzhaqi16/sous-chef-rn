@@ -24,7 +24,7 @@ export const initialAppState = {
 
 export const createAppSlice: StateCreator<
   RootState,
-  [],
+  [['zustand/immer', never]],
   [],
   AppState
 > = set => ({

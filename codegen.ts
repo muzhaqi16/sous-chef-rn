@@ -14,13 +14,13 @@ const config: CodegenConfig = {
     // include all your real .ts/.tsx/.graphql/.gql files…
     'src/**/*.{ts,tsx,graphql,gql}',
     // …but explicitly ignore the generated file
-    '!src/api/graphql/generated.ts',
+    '!src/graphql/generated.ts',
   ],
   // ignore the generates file
   ignoreNoDocuments: true,
 
   generates: {
-    'src/api/graphql/generated.ts': {
+    'src/graphql/generated.ts': {
       plugins: [
         'typescript',
         'typescript-operations',

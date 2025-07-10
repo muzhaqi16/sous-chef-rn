@@ -5,46 +5,20 @@ import {
   persist,
   subscribeWithSelector,
 } from 'zustand/middleware';
-// import {syncAll} from '../api/services/syncService';
 import {createAuthSlice, AuthState} from './slices/authSlice';
 import {
   createPreferencesSlice,
   PreferencesState,
 } from './slices/preferencesSlice';
-import {createHomeSlice, HomeState} from './slices/homeSlice';
-import {createProfileSlice, ProfileState} from './slices/profileSlice';
-import {createItemsSlice, ItemsState} from './slices/entities/itemsSlice';
-import {createPantrySlice, PantryState} from './slices/pantrySlice';
-import {
-  createShoppingListSlice,
-  ShoppingListState,
-} from './slices/shoppingListSlice';
-import {
-  createShoppingListItemSlice,
-  ShoppingListItemState,
-} from './slices/shoppingListItemSlice';
+
 import {createAppSlice, AppState} from './slices/appSlice';
-import {
-  createConnectivitySlice,
-  ConnectivityState,
-} from './slices/connectivitySlice';
-import {createOfflineSlice, OfflineState} from './slices/offlineSlice';
+
 import {logger} from './logger';
 import {zustandStorage} from '../storage/mmkv';
 
 export const STORAGE_KEY = 'sous-chef-storage';
 
-export type RootState = AuthState &
-  PreferencesState &
-  ProfileState &
-  ItemsState &
-  PantryState &
-  ShoppingListState &
-  ShoppingListItemState &
-  ConnectivityState &
-  OfflineState &
-  HomeState &
-  AppState;
+export type RootState = AuthState & PreferencesState & AppState;
 
 export const useStore = create<RootState>()(
   subscribeWithSelector(
@@ -52,37 +26,22 @@ export const useStore = create<RootState>()(
       immer(
         logger((...a) => ({
           ...createAuthSlice(...a),
-          ...createHomeSlice(...a),
           ...createPreferencesSlice(...a),
-          ...createProfileSlice(...a),
-          ...createItemsSlice(...a),
-          ...createPantrySlice(...a),
-          ...createShoppingListSlice(...a),
-          ...createShoppingListItemSlice(...a),
           ...createAppSlice(...a),
-          ...createConnectivitySlice(...a),
-          ...createOfflineSlice(...a),
         })),
       ),
       {
         name: STORAGE_KEY,
-        version: 2,
+        version: 3,
         storage: createJSONStorage(() => zustandStorage),
         onRehydrateStorage: state => {
-          return async (restoredState, error) => {
-            if (!error) {
-              restoredState?.setHydrated(true);
-
-              const isOnline = restoredState?.isOnline ?? false;
-
-              // Register syncQueue callback
-              // restoredState?.setSyncQueue(syncAll);
-
-              // Optionally trigger sync immediately if online
-              if (isOnline) {
-                // await syncAll();
-                console.log('Store rehydrated and online, syncing data...');
-              }
+          console.log('hydration starts');
+          return (state, error) => {
+            if (error) {
+              console.log('an error happened during hydration', error);
+            } else {
+              state?.setHydrated(true);
+              console.log('hydration finished');
             }
           };
         },

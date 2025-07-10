@@ -1,5 +1,7 @@
 import {gql} from '@apollo/client';
 
+// This will automatically generate a graphql useLoginMutation hook
+// when you run the codegen script
 export const LOGIN_MUTATION = gql`
   mutation Login($email: String!, $password: String!) {
     login(email: $email, password: $password) {

@@ -1,14 +1,15 @@
-import React, {useState} from 'react';
+import React from 'react';
 import {StyleSheet, Text} from 'react-native';
 import {useForm} from 'react-hook-form';
 import {AuthWrapper} from '../../components/templates/AuthWrapper';
 import {AuthFormTemplate} from '../../components/templates/AuthFormTemplate';
 import {CodeInputAdapter} from '../../components/molecules/CodeInputAdapter';
 import {useStore} from '../../store';
+
 import {
-  verifyEmailApi,
-  resendVerificationEmailApi,
-} from '../../api/services/authService';
+  useVerifyEmailMutation,
+  useResendVerificationEmailMutation,
+} from '../../graphql/generated';
 
 type CodeVerificationValues = {
   code: string;
@@ -16,6 +17,8 @@ type CodeVerificationValues = {
 
 export function CodeVerificationScreen() {
   const {setEmailVerified, user} = useStore();
+  const [verifyEmail] = useVerifyEmailMutation();
+  const [resendVerificationEmail] = useResendVerificationEmailMutation();
 
   const email = user?.email ?? '';
 
@@ -29,21 +32,36 @@ export function CodeVerificationScreen() {
 
   const onVerifyCode = async (data: CodeVerificationValues) => {
     const {code} = data;
-    const status = await verifyEmailApi(code);
-    if (status) {
-      setEmailVerified(true);
-      console.log('Code verified successfully:', code);
+    try {
+      const response = await verifyEmail({
+        variables: {code},
+      });
+
+      if (response.data?.verifyEmail) {
+        setEmailVerified(true);
+        console.log('Email verified successfully');
+      } else {
+        console.error('Email verification failed');
+      }
+    } catch (error) {
+      console.error('Error verifying email:', error);
     }
   };
 
   const onResend = async () => {
-    await resendVerificationEmailApi(email)
-      .then(() => {
-        console.log('Verification email resent successfully');
-      })
-      .catch(error => {
-        console.error('Error resending verification email:', error);
+    try {
+      const response = await resendVerificationEmail({
+        variables: {email},
       });
+
+      if (response.data?.resendVerificationEmail) {
+        console.log('Verification email resent successfully');
+      } else {
+        console.error('Failed to resend verification email');
+      }
+    } catch (error) {
+      console.error('Error resending verification email:', error);
+    }
   };
 
   return (

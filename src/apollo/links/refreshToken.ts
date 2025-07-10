@@ -3,7 +3,7 @@ import {client} from '../../apollo/client';
 import {storage} from '../../storage/mmkv';
 import Config from 'react-native-config';
 import {useStore} from '../../store';
-import {REFRESH_TOKEN_MUTATION} from '../../api/graphql/mutations/auth';
+import {REFRESH_TOKEN_MUTATION} from '../../graphql/mutations/auth';
 
 /**
  * Attempts to refresh the access token.

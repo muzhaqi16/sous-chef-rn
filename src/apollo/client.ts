@@ -1,12 +1,17 @@
 import {
   ApolloClient,
   InMemoryCache,
-  ApolloLink,
-  HttpLink,
   NormalizedCacheObject,
 } from '@apollo/client';
 import {storage} from '../storage/mmkv';
 import {link} from './links';
+import {loadErrorMessages, loadDevMessages} from '@apollo/client/dev';
+
+if (__DEV__) {
+  // Adds messages only in a dev environment
+  loadDevMessages();
+  loadErrorMessages();
+}
 
 const CACHE_KEY = 'apollo-cache';
 

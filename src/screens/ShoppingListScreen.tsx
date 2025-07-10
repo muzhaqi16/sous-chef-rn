@@ -8,56 +8,57 @@ import AddButton from '../components/molecules/AddButton';
 import {AddItemBottomSheet} from '../components';
 import {useSearchableList} from '../hooks';
 import {useStore} from '../store';
-import {useShoppingListUpdates} from '../hooks/useShoppingListUpdates';
+import {
+  useShoppingListUpdatedSubscription,
+  useShoppingListsQuery,
+  useShoppingListItemsQuery,
+} from '../graphql/generated';
 
 const ShoppingListScreen = () => {
   const {styles} = useStyles(stylesheet);
   const [showBottomSheet, setShowBottomSheet] = useState(false);
+  const selectedListId = useStore(s => s.selectedShoppingListId);
+  const {data: shoppingListsData, refetch: refetchShoppingLists} =
+    useShoppingListsQuery({
+      fetchPolicy: 'cache-and-network',
+      skip: false,
+    });
 
-  const listIds = useStore(s => s.listIds);
-  const selectedListId = useStore(s => s.selectedListId);
-  const defaultList = useStore(s => s.getDefaultShoppingList());
-  const fetchItemsForList = useStore(s => s.fetchItemsForList);
-  const {error} = useShoppingListUpdates(defaultList?.id || '');
-  // Ensure a selected list is set after lists are loaded
-  useEffect(() => {
-    if (!selectedListId && defaultList) {
-      useStore.getState().selectList(defaultList.id);
-    }
-  }, [selectedListId, defaultList]);
-
-  // Fetch items for the selected list
-  useEffect(() => {
-    console.log('ShoppingListScreen useEffect', {selectedListId});
-    if (selectedListId) {
-      fetchItemsForList(selectedListId);
-    }
-  }, [selectedListId, fetchItemsForList]);
-
-  const allItemsByList = useStore(s => s.itemsByList);
-
-  const itemsByList = useMemo(
-    () =>
-      selectedListId && allItemsByList[selectedListId]
-        ? allItemsByList[selectedListId]
-        : {byId: {}, allIds: []},
-    [allItemsByList, selectedListId],
+  const {data: shoppingListItemsData} = useShoppingListItemsQuery({
+    variables: {shoppingListId: selectedListId ?? ''},
+    fetchPolicy: 'cache-and-network',
+    skip: !selectedListId,
+  });
+  const shoppingLists = useMemo(
+    () => shoppingListsData?.shoppingLists || [],
+    [shoppingListsData],
   );
 
   const shoppingListItems = useMemo(
-    () => itemsByList.allIds.map(id => itemsByList.byId[id]),
-    [itemsByList],
+    () => shoppingListItemsData?.shoppingListItems || [],
+    [shoppingListItemsData],
   );
+
+  const {error} = useShoppingListUpdatedSubscription({
+    variables: {listId: selectedListId ?? ''},
+    skip: false,
+  });
+
+  console.log('ShoppingListScreen', error);
+  // Ensure a selected list is set after lists are loaded
+
+  // Fetch items for the selected list
+  useEffect(() => {
+    if (selectedListId) {
+      refetchShoppingLists();
+    }
+  }, [selectedListId, refetchShoppingLists]);
 
   const {query, setQuery, filtered} = useSearchableList(
     shoppingListItems,
     (item, q) =>
       !!item.itemName && item.itemName.toLowerCase().includes(q.toLowerCase()),
   );
-
-  useEffect(() => {
-    if (selectedListId) fetchItemsForList(selectedListId);
-  }, [selectedListId, fetchItemsForList]);
 
   const handleAdd = () => setShowBottomSheet(true);
 

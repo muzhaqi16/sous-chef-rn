@@ -1,27 +1,33 @@
 import React from 'react';
-import {FlatList, StyleSheet, View} from 'react-native';
+import {FlatList, View} from 'react-native';
 import {useStore} from '../../store';
 import {SwipeableShoppingListItem} from './SwipeableShoppingListItem';
-import {ShoppingListItem} from '../../api/graphql/generated';
+import {
+  ShoppingListItem,
+  useShoppingListItemsQuery,
+} from '../../graphql/generated';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
 
-type ShoppingListItemsProps = {
-  data?: ShoppingListItem[];
-};
-
-const ShoppingListItems = ({data}: ShoppingListItemsProps) => {
+const ShoppingListItems = ({data}: any) => {
   const {styles} = useStyles(stylesheet);
-
-  const {fetchItemsForList, isLoading} = useStore();
+  const selectedListId = useStore(s => s.selectedShoppingListId);
+  const {refetch, loading: isLoading} = useShoppingListItemsQuery({
+    variables: {shoppingListId: selectedListId ?? ''},
+    fetchPolicy: 'cache-and-network',
+    skip: !selectedListId,
+  });
 
   return (
     <View style={styles.container}>
       <FlatList
-        data={data}
+        data={data || []}
+        onEndReachedThreshold={0.5}
         keyExtractor={item => item.id}
         onRefresh={() => {
-          if (data && data.length > 0) {
-            fetchItemsForList(data[0].shoppingListId);
+          if (selectedListId) {
+            refetch({
+              shoppingListId: selectedListId,
+            });
           }
         }}
         showsVerticalScrollIndicator={false}

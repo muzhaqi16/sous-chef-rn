@@ -327,7 +327,6 @@ export type Mutation = {
   syncHome: Scalars['Boolean']['output'];
   syncPantry: Scalars['Boolean']['output'];
   syncPantryItems: Scalars['Boolean']['output'];
-  syncShoppingLists: Scalars['Boolean']['output'];
   updateBrand: Brand;
   updateCategory: Category;
   updateCurrency: Currency;
@@ -610,11 +609,6 @@ export type MutationSyncPantryItemsArgs = {
 };
 
 
-export type MutationSyncShoppingListsArgs = {
-  lists: Array<SyncShoppingListInput>;
-};
-
-
 export type MutationUpdateBrandArgs = {
   description?: InputMaybe<Scalars['String']['input']>;
   id: Scalars['ID']['input'];
@@ -754,7 +748,7 @@ export type MutationUpdateUserSettingsArgs = {
 
 
 export type MutationVerifyEmailArgs = {
-  token: Scalars['String']['input'];
+  code: Scalars['String']['input'];
 };
 
 export type Notification = {
@@ -1285,7 +1279,7 @@ export type LoginMutationVariables = Exact<{
 }>;
 
 
-export type LoginMutation = { __typename?: 'Mutation', login: { __typename?: 'AuthPayload', accessToken: string, refreshToken: string, user: { __typename?: 'User', email: string, id: string, role: Role, emailVerified: boolean } } };
+export type LoginMutation = { __typename?: 'Mutation', login: { __typename?: 'AuthPayload', accessToken: string, refreshToken: string, user: { __typename?: 'User', id: string, email: string, role: Role, emailVerified: boolean } } };
 
 export type RegisterMutationVariables = Exact<{
   email: Scalars['String']['input'];
@@ -1310,6 +1304,27 @@ export type ResetPasswordMutationVariables = Exact<{
 
 
 export type ResetPasswordMutation = { __typename?: 'Mutation', resetPassword: boolean };
+
+export type RefreshTokenMutationVariables = Exact<{
+  token: Scalars['String']['input'];
+}>;
+
+
+export type RefreshTokenMutation = { __typename?: 'Mutation', refresh: { __typename?: 'AuthPayload', accessToken: string, refreshToken: string } };
+
+export type VerifyEmailMutationVariables = Exact<{
+  code: Scalars['String']['input'];
+}>;
+
+
+export type VerifyEmailMutation = { __typename?: 'Mutation', verifyEmail: boolean };
+
+export type ResendVerificationEmailMutationVariables = Exact<{
+  email: Scalars['String']['input'];
+}>;
+
+
+export type ResendVerificationEmailMutation = { __typename?: 'Mutation', resendVerificationEmail: boolean };
 
 export type SyncHomeMutationVariables = Exact<{
   home: SyncHomeInput;
@@ -1367,6 +1382,30 @@ export type RemoveItemFromShoppingListMutationVariables = Exact<{
 
 export type RemoveItemFromShoppingListMutation = { __typename?: 'Mutation', removeItemFromShoppingList: boolean };
 
+export type ShoppingListCollaboratorsQueryVariables = Exact<{
+  shoppingListId: Scalars['ID']['input'];
+}>;
+
+
+export type ShoppingListCollaboratorsQuery = { __typename?: 'Query', shoppingListCollaborators: Array<{ __typename?: 'ShoppingListCollaborator', id: string, role: CollaboratorRole, status: CollaboratorStatus, invitedAt: any, statusChangedAt?: any | null, email?: string | null, collaborator?: { __typename?: 'User', email: string, role: Role, emailVerified: boolean, id: string } | null }> };
+
+export type HomeQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type HomeQuery = { __typename?: 'Query', home: { __typename?: 'Home', id: string, name: string, ownerId: string, defaultPantryId: string, createdAt: any, updatedAt: any } };
+
+export type HomeByIdQueryVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+
+export type HomeByIdQuery = { __typename?: 'Query', home: { __typename?: 'Home', id: string, name: string, ownerId: string, defaultPantryId: string, createdAt: any, updatedAt: any } };
+
+export type HomesQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type HomesQuery = { __typename?: 'Query', homes: Array<{ __typename?: 'Home', id: string, name: string, ownerId: string, defaultPantryId: string, createdAt: any, updatedAt: any }> };
+
 export type ItemsQueryVariables = Exact<{
   filter?: InputMaybe<ItemFilterInput>;
   offset?: InputMaybe<Scalars['Int']['input']>;
@@ -1388,7 +1427,14 @@ export type PantryItemsQueryVariables = Exact<{
 }>;
 
 
-export type PantryItemsQuery = { __typename?: 'Query', pantryItems: Array<{ __typename?: 'PantryItem', id: string, pantryId: string, itemId: string, unitId: string, quantity: number, grams: number, addedAt: any, lastUsedAt?: any | null, expiresAt?: any | null, storageState: StorageState, deletedAt?: any | null, version: number, item: { __typename?: 'Item', id: string, imageUrl?: string | null, name: string }, unit: { __typename?: 'Unit', id: string, name: string, symbol: string, conversionFactor?: number | null, notes?: string | null, type: UnitType } }> };
+export type PantryItemsQuery = { __typename?: 'Query', pantryItems: Array<{ __typename?: 'PantryItem', id: string, pantryId: string, itemId: string, unitId: string, quantity: number, grams: number, addedAt: any, lastUsedAt?: any | null, expiresAt?: any | null, storageState: StorageState, deletedAt?: any | null, version: number, item: { __typename?: 'Item', name: string }, unit: { __typename?: 'Unit', symbol: string, name: string } }> };
+
+export type PantriesQueryVariables = Exact<{
+  homeId: Scalars['ID']['input'];
+}>;
+
+
+export type PantriesQuery = { __typename?: 'Query', pantries: Array<{ __typename?: 'Pantry', id: string, homeId: string, name: string, version: number, createdAt: any, updatedAt: any, deletedAt?: any | null, items: Array<{ __typename?: 'PantryItem', itemId: string, storageState: StorageState, expiresAt?: any | null, id: string, grams: number, unit: { __typename?: 'Unit', symbol: string, name: string }, item: { __typename?: 'Item', name: string, status: ItemStatus, storageState: StorageState } }> }> };
 
 export type OnBoardingPantryItemsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -1426,8 +1472,8 @@ export const LoginDocument = gql`
     accessToken
     refreshToken
     user {
-      email
       id
+      email
       role
       emailVerified
     }
@@ -1566,6 +1612,102 @@ export function useResetPasswordMutation(baseOptions?: Apollo.MutationHookOption
 export type ResetPasswordMutationHookResult = ReturnType<typeof useResetPasswordMutation>;
 export type ResetPasswordMutationResult = Apollo.MutationResult<ResetPasswordMutation>;
 export type ResetPasswordMutationOptions = Apollo.BaseMutationOptions<ResetPasswordMutation, ResetPasswordMutationVariables>;
+export const RefreshTokenDocument = gql`
+    mutation RefreshToken($token: String!) {
+  refresh(token: $token) {
+    accessToken
+    refreshToken
+  }
+}
+    `;
+export type RefreshTokenMutationFn = Apollo.MutationFunction<RefreshTokenMutation, RefreshTokenMutationVariables>;
+
+/**
+ * __useRefreshTokenMutation__
+ *
+ * To run a mutation, you first call `useRefreshTokenMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useRefreshTokenMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [refreshTokenMutation, { data, loading, error }] = useRefreshTokenMutation({
+ *   variables: {
+ *      token: // value for 'token'
+ *   },
+ * });
+ */
+export function useRefreshTokenMutation(baseOptions?: Apollo.MutationHookOptions<RefreshTokenMutation, RefreshTokenMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<RefreshTokenMutation, RefreshTokenMutationVariables>(RefreshTokenDocument, options);
+      }
+export type RefreshTokenMutationHookResult = ReturnType<typeof useRefreshTokenMutation>;
+export type RefreshTokenMutationResult = Apollo.MutationResult<RefreshTokenMutation>;
+export type RefreshTokenMutationOptions = Apollo.BaseMutationOptions<RefreshTokenMutation, RefreshTokenMutationVariables>;
+export const VerifyEmailDocument = gql`
+    mutation VerifyEmail($code: String!) {
+  verifyEmail(code: $code)
+}
+    `;
+export type VerifyEmailMutationFn = Apollo.MutationFunction<VerifyEmailMutation, VerifyEmailMutationVariables>;
+
+/**
+ * __useVerifyEmailMutation__
+ *
+ * To run a mutation, you first call `useVerifyEmailMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useVerifyEmailMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [verifyEmailMutation, { data, loading, error }] = useVerifyEmailMutation({
+ *   variables: {
+ *      code: // value for 'code'
+ *   },
+ * });
+ */
+export function useVerifyEmailMutation(baseOptions?: Apollo.MutationHookOptions<VerifyEmailMutation, VerifyEmailMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<VerifyEmailMutation, VerifyEmailMutationVariables>(VerifyEmailDocument, options);
+      }
+export type VerifyEmailMutationHookResult = ReturnType<typeof useVerifyEmailMutation>;
+export type VerifyEmailMutationResult = Apollo.MutationResult<VerifyEmailMutation>;
+export type VerifyEmailMutationOptions = Apollo.BaseMutationOptions<VerifyEmailMutation, VerifyEmailMutationVariables>;
+export const ResendVerificationEmailDocument = gql`
+    mutation ResendVerificationEmail($email: String!) {
+  resendVerificationEmail(email: $email)
+}
+    `;
+export type ResendVerificationEmailMutationFn = Apollo.MutationFunction<ResendVerificationEmailMutation, ResendVerificationEmailMutationVariables>;
+
+/**
+ * __useResendVerificationEmailMutation__
+ *
+ * To run a mutation, you first call `useResendVerificationEmailMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useResendVerificationEmailMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [resendVerificationEmailMutation, { data, loading, error }] = useResendVerificationEmailMutation({
+ *   variables: {
+ *      email: // value for 'email'
+ *   },
+ * });
+ */
+export function useResendVerificationEmailMutation(baseOptions?: Apollo.MutationHookOptions<ResendVerificationEmailMutation, ResendVerificationEmailMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ResendVerificationEmailMutation, ResendVerificationEmailMutationVariables>(ResendVerificationEmailDocument, options);
+      }
+export type ResendVerificationEmailMutationHookResult = ReturnType<typeof useResendVerificationEmailMutation>;
+export type ResendVerificationEmailMutationResult = Apollo.MutationResult<ResendVerificationEmailMutation>;
+export type ResendVerificationEmailMutationOptions = Apollo.BaseMutationOptions<ResendVerificationEmailMutation, ResendVerificationEmailMutationVariables>;
 export const SyncHomeDocument = gql`
     mutation SyncHome($home: SyncHomeInput!) {
   syncHome(home: $home)
@@ -1870,6 +2012,190 @@ export function useRemoveItemFromShoppingListMutation(baseOptions?: Apollo.Mutat
 export type RemoveItemFromShoppingListMutationHookResult = ReturnType<typeof useRemoveItemFromShoppingListMutation>;
 export type RemoveItemFromShoppingListMutationResult = Apollo.MutationResult<RemoveItemFromShoppingListMutation>;
 export type RemoveItemFromShoppingListMutationOptions = Apollo.BaseMutationOptions<RemoveItemFromShoppingListMutation, RemoveItemFromShoppingListMutationVariables>;
+export const ShoppingListCollaboratorsDocument = gql`
+    query ShoppingListCollaborators($shoppingListId: ID!) {
+  shoppingListCollaborators(shoppingListId: $shoppingListId) {
+    id
+    role
+    status
+    invitedAt
+    statusChangedAt
+    email
+    collaborator {
+      email
+      role
+      emailVerified
+      id
+    }
+  }
+}
+    `;
+
+/**
+ * __useShoppingListCollaboratorsQuery__
+ *
+ * To run a query within a React component, call `useShoppingListCollaboratorsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useShoppingListCollaboratorsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useShoppingListCollaboratorsQuery({
+ *   variables: {
+ *      shoppingListId: // value for 'shoppingListId'
+ *   },
+ * });
+ */
+export function useShoppingListCollaboratorsQuery(baseOptions: Apollo.QueryHookOptions<ShoppingListCollaboratorsQuery, ShoppingListCollaboratorsQueryVariables> & ({ variables: ShoppingListCollaboratorsQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ShoppingListCollaboratorsQuery, ShoppingListCollaboratorsQueryVariables>(ShoppingListCollaboratorsDocument, options);
+      }
+export function useShoppingListCollaboratorsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ShoppingListCollaboratorsQuery, ShoppingListCollaboratorsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ShoppingListCollaboratorsQuery, ShoppingListCollaboratorsQueryVariables>(ShoppingListCollaboratorsDocument, options);
+        }
+export function useShoppingListCollaboratorsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<ShoppingListCollaboratorsQuery, ShoppingListCollaboratorsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<ShoppingListCollaboratorsQuery, ShoppingListCollaboratorsQueryVariables>(ShoppingListCollaboratorsDocument, options);
+        }
+export type ShoppingListCollaboratorsQueryHookResult = ReturnType<typeof useShoppingListCollaboratorsQuery>;
+export type ShoppingListCollaboratorsLazyQueryHookResult = ReturnType<typeof useShoppingListCollaboratorsLazyQuery>;
+export type ShoppingListCollaboratorsSuspenseQueryHookResult = ReturnType<typeof useShoppingListCollaboratorsSuspenseQuery>;
+export type ShoppingListCollaboratorsQueryResult = Apollo.QueryResult<ShoppingListCollaboratorsQuery, ShoppingListCollaboratorsQueryVariables>;
+export const HomeDocument = gql`
+    query Home {
+  home {
+    id
+    name
+    ownerId
+    defaultPantryId
+    createdAt
+    updatedAt
+  }
+}
+    `;
+
+/**
+ * __useHomeQuery__
+ *
+ * To run a query within a React component, call `useHomeQuery` and pass it any options that fit your needs.
+ * When your component renders, `useHomeQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useHomeQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useHomeQuery(baseOptions?: Apollo.QueryHookOptions<HomeQuery, HomeQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<HomeQuery, HomeQueryVariables>(HomeDocument, options);
+      }
+export function useHomeLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<HomeQuery, HomeQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<HomeQuery, HomeQueryVariables>(HomeDocument, options);
+        }
+export function useHomeSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<HomeQuery, HomeQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<HomeQuery, HomeQueryVariables>(HomeDocument, options);
+        }
+export type HomeQueryHookResult = ReturnType<typeof useHomeQuery>;
+export type HomeLazyQueryHookResult = ReturnType<typeof useHomeLazyQuery>;
+export type HomeSuspenseQueryHookResult = ReturnType<typeof useHomeSuspenseQuery>;
+export type HomeQueryResult = Apollo.QueryResult<HomeQuery, HomeQueryVariables>;
+export const HomeByIdDocument = gql`
+    query HomeById($id: ID!) {
+  home(id: $id) {
+    id
+    name
+    ownerId
+    defaultPantryId
+    createdAt
+    updatedAt
+  }
+}
+    `;
+
+/**
+ * __useHomeByIdQuery__
+ *
+ * To run a query within a React component, call `useHomeByIdQuery` and pass it any options that fit your needs.
+ * When your component renders, `useHomeByIdQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useHomeByIdQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useHomeByIdQuery(baseOptions: Apollo.QueryHookOptions<HomeByIdQuery, HomeByIdQueryVariables> & ({ variables: HomeByIdQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<HomeByIdQuery, HomeByIdQueryVariables>(HomeByIdDocument, options);
+      }
+export function useHomeByIdLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<HomeByIdQuery, HomeByIdQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<HomeByIdQuery, HomeByIdQueryVariables>(HomeByIdDocument, options);
+        }
+export function useHomeByIdSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<HomeByIdQuery, HomeByIdQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<HomeByIdQuery, HomeByIdQueryVariables>(HomeByIdDocument, options);
+        }
+export type HomeByIdQueryHookResult = ReturnType<typeof useHomeByIdQuery>;
+export type HomeByIdLazyQueryHookResult = ReturnType<typeof useHomeByIdLazyQuery>;
+export type HomeByIdSuspenseQueryHookResult = ReturnType<typeof useHomeByIdSuspenseQuery>;
+export type HomeByIdQueryResult = Apollo.QueryResult<HomeByIdQuery, HomeByIdQueryVariables>;
+export const HomesDocument = gql`
+    query Homes {
+  homes {
+    id
+    name
+    ownerId
+    defaultPantryId
+    createdAt
+    updatedAt
+  }
+}
+    `;
+
+/**
+ * __useHomesQuery__
+ *
+ * To run a query within a React component, call `useHomesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useHomesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useHomesQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useHomesQuery(baseOptions?: Apollo.QueryHookOptions<HomesQuery, HomesQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<HomesQuery, HomesQueryVariables>(HomesDocument, options);
+      }
+export function useHomesLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<HomesQuery, HomesQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<HomesQuery, HomesQueryVariables>(HomesDocument, options);
+        }
+export function useHomesSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<HomesQuery, HomesQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<HomesQuery, HomesQueryVariables>(HomesDocument, options);
+        }
+export type HomesQueryHookResult = ReturnType<typeof useHomesQuery>;
+export type HomesLazyQueryHookResult = ReturnType<typeof useHomesLazyQuery>;
+export type HomesSuspenseQueryHookResult = ReturnType<typeof useHomesSuspenseQuery>;
+export type HomesQueryResult = Apollo.QueryResult<HomesQuery, HomesQueryVariables>;
 export const ItemsDocument = gql`
     query Items($filter: ItemFilterInput, $offset: Int, $limit: Int) {
   items(filter: $filter, offset: $offset, limit: $limit) {
@@ -2018,17 +2344,11 @@ export const PantryItemsDocument = gql`
     deletedAt
     version
     item {
-      id
-      imageUrl
       name
     }
     unit {
-      id
-      name
       symbol
-      conversionFactor
-      notes
-      type
+      name
     }
   }
 }
@@ -2066,6 +2386,68 @@ export type PantryItemsQueryHookResult = ReturnType<typeof usePantryItemsQuery>;
 export type PantryItemsLazyQueryHookResult = ReturnType<typeof usePantryItemsLazyQuery>;
 export type PantryItemsSuspenseQueryHookResult = ReturnType<typeof usePantryItemsSuspenseQuery>;
 export type PantryItemsQueryResult = Apollo.QueryResult<PantryItemsQuery, PantryItemsQueryVariables>;
+export const PantriesDocument = gql`
+    query Pantries($homeId: ID!) {
+  pantries(homeId: $homeId) {
+    id
+    homeId
+    name
+    version
+    createdAt
+    updatedAt
+    deletedAt
+    items {
+      itemId
+      unit {
+        symbol
+        name
+      }
+      item {
+        name
+        status
+        storageState
+      }
+      storageState
+      expiresAt
+      id
+      grams
+    }
+  }
+}
+    `;
+
+/**
+ * __usePantriesQuery__
+ *
+ * To run a query within a React component, call `usePantriesQuery` and pass it any options that fit your needs.
+ * When your component renders, `usePantriesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = usePantriesQuery({
+ *   variables: {
+ *      homeId: // value for 'homeId'
+ *   },
+ * });
+ */
+export function usePantriesQuery(baseOptions: Apollo.QueryHookOptions<PantriesQuery, PantriesQueryVariables> & ({ variables: PantriesQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<PantriesQuery, PantriesQueryVariables>(PantriesDocument, options);
+      }
+export function usePantriesLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<PantriesQuery, PantriesQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<PantriesQuery, PantriesQueryVariables>(PantriesDocument, options);
+        }
+export function usePantriesSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<PantriesQuery, PantriesQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<PantriesQuery, PantriesQueryVariables>(PantriesDocument, options);
+        }
+export type PantriesQueryHookResult = ReturnType<typeof usePantriesQuery>;
+export type PantriesLazyQueryHookResult = ReturnType<typeof usePantriesLazyQuery>;
+export type PantriesSuspenseQueryHookResult = ReturnType<typeof usePantriesSuspenseQuery>;
+export type PantriesQueryResult = Apollo.QueryResult<PantriesQuery, PantriesQueryVariables>;
 export const OnBoardingPantryItemsDocument = gql`
     query OnBoardingPantryItems {
   onBoardingPantryItems {

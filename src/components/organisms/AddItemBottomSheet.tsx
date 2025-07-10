@@ -1,12 +1,11 @@
 import React, {useState, useRef, useEffect} from 'react';
 import {Text, StyleSheet} from 'react-native';
-import {useMutation} from '@apollo/client';
 import BottomSheet, {BottomSheetRef} from '../pages/BottomSheet';
 import Button from '../atoms/Button';
-import {ADD_ITEM_TO_SHOPPING_LIST_MUTATION} from '../../api/graphql/mutations/shoppingListItem';
 import Autocomplete from '../molecules/AutoComplete';
 import {useStore} from '../../store';
 import {BaseInput} from '../atoms';
+import {useAddItemToShoppingListMutation} from '../../graphql/generated';
 
 interface Item {
   id: string;
@@ -27,20 +26,19 @@ const AddItemBottomSheet: React.FC<BottomSheetProps> = ({
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [renderBottomSheet, setRenderBottomSheet] = useState(false);
 
-  const shoppingListId = useStore(state => state.listById?.id);
+  const shoppingListId = useStore(state => state.selectedShoppingListId);
 
   // Setup your GraphQL mutation using Apollo's useMutation hook.
-  const [addItem, {loading, error}] = useMutation(
-    ADD_ITEM_TO_SHOPPING_LIST_MUTATION,
-    {
-      onCompleted: () => {
-        bottomSheetRef.current?.close();
-        setQuery('');
-        setSelectedItem(null);
-      },
-      onError: err => console.error(err),
+  const [addItem, {loading, error}] = useAddItemToShoppingListMutation({
+    onCompleted: () => {
+      setQuery('');
+      setSelectedItem(null);
+      onClose(); // Close the bottom sheet after adding the item
     },
-  );
+    onError: err => {
+      console.error('Error adding item:', err);
+    },
+  });
 
   // Open the bottom sheet when the component mounts or when isVisible changes.
   useEffect(() => {
@@ -59,7 +57,7 @@ const AddItemBottomSheet: React.FC<BottomSheetProps> = ({
     addItem({
       variables: {
         data: {
-          shoppingListId,
+          shoppingListId: shoppingListId || '',
           itemId: selectedItem?.id || '',
           label: itemName,
         },

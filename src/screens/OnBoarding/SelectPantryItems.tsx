@@ -5,8 +5,8 @@ import {useQuery, useMutation} from '@apollo/client';
 import {OnBoardingWrapper} from '../../components/templates';
 import {useNavigation} from '@react-navigation/native';
 import {CreateShoppingListNavProp} from '../../navigation/types';
-import {GET_ONBOARDING_PANTRY_ITEMS} from '../../api/graphql/queries/pantry';
-import {ADD_ITEM_TO_PANTRY} from '../../api/graphql/mutations/pantry';
+import {GET_ONBOARDING_PANTRY_ITEMS} from '../../graphql/queries/pantry';
+import {ADD_ITEM_TO_PANTRY} from '../../graphql/mutations/pantry';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
 
 export const SelectPantryItems = () => {

@@ -1,45 +1,43 @@
-import {useEffect} from 'react';
+import React, {useEffect} from 'react';
 import {View} from 'react-native';
 import {PickerSelect} from '../../components/atoms/Picker';
-import {useStore} from '../../store';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {useShoppingListsQuery} from '../../graphql/generated';
+import {useStore} from '../../store';
 
 export const ShoppingListSelector = () => {
-  const {listById, listIds, fetchLists, getDefaultShoppingList, selectList} =
-    useStore();
-  const shoppingLists = listIds.map(id => listById[id]);
-  const defaultShoppingList = getDefaultShoppingList();
-  // Fetch shopping lists when the component mounts
-  // This ensures that the shopping lists are available when the component is rendered
-  useEffect(() => {
-    fetchLists();
-  }, []);
-
-  // Trigger fetching items when the default shopping list changes
-  useEffect(() => {
-    if (defaultShoppingList) {
-      fetchLists();
-    }
-  }, [defaultShoppingList, fetchLists]);
   const {styles} = useStyles(stylesheet);
 
+  // 1) Get the global selectedListId and the setter
+  const selectedListId = useStore(s => s.selectedShoppingListId);
+  const setSelectedListId = useStore(s => s.setSelectedShoppingListId);
+
+  // 2) Fetch all lists
+  const {data, loading, error, refetch} = useShoppingListsQuery({
+    fetchPolicy: 'cache-and-network',
+  });
+  const shoppingLists = data?.shoppingLists ?? [];
+
+  // 3) On mount, if no selectedListId, pick the default or first
+  useEffect(() => {
+    if (shoppingLists.length === 0) return;
+    // If nothing selected or the id no longer exists, pick a new one
+    if (!selectedListId || !shoppingLists.some(l => l.id === selectedListId)) {
+      const def = shoppingLists.find(l => l.isDefault);
+      setSelectedListId(def?.id ?? shoppingLists[0].id);
+    }
+  }, [shoppingLists, selectedListId, setSelectedListId]);
+
+  // 4) Render the picker
   return (
     <View style={styles.container}>
       <PickerSelect
-        items={shoppingLists?.map((list: any) => ({
+        items={shoppingLists.map(list => ({
           id: list.id,
           name: list.name,
         }))}
-        initialValue={defaultShoppingList?.id || ''}
-        onValueChange={id => {
-          const selectedList = shoppingLists?.find(list => list.id === id);
-          if (selectedList) {
-            selectList(selectedList.id);
-          } else {
-            // Optionally handle the error, e.g. show an error message or fallback logic
-            console.error('No shopping list found for id:', id);
-          }
-        }}
+        initialValue={selectedListId || ''}
+        onValueChange={id => setSelectedListId(id)}
       />
     </View>
   );
@@ -51,7 +49,6 @@ const stylesheet = createStyleSheet(theme => ({
     height: 44,
     borderRadius: 12,
     marginLeft: theme.spacing.margin.sm,
-    // backgroundColor: theme.colors.primary,
   },
 }));
 

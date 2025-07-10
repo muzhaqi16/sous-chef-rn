@@ -1,26 +1,40 @@
-import React, {useEffect, useState, useMemo} from 'react';
+import React, {useState, useMemo} from 'react';
 import {ScrollView, RefreshControl, View} from 'react-native';
-import {useStore} from '../store';
 import {SwipeablePantryItem} from '../components/organisms/SwipeablePantryItem';
-import {StorageState} from '../api/graphql/generated';
 import {useStyles, createStyleSheet} from 'react-native-unistyles';
 import SearchBar from '../components/molecules/SearchBar';
 import {useSearchableList} from '../hooks/useSearchableList';
+import {
+  StorageState,
+  usePantryItemsQuery,
+  useHomeQuery,
+} from '../graphql/generated';
 
 export const MainScreen = () => {
-  // 1) Subscribe to the normalized slices separately
-  const pantryIds = useStore(s => s.pantryIds);
-  const pantryById = useStore(s => s.pantryById);
-  const deletePantryItem = useStore(s => s.removePantryItem);
-  const editPantryItem = useStore(s => s.updatePantryItem);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // 2) Turn them into your flat array with useMemo
+  // get available pantries and homes
+  const {data: homeData} = useHomeQuery({
+    fetchPolicy: 'cache-and-network',
+    skip: false,
+  });
+
+  const home = useMemo(() => homeData?.home, [homeData]);
+
+  const {data: pantryItemsData, refetch: refetchPantryItems} =
+    usePantryItemsQuery({
+      fetchPolicy: 'cache-and-network',
+      skip: false,
+      variables: {
+        pantryId: home?.defaultPantryId ?? '',
+      },
+    });
+
   const pantryItems = useMemo(
-    () => pantryIds.map(id => pantryById[id]),
-    [pantryIds, pantryById],
+    () => pantryItemsData?.pantryItems || [],
+    [pantryItemsData],
   );
 
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const {query, setQuery, filtered} = useSearchableList(
     pantryItems,
     (item, q) => item.item.name.toLowerCase().includes(q.toLowerCase()),
@@ -42,6 +56,9 @@ export const MainScreen = () => {
           <RefreshControl
             onRefresh={() => {
               setIsRefreshing(true);
+              refetchPantryItems().finally(() => {
+                setIsRefreshing(false);
+              });
             }}
             refreshing={isRefreshing}
           />
@@ -67,15 +84,10 @@ export const MainScreen = () => {
                 new Date(pantryItem.expiresAt) < new Date()
                   ? 1
                   : 0,
-              icon: {uri: pantryItem.item.imageUrl || 'default_icon.png'},
+              icon: {uri: 'default_icon.png'},
             }}
-            onDelete={() => deletePantryItem(pantryItem.id)}
-            onEdit={() =>
-              editPantryItem(pantryItem.id, {
-                ...pantryItem,
-                storageState: StorageState.Ambient,
-              })
-            }
+            onDelete={() => () => {}}
+            onEdit={() => {}}
           />
         ))}
       </ScrollView>

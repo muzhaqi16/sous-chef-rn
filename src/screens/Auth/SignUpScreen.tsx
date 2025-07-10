@@ -5,9 +5,9 @@ import {AuthFormTemplate} from '../../components/templates/AuthFormTemplate';
 import {EmailInput, PasswordInput, BaseInput} from '../../components/atoms';
 import {getSignUpValidationSchema} from '../../utils/validation';
 import {AuthWrapper} from '../../components/templates/AuthWrapper';
-import {signupApi} from '../../api/services/authService';
 import {SignUpNavProp} from '../../navigation';
 import {useSafeNavigation} from '../../hooks';
+import {useRegisterMutation} from '../../graphql/generated';
 
 type SignUpValues = {
   name: string;
@@ -18,6 +18,7 @@ type SignUpValues = {
 
 export const SignUpScreen = () => {
   const {navigation, canGoBack, goBack} = useSafeNavigation<SignUpNavProp>();
+  const [register, {loading: isRegistering}] = useRegisterMutation();
   const {
     control,
     handleSubmit,
@@ -34,17 +35,21 @@ export const SignUpScreen = () => {
   const onSubmit = async (data: SignUpValues) => {
     // Here you would typically call your signup API
     // For example:
-    await signupApi(data.name, data.email, data.password)
-      .then(response => {
-        // Handle successful signup
-        console.log('Signup successful:', response);
-      })
-      .catch(error => {
-        // Handle error
-        console.error('Signup error:', error);
+    const {name, email, password} = data;
+    try {
+      const response = await register({
+        variables: {name, email, password},
       });
 
-    console.log('Form submitted with data:', data);
+      if (response.data?.register) {
+        console.log('Registration successful:', response.data.register);
+        // Handle successful registration, e.g., navigate to login
+      } else {
+        console.error('Registration failed:', response.errors);
+      }
+    } catch (error) {
+      console.error('Error during registration:', error);
+    }
     navigation.navigate('Login'); // Navigate to login after successful signup
   };
 

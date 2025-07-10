@@ -7,7 +7,7 @@ import {AuthFormTemplate} from '../../components/templates/AuthFormTemplate';
 import {EmailInput} from '../../components/atoms';
 import {getForgotPasswordValidationSchema} from '../../utils/validation';
 import {AuthWrapper} from '../../components/templates/AuthWrapper';
-import {forgotPasswordApi} from '../../api/services/authService';
+import {useForgotPasswordMutation} from '../../graphql/generated';
 
 type ForgotPasswordValues = {
   email: string;
@@ -15,6 +15,8 @@ type ForgotPasswordValues = {
 
 export function ForgotPasswordScreen() {
   const navigation = useNavigation<NavigationProp<AuthStackParamList>>();
+
+  const [forgotPasswordApi] = useForgotPasswordMutation();
 
   const {
     control,
@@ -30,7 +32,9 @@ export function ForgotPasswordScreen() {
     // Simulate sending reset email
     console.log(`Sending reset email to: ${email}`);
     try {
-      await forgotPasswordApi(email);
+      await forgotPasswordApi({
+        variables: {email},
+      });
       console.log('Reset email sent successfully');
       navigation.navigate('Login'); // Navigate back to login after sending
     } catch (error) {
