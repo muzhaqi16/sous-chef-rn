@@ -2,9 +2,11 @@ import React, {useEffect} from 'react';
 import {View, Text, Image} from 'react-native';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
 import Loader from '../components/atoms/Loader';
+import {useStore} from '../store';
 
 const SplashScreen = () => {
   const {styles, theme} = useStyles(stylesheet);
+  const isLoading = useStore(store => store.isLoading);
   useEffect(() => {
     // Handle loading indicator
     const loadingIndicator = setInterval(() => {
@@ -22,12 +24,16 @@ const SplashScreen = () => {
   }, []);
   return (
     <View style={styles.container}>
-      <Image
-        source={{uri: 'https://example.com/splash-screen-image.jpg'}}
-        style={styles.image}
-      />
-      <View style={styles.loader}>
-        <Loader size="large" color={theme.colors.primary} />
+      <View style={styles.imageWrapper}>
+        <Image
+          source={require('../assets/images/logo.png')}
+          resizeMode="contain"
+          style={styles.image}
+        />
+      </View>
+
+      <View style={styles.loaderWrapper}>
+        <Loader />
         <Text style={styles.text}>Loading...</Text>
       </View>
     </View>
@@ -37,25 +43,25 @@ const SplashScreen = () => {
 const stylesheet = createStyleSheet(theme => ({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
     backgroundColor: theme.colors.background,
   },
-  loader: {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    transform: [{translateX: -50}, {translateY: -50}],
+  imageWrapper: {
+    flex: 1, // fill the screen
+    justifyContent: 'center', // center vertically
+    alignItems: 'center', // center horizontally
   },
   image: {
-    width: 200,
-    height: 200,
-    marginBottom: 20,
+    width: 300,
+    height: 300,
+  },
+  loaderWrapper: {
+    paddingVertical: 20,
+    alignItems: 'center',
   },
   text: {
-    fontSize: theme.font.size.xl,
+    fontSize: theme.fonts.size.xl,
     color: theme.colors.textPrimary,
-    paddingVertical: theme.spacing.padding.lg,
+    paddingVertical: theme.spacing.md,
   },
 }));
 

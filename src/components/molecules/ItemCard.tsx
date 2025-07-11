@@ -76,7 +76,7 @@ const stylesheet = createStyleSheet(theme => ({
   },
   cardTitle: {
     fontWeight: '600',
-    fontSize: theme.font.size.md,
+    fontSize: theme.fonts.size.md,
     lineHeight: 24,
     color: '#1d1d1d',
     marginBottom: 4,

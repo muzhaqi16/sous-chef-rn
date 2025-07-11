@@ -28,11 +28,6 @@ export const ADD_COLLABORATOR_MUTATION = gql`
       invitedAt
       statusChangedAt
       email
-      collaborator {
-        email
-        id
-        role
-      }
     }
   }
 `;

@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   Image,
 } from 'react-native';
-import {SwipeableRow} from '../molecules/SwippeableRow.tsx';
+import {SwipeableRow} from '../molecules/SwipeableRow.tsx';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
 
 export interface PantryItem {

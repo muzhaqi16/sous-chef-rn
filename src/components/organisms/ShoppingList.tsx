@@ -1,35 +1,31 @@
-import React, {useEffect} from 'react';
+import React from 'react';
 import {View, FlatList, Text} from 'react-native';
 import ProductCard from '../molecules/ProductCard';
-import {useStore} from '../../store/useStore.ts';
+import {useStore} from '../../store';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {useShoppingListItemsQuery} from '../../graphql/generated';
 
 const ShoppingList = () => {
   const {styles} = useStyles(stylesheet);
-  const {items, fetchItems, addItem, defaultShoppingList} = useStore();
-  useEffect(() => {
-    if (!defaultShoppingList?.id) {
-      console.log('No default shopping list found');
-      return;
-    }
-    fetchItems({
-      shoppingListId: defaultShoppingList?.id,
-    });
-  }, []);
 
+  const {selectedShoppingListId} = useStore();
+  const {data, loading, error} = useShoppingListItemsQuery({
+    variables: {shoppingListId: selectedShoppingListId || ''},
+  });
+
+  const items = data?.shoppingListItems || [];
+  console.log('src/organisms/ShoppingList.tsx:', items);
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>
-        {defaultShoppingList?.name || 'Shopping List'}
-      </Text>
+      <Text style={styles.title}>Shopping List</Text>
       <FlatList
         data={items}
         keyExtractor={item => item.id}
         renderItem={({item}) => (
           <ProductCard
-            name={item.name}
-            price={item.price}
-            onAddToCart={() => addItem(item.name, 1)}
+            name={item?.item?.name || 'Unknown Item'}
+            price={0}
+            onAddToCart={() => {}}
           />
         )}
       />

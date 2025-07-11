@@ -141,8 +141,8 @@ const stylesheet = createStyleSheet(theme => ({
   },
   rowFirst: {borderTopLeftRadius: 12, borderTopRightRadius: 12},
   rowLast: {
-    borderBottomLeftRadius: 12,
-    borderBottomRightRadius: 12,
+    borderBottomLeftRadius: theme.radii.lg,
+    borderBottomRightRadius: theme.radii.lg,
     borderBottomWidth: 0,
   },
   row: {flexDirection: 'row', alignItems: 'center'},

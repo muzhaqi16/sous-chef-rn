@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React from 'react';
 import {View, Image} from 'react-native';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
 

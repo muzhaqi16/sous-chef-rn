@@ -131,6 +131,9 @@ export const createPreferencesSlice: StateCreator<
       if (updates.selectedShoppingListId === undefined) {
         draft.selectedShoppingListId = get().selectedShoppingListId;
       }
+      if (updates.selectedPantryId === undefined) {
+        draft.selectedPantryId = get().selectedPantryId;
+      }
     }),
 
   reset: () =>
@@ -146,6 +149,9 @@ export const createPreferencesSlice: StateCreator<
       Object.assign(draft, preferences);
       if (preferences.selectedShoppingListId === undefined) {
         draft.selectedShoppingListId = get().selectedShoppingListId;
+      }
+      if (preferences.selectedPantryId === undefined) {
+        draft.selectedPantryId = get().selectedPantryId;
       }
     }),
 });

@@ -9,7 +9,7 @@
     "ios": "react-native run-ios",
     "lint": "eslint .",
     "start": "react-native start",
-    "android:clean": "cd android && ./gradlew clean",
+    "android:clean": "cd android && gradlew clean",
     "android:build": "npx react-native build-android --mode=release",
     "adb:gql": "adb reverse tcp:4000 tcp:4000",
     "codegen": "graphql-codegen --config codegen.ts",
@@ -46,7 +46,6 @@
     "react-native-safe-area-context": "^5.5.0",
     "react-native-screens": "^4.10.0",
     "react-native-unistyles": "^2.32.0",
-    "react-native-uuid": "^2.0.3",
     "uuid": "^11.1.0",
     "yup": "^1.6.1",
     "zustand": "^5.0.4"

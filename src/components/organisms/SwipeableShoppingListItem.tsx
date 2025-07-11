@@ -1,9 +1,9 @@
 import React from 'react';
 import {TouchableOpacity, Text} from 'react-native';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
-import {SwipeableRow} from '../molecules/SwippeableRow';
+import {SwipeableRow} from '../molecules/SwipeableRow';
 import ItemCard from '../molecules/ItemCard';
-import {ShoppingListItem} from '../../api/graphql/generated';
+import {ShoppingListItem} from '../../graphql/generated';
 
 export interface SwipeableShoppingListItemProps {
   item: ShoppingListItem;

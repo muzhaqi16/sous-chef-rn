@@ -16,10 +16,16 @@ export const GET_PANTRY_ITEMS = gql`
       version
       item {
         id
+        imageUrl
+        name
       }
       unit {
-        symbol
+        id
         name
+        symbol
+        conversionFactor
+        notes
+        type
       }
     }
   }

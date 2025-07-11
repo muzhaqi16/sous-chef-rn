@@ -4,6 +4,10 @@ import BottomSheet, {BottomSheetRef} from '../pages/BottomSheet';
 import Button from '../atoms/Button';
 import {EmailInput} from '../atoms';
 import {useStore} from '../../store';
+import {
+  useAddCollaboratorMutation,
+  CollaboratorRole,
+} from '../../graphql/generated';
 
 const ShareShoppingListBottomSheet: React.FC = () => {
   const bottomSheetRef = useRef<BottomSheetRef>(null);
@@ -11,8 +15,9 @@ const ShareShoppingListBottomSheet: React.FC = () => {
   const [renderBottomSheet, setRenderBottomSheet] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const shoppingListId = useStore(state => state.getDefaultShoppingList()?.id);
-  const shareShoppingList = useStore(state => state.setCollaborators);
+  const {selectedShoppingListId} = useStore();
+  const shoppingListId = selectedShoppingListId;
+  const [shareShoppingList] = useAddCollaboratorMutation();
 
   const handleShow = () => {
     setRenderBottomSheet(true);
@@ -24,7 +29,15 @@ const ShareShoppingListBottomSheet: React.FC = () => {
       return;
     }
     try {
-      shareShoppingList(shoppingListId, [email.trim()]);
+      await shareShoppingList({
+        variables: {
+          data: {
+            shoppingListId,
+            email: email.trim(),
+            role: CollaboratorRole.Viewer, // Assuming you want to set this as collaborator
+          },
+        },
+      });
       bottomSheetRef.current?.close();
       setEmail('');
       setError(null);

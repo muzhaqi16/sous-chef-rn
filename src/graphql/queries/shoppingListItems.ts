@@ -12,6 +12,8 @@ export const GET_SHOPPING_LIST_ITEMS = gql`
       createdAt
       updatedAt
       item {
+        id
+        name
         imageUrl
       }
     }

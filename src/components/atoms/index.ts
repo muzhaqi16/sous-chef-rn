@@ -3,3 +3,5 @@ export {PasswordInput} from './PasswordInput.tsx';
 export {BaseInput} from './BaseInput.tsx';
 export {ToastProvider} from './Toast.tsx';
 export {NotificationBanner} from './Notification.tsx';
+export {Button} from './Button.tsx';
+export {IconButton} from './IconButton.tsx';

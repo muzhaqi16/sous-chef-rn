@@ -1,12 +1,20 @@
 import React from 'react';
 import {View, Text, Image} from 'react-native';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
-import {useStore} from '../../store/useStore';
+import {useStore} from '../../store';
+import {useUserProfileQuery} from '../../graphql/generated';
 
 const ShoppingListHeader: React.FC = ({}) => {
   const {styles, theme} = useStyles(stylesheet);
-
-  const avatarUrl = useStore(state => state?.userProfile?.avatarUrl);
+  // Fetch the user's avatar URL from the query
+  const {data: userProfileData} = useUserProfileQuery({
+    fetchPolicy: 'cache-and-network',
+    onError: error => console.error('Error fetching user profile:', error),
+  });
+  // Use the avatar URL from the user profile data
+  // Fallback to a placeholder if the avatar URL is not available
+  const avatarUrl =
+    userProfileData?.userProfile?.avatarUrl || 'https://via.placeholder.com/40';
 
   return (
     <View style={styles.container}>
@@ -28,7 +36,7 @@ const stylesheet = createStyleSheet(theme => ({
   container: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingTop: theme.spacing.padding.lg,
+    paddingTop: theme.spacing.sm,
     paddingBottom: theme.spacing.lg,
     backgroundColor: theme.colors.background,
   },

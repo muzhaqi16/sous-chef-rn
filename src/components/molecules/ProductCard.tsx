@@ -37,7 +37,7 @@ const stylesheet = createStyleSheet(theme => ({
     fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 10,
-    color: theme.colors.typography,
+    color: theme.colors.textPrimary || '#000',
   },
 }));
 

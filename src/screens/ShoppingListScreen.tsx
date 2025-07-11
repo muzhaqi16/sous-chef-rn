@@ -24,28 +24,29 @@ const ShoppingListScreen = () => {
       skip: false,
     });
 
-  const {data: shoppingListItemsData} = useShoppingListItemsQuery({
-    variables: {shoppingListId: selectedListId ?? ''},
-    fetchPolicy: 'cache-and-network',
-    skip: !selectedListId,
-  });
-  const shoppingLists = useMemo(
-    () => shoppingListsData?.shoppingLists || [],
-    [shoppingListsData],
-  );
+  const {data: shoppingListItemsData, refetch: refetchShoppingListItems} =
+    useShoppingListItemsQuery({
+      variables: {shoppingListId: selectedListId ?? ''},
+      fetchPolicy: 'cache-and-network',
+      skip: !selectedListId,
+    });
 
   const shoppingListItems = useMemo(
     () => shoppingListItemsData?.shoppingListItems || [],
     [shoppingListItemsData],
   );
 
-  const {error} = useShoppingListUpdatedSubscription({
-    variables: {listId: selectedListId ?? ''},
-    skip: false,
+  const {data: updated, error: subError} = useShoppingListUpdatedSubscription({
+    variables: {listId: selectedListId!},
+    skip: !selectedListId, // ← don’t subscribe until you have an ID
+    onData: ({data}) => {
+      // this callback fires whenever a new payload arrives
+      if (data) {
+        // trigger a refetch of ITEMS (or merge manually, see next section)
+        refetchShoppingListItems();
+      }
+    },
   });
-
-  console.log('ShoppingListScreen', error);
-  // Ensure a selected list is set after lists are loaded
 
   // Fetch items for the selected list
   useEffect(() => {

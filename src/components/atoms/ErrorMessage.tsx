@@ -1,4 +1,3 @@
-// src/components/atoms/ErrorMessage.tsx
 import React from 'react';
 import {Text, View} from 'react-native';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';

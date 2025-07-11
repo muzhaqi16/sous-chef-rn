@@ -26,7 +26,7 @@ export const MainScreen = () => {
       fetchPolicy: 'cache-and-network',
       skip: false,
       variables: {
-        pantryId: home?.defaultPantryId ?? '',
+        pantryId: home?.defaultPantry?.id ?? '',
       },
     });
 
@@ -34,10 +34,10 @@ export const MainScreen = () => {
     () => pantryItemsData?.pantryItems || [],
     [pantryItemsData],
   );
-
   const {query, setQuery, filtered} = useSearchableList(
     pantryItems,
-    (item, q) => item.item.name.toLowerCase().includes(q.toLowerCase()),
+    (pantryItem, q) =>
+      pantryItem?.item?.name?.toLowerCase().includes(q.toLowerCase()),
   );
   const {styles} = useStyles(stylesheet);
 
@@ -97,5 +97,5 @@ export const MainScreen = () => {
 
 const stylesheet = createStyleSheet(theme => ({
   container: {flex: 1},
-  listContent: {paddingBottom: theme.spacing.padding.sm},
+  listContent: {paddingBottom: theme.spacing.sm},
 }));

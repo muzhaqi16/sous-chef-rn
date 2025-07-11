@@ -30,6 +30,7 @@ export type HomeTabParamList = {
 };
 
 export type AuthStackParamList = {
+  LandingAuth: undefined;
   Login: undefined;
   SignUp: undefined;
   ForgotPassword: undefined;

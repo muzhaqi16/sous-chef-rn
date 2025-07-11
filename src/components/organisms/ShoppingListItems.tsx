@@ -2,13 +2,10 @@ import React from 'react';
 import {FlatList, View} from 'react-native';
 import {useStore} from '../../store';
 import {SwipeableShoppingListItem} from './SwipeableShoppingListItem';
-import {
-  ShoppingListItem,
-  useShoppingListItemsQuery,
-} from '../../graphql/generated';
+import {useShoppingListItemsQuery} from '../../graphql/generated';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
 
-const ShoppingListItems = ({data}: any) => {
+export const ShoppingListItems = ({data}: any) => {
   const {styles} = useStyles(stylesheet);
   const selectedListId = useStore(s => s.selectedShoppingListId);
   const {refetch, loading: isLoading} = useShoppingListItemsQuery({

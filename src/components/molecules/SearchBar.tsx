@@ -45,7 +45,7 @@ const stylesheet = createStyleSheet(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     padding: theme.spacing.sm,
-    borderRadius: theme.spacing.sizes.sm,
+    borderRadius: theme.radii.sm,
   },
   side: {
     marginHorizontal: theme.spacing.xs,

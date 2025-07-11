@@ -1,3 +1,3 @@
-export {AuthWrapper} from './AuthWrapper';
-export {AuthFormTemplate} from './AuthFormTemplate';
-export {OnBoardingWrapper} from './OnBoardingWrapper';
+export * from './AuthWrapper';
+export * from './AuthFormTemplate';
+export * from './OnBoardingWrapper';

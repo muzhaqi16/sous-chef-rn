@@ -17,7 +17,7 @@ type BottomSheetProps = {
   onClose: () => void;
 };
 
-const AddItemBottomSheet: React.FC<BottomSheetProps> = ({
+export const AddItemBottomSheet: React.FC<BottomSheetProps> = ({
   isVisible,
   onClose,
 }) => {
@@ -95,7 +95,7 @@ const AddItemBottomSheet: React.FC<BottomSheetProps> = ({
           <Button
             title={loading ? 'Adding...' : 'Submit'}
             onPress={handleAddItem}
-            style={{marginTop: 20}}
+            btnStyle={{marginTop: 20}}
           />
 
           {error && (

@@ -28,7 +28,7 @@ const CreateShoppingListBottomSheet: React.FC = ({}) => {
           data: {
             name: listName.trim(),
             isDefault: true, // Assuming you want to set this as default
-            addTags: ['onboarding'], // Example tag, you can modify or add more
+            tags: ['onboarding'], // Example tag, you can modify or add more
           },
         },
       });

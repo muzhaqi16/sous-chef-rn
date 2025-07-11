@@ -1344,7 +1344,7 @@ export type AddCollaboratorMutationVariables = Exact<{
 }>;
 
 
-export type AddCollaboratorMutation = { __typename?: 'Mutation', addCollaborator: { __typename?: 'ShoppingListCollaborator', id: string, role: CollaboratorRole, status: CollaboratorStatus, invitedAt: any, statusChangedAt?: any | null, email?: string | null, collaborator?: { __typename?: 'User', email: string, id: string, role: Role } | null } };
+export type AddCollaboratorMutation = { __typename?: 'Mutation', addCollaborator: { __typename?: 'ShoppingListCollaborator', id: string, role: CollaboratorRole, status: CollaboratorStatus, invitedAt: any, statusChangedAt?: any | null, email?: string | null } };
 
 export type AddItemToShoppingListMutationVariables = Exact<{
   data: ShoppingListItemInput;
@@ -1412,7 +1412,7 @@ export type PantryItemsQueryVariables = Exact<{
 }>;
 
 
-export type PantryItemsQuery = { __typename?: 'Query', pantryItems: Array<{ __typename?: 'PantryItem', id: string, pantryId: string, itemId: string, unitId: string, quantity: number, grams: number, addedAt: any, lastUsedAt?: any | null, expiresAt?: any | null, storageState: StorageState, version: number, item: { __typename?: 'Item', id: string }, unit: { __typename?: 'Unit', symbol: string, name: string } }> };
+export type PantryItemsQuery = { __typename?: 'Query', pantryItems: Array<{ __typename?: 'PantryItem', id: string, pantryId: string, itemId: string, unitId: string, quantity: number, grams: number, addedAt: any, lastUsedAt?: any | null, expiresAt?: any | null, storageState: StorageState, version: number, item: { __typename?: 'Item', id: string, imageUrl?: string | null, name: string }, unit: { __typename?: 'Unit', id: string, name: string, symbol: string, conversionFactor?: number | null, notes?: string | null, type: UnitType } }> };
 
 export type OnBoardingPantryItemsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -1434,7 +1434,7 @@ export type ShoppingListItemsQueryVariables = Exact<{
 }>;
 
 
-export type ShoppingListItemsQuery = { __typename?: 'Query', shoppingListItems: Array<{ __typename?: 'ShoppingListItem', id: string, label?: string | null, quantity?: number | null, itemName?: string | null, unitSymbol?: string | null, isPurchased: boolean, createdAt: any, updatedAt: any, item?: { __typename?: 'Item', imageUrl?: string | null } | null }> };
+export type ShoppingListItemsQuery = { __typename?: 'Query', shoppingListItems: Array<{ __typename?: 'ShoppingListItem', id: string, label?: string | null, quantity?: number | null, itemName?: string | null, unitSymbol?: string | null, isPurchased: boolean, createdAt: any, updatedAt: any, item?: { __typename?: 'Item', id: string, name: string, imageUrl?: string | null } | null }> };
 
 export type ShoppingListUpdatedSubscriptionVariables = Exact<{
   listId: Scalars['ID']['input'];
@@ -1869,11 +1869,6 @@ export const AddCollaboratorDocument = gql`
     invitedAt
     statusChangedAt
     email
-    collaborator {
-      email
-      id
-      role
-    }
   }
 }
     `;
@@ -2369,10 +2364,16 @@ export const PantryItemsDocument = gql`
     version
     item {
       id
+      imageUrl
+      name
     }
     unit {
-      symbol
+      id
       name
+      symbol
+      conversionFactor
+      notes
+      type
     }
   }
 }
@@ -2561,6 +2562,8 @@ export const ShoppingListItemsDocument = gql`
     createdAt
     updatedAt
     item {
+      id
+      name
       imageUrl
     }
   }

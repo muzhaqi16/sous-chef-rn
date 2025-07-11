@@ -1,32 +1,39 @@
 import {
+  spacing,
+  Spacing,
   fonts,
-  type Fonts,
-  breakpoints,
-  type Breakpoints,
-  type ThemeColors as Colors,
-  spacings,
-  type Spacings,
+  Fonts,
+  radii,
+  Radii,
+  sizes,
+  Sizes,
   lightColors,
+  ThemeColors,
   darkColors,
 } from './common';
 
-interface Theme {
-  colors: Colors;
-  breakpoints: Breakpoints;
-  spacing: Spacings;
-  font: Fonts;
-}
+type ThemeType = {
+  spacing: Spacing;
+  fonts: Fonts;
+  radii: Radii;
+  sizes: Sizes;
+  colors: ThemeColors;
+};
 
-export const lightTheme: Theme = {
+export const lightTheme: ThemeType = {
+  spacing,
+  fonts,
+  radii,
+  sizes,
   colors: lightColors,
-  breakpoints,
-  spacing: spacings,
-  font: fonts,
 };
 
-export const darkTheme: Theme = {
+export const darkTheme: ThemeType = {
+  spacing,
+  fonts,
+  radii,
+  sizes,
   colors: darkColors,
-  breakpoints,
-  spacing: spacings,
-  font: fonts,
 };
+
+export type AppTheme = typeof lightTheme;

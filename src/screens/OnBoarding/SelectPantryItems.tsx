@@ -2,7 +2,7 @@ import React, {useState} from 'react';
 import {TouchableOpacity, Text, View, ActivityIndicator} from 'react-native';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import {OnBoardingWrapper} from '../../components/templates';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, CommonActions} from '@react-navigation/native';
 import {CreateShoppingListNavProp} from '../../navigation/types';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
 import {
@@ -13,6 +13,7 @@ import {
 } from '../../graphql/generated';
 import {useStore} from '../../store';
 import {OnBoardingSteps} from '../../store/slices/preferencesSlice';
+import {Button} from '../../components';
 
 type PartialItem = NonNullable<
   OnBoardingPantryItemsQuery['onBoardingPantryItems']
@@ -50,8 +51,7 @@ export const SelectPantryItems = () => {
 
   const [addItemToPantry] = useAddItemToPantryMutation({
     onCompleted: () => {
-      setOnBoardingStep(OnBoardingSteps.selectPantryItems);
-      setOnBoardingCompleted(true);
+      console.log('Item added to pantry successfully');
     },
     onError: e => console.error(e),
   });
@@ -103,6 +103,20 @@ export const SelectPantryItems = () => {
         },
       }),
     );
+    // Navigate to the next step in the onboarding process
+    setOnBoardingStep(OnBoardingSteps.selectPantryItems);
+    setOnBoardingCompleted(true);
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [
+          {
+            // this is the final step, so we can go to Home
+            name: 'Home',
+          },
+        ],
+      }),
+    );
   };
 
   // 4) Finally render
@@ -138,15 +152,18 @@ export const SelectPantryItems = () => {
         </View>
       </KeyboardAwareScrollView>
 
-      <TouchableOpacity
+      <Button
+        title="Next"
         onPress={onNext}
-        style={[
+        btnStyle={[
           styles.nextButton,
           selected.length === 0 && styles.nextButtonDisabled,
         ]}
-        disabled={selected.length === 0}>
-        <Text style={styles.nextText}>Next</Text>
-      </TouchableOpacity>
+        txtStyle={styles.nextText}
+        disabled={selected.length === 0}
+      />
+
+      <TouchableOpacity onPress={onNext} style={[]}></TouchableOpacity>
     </OnBoardingWrapper>
   );
 };

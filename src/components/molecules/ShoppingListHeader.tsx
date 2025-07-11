@@ -13,8 +13,8 @@ const ShoppingListHeader: React.FC<ShoppingListHeaderProps> = ({title}) => {
 
 const stylesheet = createStyleSheet(theme => ({
   header: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: theme.fonts.size['3xl'],
+    fontWeight: theme.fonts.weight.bold,
     marginBottom: 16,
   },
 }));

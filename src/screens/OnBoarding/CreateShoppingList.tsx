@@ -4,7 +4,7 @@ import {useForm} from 'react-hook-form';
 import {useNavigation} from '@react-navigation/native';
 import {OnBoardingWrapper} from '../../components/templates';
 import {DynamicFormFields} from '../../components/molecules/DynamicFormFields';
-import {BaseInput} from '../../components/atoms';
+import {BaseInput, Button} from '../../components';
 import {CreateShoppingListNavProp} from '../../navigation/types';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
 import {yupResolver} from '@hookform/resolvers/yup';
@@ -98,9 +98,12 @@ export const CreateShoppingListScreen = () => {
         control={control}
         errors={errors}
       />
-      <TouchableOpacity onPress={onNext} style={styles.nextButton}>
-        <Text style={styles.nextText}>Next</Text>
-      </TouchableOpacity>
+      <Button
+        title="Next"
+        onPress={onNext}
+        btnStyle={styles.nextButton}
+        txtStyle={styles.nextText}
+      />
       {graphqlError && <Text style={styles.errorText}>{graphqlError}</Text>}
     </OnBoardingWrapper>
   );

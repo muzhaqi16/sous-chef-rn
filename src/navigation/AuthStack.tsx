@@ -8,6 +8,7 @@ import {
   RememberLoginInfoScreen,
   ForgotPasswordScreen,
   CodeVerificationScreen,
+  LandingAuthScreen,
 } from '../screens/Auth';
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
@@ -20,13 +21,15 @@ const AuthStack = () => {
   }
 
   // pick initialRoute synchronously
+  // based on whether the user is logged in, verified, and rememberMe status
+  // this is a synchronous check, so it can be done directly here
   const initialRoute: keyof AuthStackParamList = !user
-    ? 'Login'
+    ? rememberMe === undefined
+      ? 'LandingAuth'
+      : 'Login'
     : !user.emailVerified
       ? 'CodeVerification'
-      : rememberMe === undefined // only here when we haven’t asked yet
-        ? 'RememberLoginInfo'
-        : 'Login'; // or wherever makes sense after “no thanks”
+      : 'RememberLoginInfo'; // or wherever makes sense after “no thanks”
 
   return (
     <Stack.Navigator
@@ -51,6 +54,11 @@ const AuthStack = () => {
         gestureEnabled: true,
         gestureDirection: 'vertical', // vertical swipe to dismiss
       }}>
+      <Stack.Screen
+        name="LandingAuth"
+        component={LandingAuthScreen} // or a landing page component
+        options={{headerShown: false, animation: 'fade_from_bottom'}}
+      />
       <Stack.Screen
         name="Login"
         component={LoginScreen}

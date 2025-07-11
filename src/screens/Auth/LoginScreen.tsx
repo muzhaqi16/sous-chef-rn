@@ -17,7 +17,7 @@ import {useLoginMutation} from '../../graphql/generated';
 type LoginValues = {email: string; password: string};
 
 export function LoginScreen() {
-  const {navigation} = useSafeNavigation<LoginNavProp>();
+  const {navigation, canGoBack, goBack} = useSafeNavigation<LoginNavProp>();
   const showToast = useToast();
   const {rememberMe, setAuth, setPendingCredentials} = useStore();
 
@@ -119,7 +119,7 @@ export function LoginScreen() {
       <AuthFormTemplate<LoginValues>
         title="Sign in to Sous Chef App"
         subtitle="Access your pantry and more"
-        onBackPress={() => navigation.goBack()}
+        onBackPress={canGoBack ? goBack : undefined}
         fields={[
           {name: 'email', label: 'Email address', component: EmailInput},
           {
@@ -138,6 +138,7 @@ export function LoginScreen() {
         footerText="Don't have an account?"
         footerLinkText="Sign Up"
         onFooterLinkPress={() => navigation.navigate('SignUp')}
+        isLoading={isLoggingIn}
       />
     </AuthWrapper>
   );

@@ -63,7 +63,7 @@ const stylesheet = createStyleSheet(theme => ({
   avatar: {
     width: 80,
     height: 80,
-    borderRadius: 40,
+    borderRadius: theme.sizes.avatar,
     backgroundColor: theme.colors.surface,
   },
   avatarPlaceholder: {

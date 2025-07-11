@@ -14,15 +14,6 @@ export const ADD_ITEM_TO_PANTRY = gql`
       expiresAt
       storageState
       version
-      item {
-        id
-        imageUrl
-      }
-      unit {
-        name
-        id
-        symbol
-      }
     }
   }
 `;

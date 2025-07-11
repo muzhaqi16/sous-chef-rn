@@ -20,7 +20,7 @@ type SignUpValues = {
 export const SignUpScreen = () => {
   const {navigation, canGoBack, goBack} = useSafeNavigation<SignUpNavProp>();
   const [register, {loading: isRegistering}] = useRegisterMutation();
-  const {setAuth} = useStore();
+  const {setAuth, setPendingCredentials} = useStore();
   const {
     control,
     handleSubmit,
@@ -44,12 +44,12 @@ export const SignUpScreen = () => {
       });
 
       if (response.data?.register) {
-        console.log('Registration successful:', response.data.register);
         setAuth(
           response.data.register.user,
           response.data.register.accessToken,
           response.data.register.refreshToken,
         );
+        setPendingCredentials(email, password);
         navigation.navigate('CodeVerification', {
           email: data.email,
           password: data.password,
@@ -87,11 +87,12 @@ export const SignUpScreen = () => {
         errors={errors}
         linkText="Forgot password?"
         onLinkPress={() => navigation.navigate('ForgotPassword')}
-        submitText="Sign Up"
+        submitText={isRegistering ? 'Registering…' : 'Sign Up'}
         onSubmit={handleSubmit(onSubmit)}
         footerText="Already have an account?"
         footerLinkText="Sign In"
         onFooterLinkPress={() => navigation.navigate('Login')}
+        isLoading={isRegistering}
       />
     </AuthWrapper>
   );

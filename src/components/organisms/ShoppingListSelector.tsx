@@ -48,7 +48,7 @@ const stylesheet = createStyleSheet(theme => ({
     width: 44,
     height: 44,
     borderRadius: 12,
-    marginLeft: theme.spacing.margin.sm,
+    marginLeft: theme.spacing.sm,
   },
 }));
 

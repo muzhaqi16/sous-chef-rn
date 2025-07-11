@@ -5,7 +5,7 @@ import {AuthWrapper} from '../../components/templates/AuthWrapper';
 import {AuthFormTemplate} from '../../components/templates/AuthFormTemplate';
 import {CodeInputAdapter} from '../../components/molecules/CodeInputAdapter';
 import {useStore} from '../../store';
-
+import {useNavigation, CommonActions} from '@react-navigation/native';
 import {
   useVerifyEmailMutation,
   useResendVerificationEmailMutation,
@@ -16,10 +16,10 @@ type CodeVerificationValues = {
 };
 
 export function CodeVerificationScreen() {
-  const {setEmailVerified, user} = useStore();
+  const {setEmailVerified, user, onBoardingCompleted} = useStore();
   const [verifyEmail] = useVerifyEmailMutation();
   const [resendVerificationEmail] = useResendVerificationEmailMutation();
-
+  const navigation = useNavigation();
   const {
     control,
     handleSubmit,
@@ -38,7 +38,19 @@ export function CodeVerificationScreen() {
 
       if (response.data?.verifyEmail) {
         setEmailVerified(true);
-        console.log('Email verified successfully');
+        // 3. Reset the root nav state in one go
+        navigation.dispatch(
+          CommonActions.reset({
+            index: 0,
+            routes: [
+              {
+                // if they still need onboarding, send them there,
+                // otherwise straight to HomeTab
+                name: onBoardingCompleted ? 'Home' : 'OnBoarding',
+              },
+            ],
+          }),
+        );
       } else {
         console.error('Email verification failed');
       }

@@ -167,9 +167,10 @@ export default function ProfileScreen() {
               type: 'text',
               onPress: () => {
                 logout();
-                navigation.navigate('Auth', {
-                  screen: 'Login',
-                }); // Adjust navigation as needed
+                navigation.reset({
+                  index: 0,
+                  routes: [{name: 'Auth'}],
+                });
               },
             },
           ]}
