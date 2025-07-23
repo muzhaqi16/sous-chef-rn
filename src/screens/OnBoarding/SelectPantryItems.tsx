@@ -97,8 +97,7 @@ export const SelectPantryItems = () => {
             quantity: 1,
             pantryId:
               selectedPantryId || homeData?.home?.defaultPantry?.id || '',
-            // unitId: item?.units?.[0]?.id || '',
-            unitId: '6866d8cf7e407304a63718ba', //ounces for now, change later
+            unitId: item?.units && item.units[0]?.id,
           },
         },
       }),

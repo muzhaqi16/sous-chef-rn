@@ -5,7 +5,9 @@ export const GET_OR_CREATE_DEFAULT_HOME = gql`
     home {
       id
       name
-      ownerId
+      owner {
+        id
+      }
       defaultPantry {
         id
       }
@@ -20,7 +22,9 @@ export const GET_HOME_BY_ID = gql`
     home(id: $id) {
       id
       name
-      ownerId
+      owner {
+        id
+      }
       defaultPantry {
         id
       }
@@ -35,7 +39,9 @@ export const GET_HOMES = gql`
     homes {
       id
       name
-      ownerId
+      owner {
+        id
+      }
       defaultPantry {
         id
       }

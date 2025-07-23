@@ -4,11 +4,12 @@ export const ShoppingListUpdatedDocument = gql`
   subscription ShoppingListUpdated($listId: ID!) {
     shoppingListUpdated(listId: $listId) {
       id
-      shoppingListId
-      label
+      shoppingList {
+        id
+      }
       quantity
       itemName
-      unitSymbol
+      unitName
       isPurchased
       createdAt
       updatedAt

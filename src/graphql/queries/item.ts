@@ -5,11 +5,10 @@ export const GET_ITEMS = gql`
     items(filter: $filter, offset: $offset, limit: $limit) {
       items {
         id
-        fdcId
         name
-        dataType
+        description
+        type
         barcode
-        aisle
         storageState
         imageUrl
         shelfLifeDays
@@ -33,12 +32,10 @@ export const GET_ITEMS = gql`
           id
         }
         nutritions
-        marketCountry
-        publishedDate
-        modifiedDate
-        foodCategory
-        servingSize
-        servingSizeUnit
+        categories {
+          id
+          name
+        }
         healthBenefits
         metadata
         createdBy {

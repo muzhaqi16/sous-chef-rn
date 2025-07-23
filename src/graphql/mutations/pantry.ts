@@ -4,11 +4,16 @@ export const ADD_ITEM_TO_PANTRY = gql`
   mutation AddItemToPantry($input: CreatePantryItemInput!) {
     addItemToPantry(input: $input) {
       id
-      pantryId
-      itemId
-      unitId
+      pantry {
+        id
+      }
+      item {
+        id
+      }
+      unit {
+        id
+      }
       quantity
-      grams
       addedAt
       lastUsedAt
       expiresAt

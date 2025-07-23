@@ -59,7 +59,8 @@ export const AddItemBottomSheet: React.FC<BottomSheetProps> = ({
         data: {
           shoppingListId: shoppingListId || '',
           itemId: selectedItem?.id || '',
-          label: itemName,
+          itemName,
+          quantity: 1, // Default quantity, adjust as needed
         },
       },
     });
@@ -88,10 +89,14 @@ export const AddItemBottomSheet: React.FC<BottomSheetProps> = ({
               setQuery(text);
               setSelectedItem(null);
             }}
+            onEndEditing={() => {
+              if (query.length >= 2) {
+                setSelectedItem(null); // Reset selected item when typing
+              }
+            }}
+            autoFocus={true}
           />
-
           <Autocomplete searchTerm={query} onSelectItem={handleSelectItem} />
-
           <Button
             title={loading ? 'Adding...' : 'Submit'}
             onPress={handleAddItem}

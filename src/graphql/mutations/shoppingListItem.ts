@@ -6,7 +6,8 @@ export const ADD_ITEM_TO_SHOPPING_LIST_MUTATION = gql`
     addItemToShoppingList(data: $data) {
       id
       itemName
-      unitSymbol
+      unitName
+      quantity
     }
   }
 `;

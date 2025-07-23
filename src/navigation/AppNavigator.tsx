@@ -12,24 +12,19 @@ import type {RootStackParamList} from './types';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function AppNavigator() {
-  const {isHydrated, user} = useStore();
-  const {rememberMe, onBoardingCompleted} = useStore();
+  const {isHydrated, user, onBoardingCompleted} = useStore();
 
   if (!isHydrated) {
     // still loading your persisted zustand store
     return null;
   }
-
-  // if there's no user, OR they haven't verified, OR they haven't opted into
-  // "remember me", keep them in AuthStack.  Otherwise send them to HomeTab.
+  // only gate on user existence & verification here — rememberMe is handled _inside_ AuthStack.
   const initialRoute: keyof RootStackParamList =
-    !user || !user.emailVerified || rememberMe === undefined
+    !user || !user.emailVerified
       ? 'Auth'
-      : /* here’s your onboarding check: */
-        !onBoardingCompleted
+      : !onBoardingCompleted
         ? 'OnBoarding'
         : 'Home';
-  console.log('AppNavigator Initial route:', initialRoute);
   return (
     <NavigationContainer>
       <Stack.Navigator

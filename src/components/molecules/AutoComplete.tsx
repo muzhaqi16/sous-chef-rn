@@ -1,8 +1,7 @@
 import React, {useMemo, useEffect} from 'react';
 import {FlatList, Text, TouchableOpacity, StyleSheet} from 'react-native';
-import {useLazyQuery} from '@apollo/client';
-import {GET_ITEMS_FOR_AUTOCOMPLETE} from '../../graphql/queries/item';
-
+import BottomSheet, {BottomSheetFlatList} from '@gorhom/bottom-sheet';
+import {useAutocompleteItemsLazyQuery} from '../../graphql/generated';
 interface Item {
   id: string;
   name: string;
@@ -17,9 +16,10 @@ const Autocomplete: React.FC<AutocompleteProps> = ({
   searchTerm,
   onSelectItem,
 }) => {
-  const [fetchItems, {data, loading, error}] = useLazyQuery(
-    GET_ITEMS_FOR_AUTOCOMPLETE,
-  );
+  const [fetchItems, {data, loading, error}] = useAutocompleteItemsLazyQuery({
+    variables: {name: searchTerm},
+    fetchPolicy: 'cache-and-network', // Ensures fresh data is fetched
+  });
 
   // Only run the query when the searchTerm is at least 2 characters long.
   useEffect(() => {
@@ -38,15 +38,15 @@ const Autocomplete: React.FC<AutocompleteProps> = ({
     );
   }, [data, searchTerm]);
 
-  // Handle loading and error states.
-  if (loading) return <Text>Loading...</Text>;
   if (error) return <Text>Error loading items</Text>;
 
   // Only render the autocomplete list if searchTerm has at least 2 characters.
   return searchTerm.length < 2 ? null : (
-    <FlatList
+    <BottomSheetFlatList
+      keyboardDismissMode="on-drag"
       data={filteredItems}
       keyExtractor={(item: Item) => item.id}
+      showsVerticalScrollIndicator={false}
       renderItem={({item}) => (
         <TouchableOpacity
           onPress={() => onSelectItem(item)}
@@ -54,6 +54,12 @@ const Autocomplete: React.FC<AutocompleteProps> = ({
           <Text>{item.name}</Text>
         </TouchableOpacity>
       )}
+      ListEmptyComponent={
+        <Text style={{padding: 10, color: 'gray'}}>No items found</Text>
+      }
+      ListFooterComponent={
+        loading ? <Text style={{padding: 10}}>Loading...</Text> : null
+      }
     />
   );
 };

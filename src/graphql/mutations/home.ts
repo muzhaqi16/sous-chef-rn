@@ -6,7 +6,9 @@ export const CREATE_HOME = gql`
       id
       name
       type
-      ownerId
+      owner {
+        id
+      }
       createdAt
       updatedAt
       version

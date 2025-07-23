@@ -4,11 +4,10 @@ export const GET_PANTRY_ITEMS = gql`
   query PantryItems($pantryId: ID!) {
     pantryItems(pantryId: $pantryId) {
       id
-      pantryId
-      itemId
-      unitId
+      pantry {
+        id
+      }
       quantity
-      grams
       addedAt
       lastUsedAt
       expiresAt

@@ -4,14 +4,16 @@ export const GET_PANTRIES = gql`
   query Pantries($homeId: ID!) {
     pantries(homeId: $homeId) {
       id
-      homeId
+      home {
+        id
+      }
       name
       version
       createdAt
       updatedAt
       deletedAt
       items {
-        itemId
+        id
         unit {
           symbol
           name
@@ -23,8 +25,6 @@ export const GET_PANTRIES = gql`
         }
         storageState
         expiresAt
-        id
-        grams
       }
     }
   }

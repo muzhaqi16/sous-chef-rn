@@ -90,11 +90,13 @@ export type CreatePantryInput = {
 
 export type CreatePantryItemInput = {
   expiresAt?: InputMaybe<Scalars['DateTime']['input']>;
-  itemId: Scalars['ID']['input'];
+  itemId?: InputMaybe<Scalars['ID']['input']>;
+  itemName?: InputMaybe<Scalars['String']['input']>;
   pantryId: Scalars['ID']['input'];
-  quantity: Scalars['Float']['input'];
+  quantity?: InputMaybe<Scalars['Float']['input']>;
   storageState?: InputMaybe<StorageState>;
-  unitId: Scalars['ID']['input'];
+  unitId?: InputMaybe<Scalars['ID']['input']>;
+  unitName?: InputMaybe<Scalars['String']['input']>;
 };
 
 /**
@@ -110,24 +112,16 @@ export type CreateShoppingListInput = {
 };
 
 export type CreateUpdateItemInput = {
-  aisle?: InputMaybe<Scalars['String']['input']>;
+  allergens?: InputMaybe<Scalars['JSON']['input']>;
   barcode?: InputMaybe<Scalars['String']['input']>;
   brandIds?: InputMaybe<Array<Scalars['ID']['input']>>;
   categoryIds?: InputMaybe<Array<Scalars['ID']['input']>>;
-  dataType?: InputMaybe<Scalars['String']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
-  fdcId?: InputMaybe<Scalars['Int']['input']>;
-  foodCategory?: InputMaybe<Scalars['String']['input']>;
   healthBenefits?: InputMaybe<Scalars['JSON']['input']>;
   imageUrl?: InputMaybe<Scalars['String']['input']>;
-  marketCountry?: InputMaybe<Scalars['String']['input']>;
   metadata?: InputMaybe<Scalars['JSON']['input']>;
-  modifiedDate?: InputMaybe<Scalars['DateTime']['input']>;
   name: Scalars['String']['input'];
   nutritions?: InputMaybe<Scalars['JSON']['input']>;
-  publishedDate?: InputMaybe<Scalars['DateTime']['input']>;
-  servingSize?: InputMaybe<Scalars['Float']['input']>;
-  servingSizeUnit?: InputMaybe<Scalars['String']['input']>;
   shelfLifeDays?: InputMaybe<Scalars['Int']['input']>;
   showInOnboarding?: InputMaybe<Scalars['Boolean']['input']>;
   status?: InputMaybe<ItemStatus>;
@@ -155,6 +149,15 @@ export enum CurrencyCode {
   Usd = 'USD'
 }
 
+export enum DataSource {
+  Api = 'API',
+  BarcodeScan = 'BARCODE_SCAN',
+  Import = 'IMPORT',
+  Kroger = 'KROGER',
+  Manual = 'MANUAL',
+  Usda = 'USDA'
+}
+
 export type Home = {
   __typename?: 'Home';
   createdAt: Scalars['DateTime']['output'];
@@ -164,7 +167,7 @@ export type Home = {
   invites: Array<HomeInvite>;
   members: Array<Membership>;
   name: Scalars['String']['output'];
-  ownerId: Scalars['ID']['output'];
+  owner: User;
   pantries: Array<Pantry>;
   tags: Array<Scalars['String']['output']>;
   type: HomeType;
@@ -204,35 +207,32 @@ export enum InviteStatus {
 
 export type Item = {
   __typename?: 'Item';
-  aisle?: Maybe<Scalars['String']['output']>;
+  allergens?: Maybe<Scalars['JSON']['output']>;
   barcode?: Maybe<Scalars['String']['output']>;
   brands?: Maybe<Array<Brand>>;
   categories?: Maybe<Array<Category>>;
   createdAt: Scalars['DateTime']['output'];
   createdBy?: Maybe<User>;
-  dataType?: Maybe<Scalars['String']['output']>;
+  dataSource?: Maybe<DataSource>;
   deletedAt?: Maybe<Scalars['DateTime']['output']>;
   description?: Maybe<Scalars['String']['output']>;
-  fdcId?: Maybe<Scalars['Int']['output']>;
-  foodCategory?: Maybe<Scalars['String']['output']>;
   healthBenefits?: Maybe<Scalars['JSON']['output']>;
   id: Scalars['ID']['output'];
   imageUrl?: Maybe<Scalars['String']['output']>;
-  marketCountry?: Maybe<Scalars['String']['output']>;
   metadata?: Maybe<Scalars['JSON']['output']>;
-  modifiedDate?: Maybe<Scalars['DateTime']['output']>;
   name: Scalars['String']['output'];
   nutritions?: Maybe<Scalars['JSON']['output']>;
+  pantryItems?: Maybe<Array<PantryItem>>;
   popularityCount: Scalars['Int']['output'];
-  publishedDate?: Maybe<Scalars['DateTime']['output']>;
-  servingSize?: Maybe<Scalars['Float']['output']>;
-  servingSizeUnit?: Maybe<Scalars['String']['output']>;
+  purchases?: Maybe<Array<Purchase>>;
   shelfLifeDays?: Maybe<Scalars['Int']['output']>;
+  shoppingListItems?: Maybe<Array<ShoppingListItem>>;
   showInOnboarding: Scalars['Boolean']['output'];
-  skus?: Maybe<Array<ItemStoreSku>>;
   status: ItemStatus;
   storageState: StorageState;
+  storeSkus?: Maybe<Array<ItemStoreSku>>;
   tags?: Maybe<Array<Scalars['String']['output']>>;
+  type?: Maybe<ItemType>;
   units?: Maybe<Array<ItemUnit>>;
   updatedAt: Scalars['DateTime']['output'];
   updatedBy?: Maybe<User>;
@@ -247,7 +247,6 @@ export type ItemCategory = {
 };
 
 export type ItemFilterInput = {
-  aisle?: InputMaybe<Scalars['String']['input']>;
   barcode?: InputMaybe<Scalars['String']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
   status?: InputMaybe<ItemStatus>;
@@ -255,9 +254,10 @@ export type ItemFilterInput = {
 };
 
 export enum ItemStatus {
-  Approved = 'APPROVED',
-  Pending = 'PENDING',
-  Rejected = 'REJECTED'
+  Active = 'ACTIVE',
+  Archived = 'ARCHIVED',
+  Deprecated = 'DEPRECATED',
+  Pending = 'PENDING'
 }
 
 export type ItemStoreSku = {
@@ -278,6 +278,17 @@ export type ItemSuggestion = {
   id: Scalars['ID']['output'];
   name: Scalars['String']['output'];
 };
+
+export enum ItemType {
+  Drink = 'DRINK',
+  Food = 'FOOD',
+  Foundation = 'FOUNDATION',
+  Household = 'HOUSEHOLD',
+  Other = 'OTHER',
+  PersonalCare = 'PERSONAL_CARE',
+  Pet = 'PET',
+  Supplement = 'SUPPLEMENT'
+}
 
 export type ItemUnit = {
   __typename?: 'ItemUnit';
@@ -320,6 +331,7 @@ export type Mutation = {
   addCollaborator: ShoppingListCollaborator;
   addItemToPantry: PantryItem;
   addItemToShoppingList: ShoppingListItem;
+  addRecipe: Recipe;
   addUserAddress: UserAddress;
   createBrand: Brand;
   createCategory: Category;
@@ -399,6 +411,15 @@ export type MutationAddItemToPantryArgs = {
 
 export type MutationAddItemToShoppingListArgs = {
   data: ShoppingListItemInput;
+};
+
+
+export type MutationAddRecipeArgs = {
+  cookTime: Scalars['Int']['input'];
+  ingredients: Array<Scalars['String']['input']>;
+  instructions: Array<Scalars['String']['input']>;
+  prepTime: Scalars['Int']['input'];
+  title: Scalars['String']['input'];
 };
 
 
@@ -812,7 +833,7 @@ export type Pantry = {
   __typename?: 'Pantry';
   createdAt: Scalars['DateTime']['output'];
   deletedAt?: Maybe<Scalars['DateTime']['output']>;
-  homeId: Scalars['ID']['output'];
+  home: Home;
   id: Scalars['ID']['output'];
   isDefault: Scalars['Boolean']['output'];
   items: Array<PantryItem>;
@@ -825,18 +846,20 @@ export type Pantry = {
 export type PantryItem = {
   __typename?: 'PantryItem';
   addedAt: Scalars['DateTime']['output'];
+  addedBy: User;
+  deletedAt?: Maybe<Scalars['DateTime']['output']>;
   expiresAt?: Maybe<Scalars['DateTime']['output']>;
-  grams: Scalars['Float']['output'];
   id: Scalars['ID']['output'];
   item: Item;
-  itemId: Scalars['ID']['output'];
+  itemName: Scalars['String']['output'];
   lastUsedAt?: Maybe<Scalars['DateTime']['output']>;
-  pantryId: Scalars['ID']['output'];
-  quantity: Scalars['Float']['output'];
-  storageState: StorageState;
+  pantry: Pantry;
+  quantity?: Maybe<Scalars['Float']['output']>;
+  storageState?: Maybe<StorageState>;
+  tags?: Maybe<Array<Scalars['String']['output']>>;
   unit: Unit;
-  unitId: Scalars['ID']['output'];
-  version: Scalars['Int']['output'];
+  unitName: Scalars['String']['output'];
+  version?: Maybe<Scalars['Int']['output']>;
 };
 
 export type Purchase = {
@@ -885,12 +908,14 @@ export type Query = {
   pantryItems: Array<PantryItem>;
   popularItems: Array<ItemSuggestion>;
   purchasesByUser: Array<Purchase>;
+  searchRecipes: Array<Recipe>;
   shoppingList?: Maybe<ShoppingList>;
   shoppingListCollaborators: Array<ShoppingListCollaborator>;
   shoppingListItem?: Maybe<ShoppingListItem>;
   shoppingListItems: Array<ShoppingListItem>;
   shoppingLists: Array<ShoppingList>;
   stores: Array<Store>;
+  suggestedRecipes: Array<Recipe>;
   unit?: Maybe<Unit>;
   units: Array<Unit>;
   user?: Maybe<User>;
@@ -1002,6 +1027,11 @@ export type QueryPurchasesByUserArgs = {
 };
 
 
+export type QuerySearchRecipesArgs = {
+  query: Scalars['String']['input'];
+};
+
+
 export type QueryShoppingListArgs = {
   id: Scalars['ID']['input'];
 };
@@ -1029,6 +1059,19 @@ export type QueryUnitArgs = {
 
 export type QueryUserArgs = {
   id: Scalars['ID']['input'];
+};
+
+export type Recipe = {
+  __typename?: 'Recipe';
+  cookTime: Scalars['Int']['output'];
+  description?: Maybe<Scalars['String']['output']>;
+  difficulty: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  ingredients: Array<Scalars['String']['output']>;
+  instructions: Array<Scalars['String']['output']>;
+  matchPercentage?: Maybe<Scalars['Float']['output']>;
+  prepTime: Scalars['Int']['output'];
+  title: Scalars['String']['output'];
 };
 
 export type RemoveCollaboratorInput = {
@@ -1072,36 +1115,33 @@ export type ShoppingListCollaborator = {
 export type ShoppingListItem = {
   __typename?: 'ShoppingListItem';
   createdAt: Scalars['DateTime']['output'];
+  deletedAt?: Maybe<Scalars['DateTime']['output']>;
   id: Scalars['ID']['output'];
   isPurchased: Scalars['Boolean']['output'];
   item?: Maybe<Item>;
   itemName?: Maybe<Scalars['String']['output']>;
-  label?: Maybe<Scalars['String']['output']>;
   quantity?: Maybe<Scalars['Float']['output']>;
-  shoppingListId: Scalars['ID']['output'];
+  shoppingList: ShoppingList;
   unit?: Maybe<Unit>;
-  unitSymbol?: Maybe<Scalars['String']['output']>;
+  unitName?: Maybe<Scalars['String']['output']>;
   updatedAt: Scalars['DateTime']['output'];
+  version: Scalars['Int']['output'];
 };
 
 export type ShoppingListItemInput = {
   itemId?: InputMaybe<Scalars['ID']['input']>;
-  label?: InputMaybe<Scalars['String']['input']>;
+  itemName: Scalars['String']['input'];
   quantity?: InputMaybe<Scalars['Float']['input']>;
   shoppingListId: Scalars['ID']['input'];
   unitId?: InputMaybe<Scalars['ID']['input']>;
+  unitName?: InputMaybe<Scalars['String']['input']>;
 };
 
 export enum StorageState {
   Ambient = 'AMBIENT',
-  Chilled = 'CHILLED',
-  Cold = 'COLD',
   Frozen = 'FROZEN',
-  Hot = 'HOT',
   None = 'NONE',
-  Refrigerated = 'REFRIGERATED',
-  RoomTemperature = 'ROOM_TEMPERATURE',
-  Warm = 'WARM'
+  Refrigerated = 'REFRIGERATED'
 }
 
 export type Store = {
@@ -1255,7 +1295,8 @@ export type UserSettings = {
 
 export enum Visibility {
   Private = 'PRIVATE',
-  Public = 'PUBLIC'
+  Public = 'PUBLIC',
+  Restricted = 'RESTRICTED'
 }
 
 export type LoginMutationVariables = Exact<{
@@ -1316,14 +1357,14 @@ export type CreateHomeMutationVariables = Exact<{
 }>;
 
 
-export type CreateHomeMutation = { __typename?: 'Mutation', createHome: { __typename?: 'Home', id: string, name: string, type: HomeType, ownerId: string, createdAt: any, updatedAt: any, version: number, deletedAt?: any | null } };
+export type CreateHomeMutation = { __typename?: 'Mutation', createHome: { __typename?: 'Home', id: string, name: string, type: HomeType, createdAt: any, updatedAt: any, version: number, deletedAt?: any | null, owner: { __typename?: 'User', id: string } } };
 
 export type AddItemToPantryMutationVariables = Exact<{
   input: CreatePantryItemInput;
 }>;
 
 
-export type AddItemToPantryMutation = { __typename?: 'Mutation', addItemToPantry: { __typename?: 'PantryItem', id: string, pantryId: string, itemId: string, unitId: string, quantity: number, grams: number, addedAt: any, lastUsedAt?: any | null, expiresAt?: any | null, storageState: StorageState, version: number, item: { __typename?: 'Item', id: string, imageUrl?: string | null }, unit: { __typename?: 'Unit', name: string, id: string, symbol: string } } };
+export type AddItemToPantryMutation = { __typename?: 'Mutation', addItemToPantry: { __typename?: 'PantryItem', id: string, quantity?: number | null, addedAt: any, lastUsedAt?: any | null, expiresAt?: any | null, storageState?: StorageState | null, version?: number | null, pantry: { __typename?: 'Pantry', id: string }, item: { __typename?: 'Item', id: string }, unit: { __typename?: 'Unit', id: string } } };
 
 export type UpdateUserProfileMutationVariables = Exact<{
   data: UpdateUserSettingsInput;
@@ -1351,7 +1392,7 @@ export type AddItemToShoppingListMutationVariables = Exact<{
 }>;
 
 
-export type AddItemToShoppingListMutation = { __typename?: 'Mutation', addItemToShoppingList: { __typename?: 'ShoppingListItem', id: string, itemName?: string | null, unitSymbol?: string | null } };
+export type AddItemToShoppingListMutation = { __typename?: 'Mutation', addItemToShoppingList: { __typename?: 'ShoppingListItem', id: string, itemName?: string | null, unitName?: string | null, quantity?: number | null } };
 
 export type RemoveItemFromShoppingListMutationVariables = Exact<{
   removeItemFromShoppingListId: Scalars['ID']['input'];
@@ -1370,19 +1411,19 @@ export type ShoppingListCollaboratorsQuery = { __typename?: 'Query', shoppingLis
 export type HomeQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type HomeQuery = { __typename?: 'Query', home: { __typename?: 'Home', id: string, name: string, ownerId: string, createdAt: any, updatedAt: any, defaultPantry?: { __typename?: 'Pantry', id: string } | null } };
+export type HomeQuery = { __typename?: 'Query', home: { __typename?: 'Home', id: string, name: string, createdAt: any, updatedAt: any, owner: { __typename?: 'User', id: string }, defaultPantry?: { __typename?: 'Pantry', id: string } | null } };
 
 export type HomeByIdQueryVariables = Exact<{
   id: Scalars['ID']['input'];
 }>;
 
 
-export type HomeByIdQuery = { __typename?: 'Query', home: { __typename?: 'Home', id: string, name: string, ownerId: string, createdAt: any, updatedAt: any, defaultPantry?: { __typename?: 'Pantry', id: string } | null } };
+export type HomeByIdQuery = { __typename?: 'Query', home: { __typename?: 'Home', id: string, name: string, createdAt: any, updatedAt: any, owner: { __typename?: 'User', id: string }, defaultPantry?: { __typename?: 'Pantry', id: string } | null } };
 
 export type HomesQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type HomesQuery = { __typename?: 'Query', homes: Array<{ __typename?: 'Home', id: string, name: string, ownerId: string, createdAt: any, updatedAt: any, defaultPantry?: { __typename?: 'Pantry', id: string } | null }> };
+export type HomesQuery = { __typename?: 'Query', homes: Array<{ __typename?: 'Home', id: string, name: string, createdAt: any, updatedAt: any, owner: { __typename?: 'User', id: string }, defaultPantry?: { __typename?: 'Pantry', id: string } | null }> };
 
 export type ItemsQueryVariables = Exact<{
   filter?: InputMaybe<ItemFilterInput>;
@@ -1391,7 +1432,7 @@ export type ItemsQueryVariables = Exact<{
 }>;
 
 
-export type ItemsQuery = { __typename?: 'Query', items?: { __typename?: 'PaginatedItems', totalCount: number, items: Array<{ __typename?: 'Item', id: string, fdcId?: number | null, name: string, dataType?: string | null, barcode?: string | null, aisle?: string | null, storageState: StorageState, imageUrl?: string | null, shelfLifeDays?: number | null, popularityCount: number, tags?: Array<string> | null, status: ItemStatus, visibility: Visibility, showInOnboarding: boolean, nutritions?: any | null, marketCountry?: string | null, publishedDate?: any | null, modifiedDate?: any | null, foodCategory?: string | null, servingSize?: number | null, servingSizeUnit?: string | null, healthBenefits?: any | null, metadata?: any | null, createdAt: any, updatedAt: any, deletedAt?: any | null, version: number, units?: Array<{ __typename?: 'ItemUnit', id: string, isDefault: boolean, conversionFactor?: number | null, notes?: string | null }> | null, brands?: Array<{ __typename?: 'Brand', name: string, id: string }> | null, categories?: Array<{ __typename?: 'Category', name: string, id: string }> | null, createdBy?: { __typename?: 'User', id: string } | null, updatedBy?: { __typename?: 'User', id: string } | null }> } | null };
+export type ItemsQuery = { __typename?: 'Query', items?: { __typename?: 'PaginatedItems', totalCount: number, items: Array<{ __typename?: 'Item', id: string, name: string, description?: string | null, type?: ItemType | null, barcode?: string | null, storageState: StorageState, imageUrl?: string | null, shelfLifeDays?: number | null, popularityCount: number, tags?: Array<string> | null, status: ItemStatus, visibility: Visibility, showInOnboarding: boolean, nutritions?: any | null, healthBenefits?: any | null, metadata?: any | null, createdAt: any, updatedAt: any, deletedAt?: any | null, version: number, units?: Array<{ __typename?: 'ItemUnit', id: string, isDefault: boolean, conversionFactor?: number | null, notes?: string | null }> | null, brands?: Array<{ __typename?: 'Brand', name: string, id: string }> | null, categories?: Array<{ __typename?: 'Category', name: string, id: string }> | null, createdBy?: { __typename?: 'User', id: string } | null, updatedBy?: { __typename?: 'User', id: string } | null }> } | null };
 
 export type AutocompleteItemsQueryVariables = Exact<{
   name: Scalars['String']['input'];
@@ -1405,14 +1446,14 @@ export type PantriesQueryVariables = Exact<{
 }>;
 
 
-export type PantriesQuery = { __typename?: 'Query', pantries: Array<{ __typename?: 'Pantry', id: string, homeId: string, name: string, version: number, createdAt: any, updatedAt: any, deletedAt?: any | null, items: Array<{ __typename?: 'PantryItem', itemId: string, storageState: StorageState, expiresAt?: any | null, id: string, grams: number, unit: { __typename?: 'Unit', symbol: string, name: string }, item: { __typename?: 'Item', name: string, status: ItemStatus, storageState: StorageState } }> }> };
+export type PantriesQuery = { __typename?: 'Query', pantries: Array<{ __typename?: 'Pantry', id: string, name: string, version: number, createdAt: any, updatedAt: any, deletedAt?: any | null, home: { __typename?: 'Home', id: string }, items: Array<{ __typename?: 'PantryItem', id: string, storageState?: StorageState | null, expiresAt?: any | null, unit: { __typename?: 'Unit', symbol: string, name: string }, item: { __typename?: 'Item', name: string, status: ItemStatus, storageState: StorageState } }> }> };
 
 export type PantryItemsQueryVariables = Exact<{
   pantryId: Scalars['ID']['input'];
 }>;
 
 
-export type PantryItemsQuery = { __typename?: 'Query', pantryItems: Array<{ __typename?: 'PantryItem', id: string, pantryId: string, itemId: string, unitId: string, quantity: number, grams: number, addedAt: any, lastUsedAt?: any | null, expiresAt?: any | null, storageState: StorageState, version: number, item: { __typename?: 'Item', id: string, imageUrl?: string | null, name: string }, unit: { __typename?: 'Unit', id: string, name: string, symbol: string, conversionFactor?: number | null, notes?: string | null, type: UnitType } }> };
+export type PantryItemsQuery = { __typename?: 'Query', pantryItems: Array<{ __typename?: 'PantryItem', id: string, quantity?: number | null, addedAt: any, lastUsedAt?: any | null, expiresAt?: any | null, storageState?: StorageState | null, version?: number | null, pantry: { __typename?: 'Pantry', id: string }, item: { __typename?: 'Item', id: string, imageUrl?: string | null, name: string }, unit: { __typename?: 'Unit', id: string, name: string, symbol: string, conversionFactor?: number | null, notes?: string | null, type: UnitType } }> };
 
 export type OnBoardingPantryItemsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -1434,14 +1475,14 @@ export type ShoppingListItemsQueryVariables = Exact<{
 }>;
 
 
-export type ShoppingListItemsQuery = { __typename?: 'Query', shoppingListItems: Array<{ __typename?: 'ShoppingListItem', id: string, label?: string | null, quantity?: number | null, itemName?: string | null, unitSymbol?: string | null, isPurchased: boolean, createdAt: any, updatedAt: any, item?: { __typename?: 'Item', id: string, name: string, imageUrl?: string | null } | null }> };
+export type ShoppingListItemsQuery = { __typename?: 'Query', shoppingListItems: Array<{ __typename?: 'ShoppingListItem', id: string, quantity?: number | null, itemName?: string | null, unitName?: string | null, isPurchased: boolean, createdAt: any, updatedAt: any, item?: { __typename?: 'Item', id: string, name: string, imageUrl?: string | null } | null }> };
 
 export type ShoppingListUpdatedSubscriptionVariables = Exact<{
   listId: Scalars['ID']['input'];
 }>;
 
 
-export type ShoppingListUpdatedSubscription = { __typename?: 'Subscription', shoppingListUpdated: { __typename?: 'ShoppingListItem', id: string, shoppingListId: string, label?: string | null, quantity?: number | null, itemName?: string | null, unitSymbol?: string | null, isPurchased: boolean, createdAt: any, updatedAt: any } };
+export type ShoppingListUpdatedSubscription = { __typename?: 'Subscription', shoppingListUpdated: { __typename?: 'ShoppingListItem', id: string, quantity?: number | null, itemName?: string | null, unitName?: string | null, isPurchased: boolean, createdAt: any, updatedAt: any, shoppingList: { __typename?: 'ShoppingList', id: string } } };
 
 
 export const LoginDocument = gql`
@@ -1692,7 +1733,9 @@ export const CreateHomeDocument = gql`
     id
     name
     type
-    ownerId
+    owner {
+      id
+    }
     createdAt
     updatedAt
     version
@@ -1730,25 +1773,21 @@ export const AddItemToPantryDocument = gql`
     mutation AddItemToPantry($input: CreatePantryItemInput!) {
   addItemToPantry(input: $input) {
     id
-    pantryId
-    itemId
-    unitId
+    pantry {
+      id
+    }
+    item {
+      id
+    }
+    unit {
+      id
+    }
     quantity
-    grams
     addedAt
     lastUsedAt
     expiresAt
     storageState
     version
-    item {
-      id
-      imageUrl
-    }
-    unit {
-      name
-      id
-      symbol
-    }
   }
 }
     `;
@@ -1903,7 +1942,8 @@ export const AddItemToShoppingListDocument = gql`
   addItemToShoppingList(data: $data) {
     id
     itemName
-    unitSymbol
+    unitName
+    quantity
   }
 }
     `;
@@ -2020,7 +2060,9 @@ export const HomeDocument = gql`
   home {
     id
     name
-    ownerId
+    owner {
+      id
+    }
     defaultPantry {
       id
     }
@@ -2066,7 +2108,9 @@ export const HomeByIdDocument = gql`
   home(id: $id) {
     id
     name
-    ownerId
+    owner {
+      id
+    }
     defaultPantry {
       id
     }
@@ -2113,7 +2157,9 @@ export const HomesDocument = gql`
   homes {
     id
     name
-    ownerId
+    owner {
+      id
+    }
     defaultPantry {
       id
     }
@@ -2159,11 +2205,10 @@ export const ItemsDocument = gql`
   items(filter: $filter, offset: $offset, limit: $limit) {
     items {
       id
-      fdcId
       name
-      dataType
+      description
+      type
       barcode
-      aisle
       storageState
       imageUrl
       shelfLifeDays
@@ -2187,12 +2232,10 @@ export const ItemsDocument = gql`
         id
       }
       nutritions
-      marketCountry
-      publishedDate
-      modifiedDate
-      foodCategory
-      servingSize
-      servingSizeUnit
+      categories {
+        id
+        name
+      }
       healthBenefits
       metadata
       createdBy {
@@ -2290,14 +2333,16 @@ export const PantriesDocument = gql`
     query Pantries($homeId: ID!) {
   pantries(homeId: $homeId) {
     id
-    homeId
+    home {
+      id
+    }
     name
     version
     createdAt
     updatedAt
     deletedAt
     items {
-      itemId
+      id
       unit {
         symbol
         name
@@ -2309,8 +2354,6 @@ export const PantriesDocument = gql`
       }
       storageState
       expiresAt
-      id
-      grams
     }
   }
 }
@@ -2352,11 +2395,10 @@ export const PantryItemsDocument = gql`
     query PantryItems($pantryId: ID!) {
   pantryItems(pantryId: $pantryId) {
     id
-    pantryId
-    itemId
-    unitId
+    pantry {
+      id
+    }
     quantity
-    grams
     addedAt
     lastUsedAt
     expiresAt
@@ -2554,10 +2596,9 @@ export const ShoppingListItemsDocument = gql`
     query ShoppingListItems($shoppingListId: ID!) {
   shoppingListItems(shoppingListId: $shoppingListId) {
     id
-    label
     quantity
     itemName
-    unitSymbol
+    unitName
     isPurchased
     createdAt
     updatedAt
@@ -2606,11 +2647,12 @@ export const ShoppingListUpdatedDocument = gql`
     subscription ShoppingListUpdated($listId: ID!) {
   shoppingListUpdated(listId: $listId) {
     id
-    shoppingListId
-    label
+    shoppingList {
+      id
+    }
     quantity
     itemName
-    unitSymbol
+    unitName
     isPurchased
     createdAt
     updatedAt

@@ -18,11 +18,10 @@ const ShoppingListScreen = () => {
   const {styles} = useStyles(stylesheet);
   const [showBottomSheet, setShowBottomSheet] = useState(false);
   const selectedListId = useStore(s => s.selectedShoppingListId);
-  const {data: shoppingListsData, refetch: refetchShoppingLists} =
-    useShoppingListsQuery({
-      fetchPolicy: 'cache-and-network',
-      skip: false,
-    });
+  const {refetch: refetchShoppingLists} = useShoppingListsQuery({
+    fetchPolicy: 'cache-and-network',
+    skip: false,
+  });
 
   const {data: shoppingListItemsData, refetch: refetchShoppingListItems} =
     useShoppingListItemsQuery({
@@ -45,6 +44,9 @@ const ShoppingListScreen = () => {
         // trigger a refetch of ITEMS (or merge manually, see next section)
         refetchShoppingListItems();
       }
+    },
+    onError: error => {
+      console.error('ShoppingListUpdatedSubscription error:', error);
     },
   });
 
