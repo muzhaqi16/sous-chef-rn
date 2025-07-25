@@ -1,5 +1,6 @@
 import React, {useEffect, useState, useCallback} from 'react';
 import {ToastAndroid, ActivityIndicator, View} from 'react-native';
+import {CommonActions} from '@react-navigation/native';
 import {useForm} from 'react-hook-form';
 import {yupResolver} from '@hookform/resolvers/yup';
 
@@ -75,19 +76,41 @@ export function LoginScreen() {
 
         const {user, accessToken, refreshToken} = data.login;
 
-        // Persist into your Zustand auth slice
+        // Persist into your Zustand auth slice, we only use this to keep track of auth state
+
         setAuth(user, accessToken, refreshToken);
 
-        // If "remember me" is undefined that means that the user hasn't been asked yet
-        // so we need to set pending credentials.
+        // If the user has never been asked to remember login info
+        // and the rememberMe state is undefined, we set pending credentials and navigate to AuthStack
+        // AuthStack will handle the "remember me" logic
         if (rememberMe === undefined) {
           setPendingCredentials(email, password);
-        }
-
-        if (pwFromKeychain) {
-          // already saving credentials, just let navigator switch
+          navigation.dispatch(
+            CommonActions.reset({
+              index: 0,
+              routes: [{name: 'AuthStack'}],
+            }),
+          );
           return;
         }
+        if (!user.onBoarded) {
+          // not onboarded yet → go to onboarding stack
+          navigation.dispatch(
+            CommonActions.reset({
+              index: 0,
+              routes: [{name: 'OnBoardingStack'}],
+            }),
+          );
+          return; // stop here
+        }
+
+        // 🚩 Already onboarded and "remember me" state handled
+        navigation.dispatch(
+          CommonActions.reset({
+            index: 0,
+            routes: [{name: 'HomeStack'}], // main/home stack
+          }),
+        );
       } catch (err: any) {
         showToast({
           type: 'error',

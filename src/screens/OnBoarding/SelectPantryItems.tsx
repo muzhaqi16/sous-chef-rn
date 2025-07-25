@@ -9,6 +9,7 @@ import {
   useOnBoardingPantryItemsQuery,
   OnBoardingPantryItemsQuery,
   useAddItemToPantryMutation,
+  useUpdateUserMutation,
   useHomeQuery,
 } from '../../graphql/generated';
 import {useStore} from '../../store';
@@ -23,12 +24,8 @@ export const SelectPantryItems = () => {
   // 1) ALL hooks at the top, no early returns before these
   const navigation = useNavigation<CreateShoppingListNavProp>();
   const {styles} = useStyles(stylesheet);
-  const {
-    selectedPantryId,
-    setSelectedPantryId,
-    setOnBoardingStep,
-    setOnBoardingCompleted,
-  } = useStore();
+  const {user, selectedPantryId, setSelectedPantryId, setOnBoardingStep} =
+    useStore();
 
   const {data: homeData} = useHomeQuery({
     fetchPolicy: 'cache-and-network',
@@ -36,6 +33,13 @@ export const SelectPantryItems = () => {
       if (data.home?.defaultPantry) {
         setSelectedPantryId(data.home.defaultPantry.id);
       }
+    },
+    onError: e => console.error(e),
+  });
+
+  const [updateUser] = useUpdateUserMutation({
+    onCompleted: () => {
+      console.log('User updated successfully');
     },
     onError: e => console.error(e),
   });
@@ -104,14 +108,21 @@ export const SelectPantryItems = () => {
     );
     // Navigate to the next step in the onboarding process
     setOnBoardingStep(OnBoardingSteps.selectPantryItems);
-    setOnBoardingCompleted(true);
+    updateUser({
+      variables: {
+        id: user?.id || '',
+        input: {
+          onBoarded: true,
+        },
+      },
+    });
     navigation.dispatch(
       CommonActions.reset({
         index: 0,
         routes: [
           {
             // this is the final step, so we can go to Home
-            name: 'Home',
+            name: 'HomeStack',
           },
         ],
       }),
@@ -126,7 +137,15 @@ export const SelectPantryItems = () => {
       step={2}
       totalSteps={4}
       onBack={() => navigation.goBack()}
-      onSkip={() => navigation.replace('Home', {screen: 'Main'})}>
+      onSkip={() => {
+        setOnBoardingStep(OnBoardingSteps.selectPantryItems);
+        navigation.dispatch(
+          CommonActions.reset({
+            index: 0,
+            routes: [{name: 'HomeStack'}],
+          }),
+        );
+      }}>
       <KeyboardAwareScrollView style={styles.form}>
         <View style={styles.picker}>
           {data!.onBoardingPantryItems?.map(item => {

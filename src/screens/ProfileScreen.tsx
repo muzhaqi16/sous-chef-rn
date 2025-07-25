@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useState} from 'react';
 import {SafeAreaView, ScrollView} from 'react-native';
 import {useStore} from '../store';
 import {ProfileHeader} from '../components/organisms/ProfileHeader';

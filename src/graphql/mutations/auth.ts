@@ -12,6 +12,7 @@ export const LOGIN_MUTATION = gql`
         email
         role
         emailVerified
+        onBoarded
       }
     }
   }

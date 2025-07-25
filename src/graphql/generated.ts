@@ -80,7 +80,7 @@ export type CreateHomeInviteInput = {
   email: Scalars['String']['input'];
   expiresAt: Scalars['DateTime']['input'];
   homeId: Scalars['ID']['input'];
-  role: Role;
+  role: MembershipRole;
 };
 
 export type CreatePantryInput = {
@@ -186,7 +186,7 @@ export type HomeInvite = {
   id: Scalars['ID']['output'];
   inviter: User;
   inviterId: Scalars['ID']['output'];
-  role: Role;
+  role: MembershipRole;
   status: InviteStatus;
   token: Scalars['String']['output'];
 };
@@ -320,9 +320,15 @@ export type Membership = {
   __typename?: 'Membership';
   id: Scalars['ID']['output'];
   joinedAt: Scalars['DateTime']['output'];
-  role: Role;
+  role: MembershipRole;
   user: User;
 };
+
+export enum MembershipRole {
+  Guest = 'GUEST',
+  Member = 'MEMBER',
+  Owner = 'OWNER'
+}
 
 export type Mutation = {
   __typename?: 'Mutation';
@@ -749,9 +755,8 @@ export type MutationUpdateUnitArgs = {
 
 
 export type MutationUpdateUserArgs = {
-  email?: InputMaybe<Scalars['String']['input']>;
   id: Scalars['ID']['input'];
-  role?: InputMaybe<Role>;
+  input: UpdateUserInput;
 };
 
 
@@ -1080,11 +1085,6 @@ export type RemoveCollaboratorInput = {
   shoppingListId: Scalars['ID']['input'];
 };
 
-export enum Role {
-  Admin = 'ADMIN',
-  User = 'USER'
-}
-
 export type ShoppingList = {
   __typename?: 'ShoppingList';
   collaborators?: Maybe<Array<ShoppingListCollaborator>>;
@@ -1207,7 +1207,7 @@ export type UpdateHomeInput = {
 export type UpdateMembershipRoleInput = {
   homeId: Scalars['ID']['input'];
   membershipId: Scalars['ID']['input'];
-  role: Role;
+  role: MembershipRole;
 };
 
 export type UpdatePantryInput = {
@@ -1229,6 +1229,12 @@ export type UpdateShoppingListInput = {
   removeTags?: InputMaybe<Array<Scalars['String']['input']>>;
 };
 
+export type UpdateUserInput = {
+  email?: InputMaybe<Scalars['String']['input']>;
+  onBoarded?: InputMaybe<Scalars['Boolean']['input']>;
+  role?: InputMaybe<UserRole>;
+};
+
 export type UpdateUserSettingsInput = {
   avatarUrl?: InputMaybe<Scalars['String']['input']>;
   dateOfBirth?: InputMaybe<Scalars['DateTime']['input']>;
@@ -1242,8 +1248,8 @@ export type User = {
   email: Scalars['String']['output'];
   emailVerified: Scalars['Boolean']['output'];
   id: Scalars['ID']['output'];
-  moderation?: Maybe<UserModeration>;
-  role: Role;
+  onBoarded: Scalars['Boolean']['output'];
+  role: UserRole;
 };
 
 export type UserAddress = {
@@ -1284,6 +1290,12 @@ export type UserProfile = {
   userId: Scalars['String']['output'];
 };
 
+export enum UserRole {
+  Admin = 'ADMIN',
+  Moderator = 'MODERATOR',
+  User = 'USER'
+}
+
 export type UserSettings = {
   __typename?: 'UserSettings';
   dietaryRestrictions: Array<Scalars['String']['output']>;
@@ -1305,7 +1317,7 @@ export type LoginMutationVariables = Exact<{
 }>;
 
 
-export type LoginMutation = { __typename?: 'Mutation', login: { __typename?: 'AuthPayload', accessToken: string, refreshToken: string, user: { __typename?: 'User', id: string, email: string, role: Role, emailVerified: boolean } } };
+export type LoginMutation = { __typename?: 'Mutation', login: { __typename?: 'AuthPayload', accessToken: string, refreshToken: string, user: { __typename?: 'User', id: string, email: string, role: UserRole, emailVerified: boolean, onBoarded: boolean } } };
 
 export type RegisterMutationVariables = Exact<{
   email: Scalars['String']['input'];
@@ -1314,7 +1326,7 @@ export type RegisterMutationVariables = Exact<{
 }>;
 
 
-export type RegisterMutation = { __typename?: 'Mutation', register: { __typename?: 'AuthPayload', accessToken: string, refreshToken: string, user: { __typename?: 'User', id: string, email: string, role: Role, emailVerified: boolean } } };
+export type RegisterMutation = { __typename?: 'Mutation', register: { __typename?: 'AuthPayload', accessToken: string, refreshToken: string, user: { __typename?: 'User', id: string, email: string, role: UserRole, emailVerified: boolean } } };
 
 export type ForgotPasswordMutationVariables = Exact<{
   email: Scalars['String']['input'];
@@ -1401,12 +1413,20 @@ export type RemoveItemFromShoppingListMutationVariables = Exact<{
 
 export type RemoveItemFromShoppingListMutation = { __typename?: 'Mutation', removeItemFromShoppingList: boolean };
 
+export type UpdateUserMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+  input: UpdateUserInput;
+}>;
+
+
+export type UpdateUserMutation = { __typename?: 'Mutation', updateUser: { __typename?: 'User', id: string, email: string, role: UserRole, emailVerified: boolean, onBoarded: boolean } };
+
 export type ShoppingListCollaboratorsQueryVariables = Exact<{
   shoppingListId: Scalars['ID']['input'];
 }>;
 
 
-export type ShoppingListCollaboratorsQuery = { __typename?: 'Query', shoppingListCollaborators: Array<{ __typename?: 'ShoppingListCollaborator', id: string, role: CollaboratorRole, status: CollaboratorStatus, invitedAt: any, statusChangedAt?: any | null, email?: string | null, collaborator?: { __typename?: 'User', email: string, role: Role, emailVerified: boolean, id: string } | null }> };
+export type ShoppingListCollaboratorsQuery = { __typename?: 'Query', shoppingListCollaborators: Array<{ __typename?: 'ShoppingListCollaborator', id: string, role: CollaboratorRole, status: CollaboratorStatus, invitedAt: any, statusChangedAt?: any | null, email?: string | null, collaborator?: { __typename?: 'User', email: string, role: UserRole, emailVerified: boolean, id: string } | null }> };
 
 export type HomeQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -1495,6 +1515,7 @@ export const LoginDocument = gql`
       email
       role
       emailVerified
+      onBoarded
     }
   }
 }
@@ -2004,6 +2025,44 @@ export function useRemoveItemFromShoppingListMutation(baseOptions?: Apollo.Mutat
 export type RemoveItemFromShoppingListMutationHookResult = ReturnType<typeof useRemoveItemFromShoppingListMutation>;
 export type RemoveItemFromShoppingListMutationResult = Apollo.MutationResult<RemoveItemFromShoppingListMutation>;
 export type RemoveItemFromShoppingListMutationOptions = Apollo.BaseMutationOptions<RemoveItemFromShoppingListMutation, RemoveItemFromShoppingListMutationVariables>;
+export const UpdateUserDocument = gql`
+    mutation UpdateUser($id: ID!, $input: UpdateUserInput!) {
+  updateUser(id: $id, input: $input) {
+    id
+    email
+    role
+    emailVerified
+    onBoarded
+  }
+}
+    `;
+export type UpdateUserMutationFn = Apollo.MutationFunction<UpdateUserMutation, UpdateUserMutationVariables>;
+
+/**
+ * __useUpdateUserMutation__
+ *
+ * To run a mutation, you first call `useUpdateUserMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateUserMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateUserMutation, { data, loading, error }] = useUpdateUserMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useUpdateUserMutation(baseOptions?: Apollo.MutationHookOptions<UpdateUserMutation, UpdateUserMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateUserMutation, UpdateUserMutationVariables>(UpdateUserDocument, options);
+      }
+export type UpdateUserMutationHookResult = ReturnType<typeof useUpdateUserMutation>;
+export type UpdateUserMutationResult = Apollo.MutationResult<UpdateUserMutation>;
+export type UpdateUserMutationOptions = Apollo.BaseMutationOptions<UpdateUserMutation, UpdateUserMutationVariables>;
 export const ShoppingListCollaboratorsDocument = gql`
     query ShoppingListCollaborators($shoppingListId: ID!) {
   shoppingListCollaborators(shoppingListId: $shoppingListId) {

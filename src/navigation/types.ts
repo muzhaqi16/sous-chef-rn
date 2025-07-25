@@ -13,9 +13,9 @@ import type {
 import type {BottomTabScreenProps} from '@react-navigation/bottom-tabs';
 
 export type RootStackParamList = {
-  Home: NavigatorScreenParams<HomeTabParamList>;
-  Auth: NavigatorScreenParams<AuthStackParamList>;
-  OnBoarding: NavigatorScreenParams<OnBoardingStackParamList>;
+  HomeStack: NavigatorScreenParams<HomeTabParamList>;
+  AuthStack: NavigatorScreenParams<AuthStackParamList>;
+  OnBoardingStack: NavigatorScreenParams<OnBoardingStackParamList>;
   NotFound: undefined;
 };
 

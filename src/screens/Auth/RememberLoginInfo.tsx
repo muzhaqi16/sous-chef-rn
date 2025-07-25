@@ -2,7 +2,7 @@ import React from 'react';
 import {Text, TouchableOpacity} from 'react-native';
 import {useForm} from 'react-hook-form';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
-import {useNavigation, CommonActions} from '@react-navigation/native';
+import {CommonActions} from '@react-navigation/native';
 import {AuthWrapper, AuthFormTemplate} from '../../components/templates';
 import {saveCredentials} from '../../storage/keychain';
 import {useStore} from '../../store';
@@ -16,7 +16,6 @@ export const RememberLoginInfoScreen = ({
   const {
     user,
     setRememberMe,
-    onBoardingCompleted,
     pendingEmail,
     pendingPassword,
     clearPendingCredentials,
@@ -37,12 +36,12 @@ export const RememberLoginInfoScreen = ({
     setRememberMe(choice);
     clearPendingCredentials();
     // 2) figure out which branch AppNavigator will pick next
-    const nextRoute: 'Auth' | 'OnBoarding' | 'Home' =
+    const nextRoute: 'AuthStack' | 'OnBoardingStack' | 'HomeStack' =
       !user || !user.emailVerified || choice === undefined
-        ? 'Auth'
-        : !onBoardingCompleted
-          ? 'OnBoarding'
-          : 'Home';
+        ? 'AuthStack'
+        : !user?.onBoarded
+          ? 'OnBoardingStack'
+          : 'HomeStack';
 
     // 3) reset the *root* navigator into that branch
     navigation.getParent()?.dispatch(

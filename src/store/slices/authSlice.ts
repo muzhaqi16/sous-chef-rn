@@ -67,5 +67,10 @@ export const createAuthSlice: StateCreator<
       state.user = null;
       state.accessToken = null;
       state.refreshToken = null;
+      state.pendingEmail = undefined;
+      state.pendingPassword = undefined;
+      state.resetPreferences(); // Clear preferences on logout
+      // Optionally clear any other state related to the user session
+      // e.g., shopping lists, items, etc.
     }),
 });

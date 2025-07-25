@@ -30,7 +30,7 @@ const AuthStack = () => {
     : !user.emailVerified
       ? 'CodeVerification'
       : 'RememberLoginInfo'; // or wherever makes sense after “no thanks”
-
+  console.log('AuthStack initialRoute:', initialRoute);
   return (
     <Stack.Navigator
       key={initialRoute}
@@ -54,35 +54,42 @@ const AuthStack = () => {
         gestureEnabled: true,
         gestureDirection: 'vertical', // vertical swipe to dismiss
       }}>
-      <Stack.Screen
-        name="LandingAuth"
-        component={LandingAuthScreen} // or a landing page component
-        options={{headerShown: false, animation: 'fade_from_bottom'}}
-      />
-      <Stack.Screen
-        name="Login"
-        component={LoginScreen}
-        options={{headerShown: false, animation: 'slide_from_left'}}
-      />
-      <Stack.Screen
-        name="SignUp"
-        component={SignUpScreen}
-        options={{headerShown: false, animation: 'slide_from_right'}}
-      />
-      <Stack.Screen
-        name="ForgotPassword"
-        component={ForgotPasswordScreen}
-        options={{headerShown: false, animation: 'slide_from_right'}}
-      />
-      <Stack.Screen
-        name="RememberLoginInfo"
-        component={RememberLoginInfoScreen}
-      />
-      <Stack.Screen
-        name="CodeVerification"
-        component={CodeVerificationScreen}
-        options={{animation: 'slide_from_bottom'}}
-      />
+      {user == null ? (
+        <>
+          <Stack.Screen
+            name="LandingAuth"
+            component={LandingAuthScreen} // or a landing page component
+            options={{headerShown: false, animation: 'fade_from_bottom'}}
+          />
+          <Stack.Screen
+            name="Login"
+            component={LoginScreen}
+            options={{headerShown: false, animation: 'slide_from_left'}}
+          />
+          <Stack.Screen
+            name="SignUp"
+            component={SignUpScreen}
+            options={{headerShown: false, animation: 'slide_from_right'}}
+          />
+          <Stack.Screen
+            name="ForgotPassword"
+            component={ForgotPasswordScreen}
+            options={{headerShown: false, animation: 'slide_from_right'}}
+          />
+        </>
+      ) : (
+        <>
+          <Stack.Screen
+            name="RememberLoginInfo"
+            component={RememberLoginInfoScreen}
+          />
+          <Stack.Screen
+            name="CodeVerification"
+            component={CodeVerificationScreen}
+            options={{animation: 'slide_from_bottom'}}
+          />
+        </>
+      )}
     </Stack.Navigator>
   );
 };

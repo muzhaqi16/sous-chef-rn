@@ -12,7 +12,7 @@ import type {RootStackParamList} from './types';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function AppNavigator() {
-  const {isHydrated, user, onBoardingCompleted} = useStore();
+  const {isHydrated, user} = useStore();
 
   if (!isHydrated) {
     // still loading your persisted zustand store
@@ -21,10 +21,11 @@ export default function AppNavigator() {
   // only gate on user existence & verification here — rememberMe is handled _inside_ AuthStack.
   const initialRoute: keyof RootStackParamList =
     !user || !user.emailVerified
-      ? 'Auth'
-      : !onBoardingCompleted
-        ? 'OnBoarding'
-        : 'Home';
+      ? 'AuthStack'
+      : !user?.onBoarded
+        ? 'OnBoardingStack'
+        : 'HomeStack';
+  console.log('AppNavigator initialRoute:', initialRoute);
   return (
     <NavigationContainer>
       <Stack.Navigator
@@ -32,9 +33,9 @@ export default function AppNavigator() {
         initialRouteName={initialRoute} // must be one of 'Auth' | 'Home' | 'OnBoarding' | 'NotFound'
         screenOptions={{headerShown: false}}>
         {/* your two “flow” entry-points */}
-        <Stack.Screen name="Auth" component={AuthStack} />
-        <Stack.Screen name="OnBoarding" component={OnBoardingStack} />
-        <Stack.Screen name="Home" component={HomeTab} />
+        <Stack.Screen name="AuthStack" component={AuthStack} />
+        <Stack.Screen name="OnBoardingStack" component={OnBoardingStack} />
+        <Stack.Screen name="HomeStack" component={HomeTab} />
 
         {/* always have a catch-all */}
         <Stack.Screen name="NotFound" component={NotFoundScreen} />

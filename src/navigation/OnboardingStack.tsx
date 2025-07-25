@@ -10,17 +10,17 @@ import {OnBoardingSteps} from '../store/slices/preferencesSlice';
 const Stack = createNativeStackNavigator<OnBoardingStackParamList>();
 
 const OnBoardingStack = () => {
-  const {onBoardingStep, onBoardingCompleted} = useStore();
+  const {onBoardingStep, user} = useStore();
+  const onBoarded = user?.onBoarded ?? false;
 
   // Set the intial route based on the onboarding step or completion status that the user has reached
-  const initialRouteName = onBoardingCompleted
+  const initialRouteName = onBoarded
     ? 'OnBoardingCompleted'
     : onBoardingStep === OnBoardingSteps.createShoppingList
       ? 'CreateShoppingList'
       : onBoardingStep === OnBoardingSteps.selectPantryItems
         ? 'SelectPantryItems'
         : 'CreateShoppingList';
-  console.log('OnBoardingStack initialRouteName:', initialRouteName);
 
   return (
     <Stack.Navigator

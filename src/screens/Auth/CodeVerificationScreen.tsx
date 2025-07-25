@@ -16,7 +16,7 @@ type CodeVerificationValues = {
 };
 
 export function CodeVerificationScreen() {
-  const {setEmailVerified, user, onBoardingCompleted} = useStore();
+  const {setEmailVerified, user} = useStore();
   const [verifyEmail] = useVerifyEmailMutation();
   const [resendVerificationEmail] = useResendVerificationEmailMutation();
   const navigation = useNavigation();
@@ -46,7 +46,7 @@ export function CodeVerificationScreen() {
               {
                 // if they still need onboarding, send them there,
                 // otherwise straight to HomeTab
-                name: onBoardingCompleted ? 'Home' : 'OnBoarding',
+                name: user?.onBoarded ? 'Home' : 'OnBoarding',
               },
             ],
           }),

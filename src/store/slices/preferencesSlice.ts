@@ -1,4 +1,3 @@
-// src/store/slices/preferencesSlice.ts
 import {StateCreator} from 'zustand';
 import {RootState} from '../index';
 
@@ -12,7 +11,6 @@ export const OnBoardingSteps = {
 
 export interface PreferencesState {
   theme: 'light' | 'dark';
-  onBoardingCompleted: boolean;
   onBoardingStep: OnBoardingSteps;
   language?: string;
   emailNotifications?: boolean;
@@ -28,7 +26,6 @@ export interface PreferencesState {
   setSelectedShoppingListId: (id: string | null) => void;
   setSelectedPantryId: (id: string | null) => void;
   setTheme: (theme: 'light' | 'dark') => void;
-  setOnBoardingCompleted: (completed: boolean) => void;
   setOnBoardingStep: (step: OnBoardingSteps) => void;
   setLanguage: (language: string) => void;
 
@@ -46,7 +43,6 @@ const initialPreferencesState: Omit<
   | 'setSelectedShoppingListId'
   | 'setSelectedPantryId'
   | 'setTheme'
-  | 'setOnBoardingCompleted'
   | 'setOnBoardingStep'
   | 'setLanguage'
   | 'resetPreferences'
@@ -55,7 +51,6 @@ const initialPreferencesState: Omit<
   | 'hydrate'
 > = {
   theme: 'light',
-  onBoardingCompleted: false,
   onBoardingStep: null,
   language: undefined,
   emailNotifications: false,
@@ -101,11 +96,6 @@ export const createPreferencesSlice: StateCreator<
   setTheme: theme =>
     set(draft => {
       draft.theme = theme;
-    }),
-
-  setOnBoardingCompleted: completed =>
-    set(draft => {
-      draft.onBoardingCompleted = completed;
     }),
 
   setOnBoardingStep: step =>
