@@ -5,3 +5,4 @@ export {ToastProvider} from './Toast.tsx';
 export {NotificationBanner} from './Notification.tsx';
 export {Button} from './Button.tsx';
 export {IconButton} from './IconButton.tsx';
+export {Title} from './Title.tsx';

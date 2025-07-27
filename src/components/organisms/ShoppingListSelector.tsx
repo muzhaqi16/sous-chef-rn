@@ -4,10 +4,12 @@ import {ShoppingList, useShoppingListsQuery} from '../../graphql/generated';
 import {useStore} from '../../store';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
 import {BottomSheetAction} from '../templates/BottomSheetAction';
+import {ActionButton} from '../molecules';
 
 export const ShoppingListSelector = () => {
   const {styles, theme} = useStyles(stylesheet);
-
+  const ref =
+    React.useRef<import('@gorhom/bottom-sheet').BottomSheetModal>(null);
   // Zustand store hooks
   const {selectedShoppingListId, setSelectedShoppingListId} = useStore();
 
@@ -34,19 +36,25 @@ export const ShoppingListSelector = () => {
   );
 
   return (
-    <BottomSheetAction
-      actionIcon="list"
-      actionColor={theme.colors.white}
-      actionStyle={styles.button}
-      snapPoints={['35%', '50%', '75%']}
-      sheetTitle="Select Shopping List">
-      <FlatList
-        data={shoppingLists}
-        keyExtractor={item => item.id}
-        renderItem={renderItem}
-        keyboardShouldPersistTaps="handled"
+    <>
+      <ActionButton
+        name={'list'}
+        onPress={() => ref.current?.present()}
+        style={styles.button}
+        color={theme.colors.white}
       />
-    </BottomSheetAction>
+      <BottomSheetAction
+        snapPoints={['35%', '50%', '75%']}
+        sheetRef={ref}
+        sheetTitle="Select Shopping List">
+        <FlatList
+          data={shoppingLists}
+          keyExtractor={item => item.id}
+          renderItem={renderItem}
+          keyboardShouldPersistTaps="handled"
+        />
+      </BottomSheetAction>
+    </>
   );
 };
 

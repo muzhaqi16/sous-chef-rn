@@ -276,7 +276,10 @@ export type ItemStoreSku = {
 export type ItemSuggestion = {
   __typename?: 'ItemSuggestion';
   id: Scalars['ID']['output'];
+  imageUrl?: Maybe<Scalars['String']['output']>;
   name: Scalars['String']['output'];
+  shelfLifeDays?: Maybe<Scalars['Int']['output']>;
+  units?: Maybe<Array<ItemUnit>>;
 };
 
 export enum ItemType {
@@ -388,6 +391,7 @@ export type Mutation = {
   updatePantryItem: PantryItem;
   updatePurchase: Purchase;
   updateShoppingList: ShoppingList;
+  updateShoppingListItem: ShoppingListItem;
   updateStore: Store;
   updateStoreInfo: StoreInfo;
   updateUnit: Unit;
@@ -722,6 +726,12 @@ export type MutationUpdatePurchaseArgs = {
 
 export type MutationUpdateShoppingListArgs = {
   data: UpdateShoppingListInput;
+  id: Scalars['ID']['input'];
+};
+
+
+export type MutationUpdateShoppingListItemArgs = {
+  data: ShoppingListItemInput;
   id: Scalars['ID']['input'];
 };
 
@@ -1195,8 +1205,8 @@ export type Unit = {
 export enum UnitType {
   Count = 'COUNT',
   Length = 'LENGTH',
-  Mass = 'MASS',
-  Volume = 'VOLUME'
+  Volume = 'VOLUME',
+  Weight = 'WEIGHT'
 }
 
 export type UpdateHomeInput = {
@@ -1413,6 +1423,14 @@ export type RemoveItemFromShoppingListMutationVariables = Exact<{
 
 export type RemoveItemFromShoppingListMutation = { __typename?: 'Mutation', removeItemFromShoppingList: boolean };
 
+export type UpdateShoppingListItemMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+  data: ShoppingListItemInput;
+}>;
+
+
+export type UpdateShoppingListItemMutation = { __typename?: 'Mutation', updateShoppingListItem: { __typename?: 'ShoppingListItem', id: string, quantity?: number | null, itemName?: string | null, unitName?: string | null, isPurchased: boolean, createdAt: any, updatedAt: any, deletedAt?: any | null, version: number } };
+
 export type UpdateUserMutationVariables = Exact<{
   id: Scalars['ID']['input'];
   input: UpdateUserInput;
@@ -1456,10 +1474,11 @@ export type ItemsQuery = { __typename?: 'Query', items?: { __typename?: 'Paginat
 
 export type AutocompleteItemsQueryVariables = Exact<{
   name: Scalars['String']['input'];
+  limit?: InputMaybe<Scalars['Int']['input']>;
 }>;
 
 
-export type AutocompleteItemsQuery = { __typename?: 'Query', autocompleteItems?: Array<{ __typename?: 'ItemSuggestion', id: string, name: string }> | null };
+export type AutocompleteItemsQuery = { __typename?: 'Query', autocompleteItems?: Array<{ __typename?: 'ItemSuggestion', name: string, id: string, imageUrl?: string | null, shelfLifeDays?: number | null, units?: Array<{ __typename?: 'ItemUnit', id: string, isDefault: boolean, conversionFactor?: number | null, notes?: string | null, unit: { __typename?: 'Unit', id: string, name: string, symbol: string, type: UnitType, conversionFactor?: number | null, notes?: string | null } }> | null }> | null };
 
 export type PantriesQueryVariables = Exact<{
   homeId: Scalars['ID']['input'];
@@ -1496,6 +1515,11 @@ export type ShoppingListItemsQueryVariables = Exact<{
 
 
 export type ShoppingListItemsQuery = { __typename?: 'Query', shoppingListItems: Array<{ __typename?: 'ShoppingListItem', id: string, quantity?: number | null, itemName?: string | null, unitName?: string | null, isPurchased: boolean, createdAt: any, updatedAt: any, item?: { __typename?: 'Item', id: string, name: string, imageUrl?: string | null } | null }> };
+
+export type UnitsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type UnitsQuery = { __typename?: 'Query', units: Array<{ __typename?: 'Unit', id: string, name: string, symbol: string, type: UnitType, conversionFactor?: number | null, notes?: string | null }> };
 
 export type ShoppingListUpdatedSubscriptionVariables = Exact<{
   listId: Scalars['ID']['input'];
@@ -2025,6 +2049,48 @@ export function useRemoveItemFromShoppingListMutation(baseOptions?: Apollo.Mutat
 export type RemoveItemFromShoppingListMutationHookResult = ReturnType<typeof useRemoveItemFromShoppingListMutation>;
 export type RemoveItemFromShoppingListMutationResult = Apollo.MutationResult<RemoveItemFromShoppingListMutation>;
 export type RemoveItemFromShoppingListMutationOptions = Apollo.BaseMutationOptions<RemoveItemFromShoppingListMutation, RemoveItemFromShoppingListMutationVariables>;
+export const UpdateShoppingListItemDocument = gql`
+    mutation UpdateShoppingListItem($id: ID!, $data: ShoppingListItemInput!) {
+  updateShoppingListItem(id: $id, data: $data) {
+    id
+    quantity
+    itemName
+    unitName
+    isPurchased
+    createdAt
+    updatedAt
+    deletedAt
+    version
+  }
+}
+    `;
+export type UpdateShoppingListItemMutationFn = Apollo.MutationFunction<UpdateShoppingListItemMutation, UpdateShoppingListItemMutationVariables>;
+
+/**
+ * __useUpdateShoppingListItemMutation__
+ *
+ * To run a mutation, you first call `useUpdateShoppingListItemMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateShoppingListItemMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateShoppingListItemMutation, { data, loading, error }] = useUpdateShoppingListItemMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      data: // value for 'data'
+ *   },
+ * });
+ */
+export function useUpdateShoppingListItemMutation(baseOptions?: Apollo.MutationHookOptions<UpdateShoppingListItemMutation, UpdateShoppingListItemMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateShoppingListItemMutation, UpdateShoppingListItemMutationVariables>(UpdateShoppingListItemDocument, options);
+      }
+export type UpdateShoppingListItemMutationHookResult = ReturnType<typeof useUpdateShoppingListItemMutation>;
+export type UpdateShoppingListItemMutationResult = Apollo.MutationResult<UpdateShoppingListItemMutation>;
+export type UpdateShoppingListItemMutationOptions = Apollo.BaseMutationOptions<UpdateShoppingListItemMutation, UpdateShoppingListItemMutationVariables>;
 export const UpdateUserDocument = gql`
     mutation UpdateUser($id: ID!, $input: UpdateUserInput!) {
   updateUser(id: $id, input: $input) {
@@ -2348,10 +2414,26 @@ export type ItemsLazyQueryHookResult = ReturnType<typeof useItemsLazyQuery>;
 export type ItemsSuspenseQueryHookResult = ReturnType<typeof useItemsSuspenseQuery>;
 export type ItemsQueryResult = Apollo.QueryResult<ItemsQuery, ItemsQueryVariables>;
 export const AutocompleteItemsDocument = gql`
-    query AutocompleteItems($name: String!) {
-  autocompleteItems(name: $name) {
-    id
+    query AutocompleteItems($name: String!, $limit: Int) {
+  autocompleteItems(name: $name, limit: $limit) {
     name
+    id
+    imageUrl
+    shelfLifeDays
+    units {
+      id
+      unit {
+        id
+        name
+        symbol
+        type
+        conversionFactor
+        notes
+      }
+      isDefault
+      conversionFactor
+      notes
+    }
   }
 }
     `;
@@ -2369,6 +2451,7 @@ export const AutocompleteItemsDocument = gql`
  * const { data, loading, error } = useAutocompleteItemsQuery({
  *   variables: {
  *      name: // value for 'name'
+ *      limit: // value for 'limit'
  *   },
  * });
  */
@@ -2706,6 +2789,50 @@ export type ShoppingListItemsQueryHookResult = ReturnType<typeof useShoppingList
 export type ShoppingListItemsLazyQueryHookResult = ReturnType<typeof useShoppingListItemsLazyQuery>;
 export type ShoppingListItemsSuspenseQueryHookResult = ReturnType<typeof useShoppingListItemsSuspenseQuery>;
 export type ShoppingListItemsQueryResult = Apollo.QueryResult<ShoppingListItemsQuery, ShoppingListItemsQueryVariables>;
+export const UnitsDocument = gql`
+    query Units {
+  units {
+    id
+    name
+    symbol
+    type
+    conversionFactor
+    notes
+  }
+}
+    `;
+
+/**
+ * __useUnitsQuery__
+ *
+ * To run a query within a React component, call `useUnitsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useUnitsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useUnitsQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useUnitsQuery(baseOptions?: Apollo.QueryHookOptions<UnitsQuery, UnitsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<UnitsQuery, UnitsQueryVariables>(UnitsDocument, options);
+      }
+export function useUnitsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<UnitsQuery, UnitsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<UnitsQuery, UnitsQueryVariables>(UnitsDocument, options);
+        }
+export function useUnitsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<UnitsQuery, UnitsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<UnitsQuery, UnitsQueryVariables>(UnitsDocument, options);
+        }
+export type UnitsQueryHookResult = ReturnType<typeof useUnitsQuery>;
+export type UnitsLazyQueryHookResult = ReturnType<typeof useUnitsLazyQuery>;
+export type UnitsSuspenseQueryHookResult = ReturnType<typeof useUnitsSuspenseQuery>;
+export type UnitsQueryResult = Apollo.QueryResult<UnitsQuery, UnitsQueryVariables>;
 export const ShoppingListUpdatedDocument = gql`
     subscription ShoppingListUpdated($listId: ID!) {
   shoppingListUpdated(listId: $listId) {

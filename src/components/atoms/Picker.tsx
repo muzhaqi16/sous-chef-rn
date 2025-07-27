@@ -1,4 +1,5 @@
 import {useState} from 'react';
+import {ViewStyle} from 'react-native';
 import {Picker} from '@react-native-picker/picker';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
 
@@ -6,6 +7,7 @@ type PickerSelectProps = {
   items: {id: string; name: string}[] | undefined;
   initialValue: string;
   onValueChange: (itemValue: string) => void;
+  style: ViewStyle;
 };
 
 const Item: any = Picker.Item;

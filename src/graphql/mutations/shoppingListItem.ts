@@ -17,3 +17,20 @@ export const REMOVE_ITEM = gql`
     removeItemFromShoppingList(id: $removeItemFromShoppingListId)
   }
 `;
+
+// Update an item in shopping list
+export const UPDATE_ITEM_IN_SHOPPING_LIST_MUTATION = gql`
+  mutation UpdateShoppingListItem($id: ID!, $data: ShoppingListItemInput!) {
+    updateShoppingListItem(id: $id, data: $data) {
+      id
+      quantity
+      itemName
+      unitName
+      isPurchased
+      createdAt
+      updatedAt
+      deletedAt
+      version
+    }
+  }
+`;

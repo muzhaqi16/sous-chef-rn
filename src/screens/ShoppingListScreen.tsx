@@ -14,6 +14,7 @@ import {
   useShoppingListsQuery,
   useShoppingListItemsQuery,
 } from '../graphql/generated';
+import {ShoppingListModals} from '../components/pages/ShoppingListModals';
 
 const ShoppingListScreen = () => {
   const {styles} = useStyles(stylesheet);
@@ -71,7 +72,7 @@ const ShoppingListScreen = () => {
         placeholder="Search items…"
         leftComponent={<ShoppingListSelector />}
         containerStyle={styles.searchBar}
-        rightComponent={<AddItemBottomSheet />}
+        rightComponent={<ShoppingListModals />}
       />
 
       <ShoppingListItems data={filtered} />

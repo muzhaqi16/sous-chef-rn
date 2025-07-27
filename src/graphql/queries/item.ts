@@ -55,10 +55,26 @@ export const GET_ITEMS = gql`
 `;
 
 export const GET_ITEMS_FOR_AUTOCOMPLETE = gql`
-  query AutocompleteItems($name: String!) {
-    autocompleteItems(name: $name) {
-      id
+  query AutocompleteItems($name: String!, $limit: Int) {
+    autocompleteItems(name: $name, limit: $limit) {
       name
+      id
+      imageUrl
+      shelfLifeDays
+      units {
+        id
+        unit {
+          id
+          name
+          symbol
+          type
+          conversionFactor
+          notes
+        }
+        isDefault
+        conversionFactor
+        notes
+      }
     }
   }
 `;

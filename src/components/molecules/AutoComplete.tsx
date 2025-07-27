@@ -1,15 +1,14 @@
 import React, {useMemo, useEffect} from 'react';
 import {Text, TouchableOpacity, StyleSheet} from 'react-native';
 import {BottomSheetFlatList} from '@gorhom/bottom-sheet';
-import {useAutocompleteItemsLazyQuery} from '../../graphql/generated';
-interface Item {
-  id: string;
-  name: string;
-}
+import {
+  useAutocompleteItemsLazyQuery,
+  ItemSuggestion,
+} from '../../graphql/generated';
 
 interface AutocompleteProps {
   searchTerm: string;
-  onSelectItem: (item: Item) => void;
+  onSelectItem: (item: ItemSuggestion) => void;
 }
 
 const Autocomplete: React.FC<AutocompleteProps> = ({
@@ -33,7 +32,7 @@ const Autocomplete: React.FC<AutocompleteProps> = ({
     // If searchTerm is less than 2 characters, return an empty array.
     if (searchTerm.length < 2) return [];
     if (!data?.autocompleteItems) return [];
-    return data.autocompleteItems.filter((item: Item) =>
+    return data.autocompleteItems.filter((item: ItemSuggestion) =>
       item.name.toLowerCase().includes(searchTerm.toLowerCase()),
     );
   }, [data, searchTerm]);
@@ -46,7 +45,7 @@ const Autocomplete: React.FC<AutocompleteProps> = ({
       style={{flex: 1}}
       keyboardDismissMode="on-drag"
       data={filteredItems}
-      keyExtractor={(item: Item) => item.id}
+      keyExtractor={(item: ItemSuggestion) => item.id}
       showsVerticalScrollIndicator={false}
       renderItem={({item}) => (
         <TouchableOpacity
