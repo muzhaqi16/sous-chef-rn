@@ -6,13 +6,17 @@ export const GET_SHOPPING_LISTS = gql`
       id
       name
       owner {
-        email
         id
+        email
+        emailVerified
+        onBoarded
+        role
       }
       isDefault
       tags
       createdAt
       updatedAt
+      version
     }
   }
 `;

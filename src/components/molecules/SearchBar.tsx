@@ -26,7 +26,6 @@ const SearchBar: React.FC<SearchBarProps> = ({
 
   return (
     <View style={[styles.container, containerStyle]}>
-      {!!leftComponent && <View style={styles.side}>{leftComponent}</View>}
       <BaseInput
         value={value}
         onChangeText={onChangeText}
@@ -35,6 +34,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
         containerStyle={styles.inputContainer}
         {...textInputProps}
       />
+      {!!leftComponent && <View style={styles.side}>{leftComponent}</View>}
       {!!rightComponent && <View style={styles.side}>{rightComponent}</View>}
     </View>
   );
@@ -47,10 +47,9 @@ const stylesheet = createStyleSheet(theme => ({
     padding: theme.spacing.sm,
     borderRadius: theme.radii.sm,
   },
-  side: {
-    marginHorizontal: theme.spacing.xs,
-  },
+  side: {},
   inputContainer: {
+    // allow input to take full width
     flex: 1,
   },
   input: {

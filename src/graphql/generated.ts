@@ -1488,7 +1488,7 @@ export type UserProfileQuery = { __typename?: 'Query', userProfile?: { __typenam
 export type ShoppingListsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type ShoppingListsQuery = { __typename?: 'Query', shoppingLists: Array<{ __typename?: 'ShoppingList', id: string, name: string, isDefault: boolean, tags?: Array<string> | null, createdAt: any, updatedAt: any, owner: { __typename?: 'User', email: string, id: string } }> };
+export type ShoppingListsQuery = { __typename?: 'Query', shoppingLists: Array<{ __typename?: 'ShoppingList', id: string, name: string, isDefault: boolean, tags?: Array<string> | null, createdAt: any, updatedAt: any, version: number, owner: { __typename?: 'User', id: string, email: string, emailVerified: boolean, onBoarded: boolean, role: UserRole } }> };
 
 export type ShoppingListItemsQueryVariables = Exact<{
   shoppingListId: Scalars['ID']['input'];
@@ -2609,13 +2609,17 @@ export const ShoppingListsDocument = gql`
     id
     name
     owner {
-      email
       id
+      email
+      emailVerified
+      onBoarded
+      role
     }
     isDefault
     tags
     createdAt
     updatedAt
+    version
   }
 }
     `;

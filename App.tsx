@@ -1,6 +1,8 @@
 import React, {useEffect} from 'react';
 import {StatusBar, useColorScheme} from 'react-native';
 import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
+import {GestureHandlerRootView} from 'react-native-gesture-handler';
+import {BottomSheetModalProvider} from '@gorhom/bottom-sheet';
 import {ApolloProvider} from '@apollo/client';
 import {useStore} from './src/store';
 import {client} from './src/apollo/client';
@@ -39,20 +41,25 @@ const App = () => {
     return <SplashScreen />;
   }
   return (
-    <ApolloProvider client={client}>
-      <SafeAreaProvider>
-        <StatusBar
-          barStyle={effectiveDark ? 'light-content' : 'dark-content'}
-          backgroundColor={colors.background}
-        />
-        <SafeAreaView style={styles.container}>
-          <Text style={styles.text}>API_URL: {Config.API_URL}</Text>
-          <ToastProvider>
-            <AppNavigator />
-          </ToastProvider>
-        </SafeAreaView>
-      </SafeAreaProvider>
-    </ApolloProvider>
+    <GestureHandlerRootView style={styles.container}>
+      <ApolloProvider client={client}>
+        <SafeAreaProvider>
+          <StatusBar
+            barStyle={effectiveDark ? 'light-content' : 'dark-content'}
+            backgroundColor={colors.background}
+          />
+          <SafeAreaView style={styles.container}>
+            <Text style={styles.text}>API_URL: {Config.API_URL}</Text>
+            <ToastProvider>
+              {/* BottomSheetModalProvider needs to be above NavigationContainer */}
+              <BottomSheetModalProvider>
+                <AppNavigator />
+              </BottomSheetModalProvider>
+            </ToastProvider>
+          </SafeAreaView>
+        </SafeAreaProvider>
+      </ApolloProvider>
+    </GestureHandlerRootView>
   );
 };
 

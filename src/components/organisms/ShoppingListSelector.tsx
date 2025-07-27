@@ -1,54 +1,72 @@
-import React, {useEffect} from 'react';
-import {View} from 'react-native';
-import {PickerSelect} from '../../components/atoms/Picker';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
-import {useShoppingListsQuery} from '../../graphql/generated';
+import React from 'react';
+import {TouchableOpacity, Text, FlatList} from 'react-native';
+import {ShoppingList, useShoppingListsQuery} from '../../graphql/generated';
 import {useStore} from '../../store';
+import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {BottomSheetAction} from '../templates/BottomSheetAction';
 
 export const ShoppingListSelector = () => {
-  const {styles} = useStyles(stylesheet);
+  const {styles, theme} = useStyles(stylesheet);
 
-  // 1) Get the global selectedListId and the setter
-  const selectedListId = useStore(s => s.selectedShoppingListId);
-  const setSelectedListId = useStore(s => s.setSelectedShoppingListId);
+  // Zustand store hooks
+  const {selectedShoppingListId, setSelectedShoppingListId} = useStore();
 
-  // 2) Fetch all lists
-  const {data, loading, error, refetch} = useShoppingListsQuery({
-    fetchPolicy: 'cache-and-network',
-  });
+  // Query your shopping lists
+  const {data} = useShoppingListsQuery({fetchPolicy: 'cache-and-network'});
   const shoppingLists = data?.shoppingLists ?? [];
 
-  // 3) On mount, if no selectedListId, pick the default or first
-  useEffect(() => {
-    if (shoppingLists.length === 0) return;
-    // If nothing selected or the id no longer exists, pick a new one
-    if (!selectedListId || !shoppingLists.some(l => l.id === selectedListId)) {
-      const def = shoppingLists.find(l => l.isDefault);
-      setSelectedListId(def?.id ?? shoppingLists[0].id);
-    }
-  }, [shoppingLists, selectedListId, setSelectedListId]);
+  // Select a shopping list
+  const selectList = (id: string) => {
+    setSelectedShoppingListId(id);
+  };
 
-  // 4) Render the picker
+  // Render list item
+  const renderItem = ({item}: {item: ShoppingList}) => (
+    <TouchableOpacity style={[styles.item]} onPress={() => selectList(item.id)}>
+      <Text
+        style={[
+          styles.itemText,
+          item.id === selectedShoppingListId && styles.selectedItemText,
+        ]}>
+        {item.name}
+      </Text>
+    </TouchableOpacity>
+  );
+
   return (
-    <View style={styles.container}>
-      <PickerSelect
-        items={shoppingLists.map(list => ({
-          id: list.id,
-          name: list.name,
-        }))}
-        initialValue={selectedListId || ''}
-        onValueChange={id => setSelectedListId(id)}
+    <BottomSheetAction
+      actionIcon="list"
+      actionColor={theme.colors.white}
+      actionStyle={styles.button}
+      snapPoints={['35%', '50%', '75%']}
+      sheetTitle="Select Shopping List">
+      <FlatList
+        data={shoppingLists}
+        keyExtractor={item => item.id}
+        renderItem={renderItem}
+        keyboardShouldPersistTaps="handled"
       />
-    </View>
+    </BottomSheetAction>
   );
 };
 
 const stylesheet = createStyleSheet(theme => ({
-  container: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    marginLeft: theme.spacing.sm,
+  button: {
+    backgroundColor: theme.colors.primary,
+  },
+  item: {
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    marginBottom: 6,
+    backgroundColor: '#f2f2f2',
+  },
+  itemText: {
+    fontSize: 16,
+  },
+  selectedItemText: {
+    fontWeight: 'bold',
+    color: theme.colors.primary ?? 'red',
   },
 }));
 

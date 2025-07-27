@@ -1,55 +1,34 @@
-import React, {useState, useRef, useEffect} from 'react';
-import {Text, StyleSheet} from 'react-native';
-import BottomSheet, {BottomSheetRef} from '../pages/BottomSheet';
+import React, {useState} from 'react';
+import {Text} from 'react-native';
+import {BottomSheetTextInput} from '@gorhom/bottom-sheet';
 import Button from '../atoms/Button';
+import {BottomSheetAction} from '../templates/BottomSheetAction';
 import Autocomplete from '../molecules/AutoComplete';
 import {useStore} from '../../store';
-import {BaseInput} from '../atoms';
 import {useAddItemToShoppingListMutation} from '../../graphql/generated';
+import {createStyleSheet, useStyles} from 'react-native-unistyles';
 
 interface Item {
   id: string;
   name: string;
 }
 
-type BottomSheetProps = {
-  isVisible: boolean;
-  onClose: () => void;
-};
-
-export const AddItemBottomSheet: React.FC<BottomSheetProps> = ({
-  isVisible,
-  onClose,
-}) => {
-  const bottomSheetRef = useRef<BottomSheetRef>(null);
+export const AddItemBottomSheet: React.FC = ({}) => {
+  const {styles, theme} = useStyles(stylesheet);
   const [query, setQuery] = useState('');
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
-  const [renderBottomSheet, setRenderBottomSheet] = useState(false);
 
   const shoppingListId = useStore(state => state.selectedShoppingListId);
-
   // Setup your GraphQL mutation using Apollo's useMutation hook.
   const [addItem, {loading, error}] = useAddItemToShoppingListMutation({
     onCompleted: () => {
       setQuery('');
       setSelectedItem(null);
-      onClose(); // Close the bottom sheet after adding the item
     },
     onError: err => {
       console.error('Error adding item:', err);
     },
   });
-
-  // Open the bottom sheet when the component mounts or when isVisible changes.
-  useEffect(() => {
-    if (isVisible) {
-      setRenderBottomSheet(true);
-      bottomSheetRef.current?.expand();
-    } else {
-      bottomSheetRef.current?.close();
-      setRenderBottomSheet(false);
-    }
-  }, [isVisible]);
 
   const handleAddItem = async () => {
     const itemName = selectedItem?.name || query;
@@ -72,51 +51,43 @@ export const AddItemBottomSheet: React.FC<BottomSheetProps> = ({
   };
 
   return (
-    <>
-      {renderBottomSheet && (
-        <BottomSheet
-          ref={bottomSheetRef}
-          snapPoints={['50%', '75%']}
-          onClose={onClose} // add this if supported!
-          enablePanDownToClose={true}
-          enableContentPanningGesture={true}
-          enableDynamicSizing={false}>
-          <BaseInput
-            placeholder="Start typing item name..."
-            label="Item Name"
-            value={selectedItem?.name || query}
-            onChangeText={text => {
-              setQuery(text);
-              setSelectedItem(null);
-            }}
-            onEndEditing={() => {
-              if (query.length >= 2) {
-                setSelectedItem(null); // Reset selected item when typing
-              }
-            }}
-            autoFocus={true}
-          />
-          <Autocomplete searchTerm={query} onSelectItem={handleSelectItem} />
-          <Button
-            title={loading ? 'Adding...' : 'Submit'}
-            onPress={handleAddItem}
-            btnStyle={{marginTop: 20}}
-          />
+    <BottomSheetAction actionIcon="add" sheetTitle="Add Item">
+      <BottomSheetTextInput
+        placeholder="Start typing item name..."
+        value={selectedItem?.name || query}
+        onChangeText={text => {
+          setQuery(text);
+          setSelectedItem(null);
+        }}
+        autoFocus
+        style={{
+          backgroundColor: '#fff',
+          borderRadius: 8,
+          padding: 12,
+          fontSize: 16,
+          marginBottom: 8,
+          borderWidth: 1,
+          borderColor: '#ddd',
+          // Add any other styling you want
+        }}
+      />
+      <Autocomplete searchTerm={query} onSelectItem={handleSelectItem} />
+      <Button
+        title={loading ? 'Adding...' : 'Submit'}
+        onPress={handleAddItem}
+        btnStyle={{marginTop: 20}}
+      />
 
-          {error && (
-            <Text style={styles.errorText}>Error: {error.message}</Text>
-          )}
-        </BottomSheet>
-      )}
-    </>
+      {error && <Text style={styles.errorText}>Error: {error.message}</Text>}
+    </BottomSheetAction>
   );
 };
 
-const styles = StyleSheet.create({
+const stylesheet = createStyleSheet(theme => ({
   errorText: {
     color: 'red',
     marginTop: 10,
   },
-});
+}));
 
 export default AddItemBottomSheet;

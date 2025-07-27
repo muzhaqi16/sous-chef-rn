@@ -1,4 +1,3 @@
-export * from './AddButton';
 export * from './AutoComplete';
 export * from './CodeInputAdapter';
 export * from './Counter';
@@ -12,3 +11,4 @@ export * from './SearchBar';
 export * from './SettingRow';
 export * from './ShoppingListHeader';
 export * from './SwipeableRow';
+export * from './ActionButton';

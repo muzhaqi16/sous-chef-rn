@@ -1,11 +1,12 @@
-import React, {useEffect, useState, useMemo} from 'react';
-import {GestureHandlerRootView} from 'react-native-gesture-handler';
+import React, {useEffect, useMemo} from 'react';
+import {View} from 'react-native';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
-import {ShoppingListItems} from '../components';
 import SearchBar from '../components/molecules/SearchBar';
-import {ShoppingListSelector} from '../components/organisms/ShoppingListSelector';
-import AddButton from '../components/molecules/AddButton';
-import {AddItemBottomSheet} from '../components';
+import {
+  AddItemBottomSheet,
+  ShoppingListSelector,
+  ShoppingListItems,
+} from '../components';
 import {useSearchableList} from '../hooks';
 import {useStore} from '../store';
 import {
@@ -16,7 +17,6 @@ import {
 
 const ShoppingListScreen = () => {
   const {styles} = useStyles(stylesheet);
-  const [showBottomSheet, setShowBottomSheet] = useState(false);
   const selectedListId = useStore(s => s.selectedShoppingListId);
   const {refetch: refetchShoppingLists} = useShoppingListsQuery({
     fetchPolicy: 'cache-and-network',
@@ -63,26 +63,19 @@ const ShoppingListScreen = () => {
       !!item.itemName && item.itemName.toLowerCase().includes(q.toLowerCase()),
   );
 
-  const handleAdd = () => setShowBottomSheet(true);
-
   return (
-    <GestureHandlerRootView style={styles.container}>
+    <View style={styles.container}>
       <SearchBar
         value={query}
         onChangeText={setQuery}
         placeholder="Search items…"
         leftComponent={<ShoppingListSelector />}
         containerStyle={styles.searchBar}
-        rightComponent={<AddButton onPress={handleAdd} />}
+        rightComponent={<AddItemBottomSheet />}
       />
 
       <ShoppingListItems data={filtered} />
-
-      <AddItemBottomSheet
-        isVisible={showBottomSheet}
-        onClose={() => setShowBottomSheet(false)}
-      />
-    </GestureHandlerRootView>
+    </View>
   );
 };
 

@@ -1,6 +1,6 @@
 import React, {useMemo, useEffect} from 'react';
-import {FlatList, Text, TouchableOpacity, StyleSheet} from 'react-native';
-import BottomSheet, {BottomSheetFlatList} from '@gorhom/bottom-sheet';
+import {Text, TouchableOpacity, StyleSheet} from 'react-native';
+import {BottomSheetFlatList} from '@gorhom/bottom-sheet';
 import {useAutocompleteItemsLazyQuery} from '../../graphql/generated';
 interface Item {
   id: string;
@@ -43,6 +43,7 @@ const Autocomplete: React.FC<AutocompleteProps> = ({
   // Only render the autocomplete list if searchTerm has at least 2 characters.
   return searchTerm.length < 2 ? null : (
     <BottomSheetFlatList
+      style={{flex: 1}}
       keyboardDismissMode="on-drag"
       data={filteredItems}
       keyExtractor={(item: Item) => item.id}

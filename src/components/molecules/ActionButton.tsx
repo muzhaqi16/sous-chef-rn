@@ -1,22 +1,29 @@
 import React from 'react';
-import {Text, View} from 'react-native';
+import {Text, View, StyleProp, ViewStyle} from 'react-native';
 import {useStyles, createStyleSheet} from 'react-native-unistyles';
 import IconButton from '../atoms/IconButton';
 import Ionicons from '@react-native-vector-icons/ionicons';
 
-type AddButtonProps = {
+type ActionButtonProps = {
   onPress: () => void;
+  name?: string; // Optional name prop for the icon
+  style?: StyleProp<ViewStyle>; // Optional style prop for additional styling
+  color?: string; // Optional color prop for the icon
 };
-
-const AddButton: React.FC<AddButtonProps> = ({onPress}) => {
+export const ActionButton: React.FC<ActionButtonProps> = ({
+  onPress,
+  name,
+  style,
+  color,
+}) => {
   const {styles, theme} = useStyles(stylesheet);
 
   return (
-    <View style={styles.button}>
+    <View style={[styles.button, style]}>
       <IconButton
-        name="add"
+        name={name || 'add'}
         size={24}
-        color={theme.colors.primary}
+        color={color || theme.colors.primary}
         onPress={onPress}
         library={Ionicons}
       />
@@ -37,4 +44,4 @@ const stylesheet = createStyleSheet(theme => ({
     borderWidth: 2,
   },
 }));
-export default AddButton;
+export default ActionButton;
