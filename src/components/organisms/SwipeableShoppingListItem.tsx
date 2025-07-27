@@ -3,33 +3,49 @@ import {TouchableOpacity, Text} from 'react-native';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
 import {SwipeableRow} from '../molecules/SwipeableRow';
 import ItemCard from '../molecules/ItemCard';
-import {ShoppingListItem} from '../../graphql/generated';
+import {
+  ShoppingListItem,
+  useUpdateShoppingListItemMutation,
+} from '../../graphql/generated';
 
 export interface SwipeableShoppingListItemProps {
+  onPress: () => void;
   item: ShoppingListItem;
-  onIncrement: (id: string) => void;
-  onDecrement: (id: string) => void;
-  onRemove: (id: string) => void;
-  onMoveToPantry?: (id: string) => void;
 }
 
 export const SwipeableShoppingListItem: React.FC<
   SwipeableShoppingListItemProps
-> = ({item, onIncrement, onDecrement, onRemove}) => {
+> = ({item, onPress}) => {
   const {styles} = useStyles(stylesheet);
 
+  const [updateItem] = useUpdateShoppingListItemMutation({
+    onCompleted: () => {
+      // Optionally handle completion
+    },
+    onError: error => {
+      console.error('Update error:', error);
+    },
+  });
+
+  const handleUpdate = (id: string, quantity: number) => {
+    updateItem({
+      variables: {
+        id,
+        data: {
+          quantity,
+        },
+      },
+    });
+  };
+
   const renderLeftActions = () => (
-    <TouchableOpacity
-      style={styles.leftAction}
-      onPress={() => onDecrement(item.id)}>
+    <TouchableOpacity style={styles.leftAction} onPress={() => {}}>
       <Text style={styles.leftActionText}>－</Text>
     </TouchableOpacity>
   );
 
   const renderRightActions = () => (
-    <TouchableOpacity
-      style={styles.rightAction}
-      onPress={() => onRemove(item.id)}>
+    <TouchableOpacity style={styles.rightAction} onPress={() => {}}>
       <Text style={styles.rightActionText}>🗑️</Text>
     </TouchableOpacity>
   );
@@ -41,9 +57,12 @@ export const SwipeableShoppingListItem: React.FC<
       containerStyle={styles.rowContainer}>
       <ItemCard
         item={item}
-        onIncrement={() => onIncrement(item.id)}
-        onDecrement={() => onDecrement(item.id)}
-        onRemove={() => onRemove(item.id)}
+        onIncrement={() => handleUpdate(item.id, (item?.quantity ?? 0) + 1)}
+        onDecrement={() =>
+          handleUpdate(item.id, Math.max(1, (item?.quantity ?? 1) - 1))
+        }
+        onRemove={() => {}}
+        onPress={onPress}
       />
     </SwipeableRow>
   );
@@ -64,13 +83,12 @@ const stylesheet = createStyleSheet(theme => ({
     elevation: 2,
   },
   leftAction: {
-    flex: 1,
+    // Add flex:1 if you want the left action to take full width
     justifyContent: 'center',
     backgroundColor: theme.colors.success,
     paddingHorizontal: 20,
   },
   rightAction: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'flex-end',
     backgroundColor: theme.colors.error,

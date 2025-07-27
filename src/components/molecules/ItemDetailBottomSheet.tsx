@@ -1,16 +1,11 @@
 import React, {useState} from 'react';
 import QuantitySelector from '../organisms/QuantitySelector';
 import Button from '../atoms/Button';
-import {useStore} from '../../store';
 import {useUpdateShoppingListItemMutation} from '../../graphql/generated';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
-import {useUnitsQuery} from '../../graphql/generated';
-interface Selected {
-  id?: string;
-  name: string;
-}
+import {useUnitsQuery, ShoppingListItem} from '../../graphql/generated';
+
 interface ItemDetailProps {
-  item: Selected;
+  item: ShoppingListItem;
   onClose: () => void;
 }
 
@@ -22,7 +17,6 @@ export const ItemDetailBottomSheet: React.FC<ItemDetailProps> = ({
   const [unit, setUnit] = useState('pcs');
   const {data} = useUnitsQuery();
   const units = data?.units || [];
-  const shoppingListId = useStore(state => state.selectedShoppingListId);
 
   const [updateItem] = useUpdateShoppingListItemMutation({
     onCompleted: () => onClose(),
@@ -34,9 +28,7 @@ export const ItemDetailBottomSheet: React.FC<ItemDetailProps> = ({
       variables: {
         id: item.id || '',
         data: {
-          shoppingListId: shoppingListId || '',
-          itemId: item.id || '',
-          itemName: item.name,
+          itemName: item.itemName,
           quantity,
         },
       },
@@ -58,9 +50,5 @@ export const ItemDetailBottomSheet: React.FC<ItemDetailProps> = ({
     </>
   );
 };
-
-const stylesheet = createStyleSheet(theme => ({
-  errorText: {color: 'red', marginTop: 10},
-}));
 
 export default ItemDetailBottomSheet;

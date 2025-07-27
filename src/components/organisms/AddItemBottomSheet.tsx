@@ -8,20 +8,17 @@ import {useStore} from '../../store';
 import {
   useAddItemToShoppingListMutation,
   ItemSuggestion,
+  ShoppingListItem,
 } from '../../graphql/generated';
 
-interface Selected {
-  id?: string;
-  name: string;
-}
 interface AddItemProps {
-  onGoToDetails: (item: Selected) => void;
+  onGoToDetails: (item: ShoppingListItem) => void;
 }
 
 export const AddItemBottomSheet: React.FC<AddItemProps> = ({onGoToDetails}) => {
   const {styles} = useStyles(stylesheet);
   const [query, setQuery] = useState('');
-  const [selected, setSelected] = useState<Selected | null>(null);
+  const [selected, setSelected] = useState<ItemSuggestion | null>(null);
   const shoppingListId = useStore(state => state.selectedShoppingListId);
 
   const [addItem] = useAddItemToShoppingListMutation({
@@ -31,8 +28,7 @@ export const AddItemBottomSheet: React.FC<AddItemProps> = ({onGoToDetails}) => {
 
   // Only set selection; do NOT auto-add on select
   const handleSelect = (item: ItemSuggestion) => {
-    const next: Selected = {id: item.id, name: item.name};
-    setSelected(next);
+    setSelected(item);
     setQuery('');
   };
 
@@ -41,15 +37,12 @@ export const AddItemBottomSheet: React.FC<AddItemProps> = ({onGoToDetails}) => {
 
   // Called when user presses Add button for typed input
   const handleTypedAdd = () => {
-    const name = query.trim();
-    if (!name) return;
-    setSelected({name});
     addItem({
       variables: {
         data: {
           shoppingListId: shoppingListId || '',
           itemId: '',
-          itemName: name,
+          itemName: selected?.name || query.trim(),
           quantity: 1,
         },
       },

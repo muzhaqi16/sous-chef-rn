@@ -2,12 +2,24 @@ import React from 'react';
 import {FlatList, View} from 'react-native';
 import {useStore} from '../../store';
 import {SwipeableShoppingListItem} from './SwipeableShoppingListItem';
-import {useShoppingListItemsQuery} from '../../graphql/generated';
+import {
+  ShoppingListItem,
+  useShoppingListItemsQuery,
+} from '../../graphql/generated';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
 
-export const ShoppingListItems = ({data}: any) => {
+export interface ShoppingListItemsProps {
+  data: any[];
+  onItemPress: (item: ShoppingListItem) => void;
+}
+
+export const ShoppingListItems: React.FC<ShoppingListItemsProps> = ({
+  data,
+  onItemPress,
+}) => {
   const {styles} = useStyles(stylesheet);
   const selectedListId = useStore(s => s.selectedShoppingListId);
+
   const {refetch, loading: isLoading} = useShoppingListItemsQuery({
     variables: {shoppingListId: selectedListId ?? ''},
     fetchPolicy: 'cache-and-network',
@@ -17,25 +29,19 @@ export const ShoppingListItems = ({data}: any) => {
   return (
     <View style={styles.container}>
       <FlatList
-        data={data || []}
-        onEndReachedThreshold={0.5}
+        data={data}
         keyExtractor={item => item.id}
         onRefresh={() => {
           if (selectedListId) {
-            refetch({
-              shoppingListId: selectedListId,
-            });
+            refetch({shoppingListId: selectedListId});
           }
         }}
-        showsVerticalScrollIndicator={false}
         refreshing={isLoading}
+        showsVerticalScrollIndicator={false}
         renderItem={({item}) => (
           <SwipeableShoppingListItem
             item={item}
-            onIncrement={() => {}}
-            onDecrement={() => {}}
-            onRemove={() => {}}
-            onMoveToPantry={() => {}}
+            onPress={() => onItemPress(item)}
           />
         )}
         contentContainerStyle={styles.listContent}
@@ -45,16 +51,8 @@ export const ShoppingListItems = ({data}: any) => {
 };
 
 const stylesheet = createStyleSheet(theme => ({
-  container: {
-    paddingVertical: 24,
-    flex: 1,
-  },
+  container: {flex: 1},
   listContent: {},
-  error: {
-    textAlign: 'center',
-    color: 'red',
-    marginTop: 24,
-  },
 }));
 
 export default ShoppingListItems;

@@ -3,10 +3,12 @@ import {TouchableOpacity, Text, FlatList} from 'react-native';
 import {ShoppingList, useShoppingListsQuery} from '../../graphql/generated';
 import {useStore} from '../../store';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
-import {BottomSheetAction} from '../templates/BottomSheetAction';
-import {ActionButton} from '../molecules';
 
-export const ShoppingListSelector = () => {
+export const ShoppingListSelector = ({
+  onSelect,
+}: {
+  onSelect: (id: string) => void;
+}) => {
   const {styles, theme} = useStyles(stylesheet);
   const ref =
     React.useRef<import('@gorhom/bottom-sheet').BottomSheetModal>(null);
@@ -36,25 +38,12 @@ export const ShoppingListSelector = () => {
   );
 
   return (
-    <>
-      <ActionButton
-        name={'list'}
-        onPress={() => ref.current?.present()}
-        style={styles.button}
-        color={theme.colors.white}
-      />
-      <BottomSheetAction
-        snapPoints={['35%', '50%', '75%']}
-        sheetRef={ref}
-        sheetTitle="Select Shopping List">
-        <FlatList
-          data={shoppingLists}
-          keyExtractor={item => item.id}
-          renderItem={renderItem}
-          keyboardShouldPersistTaps="handled"
-        />
-      </BottomSheetAction>
-    </>
+    <FlatList
+      data={shoppingLists}
+      keyExtractor={item => item.id}
+      renderItem={renderItem}
+      keyboardShouldPersistTaps="handled"
+    />
   );
 };
 

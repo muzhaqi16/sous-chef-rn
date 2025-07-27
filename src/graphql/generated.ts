@@ -731,7 +731,7 @@ export type MutationUpdateShoppingListArgs = {
 
 
 export type MutationUpdateShoppingListItemArgs = {
-  data: ShoppingListItemInput;
+  data: UpdateShoppingListItemInput;
   id: Scalars['ID']['input'];
 };
 
@@ -1239,6 +1239,14 @@ export type UpdateShoppingListInput = {
   removeTags?: InputMaybe<Array<Scalars['String']['input']>>;
 };
 
+export type UpdateShoppingListItemInput = {
+  isPurchased?: InputMaybe<Scalars['Boolean']['input']>;
+  itemName?: InputMaybe<Scalars['String']['input']>;
+  quantity?: InputMaybe<Scalars['Float']['input']>;
+  unitId?: InputMaybe<Scalars['ID']['input']>;
+  unitName?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type UpdateUserInput = {
   email?: InputMaybe<Scalars['String']['input']>;
   onBoarded?: InputMaybe<Scalars['Boolean']['input']>;
@@ -1425,7 +1433,7 @@ export type RemoveItemFromShoppingListMutation = { __typename?: 'Mutation', remo
 
 export type UpdateShoppingListItemMutationVariables = Exact<{
   id: Scalars['ID']['input'];
-  data: ShoppingListItemInput;
+  data: UpdateShoppingListItemInput;
 }>;
 
 
@@ -2050,7 +2058,7 @@ export type RemoveItemFromShoppingListMutationHookResult = ReturnType<typeof use
 export type RemoveItemFromShoppingListMutationResult = Apollo.MutationResult<RemoveItemFromShoppingListMutation>;
 export type RemoveItemFromShoppingListMutationOptions = Apollo.BaseMutationOptions<RemoveItemFromShoppingListMutation, RemoveItemFromShoppingListMutationVariables>;
 export const UpdateShoppingListItemDocument = gql`
-    mutation UpdateShoppingListItem($id: ID!, $data: ShoppingListItemInput!) {
+    mutation UpdateShoppingListItem($id: ID!, $data: UpdateShoppingListItemInput!) {
   updateShoppingListItem(id: $id, data: $data) {
     id
     quantity

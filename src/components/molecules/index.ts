@@ -12,3 +12,5 @@ export * from './SettingRow';
 export * from './ShoppingListHeader';
 export * from './SwipeableRow';
 export * from './ActionButton';
+export * from './ItemDetailBottomSheet';
+export * from './SearchBar';

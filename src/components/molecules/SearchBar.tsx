@@ -12,7 +12,7 @@ type SearchBarProps = Omit<TextInputProps, 'style'> & {
   rightComponent?: React.ReactNode;
 };
 
-const SearchBar: React.FC<SearchBarProps> = ({
+export const SearchBar: React.FC<SearchBarProps> = ({
   value,
   onChangeText,
   placeholder = 'Search…',

@@ -5,6 +5,7 @@ import {Counter} from './Counter';
 
 type ItemCardProps = {
   item: any;
+  onPress: () => void; // For item press action
   onIncrement: () => void;
   onDecrement: () => void;
   onMoreOptions?: () => void; // For ellipsis menu
@@ -13,19 +14,15 @@ type ItemCardProps = {
 
 const ItemCard: React.FC<ItemCardProps> = ({
   item,
+  onPress,
   onIncrement,
   onDecrement,
   onMoreOptions,
 }) => {
-  // console.log('ItemCard shoppingListItem:', shoppingListItem);
   const {styles} = useStyles(stylesheet);
+
   return (
-    <TouchableOpacity
-      key={item?.id}
-      onPress={() => {
-        // handle onPress
-      }}
-      style={styles.card}>
+    <TouchableOpacity key={item?.id} onPress={onPress} style={styles.card}>
       <Image
         alt={item?.name}
         resizeMode="contain"
@@ -43,12 +40,12 @@ const ItemCard: React.FC<ItemCardProps> = ({
           onIncrement={onIncrement}
           onDecrement={onDecrement}
         />
-        {item?.unitSymbol &&
+        {item?.unitName &&
           // if quantity is higher than 1, show plural unit symbol
           (item?.quantity > 1 ? (
-            <Text style={styles.cardDescription}>{item?.unitSymbol}s</Text>
+            <Text style={styles.cardDescription}>{item?.unitName}s</Text>
           ) : (
-            <Text style={styles.cardDescription}>{item?.unitSymbol}</Text>
+            <Text style={styles.cardDescription}>{item?.unitName}</Text>
           ))}
       </View>
     </TouchableOpacity>
