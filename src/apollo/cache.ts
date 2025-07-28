@@ -5,7 +5,35 @@ import {storage} from '../storage/mmkv';
 const CACHE_KEY = 'apollo-cache';
 
 export async function makeCache(): Promise<InMemoryCache> {
-  const cache = new InMemoryCache();
+  const cache = new InMemoryCache({
+    typePolicies: {
+      Query: {
+        fields: {
+          shoppingListItems: {
+            keyArgs: ['shoppingListId'], // Required for proper normalization
+            merge(existing = [], incoming: any[]) {
+              // Merge and deduplicate by ID
+              const map = new Map();
+              [...existing, ...incoming].forEach(item => {
+                if (item?.id) map.set(item.id, item);
+              });
+              return Array.from(map.values());
+            },
+          },
+          pantryItems: {
+            keyArgs: ['pantryId'],
+            merge(existing = [], incoming: any[]) {
+              const map = new Map();
+              [...existing, ...incoming].forEach(item => {
+                if (item?.id) map.set(item.id, item);
+              });
+              return Array.from(map.values());
+            },
+          },
+        },
+      },
+    },
+  });
 
   // 1) Try to restore from MMKV
   const saved = storage.getString(CACHE_KEY);

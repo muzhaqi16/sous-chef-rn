@@ -6,3 +6,5 @@ export {NotificationBanner} from './Notification.tsx';
 export {Button} from './Button.tsx';
 export {IconButton} from './IconButton.tsx';
 export {Title} from './Title.tsx';
+export {Label} from './Label.tsx';
+export {PickerSelect} from './Picker.tsx';

@@ -13,8 +13,8 @@ export const ADD_ITEM_TO_SHOPPING_LIST_MUTATION = gql`
 `;
 
 export const REMOVE_ITEM = gql`
-  mutation RemoveItemFromShoppingList($removeItemFromShoppingListId: ID!) {
-    removeItemFromShoppingList(id: $removeItemFromShoppingListId)
+  mutation RemoveItemFromShoppingList($id: ID!) {
+    removeItemFromShoppingList(id: $id)
   }
 `;
 
@@ -27,6 +27,10 @@ export const UPDATE_ITEM_IN_SHOPPING_LIST_MUTATION = gql`
     updateShoppingListItem(id: $id, data: $data) {
       id
       quantity
+      item {
+        id
+        name
+      }
       itemName
       unitName
       isPurchased

@@ -16,18 +16,22 @@ export const PickerSelect = ({
   items,
   initialValue,
   onValueChange,
+  style,
 }: PickerSelectProps) => {
   const [selectedValue] = useState(initialValue);
   const {styles} = useStyles(stylesheet);
 
   return (
-    <Picker selectedValue={selectedValue} onValueChange={onValueChange}>
+    <Picker
+      selectedValue={selectedValue}
+      onValueChange={onValueChange}
+      style={[styles.picker, style]}>
       {items?.map(item => (
         <Item
           key={item.id}
           label={item.name}
           value={item.id}
-          color={styles.item.color}
+          color={styles.item}
         />
       ))}
     </Picker>
@@ -35,6 +39,10 @@ export const PickerSelect = ({
 };
 
 const stylesheet = createStyleSheet(theme => ({
+  picker: {
+    backgroundColor: theme.colors.white,
+    borderRadius: 8,
+  },
   item: {
     color: theme.colors.textPrimary,
   },

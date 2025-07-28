@@ -7,6 +7,11 @@ export const ShoppingListUpdatedDocument = gql`
       shoppingList {
         id
       }
+      item {
+        id
+        name
+        imageUrl
+      }
       quantity
       itemName
       unitName

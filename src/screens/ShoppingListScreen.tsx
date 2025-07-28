@@ -1,8 +1,7 @@
-import React, {useState, useRef, useMemo, useCallback} from 'react';
+import React, {useState} from 'react';
 import {View} from 'react-native';
-import {BottomSheetModal} from '@gorhom/bottom-sheet';
+import {createStyleSheet, useStyles} from 'react-native-unistyles';
 import {
-  ActionButton,
   SearchBar,
   ShoppingListItems,
   ShoppingListSelector,
@@ -11,141 +10,96 @@ import {
   BottomSheetAction,
 } from '../components';
 import {useStore} from '../store';
-import {useSearchableList} from '../hooks';
-import {
-  ShoppingListItem,
-  useShoppingListItemsQuery,
-  useShoppingListUpdatedSubscription,
-} from '../graphql/generated';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {useBottomSheetModal, useShoppingList} from '../hooks';
+import {type ShoppingListItemDetail} from '../types';
+import {UserHeader} from '../components/molecules/UserHeader';
 
 export const ShoppingListScreen: React.FC = () => {
-  const {styles} = useStyles(stylesheet);
+  const {styles, theme} = useStyles(stylesheet);
 
   const listId = useStore(s => s.selectedShoppingListId);
-  const [detailItem, setDetailItem] = useState<ShoppingListItem | null>(null);
-
-  // fetch + subscribe
-  const {data, refetch} = useShoppingListItemsQuery({
-    variables: {shoppingListId: listId ?? ''},
-    skip: !listId,
-    fetchPolicy: 'cache-and-network',
-  });
-  useShoppingListUpdatedSubscription({
-    variables: {listId: listId!},
-    skip: !listId,
-    onData: () => refetch(),
-  });
-  const items = data?.shoppingListItems || [];
-
-  // search
-  const {query, setQuery, filtered} = useSearchableList(
-    items,
-    (it, q) =>
-      !!it.itemName && it.itemName.toLowerCase().includes(q.toLowerCase()),
+  const {items, query, setQuery} = useShoppingList(listId);
+  const [detailItem, setDetailItem] = useState<ShoppingListItemDetail | null>(
+    null,
   );
 
   // bottom sheet refs
-  const selectRef = useRef<BottomSheetModal>(null);
-  const addRef = useRef<BottomSheetModal>(null);
-  const detailRef = useRef<BottomSheetModal>(null);
+  const selectSheet = useBottomSheetModal();
+  const addSheet = useBottomSheetModal();
+  const detailSheet = useBottomSheetModal();
 
-  // open handlers
-  const openSelect = useCallback(() => selectRef.current?.present(), []);
-  const openAdd = useCallback(() => addRef.current?.present(), []);
-  const openDetail = useCallback((item: ShoppingListItem) => {
-    setDetailItem(item);
-    detailRef.current?.present();
-  }, []);
-
-  // bottom sheet content renderers
-  const renderSelectContent = useCallback(
-    () => (
-      <ShoppingListSelector
-        onSelect={id => {
-          useStore.getState().setSelectedShoppingListId(id);
-          selectRef.current?.dismiss();
-        }}
-      />
-    ),
-    [],
-  );
-
-  const renderAddContent = useCallback(
-    () => (
-      <AddItemBottomSheet
-        onGoToDetails={item => {
-          addRef.current?.dismiss();
-          setTimeout(() => {
-            setDetailItem(item);
-            detailRef.current?.present();
-          }, 200);
-        }}
-      />
-    ),
-    [],
-  );
-
-  const renderDetailContent = useMemo(
-    () =>
-      detailItem && (
-        <ItemDetailBottomSheet
-          item={detailItem}
-          onClose={() => detailRef.current?.dismiss()}
+  const bottomSheets = [
+    {
+      key: 'select',
+      sheet: selectSheet,
+      title: 'Select Shopping List',
+      snapPoints: ['25%', '50%', '90%'],
+      content: (
+        <ShoppingListSelector
+          onSelect={id => {
+            useStore.getState().setSelectedShoppingListId(id);
+            selectSheet.close();
+          }}
         />
       ),
-    [detailItem],
-  );
-
+    },
+    {
+      key: 'add',
+      sheet: addSheet,
+      title: 'Add Item',
+      snapPoints: ['50%', '90%'],
+      content: (
+        <AddItemBottomSheet
+          onGoToDetails={item => {
+            addSheet.close();
+            setTimeout(() => {
+              setDetailItem(item);
+              detailSheet.open();
+            }, 200);
+          }}
+        />
+      ),
+    },
+  ];
+  const onItemPress = (item: ShoppingListItemDetail) => {
+    setDetailItem(item);
+    detailSheet.open();
+  };
   return (
     <View style={styles.container}>
+      <UserHeader />
+
       <SearchBar
         value={query}
         onChangeText={setQuery}
         placeholder="Search items…"
-        leftComponent={
-          <ActionButton
-            name="list"
-            onPress={openSelect}
-            style={styles.listButton}
-            color="#fff"
-          />
-        }
-        rightComponent={
-          <ActionButton
-            name="add"
-            onPress={openAdd}
-            style={styles.addButton}
-            color="#000"
-          />
-        }
+        onPressList={() => selectSheet.open()}
+        onPressAdd={() => addSheet.open()}
       />
 
-      <ShoppingListItems data={filtered} onItemPress={openDetail} />
+      <ShoppingListItems data={items} onItemPress={onItemPress} />
 
-      {/* Select List Sheet */}
-      <BottomSheetAction
-        sheetRef={selectRef}
-        sheetTitle="Select Shopping List"
-        snapPoints={['25%', '50%', '90%']}>
-        {renderSelectContent()}
-      </BottomSheetAction>
+      {bottomSheets.map(({key, sheet, title, snapPoints, content}) => (
+        <BottomSheetAction
+          key={key}
+          sheetRef={sheet.ref}
+          sheetTitle={title}
+          snapPoints={snapPoints}>
+          {content}
+        </BottomSheetAction>
+      ))}
 
-      {/* Add Item Sheet */}
-      <BottomSheetAction
-        sheetRef={addRef}
-        sheetTitle="Add Item"
-        snapPoints={['50%', '90%']}>
-        {renderAddContent()}
-      </BottomSheetAction>
-
-      {/* Edit Item Sheet */}
-      <BottomSheetAction
-        sheetRef={detailRef}
-        sheetTitle="Item Details"
-        snapPoints={['50%', '90%']}>
-        {renderDetailContent}
-      </BottomSheetAction>
+      {detailItem && (
+        <BottomSheetAction
+          sheetRef={detailSheet.ref}
+          sheetTitle="Item Details"
+          snapPoints={['45%', '65%']}>
+          <ItemDetailBottomSheet
+            item={detailItem}
+            onClose={detailSheet.close}
+          />
+        </BottomSheetAction>
+      )}
     </View>
   );
 };
@@ -154,12 +108,6 @@ const stylesheet = createStyleSheet(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-  },
-  listButton: {
-    backgroundColor: theme.colors.primary,
-  },
-  addButton: {
-    backgroundColor: theme.colors.white,
   },
 }));
 

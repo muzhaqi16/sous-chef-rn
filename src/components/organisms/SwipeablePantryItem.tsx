@@ -15,7 +15,6 @@ export interface PantryItem {
   quantity: string;
   location: string;
   expirationText: string; // e.g. "Expired 2 days ago" or "Expiring in 2 days!"
-  expiredCount?: number; // e.g. 4 for footer count
   icon: ImageSourcePropType;
 }
 
@@ -69,11 +68,6 @@ export const SwipeablePantryItem: React.FC<SwipeablePantryItemProps> = ({
         <View style={styles.badge}>
           <Text style={styles.badgeText}>{item.location}</Text>
         </View>
-        {item.expiredCount != null && (
-          <Text style={styles.footer}>
-            You have {item.expiredCount} expired items
-          </Text>
-        )}
       </View>
     </SwipeableRow>
   );

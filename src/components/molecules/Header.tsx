@@ -27,6 +27,5 @@ const stylesheet = createStyleSheet(theme => ({
     width: 80,
     height: 80,
     alignSelf: 'center',
-    marginBottom: 36,
   },
 }));

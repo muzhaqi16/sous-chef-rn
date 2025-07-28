@@ -2,9 +2,7 @@ import React from 'react';
 import {View} from 'react-native';
 import {useStyles, createStyleSheet} from 'react-native-unistyles';
 import {Unit} from '../../graphql/generated';
-import {Counter} from '../molecules/Counter';
-import {Label} from '../atoms/Label';
-import PickerSelect from '../atoms/Picker';
+import {Label, PickerSelect, Counter} from '..';
 
 interface QuantitySelectorProps {
   quantity: number;
@@ -43,9 +41,7 @@ const QuantitySelector: React.FC<QuantitySelectorProps> = ({
             initialValue={unit}
             onValueChange={onUnitChange}
             items={units}
-            style={{
-              backgroundColor: 'red',
-            }}
+            style={{}}
           />
         </View>
       </View>
@@ -54,17 +50,17 @@ const QuantitySelector: React.FC<QuantitySelectorProps> = ({
 };
 
 const stylesheet = createStyleSheet(theme => ({
-  container: {marginTop: 12, flexDirection: 'row'},
-
+  container: {
+    marginTop: theme.spacing.xs,
+    flexDirection: 'row',
+  },
   selectors: {
     flex: 1,
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    border: `1px solid ${theme.colors.border}`,
   },
   pickerWrapper: {
-    width: '100%',
-    borderRadius: 8,
+    height: 30,
+    justifyContent: 'center',
     overflow: 'hidden',
   },
 }));

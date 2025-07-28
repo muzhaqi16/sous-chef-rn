@@ -10,6 +10,7 @@ export const Label: React.FC<{children: React.ReactNode}> = ({children}) => {
 const stylesheet = createStyleSheet(theme => ({
   text: {
     fontSize: 16,
+    paddingVertical: 8,
     color: theme.colors.textPrimary,
   },
 }));

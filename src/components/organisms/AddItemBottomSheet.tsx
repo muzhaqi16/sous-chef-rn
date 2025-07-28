@@ -8,11 +8,11 @@ import {useStore} from '../../store';
 import {
   useAddItemToShoppingListMutation,
   ItemSuggestion,
-  ShoppingListItem,
 } from '../../graphql/generated';
+import {type ShoppingListItemDetail} from '../../types';
 
 interface AddItemProps {
-  onGoToDetails: (item: ShoppingListItem) => void;
+  onGoToDetails: (item: ShoppingListItemDetail) => void;
 }
 
 export const AddItemBottomSheet: React.FC<AddItemProps> = ({onGoToDetails}) => {
@@ -65,8 +65,16 @@ export const AddItemBottomSheet: React.FC<AddItemProps> = ({onGoToDetails}) => {
   };
 
   const openDetails = () => {
-    const payload = selected || {name: query.trim()};
-    onGoToDetails(payload);
+    if (!selected) return;
+    onGoToDetails({
+      id: selected.id || '',
+      itemName: selected.name,
+      quantity: 1,
+      unit: selected?.units?.[0].unit.symbol || 'pcs',
+      checked: false,
+    });
+    setSelected(null);
+    setQuery('');
   };
 
   return (

@@ -6,6 +6,7 @@ import ItemCard from '../molecules/ItemCard';
 import {
   ShoppingListItem,
   useUpdateShoppingListItemMutation,
+  useRemoveItemFromShoppingListMutation,
 } from '../../graphql/generated';
 
 export interface SwipeableShoppingListItemProps {
@@ -27,6 +28,15 @@ export const SwipeableShoppingListItem: React.FC<
     },
   });
 
+  const [removeItem] = useRemoveItemFromShoppingListMutation({
+    onCompleted: () => {
+      // Optionally handle completion
+    },
+    onError: error => {
+      console.error('Remove error:', error);
+    },
+  });
+
   const handleUpdate = (id: string, quantity: number) => {
     updateItem({
       variables: {
@@ -45,7 +55,13 @@ export const SwipeableShoppingListItem: React.FC<
   );
 
   const renderRightActions = () => (
-    <TouchableOpacity style={styles.rightAction} onPress={() => {}}>
+    <TouchableOpacity
+      style={styles.rightAction}
+      onPress={() => {
+        removeItem({
+          variables: {id: item.id},
+        });
+      }}>
       <Text style={styles.rightActionText}>🗑️</Text>
     </TouchableOpacity>
   );

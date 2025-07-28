@@ -1,15 +1,16 @@
 import React from 'react';
 import {View, StyleProp, ViewStyle, TextInputProps} from 'react-native';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
-import {BaseInput} from '../atoms/BaseInput';
+
+import {BaseInput, ActionButton} from '..';
 
 type SearchBarProps = Omit<TextInputProps, 'style'> & {
   value: string;
   onChangeText: (text: string) => void;
   containerStyle?: StyleProp<ViewStyle>;
   inputStyle?: StyleProp<ViewStyle>;
-  leftComponent?: React.ReactNode;
-  rightComponent?: React.ReactNode;
+  onPressList?: () => void;
+  onPressAdd?: () => void;
 };
 
 export const SearchBar: React.FC<SearchBarProps> = ({
@@ -18,11 +19,11 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   placeholder = 'Search…',
   containerStyle,
   inputStyle,
-  leftComponent,
-  rightComponent,
+  onPressList = () => {},
+  onPressAdd = () => {},
   ...textInputProps
 }) => {
-  const {styles} = useStyles(stylesheet);
+  const {styles, theme} = useStyles(stylesheet);
 
   return (
     <View style={[styles.container, containerStyle]}>
@@ -34,8 +35,18 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         containerStyle={styles.inputContainer}
         {...textInputProps}
       />
-      {!!leftComponent && <View style={styles.side}>{leftComponent}</View>}
-      {!!rightComponent && <View style={styles.side}>{rightComponent}</View>}
+      <ActionButton
+        name="list"
+        onPress={onPressList}
+        style={styles.listButton}
+        color="#fff"
+      />
+      <ActionButton
+        name="add"
+        onPress={onPressAdd}
+        style={styles.addButton}
+        color={theme.colors.primary}
+      />
     </View>
   );
 };
@@ -54,6 +65,12 @@ const stylesheet = createStyleSheet(theme => ({
   },
   input: {
     // any default text-input styling you want
+  },
+  listButton: {
+    backgroundColor: theme.colors.primary,
+  },
+  addButton: {
+    backgroundColor: theme.colors.white,
   },
 }));
 

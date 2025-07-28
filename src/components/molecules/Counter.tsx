@@ -14,7 +14,7 @@ export const Counter = ({
 }) => {
   const {styles} = useStyles(stylesheet);
   return (
-    <View style={styles.counter}>
+    <View style={styles.container}>
       <TouchableOpacity onPress={onDecrement} style={styles.cardAdd}>
         <Icon color="#1d1d1d" name="remove" size={11} />
       </TouchableOpacity>
@@ -26,13 +26,13 @@ export const Counter = ({
   );
 };
 const stylesheet = createStyleSheet(theme => ({
-  counter: {
+  container: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'center',
     marginRight: 10,
     borderWidth: 1,
+    backgroundColor: theme.colors.white,
     borderColor: '#ececec',
     borderStyle: 'solid',
     borderRadius: 9999,

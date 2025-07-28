@@ -1,16 +1,14 @@
 import React from 'react';
 import {FlatList, View} from 'react-native';
+import {createStyleSheet, useStyles} from 'react-native-unistyles';
 import {useStore} from '../../store';
 import {SwipeableShoppingListItem} from './SwipeableShoppingListItem';
-import {
-  ShoppingListItem,
-  useShoppingListItemsQuery,
-} from '../../graphql/generated';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {useShoppingListItemsQuery} from '../../graphql/generated';
+import {type ShoppingListItemDetail} from '../../types';
 
 export interface ShoppingListItemsProps {
   data: any[];
-  onItemPress: (item: ShoppingListItem) => void;
+  onItemPress: (item: ShoppingListItemDetail) => void;
 }
 
 export const ShoppingListItems: React.FC<ShoppingListItemsProps> = ({

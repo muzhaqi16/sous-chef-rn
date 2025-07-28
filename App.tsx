@@ -6,7 +6,6 @@ import {BottomSheetModalProvider} from '@gorhom/bottom-sheet';
 import {ApolloProvider} from '@apollo/client';
 import {useStore} from './src/store';
 import {client} from './src/apollo/client';
-import Config from 'react-native-config';
 import {
   useInitialTheme,
   createStyleSheet,
@@ -49,7 +48,6 @@ const App = () => {
             backgroundColor={colors.background}
           />
           <SafeAreaView style={styles.container}>
-            <Text style={styles.text}>API_URL: {Config.API_URL}</Text>
             <ToastProvider>
               {/* BottomSheetModalProvider needs to be above NavigationContainer */}
               <BottomSheetModalProvider>
