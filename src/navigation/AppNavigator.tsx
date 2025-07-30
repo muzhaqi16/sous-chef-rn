@@ -6,6 +6,7 @@ import {useStore} from '../store';
 import AuthStack from './AuthStack';
 import HomeTab from './TabNavigator';
 import OnBoardingStack from './OnBoardingStack';
+import BarcodeStack from './BarcodeStack';
 import {NotFoundScreen} from '../screens/NotFoundScreen';
 import type {RootStackParamList} from './types';
 
@@ -25,7 +26,6 @@ export default function AppNavigator() {
       : !user?.onBoarded
         ? 'OnBoardingStack'
         : 'HomeStack';
-  console.log('AppNavigator initialRoute:', initialRoute);
   return (
     <NavigationContainer>
       <Stack.Navigator
@@ -36,7 +36,8 @@ export default function AppNavigator() {
         <Stack.Screen name="AuthStack" component={AuthStack} />
         <Stack.Screen name="OnBoardingStack" component={OnBoardingStack} />
         <Stack.Screen name="HomeStack" component={HomeTab} />
-
+        <Stack.Screen name="BarcodeStack" component={BarcodeStack} />
+        {/* always have a catch-all for NotFound */}
         {/* always have a catch-all */}
         <Stack.Screen name="NotFound" component={NotFoundScreen} />
       </Stack.Navigator>

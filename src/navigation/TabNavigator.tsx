@@ -16,7 +16,7 @@ const HomeTab = () => {
 
   return (
     <Tab.Navigator
-      initialRouteName="ShoppingList"
+      // initialRouteName="ShoppingList"
       screenOptions={({route}) => ({
         headerShown: false,
 

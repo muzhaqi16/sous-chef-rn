@@ -78,3 +78,15 @@ export const GET_ITEMS_FOR_AUTOCOMPLETE = gql`
     }
   }
 `;
+
+export const SEARCH_ITEM_BY_BARCODE = gql`
+  query SearchItemByBarcode($barcode: String!) {
+    itemByBarcode(barcode: $barcode) {
+      id
+      name
+      description
+      imageUrl
+      barcode
+    }
+  }
+`;

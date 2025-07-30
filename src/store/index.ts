@@ -11,6 +11,11 @@ import {
   PreferencesState,
 } from './slices/preferencesSlice';
 
+import {
+  BarcodeScannerState,
+  createBarcodeScannerSlice,
+} from './slices/barcodeScannerSlice';
+
 import {createAppSlice, AppState} from './slices/appSlice';
 
 import {logger} from './logger';
@@ -18,7 +23,10 @@ import {zustandStorage} from '../storage/mmkv';
 
 export const STORAGE_KEY = 'sous-chef-storage';
 
-export type RootState = AuthState & PreferencesState & AppState;
+export type RootState = AuthState &
+  PreferencesState &
+  AppState &
+  BarcodeScannerState;
 
 export const useStore = create<RootState>()(
   subscribeWithSelector(
@@ -28,6 +36,7 @@ export const useStore = create<RootState>()(
           ...createAuthSlice(...a),
           ...createPreferencesSlice(...a),
           ...createAppSlice(...a),
+          ...createBarcodeScannerSlice(...a),
         })),
       ),
       {

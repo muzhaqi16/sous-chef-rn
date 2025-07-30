@@ -4,18 +4,24 @@ import type {
   CompositeNavigationProp,
   RouteProp,
 } from '@react-navigation/native';
-import {User} from '../graphql/generated';
-import {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import {
+  NativeStackNavigationProp,
+  NativeStackScreenProps,
+} from '@react-navigation/native-stack';
 import type {
   StackScreenProps,
   StackNavigationProp,
 } from '@react-navigation/stack';
-import type {BottomTabScreenProps} from '@react-navigation/bottom-tabs';
+import type {
+  BottomTabScreenProps,
+  BottomTabNavigationProp,
+} from '@react-navigation/bottom-tabs';
 
 export type RootStackParamList = {
   HomeStack: NavigatorScreenParams<HomeTabParamList>;
   AuthStack: NavigatorScreenParams<AuthStackParamList>;
   OnBoardingStack: NavigatorScreenParams<OnBoardingStackParamList>;
+  BarcodeStack: NavigatorScreenParams<BarcodeStackParamList>;
   NotFound: undefined;
 };
 
@@ -41,6 +47,29 @@ export type AuthStackParamList = {
   CodeVerification: {email: string; password: string};
 };
 
+export type BarcodeStackParamList = {
+  BarcodeScanner: undefined;
+  SearchResults: {
+    barcode: string;
+    format: string;
+  };
+};
+
+export type BarcodeScannerScreenProps = NativeStackScreenProps<
+  BarcodeStackParamList,
+  'BarcodeScanner'
+>;
+
+export type BarcodeScannerNavProp = NativeStackNavigationProp<
+  BarcodeStackParamList,
+  'BarcodeScanner'
+>;
+
+export type SearchResultsScreenProps = NativeStackScreenProps<
+  BarcodeStackParamList,
+  'SearchResults'
+>;
+
 export type OnBoardingStackParamList = {
   CreateShoppingList: undefined;
   SelectPantryItems: undefined;
@@ -55,6 +84,8 @@ export type HomeTabScreenProps<T extends keyof HomeTabParamList> =
     BottomTabScreenProps<HomeTabParamList, T>,
     RootStackScreenProps<keyof RootStackParamList>
   >;
+
+export type MainNavProp = BottomTabNavigationProp<HomeTabParamList, 'Main'>;
 
 export type AuthStackScreenProps<T extends keyof AuthStackParamList> =
   CompositeScreenProps<

@@ -31,7 +31,7 @@ export const CreateShoppingListScreen = () => {
           .setSelectedShoppingListId(data.createShoppingList.id);
         // Navigate to the next step in the onboarding process
         setOnBoardingStep(OnBoardingSteps.selectPantryItems);
-        navigation.replace('OnBoarding', {
+        navigation.replace('OnBoardingStack', {
           screen: 'SelectPantryItems',
         });
       } else {
@@ -84,7 +84,7 @@ export const CreateShoppingListScreen = () => {
       totalSteps={4}
       onBack={() => navigation.goBack()}
       onSkip={() =>
-        navigation.replace('OnBoarding', {screen: 'SelectPantryItems'})
+        navigation.replace('OnBoardingStack', {screen: 'SelectPantryItems'})
       }>
       <DynamicFormFields<FormValues>
         fields={[

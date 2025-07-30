@@ -1431,6 +1431,13 @@ export type CreateHomeMutationVariables = Exact<{
 
 export type CreateHomeMutation = { __typename?: 'Mutation', createHome: { __typename?: 'Home', id: string, name: string, type: HomeType, createdAt: any, updatedAt: any, version: number, deletedAt?: any | null, owner: { __typename?: 'User', id: string } } };
 
+export type CreateItemMutationVariables = Exact<{
+  data: CreateUpdateItemInput;
+}>;
+
+
+export type CreateItemMutation = { __typename?: 'Mutation', createItem: { __typename?: 'Item', id: string, name: string, description?: string | null, barcode?: string | null, dataSource?: DataSource | null, type?: ItemType | null, storageState: StorageState, shelfLifeDays?: number | null, popularityCount: number, showInOnboarding: boolean, status: ItemStatus, visibility: Visibility, imageUrl?: string | null, healthBenefits?: any | null, allergens?: any | null, nutritions?: any | null, metadata?: any | null, tags?: Array<string> | null } };
+
 export type AddItemToPantryMutationVariables = Exact<{
   input: CreatePantryItemInput;
 }>;
@@ -1529,6 +1536,13 @@ export type AutocompleteItemsQueryVariables = Exact<{
 
 
 export type AutocompleteItemsQuery = { __typename?: 'Query', autocompleteItems?: Array<{ __typename?: 'ItemSuggestion', name: string, id: string, imageUrl?: string | null, shelfLifeDays?: number | null, units?: Array<{ __typename?: 'ItemUnit', id: string, isDefault: boolean, conversionFactor?: number | null, notes?: string | null, unit: { __typename?: 'Unit', id: string, name: string, symbol: string, type: UnitType, conversionFactor?: number | null, notes?: string | null } }> | null }> | null };
+
+export type SearchItemByBarcodeQueryVariables = Exact<{
+  barcode: Scalars['String']['input'];
+}>;
+
+
+export type SearchItemByBarcodeQuery = { __typename?: 'Query', itemByBarcode?: { __typename?: 'Item', id: string, name: string, description?: string | null, imageUrl?: string | null, barcode?: string | null } | null };
 
 export type PantriesQueryVariables = Exact<{
   homeId: Scalars['ID']['input'];
@@ -1871,6 +1885,56 @@ export function useCreateHomeMutation(baseOptions?: Apollo.MutationHookOptions<C
 export type CreateHomeMutationHookResult = ReturnType<typeof useCreateHomeMutation>;
 export type CreateHomeMutationResult = Apollo.MutationResult<CreateHomeMutation>;
 export type CreateHomeMutationOptions = Apollo.BaseMutationOptions<CreateHomeMutation, CreateHomeMutationVariables>;
+export const CreateItemDocument = gql`
+    mutation CreateItem($data: CreateUpdateItemInput!) {
+  createItem(data: $data) {
+    id
+    name
+    description
+    barcode
+    dataSource
+    type
+    storageState
+    shelfLifeDays
+    popularityCount
+    showInOnboarding
+    status
+    visibility
+    imageUrl
+    healthBenefits
+    allergens
+    nutritions
+    metadata
+    tags
+  }
+}
+    `;
+export type CreateItemMutationFn = Apollo.MutationFunction<CreateItemMutation, CreateItemMutationVariables>;
+
+/**
+ * __useCreateItemMutation__
+ *
+ * To run a mutation, you first call `useCreateItemMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateItemMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createItemMutation, { data, loading, error }] = useCreateItemMutation({
+ *   variables: {
+ *      data: // value for 'data'
+ *   },
+ * });
+ */
+export function useCreateItemMutation(baseOptions?: Apollo.MutationHookOptions<CreateItemMutation, CreateItemMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateItemMutation, CreateItemMutationVariables>(CreateItemDocument, options);
+      }
+export type CreateItemMutationHookResult = ReturnType<typeof useCreateItemMutation>;
+export type CreateItemMutationResult = Apollo.MutationResult<CreateItemMutation>;
+export type CreateItemMutationOptions = Apollo.BaseMutationOptions<CreateItemMutation, CreateItemMutationVariables>;
 export const AddItemToPantryDocument = gql`
     mutation AddItemToPantry($input: CreatePantryItemInput!) {
   addItemToPantry(input: $input) {
@@ -2532,6 +2596,50 @@ export type AutocompleteItemsQueryHookResult = ReturnType<typeof useAutocomplete
 export type AutocompleteItemsLazyQueryHookResult = ReturnType<typeof useAutocompleteItemsLazyQuery>;
 export type AutocompleteItemsSuspenseQueryHookResult = ReturnType<typeof useAutocompleteItemsSuspenseQuery>;
 export type AutocompleteItemsQueryResult = Apollo.QueryResult<AutocompleteItemsQuery, AutocompleteItemsQueryVariables>;
+export const SearchItemByBarcodeDocument = gql`
+    query SearchItemByBarcode($barcode: String!) {
+  itemByBarcode(barcode: $barcode) {
+    id
+    name
+    description
+    imageUrl
+    barcode
+  }
+}
+    `;
+
+/**
+ * __useSearchItemByBarcodeQuery__
+ *
+ * To run a query within a React component, call `useSearchItemByBarcodeQuery` and pass it any options that fit your needs.
+ * When your component renders, `useSearchItemByBarcodeQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useSearchItemByBarcodeQuery({
+ *   variables: {
+ *      barcode: // value for 'barcode'
+ *   },
+ * });
+ */
+export function useSearchItemByBarcodeQuery(baseOptions: Apollo.QueryHookOptions<SearchItemByBarcodeQuery, SearchItemByBarcodeQueryVariables> & ({ variables: SearchItemByBarcodeQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<SearchItemByBarcodeQuery, SearchItemByBarcodeQueryVariables>(SearchItemByBarcodeDocument, options);
+      }
+export function useSearchItemByBarcodeLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<SearchItemByBarcodeQuery, SearchItemByBarcodeQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<SearchItemByBarcodeQuery, SearchItemByBarcodeQueryVariables>(SearchItemByBarcodeDocument, options);
+        }
+export function useSearchItemByBarcodeSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<SearchItemByBarcodeQuery, SearchItemByBarcodeQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<SearchItemByBarcodeQuery, SearchItemByBarcodeQueryVariables>(SearchItemByBarcodeDocument, options);
+        }
+export type SearchItemByBarcodeQueryHookResult = ReturnType<typeof useSearchItemByBarcodeQuery>;
+export type SearchItemByBarcodeLazyQueryHookResult = ReturnType<typeof useSearchItemByBarcodeLazyQuery>;
+export type SearchItemByBarcodeSuspenseQueryHookResult = ReturnType<typeof useSearchItemByBarcodeSuspenseQuery>;
+export type SearchItemByBarcodeQueryResult = Apollo.QueryResult<SearchItemByBarcodeQuery, SearchItemByBarcodeQueryVariables>;
 export const PantriesDocument = gql`
     query Pantries($homeId: ID!) {
   pantries(homeId: $homeId) {
