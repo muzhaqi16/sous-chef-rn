@@ -70,6 +70,11 @@ export type SearchResultsScreenProps = NativeStackScreenProps<
   'SearchResults'
 >;
 
+export type SearchResultsNavProp = NativeStackNavigationProp<
+  BarcodeStackParamList,
+  'SearchResults'
+>;
+
 export type OnBoardingStackParamList = {
   CreateShoppingList: undefined;
   SelectPantryItems: undefined;

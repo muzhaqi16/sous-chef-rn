@@ -4,5 +4,6 @@ export {useSafeNavigation} from './useSafeNavigation';
 export {useBottomSheetModal} from './useBottomSheetModal';
 export {useShoppingList} from './useShoppingList';
 export {usePantryItems} from './usePantryItems';
-export {useBarcodeScanner} from './useBarcodeScanner';
 export {useAuth} from './useAuth';
+export {useSearchResults} from './useSearchResults';
+export {useBarcodeScanner} from './useBarcodeScanner';
