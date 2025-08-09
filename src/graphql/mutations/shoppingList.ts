@@ -1,20 +1,24 @@
 import {gql} from '@apollo/client';
 
 export const CREATE_SHOPPING_LIST = gql`
-  mutation CreateShoppingList($data: CreateShoppingListInput!) {
-    createShoppingList(data: $data) {
+  mutation CreateShoppingList($input: CreateShoppingListInput!) {
+    createShoppingList(input: $input) {
       id
       name
-      tags
-      version
-      updatedAt
+      description
       isDefault
-      owner {
-        id
-      }
-      createdAt
-      deletedAt
+      tags
       metadata
+      createdAt
+      updatedAt
+      ownerships {
+        id
+        userId
+        shoppingListId
+        createdAt
+        transferredAt
+        transferredFrom
+      }
     }
   }
 `;
@@ -23,11 +27,18 @@ export const ADD_COLLABORATOR_MUTATION = gql`
   mutation AddCollaborator($data: AddCollaboratorInput!) {
     addCollaborator(data: $data) {
       id
+      shoppingListId
+      email
       role
       status
+      canEdit
+      canAddItems
+      canRemoveItems
+      canEditItems
+      canMarkPurchased
+      canInviteOthers
       invitedAt
       statusChangedAt
-      email
     }
   }
 `;

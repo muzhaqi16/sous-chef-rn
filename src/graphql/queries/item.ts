@@ -1,8 +1,12 @@
 import {gql} from '@apollo/client';
 
 export const GET_ITEMS = gql`
-  query Items($filter: ItemFilterInput, $offset: Int, $limit: Int) {
-    items(filter: $filter, offset: $offset, limit: $limit) {
+  query Items(
+    $filters: ItemFilters
+    $sort: ItemSortInput
+    $pagination: PaginationInput
+  ) {
+    items(filters: $filters, sort: $sort, pagination: $pagination) {
       items {
         id
         name
@@ -12,7 +16,6 @@ export const GET_ITEMS = gql`
         storageState
         imageUrl
         shelfLifeDays
-        popularityCount
         tags
         status
         visibility
@@ -20,30 +23,19 @@ export const GET_ITEMS = gql`
         units {
           id
           isDefault
-          conversionFactor
-          notes
         }
         brands {
-          name
           id
         }
         categories {
-          name
           id
         }
         nutritions
         categories {
           id
-          name
         }
         healthBenefits
         metadata
-        createdBy {
-          id
-        }
-        updatedBy {
-          id
-        }
         createdAt
         updatedAt
         deletedAt
@@ -55,33 +47,21 @@ export const GET_ITEMS = gql`
 `;
 
 export const GET_ITEMS_FOR_AUTOCOMPLETE = gql`
-  query AutocompleteItems($name: String!, $limit: Int) {
-    autocompleteItems(name: $name, limit: $limit) {
-      name
-      id
-      imageUrl
-      shelfLifeDays
-      units {
+  query SearchItems($input: SearchItemsInput!) {
+    searchItems(input: $input) {
+      items {
         id
-        unit {
-          id
-          name
-          symbol
-          type
-          conversionFactor
-          notes
-        }
-        isDefault
-        conversionFactor
-        notes
+        name
       }
+      totalCount
+      hasMore
     }
   }
 `;
 
 export const SEARCH_ITEM_BY_BARCODE = gql`
-  query SearchItemByBarcode($barcode: String!) {
-    itemByBarcode(barcode: $barcode) {
+  query SearchItemsByBarcode($barcode: String!) {
+    searchItemsByBarcode(barcode: $barcode) {
       id
       name
       description

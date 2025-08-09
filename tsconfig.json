@@ -1,3 +1,23 @@
 {
-  "extends": "@react-native/typescript-config/tsconfig.json"
+  "extends": "@react-native/typescript-config/tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "#/*": ["./src/*"],
+      "#generated": ["./src/graphql/generated"],
+      "#hooks": ["./src/hooks"],
+      "#graphql": ["./src/graphql"],
+      "#navigation": ["./src/navigation"],
+      "#navigation/*": ["./src/navigation/*"],
+      "#screens": ["./src/screens"],
+      "#store": ["./src/store"],
+      "#store/*": ["./src/store/*"],
+      "#storage": ["./src/storage"],
+      "#utils": ["./src/utils"],
+      "#utils/*": ["./src/utils/*"],
+      "#assets": ["./src/assets"],
+      "#components": ["./src/components"],
+      "#components/*": ["./src/components/*"]
+    }
+  }
 }

@@ -3,21 +3,23 @@ import {gql} from '@apollo/client';
 export const ShoppingListUpdatedDocument = gql`
   subscription ShoppingListUpdated($listId: ID!) {
     shoppingListUpdated(listId: $listId) {
-      id
-      shoppingList {
-        id
-      }
-      item {
+      mutation
+      node {
         id
         name
-        imageUrl
       }
-      quantity
-      itemName
-      unitName
-      isPurchased
-      createdAt
-      updatedAt
+      previousValues {
+        name
+        status
+        totalCost
+        isCompleted
+        estimatedTotal
+        description
+        budgetAmount
+      }
+      updatedFields
+      userId
+      timestamp
     }
   }
 `;

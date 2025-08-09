@@ -1,26 +1,42 @@
 import {gql} from '@apollo/client';
 
 export const ADD_NEW_ITEM = gql`
-  mutation CreateItem($data: CreateUpdateItemInput!) {
-    createItem(data: $data) {
+  mutation CreateItem($input: CreateItemInput!) {
+    createItem(input: $input) {
       id
       name
       description
       barcode
+      fdcId
       dataSource
       type
       storageState
-      shelfLifeDays
-      popularityCount
       showInOnboarding
+      shelfLifeDays
+      popularity
       status
       visibility
+      averagePrice
+      minPrice
+      maxPrice
+      priceUpdatedAt
       imageUrl
+      tags
       healthBenefits
       allergens
       nutritions
       metadata
-      tags
+      ingredients
+      createdAt
+      updatedAt
+      deletedAt
+      version
+      categories {
+        id
+        category {
+          name
+        }
+      }
     }
   }
 `;

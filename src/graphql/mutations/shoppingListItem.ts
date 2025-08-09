@@ -1,30 +1,37 @@
 import {gql} from '@apollo/client';
 
 // Add an item to shopping list
-export const ADD_ITEM_TO_SHOPPING_LIST_MUTATION = gql`
-  mutation AddItemToShoppingList($data: ShoppingListItemInput!) {
-    addItemToShoppingList(data: $data) {
+export const ADD_ITEM_TO_SHOPPING_LIST = gql`
+  mutation AddItemToShoppingList($input: CreateShoppingListItemInput!) {
+    addItemToShoppingList(input: $input) {
       id
+      addedBy {
+        id
+      }
+      isPurchased
       itemName
-      unitName
-      quantity
     }
   }
 `;
 
 export const REMOVE_ITEM = gql`
-  mutation RemoveItemFromShoppingList($id: ID!) {
-    removeItemFromShoppingList(id: $id)
+  mutation RemoveItemFromShoppingList($removeItemFromShoppingListId: ID!) {
+    removeItemFromShoppingList(id: $removeItemFromShoppingListId)
   }
 `;
 
 // Update an item in shopping list
-export const UPDATE_ITEM_IN_SHOPPING_LIST_MUTATION = gql`
+export const UPDATE_ITEM_IN_SHOPPING_LIST = gql`
   mutation UpdateShoppingListItem(
-    $id: ID!
+    $updateShoppingListItemId: ID!
     $data: UpdateShoppingListItemInput!
+    $input: UpdateShoppingListItemInput!
   ) {
-    updateShoppingListItem(id: $id, data: $data) {
+    updateShoppingListItem(
+      id: $updateShoppingListItemId
+      data: $data
+      input: $input
+    ) {
       id
       quantity
       item {

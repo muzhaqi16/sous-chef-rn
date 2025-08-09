@@ -1,64 +1,64 @@
 import React from 'react';
 import {useForm} from 'react-hook-form';
 import {yupResolver} from '@hookform/resolvers/yup';
-import {AuthFormTemplate} from '../../components/templates/AuthFormTemplate';
-import {EmailInput, PasswordInput, BaseInput} from '../../components/atoms';
-import {getSignUpValidationSchema} from '../../utils/validation';
-import {AuthWrapper} from '../../components/templates/AuthWrapper';
-import {SignUpNavProp} from '../../navigation';
-import {useSafeNavigation} from '../../hooks';
-import {useRegisterMutation} from '../../graphql/generated';
-import {useStore} from '../../store';
 
-type SignUpValues = {
-  name: string;
-  email: string;
-  password: string;
-  confirmPassword: string;
-};
+import {AuthFormTemplate, AuthWrapper} from '#components/templates';
+import {EmailInput, PasswordInput, BaseInput} from '#components/atoms';
+import {getSignUpValidationSchema} from '#utils/validation';
+import {SignUpNavProp} from '#navigation';
+import {useRegisterMutation, type RegisterInput} from '#generated';
+import {useStore} from '#store';
+import {
+  useAuthErrorHandler,
+  useSafeNavigation,
+  usePostAuthNavigation,
+} from '#hooks';
+
+type SignUpValues = RegisterInput & {confirmPassword: string; name: string};
 
 export const SignUpScreen = () => {
   const {navigation, canGoBack, goBack} = useSafeNavigation<SignUpNavProp>();
+  const {setAuthFromResponse, setPendingCredentials} = useStore();
+
+  // Shared hooks
+  const {handleAuthError} = useAuthErrorHandler();
+  const {navigateToEmailVerification} = usePostAuthNavigation();
+
+  // Apollo mutation
   const [register, {loading: isRegistering}] = useRegisterMutation();
-  const {setAuth, setPendingCredentials} = useStore();
-  const {
-    control,
-    handleSubmit,
-    formState: {errors},
-  } = useForm<SignUpValues>({
+
+  // Form setup
+  const form = useForm<SignUpValues>({
     resolver: yupResolver(getSignUpValidationSchema()),
     defaultValues: {
+      name: '',
       email: '',
       password: '',
       confirmPassword: '',
     },
   });
 
+  // Submit handler
   const onSubmit = async (data: SignUpValues) => {
-    // Here you would typically call your signup API
-    // For example:
     const {name, email, password} = data;
+    const input: RegisterInput = {name, email, password};
+
     try {
       const response = await register({
-        variables: {name, email, password},
+        variables: {input},
+        errorPolicy: 'all',
       });
 
       if (response.data?.register) {
-        setAuth(
-          response.data.register.user,
-          response.data.register.accessToken,
-          response.data.register.refreshToken,
-        );
+        const registerData = response.data.register;
+        setAuthFromResponse(registerData);
         setPendingCredentials(email, password);
-        navigation.navigate('CodeVerification', {
-          email: data.email,
-          password: data.password,
-        });
+        navigateToEmailVerification(email, password);
       } else {
-        console.error('Registration failed:', response.errors);
+        throw new Error('Registration failed: No data returned');
       }
-    } catch (error) {
-      console.error('Error during registration:', error);
+    } catch (err: any) {
+      handleAuthError(err, 'Registration failed. Please try again.');
     }
   };
 
@@ -66,8 +66,8 @@ export const SignUpScreen = () => {
     <AuthWrapper>
       <AuthFormTemplate<SignUpValues>
         title="Create account"
-        subtitle="Join MyApp today"
-        {...(canGoBack ? {onBackPress: goBack} : {})}
+        subtitle="Join Sous Chef App today"
+        onBackPress={canGoBack ? goBack : undefined}
         fields={[
           {
             name: 'name',
@@ -83,12 +83,12 @@ export const SignUpScreen = () => {
             component: PasswordInput,
           },
         ]}
-        control={control}
-        errors={errors}
-        linkText="Forgot password?"
-        onLinkPress={() => navigation.navigate('ForgotPassword')}
-        submitText={isRegistering ? 'Registering…' : 'Sign Up'}
-        onSubmit={handleSubmit(onSubmit)}
+        control={form.control}
+        errors={form.formState.errors}
+        linkText="Already have an account?"
+        onLinkPress={() => navigation.navigate('Login')}
+        submitText={isRegistering ? 'Creating account…' : 'Sign Up'}
+        onSubmit={form.handleSubmit(onSubmit)}
         footerText="Already have an account?"
         footerLinkText="Sign In"
         onFooterLinkPress={() => navigation.navigate('Login')}

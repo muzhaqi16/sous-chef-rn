@@ -1,24 +1,41 @@
 import {gql} from '@apollo/client';
 
+export const CREATE_PANTRY = gql`
+  mutation CreatePantry($input: CreatePantryInput!) {
+    createPantry(input: $input) {
+      id
+      homeId
+      name
+      description
+      isDefault
+      location
+      temperature
+      tags
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
 export const ADD_ITEM_TO_PANTRY = gql`
-  mutation AddItemToPantry($input: CreatePantryItemInput!) {
+  mutation AddItemToPantry($input: AddPantryItemInput!) {
     addItemToPantry(input: $input) {
       id
-      pantry {
-        id
-      }
-      item {
-        id
-      }
-      unit {
-        id
-      }
-      quantity
-      addedAt
-      lastUsedAt
+      pantryId
+      itemId
+      unitId
+      initialQuantity
+      currentQuantity
+      itemName
+      itemBarcode
+      unitName
       expiresAt
+      bestByDate
       storageState
-      version
+      storageLocation
+      condition
+      acquisitionMethod
+      createdAt
     }
   }
 `;

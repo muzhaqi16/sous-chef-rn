@@ -1,131 +1,74 @@
-import React, {useEffect, useState, useCallback} from 'react';
-import {ToastAndroid, ActivityIndicator, View} from 'react-native';
-import {CommonActions} from '@react-navigation/native';
+import React, {useEffect} from 'react';
+import {ActivityIndicator, View} from 'react-native';
 import {useForm} from 'react-hook-form';
 import {yupResolver} from '@hookform/resolvers/yup';
 
-import {LoginNavProp} from '../../navigation/types';
-import {AuthFormTemplate, AuthWrapper} from '../../components/templates';
-import {EmailInput, PasswordInput} from '../../components/atoms';
-import {getLoginValidationSchema} from '../../utils/validation';
-import {useSafeNavigation} from '../../hooks';
-import {useToast} from '../../hooks/useToast';
-import {loadCredentials} from '../../storage/keychain';
-
-import {useStore} from '../../store';
-import {useLoginMutation} from '../../graphql/generated';
-
-type LoginValues = {email: string; password: string};
+import {LoginNavProp} from '#navigation/types';
+import {AuthFormTemplate, AuthWrapper} from '#components/templates';
+import {EmailInput, PasswordInput} from '#components/atoms';
+import {getLoginValidationSchema} from '#utils/validation';
+import {useStore} from '#store';
+import {useLoginMutation, type LoginInput} from '#generated';
+import {
+  useCredentialLoader,
+  useAuthErrorHandler,
+  useSafeNavigation,
+  usePostAuthNavigation,
+} from '#hooks';
 
 export function LoginScreen() {
   const {navigation, canGoBack, goBack} = useSafeNavigation<LoginNavProp>();
-  const showToast = useToast();
-  const {rememberMe, setAuth, setPendingCredentials} = useStore();
+  const {rememberMe, setAuthFromResponse, setPendingCredentials} = useStore();
 
-  const [loadingCreds, setLoadingCreds] = useState(true);
-  const [pwFromKeychain, setPwFromKeychain] = useState(false);
+  // Shared hooks
+  const {loadingCreds, pwFromKeychain, loadStoredCredentials} =
+    useCredentialLoader(rememberMe);
+  const {handleAuthError} = useAuthErrorHandler();
+  const {navigateAfterAuth} = usePostAuthNavigation();
 
-  // Apollo mutation hook
+  // Apollo mutation
   const [login, {loading: isLoggingIn}] = useLoginMutation();
 
-  // React Hook Form
-  const {
-    control,
-    handleSubmit,
-    reset,
-    formState: {errors},
-  } = useForm<LoginValues>({
+  // Form setup
+  const form = useForm<LoginInput>({
     resolver: yupResolver(getLoginValidationSchema()),
     defaultValues: {email: '', password: ''},
   });
 
-  // 1) Preload credentials from Keychain
+  // Load credentials on mount
   useEffect(() => {
-    (async () => {
-      setLoadingCreds(true);
-      if (!rememberMe) {
-        setLoadingCreds(false);
-        return;
+    loadStoredCredentials().then(credentials => {
+      if (credentials) {
+        form.reset(credentials);
       }
-      try {
-        const creds = await loadCredentials();
-        if (creds) {
-          reset({email: creds.username, password: creds.password});
-          setPwFromKeychain(true);
-        }
-      } catch (err) {
-        console.warn('Keychain load failed', err);
-      } finally {
-        setLoadingCreds(false);
-      }
-    })();
-  }, [reset]);
+    });
+  }, [loadStoredCredentials, form]);
 
-  // 2) Form submit handler
-  const onSubmit = useCallback(
-    async ({email, password}: LoginValues) => {
-      try {
-        const {data, errors: gqlErrors} = await login({
-          variables: {email, password},
-          // optional: you could add errorPolicy or fetchPolicy here
-        });
+  // Submit handler
+  const onSubmit = async (input: LoginInput) => {
+    try {
+      const response = await login({
+        variables: {input},
+        errorPolicy: 'all',
+      });
 
-        if (gqlErrors?.length || !data?.login) {
-          throw new Error(gqlErrors?.[0]?.message ?? 'Login failed');
-        }
+      if (response.data?.login) {
+        const loginData = response.data.login;
+        setAuthFromResponse(loginData);
 
-        const {user, accessToken, refreshToken} = data.login;
-
-        // Persist into your Zustand auth slice, we only use this to keep track of auth state
-
-        setAuth(user, accessToken, refreshToken);
-
-        // If the user has never been asked to remember login info
-        // and the rememberMe state is undefined, we set pending credentials and navigate to AuthStack
-        // AuthStack will handle the "remember me" logic
         if (rememberMe === undefined) {
-          setPendingCredentials(email, password);
-          navigation.dispatch(
-            CommonActions.reset({
-              index: 0,
-              routes: [{name: 'AuthStack'}],
-            }),
-          );
-          return;
-        }
-        if (!user.onBoarded) {
-          // not onboarded yet → go to onboarding stack
-          navigation.dispatch(
-            CommonActions.reset({
-              index: 0,
-              routes: [{name: 'OnBoardingStack'}],
-            }),
-          );
-          return; // stop here
+          setPendingCredentials(input.email, input.password);
         }
 
-        // 🚩 Already onboarded and "remember me" state handled
-        navigation.dispatch(
-          CommonActions.reset({
-            index: 0,
-            routes: [{name: 'HomeStack'}], // main/home stack
-          }),
-        );
-      } catch (err: any) {
-        showToast({
-          type: 'error',
-          message:
-            err instanceof Error
-              ? err.message
-              : 'Login failed. Please try again.',
-          duration: ToastAndroid.SHORT,
-        });
+        navigateAfterAuth(loginData.user, rememberMe);
+      } else {
+        throw new Error('Login failed: No data returned');
       }
-    },
-    [login, navigation, pwFromKeychain, setAuth, showToast],
-  );
+    } catch (err: any) {
+      handleAuthError(err, 'Login failed. Please try again.');
+    }
+  };
 
-  // 3) Loading UI while we fetch Keychain creds
   if (loadingCreds) {
     return (
       <AuthWrapper>
@@ -136,10 +79,9 @@ export function LoginScreen() {
     );
   }
 
-  // 4) Render form
   return (
     <AuthWrapper>
-      <AuthFormTemplate<LoginValues>
+      <AuthFormTemplate<LoginInput>
         title="Sign in to Sous Chef App"
         subtitle="Access your pantry and more"
         onBackPress={canGoBack ? goBack : undefined}
@@ -152,12 +94,12 @@ export function LoginScreen() {
             props: {showToggle: !pwFromKeychain},
           },
         ]}
-        control={control}
-        errors={errors}
+        control={form.control}
+        errors={form.formState.errors}
         linkText="Forgot password?"
         onLinkPress={() => navigation.navigate('ForgotPassword')}
         submitText={isLoggingIn ? 'Logging in…' : 'Login'}
-        onSubmit={handleSubmit(onSubmit)}
+        onSubmit={form.handleSubmit(onSubmit)}
         footerText="Don't have an account?"
         footerLinkText="Sign Up"
         onFooterLinkPress={() => navigation.navigate('SignUp')}

@@ -76,12 +76,11 @@ export type SearchResultsNavProp = NativeStackNavigationProp<
 >;
 
 export type OnBoardingStackParamList = {
+  CreateHome: undefined;
   CreateShoppingList: undefined;
   SelectPantryItems: undefined;
-  AddRecipes: undefined;
-  AddFriends: undefined;
-  AddProfilePicture: undefined;
-  OnBoardingCompleted: undefined;
+  InviteMembers: undefined;
+  OnboardingComplete: undefined;
 };
 
 export type HomeTabScreenProps<T extends keyof HomeTabParamList> =
@@ -106,9 +105,9 @@ export type OnBoardingNavProp = StackNavigationProp<
   'CreateShoppingList'
 >;
 
-export type CreateShoppingListNavProp = CompositeNavigationProp<
-  OnBoardingNavProp,
-  RootNavProp
+export type CreateShoppingListNavProp = NativeStackNavigationProp<
+  OnBoardingStackParamList,
+  'CreateShoppingList'
 >;
 
 export type SignUpNavProp = StackNavigationProp<AuthStackParamList, 'SignUp'>;
@@ -137,7 +136,25 @@ export type RememberLoginInfoProps = {
   navigation: RememberNavProp;
   route: RememberRouteProp;
 };
+export type CreateHomeNavProp = NativeStackNavigationProp<
+  OnBoardingStackParamList,
+  'CreateHome'
+>;
 
+export type SelectPantryItemsNavProp = NativeStackNavigationProp<
+  OnBoardingStackParamList,
+  'SelectPantryItems'
+>;
+
+export type InviteMembersNavProp = NativeStackNavigationProp<
+  OnBoardingStackParamList,
+  'InviteMembers'
+>;
+
+export type OnboardingCompleteNavProp = NativeStackNavigationProp<
+  OnBoardingStackParamList,
+  'OnboardingComplete'
+>;
 declare global {
   namespace ReactNavigation {
     interface RootParamList extends RootStackParamList {}

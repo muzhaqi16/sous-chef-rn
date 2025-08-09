@@ -5,18 +5,54 @@ export const GET_SHOPPING_LISTS = gql`
     shoppingLists {
       id
       name
-      owner {
-        id
-        email
-        emailVerified
-        onBoarded
-        role
-      }
       isDefault
+      metadata
       tags
+      items {
+        id
+        shoppingList {
+          id
+        }
+        item {
+          id
+          name
+          description
+          barcode
+          dataSource
+          type
+          storageState
+          shelfLifeDays
+          showInOnboarding
+          status
+          visibility
+          imageUrl
+          healthBenefits
+          allergens
+          nutritions
+          metadata
+          tags
+          createdAt
+          updatedAt
+          version
+        }
+        unit {
+          id
+        }
+        quantity
+        itemName
+        unitName
+        isPurchased
+        createdAt
+        updatedAt
+        deletedAt
+        version
+      }
+      collaborators {
+        id
+      }
       createdAt
       updatedAt
-      version
+      deletedAt
     }
   }
 `;

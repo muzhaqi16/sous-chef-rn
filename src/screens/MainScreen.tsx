@@ -10,6 +10,7 @@ import {SwipeablePantryItem} from '../components/organisms/SwipeablePantryItem';
 import {useStyles, createStyleSheet} from 'react-native-unistyles';
 import SearchBar from '../components/molecules/SearchBar';
 import {usePantryItems} from '../hooks';
+import {useUserData} from '../hooks/useUserData';
 import {StorageState, useHomeQuery} from '../graphql/generated';
 import {UserHeader} from '../components/molecules/UserHeader';
 import {useNavigation} from '@react-navigation/native';
@@ -21,9 +22,12 @@ export const MainScreen: React.FC = () => {
   const navigation = useNavigation<RootNavProp>();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [expiredCount, setExpiredCount] = useState(0);
+  const {user} = useUserData(); // Only uses auth data
 
   const {data: homeData} = useHomeQuery({
     fetchPolicy: 'cache-and-network',
+    variables: {homeId: ''},
+    skip: !user?.id,
   });
 
   const pantryId = homeData?.home?.defaultPantry?.id;

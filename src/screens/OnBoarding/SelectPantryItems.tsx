@@ -1,54 +1,51 @@
 import React, {useState} from 'react';
 import {TouchableOpacity, Text, View, ActivityIndicator} from 'react-native';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
-import {OnBoardingWrapper} from '../../components/templates';
-import {useNavigation, CommonActions} from '@react-navigation/native';
-import {CreateShoppingListNavProp} from '../../navigation/types';
+import {OnBoardingWrapper} from '#components/templates';
+import {useNavigation} from '@react-navigation/native';
+import {SelectPantryItemsNavProp} from '#navigation/types';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
 import {
-  useOnBoardingPantryItemsQuery,
-  OnBoardingPantryItemsQuery,
+  useOnboardingItemsQuery,
   useAddItemToPantryMutation,
-  useUpdateUserMutation,
-  useHomeQuery,
-} from '../../graphql/generated';
-import {useStore} from '../../store';
-import {OnBoardingSteps} from '../../store/slices/preferencesSlice';
-import {Button} from '../../components';
+  StorageState,
+  ItemCondition,
+  AcquisitionMethod,
+} from '#generated';
+import {useStore} from '#store';
+import {OnBoardingSteps} from '#store/slices/preferencesSlice';
+import {Button} from '#components';
 
-type PartialItem = NonNullable<
-  OnBoardingPantryItemsQuery['onBoardingPantryItems']
->[number];
+type PartialItem = {
+  id: string;
+  name: string;
+  description?: string;
+  imageUrl?: string;
+  type?: string;
+  storageState?: StorageState;
+  popularity?: number;
+  status?: string;
+  units?: Array<{
+    id: string;
+    isDefault?: boolean;
+    unit: {
+      id: string;
+      name: string;
+      symbol: string;
+    };
+  }>;
+};
 
 export const SelectPantryItems = () => {
-  // 1) ALL hooks at the top, no early returns before these
-  const navigation = useNavigation<CreateShoppingListNavProp>();
+  const navigation = useNavigation<SelectPantryItemsNavProp>();
   const {styles} = useStyles(stylesheet);
-  const {user, selectedPantryId, setSelectedPantryId, setOnBoardingStep} =
-    useStore();
-
-  const {data: homeData} = useHomeQuery({
-    fetchPolicy: 'cache-and-network',
-    onCompleted: data => {
-      if (data.home?.defaultPantry) {
-        setSelectedPantryId(data.home.defaultPantry.id);
-      }
-    },
-    onError: e => console.error(e),
-  });
-
-  const [updateUser] = useUpdateUserMutation({
-    onCompleted: () => {
-      console.log('User updated successfully');
-    },
-    onError: e => console.error(e),
-  });
+  const {selectedPantryId, setOnBoardingStep} = useStore();
 
   const {
     data,
     loading,
     error: queryError,
-  } = useOnBoardingPantryItemsQuery({
+  } = useOnboardingItemsQuery({
     fetchPolicy: 'cache-and-network',
     onError: e => console.error(e),
   });
@@ -61,101 +58,138 @@ export const SelectPantryItems = () => {
   });
 
   const [selected, setSelected] = useState<PartialItem[]>([]);
+  const [isAddingItems, setIsAddingItems] = useState(false);
 
-  // 2) Now it’s safe to early-return or switch UI
   if (loading) {
-    return <ActivityIndicator style={styles.loader} />;
-  }
-  if (queryError) {
     return (
-      <Text style={styles.errorText}>
-        Unable to load items. Please try again.
-      </Text>
+      <OnBoardingWrapper
+        title="Stock your pantry"
+        subtitle="Select items you already have at home"
+        step={3}
+        totalSteps={5}
+        onBack={() => navigation.goBack()}
+        onSkip={() => handleSkip()}>
+        <ActivityIndicator style={styles.loader} />
+      </OnBoardingWrapper>
     );
   }
 
-  // 3) Your handlers, toggle by comparing item.id
+  if (queryError) {
+    return (
+      <OnBoardingWrapper
+        title="Stock your pantry"
+        subtitle="Select items you already have at home"
+        step={3}
+        totalSteps={5}
+        onBack={() => navigation.goBack()}
+        onSkip={() => handleSkip()}>
+        <Text style={styles.errorText}>
+          Unable to load items. Please try again.
+        </Text>
+      </OnBoardingWrapper>
+    );
+  }
+
   const handleSelect = (item: PartialItem) => {
     setSelected(current => {
       const exists = current.find(i => i.id === item.id);
       if (exists) {
         return current.filter(i => i.id !== item.id);
       }
-      if (current.length >= 3) {
-        console.warn('You can only select up to 3 items');
+      if (current.length >= 5) {
+        console.warn('You can only select up to 5 items');
         return current;
       }
       return [...current, item];
     });
   };
-  const onNext = () => {
-    if (selected.length === 0) {
-      console.warn('No items selected');
-      return;
-    }
-    selected.forEach(item =>
-      addItemToPantry({
-        variables: {
-          input: {
-            itemId: item.id,
-            quantity: 1,
-            pantryId:
-              selectedPantryId || homeData?.home?.defaultPantry?.id || '',
-            unitId: item?.units && item.units[0]?.id,
-          },
-        },
-      }),
-    );
-    // Navigate to the next step in the onboarding process
+
+  const handleSkip = () => {
     setOnBoardingStep(OnBoardingSteps.selectPantryItems);
-    updateUser({
-      variables: {
-        id: user?.id || '',
-        input: {
-          onBoarded: true,
-        },
-      },
-    });
-    navigation.dispatch(
-      CommonActions.reset({
-        index: 0,
-        routes: [
-          {
-            // this is the final step, so we can go to Home
-            name: 'HomeStack',
-          },
-        ],
-      }),
-    );
+    navigation.replace('InviteMembers');
   };
 
-  // 4) Finally render
+  const onNext = async () => {
+    if (selected.length === 0) {
+      // If no items selected, just move to next step
+      moveToNextStep();
+      return;
+    }
+
+    if (!selectedPantryId) {
+      console.warn('No pantry selected, skipping to next step');
+      moveToNextStep();
+      return;
+    }
+
+    setIsAddingItems(true);
+
+    try {
+      // Add all selected items to pantry
+      await Promise.all(
+        selected.map(item => {
+          // Find the default unit or use the first available unit
+          const defaultUnit = item.units?.find(u => u.isDefault);
+          const unitToUse = defaultUnit || item.units?.[0];
+
+          return addItemToPantry({
+            variables: {
+              input: {
+                pantryId: selectedPantryId,
+                itemId: item.id,
+                unitId: unitToUse?.unit?.id || '',
+                initialQuantity: 1,
+                storageState: StorageState.Ambient,
+                condition: ItemCondition.Good,
+                acquisitionMethod: AcquisitionMethod.Purchased,
+              },
+            },
+          });
+        }),
+      );
+
+      moveToNextStep();
+    } catch (error) {
+      console.error('Error adding items to pantry:', error);
+      // Continue anyway - items can be added later
+      moveToNextStep();
+    } finally {
+      setIsAddingItems(false);
+    }
+  };
+
+  const moveToNextStep = () => {
+    setOnBoardingStep(OnBoardingSteps.selectPantryItems);
+    navigation.replace('InviteMembers');
+  };
+
   return (
     <OnBoardingWrapper
-      title="Select pantry items"
-      subtitle="Choose a few items that you might already have"
-      step={2}
-      totalSteps={4}
+      title="Stock your pantry"
+      subtitle="Select items you already have at home (optional)"
+      step={3}
+      totalSteps={5}
       onBack={() => navigation.goBack()}
-      onSkip={() => {
-        setOnBoardingStep(OnBoardingSteps.selectPantryItems);
-        navigation.dispatch(
-          CommonActions.reset({
-            index: 0,
-            routes: [{name: 'HomeStack'}],
-          }),
-        );
-      }}>
+      onSkip={handleSkip}>
       <KeyboardAwareScrollView style={styles.form}>
+        <Text style={styles.helperText}>
+          Select up to 5 items (you have {selected.length} selected)
+        </Text>
         <View style={styles.picker}>
-          {data!.onBoardingPantryItems?.map(item => {
+          {data?.onboardingItems?.map(item => {
             const active = selected.some(
               selectedItem => selectedItem.id === item.id,
             );
             return (
               <TouchableOpacity
                 key={item.id}
-                onPress={() => handleSelect(item)}
+                onPress={() =>
+                  handleSelect({
+                    ...item,
+                    description: item.description ?? undefined,
+                    imageUrl: item.imageUrl ?? undefined,
+                  })
+                }
                 style={[styles.pickerItem, active && styles.pickerItemActive]}>
                 <Text
                   style={[
@@ -171,17 +205,18 @@ export const SelectPantryItems = () => {
       </KeyboardAwareScrollView>
 
       <Button
-        title="Next"
+        title={
+          isAddingItems
+            ? 'Adding Items...'
+            : selected.length === 0
+              ? 'Skip'
+              : `Add ${selected.length} Item${selected.length === 1 ? '' : 's'}`
+        }
         onPress={onNext}
-        btnStyle={[
-          styles.nextButton,
-          selected.length === 0 && styles.nextButtonDisabled,
-        ]}
+        btnStyle={styles.nextButton}
         txtStyle={styles.nextText}
-        disabled={selected.length === 0}
+        disabled={isAddingItems}
       />
-
-      <TouchableOpacity onPress={onNext} style={[]}></TouchableOpacity>
     </OnBoardingWrapper>
   );
 };
@@ -192,18 +227,25 @@ const stylesheet = createStyleSheet(theme => ({
     marginTop: 24,
     marginBottom: 12,
   },
+  helperText: {
+    fontSize: 14,
+    color: theme.colors.textSecondary || '#666',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
   picker: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    justifyContent: 'center',
   },
   pickerItem: {
-    margin: 2,
-    paddingVertical: 4,
-    paddingHorizontal: 12,
+    margin: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
     backgroundColor: '#fff',
     borderWidth: 1,
     borderColor: '#c9d3db',
-    borderRadius: 12,
+    borderRadius: 20,
   },
   pickerItemActive: {
     backgroundColor: theme.colors.primary,
@@ -224,16 +266,13 @@ const stylesheet = createStyleSheet(theme => ({
     alignItems: 'center',
     marginTop: 20,
   },
-  nextButtonDisabled: {
-    opacity: 0.5,
-  },
   nextText: {
     color: theme.colors.white,
     fontSize: 16,
     fontWeight: 'bold',
   },
   errorText: {
-    color: theme.colors.error,
+    color: theme.colors.error || 'red',
     textAlign: 'center',
     marginVertical: 12,
   },

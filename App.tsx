@@ -4,7 +4,7 @@ import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {BottomSheetModalProvider} from '@gorhom/bottom-sheet';
 import {ApolloProvider} from '@apollo/client';
-import {useStore} from './src/store';
+import {useStore} from '#store';
 import {client} from './src/apollo/client';
 import {
   useInitialTheme,
@@ -15,7 +15,6 @@ import {
 import AppNavigator from './src/navigation/AppNavigator';
 import SplashScreen from './src/screens/SplashScreen';
 import {ToastProvider} from './src/components/atoms';
-import {Text} from 'react-native-gesture-handler';
 
 const App = () => {
   const darkMode = useColorScheme() === 'dark';

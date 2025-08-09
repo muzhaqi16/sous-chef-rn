@@ -7,9 +7,17 @@ export const GET_USER_PROFILE = gql`
       userId
       firstName
       lastName
-      avatarUrl
+      displayName
+      bio
+      avatar
+      coverImage
       phone
+      website
       dateOfBirth
+      gender
+      profileVisibility
+      showEmail
+      showPhone
       createdAt
       updatedAt
     }

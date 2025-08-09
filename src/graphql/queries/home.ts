@@ -1,35 +1,54 @@
 import {gql} from '@apollo/client';
 
-export const GET_OR_CREATE_DEFAULT_HOME = gql`
-  query Home {
-    home {
+export const GET_HOME = gql`
+  query Home($homeId: ID!) {
+    home(id: $homeId) {
       id
       name
-      owner {
-        id
-      }
-      defaultPantry {
-        id
-      }
+      description
+      type
+      timezone
+      currency
+      isPublic
+      joinCode
+      allowJoinCode
+      maxMembers
+      tags
+      metadata
       createdAt
       updatedAt
-    }
-  }
-`;
-
-export const GET_HOME_BY_ID = gql`
-  query HomeById($id: ID!) {
-    home(id: $id) {
-      id
-      name
-      owner {
+      pantries {
         id
+        name
+        isDefault
       }
-      defaultPantry {
+      members {
         id
+        email
       }
-      createdAt
-      updatedAt
+      memberships {
+        id
+        homeId
+        userId
+        role
+        status
+        displayName
+        canViewPantry
+        canEditPantry
+        canAddItems
+        canRemoveItems
+        canInviteOthers
+        canManageHome
+        lastActiveAt
+        joinedAt
+        leftAt
+        createdAt
+        updatedAt
+        user {
+          id
+          email
+        }
+      }
     }
   }
 `;
@@ -39,12 +58,6 @@ export const GET_HOMES = gql`
     homes {
       id
       name
-      owner {
-        id
-      }
-      defaultPantry {
-        id
-      }
       createdAt
       updatedAt
     }

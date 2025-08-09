@@ -5,14 +5,51 @@ export const CREATE_HOME = gql`
     createHome(input: $input) {
       id
       name
+      description
       type
-      owner {
-        id
-      }
+      currency
+      timezone
+      isPublic
+      allowJoinCode
+      joinCode
+      maxMembers
+      tags
       createdAt
       updatedAt
-      version
-      deletedAt
+      pantries {
+        id
+        name
+        isDefault
+      }
+      members {
+        id
+        email
+      }
+    }
+  }
+`;
+
+export const INVITE_TO_HOME = gql`
+  mutation InviteToHome($input: InviteToHomeInput!) {
+    inviteToHome(input: $input) {
+      id
+      email
+      token
+      homeId
+      role
+      status
+      expiresAt
+      sentAt
+      personalMessage
+      createdAt
+      home {
+        id
+        name
+      }
+      inviter {
+        id
+        email
+      }
     }
   }
 `;

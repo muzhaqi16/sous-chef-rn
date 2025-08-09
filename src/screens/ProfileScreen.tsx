@@ -6,24 +6,19 @@ import {SettingsSection} from '../components/organisms/SettingsSection';
 import {SettingItem} from '../components/molecules/SettingRow';
 import {ModalPicker} from '../components/molecules/ModalPicker';
 import {useStyles, createStyleSheet} from 'react-native-unistyles';
-import {
-  useUpdateUserProfileMutation,
-  useUserProfileQuery,
-} from '../graphql/generated';
+import {useUserProfileQuery} from '../graphql/generated';
+import {useUserData} from '../hooks/useUserData';
 import {useNavigation} from '@react-navigation/native';
 
 export default function ProfileScreen() {
   const {styles} = useStyles(stylesheet);
   const navigation = useNavigation();
 
-  const {data: profileData} = useUserProfileQuery({
-    fetchPolicy: 'cache-and-network',
-  });
+  const {user} = useUserData(true);
 
-  const profile = profileData?.userProfile;
-  const {firstName, lastName, phone, dateOfBirth, avatarUrl} = profile || {};
+  const {firstName, lastName, phone, dateOfBirth, avatarUrl} = user || {};
+
   const {
-    user,
     logout,
     theme,
     setTheme,

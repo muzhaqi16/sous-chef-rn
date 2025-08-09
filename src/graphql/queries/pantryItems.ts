@@ -3,41 +3,38 @@ import {gql} from '@apollo/client';
 export const GET_PANTRY_ITEMS = gql`
   query PantryItems($pantryId: ID!) {
     pantryItems(pantryId: $pantryId) {
-      id
-      pantry {
-        id
-      }
-      quantity
-      addedAt
-      lastUsedAt
-      expiresAt
-      storageState
-      version
+      unitName
+      unitId
+      pantryId
+      itemName
+      itemId
+      itemBarcode
       item {
-        id
         imageUrl
-        name
-      }
-      unit {
-        id
-        name
-        symbol
-        conversionFactor
-        notes
-        type
       }
     }
   }
 `;
 
-export const GET_ONBOARDING_PANTRY_ITEMS = gql`
-  query OnBoardingPantryItems {
-    onBoardingPantryItems {
+export const GET_ONBOARDING_ITEMS = gql`
+  query OnboardingItems {
+    onboardingItems {
       id
-      imageUrl
       name
+      description
+      imageUrl
+      type
+      storageState
+      popularity
+      status
       units {
         id
+        isDefault
+        unit {
+          id
+          name
+          symbol
+        }
       }
     }
   }

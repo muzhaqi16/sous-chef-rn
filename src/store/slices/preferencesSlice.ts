@@ -1,63 +1,78 @@
 import {StateCreator} from 'zustand';
 import {RootState} from '../index';
 
-type OnBoardingSteps = 'createShoppingList' | 'selectPantryItems' | null;
+export enum OnBoardingSteps {
+  createHome = 'createHome',
+  createShoppingList = 'createShoppingList',
+  selectPantryItems = 'selectPantryItems',
+  inviteMembers = 'inviteMembers',
+  complete = 'complete',
+}
 
-export const OnBoardingSteps = {
-  createShoppingList: 'createShoppingList' as OnBoardingSteps,
-  selectPantryItems: 'selectPantryItems' as OnBoardingSteps,
-  null: null as OnBoardingSteps,
-};
-
-export interface PreferencesState {
+interface PreferencesState {
+  // Theme
   theme: 'light' | 'dark';
-  onBoardingStep: OnBoardingSteps;
-  language?: string;
-  emailNotifications?: boolean;
-  pushNotifications?: boolean;
-  /** true = user asked “yes”, false = user asked “no”, undefined = not yet asked */
-  rememberMe?: boolean;
-  selectedShoppingListId: string | null;
-  selectedPantryId: string | null;
+  setTheme: (theme: 'light' | 'dark') => void;
 
-  setRememberMe: (remember: boolean) => void;
+  // Language
+  language?: string;
+  setLanguage: (language: string) => void;
+  // Onboarding
+  onBoardingStep: OnBoardingSteps | null;
+  setOnBoardingStep: (step: OnBoardingSteps) => void;
+
+  // Notifications
+  emailNotifications: boolean;
+  pushNotifications: boolean;
   setEmailNotifications: (enabled: boolean) => void;
   setNotificationsEnabled: (enabled: boolean) => void;
-  setSelectedShoppingListId: (id: string | null) => void;
-  setSelectedPantryId: (id: string | null) => void;
-  setTheme: (theme: 'light' | 'dark') => void;
-  setOnBoardingStep: (step: OnBoardingSteps) => void;
-  setLanguage: (language: string) => void;
 
+  // Remember Me
+  rememberMe?: boolean; // undefined means "haven't asked yet"
+  setRememberMe: (remember: boolean) => void;
+
+  // Selected IDs for onboarding
+  selectedHomeId: string | null;
+  setSelectedHomeId: (id: string | null) => void;
+
+  selectedPantryId: string | null;
+  setSelectedPantryId: (id: string | null) => void;
+
+  selectedShoppingListId: string | null;
+  setSelectedShoppingListId: (id: string | null) => void;
+
+  // Reset function
+  resetOnboarding: () => void;
   resetPreferences: () => void;
-  updatePreferences: (updates: Partial<PreferencesState>) => void;
+
+  // Reset all preferences
   reset: () => void;
-  hydrate: (preferences: Partial<PreferencesState>) => void;
 }
 
 const initialPreferencesState: Omit<
   PreferencesState,
-  | 'setRememberMe'
+  | 'setTheme'
+  | 'setLanguage'
+  | 'setOnBoardingStep'
   | 'setEmailNotifications'
   | 'setNotificationsEnabled'
-  | 'setSelectedShoppingListId'
+  | 'setRememberMe'
+  | 'setSelectedHomeId'
   | 'setSelectedPantryId'
-  | 'setTheme'
-  | 'setOnBoardingStep'
-  | 'setLanguage'
+  | 'setSelectedShoppingListId'
+  | 'resetOnboarding'
   | 'resetPreferences'
-  | 'updatePreferences'
   | 'reset'
-  | 'hydrate'
 > = {
   theme: 'light',
   onBoardingStep: null,
   language: undefined,
   emailNotifications: false,
   pushNotifications: false,
-  rememberMe: undefined, // ← start as “haven’t asked yet”
+  rememberMe: undefined,
   selectedShoppingListId: null,
   selectedPantryId: null,
+  selectedHomeId: null,
 };
 
 export const createPreferencesSlice: StateCreator<
@@ -67,81 +82,36 @@ export const createPreferencesSlice: StateCreator<
   PreferencesState
 > = (set, get) => ({
   ...initialPreferencesState,
+  setTheme: theme => set({theme}),
 
-  setRememberMe: remember =>
-    set(draft => {
-      draft.rememberMe = remember;
-    }),
+  setLanguage: language => set({language}),
 
-  setEmailNotifications: enabled =>
-    set(draft => {
-      draft.emailNotifications = enabled;
-    }),
+  setOnBoardingStep: step => set({onBoardingStep: step}),
 
-  setNotificationsEnabled: enabled =>
-    set(draft => {
-      draft.emailNotifications = enabled;
-      draft.pushNotifications = enabled;
-    }),
+  setSelectedHomeId: id => set({selectedHomeId: id}),
 
-  setSelectedShoppingListId: id =>
-    set(draft => {
-      draft.selectedShoppingListId = id;
-    }),
-  setSelectedPantryId: id =>
-    set(draft => {
-      draft.selectedPantryId = id;
-    }),
+  setSelectedPantryId: id => set({selectedPantryId: id}),
 
-  setTheme: theme =>
-    set(draft => {
-      draft.theme = theme;
-    }),
+  setSelectedShoppingListId: id => set({selectedShoppingListId: id}),
 
-  setOnBoardingStep: step =>
-    set(draft => {
-      draft.onBoardingStep = step;
+  resetOnboarding: () =>
+    set({
+      onBoardingStep: null,
+      selectedHomeId: null,
+      selectedPantryId: null,
+      selectedShoppingListId: null,
     }),
-
-  setLanguage: language =>
-    set(draft => {
-      draft.language = language;
-    }),
-
   resetPreferences: () =>
-    set(() => ({
+    set({
       ...initialPreferencesState,
-      selectedShoppingListId: null,
-    })),
-
-  updatePreferences: updates =>
-    set(draft => {
-      Object.assign(draft, updates);
-      // ensure we never lose the selectedShoppingListId unless explicitly provided
-      if (updates.selectedShoppingListId === undefined) {
-        draft.selectedShoppingListId = get().selectedShoppingListId;
-      }
-      if (updates.selectedPantryId === undefined) {
-        draft.selectedPantryId = get().selectedPantryId;
-      }
+      selectedHomeId: get().selectedHomeId, // Keep the selected home ID
+      selectedPantryId: get().selectedPantryId, // Keep the selected pantry ID
+      selectedShoppingListId: get().selectedShoppingListId, // Keep the selected shopping list ID
     }),
+  setEmailNotifications: enabled => set({emailNotifications: enabled}),
+  setNotificationsEnabled: enabled => set({pushNotifications: enabled}),
+  setRememberMe: remember => set({rememberMe: remember}),
 
-  reset: () =>
-    set(() => ({
-      ...initialPreferencesState,
-      selectedShoppingListId: null,
-    })),
-
-  hydrate: preferences =>
-    // This is used to hydrate the preferences from storage
-    // so we ensure we don't lose the selectedShoppingListId
-    set(draft => {
-      Object.assign(draft, preferences);
-      if (preferences.selectedShoppingListId === undefined) {
-        draft.selectedShoppingListId = get().selectedShoppingListId;
-      }
-      if (preferences.selectedPantryId === undefined) {
-        draft.selectedPantryId = get().selectedPantryId;
-      }
-    }),
+  // Reset function to clear all preferences
+  reset: () => set(initialPreferencesState),
 });

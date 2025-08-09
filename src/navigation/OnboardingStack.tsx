@@ -2,9 +2,11 @@ import React from 'react';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {useStore} from '../store';
 import {type OnBoardingStackParamList} from './types';
-import {LoginScreen, SignUpScreen, ForgotPasswordScreen} from '../screens/Auth';
-import {CreateShoppingListScreen} from '../screens/OnBoarding/CreateShoppingList';
+import {CreateHomeScreen} from '../screens/OnBoarding/CreateHomeScreen';
+import {CreateShoppingListScreen} from '../screens/OnBoarding/CreateShoppingListScreen';
 import {SelectPantryItems} from '../screens/OnBoarding/SelectPantryItems';
+import {InviteMembersScreen} from '../screens/OnBoarding/InviteMemberScreen';
+import {OnboardingCompleteScreen} from '../screens/OnBoarding/OnboardingCompleteScreen';
 import {OnBoardingSteps} from '../store/slices/preferencesSlice';
 
 const Stack = createNativeStackNavigator<OnBoardingStackParamList>();
@@ -13,14 +15,29 @@ const OnBoardingStack = () => {
   const {onBoardingStep, user} = useStore();
   const onBoarded = user?.onBoarded ?? false;
 
-  // Set the intial route based on the onboarding step or completion status that the user has reached
-  const initialRouteName = onBoarded
-    ? 'OnBoardingCompleted'
-    : onBoardingStep === OnBoardingSteps.createShoppingList
-      ? 'CreateShoppingList'
-      : onBoardingStep === OnBoardingSteps.selectPantryItems
-        ? 'SelectPantryItems'
-        : 'CreateShoppingList';
+  // Set the initial route based on the onboarding step or completion status that the user has reached
+  const getInitialRouteName = (): keyof OnBoardingStackParamList => {
+    if (onBoarded) {
+      return 'OnboardingComplete';
+    }
+
+    switch (onBoardingStep) {
+      case OnBoardingSteps.createHome:
+        return 'CreateHome';
+      case OnBoardingSteps.createShoppingList:
+        return 'CreateShoppingList';
+      case OnBoardingSteps.selectPantryItems:
+        return 'SelectPantryItems';
+      case OnBoardingSteps.inviteMembers:
+        return 'InviteMembers';
+      case OnBoardingSteps.complete:
+        return 'OnboardingComplete';
+      default:
+        return 'CreateHome'; // Start from the beginning
+    }
+  };
+
+  const initialRouteName = getInitialRouteName();
 
   return (
     <Stack.Navigator
@@ -28,46 +45,50 @@ const OnBoardingStack = () => {
       initialRouteName={initialRouteName}
       screenOptions={{
         headerShown: false,
-        // pick one of the native presets:
-        // animation: 'fade_from_bottom', // fade in from bottom
-        // animation: 'fade',               // simple cross-fade
-        // animation: 'slide_from_right',   // slide in from the right
-        // animation: 'slide_from_left',    // slide in from the left
-        // animation: 'slide_from_bottom',  // slide in from the bottom
-        // animation: 'flip',               // iOS only, with presentation: 'modal'
-        // animation: 'none',               // no animation at all
-
-        // if you ever do a replace(), you can pick its animation too
-        animationTypeForReplace: 'push', // or 'pop'
-
-        // you can also tweak gesture directions if you like:
+        animation: 'slide_from_right',
+        animationTypeForReplace: 'push',
         gestureEnabled: true,
-        gestureDirection: 'vertical', // vertical swipe to dismiss
+        gestureDirection: 'horizontal',
       }}>
+      <Stack.Screen
+        name="CreateHome"
+        component={CreateHomeScreen}
+        options={{
+          headerShown: false,
+          animation: 'fade_from_bottom', // First screen fades in
+        }}
+      />
       <Stack.Screen
         name="CreateShoppingList"
         component={CreateShoppingListScreen}
-        options={{headerShown: false, animation: 'slide_from_left'}}
+        options={{
+          headerShown: false,
+          animation: 'slide_from_right',
+        }}
       />
       <Stack.Screen
         name="SelectPantryItems"
         component={SelectPantryItems}
-        options={{headerShown: false, animation: 'slide_from_right'}}
+        options={{
+          headerShown: false,
+          animation: 'slide_from_right',
+        }}
       />
       <Stack.Screen
-        name="AddFriends"
-        component={ForgotPasswordScreen}
-        options={{headerShown: false, animation: 'slide_from_right'}}
+        name="InviteMembers"
+        component={InviteMembersScreen}
+        options={{
+          headerShown: false,
+          animation: 'slide_from_right',
+        }}
       />
       <Stack.Screen
-        name="AddProfilePicture"
-        component={LoginScreen}
-        options={{headerShown: false, animation: 'slide_from_right'}}
-      />
-      <Stack.Screen
-        name="OnBoardingCompleted"
-        component={SignUpScreen}
-        options={{headerShown: false, animation: 'slide_from_right'}}
+        name="OnboardingComplete"
+        component={OnboardingCompleteScreen}
+        options={{
+          headerShown: false,
+          animation: 'fade', // Final screen fades in
+        }}
       />
     </Stack.Navigator>
   );

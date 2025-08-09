@@ -1,27 +1,51 @@
 import {StateCreator} from 'zustand';
 import {RootState} from '../index';
-import {User} from '../../graphql/generated';
+import {
+  User,
+  RefreshTokenMutation,
+  LoginMutation,
+  RegisterMutation,
+  GetCurrentUserQuery,
+} from '#generated';
 
-// the shape of your auth state
+// Types from your auth mutations (with minimal user data)
+type LoginResponse = NonNullable<LoginMutation['login']>;
+type RegisterResponse = NonNullable<RegisterMutation['register']>;
+type AuthResponse = LoginResponse | RegisterResponse;
+
+// Auth user type (minimal data from login/register)
+type AuthUser = AuthResponse['user'];
+
+// Complete user type (from profile queries)
+type CompleteUser = NonNullable<GetCurrentUserQuery['me']>;
+
 export interface AuthState {
-  user: User | null;
+  user: AuthUser | CompleteUser | null; // Can be minimal or complete user data
   accessToken: string | null;
   refreshToken: string | null;
-
   pendingEmail?: string;
   pendingPassword?: string;
+  isAuthenticated: boolean;
 
-  /** Call this once you have a fresh (user, accessToken, refreshToken) */
-  setAuth: (user: User, accessToken: string, refreshToken: string) => void;
-
-  /** Flip this flag on the user if you verify their email later */
+  // Auth methods
+  setAuthFromResponse: (response: AuthResponse) => void;
+  setCompleteUser: (user: CompleteUser) => void; // For when you fetch complete user data
+  setAuth: (
+    user: AuthUser | CompleteUser,
+    accessToken?: string,
+    refreshToken?: string,
+  ) => void;
+  updateUser: (updates: Partial<AuthUser | CompleteUser>) => void;
   setEmailVerified: (emailVerified: boolean) => void;
-
+  setTokensFromRefresh: (
+    response: NonNullable<RefreshTokenMutation['refresh']>,
+  ) => void;
   setPendingCredentials: (email: string, password: string) => void;
   clearPendingCredentials: () => void;
-
-  /** Clears everything */
   logout: () => void;
+
+  // Utility methods
+  hasCompleteUserData: () => boolean; // Check if user has complete data
 }
 
 const initialAuthState = {
@@ -30,27 +54,62 @@ const initialAuthState = {
   refreshToken: null,
   pendingEmail: undefined,
   pendingPassword: undefined,
+  isAuthenticated: false,
 };
 
 export const createAuthSlice: StateCreator<
   RootState,
-  [['zustand/immer', never]], // ← so your set(state => { … }) is typed as Immer
+  [['zustand/immer', never]],
   [],
   AuthState
-> = (set, _get) => ({
+> = (set, get) => ({
   ...initialAuthState,
+
+  get isAuthenticated() {
+    const state = get();
+    return !!(state?.user && state?.accessToken);
+  },
+
+  setAuthFromResponse: response =>
+    set(state => {
+      state.user = response.user; // Minimal user data from auth
+      state.accessToken = response.accessToken;
+      state.refreshToken = response.refreshToken;
+    }),
+
+  setCompleteUser: user =>
+    set(state => {
+      // Keep existing tokens, just update user data to complete version
+      state.user = user;
+    }),
 
   setAuth: (user, accessToken, refreshToken) =>
     set(state => {
       state.user = user;
-      state.accessToken = accessToken;
-      state.refreshToken = refreshToken;
+      if (accessToken) state.accessToken = accessToken;
+      if (refreshToken) state.refreshToken = refreshToken;
+    }),
+
+  updateUser: updates =>
+    set(state => {
+      if (state.user) {
+        Object.assign(state.user, updates);
+      }
     }),
 
   setEmailVerified: emailVerified =>
     set(state => {
-      if (state.user) state.user.emailVerified = emailVerified;
+      if (state.user) {
+        state.user.emailVerified = emailVerified;
+      }
     }),
+
+  setTokensFromRefresh: response =>
+    set(state => {
+      state.accessToken = response.accessToken;
+      state.refreshToken = response.refreshToken;
+    }),
+
   setPendingCredentials: (email, password) =>
     set(state => {
       state.pendingEmail = email;
@@ -62,6 +121,7 @@ export const createAuthSlice: StateCreator<
       state.pendingEmail = undefined;
       state.pendingPassword = undefined;
     }),
+
   logout: () =>
     set(state => {
       state.user = null;
@@ -69,8 +129,11 @@ export const createAuthSlice: StateCreator<
       state.refreshToken = null;
       state.pendingEmail = undefined;
       state.pendingPassword = undefined;
-      state.resetPreferences(); // Clear preferences on logout
-      // Optionally clear any other state related to the user session
-      // e.g., shopping lists, items, etc.
     }),
+
+  hasCompleteUserData: () => {
+    const state = get();
+    // Check if user has properties that only exist in complete user data
+    return !!(state.user && 'addresses' in state.user);
+  },
 });
