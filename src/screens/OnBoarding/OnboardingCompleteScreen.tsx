@@ -1,10 +1,10 @@
 import React from 'react';
 import {Text, View} from 'react-native';
+import {createStyleSheet, useStyles} from 'react-native-unistyles';
 import {useNavigation, CommonActions} from '@react-navigation/native';
 import {OnBoardingWrapper} from '#components/templates';
 import {Button} from '#components';
 import {OnboardingCompleteNavProp} from '#navigation/types';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
 import {useStore} from '#store';
 import {OnBoardingSteps} from '#store/slices/preferencesSlice';
 import {useUpdateUserMutation} from '#generated';
@@ -12,7 +12,7 @@ import {useUpdateUserMutation} from '#generated';
 export const OnboardingCompleteScreen = () => {
   const navigation = useNavigation<OnboardingCompleteNavProp>();
   const {styles} = useStyles(stylesheet);
-  const {setOnBoardingStep, user} = useStore();
+  const {setOnBoardingStep, user, setOn} = useStore();
 
   const [updateUser] = useUpdateUserMutation({
     onCompleted: () => {

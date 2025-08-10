@@ -76,17 +76,6 @@ export const COMPLETE_USER_FRAGMENT = gql`
         createdAt
       }
     }
-    memberships {
-      id
-      homeId
-    }
-    homes {
-      id
-      name
-      description
-      createdAt
-      updatedAt
-    }
     purchases {
       id
     }

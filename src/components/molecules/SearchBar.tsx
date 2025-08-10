@@ -1,14 +1,16 @@
 import React from 'react';
 import {View, StyleProp, ViewStyle, TextInputProps} from 'react-native';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
-
-import {BaseInput, ActionButton} from '..';
+import {BaseInput, ActionButton} from '#components';
 
 type SearchBarProps = Omit<TextInputProps, 'style'> & {
   value: string;
   onChangeText: (text: string) => void;
   containerStyle?: StyleProp<ViewStyle>;
   inputStyle?: StyleProp<ViewStyle>;
+  listName?: string;
+  itemCount?: number;
+  completedCount?: number;
   onPressList?: () => void;
   onPressAdd?: () => void;
 };
@@ -21,6 +23,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   inputStyle,
   onPressList = () => {},
   onPressAdd = () => {},
+  listName = 'List',
   ...textInputProps
 }) => {
   const {styles, theme} = useStyles(stylesheet);
@@ -73,5 +76,3 @@ const stylesheet = createStyleSheet(theme => ({
     backgroundColor: theme.colors.white,
   },
 }));
-
-export default SearchBar;

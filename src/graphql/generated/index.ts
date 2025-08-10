@@ -1161,10 +1161,10 @@ export type ItemUnit = {
   deletedAt?: Maybe<Scalars['DateTime']['output']>;
   id: Scalars['ID']['output'];
   isCommon: Scalars['Boolean']['output'];
-  isDefault: Scalars['Boolean']['output'];
+  isDefault?: Maybe<Scalars['Boolean']['output']>;
   isPreferred: Scalars['Boolean']['output'];
   isVerified: Scalars['Boolean']['output'];
-  item: Item;
+  item?: Maybe<Item>;
   itemId: Scalars['String']['output'];
   lastPriceUpdate?: Maybe<Scalars['DateTime']['output']>;
   lastUsedAt?: Maybe<Scalars['DateTime']['output']>;
@@ -1178,7 +1178,7 @@ export type ItemUnit = {
   recommendedFor: Array<UnitRecommendation>;
   retailUnit: Scalars['Boolean']['output'];
   source: UnitSource;
-  unit: Unit;
+  unit?: Maybe<Unit>;
   unitId: Scalars['String']['output'];
   updatedAt: Scalars['DateTime']['output'];
   usageContext: Array<UnitUsageContext>;
@@ -2461,7 +2461,6 @@ export type MutationUpdateShoppingListArgs = {
 };
 
 export type MutationUpdateShoppingListItemArgs = {
-  data: UpdateShoppingListItemInput;
   id: Scalars['ID']['input'];
   input: UpdateShoppingListItemInput;
 };
@@ -3879,7 +3878,6 @@ export type Subscription = {
   notificationUpdated: Notification;
   pantryActivityAdded: PantryActivity;
   pantryExpiringItemsAlert: Array<PantryItem>;
-  pantryItemUpdated: PantryItem;
   pantryItemsChanged: PantryItemChangedPayload;
   pantryLowStockAlert: Array<PantryItem>;
   pantryUpdated: PantryUpdatedPayload;
@@ -3990,10 +3988,6 @@ export type SubscriptionPantryActivityAddedArgs = {
 };
 
 export type SubscriptionPantryExpiringItemsAlertArgs = {
-  pantryId: Scalars['ID']['input'];
-};
-
-export type SubscriptionPantryItemUpdatedArgs = {
   pantryId: Scalars['ID']['input'];
 };
 
@@ -4563,11 +4557,9 @@ export type User = {
   email: Scalars['String']['output'];
   emailVerified: Scalars['Boolean']['output'];
   homeOwnerships: Array<HomeOwnership>;
-  homes: Array<Home>;
   id: Scalars['ID']['output'];
   language?: Maybe<Scalars['String']['output']>;
   lastActiveAt?: Maybe<Scalars['DateTime']['output']>;
-  memberships: Array<Membership>;
   moderation?: Maybe<UserModeration>;
   onBoarded: Scalars['Boolean']['output'];
   preferredCurrency?: Maybe<Scalars['String']['output']>;
@@ -4907,15 +4899,6 @@ export type CompleteUserFragment = {
     id: string;
     home: {__typename?: 'Home'; id: string; name: string; createdAt: string};
   }>;
-  memberships: Array<{__typename?: 'Membership'; id: string; homeId: string}>;
-  homes: Array<{
-    __typename?: 'Home';
-    id: string;
-    name: string;
-    description?: string | null | undefined;
-    createdAt: string;
-    updatedAt: string;
-  }>;
   purchases: Array<{__typename?: 'Purchase'; id: string}>;
   shoppingListOwnerships: Array<{
     __typename?: 'ShoppingListOwnership';
@@ -5113,19 +5096,6 @@ export type GetUserProfileQuery = {
             name: string;
             createdAt: string;
           };
-        }>;
-        memberships: Array<{
-          __typename?: 'Membership';
-          id: string;
-          homeId: string;
-        }>;
-        homes: Array<{
-          __typename?: 'Home';
-          id: string;
-          name: string;
-          description?: string | null | undefined;
-          createdAt: string;
-          updatedAt: string;
         }>;
         purchases: Array<{__typename?: 'Purchase'; id: string}>;
         shoppingListOwnerships: Array<{
@@ -5359,6 +5329,68 @@ export type AddCollaboratorMutation = {
   };
 };
 
+export type UpdateShoppingListMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+  input: UpdateShoppingListInput;
+}>;
+
+export type UpdateShoppingListMutation = {
+  __typename?: 'Mutation';
+  updateShoppingList: {
+    __typename?: 'ShoppingList';
+    id: string;
+    name: string;
+    description?: string | null | undefined;
+    tags: Array<string>;
+    budgetAmount?: number | null | undefined;
+    currency?: string | null | undefined;
+    category?: string | null | undefined;
+    priority: number;
+    status: ListStatus;
+    isCompleted: boolean;
+    isDefault: boolean;
+    updatedAt: string;
+  };
+};
+
+export type DeleteShoppingListMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type DeleteShoppingListMutation = {
+  __typename?: 'Mutation';
+  deleteShoppingList: boolean;
+};
+
+export type SetDefaultShoppingListMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type SetDefaultShoppingListMutation = {
+  __typename?: 'Mutation';
+  setDefaultShoppingList: {
+    __typename?: 'ShoppingList';
+    id: string;
+    name: string;
+    isDefault: boolean;
+  };
+};
+
+export type ShareShoppingListMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+  input: ShareShoppingListInput;
+}>;
+
+export type ShareShoppingListMutation = {
+  __typename?: 'Mutation';
+  shareShoppingList: {
+    __typename?: 'ShoppingList';
+    id: string;
+    isPublic: boolean;
+    shareCode?: string | null | undefined;
+  };
+};
+
 export type AddItemToShoppingListMutationVariables = Exact<{
   input: CreateShoppingListItemInput;
 }>;
@@ -5368,24 +5400,40 @@ export type AddItemToShoppingListMutation = {
   addItemToShoppingList: {
     __typename?: 'ShoppingListItem';
     id: string;
-    isPurchased: boolean;
+    quantity?: number | null | undefined;
+    estimatedPrice?: number | null | undefined;
     itemName?: string | null | undefined;
-    addedBy?: {__typename?: 'User'; id: string} | null | undefined;
+    unitName?: string | null | undefined;
+    notes?: string | null | undefined;
+    priority: number;
+    category?: string | null | undefined;
+    isPurchased: boolean;
+    item?:
+      | {
+          __typename?: 'Item';
+          id: string;
+          name: string;
+          description?: string | null | undefined;
+          imageUrl?: string | null | undefined;
+        }
+      | null
+      | undefined;
+    unit?:
+      | {__typename?: 'Unit'; id: string; name: string; symbol: string}
+      | null
+      | undefined;
+    shoppingList: {
+      __typename?: 'ShoppingList';
+      id: string;
+      totalItems: number;
+      completedItems: number;
+      estimatedTotal: number;
+    };
   };
 };
 
-export type RemoveItemFromShoppingListMutationVariables = Exact<{
-  removeItemFromShoppingListId: Scalars['ID']['input'];
-}>;
-
-export type RemoveItemFromShoppingListMutation = {
-  __typename?: 'Mutation';
-  removeItemFromShoppingList: boolean;
-};
-
 export type UpdateShoppingListItemMutationVariables = Exact<{
-  updateShoppingListItemId: Scalars['ID']['input'];
-  data: UpdateShoppingListItemInput;
+  id: Scalars['ID']['input'];
   input: UpdateShoppingListItemInput;
 }>;
 
@@ -5395,15 +5443,49 @@ export type UpdateShoppingListItemMutation = {
     __typename?: 'ShoppingListItem';
     id: string;
     quantity?: number | null | undefined;
+    estimatedPrice?: number | null | undefined;
+    budgetPrice?: number | null | undefined;
+    isPurchased: boolean;
+    purchasedQuantity?: number | null | undefined;
+    purchasedPrice?: number | null | undefined;
     itemName?: string | null | undefined;
     unitName?: string | null | undefined;
-    isPurchased: boolean;
-    createdAt: string;
-    updatedAt: string;
-    deletedAt?: string | null | undefined;
-    version: number;
+    notes?: string | null | undefined;
+    priority: number;
+    category?: string | null | undefined;
     item?: {__typename?: 'Item'; id: string; name: string} | null | undefined;
+    unit?:
+      | {__typename?: 'Unit'; id: string; name: string; symbol: string}
+      | null
+      | undefined;
   };
+};
+
+export type RemoveItemFromShoppingListMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type RemoveItemFromShoppingListMutation = {
+  __typename?: 'Mutation';
+  removeItemFromShoppingList: boolean;
+};
+
+export type ToggleShoppingListItemCompletionMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type ToggleShoppingListItemCompletionMutation = {
+  __typename?: 'Mutation';
+  toggleShoppingListItemCompletion: boolean;
+};
+
+export type MarkItemPurchasedMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type MarkItemPurchasedMutation = {
+  __typename?: 'Mutation';
+  markItemPurchased: boolean;
 };
 
 export type UpdateUserMutationVariables = Exact<{
@@ -5470,48 +5552,28 @@ export type HomeQuery = {
         id: string;
         name: string;
         description?: string | null | undefined;
-        type: HomeType;
-        timezone?: string | null | undefined;
-        currency?: string | null | undefined;
-        isPublic: boolean;
-        joinCode?: string | null | undefined;
-        allowJoinCode: boolean;
-        maxMembers?: number | null | undefined;
-        tags: Array<string>;
-        metadata?: string | null | undefined;
-        createdAt: string;
-        updatedAt: string;
         pantries?:
           | Array<{
               __typename?: 'Pantry';
-              id: string;
               name: string;
+              id: string;
               isDefault: boolean;
             }>
           | null
           | undefined;
-        members: Array<{__typename?: 'User'; id: string; email: string}>;
         memberships: Array<{
           __typename?: 'Membership';
           id: string;
           homeId: string;
           userId: string;
-          role: MembershipRole;
-          status: MembershipStatus;
-          displayName?: string | null | undefined;
-          canViewPantry: boolean;
-          canEditPantry: boolean;
-          canAddItems: boolean;
-          canRemoveItems: boolean;
-          canInviteOthers: boolean;
-          canManageHome: boolean;
-          lastActiveAt?: string | null | undefined;
-          joinedAt: string;
-          leftAt?: string | null | undefined;
-          createdAt: string;
-          updatedAt: string;
-          user: {__typename?: 'User'; id: string; email: string};
+          user: {__typename?: 'User'; email: string};
         }>;
+        membershipStats: {
+          __typename?: 'MembershipStats';
+          total: number;
+          active: number;
+          recentlyActive: number;
+        };
       }
     | null
     | undefined;
@@ -5527,6 +5589,15 @@ export type HomesQuery = {
     name: string;
     createdAt: string;
     updatedAt: string;
+    pantries?:
+      | Array<{
+          __typename?: 'Pantry';
+          id: string;
+          name: string;
+          isDefault: boolean;
+        }>
+      | null
+      | undefined;
   }>;
 };
 
@@ -5566,7 +5637,7 @@ export type ItemsQuery = {
           units: Array<{
             __typename?: 'ItemUnit';
             id: string;
-            isDefault: boolean;
+            isDefault?: boolean | null | undefined;
           }>;
           brands: Array<{__typename?: 'ItemBrand'; id: string}>;
           categories: Array<{__typename?: 'ItemCategory'; id: string}>;
@@ -5645,13 +5716,25 @@ export type PantryItemsQuery = {
   __typename?: 'Query';
   pantryItems: Array<{
     __typename?: 'PantryItem';
+    id: string;
     unitName: string;
     unitId: string;
     pantryId: string;
     itemName: string;
     itemId: string;
     itemBarcode?: string | null | undefined;
-    item: {__typename?: 'Item'; imageUrl?: string | null | undefined};
+    expiresAt?: string | null | undefined;
+    storageLocation?: string | null | undefined;
+    storageState: StorageState;
+    initialQuantity: number;
+    item: {
+      __typename?: 'Item';
+      id: string;
+      name: string;
+      description?: string | null | undefined;
+      imageUrl?: string | null | undefined;
+    };
+    unit: {__typename?: 'Unit'; id: string; name: string; symbol: string};
   }>;
 };
 
@@ -5672,8 +5755,22 @@ export type OnboardingItemsQuery = {
     units: Array<{
       __typename?: 'ItemUnit';
       id: string;
-      isDefault: boolean;
-      unit: {__typename?: 'Unit'; id: string; name: string; symbol: string};
+      itemId: string;
+      unitId: string;
+      unit?:
+        | {
+            __typename?: 'Unit';
+            id: string;
+            name: string;
+            symbol: string;
+            type: UnitType;
+            isMetric: boolean;
+            baseUnitId?: string | null | undefined;
+            conversionFactor: number;
+            isCommon: boolean;
+          }
+        | null
+        | undefined;
     }>;
   }>;
 };
@@ -5707,6 +5804,122 @@ export type UserProfileQuery = {
     | undefined;
 };
 
+export type ShoppingListQueryVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type ShoppingListQuery = {
+  __typename?: 'Query';
+  shoppingList?:
+    | {
+        __typename?: 'ShoppingList';
+        id: string;
+        name: string;
+        description?: string | null | undefined;
+        isDefault: boolean;
+        isPublic: boolean;
+        shareCode?: string | null | undefined;
+        tags: Array<string>;
+        budgetAmount?: number | null | undefined;
+        totalCost: number;
+        estimatedTotal: number;
+        currency?: string | null | undefined;
+        category?: string | null | undefined;
+        priority: number;
+        status: ListStatus;
+        isCompleted: boolean;
+        completedAt?: string | null | undefined;
+        totalItems: number;
+        completedItems: number;
+        createdAt: string;
+        updatedAt: string;
+        items: Array<{
+          __typename?: 'ShoppingListItem';
+          id: string;
+          quantity?: number | null | undefined;
+          estimatedPrice?: number | null | undefined;
+          budgetPrice?: number | null | undefined;
+          isPurchased: boolean;
+          purchasedQuantity?: number | null | undefined;
+          purchasedPrice?: number | null | undefined;
+          purchaseDate?: string | null | undefined;
+          itemName?: string | null | undefined;
+          itemBarcode?: string | null | undefined;
+          unitName?: string | null | undefined;
+          notes?: string | null | undefined;
+          priority: number;
+          category?: string | null | undefined;
+          sortOrder: number;
+          isAutoAdded: boolean;
+          autoAddReason?: string | null | undefined;
+          isFromMealPlan: boolean;
+          createdAt: string;
+          updatedAt: string;
+          item?:
+            | {
+                __typename?: 'Item';
+                id: string;
+                name: string;
+                description?: string | null | undefined;
+                barcode?: string | null | undefined;
+                imageUrl?: string | null | undefined;
+                type: ItemType;
+                storageState: StorageState;
+                averagePrice?: number | null | undefined;
+              }
+            | null
+            | undefined;
+          unit?:
+            | {__typename?: 'Unit'; id: string; name: string; symbol: string}
+            | null
+            | undefined;
+          preferredStore?:
+            | {
+                __typename?: 'Store';
+                id: string;
+                name: string;
+                address?: string | null | undefined;
+              }
+            | null
+            | undefined;
+          purchasedBy?:
+            | {__typename?: 'User'; id: string; email: string}
+            | null
+            | undefined;
+          addedBy?:
+            | {__typename?: 'User'; id: string; email: string}
+            | null
+            | undefined;
+        }>;
+        collaborators: Array<{
+          __typename?: 'ShoppingListCollaborator';
+          id: string;
+          email?: string | null | undefined;
+          role: CollaboratorRole;
+          status: CollaboratorStatus;
+          canEdit: boolean;
+          canAddItems: boolean;
+          canRemoveItems: boolean;
+          canEditItems: boolean;
+          canMarkPurchased: boolean;
+          canInviteOthers: boolean;
+          invitedAt: string;
+          lastViewedAt?: string | null | undefined;
+        }>;
+        targetStore?:
+          | {
+              __typename?: 'Store';
+              id: string;
+              name: string;
+              address?: string | null | undefined;
+            }
+          | null
+          | undefined;
+      }
+    | null
+    | undefined;
+};
+
 export type ShoppingListsQueryVariables = Exact<{[key: string]: never}>;
 
 export type ShoppingListsQuery = {
@@ -5715,54 +5928,65 @@ export type ShoppingListsQuery = {
     __typename?: 'ShoppingList';
     id: string;
     name: string;
+    description?: string | null | undefined;
     isDefault: boolean;
-    metadata?: any | null | undefined;
+    isPublic: boolean;
     tags: Array<string>;
+    totalItems: number;
+    completedItems: number;
+    estimatedTotal: number;
+    currency?: string | null | undefined;
+    status: ListStatus;
+    isCompleted: boolean;
+    priority: number;
     createdAt: string;
     updatedAt: string;
-    deletedAt?: string | null | undefined;
     items: Array<{
       __typename?: 'ShoppingListItem';
       id: string;
-      quantity?: number | null | undefined;
-      itemName?: string | null | undefined;
-      unitName?: string | null | undefined;
       isPurchased: boolean;
-      createdAt: string;
-      updatedAt: string;
-      deletedAt?: string | null | undefined;
-      version: number;
-      shoppingList: {__typename?: 'ShoppingList'; id: string};
-      item?:
-        | {
-            __typename?: 'Item';
-            id: string;
-            name: string;
-            description?: string | null | undefined;
-            barcode?: string | null | undefined;
-            dataSource: DataSource;
-            type: ItemType;
-            storageState: StorageState;
-            shelfLifeDays?: number | null | undefined;
-            showInOnboarding: boolean;
-            status: ItemStatus;
-            visibility: Visibility;
-            imageUrl?: string | null | undefined;
-            healthBenefits?: any | null | undefined;
-            allergens?: any | null | undefined;
-            nutritions?: any | null | undefined;
-            metadata?: any | null | undefined;
-            tags: Array<string>;
-            createdAt: string;
-            updatedAt: string;
-            version: number;
-          }
-        | null
-        | undefined;
-      unit?: {__typename?: 'Unit'; id: string} | null | undefined;
     }>;
-    collaborators: Array<{__typename?: 'ShoppingListCollaborator'; id: string}>;
+    collaborators: Array<{
+      __typename?: 'ShoppingListCollaborator';
+      id: string;
+      email?: string | null | undefined;
+      role: CollaboratorRole;
+    }>;
   }>;
+};
+
+export type DefaultShoppingListQueryVariables = Exact<{[key: string]: never}>;
+
+export type DefaultShoppingListQuery = {
+  __typename?: 'Query';
+  defaultShoppingList?:
+    | {
+        __typename?: 'ShoppingList';
+        id: string;
+        name: string;
+        description?: string | null | undefined;
+        isDefault: boolean;
+        totalItems: number;
+        completedItems: number;
+        items: Array<{
+          __typename?: 'ShoppingListItem';
+          id: string;
+          itemName?: string | null | undefined;
+          quantity?: number | null | undefined;
+          isPurchased: boolean;
+          item?:
+            | {
+                __typename?: 'Item';
+                id: string;
+                name: string;
+                imageUrl?: string | null | undefined;
+              }
+            | null
+            | undefined;
+        }>;
+      }
+    | null
+    | undefined;
 };
 
 export type ShoppingListItemsQueryVariables = Exact<{
@@ -5855,18 +6079,18 @@ export type MeQuery = {
     | undefined;
 };
 
-export type PantryItemUpdatedSubscriptionVariables = Exact<{
+export type PantryItemsChangedSubscriptionVariables = Exact<{
   pantryId: Scalars['ID']['input'];
+  itemId: Scalars['String']['input'];
 }>;
 
-export type PantryItemUpdatedSubscription = {
+export type PantryItemsChangedSubscription = {
   __typename?: 'Subscription';
-  pantryItemUpdated: {
-    __typename?: 'PantryItem';
-    id: string;
-    unitName: string;
-    itemName: string;
-    unit: {__typename?: 'Unit'; name: string};
+  pantryItemsChanged: {
+    __typename?: 'PantryItemChangedPayload';
+    pantryId: string;
+    itemId: string;
+    item: {__typename?: 'PantryItem'; itemId: string; itemName: string};
   };
 };
 
@@ -5880,29 +6104,72 @@ export type ShoppingListUpdatedSubscription = {
     | {
         __typename?: 'ShoppingListUpdatedPayload';
         mutation: MutationType;
-        updatedFields?: Array<string> | null | undefined;
-        userId: string;
-        timestamp: string;
         node?:
-          | {__typename?: 'ShoppingList'; id: string; name: string}
-          | null
-          | undefined;
-        previousValues?:
           | {
-              __typename?: 'ShoppingListPreviousValues';
-              name?: string | null | undefined;
-              status?: ListStatus | null | undefined;
-              totalCost?: number | null | undefined;
-              isCompleted?: boolean | null | undefined;
-              estimatedTotal?: number | null | undefined;
-              description?: string | null | undefined;
-              budgetAmount?: number | null | undefined;
+              __typename?: 'ShoppingList';
+              id: string;
+              name: string;
+              totalItems: number;
+              completedItems: number;
+              estimatedTotal: number;
+              items: Array<{
+                __typename?: 'ShoppingListItem';
+                id: string;
+                itemName?: string | null | undefined;
+                quantity?: number | null | undefined;
+                isPurchased: boolean;
+              }>;
             }
           | null
           | undefined;
       }
     | null
     | undefined;
+};
+
+export type ShoppingListItemAddedSubscriptionVariables = Exact<{
+  shoppingListId: Scalars['ID']['input'];
+}>;
+
+export type ShoppingListItemAddedSubscription = {
+  __typename?: 'Subscription';
+  shoppingListItemAdded: {
+    __typename?: 'ShoppingListItem';
+    id: string;
+    itemName?: string | null | undefined;
+    quantity?: number | null | undefined;
+    isPurchased: boolean;
+    addedBy?:
+      | {__typename?: 'User'; id: string; email: string}
+      | null
+      | undefined;
+  };
+};
+
+export type ShoppingListItemUpdatedSubscriptionVariables = Exact<{
+  shoppingListId: Scalars['ID']['input'];
+}>;
+
+export type ShoppingListItemUpdatedSubscription = {
+  __typename?: 'Subscription';
+  shoppingListItemUpdated: {
+    __typename?: 'ShoppingListItem';
+    id: string;
+    itemName?: string | null | undefined;
+    quantity?: number | null | undefined;
+    isPurchased: boolean;
+    notes?: string | null | undefined;
+    priority: number;
+  };
+};
+
+export type ShoppingListItemRemovedSubscriptionVariables = Exact<{
+  shoppingListId: Scalars['ID']['input'];
+}>;
+
+export type ShoppingListItemRemovedSubscription = {
+  __typename?: 'Subscription';
+  shoppingListItemRemoved: {__typename?: 'ShoppingListItem'; id: string};
 };
 
 export const AuthUserFragmentDoc = gql`
@@ -5977,17 +6244,6 @@ export const CompleteUserFragmentDoc = gql`
         name
         createdAt
       }
-    }
-    memberships {
-      id
-      homeId
-    }
-    homes {
-      id
-      name
-      description
-      createdAt
-      updatedAt
     }
     purchases {
       id
@@ -7041,15 +7297,255 @@ export type AddCollaboratorMutationOptions =
     AddCollaboratorMutation,
     AddCollaboratorMutationVariables
   >;
+export const UpdateShoppingListDocument = gql`
+  mutation UpdateShoppingList($id: ID!, $input: UpdateShoppingListInput!) {
+    updateShoppingList(id: $id, input: $input) {
+      id
+      name
+      description
+      tags
+      budgetAmount
+      currency
+      category
+      priority
+      status
+      isCompleted
+      isDefault
+      updatedAt
+    }
+  }
+`;
+export type UpdateShoppingListMutationFn = ApolloReactCommon.MutationFunction<
+  UpdateShoppingListMutation,
+  UpdateShoppingListMutationVariables
+>;
+
+/**
+ * __useUpdateShoppingListMutation__
+ *
+ * To run a mutation, you first call `useUpdateShoppingListMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateShoppingListMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateShoppingListMutation, { data, loading, error }] = useUpdateShoppingListMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useUpdateShoppingListMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    UpdateShoppingListMutation,
+    UpdateShoppingListMutationVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useMutation<
+    UpdateShoppingListMutation,
+    UpdateShoppingListMutationVariables
+  >(UpdateShoppingListDocument, options);
+}
+export type UpdateShoppingListMutationHookResult = ReturnType<
+  typeof useUpdateShoppingListMutation
+>;
+export type UpdateShoppingListMutationResult =
+  ApolloReactCommon.MutationResult<UpdateShoppingListMutation>;
+export type UpdateShoppingListMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    UpdateShoppingListMutation,
+    UpdateShoppingListMutationVariables
+  >;
+export const DeleteShoppingListDocument = gql`
+  mutation DeleteShoppingList($id: ID!) {
+    deleteShoppingList(id: $id)
+  }
+`;
+export type DeleteShoppingListMutationFn = ApolloReactCommon.MutationFunction<
+  DeleteShoppingListMutation,
+  DeleteShoppingListMutationVariables
+>;
+
+/**
+ * __useDeleteShoppingListMutation__
+ *
+ * To run a mutation, you first call `useDeleteShoppingListMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteShoppingListMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteShoppingListMutation, { data, loading, error }] = useDeleteShoppingListMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeleteShoppingListMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    DeleteShoppingListMutation,
+    DeleteShoppingListMutationVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useMutation<
+    DeleteShoppingListMutation,
+    DeleteShoppingListMutationVariables
+  >(DeleteShoppingListDocument, options);
+}
+export type DeleteShoppingListMutationHookResult = ReturnType<
+  typeof useDeleteShoppingListMutation
+>;
+export type DeleteShoppingListMutationResult =
+  ApolloReactCommon.MutationResult<DeleteShoppingListMutation>;
+export type DeleteShoppingListMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    DeleteShoppingListMutation,
+    DeleteShoppingListMutationVariables
+  >;
+export const SetDefaultShoppingListDocument = gql`
+  mutation SetDefaultShoppingList($id: ID!) {
+    setDefaultShoppingList(id: $id) {
+      id
+      name
+      isDefault
+    }
+  }
+`;
+export type SetDefaultShoppingListMutationFn =
+  ApolloReactCommon.MutationFunction<
+    SetDefaultShoppingListMutation,
+    SetDefaultShoppingListMutationVariables
+  >;
+
+/**
+ * __useSetDefaultShoppingListMutation__
+ *
+ * To run a mutation, you first call `useSetDefaultShoppingListMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useSetDefaultShoppingListMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [setDefaultShoppingListMutation, { data, loading, error }] = useSetDefaultShoppingListMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useSetDefaultShoppingListMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    SetDefaultShoppingListMutation,
+    SetDefaultShoppingListMutationVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useMutation<
+    SetDefaultShoppingListMutation,
+    SetDefaultShoppingListMutationVariables
+  >(SetDefaultShoppingListDocument, options);
+}
+export type SetDefaultShoppingListMutationHookResult = ReturnType<
+  typeof useSetDefaultShoppingListMutation
+>;
+export type SetDefaultShoppingListMutationResult =
+  ApolloReactCommon.MutationResult<SetDefaultShoppingListMutation>;
+export type SetDefaultShoppingListMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    SetDefaultShoppingListMutation,
+    SetDefaultShoppingListMutationVariables
+  >;
+export const ShareShoppingListDocument = gql`
+  mutation ShareShoppingList($id: ID!, $input: ShareShoppingListInput!) {
+    shareShoppingList(id: $id, input: $input) {
+      id
+      isPublic
+      shareCode
+    }
+  }
+`;
+export type ShareShoppingListMutationFn = ApolloReactCommon.MutationFunction<
+  ShareShoppingListMutation,
+  ShareShoppingListMutationVariables
+>;
+
+/**
+ * __useShareShoppingListMutation__
+ *
+ * To run a mutation, you first call `useShareShoppingListMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useShareShoppingListMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [shareShoppingListMutation, { data, loading, error }] = useShareShoppingListMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useShareShoppingListMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    ShareShoppingListMutation,
+    ShareShoppingListMutationVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useMutation<
+    ShareShoppingListMutation,
+    ShareShoppingListMutationVariables
+  >(ShareShoppingListDocument, options);
+}
+export type ShareShoppingListMutationHookResult = ReturnType<
+  typeof useShareShoppingListMutation
+>;
+export type ShareShoppingListMutationResult =
+  ApolloReactCommon.MutationResult<ShareShoppingListMutation>;
+export type ShareShoppingListMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    ShareShoppingListMutation,
+    ShareShoppingListMutationVariables
+  >;
 export const AddItemToShoppingListDocument = gql`
   mutation AddItemToShoppingList($input: CreateShoppingListItemInput!) {
     addItemToShoppingList(input: $input) {
       id
-      addedBy {
-        id
-      }
-      isPurchased
+      quantity
+      estimatedPrice
       itemName
+      unitName
+      notes
+      priority
+      category
+      isPurchased
+      item {
+        id
+        name
+        description
+        imageUrl
+      }
+      unit {
+        id
+        name
+        symbol
+      }
+      shoppingList {
+        id
+        totalItems
+        completedItems
+        estimatedTotal
+      }
     }
   }
 `;
@@ -7098,80 +7594,33 @@ export type AddItemToShoppingListMutationOptions =
     AddItemToShoppingListMutation,
     AddItemToShoppingListMutationVariables
   >;
-export const RemoveItemFromShoppingListDocument = gql`
-  mutation RemoveItemFromShoppingList($removeItemFromShoppingListId: ID!) {
-    removeItemFromShoppingList(id: $removeItemFromShoppingListId)
-  }
-`;
-export type RemoveItemFromShoppingListMutationFn =
-  ApolloReactCommon.MutationFunction<
-    RemoveItemFromShoppingListMutation,
-    RemoveItemFromShoppingListMutationVariables
-  >;
-
-/**
- * __useRemoveItemFromShoppingListMutation__
- *
- * To run a mutation, you first call `useRemoveItemFromShoppingListMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useRemoveItemFromShoppingListMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [removeItemFromShoppingListMutation, { data, loading, error }] = useRemoveItemFromShoppingListMutation({
- *   variables: {
- *      removeItemFromShoppingListId: // value for 'removeItemFromShoppingListId'
- *   },
- * });
- */
-export function useRemoveItemFromShoppingListMutation(
-  baseOptions?: ApolloReactHooks.MutationHookOptions<
-    RemoveItemFromShoppingListMutation,
-    RemoveItemFromShoppingListMutationVariables
-  >,
-) {
-  const options = {...defaultOptions, ...baseOptions};
-  return ApolloReactHooks.useMutation<
-    RemoveItemFromShoppingListMutation,
-    RemoveItemFromShoppingListMutationVariables
-  >(RemoveItemFromShoppingListDocument, options);
-}
-export type RemoveItemFromShoppingListMutationHookResult = ReturnType<
-  typeof useRemoveItemFromShoppingListMutation
->;
-export type RemoveItemFromShoppingListMutationResult =
-  ApolloReactCommon.MutationResult<RemoveItemFromShoppingListMutation>;
-export type RemoveItemFromShoppingListMutationOptions =
-  ApolloReactCommon.BaseMutationOptions<
-    RemoveItemFromShoppingListMutation,
-    RemoveItemFromShoppingListMutationVariables
-  >;
 export const UpdateShoppingListItemDocument = gql`
   mutation UpdateShoppingListItem(
-    $updateShoppingListItemId: ID!
-    $data: UpdateShoppingListItemInput!
+    $id: ID!
     $input: UpdateShoppingListItemInput!
   ) {
-    updateShoppingListItem(
-      id: $updateShoppingListItemId
-      data: $data
-      input: $input
-    ) {
+    updateShoppingListItem(id: $id, input: $input) {
       id
       quantity
+      estimatedPrice
+      budgetPrice
+      isPurchased
+      purchasedQuantity
+      purchasedPrice
+      itemName
+      unitName
+      notes
+      priority
+      category
       item {
         id
         name
       }
-      itemName
-      unitName
-      isPurchased
-      createdAt
-      updatedAt
-      deletedAt
-      version
+      unit {
+        id
+        name
+        symbol
+      }
     }
   }
 `;
@@ -7194,8 +7643,7 @@ export type UpdateShoppingListItemMutationFn =
  * @example
  * const [updateShoppingListItemMutation, { data, loading, error }] = useUpdateShoppingListItemMutation({
  *   variables: {
- *      updateShoppingListItemId: // value for 'updateShoppingListItemId'
- *      data: // value for 'data'
+ *      id: // value for 'id'
  *      input: // value for 'input'
  *   },
  * });
@@ -7221,6 +7669,155 @@ export type UpdateShoppingListItemMutationOptions =
   ApolloReactCommon.BaseMutationOptions<
     UpdateShoppingListItemMutation,
     UpdateShoppingListItemMutationVariables
+  >;
+export const RemoveItemFromShoppingListDocument = gql`
+  mutation RemoveItemFromShoppingList($id: ID!) {
+    removeItemFromShoppingList(id: $id)
+  }
+`;
+export type RemoveItemFromShoppingListMutationFn =
+  ApolloReactCommon.MutationFunction<
+    RemoveItemFromShoppingListMutation,
+    RemoveItemFromShoppingListMutationVariables
+  >;
+
+/**
+ * __useRemoveItemFromShoppingListMutation__
+ *
+ * To run a mutation, you first call `useRemoveItemFromShoppingListMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useRemoveItemFromShoppingListMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [removeItemFromShoppingListMutation, { data, loading, error }] = useRemoveItemFromShoppingListMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useRemoveItemFromShoppingListMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    RemoveItemFromShoppingListMutation,
+    RemoveItemFromShoppingListMutationVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useMutation<
+    RemoveItemFromShoppingListMutation,
+    RemoveItemFromShoppingListMutationVariables
+  >(RemoveItemFromShoppingListDocument, options);
+}
+export type RemoveItemFromShoppingListMutationHookResult = ReturnType<
+  typeof useRemoveItemFromShoppingListMutation
+>;
+export type RemoveItemFromShoppingListMutationResult =
+  ApolloReactCommon.MutationResult<RemoveItemFromShoppingListMutation>;
+export type RemoveItemFromShoppingListMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    RemoveItemFromShoppingListMutation,
+    RemoveItemFromShoppingListMutationVariables
+  >;
+export const ToggleShoppingListItemCompletionDocument = gql`
+  mutation ToggleShoppingListItemCompletion($id: ID!) {
+    toggleShoppingListItemCompletion(id: $id)
+  }
+`;
+export type ToggleShoppingListItemCompletionMutationFn =
+  ApolloReactCommon.MutationFunction<
+    ToggleShoppingListItemCompletionMutation,
+    ToggleShoppingListItemCompletionMutationVariables
+  >;
+
+/**
+ * __useToggleShoppingListItemCompletionMutation__
+ *
+ * To run a mutation, you first call `useToggleShoppingListItemCompletionMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useToggleShoppingListItemCompletionMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [toggleShoppingListItemCompletionMutation, { data, loading, error }] = useToggleShoppingListItemCompletionMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useToggleShoppingListItemCompletionMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    ToggleShoppingListItemCompletionMutation,
+    ToggleShoppingListItemCompletionMutationVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useMutation<
+    ToggleShoppingListItemCompletionMutation,
+    ToggleShoppingListItemCompletionMutationVariables
+  >(ToggleShoppingListItemCompletionDocument, options);
+}
+export type ToggleShoppingListItemCompletionMutationHookResult = ReturnType<
+  typeof useToggleShoppingListItemCompletionMutation
+>;
+export type ToggleShoppingListItemCompletionMutationResult =
+  ApolloReactCommon.MutationResult<ToggleShoppingListItemCompletionMutation>;
+export type ToggleShoppingListItemCompletionMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    ToggleShoppingListItemCompletionMutation,
+    ToggleShoppingListItemCompletionMutationVariables
+  >;
+export const MarkItemPurchasedDocument = gql`
+  mutation MarkItemPurchased($id: ID!) {
+    markItemPurchased(id: $id)
+  }
+`;
+export type MarkItemPurchasedMutationFn = ApolloReactCommon.MutationFunction<
+  MarkItemPurchasedMutation,
+  MarkItemPurchasedMutationVariables
+>;
+
+/**
+ * __useMarkItemPurchasedMutation__
+ *
+ * To run a mutation, you first call `useMarkItemPurchasedMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useMarkItemPurchasedMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [markItemPurchasedMutation, { data, loading, error }] = useMarkItemPurchasedMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useMarkItemPurchasedMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    MarkItemPurchasedMutation,
+    MarkItemPurchasedMutationVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useMutation<
+    MarkItemPurchasedMutation,
+    MarkItemPurchasedMutationVariables
+  >(MarkItemPurchasedDocument, options);
+}
+export type MarkItemPurchasedMutationHookResult = ReturnType<
+  typeof useMarkItemPurchasedMutation
+>;
+export type MarkItemPurchasedMutationResult =
+  ApolloReactCommon.MutationResult<MarkItemPurchasedMutation>;
+export type MarkItemPurchasedMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    MarkItemPurchasedMutation,
+    MarkItemPurchasedMutationVariables
   >;
 export const UpdateUserDocument = gql`
   mutation UpdateUser($id: ID!, $input: UpdateUserInput!) {
@@ -7385,48 +7982,23 @@ export const HomeDocument = gql`
       id
       name
       description
-      type
-      timezone
-      currency
-      isPublic
-      joinCode
-      allowJoinCode
-      maxMembers
-      tags
-      metadata
-      createdAt
-      updatedAt
       pantries {
-        id
         name
-        isDefault
-      }
-      members {
         id
-        email
+        isDefault
       }
       memberships {
         id
         homeId
         userId
-        role
-        status
-        displayName
-        canViewPantry
-        canEditPantry
-        canAddItems
-        canRemoveItems
-        canInviteOthers
-        canManageHome
-        lastActiveAt
-        joinedAt
-        leftAt
-        createdAt
-        updatedAt
         user {
-          id
           email
         }
+      }
+      membershipStats {
+        total
+        active
+        recentlyActive
       }
     }
   }
@@ -7503,6 +8075,11 @@ export const HomesDocument = gql`
       name
       createdAt
       updatedAt
+      pantries {
+        id
+        name
+        isDefault
+      }
     }
   }
 `;
@@ -7948,6 +8525,7 @@ export type PantriesQueryResult = ApolloReactCommon.QueryResult<
 export const PantryItemsDocument = gql`
   query PantryItems($pantryId: ID!) {
     pantryItems(pantryId: $pantryId) {
+      id
       unitName
       unitId
       pantryId
@@ -7955,7 +8533,19 @@ export const PantryItemsDocument = gql`
       itemId
       itemBarcode
       item {
+        id
+        name
+        description
         imageUrl
+      }
+      expiresAt
+      storageLocation
+      storageState
+      initialQuantity
+      unit {
+        id
+        name
+        symbol
       }
     }
   }
@@ -8043,11 +8633,17 @@ export const OnboardingItemsDocument = gql`
       status
       units {
         id
-        isDefault
+        itemId
+        unitId
         unit {
           id
           name
           symbol
+          type
+          isMetric
+          baseUnitId
+          conversionFactor
+          isCommon
         }
       }
     }
@@ -8214,59 +8810,200 @@ export type UserProfileQueryResult = ApolloReactCommon.QueryResult<
   UserProfileQuery,
   UserProfileQueryVariables
 >;
-export const ShoppingListsDocument = gql`
-  query ShoppingLists {
-    shoppingLists {
+export const ShoppingListDocument = gql`
+  query ShoppingList($id: ID!) {
+    shoppingList(id: $id) {
       id
       name
+      description
       isDefault
-      metadata
+      isPublic
+      shareCode
       tags
+      budgetAmount
+      totalCost
+      estimatedTotal
+      currency
+      category
+      priority
+      status
+      isCompleted
+      completedAt
+      totalItems
+      completedItems
+      createdAt
+      updatedAt
       items {
         id
-        shoppingList {
-          id
-        }
+        quantity
+        estimatedPrice
+        budgetPrice
+        isPurchased
+        purchasedQuantity
+        purchasedPrice
+        purchaseDate
+        itemName
+        itemBarcode
+        unitName
+        notes
+        priority
+        category
+        sortOrder
+        isAutoAdded
+        autoAddReason
+        isFromMealPlan
         item {
           id
           name
           description
           barcode
-          dataSource
+          imageUrl
           type
           storageState
-          shelfLifeDays
-          showInOnboarding
-          status
-          visibility
-          imageUrl
-          healthBenefits
-          allergens
-          nutritions
-          metadata
-          tags
-          createdAt
-          updatedAt
-          version
+          averagePrice
         }
         unit {
           id
+          name
+          symbol
         }
-        quantity
-        itemName
-        unitName
-        isPurchased
+        preferredStore {
+          id
+          name
+          address
+        }
+        purchasedBy {
+          id
+          email
+        }
+        addedBy {
+          id
+          email
+        }
         createdAt
         updatedAt
-        deletedAt
-        version
       }
       collaborators {
         id
+        email
+        role
+        status
+        canEdit
+        canAddItems
+        canRemoveItems
+        canEditItems
+        canMarkPurchased
+        canInviteOthers
+        invitedAt
+        lastViewedAt
       }
+      targetStore {
+        id
+        name
+        address
+      }
+    }
+  }
+`;
+
+/**
+ * __useShoppingListQuery__
+ *
+ * To run a query within a React component, call `useShoppingListQuery` and pass it any options that fit your needs.
+ * When your component renders, `useShoppingListQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useShoppingListQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useShoppingListQuery(
+  baseOptions: ApolloReactHooks.QueryHookOptions<
+    ShoppingListQuery,
+    ShoppingListQueryVariables
+  > &
+    ({variables: ShoppingListQueryVariables; skip?: boolean} | {skip: boolean}),
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useQuery<
+    ShoppingListQuery,
+    ShoppingListQueryVariables
+  >(ShoppingListDocument, options);
+}
+export function useShoppingListLazyQuery(
+  baseOptions?: ApolloReactHooks.LazyQueryHookOptions<
+    ShoppingListQuery,
+    ShoppingListQueryVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useLazyQuery<
+    ShoppingListQuery,
+    ShoppingListQueryVariables
+  >(ShoppingListDocument, options);
+}
+export function useShoppingListSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        ShoppingListQuery,
+        ShoppingListQueryVariables
+      >,
+) {
+  const options =
+    baseOptions === ApolloReactHooks.skipToken
+      ? baseOptions
+      : {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSuspenseQuery<
+    ShoppingListQuery,
+    ShoppingListQueryVariables
+  >(ShoppingListDocument, options);
+}
+export type ShoppingListQueryHookResult = ReturnType<
+  typeof useShoppingListQuery
+>;
+export type ShoppingListLazyQueryHookResult = ReturnType<
+  typeof useShoppingListLazyQuery
+>;
+export type ShoppingListSuspenseQueryHookResult = ReturnType<
+  typeof useShoppingListSuspenseQuery
+>;
+export type ShoppingListQueryResult = ApolloReactCommon.QueryResult<
+  ShoppingListQuery,
+  ShoppingListQueryVariables
+>;
+export const ShoppingListsDocument = gql`
+  query ShoppingLists {
+    shoppingLists {
+      id
+      name
+      description
+      isDefault
+      isPublic
+      tags
+      totalItems
+      completedItems
+      estimatedTotal
+      currency
+      status
+      isCompleted
+      priority
       createdAt
       updatedAt
-      deletedAt
+      items {
+        id
+        isPurchased
+      }
+      collaborators {
+        id
+        email
+        role
+      }
     }
   }
 `;
@@ -8339,6 +9076,99 @@ export type ShoppingListsSuspenseQueryHookResult = ReturnType<
 export type ShoppingListsQueryResult = ApolloReactCommon.QueryResult<
   ShoppingListsQuery,
   ShoppingListsQueryVariables
+>;
+export const DefaultShoppingListDocument = gql`
+  query DefaultShoppingList {
+    defaultShoppingList {
+      id
+      name
+      description
+      isDefault
+      totalItems
+      completedItems
+      items {
+        id
+        itemName
+        quantity
+        isPurchased
+        item {
+          id
+          name
+          imageUrl
+        }
+      }
+    }
+  }
+`;
+
+/**
+ * __useDefaultShoppingListQuery__
+ *
+ * To run a query within a React component, call `useDefaultShoppingListQuery` and pass it any options that fit your needs.
+ * When your component renders, `useDefaultShoppingListQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useDefaultShoppingListQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useDefaultShoppingListQuery(
+  baseOptions?: ApolloReactHooks.QueryHookOptions<
+    DefaultShoppingListQuery,
+    DefaultShoppingListQueryVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useQuery<
+    DefaultShoppingListQuery,
+    DefaultShoppingListQueryVariables
+  >(DefaultShoppingListDocument, options);
+}
+export function useDefaultShoppingListLazyQuery(
+  baseOptions?: ApolloReactHooks.LazyQueryHookOptions<
+    DefaultShoppingListQuery,
+    DefaultShoppingListQueryVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useLazyQuery<
+    DefaultShoppingListQuery,
+    DefaultShoppingListQueryVariables
+  >(DefaultShoppingListDocument, options);
+}
+export function useDefaultShoppingListSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        DefaultShoppingListQuery,
+        DefaultShoppingListQueryVariables
+      >,
+) {
+  const options =
+    baseOptions === ApolloReactHooks.skipToken
+      ? baseOptions
+      : {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSuspenseQuery<
+    DefaultShoppingListQuery,
+    DefaultShoppingListQueryVariables
+  >(DefaultShoppingListDocument, options);
+}
+export type DefaultShoppingListQueryHookResult = ReturnType<
+  typeof useDefaultShoppingListQuery
+>;
+export type DefaultShoppingListLazyQueryHookResult = ReturnType<
+  typeof useDefaultShoppingListLazyQuery
+>;
+export type DefaultShoppingListSuspenseQueryHookResult = ReturnType<
+  typeof useDefaultShoppingListSuspenseQuery
+>;
+export type DefaultShoppingListQueryResult = ApolloReactCommon.QueryResult<
+  DefaultShoppingListQuery,
+  DefaultShoppingListQueryVariables
 >;
 export const ShoppingListItemsDocument = gql`
   query ShoppingListItems($shoppingListId: ID!) {
@@ -8603,56 +9433,57 @@ export type MeQueryResult = ApolloReactCommon.QueryResult<
   MeQuery,
   MeQueryVariables
 >;
-export const PantryItemUpdatedDocument = gql`
-  subscription PantryItemUpdated($pantryId: ID!) {
-    pantryItemUpdated(pantryId: $pantryId) {
-      id
-      unit {
-        name
+export const PantryItemsChangedDocument = gql`
+  subscription PantryItemsChanged($pantryId: ID!, $itemId: String!) {
+    pantryItemsChanged(pantryId: $pantryId, itemId: $itemId) {
+      pantryId
+      itemId
+      item {
+        itemId
+        itemName
       }
-      unitName
-      itemName
     }
   }
 `;
 
 /**
- * __usePantryItemUpdatedSubscription__
+ * __usePantryItemsChangedSubscription__
  *
- * To run a query within a React component, call `usePantryItemUpdatedSubscription` and pass it any options that fit your needs.
- * When your component renders, `usePantryItemUpdatedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * To run a query within a React component, call `usePantryItemsChangedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `usePantryItemsChangedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
  * you can use to render your UI.
  *
  * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
  *
  * @example
- * const { data, loading, error } = usePantryItemUpdatedSubscription({
+ * const { data, loading, error } = usePantryItemsChangedSubscription({
  *   variables: {
  *      pantryId: // value for 'pantryId'
+ *      itemId: // value for 'itemId'
  *   },
  * });
  */
-export function usePantryItemUpdatedSubscription(
+export function usePantryItemsChangedSubscription(
   baseOptions: ApolloReactHooks.SubscriptionHookOptions<
-    PantryItemUpdatedSubscription,
-    PantryItemUpdatedSubscriptionVariables
+    PantryItemsChangedSubscription,
+    PantryItemsChangedSubscriptionVariables
   > &
     (
-      | {variables: PantryItemUpdatedSubscriptionVariables; skip?: boolean}
+      | {variables: PantryItemsChangedSubscriptionVariables; skip?: boolean}
       | {skip: boolean}
     ),
 ) {
   const options = {...defaultOptions, ...baseOptions};
   return ApolloReactHooks.useSubscription<
-    PantryItemUpdatedSubscription,
-    PantryItemUpdatedSubscriptionVariables
-  >(PantryItemUpdatedDocument, options);
+    PantryItemsChangedSubscription,
+    PantryItemsChangedSubscriptionVariables
+  >(PantryItemsChangedDocument, options);
 }
-export type PantryItemUpdatedSubscriptionHookResult = ReturnType<
-  typeof usePantryItemUpdatedSubscription
+export type PantryItemsChangedSubscriptionHookResult = ReturnType<
+  typeof usePantryItemsChangedSubscription
 >;
-export type PantryItemUpdatedSubscriptionResult =
-  ApolloReactCommon.SubscriptionResult<PantryItemUpdatedSubscription>;
+export type PantryItemsChangedSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<PantryItemsChangedSubscription>;
 export const ShoppingListUpdatedDocument = gql`
   subscription ShoppingListUpdated($listId: ID!) {
     shoppingListUpdated(listId: $listId) {
@@ -8660,19 +9491,16 @@ export const ShoppingListUpdatedDocument = gql`
       node {
         id
         name
-      }
-      previousValues {
-        name
-        status
-        totalCost
-        isCompleted
+        totalItems
+        completedItems
         estimatedTotal
-        description
-        budgetAmount
+        items {
+          id
+          itemName
+          quantity
+          isPurchased
+        }
       }
-      updatedFields
-      userId
-      timestamp
     }
   }
 `;
@@ -8714,3 +9542,156 @@ export type ShoppingListUpdatedSubscriptionHookResult = ReturnType<
 >;
 export type ShoppingListUpdatedSubscriptionResult =
   ApolloReactCommon.SubscriptionResult<ShoppingListUpdatedSubscription>;
+export const ShoppingListItemAddedDocument = gql`
+  subscription ShoppingListItemAdded($shoppingListId: ID!) {
+    shoppingListItemAdded(shoppingListId: $shoppingListId) {
+      id
+      itemName
+      quantity
+      isPurchased
+      addedBy {
+        id
+        email
+      }
+    }
+  }
+`;
+
+/**
+ * __useShoppingListItemAddedSubscription__
+ *
+ * To run a query within a React component, call `useShoppingListItemAddedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useShoppingListItemAddedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useShoppingListItemAddedSubscription({
+ *   variables: {
+ *      shoppingListId: // value for 'shoppingListId'
+ *   },
+ * });
+ */
+export function useShoppingListItemAddedSubscription(
+  baseOptions: ApolloReactHooks.SubscriptionHookOptions<
+    ShoppingListItemAddedSubscription,
+    ShoppingListItemAddedSubscriptionVariables
+  > &
+    (
+      | {variables: ShoppingListItemAddedSubscriptionVariables; skip?: boolean}
+      | {skip: boolean}
+    ),
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    ShoppingListItemAddedSubscription,
+    ShoppingListItemAddedSubscriptionVariables
+  >(ShoppingListItemAddedDocument, options);
+}
+export type ShoppingListItemAddedSubscriptionHookResult = ReturnType<
+  typeof useShoppingListItemAddedSubscription
+>;
+export type ShoppingListItemAddedSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<ShoppingListItemAddedSubscription>;
+export const ShoppingListItemUpdatedDocument = gql`
+  subscription ShoppingListItemUpdated($shoppingListId: ID!) {
+    shoppingListItemUpdated(shoppingListId: $shoppingListId) {
+      id
+      itemName
+      quantity
+      isPurchased
+      notes
+      priority
+    }
+  }
+`;
+
+/**
+ * __useShoppingListItemUpdatedSubscription__
+ *
+ * To run a query within a React component, call `useShoppingListItemUpdatedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useShoppingListItemUpdatedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useShoppingListItemUpdatedSubscription({
+ *   variables: {
+ *      shoppingListId: // value for 'shoppingListId'
+ *   },
+ * });
+ */
+export function useShoppingListItemUpdatedSubscription(
+  baseOptions: ApolloReactHooks.SubscriptionHookOptions<
+    ShoppingListItemUpdatedSubscription,
+    ShoppingListItemUpdatedSubscriptionVariables
+  > &
+    (
+      | {
+          variables: ShoppingListItemUpdatedSubscriptionVariables;
+          skip?: boolean;
+        }
+      | {skip: boolean}
+    ),
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    ShoppingListItemUpdatedSubscription,
+    ShoppingListItemUpdatedSubscriptionVariables
+  >(ShoppingListItemUpdatedDocument, options);
+}
+export type ShoppingListItemUpdatedSubscriptionHookResult = ReturnType<
+  typeof useShoppingListItemUpdatedSubscription
+>;
+export type ShoppingListItemUpdatedSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<ShoppingListItemUpdatedSubscription>;
+export const ShoppingListItemRemovedDocument = gql`
+  subscription ShoppingListItemRemoved($shoppingListId: ID!) {
+    shoppingListItemRemoved(shoppingListId: $shoppingListId) {
+      id
+    }
+  }
+`;
+
+/**
+ * __useShoppingListItemRemovedSubscription__
+ *
+ * To run a query within a React component, call `useShoppingListItemRemovedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useShoppingListItemRemovedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useShoppingListItemRemovedSubscription({
+ *   variables: {
+ *      shoppingListId: // value for 'shoppingListId'
+ *   },
+ * });
+ */
+export function useShoppingListItemRemovedSubscription(
+  baseOptions: ApolloReactHooks.SubscriptionHookOptions<
+    ShoppingListItemRemovedSubscription,
+    ShoppingListItemRemovedSubscriptionVariables
+  > &
+    (
+      | {
+          variables: ShoppingListItemRemovedSubscriptionVariables;
+          skip?: boolean;
+        }
+      | {skip: boolean}
+    ),
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    ShoppingListItemRemovedSubscription,
+    ShoppingListItemRemovedSubscriptionVariables
+  >(ShoppingListItemRemovedDocument, options);
+}
+export type ShoppingListItemRemovedSubscriptionHookResult = ReturnType<
+  typeof useShoppingListItemRemovedSubscription
+>;
+export type ShoppingListItemRemovedSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<ShoppingListItemRemovedSubscription>;

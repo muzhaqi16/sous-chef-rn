@@ -9275,11 +9275,7 @@
             "name": "isDefault",
             "description": null,
             "args": [],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {"kind": "SCALAR", "name": "Boolean", "ofType": null}
-            },
+            "type": {"kind": "SCALAR", "name": "Boolean", "ofType": null},
             "isDeprecated": false,
             "deprecationReason": null
           },
@@ -9311,11 +9307,7 @@
             "name": "item",
             "description": null,
             "args": [],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {"kind": "OBJECT", "name": "Item", "ofType": null}
-            },
+            "type": {"kind": "OBJECT", "name": "Item", "ofType": null},
             "isDeprecated": false,
             "deprecationReason": null
           },
@@ -9459,11 +9451,7 @@
             "name": "unit",
             "description": null,
             "args": [],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {"kind": "OBJECT", "name": "Unit", "ofType": null}
-            },
+            "type": {"kind": "OBJECT", "name": "Unit", "ofType": null},
             "isDeprecated": false,
             "deprecationReason": null
           },
@@ -18146,22 +18134,6 @@
             "name": "updateShoppingListItem",
             "description": null,
             "args": [
-              {
-                "name": "data",
-                "description": null,
-                "type": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "INPUT_OBJECT",
-                    "name": "UpdateShoppingListItemInput",
-                    "ofType": null
-                  }
-                },
-                "defaultValue": null,
-                "isDeprecated": false,
-                "deprecationReason": null
-              },
               {
                 "name": "id",
                 "description": null,
@@ -29690,31 +29662,6 @@
             "deprecationReason": null
           },
           {
-            "name": "pantryItemUpdated",
-            "description": null,
-            "args": [
-              {
-                "name": "pantryId",
-                "description": null,
-                "type": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {"kind": "SCALAR", "name": "ID", "ofType": null}
-                },
-                "defaultValue": null,
-                "isDeprecated": false,
-                "deprecationReason": null
-              }
-            ],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {"kind": "OBJECT", "name": "PantryItem", "ofType": null}
-            },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
             "name": "pantryItemsChanged",
             "description": null,
             "args": [
@@ -34248,26 +34195,6 @@
             "deprecationReason": null
           },
           {
-            "name": "homes",
-            "description": null,
-            "args": [],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {"kind": "OBJECT", "name": "Home", "ofType": null}
-                }
-              }
-            },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
             "name": "id",
             "description": null,
             "args": [],
@@ -34292,30 +34219,6 @@
             "description": null,
             "args": [],
             "type": {"kind": "SCALAR", "name": "DateTime", "ofType": null},
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "memberships",
-            "description": null,
-            "args": [],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "Membership",
-                    "ofType": null
-                  }
-                }
-              }
-            },
             "isDeprecated": false,
             "deprecationReason": null
           },

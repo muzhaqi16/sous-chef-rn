@@ -1,50 +1,83 @@
 import {gql} from '@apollo/client';
 
-// Add an item to shopping list
 export const ADD_ITEM_TO_SHOPPING_LIST = gql`
   mutation AddItemToShoppingList($input: CreateShoppingListItemInput!) {
     addItemToShoppingList(input: $input) {
       id
-      addedBy {
-        id
-      }
-      isPurchased
+      quantity
+      estimatedPrice
       itemName
+      unitName
+      notes
+      priority
+      category
+      isPurchased
+      item {
+        id
+        name
+        description
+        imageUrl
+      }
+      unit {
+        id
+        name
+        symbol
+      }
+      shoppingList {
+        id
+        totalItems
+        completedItems
+        estimatedTotal
+      }
     }
   }
 `;
 
-export const REMOVE_ITEM = gql`
-  mutation RemoveItemFromShoppingList($removeItemFromShoppingListId: ID!) {
-    removeItemFromShoppingList(id: $removeItemFromShoppingListId)
-  }
-`;
-
-// Update an item in shopping list
-export const UPDATE_ITEM_IN_SHOPPING_LIST = gql`
+export const UPDATE_SHOPPING_LIST_ITEM = gql`
   mutation UpdateShoppingListItem(
-    $updateShoppingListItemId: ID!
-    $data: UpdateShoppingListItemInput!
+    $id: ID!
     $input: UpdateShoppingListItemInput!
   ) {
-    updateShoppingListItem(
-      id: $updateShoppingListItemId
-      data: $data
-      input: $input
-    ) {
+    updateShoppingListItem(id: $id, input: $input) {
       id
       quantity
+      estimatedPrice
+      budgetPrice
+      isPurchased
+      purchasedQuantity
+      purchasedPrice
+      itemName
+      unitName
+      notes
+      priority
+      category
       item {
         id
         name
       }
-      itemName
-      unitName
-      isPurchased
-      createdAt
-      updatedAt
-      deletedAt
-      version
+      unit {
+        id
+        name
+        symbol
+      }
     }
+  }
+`;
+
+export const REMOVE_ITEM_FROM_SHOPPING_LIST = gql`
+  mutation RemoveItemFromShoppingList($id: ID!) {
+    removeItemFromShoppingList(id: $id)
+  }
+`;
+
+export const TOGGLE_SHOPPING_LIST_ITEM_COMPLETION = gql`
+  mutation ToggleShoppingListItemCompletion($id: ID!) {
+    toggleShoppingListItemCompletion(id: $id)
+  }
+`;
+
+export const MARK_ITEM_PURCHASED = gql`
+  mutation MarkItemPurchased($id: ID!) {
+    markItemPurchased(id: $id)
   }
 `;

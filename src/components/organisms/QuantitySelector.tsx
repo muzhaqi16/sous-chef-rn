@@ -19,9 +19,17 @@ const QuantitySelector: React.FC<QuantitySelectorProps> = ({
   onDecrement,
   unit,
   onUnitChange,
-  units,
+  units = [], // Provide default empty array
 }) => {
   const {styles} = useStyles(stylesheet);
+
+  // Transform units data for PickerSelect component
+  const pickerItems = units.map(unitItem => ({
+    label: `${unitItem.name} (${unitItem.symbol})`,
+    value: unitItem.name,
+    id: unitItem.id,
+  }));
+
   return (
     <View style={styles.container}>
       <View style={styles.selectors}>
@@ -40,7 +48,7 @@ const QuantitySelector: React.FC<QuantitySelectorProps> = ({
           <PickerSelect
             initialValue={unit}
             onValueChange={onUnitChange}
-            items={units}
+            items={pickerItems} // Use transformed data
             style={{}}
           />
         </View>

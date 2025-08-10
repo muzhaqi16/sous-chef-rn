@@ -4,11 +4,15 @@ import {createStyleSheet, useStyles} from 'react-native-unistyles';
 import {useStore} from '../../store';
 import {SwipeableShoppingListItem} from './SwipeableShoppingListItem';
 import {useShoppingListItemsQuery} from '../../graphql/generated';
-import {type ShoppingListItemDetail} from '../../types';
+import {ShoppingListItemDetail} from '../../types';
 
 export interface ShoppingListItemsProps {
   data: any[];
   onItemPress: (item: ShoppingListItemDetail) => void;
+  onToggleItem: (itemId: string) => void;
+  onRemoveItem: (itemId: string) => void;
+  loading?: boolean;
+  emptyMessage?: string;
 }
 
 export const ShoppingListItems: React.FC<ShoppingListItemsProps> = ({

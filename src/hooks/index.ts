@@ -8,3 +8,5 @@ export {usePantryItems} from './usePantryItems';
 export {useAuth} from './useAuth';
 export {useSearchResults} from './useSearchResults';
 export {useBarcodeScanner} from './useBarcodeScanner';
+export {useUserData} from './useUserData';
+export {useDefaultHome} from './useDefaultHome';

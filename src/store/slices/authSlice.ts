@@ -1,7 +1,6 @@
 import {StateCreator} from 'zustand';
 import {RootState} from '../index';
 import {
-  User,
   RefreshTokenMutation,
   LoginMutation,
   RegisterMutation,

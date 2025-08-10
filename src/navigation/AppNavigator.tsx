@@ -9,12 +9,12 @@ import OnBoardingStack from './OnBoardingStack';
 import BarcodeStack from './BarcodeStack';
 import {NotFoundScreen} from '../screens/NotFoundScreen';
 import type {RootStackParamList} from './types';
+import {OnBoardingSteps} from '#/store/slices/preferencesSlice';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function AppNavigator() {
-  const {isHydrated, user} = useStore();
-
+  const {isHydrated, user, onBoardingStep} = useStore();
   if (!isHydrated) {
     // still loading your persisted zustand store
     return null;
@@ -23,7 +23,7 @@ export default function AppNavigator() {
   const initialRoute: keyof RootStackParamList =
     !user || !user.emailVerified
       ? 'AuthStack'
-      : !user?.onBoarded
+      : onBoardingStep !== OnBoardingSteps.complete
         ? 'OnBoardingStack'
         : 'HomeStack';
   return (

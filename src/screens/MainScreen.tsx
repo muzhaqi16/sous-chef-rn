@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useMemo} from 'react';
 import {
   ScrollView,
   RefreshControl,
@@ -6,38 +6,62 @@ import {
   Text,
   TouchableOpacity,
 } from 'react-native';
-import {SwipeablePantryItem} from '../components/organisms/SwipeablePantryItem';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
-import SearchBar from '../components/molecules/SearchBar';
-import {usePantryItems} from '../hooks';
-import {useUserData} from '../hooks/useUserData';
-import {StorageState, useHomeQuery} from '../graphql/generated';
-import {UserHeader} from '../components/molecules/UserHeader';
-import {useNavigation} from '@react-navigation/native';
-import {RootNavProp} from '../navigation';
 import Icon from '@react-native-vector-icons/material-icons';
+import {useNavigation} from '@react-navigation/native';
+import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {SearchBar, UserHeader, SwipeablePantryItem} from '#components';
+import {usePantryItems, useDefaultHome} from '#hooks';
+import {StorageState, useHomeQuery} from '#generated';
+import {RootNavProp} from '../navigation';
 
 export const MainScreen: React.FC = () => {
   const {styles} = useStyles(stylesheet);
   const navigation = useNavigation<RootNavProp>();
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [expiredCount, setExpiredCount] = useState(0);
-  const {user} = useUserData(); // Only uses auth data
+
+  // Use the new hook to handle default home selection
+  const {
+    selectedHomeId,
+    loading: homesLoading,
+    getDefaultPantryId,
+  } = useDefaultHome();
 
   const {data: homeData} = useHomeQuery({
+    variables: {homeId: selectedHomeId},
     fetchPolicy: 'cache-and-network',
-    variables: {homeId: ''},
-    skip: !user?.id,
+    skip: !selectedHomeId,
   });
 
-  const pantryId = homeData?.home?.defaultPantry?.id;
+  // Get default pantryId from homeData
+  const pantryId = getDefaultPantryId(homeData);
+
   const {items, query, setQuery, refetch} = usePantryItems(pantryId);
+
+  // Calculate expired count using useMemo to avoid re-renders
+  const expiredCount = useMemo(() => {
+    if (!items) return 0;
+
+    return items.filter(pantryItem => {
+      if (!pantryItem.expiresAt) return false;
+      return new Date(pantryItem.expiresAt) < new Date();
+    }).length;
+  }, [items]);
 
   const handleScanBarcode = () => {
     navigation.navigate('BarcodeStack', {
       screen: 'BarcodeScanner',
     });
   };
+
+  // Show loading state while selecting default home
+  if (homesLoading || !selectedHomeId) {
+    return (
+      <View style={[styles.container, styles.loadingContainer]}>
+        <UserHeader />
+        <Text style={styles.loadingText}>Loading your home...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -47,16 +71,10 @@ export const MainScreen: React.FC = () => {
         onChangeText={setQuery}
         placeholder="Find an item…"
       />
+
       <ScrollView
+        style={styles.scrollView}
         contentContainerStyle={styles.listContent}
-        StickyHeaderComponent={() => (
-          <View style={styles.header}>
-            <Text style={{fontSize: 16, fontWeight: 'bold'}}>
-              Expired Items: {expiredCount}
-            </Text>
-          </View>
-        )}
-        stickyHeaderIndices={[0]}
         refreshControl={
           <RefreshControl
             onRefresh={() => {
@@ -66,33 +84,36 @@ export const MainScreen: React.FC = () => {
             refreshing={isRefreshing}
           />
         }>
-        {items.map(pantryItem => {
-          if (
-            pantryItem.expiresAt &&
-            new Date(pantryItem.expiresAt) < new Date()
-          ) {
-            setExpiredCount(prevCount => prevCount + 1);
-          }
+        {/* Pantry Items */}
+        {items?.map(pantryItem => {
+          const itemProp = {
+            id: pantryItem.id,
+            itemName: pantryItem.item?.name,
+            quantity: `${pantryItem.initialQuantity} ${pantryItem.unit?.symbol}`,
+            location:
+              pantryItem.storageState === 'FROZEN'
+                ? 'Frozen'
+                : pantryItem.storageState === 'REFRIGERATED'
+                  ? 'Refrigerated'
+                  : 'Pantry',
+            expirationText: pantryItem.expiresAt
+              ? `Expiring on ${new Date(pantryItem.expiresAt).toLocaleDateString()}`
+              : 'No expiration',
+            icon: {uri: 'default_icon.png'},
+          };
+
           return (
             <SwipeablePantryItem
               key={pantryItem.id}
-              item={{
-                id: pantryItem.id,
-                itemName: pantryItem.item.name,
-                quantity: `${pantryItem.quantity} ${pantryItem.unit.symbol}`,
-                location:
-                  pantryItem.storageState === StorageState.Frozen
-                    ? 'Frozen'
-                    : pantryItem.storageState === StorageState.Refrigerated
-                      ? 'Refrigerated'
-                      : 'Pantry',
-                expirationText: pantryItem.expiresAt
-                  ? `Expiring on ${new Date(pantryItem.expiresAt).toLocaleDateString()}`
-                  : 'No expiration',
-                icon: {uri: 'default_icon.png'},
+              item={itemProp}
+              onDelete={id => {
+                console.log('Delete pressed for:', id);
+                // Add your delete logic here
               }}
-              onDelete={() => () => {}}
-              onEdit={() => {}}
+              onEdit={id => {
+                console.log('Edit pressed for:', id);
+                // Add your edit logic here
+              }}
             />
           );
         })}
@@ -110,12 +131,32 @@ const stylesheet = createStyleSheet(theme => ({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: theme.colors.textPrimary,
+    marginTop: theme.spacing.md,
+  },
+  scrollView: {
+    flex: 1,
+  },
   listContent: {
-    paddingBottom: theme.spacing.sm + 80, // Add bottom padding to account for FAB
+    paddingBottom: theme.spacing.sm + 80,
   },
   header: {
     padding: theme.spacing.md,
+    flexDirection: 'row',
     backgroundColor: theme.colors.background,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border || '#E0E0E0',
+  },
+  headerTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: theme.colors.textPrimary,
   },
   fab: {
     position: 'absolute',
@@ -125,8 +166,8 @@ const stylesheet = createStyleSheet(theme => ({
     height: 70,
     borderRadius: 35,
     backgroundColor: '#62B1F6',
-    elevation: 8, // Android shadow
-    shadowColor: '#000', // iOS shadow
+    elevation: 8,
+    shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 4,
@@ -135,19 +176,5 @@ const stylesheet = createStyleSheet(theme => ({
     shadowRadius: 6,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  fabContent: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  fabIcon: {
-    fontSize: 24,
-    marginBottom: 2,
-  },
-  fabText: {
-    color: 'white',
-    fontSize: 10,
-    fontWeight: '600',
-    textAlign: 'center',
   },
 }));

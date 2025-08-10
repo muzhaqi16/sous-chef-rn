@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   Image,
 } from 'react-native';
-import {SwipeableRow} from '../molecules/SwipeableRow.tsx';
+import {SwipeableRow} from '#/components';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
 
 export interface PantryItem {
@@ -30,7 +30,6 @@ export const SwipeablePantryItem: React.FC<SwipeablePantryItemProps> = ({
   onEdit,
 }) => {
   const {styles} = useStyles(stylesheet);
-
   const renderLeft = () => (
     <TouchableOpacity style={styles.leftAction} onPress={() => onEdit(item.id)}>
       <Text style={styles.actionText}>✏️ Edit</Text>

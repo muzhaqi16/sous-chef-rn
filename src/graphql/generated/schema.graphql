@@ -1100,10 +1100,10 @@ type ItemUnit {
   deletedAt: DateTime
   id: ID!
   isCommon: Boolean!
-  isDefault: Boolean!
+  isDefault: Boolean
   isPreferred: Boolean!
   isVerified: Boolean!
-  item: Item!
+  item: Item
   itemId: String!
   lastPriceUpdate: DateTime
   lastUsedAt: DateTime
@@ -1117,7 +1117,7 @@ type ItemUnit {
   recommendedFor: [UnitRecommendation!]!
   retailUnit: Boolean!
   source: UnitSource!
-  unit: Unit!
+  unit: Unit
   unitId: String!
   updatedAt: DateTime!
   usageContext: [UnitUsageContext!]!
@@ -1750,7 +1750,6 @@ type Mutation {
   updateSettings(input: UpdateUserSettingsInput!): UserSettings!
   updateShoppingList(id: ID!, input: UpdateShoppingListInput!): ShoppingList!
   updateShoppingListItem(
-    data: UpdateShoppingListItemInput!
     id: ID!
     input: UpdateShoppingListItemInput!
   ): ShoppingListItem!
@@ -2716,7 +2715,6 @@ type Subscription {
   notificationUpdated(userId: ID!): Notification!
   pantryActivityAdded(pantryId: ID!): PantryActivity!
   pantryExpiringItemsAlert(pantryId: ID!): [PantryItem!]!
-  pantryItemUpdated(pantryId: ID!): PantryItem!
   pantryItemsChanged(itemId: String!, pantryId: ID!): PantryItemChangedPayload!
   pantryLowStockAlert(pantryId: ID!): [PantryItem!]!
   pantryUpdated(id: ID!): PantryUpdatedPayload!
@@ -3213,11 +3211,9 @@ type User {
   email: String!
   emailVerified: Boolean!
   homeOwnerships: [HomeOwnership!]!
-  homes: [Home!]!
   id: ID!
   language: String
   lastActiveAt: DateTime
-  memberships: [Membership!]!
   moderation: UserModeration
   onBoarded: Boolean!
   preferredCurrency: String

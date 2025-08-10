@@ -14,3 +14,5 @@ export * from './SwipeableRow';
 export * from './ActionButton';
 export * from './ItemDetailBottomSheet';
 export * from './SearchBar';
+export {ActionButton} from './ActionButton.tsx';
+export {UserHeader} from './UserHeader.tsx';

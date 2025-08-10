@@ -1,7 +1,7 @@
 import {useMemo} from 'react';
 import {
   usePantryItemsQuery,
-  usePantryItemUpdatedSubscription,
+  usePantryItemsChangedSubscription,
   PantryItemsQuery,
   PantryItemsDocument,
 } from '../graphql/generated';
@@ -15,8 +15,8 @@ export function usePantryItems(pantryId: string | undefined) {
     variables: {pantryId: pantryId ?? ''},
   });
 
-  usePantryItemUpdatedSubscription({
-    variables: {pantryId: pantryId ?? ''},
+  usePantryItemsChangedSubscription({
+    variables: {pantryId: pantryId ?? '', itemId: ''},
     skip: !pantryId,
     onData: ({
       data: subData,
@@ -54,7 +54,7 @@ export function usePantryItems(pantryId: string | undefined) {
 
   const {query, setQuery, filtered} = useSearchableList(
     pantryItems,
-    (item, q) => item?.item?.name?.toLowerCase().includes(q.toLowerCase()),
+    (item, q) => item?.itemName?.toLowerCase().includes(q.toLowerCase()),
   );
 
   return {items: filtered, query, setQuery, refetch};

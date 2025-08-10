@@ -5,15 +5,14 @@ import QuantitySelector from '../organisms/QuantitySelector';
 import {BottomSheetTextInput} from '@gorhom/bottom-sheet';
 import Button from '../atoms/Button';
 import {useUpdateShoppingListItemMutation} from '../../graphql/generated';
-import {
-  useUnitsQuery,
-  UpdateShoppingListItemInput,
-} from '../../graphql/generated';
-import {type ShoppingListItemDetail} from '../../types';
+import {useUnitsQuery, Unit} from '../../graphql/generated';
+import {ShoppingListItemDetail} from '../../types';
 
 interface ItemDetailProps {
   item: ShoppingListItemDetail;
   onClose: () => void;
+  onUpdate: (updates: Partial<ShoppingListItemDetail>) => void;
+  onRemove: () => void;
 }
 
 export const ItemDetailBottomSheet: React.FC<ItemDetailProps> = ({
@@ -24,7 +23,6 @@ export const ItemDetailBottomSheet: React.FC<ItemDetailProps> = ({
   const [quantity, setQuantity] = useState(1);
   const [unit, setUnit] = useState('pcs');
   const {data} = useUnitsQuery();
-  const units = data?.units || [];
   const {styles} = useStyles(stylesheet);
 
   const [updateItem] = useUpdateShoppingListItemMutation({
@@ -36,7 +34,7 @@ export const ItemDetailBottomSheet: React.FC<ItemDetailProps> = ({
     updateItem({
       variables: {
         id: item.id,
-        data: {
+        input: {
           itemName: item.itemName,
           quantity,
         },
@@ -62,7 +60,7 @@ export const ItemDetailBottomSheet: React.FC<ItemDetailProps> = ({
           onIncrement={() => setQuantity(q => q + 1)}
           unit={unit}
           onUnitChange={setUnit}
-          units={units}
+          units={data?.units as Unit[]}
         />
       </View>
       <Button title="Save" onPress={handleSave} />

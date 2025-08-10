@@ -6,48 +6,23 @@ export const GET_HOME = gql`
       id
       name
       description
-      type
-      timezone
-      currency
-      isPublic
-      joinCode
-      allowJoinCode
-      maxMembers
-      tags
-      metadata
-      createdAt
-      updatedAt
       pantries {
-        id
         name
-        isDefault
-      }
-      members {
         id
-        email
+        isDefault
       }
       memberships {
         id
         homeId
         userId
-        role
-        status
-        displayName
-        canViewPantry
-        canEditPantry
-        canAddItems
-        canRemoveItems
-        canInviteOthers
-        canManageHome
-        lastActiveAt
-        joinedAt
-        leftAt
-        createdAt
-        updatedAt
         user {
-          id
           email
         }
+      }
+      membershipStats {
+        total
+        active
+        recentlyActive
       }
     }
   }
@@ -60,6 +35,11 @@ export const GET_HOMES = gql`
       name
       createdAt
       updatedAt
+      pantries {
+        id
+        name
+        isDefault
+      }
     }
   }
 `;

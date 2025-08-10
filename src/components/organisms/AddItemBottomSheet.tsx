@@ -13,6 +13,7 @@ import {type ShoppingListItemDetail} from '../../types';
 
 interface AddItemProps {
   onGoToDetails: (item: ShoppingListItemDetail) => void;
+  onAddItem: (item: ItemSuggestion) => void;
 }
 
 export const AddItemBottomSheet: React.FC<AddItemProps> = ({onGoToDetails}) => {

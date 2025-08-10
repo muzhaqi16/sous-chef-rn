@@ -11,30 +11,15 @@ import {
   StorageState,
   ItemCondition,
   AcquisitionMethod,
+  OnboardingItemsQuery,
 } from '#generated';
 import {useStore} from '#store';
 import {OnBoardingSteps} from '#store/slices/preferencesSlice';
 import {Button} from '#components';
 
-type PartialItem = {
-  id: string;
-  name: string;
-  description?: string;
-  imageUrl?: string;
-  type?: string;
-  storageState?: StorageState;
-  popularity?: number;
-  status?: string;
-  units?: Array<{
-    id: string;
-    isDefault?: boolean;
-    unit: {
-      id: string;
-      name: string;
-      symbol: string;
-    };
-  }>;
-};
+type OnboardingItemType = NonNullable<
+  OnboardingItemsQuery['onboardingItems']
+>[number];
 
 export const SelectPantryItems = () => {
   const navigation = useNavigation<SelectPantryItemsNavProp>();
@@ -49,7 +34,7 @@ export const SelectPantryItems = () => {
     fetchPolicy: 'cache-and-network',
     onError: e => console.error(e),
   });
-
+  console.log('Onboarding items data:', data);
   const [addItemToPantry] = useAddItemToPantryMutation({
     onCompleted: () => {
       console.log('Item added to pantry successfully');
@@ -57,7 +42,7 @@ export const SelectPantryItems = () => {
     onError: e => console.error(e),
   });
 
-  const [selected, setSelected] = useState<PartialItem[]>([]);
+  const [selected, setSelected] = useState<OnboardingItemType[]>([]);
   const [isAddingItems, setIsAddingItems] = useState(false);
 
   if (loading) {
@@ -90,7 +75,7 @@ export const SelectPantryItems = () => {
     );
   }
 
-  const handleSelect = (item: PartialItem) => {
+  const handleSelect = (item: OnboardingItemType) => {
     setSelected(current => {
       const exists = current.find(i => i.id === item.id);
       if (exists) {
@@ -129,7 +114,7 @@ export const SelectPantryItems = () => {
       await Promise.all(
         selected.map(item => {
           // Find the default unit or use the first available unit
-          const defaultUnit = item.units?.find(u => u.isDefault);
+          const defaultUnit = item.units?.find(u => u?.unit?.isCommon);
           const unitToUse = defaultUnit || item.units?.[0];
 
           return addItemToPantry({
@@ -183,13 +168,7 @@ export const SelectPantryItems = () => {
             return (
               <TouchableOpacity
                 key={item.id}
-                onPress={() =>
-                  handleSelect({
-                    ...item,
-                    description: item.description ?? undefined,
-                    imageUrl: item.imageUrl ?? undefined,
-                  })
-                }
+                onPress={() => handleSelect(item)}
                 style={[styles.pickerItem, active && styles.pickerItemActive]}>
                 <Text
                   style={[

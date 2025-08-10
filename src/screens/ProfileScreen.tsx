@@ -15,8 +15,11 @@ export default function ProfileScreen() {
   const navigation = useNavigation();
 
   const {user} = useUserData(true);
+  const {data, loading: profileLoading} = useUserProfileQuery({
+    fetchPolicy: 'cache-and-network',
+  });
 
-  const {firstName, lastName, phone, dateOfBirth, avatarUrl} = user || {};
+  const profile = data?.userProfile || null;
 
   const {
     logout,
@@ -29,19 +32,6 @@ export default function ProfileScreen() {
     pushNotifications,
   } = useStore();
   const {updatePreferences} = useStore();
-
-  const [updateProfile] = useUpdateUserProfileMutation({
-    onCompleted: data => {
-      if (data.updateUserProfile) {
-        console.log('Profile updated successfully');
-      } else {
-        console.error('Failed to update profile');
-      }
-    },
-    onError: error => {
-      console.error('Error updating profile:', error);
-    },
-  });
 
   const [langPickerVisible, setLangPickerVisible] = useState(false);
 
@@ -58,40 +48,28 @@ export default function ProfileScreen() {
       label: 'First Name',
       type: 'text',
       value: profile?.firstName || '',
-      onSave: val =>
-        updateProfile({
-          variables: {data: {firstName: val}},
-        }),
+      onSave: val => {},
     },
     {
       key: 'lastName',
       label: 'Last Name',
       type: 'text',
       value: profile?.lastName || '',
-      onSave: val =>
-        updateProfile({
-          variables: {data: {lastName: val}},
-        }),
+      onSave: val => {},
     },
     {
       key: 'phone',
       label: 'Phone',
       type: 'text',
       value: profile?.phone || '',
-      onSave: val =>
-        updateProfile({
-          variables: {data: {phone: val}},
-        }),
+      onSave: val => {},
     },
     {
       key: 'birthday',
       label: 'Birthday',
       type: 'text',
       value: profile?.dateOfBirth || '',
-      onSave: val =>
-        updateProfile({
-          variables: {data: {dateOfBirth: val}},
-        }),
+      onSave: val => {},
     },
   ];
 
@@ -139,7 +117,7 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <ProfileHeader
-        avatarUrl={profile?.avatarUrl ?? undefined}
+        avatarUrl={profile?.avatar ?? undefined}
         name={`${profile?.firstName || ''} ${profile?.lastName || ''}`}
         subtitle={user?.email || ''}
         onBack={() => {}}
@@ -164,7 +142,7 @@ export default function ProfileScreen() {
                 logout();
                 navigation.reset({
                   index: 0,
-                  routes: [{name: 'Auth'}],
+                  routes: [{name: 'AuthStack'}],
                 });
               },
             },

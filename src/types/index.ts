@@ -1,7 +1,25 @@
-export type ShoppingListItemDetail = {
-  id: string; // Unique identifier for the item
-  itemName: string; // Name of the shopping list item
-  quantity: number; // Quantity of the item
-  unit: string; // Unit of measurement for the item
-  checked: boolean; // Whether the item is checked off the list
-};
+export interface ShoppingListItemDetail {
+  id: string;
+  itemId?: string;
+  itemName?: string;
+  quantity?: number;
+  unitId?: string;
+  unitName?: string;
+  isPurchased: boolean;
+  estimatedPrice?: number;
+  notes?: string;
+  category?: string;
+  priority?: number;
+  item?: {
+    id: string;
+    name: string;
+    description?: string;
+    imageUrl?: string;
+    barcode?: string;
+  };
+  unit?: {
+    id: string;
+    name: string;
+    symbol: string;
+  };
+}

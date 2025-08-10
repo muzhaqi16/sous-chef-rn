@@ -1,14 +1,14 @@
 import {gql} from '@apollo/client';
 
-export const PantryItemUpdatedDocument = gql`
-  subscription PantryItemUpdated($pantryId: ID!) {
-    pantryItemUpdated(pantryId: $pantryId) {
-      id
-      unit {
-        name
+export const PantryItemChangedSubscription = gql`
+  subscription PantryItemsChanged($pantryId: ID!, $itemId: String!) {
+    pantryItemsChanged(pantryId: $pantryId, itemId: $itemId) {
+      pantryId
+      itemId
+      item {
+        itemId
+        itemName
       }
-      unitName
-      itemName
     }
   }
 `;

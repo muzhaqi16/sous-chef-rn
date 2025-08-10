@@ -4,7 +4,7 @@ import {Picker} from '@react-native-picker/picker';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
 
 type PickerSelectProps = {
-  items: {id: string; name: string}[] | undefined;
+  items: {label: string; value: string; id: string}[];
   initialValue: string;
   onValueChange: (itemValue: string) => void;
   style: ViewStyle;
@@ -29,7 +29,7 @@ export const PickerSelect = ({
       {items?.map(item => (
         <Item
           key={item.id}
-          label={item.name}
+          label={item.label}
           value={item.id}
           color={styles.item}
         />

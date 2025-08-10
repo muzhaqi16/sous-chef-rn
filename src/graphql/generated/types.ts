@@ -1155,10 +1155,10 @@ export type ItemUnit = {
   deletedAt?: Maybe<Scalars['DateTime']['output']>;
   id: Scalars['ID']['output'];
   isCommon: Scalars['Boolean']['output'];
-  isDefault: Scalars['Boolean']['output'];
+  isDefault?: Maybe<Scalars['Boolean']['output']>;
   isPreferred: Scalars['Boolean']['output'];
   isVerified: Scalars['Boolean']['output'];
-  item: Item;
+  item?: Maybe<Item>;
   itemId: Scalars['String']['output'];
   lastPriceUpdate?: Maybe<Scalars['DateTime']['output']>;
   lastUsedAt?: Maybe<Scalars['DateTime']['output']>;
@@ -1172,7 +1172,7 @@ export type ItemUnit = {
   recommendedFor: Array<UnitRecommendation>;
   retailUnit: Scalars['Boolean']['output'];
   source: UnitSource;
-  unit: Unit;
+  unit?: Maybe<Unit>;
   unitId: Scalars['String']['output'];
   updatedAt: Scalars['DateTime']['output'];
   usageContext: Array<UnitUsageContext>;
@@ -2455,7 +2455,6 @@ export type MutationUpdateShoppingListArgs = {
 };
 
 export type MutationUpdateShoppingListItemArgs = {
-  data: UpdateShoppingListItemInput;
   id: Scalars['ID']['input'];
   input: UpdateShoppingListItemInput;
 };
@@ -3873,7 +3872,6 @@ export type Subscription = {
   notificationUpdated: Notification;
   pantryActivityAdded: PantryActivity;
   pantryExpiringItemsAlert: Array<PantryItem>;
-  pantryItemUpdated: PantryItem;
   pantryItemsChanged: PantryItemChangedPayload;
   pantryLowStockAlert: Array<PantryItem>;
   pantryUpdated: PantryUpdatedPayload;
@@ -3984,10 +3982,6 @@ export type SubscriptionPantryActivityAddedArgs = {
 };
 
 export type SubscriptionPantryExpiringItemsAlertArgs = {
-  pantryId: Scalars['ID']['input'];
-};
-
-export type SubscriptionPantryItemUpdatedArgs = {
   pantryId: Scalars['ID']['input'];
 };
 
@@ -4557,11 +4551,9 @@ export type User = {
   email: Scalars['String']['output'];
   emailVerified: Scalars['Boolean']['output'];
   homeOwnerships: Array<HomeOwnership>;
-  homes: Array<Home>;
   id: Scalars['ID']['output'];
   language?: Maybe<Scalars['String']['output']>;
   lastActiveAt?: Maybe<Scalars['DateTime']['output']>;
-  memberships: Array<Membership>;
   moderation?: Maybe<UserModeration>;
   onBoarded: Scalars['Boolean']['output'];
   preferredCurrency?: Maybe<Scalars['String']['output']>;
@@ -4901,15 +4893,6 @@ export type CompleteUserFragment = {
     id: string;
     home: {__typename?: 'Home'; id: string; name: string; createdAt: string};
   }>;
-  memberships: Array<{__typename?: 'Membership'; id: string; homeId: string}>;
-  homes: Array<{
-    __typename?: 'Home';
-    id: string;
-    name: string;
-    description?: string | null;
-    createdAt: string;
-    updatedAt: string;
-  }>;
   purchases: Array<{__typename?: 'Purchase'; id: string}>;
   shoppingListOwnerships: Array<{
     __typename?: 'ShoppingListOwnership';
@@ -5098,15 +5081,6 @@ export type GetUserProfileQuery = {
       __typename?: 'HomeOwnership';
       id: string;
       home: {__typename?: 'Home'; id: string; name: string; createdAt: string};
-    }>;
-    memberships: Array<{__typename?: 'Membership'; id: string; homeId: string}>;
-    homes: Array<{
-      __typename?: 'Home';
-      id: string;
-      name: string;
-      description?: string | null;
-      createdAt: string;
-      updatedAt: string;
     }>;
     purchases: Array<{__typename?: 'Purchase'; id: string}>;
     shoppingListOwnerships: Array<{
@@ -5335,6 +5309,68 @@ export type AddCollaboratorMutation = {
   };
 };
 
+export type UpdateShoppingListMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+  input: UpdateShoppingListInput;
+}>;
+
+export type UpdateShoppingListMutation = {
+  __typename?: 'Mutation';
+  updateShoppingList: {
+    __typename?: 'ShoppingList';
+    id: string;
+    name: string;
+    description?: string | null;
+    tags: Array<string>;
+    budgetAmount?: number | null;
+    currency?: string | null;
+    category?: string | null;
+    priority: number;
+    status: ListStatus;
+    isCompleted: boolean;
+    isDefault: boolean;
+    updatedAt: string;
+  };
+};
+
+export type DeleteShoppingListMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type DeleteShoppingListMutation = {
+  __typename?: 'Mutation';
+  deleteShoppingList: boolean;
+};
+
+export type SetDefaultShoppingListMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type SetDefaultShoppingListMutation = {
+  __typename?: 'Mutation';
+  setDefaultShoppingList: {
+    __typename?: 'ShoppingList';
+    id: string;
+    name: string;
+    isDefault: boolean;
+  };
+};
+
+export type ShareShoppingListMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+  input: ShareShoppingListInput;
+}>;
+
+export type ShareShoppingListMutation = {
+  __typename?: 'Mutation';
+  shareShoppingList: {
+    __typename?: 'ShoppingList';
+    id: string;
+    isPublic: boolean;
+    shareCode?: string | null;
+  };
+};
+
 export type AddItemToShoppingListMutationVariables = Exact<{
   input: CreateShoppingListItemInput;
 }>;
@@ -5344,24 +5380,39 @@ export type AddItemToShoppingListMutation = {
   addItemToShoppingList: {
     __typename?: 'ShoppingListItem';
     id: string;
-    isPurchased: boolean;
+    quantity?: number | null;
+    estimatedPrice?: number | null;
     itemName?: string | null;
-    addedBy?: {__typename?: 'User'; id: string} | null;
+    unitName?: string | null;
+    notes?: string | null;
+    priority: number;
+    category?: string | null;
+    isPurchased: boolean;
+    item?: {
+      __typename?: 'Item';
+      id: string;
+      name: string;
+      description?: string | null;
+      imageUrl?: string | null;
+    } | null;
+    unit?: {
+      __typename?: 'Unit';
+      id: string;
+      name: string;
+      symbol: string;
+    } | null;
+    shoppingList: {
+      __typename?: 'ShoppingList';
+      id: string;
+      totalItems: number;
+      completedItems: number;
+      estimatedTotal: number;
+    };
   };
 };
 
-export type RemoveItemFromShoppingListMutationVariables = Exact<{
-  removeItemFromShoppingListId: Scalars['ID']['input'];
-}>;
-
-export type RemoveItemFromShoppingListMutation = {
-  __typename?: 'Mutation';
-  removeItemFromShoppingList: boolean;
-};
-
 export type UpdateShoppingListItemMutationVariables = Exact<{
-  updateShoppingListItemId: Scalars['ID']['input'];
-  data: UpdateShoppingListItemInput;
+  id: Scalars['ID']['input'];
   input: UpdateShoppingListItemInput;
 }>;
 
@@ -5371,15 +5422,51 @@ export type UpdateShoppingListItemMutation = {
     __typename?: 'ShoppingListItem';
     id: string;
     quantity?: number | null;
+    estimatedPrice?: number | null;
+    budgetPrice?: number | null;
+    isPurchased: boolean;
+    purchasedQuantity?: number | null;
+    purchasedPrice?: number | null;
     itemName?: string | null;
     unitName?: string | null;
-    isPurchased: boolean;
-    createdAt: string;
-    updatedAt: string;
-    deletedAt?: string | null;
-    version: number;
+    notes?: string | null;
+    priority: number;
+    category?: string | null;
     item?: {__typename?: 'Item'; id: string; name: string} | null;
+    unit?: {
+      __typename?: 'Unit';
+      id: string;
+      name: string;
+      symbol: string;
+    } | null;
   };
+};
+
+export type RemoveItemFromShoppingListMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type RemoveItemFromShoppingListMutation = {
+  __typename?: 'Mutation';
+  removeItemFromShoppingList: boolean;
+};
+
+export type ToggleShoppingListItemCompletionMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type ToggleShoppingListItemCompletionMutation = {
+  __typename?: 'Mutation';
+  toggleShoppingListItemCompletion: boolean;
+};
+
+export type MarkItemPurchasedMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type MarkItemPurchasedMutation = {
+  __typename?: 'Mutation';
+  markItemPurchased: boolean;
 };
 
 export type UpdateUserMutationVariables = Exact<{
@@ -5442,45 +5529,25 @@ export type HomeQuery = {
     id: string;
     name: string;
     description?: string | null;
-    type: HomeType;
-    timezone?: string | null;
-    currency?: string | null;
-    isPublic: boolean;
-    joinCode?: string | null;
-    allowJoinCode: boolean;
-    maxMembers?: number | null;
-    tags: Array<string>;
-    metadata?: string | null;
-    createdAt: string;
-    updatedAt: string;
     pantries?: Array<{
       __typename?: 'Pantry';
-      id: string;
       name: string;
+      id: string;
       isDefault: boolean;
     }> | null;
-    members: Array<{__typename?: 'User'; id: string; email: string}>;
     memberships: Array<{
       __typename?: 'Membership';
       id: string;
       homeId: string;
       userId: string;
-      role: MembershipRole;
-      status: MembershipStatus;
-      displayName?: string | null;
-      canViewPantry: boolean;
-      canEditPantry: boolean;
-      canAddItems: boolean;
-      canRemoveItems: boolean;
-      canInviteOthers: boolean;
-      canManageHome: boolean;
-      lastActiveAt?: string | null;
-      joinedAt: string;
-      leftAt?: string | null;
-      createdAt: string;
-      updatedAt: string;
-      user: {__typename?: 'User'; id: string; email: string};
+      user: {__typename?: 'User'; email: string};
     }>;
+    membershipStats: {
+      __typename?: 'MembershipStats';
+      total: number;
+      active: number;
+      recentlyActive: number;
+    };
   } | null;
 };
 
@@ -5494,6 +5561,12 @@ export type HomesQuery = {
     name: string;
     createdAt: string;
     updatedAt: string;
+    pantries?: Array<{
+      __typename?: 'Pantry';
+      id: string;
+      name: string;
+      isDefault: boolean;
+    }> | null;
   }>;
 };
 
@@ -5529,7 +5602,11 @@ export type ItemsQuery = {
       updatedAt: string;
       deletedAt?: string | null;
       version: number;
-      units: Array<{__typename?: 'ItemUnit'; id: string; isDefault: boolean}>;
+      units: Array<{
+        __typename?: 'ItemUnit';
+        id: string;
+        isDefault?: boolean | null;
+      }>;
       brands: Array<{__typename?: 'ItemBrand'; id: string}>;
       categories: Array<{__typename?: 'ItemCategory'; id: string}>;
     }> | null;
@@ -5599,13 +5676,25 @@ export type PantryItemsQuery = {
   __typename?: 'Query';
   pantryItems: Array<{
     __typename?: 'PantryItem';
+    id: string;
     unitName: string;
     unitId: string;
     pantryId: string;
     itemName: string;
     itemId: string;
     itemBarcode?: string | null;
-    item: {__typename?: 'Item'; imageUrl?: string | null};
+    expiresAt?: string | null;
+    storageLocation?: string | null;
+    storageState: StorageState;
+    initialQuantity: number;
+    item: {
+      __typename?: 'Item';
+      id: string;
+      name: string;
+      description?: string | null;
+      imageUrl?: string | null;
+    };
+    unit: {__typename?: 'Unit'; id: string; name: string; symbol: string};
   }>;
 };
 
@@ -5626,8 +5715,19 @@ export type OnboardingItemsQuery = {
     units: Array<{
       __typename?: 'ItemUnit';
       id: string;
-      isDefault: boolean;
-      unit: {__typename?: 'Unit'; id: string; name: string; symbol: string};
+      itemId: string;
+      unitId: string;
+      unit?: {
+        __typename?: 'Unit';
+        id: string;
+        name: string;
+        symbol: string;
+        type: UnitType;
+        isMetric: boolean;
+        baseUnitId?: string | null;
+        conversionFactor: number;
+        isCommon: boolean;
+      } | null;
     }>;
   }>;
 };
@@ -5658,6 +5758,106 @@ export type UserProfileQuery = {
   } | null;
 };
 
+export type ShoppingListQueryVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type ShoppingListQuery = {
+  __typename?: 'Query';
+  shoppingList?: {
+    __typename?: 'ShoppingList';
+    id: string;
+    name: string;
+    description?: string | null;
+    isDefault: boolean;
+    isPublic: boolean;
+    shareCode?: string | null;
+    tags: Array<string>;
+    budgetAmount?: number | null;
+    totalCost: number;
+    estimatedTotal: number;
+    currency?: string | null;
+    category?: string | null;
+    priority: number;
+    status: ListStatus;
+    isCompleted: boolean;
+    completedAt?: string | null;
+    totalItems: number;
+    completedItems: number;
+    createdAt: string;
+    updatedAt: string;
+    items: Array<{
+      __typename?: 'ShoppingListItem';
+      id: string;
+      quantity?: number | null;
+      estimatedPrice?: number | null;
+      budgetPrice?: number | null;
+      isPurchased: boolean;
+      purchasedQuantity?: number | null;
+      purchasedPrice?: number | null;
+      purchaseDate?: string | null;
+      itemName?: string | null;
+      itemBarcode?: string | null;
+      unitName?: string | null;
+      notes?: string | null;
+      priority: number;
+      category?: string | null;
+      sortOrder: number;
+      isAutoAdded: boolean;
+      autoAddReason?: string | null;
+      isFromMealPlan: boolean;
+      createdAt: string;
+      updatedAt: string;
+      item?: {
+        __typename?: 'Item';
+        id: string;
+        name: string;
+        description?: string | null;
+        barcode?: string | null;
+        imageUrl?: string | null;
+        type: ItemType;
+        storageState: StorageState;
+        averagePrice?: number | null;
+      } | null;
+      unit?: {
+        __typename?: 'Unit';
+        id: string;
+        name: string;
+        symbol: string;
+      } | null;
+      preferredStore?: {
+        __typename?: 'Store';
+        id: string;
+        name: string;
+        address?: string | null;
+      } | null;
+      purchasedBy?: {__typename?: 'User'; id: string; email: string} | null;
+      addedBy?: {__typename?: 'User'; id: string; email: string} | null;
+    }>;
+    collaborators: Array<{
+      __typename?: 'ShoppingListCollaborator';
+      id: string;
+      email?: string | null;
+      role: CollaboratorRole;
+      status: CollaboratorStatus;
+      canEdit: boolean;
+      canAddItems: boolean;
+      canRemoveItems: boolean;
+      canEditItems: boolean;
+      canMarkPurchased: boolean;
+      canInviteOthers: boolean;
+      invitedAt: string;
+      lastViewedAt?: string | null;
+    }>;
+    targetStore?: {
+      __typename?: 'Store';
+      id: string;
+      name: string;
+      address?: string | null;
+    } | null;
+  } | null;
+};
+
 export type ShoppingListsQueryVariables = Exact<{[key: string]: never}>;
 
 export type ShoppingListsQuery = {
@@ -5666,51 +5866,59 @@ export type ShoppingListsQuery = {
     __typename?: 'ShoppingList';
     id: string;
     name: string;
+    description?: string | null;
     isDefault: boolean;
-    metadata?: any | null;
+    isPublic: boolean;
     tags: Array<string>;
+    totalItems: number;
+    completedItems: number;
+    estimatedTotal: number;
+    currency?: string | null;
+    status: ListStatus;
+    isCompleted: boolean;
+    priority: number;
     createdAt: string;
     updatedAt: string;
-    deletedAt?: string | null;
     items: Array<{
       __typename?: 'ShoppingListItem';
       id: string;
-      quantity?: number | null;
-      itemName?: string | null;
-      unitName?: string | null;
       isPurchased: boolean;
-      createdAt: string;
-      updatedAt: string;
-      deletedAt?: string | null;
-      version: number;
-      shoppingList: {__typename?: 'ShoppingList'; id: string};
+    }>;
+    collaborators: Array<{
+      __typename?: 'ShoppingListCollaborator';
+      id: string;
+      email?: string | null;
+      role: CollaboratorRole;
+    }>;
+  }>;
+};
+
+export type DefaultShoppingListQueryVariables = Exact<{[key: string]: never}>;
+
+export type DefaultShoppingListQuery = {
+  __typename?: 'Query';
+  defaultShoppingList?: {
+    __typename?: 'ShoppingList';
+    id: string;
+    name: string;
+    description?: string | null;
+    isDefault: boolean;
+    totalItems: number;
+    completedItems: number;
+    items: Array<{
+      __typename?: 'ShoppingListItem';
+      id: string;
+      itemName?: string | null;
+      quantity?: number | null;
+      isPurchased: boolean;
       item?: {
         __typename?: 'Item';
         id: string;
         name: string;
-        description?: string | null;
-        barcode?: string | null;
-        dataSource: DataSource;
-        type: ItemType;
-        storageState: StorageState;
-        shelfLifeDays?: number | null;
-        showInOnboarding: boolean;
-        status: ItemStatus;
-        visibility: Visibility;
         imageUrl?: string | null;
-        healthBenefits?: any | null;
-        allergens?: any | null;
-        nutritions?: any | null;
-        metadata?: any | null;
-        tags: Array<string>;
-        createdAt: string;
-        updatedAt: string;
-        version: number;
       } | null;
-      unit?: {__typename?: 'Unit'; id: string} | null;
     }>;
-    collaborators: Array<{__typename?: 'ShoppingListCollaborator'; id: string}>;
-  }>;
+  } | null;
 };
 
 export type ShoppingListItemsQueryVariables = Exact<{
@@ -5791,18 +5999,18 @@ export type MeQuery = {
   } | null;
 };
 
-export type PantryItemUpdatedSubscriptionVariables = Exact<{
+export type PantryItemsChangedSubscriptionVariables = Exact<{
   pantryId: Scalars['ID']['input'];
+  itemId: Scalars['String']['input'];
 }>;
 
-export type PantryItemUpdatedSubscription = {
+export type PantryItemsChangedSubscription = {
   __typename?: 'Subscription';
-  pantryItemUpdated: {
-    __typename?: 'PantryItem';
-    id: string;
-    unitName: string;
-    itemName: string;
-    unit: {__typename?: 'Unit'; name: string};
+  pantryItemsChanged: {
+    __typename?: 'PantryItemChangedPayload';
+    pantryId: string;
+    itemId: string;
+    item: {__typename?: 'PantryItem'; itemId: string; itemName: string};
   };
 };
 
@@ -5815,19 +6023,62 @@ export type ShoppingListUpdatedSubscription = {
   shoppingListUpdated?: {
     __typename?: 'ShoppingListUpdatedPayload';
     mutation: MutationType;
-    updatedFields?: Array<string> | null;
-    userId: string;
-    timestamp: string;
-    node?: {__typename?: 'ShoppingList'; id: string; name: string} | null;
-    previousValues?: {
-      __typename?: 'ShoppingListPreviousValues';
-      name?: string | null;
-      status?: ListStatus | null;
-      totalCost?: number | null;
-      isCompleted?: boolean | null;
-      estimatedTotal?: number | null;
-      description?: string | null;
-      budgetAmount?: number | null;
+    node?: {
+      __typename?: 'ShoppingList';
+      id: string;
+      name: string;
+      totalItems: number;
+      completedItems: number;
+      estimatedTotal: number;
+      items: Array<{
+        __typename?: 'ShoppingListItem';
+        id: string;
+        itemName?: string | null;
+        quantity?: number | null;
+        isPurchased: boolean;
+      }>;
     } | null;
   } | null;
+};
+
+export type ShoppingListItemAddedSubscriptionVariables = Exact<{
+  shoppingListId: Scalars['ID']['input'];
+}>;
+
+export type ShoppingListItemAddedSubscription = {
+  __typename?: 'Subscription';
+  shoppingListItemAdded: {
+    __typename?: 'ShoppingListItem';
+    id: string;
+    itemName?: string | null;
+    quantity?: number | null;
+    isPurchased: boolean;
+    addedBy?: {__typename?: 'User'; id: string; email: string} | null;
+  };
+};
+
+export type ShoppingListItemUpdatedSubscriptionVariables = Exact<{
+  shoppingListId: Scalars['ID']['input'];
+}>;
+
+export type ShoppingListItemUpdatedSubscription = {
+  __typename?: 'Subscription';
+  shoppingListItemUpdated: {
+    __typename?: 'ShoppingListItem';
+    id: string;
+    itemName?: string | null;
+    quantity?: number | null;
+    isPurchased: boolean;
+    notes?: string | null;
+    priority: number;
+  };
+};
+
+export type ShoppingListItemRemovedSubscriptionVariables = Exact<{
+  shoppingListId: Scalars['ID']['input'];
+}>;
+
+export type ShoppingListItemRemovedSubscription = {
+  __typename?: 'Subscription';
+  shoppingListItemRemoved: {__typename?: 'ShoppingListItem'; id: string};
 };
