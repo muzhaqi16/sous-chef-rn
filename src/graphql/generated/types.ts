@@ -5249,11 +5249,55 @@ export type UpdateProfileMutation = {
   updateProfile: {
     __typename?: 'UserProfile';
     id: string;
+    userId: string;
     firstName?: string | null;
     lastName?: string | null;
+    displayName?: string | null;
+    bio?: string | null;
     avatar?: string | null;
+    coverImage?: string | null;
     phone?: string | null;
+    website?: string | null;
     dateOfBirth?: string | null;
+    gender?: string | null;
+    profileVisibility: ProfileVisibility;
+    showEmail: boolean;
+    showPhone: boolean;
+    createdAt: string;
+    updatedAt: string;
+  };
+};
+
+export type UpdateSettingsMutationVariables = Exact<{
+  input: UpdateUserSettingsInput;
+}>;
+
+export type UpdateSettingsMutation = {
+  __typename?: 'Mutation';
+  updateSettings: {
+    __typename?: 'UserSettings';
+    id: string;
+    userId: string;
+    emailNotifications: boolean;
+    pushNotifications: boolean;
+    smsNotifications: boolean;
+    weeklyDigest: boolean;
+    expiredItemAlerts: boolean;
+    lowStockAlerts: boolean;
+    shoppingListUpdates: boolean;
+    recipeRecommendations: boolean;
+    theme: AppTheme;
+    compactMode: boolean;
+    showTutorials: boolean;
+    autoSync: boolean;
+    offlineMode: boolean;
+    shareUsageData: boolean;
+    shareWithPartners: boolean;
+    personalizedAds: boolean;
+    enabledFeatures: Array<string>;
+    betaFeatures: Array<string>;
+    createdAt: string;
+    updatedAt: string;
   };
 };
 

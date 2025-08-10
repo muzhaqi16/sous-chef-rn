@@ -1,0 +1,26 @@
+import {useState} from 'react';
+import {useStore} from '#store';
+import {LANGUAGE_OPTIONS} from '../../constants/languages';
+
+export const useLanguagePicker = () => {
+  const {language, setLanguage, updatePreferences} = useStore();
+  const [langPickerVisible, setLangPickerVisible] = useState(false);
+
+  const showLanguagePicker = () => setLangPickerVisible(true);
+  const hideLanguagePicker = () => setLangPickerVisible(false);
+
+  const selectLanguage = (value: string) => {
+    setLanguage(value);
+    updatePreferences({language: value});
+    hideLanguagePicker();
+  };
+
+  return {
+    langPickerVisible,
+    languageOptions: LANGUAGE_OPTIONS,
+    selectedLanguage: language || '',
+    showLanguagePicker,
+    hideLanguagePicker,
+    selectLanguage,
+  };
+};

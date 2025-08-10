@@ -5,7 +5,7 @@ import {IconButton} from '../atoms/IconButton';
 import FeatherIcon from '@react-native-vector-icons/feather';
 
 export interface ProfileHeaderProps {
-  avatarUrl?: string;
+  avatarUrl?: string | null;
   name: string;
   subtitle?: string;
   onBack: () => void;

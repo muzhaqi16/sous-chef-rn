@@ -5269,11 +5269,55 @@ export type UpdateProfileMutation = {
   updateProfile: {
     __typename?: 'UserProfile';
     id: string;
+    userId: string;
     firstName?: string | null | undefined;
     lastName?: string | null | undefined;
+    displayName?: string | null | undefined;
+    bio?: string | null | undefined;
     avatar?: string | null | undefined;
+    coverImage?: string | null | undefined;
     phone?: string | null | undefined;
+    website?: string | null | undefined;
     dateOfBirth?: string | null | undefined;
+    gender?: string | null | undefined;
+    profileVisibility: ProfileVisibility;
+    showEmail: boolean;
+    showPhone: boolean;
+    createdAt: string;
+    updatedAt: string;
+  };
+};
+
+export type UpdateSettingsMutationVariables = Exact<{
+  input: UpdateUserSettingsInput;
+}>;
+
+export type UpdateSettingsMutation = {
+  __typename?: 'Mutation';
+  updateSettings: {
+    __typename?: 'UserSettings';
+    id: string;
+    userId: string;
+    emailNotifications: boolean;
+    pushNotifications: boolean;
+    smsNotifications: boolean;
+    weeklyDigest: boolean;
+    expiredItemAlerts: boolean;
+    lowStockAlerts: boolean;
+    shoppingListUpdates: boolean;
+    recipeRecommendations: boolean;
+    theme: AppTheme;
+    compactMode: boolean;
+    showTutorials: boolean;
+    autoSync: boolean;
+    offlineMode: boolean;
+    shareUsageData: boolean;
+    shareWithPartners: boolean;
+    personalizedAds: boolean;
+    enabledFeatures: Array<string>;
+    betaFeatures: Array<string>;
+    createdAt: string;
+    updatedAt: string;
   };
 };
 
@@ -7116,11 +7160,22 @@ export const UpdateProfileDocument = gql`
   mutation UpdateProfile($input: UpdateUserProfileInput!) {
     updateProfile(input: $input) {
       id
+      userId
       firstName
       lastName
+      displayName
+      bio
       avatar
+      coverImage
       phone
+      website
       dateOfBirth
+      gender
+      profileVisibility
+      showEmail
+      showPhone
+      createdAt
+      updatedAt
     }
   }
 `;
@@ -7167,6 +7222,78 @@ export type UpdateProfileMutationOptions =
   ApolloReactCommon.BaseMutationOptions<
     UpdateProfileMutation,
     UpdateProfileMutationVariables
+  >;
+export const UpdateSettingsDocument = gql`
+  mutation UpdateSettings($input: UpdateUserSettingsInput!) {
+    updateSettings(input: $input) {
+      id
+      userId
+      emailNotifications
+      pushNotifications
+      smsNotifications
+      weeklyDigest
+      expiredItemAlerts
+      lowStockAlerts
+      shoppingListUpdates
+      recipeRecommendations
+      theme
+      compactMode
+      showTutorials
+      autoSync
+      offlineMode
+      shareUsageData
+      shareWithPartners
+      personalizedAds
+      enabledFeatures
+      betaFeatures
+      createdAt
+      updatedAt
+    }
+  }
+`;
+export type UpdateSettingsMutationFn = ApolloReactCommon.MutationFunction<
+  UpdateSettingsMutation,
+  UpdateSettingsMutationVariables
+>;
+
+/**
+ * __useUpdateSettingsMutation__
+ *
+ * To run a mutation, you first call `useUpdateSettingsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateSettingsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateSettingsMutation, { data, loading, error }] = useUpdateSettingsMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useUpdateSettingsMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    UpdateSettingsMutation,
+    UpdateSettingsMutationVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useMutation<
+    UpdateSettingsMutation,
+    UpdateSettingsMutationVariables
+  >(UpdateSettingsDocument, options);
+}
+export type UpdateSettingsMutationHookResult = ReturnType<
+  typeof useUpdateSettingsMutation
+>;
+export type UpdateSettingsMutationResult =
+  ApolloReactCommon.MutationResult<UpdateSettingsMutation>;
+export type UpdateSettingsMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    UpdateSettingsMutation,
+    UpdateSettingsMutationVariables
   >;
 export const CreateShoppingListDocument = gql`
   mutation CreateShoppingList($input: CreateShoppingListInput!) {

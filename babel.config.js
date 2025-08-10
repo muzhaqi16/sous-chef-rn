@@ -29,6 +29,8 @@ module.exports = {
           '#utils': './src/utils',
           '#assets': './src/assets',
           '#components': './src/components',
+          '#types': './src/types',
+          '#config': './src/config',
         },
       },
     ],

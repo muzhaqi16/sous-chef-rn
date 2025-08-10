@@ -8,3 +8,8 @@ export {IconButton} from './IconButton.tsx';
 export {Title} from './Title.tsx';
 export {Label} from './Label.tsx';
 export {PickerSelect} from './Picker.tsx';
+export {PhoneInput} from './PhoneInput.tsx';
+export {BioInput} from './BioInput.tsx';
+export {DateInput} from './DateInput.tsx';
+export {NameInput} from './NameInput.tsx';
+export {UrlInput} from './UrlInput.tsx';

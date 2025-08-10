@@ -10,3 +10,6 @@ export {useSearchResults} from './useSearchResults';
 export {useBarcodeScanner} from './useBarcodeScanner';
 export {useUserData} from './useUserData';
 export {useDefaultHome} from './useDefaultHome';
+export {useLanguagePicker} from './profile/useLanguagePicker';
+export {useConfigurableSettings} from './profile/useConfigurableSettings';
+export {useProfileData} from './profile/useProfileData';
