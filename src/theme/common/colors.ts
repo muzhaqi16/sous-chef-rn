@@ -17,6 +17,7 @@ export type ThemeColors = {
   overlay: string;
   textPrimary: string;
   textSecondary: string;
+  textTertiary: string;
   textDisabled: string;
   placeholder: string;
   iconPrimary: string;
@@ -52,6 +53,7 @@ export type ThemeColors = {
   onPrimaryContainer: string;
 
   errorContainer: string;
+  primaryLight: string;
 };
 const common = {
   white: '#FFFFFF',
@@ -80,6 +82,7 @@ export const lightColors: ThemeColors = {
   // text & icons
   textPrimary: common.grey900,
   textSecondary: common.grey600,
+  textTertiary: common.grey500,
   textDisabled: common.grey400,
   placeholder: common.grey400,
   iconPrimary: common.grey700,
@@ -127,6 +130,9 @@ export const lightColors: ThemeColors = {
   onPrimaryContainer: common.grey900,
 
   errorContainer: '#FDECEA', // light pink for the delete action
+
+  primaryLight: '#E3F2FD',
+  white: '#FFFFFF',
 };
 
 export const darkColors: ThemeColors = {
@@ -141,6 +147,7 @@ export const darkColors: ThemeColors = {
   // text & icons
   textPrimary: common.grey50,
   textSecondary: common.grey200,
+  textTertiary: common.grey400,
   textDisabled: common.grey400,
   placeholder: common.grey400,
   iconPrimary: common.grey100,
@@ -186,4 +193,5 @@ export const darkColors: ThemeColors = {
   onPrimaryContainer: common.white,
 
   errorContainer: '#442528', // darker red for delete on dark
+  primaryLight: '#E3F2FD', // light blue for notifications
 };

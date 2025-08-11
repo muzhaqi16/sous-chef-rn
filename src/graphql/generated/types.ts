@@ -186,6 +186,28 @@ export type BulkCreateItemsResponse = {
   updated: Array<Item>;
 };
 
+export type BulkNotificationInput = {
+  actionUrl?: InputMaybe<Scalars['String']['input']>;
+  batchId?: InputMaybe<Scalars['String']['input']>;
+  category?: InputMaybe<Scalars['String']['input']>;
+  expiresAt?: InputMaybe<Scalars['DateTime']['input']>;
+  message?: InputMaybe<Scalars['String']['input']>;
+  metadata?: InputMaybe<Scalars['JSON']['input']>;
+  payload: Scalars['JSON']['input'];
+  priority?: InputMaybe<Priority>;
+  title?: InputMaybe<Scalars['String']['input']>;
+  type: NotificationType;
+  userIds: Array<Scalars['String']['input']>;
+};
+
+export type BulkNotificationResult = {
+  __typename?: 'BulkNotificationResult';
+  failed: Array<Scalars['String']['output']>;
+  sent: Array<Notification>;
+  totalFailed: Scalars['Int']['output'];
+  totalSent: Scalars['Int']['output'];
+};
+
 export type BulkOperationSummary = {
   __typename?: 'BulkOperationSummary';
   executionTime: Scalars['Float']['output'];
@@ -261,6 +283,12 @@ export enum CollaboratorStatus {
   Removed = 'REMOVED',
   Suspended = 'SUSPENDED',
 }
+
+export type Connection = {
+  edges: Array<Edge>;
+  pageInfo: PageInfo;
+  totalCount: Scalars['Int']['output'];
+};
 
 export type CreateBrandInput = {
   description?: InputMaybe<Scalars['String']['input']>;
@@ -431,6 +459,23 @@ export type CreateMembershipInput = {
   userId: Scalars['ID']['input'];
 };
 
+export type CreateNotificationInput = {
+  actionUrl?: InputMaybe<Scalars['String']['input']>;
+  batchId?: InputMaybe<Scalars['String']['input']>;
+  category?: InputMaybe<Scalars['String']['input']>;
+  expiresAt?: InputMaybe<Scalars['DateTime']['input']>;
+  message?: InputMaybe<Scalars['String']['input']>;
+  metadata?: InputMaybe<Scalars['JSON']['input']>;
+  payload: Scalars['JSON']['input'];
+  priority?: InputMaybe<Priority>;
+  sourceId?: InputMaybe<Scalars['String']['input']>;
+  sourceType?: InputMaybe<Scalars['String']['input']>;
+  status?: InputMaybe<NotificationStatus>;
+  title?: InputMaybe<Scalars['String']['input']>;
+  type: NotificationType;
+  userId?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type CreatePantryActivityInput = {
   action: PantryActivityType;
   description: Scalars['String']['input'];
@@ -584,7 +629,9 @@ export enum DateRange {
 }
 
 export type DateRangeInput = {
+  end: Scalars['DateTime']['input'];
   endDate: Scalars['DateTime']['input'];
+  start: Scalars['DateTime']['input'];
   startDate: Scalars['DateTime']['input'];
 };
 
@@ -721,6 +768,11 @@ export type DeviceTypeStat = {
   __typename?: 'DeviceTypeStat';
   count: Scalars['Int']['output'];
   deviceType: DeviceType;
+};
+
+export type Edge = {
+  cursor: Scalars['String']['output'];
+  node: Node;
 };
 
 export enum ExportFormat {
@@ -1647,15 +1699,17 @@ export type Mutation = {
   deactivateMultipleDevices: Array<Device>;
   declineHomeInvite: Scalars['Boolean']['output'];
   deleteAccount: Scalars['Boolean']['output'];
+  deleteAllReadNotifications: Scalars['Int']['output'];
   deleteBrand: Brand;
   deleteBulkPurchases: Scalars['Boolean']['output'];
   deleteCategory: Scalars['Boolean']['output'];
   deleteCurrency: Scalars['Boolean']['output'];
   deleteDevice: Device;
+  deleteExpiredNotifications: Scalars['Int']['output'];
   deleteHome: Scalars['Boolean']['output'];
   deleteItem: Scalars['Boolean']['output'];
   deleteMultipleDevices: Array<Device>;
-  deleteNotification: Notification;
+  deleteNotification: Scalars['Boolean']['output'];
   deletePantry: Scalars['Boolean']['output'];
   deletePurchase: Scalars['Boolean']['output'];
   deleteShoppingList: Scalars['Boolean']['output'];
@@ -1678,11 +1732,12 @@ export type Mutation = {
   joinShoppingListByShareCode: ShoppingList;
   leaveHome: Scalars['Boolean']['output'];
   login: AuthPayload;
+  markAllNotificationsAsRead: Array<Notification>;
   markItemAsWaste: PantryItem;
   markItemPurchased: Scalars['Boolean']['output'];
   markLoginAsReviewed: LoginHistory;
   markMultipleLoginsAsReviewed: Array<LoginHistory>;
-  markNotificationRead: Notification;
+  markNotificationAsRead: Notification;
   mergeItems: Item;
   putUnderReview: UserModeration;
   reactivateDevice: Device;
@@ -1708,6 +1763,8 @@ export type Mutation = {
   restoreItem: Item;
   reviewAppeal: UserModeration;
   revokeHomeInvite: Scalars['Boolean']['output'];
+  sendBulkNotifications: BulkNotificationResult;
+  sendTestNotification: Notification;
   setDefaultItemUnit: ItemUnit;
   setDefaultShoppingList: ShoppingList;
   setItemBrand: Item;
@@ -1747,6 +1804,8 @@ export type Mutation = {
   updateLoginSession: LoginHistory;
   updateMembership: Membership;
   updateModerationStatus: UserModeration;
+  updateNotification: Notification;
+  updateNotificationPreferences: NotificationPreferences;
   updatePantry: Pantry;
   updatePantryItem: PantryItem;
   updateProfile: UserProfile;
@@ -1916,10 +1975,7 @@ export type MutationCreateModerationRecordArgs = {
 };
 
 export type MutationCreateNotificationArgs = {
-  payload: Scalars['JSON']['input'];
-  status?: InputMaybe<Scalars['String']['input']>;
-  type: Scalars['String']['input'];
-  userId: Scalars['ID']['input'];
+  input: CreateNotificationInput;
 };
 
 export type MutationCreatePantryArgs = {
@@ -2114,7 +2170,7 @@ export type MutationMarkMultipleLoginsAsReviewedArgs = {
   reviewerId: Scalars['ID']['input'];
 };
 
-export type MutationMarkNotificationReadArgs = {
+export type MutationMarkNotificationAsReadArgs = {
   id: Scalars['ID']['input'];
 };
 
@@ -2224,6 +2280,14 @@ export type MutationReviewAppealArgs = {
 
 export type MutationRevokeHomeInviteArgs = {
   id: Scalars['ID']['input'];
+};
+
+export type MutationSendBulkNotificationsArgs = {
+  input: BulkNotificationInput;
+};
+
+export type MutationSendTestNotificationArgs = {
+  type: NotificationType;
 };
 
 export type MutationSetDefaultItemUnitArgs = {
@@ -2416,6 +2480,15 @@ export type MutationUpdateModerationStatusArgs = {
   userId: Scalars['ID']['input'];
 };
 
+export type MutationUpdateNotificationArgs = {
+  id: Scalars['ID']['input'];
+  input: UpdateNotificationInput;
+};
+
+export type MutationUpdateNotificationPreferencesArgs = {
+  input: NotificationPreferencesInput;
+};
+
 export type MutationUpdatePantryArgs = {
   id: Scalars['ID']['input'];
   input: UpdatePantryInput;
@@ -2538,16 +2611,109 @@ export enum MutationType {
   Updated = 'UPDATED',
 }
 
-export type Notification = {
-  __typename?: 'Notification';
-  createdAt: Scalars['DateTime']['output'];
+export type Node = {
   id: Scalars['ID']['output'];
-  payload: Scalars['JSON']['output'];
-  readAt?: Maybe<Scalars['DateTime']['output']>;
-  sentAt: Scalars['DateTime']['output'];
-  status: NotificationStatus;
-  type: NotificationType;
-  userId: Scalars['ID']['output'];
+};
+
+export type Notification = Node &
+  Timestamped & {
+    __typename?: 'Notification';
+    createdAt: Scalars['DateTime']['output'];
+    id: Scalars['ID']['output'];
+    payload: Scalars['JSON']['output'];
+    readAt?: Maybe<Scalars['DateTime']['output']>;
+    sentAt: Scalars['DateTime']['output'];
+    status: NotificationStatus;
+    type: NotificationType;
+    user: User;
+    userId: Scalars['String']['output'];
+  };
+
+export type NotificationCategoryCount = {
+  __typename?: 'NotificationCategoryCount';
+  category: Scalars['String']['output'];
+  count: Scalars['Int']['output'];
+  unreadCount: Scalars['Int']['output'];
+};
+
+export type NotificationConnection = Connection & {
+  __typename?: 'NotificationConnection';
+  edges: Array<NotificationEdge>;
+  pageInfo: PageInfo;
+  totalCount: Scalars['Int']['output'];
+  unreadCount: Scalars['Int']['output'];
+};
+
+export type NotificationEdge = Edge & {
+  __typename?: 'NotificationEdge';
+  cursor: Scalars['String']['output'];
+  node: Notification;
+};
+
+export type NotificationFilterInput = {
+  batchId?: InputMaybe<Scalars['String']['input']>;
+  category?: InputMaybe<Scalars['String']['input']>;
+  dateRange?: InputMaybe<DateRangeInput>;
+  priority?: InputMaybe<Priority>;
+  sourceType?: InputMaybe<Scalars['String']['input']>;
+  status?: InputMaybe<NotificationStatus>;
+  type?: InputMaybe<NotificationType>;
+  unreadOnly?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+export enum NotificationOrderBy {
+  CreatedAtAsc = 'CREATED_AT_ASC',
+  CreatedAtDesc = 'CREATED_AT_DESC',
+  PriorityAsc = 'PRIORITY_ASC',
+  PriorityDesc = 'PRIORITY_DESC',
+  SentAtAsc = 'SENT_AT_ASC',
+  SentAtDesc = 'SENT_AT_DESC',
+  StatusAsc = 'STATUS_ASC',
+  StatusDesc = 'STATUS_DESC',
+  TypeAsc = 'TYPE_ASC',
+  TypeDesc = 'TYPE_DESC',
+}
+
+export type NotificationPreferences = {
+  __typename?: 'NotificationPreferences';
+  categories: Array<Scalars['String']['output']>;
+  email: Scalars['Boolean']['output'];
+  inApp: Scalars['Boolean']['output'];
+  push: Scalars['Boolean']['output'];
+  quietHours?: Maybe<QuietHours>;
+  sms: Scalars['Boolean']['output'];
+  types: Array<NotificationType>;
+  userId: Scalars['String']['output'];
+};
+
+export type NotificationPreferencesInput = {
+  categories?: InputMaybe<Array<Scalars['String']['input']>>;
+  email?: InputMaybe<Scalars['Boolean']['input']>;
+  inApp?: InputMaybe<Scalars['Boolean']['input']>;
+  push?: InputMaybe<Scalars['Boolean']['input']>;
+  quietHours?: InputMaybe<QuietHoursInput>;
+  sms?: InputMaybe<Scalars['Boolean']['input']>;
+  types?: InputMaybe<Array<NotificationType>>;
+};
+
+export type NotificationPriorityCount = {
+  __typename?: 'NotificationPriorityCount';
+  count: Scalars['Int']['output'];
+  priority: Priority;
+  unreadCount: Scalars['Int']['output'];
+};
+
+export type NotificationStats = {
+  __typename?: 'NotificationStats';
+  byCategory: Array<NotificationCategoryCount>;
+  byPriority: Array<NotificationPriorityCount>;
+  byType: Array<NotificationTypeCount>;
+  clicked: Scalars['Int']['output'];
+  dismissed: Scalars['Int']['output'];
+  expired: Scalars['Int']['output'];
+  read: Scalars['Int']['output'];
+  total: Scalars['Int']['output'];
+  unread: Scalars['Int']['output'];
 };
 
 export enum NotificationStatus {
@@ -2558,13 +2724,32 @@ export enum NotificationStatus {
   Sent = 'SENT',
 }
 
+export type NotificationSubscriptionPayload = {
+  __typename?: 'NotificationSubscriptionPayload';
+  mutation: MutationType;
+  node: Notification;
+  previousValues?: Maybe<Notification>;
+  updatedFields?: Maybe<Array<Scalars['String']['output']>>;
+};
+
 export enum NotificationType {
+  CollaborationInvite = 'COLLABORATION_INVITE',
   ExpiryReminder = 'EXPIRY_REMINDER',
+  HomeJoined = 'HOME_JOINED',
   ItemDeleted = 'ITEM_DELETED',
   ItemUpdated = 'ITEM_UPDATED',
+  ListUpdated = 'LIST_UPDATED',
   LowStock = 'LOW_STOCK',
+  MembershipInvite = 'MEMBERSHIP_INVITE',
   NewItemAdded = 'NEW_ITEM_ADDED',
 }
+
+export type NotificationTypeCount = {
+  __typename?: 'NotificationTypeCount';
+  count: Scalars['Int']['output'];
+  type: NotificationType;
+  unreadCount: Scalars['Int']['output'];
+};
 
 export enum NutritionCategory {
   Macronutrient = 'MACRONUTRIENT',
@@ -2605,6 +2790,14 @@ export type OperatingSystemStat = {
   __typename?: 'OperatingSystemStat';
   count: Scalars['Int']['output'];
   osName: Scalars['String']['output'];
+};
+
+export type PageInfo = {
+  __typename?: 'PageInfo';
+  endCursor?: Maybe<Scalars['String']['output']>;
+  hasNextPage: Scalars['Boolean']['output'];
+  hasPreviousPage: Scalars['Boolean']['output'];
+  startCursor?: Maybe<Scalars['String']['output']>;
 };
 
 export type PaginationInput = {
@@ -2721,10 +2914,13 @@ export type PantryItem = {
 
 export type PantryItemChangedPayload = {
   __typename?: 'PantryItemChangedPayload';
-  action: Scalars['String']['output'];
   item: PantryItem;
-  itemId: Scalars['String']['output'];
-  pantryId: Scalars['ID']['output'];
+  mutation: MutationType;
+  pantryId: Scalars['String']['output'];
+  previousValue?: Maybe<PantryItem>;
+  timestamp: Scalars['DateTime']['output'];
+  updatedFields: Array<Scalars['String']['output']>;
+  userId: Scalars['String']['output'];
 };
 
 export type PantryItemUsage = {
@@ -2796,6 +2992,13 @@ export enum PriceSource {
   ReceiptScan = 'RECEIPT_SCAN',
   StoreApi = 'STORE_API',
   WebScraping = 'WEB_SCRAPING',
+}
+
+export enum Priority {
+  High = 'HIGH',
+  Low = 'LOW',
+  Normal = 'NORMAL',
+  Urgent = 'URGENT',
 }
 
 export enum ProfileVisibility {
@@ -2896,6 +3099,7 @@ export type Query = {
   devicesByPlatform: Array<Device>;
   expiringItems: Array<PantryItem>;
   failedLoginAttempts: Array<LoginHistory>;
+  hasUrgentNotifications: Scalars['Boolean']['output'];
   home?: Maybe<Home>;
   homeByJoinCode?: Maybe<Home>;
   homeInvites: Array<HomeInvite>;
@@ -2921,9 +3125,14 @@ export type Query = {
   myMembershipInHome?: Maybe<Membership>;
   myMemberships: Array<Membership>;
   myModeration?: Maybe<UserModeration>;
+  myNotifications: NotificationConnection;
   myPurchases: Array<Purchase>;
   nearbyStores: Array<Store>;
-  notificationsByUser: Array<Notification>;
+  notification?: Maybe<Notification>;
+  notificationPreferences: NotificationPreferences;
+  notificationStats: NotificationStats;
+  notificationsByCategory: NotificationConnection;
+  notificationsByType: NotificationConnection;
   onboardingItems: Array<Item>;
   pantries: Array<Pantry>;
   pantry?: Maybe<Pantry>;
@@ -2943,6 +3152,7 @@ export type Query = {
   purchasesByShoppingListItem: Array<Purchase>;
   purchasesByStore: Array<Purchase>;
   recentItems: Array<Item>;
+  recentNotifications: Array<Notification>;
   recommendedItems: Array<ItemSuggestion>;
   recommendedStores: Array<Store>;
   relatedItems: RelatedItemsResponse;
@@ -2975,11 +3185,13 @@ export type Query = {
   unit?: Maybe<Unit>;
   unitBySymbol?: Maybe<Unit>;
   units: Array<Unit>;
+  unreadNotificationCount: Scalars['Int']['output'];
   user?: Maybe<User>;
   userDevices: Array<Device>;
   userModeration?: Maybe<UserModeration>;
   userProfile?: Maybe<UserProfile>;
   userPurchases: Array<Purchase>;
+  userSettings?: Maybe<UserSettings>;
   users: Array<User>;
   validateBarcode: BarcodeValidation;
   verifiedDevices: Array<Device>;
@@ -3152,14 +3364,39 @@ export type QueryMyMembershipInHomeArgs = {
   homeId: Scalars['ID']['input'];
 };
 
+export type QueryMyNotificationsArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  filter?: InputMaybe<NotificationFilterInput>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
+  orderBy?: InputMaybe<NotificationOrderBy>;
+};
+
 export type QueryNearbyStoresArgs = {
   lat: Scalars['Float']['input'];
   lng: Scalars['Float']['input'];
   radius?: InputMaybe<Scalars['Float']['input']>;
 };
 
-export type QueryNotificationsByUserArgs = {
-  userId: Scalars['ID']['input'];
+export type QueryNotificationArgs = {
+  id: Scalars['ID']['input'];
+};
+
+export type QueryNotificationStatsArgs = {
+  filter?: InputMaybe<NotificationFilterInput>;
+};
+
+export type QueryNotificationsByCategoryArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  category: Scalars['String']['input'];
+  first?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type QueryNotificationsByTypeArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  type: NotificationType;
 };
 
 export type QueryPantriesArgs = {
@@ -3241,6 +3478,10 @@ export type QueryPurchasesByStoreArgs = {
 export type QueryRecentItemsArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
   userId?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type QueryRecentNotificationsArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type QueryRecommendedItemsArgs = {
@@ -3375,6 +3616,10 @@ export type QueryUserPurchasesArgs = {
   userId: Scalars['ID']['input'];
 };
 
+export type QueryUserSettingsArgs = {
+  userId?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type QueryUsersArgs = {
   search?: InputMaybe<Scalars['String']['input']>;
   skip?: InputMaybe<Scalars['Int']['input']>;
@@ -3387,6 +3632,21 @@ export type QueryValidateBarcodeArgs = {
 
 export type QueryVerifiedDevicesArgs = {
   userId: Scalars['ID']['input'];
+};
+
+export type QuietHours = {
+  __typename?: 'QuietHours';
+  enabled: Scalars['Boolean']['output'];
+  endTime: Scalars['String']['output'];
+  startTime: Scalars['String']['output'];
+  timezone: Scalars['String']['output'];
+};
+
+export type QuietHoursInput = {
+  enabled: Scalars['Boolean']['input'];
+  endTime: Scalars['String']['input'];
+  startTime: Scalars['String']['input'];
+  timezone: Scalars['String']['input'];
 };
 
 export type RapidAttempt = {
@@ -3866,10 +4126,10 @@ export type Subscription = {
   myMembershipUpdated: MembershipUpdatePayload;
   myPantriesUpdated: Array<Pantry>;
   myShoppingListsUpdated?: Maybe<ShoppingListUpdatedPayload>;
-  notificationCreated: Notification;
-  notificationDeleted: Notification;
-  notificationRead: Notification;
-  notificationUpdated: Notification;
+  notificationCreated: NotificationSubscriptionPayload;
+  notificationDeleted: NotificationSubscriptionPayload;
+  notificationRead: NotificationSubscriptionPayload;
+  notificationUpdated: NotificationSubscriptionPayload;
   pantryActivityAdded: PantryActivity;
   pantryExpiringItemsAlert: Array<PantryItem>;
   pantryItemsChanged: PantryItemChangedPayload;
@@ -3961,22 +4221,6 @@ export type SubscriptionMyPantriesUpdatedArgs = {
   homeId: Scalars['ID']['input'];
 };
 
-export type SubscriptionNotificationCreatedArgs = {
-  userId: Scalars['ID']['input'];
-};
-
-export type SubscriptionNotificationDeletedArgs = {
-  userId: Scalars['ID']['input'];
-};
-
-export type SubscriptionNotificationReadArgs = {
-  userId: Scalars['ID']['input'];
-};
-
-export type SubscriptionNotificationUpdatedArgs = {
-  userId: Scalars['ID']['input'];
-};
-
 export type SubscriptionPantryActivityAddedArgs = {
   pantryId: Scalars['ID']['input'];
 };
@@ -3986,7 +4230,6 @@ export type SubscriptionPantryExpiringItemsAlertArgs = {
 };
 
 export type SubscriptionPantryItemsChangedArgs = {
-  itemId: Scalars['String']['input'];
   pantryId: Scalars['ID']['input'];
 };
 
@@ -4098,6 +4341,10 @@ export type SuspiciousActivity = {
   riskyLogins: Array<LoginHistory>;
   suspiciousActivity: Scalars['Boolean']['output'];
   unusualTimeLogins?: Maybe<Array<LoginHistory>>;
+};
+
+export type Timestamped = {
+  createdAt: Scalars['DateTime']['output'];
 };
 
 export enum TrustLevel {
@@ -4345,6 +4592,20 @@ export type UpdateMembershipInput = {
   canViewPantry?: InputMaybe<Scalars['Boolean']['input']>;
   displayName?: InputMaybe<Scalars['String']['input']>;
   role?: InputMaybe<MembershipRole>;
+};
+
+export type UpdateNotificationInput = {
+  actionUrl?: InputMaybe<Scalars['String']['input']>;
+  category?: InputMaybe<Scalars['String']['input']>;
+  expiresAt?: InputMaybe<Scalars['DateTime']['input']>;
+  message?: InputMaybe<Scalars['String']['input']>;
+  metadata?: InputMaybe<Scalars['JSON']['input']>;
+  payload?: InputMaybe<Scalars['JSON']['input']>;
+  priority?: InputMaybe<Priority>;
+  readAt?: InputMaybe<Scalars['DateTime']['input']>;
+  status?: InputMaybe<NotificationStatus>;
+  title?: InputMaybe<Scalars['String']['input']>;
+  type?: InputMaybe<NotificationType>;
 };
 
 export type UpdatePantryInput = {
@@ -5192,6 +5453,34 @@ export type CreateItemMutation = {
   };
 };
 
+export type MarkNotificationAsReadMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type MarkNotificationAsReadMutation = {
+  __typename?: 'Mutation';
+  markNotificationAsRead: {
+    __typename?: 'Notification';
+    id: string;
+    userId: string;
+    type: NotificationType;
+    payload: any;
+    status: NotificationStatus;
+    sentAt: string;
+    readAt?: string | null;
+    createdAt: string;
+  };
+};
+
+export type DeleteNotificationMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type DeleteNotificationMutation = {
+  __typename?: 'Mutation';
+  deleteNotification: boolean;
+};
+
 export type CreatePantryMutationVariables = Exact<{
   input: CreatePantryInput;
 }>;
@@ -5614,6 +5903,43 @@ export type HomesQuery = {
   }>;
 };
 
+export type HomeInvitesQueryVariables = Exact<{
+  homeId: Scalars['ID']['input'];
+}>;
+
+export type HomeInvitesQuery = {
+  __typename?: 'Query';
+  homeInvites: Array<{
+    __typename?: 'HomeInvite';
+    id: string;
+    email: string;
+    token: string;
+    homeId: string;
+    invitedUserId?: string | null;
+    recipientName?: string | null;
+    role: MembershipRole;
+    customPermissions?: string | null;
+    status: InviteStatus;
+    expiresAt: string;
+    sentAt: string;
+    lastReminderAt?: string | null;
+    reminderCount: number;
+    acceptedAt?: string | null;
+    declinedAt?: string | null;
+    revokedAt?: string | null;
+    personalMessage?: string | null;
+    createdAt: string;
+    home: {__typename?: 'Home'; name: string};
+    inviter: {
+      __typename?: 'User';
+      profile?: {
+        __typename?: 'UserProfile';
+        displayName?: string | null;
+      } | null;
+    };
+  }>;
+};
+
 export type ItemsQueryVariables = Exact<{
   filters?: InputMaybe<ItemFilters>;
   sort?: InputMaybe<ItemSortInput>;
@@ -5685,6 +6011,46 @@ export type SearchItemsByBarcodeQuery = {
     imageUrl?: string | null;
     barcode?: string | null;
   }>;
+};
+
+export type MyNotificationsQueryVariables = Exact<{
+  filter?: InputMaybe<NotificationFilterInput>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  after?: InputMaybe<Scalars['String']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  orderBy?: InputMaybe<NotificationOrderBy>;
+}>;
+
+export type MyNotificationsQuery = {
+  __typename?: 'Query';
+  myNotifications: {
+    __typename?: 'NotificationConnection';
+    totalCount: number;
+    unreadCount: number;
+    edges: Array<{
+      __typename?: 'NotificationEdge';
+      cursor: string;
+      node: {
+        __typename?: 'Notification';
+        id: string;
+        userId: string;
+        type: NotificationType;
+        payload: any;
+        status: NotificationStatus;
+        sentAt: string;
+        readAt?: string | null;
+        createdAt: string;
+      };
+    }>;
+    pageInfo: {
+      __typename?: 'PageInfo';
+      hasNextPage: boolean;
+      hasPreviousPage: boolean;
+      startCursor?: string | null;
+      endCursor?: string | null;
+    };
+  };
 };
 
 export type PantriesQueryVariables = Exact<{
@@ -6043,9 +6409,703 @@ export type MeQuery = {
   } | null;
 };
 
+export type UserSettingsQueryVariables = Exact<{[key: string]: never}>;
+
+export type UserSettingsQuery = {
+  __typename?: 'Query';
+  userSettings?: {
+    __typename?: 'UserSettings';
+    id: string;
+    userId: string;
+    emailNotifications: boolean;
+    pushNotifications: boolean;
+    smsNotifications: boolean;
+    weeklyDigest: boolean;
+    expiredItemAlerts: boolean;
+    lowStockAlerts: boolean;
+    shoppingListUpdates: boolean;
+    recipeRecommendations: boolean;
+    theme: AppTheme;
+    compactMode: boolean;
+    showTutorials: boolean;
+    autoSync: boolean;
+    offlineMode: boolean;
+    shareUsageData: boolean;
+    shareWithPartners: boolean;
+    personalizedAds: boolean;
+    enabledFeatures: Array<string>;
+    betaFeatures: Array<string>;
+    createdAt: string;
+    updatedAt: string;
+  } | null;
+};
+
+export type CollaborationMemberAddedSubscriptionVariables = Exact<{
+  shoppingListId: Scalars['ID']['input'];
+  email: Scalars['String']['input'];
+}>;
+
+export type CollaborationMemberAddedSubscription = {
+  __typename?: 'Subscription';
+  collaborationMemberAdded: {
+    __typename?: 'ShoppingListCollaborator';
+    id: string;
+    shoppingListId: string;
+    collaboratorId?: string | null;
+    email?: string | null;
+    role: CollaboratorRole;
+    status: CollaboratorStatus;
+    canEdit: boolean;
+    canAddItems: boolean;
+    canRemoveItems: boolean;
+    canMarkPurchased: boolean;
+    canInviteOthers: boolean;
+    invitedAt: string;
+    shoppingList: {__typename?: 'ShoppingList'; id: string; name: string};
+    collaborator?: {
+      __typename?: 'User';
+      id: string;
+      email: string;
+      profile?: {
+        __typename?: 'UserProfile';
+        displayName?: string | null;
+        avatar?: string | null;
+      } | null;
+    } | null;
+    invitedBy?: {
+      __typename?: 'User';
+      id: string;
+      email: string;
+      profile?: {
+        __typename?: 'UserProfile';
+        displayName?: string | null;
+      } | null;
+    } | null;
+  };
+};
+
+export type CollaborationMemberRemovedSubscriptionVariables = Exact<{
+  shoppingListId: Scalars['ID']['input'];
+  email: Scalars['String']['input'];
+}>;
+
+export type CollaborationMemberRemovedSubscription = {
+  __typename?: 'Subscription';
+  collaborationMemberRemoved: {
+    __typename?: 'ShoppingListCollaborator';
+    id: string;
+    email?: string | null;
+    collaboratorId?: string | null;
+    shoppingList: {__typename?: 'ShoppingList'; id: string; name: string};
+  };
+};
+
+export type CollaborationInviteSentSubscriptionVariables = Exact<{
+  shoppingListId: Scalars['ID']['input'];
+  email: Scalars['String']['input'];
+}>;
+
+export type CollaborationInviteSentSubscription = {
+  __typename?: 'Subscription';
+  collaborationInviteSent: {
+    __typename?: 'ShoppingListCollaborator';
+    id: string;
+    shoppingListId: string;
+    email?: string | null;
+    role: CollaboratorRole;
+    status: CollaboratorStatus;
+    inviteToken?: string | null;
+    invitedAt: string;
+    expiresAt?: string | null;
+    shoppingList: {__typename?: 'ShoppingList'; id: string; name: string};
+    invitedBy?: {
+      __typename?: 'User';
+      id: string;
+      email: string;
+      profile?: {
+        __typename?: 'UserProfile';
+        displayName?: string | null;
+      } | null;
+    } | null;
+  };
+};
+
+export type DeviceActivitySubscriptionVariables = Exact<{
+  userId: Scalars['ID']['input'];
+}>;
+
+export type DeviceActivitySubscription = {
+  __typename?: 'Subscription';
+  deviceActivity: {
+    __typename?: 'Device';
+    id: string;
+    userId: string;
+    deviceId: string;
+    deviceName?: string | null;
+    deviceType: DeviceType;
+    platform?: MobilePlatform | null;
+    lastSeenAt: string;
+    lastIpAddress?: string | null;
+    lastCountry?: string | null;
+    lastCity?: string | null;
+    isActive: boolean;
+    isTrusted: boolean;
+    loginCount: number;
+    user?: {__typename?: 'User'; id: string; email: string} | null;
+  };
+};
+
+export type DeviceRegisteredSubscriptionVariables = Exact<{
+  userId: Scalars['ID']['input'];
+}>;
+
+export type DeviceRegisteredSubscription = {
+  __typename?: 'Subscription';
+  deviceRegistered: {
+    __typename?: 'Device';
+    id: string;
+    userId: string;
+    deviceId: string;
+    deviceName?: string | null;
+    deviceType: DeviceType;
+    platform?: MobilePlatform | null;
+    userAgent?: string | null;
+    browserName?: string | null;
+    browserVersion?: string | null;
+    osName?: string | null;
+    osVersion?: string | null;
+    isActive: boolean;
+    isTrusted: boolean;
+    isVerified: boolean;
+    createdAt: string;
+  };
+};
+
+export type DeviceStatusChangedSubscriptionVariables = Exact<{
+  userId: Scalars['ID']['input'];
+}>;
+
+export type DeviceStatusChangedSubscription = {
+  __typename?: 'Subscription';
+  deviceStatusChanged: {
+    __typename?: 'Device';
+    id: string;
+    userId: string;
+    deviceId: string;
+    deviceName?: string | null;
+    isActive: boolean;
+    lastSeenAt: string;
+    updatedAt: string;
+  };
+};
+
+export type DeviceTrustChangedSubscriptionVariables = Exact<{
+  userId: Scalars['ID']['input'];
+}>;
+
+export type DeviceTrustChangedSubscription = {
+  __typename?: 'Subscription';
+  deviceTrustChanged: {
+    __typename?: 'Device';
+    id: string;
+    userId: string;
+    deviceId: string;
+    deviceName?: string | null;
+    isTrusted: boolean;
+    updatedAt: string;
+  };
+};
+
+export type DeviceVerifiedSubscriptionVariables = Exact<{
+  userId: Scalars['ID']['input'];
+}>;
+
+export type DeviceVerifiedSubscription = {
+  __typename?: 'Subscription';
+  deviceVerified: {
+    __typename?: 'Device';
+    id: string;
+    userId: string;
+    deviceId: string;
+    deviceName?: string | null;
+    isVerified: boolean;
+    verifiedAt?: string | null;
+  };
+};
+
+export type MembershipUpdatedSubscriptionVariables = Exact<{
+  homeId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+export type MembershipUpdatedSubscription = {
+  __typename?: 'Subscription';
+  membershipUpdated: {
+    __typename?: 'MembershipUpdatePayload';
+    mutation: MembershipMutationType;
+    updatedFields?: Array<string> | null;
+    userId: string;
+    node?: {
+      __typename?: 'Membership';
+      id: string;
+      homeId: string;
+      userId: string;
+      role: MembershipRole;
+      status: MembershipStatus;
+      displayName?: string | null;
+      canViewPantry: boolean;
+      canEditPantry: boolean;
+      canAddItems: boolean;
+      canRemoveItems: boolean;
+      canInviteOthers: boolean;
+      canManageHome: boolean;
+      lastActiveAt?: string | null;
+      joinedAt: string;
+      home: {__typename?: 'Home'; id: string; name: string; type: HomeType};
+      user: {
+        __typename?: 'User';
+        id: string;
+        email: string;
+        profile?: {
+          __typename?: 'UserProfile';
+          displayName?: string | null;
+          avatar?: string | null;
+        } | null;
+      };
+    } | null;
+    previousValues?: {
+      __typename?: 'Membership';
+      role: MembershipRole;
+      status: MembershipStatus;
+      canViewPantry: boolean;
+      canEditPantry: boolean;
+      canAddItems: boolean;
+      canRemoveItems: boolean;
+      canInviteOthers: boolean;
+      canManageHome: boolean;
+    } | null;
+  };
+};
+
+export type MyMembershipUpdatedSubscriptionVariables = Exact<{
+  [key: string]: never;
+}>;
+
+export type MyMembershipUpdatedSubscription = {
+  __typename?: 'Subscription';
+  myMembershipUpdated: {
+    __typename?: 'MembershipUpdatePayload';
+    mutation: MembershipMutationType;
+    updatedFields?: Array<string> | null;
+    userId: string;
+    node?: {
+      __typename?: 'Membership';
+      id: string;
+      homeId: string;
+      userId: string;
+      role: MembershipRole;
+      status: MembershipStatus;
+      displayName?: string | null;
+      canViewPantry: boolean;
+      canEditPantry: boolean;
+      canAddItems: boolean;
+      canRemoveItems: boolean;
+      canInviteOthers: boolean;
+      canManageHome: boolean;
+      home: {
+        __typename?: 'Home';
+        id: string;
+        name: string;
+        type: HomeType;
+        joinCode?: string | null;
+      };
+    } | null;
+    previousValues?: {
+      __typename?: 'Membership';
+      role: MembershipRole;
+      status: MembershipStatus;
+    } | null;
+  };
+};
+
+export type MemberJoinedSubscriptionVariables = Exact<{
+  homeId: Scalars['ID']['input'];
+}>;
+
+export type MemberJoinedSubscription = {
+  __typename?: 'Subscription';
+  memberJoined: {
+    __typename?: 'MembershipUpdatePayload';
+    mutation: MembershipMutationType;
+    updatedFields?: Array<string> | null;
+    userId: string;
+    node?: {
+      __typename?: 'Membership';
+      homeId: string;
+      userId: string;
+      user: {
+        __typename?: 'User';
+        profile?: {
+          __typename?: 'UserProfile';
+          displayName?: string | null;
+        } | null;
+      };
+    } | null;
+    previousValues?: {
+      __typename?: 'Membership';
+      id: string;
+      homeId: string;
+      userId: string;
+      role: MembershipRole;
+      status: MembershipStatus;
+      displayName?: string | null;
+      canViewPantry: boolean;
+      canEditPantry: boolean;
+      canAddItems: boolean;
+      canRemoveItems: boolean;
+      canInviteOthers: boolean;
+      canManageHome: boolean;
+      lastActiveAt?: string | null;
+      joinedAt: string;
+      leftAt?: string | null;
+      createdAt: string;
+      updatedAt: string;
+    } | null;
+  };
+};
+
+export type MemberLeftSubscriptionVariables = Exact<{
+  homeId: Scalars['ID']['input'];
+}>;
+
+export type MemberLeftSubscription = {
+  __typename?: 'Subscription';
+  memberLeft: {__typename?: 'MembershipUpdatePayload'; userId: string};
+};
+
+export type MembershipRoleChangedSubscriptionVariables = Exact<{
+  homeId: Scalars['ID']['input'];
+}>;
+
+export type MembershipRoleChangedSubscription = {
+  __typename?: 'Subscription';
+  membershipRoleChanged: {
+    __typename?: 'MembershipRoleChangedPayload';
+    homeId: string;
+    userId: string;
+    previousRole: MembershipRole;
+    newRole: MembershipRole;
+    changedBy: string;
+    membership: {
+      __typename?: 'Membership';
+      id: string;
+      homeId: string;
+      userId: string;
+      role: MembershipRole;
+      user: {
+        __typename?: 'User';
+        id: string;
+        email: string;
+        profile?: {
+          __typename?: 'UserProfile';
+          displayName?: string | null;
+        } | null;
+      };
+    };
+  };
+};
+
+export type NotificationSubscriptionFragment = {
+  __typename?: 'NotificationSubscriptionPayload';
+  mutation: MutationType;
+  updatedFields?: Array<string> | null;
+  node: {
+    __typename?: 'Notification';
+    id: string;
+    userId: string;
+    type: NotificationType;
+    payload: any;
+    status: NotificationStatus;
+    sentAt: string;
+    readAt?: string | null;
+    createdAt: string;
+  };
+  previousValues?: {
+    __typename?: 'Notification';
+    id: string;
+    userId: string;
+    type: NotificationType;
+    payload: any;
+    status: NotificationStatus;
+    sentAt: string;
+    readAt?: string | null;
+    createdAt: string;
+  } | null;
+};
+
+export type NotificationCreatedSubscriptionVariables = Exact<{
+  [key: string]: never;
+}>;
+
+export type NotificationCreatedSubscription = {
+  __typename?: 'Subscription';
+  notificationCreated: {
+    __typename?: 'NotificationSubscriptionPayload';
+    mutation: MutationType;
+    updatedFields?: Array<string> | null;
+    node: {
+      __typename?: 'Notification';
+      id: string;
+      userId: string;
+      type: NotificationType;
+      payload: any;
+      status: NotificationStatus;
+      sentAt: string;
+      readAt?: string | null;
+      createdAt: string;
+    };
+    previousValues?: {
+      __typename?: 'Notification';
+      id: string;
+      userId: string;
+      type: NotificationType;
+      payload: any;
+      status: NotificationStatus;
+      sentAt: string;
+      readAt?: string | null;
+      createdAt: string;
+    } | null;
+  };
+};
+
+export type NotificationReadSubscriptionVariables = Exact<{
+  [key: string]: never;
+}>;
+
+export type NotificationReadSubscription = {
+  __typename?: 'Subscription';
+  notificationRead: {
+    __typename?: 'NotificationSubscriptionPayload';
+    mutation: MutationType;
+    updatedFields?: Array<string> | null;
+    node: {
+      __typename?: 'Notification';
+      id: string;
+      userId: string;
+      type: NotificationType;
+      payload: any;
+      status: NotificationStatus;
+      sentAt: string;
+      readAt?: string | null;
+      createdAt: string;
+    };
+    previousValues?: {
+      __typename?: 'Notification';
+      id: string;
+      userId: string;
+      type: NotificationType;
+      payload: any;
+      status: NotificationStatus;
+      sentAt: string;
+      readAt?: string | null;
+      createdAt: string;
+    } | null;
+  };
+};
+
+export type NotificationUpdatedSubscriptionVariables = Exact<{
+  [key: string]: never;
+}>;
+
+export type NotificationUpdatedSubscription = {
+  __typename?: 'Subscription';
+  notificationUpdated: {
+    __typename?: 'NotificationSubscriptionPayload';
+    mutation: MutationType;
+    updatedFields?: Array<string> | null;
+    node: {
+      __typename?: 'Notification';
+      id: string;
+      userId: string;
+      type: NotificationType;
+      payload: any;
+      status: NotificationStatus;
+      sentAt: string;
+      readAt?: string | null;
+      createdAt: string;
+    };
+    previousValues?: {
+      __typename?: 'Notification';
+      id: string;
+      userId: string;
+      type: NotificationType;
+      payload: any;
+      status: NotificationStatus;
+      sentAt: string;
+      readAt?: string | null;
+      createdAt: string;
+    } | null;
+  };
+};
+
+export type NotificationDeletedSubscriptionVariables = Exact<{
+  [key: string]: never;
+}>;
+
+export type NotificationDeletedSubscription = {
+  __typename?: 'Subscription';
+  notificationDeleted: {
+    __typename?: 'NotificationSubscriptionPayload';
+    mutation: MutationType;
+    updatedFields?: Array<string> | null;
+    node: {
+      __typename?: 'Notification';
+      id: string;
+      userId: string;
+      type: NotificationType;
+      payload: any;
+      status: NotificationStatus;
+      sentAt: string;
+      readAt?: string | null;
+      createdAt: string;
+    };
+    previousValues?: {
+      __typename?: 'Notification';
+      id: string;
+      userId: string;
+      type: NotificationType;
+      payload: any;
+      status: NotificationStatus;
+      sentAt: string;
+      readAt?: string | null;
+      createdAt: string;
+    } | null;
+  };
+};
+
+export type PantryUpdatedSubscriptionVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type PantryUpdatedSubscription = {
+  __typename?: 'Subscription';
+  pantryUpdated: {
+    __typename?: 'PantryUpdatedPayload';
+    id: string;
+    homeId: string;
+    name: string;
+    description?: string | null;
+    location?: string | null;
+    temperature?: string | null;
+    tags: Array<string>;
+    metadata?: string | null;
+    version: number;
+    updatedAt: string;
+    home: {__typename?: 'Home'; id: string; name: string};
+  };
+};
+
+export type MyPantriesUpdatedSubscriptionVariables = Exact<{
+  homeId: Scalars['ID']['input'];
+}>;
+
+export type MyPantriesUpdatedSubscription = {
+  __typename?: 'Subscription';
+  myPantriesUpdated: Array<{
+    __typename?: 'Pantry';
+    id: string;
+    name: string;
+    description?: string | null;
+    isDefault: boolean;
+    location?: string | null;
+    items?: Array<{
+      __typename?: 'PantryItem';
+      id: string;
+      currentQuantity: number;
+    }> | null;
+  }>;
+};
+
+export type PantryActivityAddedSubscriptionVariables = Exact<{
+  pantryId: Scalars['ID']['input'];
+}>;
+
+export type PantryActivityAddedSubscription = {
+  __typename?: 'Subscription';
+  pantryActivityAdded: {
+    __typename?: 'PantryActivity';
+    id: string;
+    pantryId: string;
+    userId: string;
+    action: PantryActivityType;
+    description: string;
+    itemName?: string | null;
+    quantity?: number | null;
+    oldValue?: string | null;
+    newValue?: string | null;
+    metadata?: string | null;
+    createdAt: string;
+    user: {
+      __typename?: 'User';
+      id: string;
+      email: string;
+      profile?: {
+        __typename?: 'UserProfile';
+        displayName?: string | null;
+      } | null;
+    };
+  };
+};
+
+export type PantryLowStockAlertSubscriptionVariables = Exact<{
+  pantryId: Scalars['ID']['input'];
+}>;
+
+export type PantryLowStockAlertSubscription = {
+  __typename?: 'Subscription';
+  pantryLowStockAlert: Array<{
+    __typename?: 'PantryItem';
+    id: string;
+    itemId: string;
+    itemName: string;
+    currentQuantity: number;
+    autoReorderPoint?: number | null;
+    unitName: string;
+    item: {
+      __typename?: 'Item';
+      id: string;
+      name: string;
+      imageUrl?: string | null;
+      averagePrice?: number | null;
+    };
+  }>;
+};
+
+export type PantryExpiringItemsAlertSubscriptionVariables = Exact<{
+  pantryId: Scalars['ID']['input'];
+}>;
+
+export type PantryExpiringItemsAlertSubscription = {
+  __typename?: 'Subscription';
+  pantryExpiringItemsAlert: Array<{
+    __typename?: 'PantryItem';
+    id: string;
+    itemId: string;
+    itemName: string;
+    expiresAt?: string | null;
+    bestByDate?: string | null;
+    currentQuantity: number;
+    unitName: string;
+    item: {
+      __typename?: 'Item';
+      id: string;
+      name: string;
+      imageUrl?: string | null;
+    };
+  }>;
+};
+
 export type PantryItemsChangedSubscriptionVariables = Exact<{
   pantryId: Scalars['ID']['input'];
-  itemId: Scalars['String']['input'];
 }>;
 
 export type PantryItemsChangedSubscription = {
@@ -6053,8 +7113,227 @@ export type PantryItemsChangedSubscription = {
   pantryItemsChanged: {
     __typename?: 'PantryItemChangedPayload';
     pantryId: string;
+    updatedFields: Array<string>;
+    mutation: MutationType;
+    timestamp: string;
+    userId: string;
+    item: {
+      __typename?: 'PantryItem';
+      id: string;
+      itemName: string;
+      unit: {__typename?: 'Unit'; name: string};
+    };
+  };
+};
+
+export type PurchaseCreatedSubscriptionVariables = Exact<{
+  userId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+export type PurchaseCreatedSubscription = {
+  __typename?: 'Subscription';
+  purchaseCreated: {
+    __typename?: 'Purchase';
+    id: string;
+    userId: string;
     itemId: string;
-    item: {__typename?: 'PantryItem'; itemId: string; itemName: string};
+    storeId: string;
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+    purchaseDate: string;
+    itemName: string;
+    storeName: string;
+    unitSymbol: string;
+    currencySymbol: string;
+    user: {__typename?: 'User'; id: string; email: string};
+    item: {
+      __typename?: 'Item';
+      id: string;
+      name: string;
+      imageUrl?: string | null;
+    };
+    store: {
+      __typename?: 'Store';
+      id: string;
+      name: string;
+      address?: string | null;
+    };
+  };
+};
+
+export type PurchaseUpdatedSubscriptionVariables = Exact<{
+  userId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+export type PurchaseUpdatedSubscription = {
+  __typename?: 'Subscription';
+  purchaseUpdated: {
+    __typename?: 'Purchase';
+    id: string;
+    userId: string;
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+    purchaseDate: string;
+    updatedAt: string;
+  };
+};
+
+export type PurchaseDeletedSubscriptionVariables = Exact<{
+  userId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+export type PurchaseDeletedSubscription = {
+  __typename?: 'Subscription';
+  purchaseDeleted: {
+    __typename?: 'Purchase';
+    id: string;
+    userId: string;
+    deletedAt?: string | null;
+  };
+};
+
+export type LoginAttemptsSubscriptionVariables = Exact<{
+  userId: Scalars['ID']['input'];
+}>;
+
+export type LoginAttemptsSubscription = {
+  __typename?: 'Subscription';
+  loginAttempts: {
+    __typename?: 'LoginHistory';
+    id: string;
+    userId: string;
+    success: boolean;
+    method: LoginMethod;
+    provider?: string | null;
+    ipAddress?: string | null;
+    ipCountry?: string | null;
+    ipRegion?: string | null;
+    ipCity?: string | null;
+    isVpn?: boolean | null;
+    isTor?: boolean | null;
+    isProxy?: boolean | null;
+    userAgent?: string | null;
+    browserName?: string | null;
+    browserVersion?: string | null;
+    osName?: string | null;
+    osVersion?: string | null;
+    deviceType?: DeviceType | null;
+    isMobileApp: boolean;
+    riskScore?: number | null;
+    isRisky: boolean;
+    riskFactors: Array<RiskFactor>;
+    failureReason?: LoginFailureReason | null;
+    failureDetails?: string | null;
+    isNewLocation: boolean;
+    isNewDevice: boolean;
+    isNewBrowser: boolean;
+    loggedInAt: string;
+    user: {__typename?: 'User'; id: string; email: string};
+  };
+};
+
+export type SuspiciousActivitySubscriptionVariables = Exact<{
+  userId: Scalars['ID']['input'];
+}>;
+
+export type SuspiciousActivitySubscription = {
+  __typename?: 'Subscription';
+  suspiciousActivity: {
+    __typename?: 'SuspiciousActivity';
+    suspiciousActivity: boolean;
+    rapidAttempts?: Array<{
+      __typename?: 'RapidAttempt';
+      hour: string;
+      count: number;
+    }> | null;
+    riskyLogins: Array<{
+      __typename?: 'LoginHistory';
+      id: string;
+      ipAddress?: string | null;
+      ipCountry?: string | null;
+      riskScore?: number | null;
+      riskFactors: Array<RiskFactor>;
+      loggedInAt: string;
+    }>;
+    newLocationLogins?: Array<{
+      __typename?: 'LoginHistory';
+      id: string;
+      ipAddress?: string | null;
+      ipCountry?: string | null;
+      ipCity?: string | null;
+      loggedInAt: string;
+    }> | null;
+    newDeviceLogins?: Array<{
+      __typename?: 'LoginHistory';
+      id: string;
+      deviceType?: DeviceType | null;
+      browserName?: string | null;
+      osName?: string | null;
+      loggedInAt: string;
+    }> | null;
+    failedFromSameIP?: Array<{
+      __typename?: 'FailedIPStat';
+      ipAddress?: string | null;
+      count: number;
+    }> | null;
+    unusualTimeLogins?: Array<{
+      __typename?: 'LoginHistory';
+      id: string;
+      loggedInAt: string;
+      timezoneDiff?: number | null;
+    }> | null;
+    multipleAccountsFromIP?: Array<{
+      __typename?: 'FailedIPStat';
+      ipAddress?: string | null;
+      count: number;
+    }> | null;
+  };
+};
+
+export type FailedLoginAttemptsSubscriptionVariables = Exact<{
+  userId: Scalars['ID']['input'];
+}>;
+
+export type FailedLoginAttemptsSubscription = {
+  __typename?: 'Subscription';
+  failedLoginAttempts: {
+    __typename?: 'LoginHistory';
+    id: string;
+    userId: string;
+    method: LoginMethod;
+    ipAddress?: string | null;
+    ipCountry?: string | null;
+    userAgent?: string | null;
+    failureReason?: LoginFailureReason | null;
+    failureDetails?: string | null;
+    loggedInAt: string;
+  };
+};
+
+export type RiskyLoginAlertsSubscriptionVariables = Exact<{
+  userId: Scalars['ID']['input'];
+}>;
+
+export type RiskyLoginAlertsSubscription = {
+  __typename?: 'Subscription';
+  riskyLoginAlerts: {
+    __typename?: 'LoginHistory';
+    id: string;
+    userId: string;
+    ipAddress?: string | null;
+    ipCountry?: string | null;
+    riskScore?: number | null;
+    riskFactors: Array<RiskFactor>;
+    isVpn?: boolean | null;
+    isTor?: boolean | null;
+    isProxy?: boolean | null;
+    requiresMfa: boolean;
+    mfaCompleted: boolean;
+    loggedInAt: string;
+    flaggedReason?: string | null;
+    flaggedBy?: {__typename?: 'User'; id: string; email: string} | null;
   };
 };
 
@@ -6067,6 +7346,9 @@ export type ShoppingListUpdatedSubscription = {
   shoppingListUpdated?: {
     __typename?: 'ShoppingListUpdatedPayload';
     mutation: MutationType;
+    updatedFields?: Array<string> | null;
+    userId: string;
+    timestamp: string;
     node?: {
       __typename?: 'ShoppingList';
       id: string;
@@ -6074,13 +7356,169 @@ export type ShoppingListUpdatedSubscription = {
       totalItems: number;
       completedItems: number;
       estimatedTotal: number;
+      status: ListStatus;
+      isCompleted: boolean;
+      completedAt?: string | null;
+      budgetAmount?: number | null;
+      totalCost: number;
       items: Array<{
         __typename?: 'ShoppingListItem';
         id: string;
         itemName?: string | null;
         quantity?: number | null;
         isPurchased: boolean;
+        estimatedPrice?: number | null;
       }>;
+    } | null;
+    previousValues?: {
+      __typename?: 'ShoppingListPreviousValues';
+      name?: string | null;
+      status?: ListStatus | null;
+      isCompleted?: boolean | null;
+      budgetAmount?: number | null;
+      totalCost?: number | null;
+      estimatedTotal?: number | null;
+    } | null;
+  } | null;
+};
+
+export type MyShoppingListsUpdatedSubscriptionVariables = Exact<{
+  [key: string]: never;
+}>;
+
+export type MyShoppingListsUpdatedSubscription = {
+  __typename?: 'Subscription';
+  myShoppingListsUpdated?: {
+    __typename?: 'ShoppingListUpdatedPayload';
+    mutation: MutationType;
+    updatedFields?: Array<string> | null;
+    userId: string;
+    timestamp: string;
+    node?: {
+      __typename?: 'ShoppingList';
+      id: string;
+      name: string;
+      totalItems: number;
+      completedItems: number;
+      estimatedTotal: number;
+      status: ListStatus;
+      isCompleted: boolean;
+    } | null;
+    previousValues?: {
+      __typename?: 'ShoppingListPreviousValues';
+      name?: string | null;
+      status?: ListStatus | null;
+      isCompleted?: boolean | null;
+    } | null;
+  } | null;
+};
+
+export type ShoppingListItemsChangedSubscriptionVariables = Exact<{
+  listId: Scalars['ID']['input'];
+}>;
+
+export type ShoppingListItemsChangedSubscription = {
+  __typename?: 'Subscription';
+  shoppingListItemsChanged?: {
+    __typename?: 'ShoppingListItemChangedPayload';
+    mutation: MutationType;
+    listId: string;
+    updatedFields?: Array<string> | null;
+    userId: string;
+    timestamp: string;
+    item?: {
+      __typename?: 'ShoppingListItem';
+      id: string;
+      itemName?: string | null;
+      quantity?: number | null;
+      estimatedPrice?: number | null;
+      isPurchased: boolean;
+      purchasedQuantity?: number | null;
+      purchasedPrice?: number | null;
+      notes?: string | null;
+      priority: number;
+      category?: string | null;
+      addedBy?: {
+        __typename?: 'User';
+        id: string;
+        email: string;
+        profile?: {
+          __typename?: 'UserProfile';
+          displayName?: string | null;
+        } | null;
+      } | null;
+    } | null;
+    previousValues?: {
+      __typename?: 'ShoppingListItemPreviousValues';
+      name?: string | null;
+      quantity?: number | null;
+      isCompleted?: boolean | null;
+      price?: number | null;
+      notes?: string | null;
+    } | null;
+  } | null;
+};
+
+export type ShoppingListCollaboratorsChangedSubscriptionVariables = Exact<{
+  listId: Scalars['ID']['input'];
+}>;
+
+export type ShoppingListCollaboratorsChangedSubscription = {
+  __typename?: 'Subscription';
+  shoppingListCollaboratorsChanged?: {
+    __typename?: 'ShoppingListCollaboratorChangedPayload';
+    mutation: MutationType;
+    listId: string;
+    userId: string;
+    timestamp: string;
+    collaborator?: {
+      __typename?: 'ShoppingListCollaborator';
+      id: string;
+      collaboratorId?: string | null;
+      email?: string | null;
+      role: CollaboratorRole;
+      status: CollaboratorStatus;
+      canEdit: boolean;
+      canAddItems: boolean;
+      canRemoveItems: boolean;
+      canMarkPurchased: boolean;
+      invitedAt: string;
+      collaborator?: {
+        __typename?: 'User';
+        id: string;
+        email: string;
+        profile?: {
+          __typename?: 'UserProfile';
+          displayName?: string | null;
+          avatar?: string | null;
+        } | null;
+      } | null;
+    } | null;
+  } | null;
+};
+
+export type ShoppingListStatusChangedSubscriptionVariables = Exact<{
+  listId: Scalars['ID']['input'];
+}>;
+
+export type ShoppingListStatusChangedSubscription = {
+  __typename?: 'Subscription';
+  shoppingListStatusChanged?: {
+    __typename?: 'ShoppingListStatusChangedPayload';
+    mutation: MutationType;
+    listId: string;
+    newStatus: ListStatus;
+    previousStatus?: ListStatus | null;
+    userId: string;
+    timestamp: string;
+    completedBy?: {
+      __typename?: 'User';
+      id: string;
+      email: string;
+      profile?: {
+        __typename?: 'UserProfile';
+        displayName?: string | null;
+      } | null;
     } | null;
   } | null;
 };
@@ -6096,8 +7534,34 @@ export type ShoppingListItemAddedSubscription = {
     id: string;
     itemName?: string | null;
     quantity?: number | null;
+    estimatedPrice?: number | null;
     isPurchased: boolean;
-    addedBy?: {__typename?: 'User'; id: string; email: string} | null;
+    priority: number;
+    category?: string | null;
+    notes?: string | null;
+    createdAt: string;
+    addedBy?: {
+      __typename?: 'User';
+      id: string;
+      email: string;
+      profile?: {
+        __typename?: 'UserProfile';
+        displayName?: string | null;
+      } | null;
+    } | null;
+    item?: {
+      __typename?: 'Item';
+      id: string;
+      name: string;
+      imageUrl?: string | null;
+      averagePrice?: number | null;
+    } | null;
+    unit?: {
+      __typename?: 'Unit';
+      id: string;
+      symbol: string;
+      name: string;
+    } | null;
   };
 };
 
@@ -6112,9 +7576,23 @@ export type ShoppingListItemUpdatedSubscription = {
     id: string;
     itemName?: string | null;
     quantity?: number | null;
+    estimatedPrice?: number | null;
     isPurchased: boolean;
+    purchasedQuantity?: number | null;
+    purchasedPrice?: number | null;
     notes?: string | null;
     priority: number;
+    category?: string | null;
+    updatedAt: string;
+    lastEditedBy?: {
+      __typename?: 'User';
+      id: string;
+      email: string;
+      profile?: {
+        __typename?: 'UserProfile';
+        displayName?: string | null;
+      } | null;
+    } | null;
   };
 };
 
@@ -6124,5 +7602,212 @@ export type ShoppingListItemRemovedSubscriptionVariables = Exact<{
 
 export type ShoppingListItemRemovedSubscription = {
   __typename?: 'Subscription';
-  shoppingListItemRemoved: {__typename?: 'ShoppingListItem'; id: string};
+  shoppingListItemRemoved: {
+    __typename?: 'ShoppingListItem';
+    id: string;
+    itemName?: string | null;
+  };
+};
+
+export type StoreUpdatedSubscriptionVariables = Exact<{
+  storeId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+export type StoreUpdatedSubscription = {
+  __typename?: 'Subscription';
+  storeUpdated: {
+    __typename?: 'Store';
+    id: string;
+    name: string;
+    address?: string | null;
+    priceAccuracy?: number | null;
+    lastPriceUpdate?: string | null;
+    qualityRating?: number | null;
+    chain?: string | null;
+    city?: string | null;
+    state?: string | null;
+    zipCode?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
+    phone?: string | null;
+    website?: string | null;
+    isActive: boolean;
+    updatedAt: string;
+  };
+};
+
+export type StoreRatingChangedSubscriptionVariables = Exact<{
+  storeId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+export type StoreRatingChangedSubscription = {
+  __typename?: 'Subscription';
+  storeRatingChanged: {
+    __typename?: 'Store';
+    id: string;
+    name: string;
+    qualityRating?: number | null;
+    priceAccuracy?: number | null;
+    updatedAt: string;
+  };
+};
+
+export type UserUpdatedSubscriptionVariables = Exact<{
+  userId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+export type UserUpdatedSubscription = {
+  __typename?: 'Subscription';
+  userUpdated: {
+    __typename?: 'UserUpdatedPayload';
+    mutation: string;
+    updatedFields?: Array<string> | null;
+    userId: string;
+    timestamp: string;
+    node: {
+      __typename?: 'User';
+      id: string;
+      email: string;
+      emailVerified: boolean;
+      role: UserRole;
+      onBoarded: boolean;
+      timezone?: string | null;
+      preferredCurrency?: string | null;
+      language?: string | null;
+      lastActiveAt?: string | null;
+      profile?: {
+        __typename?: 'UserProfile';
+        id: string;
+        firstName?: string | null;
+        lastName?: string | null;
+        displayName?: string | null;
+        avatar?: string | null;
+        bio?: string | null;
+      } | null;
+    };
+    previousValues?: {
+      __typename?: 'User';
+      email: string;
+      role: UserRole;
+      timezone?: string | null;
+      preferredCurrency?: string | null;
+      language?: string | null;
+    } | null;
+  };
+};
+
+export type UserStatusChangedSubscriptionVariables = Exact<{
+  userId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+export type UserStatusChangedSubscription = {
+  __typename?: 'Subscription';
+  userStatusChanged: {
+    __typename?: 'UserStatusChangedPayload';
+    userId: string;
+    newStatus: UserStatusType;
+    previousStatus?: UserStatusType | null;
+    isOnline: boolean;
+    lastActiveAt?: string | null;
+    timestamp: string;
+  };
+};
+
+export type UserActivitySubscriptionVariables = Exact<{
+  userId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+export type UserActivitySubscription = {
+  __typename?: 'Subscription';
+  userActivity: {
+    __typename?: 'UserActivityPayload';
+    userId: string;
+    activityType: UserActivityType;
+    description: string;
+    metadata?: any | null;
+    timestamp: string;
+  };
+};
+
+export type UserModerationChangedSubscriptionVariables = Exact<{
+  userId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+export type UserModerationChangedSubscription = {
+  __typename?: 'Subscription';
+  userModerationChanged: {
+    __typename?: 'UserModerationChangedPayload';
+    userId: string;
+    moderationType: string;
+    moderationStatus: string;
+    reason?: string | null;
+    moderatedBy: string;
+    timestamp: string;
+  };
+};
+
+export type UserProfileChangedSubscriptionVariables = Exact<{
+  userId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+export type UserProfileChangedSubscription = {
+  __typename?: 'Subscription';
+  userProfileChanged: {
+    __typename?: 'UserProfileChangedPayload';
+    userId: string;
+    mutation: string;
+    updatedFields?: Array<string> | null;
+    timestamp: string;
+    profile: {
+      __typename?: 'UserProfile';
+      id: string;
+      firstName?: string | null;
+      lastName?: string | null;
+      displayName?: string | null;
+      bio?: string | null;
+      avatar?: string | null;
+      coverImage?: string | null;
+      phone?: string | null;
+      website?: string | null;
+      profileVisibility: ProfileVisibility;
+    };
+    previousValues?: {
+      __typename?: 'UserProfile';
+      firstName?: string | null;
+      lastName?: string | null;
+      displayName?: string | null;
+      bio?: string | null;
+      avatar?: string | null;
+    } | null;
+  };
+};
+
+export type UserAuthSubscriptionVariables = Exact<{
+  userId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+export type UserAuthSubscription = {
+  __typename?: 'Subscription';
+  userAuth: {
+    __typename?: 'UserAuthPayload';
+    userId: string;
+    authType: string;
+    deviceInfo?: any | null;
+    timestamp: string;
+  };
+};
+
+export type UserSocialSubscriptionVariables = Exact<{
+  userId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+export type UserSocialSubscription = {
+  __typename?: 'Subscription';
+  userSocial: {
+    __typename?: 'UserSocialPayload';
+    userId: string;
+    targetUserId: string;
+    action: string;
+    timestamp: string;
+  };
 };

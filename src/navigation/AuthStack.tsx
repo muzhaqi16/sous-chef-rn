@@ -9,7 +9,7 @@ import {
   ForgotPasswordScreen,
   CodeVerificationScreen,
   LandingAuthScreen,
-} from '../screens/Auth';
+} from '../screens/auth';
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
 

@@ -9,7 +9,7 @@ export enum OnBoardingSteps {
   complete = 'complete',
 }
 
-interface PreferencesState {
+export interface PreferencesState {
   // Theme
   theme: 'light' | 'dark';
   setTheme: (theme: 'light' | 'dark') => void;

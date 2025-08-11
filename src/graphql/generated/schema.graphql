@@ -159,6 +159,27 @@ type BulkCreateItemsResponse {
   updated: [Item!]!
 }
 
+input BulkNotificationInput {
+  actionUrl: String
+  batchId: String
+  category: String
+  expiresAt: DateTime
+  message: String
+  metadata: JSON
+  payload: JSON!
+  priority: Priority
+  title: String
+  type: NotificationType!
+  userIds: [String!]!
+}
+
+type BulkNotificationResult {
+  failed: [String!]!
+  sent: [Notification!]!
+  totalFailed: Int!
+  totalSent: Int!
+}
+
 type BulkOperationSummary {
   executionTime: Float!
   failed: Int!
@@ -231,6 +252,12 @@ enum CollaboratorStatus {
   PENDING
   REMOVED
   SUSPENDED
+}
+
+interface Connection {
+  edges: [Edge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
 }
 
 input CreateBrandInput {
@@ -402,6 +429,23 @@ input CreateMembershipInput {
   userId: ID!
 }
 
+input CreateNotificationInput {
+  actionUrl: String
+  batchId: String
+  category: String
+  expiresAt: DateTime
+  message: String
+  metadata: JSON
+  payload: JSON!
+  priority: Priority
+  sourceId: String
+  sourceType: String
+  status: NotificationStatus
+  title: String
+  type: NotificationType!
+  userId: String
+}
+
 input CreatePantryActivityInput {
   action: PantryActivityType!
   description: String!
@@ -554,7 +598,9 @@ enum DateRange {
 }
 
 input DateRangeInput {
+  end: DateTime!
   endDate: DateTime!
+  start: DateTime!
   startDate: DateTime!
 }
 
@@ -685,6 +731,11 @@ enum DeviceType {
 type DeviceTypeStat {
   count: Int!
   deviceType: DeviceType!
+}
+
+interface Edge {
+  cursor: String!
+  node: Node!
 }
 
 enum ExportFormat {
@@ -1578,12 +1629,7 @@ type Mutation {
   createLoginHistory(input: CreateLoginHistoryInput!): LoginHistory!
   createMembership(input: CreateMembershipInput!): Membership!
   createModerationRecord(input: CreateUserModerationInput!): UserModeration!
-  createNotification(
-    payload: JSON!
-    status: String
-    type: String!
-    userId: ID!
-  ): Notification!
+  createNotification(input: CreateNotificationInput!): Notification!
   createPantry(input: CreatePantryInput!): Pantry!
   createProfile(input: CreateUserProfileInput!): UserProfile!
   createPurchase(input: CreatePurchaseInput!): Purchase!
@@ -1594,15 +1640,17 @@ type Mutation {
   deactivateMultipleDevices(deviceIds: [ID!]!): [Device!]!
   declineHomeInvite(token: String!): Boolean!
   deleteAccount: Boolean!
+  deleteAllReadNotifications: Int!
   deleteBrand(id: ID!): Brand!
   deleteBulkPurchases(purchaseIds: [ID!]!): Boolean!
   deleteCategory(id: ID!): Boolean!
   deleteCurrency(id: ID!): Boolean!
   deleteDevice(id: ID!): Device!
+  deleteExpiredNotifications: Int!
   deleteHome(id: ID!): Boolean!
   deleteItem(id: ID!, permanent: Boolean): Boolean!
   deleteMultipleDevices(deviceIds: [ID!]!): [Device!]!
-  deleteNotification(id: ID!): Notification!
+  deleteNotification(id: ID!): Boolean!
   deletePantry(id: ID!): Boolean!
   deletePurchase(id: ID!): Boolean!
   deleteShoppingList(id: ID!): Boolean!
@@ -1639,6 +1687,7 @@ type Mutation {
   joinShoppingListByShareCode(shareCode: String!): ShoppingList!
   leaveHome(homeId: ID!): Boolean!
   login(input: LoginInput!): AuthPayload!
+  markAllNotificationsAsRead: [Notification!]!
   markItemAsWaste(
     id: ID!
     isComposted: Boolean
@@ -1657,7 +1706,7 @@ type Mutation {
     notes: String
     reviewerId: ID!
   ): [LoginHistory!]!
-  markNotificationRead(id: ID!): Notification!
+  markNotificationAsRead(id: ID!): Notification!
   mergeItems(duplicateIds: [ID!]!, primaryId: ID!): Item!
   putUnderReview(input: PutUnderReviewInput!): UserModeration!
   reactivateDevice(id: ID!): Device!
@@ -1688,6 +1737,8 @@ type Mutation {
   restoreItem(id: ID!): Item!
   reviewAppeal(input: ReviewAppealInput!): UserModeration!
   revokeHomeInvite(id: ID!): Boolean!
+  sendBulkNotifications(input: BulkNotificationInput!): BulkNotificationResult!
+  sendTestNotification(type: NotificationType!): Notification!
   setDefaultItemUnit(itemId: ID!, unitId: ID!): ItemUnit!
   setDefaultShoppingList(id: ID!): ShoppingList!
   setItemBrand(brandId: ID!, isPrimary: Boolean, itemId: ID!): Item!
@@ -1741,6 +1792,10 @@ type Mutation {
     status: ModerationStatus!
     userId: ID!
   ): UserModeration!
+  updateNotification(id: ID!, input: UpdateNotificationInput!): Notification!
+  updateNotificationPreferences(
+    input: NotificationPreferencesInput!
+  ): NotificationPreferences!
   updatePantry(id: ID!, input: UpdatePantryInput!): Pantry!
   updatePantryItem(id: ID!, input: UpdatePantryItemInput!): PantryItem!
   updateProfile(input: UpdateUserProfileInput!): UserProfile!
@@ -1790,7 +1845,11 @@ enum MutationType {
   UPDATED
 }
 
-type Notification {
+interface Node {
+  id: ID!
+}
+
+type Notification implements Node & Timestamped {
   createdAt: DateTime!
   id: ID!
   payload: JSON!
@@ -1798,7 +1857,89 @@ type Notification {
   sentAt: DateTime!
   status: NotificationStatus!
   type: NotificationType!
-  userId: ID!
+  user: User!
+  userId: String!
+}
+
+type NotificationCategoryCount {
+  category: String!
+  count: Int!
+  unreadCount: Int!
+}
+
+type NotificationConnection implements Connection {
+  edges: [NotificationEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+  unreadCount: Int!
+}
+
+type NotificationEdge implements Edge {
+  cursor: String!
+  node: Notification!
+}
+
+input NotificationFilterInput {
+  batchId: String
+  category: String
+  dateRange: DateRangeInput
+  priority: Priority
+  sourceType: String
+  status: NotificationStatus
+  type: NotificationType
+  unreadOnly: Boolean
+}
+
+enum NotificationOrderBy {
+  CREATED_AT_ASC
+  CREATED_AT_DESC
+  PRIORITY_ASC
+  PRIORITY_DESC
+  SENT_AT_ASC
+  SENT_AT_DESC
+  STATUS_ASC
+  STATUS_DESC
+  TYPE_ASC
+  TYPE_DESC
+}
+
+type NotificationPreferences {
+  categories: [String!]!
+  email: Boolean!
+  inApp: Boolean!
+  push: Boolean!
+  quietHours: QuietHours
+  sms: Boolean!
+  types: [NotificationType!]!
+  userId: String!
+}
+
+input NotificationPreferencesInput {
+  categories: [String!]
+  email: Boolean
+  inApp: Boolean
+  push: Boolean
+  quietHours: QuietHoursInput
+  sms: Boolean
+  types: [NotificationType!]
+}
+
+type NotificationPriorityCount {
+  count: Int!
+  priority: Priority!
+  unreadCount: Int!
+}
+
+type NotificationStats {
+  byCategory: [NotificationCategoryCount!]!
+  byPriority: [NotificationPriorityCount!]!
+  byType: [NotificationTypeCount!]!
+  clicked: Int!
+  dismissed: Int!
+  expired: Int!
+  read: Int!
+  total: Int!
+  unread: Int!
 }
 
 enum NotificationStatus {
@@ -1809,12 +1950,29 @@ enum NotificationStatus {
   SENT
 }
 
+type NotificationSubscriptionPayload {
+  mutation: MutationType!
+  node: Notification!
+  previousValues: Notification
+  updatedFields: [String!]
+}
+
 enum NotificationType {
+  COLLABORATION_INVITE
   EXPIRY_REMINDER
+  HOME_JOINED
   ITEM_DELETED
   ITEM_UPDATED
+  LIST_UPDATED
   LOW_STOCK
+  MEMBERSHIP_INVITE
   NEW_ITEM_ADDED
+}
+
+type NotificationTypeCount {
+  count: Int!
+  type: NotificationType!
+  unreadCount: Int!
 }
 
 enum NutritionCategory {
@@ -1854,6 +2012,13 @@ type OfferSummary {
 type OperatingSystemStat {
   count: Int!
   osName: String!
+}
+
+type PageInfo {
+  endCursor: String
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
 }
 
 input PaginationInput {
@@ -1966,10 +2131,13 @@ type PantryItem {
 }
 
 type PantryItemChangedPayload {
-  action: String!
   item: PantryItem!
-  itemId: String!
-  pantryId: ID!
+  mutation: MutationType!
+  pantryId: String!
+  previousValue: PantryItem
+  timestamp: DateTime!
+  updatedFields: [String!]!
+  userId: String!
 }
 
 type PantryItemUsage {
@@ -2036,6 +2204,13 @@ enum PriceSource {
   RECEIPT_SCAN
   STORE_API
   WEB_SCRAPING
+}
+
+enum Priority {
+  HIGH
+  LOW
+  NORMAL
+  URGENT
 }
 
 enum ProfileVisibility {
@@ -2140,6 +2315,7 @@ type Query {
   devicesByPlatform(platform: MobilePlatform!, userId: ID!): [Device!]!
   expiringItems(pantryId: ID!): [PantryItem!]!
   failedLoginAttempts(hours: Int = 24, userId: ID!): [LoginHistory!]!
+  hasUrgentNotifications: Boolean!
   home(id: ID!): Home
   homeByJoinCode(joinCode: String!): Home
   homeInvites(homeId: ID!): [HomeInvite!]!
@@ -2179,9 +2355,29 @@ type Query {
   myMembershipInHome(homeId: ID!): Membership
   myMemberships: [Membership!]!
   myModeration: UserModeration
+  myNotifications(
+    after: String
+    before: String
+    filter: NotificationFilterInput
+    first: Int
+    last: Int
+    orderBy: NotificationOrderBy
+  ): NotificationConnection!
   myPurchases: [Purchase!]!
   nearbyStores(lat: Float!, lng: Float!, radius: Float): [Store!]!
-  notificationsByUser(userId: ID!): [Notification!]!
+  notification(id: ID!): Notification
+  notificationPreferences: NotificationPreferences!
+  notificationStats(filter: NotificationFilterInput): NotificationStats!
+  notificationsByCategory(
+    after: String
+    category: String!
+    first: Int
+  ): NotificationConnection!
+  notificationsByType(
+    after: String
+    first: Int
+    type: NotificationType!
+  ): NotificationConnection!
   onboardingItems: [Item!]!
   pantries(homeId: ID!): [Pantry!]!
   pantry(id: ID!): Pantry
@@ -2201,6 +2397,7 @@ type Query {
   purchasesByShoppingListItem(limit: Int, shoppingListItemId: ID!): [Purchase!]!
   purchasesByStore(storeId: ID!, userId: ID): [Purchase!]!
   recentItems(limit: Int, userId: String): [Item!]!
+  recentNotifications(limit: Int = 10): [Notification!]!
   recommendedItems(limit: Int, userId: String): [ItemSuggestion!]!
   recommendedStores: [Store!]!
   relatedItems(itemId: ID!): RelatedItemsResponse!
@@ -2236,14 +2433,30 @@ type Query {
   unit(id: ID!): Unit
   unitBySymbol(symbol: String!): Unit
   units(isCommon: Boolean, type: UnitType): [Unit!]!
+  unreadNotificationCount: Int!
   user(id: ID!): User
   userDevices(filters: DeviceFiltersInput, userId: ID!): [Device!]!
   userModeration(userId: ID!): UserModeration
   userProfile: UserProfile
   userPurchases(userId: ID!): [Purchase!]!
+  userSettings(userId: String): UserSettings
   users(search: String, skip: Int, take: Int): [User!]!
   validateBarcode(barcode: String!): BarcodeValidation!
   verifiedDevices(userId: ID!): [Device!]!
+}
+
+type QuietHours {
+  enabled: Boolean!
+  endTime: String!
+  startTime: String!
+  timezone: String!
+}
+
+input QuietHoursInput {
+  enabled: Boolean!
+  endTime: String!
+  startTime: String!
+  timezone: String!
 }
 
 type RapidAttempt {
@@ -2709,13 +2922,13 @@ type Subscription {
   myMembershipUpdated: MembershipUpdatePayload!
   myPantriesUpdated(homeId: ID!): [Pantry!]!
   myShoppingListsUpdated: ShoppingListUpdatedPayload
-  notificationCreated(userId: ID!): Notification!
-  notificationDeleted(userId: ID!): Notification!
-  notificationRead(userId: ID!): Notification!
-  notificationUpdated(userId: ID!): Notification!
+  notificationCreated: NotificationSubscriptionPayload!
+  notificationDeleted: NotificationSubscriptionPayload!
+  notificationRead: NotificationSubscriptionPayload!
+  notificationUpdated: NotificationSubscriptionPayload!
   pantryActivityAdded(pantryId: ID!): PantryActivity!
   pantryExpiringItemsAlert(pantryId: ID!): [PantryItem!]!
-  pantryItemsChanged(itemId: String!, pantryId: ID!): PantryItemChangedPayload!
+  pantryItemsChanged(pantryId: ID!): PantryItemChangedPayload!
   pantryLowStockAlert(pantryId: ID!): [PantryItem!]!
   pantryUpdated(id: ID!): PantryUpdatedPayload!
   purchaseCreated(userId: ID): Purchase!
@@ -2758,6 +2971,10 @@ type SuspiciousActivity {
   riskyLogins: [LoginHistory!]!
   suspiciousActivity: Boolean!
   unusualTimeLogins: [LoginHistory!]
+}
+
+interface Timestamped {
+  createdAt: DateTime!
 }
 
 enum TrustLevel {
@@ -3004,6 +3221,20 @@ input UpdateMembershipInput {
   canViewPantry: Boolean
   displayName: String
   role: MembershipRole
+}
+
+input UpdateNotificationInput {
+  actionUrl: String
+  category: String
+  expiresAt: DateTime
+  message: String
+  metadata: JSON
+  payload: JSON
+  priority: Priority
+  readAt: DateTime
+  status: NotificationStatus
+  title: String
+  type: NotificationType
 }
 
 input UpdatePantryInput {

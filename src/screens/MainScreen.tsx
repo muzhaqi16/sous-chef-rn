@@ -11,7 +11,7 @@ import {useNavigation} from '@react-navigation/native';
 import {useStyles, createStyleSheet} from 'react-native-unistyles';
 import {SearchBar, UserHeader, SwipeablePantryItem} from '#components';
 import {usePantryItems, useDefaultHome} from '#hooks';
-import {StorageState, useHomeQuery} from '#generated';
+import {useHomeQuery} from '#generated';
 import {RootNavProp} from '../navigation';
 
 export const MainScreen: React.FC = () => {
@@ -27,7 +27,7 @@ export const MainScreen: React.FC = () => {
   } = useDefaultHome();
 
   const {data: homeData} = useHomeQuery({
-    variables: {homeId: selectedHomeId},
+    variables: {homeId: selectedHomeId ?? ''},
     fetchPolicy: 'cache-and-network',
     skip: !selectedHomeId,
   });

@@ -18,6 +18,11 @@ import {
 
 import {createAppSlice, AppState} from './slices/appSlice';
 
+import {
+  createNotificationSlice,
+  NotificationState,
+} from './slices/notificationSlice';
+
 import {logger} from './logger';
 import {zustandStorage} from '../storage/mmkv';
 
@@ -26,6 +31,7 @@ export const STORAGE_KEY = 'sous-chef-storage';
 export type RootState = AuthState &
   PreferencesState &
   AppState &
+  NotificationState &
   BarcodeScannerState;
 
 export const useStore = create<RootState>()(
@@ -37,6 +43,7 @@ export const useStore = create<RootState>()(
           ...createPreferencesSlice(...a),
           ...createAppSlice(...a),
           ...createBarcodeScannerSlice(...a),
+          ...createNotificationSlice(...a),
         })),
       ),
       {

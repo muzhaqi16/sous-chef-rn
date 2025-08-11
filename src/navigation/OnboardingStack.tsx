@@ -2,11 +2,11 @@ import React from 'react';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {useStore} from '../store';
 import {type OnBoardingStackParamList} from './types';
-import {CreateHomeScreen} from '../screens/OnBoarding/CreateHomeScreen';
-import {CreateShoppingListScreen} from '../screens/OnBoarding/CreateShoppingListScreen';
-import {SelectPantryItems} from '../screens/OnBoarding/SelectPantryItems';
-import {InviteMembersScreen} from '../screens/OnBoarding/InviteMemberScreen';
-import {OnboardingCompleteScreen} from '../screens/OnBoarding/OnboardingCompleteScreen';
+import {CreateHomeScreen} from '../screens/onBoarding/CreateHomeScreen';
+import {CreateShoppingListScreen} from '../screens/onBoarding/CreateShoppingListScreen';
+import {SelectPantryItems} from '../screens/onBoarding/SelectPantryItems';
+import {InviteMembersScreen} from '../screens/onBoarding/InviteMemberScreen';
+import {OnboardingCompleteScreen} from '../screens/onBoarding/OnboardingCompleteScreen';
 import {OnBoardingSteps} from '../store/slices/preferencesSlice';
 
 const Stack = createNativeStackNavigator<OnBoardingStackParamList>();

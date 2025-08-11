@@ -9,14 +9,22 @@ import {useSearchableList} from './useSearchableList';
 import {ApolloClient} from '@apollo/client';
 
 export function usePantryItems(pantryId: string | undefined) {
+  // Fetch pantry items with cache-and-network policy
+  // This ensures we get the latest data from the server while using cached data
+  // for immediate UI updates.
+  // If pantryId is not provided, skip the query
+  // to avoid unnecessary network requests.
+  if (!pantryId) {
+    return {items: [], query: '', setQuery: () => {}, refetch: () => {}};
+  }
   const {data, refetch, client} = usePantryItemsQuery({
     fetchPolicy: 'cache-and-network',
     skip: !pantryId,
-    variables: {pantryId: pantryId ?? ''},
+    variables: {pantryId: pantryId},
   });
 
   usePantryItemsChangedSubscription({
-    variables: {pantryId: pantryId ?? '', itemId: ''},
+    variables: {pantryId: pantryId},
     skip: !pantryId,
     onData: ({
       data: subData,

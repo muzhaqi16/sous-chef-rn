@@ -192,6 +192,28 @@ export type BulkCreateItemsResponse = {
   updated: Array<Item>;
 };
 
+export type BulkNotificationInput = {
+  actionUrl?: InputMaybe<Scalars['String']['input']>;
+  batchId?: InputMaybe<Scalars['String']['input']>;
+  category?: InputMaybe<Scalars['String']['input']>;
+  expiresAt?: InputMaybe<Scalars['DateTime']['input']>;
+  message?: InputMaybe<Scalars['String']['input']>;
+  metadata?: InputMaybe<Scalars['JSON']['input']>;
+  payload: Scalars['JSON']['input'];
+  priority?: InputMaybe<Priority>;
+  title?: InputMaybe<Scalars['String']['input']>;
+  type: NotificationType;
+  userIds: Array<Scalars['String']['input']>;
+};
+
+export type BulkNotificationResult = {
+  __typename?: 'BulkNotificationResult';
+  failed: Array<Scalars['String']['output']>;
+  sent: Array<Notification>;
+  totalFailed: Scalars['Int']['output'];
+  totalSent: Scalars['Int']['output'];
+};
+
 export type BulkOperationSummary = {
   __typename?: 'BulkOperationSummary';
   executionTime: Scalars['Float']['output'];
@@ -267,6 +289,12 @@ export enum CollaboratorStatus {
   Removed = 'REMOVED',
   Suspended = 'SUSPENDED',
 }
+
+export type Connection = {
+  edges: Array<Edge>;
+  pageInfo: PageInfo;
+  totalCount: Scalars['Int']['output'];
+};
 
 export type CreateBrandInput = {
   description?: InputMaybe<Scalars['String']['input']>;
@@ -437,6 +465,23 @@ export type CreateMembershipInput = {
   userId: Scalars['ID']['input'];
 };
 
+export type CreateNotificationInput = {
+  actionUrl?: InputMaybe<Scalars['String']['input']>;
+  batchId?: InputMaybe<Scalars['String']['input']>;
+  category?: InputMaybe<Scalars['String']['input']>;
+  expiresAt?: InputMaybe<Scalars['DateTime']['input']>;
+  message?: InputMaybe<Scalars['String']['input']>;
+  metadata?: InputMaybe<Scalars['JSON']['input']>;
+  payload: Scalars['JSON']['input'];
+  priority?: InputMaybe<Priority>;
+  sourceId?: InputMaybe<Scalars['String']['input']>;
+  sourceType?: InputMaybe<Scalars['String']['input']>;
+  status?: InputMaybe<NotificationStatus>;
+  title?: InputMaybe<Scalars['String']['input']>;
+  type: NotificationType;
+  userId?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type CreatePantryActivityInput = {
   action: PantryActivityType;
   description: Scalars['String']['input'];
@@ -590,7 +635,9 @@ export enum DateRange {
 }
 
 export type DateRangeInput = {
+  end: Scalars['DateTime']['input'];
   endDate: Scalars['DateTime']['input'];
+  start: Scalars['DateTime']['input'];
   startDate: Scalars['DateTime']['input'];
 };
 
@@ -727,6 +774,11 @@ export type DeviceTypeStat = {
   __typename?: 'DeviceTypeStat';
   count: Scalars['Int']['output'];
   deviceType: DeviceType;
+};
+
+export type Edge = {
+  cursor: Scalars['String']['output'];
+  node: Node;
 };
 
 export enum ExportFormat {
@@ -1653,15 +1705,17 @@ export type Mutation = {
   deactivateMultipleDevices: Array<Device>;
   declineHomeInvite: Scalars['Boolean']['output'];
   deleteAccount: Scalars['Boolean']['output'];
+  deleteAllReadNotifications: Scalars['Int']['output'];
   deleteBrand: Brand;
   deleteBulkPurchases: Scalars['Boolean']['output'];
   deleteCategory: Scalars['Boolean']['output'];
   deleteCurrency: Scalars['Boolean']['output'];
   deleteDevice: Device;
+  deleteExpiredNotifications: Scalars['Int']['output'];
   deleteHome: Scalars['Boolean']['output'];
   deleteItem: Scalars['Boolean']['output'];
   deleteMultipleDevices: Array<Device>;
-  deleteNotification: Notification;
+  deleteNotification: Scalars['Boolean']['output'];
   deletePantry: Scalars['Boolean']['output'];
   deletePurchase: Scalars['Boolean']['output'];
   deleteShoppingList: Scalars['Boolean']['output'];
@@ -1684,11 +1738,12 @@ export type Mutation = {
   joinShoppingListByShareCode: ShoppingList;
   leaveHome: Scalars['Boolean']['output'];
   login: AuthPayload;
+  markAllNotificationsAsRead: Array<Notification>;
   markItemAsWaste: PantryItem;
   markItemPurchased: Scalars['Boolean']['output'];
   markLoginAsReviewed: LoginHistory;
   markMultipleLoginsAsReviewed: Array<LoginHistory>;
-  markNotificationRead: Notification;
+  markNotificationAsRead: Notification;
   mergeItems: Item;
   putUnderReview: UserModeration;
   reactivateDevice: Device;
@@ -1714,6 +1769,8 @@ export type Mutation = {
   restoreItem: Item;
   reviewAppeal: UserModeration;
   revokeHomeInvite: Scalars['Boolean']['output'];
+  sendBulkNotifications: BulkNotificationResult;
+  sendTestNotification: Notification;
   setDefaultItemUnit: ItemUnit;
   setDefaultShoppingList: ShoppingList;
   setItemBrand: Item;
@@ -1753,6 +1810,8 @@ export type Mutation = {
   updateLoginSession: LoginHistory;
   updateMembership: Membership;
   updateModerationStatus: UserModeration;
+  updateNotification: Notification;
+  updateNotificationPreferences: NotificationPreferences;
   updatePantry: Pantry;
   updatePantryItem: PantryItem;
   updateProfile: UserProfile;
@@ -1922,10 +1981,7 @@ export type MutationCreateModerationRecordArgs = {
 };
 
 export type MutationCreateNotificationArgs = {
-  payload: Scalars['JSON']['input'];
-  status?: InputMaybe<Scalars['String']['input']>;
-  type: Scalars['String']['input'];
-  userId: Scalars['ID']['input'];
+  input: CreateNotificationInput;
 };
 
 export type MutationCreatePantryArgs = {
@@ -2120,7 +2176,7 @@ export type MutationMarkMultipleLoginsAsReviewedArgs = {
   reviewerId: Scalars['ID']['input'];
 };
 
-export type MutationMarkNotificationReadArgs = {
+export type MutationMarkNotificationAsReadArgs = {
   id: Scalars['ID']['input'];
 };
 
@@ -2230,6 +2286,14 @@ export type MutationReviewAppealArgs = {
 
 export type MutationRevokeHomeInviteArgs = {
   id: Scalars['ID']['input'];
+};
+
+export type MutationSendBulkNotificationsArgs = {
+  input: BulkNotificationInput;
+};
+
+export type MutationSendTestNotificationArgs = {
+  type: NotificationType;
 };
 
 export type MutationSetDefaultItemUnitArgs = {
@@ -2422,6 +2486,15 @@ export type MutationUpdateModerationStatusArgs = {
   userId: Scalars['ID']['input'];
 };
 
+export type MutationUpdateNotificationArgs = {
+  id: Scalars['ID']['input'];
+  input: UpdateNotificationInput;
+};
+
+export type MutationUpdateNotificationPreferencesArgs = {
+  input: NotificationPreferencesInput;
+};
+
 export type MutationUpdatePantryArgs = {
   id: Scalars['ID']['input'];
   input: UpdatePantryInput;
@@ -2544,16 +2617,109 @@ export enum MutationType {
   Updated = 'UPDATED',
 }
 
-export type Notification = {
-  __typename?: 'Notification';
-  createdAt: Scalars['DateTime']['output'];
+export type Node = {
   id: Scalars['ID']['output'];
-  payload: Scalars['JSON']['output'];
-  readAt?: Maybe<Scalars['DateTime']['output']>;
-  sentAt: Scalars['DateTime']['output'];
-  status: NotificationStatus;
-  type: NotificationType;
-  userId: Scalars['ID']['output'];
+};
+
+export type Notification = Node &
+  Timestamped & {
+    __typename?: 'Notification';
+    createdAt: Scalars['DateTime']['output'];
+    id: Scalars['ID']['output'];
+    payload: Scalars['JSON']['output'];
+    readAt?: Maybe<Scalars['DateTime']['output']>;
+    sentAt: Scalars['DateTime']['output'];
+    status: NotificationStatus;
+    type: NotificationType;
+    user: User;
+    userId: Scalars['String']['output'];
+  };
+
+export type NotificationCategoryCount = {
+  __typename?: 'NotificationCategoryCount';
+  category: Scalars['String']['output'];
+  count: Scalars['Int']['output'];
+  unreadCount: Scalars['Int']['output'];
+};
+
+export type NotificationConnection = Connection & {
+  __typename?: 'NotificationConnection';
+  edges: Array<NotificationEdge>;
+  pageInfo: PageInfo;
+  totalCount: Scalars['Int']['output'];
+  unreadCount: Scalars['Int']['output'];
+};
+
+export type NotificationEdge = Edge & {
+  __typename?: 'NotificationEdge';
+  cursor: Scalars['String']['output'];
+  node: Notification;
+};
+
+export type NotificationFilterInput = {
+  batchId?: InputMaybe<Scalars['String']['input']>;
+  category?: InputMaybe<Scalars['String']['input']>;
+  dateRange?: InputMaybe<DateRangeInput>;
+  priority?: InputMaybe<Priority>;
+  sourceType?: InputMaybe<Scalars['String']['input']>;
+  status?: InputMaybe<NotificationStatus>;
+  type?: InputMaybe<NotificationType>;
+  unreadOnly?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+export enum NotificationOrderBy {
+  CreatedAtAsc = 'CREATED_AT_ASC',
+  CreatedAtDesc = 'CREATED_AT_DESC',
+  PriorityAsc = 'PRIORITY_ASC',
+  PriorityDesc = 'PRIORITY_DESC',
+  SentAtAsc = 'SENT_AT_ASC',
+  SentAtDesc = 'SENT_AT_DESC',
+  StatusAsc = 'STATUS_ASC',
+  StatusDesc = 'STATUS_DESC',
+  TypeAsc = 'TYPE_ASC',
+  TypeDesc = 'TYPE_DESC',
+}
+
+export type NotificationPreferences = {
+  __typename?: 'NotificationPreferences';
+  categories: Array<Scalars['String']['output']>;
+  email: Scalars['Boolean']['output'];
+  inApp: Scalars['Boolean']['output'];
+  push: Scalars['Boolean']['output'];
+  quietHours?: Maybe<QuietHours>;
+  sms: Scalars['Boolean']['output'];
+  types: Array<NotificationType>;
+  userId: Scalars['String']['output'];
+};
+
+export type NotificationPreferencesInput = {
+  categories?: InputMaybe<Array<Scalars['String']['input']>>;
+  email?: InputMaybe<Scalars['Boolean']['input']>;
+  inApp?: InputMaybe<Scalars['Boolean']['input']>;
+  push?: InputMaybe<Scalars['Boolean']['input']>;
+  quietHours?: InputMaybe<QuietHoursInput>;
+  sms?: InputMaybe<Scalars['Boolean']['input']>;
+  types?: InputMaybe<Array<NotificationType>>;
+};
+
+export type NotificationPriorityCount = {
+  __typename?: 'NotificationPriorityCount';
+  count: Scalars['Int']['output'];
+  priority: Priority;
+  unreadCount: Scalars['Int']['output'];
+};
+
+export type NotificationStats = {
+  __typename?: 'NotificationStats';
+  byCategory: Array<NotificationCategoryCount>;
+  byPriority: Array<NotificationPriorityCount>;
+  byType: Array<NotificationTypeCount>;
+  clicked: Scalars['Int']['output'];
+  dismissed: Scalars['Int']['output'];
+  expired: Scalars['Int']['output'];
+  read: Scalars['Int']['output'];
+  total: Scalars['Int']['output'];
+  unread: Scalars['Int']['output'];
 };
 
 export enum NotificationStatus {
@@ -2564,13 +2730,32 @@ export enum NotificationStatus {
   Sent = 'SENT',
 }
 
+export type NotificationSubscriptionPayload = {
+  __typename?: 'NotificationSubscriptionPayload';
+  mutation: MutationType;
+  node: Notification;
+  previousValues?: Maybe<Notification>;
+  updatedFields?: Maybe<Array<Scalars['String']['output']>>;
+};
+
 export enum NotificationType {
+  CollaborationInvite = 'COLLABORATION_INVITE',
   ExpiryReminder = 'EXPIRY_REMINDER',
+  HomeJoined = 'HOME_JOINED',
   ItemDeleted = 'ITEM_DELETED',
   ItemUpdated = 'ITEM_UPDATED',
+  ListUpdated = 'LIST_UPDATED',
   LowStock = 'LOW_STOCK',
+  MembershipInvite = 'MEMBERSHIP_INVITE',
   NewItemAdded = 'NEW_ITEM_ADDED',
 }
+
+export type NotificationTypeCount = {
+  __typename?: 'NotificationTypeCount';
+  count: Scalars['Int']['output'];
+  type: NotificationType;
+  unreadCount: Scalars['Int']['output'];
+};
 
 export enum NutritionCategory {
   Macronutrient = 'MACRONUTRIENT',
@@ -2611,6 +2796,14 @@ export type OperatingSystemStat = {
   __typename?: 'OperatingSystemStat';
   count: Scalars['Int']['output'];
   osName: Scalars['String']['output'];
+};
+
+export type PageInfo = {
+  __typename?: 'PageInfo';
+  endCursor?: Maybe<Scalars['String']['output']>;
+  hasNextPage: Scalars['Boolean']['output'];
+  hasPreviousPage: Scalars['Boolean']['output'];
+  startCursor?: Maybe<Scalars['String']['output']>;
 };
 
 export type PaginationInput = {
@@ -2727,10 +2920,13 @@ export type PantryItem = {
 
 export type PantryItemChangedPayload = {
   __typename?: 'PantryItemChangedPayload';
-  action: Scalars['String']['output'];
   item: PantryItem;
-  itemId: Scalars['String']['output'];
-  pantryId: Scalars['ID']['output'];
+  mutation: MutationType;
+  pantryId: Scalars['String']['output'];
+  previousValue?: Maybe<PantryItem>;
+  timestamp: Scalars['DateTime']['output'];
+  updatedFields: Array<Scalars['String']['output']>;
+  userId: Scalars['String']['output'];
 };
 
 export type PantryItemUsage = {
@@ -2802,6 +2998,13 @@ export enum PriceSource {
   ReceiptScan = 'RECEIPT_SCAN',
   StoreApi = 'STORE_API',
   WebScraping = 'WEB_SCRAPING',
+}
+
+export enum Priority {
+  High = 'HIGH',
+  Low = 'LOW',
+  Normal = 'NORMAL',
+  Urgent = 'URGENT',
 }
 
 export enum ProfileVisibility {
@@ -2902,6 +3105,7 @@ export type Query = {
   devicesByPlatform: Array<Device>;
   expiringItems: Array<PantryItem>;
   failedLoginAttempts: Array<LoginHistory>;
+  hasUrgentNotifications: Scalars['Boolean']['output'];
   home?: Maybe<Home>;
   homeByJoinCode?: Maybe<Home>;
   homeInvites: Array<HomeInvite>;
@@ -2927,9 +3131,14 @@ export type Query = {
   myMembershipInHome?: Maybe<Membership>;
   myMemberships: Array<Membership>;
   myModeration?: Maybe<UserModeration>;
+  myNotifications: NotificationConnection;
   myPurchases: Array<Purchase>;
   nearbyStores: Array<Store>;
-  notificationsByUser: Array<Notification>;
+  notification?: Maybe<Notification>;
+  notificationPreferences: NotificationPreferences;
+  notificationStats: NotificationStats;
+  notificationsByCategory: NotificationConnection;
+  notificationsByType: NotificationConnection;
   onboardingItems: Array<Item>;
   pantries: Array<Pantry>;
   pantry?: Maybe<Pantry>;
@@ -2949,6 +3158,7 @@ export type Query = {
   purchasesByShoppingListItem: Array<Purchase>;
   purchasesByStore: Array<Purchase>;
   recentItems: Array<Item>;
+  recentNotifications: Array<Notification>;
   recommendedItems: Array<ItemSuggestion>;
   recommendedStores: Array<Store>;
   relatedItems: RelatedItemsResponse;
@@ -2981,11 +3191,13 @@ export type Query = {
   unit?: Maybe<Unit>;
   unitBySymbol?: Maybe<Unit>;
   units: Array<Unit>;
+  unreadNotificationCount: Scalars['Int']['output'];
   user?: Maybe<User>;
   userDevices: Array<Device>;
   userModeration?: Maybe<UserModeration>;
   userProfile?: Maybe<UserProfile>;
   userPurchases: Array<Purchase>;
+  userSettings?: Maybe<UserSettings>;
   users: Array<User>;
   validateBarcode: BarcodeValidation;
   verifiedDevices: Array<Device>;
@@ -3158,14 +3370,39 @@ export type QueryMyMembershipInHomeArgs = {
   homeId: Scalars['ID']['input'];
 };
 
+export type QueryMyNotificationsArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  filter?: InputMaybe<NotificationFilterInput>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
+  orderBy?: InputMaybe<NotificationOrderBy>;
+};
+
 export type QueryNearbyStoresArgs = {
   lat: Scalars['Float']['input'];
   lng: Scalars['Float']['input'];
   radius?: InputMaybe<Scalars['Float']['input']>;
 };
 
-export type QueryNotificationsByUserArgs = {
-  userId: Scalars['ID']['input'];
+export type QueryNotificationArgs = {
+  id: Scalars['ID']['input'];
+};
+
+export type QueryNotificationStatsArgs = {
+  filter?: InputMaybe<NotificationFilterInput>;
+};
+
+export type QueryNotificationsByCategoryArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  category: Scalars['String']['input'];
+  first?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type QueryNotificationsByTypeArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  type: NotificationType;
 };
 
 export type QueryPantriesArgs = {
@@ -3247,6 +3484,10 @@ export type QueryPurchasesByStoreArgs = {
 export type QueryRecentItemsArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
   userId?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type QueryRecentNotificationsArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type QueryRecommendedItemsArgs = {
@@ -3381,6 +3622,10 @@ export type QueryUserPurchasesArgs = {
   userId: Scalars['ID']['input'];
 };
 
+export type QueryUserSettingsArgs = {
+  userId?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type QueryUsersArgs = {
   search?: InputMaybe<Scalars['String']['input']>;
   skip?: InputMaybe<Scalars['Int']['input']>;
@@ -3393,6 +3638,21 @@ export type QueryValidateBarcodeArgs = {
 
 export type QueryVerifiedDevicesArgs = {
   userId: Scalars['ID']['input'];
+};
+
+export type QuietHours = {
+  __typename?: 'QuietHours';
+  enabled: Scalars['Boolean']['output'];
+  endTime: Scalars['String']['output'];
+  startTime: Scalars['String']['output'];
+  timezone: Scalars['String']['output'];
+};
+
+export type QuietHoursInput = {
+  enabled: Scalars['Boolean']['input'];
+  endTime: Scalars['String']['input'];
+  startTime: Scalars['String']['input'];
+  timezone: Scalars['String']['input'];
 };
 
 export type RapidAttempt = {
@@ -3872,10 +4132,10 @@ export type Subscription = {
   myMembershipUpdated: MembershipUpdatePayload;
   myPantriesUpdated: Array<Pantry>;
   myShoppingListsUpdated?: Maybe<ShoppingListUpdatedPayload>;
-  notificationCreated: Notification;
-  notificationDeleted: Notification;
-  notificationRead: Notification;
-  notificationUpdated: Notification;
+  notificationCreated: NotificationSubscriptionPayload;
+  notificationDeleted: NotificationSubscriptionPayload;
+  notificationRead: NotificationSubscriptionPayload;
+  notificationUpdated: NotificationSubscriptionPayload;
   pantryActivityAdded: PantryActivity;
   pantryExpiringItemsAlert: Array<PantryItem>;
   pantryItemsChanged: PantryItemChangedPayload;
@@ -3967,22 +4227,6 @@ export type SubscriptionMyPantriesUpdatedArgs = {
   homeId: Scalars['ID']['input'];
 };
 
-export type SubscriptionNotificationCreatedArgs = {
-  userId: Scalars['ID']['input'];
-};
-
-export type SubscriptionNotificationDeletedArgs = {
-  userId: Scalars['ID']['input'];
-};
-
-export type SubscriptionNotificationReadArgs = {
-  userId: Scalars['ID']['input'];
-};
-
-export type SubscriptionNotificationUpdatedArgs = {
-  userId: Scalars['ID']['input'];
-};
-
 export type SubscriptionPantryActivityAddedArgs = {
   pantryId: Scalars['ID']['input'];
 };
@@ -3992,7 +4236,6 @@ export type SubscriptionPantryExpiringItemsAlertArgs = {
 };
 
 export type SubscriptionPantryItemsChangedArgs = {
-  itemId: Scalars['String']['input'];
   pantryId: Scalars['ID']['input'];
 };
 
@@ -4104,6 +4347,10 @@ export type SuspiciousActivity = {
   riskyLogins: Array<LoginHistory>;
   suspiciousActivity: Scalars['Boolean']['output'];
   unusualTimeLogins?: Maybe<Array<LoginHistory>>;
+};
+
+export type Timestamped = {
+  createdAt: Scalars['DateTime']['output'];
 };
 
 export enum TrustLevel {
@@ -4351,6 +4598,20 @@ export type UpdateMembershipInput = {
   canViewPantry?: InputMaybe<Scalars['Boolean']['input']>;
   displayName?: InputMaybe<Scalars['String']['input']>;
   role?: InputMaybe<MembershipRole>;
+};
+
+export type UpdateNotificationInput = {
+  actionUrl?: InputMaybe<Scalars['String']['input']>;
+  category?: InputMaybe<Scalars['String']['input']>;
+  expiresAt?: InputMaybe<Scalars['DateTime']['input']>;
+  message?: InputMaybe<Scalars['String']['input']>;
+  metadata?: InputMaybe<Scalars['JSON']['input']>;
+  payload?: InputMaybe<Scalars['JSON']['input']>;
+  priority?: InputMaybe<Priority>;
+  readAt?: InputMaybe<Scalars['DateTime']['input']>;
+  status?: InputMaybe<NotificationStatus>;
+  title?: InputMaybe<Scalars['String']['input']>;
+  type?: InputMaybe<NotificationType>;
 };
 
 export type UpdatePantryInput = {
@@ -5212,6 +5473,34 @@ export type CreateItemMutation = {
   };
 };
 
+export type MarkNotificationAsReadMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type MarkNotificationAsReadMutation = {
+  __typename?: 'Mutation';
+  markNotificationAsRead: {
+    __typename?: 'Notification';
+    id: string;
+    userId: string;
+    type: NotificationType;
+    payload: any;
+    status: NotificationStatus;
+    sentAt: string;
+    readAt?: string | null | undefined;
+    createdAt: string;
+  };
+};
+
+export type DeleteNotificationMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type DeleteNotificationMutation = {
+  __typename?: 'Mutation';
+  deleteNotification: boolean;
+};
+
 export type CreatePantryMutationVariables = Exact<{
   input: CreatePantryInput;
 }>;
@@ -5645,6 +5934,43 @@ export type HomesQuery = {
   }>;
 };
 
+export type HomeInvitesQueryVariables = Exact<{
+  homeId: Scalars['ID']['input'];
+}>;
+
+export type HomeInvitesQuery = {
+  __typename?: 'Query';
+  homeInvites: Array<{
+    __typename?: 'HomeInvite';
+    id: string;
+    email: string;
+    token: string;
+    homeId: string;
+    invitedUserId?: string | null | undefined;
+    recipientName?: string | null | undefined;
+    role: MembershipRole;
+    customPermissions?: string | null | undefined;
+    status: InviteStatus;
+    expiresAt: string;
+    sentAt: string;
+    lastReminderAt?: string | null | undefined;
+    reminderCount: number;
+    acceptedAt?: string | null | undefined;
+    declinedAt?: string | null | undefined;
+    revokedAt?: string | null | undefined;
+    personalMessage?: string | null | undefined;
+    createdAt: string;
+    home: {__typename?: 'Home'; name: string};
+    inviter: {
+      __typename?: 'User';
+      profile?:
+        | {__typename?: 'UserProfile'; displayName?: string | null | undefined}
+        | null
+        | undefined;
+    };
+  }>;
+};
+
 export type ItemsQueryVariables = Exact<{
   filters?: InputMaybe<ItemFilters>;
   sort?: InputMaybe<ItemSortInput>;
@@ -5722,6 +6048,46 @@ export type SearchItemsByBarcodeQuery = {
     imageUrl?: string | null | undefined;
     barcode?: string | null | undefined;
   }>;
+};
+
+export type MyNotificationsQueryVariables = Exact<{
+  filter?: InputMaybe<NotificationFilterInput>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  after?: InputMaybe<Scalars['String']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  orderBy?: InputMaybe<NotificationOrderBy>;
+}>;
+
+export type MyNotificationsQuery = {
+  __typename?: 'Query';
+  myNotifications: {
+    __typename?: 'NotificationConnection';
+    totalCount: number;
+    unreadCount: number;
+    edges: Array<{
+      __typename?: 'NotificationEdge';
+      cursor: string;
+      node: {
+        __typename?: 'Notification';
+        id: string;
+        userId: string;
+        type: NotificationType;
+        payload: any;
+        status: NotificationStatus;
+        sentAt: string;
+        readAt?: string | null | undefined;
+        createdAt: string;
+      };
+    }>;
+    pageInfo: {
+      __typename?: 'PageInfo';
+      hasNextPage: boolean;
+      hasPreviousPage: boolean;
+      startCursor?: string | null | undefined;
+      endCursor?: string | null | undefined;
+    };
+  };
 };
 
 export type PantriesQueryVariables = Exact<{
@@ -6123,9 +6489,765 @@ export type MeQuery = {
     | undefined;
 };
 
+export type UserSettingsQueryVariables = Exact<{[key: string]: never}>;
+
+export type UserSettingsQuery = {
+  __typename?: 'Query';
+  userSettings?:
+    | {
+        __typename?: 'UserSettings';
+        id: string;
+        userId: string;
+        emailNotifications: boolean;
+        pushNotifications: boolean;
+        smsNotifications: boolean;
+        weeklyDigest: boolean;
+        expiredItemAlerts: boolean;
+        lowStockAlerts: boolean;
+        shoppingListUpdates: boolean;
+        recipeRecommendations: boolean;
+        theme: AppTheme;
+        compactMode: boolean;
+        showTutorials: boolean;
+        autoSync: boolean;
+        offlineMode: boolean;
+        shareUsageData: boolean;
+        shareWithPartners: boolean;
+        personalizedAds: boolean;
+        enabledFeatures: Array<string>;
+        betaFeatures: Array<string>;
+        createdAt: string;
+        updatedAt: string;
+      }
+    | null
+    | undefined;
+};
+
+export type CollaborationMemberAddedSubscriptionVariables = Exact<{
+  shoppingListId: Scalars['ID']['input'];
+  email: Scalars['String']['input'];
+}>;
+
+export type CollaborationMemberAddedSubscription = {
+  __typename?: 'Subscription';
+  collaborationMemberAdded: {
+    __typename?: 'ShoppingListCollaborator';
+    id: string;
+    shoppingListId: string;
+    collaboratorId?: string | null | undefined;
+    email?: string | null | undefined;
+    role: CollaboratorRole;
+    status: CollaboratorStatus;
+    canEdit: boolean;
+    canAddItems: boolean;
+    canRemoveItems: boolean;
+    canMarkPurchased: boolean;
+    canInviteOthers: boolean;
+    invitedAt: string;
+    shoppingList: {__typename?: 'ShoppingList'; id: string; name: string};
+    collaborator?:
+      | {
+          __typename?: 'User';
+          id: string;
+          email: string;
+          profile?:
+            | {
+                __typename?: 'UserProfile';
+                displayName?: string | null | undefined;
+                avatar?: string | null | undefined;
+              }
+            | null
+            | undefined;
+        }
+      | null
+      | undefined;
+    invitedBy?:
+      | {
+          __typename?: 'User';
+          id: string;
+          email: string;
+          profile?:
+            | {
+                __typename?: 'UserProfile';
+                displayName?: string | null | undefined;
+              }
+            | null
+            | undefined;
+        }
+      | null
+      | undefined;
+  };
+};
+
+export type CollaborationMemberRemovedSubscriptionVariables = Exact<{
+  shoppingListId: Scalars['ID']['input'];
+  email: Scalars['String']['input'];
+}>;
+
+export type CollaborationMemberRemovedSubscription = {
+  __typename?: 'Subscription';
+  collaborationMemberRemoved: {
+    __typename?: 'ShoppingListCollaborator';
+    id: string;
+    email?: string | null | undefined;
+    collaboratorId?: string | null | undefined;
+    shoppingList: {__typename?: 'ShoppingList'; id: string; name: string};
+  };
+};
+
+export type CollaborationInviteSentSubscriptionVariables = Exact<{
+  shoppingListId: Scalars['ID']['input'];
+  email: Scalars['String']['input'];
+}>;
+
+export type CollaborationInviteSentSubscription = {
+  __typename?: 'Subscription';
+  collaborationInviteSent: {
+    __typename?: 'ShoppingListCollaborator';
+    id: string;
+    shoppingListId: string;
+    email?: string | null | undefined;
+    role: CollaboratorRole;
+    status: CollaboratorStatus;
+    inviteToken?: string | null | undefined;
+    invitedAt: string;
+    expiresAt?: string | null | undefined;
+    shoppingList: {__typename?: 'ShoppingList'; id: string; name: string};
+    invitedBy?:
+      | {
+          __typename?: 'User';
+          id: string;
+          email: string;
+          profile?:
+            | {
+                __typename?: 'UserProfile';
+                displayName?: string | null | undefined;
+              }
+            | null
+            | undefined;
+        }
+      | null
+      | undefined;
+  };
+};
+
+export type DeviceActivitySubscriptionVariables = Exact<{
+  userId: Scalars['ID']['input'];
+}>;
+
+export type DeviceActivitySubscription = {
+  __typename?: 'Subscription';
+  deviceActivity: {
+    __typename?: 'Device';
+    id: string;
+    userId: string;
+    deviceId: string;
+    deviceName?: string | null | undefined;
+    deviceType: DeviceType;
+    platform?: MobilePlatform | null | undefined;
+    lastSeenAt: string;
+    lastIpAddress?: string | null | undefined;
+    lastCountry?: string | null | undefined;
+    lastCity?: string | null | undefined;
+    isActive: boolean;
+    isTrusted: boolean;
+    loginCount: number;
+    user?: {__typename?: 'User'; id: string; email: string} | null | undefined;
+  };
+};
+
+export type DeviceRegisteredSubscriptionVariables = Exact<{
+  userId: Scalars['ID']['input'];
+}>;
+
+export type DeviceRegisteredSubscription = {
+  __typename?: 'Subscription';
+  deviceRegistered: {
+    __typename?: 'Device';
+    id: string;
+    userId: string;
+    deviceId: string;
+    deviceName?: string | null | undefined;
+    deviceType: DeviceType;
+    platform?: MobilePlatform | null | undefined;
+    userAgent?: string | null | undefined;
+    browserName?: string | null | undefined;
+    browserVersion?: string | null | undefined;
+    osName?: string | null | undefined;
+    osVersion?: string | null | undefined;
+    isActive: boolean;
+    isTrusted: boolean;
+    isVerified: boolean;
+    createdAt: string;
+  };
+};
+
+export type DeviceStatusChangedSubscriptionVariables = Exact<{
+  userId: Scalars['ID']['input'];
+}>;
+
+export type DeviceStatusChangedSubscription = {
+  __typename?: 'Subscription';
+  deviceStatusChanged: {
+    __typename?: 'Device';
+    id: string;
+    userId: string;
+    deviceId: string;
+    deviceName?: string | null | undefined;
+    isActive: boolean;
+    lastSeenAt: string;
+    updatedAt: string;
+  };
+};
+
+export type DeviceTrustChangedSubscriptionVariables = Exact<{
+  userId: Scalars['ID']['input'];
+}>;
+
+export type DeviceTrustChangedSubscription = {
+  __typename?: 'Subscription';
+  deviceTrustChanged: {
+    __typename?: 'Device';
+    id: string;
+    userId: string;
+    deviceId: string;
+    deviceName?: string | null | undefined;
+    isTrusted: boolean;
+    updatedAt: string;
+  };
+};
+
+export type DeviceVerifiedSubscriptionVariables = Exact<{
+  userId: Scalars['ID']['input'];
+}>;
+
+export type DeviceVerifiedSubscription = {
+  __typename?: 'Subscription';
+  deviceVerified: {
+    __typename?: 'Device';
+    id: string;
+    userId: string;
+    deviceId: string;
+    deviceName?: string | null | undefined;
+    isVerified: boolean;
+    verifiedAt?: string | null | undefined;
+  };
+};
+
+export type MembershipUpdatedSubscriptionVariables = Exact<{
+  homeId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+export type MembershipUpdatedSubscription = {
+  __typename?: 'Subscription';
+  membershipUpdated: {
+    __typename?: 'MembershipUpdatePayload';
+    mutation: MembershipMutationType;
+    updatedFields?: Array<string> | null | undefined;
+    userId: string;
+    node?:
+      | {
+          __typename?: 'Membership';
+          id: string;
+          homeId: string;
+          userId: string;
+          role: MembershipRole;
+          status: MembershipStatus;
+          displayName?: string | null | undefined;
+          canViewPantry: boolean;
+          canEditPantry: boolean;
+          canAddItems: boolean;
+          canRemoveItems: boolean;
+          canInviteOthers: boolean;
+          canManageHome: boolean;
+          lastActiveAt?: string | null | undefined;
+          joinedAt: string;
+          home: {__typename?: 'Home'; id: string; name: string; type: HomeType};
+          user: {
+            __typename?: 'User';
+            id: string;
+            email: string;
+            profile?:
+              | {
+                  __typename?: 'UserProfile';
+                  displayName?: string | null | undefined;
+                  avatar?: string | null | undefined;
+                }
+              | null
+              | undefined;
+          };
+        }
+      | null
+      | undefined;
+    previousValues?:
+      | {
+          __typename?: 'Membership';
+          role: MembershipRole;
+          status: MembershipStatus;
+          canViewPantry: boolean;
+          canEditPantry: boolean;
+          canAddItems: boolean;
+          canRemoveItems: boolean;
+          canInviteOthers: boolean;
+          canManageHome: boolean;
+        }
+      | null
+      | undefined;
+  };
+};
+
+export type MyMembershipUpdatedSubscriptionVariables = Exact<{
+  [key: string]: never;
+}>;
+
+export type MyMembershipUpdatedSubscription = {
+  __typename?: 'Subscription';
+  myMembershipUpdated: {
+    __typename?: 'MembershipUpdatePayload';
+    mutation: MembershipMutationType;
+    updatedFields?: Array<string> | null | undefined;
+    userId: string;
+    node?:
+      | {
+          __typename?: 'Membership';
+          id: string;
+          homeId: string;
+          userId: string;
+          role: MembershipRole;
+          status: MembershipStatus;
+          displayName?: string | null | undefined;
+          canViewPantry: boolean;
+          canEditPantry: boolean;
+          canAddItems: boolean;
+          canRemoveItems: boolean;
+          canInviteOthers: boolean;
+          canManageHome: boolean;
+          home: {
+            __typename?: 'Home';
+            id: string;
+            name: string;
+            type: HomeType;
+            joinCode?: string | null | undefined;
+          };
+        }
+      | null
+      | undefined;
+    previousValues?:
+      | {
+          __typename?: 'Membership';
+          role: MembershipRole;
+          status: MembershipStatus;
+        }
+      | null
+      | undefined;
+  };
+};
+
+export type MemberJoinedSubscriptionVariables = Exact<{
+  homeId: Scalars['ID']['input'];
+}>;
+
+export type MemberJoinedSubscription = {
+  __typename?: 'Subscription';
+  memberJoined: {
+    __typename?: 'MembershipUpdatePayload';
+    mutation: MembershipMutationType;
+    updatedFields?: Array<string> | null | undefined;
+    userId: string;
+    node?:
+      | {
+          __typename?: 'Membership';
+          homeId: string;
+          userId: string;
+          user: {
+            __typename?: 'User';
+            profile?:
+              | {
+                  __typename?: 'UserProfile';
+                  displayName?: string | null | undefined;
+                }
+              | null
+              | undefined;
+          };
+        }
+      | null
+      | undefined;
+    previousValues?:
+      | {
+          __typename?: 'Membership';
+          id: string;
+          homeId: string;
+          userId: string;
+          role: MembershipRole;
+          status: MembershipStatus;
+          displayName?: string | null | undefined;
+          canViewPantry: boolean;
+          canEditPantry: boolean;
+          canAddItems: boolean;
+          canRemoveItems: boolean;
+          canInviteOthers: boolean;
+          canManageHome: boolean;
+          lastActiveAt?: string | null | undefined;
+          joinedAt: string;
+          leftAt?: string | null | undefined;
+          createdAt: string;
+          updatedAt: string;
+        }
+      | null
+      | undefined;
+  };
+};
+
+export type MemberLeftSubscriptionVariables = Exact<{
+  homeId: Scalars['ID']['input'];
+}>;
+
+export type MemberLeftSubscription = {
+  __typename?: 'Subscription';
+  memberLeft: {__typename?: 'MembershipUpdatePayload'; userId: string};
+};
+
+export type MembershipRoleChangedSubscriptionVariables = Exact<{
+  homeId: Scalars['ID']['input'];
+}>;
+
+export type MembershipRoleChangedSubscription = {
+  __typename?: 'Subscription';
+  membershipRoleChanged: {
+    __typename?: 'MembershipRoleChangedPayload';
+    homeId: string;
+    userId: string;
+    previousRole: MembershipRole;
+    newRole: MembershipRole;
+    changedBy: string;
+    membership: {
+      __typename?: 'Membership';
+      id: string;
+      homeId: string;
+      userId: string;
+      role: MembershipRole;
+      user: {
+        __typename?: 'User';
+        id: string;
+        email: string;
+        profile?:
+          | {
+              __typename?: 'UserProfile';
+              displayName?: string | null | undefined;
+            }
+          | null
+          | undefined;
+      };
+    };
+  };
+};
+
+export type NotificationSubscriptionFragment = {
+  __typename?: 'NotificationSubscriptionPayload';
+  mutation: MutationType;
+  updatedFields?: Array<string> | null | undefined;
+  node: {
+    __typename?: 'Notification';
+    id: string;
+    userId: string;
+    type: NotificationType;
+    payload: any;
+    status: NotificationStatus;
+    sentAt: string;
+    readAt?: string | null | undefined;
+    createdAt: string;
+  };
+  previousValues?:
+    | {
+        __typename?: 'Notification';
+        id: string;
+        userId: string;
+        type: NotificationType;
+        payload: any;
+        status: NotificationStatus;
+        sentAt: string;
+        readAt?: string | null | undefined;
+        createdAt: string;
+      }
+    | null
+    | undefined;
+};
+
+export type NotificationCreatedSubscriptionVariables = Exact<{
+  [key: string]: never;
+}>;
+
+export type NotificationCreatedSubscription = {
+  __typename?: 'Subscription';
+  notificationCreated: {
+    __typename?: 'NotificationSubscriptionPayload';
+    mutation: MutationType;
+    updatedFields?: Array<string> | null | undefined;
+    node: {
+      __typename?: 'Notification';
+      id: string;
+      userId: string;
+      type: NotificationType;
+      payload: any;
+      status: NotificationStatus;
+      sentAt: string;
+      readAt?: string | null | undefined;
+      createdAt: string;
+    };
+    previousValues?:
+      | {
+          __typename?: 'Notification';
+          id: string;
+          userId: string;
+          type: NotificationType;
+          payload: any;
+          status: NotificationStatus;
+          sentAt: string;
+          readAt?: string | null | undefined;
+          createdAt: string;
+        }
+      | null
+      | undefined;
+  };
+};
+
+export type NotificationReadSubscriptionVariables = Exact<{
+  [key: string]: never;
+}>;
+
+export type NotificationReadSubscription = {
+  __typename?: 'Subscription';
+  notificationRead: {
+    __typename?: 'NotificationSubscriptionPayload';
+    mutation: MutationType;
+    updatedFields?: Array<string> | null | undefined;
+    node: {
+      __typename?: 'Notification';
+      id: string;
+      userId: string;
+      type: NotificationType;
+      payload: any;
+      status: NotificationStatus;
+      sentAt: string;
+      readAt?: string | null | undefined;
+      createdAt: string;
+    };
+    previousValues?:
+      | {
+          __typename?: 'Notification';
+          id: string;
+          userId: string;
+          type: NotificationType;
+          payload: any;
+          status: NotificationStatus;
+          sentAt: string;
+          readAt?: string | null | undefined;
+          createdAt: string;
+        }
+      | null
+      | undefined;
+  };
+};
+
+export type NotificationUpdatedSubscriptionVariables = Exact<{
+  [key: string]: never;
+}>;
+
+export type NotificationUpdatedSubscription = {
+  __typename?: 'Subscription';
+  notificationUpdated: {
+    __typename?: 'NotificationSubscriptionPayload';
+    mutation: MutationType;
+    updatedFields?: Array<string> | null | undefined;
+    node: {
+      __typename?: 'Notification';
+      id: string;
+      userId: string;
+      type: NotificationType;
+      payload: any;
+      status: NotificationStatus;
+      sentAt: string;
+      readAt?: string | null | undefined;
+      createdAt: string;
+    };
+    previousValues?:
+      | {
+          __typename?: 'Notification';
+          id: string;
+          userId: string;
+          type: NotificationType;
+          payload: any;
+          status: NotificationStatus;
+          sentAt: string;
+          readAt?: string | null | undefined;
+          createdAt: string;
+        }
+      | null
+      | undefined;
+  };
+};
+
+export type NotificationDeletedSubscriptionVariables = Exact<{
+  [key: string]: never;
+}>;
+
+export type NotificationDeletedSubscription = {
+  __typename?: 'Subscription';
+  notificationDeleted: {
+    __typename?: 'NotificationSubscriptionPayload';
+    mutation: MutationType;
+    updatedFields?: Array<string> | null | undefined;
+    node: {
+      __typename?: 'Notification';
+      id: string;
+      userId: string;
+      type: NotificationType;
+      payload: any;
+      status: NotificationStatus;
+      sentAt: string;
+      readAt?: string | null | undefined;
+      createdAt: string;
+    };
+    previousValues?:
+      | {
+          __typename?: 'Notification';
+          id: string;
+          userId: string;
+          type: NotificationType;
+          payload: any;
+          status: NotificationStatus;
+          sentAt: string;
+          readAt?: string | null | undefined;
+          createdAt: string;
+        }
+      | null
+      | undefined;
+  };
+};
+
+export type PantryUpdatedSubscriptionVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type PantryUpdatedSubscription = {
+  __typename?: 'Subscription';
+  pantryUpdated: {
+    __typename?: 'PantryUpdatedPayload';
+    id: string;
+    homeId: string;
+    name: string;
+    description?: string | null | undefined;
+    location?: string | null | undefined;
+    temperature?: string | null | undefined;
+    tags: Array<string>;
+    metadata?: string | null | undefined;
+    version: number;
+    updatedAt: string;
+    home: {__typename?: 'Home'; id: string; name: string};
+  };
+};
+
+export type MyPantriesUpdatedSubscriptionVariables = Exact<{
+  homeId: Scalars['ID']['input'];
+}>;
+
+export type MyPantriesUpdatedSubscription = {
+  __typename?: 'Subscription';
+  myPantriesUpdated: Array<{
+    __typename?: 'Pantry';
+    id: string;
+    name: string;
+    description?: string | null | undefined;
+    isDefault: boolean;
+    location?: string | null | undefined;
+    items?:
+      | Array<{__typename?: 'PantryItem'; id: string; currentQuantity: number}>
+      | null
+      | undefined;
+  }>;
+};
+
+export type PantryActivityAddedSubscriptionVariables = Exact<{
+  pantryId: Scalars['ID']['input'];
+}>;
+
+export type PantryActivityAddedSubscription = {
+  __typename?: 'Subscription';
+  pantryActivityAdded: {
+    __typename?: 'PantryActivity';
+    id: string;
+    pantryId: string;
+    userId: string;
+    action: PantryActivityType;
+    description: string;
+    itemName?: string | null | undefined;
+    quantity?: number | null | undefined;
+    oldValue?: string | null | undefined;
+    newValue?: string | null | undefined;
+    metadata?: string | null | undefined;
+    createdAt: string;
+    user: {
+      __typename?: 'User';
+      id: string;
+      email: string;
+      profile?:
+        | {__typename?: 'UserProfile'; displayName?: string | null | undefined}
+        | null
+        | undefined;
+    };
+  };
+};
+
+export type PantryLowStockAlertSubscriptionVariables = Exact<{
+  pantryId: Scalars['ID']['input'];
+}>;
+
+export type PantryLowStockAlertSubscription = {
+  __typename?: 'Subscription';
+  pantryLowStockAlert: Array<{
+    __typename?: 'PantryItem';
+    id: string;
+    itemId: string;
+    itemName: string;
+    currentQuantity: number;
+    autoReorderPoint?: number | null | undefined;
+    unitName: string;
+    item: {
+      __typename?: 'Item';
+      id: string;
+      name: string;
+      imageUrl?: string | null | undefined;
+      averagePrice?: number | null | undefined;
+    };
+  }>;
+};
+
+export type PantryExpiringItemsAlertSubscriptionVariables = Exact<{
+  pantryId: Scalars['ID']['input'];
+}>;
+
+export type PantryExpiringItemsAlertSubscription = {
+  __typename?: 'Subscription';
+  pantryExpiringItemsAlert: Array<{
+    __typename?: 'PantryItem';
+    id: string;
+    itemId: string;
+    itemName: string;
+    expiresAt?: string | null | undefined;
+    bestByDate?: string | null | undefined;
+    currentQuantity: number;
+    unitName: string;
+    item: {
+      __typename?: 'Item';
+      id: string;
+      name: string;
+      imageUrl?: string | null | undefined;
+    };
+  }>;
+};
+
 export type PantryItemsChangedSubscriptionVariables = Exact<{
   pantryId: Scalars['ID']['input'];
-  itemId: Scalars['String']['input'];
 }>;
 
 export type PantryItemsChangedSubscription = {
@@ -6133,8 +7255,244 @@ export type PantryItemsChangedSubscription = {
   pantryItemsChanged: {
     __typename?: 'PantryItemChangedPayload';
     pantryId: string;
+    updatedFields: Array<string>;
+    mutation: MutationType;
+    timestamp: string;
+    userId: string;
+    item: {
+      __typename?: 'PantryItem';
+      id: string;
+      itemName: string;
+      unit: {__typename?: 'Unit'; name: string};
+    };
+  };
+};
+
+export type PurchaseCreatedSubscriptionVariables = Exact<{
+  userId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+export type PurchaseCreatedSubscription = {
+  __typename?: 'Subscription';
+  purchaseCreated: {
+    __typename?: 'Purchase';
+    id: string;
+    userId: string;
     itemId: string;
-    item: {__typename?: 'PantryItem'; itemId: string; itemName: string};
+    storeId: string;
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+    purchaseDate: string;
+    itemName: string;
+    storeName: string;
+    unitSymbol: string;
+    currencySymbol: string;
+    user: {__typename?: 'User'; id: string; email: string};
+    item: {
+      __typename?: 'Item';
+      id: string;
+      name: string;
+      imageUrl?: string | null | undefined;
+    };
+    store: {
+      __typename?: 'Store';
+      id: string;
+      name: string;
+      address?: string | null | undefined;
+    };
+  };
+};
+
+export type PurchaseUpdatedSubscriptionVariables = Exact<{
+  userId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+export type PurchaseUpdatedSubscription = {
+  __typename?: 'Subscription';
+  purchaseUpdated: {
+    __typename?: 'Purchase';
+    id: string;
+    userId: string;
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+    purchaseDate: string;
+    updatedAt: string;
+  };
+};
+
+export type PurchaseDeletedSubscriptionVariables = Exact<{
+  userId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+export type PurchaseDeletedSubscription = {
+  __typename?: 'Subscription';
+  purchaseDeleted: {
+    __typename?: 'Purchase';
+    id: string;
+    userId: string;
+    deletedAt?: string | null | undefined;
+  };
+};
+
+export type LoginAttemptsSubscriptionVariables = Exact<{
+  userId: Scalars['ID']['input'];
+}>;
+
+export type LoginAttemptsSubscription = {
+  __typename?: 'Subscription';
+  loginAttempts: {
+    __typename?: 'LoginHistory';
+    id: string;
+    userId: string;
+    success: boolean;
+    method: LoginMethod;
+    provider?: string | null | undefined;
+    ipAddress?: string | null | undefined;
+    ipCountry?: string | null | undefined;
+    ipRegion?: string | null | undefined;
+    ipCity?: string | null | undefined;
+    isVpn?: boolean | null | undefined;
+    isTor?: boolean | null | undefined;
+    isProxy?: boolean | null | undefined;
+    userAgent?: string | null | undefined;
+    browserName?: string | null | undefined;
+    browserVersion?: string | null | undefined;
+    osName?: string | null | undefined;
+    osVersion?: string | null | undefined;
+    deviceType?: DeviceType | null | undefined;
+    isMobileApp: boolean;
+    riskScore?: number | null | undefined;
+    isRisky: boolean;
+    riskFactors: Array<RiskFactor>;
+    failureReason?: LoginFailureReason | null | undefined;
+    failureDetails?: string | null | undefined;
+    isNewLocation: boolean;
+    isNewDevice: boolean;
+    isNewBrowser: boolean;
+    loggedInAt: string;
+    user: {__typename?: 'User'; id: string; email: string};
+  };
+};
+
+export type SuspiciousActivitySubscriptionVariables = Exact<{
+  userId: Scalars['ID']['input'];
+}>;
+
+export type SuspiciousActivitySubscription = {
+  __typename?: 'Subscription';
+  suspiciousActivity: {
+    __typename?: 'SuspiciousActivity';
+    suspiciousActivity: boolean;
+    rapidAttempts?:
+      | Array<{__typename?: 'RapidAttempt'; hour: string; count: number}>
+      | null
+      | undefined;
+    riskyLogins: Array<{
+      __typename?: 'LoginHistory';
+      id: string;
+      ipAddress?: string | null | undefined;
+      ipCountry?: string | null | undefined;
+      riskScore?: number | null | undefined;
+      riskFactors: Array<RiskFactor>;
+      loggedInAt: string;
+    }>;
+    newLocationLogins?:
+      | Array<{
+          __typename?: 'LoginHistory';
+          id: string;
+          ipAddress?: string | null | undefined;
+          ipCountry?: string | null | undefined;
+          ipCity?: string | null | undefined;
+          loggedInAt: string;
+        }>
+      | null
+      | undefined;
+    newDeviceLogins?:
+      | Array<{
+          __typename?: 'LoginHistory';
+          id: string;
+          deviceType?: DeviceType | null | undefined;
+          browserName?: string | null | undefined;
+          osName?: string | null | undefined;
+          loggedInAt: string;
+        }>
+      | null
+      | undefined;
+    failedFromSameIP?:
+      | Array<{
+          __typename?: 'FailedIPStat';
+          ipAddress?: string | null | undefined;
+          count: number;
+        }>
+      | null
+      | undefined;
+    unusualTimeLogins?:
+      | Array<{
+          __typename?: 'LoginHistory';
+          id: string;
+          loggedInAt: string;
+          timezoneDiff?: number | null | undefined;
+        }>
+      | null
+      | undefined;
+    multipleAccountsFromIP?:
+      | Array<{
+          __typename?: 'FailedIPStat';
+          ipAddress?: string | null | undefined;
+          count: number;
+        }>
+      | null
+      | undefined;
+  };
+};
+
+export type FailedLoginAttemptsSubscriptionVariables = Exact<{
+  userId: Scalars['ID']['input'];
+}>;
+
+export type FailedLoginAttemptsSubscription = {
+  __typename?: 'Subscription';
+  failedLoginAttempts: {
+    __typename?: 'LoginHistory';
+    id: string;
+    userId: string;
+    method: LoginMethod;
+    ipAddress?: string | null | undefined;
+    ipCountry?: string | null | undefined;
+    userAgent?: string | null | undefined;
+    failureReason?: LoginFailureReason | null | undefined;
+    failureDetails?: string | null | undefined;
+    loggedInAt: string;
+  };
+};
+
+export type RiskyLoginAlertsSubscriptionVariables = Exact<{
+  userId: Scalars['ID']['input'];
+}>;
+
+export type RiskyLoginAlertsSubscription = {
+  __typename?: 'Subscription';
+  riskyLoginAlerts: {
+    __typename?: 'LoginHistory';
+    id: string;
+    userId: string;
+    ipAddress?: string | null | undefined;
+    ipCountry?: string | null | undefined;
+    riskScore?: number | null | undefined;
+    riskFactors: Array<RiskFactor>;
+    isVpn?: boolean | null | undefined;
+    isTor?: boolean | null | undefined;
+    isProxy?: boolean | null | undefined;
+    requiresMfa: boolean;
+    mfaCompleted: boolean;
+    loggedInAt: string;
+    flaggedReason?: string | null | undefined;
+    flaggedBy?:
+      | {__typename?: 'User'; id: string; email: string}
+      | null
+      | undefined;
   };
 };
 
@@ -6148,6 +7506,9 @@ export type ShoppingListUpdatedSubscription = {
     | {
         __typename?: 'ShoppingListUpdatedPayload';
         mutation: MutationType;
+        updatedFields?: Array<string> | null | undefined;
+        userId: string;
+        timestamp: string;
         node?:
           | {
               __typename?: 'ShoppingList';
@@ -6156,13 +7517,217 @@ export type ShoppingListUpdatedSubscription = {
               totalItems: number;
               completedItems: number;
               estimatedTotal: number;
+              status: ListStatus;
+              isCompleted: boolean;
+              completedAt?: string | null | undefined;
+              budgetAmount?: number | null | undefined;
+              totalCost: number;
               items: Array<{
                 __typename?: 'ShoppingListItem';
                 id: string;
                 itemName?: string | null | undefined;
                 quantity?: number | null | undefined;
                 isPurchased: boolean;
+                estimatedPrice?: number | null | undefined;
               }>;
+            }
+          | null
+          | undefined;
+        previousValues?:
+          | {
+              __typename?: 'ShoppingListPreviousValues';
+              name?: string | null | undefined;
+              status?: ListStatus | null | undefined;
+              isCompleted?: boolean | null | undefined;
+              budgetAmount?: number | null | undefined;
+              totalCost?: number | null | undefined;
+              estimatedTotal?: number | null | undefined;
+            }
+          | null
+          | undefined;
+      }
+    | null
+    | undefined;
+};
+
+export type MyShoppingListsUpdatedSubscriptionVariables = Exact<{
+  [key: string]: never;
+}>;
+
+export type MyShoppingListsUpdatedSubscription = {
+  __typename?: 'Subscription';
+  myShoppingListsUpdated?:
+    | {
+        __typename?: 'ShoppingListUpdatedPayload';
+        mutation: MutationType;
+        updatedFields?: Array<string> | null | undefined;
+        userId: string;
+        timestamp: string;
+        node?:
+          | {
+              __typename?: 'ShoppingList';
+              id: string;
+              name: string;
+              totalItems: number;
+              completedItems: number;
+              estimatedTotal: number;
+              status: ListStatus;
+              isCompleted: boolean;
+            }
+          | null
+          | undefined;
+        previousValues?:
+          | {
+              __typename?: 'ShoppingListPreviousValues';
+              name?: string | null | undefined;
+              status?: ListStatus | null | undefined;
+              isCompleted?: boolean | null | undefined;
+            }
+          | null
+          | undefined;
+      }
+    | null
+    | undefined;
+};
+
+export type ShoppingListItemsChangedSubscriptionVariables = Exact<{
+  listId: Scalars['ID']['input'];
+}>;
+
+export type ShoppingListItemsChangedSubscription = {
+  __typename?: 'Subscription';
+  shoppingListItemsChanged?:
+    | {
+        __typename?: 'ShoppingListItemChangedPayload';
+        mutation: MutationType;
+        listId: string;
+        updatedFields?: Array<string> | null | undefined;
+        userId: string;
+        timestamp: string;
+        item?:
+          | {
+              __typename?: 'ShoppingListItem';
+              id: string;
+              itemName?: string | null | undefined;
+              quantity?: number | null | undefined;
+              estimatedPrice?: number | null | undefined;
+              isPurchased: boolean;
+              purchasedQuantity?: number | null | undefined;
+              purchasedPrice?: number | null | undefined;
+              notes?: string | null | undefined;
+              priority: number;
+              category?: string | null | undefined;
+              addedBy?:
+                | {
+                    __typename?: 'User';
+                    id: string;
+                    email: string;
+                    profile?:
+                      | {
+                          __typename?: 'UserProfile';
+                          displayName?: string | null | undefined;
+                        }
+                      | null
+                      | undefined;
+                  }
+                | null
+                | undefined;
+            }
+          | null
+          | undefined;
+        previousValues?:
+          | {
+              __typename?: 'ShoppingListItemPreviousValues';
+              name?: string | null | undefined;
+              quantity?: number | null | undefined;
+              isCompleted?: boolean | null | undefined;
+              price?: number | null | undefined;
+              notes?: string | null | undefined;
+            }
+          | null
+          | undefined;
+      }
+    | null
+    | undefined;
+};
+
+export type ShoppingListCollaboratorsChangedSubscriptionVariables = Exact<{
+  listId: Scalars['ID']['input'];
+}>;
+
+export type ShoppingListCollaboratorsChangedSubscription = {
+  __typename?: 'Subscription';
+  shoppingListCollaboratorsChanged?:
+    | {
+        __typename?: 'ShoppingListCollaboratorChangedPayload';
+        mutation: MutationType;
+        listId: string;
+        userId: string;
+        timestamp: string;
+        collaborator?:
+          | {
+              __typename?: 'ShoppingListCollaborator';
+              id: string;
+              collaboratorId?: string | null | undefined;
+              email?: string | null | undefined;
+              role: CollaboratorRole;
+              status: CollaboratorStatus;
+              canEdit: boolean;
+              canAddItems: boolean;
+              canRemoveItems: boolean;
+              canMarkPurchased: boolean;
+              invitedAt: string;
+              collaborator?:
+                | {
+                    __typename?: 'User';
+                    id: string;
+                    email: string;
+                    profile?:
+                      | {
+                          __typename?: 'UserProfile';
+                          displayName?: string | null | undefined;
+                          avatar?: string | null | undefined;
+                        }
+                      | null
+                      | undefined;
+                  }
+                | null
+                | undefined;
+            }
+          | null
+          | undefined;
+      }
+    | null
+    | undefined;
+};
+
+export type ShoppingListStatusChangedSubscriptionVariables = Exact<{
+  listId: Scalars['ID']['input'];
+}>;
+
+export type ShoppingListStatusChangedSubscription = {
+  __typename?: 'Subscription';
+  shoppingListStatusChanged?:
+    | {
+        __typename?: 'ShoppingListStatusChangedPayload';
+        mutation: MutationType;
+        listId: string;
+        newStatus: ListStatus;
+        previousStatus?: ListStatus | null | undefined;
+        userId: string;
+        timestamp: string;
+        completedBy?:
+          | {
+              __typename?: 'User';
+              id: string;
+              email: string;
+              profile?:
+                | {
+                    __typename?: 'UserProfile';
+                    displayName?: string | null | undefined;
+                  }
+                | null
+                | undefined;
             }
           | null
           | undefined;
@@ -6182,9 +7747,39 @@ export type ShoppingListItemAddedSubscription = {
     id: string;
     itemName?: string | null | undefined;
     quantity?: number | null | undefined;
+    estimatedPrice?: number | null | undefined;
     isPurchased: boolean;
+    priority: number;
+    category?: string | null | undefined;
+    notes?: string | null | undefined;
+    createdAt: string;
     addedBy?:
-      | {__typename?: 'User'; id: string; email: string}
+      | {
+          __typename?: 'User';
+          id: string;
+          email: string;
+          profile?:
+            | {
+                __typename?: 'UserProfile';
+                displayName?: string | null | undefined;
+              }
+            | null
+            | undefined;
+        }
+      | null
+      | undefined;
+    item?:
+      | {
+          __typename?: 'Item';
+          id: string;
+          name: string;
+          imageUrl?: string | null | undefined;
+          averagePrice?: number | null | undefined;
+        }
+      | null
+      | undefined;
+    unit?:
+      | {__typename?: 'Unit'; id: string; symbol: string; name: string}
       | null
       | undefined;
   };
@@ -6201,9 +7796,29 @@ export type ShoppingListItemUpdatedSubscription = {
     id: string;
     itemName?: string | null | undefined;
     quantity?: number | null | undefined;
+    estimatedPrice?: number | null | undefined;
     isPurchased: boolean;
+    purchasedQuantity?: number | null | undefined;
+    purchasedPrice?: number | null | undefined;
     notes?: string | null | undefined;
     priority: number;
+    category?: string | null | undefined;
+    updatedAt: string;
+    lastEditedBy?:
+      | {
+          __typename?: 'User';
+          id: string;
+          email: string;
+          profile?:
+            | {
+                __typename?: 'UserProfile';
+                displayName?: string | null | undefined;
+              }
+            | null
+            | undefined;
+        }
+      | null
+      | undefined;
   };
 };
 
@@ -6213,7 +7828,223 @@ export type ShoppingListItemRemovedSubscriptionVariables = Exact<{
 
 export type ShoppingListItemRemovedSubscription = {
   __typename?: 'Subscription';
-  shoppingListItemRemoved: {__typename?: 'ShoppingListItem'; id: string};
+  shoppingListItemRemoved: {
+    __typename?: 'ShoppingListItem';
+    id: string;
+    itemName?: string | null | undefined;
+  };
+};
+
+export type StoreUpdatedSubscriptionVariables = Exact<{
+  storeId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+export type StoreUpdatedSubscription = {
+  __typename?: 'Subscription';
+  storeUpdated: {
+    __typename?: 'Store';
+    id: string;
+    name: string;
+    address?: string | null | undefined;
+    priceAccuracy?: number | null | undefined;
+    lastPriceUpdate?: string | null | undefined;
+    qualityRating?: number | null | undefined;
+    chain?: string | null | undefined;
+    city?: string | null | undefined;
+    state?: string | null | undefined;
+    zipCode?: string | null | undefined;
+    latitude?: number | null | undefined;
+    longitude?: number | null | undefined;
+    phone?: string | null | undefined;
+    website?: string | null | undefined;
+    isActive: boolean;
+    updatedAt: string;
+  };
+};
+
+export type StoreRatingChangedSubscriptionVariables = Exact<{
+  storeId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+export type StoreRatingChangedSubscription = {
+  __typename?: 'Subscription';
+  storeRatingChanged: {
+    __typename?: 'Store';
+    id: string;
+    name: string;
+    qualityRating?: number | null | undefined;
+    priceAccuracy?: number | null | undefined;
+    updatedAt: string;
+  };
+};
+
+export type UserUpdatedSubscriptionVariables = Exact<{
+  userId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+export type UserUpdatedSubscription = {
+  __typename?: 'Subscription';
+  userUpdated: {
+    __typename?: 'UserUpdatedPayload';
+    mutation: string;
+    updatedFields?: Array<string> | null | undefined;
+    userId: string;
+    timestamp: string;
+    node: {
+      __typename?: 'User';
+      id: string;
+      email: string;
+      emailVerified: boolean;
+      role: UserRole;
+      onBoarded: boolean;
+      timezone?: string | null | undefined;
+      preferredCurrency?: string | null | undefined;
+      language?: string | null | undefined;
+      lastActiveAt?: string | null | undefined;
+      profile?:
+        | {
+            __typename?: 'UserProfile';
+            id: string;
+            firstName?: string | null | undefined;
+            lastName?: string | null | undefined;
+            displayName?: string | null | undefined;
+            avatar?: string | null | undefined;
+            bio?: string | null | undefined;
+          }
+        | null
+        | undefined;
+    };
+    previousValues?:
+      | {
+          __typename?: 'User';
+          email: string;
+          role: UserRole;
+          timezone?: string | null | undefined;
+          preferredCurrency?: string | null | undefined;
+          language?: string | null | undefined;
+        }
+      | null
+      | undefined;
+  };
+};
+
+export type UserStatusChangedSubscriptionVariables = Exact<{
+  userId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+export type UserStatusChangedSubscription = {
+  __typename?: 'Subscription';
+  userStatusChanged: {
+    __typename?: 'UserStatusChangedPayload';
+    userId: string;
+    newStatus: UserStatusType;
+    previousStatus?: UserStatusType | null | undefined;
+    isOnline: boolean;
+    lastActiveAt?: string | null | undefined;
+    timestamp: string;
+  };
+};
+
+export type UserActivitySubscriptionVariables = Exact<{
+  userId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+export type UserActivitySubscription = {
+  __typename?: 'Subscription';
+  userActivity: {
+    __typename?: 'UserActivityPayload';
+    userId: string;
+    activityType: UserActivityType;
+    description: string;
+    metadata?: any | null | undefined;
+    timestamp: string;
+  };
+};
+
+export type UserModerationChangedSubscriptionVariables = Exact<{
+  userId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+export type UserModerationChangedSubscription = {
+  __typename?: 'Subscription';
+  userModerationChanged: {
+    __typename?: 'UserModerationChangedPayload';
+    userId: string;
+    moderationType: string;
+    moderationStatus: string;
+    reason?: string | null | undefined;
+    moderatedBy: string;
+    timestamp: string;
+  };
+};
+
+export type UserProfileChangedSubscriptionVariables = Exact<{
+  userId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+export type UserProfileChangedSubscription = {
+  __typename?: 'Subscription';
+  userProfileChanged: {
+    __typename?: 'UserProfileChangedPayload';
+    userId: string;
+    mutation: string;
+    updatedFields?: Array<string> | null | undefined;
+    timestamp: string;
+    profile: {
+      __typename?: 'UserProfile';
+      id: string;
+      firstName?: string | null | undefined;
+      lastName?: string | null | undefined;
+      displayName?: string | null | undefined;
+      bio?: string | null | undefined;
+      avatar?: string | null | undefined;
+      coverImage?: string | null | undefined;
+      phone?: string | null | undefined;
+      website?: string | null | undefined;
+      profileVisibility: ProfileVisibility;
+    };
+    previousValues?:
+      | {
+          __typename?: 'UserProfile';
+          firstName?: string | null | undefined;
+          lastName?: string | null | undefined;
+          displayName?: string | null | undefined;
+          bio?: string | null | undefined;
+          avatar?: string | null | undefined;
+        }
+      | null
+      | undefined;
+  };
+};
+
+export type UserAuthSubscriptionVariables = Exact<{
+  userId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+export type UserAuthSubscription = {
+  __typename?: 'Subscription';
+  userAuth: {
+    __typename?: 'UserAuthPayload';
+    userId: string;
+    authType: string;
+    deviceInfo?: any | null | undefined;
+    timestamp: string;
+  };
+};
+
+export type UserSocialSubscriptionVariables = Exact<{
+  userId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+export type UserSocialSubscription = {
+  __typename?: 'Subscription';
+  userSocial: {
+    __typename?: 'UserSocialPayload';
+    userId: string;
+    targetUserId: string;
+    action: string;
+    timestamp: string;
+  };
 };
 
 export const AuthUserFragmentDoc = gql`
@@ -6299,6 +8130,32 @@ export const CompleteUserFragmentDoc = gql`
       transferredAt
       transferredFrom
     }
+  }
+`;
+export const NotificationSubscriptionFragmentDoc = gql`
+  fragment NotificationSubscription on NotificationSubscriptionPayload {
+    mutation
+    node {
+      id
+      userId
+      type
+      payload
+      status
+      sentAt
+      readAt
+      createdAt
+    }
+    previousValues {
+      id
+      userId
+      type
+      payload
+      status
+      sentAt
+      readAt
+      createdAt
+    }
+    updatedFields
   }
 `;
 export const LoginDocument = gql`
@@ -7031,6 +8888,114 @@ export type CreateItemMutationOptions = ApolloReactCommon.BaseMutationOptions<
   CreateItemMutation,
   CreateItemMutationVariables
 >;
+export const MarkNotificationAsReadDocument = gql`
+  mutation markNotificationAsRead($id: ID!) {
+    markNotificationAsRead(id: $id) {
+      id
+      userId
+      type
+      payload
+      status
+      sentAt
+      readAt
+      createdAt
+    }
+  }
+`;
+export type MarkNotificationAsReadMutationFn =
+  ApolloReactCommon.MutationFunction<
+    MarkNotificationAsReadMutation,
+    MarkNotificationAsReadMutationVariables
+  >;
+
+/**
+ * __useMarkNotificationAsReadMutation__
+ *
+ * To run a mutation, you first call `useMarkNotificationAsReadMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useMarkNotificationAsReadMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [markNotificationAsReadMutation, { data, loading, error }] = useMarkNotificationAsReadMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useMarkNotificationAsReadMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    MarkNotificationAsReadMutation,
+    MarkNotificationAsReadMutationVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useMutation<
+    MarkNotificationAsReadMutation,
+    MarkNotificationAsReadMutationVariables
+  >(MarkNotificationAsReadDocument, options);
+}
+export type MarkNotificationAsReadMutationHookResult = ReturnType<
+  typeof useMarkNotificationAsReadMutation
+>;
+export type MarkNotificationAsReadMutationResult =
+  ApolloReactCommon.MutationResult<MarkNotificationAsReadMutation>;
+export type MarkNotificationAsReadMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    MarkNotificationAsReadMutation,
+    MarkNotificationAsReadMutationVariables
+  >;
+export const DeleteNotificationDocument = gql`
+  mutation DeleteNotification($id: ID!) {
+    deleteNotification(id: $id)
+  }
+`;
+export type DeleteNotificationMutationFn = ApolloReactCommon.MutationFunction<
+  DeleteNotificationMutation,
+  DeleteNotificationMutationVariables
+>;
+
+/**
+ * __useDeleteNotificationMutation__
+ *
+ * To run a mutation, you first call `useDeleteNotificationMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteNotificationMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteNotificationMutation, { data, loading, error }] = useDeleteNotificationMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeleteNotificationMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    DeleteNotificationMutation,
+    DeleteNotificationMutationVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useMutation<
+    DeleteNotificationMutation,
+    DeleteNotificationMutationVariables
+  >(DeleteNotificationDocument, options);
+}
+export type DeleteNotificationMutationHookResult = ReturnType<
+  typeof useDeleteNotificationMutation
+>;
+export type DeleteNotificationMutationResult =
+  ApolloReactCommon.MutationResult<DeleteNotificationMutation>;
+export type DeleteNotificationMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    DeleteNotificationMutation,
+    DeleteNotificationMutationVariables
+  >;
 export const CreatePantryDocument = gql`
   mutation CreatePantry($input: CreatePantryInput!) {
     createPantry(input: $input) {
@@ -8276,6 +10241,108 @@ export type HomesQueryResult = ApolloReactCommon.QueryResult<
   HomesQuery,
   HomesQueryVariables
 >;
+export const HomeInvitesDocument = gql`
+  query HomeInvites($homeId: ID!) {
+    homeInvites(homeId: $homeId) {
+      id
+      email
+      token
+      homeId
+      home {
+        name
+      }
+      invitedUserId
+      inviter {
+        profile {
+          displayName
+        }
+      }
+      recipientName
+      role
+      customPermissions
+      status
+      expiresAt
+      sentAt
+      lastReminderAt
+      reminderCount
+      acceptedAt
+      declinedAt
+      revokedAt
+      personalMessage
+      createdAt
+    }
+  }
+`;
+
+/**
+ * __useHomeInvitesQuery__
+ *
+ * To run a query within a React component, call `useHomeInvitesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useHomeInvitesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useHomeInvitesQuery({
+ *   variables: {
+ *      homeId: // value for 'homeId'
+ *   },
+ * });
+ */
+export function useHomeInvitesQuery(
+  baseOptions: ApolloReactHooks.QueryHookOptions<
+    HomeInvitesQuery,
+    HomeInvitesQueryVariables
+  > &
+    ({variables: HomeInvitesQueryVariables; skip?: boolean} | {skip: boolean}),
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useQuery<HomeInvitesQuery, HomeInvitesQueryVariables>(
+    HomeInvitesDocument,
+    options,
+  );
+}
+export function useHomeInvitesLazyQuery(
+  baseOptions?: ApolloReactHooks.LazyQueryHookOptions<
+    HomeInvitesQuery,
+    HomeInvitesQueryVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useLazyQuery<
+    HomeInvitesQuery,
+    HomeInvitesQueryVariables
+  >(HomeInvitesDocument, options);
+}
+export function useHomeInvitesSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        HomeInvitesQuery,
+        HomeInvitesQueryVariables
+      >,
+) {
+  const options =
+    baseOptions === ApolloReactHooks.skipToken
+      ? baseOptions
+      : {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSuspenseQuery<
+    HomeInvitesQuery,
+    HomeInvitesQueryVariables
+  >(HomeInvitesDocument, options);
+}
+export type HomeInvitesQueryHookResult = ReturnType<typeof useHomeInvitesQuery>;
+export type HomeInvitesLazyQueryHookResult = ReturnType<
+  typeof useHomeInvitesLazyQuery
+>;
+export type HomeInvitesSuspenseQueryHookResult = ReturnType<
+  typeof useHomeInvitesSuspenseQuery
+>;
+export type HomeInvitesQueryResult = ApolloReactCommon.QueryResult<
+  HomeInvitesQuery,
+  HomeInvitesQueryVariables
+>;
 export const ItemsDocument = gql`
   query Items(
     $filters: ItemFilters
@@ -8557,6 +10624,123 @@ export type SearchItemsByBarcodeSuspenseQueryHookResult = ReturnType<
 export type SearchItemsByBarcodeQueryResult = ApolloReactCommon.QueryResult<
   SearchItemsByBarcodeQuery,
   SearchItemsByBarcodeQueryVariables
+>;
+export const MyNotificationsDocument = gql`
+  query MyNotifications(
+    $filter: NotificationFilterInput
+    $first: Int
+    $after: String
+    $last: Int
+    $before: String
+    $orderBy: NotificationOrderBy
+  ) {
+    myNotifications(
+      filter: $filter
+      first: $first
+      after: $after
+      last: $last
+      before: $before
+      orderBy: $orderBy
+    ) {
+      edges {
+        node {
+          id
+          userId
+          type
+          payload
+          status
+          sentAt
+          readAt
+          createdAt
+        }
+        cursor
+      }
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        startCursor
+        endCursor
+      }
+      totalCount
+      unreadCount
+    }
+  }
+`;
+
+/**
+ * __useMyNotificationsQuery__
+ *
+ * To run a query within a React component, call `useMyNotificationsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useMyNotificationsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useMyNotificationsQuery({
+ *   variables: {
+ *      filter: // value for 'filter'
+ *      first: // value for 'first'
+ *      after: // value for 'after'
+ *      last: // value for 'last'
+ *      before: // value for 'before'
+ *      orderBy: // value for 'orderBy'
+ *   },
+ * });
+ */
+export function useMyNotificationsQuery(
+  baseOptions?: ApolloReactHooks.QueryHookOptions<
+    MyNotificationsQuery,
+    MyNotificationsQueryVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useQuery<
+    MyNotificationsQuery,
+    MyNotificationsQueryVariables
+  >(MyNotificationsDocument, options);
+}
+export function useMyNotificationsLazyQuery(
+  baseOptions?: ApolloReactHooks.LazyQueryHookOptions<
+    MyNotificationsQuery,
+    MyNotificationsQueryVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useLazyQuery<
+    MyNotificationsQuery,
+    MyNotificationsQueryVariables
+  >(MyNotificationsDocument, options);
+}
+export function useMyNotificationsSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        MyNotificationsQuery,
+        MyNotificationsQueryVariables
+      >,
+) {
+  const options =
+    baseOptions === ApolloReactHooks.skipToken
+      ? baseOptions
+      : {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSuspenseQuery<
+    MyNotificationsQuery,
+    MyNotificationsQueryVariables
+  >(MyNotificationsDocument, options);
+}
+export type MyNotificationsQueryHookResult = ReturnType<
+  typeof useMyNotificationsQuery
+>;
+export type MyNotificationsLazyQueryHookResult = ReturnType<
+  typeof useMyNotificationsLazyQuery
+>;
+export type MyNotificationsSuspenseQueryHookResult = ReturnType<
+  typeof useMyNotificationsSuspenseQuery
+>;
+export type MyNotificationsQueryResult = ApolloReactCommon.QueryResult<
+  MyNotificationsQuery,
+  MyNotificationsQueryVariables
 >;
 export const PantriesDocument = gql`
   query Pantries($homeId: ID!) {
@@ -9560,15 +11744,1376 @@ export type MeQueryResult = ApolloReactCommon.QueryResult<
   MeQuery,
   MeQueryVariables
 >;
-export const PantryItemsChangedDocument = gql`
-  subscription PantryItemsChanged($pantryId: ID!, $itemId: String!) {
-    pantryItemsChanged(pantryId: $pantryId, itemId: $itemId) {
+export const UserSettingsDocument = gql`
+  query UserSettings {
+    userSettings {
+      id
+      userId
+      emailNotifications
+      pushNotifications
+      smsNotifications
+      weeklyDigest
+      expiredItemAlerts
+      lowStockAlerts
+      shoppingListUpdates
+      recipeRecommendations
+      theme
+      compactMode
+      showTutorials
+      autoSync
+      offlineMode
+      shareUsageData
+      shareWithPartners
+      personalizedAds
+      enabledFeatures
+      betaFeatures
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
+/**
+ * __useUserSettingsQuery__
+ *
+ * To run a query within a React component, call `useUserSettingsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useUserSettingsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useUserSettingsQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useUserSettingsQuery(
+  baseOptions?: ApolloReactHooks.QueryHookOptions<
+    UserSettingsQuery,
+    UserSettingsQueryVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useQuery<
+    UserSettingsQuery,
+    UserSettingsQueryVariables
+  >(UserSettingsDocument, options);
+}
+export function useUserSettingsLazyQuery(
+  baseOptions?: ApolloReactHooks.LazyQueryHookOptions<
+    UserSettingsQuery,
+    UserSettingsQueryVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useLazyQuery<
+    UserSettingsQuery,
+    UserSettingsQueryVariables
+  >(UserSettingsDocument, options);
+}
+export function useUserSettingsSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        UserSettingsQuery,
+        UserSettingsQueryVariables
+      >,
+) {
+  const options =
+    baseOptions === ApolloReactHooks.skipToken
+      ? baseOptions
+      : {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSuspenseQuery<
+    UserSettingsQuery,
+    UserSettingsQueryVariables
+  >(UserSettingsDocument, options);
+}
+export type UserSettingsQueryHookResult = ReturnType<
+  typeof useUserSettingsQuery
+>;
+export type UserSettingsLazyQueryHookResult = ReturnType<
+  typeof useUserSettingsLazyQuery
+>;
+export type UserSettingsSuspenseQueryHookResult = ReturnType<
+  typeof useUserSettingsSuspenseQuery
+>;
+export type UserSettingsQueryResult = ApolloReactCommon.QueryResult<
+  UserSettingsQuery,
+  UserSettingsQueryVariables
+>;
+export const CollaborationMemberAddedDocument = gql`
+  subscription CollaborationMemberAdded($shoppingListId: ID!, $email: String!) {
+    collaborationMemberAdded(shoppingListId: $shoppingListId, email: $email) {
+      id
+      shoppingListId
+      collaboratorId
+      email
+      role
+      status
+      canEdit
+      canAddItems
+      canRemoveItems
+      canMarkPurchased
+      canInviteOthers
+      invitedAt
+      shoppingList {
+        id
+        name
+      }
+      collaborator {
+        id
+        email
+        profile {
+          displayName
+          avatar
+        }
+      }
+      invitedBy {
+        id
+        email
+        profile {
+          displayName
+        }
+      }
+    }
+  }
+`;
+
+/**
+ * __useCollaborationMemberAddedSubscription__
+ *
+ * To run a query within a React component, call `useCollaborationMemberAddedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useCollaborationMemberAddedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useCollaborationMemberAddedSubscription({
+ *   variables: {
+ *      shoppingListId: // value for 'shoppingListId'
+ *      email: // value for 'email'
+ *   },
+ * });
+ */
+export function useCollaborationMemberAddedSubscription(
+  baseOptions: ApolloReactHooks.SubscriptionHookOptions<
+    CollaborationMemberAddedSubscription,
+    CollaborationMemberAddedSubscriptionVariables
+  > &
+    (
+      | {
+          variables: CollaborationMemberAddedSubscriptionVariables;
+          skip?: boolean;
+        }
+      | {skip: boolean}
+    ),
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    CollaborationMemberAddedSubscription,
+    CollaborationMemberAddedSubscriptionVariables
+  >(CollaborationMemberAddedDocument, options);
+}
+export type CollaborationMemberAddedSubscriptionHookResult = ReturnType<
+  typeof useCollaborationMemberAddedSubscription
+>;
+export type CollaborationMemberAddedSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<CollaborationMemberAddedSubscription>;
+export const CollaborationMemberRemovedDocument = gql`
+  subscription CollaborationMemberRemoved(
+    $shoppingListId: ID!
+    $email: String!
+  ) {
+    collaborationMemberRemoved(shoppingListId: $shoppingListId, email: $email) {
+      id
+      email
+      collaboratorId
+      shoppingList {
+        id
+        name
+      }
+    }
+  }
+`;
+
+/**
+ * __useCollaborationMemberRemovedSubscription__
+ *
+ * To run a query within a React component, call `useCollaborationMemberRemovedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useCollaborationMemberRemovedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useCollaborationMemberRemovedSubscription({
+ *   variables: {
+ *      shoppingListId: // value for 'shoppingListId'
+ *      email: // value for 'email'
+ *   },
+ * });
+ */
+export function useCollaborationMemberRemovedSubscription(
+  baseOptions: ApolloReactHooks.SubscriptionHookOptions<
+    CollaborationMemberRemovedSubscription,
+    CollaborationMemberRemovedSubscriptionVariables
+  > &
+    (
+      | {
+          variables: CollaborationMemberRemovedSubscriptionVariables;
+          skip?: boolean;
+        }
+      | {skip: boolean}
+    ),
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    CollaborationMemberRemovedSubscription,
+    CollaborationMemberRemovedSubscriptionVariables
+  >(CollaborationMemberRemovedDocument, options);
+}
+export type CollaborationMemberRemovedSubscriptionHookResult = ReturnType<
+  typeof useCollaborationMemberRemovedSubscription
+>;
+export type CollaborationMemberRemovedSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<CollaborationMemberRemovedSubscription>;
+export const CollaborationInviteSentDocument = gql`
+  subscription CollaborationInviteSent($shoppingListId: ID!, $email: String!) {
+    collaborationInviteSent(shoppingListId: $shoppingListId, email: $email) {
+      id
+      shoppingListId
+      email
+      role
+      status
+      inviteToken
+      invitedAt
+      expiresAt
+      shoppingList {
+        id
+        name
+      }
+      invitedBy {
+        id
+        email
+        profile {
+          displayName
+        }
+      }
+    }
+  }
+`;
+
+/**
+ * __useCollaborationInviteSentSubscription__
+ *
+ * To run a query within a React component, call `useCollaborationInviteSentSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useCollaborationInviteSentSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useCollaborationInviteSentSubscription({
+ *   variables: {
+ *      shoppingListId: // value for 'shoppingListId'
+ *      email: // value for 'email'
+ *   },
+ * });
+ */
+export function useCollaborationInviteSentSubscription(
+  baseOptions: ApolloReactHooks.SubscriptionHookOptions<
+    CollaborationInviteSentSubscription,
+    CollaborationInviteSentSubscriptionVariables
+  > &
+    (
+      | {
+          variables: CollaborationInviteSentSubscriptionVariables;
+          skip?: boolean;
+        }
+      | {skip: boolean}
+    ),
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    CollaborationInviteSentSubscription,
+    CollaborationInviteSentSubscriptionVariables
+  >(CollaborationInviteSentDocument, options);
+}
+export type CollaborationInviteSentSubscriptionHookResult = ReturnType<
+  typeof useCollaborationInviteSentSubscription
+>;
+export type CollaborationInviteSentSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<CollaborationInviteSentSubscription>;
+export const DeviceActivityDocument = gql`
+  subscription DeviceActivity($userId: ID!) {
+    deviceActivity(userId: $userId) {
+      id
+      userId
+      deviceId
+      deviceName
+      deviceType
+      platform
+      lastSeenAt
+      lastIpAddress
+      lastCountry
+      lastCity
+      isActive
+      isTrusted
+      loginCount
+      user {
+        id
+        email
+      }
+    }
+  }
+`;
+
+/**
+ * __useDeviceActivitySubscription__
+ *
+ * To run a query within a React component, call `useDeviceActivitySubscription` and pass it any options that fit your needs.
+ * When your component renders, `useDeviceActivitySubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useDeviceActivitySubscription({
+ *   variables: {
+ *      userId: // value for 'userId'
+ *   },
+ * });
+ */
+export function useDeviceActivitySubscription(
+  baseOptions: ApolloReactHooks.SubscriptionHookOptions<
+    DeviceActivitySubscription,
+    DeviceActivitySubscriptionVariables
+  > &
+    (
+      | {variables: DeviceActivitySubscriptionVariables; skip?: boolean}
+      | {skip: boolean}
+    ),
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    DeviceActivitySubscription,
+    DeviceActivitySubscriptionVariables
+  >(DeviceActivityDocument, options);
+}
+export type DeviceActivitySubscriptionHookResult = ReturnType<
+  typeof useDeviceActivitySubscription
+>;
+export type DeviceActivitySubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<DeviceActivitySubscription>;
+export const DeviceRegisteredDocument = gql`
+  subscription DeviceRegistered($userId: ID!) {
+    deviceRegistered(userId: $userId) {
+      id
+      userId
+      deviceId
+      deviceName
+      deviceType
+      platform
+      userAgent
+      browserName
+      browserVersion
+      osName
+      osVersion
+      isActive
+      isTrusted
+      isVerified
+      createdAt
+    }
+  }
+`;
+
+/**
+ * __useDeviceRegisteredSubscription__
+ *
+ * To run a query within a React component, call `useDeviceRegisteredSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useDeviceRegisteredSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useDeviceRegisteredSubscription({
+ *   variables: {
+ *      userId: // value for 'userId'
+ *   },
+ * });
+ */
+export function useDeviceRegisteredSubscription(
+  baseOptions: ApolloReactHooks.SubscriptionHookOptions<
+    DeviceRegisteredSubscription,
+    DeviceRegisteredSubscriptionVariables
+  > &
+    (
+      | {variables: DeviceRegisteredSubscriptionVariables; skip?: boolean}
+      | {skip: boolean}
+    ),
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    DeviceRegisteredSubscription,
+    DeviceRegisteredSubscriptionVariables
+  >(DeviceRegisteredDocument, options);
+}
+export type DeviceRegisteredSubscriptionHookResult = ReturnType<
+  typeof useDeviceRegisteredSubscription
+>;
+export type DeviceRegisteredSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<DeviceRegisteredSubscription>;
+export const DeviceStatusChangedDocument = gql`
+  subscription DeviceStatusChanged($userId: ID!) {
+    deviceStatusChanged(userId: $userId) {
+      id
+      userId
+      deviceId
+      deviceName
+      isActive
+      lastSeenAt
+      updatedAt
+    }
+  }
+`;
+
+/**
+ * __useDeviceStatusChangedSubscription__
+ *
+ * To run a query within a React component, call `useDeviceStatusChangedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useDeviceStatusChangedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useDeviceStatusChangedSubscription({
+ *   variables: {
+ *      userId: // value for 'userId'
+ *   },
+ * });
+ */
+export function useDeviceStatusChangedSubscription(
+  baseOptions: ApolloReactHooks.SubscriptionHookOptions<
+    DeviceStatusChangedSubscription,
+    DeviceStatusChangedSubscriptionVariables
+  > &
+    (
+      | {variables: DeviceStatusChangedSubscriptionVariables; skip?: boolean}
+      | {skip: boolean}
+    ),
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    DeviceStatusChangedSubscription,
+    DeviceStatusChangedSubscriptionVariables
+  >(DeviceStatusChangedDocument, options);
+}
+export type DeviceStatusChangedSubscriptionHookResult = ReturnType<
+  typeof useDeviceStatusChangedSubscription
+>;
+export type DeviceStatusChangedSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<DeviceStatusChangedSubscription>;
+export const DeviceTrustChangedDocument = gql`
+  subscription DeviceTrustChanged($userId: ID!) {
+    deviceTrustChanged(userId: $userId) {
+      id
+      userId
+      deviceId
+      deviceName
+      isTrusted
+      updatedAt
+    }
+  }
+`;
+
+/**
+ * __useDeviceTrustChangedSubscription__
+ *
+ * To run a query within a React component, call `useDeviceTrustChangedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useDeviceTrustChangedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useDeviceTrustChangedSubscription({
+ *   variables: {
+ *      userId: // value for 'userId'
+ *   },
+ * });
+ */
+export function useDeviceTrustChangedSubscription(
+  baseOptions: ApolloReactHooks.SubscriptionHookOptions<
+    DeviceTrustChangedSubscription,
+    DeviceTrustChangedSubscriptionVariables
+  > &
+    (
+      | {variables: DeviceTrustChangedSubscriptionVariables; skip?: boolean}
+      | {skip: boolean}
+    ),
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    DeviceTrustChangedSubscription,
+    DeviceTrustChangedSubscriptionVariables
+  >(DeviceTrustChangedDocument, options);
+}
+export type DeviceTrustChangedSubscriptionHookResult = ReturnType<
+  typeof useDeviceTrustChangedSubscription
+>;
+export type DeviceTrustChangedSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<DeviceTrustChangedSubscription>;
+export const DeviceVerifiedDocument = gql`
+  subscription DeviceVerified($userId: ID!) {
+    deviceVerified(userId: $userId) {
+      id
+      userId
+      deviceId
+      deviceName
+      isVerified
+      verifiedAt
+    }
+  }
+`;
+
+/**
+ * __useDeviceVerifiedSubscription__
+ *
+ * To run a query within a React component, call `useDeviceVerifiedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useDeviceVerifiedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useDeviceVerifiedSubscription({
+ *   variables: {
+ *      userId: // value for 'userId'
+ *   },
+ * });
+ */
+export function useDeviceVerifiedSubscription(
+  baseOptions: ApolloReactHooks.SubscriptionHookOptions<
+    DeviceVerifiedSubscription,
+    DeviceVerifiedSubscriptionVariables
+  > &
+    (
+      | {variables: DeviceVerifiedSubscriptionVariables; skip?: boolean}
+      | {skip: boolean}
+    ),
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    DeviceVerifiedSubscription,
+    DeviceVerifiedSubscriptionVariables
+  >(DeviceVerifiedDocument, options);
+}
+export type DeviceVerifiedSubscriptionHookResult = ReturnType<
+  typeof useDeviceVerifiedSubscription
+>;
+export type DeviceVerifiedSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<DeviceVerifiedSubscription>;
+export const MembershipUpdatedDocument = gql`
+  subscription MembershipUpdated($homeId: ID) {
+    membershipUpdated(homeId: $homeId) {
+      mutation
+      node {
+        id
+        homeId
+        userId
+        role
+        status
+        displayName
+        canViewPantry
+        canEditPantry
+        canAddItems
+        canRemoveItems
+        canInviteOthers
+        canManageHome
+        lastActiveAt
+        joinedAt
+        home {
+          id
+          name
+          type
+        }
+        user {
+          id
+          email
+          profile {
+            displayName
+            avatar
+          }
+        }
+      }
+      previousValues {
+        role
+        status
+        canViewPantry
+        canEditPantry
+        canAddItems
+        canRemoveItems
+        canInviteOthers
+        canManageHome
+      }
+      updatedFields
+      userId
+    }
+  }
+`;
+
+/**
+ * __useMembershipUpdatedSubscription__
+ *
+ * To run a query within a React component, call `useMembershipUpdatedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useMembershipUpdatedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useMembershipUpdatedSubscription({
+ *   variables: {
+ *      homeId: // value for 'homeId'
+ *   },
+ * });
+ */
+export function useMembershipUpdatedSubscription(
+  baseOptions?: ApolloReactHooks.SubscriptionHookOptions<
+    MembershipUpdatedSubscription,
+    MembershipUpdatedSubscriptionVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    MembershipUpdatedSubscription,
+    MembershipUpdatedSubscriptionVariables
+  >(MembershipUpdatedDocument, options);
+}
+export type MembershipUpdatedSubscriptionHookResult = ReturnType<
+  typeof useMembershipUpdatedSubscription
+>;
+export type MembershipUpdatedSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<MembershipUpdatedSubscription>;
+export const MyMembershipUpdatedDocument = gql`
+  subscription MyMembershipUpdated {
+    myMembershipUpdated {
+      mutation
+      node {
+        id
+        homeId
+        userId
+        role
+        status
+        displayName
+        canViewPantry
+        canEditPantry
+        canAddItems
+        canRemoveItems
+        canInviteOthers
+        canManageHome
+        home {
+          id
+          name
+          type
+          joinCode
+        }
+      }
+      previousValues {
+        role
+        status
+      }
+      updatedFields
+      userId
+    }
+  }
+`;
+
+/**
+ * __useMyMembershipUpdatedSubscription__
+ *
+ * To run a query within a React component, call `useMyMembershipUpdatedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useMyMembershipUpdatedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useMyMembershipUpdatedSubscription({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useMyMembershipUpdatedSubscription(
+  baseOptions?: ApolloReactHooks.SubscriptionHookOptions<
+    MyMembershipUpdatedSubscription,
+    MyMembershipUpdatedSubscriptionVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    MyMembershipUpdatedSubscription,
+    MyMembershipUpdatedSubscriptionVariables
+  >(MyMembershipUpdatedDocument, options);
+}
+export type MyMembershipUpdatedSubscriptionHookResult = ReturnType<
+  typeof useMyMembershipUpdatedSubscription
+>;
+export type MyMembershipUpdatedSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<MyMembershipUpdatedSubscription>;
+export const MemberJoinedDocument = gql`
+  subscription MemberJoined($homeId: ID!) {
+    memberJoined(homeId: $homeId) {
+      mutation
+      node {
+        homeId
+        userId
+        user {
+          profile {
+            displayName
+          }
+        }
+      }
+      previousValues {
+        id
+        homeId
+        userId
+        role
+        status
+        displayName
+        canViewPantry
+        canEditPantry
+        canAddItems
+        canRemoveItems
+        canInviteOthers
+        canManageHome
+        lastActiveAt
+        joinedAt
+        leftAt
+        createdAt
+        updatedAt
+      }
+      updatedFields
+      userId
+    }
+  }
+`;
+
+/**
+ * __useMemberJoinedSubscription__
+ *
+ * To run a query within a React component, call `useMemberJoinedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useMemberJoinedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useMemberJoinedSubscription({
+ *   variables: {
+ *      homeId: // value for 'homeId'
+ *   },
+ * });
+ */
+export function useMemberJoinedSubscription(
+  baseOptions: ApolloReactHooks.SubscriptionHookOptions<
+    MemberJoinedSubscription,
+    MemberJoinedSubscriptionVariables
+  > &
+    (
+      | {variables: MemberJoinedSubscriptionVariables; skip?: boolean}
+      | {skip: boolean}
+    ),
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    MemberJoinedSubscription,
+    MemberJoinedSubscriptionVariables
+  >(MemberJoinedDocument, options);
+}
+export type MemberJoinedSubscriptionHookResult = ReturnType<
+  typeof useMemberJoinedSubscription
+>;
+export type MemberJoinedSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<MemberJoinedSubscription>;
+export const MemberLeftDocument = gql`
+  subscription MemberLeft($homeId: ID!) {
+    memberLeft(homeId: $homeId) {
+      userId
+    }
+  }
+`;
+
+/**
+ * __useMemberLeftSubscription__
+ *
+ * To run a query within a React component, call `useMemberLeftSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useMemberLeftSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useMemberLeftSubscription({
+ *   variables: {
+ *      homeId: // value for 'homeId'
+ *   },
+ * });
+ */
+export function useMemberLeftSubscription(
+  baseOptions: ApolloReactHooks.SubscriptionHookOptions<
+    MemberLeftSubscription,
+    MemberLeftSubscriptionVariables
+  > &
+    (
+      | {variables: MemberLeftSubscriptionVariables; skip?: boolean}
+      | {skip: boolean}
+    ),
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    MemberLeftSubscription,
+    MemberLeftSubscriptionVariables
+  >(MemberLeftDocument, options);
+}
+export type MemberLeftSubscriptionHookResult = ReturnType<
+  typeof useMemberLeftSubscription
+>;
+export type MemberLeftSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<MemberLeftSubscription>;
+export const MembershipRoleChangedDocument = gql`
+  subscription MembershipRoleChanged($homeId: ID!) {
+    membershipRoleChanged(homeId: $homeId) {
+      membership {
+        id
+        homeId
+        userId
+        role
+        user {
+          id
+          email
+          profile {
+            displayName
+          }
+        }
+      }
+      homeId
+      userId
+      previousRole
+      newRole
+      changedBy
+    }
+  }
+`;
+
+/**
+ * __useMembershipRoleChangedSubscription__
+ *
+ * To run a query within a React component, call `useMembershipRoleChangedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useMembershipRoleChangedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useMembershipRoleChangedSubscription({
+ *   variables: {
+ *      homeId: // value for 'homeId'
+ *   },
+ * });
+ */
+export function useMembershipRoleChangedSubscription(
+  baseOptions: ApolloReactHooks.SubscriptionHookOptions<
+    MembershipRoleChangedSubscription,
+    MembershipRoleChangedSubscriptionVariables
+  > &
+    (
+      | {variables: MembershipRoleChangedSubscriptionVariables; skip?: boolean}
+      | {skip: boolean}
+    ),
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    MembershipRoleChangedSubscription,
+    MembershipRoleChangedSubscriptionVariables
+  >(MembershipRoleChangedDocument, options);
+}
+export type MembershipRoleChangedSubscriptionHookResult = ReturnType<
+  typeof useMembershipRoleChangedSubscription
+>;
+export type MembershipRoleChangedSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<MembershipRoleChangedSubscription>;
+export const NotificationCreatedDocument = gql`
+  subscription NotificationCreated {
+    notificationCreated {
+      ...NotificationSubscription
+    }
+  }
+  ${NotificationSubscriptionFragmentDoc}
+`;
+
+/**
+ * __useNotificationCreatedSubscription__
+ *
+ * To run a query within a React component, call `useNotificationCreatedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useNotificationCreatedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useNotificationCreatedSubscription({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useNotificationCreatedSubscription(
+  baseOptions?: ApolloReactHooks.SubscriptionHookOptions<
+    NotificationCreatedSubscription,
+    NotificationCreatedSubscriptionVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    NotificationCreatedSubscription,
+    NotificationCreatedSubscriptionVariables
+  >(NotificationCreatedDocument, options);
+}
+export type NotificationCreatedSubscriptionHookResult = ReturnType<
+  typeof useNotificationCreatedSubscription
+>;
+export type NotificationCreatedSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<NotificationCreatedSubscription>;
+export const NotificationReadDocument = gql`
+  subscription NotificationRead {
+    notificationRead {
+      ...NotificationSubscription
+    }
+  }
+  ${NotificationSubscriptionFragmentDoc}
+`;
+
+/**
+ * __useNotificationReadSubscription__
+ *
+ * To run a query within a React component, call `useNotificationReadSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useNotificationReadSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useNotificationReadSubscription({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useNotificationReadSubscription(
+  baseOptions?: ApolloReactHooks.SubscriptionHookOptions<
+    NotificationReadSubscription,
+    NotificationReadSubscriptionVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    NotificationReadSubscription,
+    NotificationReadSubscriptionVariables
+  >(NotificationReadDocument, options);
+}
+export type NotificationReadSubscriptionHookResult = ReturnType<
+  typeof useNotificationReadSubscription
+>;
+export type NotificationReadSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<NotificationReadSubscription>;
+export const NotificationUpdatedDocument = gql`
+  subscription NotificationUpdated {
+    notificationUpdated {
+      ...NotificationSubscription
+    }
+  }
+  ${NotificationSubscriptionFragmentDoc}
+`;
+
+/**
+ * __useNotificationUpdatedSubscription__
+ *
+ * To run a query within a React component, call `useNotificationUpdatedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useNotificationUpdatedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useNotificationUpdatedSubscription({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useNotificationUpdatedSubscription(
+  baseOptions?: ApolloReactHooks.SubscriptionHookOptions<
+    NotificationUpdatedSubscription,
+    NotificationUpdatedSubscriptionVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    NotificationUpdatedSubscription,
+    NotificationUpdatedSubscriptionVariables
+  >(NotificationUpdatedDocument, options);
+}
+export type NotificationUpdatedSubscriptionHookResult = ReturnType<
+  typeof useNotificationUpdatedSubscription
+>;
+export type NotificationUpdatedSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<NotificationUpdatedSubscription>;
+export const NotificationDeletedDocument = gql`
+  subscription NotificationDeleted {
+    notificationDeleted {
+      ...NotificationSubscription
+    }
+  }
+  ${NotificationSubscriptionFragmentDoc}
+`;
+
+/**
+ * __useNotificationDeletedSubscription__
+ *
+ * To run a query within a React component, call `useNotificationDeletedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useNotificationDeletedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useNotificationDeletedSubscription({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useNotificationDeletedSubscription(
+  baseOptions?: ApolloReactHooks.SubscriptionHookOptions<
+    NotificationDeletedSubscription,
+    NotificationDeletedSubscriptionVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    NotificationDeletedSubscription,
+    NotificationDeletedSubscriptionVariables
+  >(NotificationDeletedDocument, options);
+}
+export type NotificationDeletedSubscriptionHookResult = ReturnType<
+  typeof useNotificationDeletedSubscription
+>;
+export type NotificationDeletedSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<NotificationDeletedSubscription>;
+export const PantryUpdatedDocument = gql`
+  subscription PantryUpdated($id: ID!) {
+    pantryUpdated(id: $id) {
+      id
+      homeId
+      name
+      description
+      location
+      temperature
+      tags
+      metadata
+      version
+      updatedAt
+      home {
+        id
+        name
+      }
+    }
+  }
+`;
+
+/**
+ * __usePantryUpdatedSubscription__
+ *
+ * To run a query within a React component, call `usePantryUpdatedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `usePantryUpdatedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = usePantryUpdatedSubscription({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function usePantryUpdatedSubscription(
+  baseOptions: ApolloReactHooks.SubscriptionHookOptions<
+    PantryUpdatedSubscription,
+    PantryUpdatedSubscriptionVariables
+  > &
+    (
+      | {variables: PantryUpdatedSubscriptionVariables; skip?: boolean}
+      | {skip: boolean}
+    ),
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    PantryUpdatedSubscription,
+    PantryUpdatedSubscriptionVariables
+  >(PantryUpdatedDocument, options);
+}
+export type PantryUpdatedSubscriptionHookResult = ReturnType<
+  typeof usePantryUpdatedSubscription
+>;
+export type PantryUpdatedSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<PantryUpdatedSubscription>;
+export const MyPantriesUpdatedDocument = gql`
+  subscription MyPantriesUpdated($homeId: ID!) {
+    myPantriesUpdated(homeId: $homeId) {
+      id
+      name
+      description
+      isDefault
+      location
+      items {
+        id
+        currentQuantity
+      }
+    }
+  }
+`;
+
+/**
+ * __useMyPantriesUpdatedSubscription__
+ *
+ * To run a query within a React component, call `useMyPantriesUpdatedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useMyPantriesUpdatedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useMyPantriesUpdatedSubscription({
+ *   variables: {
+ *      homeId: // value for 'homeId'
+ *   },
+ * });
+ */
+export function useMyPantriesUpdatedSubscription(
+  baseOptions: ApolloReactHooks.SubscriptionHookOptions<
+    MyPantriesUpdatedSubscription,
+    MyPantriesUpdatedSubscriptionVariables
+  > &
+    (
+      | {variables: MyPantriesUpdatedSubscriptionVariables; skip?: boolean}
+      | {skip: boolean}
+    ),
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    MyPantriesUpdatedSubscription,
+    MyPantriesUpdatedSubscriptionVariables
+  >(MyPantriesUpdatedDocument, options);
+}
+export type MyPantriesUpdatedSubscriptionHookResult = ReturnType<
+  typeof useMyPantriesUpdatedSubscription
+>;
+export type MyPantriesUpdatedSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<MyPantriesUpdatedSubscription>;
+export const PantryActivityAddedDocument = gql`
+  subscription PantryActivityAdded($pantryId: ID!) {
+    pantryActivityAdded(pantryId: $pantryId) {
+      id
       pantryId
+      userId
+      action
+      description
+      itemName
+      quantity
+      oldValue
+      newValue
+      metadata
+      createdAt
+      user {
+        id
+        email
+        profile {
+          displayName
+        }
+      }
+    }
+  }
+`;
+
+/**
+ * __usePantryActivityAddedSubscription__
+ *
+ * To run a query within a React component, call `usePantryActivityAddedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `usePantryActivityAddedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = usePantryActivityAddedSubscription({
+ *   variables: {
+ *      pantryId: // value for 'pantryId'
+ *   },
+ * });
+ */
+export function usePantryActivityAddedSubscription(
+  baseOptions: ApolloReactHooks.SubscriptionHookOptions<
+    PantryActivityAddedSubscription,
+    PantryActivityAddedSubscriptionVariables
+  > &
+    (
+      | {variables: PantryActivityAddedSubscriptionVariables; skip?: boolean}
+      | {skip: boolean}
+    ),
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    PantryActivityAddedSubscription,
+    PantryActivityAddedSubscriptionVariables
+  >(PantryActivityAddedDocument, options);
+}
+export type PantryActivityAddedSubscriptionHookResult = ReturnType<
+  typeof usePantryActivityAddedSubscription
+>;
+export type PantryActivityAddedSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<PantryActivityAddedSubscription>;
+export const PantryLowStockAlertDocument = gql`
+  subscription PantryLowStockAlert($pantryId: ID!) {
+    pantryLowStockAlert(pantryId: $pantryId) {
+      id
       itemId
+      itemName
+      currentQuantity
+      autoReorderPoint
+      unitName
       item {
-        itemId
+        id
+        name
+        imageUrl
+        averagePrice
+      }
+    }
+  }
+`;
+
+/**
+ * __usePantryLowStockAlertSubscription__
+ *
+ * To run a query within a React component, call `usePantryLowStockAlertSubscription` and pass it any options that fit your needs.
+ * When your component renders, `usePantryLowStockAlertSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = usePantryLowStockAlertSubscription({
+ *   variables: {
+ *      pantryId: // value for 'pantryId'
+ *   },
+ * });
+ */
+export function usePantryLowStockAlertSubscription(
+  baseOptions: ApolloReactHooks.SubscriptionHookOptions<
+    PantryLowStockAlertSubscription,
+    PantryLowStockAlertSubscriptionVariables
+  > &
+    (
+      | {variables: PantryLowStockAlertSubscriptionVariables; skip?: boolean}
+      | {skip: boolean}
+    ),
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    PantryLowStockAlertSubscription,
+    PantryLowStockAlertSubscriptionVariables
+  >(PantryLowStockAlertDocument, options);
+}
+export type PantryLowStockAlertSubscriptionHookResult = ReturnType<
+  typeof usePantryLowStockAlertSubscription
+>;
+export type PantryLowStockAlertSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<PantryLowStockAlertSubscription>;
+export const PantryExpiringItemsAlertDocument = gql`
+  subscription PantryExpiringItemsAlert($pantryId: ID!) {
+    pantryExpiringItemsAlert(pantryId: $pantryId) {
+      id
+      itemId
+      itemName
+      expiresAt
+      bestByDate
+      currentQuantity
+      unitName
+      item {
+        id
+        name
+        imageUrl
+      }
+    }
+  }
+`;
+
+/**
+ * __usePantryExpiringItemsAlertSubscription__
+ *
+ * To run a query within a React component, call `usePantryExpiringItemsAlertSubscription` and pass it any options that fit your needs.
+ * When your component renders, `usePantryExpiringItemsAlertSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = usePantryExpiringItemsAlertSubscription({
+ *   variables: {
+ *      pantryId: // value for 'pantryId'
+ *   },
+ * });
+ */
+export function usePantryExpiringItemsAlertSubscription(
+  baseOptions: ApolloReactHooks.SubscriptionHookOptions<
+    PantryExpiringItemsAlertSubscription,
+    PantryExpiringItemsAlertSubscriptionVariables
+  > &
+    (
+      | {
+          variables: PantryExpiringItemsAlertSubscriptionVariables;
+          skip?: boolean;
+        }
+      | {skip: boolean}
+    ),
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    PantryExpiringItemsAlertSubscription,
+    PantryExpiringItemsAlertSubscriptionVariables
+  >(PantryExpiringItemsAlertDocument, options);
+}
+export type PantryExpiringItemsAlertSubscriptionHookResult = ReturnType<
+  typeof usePantryExpiringItemsAlertSubscription
+>;
+export type PantryExpiringItemsAlertSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<PantryExpiringItemsAlertSubscription>;
+export const PantryItemsChangedDocument = gql`
+  subscription PantryItemsChanged($pantryId: ID!) {
+    pantryItemsChanged(pantryId: $pantryId) {
+      pantryId
+      item {
+        id
+        unit {
+          name
+        }
         itemName
       }
+      updatedFields
+      mutation
+      timestamp
+      userId
     }
   }
 `;
@@ -9586,7 +13131,6 @@ export const PantryItemsChangedDocument = gql`
  * const { data, loading, error } = usePantryItemsChangedSubscription({
  *   variables: {
  *      pantryId: // value for 'pantryId'
- *      itemId: // value for 'itemId'
  *   },
  * });
  */
@@ -9611,6 +13155,436 @@ export type PantryItemsChangedSubscriptionHookResult = ReturnType<
 >;
 export type PantryItemsChangedSubscriptionResult =
   ApolloReactCommon.SubscriptionResult<PantryItemsChangedSubscription>;
+export const PurchaseCreatedDocument = gql`
+  subscription PurchaseCreated($userId: ID) {
+    purchaseCreated(userId: $userId) {
+      id
+      userId
+      itemId
+      storeId
+      quantity
+      unitPrice
+      totalPrice
+      purchaseDate
+      itemName
+      storeName
+      unitSymbol
+      currencySymbol
+      user {
+        id
+        email
+      }
+      item {
+        id
+        name
+        imageUrl
+      }
+      store {
+        id
+        name
+        address
+      }
+    }
+  }
+`;
+
+/**
+ * __usePurchaseCreatedSubscription__
+ *
+ * To run a query within a React component, call `usePurchaseCreatedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `usePurchaseCreatedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = usePurchaseCreatedSubscription({
+ *   variables: {
+ *      userId: // value for 'userId'
+ *   },
+ * });
+ */
+export function usePurchaseCreatedSubscription(
+  baseOptions?: ApolloReactHooks.SubscriptionHookOptions<
+    PurchaseCreatedSubscription,
+    PurchaseCreatedSubscriptionVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    PurchaseCreatedSubscription,
+    PurchaseCreatedSubscriptionVariables
+  >(PurchaseCreatedDocument, options);
+}
+export type PurchaseCreatedSubscriptionHookResult = ReturnType<
+  typeof usePurchaseCreatedSubscription
+>;
+export type PurchaseCreatedSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<PurchaseCreatedSubscription>;
+export const PurchaseUpdatedDocument = gql`
+  subscription PurchaseUpdated($userId: ID) {
+    purchaseUpdated(userId: $userId) {
+      id
+      userId
+      quantity
+      unitPrice
+      totalPrice
+      purchaseDate
+      updatedAt
+    }
+  }
+`;
+
+/**
+ * __usePurchaseUpdatedSubscription__
+ *
+ * To run a query within a React component, call `usePurchaseUpdatedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `usePurchaseUpdatedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = usePurchaseUpdatedSubscription({
+ *   variables: {
+ *      userId: // value for 'userId'
+ *   },
+ * });
+ */
+export function usePurchaseUpdatedSubscription(
+  baseOptions?: ApolloReactHooks.SubscriptionHookOptions<
+    PurchaseUpdatedSubscription,
+    PurchaseUpdatedSubscriptionVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    PurchaseUpdatedSubscription,
+    PurchaseUpdatedSubscriptionVariables
+  >(PurchaseUpdatedDocument, options);
+}
+export type PurchaseUpdatedSubscriptionHookResult = ReturnType<
+  typeof usePurchaseUpdatedSubscription
+>;
+export type PurchaseUpdatedSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<PurchaseUpdatedSubscription>;
+export const PurchaseDeletedDocument = gql`
+  subscription PurchaseDeleted($userId: ID) {
+    purchaseDeleted(userId: $userId) {
+      id
+      userId
+      deletedAt
+    }
+  }
+`;
+
+/**
+ * __usePurchaseDeletedSubscription__
+ *
+ * To run a query within a React component, call `usePurchaseDeletedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `usePurchaseDeletedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = usePurchaseDeletedSubscription({
+ *   variables: {
+ *      userId: // value for 'userId'
+ *   },
+ * });
+ */
+export function usePurchaseDeletedSubscription(
+  baseOptions?: ApolloReactHooks.SubscriptionHookOptions<
+    PurchaseDeletedSubscription,
+    PurchaseDeletedSubscriptionVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    PurchaseDeletedSubscription,
+    PurchaseDeletedSubscriptionVariables
+  >(PurchaseDeletedDocument, options);
+}
+export type PurchaseDeletedSubscriptionHookResult = ReturnType<
+  typeof usePurchaseDeletedSubscription
+>;
+export type PurchaseDeletedSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<PurchaseDeletedSubscription>;
+export const LoginAttemptsDocument = gql`
+  subscription LoginAttempts($userId: ID!) {
+    loginAttempts(userId: $userId) {
+      id
+      userId
+      success
+      method
+      provider
+      ipAddress
+      ipCountry
+      ipRegion
+      ipCity
+      isVpn
+      isTor
+      isProxy
+      userAgent
+      browserName
+      browserVersion
+      osName
+      osVersion
+      deviceType
+      isMobileApp
+      riskScore
+      isRisky
+      riskFactors
+      failureReason
+      failureDetails
+      isNewLocation
+      isNewDevice
+      isNewBrowser
+      loggedInAt
+      user {
+        id
+        email
+      }
+    }
+  }
+`;
+
+/**
+ * __useLoginAttemptsSubscription__
+ *
+ * To run a query within a React component, call `useLoginAttemptsSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useLoginAttemptsSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useLoginAttemptsSubscription({
+ *   variables: {
+ *      userId: // value for 'userId'
+ *   },
+ * });
+ */
+export function useLoginAttemptsSubscription(
+  baseOptions: ApolloReactHooks.SubscriptionHookOptions<
+    LoginAttemptsSubscription,
+    LoginAttemptsSubscriptionVariables
+  > &
+    (
+      | {variables: LoginAttemptsSubscriptionVariables; skip?: boolean}
+      | {skip: boolean}
+    ),
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    LoginAttemptsSubscription,
+    LoginAttemptsSubscriptionVariables
+  >(LoginAttemptsDocument, options);
+}
+export type LoginAttemptsSubscriptionHookResult = ReturnType<
+  typeof useLoginAttemptsSubscription
+>;
+export type LoginAttemptsSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<LoginAttemptsSubscription>;
+export const SuspiciousActivityDocument = gql`
+  subscription SuspiciousActivity($userId: ID!) {
+    suspiciousActivity(userId: $userId) {
+      rapidAttempts {
+        hour
+        count
+      }
+      riskyLogins {
+        id
+        ipAddress
+        ipCountry
+        riskScore
+        riskFactors
+        loggedInAt
+      }
+      newLocationLogins {
+        id
+        ipAddress
+        ipCountry
+        ipCity
+        loggedInAt
+      }
+      newDeviceLogins {
+        id
+        deviceType
+        browserName
+        osName
+        loggedInAt
+      }
+      failedFromSameIP {
+        ipAddress
+        count
+      }
+      suspiciousActivity
+      unusualTimeLogins {
+        id
+        loggedInAt
+        timezoneDiff
+      }
+      multipleAccountsFromIP {
+        ipAddress
+        count
+      }
+    }
+  }
+`;
+
+/**
+ * __useSuspiciousActivitySubscription__
+ *
+ * To run a query within a React component, call `useSuspiciousActivitySubscription` and pass it any options that fit your needs.
+ * When your component renders, `useSuspiciousActivitySubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useSuspiciousActivitySubscription({
+ *   variables: {
+ *      userId: // value for 'userId'
+ *   },
+ * });
+ */
+export function useSuspiciousActivitySubscription(
+  baseOptions: ApolloReactHooks.SubscriptionHookOptions<
+    SuspiciousActivitySubscription,
+    SuspiciousActivitySubscriptionVariables
+  > &
+    (
+      | {variables: SuspiciousActivitySubscriptionVariables; skip?: boolean}
+      | {skip: boolean}
+    ),
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    SuspiciousActivitySubscription,
+    SuspiciousActivitySubscriptionVariables
+  >(SuspiciousActivityDocument, options);
+}
+export type SuspiciousActivitySubscriptionHookResult = ReturnType<
+  typeof useSuspiciousActivitySubscription
+>;
+export type SuspiciousActivitySubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<SuspiciousActivitySubscription>;
+export const FailedLoginAttemptsDocument = gql`
+  subscription FailedLoginAttempts($userId: ID!) {
+    failedLoginAttempts(userId: $userId) {
+      id
+      userId
+      method
+      ipAddress
+      ipCountry
+      userAgent
+      failureReason
+      failureDetails
+      loggedInAt
+    }
+  }
+`;
+
+/**
+ * __useFailedLoginAttemptsSubscription__
+ *
+ * To run a query within a React component, call `useFailedLoginAttemptsSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useFailedLoginAttemptsSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useFailedLoginAttemptsSubscription({
+ *   variables: {
+ *      userId: // value for 'userId'
+ *   },
+ * });
+ */
+export function useFailedLoginAttemptsSubscription(
+  baseOptions: ApolloReactHooks.SubscriptionHookOptions<
+    FailedLoginAttemptsSubscription,
+    FailedLoginAttemptsSubscriptionVariables
+  > &
+    (
+      | {variables: FailedLoginAttemptsSubscriptionVariables; skip?: boolean}
+      | {skip: boolean}
+    ),
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    FailedLoginAttemptsSubscription,
+    FailedLoginAttemptsSubscriptionVariables
+  >(FailedLoginAttemptsDocument, options);
+}
+export type FailedLoginAttemptsSubscriptionHookResult = ReturnType<
+  typeof useFailedLoginAttemptsSubscription
+>;
+export type FailedLoginAttemptsSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<FailedLoginAttemptsSubscription>;
+export const RiskyLoginAlertsDocument = gql`
+  subscription RiskyLoginAlerts($userId: ID!) {
+    riskyLoginAlerts(userId: $userId) {
+      id
+      userId
+      ipAddress
+      ipCountry
+      riskScore
+      riskFactors
+      isVpn
+      isTor
+      isProxy
+      requiresMfa
+      mfaCompleted
+      loggedInAt
+      flaggedBy {
+        id
+        email
+      }
+      flaggedReason
+    }
+  }
+`;
+
+/**
+ * __useRiskyLoginAlertsSubscription__
+ *
+ * To run a query within a React component, call `useRiskyLoginAlertsSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useRiskyLoginAlertsSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useRiskyLoginAlertsSubscription({
+ *   variables: {
+ *      userId: // value for 'userId'
+ *   },
+ * });
+ */
+export function useRiskyLoginAlertsSubscription(
+  baseOptions: ApolloReactHooks.SubscriptionHookOptions<
+    RiskyLoginAlertsSubscription,
+    RiskyLoginAlertsSubscriptionVariables
+  > &
+    (
+      | {variables: RiskyLoginAlertsSubscriptionVariables; skip?: boolean}
+      | {skip: boolean}
+    ),
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    RiskyLoginAlertsSubscription,
+    RiskyLoginAlertsSubscriptionVariables
+  >(RiskyLoginAlertsDocument, options);
+}
+export type RiskyLoginAlertsSubscriptionHookResult = ReturnType<
+  typeof useRiskyLoginAlertsSubscription
+>;
+export type RiskyLoginAlertsSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<RiskyLoginAlertsSubscription>;
 export const ShoppingListUpdatedDocument = gql`
   subscription ShoppingListUpdated($listId: ID!) {
     shoppingListUpdated(listId: $listId) {
@@ -9621,13 +13595,30 @@ export const ShoppingListUpdatedDocument = gql`
         totalItems
         completedItems
         estimatedTotal
+        status
+        isCompleted
+        completedAt
+        budgetAmount
+        totalCost
         items {
           id
           itemName
           quantity
           isPurchased
+          estimatedPrice
         }
       }
+      updatedFields
+      previousValues {
+        name
+        status
+        isCompleted
+        budgetAmount
+        totalCost
+        estimatedTotal
+      }
+      userId
+      timestamp
     }
   }
 `;
@@ -9669,17 +13660,302 @@ export type ShoppingListUpdatedSubscriptionHookResult = ReturnType<
 >;
 export type ShoppingListUpdatedSubscriptionResult =
   ApolloReactCommon.SubscriptionResult<ShoppingListUpdatedSubscription>;
+export const MyShoppingListsUpdatedDocument = gql`
+  subscription MyShoppingListsUpdated {
+    myShoppingListsUpdated {
+      mutation
+      node {
+        id
+        name
+        totalItems
+        completedItems
+        estimatedTotal
+        status
+        isCompleted
+      }
+      previousValues {
+        name
+        status
+        isCompleted
+      }
+      updatedFields
+      userId
+      timestamp
+    }
+  }
+`;
+
+/**
+ * __useMyShoppingListsUpdatedSubscription__
+ *
+ * To run a query within a React component, call `useMyShoppingListsUpdatedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useMyShoppingListsUpdatedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useMyShoppingListsUpdatedSubscription({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useMyShoppingListsUpdatedSubscription(
+  baseOptions?: ApolloReactHooks.SubscriptionHookOptions<
+    MyShoppingListsUpdatedSubscription,
+    MyShoppingListsUpdatedSubscriptionVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    MyShoppingListsUpdatedSubscription,
+    MyShoppingListsUpdatedSubscriptionVariables
+  >(MyShoppingListsUpdatedDocument, options);
+}
+export type MyShoppingListsUpdatedSubscriptionHookResult = ReturnType<
+  typeof useMyShoppingListsUpdatedSubscription
+>;
+export type MyShoppingListsUpdatedSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<MyShoppingListsUpdatedSubscription>;
+export const ShoppingListItemsChangedDocument = gql`
+  subscription ShoppingListItemsChanged($listId: ID!) {
+    shoppingListItemsChanged(listId: $listId) {
+      mutation
+      listId
+      item {
+        id
+        itemName
+        quantity
+        estimatedPrice
+        isPurchased
+        purchasedQuantity
+        purchasedPrice
+        notes
+        priority
+        category
+        addedBy {
+          id
+          email
+          profile {
+            displayName
+          }
+        }
+      }
+      previousValues {
+        name
+        quantity
+        isCompleted
+        price
+        notes
+      }
+      updatedFields
+      userId
+      timestamp
+    }
+  }
+`;
+
+/**
+ * __useShoppingListItemsChangedSubscription__
+ *
+ * To run a query within a React component, call `useShoppingListItemsChangedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useShoppingListItemsChangedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useShoppingListItemsChangedSubscription({
+ *   variables: {
+ *      listId: // value for 'listId'
+ *   },
+ * });
+ */
+export function useShoppingListItemsChangedSubscription(
+  baseOptions: ApolloReactHooks.SubscriptionHookOptions<
+    ShoppingListItemsChangedSubscription,
+    ShoppingListItemsChangedSubscriptionVariables
+  > &
+    (
+      | {
+          variables: ShoppingListItemsChangedSubscriptionVariables;
+          skip?: boolean;
+        }
+      | {skip: boolean}
+    ),
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    ShoppingListItemsChangedSubscription,
+    ShoppingListItemsChangedSubscriptionVariables
+  >(ShoppingListItemsChangedDocument, options);
+}
+export type ShoppingListItemsChangedSubscriptionHookResult = ReturnType<
+  typeof useShoppingListItemsChangedSubscription
+>;
+export type ShoppingListItemsChangedSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<ShoppingListItemsChangedSubscription>;
+export const ShoppingListCollaboratorsChangedDocument = gql`
+  subscription ShoppingListCollaboratorsChanged($listId: ID!) {
+    shoppingListCollaboratorsChanged(listId: $listId) {
+      mutation
+      listId
+      collaborator {
+        id
+        collaboratorId
+        email
+        role
+        status
+        canEdit
+        canAddItems
+        canRemoveItems
+        canMarkPurchased
+        invitedAt
+        collaborator {
+          id
+          email
+          profile {
+            displayName
+            avatar
+          }
+        }
+      }
+      userId
+      timestamp
+    }
+  }
+`;
+
+/**
+ * __useShoppingListCollaboratorsChangedSubscription__
+ *
+ * To run a query within a React component, call `useShoppingListCollaboratorsChangedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useShoppingListCollaboratorsChangedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useShoppingListCollaboratorsChangedSubscription({
+ *   variables: {
+ *      listId: // value for 'listId'
+ *   },
+ * });
+ */
+export function useShoppingListCollaboratorsChangedSubscription(
+  baseOptions: ApolloReactHooks.SubscriptionHookOptions<
+    ShoppingListCollaboratorsChangedSubscription,
+    ShoppingListCollaboratorsChangedSubscriptionVariables
+  > &
+    (
+      | {
+          variables: ShoppingListCollaboratorsChangedSubscriptionVariables;
+          skip?: boolean;
+        }
+      | {skip: boolean}
+    ),
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    ShoppingListCollaboratorsChangedSubscription,
+    ShoppingListCollaboratorsChangedSubscriptionVariables
+  >(ShoppingListCollaboratorsChangedDocument, options);
+}
+export type ShoppingListCollaboratorsChangedSubscriptionHookResult = ReturnType<
+  typeof useShoppingListCollaboratorsChangedSubscription
+>;
+export type ShoppingListCollaboratorsChangedSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<ShoppingListCollaboratorsChangedSubscription>;
+export const ShoppingListStatusChangedDocument = gql`
+  subscription ShoppingListStatusChanged($listId: ID!) {
+    shoppingListStatusChanged(listId: $listId) {
+      mutation
+      listId
+      newStatus
+      previousStatus
+      completedBy {
+        id
+        email
+        profile {
+          displayName
+        }
+      }
+      userId
+      timestamp
+    }
+  }
+`;
+
+/**
+ * __useShoppingListStatusChangedSubscription__
+ *
+ * To run a query within a React component, call `useShoppingListStatusChangedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useShoppingListStatusChangedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useShoppingListStatusChangedSubscription({
+ *   variables: {
+ *      listId: // value for 'listId'
+ *   },
+ * });
+ */
+export function useShoppingListStatusChangedSubscription(
+  baseOptions: ApolloReactHooks.SubscriptionHookOptions<
+    ShoppingListStatusChangedSubscription,
+    ShoppingListStatusChangedSubscriptionVariables
+  > &
+    (
+      | {
+          variables: ShoppingListStatusChangedSubscriptionVariables;
+          skip?: boolean;
+        }
+      | {skip: boolean}
+    ),
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    ShoppingListStatusChangedSubscription,
+    ShoppingListStatusChangedSubscriptionVariables
+  >(ShoppingListStatusChangedDocument, options);
+}
+export type ShoppingListStatusChangedSubscriptionHookResult = ReturnType<
+  typeof useShoppingListStatusChangedSubscription
+>;
+export type ShoppingListStatusChangedSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<ShoppingListStatusChangedSubscription>;
 export const ShoppingListItemAddedDocument = gql`
   subscription ShoppingListItemAdded($shoppingListId: ID!) {
     shoppingListItemAdded(shoppingListId: $shoppingListId) {
       id
       itemName
       quantity
+      estimatedPrice
       isPurchased
+      priority
+      category
+      notes
       addedBy {
         id
         email
+        profile {
+          displayName
+        }
       }
+      item {
+        id
+        name
+        imageUrl
+        averagePrice
+      }
+      unit {
+        id
+        symbol
+        name
+      }
+      createdAt
     }
   }
 `;
@@ -9727,9 +14003,21 @@ export const ShoppingListItemUpdatedDocument = gql`
       id
       itemName
       quantity
+      estimatedPrice
       isPurchased
+      purchasedQuantity
+      purchasedPrice
       notes
       priority
+      category
+      lastEditedBy {
+        id
+        email
+        profile {
+          displayName
+        }
+      }
+      updatedAt
     }
   }
 `;
@@ -9778,6 +14066,7 @@ export const ShoppingListItemRemovedDocument = gql`
   subscription ShoppingListItemRemoved($shoppingListId: ID!) {
     shoppingListItemRemoved(shoppingListId: $shoppingListId) {
       id
+      itemName
     }
   }
 `;
@@ -9822,3 +14111,462 @@ export type ShoppingListItemRemovedSubscriptionHookResult = ReturnType<
 >;
 export type ShoppingListItemRemovedSubscriptionResult =
   ApolloReactCommon.SubscriptionResult<ShoppingListItemRemovedSubscription>;
+export const StoreUpdatedDocument = gql`
+  subscription StoreUpdated($storeId: ID) {
+    storeUpdated(storeId: $storeId) {
+      id
+      name
+      address
+      priceAccuracy
+      lastPriceUpdate
+      qualityRating
+      chain
+      city
+      state
+      zipCode
+      latitude
+      longitude
+      phone
+      website
+      isActive
+      updatedAt
+    }
+  }
+`;
+
+/**
+ * __useStoreUpdatedSubscription__
+ *
+ * To run a query within a React component, call `useStoreUpdatedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useStoreUpdatedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useStoreUpdatedSubscription({
+ *   variables: {
+ *      storeId: // value for 'storeId'
+ *   },
+ * });
+ */
+export function useStoreUpdatedSubscription(
+  baseOptions?: ApolloReactHooks.SubscriptionHookOptions<
+    StoreUpdatedSubscription,
+    StoreUpdatedSubscriptionVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    StoreUpdatedSubscription,
+    StoreUpdatedSubscriptionVariables
+  >(StoreUpdatedDocument, options);
+}
+export type StoreUpdatedSubscriptionHookResult = ReturnType<
+  typeof useStoreUpdatedSubscription
+>;
+export type StoreUpdatedSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<StoreUpdatedSubscription>;
+export const StoreRatingChangedDocument = gql`
+  subscription StoreRatingChanged($storeId: ID) {
+    storeRatingChanged(storeId: $storeId) {
+      id
+      name
+      qualityRating
+      priceAccuracy
+      updatedAt
+    }
+  }
+`;
+
+/**
+ * __useStoreRatingChangedSubscription__
+ *
+ * To run a query within a React component, call `useStoreRatingChangedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useStoreRatingChangedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useStoreRatingChangedSubscription({
+ *   variables: {
+ *      storeId: // value for 'storeId'
+ *   },
+ * });
+ */
+export function useStoreRatingChangedSubscription(
+  baseOptions?: ApolloReactHooks.SubscriptionHookOptions<
+    StoreRatingChangedSubscription,
+    StoreRatingChangedSubscriptionVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    StoreRatingChangedSubscription,
+    StoreRatingChangedSubscriptionVariables
+  >(StoreRatingChangedDocument, options);
+}
+export type StoreRatingChangedSubscriptionHookResult = ReturnType<
+  typeof useStoreRatingChangedSubscription
+>;
+export type StoreRatingChangedSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<StoreRatingChangedSubscription>;
+export const UserUpdatedDocument = gql`
+  subscription UserUpdated($userId: ID) {
+    userUpdated(userId: $userId) {
+      mutation
+      node {
+        id
+        email
+        emailVerified
+        role
+        onBoarded
+        timezone
+        preferredCurrency
+        language
+        lastActiveAt
+        profile {
+          id
+          firstName
+          lastName
+          displayName
+          avatar
+          bio
+        }
+      }
+      previousValues {
+        email
+        role
+        timezone
+        preferredCurrency
+        language
+      }
+      updatedFields
+      userId
+      timestamp
+    }
+  }
+`;
+
+/**
+ * __useUserUpdatedSubscription__
+ *
+ * To run a query within a React component, call `useUserUpdatedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useUserUpdatedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useUserUpdatedSubscription({
+ *   variables: {
+ *      userId: // value for 'userId'
+ *   },
+ * });
+ */
+export function useUserUpdatedSubscription(
+  baseOptions?: ApolloReactHooks.SubscriptionHookOptions<
+    UserUpdatedSubscription,
+    UserUpdatedSubscriptionVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    UserUpdatedSubscription,
+    UserUpdatedSubscriptionVariables
+  >(UserUpdatedDocument, options);
+}
+export type UserUpdatedSubscriptionHookResult = ReturnType<
+  typeof useUserUpdatedSubscription
+>;
+export type UserUpdatedSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<UserUpdatedSubscription>;
+export const UserStatusChangedDocument = gql`
+  subscription UserStatusChanged($userId: ID) {
+    userStatusChanged(userId: $userId) {
+      userId
+      newStatus
+      previousStatus
+      isOnline
+      lastActiveAt
+      timestamp
+    }
+  }
+`;
+
+/**
+ * __useUserStatusChangedSubscription__
+ *
+ * To run a query within a React component, call `useUserStatusChangedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useUserStatusChangedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useUserStatusChangedSubscription({
+ *   variables: {
+ *      userId: // value for 'userId'
+ *   },
+ * });
+ */
+export function useUserStatusChangedSubscription(
+  baseOptions?: ApolloReactHooks.SubscriptionHookOptions<
+    UserStatusChangedSubscription,
+    UserStatusChangedSubscriptionVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    UserStatusChangedSubscription,
+    UserStatusChangedSubscriptionVariables
+  >(UserStatusChangedDocument, options);
+}
+export type UserStatusChangedSubscriptionHookResult = ReturnType<
+  typeof useUserStatusChangedSubscription
+>;
+export type UserStatusChangedSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<UserStatusChangedSubscription>;
+export const UserActivityDocument = gql`
+  subscription UserActivity($userId: ID) {
+    userActivity(userId: $userId) {
+      userId
+      activityType
+      description
+      metadata
+      timestamp
+    }
+  }
+`;
+
+/**
+ * __useUserActivitySubscription__
+ *
+ * To run a query within a React component, call `useUserActivitySubscription` and pass it any options that fit your needs.
+ * When your component renders, `useUserActivitySubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useUserActivitySubscription({
+ *   variables: {
+ *      userId: // value for 'userId'
+ *   },
+ * });
+ */
+export function useUserActivitySubscription(
+  baseOptions?: ApolloReactHooks.SubscriptionHookOptions<
+    UserActivitySubscription,
+    UserActivitySubscriptionVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    UserActivitySubscription,
+    UserActivitySubscriptionVariables
+  >(UserActivityDocument, options);
+}
+export type UserActivitySubscriptionHookResult = ReturnType<
+  typeof useUserActivitySubscription
+>;
+export type UserActivitySubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<UserActivitySubscription>;
+export const UserModerationChangedDocument = gql`
+  subscription UserModerationChanged($userId: ID) {
+    userModerationChanged(userId: $userId) {
+      userId
+      moderationType
+      moderationStatus
+      reason
+      moderatedBy
+      timestamp
+    }
+  }
+`;
+
+/**
+ * __useUserModerationChangedSubscription__
+ *
+ * To run a query within a React component, call `useUserModerationChangedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useUserModerationChangedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useUserModerationChangedSubscription({
+ *   variables: {
+ *      userId: // value for 'userId'
+ *   },
+ * });
+ */
+export function useUserModerationChangedSubscription(
+  baseOptions?: ApolloReactHooks.SubscriptionHookOptions<
+    UserModerationChangedSubscription,
+    UserModerationChangedSubscriptionVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    UserModerationChangedSubscription,
+    UserModerationChangedSubscriptionVariables
+  >(UserModerationChangedDocument, options);
+}
+export type UserModerationChangedSubscriptionHookResult = ReturnType<
+  typeof useUserModerationChangedSubscription
+>;
+export type UserModerationChangedSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<UserModerationChangedSubscription>;
+export const UserProfileChangedDocument = gql`
+  subscription UserProfileChanged($userId: ID) {
+    userProfileChanged(userId: $userId) {
+      userId
+      mutation
+      profile {
+        id
+        firstName
+        lastName
+        displayName
+        bio
+        avatar
+        coverImage
+        phone
+        website
+        profileVisibility
+      }
+      previousValues {
+        firstName
+        lastName
+        displayName
+        bio
+        avatar
+      }
+      updatedFields
+      timestamp
+    }
+  }
+`;
+
+/**
+ * __useUserProfileChangedSubscription__
+ *
+ * To run a query within a React component, call `useUserProfileChangedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useUserProfileChangedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useUserProfileChangedSubscription({
+ *   variables: {
+ *      userId: // value for 'userId'
+ *   },
+ * });
+ */
+export function useUserProfileChangedSubscription(
+  baseOptions?: ApolloReactHooks.SubscriptionHookOptions<
+    UserProfileChangedSubscription,
+    UserProfileChangedSubscriptionVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    UserProfileChangedSubscription,
+    UserProfileChangedSubscriptionVariables
+  >(UserProfileChangedDocument, options);
+}
+export type UserProfileChangedSubscriptionHookResult = ReturnType<
+  typeof useUserProfileChangedSubscription
+>;
+export type UserProfileChangedSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<UserProfileChangedSubscription>;
+export const UserAuthDocument = gql`
+  subscription UserAuth($userId: ID) {
+    userAuth(userId: $userId) {
+      userId
+      authType
+      deviceInfo
+      timestamp
+    }
+  }
+`;
+
+/**
+ * __useUserAuthSubscription__
+ *
+ * To run a query within a React component, call `useUserAuthSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useUserAuthSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useUserAuthSubscription({
+ *   variables: {
+ *      userId: // value for 'userId'
+ *   },
+ * });
+ */
+export function useUserAuthSubscription(
+  baseOptions?: ApolloReactHooks.SubscriptionHookOptions<
+    UserAuthSubscription,
+    UserAuthSubscriptionVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    UserAuthSubscription,
+    UserAuthSubscriptionVariables
+  >(UserAuthDocument, options);
+}
+export type UserAuthSubscriptionHookResult = ReturnType<
+  typeof useUserAuthSubscription
+>;
+export type UserAuthSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<UserAuthSubscription>;
+export const UserSocialDocument = gql`
+  subscription UserSocial($userId: ID) {
+    userSocial(userId: $userId) {
+      userId
+      targetUserId
+      action
+      timestamp
+    }
+  }
+`;
+
+/**
+ * __useUserSocialSubscription__
+ *
+ * To run a query within a React component, call `useUserSocialSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useUserSocialSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useUserSocialSubscription({
+ *   variables: {
+ *      userId: // value for 'userId'
+ *   },
+ * });
+ */
+export function useUserSocialSubscription(
+  baseOptions?: ApolloReactHooks.SubscriptionHookOptions<
+    UserSocialSubscription,
+    UserSocialSubscriptionVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    UserSocialSubscription,
+    UserSocialSubscriptionVariables
+  >(UserSocialDocument, options);
+}
+export type UserSocialSubscriptionHookResult = ReturnType<
+  typeof useUserSocialSubscription
+>;
+export type UserSocialSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<UserSocialSubscription>;

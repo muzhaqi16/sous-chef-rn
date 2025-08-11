@@ -34,3 +34,32 @@ export const GET_ME = gql`
     }
   }
 `;
+
+export const GET_USER_SETTINGS = gql`
+  query UserSettings {
+    userSettings {
+      id
+      userId
+      emailNotifications
+      pushNotifications
+      smsNotifications
+      weeklyDigest
+      expiredItemAlerts
+      lowStockAlerts
+      shoppingListUpdates
+      recipeRecommendations
+      theme
+      compactMode
+      showTutorials
+      autoSync
+      offlineMode
+      shareUsageData
+      shareWithPartners
+      personalizedAds
+      enabledFeatures
+      betaFeatures
+      createdAt
+      updatedAt
+    }
+  }
+`;
