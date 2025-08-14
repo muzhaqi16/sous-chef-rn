@@ -4,7 +4,9 @@ import {
   RefreshTokenMutation,
   LoginMutation,
   RegisterMutation,
-  GetCurrentUserQuery,
+  GetCompleteUserQuery,
+  AuthUserFragment,
+  GetAuthUserQuery,
 } from '#generated';
 
 // Types from your auth mutations (with minimal user data)
@@ -13,10 +15,10 @@ type RegisterResponse = NonNullable<RegisterMutation['register']>;
 type AuthResponse = LoginResponse | RegisterResponse;
 
 // Auth user type (minimal data from login/register)
-type AuthUser = AuthResponse['user'];
+type AuthUser = NonNullable<GetAuthUserQuery['me']>;
 
 // Complete user type (from profile queries)
-type CompleteUser = NonNullable<GetCurrentUserQuery['me']>;
+type CompleteUser = NonNullable<GetCompleteUserQuery['me']>;
 
 export interface AuthState {
   user: AuthUser | CompleteUser | null; // Can be minimal or complete user data
@@ -28,12 +30,19 @@ export interface AuthState {
 
   // Auth methods
   setAuthFromResponse: (response: AuthResponse) => void;
-  setCompleteUser: (user: CompleteUser) => void; // For when you fetch complete user data
+  setCompleteUser: (user: CompleteUser) => void;
   setAuth: (
     user: AuthUser | CompleteUser,
     accessToken?: string,
     refreshToken?: string,
   ) => void;
+  setTokens: ({
+    accessToken,
+    refreshToken,
+  }: {
+    accessToken?: string;
+    refreshToken?: string;
+  }) => void;
   updateUser: (updates: Partial<AuthUser | CompleteUser>) => void;
   setEmailVerified: (emailVerified: boolean) => void;
   setTokensFromRefresh: (
@@ -85,6 +94,12 @@ export const createAuthSlice: StateCreator<
   setAuth: (user, accessToken, refreshToken) =>
     set(state => {
       state.user = user;
+      if (accessToken) state.accessToken = accessToken;
+      if (refreshToken) state.refreshToken = refreshToken;
+    }),
+
+  setTokens: ({accessToken, refreshToken}) =>
+    set(state => {
       if (accessToken) state.accessToken = accessToken;
       if (refreshToken) state.refreshToken = refreshToken;
     }),

@@ -108,6 +108,7 @@ export type PantryStackParamList = {
   ExpiringItems: undefined;
   LowStockItems: undefined;
   CategoryManagement: undefined;
+  HomeManagement: undefined;
 };
 
 export type SettingsStackParamList = {
@@ -270,6 +271,11 @@ export type EditItemNavProp = NativeStackNavigationProp<
   'EditItem'
 >;
 
+export type ListSettingsNavProp = NativeStackNavigationProp<
+  ShoppingListStackParamList,
+  'ListSettings'
+>;
+
 // Route Props
 export type ShoppingListDetailRouteProp = RouteProp<
   ShoppingListStackParamList,
@@ -318,6 +324,14 @@ export type AddPantryItemNavProp = NativeStackNavigationProp<
 export type EditPantryItemNavProp = NativeStackNavigationProp<
   PantryStackParamList,
   'EditPantryItem'
+>;
+export type ExpiringItemsNavProp = NativeStackNavigationProp<
+  PantryStackParamList,
+  'ExpiringItems'
+>;
+export type LowStockItemsNavProp = NativeStackNavigationProp<
+  PantryStackParamList,
+  'LowStockItems'
 >;
 
 // Route Props

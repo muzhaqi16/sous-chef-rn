@@ -1,0 +1,147 @@
+# ============================================
+# SUBSCRIPTIONS
+# ============================================
+
+subscription MembershipUpdated($homeId: ID) {
+  membershipUpdated(homeId: $homeId) {
+    mutation
+    node {
+      id
+      homeId
+      userId
+      role
+      status
+      displayName
+      canViewPantry
+      canEditPantry
+      canAddItems
+      canRemoveItems
+      canInviteOthers
+      canManageHome
+      lastActiveAt
+      joinedAt
+      home {
+        id
+        name
+        type
+      }
+      user {
+        id
+        email
+        profile {
+          displayName
+          avatar
+        }
+      }
+    }
+    previousValues {
+      role
+      status
+      canViewPantry
+      canEditPantry
+      canAddItems
+      canRemoveItems
+      canInviteOthers
+      canManageHome
+    }
+    updatedFields
+    userId
+  }
+}
+
+subscription MyMembershipUpdated {
+  myMembershipUpdated {
+    mutation
+    node {
+      id
+      homeId
+      userId
+      role
+      status
+      displayName
+      canViewPantry
+      canEditPantry
+      canAddItems
+      canRemoveItems
+      canInviteOthers
+      canManageHome
+      home {
+        id
+        name
+        type
+        joinCode
+      }
+    }
+    previousValues {
+      role
+      status
+    }
+    updatedFields
+    userId
+  }
+}
+
+subscription MemberJoined($homeId: ID!) {
+  memberJoined(homeId: $homeId) {
+    mutation
+    node {
+      homeId
+      userId
+      user {
+        profile {
+          displayName
+        }
+      }
+    }
+    previousValues {
+      id
+      homeId
+      userId
+      role
+      status
+      displayName
+      canViewPantry
+      canEditPantry
+      canAddItems
+      canRemoveItems
+      canInviteOthers
+      canManageHome
+      lastActiveAt
+      joinedAt
+      leftAt
+      createdAt
+      updatedAt
+    }
+    updatedFields
+    userId
+  }
+}
+
+subscription MemberLeft($homeId: ID!) {
+  memberLeft(homeId: $homeId) {
+    userId
+  }
+}
+
+subscription MembershipRoleChanged($homeId: ID!) {
+  membershipRoleChanged(homeId: $homeId) {
+    membership {
+      id
+      homeId
+      userId
+      role
+      user {
+        id
+        email
+        profile {
+          displayName
+        }
+      }
+    }
+    homeId
+    userId
+    previousRole
+    newRole
+    changedBy
+  }
+}

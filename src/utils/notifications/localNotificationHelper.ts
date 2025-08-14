@@ -5,16 +5,14 @@ interface LocalNotificationParams {
   id: string;
   title: string;
   body: string;
-  data?: any;
-  badge?: number;
+  priority?: 'high' | 'default' | 'low';
 }
 
 export const showLocalNotification = async ({
   id,
   title,
   body,
-  data,
-  badge,
+  priority = 'default',
 }: LocalNotificationParams) => {
   try {
     // Create channel for Android
@@ -33,7 +31,6 @@ export const showLocalNotification = async ({
       id,
       title,
       body,
-      data,
       ios: {
         sound: 'default',
         categoryId: 'default',

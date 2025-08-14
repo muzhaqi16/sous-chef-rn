@@ -4,7 +4,9 @@ import {createStyleSheet, useStyles} from 'react-native-unistyles';
 import Ionicons from '@react-native-vector-icons/ionicons';
 
 import type {HomeTabParamList} from './types';
-import {ProfileScreen, MainScreen, ShoppingListScreen} from '#/screens';
+import {ProfileScreen} from '#/screens';
+import {PantryStack} from './PantryStack';
+import {ShoppingListStack} from './ShoppingListStack';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 const Tab = createBottomTabNavigator<HomeTabParamList>();
@@ -49,12 +51,12 @@ const HomeTab = () => {
       })}>
       <Tab.Screen
         name="Main"
-        component={MainScreen} // Assuming MainScreen is the same as ShoppingListScreen
+        component={PantryStack}
         options={{title: 'Pantry'}}
       />
       <Tab.Screen
         name="ShoppingList"
-        component={ShoppingListScreen}
+        component={ShoppingListStack}
         options={{title: 'Shopping List'}}
       />
       <Tab.Screen

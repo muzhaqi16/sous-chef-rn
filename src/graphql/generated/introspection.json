@@ -6428,19 +6428,15 @@
             "description": null,
             "args": [],
             "type": {
-              "kind": "NON_NULL",
+              "kind": "LIST",
               "name": null,
               "ofType": {
-                "kind": "LIST",
+                "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "HomeInvite",
-                    "ofType": null
-                  }
+                  "kind": "OBJECT",
+                  "name": "HomeInvite",
+                  "ofType": null
                 }
               }
             },
@@ -6488,7 +6484,11 @@
                 "ofType": {
                   "kind": "NON_NULL",
                   "name": null,
-                  "ofType": {"kind": "OBJECT", "name": "User", "ofType": null}
+                  "ofType": {
+                    "kind": "OBJECT",
+                    "name": "Membership",
+                    "ofType": null
+                  }
                 }
               }
             },
@@ -6506,30 +6506,6 @@
                 "kind": "OBJECT",
                 "name": "MembershipStats",
                 "ofType": null
-              }
-            },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "memberships",
-            "description": null,
-            "args": [],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "Membership",
-                    "ofType": null
-                  }
-                }
               }
             },
             "isDeprecated": false,
@@ -7838,19 +7814,15 @@
             "description": null,
             "args": [],
             "type": {
-              "kind": "NON_NULL",
+              "kind": "LIST",
               "name": null,
               "ofType": {
-                "kind": "LIST",
+                "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "ItemCategory",
-                    "ofType": null
-                  }
+                  "kind": "OBJECT",
+                  "name": "ItemCategory",
+                  "ofType": null
                 }
               }
             },
@@ -14903,7 +14875,7 @@
             "type": {
               "kind": "NON_NULL",
               "name": null,
-              "ofType": {"kind": "SCALAR", "name": "Boolean", "ofType": null}
+              "ofType": {"kind": "OBJECT", "name": "Home", "ofType": null}
             },
             "isDeprecated": false,
             "deprecationReason": null
@@ -16410,7 +16382,7 @@
             "type": {
               "kind": "NON_NULL",
               "name": null,
-              "ofType": {"kind": "SCALAR", "name": "Boolean", "ofType": null}
+              "ofType": {"kind": "OBJECT", "name": "PantryItem", "ofType": null}
             },
             "isDeprecated": false,
             "deprecationReason": null
@@ -19845,6 +19817,50 @@
             "deprecationReason": null
           }
         ],
+        "possibleTypes": null
+      },
+      {
+        "kind": "OBJECT",
+        "name": "NotificationPayload",
+        "description": null,
+        "isOneOf": null,
+        "fields": [
+          {
+            "name": "mutation",
+            "description": null,
+            "args": [],
+            "type": {"kind": "ENUM", "name": "MutationType", "ofType": null},
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "notification",
+            "description": null,
+            "args": [],
+            "type": {"kind": "OBJECT", "name": "Notification", "ofType": null},
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "timestamp",
+            "description": null,
+            "args": [],
+            "type": {"kind": "SCALAR", "name": "String", "ofType": null},
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "userId",
+            "description": null,
+            "args": [],
+            "type": {"kind": "SCALAR", "name": "String", "ofType": null},
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [],
+        "enumValues": null,
         "possibleTypes": null
       },
       {
@@ -31070,6 +31086,47 @@
             "deprecationReason": null
           },
           {
+            "name": "collaborationInviteAccepted",
+            "description": null,
+            "args": [
+              {
+                "name": "email",
+                "description": null,
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {"kind": "SCALAR", "name": "String", "ofType": null}
+                },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
+                "name": "shoppingListId",
+                "description": null,
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {"kind": "SCALAR", "name": "ID", "ofType": null}
+                },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              }
+            ],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "ShoppingListCollaborator",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "collaborationInviteSent",
             "description": null,
             "args": [
@@ -31549,15 +31606,32 @@
             "deprecationReason": null
           },
           {
-            "name": "notificationCreated",
+            "name": "notificationByType",
             "description": null,
-            "args": [],
+            "args": [
+              {
+                "name": "type",
+                "description": null,
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "ENUM",
+                    "name": "NotificationType",
+                    "ofType": null
+                  }
+                },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              }
+            ],
             "type": {
               "kind": "NON_NULL",
               "name": null,
               "ofType": {
                 "kind": "OBJECT",
-                "name": "NotificationSubscriptionPayload",
+                "name": "NotificationPayload",
                 "ofType": null
               }
             },
@@ -31565,7 +31639,7 @@
             "deprecationReason": null
           },
           {
-            "name": "notificationDeleted",
+            "name": "notificationReceived",
             "description": null,
             "args": [],
             "type": {
@@ -31573,23 +31647,7 @@
               "name": null,
               "ofType": {
                 "kind": "OBJECT",
-                "name": "NotificationSubscriptionPayload",
-                "ofType": null
-              }
-            },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "notificationRead",
-            "description": null,
-            "args": [],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "OBJECT",
-                "name": "NotificationSubscriptionPayload",
+                "name": "NotificationPayload",
                 "ofType": null
               }
             },
@@ -31605,7 +31663,7 @@
               "name": null,
               "ofType": {
                 "kind": "OBJECT",
-                "name": "NotificationSubscriptionPayload",
+                "name": "NotificationPayload",
                 "ofType": null
               }
             },
@@ -32117,6 +32175,22 @@
               "ofType": {
                 "kind": "OBJECT",
                 "name": "SuspiciousActivity",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "urgentNotificationReceived",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "NotificationPayload",
                 "ofType": null
               }
             },

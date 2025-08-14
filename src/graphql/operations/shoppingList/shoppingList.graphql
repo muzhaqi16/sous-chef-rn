@@ -1,0 +1,508 @@
+# ============================================
+# QUERIES
+# ============================================
+
+query GetShoppingList($id: ID!) {
+  shoppingList(id: $id) {
+    id
+    name
+    description
+    isDefault
+    isPublic
+    shareCode
+    tags
+    budgetAmount
+    totalCost
+    estimatedTotal
+    currency
+    category
+    priority
+    status
+    isCompleted
+    completedAt
+    totalItems
+    completedItems
+    createdAt
+    updatedAt
+    items {
+      id
+      quantity
+      estimatedPrice
+      budgetPrice
+      isPurchased
+      purchasedQuantity
+      purchasedPrice
+      purchaseDate
+      itemName
+      itemBarcode
+      unitName
+      notes
+      priority
+      category
+      sortOrder
+      isAutoAdded
+      autoAddReason
+      isFromMealPlan
+      item {
+        id
+        name
+        description
+        barcode
+        imageUrl
+        type
+        storageState
+        averagePrice
+      }
+      unit {
+        id
+        name
+        symbol
+      }
+      preferredStore {
+        id
+        name
+        address
+      }
+      purchasedBy {
+        id
+        email
+      }
+      addedBy {
+        id
+        email
+      }
+      createdAt
+      updatedAt
+    }
+    collaborators {
+      id
+      email
+      role
+      status
+      canEdit
+      canAddItems
+      canRemoveItems
+      canEditItems
+      canMarkPurchased
+      canInviteOthers
+      invitedAt
+      lastViewedAt
+    }
+    targetStore {
+      id
+      name
+      address
+    }
+  }
+}
+
+query GetShoppingLists {
+  shoppingLists {
+    id
+    name
+    description
+    isDefault
+    isPublic
+    tags
+    totalItems
+    completedItems
+    estimatedTotal
+    currency
+    status
+    isCompleted
+    priority
+    createdAt
+    updatedAt
+    items {
+      id
+      isPurchased
+    }
+    collaborators {
+      id
+      email
+      role
+    }
+  }
+}
+
+query GetDefaultShoppingList {
+  defaultShoppingList {
+    id
+    name
+    description
+    isDefault
+    totalItems
+    completedItems
+    items {
+      id
+      itemName
+      quantity
+      isPurchased
+      item {
+        id
+        name
+        imageUrl
+      }
+    }
+  }
+}
+
+query GetShoppingListItems($shoppingListId: ID!) {
+  shoppingListItems(shoppingListId: $shoppingListId) {
+    ...ShoppingListItemFragment
+  }
+}
+
+query GetShoppingListItem($id: ID!) {
+  shoppingListItem(id: $id) {
+    ...ShoppingListItemFragment
+  }
+}
+
+query GetShoppingListCollaborators($shoppingListId: ID!) {
+  shoppingListCollaborators(shoppingListId: $shoppingListId) {
+    id
+    role
+    status
+    invitedAt
+    statusChangedAt
+    email
+    collaborator {
+      email
+      role
+      emailVerified
+      id
+    }
+  }
+}
+
+# ============================================
+# MUTATIONS
+# ============================================
+
+mutation CreateShoppingList($input: CreateShoppingListInput!) {
+  createShoppingList(input: $input) {
+    id
+    name
+    description
+    isDefault
+    tags
+    metadata
+    createdAt
+    updatedAt
+    ownerships {
+      id
+      userId
+      shoppingListId
+      createdAt
+      transferredAt
+      transferredFrom
+    }
+  }
+}
+
+mutation UpdateShoppingList($id: ID!, $input: UpdateShoppingListInput!) {
+  updateShoppingList(id: $id, input: $input) {
+    id
+    name
+    description
+    tags
+    budgetAmount
+    currency
+    category
+    priority
+    status
+    isCompleted
+    isDefault
+    updatedAt
+  }
+}
+
+mutation DeleteShoppingList($id: ID!) {
+  deleteShoppingList(id: $id)
+}
+
+mutation SetDefaultShoppingList($id: ID!) {
+  setDefaultShoppingList(id: $id) {
+    id
+    name
+    isDefault
+  }
+}
+
+mutation ShareShoppingList($id: ID!, $input: ShareShoppingListInput!) {
+  shareShoppingList(id: $id, input: $input) {
+    name
+    id
+    isPublic
+    isDefault
+  }
+}
+
+mutation AddCollaborator($data: AddCollaboratorInput!) {
+  addCollaborator(data: $data) {
+    id
+    shoppingListId
+    collaboratorId
+    email
+    role
+    status
+    canEdit
+    canAddItems
+    canRemoveItems
+    canEditItems
+    canMarkPurchased
+    canInviteOthers
+    canViewHistory
+    canExport
+    inviteToken
+    invitedAt
+    statusChangedAt
+    expiresAt
+    lastViewedAt
+    lastEditedAt
+    itemsAdded
+    itemsPurchased
+    notifyOnChanges
+    notifyOnComplete
+  }
+}
+
+mutation RemoveCollaborator($data: RemoveCollaboratorInput!) {
+  removeCollaborator(data: $data)
+}
+
+mutation AddItemToShoppingList($input: CreateShoppingListItemInput!) {
+  addItemToShoppingList(input: $input) {
+    ...ShoppingListItemFragment
+  }
+}
+
+mutation UpdateShoppingListItem(
+  $id: ID!
+  $input: UpdateShoppingListItemInput!
+) {
+  updateShoppingListItem(id: $id, input: $input) {
+    ...ShoppingListItemFragment
+  }
+}
+
+mutation RemoveItemFromShoppingList($id: ID!) {
+  removeItemFromShoppingList(id: $id)
+}
+
+mutation ToggleShoppingListItemCompletion($id: ID!) {
+  toggleShoppingListItemCompletion(id: $id)
+}
+
+mutation MarkItemPurchased($id: ID!) {
+  markItemPurchased(id: $id)
+}
+
+# ============================================
+# SUBSCRIPTIONS
+# ============================================
+
+subscription ShoppingListUpdated($listId: ID!) {
+  shoppingListUpdated(listId: $listId) {
+    mutation
+    node {
+      id
+      name
+      totalItems
+      completedItems
+      estimatedTotal
+      status
+      isCompleted
+      completedAt
+      budgetAmount
+      totalCost
+      items {
+        id
+        itemName
+        quantity
+        isPurchased
+        estimatedPrice
+      }
+    }
+    updatedFields
+    previousValues {
+      name
+      status
+      isCompleted
+      budgetAmount
+      totalCost
+      estimatedTotal
+    }
+    userId
+    timestamp
+  }
+}
+
+subscription MyShoppingListsUpdated {
+  myShoppingListsUpdated {
+    mutation
+    node {
+      id
+      name
+      totalItems
+      completedItems
+      estimatedTotal
+      status
+      isCompleted
+    }
+    previousValues {
+      name
+      status
+      isCompleted
+    }
+    updatedFields
+    userId
+    timestamp
+  }
+}
+
+subscription ShoppingListItemsChanged($listId: ID!) {
+  shoppingListItemsChanged(listId: $listId) {
+    mutation
+    listId
+    item {
+      id
+      itemName
+      quantity
+      estimatedPrice
+      isPurchased
+      purchasedQuantity
+      purchasedPrice
+      notes
+      priority
+      category
+      addedBy {
+        id
+        email
+        profile {
+          displayName
+        }
+      }
+    }
+    previousValues {
+      name
+      quantity
+      isCompleted
+      price
+      notes
+    }
+    updatedFields
+    userId
+    timestamp
+  }
+}
+
+subscription ShoppingListCollaboratorsChanged($listId: ID!) {
+  shoppingListCollaboratorsChanged(listId: $listId) {
+    mutation
+    listId
+    collaborator {
+      id
+      collaboratorId
+      email
+      role
+      status
+      canEdit
+      canAddItems
+      canRemoveItems
+      canMarkPurchased
+      invitedAt
+      collaborator {
+        id
+        email
+        profile {
+          displayName
+          avatar
+        }
+      }
+    }
+    userId
+    timestamp
+  }
+}
+
+subscription ShoppingListStatusChanged($listId: ID!) {
+  shoppingListStatusChanged(listId: $listId) {
+    mutation
+    listId
+    newStatus
+    previousStatus
+    completedBy {
+      id
+      email
+      profile {
+        displayName
+      }
+    }
+    userId
+    timestamp
+  }
+}
+
+subscription ShoppingListItemAdded($shoppingListId: ID!) {
+  shoppingListItemAdded(shoppingListId: $shoppingListId) {
+    id
+    itemName
+    quantity
+    estimatedPrice
+    isPurchased
+    priority
+    category
+    notes
+    addedBy {
+      id
+      email
+      profile {
+        displayName
+      }
+    }
+    item {
+      id
+      name
+      imageUrl
+      averagePrice
+    }
+    unit {
+      id
+      symbol
+      name
+    }
+    createdAt
+  }
+}
+
+subscription ShoppingListItemUpdated($shoppingListId: ID!) {
+  shoppingListItemUpdated(shoppingListId: $shoppingListId) {
+    id
+    itemName
+    quantity
+    estimatedPrice
+    isPurchased
+    purchasedQuantity
+    purchasedPrice
+    notes
+    priority
+    category
+    lastEditedBy {
+      id
+      email
+      profile {
+        displayName
+      }
+    }
+    updatedAt
+  }
+}
+
+subscription ShoppingListItemRemoved($shoppingListId: ID!) {
+  shoppingListItemRemoved(shoppingListId: $shoppingListId) {
+    id
+    itemName
+  }
+}

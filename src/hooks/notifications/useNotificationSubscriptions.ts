@@ -1,12 +1,13 @@
-import {useEffect} from 'react';
+import {useEffect, useState} from 'react';
+import {AppState} from 'react-native';
 import {
-  useNotificationCreatedSubscription,
-  useNotificationUpdatedSubscription,
+  useNotificationReceivedSubscription,
+  useShoppingListItemsChangedSubscription,
+  useUrgentNotificationReceivedSubscription,
   useMyMembershipUpdatedSubscription,
   useShoppingListCollaboratorsChangedSubscription,
   useMemberJoinedSubscription,
   useHomeInvitesQuery,
-  useShoppingListUpdatedSubscription,
   useMyShoppingListsUpdatedSubscription,
   NotificationType,
   NotificationStatus,
@@ -21,62 +22,69 @@ import {
   NotificationPriority,
 } from '#store/slices/notificationSlice';
 
-// Helper function to get category from notification type
-const getCategoryFromType = (type: NotificationType): NotificationCategory => {
-  switch (type) {
-    case NotificationType.ExpiryReminder:
-    case NotificationType.LowStock:
-      return NotificationCategory.PANTRY;
-    case NotificationType.NewItemAdded:
-    case NotificationType.ItemUpdated:
-    case NotificationType.ItemDeleted:
-    case NotificationType.ListUpdated:
-      return NotificationCategory.SHOPPING_LIST;
-    case NotificationType.MembershipInvite:
-    case NotificationType.HomeJoined:
-      return NotificationCategory.MEMBERSHIP;
-    case NotificationType.CollaborationInvite:
-      return NotificationCategory.COLLABORATION;
-    default:
-      return NotificationCategory.SYSTEM;
-  }
-};
-
-// Helper function to get priority from notification type
-const getPriorityFromType = (type: NotificationType): NotificationPriority => {
-  switch (type) {
-    case NotificationType.ExpiryReminder:
-      return NotificationPriority.URGENT;
-    case NotificationType.LowStock:
-    case NotificationType.MembershipInvite:
-    case NotificationType.CollaborationInvite:
-      return NotificationPriority.HIGH;
-    case NotificationType.NewItemAdded:
-    case NotificationType.ItemUpdated:
-    case NotificationType.ItemDeleted:
-      return NotificationPriority.LOW;
-    default:
-      return NotificationPriority.MEDIUM;
-  }
-};
-
-export const useNotificationSubscriptions = (userId: string | undefined) => {
+export const useNotificationSubscriptions = (
+  userId: string | undefined,
+  currentShoppingListId?: string | null,
+  currentUserId?: string,
+) => {
+  const [appState, setAppState] = useState(AppState.currentState);
   const addNotification = useStore(state => state.addNotification);
   const selectedHomeId = useStore(state => state.selectedHomeId);
 
-  // Subscribe to notification creation
-  const {data: notificationData} = useNotificationCreatedSubscription({
-    variables: {userId: userId!},
+  // Helper functions
+  const getCategoryFromType = (
+    type: NotificationType,
+  ): NotificationCategory => {
+    switch (type) {
+      case NotificationType.ExpiryReminder:
+      case NotificationType.LowStock:
+        return NotificationCategory.PANTRY;
+      case NotificationType.NewItemAdded:
+      case NotificationType.ItemUpdated:
+      case NotificationType.ItemDeleted:
+      case NotificationType.ListUpdated:
+        return NotificationCategory.SHOPPING_LIST;
+      case NotificationType.MembershipInvite:
+      case NotificationType.HomeJoined:
+        return NotificationCategory.MEMBERSHIP;
+      case NotificationType.CollaborationInvite:
+        return NotificationCategory.COLLABORATION;
+      default:
+        return NotificationCategory.SYSTEM;
+    }
+  };
+
+  const getPriorityFromType = (
+    type: NotificationType,
+  ): NotificationPriority => {
+    switch (type) {
+      case NotificationType.ExpiryReminder:
+        return NotificationPriority.URGENT;
+      case NotificationType.LowStock:
+      case NotificationType.MembershipInvite:
+      case NotificationType.CollaborationInvite:
+        return NotificationPriority.HIGH;
+      case NotificationType.NewItemAdded:
+      case NotificationType.ItemUpdated:
+      case NotificationType.ItemDeleted:
+        return NotificationPriority.LOW;
+      default:
+        return NotificationPriority.MEDIUM;
+    }
+  };
+
+  // Subscribe to ALL notifications
+  const {data: notificationData} = useNotificationReceivedSubscription({
     skip: !userId,
   });
 
-  // Subscribe to notification updates
-  const {data: notificationUpdateData} = useNotificationUpdatedSubscription({
-    variables: {userId: userId!},
-    skip: !userId,
-  });
+  // Subscribe to urgent notifications
+  const {data: urgentNotificationData} =
+    useUrgentNotificationReceivedSubscription({
+      skip: !userId,
+    });
 
-  // Subscribe to membership updates for the selected home
+  // Subscribe to membership updates
   const {data: membershipData} = useMyMembershipUpdatedSubscription({
     skip: !userId,
   });
@@ -87,53 +95,92 @@ export const useNotificationSubscriptions = (userId: string | undefined) => {
     skip: !selectedHomeId,
   });
 
-  // Subscribe to shopping list updates
+  // Subscribe to shopping list updates (general)
   const {data: shoppingListData} = useMyShoppingListsUpdatedSubscription({
     skip: !userId,
   });
 
-  // Subscribe to collaboration changes
+  // Subscribe to collaboration changes for current list
   const {data: collaborationData} =
     useShoppingListCollaboratorsChangedSubscription({
-      skip: !userId,
+      variables: {listId: currentShoppingListId!},
+      skip: !userId || !currentShoppingListId,
     });
+
+  // Subscribe to shopping list items changes for current list
+  const {data: itemsChangedData} = useShoppingListItemsChangedSubscription({
+    variables: {listId: currentShoppingListId!},
+    skip: !userId || !currentShoppingListId,
+  });
 
   // Poll for home invites
   const {data: invitesData} = useHomeInvitesQuery({
     variables: {homeId: selectedHomeId!},
     skip: !selectedHomeId,
-    pollInterval: 30000, // Poll every 30 seconds
+    pollInterval: 30000,
   });
-
-  // Handle notification creation
+  // Handle app state changes
   useEffect(() => {
-    if (notificationData?.notificationCreated) {
-      const notification = notificationData.notificationCreated;
-      const parsed = parseNotificationPayload(notification.payload);
-      const notificationType = notification.type as NotificationType;
+    const subscription = AppState.addEventListener('change', setAppState);
+    return () => subscription.remove();
+  }, []);
 
-      const newNotification = {
-        id: notification.id,
-        type: notificationType,
-        category: getCategoryFromType(notificationType),
-        priority: getPriorityFromType(notificationType),
-        title: parsed.title,
-        message: parsed.message,
-        payload: notification.payload,
-        sentAt: notification.sentAt,
-        readAt: notification.readAt,
-      };
+  // Handle general notifications
+  useEffect(() => {
+    if (notificationData?.notificationReceived) {
+      const {notification, mutation, timestamp} =
+        notificationData.notificationReceived;
 
-      addNotification(newNotification);
+      if (notification && mutation !== MutationType.Deleted) {
+        const parsed = parseNotificationPayload(notification.payload);
+        const notificationType = notification.type as NotificationType;
 
-      // Show local notification
-      showLocalNotification({
-        id: notification.id,
-        title: parsed.title,
-        body: parsed.message,
-      });
+        const newNotification = {
+          id: notification.id,
+          type: notificationType,
+          category: getCategoryFromType(notificationType),
+          priority: getPriorityFromType(notificationType),
+          title: parsed.title,
+          message: parsed.message,
+          payload: notification.payload,
+          status: notification.status,
+          sentAt: notification.sentAt,
+          readAt: notification.readAt,
+          createdAt: notification.createdAt,
+          timestamp,
+        };
+
+        addNotification(newNotification);
+
+        if (notification.status !== NotificationStatus.Read) {
+          showLocalNotification({
+            id: notification.id,
+            title: parsed.title,
+            body: parsed.message,
+          });
+        }
+      }
     }
   }, [notificationData, addNotification]);
+
+  // Handle urgent notifications
+  useEffect(() => {
+    if (urgentNotificationData?.urgentNotificationReceived) {
+      const {notification, timestamp} =
+        urgentNotificationData.urgentNotificationReceived;
+
+      if (notification) {
+        const parsed = parseNotificationPayload(notification.payload);
+
+        showLocalNotification({
+          id: notification.id,
+          title: `🚨 ${parsed.title}`,
+          body: parsed.message,
+          priority: 'high',
+        });
+      }
+    }
+  }, [urgentNotificationData]);
 
   // Handle membership updates
   useEffect(() => {
@@ -173,82 +220,22 @@ export const useNotificationSubscriptions = (userId: string | undefined) => {
     }
   }, [membershipData, addNotification]);
 
-  // Handle new member joined
-  useEffect(() => {
-    if (memberJoinedData?.memberJoined) {
-      const member = memberJoinedData.memberJoined;
-
-      const notification = {
-        id: `member-joined-${Date.now()}`,
-        type: NotificationType.HomeJoined,
-        category: NotificationCategory.MEMBERSHIP,
-        priority: NotificationPriority.MEDIUM,
-        title: 'New Member Joined',
-        message: `${member.node?.user.profile?.displayName || 'Someone'} joined your home`,
-        payload: {
-          homeId: member?.node?.homeId,
-          userId: member.userId,
-          userName: member.node?.user.profile?.displayName,
-        },
-        sentAt: new Date().toISOString(),
-      };
-
-      addNotification(notification);
-      showLocalNotification({
-        id: notification.id,
-        title: notification.title,
-        body: notification.message,
-      });
-    }
-  }, [memberJoinedData, addNotification]);
-
-  // Handle shopping list updates
-  useEffect(() => {
-    if (shoppingListData?.myShoppingListsUpdated) {
-      const update = shoppingListData.myShoppingListsUpdated;
-
-      if (
-        update.mutation === MutationType.ItemAdded ||
-        update.mutation === MutationType.ItemUpdated
-      ) {
-        const notification = {
-          id: `list-update-${Date.now()}`,
-          type: NotificationType.ListUpdated,
-          category: NotificationCategory.SHOPPING_LIST,
-          priority: NotificationPriority.LOW,
-          title: 'Shopping List Updated',
-          message: `${update.node?.name || 'A shopping list'} has been updated`,
-          payload: {
-            listId: update.node?.id,
-            listName: update.node?.name,
-            mutation: update.mutation,
-          },
-          sentAt: new Date().toISOString(),
-        };
-
-        addNotification(notification);
-        showLocalNotification({
-          id: notification.id,
-          title: notification.title,
-          body: notification.message,
-        });
-      }
-    }
-  }, [shoppingListData, addNotification]);
-
   // Handle collaboration updates
   useEffect(() => {
     if (collaborationData?.shoppingListCollaboratorsChanged) {
       const change = collaborationData.shoppingListCollaboratorsChanged;
 
-      if (change.mutation === MutationType.CollaboratorAdded) {
+      if (
+        change.mutation === MutationType.CollaboratorAdded &&
+        change.userId !== currentUserId
+      ) {
         const notification = {
           id: `collab-${Date.now()}`,
           type: NotificationType.CollaborationInvite,
           category: NotificationCategory.COLLABORATION,
           priority: NotificationPriority.HIGH,
-          title: 'Shopping List Invitation',
-          message: `You've been added to a shopping list`,
+          title: 'Added to Shopping List',
+          message: `You've been added as a collaborator`,
           payload: {
             listId: change.listId,
             role: change.collaborator?.role,
@@ -270,9 +257,71 @@ export const useNotificationSubscriptions = (userId: string | undefined) => {
         });
       }
     }
-  }, [collaborationData, addNotification]);
+  }, [collaborationData, addNotification, currentUserId]);
 
-  // Handle home invites
+  // Handle shopping list item changes
+  useEffect(() => {
+    if (itemsChangedData?.shoppingListItemsChanged) {
+      const change = itemsChangedData.shoppingListItemsChanged;
+
+      // Only notify if change was made by someone else
+      if (change.userId !== currentUserId) {
+        let title = '';
+        let message = '';
+
+        switch (change.mutation) {
+          case MutationType.ItemAdded:
+            title = 'Item Added';
+            message = `${change.item?.itemName} was added by ${change.item?.addedBy?.profile?.displayName || 'someone'}`;
+            break;
+          case MutationType.ItemRemoved:
+            title = 'Item Removed';
+            message = `${change.item?.itemName} was removed`;
+            break;
+          case MutationType.ItemCompleted:
+            title = 'Item Purchased';
+            message = `${change.item?.itemName} was marked as purchased`;
+            break;
+          case MutationType.ItemUpdated:
+            title = 'Item Updated';
+            message = `${change.item?.itemName} was updated`;
+            break;
+        }
+
+        if (title && message) {
+          const notification = {
+            id: `item-change-${Date.now()}`,
+            type: NotificationType.ListUpdated,
+            category: NotificationCategory.SHOPPING_LIST,
+            priority: NotificationPriority.LOW,
+            title,
+            message,
+            payload: {
+              listId: change.listId,
+              itemId: change.item?.id,
+              itemName: change.item?.itemName,
+              mutation: change.mutation,
+              userId: change.userId,
+            },
+            sentAt: new Date().toISOString(),
+          };
+
+          addNotification(notification);
+
+          // Only show notification if app is in background
+          if (appState === 'background' || appState === 'inactive') {
+            showLocalNotification({
+              id: notification.id,
+              title: notification.title,
+              body: notification.message,
+            });
+          }
+        }
+      }
+    }
+  }, [itemsChangedData, addNotification, currentUserId]);
+
+  // Handle home invites (polling)
   useEffect(() => {
     if (invitesData?.homeInvites) {
       const pendingInvites = invitesData.homeInvites.filter(
@@ -308,7 +357,7 @@ export const useNotificationSubscriptions = (userId: string | undefined) => {
               inviteId: invite.id,
               token: invite.token,
             },
-            expiresAt: invite.expiresAt, // Add expiration from invite
+            expiresAt: invite.expiresAt,
           };
 
           addNotification(notification);
@@ -321,4 +370,11 @@ export const useNotificationSubscriptions = (userId: string | undefined) => {
       });
     }
   }, [invitesData, addNotification]);
+
+  return {
+    notificationCount: useStore(
+      state => state.notifications.filter(n => !n.readAt).length,
+    ),
+    notifications: useStore(state => state.notifications),
+  };
 };

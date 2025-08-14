@@ -1,5 +1,5 @@
 import {useEffect} from 'react';
-import {useHomesQuery} from '#generated';
+import {useGetHomesQuery} from '#generated';
 import {useStore} from '#store';
 
 export const useDefaultHome = () => {
@@ -9,7 +9,7 @@ export const useDefaultHome = () => {
     data: homes,
     loading,
     error,
-  } = useHomesQuery({
+  } = useGetHomesQuery({
     fetchPolicy: 'cache-and-network',
     skip: !!selectedHomeId, // Skip if we already have a selected home
   });

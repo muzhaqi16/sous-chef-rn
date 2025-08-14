@@ -1,30 +1,22 @@
 import {useMemo} from 'react';
 import {
-  usePantryItemsQuery,
+  useGetPantryItemsQuery,
   usePantryItemsChangedSubscription,
-  PantryItemsQuery,
-  PantryItemsDocument,
+  GetPantryItemsQuery,
+  GetPantryItemsDocument,
 } from '../graphql/generated';
 import {useSearchableList} from './useSearchableList';
 import {ApolloClient} from '@apollo/client';
 
 export function usePantryItems(pantryId: string | undefined) {
-  // Fetch pantry items with cache-and-network policy
-  // This ensures we get the latest data from the server while using cached data
-  // for immediate UI updates.
-  // If pantryId is not provided, skip the query
-  // to avoid unnecessary network requests.
-  if (!pantryId) {
-    return {items: [], query: '', setQuery: () => {}, refetch: () => {}};
-  }
-  const {data, refetch, client} = usePantryItemsQuery({
+  const {data, refetch, client} = useGetPantryItemsQuery({
     fetchPolicy: 'cache-and-network',
     skip: !pantryId,
-    variables: {pantryId: pantryId},
+    variables: {pantryId: pantryId ?? ''},
   });
 
   usePantryItemsChangedSubscription({
-    variables: {pantryId: pantryId},
+    variables: {pantryId: pantryId ?? ''},
     skip: !pantryId,
     onData: ({
       data: subData,
@@ -36,8 +28,8 @@ export function usePantryItems(pantryId: string | undefined) {
       const updatedItem = subData?.data?.pantryItemUpdated;
       if (!updatedItem) return;
 
-      const cache = client.readQuery<PantryItemsQuery>({
-        query: PantryItemsDocument,
+      const cache = client.readQuery<GetPantryItemsQuery>({
+        query: GetPantryItemsDocument,
         variables: {pantryId},
       });
 
@@ -50,8 +42,8 @@ export function usePantryItems(pantryId: string | undefined) {
           )
         : [...cache.pantryItems, updatedItem];
 
-      client.writeQuery<PantryItemsQuery>({
-        query: PantryItemsDocument,
+      client.writeQuery<GetPantryItemsQuery>({
+        query: GetPantryItemsDocument,
         variables: {pantryId},
         data: {pantryItems: updated},
       });

@@ -1,12 +1,5 @@
 import React from 'react';
-import {
-  StyleSheet,
-  SafeAreaView,
-  View,
-  Text,
-  TouchableOpacity,
-  Image,
-} from 'react-native';
+import {View, Text, TouchableOpacity, Image} from 'react-native';
 import FeatherIcon from '@react-native-vector-icons/feather';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
 import {useNavigation} from '@react-navigation/native';

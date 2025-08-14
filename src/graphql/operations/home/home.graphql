@@ -1,0 +1,118 @@
+# ============================================
+# QUERIES
+# ============================================
+
+query GetHome($homeId: ID!) {
+  home(id: $homeId) {
+    ...HomeFragment
+  }
+}
+
+query GetHomes {
+  homes {
+    id
+    name
+    createdAt
+    updatedAt
+    pantries {
+      id
+      name
+      isDefault
+    }
+    members {
+      id
+      role
+      status
+      user {
+        ...BasicUser
+      }
+    }
+  }
+}
+
+query GetHomeInvites($homeId: ID!) {
+  homeInvites(homeId: $homeId) {
+    ...HomeInviteFragment
+  }
+}
+
+# ============================================
+# MUTATIONS
+# ============================================
+
+mutation CreateHome($input: CreateHomeInput!) {
+  createHome(input: $input) {
+    id
+    name
+    description
+    type
+    currency
+    timezone
+    isPublic
+    allowJoinCode
+    joinCode
+    maxMembers
+    tags
+    createdAt
+    updatedAt
+    pantries {
+      id
+      name
+      isDefault
+    }
+    members {
+      id
+      user {
+        email
+      }
+    }
+  }
+}
+
+mutation UpdateHome($id: ID!, $input: UpdateHomeInput!) {
+  updateHome(id: $id, input: $input) {
+    ...HomeFragment
+  }
+}
+
+mutation DeleteHome($id: ID!) {
+  deleteHome(id: $id) {
+    ...HomeFragment
+  }
+}
+
+mutation InviteToHome($input: InviteToHomeInput!) {
+  inviteToHome(input: $input) {
+    ...HomeInviteFragment
+  }
+}
+
+mutation InviteUserToHome($input: InviteUserInput!) {
+  inviteUserToHome(input: $input)
+}
+
+mutation AcceptHomeInvite($token: String!) {
+  acceptHomeInvite(token: $token) {
+    id
+    homeId
+    userId
+    role
+    status
+    displayName
+    canViewPantry
+    canEditPantry
+    canAddItems
+    canRemoveItems
+    canInviteOthers
+    canManageHome
+    lastActiveAt
+    joinedAt
+    leftAt
+    createdAt
+    updatedAt
+  }
+}
+
+mutation DeclineHomeInvite($token: String!) {
+  declineHomeInvite(token: $token)
+}

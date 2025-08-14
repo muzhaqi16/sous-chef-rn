@@ -1,0 +1,48 @@
+# ============================================
+# QUERIES
+# ============================================
+
+query GetUnits {
+  units {
+    id
+    name
+    symbol
+    type
+    conversionFactor
+    notes
+  }
+}
+
+query GetUnit($id: ID!) {
+  unit(id: $id) {
+    id
+    name
+    symbol
+    type
+    conversionFactor
+    notes
+  }
+}
+
+query GetUnitBySymbol($symbol: String!) {
+  unitBySymbol(symbol: $symbol) {
+    id
+    name
+    symbol
+    type
+    isMetric
+    baseUnitId
+    conversionFactor
+    notes
+    isCommon
+    sortOrder
+    createdAt
+    updatedAt
+    baseUnit {
+      id
+      name
+      conversionFactor
+      baseUnitId
+    }
+  }
+}

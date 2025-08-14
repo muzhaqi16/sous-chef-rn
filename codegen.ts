@@ -32,10 +32,9 @@ const config: CodegenConfig = {
 
   // Include GraphQL documents from your mobile app
   documents: [
-    // TypeScript/JavaScript files with gql tags
-    'src/**/*.{ts,tsx,js,jsx}',
+    'src/graphql/operations/fragments.graphql', // Load fragments first
     // Standalone GraphQL files
-    'src/**/*.{graphql,gql}',
+    'src/graphql/operations/**/*.{graphql,gql}',
     // Exclude generated files
     '!src/graphql/generated/**/*.{ts,tsx}',
     // Exclude node_modules and other irrelevant paths
@@ -66,10 +65,16 @@ const config: CodegenConfig = {
         withHooks: true,
         withComponent: false,
         withHOC: false,
+        withSubscriptionHooks: true, // Enable subscription hooks
+        withRefetchFn: true, // Enable refetch functions
+        withMutationFn: true, // Enable mutation functions
 
         // Apollo Client configuration
         apolloReactCommonImportFrom: '@apollo/client',
         apolloReactHooksImportFrom: '@apollo/client',
+
+        // Document mode - important for subscriptions
+        documentMode: 'documentNode', // ADD THIS LINE
 
         // Type safety improvements
         avoidOptionals: {
@@ -98,6 +103,16 @@ const config: CodegenConfig = {
         dedupeOperationSuffix: true,
         skipTypename: false,
         flattenGeneratedTypes: false,
+
+        // Fragment types
+        inlineFragmentTypes: 'combine', // Better fragment handling
+        nonOptionalTypename: false, // Don't include __typename
+
+        // Immutable types for better type safety
+        immutableTypes: false, // Set to true if you want readonly types
+
+        // Enum handling
+        enumsAsTypes: false, // Set to true if you prefer union types over enums
       },
     },
 
@@ -122,6 +137,7 @@ const config: CodegenConfig = {
       plugins: ['schema-ast'],
       config: {
         includeDirectives: true,
+        includeIntrospectionTypes: true, // Include subscription types
         sort: true,
       },
     },

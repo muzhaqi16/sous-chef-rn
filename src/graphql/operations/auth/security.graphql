@@ -1,0 +1,121 @@
+# ============================================
+# SUBSCRIPTIONS
+# ============================================
+
+subscription LoginAttempts($userId: ID!) {
+  loginAttempts(userId: $userId) {
+    id
+    userId
+    success
+    method
+    provider
+    ipAddress
+    ipCountry
+    ipRegion
+    ipCity
+    isVpn
+    isTor
+    isProxy
+    userAgent
+    browserName
+    browserVersion
+    osName
+    osVersion
+    deviceType
+    isMobileApp
+    riskScore
+    isRisky
+    riskFactors
+    failureReason
+    failureDetails
+    isNewLocation
+    isNewDevice
+    isNewBrowser
+    loggedInAt
+    user {
+      id
+      email
+    }
+  }
+}
+
+subscription SuspiciousActivity($userId: ID!) {
+  suspiciousActivity(userId: $userId) {
+    rapidAttempts {
+      hour
+      count
+    }
+    riskyLogins {
+      id
+      ipAddress
+      ipCountry
+      riskScore
+      riskFactors
+      loggedInAt
+    }
+    newLocationLogins {
+      id
+      ipAddress
+      ipCountry
+      ipCity
+      loggedInAt
+    }
+    newDeviceLogins {
+      id
+      deviceType
+      browserName
+      osName
+      loggedInAt
+    }
+    failedFromSameIP {
+      ipAddress
+      count
+    }
+    suspiciousActivity
+    unusualTimeLogins {
+      id
+      loggedInAt
+      timezoneDiff
+    }
+    multipleAccountsFromIP {
+      ipAddress
+      count
+    }
+  }
+}
+
+subscription FailedLoginAttempts($userId: ID!) {
+  failedLoginAttempts(userId: $userId) {
+    id
+    userId
+    method
+    ipAddress
+    ipCountry
+    userAgent
+    failureReason
+    failureDetails
+    loggedInAt
+  }
+}
+
+subscription RiskyLoginAlerts($userId: ID!) {
+  riskyLoginAlerts(userId: $userId) {
+    id
+    userId
+    ipAddress
+    ipCountry
+    riskScore
+    riskFactors
+    isVpn
+    isTor
+    isProxy
+    requiresMfa
+    mfaCompleted
+    loggedInAt
+    flaggedBy {
+      id
+      email
+    }
+    flaggedReason
+  }
+}

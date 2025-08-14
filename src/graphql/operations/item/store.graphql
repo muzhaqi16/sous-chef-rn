@@ -1,0 +1,34 @@
+# ============================================
+# SUBSCRIPTIONS
+# ============================================
+
+subscription StoreUpdated($storeId: ID) {
+  storeUpdated(storeId: $storeId) {
+    id
+    name
+    address
+    priceAccuracy
+    lastPriceUpdate
+    qualityRating
+    chain
+    city
+    state
+    zipCode
+    latitude
+    longitude
+    phone
+    website
+    isActive
+    updatedAt
+  }
+}
+
+subscription StoreRatingChanged($storeId: ID) {
+  storeRatingChanged(storeId: $storeId) {
+    id
+    name
+    qualityRating
+    priceAccuracy
+    updatedAt
+  }
+}

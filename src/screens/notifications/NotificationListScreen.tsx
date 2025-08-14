@@ -24,7 +24,7 @@ import {
   NotificationPriority,
 } from '#store/slices/notificationSlice';
 import {RootNavProp} from '#navigation';
-import {useMyNotificationsQuery} from '#generated';
+import {useGetMyNotificationsQuery} from '#generated';
 import {useStore} from '#store';
 
 export const NotificationListScreen: React.FC = () => {
@@ -91,7 +91,7 @@ export const NotificationListScreen: React.FC = () => {
   }, [filteredNotifications]);
 
   // Fetch notifications from server
-  const {refetch} = useMyNotificationsQuery({
+  const {refetch} = useGetMyNotificationsQuery({
     skip: !userId,
   });
 

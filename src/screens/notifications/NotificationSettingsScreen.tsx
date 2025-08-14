@@ -1,15 +1,18 @@
 import React, {useState, useEffect} from 'react';
 import {View, Text, ScrollView, Alert} from 'react-native';
 import {useStyles, createStyleSheet} from 'react-native-unistyles';
-import {useUpdateSettingsMutation, useUserSettingsQuery} from '#generated';
+import {
+  useUpdateUserPreferencesMutation,
+  useGetUserSettingsQuery,
+} from '#generated';
 import {SettingSwitch, SettingSection} from '#components/settings';
 import {useStore} from '#/store';
 
 export const NotificationSettingsScreen: React.FC = () => {
   const {styles} = useStyles(stylesheet);
   const user = useStore(state => state.user);
-  const {data, loading} = useUserSettingsQuery();
-  const [updateSettings] = useUpdateSettingsMutation();
+  const {data, loading} = useGetUserSettingsQuery();
+  const [updateSettings] = useUpdateUserPreferencesMutation();
 
   const settings = data?.userSettings;
 
