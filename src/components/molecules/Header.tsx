@@ -1,6 +1,7 @@
 import React from 'react';
 import {View, Text, TouchableOpacity} from 'react-native';
 import Icon from '@react-native-vector-icons/material-icons';
+import {MaterialDesignIcons} from '@react-native-vector-icons/material-design-icons';
 import {useStyles, createStyleSheet} from 'react-native-unistyles';
 
 interface HeaderAction {
@@ -13,27 +14,41 @@ interface HeaderAction {
 interface HeaderProps {
   title: string;
   onBack?: () => void;
-  actions?: HeaderAction[];
+  leftActions?: HeaderAction[];
+  rightActions?: HeaderAction[];
   centerTitle?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   title,
-  onBack,
-  actions = [],
+  leftActions = [],
+  rightActions = [],
   centerTitle = false,
 }) => {
   const {styles, theme} = useStyles(headerStyles);
 
   return (
     <View style={styles.container}>
-      {onBack ? (
-        <TouchableOpacity onPress={onBack}>
-          <Icon name="arrow-back" size={24} color={theme.colors.textPrimary} />
-        </TouchableOpacity>
-      ) : (
-        <View style={styles.placeholder} />
-      )}
+      <View style={styles.leftActions}>
+        {leftActions.map((action, index) => (
+          <TouchableOpacity
+            key={index}
+            style={styles.leftActions}
+            onPress={action.onPress}>
+            <Icon
+              name={action.icon}
+              size={24}
+              color={action.color || theme.colors.textPrimary}
+            />
+            {action.badge !== undefined && action.badge > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{action.badge}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        ))}
+        {leftActions.length === 0 && <View style={styles.placeholder} />}
+      </View>
 
       {title && (
         <Text style={[styles.title, centerTitle && styles.centerTitle]}>
@@ -42,7 +57,7 @@ export const Header: React.FC<HeaderProps> = ({
       )}
 
       <View style={styles.actions}>
-        {actions.map((action, index) => (
+        {rightActions.map((action, index) => (
           <TouchableOpacity
             key={index}
             style={styles.action}
@@ -59,7 +74,7 @@ export const Header: React.FC<HeaderProps> = ({
             )}
           </TouchableOpacity>
         ))}
-        {actions.length === 0 && <View style={styles.placeholder} />}
+        {rightActions.length === 0 && <View style={styles.placeholder} />}
       </View>
     </View>
   );
@@ -85,7 +100,7 @@ const headerStyles = createStyleSheet(theme => ({
     textAlign: 'center',
   },
   placeholder: {
-    width: 24,
+    paddingRight: theme.spacing.sm,
   },
   actions: {
     flexDirection: 'row',
@@ -95,6 +110,7 @@ const headerStyles = createStyleSheet(theme => ({
     marginLeft: 16,
     position: 'relative',
   },
+  leftActions: {},
   badge: {
     position: 'absolute',
     top: -4,

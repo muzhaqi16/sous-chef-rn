@@ -6,17 +6,18 @@ import {useGetHomeQuery} from '#generated';
 import {PantryMainNavProp} from '#navigation/types';
 import {ListTemplate} from '#components/templates/ListTemplate';
 import {EmptyState} from '#components/molecules/EmptyState';
+import {useStyles} from 'react-native-unistyles';
 
 export const PantryMain: React.FC = () => {
   const navigation = useNavigation<PantryMainNavProp>();
 
+  const {theme} = useStyles();
+
   const {
     selectedHomeId,
     loading: homesLoading,
-    getDefaultPantryId,
+    getDefaultPantry,
   } = useDefaultHome();
-
-  console.log('Selected Home ID:', selectedHomeId);
 
   const {data: homeData} = useGetHomeQuery({
     variables: {homeId: selectedHomeId ?? ''},
@@ -24,7 +25,7 @@ export const PantryMain: React.FC = () => {
     skip: !selectedHomeId,
   });
 
-  const pantryId = getDefaultPantryId(homeData);
+  const pantry = getDefaultPantry(homeData);
 
   const {
     items: pantryItems,
@@ -36,7 +37,7 @@ export const PantryMain: React.FC = () => {
     loading,
     getExpiredItems,
     getLowStockItems,
-  } = usePantryManagement(pantryId);
+  } = usePantryManagement(pantry?.id);
 
   // Transform pantry items to list items format
   const items = useMemo(() => {
@@ -106,7 +107,7 @@ export const PantryMain: React.FC = () => {
         onRefresh={async () => {
           await refetch();
         }}
-        headerActions={[]}
+        headerRightActions={[]}
         emptyState={{
           icon: 'inventory',
           title: 'Loading...',
@@ -115,10 +116,10 @@ export const PantryMain: React.FC = () => {
       />
     );
   }
-
   return (
     <ListTemplate
-      title="Pantry"
+      title={homeData?.home?.name || 'Pantry'}
+      subtitle={pantry?.name || 'Your Pantry'}
       items={items}
       searchQuery={searchQuery}
       onSearchChange={setSearchQuery}
@@ -129,7 +130,18 @@ export const PantryMain: React.FC = () => {
       onRefresh={async () => {
         await refetch();
       }}
-      headerActions={[
+      headerLeftActions={[
+        {
+          icon: 'home',
+          onPress: () =>
+            navigation.getParent()?.navigate('HomeManagementStack', {
+              screen: 'HomeManagement',
+              params: {homeId: selectedHomeId},
+            }),
+          color: theme.colors.primary,
+        },
+      ]}
+      headerRightActions={[
         {
           icon: 'schedule',
           onPress: () => navigation.navigate('ExpiringItems'),

@@ -10,7 +10,10 @@ query GetMe {
 query GetUserSettings {
   userSettings {
     id
-    userId
+    user {
+      id
+      email
+    }
     emailNotifications
     pushNotifications
     smsNotifications
@@ -31,6 +34,10 @@ query GetUserSettings {
     betaFeatures
     createdAt
     updatedAt
+    defaultHome {
+      id
+      name
+    }
   }
 }
 
@@ -103,7 +110,10 @@ mutation UpdateUserProfile($input: UpdateUserProfileInput!) {
 mutation UpdateUserPreferences($input: UpdateUserSettingsInput!) {
   updateSettings(input: $input) {
     id
-    userId
+    user {
+      id
+      email
+    }
     emailNotifications
     pushNotifications
     smsNotifications

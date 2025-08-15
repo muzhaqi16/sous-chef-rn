@@ -393,7 +393,7 @@ fragment HomeInviteFragment on HomeInvite {
   acceptedAt
   declinedAt
   revokedAt
-  personalMessage
+  message
   createdAt
   home {
     id
@@ -412,7 +412,7 @@ fragment MemberShipFragment on Membership {
   homeId
   userId
   user {
-    ...BasicUser
+    ...PartialUser
   }
   role
   status

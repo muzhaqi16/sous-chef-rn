@@ -24,7 +24,7 @@ export const useDefaultHome = () => {
   }, [selectedHomeId, homes, setSelectedHomeId]);
 
   // Helper function to get the default pantry from a home
-  const getDefaultPantryId = (homeData: any) => {
+  const getDefaultPantry = (homeData: any) => {
     if (!homeData?.home?.pantries) return null;
 
     // First try to find a pantry marked as default
@@ -32,13 +32,11 @@ export const useDefaultHome = () => {
       (pantry: any) => pantry.isDefault,
     );
     if (defaultPantry) {
-      return defaultPantry.id;
+      return defaultPantry;
     }
 
     // If no default pantry, return the first one
-    return homeData.home.pantries.length > 0
-      ? homeData.home.pantries[0].id
-      : null;
+    return homeData.home.pantries.length > 0 ? homeData.home.pantries[0] : null;
   };
 
   return {
@@ -47,6 +45,6 @@ export const useDefaultHome = () => {
     loading,
     error,
     hasDefaultHome: !!selectedHomeId,
-    getDefaultPantryId,
+    getDefaultPantry,
   };
 };

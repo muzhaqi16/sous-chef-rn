@@ -24,7 +24,7 @@ query GetHomes {
       role
       status
       user {
-        ...BasicUser
+        ...PartialUser
       }
     }
   }
@@ -42,30 +42,7 @@ query GetHomeInvites($homeId: ID!) {
 
 mutation CreateHome($input: CreateHomeInput!) {
   createHome(input: $input) {
-    id
-    name
-    description
-    type
-    currency
-    timezone
-    isPublic
-    allowJoinCode
-    joinCode
-    maxMembers
-    tags
-    createdAt
-    updatedAt
-    pantries {
-      id
-      name
-      isDefault
-    }
-    members {
-      id
-      user {
-        email
-      }
-    }
+    ...HomeFragment
   }
 }
 
@@ -85,10 +62,6 @@ mutation InviteToHome($input: InviteToHomeInput!) {
   inviteToHome(input: $input) {
     ...HomeInviteFragment
   }
-}
-
-mutation InviteUserToHome($input: InviteUserInput!) {
-  inviteUserToHome(input: $input)
 }
 
 mutation AcceptHomeInvite($token: String!) {

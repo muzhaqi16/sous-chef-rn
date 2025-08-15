@@ -8,6 +8,7 @@ import {FAB} from '../base/Fab';
 
 interface ListTemplateProps {
   title?: string;
+  subtitle?: string;
   items: any[];
   searchQuery: string;
   onSearchChange: (query: string) => void;
@@ -16,7 +17,8 @@ interface ListTemplateProps {
   onItemDelete?: (id: string) => void;
   onAddPress?: () => void;
   onRefresh?: () => Promise<void>;
-  headerActions?: any[];
+  headerLeftActions?: any[];
+  headerRightActions?: any[];
   emptyState?: any;
   showUserHeader?: boolean;
   onBack?: () => void;
@@ -24,6 +26,7 @@ interface ListTemplateProps {
 
 export const ListTemplate: React.FC<ListTemplateProps> = ({
   title = '',
+  subtitle = '',
   items,
   searchQuery,
   onSearchChange,
@@ -32,7 +35,8 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
   onItemDelete,
   onAddPress,
   onRefresh,
-  headerActions = [],
+  headerRightActions = [],
+  headerLeftActions = [],
   emptyState,
   showUserHeader = true,
   onBack,
@@ -42,13 +46,18 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
   return (
     <View style={styles.container}>
       {showUserHeader && <UserHeader />}
-      {headerActions.length > 0 && (
-        <Header title={title} onBack={onBack} actions={headerActions} />
+      {headerRightActions.length > 0 && (
+        <Header
+          title={title}
+          onBack={onBack}
+          leftActions={headerLeftActions}
+          rightActions={headerRightActions}
+        />
       )}
       <SearchBar
         value={searchQuery}
         onChangeText={onSearchChange}
-        placeholder={`Search ${title.toLowerCase()}...`}
+        placeholder={`Search ${subtitle.toLowerCase()}...`}
         onPressList={() => {}}
         onPressAdd={onAddPress}
         listName={title}

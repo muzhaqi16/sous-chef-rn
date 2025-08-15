@@ -1107,7 +1107,7 @@ type HomeInvite {
   invitedUserId: String
   inviter: User!
   lastReminderAt: String
-  personalMessage: String
+  message: String
   recipientName: String
   reminderCount: Int!
   revokedAt: String
@@ -1202,10 +1202,9 @@ enum InviteStatus {
 }
 
 input InviteToHomeInput {
-  customExpiration: Int
   email: String!
   homeId: ID!
-  personalMessage: String
+  message: String
   role: MembershipRole!
 }
 
@@ -1222,13 +1221,6 @@ input InviteToShoppingListInput {
   expiresAt: String
   role: CollaboratorRole!
   shoppingListId: ID!
-}
-
-input InviteUserInput {
-  email: String!
-  homeId: ID!
-  message: String
-  role: MembershipRole
 }
 
 type Item {
@@ -1972,7 +1964,6 @@ type Mutation {
   incrementDeviceLoginCount(id: ID!): Device!
   incrementItemPopularity(id: ID!): Item!
   inviteToHome(input: InviteToHomeInput!): HomeInvite!
-  inviteUserToHome(input: InviteUserInput!): Boolean!
   joinHomeByCode(joinCode: String!): Membership!
   joinShoppingListByShareCode(shareCode: String!): ShoppingList!
   leaveHome(homeId: ID!): Boolean!
@@ -2029,6 +2020,7 @@ type Mutation {
   revokeHomeInvite(id: ID!): Boolean!
   sendBulkNotifications(input: BulkNotificationInput!): BulkNotificationResult!
   sendTestNotification(type: NotificationType!): Notification!
+  setDefaultHome(homeId: ID!): UserSettings!
   setDefaultItemUnit(itemId: ID!, unitId: ID!): ItemUnit!
   setDefaultShoppingList(id: ID!): ShoppingList!
   setItemBrand(brandId: ID!, isPrimary: Boolean, itemId: ID!): Item!
@@ -2612,6 +2604,7 @@ type Query {
   devicesByPlatform(platform: MobilePlatform!, userId: ID!): [Device!]!
   expiringItems(pantryId: ID!): [PantryItem!]!
   failedLoginAttempts(hours: Int = 24, userId: ID!): [LoginHistory!]!
+  getDefaultHome: Home
   hasUrgentNotifications: Boolean!
   home(id: ID!): Home
   homeByJoinCode(joinCode: String!): Home
@@ -3893,6 +3886,7 @@ type UserSettings {
   betaFeatures: [String!]!
   compactMode: Boolean!
   createdAt: DateTime!
+  defaultHome: Home
   emailNotifications: Boolean!
   enabledFeatures: [String!]!
   expiredItemAlerts: Boolean!
@@ -3909,7 +3903,7 @@ type UserSettings {
   smsNotifications: Boolean!
   theme: AppTheme!
   updatedAt: DateTime!
-  userId: String!
+  user: User!
   weeklyDigest: Boolean!
 }
 

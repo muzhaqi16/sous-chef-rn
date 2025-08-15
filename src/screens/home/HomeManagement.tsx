@@ -10,28 +10,44 @@ import {
 import Icon from '@react-native-vector-icons/material-icons';
 import {useNavigation} from '@react-navigation/native';
 import {useStyles, createStyleSheet} from 'react-native-unistyles';
-import {UserHeader} from '#components';
 import {ShoppingListDetailNavProp} from '#/navigation';
 import {useHomeManagement} from '#/hooks';
+import {useEmailInputModal} from '#/hooks/useEmailInputModal';
 
 export const HomeManagement: React.FC = () => {
   const {styles, theme} = useStyles(stylesheet);
   const navigation = useNavigation<ShoppingListDetailNavProp>();
-
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [homeName, setHomeName] = useState('');
 
   const {
     homes,
+    defaultHomeId,
     loading,
     creating,
     createHome,
     deleteHome,
     setDefaultHome,
-    inviteUserPrompt,
+    inviteUserToHome,
     stats,
   } = useHomeManagement();
 
+  const {show, hide, EmailModalComponent} = useEmailInputModal();
+
+  // Update inviteUserPrompt
+  const inviteUserPrompt = (homeId: string) => {
+    show({
+      title: 'Invite Member',
+      placeholder: 'Enter email address',
+      onSubmit: async email => {
+        const success = await inviteUserToHome(homeId, email);
+        if (!success) {
+          throw new Error('Failed to invite user');
+        }
+        hide();
+      },
+    });
+  };
   const handleCreateHome = async () => {
     const result = await createHome(homeName);
     if (result) {
@@ -59,137 +75,156 @@ export const HomeManagement: React.FC = () => {
       </View>
     );
   }
-
   return (
-    <View style={styles.container}>
-      <UserHeader />
-
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>My Homes</Text>
-        <TouchableOpacity onPress={() => setShowCreateForm(true)}>
-          <Icon name="add" size={24} color={theme.colors.primary} />
-        </TouchableOpacity>
-      </View>
-
-      {/* Stats Section */}
-      <View style={styles.statsContainer}>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{stats.totalHomes}</Text>
-          <Text style={styles.statLabel}>Homes</Text>
+    <>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          {/* Go Back */}
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Icon
+              name="arrow-back"
+              size={24}
+              color={theme.colors.textPrimary}
+            />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>My Homes</Text>
+          <TouchableOpacity onPress={() => setShowCreateForm(true)}>
+            <Icon name="add" size={24} color={theme.colors.primary} />
+          </TouchableOpacity>
         </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{stats.totalMembers}</Text>
-          <Text style={styles.statLabel}>Members</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{stats.totalPantries}</Text>
-          <Text style={styles.statLabel}>Pantries</Text>
-        </View>
-      </View>
 
-      {showCreateForm && (
-        <View style={styles.createForm}>
-          <TextInput
-            style={styles.input}
-            value={homeName}
-            onChangeText={setHomeName}
-            placeholder="Enter home name"
-            autoFocus
-          />
-          <View style={styles.formActions}>
-            <TouchableOpacity
-              style={[styles.button, styles.cancelButton]}
-              onPress={() => {
-                setShowCreateForm(false);
-                setHomeName('');
-              }}>
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.button, styles.createButton]}
-              onPress={handleCreateHome}
-              disabled={creating}>
-              {creating ? (
-                <ActivityIndicator size="small" color="white" />
-              ) : (
-                <Text style={styles.createButtonText}>Create</Text>
-              )}
-            </TouchableOpacity>
+        {/* Stats Section */}
+        <View style={styles.statsContainer}>
+          <View style={styles.statCard}>
+            <Text style={styles.statNumber}>{stats.totalHomes}</Text>
+            <Text style={styles.statLabel}>
+              {stats.totalHomes === 1 ? 'Home' : 'Homes'}
+            </Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statNumber}>{stats.totalMembers}</Text>
+            <Text style={styles.statLabel}>
+              {stats.totalMembers === 1 ? 'Member' : 'Members'}
+            </Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statNumber}>{stats.totalPantries}</Text>
+            <Text style={styles.statLabel}>
+              {stats.totalPantries === 1 ? 'Pantry' : 'Pantries'}
+            </Text>
           </View>
         </View>
-      )}
 
-      <ScrollView style={styles.scrollView}>
-        {homes.map((home: any) => (
-          <View key={home.id} style={styles.homeCard}>
-            <View style={styles.homeHeader}>
-              <View style={styles.homeInfo}>
-                <Text style={styles.homeName}>{home.name}</Text>
-                <Text style={styles.homeDetails}>
-                  {home.members?.length || 0} members •{' '}
-                  {home.pantries?.length || 0} pantries
-                </Text>
-              </View>
-              {home.isDefault && (
-                <View style={styles.defaultBadge}>
-                  <Text style={styles.defaultText}>Default</Text>
-                </View>
-              )}
+        {showCreateForm && (
+          <View style={styles.createForm}>
+            <TextInput
+              style={styles.input}
+              value={homeName}
+              onChangeText={setHomeName}
+              placeholder="Enter home name"
+              autoFocus
+            />
+            <View style={styles.formActions}>
+              <TouchableOpacity
+                style={[styles.button, styles.cancelButton]}
+                onPress={() => {
+                  setShowCreateForm(false);
+                  setHomeName('');
+                }}>
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, styles.createButton]}
+                onPress={handleCreateHome}
+                disabled={creating}>
+                {creating ? (
+                  <ActivityIndicator size="small" color="white" />
+                ) : (
+                  <Text style={styles.createButtonText}>Create</Text>
+                )}
+              </TouchableOpacity>
             </View>
+          </View>
+        )}
 
-            <View style={styles.homeActions}>
-              {!home.isDefault && (
+        <ScrollView
+          style={styles.scrollView}
+          keyboardShouldPersistTaps="handled" // Add this
+          keyboardDismissMode="on-drag">
+          {homes.map(home => (
+            <View key={home.id} style={styles.homeCard}>
+              <View style={styles.homeHeader}>
+                <View style={styles.homeInfo}>
+                  <Text style={styles.homeName}>{home.name}</Text>
+                  <Text style={styles.homeDetails}>
+                    {home.members?.length || 0} members •{' '}
+                    {home.pantries?.length || 0} pantries
+                  </Text>
+                </View>
+                {home.id == defaultHomeId && (
+                  <View style={styles.defaultBadge}>
+                    <Text style={styles.defaultText}>Default</Text>
+                  </View>
+                )}
+              </View>
+
+              <View style={styles.homeActions}>
+                {home.id !== defaultHomeId && (
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => handleSetDefault(home.id)}>
+                    <Icon
+                      name="star-outline"
+                      size={20}
+                      color={theme.colors.textSecondary}
+                    />
+                    <Text style={styles.actionText}>Set Default</Text>
+                  </TouchableOpacity>
+                )}
+
                 <TouchableOpacity
                   style={styles.actionButton}
-                  onPress={() => handleSetDefault(home.id)}>
+                  onPress={() => handleInviteMember(home.id)}>
                   <Icon
-                    name="star-outline"
+                    name="person-add"
                     size={20}
                     color={theme.colors.textSecondary}
                   />
-                  <Text style={styles.actionText}>Set Default</Text>
+                  <Text style={styles.actionText}>Invite</Text>
                 </TouchableOpacity>
-              )}
 
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() => handleInviteMember(home.id)}>
-                <Icon
-                  name="person-add"
-                  size={20}
-                  color={theme.colors.textSecondary}
-                />
-                <Text style={styles.actionText}>Invite</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() => handleDeleteHome(home.id, home.name)}>
-                <Icon name="delete" size={20} color={theme.colors.error} />
-                <Text style={[styles.actionText, {color: theme.colors.error}]}>
-                  Delete
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {home.members && home.members.length > 0 && (
-              <View style={styles.membersSection}>
-                <Text style={styles.membersSectionTitle}>Members</Text>
-                <View style={styles.membersList}>
-                  {home.members.map((member: any) => (
-                    <View key={member.id} style={styles.memberChip}>
-                      <Text style={styles.memberChipText}>
-                        {member.name || member.email}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => handleDeleteHome(home.id, home.name)}>
+                  <Icon name="delete" size={20} color={theme.colors.error} />
+                  <Text
+                    style={[styles.actionText, {color: theme.colors.error}]}>
+                    Delete
+                  </Text>
+                </TouchableOpacity>
               </View>
-            )}
-          </View>
-        ))}
-      </ScrollView>
-    </View>
+
+              {home.members && home.members.length > 0 && (
+                <View style={styles.membersSection}>
+                  <Text style={styles.membersSectionTitle}>Members</Text>
+                  <View style={styles.membersList}>
+                    {home.members.map(member => (
+                      <View key={member.id} style={styles.memberChip}>
+                        <Text style={styles.memberChipText}>
+                          {member?.user?.profile?.firstName ||
+                            member?.user?.email}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+            </View>
+          ))}
+        </ScrollView>
+      </View>
+      {EmailModalComponent}
+    </>
   );
 };
 

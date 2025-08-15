@@ -30,6 +30,7 @@ export type RootStackParamList = {
   ShoppingListStack: NavigatorScreenParams<ShoppingListStackParamList>;
   PantryStack: NavigatorScreenParams<PantryStackParamList>;
   SettingsStack: NavigatorScreenParams<SettingsStackParamList>;
+  HomeManagementStack: NavigatorScreenParams<HomeManagementStackParamList>;
   NotFound: undefined;
 };
 
@@ -124,6 +125,11 @@ export type SettingsStackParamList = {
   About: undefined;
 };
 
+export type HomeManagementStackParamList = {
+  HomeManagement: {
+    selectedHomeId?: string;
+  };
+};
 // ============================================================================
 // ROOT & HOME TAB SCREEN PROPS
 // ============================================================================
@@ -381,6 +387,27 @@ export type ProfileSettingsNavProp = NativeStackNavigationProp<
 export type NotificationSettingsNavProp = NativeStackNavigationProp<
   SettingsStackParamList,
   'NotificationSettings'
+>;
+
+// ============================================================================
+// HOME MANAGEMENT STACK TYPES
+// ============================================================================
+
+// Screen Props
+export type HomeManagementStackScreenProps<
+  T extends keyof HomeManagementStackParamList,
+> = CompositeScreenProps<
+  NativeStackScreenProps<HomeManagementStackParamList, T>,
+  StackScreenProps<RootStackParamList, keyof RootStackParamList>
+>;
+
+export type HomeManagementScreenProps =
+  HomeManagementStackScreenProps<'HomeManagement'>;
+
+// Navigation Props
+export type HomeManagementNavProp = NativeStackNavigationProp<
+  HomeManagementStackParamList,
+  'HomeManagement'
 >;
 
 // ============================================================================

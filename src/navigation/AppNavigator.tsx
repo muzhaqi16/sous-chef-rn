@@ -10,7 +10,7 @@ import NotificationStack from './NotificationStack'; // Add this
 import {NotFoundScreen} from '../screens/NotFoundScreen';
 import type {RootStackParamList} from './types';
 import {OnBoardingSteps} from '#/store/slices/preferencesSlice';
-
+import {HomeManagementStack} from './HomeStack'; // Import HomeManagementStack
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function AppNavigator() {
@@ -36,6 +36,10 @@ export default function AppNavigator() {
         <Stack.Screen name="AuthStack" component={AuthStack} />
         <Stack.Screen name="OnBoardingStack" component={OnBoardingStack} />
         <Stack.Screen name="HomeStack" component={HomeTab} />
+        <Stack.Screen
+          name="HomeManagementStack"
+          component={HomeManagementStack}
+        />
         <Stack.Screen name="BarcodeStack" component={BarcodeStack} />
         <Stack.Screen name="NotificationStack" component={NotificationStack} />
         <Stack.Screen name="NotFound" component={NotFoundScreen} />
