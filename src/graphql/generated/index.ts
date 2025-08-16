@@ -6768,7 +6768,20 @@ export type GetOnboardingItemsQueryVariables = Exact<{[key: string]: never}>;
 
 export type GetOnboardingItemsQuery = {
   __typename?: 'Query';
-  onboardingItems: Array<{__typename?: 'Item'} & ItemFragment>;
+  onboardingItems: Array<{
+    __typename?: 'Item';
+    imageUrl?: string | null | undefined;
+    id: string;
+    name: string;
+    storageState: StorageState;
+    units: Array<{
+      __typename?: 'ItemUnit';
+      unit?:
+        | {__typename?: 'Unit'; id: string; name: string; isCommon: boolean}
+        | null
+        | undefined;
+    }>;
+  }>;
 };
 
 export type AutocompleteItemsQueryVariables = Exact<{
@@ -19793,238 +19806,36 @@ export const GetOnboardingItemsDocument = {
               kind: 'SelectionSet',
               selections: [
                 {
-                  kind: 'FragmentSpread',
-                  name: {kind: 'Name', value: 'ItemFragment'},
-                },
-              ],
-            },
-          },
-        ],
-      },
-    },
-    {
-      kind: 'FragmentDefinition',
-      name: {kind: 'Name', value: 'UnitFragment'},
-      typeCondition: {
-        kind: 'NamedType',
-        name: {kind: 'Name', value: 'ItemUnit'},
-      },
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          {kind: 'Field', name: {kind: 'Name', value: 'id'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'itemId'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'unitId'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'isDefault'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'isPreferred'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'isCommon'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'conversionRatio'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'conversionNote'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'packageSize'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'packageDescription'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'retailUnit'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'usageContext'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'recommendedFor'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'minQuantity'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'maxQuantity'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'quantityStep'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'averagePricePerUnit'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'lastPriceUpdate'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'priceSource'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'usageCount'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'lastUsedAt'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'popularityScore'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'source'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'confidence'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'isVerified'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'verifiedAt'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'createdAt'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'updatedAt'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'deletedAt'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'version'}},
-        ],
-      },
-    },
-    {
-      kind: 'FragmentDefinition',
-      name: {kind: 'Name', value: 'BrandFragment'},
-      typeCondition: {
-        kind: 'NamedType',
-        name: {kind: 'Name', value: 'ItemBrand'},
-      },
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          {kind: 'Field', name: {kind: 'Name', value: 'id'}},
-          {
-            kind: 'Field',
-            name: {kind: 'Name', value: 'brand'},
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                {kind: 'Field', name: {kind: 'Name', value: 'id'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'name'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'logo'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'website'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'description'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'metadata'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'createdAt'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'updatedAt'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'deletedAt'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'version'}},
-              ],
-            },
-          },
-          {kind: 'Field', name: {kind: 'Name', value: 'isPrimary'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'createdAt'}},
-        ],
-      },
-    },
-    {
-      kind: 'FragmentDefinition',
-      name: {kind: 'Name', value: 'CategoryFragment'},
-      typeCondition: {
-        kind: 'NamedType',
-        name: {kind: 'Name', value: 'Category'},
-      },
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          {kind: 'Field', name: {kind: 'Name', value: 'id'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'name'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'slug'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'description'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'icon'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'color'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'sortOrder'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'type'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'isActive'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'isSystem'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'visibility'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'itemCount'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'usageCount'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'createdAt'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'updatedAt'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'deletedAt'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'version'}},
-        ],
-      },
-    },
-    {
-      kind: 'FragmentDefinition',
-      name: {kind: 'Name', value: 'ItemFragment'},
-      typeCondition: {kind: 'NamedType', name: {kind: 'Name', value: 'Item'}},
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          {kind: 'Field', name: {kind: 'Name', value: 'id'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'name'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'description'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'barcode'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'fdcId'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'dataSource'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'type'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'storageState'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'showInOnboarding'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'shelfLifeDays'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'popularity'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'status'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'visibility'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'averagePrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'minPrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'maxPrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'priceUpdatedAt'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'imageUrl'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'tags'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'healthBenefits'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'allergens'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'nutritions'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'metadata'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'ingredients'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'createdAt'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'updatedAt'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'deletedAt'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'version'}},
-          {
-            kind: 'Field',
-            name: {kind: 'Name', value: 'units'},
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                {
-                  kind: 'FragmentSpread',
-                  name: {kind: 'Name', value: 'UnitFragment'},
-                },
-              ],
-            },
-          },
-          {
-            kind: 'Field',
-            name: {kind: 'Name', value: 'brands'},
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                {
-                  kind: 'FragmentSpread',
-                  name: {kind: 'Name', value: 'BrandFragment'},
-                },
-              ],
-            },
-          },
-          {
-            kind: 'Field',
-            name: {kind: 'Name', value: 'categories'},
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                {kind: 'Field', name: {kind: 'Name', value: 'id'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'source'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'confidence'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'isPrimary'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'createdAt'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'assignedAt'}},
-                {
                   kind: 'Field',
-                  name: {kind: 'Name', value: 'category'},
+                  name: {kind: 'Name', value: 'units'},
                   selectionSet: {
                     kind: 'SelectionSet',
                     selections: [
                       {
-                        kind: 'FragmentSpread',
-                        name: {kind: 'Name', value: 'CategoryFragment'},
+                        kind: 'Field',
+                        name: {kind: 'Name', value: 'unit'},
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {kind: 'Field', name: {kind: 'Name', value: 'id'}},
+                            {
+                              kind: 'Field',
+                              name: {kind: 'Name', value: 'name'},
+                            },
+                            {
+                              kind: 'Field',
+                              name: {kind: 'Name', value: 'isCommon'},
+                            },
+                          ],
+                        },
                       },
                     ],
                   },
                 },
-              ],
-            },
-          },
-          {
-            kind: 'Field',
-            name: {kind: 'Name', value: 'creations'},
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
+                {kind: 'Field', name: {kind: 'Name', value: 'imageUrl'}},
                 {kind: 'Field', name: {kind: 'Name', value: 'id'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'source'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'reason'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'metadata'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'createdAt'}},
-              ],
-            },
-          },
-          {
-            kind: 'Field',
-            name: {kind: 'Name', value: 'edits'},
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                {kind: 'Field', name: {kind: 'Name', value: 'id'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'fieldsChanged'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'oldValues'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'newValues'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'editReason'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'createdAt'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'name'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'storageState'}},
               ],
             },
           },

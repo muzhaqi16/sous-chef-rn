@@ -6,19 +6,19 @@ import {useNavigation} from '@react-navigation/native';
 import {SelectPantryItemsNavProp} from '#navigation/types';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
 import {
-  useOnboardingItemsQuery,
+  useGetOnboardingItemsQuery,
   useAddItemToPantryMutation,
   StorageState,
   ItemCondition,
   AcquisitionMethod,
-  OnboardingItemsQuery,
+  GetOnboardingItemsQuery,
 } from '#generated';
 import {useStore} from '#store';
 import {OnBoardingSteps} from '#store/slices/preferencesSlice';
 import {Button} from '#components';
 
 type OnboardingItemType = NonNullable<
-  OnboardingItemsQuery['onboardingItems']
+  GetOnboardingItemsQuery['onboardingItems']
 >[number];
 
 export const SelectPantryItems = () => {
@@ -30,7 +30,7 @@ export const SelectPantryItems = () => {
     data,
     loading,
     error: queryError,
-  } = useOnboardingItemsQuery({
+  } = useGetOnboardingItemsQuery({
     fetchPolicy: 'cache-and-network',
     onError: e => console.error(e),
   });
