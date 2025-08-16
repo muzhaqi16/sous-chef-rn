@@ -33,7 +33,13 @@ export const FormModal: React.FC<FormModalProps> = ({
       <Header
         title={title}
         onBack={onClose}
-        actions={[
+        leftActions={[
+          {
+            icon: 'close',
+            onPress: onClose,
+          },
+        ]}
+        rightActions={[
           {
             icon: 'check',
             onPress: onSave,

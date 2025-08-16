@@ -15,6 +15,7 @@ interface ListItemProps {
     variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger';
   };
   rightElement?: React.ReactNode;
+  leftElement?: React.ReactNode; // Optional left element for image or icon
 }
 
 export const ListItem: React.FC<ListItemProps> = ({
@@ -25,11 +26,14 @@ export const ListItem: React.FC<ListItemProps> = ({
   rightIcon = 'chevron-right',
   badge,
   rightElement,
+  leftElement,
 }) => {
   const {styles, theme} = useStyles(listItemStyles);
 
   const content = (
     <>
+      {/* Optional left element for image or icon */}
+      {leftElement}
       {leftIcon && (
         <View style={styles.leftIcon}>
           <Icon name={leftIcon} size={24} color={theme.colors.textSecondary} />

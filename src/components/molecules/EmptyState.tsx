@@ -1,11 +1,11 @@
 import React from 'react';
 import {View, Text} from 'react-native';
-import Icon from '@react-native-vector-icons/material-icons';
 import {useStyles, createStyleSheet} from 'react-native-unistyles';
 import {Button} from '../base/Button';
+import {IconName, Icon} from '#/utils/iconUtils';
 
 interface EmptyStateProps {
-  icon: React.ComponentProps<typeof Icon>['name'];
+  icon: IconName;
   title: string;
   description?: string;
   action?: {

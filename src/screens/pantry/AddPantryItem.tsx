@@ -40,7 +40,12 @@ export const AddPantryItem: React.FC = () => {
   const [category, setCategory] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const {selectedHomeId, getDefaultPantryId} = useDefaultHome();
+  const {
+    selectedHomeId,
+    loading: homesLoading,
+    getDefaultPantry,
+  } = useDefaultHome();
+
   const {data: homeData} = useGetHomeQuery({
     variables: {homeId: selectedHomeId ?? ''},
     skip: !selectedHomeId,
@@ -50,7 +55,7 @@ export const AddPantryItem: React.FC = () => {
     fetchPolicy: 'network-only',
   });
 
-  const pantryId = getDefaultPantryId(homeData);
+  const pantry = getDefaultPantry(homeData);
   const [addItem] = useAddItemToPantryMutation();
 
   const handleSave = async () => {
@@ -73,7 +78,7 @@ export const AddPantryItem: React.FC = () => {
       await addItem({
         variables: {
           input: {
-            pantryId,
+            pantryId: pantry?.id || '',
             initialQuantity: parseFloat(quantity),
             storageState: storageState as StorageState,
             expiresAt: expirationDate?.toISOString(),

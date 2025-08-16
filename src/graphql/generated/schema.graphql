@@ -384,6 +384,18 @@ type AuthPayload {
   user: User!
 }
 
+input AutocompleteInput {
+  category: String
+  limit: Int = 10
+  query: String!
+  storeId: String
+}
+
+type AutocompleteResponse {
+  suggestions: [ItemSuggestion!]!
+  totalCount: Int!
+}
+
 enum AutomatedFlag {
   ABUSE_LANGUAGE
   DUPLICATE_CONTENT
@@ -1407,9 +1419,9 @@ type ItemStoreSku {
 }
 
 type ItemSuggestion {
-  item: Item!
-  reason: String!
-  score: Float!
+  id: ID!
+  imageUrl: String
+  name: String!
 }
 
 enum ItemType {
@@ -1695,6 +1707,13 @@ type LoginMethodStat {
   method: LoginMethod!
 }
 
+enum MatchType {
+  CATEGORY
+  EXACT
+  FUZZY
+  PARTIAL
+}
+
 type MealPlan {
   createdAt: DateTime!
   description: String
@@ -1976,7 +1995,7 @@ type Mutation {
     wasteAmount: Float!
     wasteReason: WasteReason!
   ): PantryItem!
-  markItemPurchased(id: ID!): Boolean!
+  markItemPurchased(id: ID!, status: Boolean!): ShoppingListItem!
   markLoginAsReviewed(
     loginId: ID!
     notes: String
@@ -2033,7 +2052,6 @@ type Mutation {
   syncItemOffers(itemId: ID!, storeId: String!): Item!
   syncItemPrices(itemId: ID!, storeIds: [String!]): Item!
   syncItemWithProvider(itemId: ID!, provider: ProviderType!): Item!
-  toggleShoppingListItemCompletion(id: ID!): Boolean!
   transferHomeOwnership(homeId: ID!, newOwnerId: ID!): HomeOwnership!
   trustDevice(id: ID!): Device!
   trustMultipleDevices(deviceIds: [ID!]!): [Device!]!
@@ -2579,6 +2597,7 @@ type Query {
   _empty: String
   activeDevices(userId: ID!): [Device!]!
   activeModerations: [UserModeration!]!
+  autocompleteItems(input: AutocompleteInput!): AutocompleteResponse!
   brand(id: ID!): Brand
   brands: [Brand!]!
   categories(parentId: String, type: CategoryType): [Category!]!

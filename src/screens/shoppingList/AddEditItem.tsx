@@ -4,11 +4,13 @@ import {useNavigation, useRoute} from '@react-navigation/native';
 import {
   useAddItemToShoppingListMutation,
   useUpdateShoppingListItemMutation,
-  useShoppingListItemQuery,
+  useGetShoppingListItemQuery,
+  ItemSuggestion,
 } from '#generated';
 import {FormModal} from '#components/organisms/FormModal';
 import {Input} from '#components/base/Input';
 import {FormGroup} from '#components/molecules/FormGroup';
+import {AutocompleteInput} from '#components/molecules/AutoCompleteInput';
 
 interface RouteParams {
   listId: string;
@@ -21,6 +23,7 @@ export const AddEditItem: React.FC = () => {
   const {listId, itemId} = route.params as RouteParams;
   const isEdit = !!itemId;
 
+  // Form state
   const [itemName, setItemName] = useState('');
   const [quantity, setQuantity] = useState('1');
   const [unit, setUnit] = useState('');
@@ -28,7 +31,8 @@ export const AddEditItem: React.FC = () => {
   const [category, setCategory] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const {data} = useShoppingListItemQuery({
+  // GraphQL hooks
+  const {data} = useGetShoppingListItemQuery({
     variables: {id: itemId || ''},
     skip: !isEdit,
   });
@@ -36,6 +40,7 @@ export const AddEditItem: React.FC = () => {
   const [addItem] = useAddItemToShoppingListMutation();
   const [updateItem] = useUpdateShoppingListItemMutation();
 
+  // Populate form when editing existing item
   useEffect(() => {
     if (data?.shoppingListItem) {
       const item = data.shoppingListItem;
@@ -47,6 +52,15 @@ export const AddEditItem: React.FC = () => {
     }
   }, [data]);
 
+  // Handle autocomplete item selection
+  const handleItemSelect = (item: ItemSuggestion) => {
+    // When user selects from autocomplete, just set the item name
+    // In the future, you could extend this to fetch more item details
+    // and populate other fields like category, default unit, etc.
+    setItemName(item.name);
+  };
+
+  // Handle form submission
   const handleSave = async () => {
     if (!itemName.trim()) {
       Alert.alert('Error', 'Please enter an item name');
@@ -96,15 +110,29 @@ export const AddEditItem: React.FC = () => {
       onClose={() => navigation.goBack()}
       onSave={handleSave}
       loading={saving}>
-      <Input
-        label="Item Name"
-        value={itemName}
-        onChangeText={setItemName}
-        placeholder="e.g., Milk, Bread"
-        required
-        autoFocus
-      />
+      {/* Item Name Field - Use autocomplete for new items only */}
+      {isEdit ? (
+        <Input
+          label="Item Name"
+          value={itemName}
+          onChangeText={setItemName}
+          placeholder="e.g., Milk, Bread"
+          required
+          autoFocus
+        />
+      ) : (
+        <AutocompleteInput
+          label="Item Name"
+          value={itemName}
+          onChangeText={setItemName}
+          onSelectItem={handleItemSelect}
+          placeholder="e.g., Milk, Bread"
+          required
+          autoFocus
+        />
+      )}
 
+      {/* Quantity and Unit Row */}
       <FormGroup row>
         <Input
           label="Quantity"
@@ -121,6 +149,7 @@ export const AddEditItem: React.FC = () => {
         />
       </FormGroup>
 
+      {/* Category Field */}
       <Input
         label="Category"
         value={category}
@@ -128,6 +157,7 @@ export const AddEditItem: React.FC = () => {
         placeholder="e.g., Dairy, Produce"
       />
 
+      {/* Notes Field */}
       <Input
         label="Notes"
         value={notes}

@@ -2,11 +2,23 @@ import React from 'react';
 import {View} from 'react-native';
 import {useStyles, createStyleSheet} from 'react-native-unistyles';
 import {UserHeader, SearchBar} from '#components';
-import {Header} from '../molecules/Header';
+import {Header, HeaderAction} from '../molecules/Header';
 import {ItemList} from '../organisms/ItemList';
 import {FAB} from '../base/Fab';
+import {SearchBarAction} from '#components/molecules/SearchBar';
+
+interface HeaderActions {
+  left?: HeaderAction[];
+  right?: HeaderAction[];
+}
+
+interface SearchBarActions {
+  left?: SearchBarAction[];
+  right?: SearchBarAction[];
+}
 
 interface ListTemplateProps {
+  // Core list functionality
   title?: string;
   subtitle?: string;
   items: any[];
@@ -15,16 +27,27 @@ interface ListTemplateProps {
   onItemPress: (id: string) => void;
   onItemEdit?: (id: string) => void;
   onItemDelete?: (id: string) => void;
-  onAddPress?: () => void;
   onRefresh?: () => Promise<void>;
-  headerLeftActions?: any[];
-  headerRightActions?: any[];
   emptyState?: any;
+
+  // Display controls
   showUserHeader?: boolean;
-  onBack?: () => void;
+  showHeader?: boolean;
+  showSearchBar?: boolean;
+  showFAB?: boolean;
+
+  // Actions
+  headerActions?: HeaderActions;
+  searchBarActions?: SearchBarActions;
+  onFabPress?: () => void; // For FAB
+  onBack?: () => void; // For header back button
+
+  // Search bar specific props
+  searchPlaceholder?: string;
 }
 
 export const ListTemplate: React.FC<ListTemplateProps> = ({
+  // Core props
   title = '',
   subtitle = '',
   items,
@@ -33,37 +56,54 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
   onItemPress,
   onItemEdit,
   onItemDelete,
-  onAddPress,
   onRefresh,
-  headerRightActions = [],
-  headerLeftActions = [],
   emptyState,
+
+  // Display controls
   showUserHeader = true,
+  showHeader = false,
+  showSearchBar = true,
+  showFAB = true,
+
+  // Actions
+  headerActions,
+  searchBarActions,
+  onFabPress,
   onBack,
+
+  // Search specific
+  searchPlaceholder,
 }) => {
   const {styles} = useStyles(stylesheet);
 
   return (
     <View style={styles.container}>
       {showUserHeader && <UserHeader />}
-      {headerRightActions.length > 0 && (
+
+      {showHeader && (
         <Header
           title={title}
           onBack={onBack}
-          leftActions={headerLeftActions}
-          rightActions={headerRightActions}
+          leftActions={headerActions?.left || []}
+          rightActions={headerActions?.right || []}
         />
       )}
-      <SearchBar
-        value={searchQuery}
-        onChangeText={onSearchChange}
-        placeholder={`Search ${subtitle.toLowerCase()}...`}
-        onPressList={() => {}}
-        onPressAdd={onAddPress}
-        listName={title}
-        itemCount={items.length}
-        completedCount={items.filter(item => item.completed).length}
-      />
+
+      {showSearchBar && (
+        <SearchBar
+          value={searchQuery}
+          onChangeText={onSearchChange}
+          placeholder={
+            searchPlaceholder || `Search ${subtitle.toLowerCase()}...`
+          }
+          leftActions={searchBarActions?.left || []}
+          rightActions={searchBarActions?.right || []}
+          listName={title}
+          itemCount={items.length}
+          completedCount={items.filter(item => item.completed).length}
+        />
+      )}
+
       <ItemList
         items={items}
         onItemPress={onItemPress}
@@ -72,8 +112,13 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
         onRefresh={onRefresh}
         emptyState={emptyState}
       />
-      {onAddPress && (
-        <FAB onPress={onAddPress} position={{bottom: 20, right: 20}} />
+
+      {showFAB && showFAB && (
+        <FAB
+          icon="qr-code-scanner"
+          onPress={onFabPress}
+          position={{bottom: 20, right: 20}}
+        />
       )}
     </View>
   );

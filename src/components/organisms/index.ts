@@ -1,5 +1,4 @@
 export * from './ProfileInfo';
-export * from './AddItemBottomSheet';
 export * from './CategorySelector';
 export * from './CreateShoppingListBottomSheet';
 export * from './ProfileHeader';
@@ -8,5 +7,6 @@ export * from './ShareShoppingListBottomSheet';
 export * from './ShoppingList';
 export * from './ShoppingListFooter';
 export * from './ShoppingListHeader';
-export * from './ShoppingListSelector';
-export * from './AddItemBottomSheet';
+export * from './home';
+export * from './ItemSelector';
+export * from './modal';

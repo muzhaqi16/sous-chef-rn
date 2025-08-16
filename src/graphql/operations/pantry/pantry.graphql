@@ -48,6 +48,8 @@ mutation CreatePantry($input: CreatePantryInput!) {
     location
     temperature
     tags
+    metadata
+    version
     createdAt
     updatedAt
   }

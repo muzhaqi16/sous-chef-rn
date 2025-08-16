@@ -1,11 +1,10 @@
-import {useMemo} from 'react';
 import {
   useGetPantryItemsQuery,
   usePantryItemsChangedSubscription,
   GetPantryItemsQuery,
   GetPantryItemsDocument,
-} from '../graphql/generated';
-import {useSearchableList} from './useSearchableList';
+} from '#generated';
+import {useSearchableList} from '../useSearchableList';
 import {ApolloClient} from '@apollo/client';
 
 export function usePantryItems(pantryId: string | undefined) {

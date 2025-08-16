@@ -39,18 +39,7 @@ export function PantryStack() {
         name="AddPantryItem"
         component={AddPantryItem}
         options={{
-          title: 'Add Pantry Item',
-          headerLeft: () => (
-            <TouchableOpacity
-              style={styles.headerButton}
-              onPress={() => navigation.goBack()}>
-              <Icon
-                name="arrow-back"
-                size={24}
-                color={theme.colors.textPrimary}
-              />
-            </TouchableOpacity>
-          ),
+          headerShown: false,
         }}
       />
       <Stack.Screen

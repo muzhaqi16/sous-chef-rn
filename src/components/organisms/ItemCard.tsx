@@ -14,6 +14,7 @@ interface ItemCardProps {
     variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger';
   };
   rightElement?: React.ReactNode;
+  leftElement?: React.ReactNode; // Optional left element for image or icon
 }
 
 export const ItemCard: React.FC<ItemCardProps> = ({
@@ -24,6 +25,7 @@ export const ItemCard: React.FC<ItemCardProps> = ({
   onDelete,
   badge,
   rightElement,
+  leftElement,
 }) => {
   if (onEdit || onDelete) {
     return (
@@ -33,6 +35,7 @@ export const ItemCard: React.FC<ItemCardProps> = ({
           subtitle={subtitle}
           badge={badge}
           rightElement={rightElement}
+          leftElement={leftElement}
         />
       </SwipeableItem>
     );

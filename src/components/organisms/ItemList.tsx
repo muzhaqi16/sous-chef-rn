@@ -3,8 +3,7 @@ import {ScrollView, RefreshControl} from 'react-native';
 import {useStyles, createStyleSheet} from 'react-native-unistyles';
 import {EmptyState} from '../molecules/EmptyState';
 import {ItemCard} from './ItemCard';
-import {MaterialIconName} from '#/types';
-
+import {IconName} from '#/utils/iconUtils';
 interface Item {
   id: string;
   title: string;
@@ -14,6 +13,7 @@ interface Item {
     variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger';
   };
   rightElement?: React.ReactNode;
+  leftElement?: React.ReactNode; // Optional left element for image or icon
 }
 
 interface ItemListProps {
@@ -23,7 +23,7 @@ interface ItemListProps {
   onItemDelete?: (id: string) => void;
   onRefresh?: () => Promise<void>;
   emptyState?: {
-    icon: MaterialIconName;
+    icon: IconName;
     title: string;
     description?: string;
     action?: {
@@ -72,6 +72,7 @@ export const ItemList: React.FC<ItemListProps> = ({
           title={item.title}
           subtitle={item.subtitle}
           badge={item.badge}
+          leftElement={item.leftElement}
           rightElement={item.rightElement}
           onPress={() => onItemPress(item.id)}
           onEdit={onItemEdit ? () => onItemEdit(item.id) : undefined}

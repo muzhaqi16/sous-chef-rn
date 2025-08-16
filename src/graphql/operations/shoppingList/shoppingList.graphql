@@ -291,12 +291,12 @@ mutation RemoveItemFromShoppingList($id: ID!) {
   removeItemFromShoppingList(id: $id)
 }
 
-mutation ToggleShoppingListItemCompletion($id: ID!) {
-  toggleShoppingListItemCompletion(id: $id)
-}
-
-mutation MarkItemPurchased($id: ID!) {
-  markItemPurchased(id: $id)
+mutation markItemPurchased($id: ID!, $status: Boolean!) {
+  markItemPurchased(id: $id, status: $status) {
+    id
+    itemName
+    isPurchased
+  }
 }
 
 # ============================================

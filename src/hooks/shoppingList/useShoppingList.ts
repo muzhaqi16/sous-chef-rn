@@ -4,7 +4,7 @@ import {
   GetShoppingListItemsDocument,
   ShoppingListItem,
 } from '#generated';
-import {useSearchableList} from '..';
+import {useSearchableList} from '../useSearchableList';
 
 export function useShoppingList(listId: string | null) {
   const {data} = useGetShoppingListItemsQuery({

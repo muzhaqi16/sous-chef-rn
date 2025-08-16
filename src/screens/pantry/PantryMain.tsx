@@ -1,17 +1,30 @@
 import React, {useMemo} from 'react';
 import {Alert} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
-import {useDefaultHome, usePantryManagement} from '#hooks';
+import {useStyles} from 'react-native-unistyles';
+import {
+  useDefaultHome,
+  usePantryManagement,
+  useBottomSheetModal,
+  usePantrySelector,
+} from '#hooks';
 import {useGetHomeQuery} from '#generated';
 import {PantryMainNavProp} from '#navigation/types';
-import {ListTemplate} from '#components/templates/ListTemplate';
-import {EmptyState} from '#components/molecules/EmptyState';
-import {useStyles} from 'react-native-unistyles';
+import {
+  ListTemplate,
+  SearchBarAction,
+  BottomSheetAction,
+  HeaderAction,
+  ItemSelector,
+  EmptyState,
+} from '#components';
 
 export const PantryMain: React.FC = () => {
   const navigation = useNavigation<PantryMainNavProp>();
 
   const {theme} = useStyles();
+
+  const selectPantrySheet = useBottomSheetModal();
 
   const {
     selectedHomeId,
@@ -27,6 +40,13 @@ export const PantryMain: React.FC = () => {
 
   const pantry = getDefaultPantry(homeData);
 
+  const selector = usePantrySelector({
+    initialSelected: pantry?.id,
+    onSelect: (id, item) => {
+      // Do something with the selected pantry
+      console.log('Selected pantry:', id, item);
+    },
+  });
   const {
     items: pantryItems,
     searchQuery,
@@ -81,6 +101,70 @@ export const PantryMain: React.FC = () => {
     return await removeItem(itemId);
   };
 
+  // Header actions
+  const headerActions = useMemo(
+    () => ({
+      left: [
+        {
+          icon: 'home-switch-outline',
+          onPress: () =>
+            navigation.getParent()?.navigate('HomeManagementStack', {
+              screen: 'HomeManagement',
+              params: {homeId: selectedHomeId},
+            }),
+          size: 34,
+          color: theme.colors.primary,
+          library: 'MaterialDesignIcons',
+        },
+      ] as HeaderAction[],
+      right: [
+        {
+          icon: 'schedule',
+          onPress: () => navigation.navigate('ExpiringItems'),
+          badge: stats.expired,
+          color: '#FF6B6B',
+        },
+        {
+          icon: 'warning',
+          onPress: () => navigation.navigate('LowStockItems'),
+          badge: stats.lowStock,
+          color: '#FFB84D',
+        },
+        {
+          icon: 'category',
+          onPress: () => navigation.navigate('CategoryManagement'),
+        },
+      ] as HeaderAction[],
+    }),
+    [
+      navigation,
+      selectedHomeId,
+      theme.colors.primary,
+      stats.expired,
+      stats.lowStock,
+    ],
+  );
+
+  // Search bar actions
+  const searchBarActions = useMemo(
+    () => ({
+      left: [] as SearchBarAction[],
+      right: [
+        {
+          icon: 'list',
+          color: '#fff',
+          onPress: () => selectPantrySheet.open(),
+        },
+        {
+          icon: 'add',
+          onPress: handleAddItem,
+          color: '#fff',
+        },
+      ] as SearchBarAction[],
+    }),
+    [navigation, theme.colors, handleAddItem],
+  );
+
   if (!selectedHomeId) {
     return (
       <EmptyState
@@ -99,15 +183,19 @@ export const PantryMain: React.FC = () => {
     return (
       <ListTemplate
         title="Pantry"
+        subtitle="your pantry"
         items={[]}
         searchQuery=""
         onSearchChange={() => {}}
         onItemPress={() => {}}
-        onAddPress={handleAddItem}
+        showHeader={true}
+        showSearchBar={true}
+        showFAB={false} // Don't show FAB since we have add in search bar
+        headerActions={headerActions}
+        searchBarActions={searchBarActions}
         onRefresh={async () => {
           await refetch();
         }}
-        headerRightActions={[]}
         emptyState={{
           icon: 'inventory',
           title: 'Loading...',
@@ -116,58 +204,59 @@ export const PantryMain: React.FC = () => {
       />
     );
   }
+
   return (
-    <ListTemplate
-      title={homeData?.home?.name || 'Pantry'}
-      subtitle={pantry?.name || 'Your Pantry'}
-      items={items}
-      searchQuery={searchQuery}
-      onSearchChange={setSearchQuery}
-      onItemPress={id => navigation.navigate('PantryItemDetail', {itemId: id})}
-      onItemEdit={id => navigation.navigate('EditPantryItem', {itemId: id})}
-      onItemDelete={handleDeleteItem}
-      onAddPress={handleAddItem}
-      onRefresh={async () => {
-        await refetch();
-      }}
-      headerLeftActions={[
-        {
-          icon: 'home',
-          onPress: () =>
-            navigation.getParent()?.navigate('HomeManagementStack', {
-              screen: 'HomeManagement',
-              params: {homeId: selectedHomeId},
-            }),
-          color: theme.colors.primary,
-        },
-      ]}
-      headerRightActions={[
-        {
-          icon: 'schedule',
-          onPress: () => navigation.navigate('ExpiringItems'),
-          badge: stats.expired,
-          color: '#FF6B6B',
-        },
-        {
-          icon: 'warning',
-          onPress: () => navigation.navigate('LowStockItems'),
-          badge: stats.lowStock,
-          color: '#FFB84D',
-        },
-        {
-          icon: 'category',
-          onPress: () => navigation.navigate('CategoryManagement'),
-        },
-      ]}
-      emptyState={{
-        icon: 'inventory',
-        title: 'No items in pantry',
-        description: 'Add items to track your pantry inventory',
-        action: {
-          label: 'Add first item',
-          onPress: handleAddItem,
-        },
-      }}
-    />
+    <>
+      <ListTemplate
+        title={homeData?.home?.name || 'Pantry'}
+        subtitle={pantry?.name || 'Your Pantry'}
+        items={items}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        onItemPress={id =>
+          navigation.navigate('PantryItemDetail', {itemId: id})
+        }
+        onItemEdit={id => navigation.navigate('EditPantryItem', {itemId: id})}
+        onItemDelete={handleDeleteItem}
+        onRefresh={async () => {
+          await refetch();
+        }}
+        // Display configuration
+        showHeader={true}
+        showSearchBar={true}
+        showFAB={true} // Don't show FAB since we have add in search bar
+        onFabPress={() =>
+          navigation.getParent()?.navigate('BarcodeStack', {
+            screen: 'BarcodeScanner',
+          })
+        }
+        // Actions
+        headerActions={headerActions}
+        searchBarActions={searchBarActions}
+        emptyState={{
+          icon: 'inventory',
+          title: 'No items in pantry',
+          description: 'Add items to track your pantry inventory',
+          action: {
+            label: 'Add first item',
+            onPress: handleAddItem,
+          },
+        }}
+      />
+      <BottomSheetAction
+        key={'select'}
+        sheetRef={selectPantrySheet.ref}
+        sheetTitle={'Select Pantry'}
+        snapPoints={['25%', '50%', '90%']}>
+        <ItemSelector
+          data={selector.data}
+          selectedId={selector.selectedId}
+          onSelect={selector.handleSelect}
+          displayProperty="name"
+          loading={selector.loading}
+          emptyMessage={selector.emptyMessage}
+        />
+      </BottomSheetAction>
+    </>
   );
 };

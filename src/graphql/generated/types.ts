@@ -116,6 +116,19 @@ export type AuthPayload = {
   user: User;
 };
 
+export type AutocompleteInput = {
+  category?: InputMaybe<Scalars['String']['input']>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  query: Scalars['String']['input'];
+  storeId?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type AutocompleteResponse = {
+  __typename?: 'AutocompleteResponse';
+  suggestions: Array<ItemSuggestion>;
+  totalCount: Scalars['Int']['output'];
+};
+
 export enum AutomatedFlag {
   AbuseLanguage = 'ABUSE_LANGUAGE',
   DuplicateContent = 'DUPLICATE_CONTENT',
@@ -1171,9 +1184,9 @@ export type ItemStoreSku = {
 
 export type ItemSuggestion = {
   __typename?: 'ItemSuggestion';
-  item: Item;
-  reason: Scalars['String']['output'];
-  score: Scalars['Float']['output'];
+  id: Scalars['ID']['output'];
+  imageUrl?: Maybe<Scalars['String']['output']>;
+  name: Scalars['String']['output'];
 };
 
 export enum ItemType {
@@ -1467,6 +1480,13 @@ export type LoginMethodStat = {
   method: LoginMethod;
 };
 
+export enum MatchType {
+  Category = 'CATEGORY',
+  Exact = 'EXACT',
+  Fuzzy = 'FUZZY',
+  Partial = 'PARTIAL',
+}
+
 export type MealPlan = {
   __typename?: 'MealPlan';
   createdAt: Scalars['DateTime']['output'];
@@ -1724,7 +1744,7 @@ export type Mutation = {
   login: AuthPayload;
   markAllNotificationsAsRead: Array<Notification>;
   markItemAsWaste: PantryItem;
-  markItemPurchased: Scalars['Boolean']['output'];
+  markItemPurchased: ShoppingListItem;
   markLoginAsReviewed: LoginHistory;
   markMultipleLoginsAsReviewed: Array<LoginHistory>;
   markNotificationAsRead: Notification;
@@ -1768,7 +1788,6 @@ export type Mutation = {
   syncItemOffers: Item;
   syncItemPrices: Item;
   syncItemWithProvider: Item;
-  toggleShoppingListItemCompletion: Scalars['Boolean']['output'];
   transferHomeOwnership: HomeOwnership;
   trustDevice: Device;
   trustMultipleDevices: Array<Device>;
@@ -2143,6 +2162,7 @@ export type MutationMarkItemAsWasteArgs = {
 
 export type MutationMarkItemPurchasedArgs = {
   id: Scalars['ID']['input'];
+  status: Scalars['Boolean']['input'];
 };
 
 export type MutationMarkLoginAsReviewedArgs = {
@@ -2337,10 +2357,6 @@ export type MutationSyncItemPricesArgs = {
 export type MutationSyncItemWithProviderArgs = {
   itemId: Scalars['ID']['input'];
   provider: ProviderType;
-};
-
-export type MutationToggleShoppingListItemCompletionArgs = {
-  id: Scalars['ID']['input'];
 };
 
 export type MutationTransferHomeOwnershipArgs = {
@@ -3080,6 +3096,7 @@ export type Query = {
   _empty?: Maybe<Scalars['String']['output']>;
   activeDevices: Array<Device>;
   activeModerations: Array<UserModeration>;
+  autocompleteItems: AutocompleteResponse;
   brand?: Maybe<Brand>;
   brands: Array<Brand>;
   categories: Array<Category>;
@@ -3199,6 +3216,10 @@ export type Query = {
 
 export type QueryActiveDevicesArgs = {
   userId: Scalars['ID']['input'];
+};
+
+export type QueryAutocompleteItemsArgs = {
+  input: AutocompleteInput;
 };
 
 export type QueryBrandArgs = {
@@ -9522,6 +9543,24 @@ export type GetOnboardingItemsQuery = {
   }>;
 };
 
+export type AutocompleteItemsQueryVariables = Exact<{
+  input: AutocompleteInput;
+}>;
+
+export type AutocompleteItemsQuery = {
+  __typename?: 'Query';
+  autocompleteItems: {
+    __typename?: 'AutocompleteResponse';
+    totalCount: number;
+    suggestions: Array<{
+      __typename?: 'ItemSuggestion';
+      id: string;
+      name: string;
+      imageUrl?: string | null;
+    }>;
+  };
+};
+
 export type CreateItemMutationVariables = Exact<{
   input: CreateItemInput;
 }>;
@@ -10238,6 +10277,8 @@ export type CreatePantryMutation = {
     location?: string | null;
     temperature?: string | null;
     tags: Array<string>;
+    metadata?: any | null;
+    version: number;
     createdAt: string;
     updatedAt?: string | null;
   };
@@ -11715,22 +11756,19 @@ export type RemoveItemFromShoppingListMutation = {
   removeItemFromShoppingList: boolean;
 };
 
-export type ToggleShoppingListItemCompletionMutationVariables = Exact<{
-  id: Scalars['ID']['input'];
-}>;
-
-export type ToggleShoppingListItemCompletionMutation = {
-  __typename?: 'Mutation';
-  toggleShoppingListItemCompletion: boolean;
-};
-
 export type MarkItemPurchasedMutationVariables = Exact<{
   id: Scalars['ID']['input'];
+  status: Scalars['Boolean']['input'];
 }>;
 
 export type MarkItemPurchasedMutation = {
   __typename?: 'Mutation';
-  markItemPurchased: boolean;
+  markItemPurchased: {
+    __typename?: 'ShoppingListItem';
+    id: string;
+    itemName?: string | null;
+    isPurchased: boolean;
+  };
 };
 
 export type ShoppingListUpdatedSubscriptionVariables = Exact<{

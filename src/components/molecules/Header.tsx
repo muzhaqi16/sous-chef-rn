@@ -1,14 +1,15 @@
 import React from 'react';
 import {View, Text, TouchableOpacity} from 'react-native';
-import Icon from '@react-native-vector-icons/material-icons';
-import {MaterialDesignIcons} from '@react-native-vector-icons/material-design-icons';
+import {Icon, IconName, IconLibrary} from '#utils/iconUtils';
 import {useStyles, createStyleSheet} from 'react-native-unistyles';
 
-interface HeaderAction {
-  icon: React.ComponentProps<typeof Icon>['name'];
+export interface HeaderAction {
+  icon: IconName;
   onPress: () => void;
   badge?: number;
+  size?: number;
   color?: string;
+  library?: IconLibrary;
 }
 
 interface HeaderProps {
@@ -31,14 +32,12 @@ export const Header: React.FC<HeaderProps> = ({
     <View style={styles.container}>
       <View style={styles.leftActions}>
         {leftActions.map((action, index) => (
-          <TouchableOpacity
-            key={index}
-            style={styles.leftActions}
-            onPress={action.onPress}>
+          <TouchableOpacity key={index} onPress={action.onPress}>
             <Icon
               name={action.icon}
-              size={24}
+              size={action.size || 24}
               color={action.color || theme.colors.textPrimary}
+              library={action.library}
             />
             {action.badge !== undefined && action.badge > 0 && (
               <View style={styles.badge}>
@@ -90,11 +89,11 @@ const headerStyles = createStyleSheet(theme => ({
     borderBottomColor: theme.colors.border,
   },
   title: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     color: theme.colors.textPrimary,
     flex: 1,
-    marginHorizontal: 16,
+    marginHorizontal: 8,
   },
   centerTitle: {
     textAlign: 'center',
@@ -110,7 +109,9 @@ const headerStyles = createStyleSheet(theme => ({
     marginLeft: 16,
     position: 'relative',
   },
-  leftActions: {},
+  leftActions: {
+    margin: 0,
+  },
   badge: {
     position: 'absolute',
     top: -4,

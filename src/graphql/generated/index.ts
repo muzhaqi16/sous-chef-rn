@@ -122,6 +122,19 @@ export type AuthPayload = {
   user: User;
 };
 
+export type AutocompleteInput = {
+  category?: InputMaybe<Scalars['String']['input']>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  query: Scalars['String']['input'];
+  storeId?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type AutocompleteResponse = {
+  __typename?: 'AutocompleteResponse';
+  suggestions: Array<ItemSuggestion>;
+  totalCount: Scalars['Int']['output'];
+};
+
 export enum AutomatedFlag {
   AbuseLanguage = 'ABUSE_LANGUAGE',
   DuplicateContent = 'DUPLICATE_CONTENT',
@@ -1177,9 +1190,9 @@ export type ItemStoreSku = {
 
 export type ItemSuggestion = {
   __typename?: 'ItemSuggestion';
-  item: Item;
-  reason: Scalars['String']['output'];
-  score: Scalars['Float']['output'];
+  id: Scalars['ID']['output'];
+  imageUrl?: Maybe<Scalars['String']['output']>;
+  name: Scalars['String']['output'];
 };
 
 export enum ItemType {
@@ -1473,6 +1486,13 @@ export type LoginMethodStat = {
   method: LoginMethod;
 };
 
+export enum MatchType {
+  Category = 'CATEGORY',
+  Exact = 'EXACT',
+  Fuzzy = 'FUZZY',
+  Partial = 'PARTIAL',
+}
+
 export type MealPlan = {
   __typename?: 'MealPlan';
   createdAt: Scalars['DateTime']['output'];
@@ -1730,7 +1750,7 @@ export type Mutation = {
   login: AuthPayload;
   markAllNotificationsAsRead: Array<Notification>;
   markItemAsWaste: PantryItem;
-  markItemPurchased: Scalars['Boolean']['output'];
+  markItemPurchased: ShoppingListItem;
   markLoginAsReviewed: LoginHistory;
   markMultipleLoginsAsReviewed: Array<LoginHistory>;
   markNotificationAsRead: Notification;
@@ -1774,7 +1794,6 @@ export type Mutation = {
   syncItemOffers: Item;
   syncItemPrices: Item;
   syncItemWithProvider: Item;
-  toggleShoppingListItemCompletion: Scalars['Boolean']['output'];
   transferHomeOwnership: HomeOwnership;
   trustDevice: Device;
   trustMultipleDevices: Array<Device>;
@@ -2149,6 +2168,7 @@ export type MutationMarkItemAsWasteArgs = {
 
 export type MutationMarkItemPurchasedArgs = {
   id: Scalars['ID']['input'];
+  status: Scalars['Boolean']['input'];
 };
 
 export type MutationMarkLoginAsReviewedArgs = {
@@ -2343,10 +2363,6 @@ export type MutationSyncItemPricesArgs = {
 export type MutationSyncItemWithProviderArgs = {
   itemId: Scalars['ID']['input'];
   provider: ProviderType;
-};
-
-export type MutationToggleShoppingListItemCompletionArgs = {
-  id: Scalars['ID']['input'];
 };
 
 export type MutationTransferHomeOwnershipArgs = {
@@ -3086,6 +3102,7 @@ export type Query = {
   _empty?: Maybe<Scalars['String']['output']>;
   activeDevices: Array<Device>;
   activeModerations: Array<UserModeration>;
+  autocompleteItems: AutocompleteResponse;
   brand?: Maybe<Brand>;
   brands: Array<Brand>;
   categories: Array<Category>;
@@ -3205,6 +3222,10 @@ export type Query = {
 
 export type QueryActiveDevicesArgs = {
   userId: Scalars['ID']['input'];
+};
+
+export type QueryAutocompleteItemsArgs = {
+  input: AutocompleteInput;
 };
 
 export type QueryBrandArgs = {
@@ -6750,6 +6771,24 @@ export type GetOnboardingItemsQuery = {
   onboardingItems: Array<{__typename?: 'Item'} & ItemFragment>;
 };
 
+export type AutocompleteItemsQueryVariables = Exact<{
+  input: AutocompleteInput;
+}>;
+
+export type AutocompleteItemsQuery = {
+  __typename?: 'Query';
+  autocompleteItems: {
+    __typename?: 'AutocompleteResponse';
+    totalCount: number;
+    suggestions: Array<{
+      __typename?: 'ItemSuggestion';
+      id: string;
+      name: string;
+      imageUrl?: string | null | undefined;
+    }>;
+  };
+};
+
 export type CreateItemMutationVariables = Exact<{
   input: CreateItemInput;
 }>;
@@ -7085,6 +7124,8 @@ export type CreatePantryMutation = {
     location?: string | null | undefined;
     temperature?: string | null | undefined;
     tags: Array<string>;
+    metadata?: any | null | undefined;
+    version: number;
     createdAt: string;
     updatedAt?: string | null | undefined;
   };
@@ -7841,22 +7882,19 @@ export type RemoveItemFromShoppingListMutation = {
   removeItemFromShoppingList: boolean;
 };
 
-export type ToggleShoppingListItemCompletionMutationVariables = Exact<{
-  id: Scalars['ID']['input'];
-}>;
-
-export type ToggleShoppingListItemCompletionMutation = {
-  __typename?: 'Mutation';
-  toggleShoppingListItemCompletion: boolean;
-};
-
 export type MarkItemPurchasedMutationVariables = Exact<{
   id: Scalars['ID']['input'];
+  status: Scalars['Boolean']['input'];
 }>;
 
 export type MarkItemPurchasedMutation = {
   __typename?: 'Mutation';
-  markItemPurchased: boolean;
+  markItemPurchased: {
+    __typename?: 'ShoppingListItem';
+    id: string;
+    itemName?: string | null | undefined;
+    isPurchased: boolean;
+  };
 };
 
 export type ShoppingListUpdatedSubscriptionVariables = Exact<{
@@ -20070,6 +20108,143 @@ export function refetchGetOnboardingItemsQuery(
 ) {
   return {query: GetOnboardingItemsDocument, variables: variables};
 }
+export const AutocompleteItemsDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'query',
+      name: {kind: 'Name', value: 'AutocompleteItems'},
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {kind: 'Variable', name: {kind: 'Name', value: 'input'}},
+          type: {
+            kind: 'NonNullType',
+            type: {
+              kind: 'NamedType',
+              name: {kind: 'Name', value: 'AutocompleteInput'},
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: {kind: 'Name', value: 'autocompleteItems'},
+            arguments: [
+              {
+                kind: 'Argument',
+                name: {kind: 'Name', value: 'input'},
+                value: {kind: 'Variable', name: {kind: 'Name', value: 'input'}},
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'Field',
+                  name: {kind: 'Name', value: 'suggestions'},
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {kind: 'Field', name: {kind: 'Name', value: 'id'}},
+                      {kind: 'Field', name: {kind: 'Name', value: 'name'}},
+                      {kind: 'Field', name: {kind: 'Name', value: 'imageUrl'}},
+                    ],
+                  },
+                },
+                {kind: 'Field', name: {kind: 'Name', value: 'totalCount'}},
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+
+/**
+ * __useAutocompleteItemsQuery__
+ *
+ * To run a query within a React component, call `useAutocompleteItemsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useAutocompleteItemsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useAutocompleteItemsQuery({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useAutocompleteItemsQuery(
+  baseOptions: ApolloReactHooks.QueryHookOptions<
+    AutocompleteItemsQuery,
+    AutocompleteItemsQueryVariables
+  > &
+    (
+      | {variables: AutocompleteItemsQueryVariables; skip?: boolean}
+      | {skip: boolean}
+    ),
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useQuery<
+    AutocompleteItemsQuery,
+    AutocompleteItemsQueryVariables
+  >(AutocompleteItemsDocument, options);
+}
+export function useAutocompleteItemsLazyQuery(
+  baseOptions?: ApolloReactHooks.LazyQueryHookOptions<
+    AutocompleteItemsQuery,
+    AutocompleteItemsQueryVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useLazyQuery<
+    AutocompleteItemsQuery,
+    AutocompleteItemsQueryVariables
+  >(AutocompleteItemsDocument, options);
+}
+export function useAutocompleteItemsSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        AutocompleteItemsQuery,
+        AutocompleteItemsQueryVariables
+      >,
+) {
+  const options =
+    baseOptions === ApolloReactHooks.skipToken
+      ? baseOptions
+      : {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSuspenseQuery<
+    AutocompleteItemsQuery,
+    AutocompleteItemsQueryVariables
+  >(AutocompleteItemsDocument, options);
+}
+export type AutocompleteItemsQueryHookResult = ReturnType<
+  typeof useAutocompleteItemsQuery
+>;
+export type AutocompleteItemsLazyQueryHookResult = ReturnType<
+  typeof useAutocompleteItemsLazyQuery
+>;
+export type AutocompleteItemsSuspenseQueryHookResult = ReturnType<
+  typeof useAutocompleteItemsSuspenseQuery
+>;
+export type AutocompleteItemsQueryResult = ApolloReactCommon.QueryResult<
+  AutocompleteItemsQuery,
+  AutocompleteItemsQueryVariables
+>;
+export function refetchAutocompleteItemsQuery(
+  variables: AutocompleteItemsQueryVariables,
+) {
+  return {query: AutocompleteItemsDocument, variables: variables};
+}
 export const CreateItemDocument = {
   kind: 'Document',
   definitions: [
@@ -22693,6 +22868,8 @@ export const CreatePantryDocument = {
                 {kind: 'Field', name: {kind: 'Name', value: 'location'}},
                 {kind: 'Field', name: {kind: 'Name', value: 'temperature'}},
                 {kind: 'Field', name: {kind: 'Name', value: 'tags'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'metadata'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'version'}},
                 {kind: 'Field', name: {kind: 'Name', value: 'createdAt'}},
                 {kind: 'Field', name: {kind: 'Name', value: 'updatedAt'}},
               ],
@@ -27769,13 +27946,13 @@ export type RemoveItemFromShoppingListMutationOptions =
     RemoveItemFromShoppingListMutation,
     RemoveItemFromShoppingListMutationVariables
   >;
-export const ToggleShoppingListItemCompletionDocument = {
+export const MarkItemPurchasedDocument = {
   kind: 'Document',
   definitions: [
     {
       kind: 'OperationDefinition',
       operation: 'mutation',
-      name: {kind: 'Name', value: 'ToggleShoppingListItemCompletion'},
+      name: {kind: 'Name', value: 'markItemPurchased'},
       variableDefinitions: [
         {
           kind: 'VariableDefinition',
@@ -27785,85 +27962,12 @@ export const ToggleShoppingListItemCompletionDocument = {
             type: {kind: 'NamedType', name: {kind: 'Name', value: 'ID'}},
           },
         },
-      ],
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          {
-            kind: 'Field',
-            name: {kind: 'Name', value: 'toggleShoppingListItemCompletion'},
-            arguments: [
-              {
-                kind: 'Argument',
-                name: {kind: 'Name', value: 'id'},
-                value: {kind: 'Variable', name: {kind: 'Name', value: 'id'}},
-              },
-            ],
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
-export type ToggleShoppingListItemCompletionMutationFn =
-  ApolloReactCommon.MutationFunction<
-    ToggleShoppingListItemCompletionMutation,
-    ToggleShoppingListItemCompletionMutationVariables
-  >;
-
-/**
- * __useToggleShoppingListItemCompletionMutation__
- *
- * To run a mutation, you first call `useToggleShoppingListItemCompletionMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useToggleShoppingListItemCompletionMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [toggleShoppingListItemCompletionMutation, { data, loading, error }] = useToggleShoppingListItemCompletionMutation({
- *   variables: {
- *      id: // value for 'id'
- *   },
- * });
- */
-export function useToggleShoppingListItemCompletionMutation(
-  baseOptions?: ApolloReactHooks.MutationHookOptions<
-    ToggleShoppingListItemCompletionMutation,
-    ToggleShoppingListItemCompletionMutationVariables
-  >,
-) {
-  const options = {...defaultOptions, ...baseOptions};
-  return ApolloReactHooks.useMutation<
-    ToggleShoppingListItemCompletionMutation,
-    ToggleShoppingListItemCompletionMutationVariables
-  >(ToggleShoppingListItemCompletionDocument, options);
-}
-export type ToggleShoppingListItemCompletionMutationHookResult = ReturnType<
-  typeof useToggleShoppingListItemCompletionMutation
->;
-export type ToggleShoppingListItemCompletionMutationResult =
-  ApolloReactCommon.MutationResult<ToggleShoppingListItemCompletionMutation>;
-export type ToggleShoppingListItemCompletionMutationOptions =
-  ApolloReactCommon.BaseMutationOptions<
-    ToggleShoppingListItemCompletionMutation,
-    ToggleShoppingListItemCompletionMutationVariables
-  >;
-export const MarkItemPurchasedDocument = {
-  kind: 'Document',
-  definitions: [
-    {
-      kind: 'OperationDefinition',
-      operation: 'mutation',
-      name: {kind: 'Name', value: 'MarkItemPurchased'},
-      variableDefinitions: [
         {
           kind: 'VariableDefinition',
-          variable: {kind: 'Variable', name: {kind: 'Name', value: 'id'}},
+          variable: {kind: 'Variable', name: {kind: 'Name', value: 'status'}},
           type: {
             kind: 'NonNullType',
-            type: {kind: 'NamedType', name: {kind: 'Name', value: 'ID'}},
+            type: {kind: 'NamedType', name: {kind: 'Name', value: 'Boolean'}},
           },
         },
       ],
@@ -27879,7 +27983,23 @@ export const MarkItemPurchasedDocument = {
                 name: {kind: 'Name', value: 'id'},
                 value: {kind: 'Variable', name: {kind: 'Name', value: 'id'}},
               },
+              {
+                kind: 'Argument',
+                name: {kind: 'Name', value: 'status'},
+                value: {
+                  kind: 'Variable',
+                  name: {kind: 'Name', value: 'status'},
+                },
+              },
             ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {kind: 'Field', name: {kind: 'Name', value: 'id'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'itemName'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'isPurchased'}},
+              ],
+            },
           },
         ],
       },
@@ -27905,6 +28025,7 @@ export type MarkItemPurchasedMutationFn = ApolloReactCommon.MutationFunction<
  * const [markItemPurchasedMutation, { data, loading, error }] = useMarkItemPurchasedMutation({
  *   variables: {
  *      id: // value for 'id'
+ *      status: // value for 'status'
  *   },
  * });
  */

@@ -2,7 +2,7 @@ import React from 'react';
 import {View, Image} from 'react-native';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
 
-export const Header: React.FC = () => {
+export const ImageHeader: React.FC = () => {
   const {styles} = useStyles(stylesheet);
 
   return (

@@ -1,25 +1,26 @@
 import React from 'react';
-import {TouchableOpacity, View} from 'react-native';
-import Icon from '@react-native-vector-icons/material-icons';
+import {TouchableOpacity} from 'react-native';
 import {useStyles, createStyleSheet} from 'react-native-unistyles';
-import {MaterialIconName} from '#/types';
+import {Icon, IconName, IconLibrary} from '#utils/iconUtils';
 
 interface FABProps {
-  onPress: () => void;
-  icon?: MaterialIconName;
+  onPress?: () => void;
+  icon?: IconName;
+  library?: IconLibrary;
   position?: {bottom?: number; right?: number; left?: number; top?: number};
 }
 
 export const FAB: React.FC<FABProps> = ({
-  onPress,
+  onPress = () => {},
   icon = 'add',
+  library = 'MaterialIcons',
   position = {bottom: 20, right: 20},
 }) => {
   const {styles} = useStyles(fabStyles);
 
   return (
     <TouchableOpacity style={[styles.fab, position]} onPress={onPress}>
-      <Icon name={icon} size={24} color="white" />
+      <Icon name={icon} size={24} color="white" library={library} />
     </TouchableOpacity>
   );
 };

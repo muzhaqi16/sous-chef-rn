@@ -70,6 +70,17 @@ query GetOnboardingItems {
   }
 }
 
+query AutocompleteItems($input: AutocompleteInput!) {
+  autocompleteItems(input: $input) {
+    suggestions {
+      id
+      name
+      imageUrl
+    }
+    totalCount
+  }
+}
+
 # ============================================
 # MUTATIONS
 # ============================================
