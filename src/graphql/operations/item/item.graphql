@@ -1,0 +1,125 @@
+# ============================================
+# QUERIES
+# ============================================
+
+query GetItems(
+  $filters: ItemFilters
+  $sort: ItemSortInput
+  $pagination: PaginationInput
+) {
+  items(filters: $filters, sort: $sort, pagination: $pagination) {
+    items {
+      id
+      name
+      description
+      type
+      barcode
+      storageState
+      imageUrl
+      shelfLifeDays
+      tags
+      status
+      visibility
+      showInOnboarding
+      units {
+        id
+        isDefault
+      }
+      brands {
+        id
+      }
+      categories {
+        id
+      }
+      nutritions
+      healthBenefits
+      metadata
+      createdAt
+      updatedAt
+      deletedAt
+      version
+    }
+    totalCount
+  }
+}
+
+query SearchItems($input: SearchItemsInput!) {
+  searchItems(input: $input) {
+    items {
+      id
+      name
+    }
+    totalCount
+    hasMore
+  }
+}
+
+query SearchItemsByBarcode($barcode: String!) {
+  searchItemsByBarcode(barcode: $barcode) {
+    id
+    name
+    description
+    imageUrl
+    barcode
+  }
+}
+
+query GetOnboardingItems {
+  onboardingItems {
+    ...ItemFragment
+  }
+}
+
+query AutocompleteItems($input: AutocompleteInput!) {
+  autocompleteItems(input: $input) {
+    suggestions {
+      id
+      name
+      imageUrl
+    }
+    totalCount
+  }
+}
+
+# ============================================
+# MUTATIONS
+# ============================================
+
+mutation CreateItem($input: CreateItemInput!) {
+  createItem(input: $input) {
+    id
+    name
+    description
+    barcode
+    fdcId
+    dataSource
+    type
+    storageState
+    showInOnboarding
+    shelfLifeDays
+    popularity
+    status
+    visibility
+    averagePrice
+    minPrice
+    maxPrice
+    priceUpdatedAt
+    imageUrl
+    tags
+    healthBenefits
+    allergens
+    nutritions
+    metadata
+    ingredients
+    createdAt
+    updatedAt
+    deletedAt
+    version
+    categories {
+      id
+      category {
+        name
+      }
+    }
+  }
+}

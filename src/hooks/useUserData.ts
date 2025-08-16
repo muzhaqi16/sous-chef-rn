@@ -1,5 +1,5 @@
 import {useEffect} from 'react';
-import {useGetCurrentUserQuery} from '../graphql/generated';
+import {useGetCompleteUserQuery} from '../graphql/generated';
 import {useStore} from '../store';
 
 /**
@@ -14,7 +14,7 @@ export const useUserData = (loadComplete = false) => {
   // Only fetch complete user data if authenticated and requested
   const shouldFetch = isAuthenticated && loadComplete && !hasCompleteUserData();
 
-  const {data, loading, error, refetch} = useGetCurrentUserQuery({
+  const {data, loading, error, refetch} = useGetCompleteUserQuery({
     skip: !shouldFetch,
     fetchPolicy: 'cache-first', // Use cache if available
     errorPolicy: 'all',

@@ -3,10 +3,10 @@ import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
 import Ionicons from '@react-native-vector-icons/ionicons';
 
-import ProfileScreen from '../screens/ProfileScreen';
-import {MainScreen} from '../screens/MainScreen'; // Assuming MainScreen is the same as ShoppingListScreen
-import ShoppingListScreen from '../screens/ShoppingListScreen';
 import type {HomeTabParamList} from './types';
+import {ProfileScreen} from '#/screens';
+import {PantryStack} from './PantryStack';
+import {ShoppingListStack} from './ShoppingListStack';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 const Tab = createBottomTabNavigator<HomeTabParamList>();
@@ -51,12 +51,12 @@ const HomeTab = () => {
       })}>
       <Tab.Screen
         name="Main"
-        component={MainScreen} // Assuming MainScreen is the same as ShoppingListScreen
+        component={PantryStack}
         options={{title: 'Pantry'}}
       />
       <Tab.Screen
         name="ShoppingList"
-        component={ShoppingListScreen}
+        component={ShoppingListStack}
         options={{title: 'Shopping List'}}
       />
       <Tab.Screen

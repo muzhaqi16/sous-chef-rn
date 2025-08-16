@@ -1,10 +1,7 @@
 import React from 'react';
 import {TouchableOpacity, StyleProp, ViewStyle} from 'react-native';
-import type {IconProps} from '@react-native-vector-icons/common';
-import Feather from '@react-native-vector-icons/feather';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
-
-export type IconLibrary = React.ComponentType<IconProps<any>>;
+import {IconLibrary, Icon} from '#/utils/iconUtils';
 
 export interface IconButtonProps {
   /** glyph name to render */
@@ -21,16 +18,13 @@ export interface IconButtonProps {
   library?: IconLibrary;
 }
 
-// Default to Feather
-const DEFAULT_LIBRARY: IconLibrary = Feather;
-
 export const IconButton: React.FC<IconButtonProps> = ({
   name,
   onPress,
   size = 24,
   color,
   style,
-  library: IconComponent = DEFAULT_LIBRARY,
+  library = 'MaterialIcons',
 }) => {
   const {styles, theme} = useStyles(stylesheet);
 
@@ -39,7 +33,8 @@ export const IconButton: React.FC<IconButtonProps> = ({
       style={[styles.button, style]}
       onPress={onPress}
       hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
-      <IconComponent
+      <Icon
+        library={library}
         name={name}
         size={size}
         color={color ?? theme.colors.iconPrimary}

@@ -5,7 +5,7 @@ import {useStyles, createStyleSheet} from 'react-native-unistyles';
 import {ProfileHeader, SettingsSection} from '#components';
 import {useProfileData, useConfigurableSettings} from '#hooks';
 
-export default function EnhancedProfileScreen() {
+export const ProfileScreen = () => {
   const {styles} = useStyles(stylesheet);
   const navigation = useNavigation();
   const {profile, user, loading} = useProfileData();
@@ -60,7 +60,7 @@ export default function EnhancedProfileScreen() {
       </ScrollView>
     </SafeAreaView>
   );
-}
+};
 
 const stylesheet = createStyleSheet(theme => ({
   container: {

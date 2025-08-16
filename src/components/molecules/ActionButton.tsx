@@ -2,19 +2,20 @@ import React from 'react';
 import {Text, View, StyleProp, ViewStyle} from 'react-native';
 import {useStyles, createStyleSheet} from 'react-native-unistyles';
 import IconButton from '../atoms/IconButton';
-import Ionicons from '@react-native-vector-icons/ionicons';
 
 type ActionButtonProps = {
   onPress: () => void;
   name?: string; // Optional name prop for the icon
   style?: StyleProp<ViewStyle>; // Optional style prop for additional styling
   color?: string; // Optional color prop for the icon
+  size?: number; // Optional size prop for the icon
 };
 export const ActionButton: React.FC<ActionButtonProps> = ({
   onPress,
   name,
   style,
   color,
+  size = 24, // Default size for the icon
 }) => {
   const {styles, theme} = useStyles(stylesheet);
 
@@ -22,10 +23,10 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
     <View style={[styles.button, style]}>
       <IconButton
         name={name || 'add'}
-        size={24}
+        size={size}
         color={color || theme.colors.primary}
         onPress={onPress}
-        library={Ionicons}
+        library={'Ionicons'}
       />
     </View>
   );

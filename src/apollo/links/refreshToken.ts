@@ -3,7 +3,7 @@ import {client} from '../../apollo/client';
 import {storage} from '../../storage/mmkv';
 import Config from 'react-native-config';
 import {useStore} from '../../store';
-import {REFRESH_TOKEN_MUTATION} from '../../graphql/mutations/auth';
+import {RefreshTokenDocument, RefreshTokenMutation} from '#generated';
 
 /**
  * Attempts to refresh the access token.
@@ -17,6 +17,7 @@ export const attemptTokenRefresh = (
   forward: any,
 ): Observable<FetchResult> => {
   const refreshToken = storage.getString('refreshToken');
+
   if (!refreshToken) {
     // If no refresh token is available, log out and return an observable that errors immediately.
     storage.delete('accessToken');
@@ -29,22 +30,29 @@ export const attemptTokenRefresh = (
 
   return new Observable<FetchResult>(observer => {
     client
-      .mutate({
-        mutation: REFRESH_TOKEN_MUTATION,
-        variables: {refreshToken},
+      .mutate<RefreshTokenMutation>({
+        mutation: RefreshTokenDocument, // Use the generated document, not the hook
+        variables: {token: refreshToken}, // Adjust variable name based on your schema
       })
       .then(response => {
-        const data = response.data?.refreshToken;
+        const data = response.data?.refresh; // Adjust based on your mutation response structure
         if (!data?.accessToken || !data?.refreshToken) {
           throw new Error('Invalid refresh response');
         }
 
         const {accessToken: newToken, refreshToken: newRefreshToken} = data;
-        // Update tokens in storage.
+
+        // Update tokens in storage
         storage.set('accessToken', newToken);
         storage.set('refreshToken', newRefreshToken);
 
-        // Update the operation context with the new token.
+        // Update tokens in your store
+        useStore.getState().setTokens({
+          accessToken: newToken,
+          refreshToken: newRefreshToken,
+        });
+
+        // Update the operation context with the new token
         const oldHeaders = operation.getContext().headers;
         operation.setContext({
           headers: {
@@ -53,7 +61,7 @@ export const attemptTokenRefresh = (
           },
         });
 
-        // Retry the failed request by subscribing to the forwarded operation.
+        // Retry the failed request by subscribing to the forwarded operation
         forward(operation).subscribe({
           next: observer.next.bind(observer),
           error: observer.error.bind(observer),
@@ -62,7 +70,7 @@ export const attemptTokenRefresh = (
       })
       .catch(refreshError => {
         console.log('Token refresh failed', refreshError);
-        // Clear tokens and log out the user.
+        // Clear tokens and log out the user
         storage.delete('accessToken');
         storage.delete('refreshToken');
         useStore.getState().logout();

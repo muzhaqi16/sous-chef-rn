@@ -1,9 +1,9 @@
-import {useUserProfileQuery} from '#generated';
+import {useGetUserProfileQuery} from '#generated';
 import {useUserData} from '../useUserData';
 
 export const useProfileData = () => {
   const {user} = useUserData(true);
-  const {data, loading} = useUserProfileQuery({
+  const {data, loading} = useGetUserProfileQuery({
     fetchPolicy: 'cache-and-network',
   });
 

@@ -1,0 +1,185 @@
+# ============================================
+# QUERIES
+# ============================================
+
+query GetPantries($homeId: ID!) {
+  pantries(homeId: $homeId) {
+    id
+    homeId
+    name
+    isDefault
+    items {
+      id
+      itemName
+      item {
+        name
+      }
+    }
+    createdAt
+    updatedAt
+    version
+    tags
+  }
+}
+
+query GetPantryItems($pantryId: ID!) {
+  pantryItems(pantryId: $pantryId) {
+    ...PantryItemFragment
+  }
+}
+
+query GetPantryItem($id: ID!) {
+  pantryItem(id: $id) {
+    ...PantryItemFragment
+  }
+}
+
+# ============================================
+# MUTATIONS
+# ============================================
+
+mutation CreatePantry($input: CreatePantryInput!) {
+  createPantry(input: $input) {
+    id
+    homeId
+    name
+    description
+    isDefault
+    location
+    temperature
+    tags
+    metadata
+    version
+    createdAt
+    updatedAt
+  }
+}
+
+mutation AddItemToPantry($input: AddPantryItemInput!) {
+  addItemToPantry(input: $input) {
+    ...PantryItemFragment
+  }
+}
+
+mutation UpdatePantryItem($id: ID!, $input: UpdatePantryItemInput!) {
+  updatePantryItem(id: $id, input: $input) {
+    ...PantryItemFragment
+  }
+}
+
+mutation RemoveItemFromPantry($id: ID!) {
+  removeItemFromPantry(id: $id) {
+    ...PantryItemFragment
+  }
+}
+
+# ============================================
+# SUBSCRIPTIONS
+# ============================================
+
+subscription PantryUpdated($id: ID!) {
+  pantryUpdated(id: $id) {
+    id
+    homeId
+    name
+    description
+    location
+    temperature
+    tags
+    metadata
+    version
+    updatedAt
+    home {
+      id
+      name
+    }
+  }
+}
+
+subscription MyPantriesUpdated($homeId: ID!) {
+  myPantriesUpdated(homeId: $homeId) {
+    id
+    name
+    description
+    isDefault
+    location
+    items {
+      id
+      currentQuantity
+    }
+  }
+}
+
+subscription PantryActivityAdded($pantryId: ID!) {
+  pantryActivityAdded(pantryId: $pantryId) {
+    id
+    pantryId
+    userId
+    action
+    description
+    itemName
+    quantity
+    oldValue
+    newValue
+    metadata
+    createdAt
+    user {
+      id
+      email
+      profile {
+        displayName
+      }
+    }
+  }
+}
+
+subscription PantryLowStockAlert($pantryId: ID!) {
+  pantryLowStockAlert(pantryId: $pantryId) {
+    id
+    itemId
+    itemName
+    currentQuantity
+    autoReorderPoint
+    unitName
+    item {
+      id
+      name
+      imageUrl
+      averagePrice
+    }
+  }
+}
+
+subscription PantryExpiringItemsAlert($pantryId: ID!) {
+  pantryExpiringItemsAlert(pantryId: $pantryId) {
+    id
+    itemId
+    itemName
+    expiresAt
+    bestByDate
+    currentQuantity
+    unitName
+    item {
+      id
+      name
+      imageUrl
+    }
+  }
+}
+
+subscription PantryItemsChanged($pantryId: ID!) {
+  pantryItemsChanged(pantryId: $pantryId) {
+    pantryId
+    item {
+      id
+      unit {
+        name
+      }
+      itemName
+    }
+    updatedFields
+    mutation
+    timestamp
+    userId
+  }
+}

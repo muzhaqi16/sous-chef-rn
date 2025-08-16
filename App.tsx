@@ -15,29 +15,62 @@ import {
 import AppNavigator from './src/navigation/AppNavigator';
 import SplashScreen from './src/screens/SplashScreen';
 import {ToastProvider} from './src/components/atoms';
+import {
+  setupNotificationHandlers,
+  setBadgeCount,
+} from '#utils/notifications/localNotificationHelper';
+import {useNotificationSubscriptions, useNotificationPermissions} from '#hooks';
 
 const App = () => {
+  const isHydrated = useStore(store => store.isHydrated);
+  // Get unread count and user ID from the store
+  const unreadCount = useStore(state => state.unreadCount);
+  const userId = useStore(state => state.user?.id);
+
   const darkMode = useColorScheme() === 'dark';
+  const {styles, theme} = useStyles(stylesheet);
+  const {colors} = theme;
   const {theme: userTheme} = useStore();
+
   const effectiveDark =
     darkMode !== undefined ? darkMode : userTheme === 'dark';
 
   useInitialTheme(effectiveDark ? 'dark' : 'light');
-  const {styles, theme} = useStyles(stylesheet);
-  const {colors} = theme;
 
+  // Request notification permissions
+  const {requestPermissions} = useNotificationPermissions();
+
+  useEffect(() => {
+    // Ensure the app is hydrated before proceeding
+    if (!isHydrated) {
+      return;
+    }
+
+    // Request notification permissions
+    requestPermissions();
+    // Setup notification handlers
+    const unsubscribe = setupNotificationHandlers();
+    return () => {
+      unsubscribe();
+    };
+  }, [isHydrated, requestPermissions]);
+
+  // Update badge count when unread count changes
+  useEffect(() => {
+    setBadgeCount(unreadCount);
+  }, [unreadCount]);
+
+  // Set the theme for Unistyles
   useEffect(() => {
     UnistylesRuntime.setTheme(effectiveDark ? 'dark' : 'light');
   }, [effectiveDark]);
 
-  const isHydrated = useStore(store => store.isHydrated);
+  // Early return for loading state - before any conditional hooks
+  if (!isHydrated || !client) {
+    console.error('App is not hydrated or Apollo client is not initialized');
+    return <SplashScreen />;
+  }
 
-  if (!isHydrated) {
-    return <SplashScreen />;
-  }
-  if (!client) {
-    return <SplashScreen />;
-  }
   return (
     <GestureHandlerRootView style={styles.container}>
       <ApolloProvider client={client}>

@@ -1,0 +1,54 @@
+# ============================================
+# SUBSCRIPTIONS
+# ============================================
+
+subscription PurchaseCreated($userId: ID) {
+  purchaseCreated(userId: $userId) {
+    id
+    userId
+    itemId
+    storeId
+    quantity
+    unitPrice
+    totalPrice
+    purchaseDate
+    itemName
+    storeName
+    unitSymbol
+    currencySymbol
+    user {
+      id
+      email
+    }
+    item {
+      id
+      name
+      imageUrl
+    }
+    store {
+      id
+      name
+      address
+    }
+  }
+}
+
+subscription PurchaseUpdated($userId: ID) {
+  purchaseUpdated(userId: $userId) {
+    id
+    userId
+    quantity
+    unitPrice
+    totalPrice
+    purchaseDate
+    updatedAt
+  }
+}
+
+subscription PurchaseDeleted($userId: ID) {
+  purchaseDeleted(userId: $userId) {
+    id
+    userId
+    deletedAt
+  }
+}

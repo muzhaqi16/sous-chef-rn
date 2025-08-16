@@ -1,18 +1,13 @@
 import React from 'react';
-import {
-  StyleSheet,
-  SafeAreaView,
-  View,
-  Text,
-  TouchableOpacity,
-  Image,
-} from 'react-native';
+import {View, Text, TouchableOpacity, Image} from 'react-native';
 import FeatherIcon from '@react-native-vector-icons/feather';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {useNavigation} from '@react-navigation/native';
 import {useStore} from '../../store';
 
 export const UserHeader: React.FC = () => {
   const {styles, theme} = useStyles(stylesheet);
+  const navigation = useNavigation();
   const {user} = useStore();
   return (
     <View style={styles.header}>
@@ -21,9 +16,12 @@ export const UserHeader: React.FC = () => {
       </Text>
 
       <View style={styles.headerActions}>
+        {/* Notifications */}
         <TouchableOpacity
           onPress={() => {
-            // handle onPress
+            navigation.navigate('NotificationStack', {
+              screen: 'NotificationList',
+            });
           }}>
           <View style={styles.headerNotifications}>
             <FeatherIcon color="#222" name="bell" size={20} />

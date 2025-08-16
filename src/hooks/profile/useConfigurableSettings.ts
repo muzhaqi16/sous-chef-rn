@@ -2,10 +2,11 @@ import {useMemo, useCallback} from 'react';
 import {useStore} from '#store';
 import {useApolloClient} from '@apollo/client';
 import {
-  useUpdateProfileMutation,
-  useUpdateSettingsMutation,
-  UserProfileQuery,
-  UserProfileDocument,
+  useUpdateUserProfileMutation,
+  useUpdateUserPreferencesMutation,
+  useGetUserProfileQuery,
+  GetUserProfileQuery,
+  GetUserProfileDocument,
   ProfileVisibility,
 } from '#generated';
 import {
@@ -20,21 +21,21 @@ import {dateStringToISO, extractDateString} from '#utils/dateUtils';
 export const useConfigurableSettings = (profile: any) => {
   const store = useStore();
   const client = useApolloClient();
-  const [updateProfileMutation] = useUpdateProfileMutation();
-  const [updateSettingsMutation] = useUpdateSettingsMutation();
+  const [updateProfileMutation] = useUpdateUserProfileMutation();
+  const [updateSettingsMutation] = useUpdateUserPreferencesMutation();
 
   const updateProfile = useCallback(
     async (input: Partial<Record<ProfileFieldKey, any>>) => {
       try {
         // Read current cache
-        const cache = client.readQuery<UserProfileQuery>({
-          query: UserProfileDocument,
+        const cache = client.readQuery<GetUserProfileQuery>({
+          query: GetUserProfileDocument,
         });
 
         // Optimistically update the cache immediately
         if (cache?.userProfile) {
-          client.writeQuery<UserProfileQuery>({
-            query: UserProfileDocument,
+          client.writeQuery<GetUserProfileQuery>({
+            query: GetUserProfileDocument,
             data: {
               userProfile: {
                 ...cache.userProfile,
@@ -54,7 +55,7 @@ export const useConfigurableSettings = (profile: any) => {
         console.error('Failed to update profile:', error);
         // On error, refetch to restore correct state
         client.refetchQueries({
-          include: [UserProfileDocument],
+          include: [GetUserProfileDocument],
         });
       }
     },

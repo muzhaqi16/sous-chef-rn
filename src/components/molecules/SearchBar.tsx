@@ -3,6 +3,17 @@ import {View, StyleProp, ViewStyle, TextInputProps} from 'react-native';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
 import {BaseInput, ActionButton} from '#components';
 
+export interface SearchBarAction {
+  icon: string;
+  onPress: () => void;
+  color?: string;
+  backgroundColor?: string;
+  badge?: number;
+  size?: number;
+  library?: 'MaterialDesignIcons' | 'Ionicons' | 'FontAwesome' | string;
+  style?: StyleProp<ViewStyle>;
+}
+
 type SearchBarProps = Omit<TextInputProps, 'style'> & {
   value: string;
   onChangeText: (text: string) => void;
@@ -11,6 +22,9 @@ type SearchBarProps = Omit<TextInputProps, 'style'> & {
   listName?: string;
   itemCount?: number;
   completedCount?: number;
+  leftActions?: SearchBarAction[];
+  rightActions?: SearchBarAction[];
+  // Keep legacy props for backward compatibility
   onPressList?: () => void;
   onPressAdd?: () => void;
 };
@@ -21,15 +35,79 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   placeholder = 'Search…',
   containerStyle,
   inputStyle,
-  onPressList = () => {},
-  onPressAdd = () => {},
+  leftActions = [],
+  rightActions = [],
   listName = 'List',
+  // Legacy props for backward compatibility
+  onPressList,
+  onPressAdd,
   ...textInputProps
 }) => {
   const {styles, theme} = useStyles(stylesheet);
 
+  // Handle legacy props by converting them to action arrays
+  const finalLeftActions = React.useMemo(() => {
+    const actions = [...leftActions];
+    if (onPressList && !leftActions.some(action => action.icon === 'list')) {
+      actions.push({
+        icon: 'list',
+        onPress: onPressList,
+        backgroundColor: theme.colors.primary,
+        color: '#fff',
+      });
+    }
+    return actions;
+  }, [leftActions, onPressList, theme.colors.primary]);
+
+  const finalRightActions = React.useMemo(() => {
+    const actions = [...rightActions];
+    if (onPressAdd && !rightActions.some(action => action.icon === 'add')) {
+      actions.push({
+        icon: 'add',
+        onPress: onPressAdd,
+        backgroundColor: theme.colors.white,
+        color: theme.colors.primary,
+      });
+    }
+    return actions;
+  }, [rightActions, onPressAdd, theme.colors.primary, theme.colors.white]);
+
+  const renderActionButtons = (
+    actions: SearchBarAction[],
+    side: 'left' | 'right',
+  ) => {
+    if (actions.length === 0) return null;
+
+    return (
+      <View
+        style={[
+          styles.actionsContainer,
+          side === 'left' ? styles.leftActions : styles.rightActions,
+        ]}>
+        {actions.map((action, index) => (
+          <ActionButton
+            key={`${side}-${index}-${action.icon}`}
+            name={action.icon}
+            onPress={action.onPress}
+            style={[
+              styles.actionButton,
+              {
+                backgroundColor: action.backgroundColor || theme.colors.primary,
+              },
+              action.style,
+            ]}
+            color={action.color || '#fff'}
+            size={action.size}
+          />
+        ))}
+      </View>
+    );
+  };
+
   return (
     <View style={[styles.container, containerStyle]}>
+      {renderActionButtons(finalLeftActions, 'left')}
+
       <BaseInput
         value={value}
         onChangeText={onChangeText}
@@ -38,18 +116,8 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         containerStyle={styles.inputContainer}
         {...textInputProps}
       />
-      <ActionButton
-        name="list"
-        onPress={onPressList}
-        style={styles.listButton}
-        color="#fff"
-      />
-      <ActionButton
-        name="add"
-        onPress={onPressAdd}
-        style={styles.addButton}
-        color={theme.colors.primary}
-      />
+
+      {renderActionButtons(finalRightActions, 'right')}
     </View>
   );
 };
@@ -60,19 +128,25 @@ const stylesheet = createStyleSheet(theme => ({
     alignItems: 'center',
     padding: theme.spacing.sm,
     borderRadius: theme.radii.sm,
+    gap: theme.spacing.xs,
   },
-  side: {},
   inputContainer: {
-    // allow input to take full width
     flex: 1,
   },
   input: {
     // any default text-input styling you want
   },
-  listButton: {
-    backgroundColor: theme.colors.primary,
+  actionsContainer: {
+    flexDirection: 'row',
+    gap: theme.spacing.xs,
   },
-  addButton: {
-    backgroundColor: theme.colors.white,
+  leftActions: {
+    // Any specific styling for left actions
+  },
+  rightActions: {
+    // Any specific styling for right actions
+  },
+  actionButton: {
+    // Default action button styling
   },
 }));
