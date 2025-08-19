@@ -17,10 +17,12 @@ import {
 } from '#types';
 import {PROFILE_SETTINGS_CONFIG} from '#config';
 import {dateStringToISO, extractDateString} from '#utils/dateUtils';
+import {useStoreReset} from '../useStoreReset';
 
 export const useConfigurableSettings = (profile: any) => {
   const store = useStore();
   const client = useApolloClient();
+  const {logout} = useStore();
   const [updateProfileMutation] = useUpdateUserProfileMutation();
   const [updateSettingsMutation] = useUpdateUserPreferencesMutation();
 
@@ -294,9 +296,10 @@ export const useConfigurableSettings = (profile: any) => {
         case 'logout':
           baseItem.onPress = () => {
             // Call the store's reset method or handle logout logic here
-            store.reset();
+            logout();
             // You might want to add additional logout logic here
             // like clearing auth tokens, navigation, etc.
+            console.log('User logged out');
           };
           break;
 

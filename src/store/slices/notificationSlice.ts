@@ -60,7 +60,7 @@ export interface NotificationState {
   removeSubscribedList: (listId: string) => void;
   addSubscribedPantry: (pantryId: string) => void;
   removeSubscribedPantry: (pantryId: string) => void;
-
+  cleanupOrphanedSubscriptions: () => void;
   // Selectors
   getUnreadNotifications: () => NotificationItem[];
   getNotificationsByCategory: (
@@ -93,6 +93,7 @@ const initialNotificationState: Omit<
   | 'getUrgentNotifications'
   | 'getActionableNotifications'
   | 'resetNotifications'
+  | 'cleanupOrphanedSubscriptions'
 > = {
   notifications: [],
   unreadCount: 0,
@@ -109,8 +110,43 @@ export const createNotificationSlice: StateCreator<
   NotificationState
 > = (set, get) => ({
   ...initialNotificationState,
-
+  // Enhanced addNotification with safety checks
   addNotification: notification => {
+    const state = get();
+
+    // Safety check: Don't add notifications if user can't receive them
+    if (!state.user?.emailVerified) {
+      console.log('Skipping notification - user not verified');
+      return;
+    }
+
+    // Safety check: Don't add pantry notifications without pantry
+    if (
+      notification.category === NotificationCategory.PANTRY &&
+      !state.selectedPantryId
+    ) {
+      console.log('Skipping pantry notification - no pantry selected');
+      return;
+    }
+
+    // Safety check: Don't add home notifications without home
+    if (
+      notification.category === NotificationCategory.MEMBERSHIP &&
+      !state.selectedHomeId
+    ) {
+      console.log('Skipping home notification - no home selected');
+      return;
+    }
+
+    // Safety check: Don't add shopping list notifications without list
+    if (
+      notification.category === NotificationCategory.SHOPPING_LIST &&
+      !state.selectedShoppingListId
+    ) {
+      console.log('Skipping shopping list notification - no list selected');
+      return;
+    }
+
     set(state => {
       const newNotification = {...notification, isRead: false};
       state.notifications.unshift(newNotification);
@@ -121,12 +157,131 @@ export const createNotificationSlice: StateCreator<
     });
   },
 
+  // Safe batch add with filtering
   addMultipleNotifications: notifications => {
+    const state = get();
+
+    if (!state.user?.emailVerified) {
+      console.log('Skipping all notifications - user not verified');
+      return;
+    }
+
+    // Filter notifications based on current state
+    const validNotifications = notifications.filter(notification => {
+      if (
+        notification.category === NotificationCategory.PANTRY &&
+        !state.selectedPantryId
+      ) {
+        return false;
+      }
+      if (
+        notification.category === NotificationCategory.MEMBERSHIP &&
+        !state.selectedHomeId
+      ) {
+        return false;
+      }
+      if (
+        notification.category === NotificationCategory.SHOPPING_LIST &&
+        !state.selectedShoppingListId
+      ) {
+        return false;
+      }
+      return true;
+    });
+
+    if (validNotifications.length === 0) {
+      console.log('No valid notifications to add');
+      return;
+    }
+
+    console.log(
+      `Adding ${validNotifications.length} of ${notifications.length} notifications`,
+    );
+
     set(state => {
-      const newNotifications = notifications.map(n => ({...n, isRead: false}));
+      const newNotifications = validNotifications.map(n => ({
+        ...n,
+        isRead: false,
+      }));
       state.notifications.unshift(...newNotifications);
       state.unreadCount = state.notifications.filter(n => !n.isRead).length;
       state.urgentCount = state.notifications.filter(
+        n => !n.isRead && n.priority === NotificationPriority.URGENT,
+      ).length;
+    });
+  },
+
+  // Enhanced subscription management with validation
+  addSubscribedList: listId => {
+    const state = get();
+    if (!state.selectedShoppingListId) {
+      console.log('Not adding list subscription - no shopping list selected');
+      return;
+    }
+
+    set(state => {
+      if (!state.subscribedLists.includes(listId)) {
+        state.subscribedLists.push(listId);
+        console.log('Added shopping list subscription:', listId);
+      }
+    });
+  },
+
+  addSubscribedPantry: pantryId => {
+    const state = get();
+    if (!state.selectedPantryId) {
+      console.log('Not adding pantry subscription - no pantry selected');
+      return;
+    }
+
+    set(state => {
+      if (!state.subscribedPantries.includes(pantryId)) {
+        state.subscribedPantries.push(pantryId);
+        console.log('Added pantry subscription:', pantryId);
+      }
+    });
+  },
+
+  // Clean up subscriptions when entities are removed
+  cleanupOrphanedSubscriptions: () => {
+    const state = get();
+
+    set(draft => {
+      // Remove subscriptions for entities that no longer exist
+      if (!state.selectedPantryId) {
+        draft.subscribedPantries = [];
+      }
+
+      if (!state.selectedShoppingListId) {
+        draft.subscribedLists = [];
+      }
+
+      // Remove notifications for entities that no longer exist
+      draft.notifications = draft.notifications.filter(notification => {
+        if (
+          notification.category === NotificationCategory.PANTRY &&
+          !state.selectedPantryId
+        ) {
+          return false;
+        }
+        if (
+          notification.category === NotificationCategory.SHOPPING_LIST &&
+          !state.selectedShoppingListId
+        ) {
+          return false;
+        }
+        if (
+          notification.category === NotificationCategory.MEMBERSHIP &&
+          !state.selectedHomeId
+        ) {
+          return false;
+        }
+        return true;
+      });
+
+      // Recalculate counts
+      draft.unreadCount = draft.notifications.filter(n => !n.isRead).length;
+      draft.urgentCount = draft.notifications.filter(
         n => !n.isRead && n.priority === NotificationPriority.URGENT,
       ).length;
     });
@@ -217,25 +372,9 @@ export const createNotificationSlice: StateCreator<
     set({lastFetchedAt: timestamp});
   },
 
-  addSubscribedList: listId => {
-    set(state => {
-      if (!state.subscribedLists.includes(listId)) {
-        state.subscribedLists.push(listId);
-      }
-    });
-  },
-
   removeSubscribedList: listId => {
     set(state => {
       state.subscribedLists = state.subscribedLists.filter(id => id !== listId);
-    });
-  },
-
-  addSubscribedPantry: pantryId => {
-    set(state => {
-      if (!state.subscribedPantries.includes(pantryId)) {
-        state.subscribedPantries.push(pantryId);
-      }
     });
   },
 

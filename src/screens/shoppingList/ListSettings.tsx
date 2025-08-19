@@ -17,38 +17,34 @@ import {
   useDeleteShoppingListMutation,
   useCreateShoppingListMutation,
   GetShoppingListsDocument,
-  ShoppingList
+  ShoppingList,
 } from '#generated';
 import {useStore} from '#store';
 
-import {ListSettingsNavProp} from '#navigation/types';
+import {ListSettingsNavProp, ListSettingsRouteProp} from '#navigation/types';
 
 export const ListSettings: React.FC = () => {
   const {styles, theme} = useStyles(listSettingsStylesheet);
   const navigation = useNavigation<ListSettingsNavProp>();
-  const route = useRoute();
-  const {listId} = (route.params as {listId?: string}) || {};
+  const route = useRoute<ListSettingsRouteProp>();
+  const listId = route.params?.listId;
+
   const {setSelectedShoppingListId} = useStore();
 
   const [name, setName] = useState('');
   const [isDefault, setIsDefault] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Determine if we're creating a new list or editing existing one
-  const isCreating = !listId;
-  
-  const {shoppingList, loading, isShared, collaborators} = useShoppingListDetails(
-    listId || '' // Pass empty string if creating new list
-  );
+  const {shoppingList, isShared} = useShoppingListDetails(listId);
 
   const [updateList] = useUpdateShoppingListMutation();
   const [deleteList] = useDeleteShoppingListMutation();
   const [createList] = useCreateShoppingListMutation({
-     // Update the cache when a new list is created
+    // Update the cache when a new list is created
     update(cache, {data}) {
       if (data?.createShoppingList) {
         // Read the existing query from cache
-        const existingData = cache.readQuery<{ shoppingLists: ShoppingList[] }>({
+        const existingData = cache.readQuery<{shoppingLists: ShoppingList[]}>({
           query: GetShoppingListsDocument,
         });
 
@@ -71,12 +67,7 @@ export const ListSettings: React.FC = () => {
       if (data?.createShoppingList) {
         // Set the new list as selected
         setSelectedShoppingListId(data.createShoppingList.id);
-        Alert.alert('Success', 'List created successfully', [
-          {
-            text: 'OK',
-            onPress: () => navigation.goBack(),
-          },
-        ]);
+        navigation.goBack();
       }
     },
     onError: error => {
@@ -85,15 +76,15 @@ export const ListSettings: React.FC = () => {
   });
 
   useEffect(() => {
-    if (shoppingList && !isCreating) {
+    if (shoppingList && !listId) {
       setName(shoppingList.name);
       setIsDefault(shoppingList.isDefault);
-    } else if (isCreating) {
+    } else if (listId) {
       // Set default values for new list
       setName('');
       setIsDefault(false);
     }
-  }, [shoppingList, isCreating]);
+  }, [shoppingList, listId]);
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -103,7 +94,7 @@ export const ListSettings: React.FC = () => {
 
     setSaving(true);
     try {
-      if (isCreating) {
+      if (!listId) {
         // Create new list
         await createList({
           variables: {
@@ -126,15 +117,17 @@ export const ListSettings: React.FC = () => {
         Alert.alert('Success', 'Settings saved');
       }
     } catch (error) {
-      Alert.alert('Error', isCreating ? 'Failed to create list' : 'Failed to save settings');
+      Alert.alert(
+        'Error',
+        listId ? 'Failed to create list' : 'Failed to save settings',
+      );
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = () => {
-    if (isCreating) return; // Should never happen as delete button is hidden
-
+    if (listId) return; // Should never happen as delete button is hidden
     Alert.alert(
       'Delete List',
       'Are you sure you want to delete this list? This action cannot be undone.',
@@ -163,11 +156,11 @@ export const ListSettings: React.FC = () => {
           <Icon name="arrow-back" size={24} color={theme.colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.title}>
-          {isCreating ? 'Create New List' : 'List Settings'}
+          {!listId ? 'Create New List' : 'List Settings'}
         </Text>
         <TouchableOpacity onPress={handleSave} disabled={saving}>
           <Text style={styles.saveButton}>
-            {saving ? 'Saving...' : isCreating ? 'Create' : 'Save'}
+            {saving ? 'Saving...' : !listId ? 'Create' : 'Save'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -203,13 +196,15 @@ export const ListSettings: React.FC = () => {
         </View>
 
         {/* Only show sharing section if editing existing list */}
-        {!isCreating && (
+        {listId && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Sharing</Text>
 
             <TouchableOpacity
               style={styles.actionRow}
-              onPress={() => navigation.navigate('ShareList', {listId: listId!})}>
+              onPress={() =>
+                navigation.navigate('ShareList', {listId: listId!})
+              }>
               <Icon name="person-add" size={20} color={theme.colors.primary} />
               <Text style={styles.actionText}>Manage Members</Text>
               <Icon
@@ -229,11 +224,13 @@ export const ListSettings: React.FC = () => {
         )}
 
         {/* Only show danger zone if editing existing list */}
-        {!isCreating && (
+        {listId && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Danger Zone</Text>
 
-            <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={handleDelete}>
               <Icon name="delete" size={20} color={theme.colors.error} />
               <Text style={styles.deleteButtonText}>Delete List</Text>
             </TouchableOpacity>

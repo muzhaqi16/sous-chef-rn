@@ -9,12 +9,11 @@ import BarcodeStack from './BarcodeStack';
 import NotificationStack from './NotificationStack'; // Add this
 import {NotFoundScreen} from '../screens/NotFoundScreen';
 import type {RootStackParamList} from './types';
-import {OnBoardingSteps} from '#/store/slices/preferencesSlice';
-import {HomeManagementStack} from './HomeStack'; // Import HomeManagementStack
+import {HomeManagementStack} from './HomeStack'; 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function AppNavigator() {
-  const {isHydrated, user, onBoardingStep} = useStore();
+  const {isHydrated, user} = useStore();
 
   if (!isHydrated) {
     return null;
@@ -23,7 +22,7 @@ export default function AppNavigator() {
   const initialRoute: keyof RootStackParamList =
     !user || !user.emailVerified
       ? 'AuthStack'
-      : onBoardingStep !== OnBoardingSteps.complete
+      : !user.onBoarded
         ? 'OnBoardingStack'
         : 'HomeStack';
 

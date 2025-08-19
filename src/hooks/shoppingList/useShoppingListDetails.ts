@@ -4,7 +4,7 @@ import {
   GetShoppingListDocument,
 } from '#generated';
 
-export function useShoppingListDetails(listId: string | null) {
+export function useShoppingListDetails(listId: string | undefined) {
   const {data, loading, error, refetch} = useGetShoppingListQuery({
     variables: {id: listId ?? ''},
     skip: !listId,

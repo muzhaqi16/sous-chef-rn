@@ -6,8 +6,6 @@ import {
   useGetShoppingListsQuery,
   useMarkItemPurchasedMutation,
   useRemoveItemFromShoppingListMutation,
-  useCreateShoppingListMutation,
-  useAddCollaboratorMutation,
 } from '#generated';
 import {ShoppingListMainNavProp} from '#navigation/types';
 import {
@@ -16,8 +14,6 @@ import {
   BottomSheetAction,
   ItemSelector,
   EmptyState,
-  useTextInputModal,
-  ValidationRules,
 } from '#components';
 import {
   useShoppingListSelector,
@@ -30,9 +26,6 @@ import {Icon} from '#/utils/iconUtils';
 export const ShoppingListMain: React.FC = () => {
   const {styles, theme} = useStyles(stylesheet);
   const navigation = useNavigation<ShoppingListMainNavProp>();
-  const {TextModalComponent, show, hide} = useTextInputModal();
-  const [createShoppingList] = useCreateShoppingListMutation();
-  const [addCollaborator] = useAddCollaboratorMutation();
   const selectShoppingListSheet = useBottomSheetModal();
   const {selectedShoppingListId, setSelectedShoppingListId} = useStore();
   const [toggleItem] = useMarkItemPurchasedMutation();
@@ -94,7 +87,7 @@ export const ShoppingListMain: React.FC = () => {
           {
             text: 'Create List',
             onPress: () =>
-              navigation.navigate('ShoppingListDetail', {listId: 'new'}),
+              navigation.navigate('ListSettings'),
           },
         ],
       );
@@ -109,30 +102,6 @@ export const ShoppingListMain: React.FC = () => {
     } catch (error) {
       Alert.alert('Error', 'Failed to delete item');
     }
-  };
-
-  // For creating a new shopping list
-  const handleCreateList = () => {
-    show({
-      title: 'Create New List',
-      placeholder: 'Enter list name',
-      submitText: 'Create List',
-      validationRules: [
-        ValidationRules.minLength(2),
-        ValidationRules.maxLength(50),
-      ],
-      onSubmit: async listName => {
-        await createShoppingList({
-          variables: {
-            input: {
-              name: listName,
-              isDefault: false,
-            },
-          },
-        });
-        Alert.alert('Success', 'Shopping list created!');
-      },
-    });
   };
 
   // Search bar actions - similar to PantryMain
@@ -231,8 +200,7 @@ export const ShoppingListMain: React.FC = () => {
         <TouchableOpacity
           style={styles.actionButton}
           onPress={() => {
-            selectShoppingListSheet.close();
-            handleCreateList();
+           navigation.navigate('ListSettings');
           }}>
           <Icon name="add" size={20} color={theme.colors.primary} />
           <Text style={styles.actionButtonText}>Create New List</Text>
@@ -262,7 +230,6 @@ export const ShoppingListMain: React.FC = () => {
           </>
         )}
       </BottomSheetAction>
-      {TextModalComponent}
     </>
   );
 };

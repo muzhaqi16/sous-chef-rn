@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useEffect} from 'react';
 import {useForm} from 'react-hook-form';
 import {yupResolver} from '@hookform/resolvers/yup';
 
@@ -31,10 +31,10 @@ export const SignUpScreen = () => {
   const form = useForm<SignUpValues>({
     resolver: yupResolver(getSignUpValidationSchema()),
     defaultValues: {
-      name: '',
-      email: '',
-      password: '',
-      confirmPassword: '',
+      name: '133 N',
+      email: '133nmolest@gmail.com',
+      password: 'Test123!',
+      confirmPassword: 'Test123!',
     },
   });
 
@@ -46,17 +46,13 @@ export const SignUpScreen = () => {
     try {
       const response = await register({
         variables: {input},
-        errorPolicy: 'all',
       });
-
       if (response.data?.register) {
         const registerData = response.data.register;
         setAuthFromResponse(registerData);
         setPendingCredentials(email, password);
         navigateToEmailVerification(email, password);
-      } else {
-        throw new Error('Registration failed: No data returned');
-      }
+      } 
     } catch (err: any) {
       handleAuthError(err, 'Registration failed. Please try again.');
     }

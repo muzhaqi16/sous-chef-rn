@@ -5,7 +5,6 @@ import {
   LoginMutation,
   RegisterMutation,
   GetCompleteUserQuery,
-  AuthUserFragment,
   GetAuthUserQuery,
 } from '#generated';
 
@@ -135,15 +134,14 @@ export const createAuthSlice: StateCreator<
       state.pendingEmail = undefined;
       state.pendingPassword = undefined;
     }),
-
-  logout: () =>
-    set(state => {
-      state.user = null;
-      state.accessToken = null;
-      state.refreshToken = null;
-      state.pendingEmail = undefined;
-      state.pendingPassword = undefined;
-    }),
+// Simplified logout that delegates to reset manager
+  logout: () => {
+    // The reset manager will be available on the store when this is called
+    const store = get();
+    if ('resetStore' in store) {
+      (store as any).resetStore('LOGOUT');
+    }
+  },
 
   hasCompleteUserData: () => {
     const state = get();

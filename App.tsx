@@ -12,21 +12,13 @@ import {
   UnistylesRuntime,
   useStyles,
 } from 'react-native-unistyles';
-import AppNavigator from './src/navigation/AppNavigator';
-import SplashScreen from './src/screens/SplashScreen';
-import {ToastProvider} from './src/components/atoms';
-import {
-  setupNotificationHandlers,
-  setBadgeCount,
-} from '#utils/notifications/localNotificationHelper';
-import {useNotificationSubscriptions, useNotificationPermissions} from './src/hooks/notifications';
+import AppNavigator from '#navigation/AppNavigator';
+import SplashScreen from '#/screens/SplashScreen';
+import {ToastProvider} from '#/components/atoms';
 
 const App = () => {
   const isHydrated = useStore(store => store.isHydrated);
-  // Get unread count and user ID from the store
-  const unreadCount = useStore(state => state.unreadCount);
-  const userId = useStore(state => state.user?.id);
-
+ 
   const darkMode = useColorScheme() === 'dark';
   const {styles, theme} = useStyles(stylesheet);
   const {colors} = theme;
@@ -36,29 +28,6 @@ const App = () => {
     darkMode !== undefined ? darkMode : userTheme === 'dark';
 
   useInitialTheme(effectiveDark ? 'dark' : 'light');
-
-  // Request notification permissions
-  const {requestPermissions} = useNotificationPermissions();
-
-  useEffect(() => {
-    // Ensure the app is hydrated before proceeding
-    if (!isHydrated) {
-      return;
-    }
-
-    // Request notification permissions
-    requestPermissions();
-    // Setup notification handlers
-    const unsubscribe = setupNotificationHandlers();
-    return () => {
-      unsubscribe();
-    };
-  }, [isHydrated, requestPermissions]);
-
-  // Update badge count when unread count changes
-  useEffect(() => {
-    setBadgeCount(unreadCount);
-  }, [unreadCount]);
 
   // Set the theme for Unistyles
   useEffect(() => {

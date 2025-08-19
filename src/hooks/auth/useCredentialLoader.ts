@@ -1,5 +1,5 @@
 import {useState, useCallback} from 'react';
-import {loadCredentials} from '#storage/keychain';
+import {loadCredentials} from '#/storage/keychain';
 
 export const useCredentialLoader = (rememberMe: boolean | undefined) => {
   const [loadingCreds, setLoadingCreds] = useState(true);

@@ -1,7 +1,5 @@
 import React from 'react';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
-import {TouchableOpacity} from 'react-native';
-import Icon from '@react-native-vector-icons/material-icons';
 import {useStyles, createStyleSheet} from 'react-native-unistyles';
 import {HomeManagement} from '#screens';
 import {HomeManagementStackParamList} from './types';

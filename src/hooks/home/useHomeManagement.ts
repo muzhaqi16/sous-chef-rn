@@ -203,7 +203,6 @@ export function useHomeManagement() {
       });
 
       if (result.data?.createHome) {
-        Alert.alert('Success', 'Home created successfully');
         return result.data.createHome;
       }
       return false;

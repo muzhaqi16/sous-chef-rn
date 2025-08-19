@@ -9,7 +9,6 @@ import {
 import Icon from '@react-native-vector-icons/material-icons';
 import {useNavigation} from '@react-navigation/native';
 import {useStyles, createStyleSheet} from 'react-native-unistyles';
-import {ShoppingListDetailNavProp} from '#/navigation';
 import {useHomeManagement} from '#/hooks';
 import {useEmailInputModal} from '#/hooks/useEmailInputModal';
 import {
@@ -18,10 +17,11 @@ import {
   HomeCard,
   PartialHome,
 } from '#/components/organisms/home';
+import { HomeManagementNavProp } from '#/navigation';
 
 export const HomeManagement: React.FC = () => {
   const {styles, theme} = useStyles(stylesheet);
-  const navigation = useNavigation<ShoppingListDetailNavProp>();
+  const navigation = useNavigation<HomeManagementNavProp>();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [homeName, setHomeName] = useState('');
 
