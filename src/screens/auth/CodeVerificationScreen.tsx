@@ -1,56 +1,64 @@
-import React from 'react';
-import {StyleSheet, Text} from 'react-native';
+import React, {useEffect} from 'react';
 import {useForm} from 'react-hook-form';
-import {AuthWrapper} from '../../components/templates/AuthWrapper';
-import {AuthFormTemplate} from '../../components/templates/AuthFormTemplate';
-import {CodeInputAdapter} from '../../components/molecules/CodeInputAdapter';
-import {useStore} from '../../store';
+import {StyleSheet, Text} from 'react-native';
 import {useNavigation, CommonActions} from '@react-navigation/native';
+import {AuthWrapper, AuthFormTemplate,CodeInputAdapter} from '#components';
+import {useStore} from '#store';
 import {
   useVerifyEmailMutation,
   useResendVerificationEmailMutation,
-} from '../../graphql/generated';
+} from '#generated';
 
 type CodeVerificationValues = {
   code: string;
 };
 
 export function CodeVerificationScreen() {
-  const {setEmailVerified, user} = useStore();
+  const {setEmailVerified} = useStore();
+  const user = useStore(state => state.user); // More specific selector
   const [verifyEmail] = useVerifyEmailMutation();
   const [resendVerificationEmail] = useResendVerificationEmailMutation();
   const navigation = useNavigation();
+
   const {
     control,
     handleSubmit,
     formState: {errors},
-  } = useForm<CodeVerificationValues>({
+  } = useForm({
     defaultValues: {code: ''},
   });
 
+  // Handle navigation when email verification status changes
+  useEffect(() => {
+    if (user?.emailVerified) {
+      // Small delay to ensure state has fully updated
+      const timeoutId = setTimeout(() => {
+        navigation.dispatch(
+          CommonActions.reset({
+            index: 0,
+            routes: [{name: user.onBoarded ? 'Home' : 'OnBoarding'}],
+          }),
+        );
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [user?.emailVerified, user?.onBoarded, navigation]);
+
   const onVerifyCode = async (data: CodeVerificationValues) => {
     const {code} = data;
-
     try {
       const response = await verifyEmail({
         variables: {code},
       });
-
       if (response.data?.verifyEmail) {
         setEmailVerified(true);
-        // 3. Reset the root nav state in one go
-        navigation.dispatch(
-          CommonActions.reset({
-            index: 0,
-            routes: [
-              {
-                // if they still need onboarding, send them there,
-                // otherwise straight to HomeTab
-                name: user?.onBoarded ? 'Home' : 'OnBoarding',
-              },
-            ],
-          }),
-        );
+          navigation.dispatch(
+            CommonActions.reset({
+              index: 0,
+              routes: [{name: user?.onBoarded ? 'Home' : 'OnBoarding'}],
+            }),
+          );
       } else {
         console.error('Email verification failed');
       }
@@ -68,7 +76,6 @@ export function CodeVerificationScreen() {
       const response = await resendVerificationEmail({
         variables: {email: user.email},
       });
-
       if (response.data?.resendVerificationEmail) {
         console.log('Verification email resent successfully');
       } else {
@@ -79,15 +86,22 @@ export function CodeVerificationScreen() {
     }
   };
 
+  // Don't render the screen if already verified
+  if (user?.emailVerified) {
+    return null;
+  }
+
   return (
     <AuthWrapper>
-      <AuthFormTemplate<CodeVerificationValues>
+      <AuthFormTemplate
         title="Enter Code"
         subtitle={
           <>
             We emailed a code to{' '}
-            <Text style={{color: '#222'}}>{user?.email || 'your email'}</Text>.
-            Please enter the code to continue.
+            <Text style={{fontWeight: 'bold'}}>
+              {user?.email || 'your email'}
+            </Text>
+            . Please enter the code to continue.
           </>
         }
         fields={[{name: 'code', label: '', component: CodeInputAdapter}]}

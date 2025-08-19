@@ -1,6 +1,6 @@
-import React, {useMemo} from 'react';
-import {TouchableOpacity, Text, Alert, Image, View} from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import React, {useMemo,} from 'react';
+import {TouchableOpacity, Text, Alert, Image, View, } from 'react-native';
+import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import {useStyles, createStyleSheet} from 'react-native-unistyles';
 import {
   useGetShoppingListsQuery,
@@ -158,6 +158,12 @@ export const ShoppingListMain: React.FC = () => {
   const handleRefresh = async () => {
     await Promise.all([refetch()]);
   };
+// Refetch data when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      refetch();
+    }, [refetch]),
+  );
 
   // If no lists exist at all
   if (lists.length === 0) {
@@ -169,7 +175,7 @@ export const ShoppingListMain: React.FC = () => {
         action={{
           label: 'Create your first list',
           onPress: () =>
-            navigation.navigate('ShoppingListDetail', {listId: 'new'}),
+            navigation.navigate('ListSettings', {listId: ''}),
         }}
       />
     );
