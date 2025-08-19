@@ -19,7 +19,7 @@ import {
   setupNotificationHandlers,
   setBadgeCount,
 } from '#utils/notifications/localNotificationHelper';
-import {useNotificationSubscriptions, useNotificationPermissions} from '#hooks';
+import {useNotificationSubscriptions, useNotificationPermissions} from './src/hooks/notifications';
 
 const App = () => {
   const isHydrated = useStore(store => store.isHydrated);

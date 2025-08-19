@@ -7,7 +7,7 @@ import {
   useMyMembershipUpdatedSubscription,
   useShoppingListCollaboratorsChangedSubscription,
   useMemberJoinedSubscription,
-  useHomeInvitesQuery,
+  useGetHomeInvitesQuery,
   useMyShoppingListsUpdatedSubscription,
   NotificationType,
   NotificationStatus,
@@ -114,7 +114,7 @@ export const useNotificationSubscriptions = (
   });
 
   // Poll for home invites
-  const {data: invitesData} = useHomeInvitesQuery({
+  const {data: invitesData} = useGetHomeInvitesQuery({
     variables: {homeId: selectedHomeId!},
     skip: !selectedHomeId,
     pollInterval: 30000,
