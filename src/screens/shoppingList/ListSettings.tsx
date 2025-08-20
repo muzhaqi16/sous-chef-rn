@@ -76,7 +76,7 @@ export const ListSettings: React.FC = () => {
   });
 
   useEffect(() => {
-    if (shoppingList && !listId) {
+    if (shoppingList && listId) {
       setName(shoppingList.name);
       setIsDefault(shoppingList.isDefault);
     } else if (listId) {

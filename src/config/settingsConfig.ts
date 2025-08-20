@@ -30,11 +30,6 @@ export const PROFILE_SETTINGS_CONFIG: SettingsSection[] = [
         type: 'text',
       },
       {
-        key: 'website',
-        label: 'Website',
-        type: 'text',
-      },
-      {
         key: 'dateOfBirth',
         label: 'Date of Birth',
         type: 'text',
@@ -112,21 +107,6 @@ export const PROFILE_SETTINGS_CONFIG: SettingsSection[] = [
           {label: 'German', value: 'de'},
           {label: 'Italian', value: 'it'},
         ],
-      },
-    ],
-  },
-  {
-    title: 'Notifications',
-    items: [
-      {
-        key: 'emailNotif',
-        label: 'Email Notifications',
-        type: 'switch',
-      },
-      {
-        key: 'pushNotif',
-        label: 'Push Notifications',
-        type: 'switch',
       },
     ],
   },

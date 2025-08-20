@@ -314,8 +314,6 @@ export function useHomeManagement() {
           },
         },
       });
-
-      Alert.alert('Success', 'Invitation sent');
       return true;
     } catch (error) {
       return false;

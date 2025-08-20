@@ -30,6 +30,9 @@ export const ShareList: React.FC = () => {
   const {shoppingList, loading, collaborators, refetch} =
     useShoppingListDetails(listId);
 
+  console.log('Collaborators:', collaborators);
+  console.log('Shopping List:', shoppingList);
+
   const [shareList] = useAddCollaboratorMutation();
   const [removeMember] = useRemoveCollaboratorMutation();
 
@@ -51,7 +54,6 @@ export const ShareList: React.FC = () => {
         },
       });
       setEmail('');
-      Alert.alert('Success', 'Invitation sent successfully');
       refetch();
     } catch (error) {
       Alert.alert('Error', 'Failed to send invitation');

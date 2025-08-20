@@ -4,7 +4,6 @@ import {useApolloClient} from '@apollo/client';
 import {
   useUpdateUserProfileMutation,
   useUpdateUserPreferencesMutation,
-  useGetUserProfileQuery,
   GetUserProfileQuery,
   GetUserProfileDocument,
   ProfileVisibility,
@@ -17,7 +16,6 @@ import {
 } from '#types';
 import {PROFILE_SETTINGS_CONFIG} from '#config';
 import {dateStringToISO, extractDateString} from '#utils/dateUtils';
-import {useStoreReset} from '../useStoreReset';
 
 export const useConfigurableSettings = (profile: any) => {
   const store = useStore();
@@ -265,29 +263,6 @@ export const useConfigurableSettings = (profile: any) => {
             baseItem.onSave = (value: string) => {
               store.setLanguage(value);
               updateUserPreferences({language: value});
-            };
-          }
-          break;
-
-        // Notification settings
-        case 'emailNotif':
-          if (config.type === 'switch') {
-            baseItem.value = store.emailNotifications;
-            baseItem.onPress = () => {
-              const newValue = !store.emailNotifications;
-              store.setEmailNotifications(newValue);
-              updateUserPreferences({emailNotifications: newValue});
-            };
-          }
-          break;
-
-        case 'pushNotif':
-          if (config.type === 'switch') {
-            baseItem.value = store.pushNotifications;
-            baseItem.onPress = () => {
-              const newValue = !store.pushNotifications;
-              store.setNotificationsEnabled(newValue);
-              updateUserPreferences({pushNotifications: newValue});
             };
           }
           break;
