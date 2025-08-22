@@ -2890,12 +2890,12 @@ input ShareShoppingListInput {
 }
 
 type ShoppingList {
-  activities: [ShoppingListActivity!]!
+  activities: [ShoppingListActivity!]
   autoAddSuggestions: Boolean!
   basedOnTemplate: ShoppingList
   budgetAmount: Float
   category: String
-  collaborators: [ShoppingListCollaborator!]!
+  collaborators: [ShoppingListCollaborator!]
   completedAt: String
   completedItems: Int!
   completedShopDate: String
@@ -2918,11 +2918,11 @@ type ShoppingList {
   metadata: JSON
   name: String!
   nextRecurringDate: String
-  ownerships: [ShoppingListOwnership!]!
+  ownerships: [ShoppingListOwnership!]
   plannedShopDate: String
   priceTracking: Boolean!
   priority: Int!
-  purchases: [Purchase!]!
+  purchases: [Purchase!]
   recurringInterval: Int
   recurringPattern: RecurringPattern
   reminderDate: String
@@ -2936,7 +2936,7 @@ type ShoppingList {
   targetStore: Store
   targetStoreId: String
   templateName: String
-  templatesCreated: [ShoppingList!]!
+  templatesCreated: [ShoppingList!]
   totalCollaborators: Int!
   totalCost: Float!
   totalItems: Int!
@@ -3066,11 +3066,9 @@ type ShoppingListOwnership {
   createdAt: DateTime!
   id: ID!
   shoppingList: ShoppingList!
-  shoppingListId: String!
   transferredAt: String
   transferredFrom: String
   user: User!
-  userId: String!
 }
 
 type ShoppingListPreviousValues {

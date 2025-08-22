@@ -143,7 +143,7 @@ export const InviteMembersScreen = () => {
                   homeId: selectedHomeId,
                   email: invite.email,
                   role: MembershipRole.Member,
-                  personalMessage: `${user?.email || 'A user'} has invited you to join their home for managing pantry and shopping lists together!`,
+                  message: `${user?.email || 'A user'} has invited you to join their home for managing pantry and shopping lists together!`,
                 },
               },
             }),
@@ -170,12 +170,6 @@ export const InviteMembersScreen = () => {
       }
 
       await Promise.all(invitePromises);
-
-      Alert.alert(
-        'Success!',
-        `Invitations sent to ${invites.length} ${invites.length === 1 ? 'person' : 'people'}`,
-        [{text: 'OK', onPress: moveToCompletion}],
-      );
     } catch (error) {
       console.error('Error sending invites:', error);
       Alert.alert(
