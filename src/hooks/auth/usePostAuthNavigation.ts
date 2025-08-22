@@ -47,7 +47,17 @@ export const usePostAuthNavigation = () => {
 
   const navigateToEmailVerification = useCallback(
     (email: string, password: string) => {
-      navigation.navigate('CodeVerification', {email, password});
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [
+            {
+              name: 'CodeVerification',
+              params: {email, password},
+            },
+          ],
+        }),
+      );
     },
     [navigation],
   );

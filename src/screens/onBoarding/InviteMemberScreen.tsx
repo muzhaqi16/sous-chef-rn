@@ -170,6 +170,8 @@ export const InviteMembersScreen = () => {
       }
 
       await Promise.all(invitePromises);
+      // Add this line after successful completion
+      moveToCompletion();
     } catch (error) {
       console.error('Error sending invites:', error);
       Alert.alert(

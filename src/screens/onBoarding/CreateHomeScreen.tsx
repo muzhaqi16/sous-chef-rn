@@ -1,8 +1,8 @@
 // src/screens/onBoarding/CreateHomeScreen.tsx
-import React, {useState, useEffect} from 'react';
+import React, {useState} from 'react';
 import {Text, ActivityIndicator, View} from 'react-native';
 import {useForm} from 'react-hook-form';
-import {useNavigation, useFocusEffect} from '@react-navigation/native';
+import {useNavigation} from '@react-navigation/native';
 import {OnBoardingWrapper} from '#components/templates';
 import {DynamicFormFields} from '#components/molecules/DynamicFormFields';
 import {BaseInput, Button} from '#components';
@@ -17,6 +17,7 @@ import {
 } from '#generated';
 import {useStore} from '#store';
 import {OnBoardingSteps} from '#store/slices/preferencesSlice';
+import {useOnboardingSkip} from '#hooks';
 import * as yup from 'yup';
 
 type FormValues = {
@@ -44,18 +45,13 @@ export const CreateHomeScreen = () => {
 
   const homes = homesData?.homes || [];
 
-  // Check if user already has a home when screen comes into focus
-  useFocusEffect(
-    React.useCallback(() => {
-      console.log('CreateHomeScreen focused, checking for existing homes...');
-      if (!homesLoading && homes.length > 0) {
-        console.log('User already has homes, skipping to next step');
-        // Set the first home as selected
-        setSelectedHomeId(homes[0].id);
-        setOnBoardingStep(OnBoardingSteps.createHome);
-        navigation.replace('CreateShoppingList');
-      }
-    }, [homes, homesLoading, setSelectedHomeId, setOnBoardingStep, navigation]),
+  // Use the hook to handle skipping - replaces the useFocusEffect logic
+  const isCheckingExisting = useOnboardingSkip(
+    {data: homesData, loading: homesLoading},
+    homes,
+    OnBoardingSteps.createHome,
+    'CreateShoppingList',
+    setSelectedHomeId,
   );
 
   const [createPantry] = useCreatePantryMutation({
@@ -167,8 +163,8 @@ export const CreateHomeScreen = () => {
     navigation.replace('CreateShoppingList');
   };
 
-  // Show loading if we're checking for existing homes
-  if (homesLoading) {
+  // Show loading if we're checking for existing homes (returned from the hook)
+  if (isCheckingExisting) {
     return (
       <OnBoardingWrapper
         title="Welcome! Let's set up your home"

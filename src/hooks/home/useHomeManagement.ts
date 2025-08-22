@@ -31,22 +31,21 @@ export function useHomeManagement() {
   });
 
   const [setDefaultHomeMutation] = useSetDefaultHomeMutation({
+    update: (cache, {data}) => {
+      console.log('Set default response:', data);
+      // Add any cache updates here if you have them
+    },
     onError: error => {
       Alert.alert('Error', 'Failed to set default home');
       console.error('Set default home error:', error);
     },
   });
-
   const homes = data?.homes || [];
   const remoteDefaultHomeId = defaultHomeData?.getDefaultHome?.id;
 
   // Sync remote default home with local store on initial load and changes
   useEffect(() => {
     if (remoteDefaultHomeId && remoteDefaultHomeId !== selectedHomeId) {
-      console.log(
-        'Syncing remote default home to local store:',
-        remoteDefaultHomeId,
-      );
       setSelectedHomeId(remoteDefaultHomeId);
     }
   }, [remoteDefaultHomeId, setSelectedHomeId]);
@@ -81,7 +80,7 @@ export function useHomeManagement() {
     home?.name?.toLowerCase().includes(q.toLowerCase()),
   );
 
-  // Create home mutation
+  // Add debugging to createHomeMutation
   const [createHomeMutation, {loading: creating}] = useCreateHomeMutation({
     update: (cache, {data}) => {
       if (data?.createHome) {
@@ -90,10 +89,12 @@ export function useHomeManagement() {
         });
 
         if (existingHomes?.homes) {
+          const newHomesArray = [...existingHomes.homes, data.createHome];
+
           cache.writeQuery<GetHomesQuery>({
             query: GetHomesDocument,
             data: {
-              homes: [...existingHomes.homes, data.createHome],
+              homes: newHomesArray,
             },
           });
         }
@@ -113,7 +114,7 @@ export function useHomeManagement() {
     },
   });
 
-  // Update home mutation
+  // Add debugging to updateHomeMutation
   const [updateHomeMutation, {loading: updating}] = useUpdateHomeMutation({
     update: (cache, {data}) => {
       if (data?.updateHome) {
@@ -122,9 +123,12 @@ export function useHomeManagement() {
         });
 
         if (existingHomes?.homes) {
-          const updatedHomes = existingHomes.homes.map(home =>
-            home.id === data.updateHome.id ? data.updateHome : home,
-          );
+          const updatedHomes = existingHomes.homes.map(home => {
+            if (home.id === data.updateHome.id) {
+              return data.updateHome;
+            }
+            return home;
+          });
 
           cache.writeQuery<GetHomesQuery>({
             query: GetHomesDocument,
@@ -141,7 +145,7 @@ export function useHomeManagement() {
     },
   });
 
-  // Delete home mutation
+  // Add debugging to deleteHomeMutation
   const [deleteHomeMutation, {loading: deleting}] = useDeleteHomeMutation({
     update: (cache, {data}) => {
       if (data?.deleteHome) {
@@ -183,12 +187,7 @@ export function useHomeManagement() {
   });
 
   // Invite user to home mutation
-  const [inviteUserMutation, {loading: inviting}] = useInviteToHomeMutation({
-    onError: error => {
-      Alert.alert('Error', 'Failed to send invitation');
-      console.error('Invite user error:', error);
-    },
-  });
+  const [inviteUserMutation, {loading: inviting}] = useInviteToHomeMutation();
 
   // Helper functions
   const createHome = async (name: string) => {
@@ -304,37 +303,37 @@ export function useHomeManagement() {
     email: string,
     role: MembershipRole = MembershipRole.Member,
   ) => {
-    try {
-      await inviteUserMutation({
-        variables: {
-          input: {
-            homeId,
-            email: email.trim(),
-            role,
-          },
+    const result = await inviteUserMutation({
+      variables: {
+        input: {
+          homeId,
+          email: email.trim(),
+          role,
         },
-      });
-      return true;
-    } catch (error) {
-      return false;
-    }
+      },
+    });
+
+    return result.data;
   };
 
   // Statistics and computed values
   const stats = useMemo(() => {
-    return {
-      totalHomes: homes.length,
-      totalMembers: homes.reduce(
-        (acc, home) => acc + (home.members?.length || 0),
-        0,
-      ),
-      totalPantries: homes.reduce(
-        (acc, home) => acc + (home.pantries?.length || 0),
-        0,
-      ),
-    };
-  }, [homes]);
+    const validHomes = Array.isArray(homes) ? homes.filter(Boolean) : [];
 
+    const result = {
+      totalHomes: validHomes.length,
+      totalMembers: validHomes.reduce((acc, home) => {
+        const count = Array.isArray(home?.members) ? home.members.length : 0;
+        return acc + count;
+      }, 0),
+      totalPantries: validHomes.reduce((acc, home) => {
+        const count = Array.isArray(home?.pantries) ? home.pantries.length : 0;
+        return acc + count;
+      }, 0),
+    };
+
+    return result;
+  }, [homes]);
   // Computed value for current default home
   const defaultHome = useMemo(() => {
     return homes.find(home => home.id === selectedHomeId) || null;

@@ -63,9 +63,26 @@ export const EmailInputModal: React.FC<EmailInputModalProps> = ({
 
     try {
       await onSubmit(trimmedEmail);
+      // Only close on success
       handleClose();
-    } catch (err) {
-      setError('Failed to send invite. Please try again.');
+    } catch (err: any) {
+      console.log('❌ Modal caught error:', err);
+      // Extract the actual error message from the API
+      let errorMessage = 'Failed to send invite. Please try again.';
+
+      // Try different ways to extract the error message
+      if (err?.message) {
+        errorMessage = err.message.replace('ApolloError: ', '');
+      } else if (err?.graphQLErrors?.length > 0) {
+        errorMessage = err.graphQLErrors[0].message;
+      } else if (err?.networkError?.message) {
+        errorMessage = err.networkError.message;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      }
+
+      setError(errorMessage);
+      // Don't close the modal on error - keep it open for retry
     } finally {
       setIsSubmitting(false);
     }
@@ -96,7 +113,7 @@ export const EmailInputModal: React.FC<EmailInputModalProps> = ({
             value={email}
             onChangeText={text => {
               setEmail(text);
-              setError('');
+              if (error) setError(''); // Clear error when user types
             }}
             keyboardType="email-address"
             autoCapitalize="none"
@@ -136,47 +153,6 @@ export const EmailInputModal: React.FC<EmailInputModalProps> = ({
       </View>
     </Modal>
   );
-};
-
-// Hook for managing the modal state programmatically
-export const useEmailInputModal = () => {
-  const [visible, setVisible] = useState(false);
-  const [modalConfig, setModalConfig] = useState<{
-    onSubmit: (email: string) => Promise<void> | void;
-    title?: string;
-    placeholder?: string;
-  }>({
-    onSubmit: () => {},
-  });
-
-  const show = (config: {
-    onSubmit: (email: string) => Promise<void> | void;
-    title?: string;
-    placeholder?: string;
-  }) => {
-    setModalConfig(config);
-    setVisible(true);
-  };
-
-  const hide = () => {
-    setVisible(false);
-  };
-
-  const EmailModalComponent = () => (
-    <EmailInputModal
-      visible={visible}
-      onClose={hide}
-      onSubmit={modalConfig.onSubmit}
-      title={modalConfig.title}
-      placeholder={modalConfig.placeholder}
-    />
-  );
-
-  return {
-    show,
-    hide,
-    EmailModalComponent,
-  };
 };
 
 const styles = StyleSheet.create({

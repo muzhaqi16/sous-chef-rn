@@ -15,6 +15,7 @@ import {
 import {useStore} from '#store';
 import {OnBoardingSteps} from '#store/slices/preferencesSlice';
 import * as yup from 'yup';
+import {useOnboardingSkip} from '#hooks';
 
 type FormValues = {shoppingListName: string};
 
@@ -33,28 +34,14 @@ export const CreateShoppingListScreen = () => {
 
   const lists = listsData?.shoppingLists || [];
 
-  // Check if user already has a shopping list when screen comes into focus
-  useFocusEffect(
-    React.useCallback(() => {
-      console.log(
-        'CreateShoppingListScreen focused, checking for existing lists...',
-      );
-      if (!listsLoading && lists.length > 0) {
-        console.log('User already has shopping lists, skipping to next step');
-        // Set the first list as selected
-        setSelectedShoppingListId(lists[0].id);
-        setOnBoardingStep(OnBoardingSteps.createShoppingList);
-        navigation.replace('SelectPantryItems');
-      }
-    }, [
-      lists,
-      listsLoading,
-      setSelectedShoppingListId,
-      setOnBoardingStep,
-      navigation,
-    ]),
+  // Use the hook to handle skipping - replaces the useFocusEffect logic
+  const isCheckingExisting = useOnboardingSkip(
+    {data: lists, loading: listsLoading},
+    lists,
+    OnBoardingSteps.createHome,
+    'SelectPantryItems',
+    setSelectedShoppingListId,
   );
-
   const [createShoppingList] = useCreateShoppingListMutation({
     onCompleted: data => {
       if (data?.createShoppingList) {
@@ -132,7 +119,7 @@ export const CreateShoppingListScreen = () => {
   };
 
   // Show loading if we're checking for existing lists
-  if (listsLoading) {
+  if (isCheckingExisting) {
     return (
       <OnBoardingWrapper
         title="Create your shopping list"

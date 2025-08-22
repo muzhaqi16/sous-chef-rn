@@ -1,7 +1,7 @@
 import {ApolloLink, split} from '@apollo/client';
 import {getMainDefinition} from '@apollo/client/utilities';
 import {authLink} from './authLink';
-import {consoleLink} from './consoleLink';
+import {createConsoleLink} from './consoleLink';
 import {errorLink} from './errorLink';
 import {httpLink} from './httpLink';
 import {persistLink} from './persistLink';
@@ -22,6 +22,28 @@ const transportLink = split(
   retriableHttp,
 );
 
+// Default settings (recommended)
+const consoleLink = createConsoleLink({
+  enabled: false,
+});
+
+// Custom settings
+const consoleLinkCustom = createConsoleLink({
+  enabled: __DEV__ && true, // Enable only in dev
+  logVariables: true, // Log request variables
+  logQuery: false, // Don't log full query (can be verbose)
+  logResponse: true, // Log response data
+  logTiming: true, // Log execution time
+  slowQueryThreshold: 500, // Warn if query takes longer than 500ms
+});
+
+// Minimal logging
+const consoleLinkMinimal = createConsoleLink({
+  logVariables: false,
+  logQuery: false,
+  logResponse: false,
+  logTiming: true, // Only log timing
+});
 // Combine links: errorLink comes first to catch errors from subsequent links
 export const link = ApolloLink.from([
   persistLink,

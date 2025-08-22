@@ -17,7 +17,7 @@ import {
   HomeCard,
   PartialHome,
 } from '#/components/organisms/home';
-import { HomeManagementNavProp } from '#/navigation';
+import {HomeManagementNavProp} from '#/navigation';
 
 export const HomeManagement: React.FC = () => {
   const {styles, theme} = useStyles(stylesheet);
@@ -27,6 +27,7 @@ export const HomeManagement: React.FC = () => {
 
   const {
     homes,
+    allHomes,
     defaultHomeId,
     loading,
     creating,
@@ -38,16 +39,15 @@ export const HomeManagement: React.FC = () => {
   } = useHomeManagement();
 
   const {show, EmailModalComponent} = useEmailInputModal();
-
   const inviteUserPrompt = (homeId: string) => {
     show({
       title: 'Invite Member',
       placeholder: 'Enter email address',
       onSubmit: async email => {
-        const success = await inviteUserToHome(homeId, email);
-        if (!success) {
-          throw new Error('Failed to invite user');
-        }
+        // Just call the function and let any errors bubble up to the modal
+        // The modal will handle displaying the error and keeping itself open
+        await inviteUserToHome(homeId, email);
+        // If we reach here, the invitation was successful and the modal will close
       },
     });
   };

@@ -40,7 +40,7 @@ export const useTokenRefresh = () => {
     try {
       const response = await client.mutate<RefreshTokenMutation>({
         mutation: RefreshTokenDocument,
-        variables: {refreshToken},
+        variables: {token: refreshToken},
         context: {
           skipErrorLink: true, // Skip error link to avoid loops
         },
@@ -83,6 +83,13 @@ export const useTokenRefresh = () => {
 
       if (refreshIn > 0) {
         console.log(`Scheduling token refresh in ${refreshIn / 1000} seconds`);
+        // console log refreshing time in hours, minutes, seconds
+        const hours = Math.floor(refreshIn / 3600000);
+        const minutes = Math.floor((refreshIn % 3600000) / 60000);
+        const seconds = Math.floor((refreshIn % 60000) / 1000);
+        console.log(
+          `Token will be refreshed in ${hours}h ${minutes}m ${seconds}s`,
+        );
         refreshTimeoutRef.current = setTimeout(refreshAccessToken, refreshIn);
       }
     } catch (error) {

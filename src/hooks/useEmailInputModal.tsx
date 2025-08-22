@@ -1,6 +1,5 @@
-// Hook for managing the modal state programmatically
 import {useState, useMemo} from 'react';
-import {EmailInputModal} from '../components/organisms/EmailInputModal';
+import {EmailInputModal} from '#components';
 
 export const useEmailInputModal = () => {
   const [visible, setVisible] = useState(false);

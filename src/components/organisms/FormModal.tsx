@@ -32,7 +32,7 @@ export const FormModal: React.FC<FormModalProps> = ({
     <View style={styles.container}>
       <Header
         title={title}
-        onBack={onClose}
+        centerTitle
         leftActions={[
           {
             icon: 'close',

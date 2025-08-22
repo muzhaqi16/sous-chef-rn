@@ -1,5 +1,5 @@
-import React from 'react';
-import {Text, View} from 'react-native';
+import React, {useState} from 'react';
+import {Text, View, ActivityIndicator} from 'react-native';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
 import {useNavigation, CommonActions} from '@react-navigation/native';
 import {OnBoardingWrapper} from '#components/templates';
@@ -12,22 +12,50 @@ import {useUpdateUserMutation} from '#generated';
 export const OnboardingCompleteScreen = () => {
   const navigation = useNavigation<OnboardingCompleteNavProp>();
   const {styles} = useStyles(stylesheet);
-  const {setOnBoardingStep, user} = useStore();
+  const {setOnBoardingStep, user, updateUser} = useStore(); // Add setUser
+  const [isCompleting, setIsCompleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const [updateUser] = useUpdateUserMutation({
-    onCompleted: () => {
+  const [updateUserMutation] = useUpdateUserMutation({
+    onCompleted: data => {
       console.log('User onboarding marked as complete');
+
+      // Update the user in the store with the response from the server
+      if (data?.updateUser) {
+        updateUser(data.updateUser);
+      }
+
+      // Mark onboarding as fully complete in store
+      setOnBoardingStep(OnBoardingSteps.complete);
+
+      // Navigate to home and clear the navigation stack
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [{name: 'HomeStack'}],
+        }),
+      );
+
+      setIsCompleting(false);
     },
-    onError: e => console.error(e),
+    onError: error => {
+      console.error('Failed to update user onboarding status:', error);
+      setError('Failed to complete onboarding. Please try again.');
+      setIsCompleting(false);
+    },
   });
 
-  const handleComplete = () => {
-    // Mark onboarding as fully complete
-    setOnBoardingStep(OnBoardingSteps.complete);
+  const handleComplete = async () => {
+    if (!user?.id) {
+      setError('User not found. Please try again.');
+      return;
+    }
 
-    // Update user as onboarded
-    if (user?.id) {
-      updateUser({
+    setIsCompleting(true);
+    setError(null);
+
+    try {
+      await updateUserMutation({
         variables: {
           id: user.id,
           input: {
@@ -35,15 +63,10 @@ export const OnboardingCompleteScreen = () => {
           },
         },
       });
+    } catch (err) {
+      // Error handling is done in onError callback
+      console.error('Error in handleComplete:', err);
     }
-
-    // Navigate to home and clear the navigation stack
-    navigation.dispatch(
-      CommonActions.reset({
-        index: 0,
-        routes: [{name: 'HomeStack'}],
-      }),
-    );
   };
 
   return (
@@ -72,14 +95,34 @@ export const OnboardingCompleteScreen = () => {
           You can now start managing your pantry, create shopping lists, and
           collaborate with family members!
         </Text>
+
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
       </View>
 
       <Button
-        title="Get Started"
+        title={isCompleting ? 'Completing Setup...' : 'Get Started'}
         onPress={handleComplete}
-        btnStyle={styles.completeButton}
+        btnStyle={[
+          styles.completeButton,
+          isCompleting && styles.disabledButton,
+        ]}
         txtStyle={styles.completeText}
+        disabled={isCompleting}
       />
+
+      {isCompleting && (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator
+            size="small"
+            color={styles.loadingIndicator.color}
+          />
+          <Text style={styles.loadingText}>Finalizing your setup...</Text>
+        </View>
+      )}
     </OnBoardingWrapper>
   );
 };
@@ -134,9 +177,35 @@ const stylesheet = createStyleSheet(theme => ({
     alignItems: 'center',
     marginTop: 20,
   },
+  disabledButton: {
+    opacity: 0.6,
+  },
   completeText: {
     color: theme.colors.white,
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  errorContainer: {
+    marginTop: 16,
+    paddingHorizontal: 20,
+  },
+  errorText: {
+    color: theme.colors.error || '#FF3B30',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+  },
+  loadingIndicator: {
+    color: theme.colors.primary,
+  },
+  loadingText: {
+    marginLeft: 8,
+    fontSize: 14,
+    color: theme.colors.textSecondary || '#666',
   },
 }));

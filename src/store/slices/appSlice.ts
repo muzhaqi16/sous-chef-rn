@@ -1,6 +1,6 @@
 import {StateCreator} from 'zustand';
-import {RootState, STORAGE_KEY} from '../index';
-import {zustandStorage} from '../../storage/mmkv';
+import {RootState} from '../index';
+import {zustandStorage, STORAGE_KEY} from '../../storage/mmkv';
 
 export interface AppState {
   isHydrated: boolean;

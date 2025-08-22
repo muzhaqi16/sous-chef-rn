@@ -31,10 +31,10 @@ export const SignUpScreen = () => {
   const form = useForm<SignUpValues>({
     resolver: yupResolver(getSignUpValidationSchema()),
     defaultValues: {
-      name: '133 N',
-      email: '133nmolest@gmail.com',
-      password: 'Test123!',
-      confirmPassword: 'Test123!',
+      name: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
     },
   });
 
@@ -52,7 +52,7 @@ export const SignUpScreen = () => {
         setAuthFromResponse(registerData);
         setPendingCredentials(email, password);
         navigateToEmailVerification(email, password);
-      } 
+      }
     } catch (err: any) {
       handleAuthError(err, 'Registration failed. Please try again.');
     }
