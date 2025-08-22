@@ -79,9 +79,6 @@ export type NotificationStackParamList = {
 
 export type ShoppingListStackParamList = {
   ShoppingListMain: undefined;
-  ShoppingListDetail: {
-    listId: string;
-  };
   AddItem: {
     listId?: string;
   };
@@ -92,9 +89,11 @@ export type ShoppingListStackParamList = {
   ShareList: {
     listId: string;
   };
-  ListSettings: {
-    listId: string;
-  };
+  ListSettings:
+    | {
+        listId?: string;
+      }
+    | undefined;
 };
 
 export type PantryStackParamList = {
@@ -251,23 +250,24 @@ export type ShoppingListStackScreenProps<
 
 export type ShoppingListMainScreenProps =
   ShoppingListStackScreenProps<'ShoppingListMain'>;
-export type ShoppingListDetailScreenProps =
-  ShoppingListStackScreenProps<'ShoppingListDetail'>;
+
 export type AddItemScreenProps = ShoppingListStackScreenProps<'AddItem'>;
 export type EditItemScreenProps = ShoppingListStackScreenProps<'EditItem'>;
 export type ShareListScreenProps = ShoppingListStackScreenProps<'ShareList'>;
 export type ListSettingsScreenProps =
   ShoppingListStackScreenProps<'ListSettings'>;
 
+export type ListSettingsRouteProp = RouteProp<
+  ShoppingListStackParamList,
+  'ListSettings'
+>;
+
 // Navigation Props
 export type ShoppingListMainNavProp = NativeStackNavigationProp<
   ShoppingListStackParamList,
   'ShoppingListMain'
 >;
-export type ShoppingListDetailNavProp = NativeStackNavigationProp<
-  ShoppingListStackParamList,
-  'ShoppingListDetail'
->;
+
 export type AddItemNavProp = NativeStackNavigationProp<
   ShoppingListStackParamList,
   'AddItem'
@@ -282,11 +282,6 @@ export type ListSettingsNavProp = NativeStackNavigationProp<
   'ListSettings'
 >;
 
-// Route Props
-export type ShoppingListDetailRouteProp = RouteProp<
-  ShoppingListStackParamList,
-  'ShoppingListDetail'
->;
 export type EditItemRouteProp = RouteProp<
   ShoppingListStackParamList,
   'EditItem'

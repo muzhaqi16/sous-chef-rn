@@ -176,7 +176,9 @@ fragment CompleteUser on User {
   shoppingListOwnerships {
     createdAt
     id
-    shoppingListId
+    shoppingList {
+      id
+    }
     transferredAt
     transferredFrom
   }

@@ -14,7 +14,7 @@ const Stack = createNativeStackNavigator<OnBoardingStackParamList>();
 const OnBoardingStack = () => {
   const {onBoardingStep, user} = useStore();
   const onBoarded = user?.onBoarded ?? false;
-
+console.log('OnBoardingStack - onBoardingStep:', onBoardingStep, 'onBoarded:', onBoarded);
   // Set the initial route based on the onboarding step or completion status that the user has reached
   const getInitialRouteName = (): keyof OnBoardingStackParamList => {
     if (onBoarded) {

@@ -3802,12 +3802,12 @@ export type ShareShoppingListInput = {
 
 export type ShoppingList = {
   __typename?: 'ShoppingList';
-  activities: Array<ShoppingListActivity>;
+  activities?: Maybe<Array<ShoppingListActivity>>;
   autoAddSuggestions: Scalars['Boolean']['output'];
   basedOnTemplate?: Maybe<ShoppingList>;
   budgetAmount?: Maybe<Scalars['Float']['output']>;
   category?: Maybe<Scalars['String']['output']>;
-  collaborators: Array<ShoppingListCollaborator>;
+  collaborators?: Maybe<Array<ShoppingListCollaborator>>;
   completedAt?: Maybe<Scalars['String']['output']>;
   completedItems: Scalars['Int']['output'];
   completedShopDate?: Maybe<Scalars['String']['output']>;
@@ -3830,11 +3830,11 @@ export type ShoppingList = {
   metadata?: Maybe<Scalars['JSON']['output']>;
   name: Scalars['String']['output'];
   nextRecurringDate?: Maybe<Scalars['String']['output']>;
-  ownerships: Array<ShoppingListOwnership>;
+  ownerships?: Maybe<Array<ShoppingListOwnership>>;
   plannedShopDate?: Maybe<Scalars['String']['output']>;
   priceTracking: Scalars['Boolean']['output'];
   priority: Scalars['Int']['output'];
-  purchases: Array<Purchase>;
+  purchases?: Maybe<Array<Purchase>>;
   recurringInterval?: Maybe<Scalars['Int']['output']>;
   recurringPattern?: Maybe<RecurringPattern>;
   reminderDate?: Maybe<Scalars['String']['output']>;
@@ -3848,7 +3848,7 @@ export type ShoppingList = {
   targetStore?: Maybe<Store>;
   targetStoreId?: Maybe<Scalars['String']['output']>;
   templateName?: Maybe<Scalars['String']['output']>;
-  templatesCreated: Array<ShoppingList>;
+  templatesCreated?: Maybe<Array<ShoppingList>>;
   totalCollaborators: Scalars['Int']['output'];
   totalCost: Scalars['Float']['output'];
   totalItems: Scalars['Int']['output'];
@@ -3985,11 +3985,9 @@ export type ShoppingListOwnership = {
   createdAt: Scalars['DateTime']['output'];
   id: Scalars['ID']['output'];
   shoppingList: ShoppingList;
-  shoppingListId: Scalars['String']['output'];
   transferredAt?: Maybe<Scalars['String']['output']>;
   transferredFrom?: Maybe<Scalars['String']['output']>;
   user: User;
-  userId: Scalars['String']['output'];
 };
 
 export type ShoppingListPreviousValues = {
@@ -5998,9 +5996,9 @@ export type CompleteUserFragment = {
     __typename?: 'ShoppingListOwnership';
     createdAt: string;
     id: string;
-    shoppingListId: string;
     transferredAt?: string | null | undefined;
     transferredFrom?: string | null | undefined;
+    shoppingList: {__typename?: 'ShoppingList'; id: string};
   }>;
 };
 
@@ -7578,21 +7576,24 @@ export type GetShoppingListQuery = {
             | null
             | undefined;
         }>;
-        collaborators: Array<{
-          __typename?: 'ShoppingListCollaborator';
-          id: string;
-          email?: string | null | undefined;
-          role: CollaboratorRole;
-          status: CollaboratorStatus;
-          canEdit: boolean;
-          canAddItems: boolean;
-          canRemoveItems: boolean;
-          canEditItems: boolean;
-          canMarkPurchased: boolean;
-          canInviteOthers: boolean;
-          invitedAt: string;
-          lastViewedAt?: string | null | undefined;
-        }>;
+        collaborators?:
+          | Array<{
+              __typename?: 'ShoppingListCollaborator';
+              id: string;
+              email?: string | null | undefined;
+              role: CollaboratorRole;
+              status: CollaboratorStatus;
+              canEdit: boolean;
+              canAddItems: boolean;
+              canRemoveItems: boolean;
+              canEditItems: boolean;
+              canMarkPurchased: boolean;
+              canInviteOthers: boolean;
+              invitedAt: string;
+              lastViewedAt?: string | null | undefined;
+            }>
+          | null
+          | undefined;
         targetStore?:
           | {
               __typename?: 'Store';
@@ -7633,12 +7634,15 @@ export type GetShoppingListsQuery = {
       id: string;
       isPurchased: boolean;
     }>;
-    collaborators: Array<{
-      __typename?: 'ShoppingListCollaborator';
-      id: string;
-      email?: string | null | undefined;
-      role: CollaboratorRole;
-    }>;
+    collaborators?:
+      | Array<{
+          __typename?: 'ShoppingListCollaborator';
+          id: string;
+          email?: string | null | undefined;
+          role: CollaboratorRole;
+        }>
+      | null
+      | undefined;
   }>;
 };
 
@@ -7744,15 +7748,18 @@ export type CreateShoppingListMutation = {
     metadata?: any | null | undefined;
     createdAt: string;
     updatedAt: string;
-    ownerships: Array<{
-      __typename?: 'ShoppingListOwnership';
-      id: string;
-      userId: string;
-      shoppingListId: string;
-      createdAt: string;
-      transferredAt?: string | null | undefined;
-      transferredFrom?: string | null | undefined;
-    }>;
+    ownerships?:
+      | Array<{
+          __typename?: 'ShoppingListOwnership';
+          id: string;
+          createdAt: string;
+          transferredAt?: string | null | undefined;
+          transferredFrom?: string | null | undefined;
+          user: {__typename?: 'User'; id: string};
+          shoppingList: {__typename?: 'ShoppingList'; id: string};
+        }>
+      | null
+      | undefined;
   };
 };
 
@@ -8489,7 +8496,16 @@ export const CompleteUserFragmentDoc = {
               selections: [
                 {kind: 'Field', name: {kind: 'Name', value: 'createdAt'}},
                 {kind: 'Field', name: {kind: 'Name', value: 'id'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'shoppingListId'}},
+                {
+                  kind: 'Field',
+                  name: {kind: 'Name', value: 'shoppingList'},
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {kind: 'Field', name: {kind: 'Name', value: 'id'}},
+                    ],
+                  },
+                },
                 {kind: 'Field', name: {kind: 'Name', value: 'transferredAt'}},
                 {kind: 'Field', name: {kind: 'Name', value: 'transferredFrom'}},
               ],
@@ -10762,7 +10778,16 @@ export const GetCompleteUserDocument = {
               selections: [
                 {kind: 'Field', name: {kind: 'Name', value: 'createdAt'}},
                 {kind: 'Field', name: {kind: 'Name', value: 'id'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'shoppingListId'}},
+                {
+                  kind: 'Field',
+                  name: {kind: 'Name', value: 'shoppingList'},
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {kind: 'Field', name: {kind: 'Name', value: 'id'}},
+                    ],
+                  },
+                },
                 {kind: 'Field', name: {kind: 'Name', value: 'transferredAt'}},
                 {kind: 'Field', name: {kind: 'Name', value: 'transferredFrom'}},
               ],
@@ -26625,10 +26650,25 @@ export const CreateShoppingListDocument = {
                     kind: 'SelectionSet',
                     selections: [
                       {kind: 'Field', name: {kind: 'Name', value: 'id'}},
-                      {kind: 'Field', name: {kind: 'Name', value: 'userId'}},
                       {
                         kind: 'Field',
-                        name: {kind: 'Name', value: 'shoppingListId'},
+                        name: {kind: 'Name', value: 'user'},
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {kind: 'Field', name: {kind: 'Name', value: 'id'}},
+                          ],
+                        },
+                      },
+                      {
+                        kind: 'Field',
+                        name: {kind: 'Name', value: 'shoppingList'},
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {kind: 'Field', name: {kind: 'Name', value: 'id'}},
+                          ],
+                        },
                       },
                       {kind: 'Field', name: {kind: 'Name', value: 'createdAt'}},
                       {

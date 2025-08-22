@@ -28167,19 +28167,15 @@
             "description": null,
             "args": [],
             "type": {
-              "kind": "NON_NULL",
+              "kind": "LIST",
               "name": null,
               "ofType": {
-                "kind": "LIST",
+                "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "ShoppingListActivity",
-                    "ofType": null
-                  }
+                  "kind": "OBJECT",
+                  "name": "ShoppingListActivity",
+                  "ofType": null
                 }
               }
             },
@@ -28227,19 +28223,15 @@
             "description": null,
             "args": [],
             "type": {
-              "kind": "NON_NULL",
+              "kind": "LIST",
               "name": null,
               "ofType": {
-                "kind": "LIST",
+                "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "ShoppingListCollaborator",
-                    "ofType": null
-                  }
+                  "kind": "OBJECT",
+                  "name": "ShoppingListCollaborator",
+                  "ofType": null
                 }
               }
             },
@@ -28487,19 +28479,15 @@
             "description": null,
             "args": [],
             "type": {
-              "kind": "NON_NULL",
+              "kind": "LIST",
               "name": null,
               "ofType": {
-                "kind": "LIST",
+                "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "ShoppingListOwnership",
-                    "ofType": null
-                  }
+                  "kind": "OBJECT",
+                  "name": "ShoppingListOwnership",
+                  "ofType": null
                 }
               }
             },
@@ -28543,20 +28531,12 @@
             "description": null,
             "args": [],
             "type": {
-              "kind": "NON_NULL",
+              "kind": "LIST",
               "name": null,
               "ofType": {
-                "kind": "LIST",
+                "kind": "NON_NULL",
                 "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "Purchase",
-                    "ofType": null
-                  }
-                }
+                "ofType": {"kind": "OBJECT", "name": "Purchase", "ofType": null}
               }
             },
             "isDeprecated": false,
@@ -28707,19 +28687,15 @@
             "description": null,
             "args": [],
             "type": {
-              "kind": "NON_NULL",
+              "kind": "LIST",
               "name": null,
               "ofType": {
-                "kind": "LIST",
+                "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "ShoppingList",
-                    "ofType": null
-                  }
+                  "kind": "OBJECT",
+                  "name": "ShoppingList",
+                  "ofType": null
                 }
               }
             },
@@ -29947,18 +29923,6 @@
             "deprecationReason": null
           },
           {
-            "name": "shoppingListId",
-            "description": null,
-            "args": [],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {"kind": "SCALAR", "name": "String", "ofType": null}
-            },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
             "name": "transferredAt",
             "description": null,
             "args": [],
@@ -29982,18 +29946,6 @@
               "kind": "NON_NULL",
               "name": null,
               "ofType": {"kind": "OBJECT", "name": "User", "ofType": null}
-            },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "userId",
-            "description": null,
-            "args": [],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {"kind": "SCALAR", "name": "String", "ofType": null}
             },
             "isDeprecated": false,
             "deprecationReason": null

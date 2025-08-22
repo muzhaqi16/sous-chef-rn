@@ -2,12 +2,13 @@ import React, {useEffect} from 'react';
 import {useForm} from 'react-hook-form';
 import {StyleSheet, Text} from 'react-native';
 import {useNavigation, CommonActions} from '@react-navigation/native';
-import {AuthWrapper, AuthFormTemplate,CodeInputAdapter} from '#components';
+import {AuthWrapper, AuthFormTemplate, CodeInputAdapter} from '#components';
 import {useStore} from '#store';
 import {
   useVerifyEmailMutation,
   useResendVerificationEmailMutation,
 } from '#generated';
+import { useAuth } from '#/hooks';
 
 type CodeVerificationValues = {
   code: string;
@@ -15,7 +16,7 @@ type CodeVerificationValues = {
 
 export function CodeVerificationScreen() {
   const {setEmailVerified} = useStore();
-  const user = useStore(state => state.user); // More specific selector
+  const {user} = useAuth();
   const [verifyEmail] = useVerifyEmailMutation();
   const [resendVerificationEmail] = useResendVerificationEmailMutation();
   const navigation = useNavigation();
@@ -36,11 +37,11 @@ export function CodeVerificationScreen() {
         navigation.dispatch(
           CommonActions.reset({
             index: 0,
-            routes: [{name: user.onBoarded ? 'Home' : 'OnBoarding'}],
+            routes: [{name: user.onBoarded ? 'HomeStack' : 'OnBoardingStack'}],
           }),
         );
       }, 100);
-      
+
       return () => clearTimeout(timeoutId);
     }
   }, [user?.emailVerified, user?.onBoarded, navigation]);
@@ -51,14 +52,11 @@ export function CodeVerificationScreen() {
       const response = await verifyEmail({
         variables: {code},
       });
+      
       if (response.data?.verifyEmail) {
         setEmailVerified(true);
-          navigation.dispatch(
-            CommonActions.reset({
-              index: 0,
-              routes: [{name: user?.onBoarded ? 'Home' : 'OnBoarding'}],
-            }),
-          );
+        // The useEffect above will handle navigation when emailVerified becomes true
+        // No need to duplicate navigation logic here
       } else {
         console.error('Email verification failed');
       }
@@ -73,11 +71,14 @@ export function CodeVerificationScreen() {
         console.error('No email available to resend verification');
         return;
       }
+      
       const response = await resendVerificationEmail({
         variables: {email: user.email},
       });
+      
       if (response.data?.resendVerificationEmail) {
         console.log('Verification email resent successfully');
+        // You might want to show a success message to the user here
       } else {
         console.error('Failed to resend verification email');
       }

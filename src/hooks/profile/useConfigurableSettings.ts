@@ -4,7 +4,6 @@ import {useApolloClient} from '@apollo/client';
 import {
   useUpdateUserProfileMutation,
   useUpdateUserPreferencesMutation,
-  useGetUserProfileQuery,
   GetUserProfileQuery,
   GetUserProfileDocument,
   ProfileVisibility,
@@ -21,6 +20,7 @@ import {dateStringToISO, extractDateString} from '#utils/dateUtils';
 export const useConfigurableSettings = (profile: any) => {
   const store = useStore();
   const client = useApolloClient();
+  const {logout} = useStore();
   const [updateProfileMutation] = useUpdateUserProfileMutation();
   const [updateSettingsMutation] = useUpdateUserPreferencesMutation();
 
@@ -267,36 +267,14 @@ export const useConfigurableSettings = (profile: any) => {
           }
           break;
 
-        // Notification settings
-        case 'emailNotif':
-          if (config.type === 'switch') {
-            baseItem.value = store.emailNotifications;
-            baseItem.onPress = () => {
-              const newValue = !store.emailNotifications;
-              store.setEmailNotifications(newValue);
-              updateUserPreferences({emailNotifications: newValue});
-            };
-          }
-          break;
-
-        case 'pushNotif':
-          if (config.type === 'switch') {
-            baseItem.value = store.pushNotifications;
-            baseItem.onPress = () => {
-              const newValue = !store.pushNotifications;
-              store.setNotificationsEnabled(newValue);
-              updateUserPreferences({pushNotifications: newValue});
-            };
-          }
-          break;
-
         // Action items
         case 'logout':
           baseItem.onPress = () => {
             // Call the store's reset method or handle logout logic here
-            store.reset();
+            logout();
             // You might want to add additional logout logic here
             // like clearing auth tokens, navigation, etc.
+            console.log('User logged out');
           };
           break;
 

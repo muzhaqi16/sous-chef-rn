@@ -1,6 +1,8 @@
 import {MMKV} from 'react-native-mmkv';
 import {StateStorage} from 'zustand/middleware';
 
+export const STORAGE_KEY = 'sous-chef-storage';
+
 export const storage = new MMKV();
 
 export const zustandStorage: StateStorage = {

@@ -32,7 +32,7 @@ export function LoginScreen() {
   // Form setup
   const form = useForm<LoginInput>({
     resolver: yupResolver(getLoginValidationSchema()),
-    defaultValues: {email: '', password: ''},
+    defaultValues: {email: '133nmolest@gmail.com', password: 'Test123!'},
   });
 
   // Load credentials on mount

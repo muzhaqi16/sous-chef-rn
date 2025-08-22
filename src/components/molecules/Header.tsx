@@ -84,7 +84,7 @@ const headerStyles = createStyleSheet(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
+    paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },

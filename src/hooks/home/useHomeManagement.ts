@@ -203,7 +203,6 @@ export function useHomeManagement() {
       });
 
       if (result.data?.createHome) {
-        Alert.alert('Success', 'Home created successfully');
         return result.data.createHome;
       }
       return false;
@@ -315,8 +314,6 @@ export function useHomeManagement() {
           },
         },
       });
-
-      Alert.alert('Success', 'Invitation sent');
       return true;
     } catch (error) {
       return false;

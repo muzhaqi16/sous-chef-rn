@@ -88,7 +88,10 @@ export const PantryMain: React.FC = () => {
           {text: 'Cancel', style: 'cancel'},
           {
             text: 'Manage Homes',
-            onPress: () => navigation.navigate('HomeManagement'),
+            onPress: () => navigation.getParent()?.navigate('HomeManagementStack', {
+              screen: 'HomeManagement',
+            }),
+            style: 'default',
           },
         ],
       );
@@ -170,10 +173,12 @@ export const PantryMain: React.FC = () => {
       <EmptyState
         icon="home"
         title="No Home Selected"
-        description="You need to be a member of a home to manage pantry items."
+        description="You need to create or be a member of a home to manage pantry items."
         action={{
           label: 'Manage Homes',
-          onPress: () => navigation.navigate('HomeManagement'),
+          onPress: () => navigation.getParent()?.navigate('HomeManagementStack', {
+            screen: 'HomeManagement',
+          }),
         }}
       />
     );

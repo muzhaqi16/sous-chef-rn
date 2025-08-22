@@ -192,8 +192,12 @@ mutation CreateShoppingList($input: CreateShoppingListInput!) {
     updatedAt
     ownerships {
       id
-      userId
-      shoppingListId
+      user {
+        id
+      }
+      shoppingList {
+        id
+      }
       createdAt
       transferredAt
       transferredFrom

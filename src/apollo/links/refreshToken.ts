@@ -1,8 +1,7 @@
 import {Observable, FetchResult} from '@apollo/client';
-import {client} from '../../apollo/client';
-import {storage} from '../../storage/mmkv';
-import Config from 'react-native-config';
-import {useStore} from '../../store';
+import {client} from '#/apollo/client';
+import {storage} from '#/storage/mmkv';
+import {useStore} from '#store';
 import {RefreshTokenDocument, RefreshTokenMutation} from '#generated';
 
 /**
@@ -10,8 +9,6 @@ import {RefreshTokenDocument, RefreshTokenMutation} from '#generated';
  * Returns an Observable<FetchResult> that resolves when the token is refreshed
  * and the failed operation is retried.
  */
-const API_URL = Config.API_URL;
-
 export const attemptTokenRefresh = (
   operation: any,
   forward: any,

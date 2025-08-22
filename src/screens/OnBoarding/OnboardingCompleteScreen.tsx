@@ -12,7 +12,7 @@ import {useUpdateUserMutation} from '#generated';
 export const OnboardingCompleteScreen = () => {
   const navigation = useNavigation<OnboardingCompleteNavProp>();
   const {styles} = useStyles(stylesheet);
-  const {setOnBoardingStep, user, setOn} = useStore();
+  const {setOnBoardingStep, user} = useStore();
 
   const [updateUser] = useUpdateUserMutation({
     onCompleted: () => {
@@ -51,9 +51,7 @@ export const OnboardingCompleteScreen = () => {
       title="All set!"
       subtitle="Your home is ready to use"
       step={5}
-      totalSteps={5}
-      onBack={() => navigation.goBack()}
-      onSkip={handleComplete}>
+      totalSteps={5}>
       <View style={styles.container}>
         <View style={styles.successIcon}>
           <Text style={styles.checkmark}>✓</Text>
