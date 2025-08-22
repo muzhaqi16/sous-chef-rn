@@ -9,7 +9,7 @@ import BarcodeStack from './BarcodeStack';
 import NotificationStack from './NotificationStack'; // Add this
 import {NotFoundScreen} from '../screens/NotFoundScreen';
 import type {RootStackParamList} from './types';
-import {HomeManagementStack} from './HomeStack'; 
+import {HomeManagementStack} from './HomeStack';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function AppNavigator() {
