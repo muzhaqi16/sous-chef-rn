@@ -1,5 +1,5 @@
 import React, {useEffect} from 'react';
-import {StatusBar, useColorScheme} from 'react-native';
+import {StatusBar, useColorScheme, Platform} from 'react-native';
 import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {BottomSheetModalProvider} from '@gorhom/bottom-sheet';
@@ -18,7 +18,7 @@ import {ToastProvider} from '#/components/atoms';
 
 const App = () => {
   const isHydrated = useStore(store => store.isHydrated);
- 
+
   const darkMode = useColorScheme() === 'dark';
   const {styles, theme} = useStyles(stylesheet);
   const {colors} = theme;

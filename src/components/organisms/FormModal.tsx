@@ -55,6 +55,7 @@ const formModalStyles = createStyleSheet(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+    paddingTop: 12,
   },
   form: {
     padding: 16,

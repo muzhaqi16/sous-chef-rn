@@ -23,13 +23,14 @@ import {
   NotificationCategory,
   NotificationPriority,
 } from '#store/slices/notificationSlice';
-import {RootNavProp} from '#navigation';
+import {NotificationListNavProp} from '#navigation';
 import {useGetMyNotificationsQuery} from '#generated';
 import {useStore} from '#store';
+import {Header} from '#components/molecules/Header';
 
 export const NotificationListScreen: React.FC = () => {
   const {styles} = useStyles(stylesheet);
-  const navigation = useNavigation<RootNavProp>();
+  const navigation = useNavigation<NotificationListNavProp>();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [filterCategory, setFilterCategory] =
     useState<NotificationCategory | null>(null);
@@ -106,57 +107,55 @@ export const NotificationListScreen: React.FC = () => {
       if (notification.requiresAction && notification.actionType) {
         switch (notification.actionType) {
           case 'ACCEPT_INVITE':
-            navigation.navigate('HomeStack', {
+            navigation.getParent()?.navigate('HomeStack', {
               screen: 'Main',
               params: notification.actionData,
             });
             break;
           case 'ADD_TO_SHOPPING_LIST':
-            navigation.navigate('ShoppingListStack', {
+            navigation.getParent()?.navigate('ShoppingListStack', {
               screen: 'ShoppingListMain',
               params: notification.actionData,
             });
             break;
           case 'VIEW_EXPIRING_ITEMS':
-            navigation.navigate('PantryStack', {
+            navigation.getParent()?.navigate('PantryStack', {
               screen: 'ExpiringItems',
               params: notification.actionData,
             });
             break;
           case 'REVIEW_SECURITY':
-            navigation.navigate('SettingsStack', {
+            navigation.getParent()?.navigate('SettingsStack', {
               screen: 'ProfileSettings',
             });
             break;
           default:
-            navigation.navigate('NotificationStack', {
-              screen: 'NotificationDetail',
-              params: {notification},
+            navigation.navigate('NotificationDetail', {
+              notification,
             });
         }
       } else {
         // Default navigation based on category
         switch (notification.category) {
           case NotificationCategory.SHOPPING_LIST:
-            navigation.navigate('ShoppingListStack', {
-              screen: 'ShoppingListDetail',
+            navigation.getParent()?.navigate('ShoppingListStack', {
+              screen: 'ListSettings',
               params: {listId: notification.payload.listId},
             });
             break;
           case NotificationCategory.PANTRY:
-            navigation.navigate('PantryStack', {
+            navigation.getParent()?.navigate('PantryStack', {
               screen: 'PantryMain',
             });
             break;
           case NotificationCategory.SECURITY:
-            navigation.navigate('SettingsStack', {
+            navigation.getParent()?.navigate('SettingsStack', {
               screen: 'ProfileSettings',
             });
             break;
           default:
-            navigation.navigate('NotificationStack', {
-              screen: 'NotificationDetail',
-              params: {notification},
+            navigation.navigate('NotificationDetail', {
+              notification,
             });
         }
       }
@@ -185,6 +184,17 @@ export const NotificationListScreen: React.FC = () => {
   // Category filter pills
   const renderCategoryFilters = () => (
     <View style={styles.filterContainer}>
+      <Header
+        title={'Notifications'}
+        centerTitle={true}
+        onBack={navigation.goBack}
+        rightActions={[
+          {
+            icon: 'settings',
+            onPress: () => navigation.navigate('NotificationSettings'),
+          },
+        ]}
+      />
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}

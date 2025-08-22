@@ -1,14 +1,17 @@
 import React, {useState} from 'react';
-import {Text} from 'react-native';
+import {Text, ActivityIndicator, View} from 'react-native';
 import {useForm} from 'react-hook-form';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import {OnBoardingWrapper} from '#components/templates';
 import {DynamicFormFields} from '#components/molecules/DynamicFormFields';
 import {BaseInput, Button} from '#components';
 import {CreateShoppingListNavProp} from '#navigation/types';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
 import {yupResolver} from '@hookform/resolvers/yup';
-import {useCreateShoppingListMutation} from '#generated';
+import {
+  useCreateShoppingListMutation,
+  useGetShoppingListsQuery,
+} from '#generated';
 import {useStore} from '#store';
 import {OnBoardingSteps} from '#store/slices/preferencesSlice';
 import * as yup from 'yup';
@@ -17,27 +20,67 @@ type FormValues = {shoppingListName: string};
 
 export const CreateShoppingListScreen = () => {
   const navigation = useNavigation<CreateShoppingListNavProp>();
-  const {setOnBoardingStep, setSelectedShoppingListId} = useStore();
+  const {setOnBoardingStep, setSelectedShoppingListId, user} = useStore();
   const [graphqlError, setGraphqlError] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
   const {styles} = useStyles(stylesheet);
+
+  // Check for existing shopping lists
+  const {data: listsData, loading: listsLoading} = useGetShoppingListsQuery({
+    skip: !user?.id,
+    fetchPolicy: 'cache-and-network',
+  });
+
+  const lists = listsData?.shoppingLists || [];
+
+  // Check if user already has a shopping list when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log(
+        'CreateShoppingListScreen focused, checking for existing lists...',
+      );
+      if (!listsLoading && lists.length > 0) {
+        console.log('User already has shopping lists, skipping to next step');
+        // Set the first list as selected
+        setSelectedShoppingListId(lists[0].id);
+        setOnBoardingStep(OnBoardingSteps.createShoppingList);
+        navigation.replace('SelectPantryItems');
+      }
+    }, [
+      lists,
+      listsLoading,
+      setSelectedShoppingListId,
+      setOnBoardingStep,
+      navigation,
+    ]),
+  );
 
   const [createShoppingList] = useCreateShoppingListMutation({
     onCompleted: data => {
       if (data?.createShoppingList) {
         setGraphqlError(null);
+        console.log(
+          'Shopping list created successfully:',
+          data.createShoppingList.id,
+        );
+
         // Set the selected shopping list ID in the store
         setSelectedShoppingListId(data.createShoppingList.id);
+
         // Navigate to the next step in the onboarding process
         setOnBoardingStep(OnBoardingSteps.createShoppingList);
+        setIsCreating(false);
         navigation.replace('SelectPantryItems');
       } else {
         setGraphqlError('Failed to create shopping list');
+        setIsCreating(false);
       }
     },
     onError: error => {
       setGraphqlError(
         error.message || 'An error occurred while creating the shopping list',
       );
+      setIsCreating(false);
     },
   });
 
@@ -59,6 +102,10 @@ export const CreateShoppingListScreen = () => {
   });
 
   const onNext = handleSubmit(data => {
+    console.log('Creating shopping list with data:', data);
+    setIsCreating(true);
+    setGraphqlError(null);
+
     createShoppingList({
       variables: {
         input: {
@@ -71,17 +118,50 @@ export const CreateShoppingListScreen = () => {
     });
   });
 
+  const handleSkip = () => {
+    console.log('Skipping shopping list creation');
+    setOnBoardingStep(OnBoardingSteps.createShoppingList);
+    navigation.replace('SelectPantryItems');
+  };
+
+  const handleBack = () => {
+    // Only allow going back if user came from a valid previous step
+    // In normal flow, this should not be called due to gestureEnabled: false
+    console.log('Attempting to go back from CreateShoppingList');
+    navigation.goBack();
+  };
+
+  // Show loading if we're checking for existing lists
+  if (listsLoading) {
+    return (
+      <OnBoardingWrapper
+        title="Create your shopping list"
+        subtitle="Checking your existing lists..."
+        step={2}
+        totalSteps={5}
+        onBack={handleBack}
+        onSkip={handleSkip}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator
+            size="large"
+            color={styles.loadingIndicator.color}
+          />
+          <Text style={styles.loadingText}>
+            Checking your shopping lists...
+          </Text>
+        </View>
+      </OnBoardingWrapper>
+    );
+  }
+
   return (
     <OnBoardingWrapper
       title="Create your shopping list"
       subtitle="You can add items to it later"
       step={2}
       totalSteps={5}
-      onBack={() => navigation.goBack()}
-      onSkip={() => {
-        setOnBoardingStep(OnBoardingSteps.createShoppingList);
-        navigation.replace('SelectPantryItems');
-      }}>
+      onBack={handleBack}
+      onSkip={handleSkip}>
       <DynamicFormFields<FormValues>
         fields={[
           {
@@ -94,12 +174,15 @@ export const CreateShoppingListScreen = () => {
         control={control}
         errors={errors}
       />
+
       <Button
-        title="Next"
+        title={isCreating ? 'Creating List...' : 'Next'}
         onPress={onNext}
         btnStyle={styles.nextButton}
         txtStyle={styles.nextText}
+        disabled={isCreating}
       />
+
       {graphqlError && <Text style={styles.errorText}>{graphqlError}</Text>}
     </OnBoardingWrapper>
   );
@@ -122,5 +205,18 @@ const stylesheet = createStyleSheet(theme => ({
     color: theme.colors.error || 'red',
     marginTop: 12,
     textAlign: 'center',
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  loadingIndicator: {
+    color: theme.colors.primary,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: theme.colors.textSecondary,
   },
 }));

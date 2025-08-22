@@ -49,7 +49,7 @@ export interface AuthState {
   ) => void;
   setPendingCredentials: (email: string, password: string) => void;
   clearPendingCredentials: () => void;
-  logout: () => void;
+  logout: () => Promise<void>;
 
   // Utility methods
   hasCompleteUserData: () => boolean; // Check if user has complete data
@@ -134,12 +134,28 @@ export const createAuthSlice: StateCreator<
       state.pendingEmail = undefined;
       state.pendingPassword = undefined;
     }),
-// Simplified logout that delegates to reset manager
-  logout: () => {
-    // The reset manager will be available on the store when this is called
-    const store = get();
-    if ('resetStore' in store) {
-      (store as any).resetStore('LOGOUT');
+
+  // Enhanced logout that properly clears everything
+  logout: async () => {
+    console.log('AuthSlice: Starting logout process...');
+
+    try {
+      // The reset manager will be available on the store when this is called
+      const store = get();
+      if ('resetStore' in store) {
+        await (store as any).resetStore('LOGOUT');
+        console.log('AuthSlice: Logout completed successfully');
+      } else {
+        console.error(
+          'AuthSlice: Reset manager not available, performing manual reset',
+        );
+        // Fallback manual reset
+        set(initialAuthState);
+      }
+    } catch (error) {
+      console.error('AuthSlice: Error during logout:', error);
+      // Ensure we at least clear the auth state even if other cleanup fails
+      set(initialAuthState);
     }
   },
 

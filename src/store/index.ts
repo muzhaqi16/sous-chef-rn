@@ -1,4 +1,4 @@
-// store/index.ts - Updated with reset manager
+// src/store/index.ts - Updated with async reset manager
 import {create} from 'zustand';
 import {immer} from 'zustand/middleware/immer';
 import {
@@ -7,22 +7,36 @@ import {
   subscribeWithSelector,
 } from 'zustand/middleware';
 import {createAuthSlice, AuthState} from './slices/authSlice';
-import {createPreferencesSlice, PreferencesState} from './slices/preferencesSlice';
-import {BarcodeScannerState, createBarcodeScannerSlice} from './slices/barcodeScannerSlice';
+import {
+  createPreferencesSlice,
+  PreferencesState,
+} from './slices/preferencesSlice';
+import {
+  BarcodeScannerState,
+  createBarcodeScannerSlice,
+} from './slices/barcodeScannerSlice';
 import {createAppSlice, AppState} from './slices/appSlice';
-import {createNotificationSlice, NotificationState} from './slices/notificationSlice';
-import {createResetManager, ResetOptions, RESET_SCENARIOS} from './resetManager';
+import {
+  createNotificationSlice,
+  NotificationState,
+} from './slices/notificationSlice';
+import {
+  createResetManager,
+  ResetOptions,
+  RESET_SCENARIOS,
+} from './resetManager';
 import {logger} from './logger';
 import {zustandStorage, STORAGE_KEY} from '#/storage/mmkv';
 
-
 // Add reset manager interface to root state
 interface ResetManagerState {
-  resetStore: (options: ResetOptions | keyof typeof RESET_SCENARIOS) => void;
-  logout: () => void;
-  fullReset: () => void;
-  sessionExpired: () => void;
-  resetOnboarding: () => void;
+  resetStore: (
+    options: ResetOptions | keyof typeof RESET_SCENARIOS,
+  ) => Promise<void>;
+  logout: () => Promise<void>;
+  fullReset: () => Promise<void>;
+  sessionExpired: () => Promise<void>;
+  resetOnboarding: () => Promise<void>;
 }
 
 export type RootState = AuthState &
@@ -39,7 +53,7 @@ export const useStore = create<RootState>()(
         logger((set, get, store) => {
           // Create the reset manager
           const resetManager = createResetManager(set, get);
-          
+
           return {
             ...createAuthSlice(set, get, store),
             ...createPreferencesSlice(set, get, store),
@@ -56,13 +70,13 @@ export const useStore = create<RootState>()(
         version: 3,
         storage: createJSONStorage(() => zustandStorage),
         onRehydrateStorage: state => {
-          console.log('hydration starts');
+          console.log('Store hydration starts');
           return (state, error) => {
             if (error) {
-              console.log('an error happened during hydration', error);
+              console.log('An error happened during hydration', error);
             } else {
               state?.setHydrated(true);
-              console.log('hydration finished');
+              console.log('Store hydration finished');
             }
           };
         },

@@ -25,11 +25,17 @@ export const Header: React.FC<HeaderProps> = ({
   leftActions = [],
   rightActions = [],
   centerTitle = false,
+  onBack,
 }) => {
   const {styles, theme} = useStyles(headerStyles);
 
   return (
     <View style={styles.container}>
+      {onBack && (
+        <TouchableOpacity style={styles.action} onPress={onBack}>
+          <Icon name="arrow-back" size={24} color={theme.colors.textPrimary} />
+        </TouchableOpacity>
+      )}
       <View style={styles.leftActions}>
         {leftActions.map((action, index) => (
           <TouchableOpacity key={index} onPress={action.onPress}>
@@ -86,6 +92,7 @@ const headerStyles = createStyleSheet(theme => ({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     borderBottomWidth: 1,
+    paddingVertical: 12,
     borderBottomColor: theme.colors.border,
   },
   title: {

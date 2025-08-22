@@ -371,23 +371,7 @@ subscription ShoppingListItemsChanged($listId: ID!) {
     mutation
     listId
     item {
-      id
-      itemName
-      quantity
-      estimatedPrice
-      isPurchased
-      purchasedQuantity
-      purchasedPrice
-      notes
-      priority
-      category
-      addedBy {
-        id
-        email
-        profile {
-          displayName
-        }
-      }
+      ...ShoppingListItemFragment
     }
     previousValues {
       name
@@ -451,56 +435,13 @@ subscription ShoppingListStatusChanged($listId: ID!) {
 
 subscription ShoppingListItemAdded($shoppingListId: ID!) {
   shoppingListItemAdded(shoppingListId: $shoppingListId) {
-    id
-    itemName
-    quantity
-    estimatedPrice
-    isPurchased
-    priority
-    category
-    notes
-    addedBy {
-      id
-      email
-      profile {
-        displayName
-      }
-    }
-    item {
-      id
-      name
-      imageUrl
-      averagePrice
-    }
-    unit {
-      id
-      symbol
-      name
-    }
-    createdAt
+    ...ShoppingListItemFragment
   }
 }
 
 subscription ShoppingListItemUpdated($shoppingListId: ID!) {
   shoppingListItemUpdated(shoppingListId: $shoppingListId) {
-    id
-    itemName
-    quantity
-    estimatedPrice
-    isPurchased
-    purchasedQuantity
-    purchasedPrice
-    notes
-    priority
-    category
-    lastEditedBy {
-      id
-      email
-      profile {
-        displayName
-      }
-    }
-    updatedAt
+    ...ShoppingListItemFragment
   }
 }
 

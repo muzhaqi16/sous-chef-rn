@@ -25,19 +25,8 @@ export default function NotificationStack() {
       <Stack.Screen
         name="NotificationList"
         component={NotificationListScreen}
-        options={({navigation}) => ({
-          title: 'Notifications',
-          headerRight: () => (
-            <TouchableOpacity
-              style={styles.headerButton}
-              onPress={() => navigation.navigate('NotificationSettings')}>
-              <Icon
-                name="settings"
-                size={24}
-                color={theme.colors.textPrimary}
-              />
-            </TouchableOpacity>
-          ),
+        options={({}) => ({
+          headerShown: false,
         })}
       />
       <Stack.Screen

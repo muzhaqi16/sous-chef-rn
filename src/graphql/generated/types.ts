@@ -5191,6 +5191,10 @@ export type GetCompleteUserQuery = {
     homeOwnerships: Array<{
       __typename?: 'HomeOwnership';
       id: string;
+      createdAt: string;
+      homeId: string;
+      userId: string;
+      user: {__typename?: 'User'; id: string};
       home: {__typename?: 'Home'; id: string; name: string; createdAt: string};
     }>;
     purchases: Array<{__typename?: 'Purchase'; id: string}>;
@@ -5955,6 +5959,72 @@ export type ShoppingListItemFragmentFragment = {
     createdAt: string;
     updatedAt: string;
   } | null;
+  addedBy?: {
+    __typename?: 'User';
+    id: string;
+    email: string;
+    emailVerified: boolean;
+    role: UserRole;
+    onBoarded: boolean;
+    timezone?: string | null;
+    preferredCurrency?: string | null;
+    language?: string | null;
+    defaultShoppingListId?: string | null;
+    defaultHomeId?: string | null;
+    createdAt: string;
+    updatedAt: string;
+    lastActiveAt?: string | null;
+    profile?: {
+      __typename?: 'UserProfile';
+      id: string;
+      firstName?: string | null;
+      lastName?: string | null;
+      displayName?: string | null;
+      bio?: string | null;
+      avatar?: string | null;
+      phone?: string | null;
+    } | null;
+    settings?: {
+      __typename?: 'UserSettings';
+      id: string;
+      emailNotifications: boolean;
+      pushNotifications: boolean;
+      theme: AppTheme;
+    } | null;
+  } | null;
+  purchasedBy?: {
+    __typename?: 'User';
+    id: string;
+    email: string;
+    emailVerified: boolean;
+    role: UserRole;
+    onBoarded: boolean;
+    timezone?: string | null;
+    preferredCurrency?: string | null;
+    language?: string | null;
+    defaultShoppingListId?: string | null;
+    defaultHomeId?: string | null;
+    createdAt: string;
+    updatedAt: string;
+    lastActiveAt?: string | null;
+    profile?: {
+      __typename?: 'UserProfile';
+      id: string;
+      firstName?: string | null;
+      lastName?: string | null;
+      displayName?: string | null;
+      bio?: string | null;
+      avatar?: string | null;
+      phone?: string | null;
+    } | null;
+    settings?: {
+      __typename?: 'UserSettings';
+      id: string;
+      emailNotifications: boolean;
+      pushNotifications: boolean;
+      theme: AppTheme;
+    } | null;
+  } | null;
 };
 
 export type BasicUserFragment = {
@@ -6067,6 +6137,10 @@ export type CompleteUserFragment = {
   homeOwnerships: Array<{
     __typename?: 'HomeOwnership';
     id: string;
+    createdAt: string;
+    homeId: string;
+    userId: string;
+    user: {__typename?: 'User'; id: string};
     home: {__typename?: 'Home'; id: string; name: string; createdAt: string};
   }>;
   purchases: Array<{__typename?: 'Purchase'; id: string}>;
@@ -11250,6 +11324,72 @@ export type GetShoppingListItemsQuery = {
       createdAt: string;
       updatedAt: string;
     } | null;
+    addedBy?: {
+      __typename?: 'User';
+      id: string;
+      email: string;
+      emailVerified: boolean;
+      role: UserRole;
+      onBoarded: boolean;
+      timezone?: string | null;
+      preferredCurrency?: string | null;
+      language?: string | null;
+      defaultShoppingListId?: string | null;
+      defaultHomeId?: string | null;
+      createdAt: string;
+      updatedAt: string;
+      lastActiveAt?: string | null;
+      profile?: {
+        __typename?: 'UserProfile';
+        id: string;
+        firstName?: string | null;
+        lastName?: string | null;
+        displayName?: string | null;
+        bio?: string | null;
+        avatar?: string | null;
+        phone?: string | null;
+      } | null;
+      settings?: {
+        __typename?: 'UserSettings';
+        id: string;
+        emailNotifications: boolean;
+        pushNotifications: boolean;
+        theme: AppTheme;
+      } | null;
+    } | null;
+    purchasedBy?: {
+      __typename?: 'User';
+      id: string;
+      email: string;
+      emailVerified: boolean;
+      role: UserRole;
+      onBoarded: boolean;
+      timezone?: string | null;
+      preferredCurrency?: string | null;
+      language?: string | null;
+      defaultShoppingListId?: string | null;
+      defaultHomeId?: string | null;
+      createdAt: string;
+      updatedAt: string;
+      lastActiveAt?: string | null;
+      profile?: {
+        __typename?: 'UserProfile';
+        id: string;
+        firstName?: string | null;
+        lastName?: string | null;
+        displayName?: string | null;
+        bio?: string | null;
+        avatar?: string | null;
+        phone?: string | null;
+      } | null;
+      settings?: {
+        __typename?: 'UserSettings';
+        id: string;
+        emailNotifications: boolean;
+        pushNotifications: boolean;
+        theme: AppTheme;
+      } | null;
+    } | null;
   }>;
 };
 
@@ -11322,6 +11462,72 @@ export type GetShoppingListItemQuery = {
       sortOrder: number;
       createdAt: string;
       updatedAt: string;
+    } | null;
+    addedBy?: {
+      __typename?: 'User';
+      id: string;
+      email: string;
+      emailVerified: boolean;
+      role: UserRole;
+      onBoarded: boolean;
+      timezone?: string | null;
+      preferredCurrency?: string | null;
+      language?: string | null;
+      defaultShoppingListId?: string | null;
+      defaultHomeId?: string | null;
+      createdAt: string;
+      updatedAt: string;
+      lastActiveAt?: string | null;
+      profile?: {
+        __typename?: 'UserProfile';
+        id: string;
+        firstName?: string | null;
+        lastName?: string | null;
+        displayName?: string | null;
+        bio?: string | null;
+        avatar?: string | null;
+        phone?: string | null;
+      } | null;
+      settings?: {
+        __typename?: 'UserSettings';
+        id: string;
+        emailNotifications: boolean;
+        pushNotifications: boolean;
+        theme: AppTheme;
+      } | null;
+    } | null;
+    purchasedBy?: {
+      __typename?: 'User';
+      id: string;
+      email: string;
+      emailVerified: boolean;
+      role: UserRole;
+      onBoarded: boolean;
+      timezone?: string | null;
+      preferredCurrency?: string | null;
+      language?: string | null;
+      defaultShoppingListId?: string | null;
+      defaultHomeId?: string | null;
+      createdAt: string;
+      updatedAt: string;
+      lastActiveAt?: string | null;
+      profile?: {
+        __typename?: 'UserProfile';
+        id: string;
+        firstName?: string | null;
+        lastName?: string | null;
+        displayName?: string | null;
+        bio?: string | null;
+        avatar?: string | null;
+        phone?: string | null;
+      } | null;
+      settings?: {
+        __typename?: 'UserSettings';
+        id: string;
+        emailNotifications: boolean;
+        pushNotifications: boolean;
+        theme: AppTheme;
+      } | null;
     } | null;
   } | null;
 };
@@ -11555,6 +11761,72 @@ export type AddItemToShoppingListMutation = {
       createdAt: string;
       updatedAt: string;
     } | null;
+    addedBy?: {
+      __typename?: 'User';
+      id: string;
+      email: string;
+      emailVerified: boolean;
+      role: UserRole;
+      onBoarded: boolean;
+      timezone?: string | null;
+      preferredCurrency?: string | null;
+      language?: string | null;
+      defaultShoppingListId?: string | null;
+      defaultHomeId?: string | null;
+      createdAt: string;
+      updatedAt: string;
+      lastActiveAt?: string | null;
+      profile?: {
+        __typename?: 'UserProfile';
+        id: string;
+        firstName?: string | null;
+        lastName?: string | null;
+        displayName?: string | null;
+        bio?: string | null;
+        avatar?: string | null;
+        phone?: string | null;
+      } | null;
+      settings?: {
+        __typename?: 'UserSettings';
+        id: string;
+        emailNotifications: boolean;
+        pushNotifications: boolean;
+        theme: AppTheme;
+      } | null;
+    } | null;
+    purchasedBy?: {
+      __typename?: 'User';
+      id: string;
+      email: string;
+      emailVerified: boolean;
+      role: UserRole;
+      onBoarded: boolean;
+      timezone?: string | null;
+      preferredCurrency?: string | null;
+      language?: string | null;
+      defaultShoppingListId?: string | null;
+      defaultHomeId?: string | null;
+      createdAt: string;
+      updatedAt: string;
+      lastActiveAt?: string | null;
+      profile?: {
+        __typename?: 'UserProfile';
+        id: string;
+        firstName?: string | null;
+        lastName?: string | null;
+        displayName?: string | null;
+        bio?: string | null;
+        avatar?: string | null;
+        phone?: string | null;
+      } | null;
+      settings?: {
+        __typename?: 'UserSettings';
+        id: string;
+        emailNotifications: boolean;
+        pushNotifications: boolean;
+        theme: AppTheme;
+      } | null;
+    } | null;
   };
 };
 
@@ -11628,6 +11900,72 @@ export type UpdateShoppingListItemMutation = {
       sortOrder: number;
       createdAt: string;
       updatedAt: string;
+    } | null;
+    addedBy?: {
+      __typename?: 'User';
+      id: string;
+      email: string;
+      emailVerified: boolean;
+      role: UserRole;
+      onBoarded: boolean;
+      timezone?: string | null;
+      preferredCurrency?: string | null;
+      language?: string | null;
+      defaultShoppingListId?: string | null;
+      defaultHomeId?: string | null;
+      createdAt: string;
+      updatedAt: string;
+      lastActiveAt?: string | null;
+      profile?: {
+        __typename?: 'UserProfile';
+        id: string;
+        firstName?: string | null;
+        lastName?: string | null;
+        displayName?: string | null;
+        bio?: string | null;
+        avatar?: string | null;
+        phone?: string | null;
+      } | null;
+      settings?: {
+        __typename?: 'UserSettings';
+        id: string;
+        emailNotifications: boolean;
+        pushNotifications: boolean;
+        theme: AppTheme;
+      } | null;
+    } | null;
+    purchasedBy?: {
+      __typename?: 'User';
+      id: string;
+      email: string;
+      emailVerified: boolean;
+      role: UserRole;
+      onBoarded: boolean;
+      timezone?: string | null;
+      preferredCurrency?: string | null;
+      language?: string | null;
+      defaultShoppingListId?: string | null;
+      defaultHomeId?: string | null;
+      createdAt: string;
+      updatedAt: string;
+      lastActiveAt?: string | null;
+      profile?: {
+        __typename?: 'UserProfile';
+        id: string;
+        firstName?: string | null;
+        lastName?: string | null;
+        displayName?: string | null;
+        bio?: string | null;
+        avatar?: string | null;
+        phone?: string | null;
+      } | null;
+      settings?: {
+        __typename?: 'UserSettings';
+        id: string;
+        emailNotifications: boolean;
+        pushNotifications: boolean;
+        theme: AppTheme;
+      } | null;
     } | null;
   };
 };
@@ -11748,22 +12086,131 @@ export type ShoppingListItemsChangedSubscription = {
     item?: {
       __typename?: 'ShoppingListItem';
       id: string;
-      itemName?: string | null;
       quantity?: number | null;
       estimatedPrice?: number | null;
+      budgetPrice?: number | null;
+      lastKnownPrice?: number | null;
+      averagePrice?: number | null;
+      lowestPrice?: number | null;
+      highestPrice?: number | null;
+      priceLastUpdated?: string | null;
       isPurchased: boolean;
       purchasedQuantity?: number | null;
       purchasedPrice?: number | null;
+      purchaseDate?: string | null;
+      aisle?: string | null;
+      storeSection?: string | null;
+      previouslyPurchased: boolean;
+      lastPurchaseDate?: string | null;
+      purchaseCount: number;
+      itemName?: string | null;
+      itemBarcode?: string | null;
+      unitName?: string | null;
       notes?: string | null;
       priority: number;
       category?: string | null;
+      sortOrder: number;
+      isAutoAdded: boolean;
+      autoAddReason?: string | null;
+      isFromMealPlan: boolean;
+      mealPlanReference?: string | null;
+      createdAt: string;
+      updatedAt: string;
+      deletedAt?: string | null;
+      version: number;
+      shoppingList: {
+        __typename?: 'ShoppingList';
+        id: string;
+        totalItems: number;
+        completedItems: number;
+        estimatedTotal: number;
+      };
+      item?: {
+        __typename?: 'Item';
+        id: string;
+        name: string;
+        description?: string | null;
+        imageUrl?: string | null;
+      } | null;
+      unit?: {
+        __typename?: 'Unit';
+        id: string;
+        name: string;
+        symbol: string;
+        type: UnitType;
+        isMetric: boolean;
+        baseUnitId?: string | null;
+        conversionFactor: number;
+        notes?: string | null;
+        isCommon: boolean;
+        sortOrder: number;
+        createdAt: string;
+        updatedAt: string;
+      } | null;
       addedBy?: {
         __typename?: 'User';
         id: string;
         email: string;
+        emailVerified: boolean;
+        role: UserRole;
+        onBoarded: boolean;
+        timezone?: string | null;
+        preferredCurrency?: string | null;
+        language?: string | null;
+        defaultShoppingListId?: string | null;
+        defaultHomeId?: string | null;
+        createdAt: string;
+        updatedAt: string;
+        lastActiveAt?: string | null;
         profile?: {
           __typename?: 'UserProfile';
+          id: string;
+          firstName?: string | null;
+          lastName?: string | null;
           displayName?: string | null;
+          bio?: string | null;
+          avatar?: string | null;
+          phone?: string | null;
+        } | null;
+        settings?: {
+          __typename?: 'UserSettings';
+          id: string;
+          emailNotifications: boolean;
+          pushNotifications: boolean;
+          theme: AppTheme;
+        } | null;
+      } | null;
+      purchasedBy?: {
+        __typename?: 'User';
+        id: string;
+        email: string;
+        emailVerified: boolean;
+        role: UserRole;
+        onBoarded: boolean;
+        timezone?: string | null;
+        preferredCurrency?: string | null;
+        language?: string | null;
+        defaultShoppingListId?: string | null;
+        defaultHomeId?: string | null;
+        createdAt: string;
+        updatedAt: string;
+        lastActiveAt?: string | null;
+        profile?: {
+          __typename?: 'UserProfile';
+          id: string;
+          firstName?: string | null;
+          lastName?: string | null;
+          displayName?: string | null;
+          bio?: string | null;
+          avatar?: string | null;
+          phone?: string | null;
+        } | null;
+        settings?: {
+          __typename?: 'UserSettings';
+          id: string;
+          emailNotifications: boolean;
+          pushNotifications: boolean;
+          theme: AppTheme;
         } | null;
       } | null;
     } | null;
@@ -11851,35 +12298,132 @@ export type ShoppingListItemAddedSubscription = {
   shoppingListItemAdded: {
     __typename?: 'ShoppingListItem';
     id: string;
-    itemName?: string | null;
     quantity?: number | null;
     estimatedPrice?: number | null;
+    budgetPrice?: number | null;
+    lastKnownPrice?: number | null;
+    averagePrice?: number | null;
+    lowestPrice?: number | null;
+    highestPrice?: number | null;
+    priceLastUpdated?: string | null;
     isPurchased: boolean;
+    purchasedQuantity?: number | null;
+    purchasedPrice?: number | null;
+    purchaseDate?: string | null;
+    aisle?: string | null;
+    storeSection?: string | null;
+    previouslyPurchased: boolean;
+    lastPurchaseDate?: string | null;
+    purchaseCount: number;
+    itemName?: string | null;
+    itemBarcode?: string | null;
+    unitName?: string | null;
+    notes?: string | null;
     priority: number;
     category?: string | null;
-    notes?: string | null;
+    sortOrder: number;
+    isAutoAdded: boolean;
+    autoAddReason?: string | null;
+    isFromMealPlan: boolean;
+    mealPlanReference?: string | null;
     createdAt: string;
-    addedBy?: {
-      __typename?: 'User';
+    updatedAt: string;
+    deletedAt?: string | null;
+    version: number;
+    shoppingList: {
+      __typename?: 'ShoppingList';
       id: string;
-      email: string;
-      profile?: {
-        __typename?: 'UserProfile';
-        displayName?: string | null;
-      } | null;
-    } | null;
+      totalItems: number;
+      completedItems: number;
+      estimatedTotal: number;
+    };
     item?: {
       __typename?: 'Item';
       id: string;
       name: string;
+      description?: string | null;
       imageUrl?: string | null;
-      averagePrice?: number | null;
     } | null;
     unit?: {
       __typename?: 'Unit';
       id: string;
-      symbol: string;
       name: string;
+      symbol: string;
+      type: UnitType;
+      isMetric: boolean;
+      baseUnitId?: string | null;
+      conversionFactor: number;
+      notes?: string | null;
+      isCommon: boolean;
+      sortOrder: number;
+      createdAt: string;
+      updatedAt: string;
+    } | null;
+    addedBy?: {
+      __typename?: 'User';
+      id: string;
+      email: string;
+      emailVerified: boolean;
+      role: UserRole;
+      onBoarded: boolean;
+      timezone?: string | null;
+      preferredCurrency?: string | null;
+      language?: string | null;
+      defaultShoppingListId?: string | null;
+      defaultHomeId?: string | null;
+      createdAt: string;
+      updatedAt: string;
+      lastActiveAt?: string | null;
+      profile?: {
+        __typename?: 'UserProfile';
+        id: string;
+        firstName?: string | null;
+        lastName?: string | null;
+        displayName?: string | null;
+        bio?: string | null;
+        avatar?: string | null;
+        phone?: string | null;
+      } | null;
+      settings?: {
+        __typename?: 'UserSettings';
+        id: string;
+        emailNotifications: boolean;
+        pushNotifications: boolean;
+        theme: AppTheme;
+      } | null;
+    } | null;
+    purchasedBy?: {
+      __typename?: 'User';
+      id: string;
+      email: string;
+      emailVerified: boolean;
+      role: UserRole;
+      onBoarded: boolean;
+      timezone?: string | null;
+      preferredCurrency?: string | null;
+      language?: string | null;
+      defaultShoppingListId?: string | null;
+      defaultHomeId?: string | null;
+      createdAt: string;
+      updatedAt: string;
+      lastActiveAt?: string | null;
+      profile?: {
+        __typename?: 'UserProfile';
+        id: string;
+        firstName?: string | null;
+        lastName?: string | null;
+        displayName?: string | null;
+        bio?: string | null;
+        avatar?: string | null;
+        phone?: string | null;
+      } | null;
+      settings?: {
+        __typename?: 'UserSettings';
+        id: string;
+        emailNotifications: boolean;
+        pushNotifications: boolean;
+        theme: AppTheme;
+      } | null;
     } | null;
   };
 };
@@ -11893,23 +12437,131 @@ export type ShoppingListItemUpdatedSubscription = {
   shoppingListItemUpdated: {
     __typename?: 'ShoppingListItem';
     id: string;
-    itemName?: string | null;
     quantity?: number | null;
     estimatedPrice?: number | null;
+    budgetPrice?: number | null;
+    lastKnownPrice?: number | null;
+    averagePrice?: number | null;
+    lowestPrice?: number | null;
+    highestPrice?: number | null;
+    priceLastUpdated?: string | null;
     isPurchased: boolean;
     purchasedQuantity?: number | null;
     purchasedPrice?: number | null;
+    purchaseDate?: string | null;
+    aisle?: string | null;
+    storeSection?: string | null;
+    previouslyPurchased: boolean;
+    lastPurchaseDate?: string | null;
+    purchaseCount: number;
+    itemName?: string | null;
+    itemBarcode?: string | null;
+    unitName?: string | null;
     notes?: string | null;
     priority: number;
     category?: string | null;
+    sortOrder: number;
+    isAutoAdded: boolean;
+    autoAddReason?: string | null;
+    isFromMealPlan: boolean;
+    mealPlanReference?: string | null;
+    createdAt: string;
     updatedAt: string;
-    lastEditedBy?: {
+    deletedAt?: string | null;
+    version: number;
+    shoppingList: {
+      __typename?: 'ShoppingList';
+      id: string;
+      totalItems: number;
+      completedItems: number;
+      estimatedTotal: number;
+    };
+    item?: {
+      __typename?: 'Item';
+      id: string;
+      name: string;
+      description?: string | null;
+      imageUrl?: string | null;
+    } | null;
+    unit?: {
+      __typename?: 'Unit';
+      id: string;
+      name: string;
+      symbol: string;
+      type: UnitType;
+      isMetric: boolean;
+      baseUnitId?: string | null;
+      conversionFactor: number;
+      notes?: string | null;
+      isCommon: boolean;
+      sortOrder: number;
+      createdAt: string;
+      updatedAt: string;
+    } | null;
+    addedBy?: {
       __typename?: 'User';
       id: string;
       email: string;
+      emailVerified: boolean;
+      role: UserRole;
+      onBoarded: boolean;
+      timezone?: string | null;
+      preferredCurrency?: string | null;
+      language?: string | null;
+      defaultShoppingListId?: string | null;
+      defaultHomeId?: string | null;
+      createdAt: string;
+      updatedAt: string;
+      lastActiveAt?: string | null;
       profile?: {
         __typename?: 'UserProfile';
+        id: string;
+        firstName?: string | null;
+        lastName?: string | null;
         displayName?: string | null;
+        bio?: string | null;
+        avatar?: string | null;
+        phone?: string | null;
+      } | null;
+      settings?: {
+        __typename?: 'UserSettings';
+        id: string;
+        emailNotifications: boolean;
+        pushNotifications: boolean;
+        theme: AppTheme;
+      } | null;
+    } | null;
+    purchasedBy?: {
+      __typename?: 'User';
+      id: string;
+      email: string;
+      emailVerified: boolean;
+      role: UserRole;
+      onBoarded: boolean;
+      timezone?: string | null;
+      preferredCurrency?: string | null;
+      language?: string | null;
+      defaultShoppingListId?: string | null;
+      defaultHomeId?: string | null;
+      createdAt: string;
+      updatedAt: string;
+      lastActiveAt?: string | null;
+      profile?: {
+        __typename?: 'UserProfile';
+        id: string;
+        firstName?: string | null;
+        lastName?: string | null;
+        displayName?: string | null;
+        bio?: string | null;
+        avatar?: string | null;
+        phone?: string | null;
+      } | null;
+      settings?: {
+        __typename?: 'UserSettings';
+        id: string;
+        emailNotifications: boolean;
+        pushNotifications: boolean;
+        theme: AppTheme;
       } | null;
     } | null;
   };

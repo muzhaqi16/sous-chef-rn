@@ -10,11 +10,17 @@ import NotificationStack from './NotificationStack'; // Add this
 import {NotFoundScreen} from '../screens/NotFoundScreen';
 import type {RootStackParamList} from './types';
 import {HomeManagementStack} from './HomeStack';
+import {useTokenRefresh} from '#/hooks/auth/useTokenRefresh';
+
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function AppNavigator() {
   const {isHydrated, user} = useStore();
 
+  // Call token refresh at the app navigator level
+  useTokenRefresh();
+
+  // If not hydrated, return null to avoid rendering navigation
   if (!isHydrated) {
     return null;
   }

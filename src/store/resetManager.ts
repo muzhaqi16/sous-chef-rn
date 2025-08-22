@@ -1,5 +1,7 @@
+// src/store/resetManager.ts
 import {RootState} from './index';
 import {zustandStorage, STORAGE_KEY} from '#/storage/mmkv';
+import {storage} from '#/storage/mmkv';
 
 // Define what gets reset in different scenarios
 export interface ResetOptions {
@@ -8,6 +10,7 @@ export interface ResetOptions {
   notifications?: boolean;
   scanner?: boolean;
   storage?: boolean;
+  clearApolloCache?: boolean;
 }
 
 // Predefined reset scenarios
@@ -18,6 +21,7 @@ export const RESET_SCENARIOS = {
     notifications: true,
     scanner: true,
     storage: false, // Don't clear storage completely, just auth data
+    clearApolloCache: true, // Clear Apollo cache on logout
   },
   FULL_RESET: {
     auth: true,
@@ -25,6 +29,7 @@ export const RESET_SCENARIOS = {
     notifications: true,
     scanner: true,
     storage: true,
+    clearApolloCache: true,
   },
   SESSION_EXPIRED: {
     auth: true,
@@ -32,6 +37,7 @@ export const RESET_SCENARIOS = {
     notifications: false,
     scanner: true,
     storage: false,
+    clearApolloCache: true,
   },
   ONBOARDING_RESET: {
     auth: false,
@@ -39,6 +45,7 @@ export const RESET_SCENARIOS = {
     notifications: false,
     scanner: false,
     storage: false,
+    clearApolloCache: false,
   },
 } as const;
 
@@ -48,9 +55,12 @@ export const createResetManager = (
   get: () => RootState,
 ) => ({
   // Master reset function
-  resetStore: (options: ResetOptions | keyof typeof RESET_SCENARIOS) => {
-    const resetOptions = typeof options === 'string' ? RESET_SCENARIOS[options] : options;
+  resetStore: async (options: ResetOptions | keyof typeof RESET_SCENARIOS) => {
+    const resetOptions =
+      typeof options === 'string' ? RESET_SCENARIOS[options] : options;
     const currentState = get();
+
+    console.log('Resetting store with options:', resetOptions);
 
     // Build the new state based on reset options
     const newState: Partial<RootState> = {};
@@ -73,38 +83,60 @@ export const createResetManager = (
 
     // Handle storage reset
     if (resetOptions.storage) {
+      console.log('Clearing all storage data');
       zustandStorage.removeItem(STORAGE_KEY);
+      storage.clearAll();
     } else if (resetOptions.auth) {
       // Only clear auth-related storage data
-      clearAuthFromStorage();
+      console.log('Clearing auth data from storage');
+      await clearAuthFromStorage();
+    }
+
+    // Clear Apollo cache if requested
+    if (resetOptions.clearApolloCache) {
+      console.log('Clearing Apollo cache');
+      try {
+        const {client} = await import('#/apollo/client');
+        await client.clearStore();
+        // Also clear persisted cache
+        storage.delete('apollo-cache');
+      } catch (error) {
+        console.error('Error clearing Apollo cache:', error);
+      }
     }
 
     // Apply the reset
     set(newState);
 
     // Ensure hydration flag remains true
-    set({ isHydrated: true });
+    set({isHydrated: true});
+
+    console.log('Store reset completed');
   },
 
   // Convenience methods for common scenarios
-  logout: () => {
+  logout: async () => {
+    console.log('Logging out user...');
     const resetManager = createResetManager(set, get);
-    resetManager.resetStore('LOGOUT');
+    await resetManager.resetStore('LOGOUT');
   },
 
-  fullReset: () => {
+  fullReset: async () => {
+    console.log('Performing full reset...');
     const resetManager = createResetManager(set, get);
-    resetManager.resetStore('FULL_RESET');
+    await resetManager.resetStore('FULL_RESET');
   },
 
-  sessionExpired: () => {
+  sessionExpired: async () => {
+    console.log('Session expired, resetting auth...');
     const resetManager = createResetManager(set, get);
-    resetManager.resetStore('SESSION_EXPIRED');
+    await resetManager.resetStore('SESSION_EXPIRED');
   },
 
-  resetOnboarding: () => {
+  resetOnboarding: async () => {
+    console.log('Resetting onboarding...');
     const resetManager = createResetManager(set, get);
-    resetManager.resetStore('ONBOARDING_RESET');
+    await resetManager.resetStore('ONBOARDING_RESET');
   },
 });
 
@@ -154,15 +186,41 @@ const getScannerResetState = () => ({
 // Storage helpers
 const clearAuthFromStorage = async () => {
   try {
+    console.log('Clearing auth tokens from storage');
+
+    // Clear individual auth-related keys
+    storage.delete('accessToken');
+    storage.delete('refreshToken');
+
+    // Also update the persisted zustand data to remove auth info
     const currentData = await zustandStorage.getItem(STORAGE_KEY);
     if (currentData) {
       const parsedData = JSON.parse(currentData);
-      delete parsedData.state.user;
-      delete parsedData.state.accessToken;
-      delete parsedData.state.refreshToken;
-      delete parsedData.state.pendingEmail;
-      delete parsedData.state.pendingPassword;
-      zustandStorage.setItem(STORAGE_KEY, JSON.stringify(parsedData));
+      if (parsedData.state) {
+        // Clear auth-related fields from persisted state
+        delete parsedData.state.user;
+        delete parsedData.state.accessToken;
+        delete parsedData.state.refreshToken;
+        delete parsedData.state.pendingEmail;
+        delete parsedData.state.pendingPassword;
+
+        // Clear selected IDs that are tied to the user
+        delete parsedData.state.selectedHomeId;
+        delete parsedData.state.selectedPantryId;
+        delete parsedData.state.selectedShoppingListId;
+
+        // Clear notifications and scanner state
+        delete parsedData.state.notifications;
+        delete parsedData.state.unreadCount;
+        delete parsedData.state.urgentCount;
+        delete parsedData.state.subscribedLists;
+        delete parsedData.state.subscribedPantries;
+        delete parsedData.state.scannedBarcode;
+        delete parsedData.state.searchResults;
+        delete parsedData.state.recentlyScanned;
+
+        zustandStorage.setItem(STORAGE_KEY, JSON.stringify(parsedData));
+      }
     }
   } catch (error) {
     console.error('Error clearing auth from storage:', error);

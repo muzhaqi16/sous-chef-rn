@@ -1,5 +1,5 @@
-import React from 'react';
-import {Text, TouchableOpacity} from 'react-native';
+import React, {useState} from 'react';
+import {Text, TouchableOpacity, Alert} from 'react-native';
 import {useForm} from 'react-hook-form';
 import {createStyleSheet, useStyles} from 'react-native-unistyles';
 import {CommonActions} from '@react-navigation/native';
@@ -21,6 +21,8 @@ export const RememberLoginInfoScreen = ({
     clearPendingCredentials,
   } = useStore();
   const {styles} = useStyles(stylesheet);
+  const [isSaving, setIsSaving] = useState(false);
+
   const {
     control,
     handleSubmit,
@@ -29,27 +31,93 @@ export const RememberLoginInfoScreen = ({
     defaultValues: {},
   });
 
-  const onRemember = async (choice: boolean) => {
-    if (choice && pendingEmail && pendingPassword) {
-      await saveCredentials(pendingEmail, pendingPassword);
-    }
-    setRememberMe(choice);
-    clearPendingCredentials();
-    // 2) figure out which branch AppNavigator will pick next
+  const navigateToNextScreen = () => {
+    // Figure out which branch AppNavigator will pick next
     const nextRoute: 'AuthStack' | 'OnBoardingStack' | 'HomeStack' =
-      !user || !user.emailVerified || choice === undefined
+      !user || !user.emailVerified
         ? 'AuthStack'
         : !user?.onBoarded
           ? 'OnBoardingStack'
           : 'HomeStack';
 
-    // 3) reset the *root* navigator into that branch
+    // Reset the root navigator into that branch
     navigation.getParent()?.dispatch(
       CommonActions.reset({
         index: 0,
         routes: [{name: nextRoute}],
       }),
     );
+  };
+
+  const onRemember = async (choice: boolean) => {
+    // Prevent multiple simultaneous operations
+    if (isSaving) return;
+
+    try {
+      if (choice) {
+        // Validate we have the required credentials
+        if (!pendingEmail || !pendingPassword) {
+          console.warn('Cannot save credentials: missing email or password');
+          Alert.alert(
+            'Error',
+            'Unable to save login credentials. Please try logging in again.',
+            [
+              {
+                text: 'OK',
+                onPress: () => {
+                  // Navigate back to login if credentials are missing
+                  navigation.getParent()?.dispatch(
+                    CommonActions.reset({
+                      index: 0,
+                      routes: [{name: 'AuthStack'}],
+                    }),
+                  );
+                },
+              },
+            ],
+          );
+          return;
+        }
+
+        setIsSaving(true);
+        await saveCredentials(pendingEmail, pendingPassword);
+      }
+
+      // Set the remember preference
+      setRememberMe(choice);
+
+      // Clear pending credentials after successful save (or skip)
+      clearPendingCredentials();
+
+      // Navigate to next screen
+      navigateToNextScreen();
+    } catch (error) {
+      console.error('Error saving credentials:', error);
+
+      // Show user-friendly error message
+      Alert.alert(
+        'Error Saving Credentials',
+        "We couldn't save your login information. You can try again later in settings.",
+        [
+          {
+            text: 'Continue Anyway',
+            onPress: () => {
+              // Set remember to false and continue
+              setRememberMe(false);
+              clearPendingCredentials();
+              navigateToNextScreen();
+            },
+          },
+          {
+            text: 'Try Again',
+            onPress: () => onRemember(choice),
+            style: 'default',
+          },
+        ],
+      );
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -60,14 +128,22 @@ export const RememberLoginInfoScreen = ({
         fields={[]}
         control={control}
         errors={errors}
-        submitText="Remember"
+        submitText={isSaving ? 'Saving...' : 'Remember'}
         onSubmit={handleSubmit(() => onRemember(true))}
+        isLoading={isSaving}
       />
 
       <TouchableOpacity
-        style={styles.btnSecondary}
-        onPress={() => onRemember(false)}>
-        <Text style={styles.btnSecondaryText}>Skip for now</Text>
+        style={[styles.btnSecondary, isSaving && styles.btnSecondaryDisabled]}
+        onPress={() => onRemember(false)}
+        disabled={isSaving}>
+        <Text
+          style={[
+            styles.btnSecondaryText,
+            isSaving && styles.btnSecondaryTextDisabled,
+          ]}>
+          Skip for now
+        </Text>
       </TouchableOpacity>
     </AuthWrapper>
   );
@@ -89,5 +165,11 @@ const stylesheet = createStyleSheet(theme => ({
     lineHeight: 26,
     fontWeight: '600',
     color: '#1D2A32',
+  },
+  btnSecondaryDisabled: {
+    opacity: 0.5,
+  },
+  btnSecondaryTextDisabled: {
+    opacity: 0.5,
   },
 }));

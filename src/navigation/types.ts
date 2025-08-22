@@ -385,6 +385,33 @@ export type NotificationSettingsNavProp = NativeStackNavigationProp<
 >;
 
 // ============================================================================
+// NOTIFICATION STACK TYPES
+// ============================================================================
+
+// Screen Props
+export type NotificationStackScreenProps<
+  T extends keyof NotificationStackParamList,
+> = CompositeScreenProps<
+  NativeStackScreenProps<NotificationStackParamList, T>,
+  StackScreenProps<RootStackParamList, keyof RootStackParamList>
+>;
+export type NotificationListScreenProps =
+  NotificationStackScreenProps<'NotificationList'>;
+
+export type NotificationDetailScreenProps =
+  NotificationStackScreenProps<'NotificationDetail'>;
+
+// Navigation Props
+export type NotificationListNavProp = NativeStackNavigationProp<
+  NotificationStackParamList,
+  'NotificationList'
+>;
+export type NotificationDetailNavProp = NativeStackNavigationProp<
+  NotificationStackParamList,
+  'NotificationDetail'
+>;
+
+// ============================================================================
 // HOME MANAGEMENT STACK TYPES
 // ============================================================================
 

@@ -62,6 +62,13 @@ fragment ShoppingListItemFragment on ShoppingListItem {
   updatedAt
   deletedAt
   version
+  # Add these fields if they're missing and causing the TypeScript errors
+  addedBy {
+    ...PartialUser
+  }
+  purchasedBy {
+    ...PartialUser
+  }
 }
 fragment BasicUser on User {
   id
@@ -164,6 +171,12 @@ fragment CompleteUser on User {
   }
   homeOwnerships {
     id
+    createdAt
+    homeId
+    userId
+    user {
+      id
+    }
     home {
       id
       name

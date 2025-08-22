@@ -5,7 +5,9 @@ import {
   useAddItemToShoppingListMutation,
   useUpdateShoppingListItemMutation,
   useGetShoppingListItemQuery,
+  GetShoppingListItemsDocument,
   ItemSuggestion,
+  ShoppingListItemFragment,
 } from '#generated';
 import {FormModal} from '#components/organisms/FormModal';
 import {Input} from '#components/base/Input';
@@ -37,8 +39,87 @@ export const AddEditItem: React.FC = () => {
     skip: !isEdit,
   });
 
-  const [addItem] = useAddItemToShoppingListMutation();
-  const [updateItem] = useUpdateShoppingListItemMutation();
+  const [addItem] = useAddItemToShoppingListMutation({
+    // Update cache immediately for optimistic UI
+    update: (cache, {data: mutationData}) => {
+      if (!mutationData?.addItemToShoppingList) return;
+
+      const newItem = mutationData.addItemToShoppingList;
+
+      try {
+        // Read the current shopping list items from cache
+        const existingData = cache.readQuery<{
+          shoppingListItems: ShoppingListItemFragment[];
+        }>({
+          query: GetShoppingListItemsDocument,
+          variables: {shoppingListId: listId},
+        });
+
+        if (existingData?.shoppingListItems) {
+          // Add the new item to the list
+          cache.writeQuery({
+            query: GetShoppingListItemsDocument,
+            variables: {shoppingListId: listId},
+            data: {
+              shoppingListItems: [...existingData.shoppingListItems, newItem],
+            },
+          });
+        }
+      } catch (error) {
+        console.warn('Cache update failed:', error);
+        // Cache update failed, but mutation still succeeded
+      }
+    },
+    onCompleted: () => {
+      console.log('Item added successfully');
+    },
+    onError: error => {
+      console.error('Add item error:', error);
+    },
+  });
+
+  const [updateItem] = useUpdateShoppingListItemMutation({
+    // Update cache immediately for optimistic UI
+    update: (cache, {data: mutationData}) => {
+      if (!mutationData?.updateShoppingListItem) return;
+
+      const updatedItem = mutationData.updateShoppingListItem;
+
+      try {
+        // Read the current shopping list items from cache
+        const existingData = cache.readQuery<{
+          shoppingListItems: ShoppingListItemFragment[];
+        }>({
+          query: GetShoppingListItemsDocument,
+          variables: {shoppingListId: listId},
+        });
+
+        if (existingData?.shoppingListItems) {
+          // Update the existing item in the list
+          const updatedItems = existingData.shoppingListItems.map(
+            (item: any) => (item.id === updatedItem.id ? updatedItem : item),
+          );
+
+          cache.writeQuery({
+            query: GetShoppingListItemsDocument,
+            variables: {shoppingListId: listId},
+            data: {
+              shoppingListItems: updatedItems,
+            },
+          });
+        }
+      } catch (error) {
+        console.warn('Cache update failed:', error);
+        // Cache update failed, but mutation still succeeded
+      }
+    },
+    onCompleted: () => {
+      console.log('Item updated successfully');
+    },
+    onError: error => {
+      console.error('Update item error:', error);
+    },
+  });
 
   // Populate form when editing existing item
   useEffect(() => {
@@ -98,6 +179,7 @@ export const AddEditItem: React.FC = () => {
       }
       navigation.goBack();
     } catch (error) {
+      console.error('Save error:', error);
       Alert.alert('Error', `Failed to ${isEdit ? 'update' : 'add'} item`);
     } finally {
       setSaving(false);

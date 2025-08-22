@@ -1,8 +1,14 @@
 import {onError} from '@apollo/client/link/error';
+import {fromPromise} from '@apollo/client';
 import {attemptTokenRefresh} from './refreshToken';
 
 export const errorLink = onError(
   ({graphQLErrors, networkError, operation, forward}) => {
+    // Skip error handling for refresh token mutation
+    if (operation.getContext().skipErrorLink) {
+      return;
+    }
+
     console.log('Error link triggered:', {
       graphQLErrors,
       networkError,
@@ -14,23 +20,53 @@ export const errorLink = onError(
       for (const err of graphQLErrors) {
         const code = err.extensions?.code;
         const msg = err.message || '';
-        // match either the standard UNAUTHENTICATED code
-        // or look for "expired" in the message text
-        if (
+
+        // Check for various authentication error patterns
+        const isAuthError =
           code === 'UNAUTHENTICATED' ||
-          msg.toLowerCase().includes('expired')
-        ) {
+          code === 'FORBIDDEN' ||
+          msg.toLowerCase().includes('expired') ||
+          msg.toLowerCase().includes('unauthorized') ||
+          msg.toLowerCase().includes('invalid token') ||
+          msg.toLowerCase().includes('jwt');
+
+        if (isAuthError && operation.operationName !== 'RefreshToken') {
           console.log(
-            'Received unauthenticated/expired error, attempting token refresh…',
+            'Received authentication error, attempting token refresh…',
           );
-          // must return so we swap to the refresh Observable
-          return attemptTokenRefresh(operation, forward);
+          // Return the refresh observable
+          return fromPromise(
+            new Promise<any>((resolve, reject) => {
+              attemptTokenRefresh(operation, forward).subscribe({
+                next: resolve,
+                error: reject,
+              });
+            }),
+          );
         }
       }
     }
-    // 2) Handle other network errors (rate-limit, etc)
+
+    // 2) Handle network errors
     if (networkError) {
       const errorAny = networkError as any;
+
+      // Check for 401 Unauthorized
+      if (
+        errorAny.statusCode === 401 &&
+        operation.operationName !== 'RefreshToken'
+      ) {
+        console.log('Received 401, attempting token refresh…');
+        return fromPromise(
+          new Promise<any>((resolve, reject) => {
+            attemptTokenRefresh(operation, forward).subscribe({
+              next: resolve,
+              error: reject,
+            });
+          }),
+        );
+      }
+
       if (errorAny.statusCode === 429) {
         const headers = errorAny.response?.headers;
         if (headers) {
@@ -40,8 +76,6 @@ export const errorLink = onError(
           console.log(
             `Rate limit exceeded. Headers: X-RateLimit-Limit=${rateLimit}, X-RateLimit-Remaining=${rateRemaining}, Retry-After=${retryAfter}`,
           );
-        } else {
-          console.log('Rate limit exceeded but no headers were returned.');
         }
       } else {
         console.log(`[Network error]: ${networkError}`);

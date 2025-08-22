@@ -2,7 +2,7 @@ import React, {ReactNode} from 'react';
 import {
   View,
   Text,
-  TextInput as RNTextInput,
+  TextInput,
   TextInputProps,
   StyleProp,
   ViewStyle,
@@ -30,7 +30,7 @@ export const BaseInput: React.FC<BaseInputProps> = ({
     <View style={containerStyle}>
       {label != null && <Text style={styles.label}>{label}</Text>}
       <View style={styles.inputRow}>
-        <RNTextInput
+        <TextInput
           style={[styles.input, style]}
           placeholderTextColor={theme.colors.inputPlaceholder}
           {...textInputProps}
