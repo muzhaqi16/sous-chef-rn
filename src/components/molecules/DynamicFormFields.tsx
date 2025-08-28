@@ -8,7 +8,7 @@ import {
   Path,
 } from 'react-hook-form';
 
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 
 export type FieldDef<T extends FieldValues> = {
   name: Path<T>;
@@ -35,7 +35,6 @@ export function DynamicFormFields<T extends FieldValues>({
   control,
   errors,
 }: DynamicFormFieldsProps<T>) {
-  const {styles} = useStyles(stylesheet);
   return (
     <View style={styles.container}>
       {fields.map(
@@ -69,7 +68,7 @@ export function DynamicFormFields<T extends FieldValues>({
   );
 }
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     width: '100%',
   },

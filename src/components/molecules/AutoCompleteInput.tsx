@@ -5,7 +5,7 @@ import {
   BottomSheetBackdrop,
   BottomSheetTextInput,
 } from '@gorhom/bottom-sheet';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 import {Input} from '#components/base/Input';
 import Autocomplete from '#components/molecules/AutoComplete';
 import {ItemSuggestion} from '#generated';
@@ -31,7 +31,6 @@ export const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
   onSelectItem,
   error,
 }) => {
-  const {styles, theme} = useStyles(stylesheet);
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -125,7 +124,7 @@ export const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   autocompleteContainer: {
     flex: 1,
     paddingHorizontal: 16,

@@ -2,7 +2,7 @@ import React from 'react';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {TouchableOpacity} from 'react-native';
 import Icon from '@react-native-vector-icons/material-icons';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {
   PantryMain,
   ExpiringItems,
@@ -10,7 +10,6 @@ import {
   PantryItemDetail,
   LowStockItems,
   CategoryManagement,
-  HomeManagement,
 } from '#screens';
 import {PantryStackParamList} from './types';
 import {useNavigation} from '@react-navigation/native';
@@ -18,9 +17,8 @@ import {useNavigation} from '@react-navigation/native';
 const Stack = createNativeStackNavigator<PantryStackParamList>();
 
 export function PantryStack() {
-  const {styles, theme} = useStyles(stylesheet);
   const navigation = useNavigation();
-
+  const {theme} = useUnistyles();
   return (
     <Stack.Navigator
       screenOptions={{
@@ -91,7 +89,7 @@ export function PantryStack() {
     </Stack.Navigator>
   );
 }
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   header: {
     backgroundColor: theme.colors.surface,
     elevation: 4,

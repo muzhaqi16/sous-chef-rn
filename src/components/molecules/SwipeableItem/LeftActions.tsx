@@ -6,7 +6,7 @@ import Reanimated, {
 } from 'react-native-reanimated';
 import Icon from '@react-native-vector-icons/material-icons';
 import {stylesheet} from './styles';
-import {useStyles} from 'react-native-unistyles';
+import {useUnistyles} from 'react-native-unistyles';
 
 interface LeftActionsProps {
   dragX: SharedValue<number>;
@@ -19,8 +19,6 @@ export const LeftActions: React.FC<LeftActionsProps> = ({
   progress,
   enabled,
 }) => {
-  const {styles} = useStyles(stylesheet);
-
   if (!enabled) return null;
 
   const translateX = useAnimatedStyle(() => {

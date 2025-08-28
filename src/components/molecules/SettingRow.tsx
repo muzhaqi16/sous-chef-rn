@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import FeatherIcon from '@react-native-vector-icons/feather';
 import Ionicons from '@react-native-vector-icons/ionicons';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {Controller, useForm} from 'react-hook-form';
 import {yupResolver} from '@hookform/resolvers/yup';
 import {ValueText} from '../atoms/ValueText';
@@ -33,7 +33,8 @@ export const SettingRow: React.FC<SettingRowProps> = ({
   isFirst,
   isLast,
 }) => {
-  const {styles, theme} = useStyles(stylesheet);
+  const {theme} = useUnistyles();
+
   const [modalVisible, setModalVisible] = useState(false);
   const [textEditModalVisible, setTextEditModalVisible] = useState(false);
 
@@ -248,7 +249,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   rowWrapper: {
     padding: 16,
     borderBottomWidth: 1,

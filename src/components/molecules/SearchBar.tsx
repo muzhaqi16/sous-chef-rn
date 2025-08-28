@@ -1,6 +1,6 @@
 import React from 'react';
 import {View, StyleProp, ViewStyle, TextInputProps} from 'react-native';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {BaseInput, ActionButton} from '#components';
 
 export interface SearchBarAction {
@@ -43,8 +43,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   onPressAdd,
   ...textInputProps
 }) => {
-  const {styles, theme} = useStyles(stylesheet);
-
+  const {theme} = useUnistyles();
   // Handle legacy props by converting them to action arrays
   const finalLeftActions = React.useMemo(() => {
     const actions = [...leftActions];
@@ -122,7 +121,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flexDirection: 'row',
     alignItems: 'center',

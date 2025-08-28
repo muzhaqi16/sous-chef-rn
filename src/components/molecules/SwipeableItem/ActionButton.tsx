@@ -2,7 +2,7 @@ import React from 'react';
 import {TouchableOpacity, Text} from 'react-native';
 import Icon from '@react-native-vector-icons/material-icons';
 import {stylesheet} from './styles';
-import {useStyles} from 'react-native-unistyles';
+import {useUnistyles} from 'react-native-unistyles';
 
 import {ActionButtonProps} from './types';
 
@@ -12,8 +12,6 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
   backgroundColor,
   label,
 }) => {
-  const {styles} = useStyles(stylesheet);
-
   return (
     <TouchableOpacity
       style={[styles.actionButton, {backgroundColor}]}

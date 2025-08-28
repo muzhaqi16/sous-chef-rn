@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import Icon from '@react-native-vector-icons/material-icons';
 import {useNavigation} from '@react-navigation/native';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {useDefaultHome} from '#hooks';
 import {
@@ -24,8 +24,8 @@ import {
 const STORAGE_STATES = ['AMBIENT', 'FROZEN', 'NONE', 'REFRIGERATED'];
 
 export const AddPantryItem: React.FC = () => {
-  const {styles, theme} = useStyles(stylesheet);
   const navigation = useNavigation();
+  const {theme} = useUnistyles();
 
   const [itemName, setItemName] = useState('');
   const [brand, setBrand] = useState('');
@@ -251,7 +251,7 @@ export const AddPantryItem: React.FC = () => {
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

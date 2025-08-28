@@ -1,6 +1,6 @@
 import React from 'react';
 import {View, Text} from 'react-native';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 
 interface HomeStatsProps {
   totalHomes: number;
@@ -13,8 +13,6 @@ export const HomeStats: React.FC<HomeStatsProps> = ({
   totalMembers,
   totalPantries,
 }) => {
-  const {styles, theme} = useStyles(stylesheet);
-
   return (
     <View style={styles.statsContainer}>
       <View style={styles.statCard}>
@@ -39,7 +37,7 @@ export const HomeStats: React.FC<HomeStatsProps> = ({
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   statsContainer: {
     flexDirection: 'row',
     padding: 16,

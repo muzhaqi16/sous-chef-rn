@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 
 interface CreateHomeFormProps {
   isVisible: boolean;
@@ -25,8 +25,6 @@ export const CreateHomeForm: React.FC<CreateHomeFormProps> = ({
   onCancel,
   isCreating,
 }) => {
-  const {styles, theme} = useStyles(stylesheet);
-
   if (!isVisible) return null;
 
   return (
@@ -59,7 +57,7 @@ export const CreateHomeForm: React.FC<CreateHomeFormProps> = ({
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   createForm: {
     padding: 16,
     backgroundColor: theme.colors.surface,

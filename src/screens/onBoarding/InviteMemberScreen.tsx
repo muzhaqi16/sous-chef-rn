@@ -11,7 +11,7 @@ import {useNavigation} from '@react-navigation/native';
 import {OnBoardingWrapper} from '#components/templates';
 import {Button} from '#components';
 import {InviteMembersNavProp} from '#navigation/types';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 import {
   useInviteToHomeMutation,
   useAddCollaboratorMutation,
@@ -29,7 +29,7 @@ type InviteEntry = {
 
 export const InviteMembersScreen = () => {
   const navigation = useNavigation<InviteMembersNavProp>();
-  const {styles} = useStyles(stylesheet);
+
   const {selectedHomeId, selectedShoppingListId, setOnBoardingStep, user} =
     useStore();
 
@@ -288,7 +288,7 @@ export const InviteMembersScreen = () => {
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     marginTop: 20,

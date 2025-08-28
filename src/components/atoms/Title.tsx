@@ -1,6 +1,6 @@
 import React from 'react';
 import {Text, TextStyle} from 'react-native';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 
 interface TitleProps {
   children: React.ReactNode;
@@ -8,10 +8,9 @@ interface TitleProps {
 }
 
 export const Title: React.FC<TitleProps> = ({children, style}) => {
-  const {styles} = useStyles(stylesheet);
   return <Text style={[styles.title, style]}>{children}</Text>;
 };
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   title: {
     fontFamily: 'DM Sans',
     fontWeight: '700',

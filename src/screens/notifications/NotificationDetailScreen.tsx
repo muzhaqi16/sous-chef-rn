@@ -1,14 +1,13 @@
 import React from 'react';
 import {View, Text, ScrollView, TouchableOpacity} from 'react-native';
 import {useRoute, useNavigation} from '@react-navigation/native';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 import Icon from '@react-native-vector-icons/material-icons';
 
 import {format} from 'date-fns';
 import {NotificationItem} from '#store/slices/notificationSlice';
 
 export const NotificationDetailScreen: React.FC = () => {
-  const {styles} = useStyles(stylesheet);
   const route = useRoute();
   const navigation = useNavigation();
   const notification = route.params?.notification as NotificationItem;
@@ -103,7 +102,7 @@ const getNotificationTitle = (type: string): string => {
   }
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

@@ -1,6 +1,6 @@
 import React from 'react';
 import {View, ScrollView, ActivityIndicator} from 'react-native';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {Header} from '../molecules/Header';
 
 interface FormModalProps {
@@ -18,8 +18,7 @@ export const FormModal: React.FC<FormModalProps> = ({
   loading = false,
   children,
 }) => {
-  const {styles, theme} = useStyles(formModalStyles);
-
+  const {theme} = useUnistyles();
   if (loading) {
     return (
       <View style={styles.container}>
@@ -51,7 +50,7 @@ export const FormModal: React.FC<FormModalProps> = ({
   );
 };
 
-const formModalStyles = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

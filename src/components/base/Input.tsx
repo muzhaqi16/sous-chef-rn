@@ -1,6 +1,6 @@
 import React from 'react';
 import {TextInput, View, Text} from 'react-native';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 
 interface InputProps {
   value: string;

@@ -2,11 +2,9 @@ import React from 'react';
 import {View, Text} from 'react-native';
 import Icon from '@react-native-vector-icons/material-icons';
 
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 
 export const EmptyNotifications: React.FC = () => {
-  const {styles} = useStyles(stylesheet);
-
   return (
     <View style={styles.container}>
       <Icon name="notifications-none" size={64} color={styles.icon.color} />
@@ -18,7 +16,7 @@ export const EmptyNotifications: React.FC = () => {
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     justifyContent: 'center',

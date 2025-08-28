@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import Icon from '@react-native-vector-icons/material-icons';
 import {useNavigation, useRoute} from '@react-navigation/native';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 import {
   useInviteQuery,
   useAcceptInviteMutation,
@@ -16,7 +16,6 @@ import {
 } from '#generated';
 
 export const AcceptInvite: React.FC = () => {
-  const {styles, theme} = useStyles(stylesheet);
   const navigation = useNavigation();
   const route = useRoute();
   const {inviteId} = route.params as {inviteId: string};
@@ -137,7 +136,7 @@ export const AcceptInvite: React.FC = () => {
     </View>
   );
 };
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

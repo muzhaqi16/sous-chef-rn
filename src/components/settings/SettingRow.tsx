@@ -1,7 +1,7 @@
 import React from 'react';
 import {View, Text, TouchableOpacity} from 'react-native';
 import Icon from '@react-native-vector-icons/material-icons';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 
 interface SettingRowProps {
   title: string;
@@ -22,8 +22,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
   showArrow = true,
   disabled = false,
 }) => {
-  const {styles, theme} = useStyles(stylesheet);
-
+  const {theme} = useUnistyles();
   return (
     <TouchableOpacity
       style={[styles.container, disabled && styles.containerDisabled]}
@@ -64,7 +63,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -1,6 +1,6 @@
 import React from 'react';
 import {Text, TouchableOpacity} from 'react-native';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 
 interface SettingButtonProps {
   title: string;
@@ -15,8 +15,6 @@ export const SettingButton: React.FC<SettingButtonProps> = ({
   variant = 'default',
   disabled = false,
 }) => {
-  const {styles} = useStyles(stylesheet);
-
   return (
     <TouchableOpacity
       style={[styles.container, styles[variant], disabled && styles.disabled]}
@@ -28,7 +26,7 @@ export const SettingButton: React.FC<SettingButtonProps> = ({
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     padding: theme.spacing.md,
     backgroundColor: theme.colors.surface,

@@ -1,6 +1,6 @@
 import React from 'react';
 import {View, Text, TouchableOpacity} from 'react-native';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 
 interface ErrorStateProps {
   title: string;
@@ -15,7 +15,6 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
   onRetry,
   icon = '⚠️',
 }) => {
-  const {styles} = useStyles(stylesheet);
   return (
     <View style={styles.container}>
       <Text style={styles.errorIcon}>{icon}</Text>
@@ -30,7 +29,7 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     justifyContent: 'center',

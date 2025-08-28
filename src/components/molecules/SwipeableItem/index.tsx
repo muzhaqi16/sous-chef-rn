@@ -9,7 +9,7 @@ import {useSwipeableAnimation} from './hooks/useSwipeableAnimation';
 import {useSwipeableActions} from './hooks/useSwipeableActions';
 import {stylesheet} from './styles';
 import {SwipeableItemProps} from './types';
-import {useStyles} from 'react-native-unistyles';
+import {useUnistyles} from 'react-native-unistyles';
 
 export const SwipeableItem: React.FC<SwipeableItemProps> = ({
   children,
@@ -21,8 +21,6 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({
   rightThreshold = 40,
   friction = 2,
 }) => {
-  const {styles} = useStyles(stylesheet);
-
   const {itemOpacity, itemHeight, animateDelete} =
     useSwipeableAnimation(onDelete);
 

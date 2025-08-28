@@ -1,6 +1,6 @@
 import React from 'react';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import Ionicons from '@react-native-vector-icons/ionicons';
 
 import type {HomeTabParamList} from './types';
@@ -12,7 +12,7 @@ type IconName = React.ComponentProps<typeof Ionicons>['name'];
 const Tab = createBottomTabNavigator<HomeTabParamList>();
 
 const HomeTab = () => {
-  const {theme, styles} = useStyles(stylesheet);
+  const {theme} = useUnistyles();
 
   return (
     <Tab.Navigator
@@ -68,7 +68,7 @@ const HomeTab = () => {
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   tabBar: {
     backgroundColor: theme.colors.surface,
     borderTopColor: theme.colors.border,

@@ -1,7 +1,7 @@
 import React from 'react';
 import {TouchableOpacity} from 'react-native';
 import {stylesheet} from './styles';
-import {useStyles} from 'react-native-unistyles';
+import {useUnistyles} from 'react-native-unistyles';
 
 interface SwipeableContentProps {
   children: React.ReactNode;
@@ -12,8 +12,6 @@ export const SwipeableContent: React.FC<SwipeableContentProps> = ({
   children,
   onPress,
 }) => {
-  const {styles} = useStyles(stylesheet);
-
   return (
     <TouchableOpacity
       onPress={onPress}

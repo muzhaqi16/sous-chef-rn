@@ -1,6 +1,6 @@
 import React from 'react';
-import {View, Text, ActivityIndicator, StyleSheet} from 'react-native';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {View, Text, ActivityIndicator} from 'react-native';
+import {StyleSheet} from 'react-native-unistyles';
 
 interface LoadingStateProps {
   message: string;
@@ -11,7 +11,6 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
   message,
   barcode,
 }) => {
-  const {styles} = useStyles(stylesheet);
   return (
     <View style={styles.container}>
       <ActivityIndicator size="large" color="#62B1F6" />
@@ -21,7 +20,7 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     justifyContent: 'center',

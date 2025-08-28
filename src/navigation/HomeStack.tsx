@@ -1,14 +1,13 @@
 import React from 'react';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {HomeManagement} from '#screens';
 import {HomeManagementStackParamList} from './types';
 
 const Stack = createNativeStackNavigator<HomeManagementStackParamList>();
 
 export const HomeManagementStack = () => {
-  const {styles, theme} = useStyles(stylesheet);
-
+  const {theme} = useUnistyles();
   return (
     <Stack.Navigator
       screenOptions={{
@@ -27,7 +26,7 @@ export const HomeManagementStack = () => {
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   header: {
     backgroundColor: theme.colors.surface,
     elevation: 4,

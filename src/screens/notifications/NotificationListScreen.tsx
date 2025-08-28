@@ -9,7 +9,7 @@ import {
   ScrollView,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 import Icon from '@react-native-vector-icons/material-icons';
 import {
   NotificationItem,
@@ -29,7 +29,6 @@ import {useStore} from '#store';
 import {Header} from '#components/molecules/Header';
 
 export const NotificationListScreen: React.FC = () => {
-  const {styles} = useStyles(stylesheet);
   const navigation = useNavigation<NotificationListNavProp>();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [filterCategory, setFilterCategory] =
@@ -280,7 +279,7 @@ export const NotificationListScreen: React.FC = () => {
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

@@ -1,17 +1,28 @@
-import {UnistylesRegistry} from 'react-native-unistyles';
-import {breakpoints, Breakpoints} from './common/breakpoints';
-import {lightTheme, darkTheme, AppTheme} from './themes';
+import {StyleSheet} from 'react-native-unistyles';
+import {lightTheme, darkTheme} from './themes';
+import {breakpoints} from './foundations/breakpoints';
 
-// 1) Tell TS your Unistyles shapes
+const appThemes = {
+  light: lightTheme,
+  dark: darkTheme,
+};
+
+// Re-export all theme utilities
+export * from './foundations';
+export * from './themes';
+export * from './utilities';
+
+type AppThemes = typeof appThemes;
+
 declare module 'react-native-unistyles' {
-  export interface UnistylesBreakpoints extends Breakpoints {}
-  export interface UnistylesThemes {
-    light: AppTheme;
-    dark: AppTheme;
-  }
+  export interface UnistylesThemes extends AppThemes {}
 }
 
-// 2) Register them (run this before your app mounts!)
-UnistylesRegistry.addBreakpoints(breakpoints)
-  .addThemes({light: lightTheme, dark: darkTheme})
-  .addConfig({adaptiveThemes: true});
+StyleSheet.configure({
+  settings: {
+    adaptiveThemes: false,
+    initialTheme: 'light',
+  },
+  breakpoints,
+  themes: appThemes,
+});

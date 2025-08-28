@@ -1,6 +1,6 @@
 import React, {useState} from 'react';
 import {Text, View, ActivityIndicator} from 'react-native';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 import {useNavigation, CommonActions} from '@react-navigation/native';
 import {OnBoardingWrapper} from '#components/templates';
 import {Button} from '#components';
@@ -11,7 +11,7 @@ import {useUpdateUserMutation} from '#generated';
 
 export const OnboardingCompleteScreen = () => {
   const navigation = useNavigation<OnboardingCompleteNavProp>();
-  const {styles} = useStyles(stylesheet);
+
   const {setOnBoardingStep, user, updateUser} = useStore(); // Add setUser
   const [isCompleting, setIsCompleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -127,7 +127,7 @@ export const OnboardingCompleteScreen = () => {
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     alignItems: 'center',

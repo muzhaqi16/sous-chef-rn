@@ -2,12 +2,11 @@ import React, {useMemo, useState} from 'react';
 import {View, Text, ScrollView, TouchableOpacity} from 'react-native';
 import Icon from '@react-native-vector-icons/material-icons';
 import {useNavigation} from '@react-navigation/native';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 import {usePantryItems, useDefaultHome} from '#hooks';
 import {useGetHomeQuery} from '#generated';
 
 export const CategoryManagement: React.FC = () => {
-  const {styles, theme} = useStyles(stylesheet);
   const navigation = useNavigation();
 
   const {selectedHomeId, getDefaultPantryId} = useDefaultHome();
@@ -72,7 +71,7 @@ export const CategoryManagement: React.FC = () => {
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

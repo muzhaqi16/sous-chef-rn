@@ -7,7 +7,7 @@ import {
   RefreshControl,
   Alert,
 } from 'react-native';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import Icon from '@react-native-vector-icons/material-icons';
 import {useNavigation} from '@react-navigation/native';
 import {SwipeableItem} from '#components';
@@ -16,18 +16,18 @@ import {useGetHomeQuery, useAddItemToShoppingListMutation} from '#generated';
 import {LowStockItemsNavProp} from '#navigation/types';
 
 export const LowStockItems: React.FC = () => {
-  const {styles, theme} = useStyles(stylesheet);
+  const {theme} = useUnistyles();
   const navigation = useNavigation<LowStockItemsNavProp>();
   const [refreshing, setRefreshing] = React.useState(false);
 
-  const {selectedHomeId, getDefaultPantryId} = useDefaultHome();
+  const {selectedHomeId, getDefaultPantry} = useDefaultHome();
   const {data: homeData} = useGetHomeQuery({
     variables: {homeId: selectedHomeId ?? ''},
     skip: !selectedHomeId,
   });
 
-  const pantryId = getDefaultPantryId(homeData);
-  const {items, refetch} = usePantryItems(pantryId);
+  const pantry = getDefaultPantry(homeData);
+  const {items, refetch} = usePantryItems(pantry?.id);
   const [addToShoppingList] = useAddItemToShoppingListMutation();
 
   const lowStockItems = useMemo(() => {
@@ -109,7 +109,7 @@ export const LowStockItems: React.FC = () => {
     </View>
   );
 };
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

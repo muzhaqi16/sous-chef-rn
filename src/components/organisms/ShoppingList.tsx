@@ -2,14 +2,12 @@ import React from 'react';
 import {View, FlatList, Text} from 'react-native';
 import ProductCard from '../molecules/ProductCard';
 import {useStore} from '../../store';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
-import {useShoppingListItemsQuery} from '../../graphql/generated';
+import {StyleSheet} from 'react-native-unistyles';
+import {useGetShoppingListItemsQuery} from '../../graphql/generated';
 
 const ShoppingList = () => {
-  const {styles} = useStyles(stylesheet);
-
   const {selectedShoppingListId} = useStore();
-  const {data, loading, error} = useShoppingListItemsQuery({
+  const {data, loading, error} = useGetShoppingListItemsQuery({
     variables: {shoppingListId: selectedShoppingListId || ''},
   });
 
@@ -33,7 +31,7 @@ const ShoppingList = () => {
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

@@ -1,6 +1,6 @@
 import React from 'react';
 import {View, Text, Switch} from 'react-native';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 
 interface SettingSwitchProps {
   title: string;
@@ -17,8 +17,7 @@ export const SettingSwitch: React.FC<SettingSwitchProps> = ({
   onValueChange,
   disabled = false,
 }) => {
-  const {styles, theme} = useStyles(stylesheet);
-
+  const {theme} = useUnistyles();
   return (
     <View style={[styles.container, disabled && styles.containerDisabled]}>
       <View style={styles.textContainer}>
@@ -50,7 +49,7 @@ export const SettingSwitch: React.FC<SettingSwitchProps> = ({
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flexDirection: 'row',
     justifyContent: 'space-between',

@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import Icon from '@react-native-vector-icons/material-icons';
 import {useNavigation, useRoute} from '@react-navigation/native';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 import {useGetPantryItemQuery, useUpdatePantryItemMutation} from '#generated';
 
 const STORAGE_STATES = ['PANTRY', 'REFRIGERATED', 'FROZEN'];

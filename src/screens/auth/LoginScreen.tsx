@@ -3,7 +3,7 @@ import {View, TouchableOpacity, Text, Alert} from 'react-native';
 import {useForm} from 'react-hook-form';
 import {yupResolver} from '@hookform/resolvers/yup';
 import Icon from '@react-native-vector-icons/material-icons';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 
 import {LoginNavProp} from '#navigation/types';
 import {AuthFormTemplate, AuthWrapper} from '#components/templates';
@@ -34,9 +34,9 @@ const obscureEmail = (email: string): string => {
 };
 
 export function LoginScreen() {
+  const {theme} = useUnistyles();
   const {navigation, canGoBack, goBack} = useSafeNavigation<LoginNavProp>();
   const {rememberMe, setAuthFromResponse, setPendingCredentials} = useStore();
-  const {styles, theme} = useStyles(stylesheet);
 
   // State for credential management
   const [savedEmail, setSavedEmail] = useState<string>('');
@@ -313,7 +313,7 @@ export function LoginScreen() {
   );
 }
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   credentialBar: {
     flexDirection: 'row',
     alignItems: 'center',

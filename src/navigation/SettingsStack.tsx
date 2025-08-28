@@ -2,15 +2,14 @@ import React from 'react';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {TouchableOpacity} from 'react-native';
 import Icon from '@react-native-vector-icons/material-icons';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {ProfileScreen, NotificationSettingsScreen} from '#screens';
 import {SettingsStackParamList} from './types';
 
 const Stack = createNativeStackNavigator<SettingsStackParamList>();
 
 export function SettingsStack() {
-  const {styles, theme} = useStyles(stylesheet);
-
+  const {theme} = useUnistyles();
   return (
     <Stack.Navigator
       screenOptions={{
@@ -45,7 +44,7 @@ export function SettingsStack() {
   );
 }
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   header: {
     backgroundColor: theme.colors.surface,
     elevation: 4,

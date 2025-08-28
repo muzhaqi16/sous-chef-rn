@@ -1,6 +1,6 @@
 import React, {useState, useRef, ReactNode} from 'react';
 import {Text, Platform, ToastAndroid, Animated} from 'react-native';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 import {ToastContext} from '../../hooks/useToast';
 
 // Define toast types
@@ -21,7 +21,6 @@ export const ToastProvider: React.FC<{children: ReactNode}> = ({children}) => {
   });
   const [visible, setVisible] = useState(false);
   const opacity = useRef(new Animated.Value(0)).current;
-  const {styles} = useStyles(stylesheet);
 
   const showToast: ToastFn = ({
     message,
@@ -82,7 +81,7 @@ export const ToastProvider: React.FC<{children: ReactNode}> = ({children}) => {
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   toastContainer: {
     position: 'absolute',
     bottom: 80,

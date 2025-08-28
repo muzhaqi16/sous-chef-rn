@@ -2,7 +2,7 @@ import React, {useRef, useEffect} from 'react';
 import {SafeAreaView} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import BottomSheet, {BottomSheetView} from '@gorhom/bottom-sheet';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 
 import {
   Header,
@@ -20,7 +20,7 @@ const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({route}) => {
   const {barcode, format} = route.params;
 
   const navigation = useNavigation<SearchResultsNavProp>();
-  const {styles} = useStyles(stylesheet);
+
   const bottomSheetRef = useRef<BottomSheet>(null);
 
   const {
@@ -115,7 +115,7 @@ const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({route}) => {
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',

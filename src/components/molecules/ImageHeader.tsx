@@ -1,10 +1,8 @@
 import React from 'react';
 import {View, Image} from 'react-native';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 
 export const ImageHeader: React.FC = () => {
-  const {styles} = useStyles(stylesheet);
-
   return (
     <View style={styles.header}>
       <Image
@@ -17,7 +15,7 @@ export const ImageHeader: React.FC = () => {
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   /** Header */
   header: {
     alignItems: 'center',

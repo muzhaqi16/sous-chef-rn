@@ -1,6 +1,6 @@
 import React from 'react';
 import {View, Text} from 'react-native';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 
 interface BadgeProps {
   children: React.ReactNode;
@@ -13,8 +13,6 @@ export const Badge: React.FC<BadgeProps> = ({
   variant = 'default',
   size = 'small',
 }) => {
-  const {styles} = useStyles(badgeStyles);
-
   return (
     <View style={[styles.badge, styles[variant], styles[size]]}>
       <Text style={[styles.text, styles[`${variant}Text`]]}>{children}</Text>
@@ -22,7 +20,7 @@ export const Badge: React.FC<BadgeProps> = ({
   );
 };
 
-const badgeStyles = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   badge: {
     paddingHorizontal: 8,
     paddingVertical: 4,

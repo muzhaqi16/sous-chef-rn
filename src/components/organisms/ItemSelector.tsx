@@ -6,7 +6,7 @@ import {
   ActivityIndicator,
   View,
 } from 'react-native';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 
 // Generic interface for selectable items
 interface SelectableItem {
@@ -39,8 +39,6 @@ export function ItemSelector<T extends SelectableItem>({
   keyExtractor,
   renderCustomItem,
 }: ItemSelectorProps<T>) {
-  const {styles, theme} = useStyles(stylesheet);
-
   const defaultKeyExtractor = (item: T) => item.id;
   const getKey = keyExtractor || defaultKeyExtractor;
 
@@ -96,7 +94,7 @@ export function ItemSelector<T extends SelectableItem>({
   );
 }
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   item: {
     paddingVertical: 12,
     paddingHorizontal: 16,

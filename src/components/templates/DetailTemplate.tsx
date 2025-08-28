@@ -1,6 +1,6 @@
 import React from 'react';
 import {View, ScrollView, Text} from 'react-native';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 import Icon from '@react-native-vector-icons/material-icons';
 import {Header} from '../molecules/Header';
 import {Button} from '../base/Button';
@@ -29,8 +29,6 @@ export const DetailTemplate: React.FC<DetailTemplateProps> = ({
   sections,
   primaryAction,
 }) => {
-  const {styles} = useStyles(stylesheet);
-
   return (
     <View style={styles.container}>
       <Header
@@ -61,7 +59,7 @@ export const DetailTemplate: React.FC<DetailTemplateProps> = ({
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

@@ -1,9 +1,9 @@
 import React from 'react';
 import {View, Text, Alert} from 'react-native';
 import {useNavigation, useRoute} from '@react-navigation/native';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {
-  usePantryItemQuery,
+  useGetPantryItemQuery,
   useRemoveItemFromPantryMutation,
   useAddItemToShoppingListMutation,
 } from '#generated';
@@ -12,13 +12,13 @@ import {useStore} from '#/store';
 import {PantryItemDetailNavProp} from '#/navigation';
 
 export const PantryItemDetail: React.FC = () => {
-  const {styles, theme} = useStyles(detailStyles);
+  const {theme} = useUnistyles();
   const navigation = useNavigation<PantryItemDetailNavProp>();
   const route = useRoute();
   const {itemId} = route.params as {itemId: string};
   const {selectedShoppingListId} = useStore();
 
-  const {data, loading} = usePantryItemQuery({
+  const {data, loading} = useGetPantryItemQuery({
     variables: {id: itemId},
   });
 
@@ -148,7 +148,7 @@ export const PantryItemDetail: React.FC = () => {
   );
 };
 
-const detailStyles = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   itemName: {
     fontSize: 24,
     fontWeight: '600',

@@ -1,9 +1,7 @@
 import React from 'react';
 import {useNavigation} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
-import {TouchableOpacity} from 'react-native';
-import Icon from '@react-native-vector-icons/material-icons';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {ShoppingListMain} from '#screens';
 import {ListSettings} from '#/screens/shoppingList/ListSettings';
 import {ShoppingListStackParamList} from './types';
@@ -12,8 +10,9 @@ import {ShareList, AddEditItem} from '#/screens';
 const Stack = createNativeStackNavigator<ShoppingListStackParamList>();
 
 export function ShoppingListStack() {
-  const {styles, theme} = useStyles(stylesheet);
   const navigation = useNavigation();
+
+  const {theme} = useUnistyles();
 
   return (
     <Stack.Navigator
@@ -54,7 +53,7 @@ export function ShoppingListStack() {
     </Stack.Navigator>
   );
 }
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   header: {
     backgroundColor: theme.colors.surface,
     elevation: 4,

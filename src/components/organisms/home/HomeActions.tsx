@@ -1,8 +1,7 @@
-// components/organisms/HomeActions.tsx
 import React from 'react';
 import {View, Text, TouchableOpacity} from 'react-native';
 import Icon from '@react-native-vector-icons/material-icons';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 
 interface HomeActionsProps {
   homeId: string;
@@ -19,8 +18,7 @@ export const HomeActions: React.FC<HomeActionsProps> = ({
   onInvite,
   onDelete,
 }) => {
-  const {styles, theme} = useStyles(stylesheet);
-
+  const {theme} = useUnistyles();
   return (
     <View style={styles.homeActions}>
       {!isDefault && (
@@ -55,7 +53,7 @@ export const HomeActions: React.FC<HomeActionsProps> = ({
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   homeActions: {
     flexDirection: 'row',
     gap: 16,

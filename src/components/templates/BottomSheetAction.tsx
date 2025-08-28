@@ -7,7 +7,7 @@ import {
 } from '@gorhom/bottom-sheet';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {Title} from '../atoms';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 
 interface BottomSheetActionProps {
   children: ReactNode;
@@ -23,8 +23,9 @@ export const BottomSheetAction: React.FC<BottomSheetActionProps> = ({
   snapPoints = ['25%', '50%', '90%'],
   sheetRef,
 }) => {
+  const {theme} = useUnistyles();
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
-  const {styles, theme} = useStyles(stylesheet);
+
   const insets = useSafeAreaInsets();
   const openSheet = useCallback(() => {
     bottomSheetModalRef.current?.present();
@@ -61,6 +62,6 @@ export const BottomSheetAction: React.FC<BottomSheetActionProps> = ({
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   sheetTitle: {},
 }));

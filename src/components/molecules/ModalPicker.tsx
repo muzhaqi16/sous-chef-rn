@@ -8,7 +8,7 @@ import {
   ScrollView,
 } from 'react-native';
 import FeatherIcon from '@react-native-vector-icons/feather';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 
 export interface ModalPickerProps {
   label: string;
@@ -27,7 +27,6 @@ export const ModalPicker: React.FC<ModalPickerProps> = ({
   onSelect,
   onCancel,
 }) => {
-  const {styles, theme} = useStyles(stylesheet);
   return (
     <Modal visible={visible} animationType="slide">
       <SafeAreaView style={styles.container}>
@@ -59,7 +58,7 @@ export const ModalPicker: React.FC<ModalPickerProps> = ({
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   container: {flex: 1, backgroundColor: theme.colors.background, padding: 16},
   header: {
     flexDirection: 'row',

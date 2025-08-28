@@ -7,7 +7,7 @@ import {OnBoardingWrapper} from '#components/templates';
 import {DynamicFormFields} from '#components/molecules/DynamicFormFields';
 import {BaseInput, Button} from '#components';
 import {CreateHomeNavProp} from '#navigation/types';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 import {yupResolver} from '@hookform/resolvers/yup';
 import {
   HomeType,
@@ -31,7 +31,6 @@ export const CreateHomeScreen = () => {
     useStore();
   const [graphqlError, setGraphqlError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
-  const {styles} = useStyles(stylesheet);
 
   // Check for existing homes
   const {
@@ -222,7 +221,7 @@ export const CreateHomeScreen = () => {
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   nextButton: {
     backgroundColor: theme.colors.primary,
     padding: 16,

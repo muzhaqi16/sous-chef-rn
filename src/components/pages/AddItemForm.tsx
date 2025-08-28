@@ -5,12 +5,11 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  StyleSheet,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 
 interface FormData {
   name: string;
@@ -34,7 +33,6 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
   onClose,
   loading = false,
 }) => {
-  const {styles} = useStyles(stylesheet);
   const [formData, setFormData] = useState<FormData>({
     name: '',
     description: '',
@@ -203,7 +201,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
   },

@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import Icon from '@react-native-vector-icons/material-icons';
 import {useNavigation} from '@react-navigation/native';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {useHomeManagement} from '#/hooks';
 import {useEmailInputModal} from '#/hooks/useEmailInputModal';
 import {
@@ -20,8 +20,10 @@ import {
 import {HomeManagementNavProp} from '#/navigation';
 
 export const HomeManagement: React.FC = () => {
-  const {styles, theme} = useStyles(stylesheet);
   const navigation = useNavigation<HomeManagementNavProp>();
+
+  const {theme} = useUnistyles();
+
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [homeName, setHomeName] = useState('');
 
@@ -144,7 +146,7 @@ export const HomeManagement: React.FC = () => {
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

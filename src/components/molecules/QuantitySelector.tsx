@@ -1,6 +1,6 @@
 import React from 'react';
 import {View, Text} from 'react-native';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 import IconButton from '../atoms/IconButton';
 
 type QuantitySelectorProps = {
@@ -9,7 +9,7 @@ type QuantitySelectorProps = {
   onDecrement: () => void;
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -29,7 +29,6 @@ const QuantitySelector: React.FC<QuantitySelectorProps> = ({
   onIncrement,
   onDecrement,
 }) => {
-  const {styles} = useStyles(stylesheet);
   return (
     <View style={styles.container}>
       <IconButton

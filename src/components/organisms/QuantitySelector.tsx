@@ -1,6 +1,6 @@
 import React from 'react';
 import {View} from 'react-native';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 import {Unit} from '../../graphql/generated';
 import {Label, PickerSelect, Counter} from '..';
 
@@ -21,8 +21,6 @@ const QuantitySelector: React.FC<QuantitySelectorProps> = ({
   onUnitChange,
   units = [], // Provide default empty array
 }) => {
-  const {styles} = useStyles(stylesheet);
-
   // Transform units data for PickerSelect component
   const pickerItems = units.map(unitItem => ({
     label: `${unitItem.name} (${unitItem.symbol})`,
@@ -57,7 +55,7 @@ const QuantitySelector: React.FC<QuantitySelectorProps> = ({
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     marginTop: theme.spacing.xs,
     flexDirection: 'row',

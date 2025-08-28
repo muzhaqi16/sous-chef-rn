@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import Icon from '@react-native-vector-icons/material-icons';
 import {useNavigation, useRoute} from '@react-navigation/native';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {useShoppingListDetails} from '#/hooks';
 import {
   useUpdateShoppingListMutation,
@@ -24,8 +24,8 @@ import {useStore} from '#store';
 import {ListSettingsNavProp, ListSettingsRouteProp} from '#navigation/types';
 
 export const ListSettings: React.FC = () => {
-  const {styles, theme} = useStyles(listSettingsStylesheet);
   const navigation = useNavigation<ListSettingsNavProp>();
+  const {theme} = useUnistyles();
   const route = useRoute<ListSettingsRouteProp>();
   const listId = route.params?.listId;
 
@@ -241,7 +241,7 @@ export const ListSettings: React.FC = () => {
   );
 };
 
-const listSettingsStylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

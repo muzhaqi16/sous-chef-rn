@@ -1,6 +1,6 @@
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 
-export const stylesheet = createStyleSheet(theme => ({
+export const styles = StyleSheet.create(theme => ({
   gestureContainer: {
     marginBottom: 8,
   },

@@ -1,5 +1,5 @@
 import React from 'react';
-import {BaseInput, BaseInputProps} from './BaseInput';
+import {BaseInput, BaseInputProps} from './BaseInput/BaseInput';
 
 // Bio Input Component (multiline)
 export const BioInput: React.FC<

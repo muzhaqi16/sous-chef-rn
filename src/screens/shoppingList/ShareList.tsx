@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import Icon from '@react-native-vector-icons/material-icons';
 import {useNavigation, useRoute} from '@react-navigation/native';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {
   useRemoveCollaboratorMutation,
   useAddCollaboratorMutation,
@@ -19,7 +19,7 @@ import {
 import {useShoppingListDetails} from '#/hooks';
 
 export const ShareList: React.FC = () => {
-  const {styles, theme} = useStyles(stylesheet);
+  const {theme} = useUnistyles();
   const navigation = useNavigation();
   const route = useRoute();
   const {listId} = route.params as {listId: string};
@@ -29,9 +29,6 @@ export const ShareList: React.FC = () => {
 
   const {shoppingList, loading, collaborators, refetch} =
     useShoppingListDetails(listId);
-
-  console.log('Collaborators:', collaborators);
-  console.log('Shopping List:', shoppingList);
 
   const [shareList] = useAddCollaboratorMutation();
   const [removeMember] = useRemoveCollaboratorMutation();
@@ -160,7 +157,7 @@ export const ShareList: React.FC = () => {
     </View>
   );
 };
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

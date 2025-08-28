@@ -1,7 +1,7 @@
 import React, {useState, useRef} from 'react';
 import {Text, StyleSheet} from 'react-native';
 import BottomSheet, {BottomSheetRef} from '../pages/BottomSheet';
-import Button from '../atoms/Button';
+import {Button} from '../atoms/Button';
 import {EmailInput} from '../atoms';
 import {useStore} from '../../store';
 import {

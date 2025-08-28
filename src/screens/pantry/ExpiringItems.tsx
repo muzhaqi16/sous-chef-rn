@@ -8,14 +8,13 @@ import {
 } from 'react-native';
 import Icon from '@react-native-vector-icons/material-icons';
 import {useNavigation} from '@react-navigation/native';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 import {SwipeableItem} from '#components';
 import {usePantryItems, useDefaultHome} from '#hooks';
 import {useGetHomeQuery} from '#generated';
 import {ExpiringItemsNavProp} from '#/navigation';
 
 export const ExpiringItems: React.FC = () => {
-  const {styles, theme} = useStyles(stylesheet);
   const navigation = useNavigation<ExpiringItemsNavProp>();
   const [refreshing, setRefreshing] = React.useState(false);
 
@@ -131,7 +130,7 @@ export const ExpiringItems: React.FC = () => {
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

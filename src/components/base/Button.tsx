@@ -1,6 +1,6 @@
 import React from 'react';
 import {TouchableOpacity, Text, ActivityIndicator} from 'react-native';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 import Icon from '@react-native-vector-icons/material-icons';
 
 interface ButtonProps {
@@ -24,8 +24,6 @@ export const Button: React.FC<ButtonProps> = ({
   children,
   fullWidth = false,
 }) => {
-  const {styles} = useStyles(buttonStyles);
-
   return (
     <TouchableOpacity
       style={[
@@ -64,7 +62,7 @@ export const Button: React.FC<ButtonProps> = ({
   );
 };
 
-const buttonStyles = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   base: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -1,7 +1,7 @@
 import React from 'react';
 import {View, Text, TouchableOpacity} from 'react-native';
 import Icon from '@react-native-vector-icons/material-icons';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 
 interface NotificationHeaderProps {
   onMarkAllRead: () => void;
@@ -14,8 +14,6 @@ export const NotificationHeader: React.FC<NotificationHeaderProps> = ({
   onClearAll,
   hasNotifications,
 }) => {
-  const {styles} = useStyles(stylesheet);
-
   if (!hasNotifications) return null;
 
   return (
@@ -33,7 +31,7 @@ export const NotificationHeader: React.FC<NotificationHeaderProps> = ({
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flexDirection: 'row',
     justifyContent: 'space-between',

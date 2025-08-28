@@ -1,12 +1,12 @@
 import React, {useEffect} from 'react';
 import {View, Text, Image} from 'react-native';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 import Loader from '../components/atoms/Loader';
 import {useStore} from '../store';
 
 const SplashScreen = () => {
-  const {styles, theme} = useStyles(stylesheet);
   const isLoading = useStore(store => store.isLoading);
+
   useEffect(() => {
     // Handle loading indicator
     const loadingIndicator = setInterval(() => {
@@ -40,7 +40,7 @@ const SplashScreen = () => {
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

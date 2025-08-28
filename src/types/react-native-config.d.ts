@@ -2,7 +2,7 @@ declare module 'react-native-config' {
   export interface NativeConfig {
     API_URL?: string;
     WEB_SOCKET_URL?: string;
-    GOOGLE_MAPS_API_KEY?: string;
+    API_KEY?: string;
   }
 
   export const Config: NativeConfig;

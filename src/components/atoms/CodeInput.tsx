@@ -1,14 +1,12 @@
 import React, {useRef} from 'react';
 import {Text, TextInput, TouchableOpacity, View} from 'react-native';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 
 export const CodeInput: React.FC<{
   value: string;
   onChange: (v: string) => void;
   error?: string;
 }> = ({value, onChange}) => {
-  const {styles} = useStyles(stylesheet);
-
   const inputRef = useRef<TextInput>(null);
 
   return (
@@ -38,7 +36,7 @@ export const CodeInput: React.FC<{
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   formInput: {
     position: 'relative',
     backgroundColor: theme.colors.white,

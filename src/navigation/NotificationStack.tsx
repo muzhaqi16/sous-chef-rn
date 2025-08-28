@@ -1,8 +1,6 @@
 import React from 'react';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
-import {TouchableOpacity} from 'react-native';
-import Icon from '@react-native-vector-icons/material-icons';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {
   NotificationListScreen,
   NotificationDetailScreen,
@@ -13,8 +11,7 @@ import {NotificationStackParamList} from './types';
 const Stack = createNativeStackNavigator<NotificationStackParamList>();
 
 export default function NotificationStack() {
-  const {styles, theme} = useStyles(stylesheet);
-
+  const {theme} = useUnistyles();
   return (
     <Stack.Navigator
       screenOptions={{
@@ -47,7 +44,7 @@ export default function NotificationStack() {
   );
 }
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   header: {
     backgroundColor: theme.colors.surface,
     elevation: 4,

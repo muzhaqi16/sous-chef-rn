@@ -1,6 +1,6 @@
 import React from 'react';
 import {View, Text, TouchableOpacity} from 'react-native';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 
 interface HeaderProps {
   title: string;
@@ -15,7 +15,6 @@ export const Header: React.FC<HeaderProps> = ({
   onScanPress,
   showScanButton = true,
 }) => {
-  const {styles} = useStyles(stylesheet);
   return (
     <View style={styles.header}>
       <TouchableOpacity onPress={onBackPress}>
@@ -31,7 +30,7 @@ export const Header: React.FC<HeaderProps> = ({
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   // Common styles that would be shared across components
   header: {
     flexDirection: 'row',

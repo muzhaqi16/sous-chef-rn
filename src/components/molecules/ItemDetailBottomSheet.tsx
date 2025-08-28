@@ -1,9 +1,9 @@
 import React, {useState} from 'react';
 import {View} from 'react-native';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 import QuantitySelector from '../organisms/QuantitySelector';
 import {BottomSheetTextInput} from '@gorhom/bottom-sheet';
-import Button from '../atoms/Button';
+import Button from '../atoms/Button/Button';
 import {useUpdateShoppingListItemMutation} from '../../graphql/generated';
 import {useUnitsQuery, Unit} from '../../graphql/generated';
 import {ShoppingListItemDetail} from '../../types';
@@ -23,7 +23,6 @@ export const ItemDetailBottomSheet: React.FC<ItemDetailProps> = ({
   const [quantity, setQuantity] = useState(1);
   const [unit, setUnit] = useState('pcs');
   const {data} = useUnitsQuery();
-  const {styles} = useStyles(stylesheet);
 
   const [updateItem] = useUpdateShoppingListItemMutation({
     onCompleted: () => onClose(),
@@ -68,7 +67,7 @@ export const ItemDetailBottomSheet: React.FC<ItemDetailProps> = ({
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     flexDirection: 'column',

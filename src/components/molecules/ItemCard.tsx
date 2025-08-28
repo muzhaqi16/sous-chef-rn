@@ -1,6 +1,6 @@
 import React from 'react';
 import {View, Text, Image, TouchableOpacity} from 'react-native';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 import {Counter} from './Counter';
 
 type ItemCardProps = {
@@ -19,8 +19,6 @@ const ItemCard: React.FC<ItemCardProps> = ({
   onDecrement,
   onMoreOptions,
 }) => {
-  const {styles} = useStyles(stylesheet);
-
   return (
     <TouchableOpacity key={item?.id} onPress={onPress} style={styles.card}>
       <Image
@@ -51,7 +49,7 @@ const ItemCard: React.FC<ItemCardProps> = ({
     </TouchableOpacity>
   );
 };
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   card: {
     position: 'relative',
     flexDirection: 'row',

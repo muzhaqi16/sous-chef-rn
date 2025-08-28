@@ -4,7 +4,7 @@ import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import {OnBoardingWrapper} from '#components/templates';
 import {useNavigation} from '@react-navigation/native';
 import {SelectPantryItemsNavProp} from '#navigation/types';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 import {
   useGetOnboardingItemsQuery,
   useAddItemToPantryMutation,
@@ -23,7 +23,7 @@ type OnboardingItemType = NonNullable<
 
 export const SelectPantryItems = () => {
   const navigation = useNavigation<SelectPantryItemsNavProp>();
-  const {styles} = useStyles(stylesheet);
+
   const {selectedPantryId, setOnBoardingStep} = useStore();
 
   const {
@@ -200,7 +200,7 @@ export const SelectPantryItems = () => {
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   form: {
     flex: 1,
     marginTop: 24,

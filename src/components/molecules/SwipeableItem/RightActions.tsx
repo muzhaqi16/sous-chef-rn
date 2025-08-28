@@ -3,7 +3,7 @@ import Reanimated, {useAnimatedStyle} from 'react-native-reanimated';
 import {ActionButton} from './ActionButton';
 import {stylesheet} from './styles';
 import {SwipeActionsProps} from './types';
-import {useStyles} from 'react-native-unistyles';
+import {useUnistyles} from 'react-native-unistyles';
 
 interface RightActionsProps extends SwipeActionsProps {
   dragX: Reanimated.SharedValue<number>;
@@ -17,8 +17,6 @@ export const RightActions: React.FC<RightActionsProps> = ({
   onDelete,
   onActionPress,
 }) => {
-  const {styles} = useStyles(stylesheet);
-
   const translateX = useAnimatedStyle(() => {
     return {
       transform: [{translateX: dragX.value + 120}],

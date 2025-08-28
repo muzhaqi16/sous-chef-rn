@@ -1,6 +1,6 @@
 import React from 'react';
 import {View, Text} from 'react-native';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 import {HomeActions} from './HomeActions';
 import {MembersList} from './MembersList';
 
@@ -34,8 +34,6 @@ export const HomeCard: React.FC<HomeCardProps> = ({
   onInvite,
   onDelete,
 }) => {
-  const {styles, theme} = useStyles(stylesheet);
-
   const handleDelete = () => {
     onDelete(home.id, home.name);
   };
@@ -70,7 +68,7 @@ export const HomeCard: React.FC<HomeCardProps> = ({
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   homeCard: {
     backgroundColor: 'white',
     borderRadius: 8,

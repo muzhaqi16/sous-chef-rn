@@ -1,6 +1,6 @@
 // Date Input Component
 import React from 'react';
-import {BaseInput, BaseInputProps} from './BaseInput';
+import {BaseInput, BaseInputProps} from './BaseInput/BaseInput';
 
 // Date Input Component
 export const DateInput: React.FC<

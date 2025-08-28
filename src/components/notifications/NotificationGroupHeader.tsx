@@ -1,6 +1,6 @@
 import React from 'react';
 import {View, Text} from 'react-native';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 
 interface NotificationGroupHeaderProps {
   title: string;
@@ -9,8 +9,6 @@ interface NotificationGroupHeaderProps {
 export const NotificationGroupHeader: React.FC<
   NotificationGroupHeaderProps
 > = ({title}) => {
-  const {styles} = useStyles(stylesheet);
-
   return (
     <View style={styles.container}>
       <Text style={styles.title}>{title}</Text>
@@ -18,7 +16,7 @@ export const NotificationGroupHeader: React.FC<
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,

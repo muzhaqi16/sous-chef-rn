@@ -1,7 +1,7 @@
 import React, {useState} from 'react';
 import {TouchableOpacity} from 'react-native';
 import Feather from '@react-native-vector-icons/feather';
-import {BaseInput, BaseInputProps} from './BaseInput';
+import {BaseInput, BaseInputProps} from './BaseInput/BaseInput';
 
 export interface PasswordInputProps
   extends Omit<BaseInputProps, 'secureTextEntry'> {

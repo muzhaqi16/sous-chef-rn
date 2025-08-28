@@ -1,6 +1,6 @@
 import React from 'react';
 import {View, Text} from 'react-native';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {Button} from '../base/Button';
 import {IconName, Icon} from '#/utils/iconUtils';
 
@@ -20,8 +20,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   description,
   action,
 }) => {
-  const {styles, theme} = useStyles(emptyStateStyles);
-
+  const {theme} = useUnistyles();
   return (
     <View style={styles.container}>
       <Icon name={icon} size={64} color={theme.colors.textSecondary} />
@@ -36,7 +35,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   );
 };
 
-const emptyStateStyles = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     justifyContent: 'center',

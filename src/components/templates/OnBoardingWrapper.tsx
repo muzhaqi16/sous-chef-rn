@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   Text,
 } from 'react-native';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import FeatherIcon from '@react-native-vector-icons/feather';
 
 interface OnboardingWrapperProps {
@@ -30,8 +30,7 @@ export const OnBoardingWrapper = ({
   onBack,
   onSkip,
 }: OnboardingWrapperProps) => {
-  const {styles, theme} = useStyles(stylesheet);
-
+  const {theme} = useUnistyles();
   const progress = step && totalSteps ? (step / totalSteps) * 100 : 0;
 
   return (
@@ -75,7 +74,7 @@ export const OnBoardingWrapper = ({
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   safeArea: {
     flex: 1,
     backgroundColor: theme.colors.background,

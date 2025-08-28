@@ -1,12 +1,11 @@
 import React from 'react';
 import {SafeAreaView, ScrollView} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 import {ProfileHeader, SettingsSection} from '#components';
 import {useProfileData, useConfigurableSettings} from '#hooks';
 
 export const ProfileScreen = () => {
-  const {styles} = useStyles(stylesheet);
   const navigation = useNavigation();
   const {profile, user, loading} = useProfileData();
   const {sections} = useConfigurableSettings(profile);
@@ -62,7 +61,7 @@ export const ProfileScreen = () => {
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

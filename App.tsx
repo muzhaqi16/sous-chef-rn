@@ -1,38 +1,24 @@
-import React, {useEffect} from 'react';
-import {StatusBar, useColorScheme, Platform} from 'react-native';
+import React from 'react';
+import {StatusBar, useColorScheme} from 'react-native';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {BottomSheetModalProvider} from '@gorhom/bottom-sheet';
 import {ApolloProvider} from '@apollo/client';
 import {useStore} from '#store';
 import {client} from './src/apollo/client';
-import {
-  useInitialTheme,
-  createStyleSheet,
-  UnistylesRuntime,
-  useStyles,
-} from 'react-native-unistyles';
 import AppNavigator from '#navigation/AppNavigator';
 import SplashScreen from '#/screens/SplashScreen';
 import {ToastProvider} from '#/components/atoms';
 
 const App = () => {
   const isHydrated = useStore(store => store.isHydrated);
-
   const darkMode = useColorScheme() === 'dark';
-  const {styles, theme} = useStyles(stylesheet);
-  const {colors} = theme;
-  const {theme: userTheme} = useStore();
 
+  const {theme: userTheme} = useStore();
+  const {theme} = useUnistyles();
   const effectiveDark =
     darkMode !== undefined ? darkMode : userTheme === 'dark';
-
-  useInitialTheme(effectiveDark ? 'dark' : 'light');
-
-  // Set the theme for Unistyles
-  useEffect(() => {
-    UnistylesRuntime.setTheme(effectiveDark ? 'dark' : 'light');
-  }, [effectiveDark]);
 
   // Early return for loading state - before any conditional hooks
   if (!isHydrated || !client) {
@@ -46,7 +32,7 @@ const App = () => {
         <SafeAreaProvider>
           <StatusBar
             barStyle={effectiveDark ? 'light-content' : 'dark-content'}
-            backgroundColor={colors.background}
+            backgroundColor={theme.colors.background}
           />
           <SafeAreaView style={styles.container}>
             <ToastProvider>
@@ -62,7 +48,7 @@ const App = () => {
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

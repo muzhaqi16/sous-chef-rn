@@ -21,6 +21,21 @@ export const errorLink = onError(
         const code = err.extensions?.code;
         const msg = err.message || '';
 
+        // Check for API key related errors
+        const isApiKeyError =
+          code === 'API_KEY_REQUIRED' ||
+          code === 'INVALID_API_KEY' ||
+          code === 'API_KEY_EXPIRED' ||
+          msg.toLowerCase().includes('api key') ||
+          msg.toLowerCase().includes('invalid key');
+
+        if (isApiKeyError) {
+          console.error('API Key error:', err.message);
+          // Handle API key errors - maybe show a specific error message
+          // Don't attempt token refresh for API key issues
+          continue;
+        }
+
         // Check for various authentication error patterns
         const isAuthError =
           code === 'UNAUTHENTICATED' ||
@@ -51,11 +66,21 @@ export const errorLink = onError(
     if (networkError) {
       const errorAny = networkError as any;
 
-      // Check for 401 Unauthorized
+      // Check for 401 Unauthorized (could be auth or API key issue)
       if (
         errorAny.statusCode === 401 &&
         operation.operationName !== 'RefreshToken'
       ) {
+        // Try to determine if it's an API key issue vs auth issue
+        const responseText = errorAny.bodyText || '';
+        const isApiKeyIssue = responseText.toLowerCase().includes('api key');
+
+        if (isApiKeyIssue) {
+          console.error('API Key authentication failed');
+          // Don't attempt token refresh for API key issues
+          return;
+        }
+
         console.log('Received 401, attempting token refresh…');
         return fromPromise(
           new Promise<any>((resolve, reject) => {
@@ -65,6 +90,13 @@ export const errorLink = onError(
             });
           }),
         );
+      }
+
+      // Check for 403 Forbidden (likely API key related)
+      if (errorAny.statusCode === 403) {
+        console.error('Access forbidden - check API key permissions');
+        // Don't attempt retry for 403 errors
+        return;
       }
 
       if (errorAny.statusCode === 429) {

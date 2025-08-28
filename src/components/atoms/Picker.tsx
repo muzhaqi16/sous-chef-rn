@@ -1,7 +1,7 @@
 import {useState} from 'react';
 import {ViewStyle} from 'react-native';
 import {Picker} from '@react-native-picker/picker';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 
 type PickerSelectProps = {
   items: {label: string; value: string; id: string}[];
@@ -19,7 +19,6 @@ export const PickerSelect = ({
   style,
 }: PickerSelectProps) => {
   const [selectedValue] = useState(initialValue);
-  const {styles} = useStyles(stylesheet);
 
   return (
     <Picker
@@ -38,7 +37,7 @@ export const PickerSelect = ({
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   picker: {
     backgroundColor: theme.colors.white,
     borderRadius: 8,

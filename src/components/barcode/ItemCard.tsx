@@ -1,6 +1,6 @@
 import React from 'react';
 import {View, Text, Image} from 'react-native';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 
 interface Item {
   id: string;
@@ -17,7 +17,6 @@ interface ItemCardProps {
 }
 
 export const ItemCard: React.FC<ItemCardProps> = ({item, format}) => {
-  const {styles} = useStyles(stylesheet);
   return (
     <View style={styles.itemCard}>
       {item.imageUrl ? (
@@ -42,7 +41,7 @@ export const ItemCard: React.FC<ItemCardProps> = ({item, format}) => {
     </View>
   );
 };
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   itemCard: {
     backgroundColor: 'white',
     borderRadius: 12,

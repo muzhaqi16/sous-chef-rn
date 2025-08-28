@@ -18,7 +18,21 @@ export const wsLink = new GraphQLWsLink(
     keepAlive: 12_000, // send ping every 12s to keep alive
     connectionParams: () => {
       const token = useStore.getState().accessToken;
-      return token ? {authorization: `Bearer ${token}`} : {};
+      const apiKey = Config.API_KEY;
+
+      const params: Record<string, string> = {};
+
+      // Always include API key if available
+      if (apiKey) {
+        params['x-api-key'] = apiKey;
+      }
+
+      // Include authorization only when token is available
+      if (token) {
+        params.authorization = `Bearer ${token}`;
+      }
+
+      return params;
     },
     on: {
       connected: () => console.log('[WS] connected'),

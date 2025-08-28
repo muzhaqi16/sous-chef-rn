@@ -1,6 +1,6 @@
 import React from 'react';
 import {View, Text, TouchableOpacity, Platform} from 'react-native';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import type {FieldValues, Control, FieldErrors} from 'react-hook-form';
 import {DynamicFormFields, FieldDef} from '../molecules/DynamicFormFields';
 import {Button, IconButton} from '../atoms';
@@ -37,9 +37,9 @@ export function AuthFormTemplate<T extends FieldValues>({
   onLinkPress,
   isLoading = false,
 }: Props<T>) {
-  const {styles, theme} = useStyles(stylesheet);
   // adjust this if you have a fixed header height
   const keyboardVerticalOffset = Platform.select({ios: 64, android: 0});
+  const {theme} = useUnistyles();
   return (
     <>
       <View style={styles.header}>
@@ -86,7 +86,7 @@ export function AuthFormTemplate<T extends FieldValues>({
   );
 }
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   header: {
     paddingHorizontal: 0,
   },

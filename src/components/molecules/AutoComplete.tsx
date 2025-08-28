@@ -1,7 +1,7 @@
 import React, {useMemo, useEffect} from 'react';
 import {Text, TouchableOpacity, View, Image} from 'react-native';
 import {BottomSheetFlatList, BottomSheetView} from '@gorhom/bottom-sheet';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 import {useAutocompleteItemsLazyQuery, ItemSuggestion} from '#generated';
 
 interface AutocompleteProps {
@@ -13,8 +13,6 @@ const Autocomplete: React.FC<AutocompleteProps> = ({
   searchTerm,
   onSelectItem,
 }) => {
-  const {styles, theme} = useStyles(stylesheet);
-
   const [fetchItems, {data, loading, error}] = useAutocompleteItemsLazyQuery({
     variables: {input: {query: searchTerm}},
     fetchPolicy: 'cache-and-network',
@@ -125,7 +123,7 @@ const Autocomplete: React.FC<AutocompleteProps> = ({
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   flatList: {
     flex: 1,
   },

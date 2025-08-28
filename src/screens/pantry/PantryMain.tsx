@@ -1,7 +1,7 @@
-import React, {useMemo} from 'react';
+import React, {use, useMemo} from 'react';
 import {Alert} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
-import {useStyles} from 'react-native-unistyles';
+import {useUnistyles} from 'react-native-unistyles';
 import {
   useDefaultHome,
   usePantryManagement,
@@ -22,7 +22,7 @@ import {
 export const PantryMain: React.FC = () => {
   const navigation = useNavigation<PantryMainNavProp>();
 
-  const {theme} = useStyles();
+  const {theme} = useUnistyles();
 
   const selectPantrySheet = useBottomSheetModal();
 
@@ -88,9 +88,10 @@ export const PantryMain: React.FC = () => {
           {text: 'Cancel', style: 'cancel'},
           {
             text: 'Manage Homes',
-            onPress: () => navigation.getParent()?.navigate('HomeManagementStack', {
-              screen: 'HomeManagement',
-            }),
+            onPress: () =>
+              navigation.getParent()?.navigate('HomeManagementStack', {
+                screen: 'HomeManagement',
+              }),
             style: 'default',
           },
         ],
@@ -176,9 +177,10 @@ export const PantryMain: React.FC = () => {
         description="You need to create or be a member of a home to manage pantry items."
         action={{
           label: 'Manage Homes',
-          onPress: () => navigation.getParent()?.navigate('HomeManagementStack', {
-            screen: 'HomeManagement',
-          }),
+          onPress: () =>
+            navigation.getParent()?.navigate('HomeManagementStack', {
+              screen: 'HomeManagement',
+            }),
         }}
       />
     );

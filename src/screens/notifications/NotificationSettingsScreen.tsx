@@ -1,6 +1,6 @@
 import React, {useState, useEffect} from 'react';
 import {View, Text, ScrollView, Alert} from 'react-native';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 import {
   useUpdateUserPreferencesMutation,
   useGetUserSettingsQuery,
@@ -9,7 +9,6 @@ import {SettingSwitch, SettingSection} from '#components/settings';
 import {useStore} from '#/store';
 
 export const NotificationSettingsScreen: React.FC = () => {
-  const {styles} = useStyles(stylesheet);
   const user = useStore(state => state.user);
   const {data, loading} = useGetUserSettingsQuery();
   const [updateSettings] = useUpdateUserPreferencesMutation();
@@ -143,7 +142,7 @@ export const NotificationSettingsScreen: React.FC = () => {
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

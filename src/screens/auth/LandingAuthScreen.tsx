@@ -1,13 +1,11 @@
 import React from 'react';
-import {StyleSheet, View, Image, Text, TouchableOpacity} from 'react-native';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {View, Image, Text, TouchableOpacity} from 'react-native';
+import {StyleSheet} from 'react-native-unistyles';
+import {AuthWrapper, Button} from '#components';
+import {useSafeNavigation} from '#hooks';
 
-import {AuthWrapper} from '../../components/templates';
-import {useSafeNavigation} from '../../hooks';
-import {Button} from '../../components/atoms/Button';
 export function LandingAuthScreen() {
   const {navigation} = useSafeNavigation();
-  const {styles, theme} = useStyles(stylesheet);
 
   return (
     <AuthWrapper>
@@ -53,7 +51,7 @@ export function LandingAuthScreen() {
   );
 }
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   heroContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -91,10 +89,12 @@ const stylesheet = createStyleSheet(theme => ({
   },
   primaryBtn: {
     paddingVertical: theme.spacing.md,
+    marginBottom: theme.spacing.md,
   },
 
   secondaryBtn: {
     backgroundColor: theme.colors.surface,
+    paddingVertical: theme.spacing.md,
   },
   secondaryBtnText: {
     color: theme.colors.primary,
@@ -102,7 +102,7 @@ const stylesheet = createStyleSheet(theme => ({
 
   footerText: {
     fontSize: theme.fonts.size.sm,
-    lineHeight: theme.fonts.lineHeight.md,
+    lineHeight: theme.fonts.size.md * 1.5,
     color: theme.colors.textSecondary,
     textAlign: 'center',
     marginTop: theme.spacing.lg,

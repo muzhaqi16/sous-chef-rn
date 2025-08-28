@@ -1,8 +1,8 @@
 import React from 'react';
-import {ScrollView, Alert, StyleSheet} from 'react-native';
+import {ScrollView, Alert} from 'react-native';
 import {ItemCard} from './ItemCard';
 import {ActionButtons} from './ActionButtons';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 interface SearchResultsProps {
   item: any;
   format?: string;
@@ -14,8 +14,6 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   format,
   onScanAnother,
 }) => {
-  const {styles, theme} = useStyles(stylesheet);
-
   const handleAddToCart = () => {
     Alert.alert('Success', 'Item action completed!');
   };
@@ -40,7 +38,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   scrollView: {
     flex: 1,
   },

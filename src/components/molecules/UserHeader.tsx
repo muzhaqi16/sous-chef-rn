@@ -1,12 +1,11 @@
 import React from 'react';
 import {View, Text, TouchableOpacity, Image} from 'react-native';
 import FeatherIcon from '@react-native-vector-icons/feather';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 import {useNavigation} from '@react-navigation/native';
 import {useStore} from '../../store';
 
 export const UserHeader: React.FC = () => {
-  const {styles, theme} = useStyles(stylesheet);
   const navigation = useNavigation();
   const {user} = useStore();
   return (
@@ -49,7 +48,7 @@ export const UserHeader: React.FC = () => {
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   /** Header */
   header: {
     flexDirection: 'row',

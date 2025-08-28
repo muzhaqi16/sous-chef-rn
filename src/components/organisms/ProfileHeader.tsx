@@ -1,6 +1,6 @@
 import React from 'react';
 import {View, Text, Image, TouchableOpacity} from 'react-native';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {IconButton} from '../atoms/IconButton';
 import FeatherIcon from '@react-native-vector-icons/feather';
 
@@ -21,7 +21,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   onMore,
   onAvatarPress,
 }) => {
-  const {styles, theme} = useStyles(stylesheet);
+  const {theme} = useUnistyles();
   return (
     <View style={styles.header}>
       <IconButton
@@ -51,7 +51,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   header: {
     flexDirection: 'row',
     alignItems: 'center',

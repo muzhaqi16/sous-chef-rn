@@ -1,6 +1,6 @@
 import React from 'react';
 import {View, Text} from 'react-native';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 
 interface Member {
   id: string;
@@ -17,8 +17,6 @@ interface MembersListProps {
 }
 
 export const MembersList: React.FC<MembersListProps> = ({members}) => {
-  const {styles, theme} = useStyles(stylesheet);
-
   if (!members || members.length === 0) return null;
 
   return (
@@ -37,7 +35,7 @@ export const MembersList: React.FC<MembersListProps> = ({members}) => {
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   membersSection: {
     paddingTop: 16,
     borderTopWidth: 1,

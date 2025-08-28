@@ -1,10 +1,8 @@
 import React from 'react';
 import {View, Text} from 'react-native';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 
 export const NotFoundScreen = () => {
-  const {styles} = useStyles(stylesheet);
-
   return (
     <View style={styles.container}>
       <Text style={styles.text}>
@@ -15,7 +13,7 @@ export const NotFoundScreen = () => {
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

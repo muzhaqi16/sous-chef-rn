@@ -1,6 +1,6 @@
 import React from 'react';
 import {View, TouchableOpacity, Text} from 'react-native';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 
 interface ActionButtonsProps {
   primaryAction: {
@@ -17,7 +17,6 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
   primaryAction,
   secondaryAction,
 }) => {
-  const {styles} = useStyles(stylesheet);
   return (
     <View style={styles.actionButtons}>
       <TouchableOpacity
@@ -35,7 +34,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   actionButtons: {
     gap: 12,
   },

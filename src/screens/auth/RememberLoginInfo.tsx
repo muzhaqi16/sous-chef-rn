@@ -1,7 +1,7 @@
 import React, {useState} from 'react';
 import {Text, TouchableOpacity, Alert} from 'react-native';
 import {useForm} from 'react-hook-form';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 import {CommonActions} from '@react-navigation/native';
 import {AuthWrapper, AuthFormTemplate} from '../../components/templates';
 import {saveCredentials} from '../../storage/keychain';
@@ -20,7 +20,7 @@ export const RememberLoginInfoScreen = ({
     pendingPassword,
     clearPendingCredentials,
   } = useStore();
-  const {styles} = useStyles(stylesheet);
+
   const [isSaving, setIsSaving] = useState(false);
 
   const {
@@ -149,7 +149,7 @@ export const RememberLoginInfoScreen = ({
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   btnSecondary: {
     alignItems: 'center',
     justifyContent: 'center',

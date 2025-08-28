@@ -6,7 +6,7 @@ import {OnBoardingWrapper} from '#components/templates';
 import {DynamicFormFields} from '#components/molecules/DynamicFormFields';
 import {BaseInput, Button} from '#components';
 import {CreateShoppingListNavProp} from '#navigation/types';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 import {yupResolver} from '@hookform/resolvers/yup';
 import {
   useCreateShoppingListMutation,
@@ -24,7 +24,6 @@ export const CreateShoppingListScreen = () => {
   const {setOnBoardingStep, setSelectedShoppingListId, user} = useStore();
   const [graphqlError, setGraphqlError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
-  const {styles} = useStyles(stylesheet);
 
   // Check for existing shopping lists
   const {data: listsData, loading: listsLoading} = useGetShoppingListsQuery({
@@ -175,7 +174,7 @@ export const CreateShoppingListScreen = () => {
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   nextButton: {
     backgroundColor: theme.colors.primary,
     padding: 16,

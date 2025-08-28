@@ -1,7 +1,7 @@
 import React, {useState} from 'react';
 import {TouchableOpacity, View, Text, TextInput} from 'react-native';
 import FeatherIcon from '@react-native-vector-icons/feather';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 
 export interface RowProps {
   label: string;
@@ -24,7 +24,6 @@ export const Row: React.FC<RowProps> = ({
   isFirst = false,
   isLast = false,
 }) => {
-  const {styles, theme} = useStyles(stylesheet);
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(value ?? '');
 
@@ -109,7 +108,7 @@ export const Row: React.FC<RowProps> = ({
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   rowWrapper: {
     borderTopWidth: 1,
     borderColor: theme.colors.border,

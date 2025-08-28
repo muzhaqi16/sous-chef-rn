@@ -1,7 +1,7 @@
-import React, {useMemo,} from 'react';
-import {TouchableOpacity, Text, Alert, Image, View, } from 'react-native';
+import React, {useMemo} from 'react';
+import {TouchableOpacity, Text, Alert, Image, View} from 'react-native';
 import {useNavigation, useFocusEffect} from '@react-navigation/native';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {
   useGetShoppingListsQuery,
   useMarkItemPurchasedMutation,
@@ -24,7 +24,7 @@ import {useStore} from '#/store';
 import {Icon} from '#/utils/iconUtils';
 
 export const ShoppingListMain: React.FC = () => {
-  const {styles, theme} = useStyles(stylesheet);
+  const {theme} = useUnistyles();
   const navigation = useNavigation<ShoppingListMainNavProp>();
   const selectShoppingListSheet = useBottomSheetModal();
   const {selectedShoppingListId, setSelectedShoppingListId} = useStore();
@@ -86,8 +86,7 @@ export const ShoppingListMain: React.FC = () => {
           {text: 'Cancel', style: 'cancel'},
           {
             text: 'Create List',
-            onPress: () =>
-              navigation.navigate('ListSettings'),
+            onPress: () => navigation.navigate('ListSettings'),
           },
         ],
       );
@@ -127,7 +126,7 @@ export const ShoppingListMain: React.FC = () => {
   const handleRefresh = async () => {
     await Promise.all([refetch()]);
   };
-// Refetch data when screen comes into focus
+  // Refetch data when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
       refetch();
@@ -143,8 +142,7 @@ export const ShoppingListMain: React.FC = () => {
         description="Create your first shopping list to get started."
         action={{
           label: 'Create your first list',
-          onPress: () =>
-            navigation.navigate('ListSettings', {listId: ''}),
+          onPress: () => navigation.navigate('ListSettings', {listId: ''}),
         }}
       />
     );
@@ -200,7 +198,7 @@ export const ShoppingListMain: React.FC = () => {
         <TouchableOpacity
           style={styles.actionButton}
           onPress={() => {
-           navigation.navigate('ListSettings');
+            navigation.navigate('ListSettings');
           }}>
           <Icon name="add" size={20} color={theme.colors.primary} />
           <Text style={styles.actionButtonText}>Create New List</Text>
@@ -234,7 +232,7 @@ export const ShoppingListMain: React.FC = () => {
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   checkbox: {
     width: 24,
     height: 24,
@@ -282,7 +280,7 @@ const stylesheet = createStyleSheet(theme => ({
     borderRadius: 8,
     resizeMode: 'cover',
     elevation: 2,
-    shadowColor: theme.colors.grey100,
+    shadowColor: theme.colors.primary,
     shadowOffset: {width: 0, height: 1},
     shadowOpacity: 0.2,
     shadowRadius: 1.41,

@@ -6,24 +6,25 @@ const getEndpoint = () => {
 
   switch (env) {
     case 'production':
-      return process.env.GRAPHQL_ENDPOINT || 'https://your-api.com/graphql';
+      return process.env.API_URL || 'https://your-api.com/graphql';
     case 'staging':
-      return process.env.GRAPHQL_ENDPOINT || 'https://staging-api.com/graphql';
+      return process.env.API_URL || 'https://staging-api.com/graphql';
     default:
-      return process.env.GRAPHQL_ENDPOINT || 'http://localhost:4000/graphql';
+      return process.env.API_URL || 'http://localhost:4000/graphql';
   }
 };
 
 const endpoint = getEndpoint();
 
 const config: CodegenConfig = {
-  // Remote introspection with headers for authentication if needed
+  // Remote introspection with headers for API key and optional auth
   schema: [
     {
       [endpoint]: {
         headers: {
-          // Add auth headers if your GraphQL endpoint requires them
-          // Authorization: 'Bearer ${GRAPHQL_TOKEN}',
+          // API Key is always required for schema introspection
+          'x-api-key':
+            process.env.API_KEY || 'mobile_ck_your_secure_random_key_here',
           'Content-Type': 'application/json',
         },
       },
@@ -74,7 +75,7 @@ const config: CodegenConfig = {
         apolloReactHooksImportFrom: '@apollo/client',
 
         // Document mode - important for subscriptions
-        documentMode: 'documentNode', // ADD THIS LINE
+        documentMode: 'documentNode',
 
         // Type safety improvements
         avoidOptionals: {

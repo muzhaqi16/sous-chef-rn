@@ -1,6 +1,6 @@
 import React from 'react';
 import {View} from 'react-native';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 import {UserHeader, SearchBar} from '#components';
 import {Header, HeaderAction} from '../molecules/Header';
 import {ItemList} from '../organisms/ItemList';
@@ -74,8 +74,6 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
   // Search specific
   searchPlaceholder,
 }) => {
-  const {styles} = useStyles(stylesheet);
-
   return (
     <View style={styles.container}>
       {showUserHeader && <UserHeader />}
@@ -124,7 +122,7 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,

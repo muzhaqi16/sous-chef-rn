@@ -1,6 +1,6 @@
 import React from 'react';
 import {View, Text} from 'react-native';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 import Icon from '@react-native-vector-icons/material-icons';
 
 interface ItemNotFoundProps {
@@ -8,8 +8,6 @@ interface ItemNotFoundProps {
 }
 
 export const ItemNotFound: React.FC<ItemNotFoundProps> = ({barcode}) => {
-  const {styles} = useStyles(stylesheet);
-
   return (
     <View style={styles.container}>
       <Text style={styles.notFoundIcon}>
@@ -26,7 +24,7 @@ export const ItemNotFound: React.FC<ItemNotFoundProps> = ({barcode}) => {
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     justifyContent: 'flex-start',

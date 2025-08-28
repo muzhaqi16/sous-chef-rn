@@ -1,6 +1,6 @@
 import React from 'react';
 import {View} from 'react-native';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 
 interface FormGroupProps {
   children: React.ReactNode;
@@ -11,12 +11,10 @@ export const FormGroup: React.FC<FormGroupProps> = ({
   children,
   row = false,
 }) => {
-  const {styles} = useStyles(formGroupStyles);
-
   return <View style={[styles.container, row && styles.row]}>{children}</View>;
 };
 
-const formGroupStyles = createStyleSheet(() => ({
+const styles = StyleSheet.create(() => ({
   container: {
     marginBottom: 20,
   },

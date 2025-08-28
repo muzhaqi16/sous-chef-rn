@@ -1,7 +1,7 @@
 import React, {useState, useRef} from 'react';
 import {Text, StyleSheet} from 'react-native';
 import BottomSheet, {BottomSheetRef} from '../pages/BottomSheet';
-import Button from '../atoms/Button';
+import {Button} from '../atoms/Button/Button';
 import {BaseInput as Input} from '../atoms';
 import {useCreateShoppingListMutation} from '../../graphql/generated';
 
@@ -25,7 +25,7 @@ const CreateShoppingListBottomSheet: React.FC = ({}) => {
     try {
       await createShoppingList({
         variables: {
-          data: {
+          input: {
             name: listName.trim(),
             isDefault: true, // Assuming you want to set this as default
             tags: ['onboarding'], // Example tag, you can modify or add more

@@ -1,6 +1,6 @@
 import React from 'react';
 import {ScrollView, RefreshControl} from 'react-native';
-import {useStyles, createStyleSheet} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 import {EmptyState} from '../molecules/EmptyState';
 import {ItemCard} from './ItemCard';
 import {IconName} from '#/utils/iconUtils';
@@ -41,7 +41,6 @@ export const ItemList: React.FC<ItemListProps> = ({
   onRefresh,
   emptyState,
 }) => {
-  const {styles} = useStyles(itemListStyles);
   const [refreshing, setRefreshing] = React.useState(false);
 
   const handleRefresh = async () => {
@@ -83,7 +82,7 @@ export const ItemList: React.FC<ItemListProps> = ({
   );
 };
 
-const itemListStyles = createStyleSheet(() => ({
+const styles = StyleSheet.create(() => ({
   container: {
     flex: 1,
   },
