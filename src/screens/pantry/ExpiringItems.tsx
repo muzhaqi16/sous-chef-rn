@@ -8,24 +8,27 @@ import {
 } from 'react-native';
 import Icon from '@react-native-vector-icons/material-icons';
 import {useNavigation} from '@react-navigation/native';
-import {StyleSheet} from 'react-native-unistyles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
+
 import {SwipeableItem} from '#components';
 import {usePantryItems, useDefaultHome} from '#hooks';
 import {useGetHomeQuery} from '#generated';
 import {ExpiringItemsNavProp} from '#/navigation';
+import {commonStyles} from '#styles';
 
 export const ExpiringItems: React.FC = () => {
   const navigation = useNavigation<ExpiringItemsNavProp>();
   const [refreshing, setRefreshing] = React.useState(false);
+  const {theme} = useUnistyles();
 
-  const {selectedHomeId, getDefaultPantryId} = useDefaultHome();
+  const {selectedHomeId, getDefaultPantry} = useDefaultHome();
   const {data: homeData} = useGetHomeQuery({
     variables: {homeId: selectedHomeId ?? ''},
     skip: !selectedHomeId,
   });
 
-  const pantryId = getDefaultPantryId(homeData);
-  const {items, refetch} = usePantryItems(pantryId);
+  const pantry = getDefaultPantry(homeData);
+  const {items, refetch} = usePantryItems(pantry.id);
 
   const expiringItems = useMemo(() => {
     if (!items) return [];
@@ -62,12 +65,14 @@ export const ExpiringItems: React.FC = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={commonStyles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Icon name="arrow-back" size={24} color={theme.colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.title}>Expiring Items</Text>
+        <Text style={[commonStyles.title, styles.headerTitle]}>
+          Expiring Items
+        </Text>
         <View style={styles.placeholder} />
       </View>
 
@@ -75,18 +80,29 @@ export const ExpiringItems: React.FC = () => {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={[theme.colors.primary]}
+            tintColor={theme.colors.primary}
+          />
         }>
         {expiringItems.length === 0 ? (
-          <View style={styles.emptyState}>
+          <View style={[commonStyles.center, styles.emptyState]}>
             <Icon name="check-circle" size={64} color={theme.colors.success} />
-            <Text style={styles.emptyText}>
+            <Text style={[commonStyles.body, styles.emptyText]}>
               No items expiring in the next 30 days
             </Text>
           </View>
         ) : (
           expiringItems.map(item => {
             const daysUntil = getDaysUntilExpiration(item?.expiresAt || '');
+            const statusColor =
+              daysUntil < 0
+                ? theme.colors.error
+                : daysUntil <= 7
+                  ? theme.colors.warning
+                  : theme.colors.success;
 
             return (
               <SwipeableItem
@@ -94,25 +110,14 @@ export const ExpiringItems: React.FC = () => {
                 onPress={() =>
                   navigation.navigate('PantryItemDetail', {itemId: item.id})
                 }>
-                <View style={styles.itemCard}>
+                <View style={[commonStyles.card, styles.itemCard]}>
                   <View style={styles.itemInfo}>
                     <Text style={styles.itemName}>{item.item?.name}</Text>
-                    <Text style={styles.itemDetails}>
+                    <Text style={[commonStyles.caption, styles.itemDetails]}>
                       {item.currentQuantity} {item.unit?.symbol} •{' '}
                       {item.storageState}
                     </Text>
-                    <Text
-                      style={[
-                        styles.statusText,
-                        {
-                          color:
-                            daysUntil < 0
-                              ? '#FF0000'
-                              : daysUntil <= 7
-                                ? '#FFB84D'
-                                : '#4CAF50',
-                        },
-                      ]}>
+                    <Text style={[styles.statusText, {color: statusColor}]}>
                       {daysUntil < 0
                         ? `Expired ${Math.abs(daysUntil)} days ago`
                         : daysUntil === 0
@@ -131,36 +136,15 @@ export const ExpiringItems: React.FC = () => {
 };
 
 const styles = StyleSheet.create(theme => ({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
+    ...commonStyles.rowSpaceBetween,
+    padding: theme.spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
-  title: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
-  },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  headerAction: {
-    marginLeft: 16,
-    position: 'relative',
+    flex: 1,
+    textAlign: 'center',
   },
   placeholder: {
     width: 24,
@@ -169,44 +153,33 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
+    padding: theme.spacing.md,
   },
   emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 32,
+    padding: theme.spacing['2xl'],
   },
   emptyText: {
-    fontSize: 16,
-    color: theme.colors.textSecondary,
-    marginTop: 16,
-    marginBottom: 24,
+    marginTop: theme.spacing.md,
+    marginBottom: theme.spacing.lg,
     textAlign: 'center',
   },
   itemCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: 'white',
-    marginBottom: 8,
-    borderRadius: 8,
+    marginBottom: theme.spacing.sm,
   },
   itemInfo: {
     flex: 1,
   },
   itemName: {
-    fontSize: 16,
-    fontWeight: '500',
+    fontSize: theme.fonts.size.base,
+    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
   },
   itemDetails: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-    marginTop: 4,
+    marginTop: theme.spacing.xs,
   },
   statusText: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: theme.fonts.size.xs,
+    fontWeight: theme.fonts.weight.semibold,
+    marginTop: theme.spacing.xs,
   },
 }));

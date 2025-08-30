@@ -1066,6 +1066,11 @@ type FailedIPStat {
   ipAddress: String
 }
 
+type ForgotPasswordResponse {
+  message: String!
+  success: Boolean!
+}
+
 enum HealthBenefitCategory {
   DIETARY
   FITNESS
@@ -1969,7 +1974,10 @@ type Mutation {
     loginIds: [ID!]!
     reason: String!
   ): [LoginHistory!]!
-  forgotPassword(email: String!): Boolean!
+  """
+  Request a password reset email
+  """
+  forgotPassword(email: String!): ForgotPasswordResponse!
   generateShoppingListShareCode(id: ID!): ShoppingList!
   hardDeleteDevice(id: ID!): Boolean!
   importItemsFromCSV(
@@ -2033,7 +2041,10 @@ type Mutation {
   removePushToken(id: ID!): Device!
   removeRestrictions(input: RemoveRestrictionsInput!): UserModeration!
   resendVerificationEmail(email: String!): Boolean!
-  resetPassword(input: ResetPasswordInput!): Boolean!
+  """
+  Reset password using token from email
+  """
+  resetPassword(newPassword: String!, token: String!): ResetPasswordResponse!
   restoreItem(id: ID!): Item!
   reviewAppeal(input: ReviewAppealInput!): UserModeration!
   revokeHomeInvite(id: ID!): Boolean!
@@ -2125,6 +2136,10 @@ type Mutation {
   updateUser(id: ID!, input: UpdateUserInput!): User!
   updateUserAddress(input: UpdateUserAddressInput!): UserAddress!
   validateItem(deep: Boolean, id: ID!): ValidationResult!
+  """
+  Validate if a password reset token is still valid
+  """
+  validatePasswordResetToken(token: String!): ValidateTokenResponse!
   verifyDevice(id: ID!): Device!
   verifyEmail(code: String!): Boolean!
   verifyItemUnit(id: ID!): ItemUnit!
@@ -2844,6 +2859,11 @@ input RemoveRestrictionsInput {
 input ResetPasswordInput {
   password: String!
   token: String!
+}
+
+type ResetPasswordResponse {
+  message: String!
+  success: Boolean!
 }
 
 input ReviewAppealInput {
@@ -3974,6 +3994,11 @@ type UserUpdatedPayload {
   timestamp: DateTime!
   updatedFields: [String!]
   userId: String!
+}
+
+type ValidateTokenResponse {
+  email: String
+  valid: Boolean!
 }
 
 type ValidationError {

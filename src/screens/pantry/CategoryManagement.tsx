@@ -1,29 +1,31 @@
-import React, {useMemo, useState} from 'react';
+import React, {useMemo} from 'react';
 import {View, Text, ScrollView, TouchableOpacity} from 'react-native';
 import Icon from '@react-native-vector-icons/material-icons';
 import {useNavigation} from '@react-navigation/native';
-import {StyleSheet} from 'react-native-unistyles';
 import {usePantryItems, useDefaultHome} from '#hooks';
 import {useGetHomeQuery} from '#generated';
+import {commonStyles} from '#styles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 
 export const CategoryManagement: React.FC = () => {
   const navigation = useNavigation();
+  const {theme} = useUnistyles();
 
-  const {selectedHomeId, getDefaultPantryId} = useDefaultHome();
+  const {selectedHomeId, getDefaultPantry} = useDefaultHome();
   const {data: homeData} = useGetHomeQuery({
     variables: {homeId: selectedHomeId ?? ''},
     skip: !selectedHomeId,
   });
 
-  const pantryId = getDefaultPantryId(homeData);
-  const {items} = usePantryItems(pantryId);
+  const pantry = getDefaultPantry(homeData);
+  const {items} = usePantryItems(pantry.id);
 
   const categorizedItems = useMemo(() => {
     if (!items) return {};
 
     const grouped: Record<string, any[]> = {};
     items.forEach(item => {
-      const category = item.category || 'Uncategorized';
+      const category = item.customCategory || 'Uncategorized';
       if (!grouped[category]) {
         grouped[category] = [];
       }
@@ -36,12 +38,12 @@ export const CategoryManagement: React.FC = () => {
   const categories = Object.keys(categorizedItems).sort();
 
   return (
-    <View style={styles.container}>
+    <View style={commonStyles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Icon name="arrow-back" size={24} color={theme.colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.title}>Categories</Text>
+        <Text style={[commonStyles.title, styles.headerTitle]}>Categories</Text>
         <View style={styles.placeholder} />
       </View>
 
@@ -51,11 +53,11 @@ export const CategoryManagement: React.FC = () => {
         {categories.map(category => (
           <TouchableOpacity
             key={category}
-            style={[styles.itemCard, {marginBottom: 12}]}
+            style={[commonStyles.card, styles.categoryCard]}
             onPress={() => {}}>
-            <View style={styles.itemInfo}>
-              <Text style={styles.itemName}>{category}</Text>
-              <Text style={styles.itemDetails}>
+            <View style={styles.categoryInfo}>
+              <Text style={styles.categoryName}>{category}</Text>
+              <Text style={[commonStyles.caption, styles.categoryDetails]}>
                 {categorizedItems[category].length} items
               </Text>
             </View>
@@ -72,22 +74,17 @@ export const CategoryManagement: React.FC = () => {
 };
 
 const styles = StyleSheet.create(theme => ({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
+    padding: theme.spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
-  title: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
+  headerTitle: {
+    flex: 1,
+    textAlign: 'center',
   },
   placeholder: {
     width: 24,
@@ -96,40 +93,22 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
+    padding: theme.spacing.md,
   },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 32,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: theme.colors.textSecondary,
-    marginTop: 16,
-    marginBottom: 24,
-    textAlign: 'center',
-  },
-  itemCard: {
+  categoryCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: 'white',
-    marginBottom: 8,
-    borderRadius: 8,
+    marginBottom: theme.spacing.sm,
   },
-  itemInfo: {
+  categoryInfo: {
     flex: 1,
   },
-  itemName: {
-    fontSize: 16,
-    fontWeight: '500',
+  categoryName: {
+    fontSize: theme.fonts.size.base,
+    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
   },
-  itemDetails: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-    marginTop: 4,
+  categoryDetails: {
+    marginTop: theme.spacing.xs,
   },
 }));

@@ -34,6 +34,7 @@ export default function (api) {
             '#components': './src/components',
             '#types': './src/types',
             '#config': './src/config',
+            '#styles': './src/styles',
           },
         },
       ],

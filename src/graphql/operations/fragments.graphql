@@ -368,12 +368,18 @@ fragment PantryItemFragment on PantryItem {
   expiresAt
   storageLocation
   storageState
+  storageNotes
   initialQuantity
   currentQuantity
   consumedQuantity
   reservedQuantity
+  autoReorderPoint
+  isAutoReorder
+  customCategory
   createdAt
   updatedAt
+  tags
+
   usageRecords {
     id
     pantryItemId

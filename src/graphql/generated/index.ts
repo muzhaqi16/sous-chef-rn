@@ -822,6 +822,12 @@ export type FailedIpStat = {
   ipAddress?: Maybe<Scalars['String']['output']>;
 };
 
+export type ForgotPasswordResponse = {
+  __typename?: 'ForgotPasswordResponse';
+  message: Scalars['String']['output'];
+  success: Scalars['Boolean']['output'];
+};
+
 export enum HealthBenefitCategory {
   Dietary = 'DIETARY',
   Fitness = 'FITNESS',
@@ -1736,7 +1742,8 @@ export type Mutation = {
   exportItems: ExportResponse;
   flagLoginAsRisky: LoginHistory;
   flagMultipleLoginsAsRisky: Array<LoginHistory>;
-  forgotPassword: Scalars['Boolean']['output'];
+  /** Request a password reset email */
+  forgotPassword: ForgotPasswordResponse;
   generateShoppingListShareCode: ShoppingList;
   hardDeleteDevice: Scalars['Boolean']['output'];
   importItemsFromCSV: ImportItemsResponse;
@@ -1775,7 +1782,8 @@ export type Mutation = {
   removePushToken: Device;
   removeRestrictions: UserModeration;
   resendVerificationEmail: Scalars['Boolean']['output'];
-  resetPassword: Scalars['Boolean']['output'];
+  /** Reset password using token from email */
+  resetPassword: ResetPasswordResponse;
   restoreItem: Item;
   reviewAppeal: UserModeration;
   revokeHomeInvite: Scalars['Boolean']['output'];
@@ -1840,6 +1848,8 @@ export type Mutation = {
   updateUser: User;
   updateUserAddress: UserAddress;
   validateItem: ValidationResult;
+  /** Validate if a password reset token is still valid */
+  validatePasswordResetToken: ValidateTokenResponse;
   verifyDevice: Device;
   verifyEmail: Scalars['Boolean']['output'];
   verifyItemUnit: ItemUnit;
@@ -2280,7 +2290,8 @@ export type MutationResendVerificationEmailArgs = {
 };
 
 export type MutationResetPasswordArgs = {
-  input: ResetPasswordInput;
+  newPassword: Scalars['String']['input'];
+  token: Scalars['String']['input'];
 };
 
 export type MutationRestoreItemArgs = {
@@ -2592,6 +2603,10 @@ export type MutationUpdateUserAddressArgs = {
 export type MutationValidateItemArgs = {
   deep?: InputMaybe<Scalars['Boolean']['input']>;
   id: Scalars['ID']['input'];
+};
+
+export type MutationValidatePasswordResetTokenArgs = {
+  token: Scalars['String']['input'];
 };
 
 export type MutationVerifyDeviceArgs = {
@@ -3754,6 +3769,12 @@ export type RemoveRestrictionsInput = {
 export type ResetPasswordInput = {
   password: Scalars['String']['input'];
   token: Scalars['String']['input'];
+};
+
+export type ResetPasswordResponse = {
+  __typename?: 'ResetPasswordResponse';
+  message: Scalars['String']['output'];
+  success: Scalars['Boolean']['output'];
 };
 
 export type ReviewAppealInput = {
@@ -5080,6 +5101,12 @@ export type UserUpdatedPayload = {
   userId: Scalars['String']['output'];
 };
 
+export type ValidateTokenResponse = {
+  __typename?: 'ValidateTokenResponse';
+  email?: Maybe<Scalars['String']['output']>;
+  valid: Scalars['Boolean']['output'];
+};
+
 export type ValidationError = {
   __typename?: 'ValidationError';
   code: Scalars['String']['output'];
@@ -5188,16 +5215,25 @@ export type ForgotPasswordMutationVariables = Exact<{
 
 export type ForgotPasswordMutation = {
   __typename?: 'Mutation';
-  forgotPassword: boolean;
+  forgotPassword: {
+    __typename?: 'ForgotPasswordResponse';
+    success: boolean;
+    message: string;
+  };
 };
 
 export type ResetPasswordMutationVariables = Exact<{
-  input: ResetPasswordInput;
+  token: Scalars['String']['input'];
+  newPassword: Scalars['String']['input'];
 }>;
 
 export type ResetPasswordMutation = {
   __typename?: 'Mutation';
-  resetPassword: boolean;
+  resetPassword: {
+    __typename?: 'ResetPasswordResponse';
+    success: boolean;
+    message: string;
+  };
 };
 
 export type ResendVerificationEmailMutationVariables = Exact<{
@@ -6182,12 +6218,17 @@ export type PantryItemFragment = {
   expiresAt?: string | null | undefined;
   storageLocation?: string | null | undefined;
   storageState: StorageState;
+  storageNotes?: string | null | undefined;
   initialQuantity: number;
   currentQuantity: number;
   consumedQuantity: number;
   reservedQuantity: number;
+  autoReorderPoint?: number | null | undefined;
+  isAutoReorder: boolean;
+  customCategory?: string | null | undefined;
   createdAt: string;
   updatedAt: string;
+  tags: Array<string>;
   item: {__typename?: 'Item'} & ItemFragment;
   unit: {
     __typename?: 'Unit';
@@ -9252,12 +9293,17 @@ export const PantryItemFragmentDoc = {
           {kind: 'Field', name: {kind: 'Name', value: 'expiresAt'}},
           {kind: 'Field', name: {kind: 'Name', value: 'storageLocation'}},
           {kind: 'Field', name: {kind: 'Name', value: 'storageState'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'storageNotes'}},
           {kind: 'Field', name: {kind: 'Name', value: 'initialQuantity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'currentQuantity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'consumedQuantity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'reservedQuantity'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'autoReorderPoint'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'isAutoReorder'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'customCategory'}},
           {kind: 'Field', name: {kind: 'Name', value: 'createdAt'}},
           {kind: 'Field', name: {kind: 'Name', value: 'updatedAt'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'tags'}},
           {
             kind: 'Field',
             name: {kind: 'Name', value: 'usageRecords'},
@@ -9841,12 +9887,17 @@ export const PantryFragmentDoc = {
           {kind: 'Field', name: {kind: 'Name', value: 'expiresAt'}},
           {kind: 'Field', name: {kind: 'Name', value: 'storageLocation'}},
           {kind: 'Field', name: {kind: 'Name', value: 'storageState'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'storageNotes'}},
           {kind: 'Field', name: {kind: 'Name', value: 'initialQuantity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'currentQuantity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'consumedQuantity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'reservedQuantity'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'autoReorderPoint'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'isAutoReorder'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'customCategory'}},
           {kind: 'Field', name: {kind: 'Name', value: 'createdAt'}},
           {kind: 'Field', name: {kind: 'Name', value: 'updatedAt'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'tags'}},
           {
             kind: 'Field',
             name: {kind: 'Name', value: 'usageRecords'},
@@ -10351,12 +10402,17 @@ export const HomeFragmentDoc = {
           {kind: 'Field', name: {kind: 'Name', value: 'expiresAt'}},
           {kind: 'Field', name: {kind: 'Name', value: 'storageLocation'}},
           {kind: 'Field', name: {kind: 'Name', value: 'storageState'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'storageNotes'}},
           {kind: 'Field', name: {kind: 'Name', value: 'initialQuantity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'currentQuantity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'consumedQuantity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'reservedQuantity'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'autoReorderPoint'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'isAutoReorder'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'customCategory'}},
           {kind: 'Field', name: {kind: 'Name', value: 'createdAt'}},
           {kind: 'Field', name: {kind: 'Name', value: 'updatedAt'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'tags'}},
           {
             kind: 'Field',
             name: {kind: 'Name', value: 'usageRecords'},
@@ -11332,6 +11388,13 @@ export const ForgotPasswordDocument = {
                 value: {kind: 'Variable', name: {kind: 'Name', value: 'email'}},
               },
             ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {kind: 'Field', name: {kind: 'Name', value: 'success'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'message'}},
+              ],
+            },
           },
         ],
       },
@@ -11392,13 +11455,21 @@ export const ResetPasswordDocument = {
       variableDefinitions: [
         {
           kind: 'VariableDefinition',
-          variable: {kind: 'Variable', name: {kind: 'Name', value: 'input'}},
+          variable: {kind: 'Variable', name: {kind: 'Name', value: 'token'}},
           type: {
             kind: 'NonNullType',
-            type: {
-              kind: 'NamedType',
-              name: {kind: 'Name', value: 'ResetPasswordInput'},
-            },
+            type: {kind: 'NamedType', name: {kind: 'Name', value: 'String'}},
+          },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: {kind: 'Name', value: 'newPassword'},
+          },
+          type: {
+            kind: 'NonNullType',
+            type: {kind: 'NamedType', name: {kind: 'Name', value: 'String'}},
           },
         },
       ],
@@ -11411,10 +11482,25 @@ export const ResetPasswordDocument = {
             arguments: [
               {
                 kind: 'Argument',
-                name: {kind: 'Name', value: 'input'},
-                value: {kind: 'Variable', name: {kind: 'Name', value: 'input'}},
+                name: {kind: 'Name', value: 'token'},
+                value: {kind: 'Variable', name: {kind: 'Name', value: 'token'}},
+              },
+              {
+                kind: 'Argument',
+                name: {kind: 'Name', value: 'newPassword'},
+                value: {
+                  kind: 'Variable',
+                  name: {kind: 'Name', value: 'newPassword'},
+                },
               },
             ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {kind: 'Field', name: {kind: 'Name', value: 'success'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'message'}},
+              ],
+            },
           },
         ],
       },
@@ -11439,7 +11525,8 @@ export type ResetPasswordMutationFn = ApolloReactCommon.MutationFunction<
  * @example
  * const [resetPasswordMutation, { data, loading, error }] = useResetPasswordMutation({
  *   variables: {
- *      input: // value for 'input'
+ *      token: // value for 'token'
+ *      newPassword: // value for 'newPassword'
  *   },
  * });
  */
@@ -14412,12 +14499,17 @@ export const GetHomeDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'expiresAt'}},
           {kind: 'Field', name: {kind: 'Name', value: 'storageLocation'}},
           {kind: 'Field', name: {kind: 'Name', value: 'storageState'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'storageNotes'}},
           {kind: 'Field', name: {kind: 'Name', value: 'initialQuantity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'currentQuantity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'consumedQuantity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'reservedQuantity'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'autoReorderPoint'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'isAutoReorder'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'customCategory'}},
           {kind: 'Field', name: {kind: 'Name', value: 'createdAt'}},
           {kind: 'Field', name: {kind: 'Name', value: 'updatedAt'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'tags'}},
           {
             kind: 'Field',
             name: {kind: 'Name', value: 'usageRecords'},
@@ -15584,12 +15676,17 @@ export const CreateHomeDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'expiresAt'}},
           {kind: 'Field', name: {kind: 'Name', value: 'storageLocation'}},
           {kind: 'Field', name: {kind: 'Name', value: 'storageState'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'storageNotes'}},
           {kind: 'Field', name: {kind: 'Name', value: 'initialQuantity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'currentQuantity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'consumedQuantity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'reservedQuantity'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'autoReorderPoint'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'isAutoReorder'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'customCategory'}},
           {kind: 'Field', name: {kind: 'Name', value: 'createdAt'}},
           {kind: 'Field', name: {kind: 'Name', value: 'updatedAt'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'tags'}},
           {
             kind: 'Field',
             name: {kind: 'Name', value: 'usageRecords'},
@@ -16339,12 +16436,17 @@ export const UpdateHomeDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'expiresAt'}},
           {kind: 'Field', name: {kind: 'Name', value: 'storageLocation'}},
           {kind: 'Field', name: {kind: 'Name', value: 'storageState'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'storageNotes'}},
           {kind: 'Field', name: {kind: 'Name', value: 'initialQuantity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'currentQuantity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'consumedQuantity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'reservedQuantity'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'autoReorderPoint'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'isAutoReorder'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'customCategory'}},
           {kind: 'Field', name: {kind: 'Name', value: 'createdAt'}},
           {kind: 'Field', name: {kind: 'Name', value: 'updatedAt'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'tags'}},
           {
             kind: 'Field',
             name: {kind: 'Name', value: 'usageRecords'},
@@ -17079,12 +17181,17 @@ export const DeleteHomeDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'expiresAt'}},
           {kind: 'Field', name: {kind: 'Name', value: 'storageLocation'}},
           {kind: 'Field', name: {kind: 'Name', value: 'storageState'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'storageNotes'}},
           {kind: 'Field', name: {kind: 'Name', value: 'initialQuantity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'currentQuantity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'consumedQuantity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'reservedQuantity'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'autoReorderPoint'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'isAutoReorder'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'customCategory'}},
           {kind: 'Field', name: {kind: 'Name', value: 'createdAt'}},
           {kind: 'Field', name: {kind: 'Name', value: 'updatedAt'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'tags'}},
           {
             kind: 'Field',
             name: {kind: 'Name', value: 'usageRecords'},
@@ -18876,12 +18983,17 @@ export const GetDefaultHomeDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'expiresAt'}},
           {kind: 'Field', name: {kind: 'Name', value: 'storageLocation'}},
           {kind: 'Field', name: {kind: 'Name', value: 'storageState'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'storageNotes'}},
           {kind: 'Field', name: {kind: 'Name', value: 'initialQuantity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'currentQuantity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'consumedQuantity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'reservedQuantity'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'autoReorderPoint'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'isAutoReorder'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'customCategory'}},
           {kind: 'Field', name: {kind: 'Name', value: 'createdAt'}},
           {kind: 'Field', name: {kind: 'Name', value: 'updatedAt'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'tags'}},
           {
             kind: 'Field',
             name: {kind: 'Name', value: 'usageRecords'},
@@ -22123,12 +22235,17 @@ export const GetPantryItemsDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'expiresAt'}},
           {kind: 'Field', name: {kind: 'Name', value: 'storageLocation'}},
           {kind: 'Field', name: {kind: 'Name', value: 'storageState'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'storageNotes'}},
           {kind: 'Field', name: {kind: 'Name', value: 'initialQuantity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'currentQuantity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'consumedQuantity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'reservedQuantity'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'autoReorderPoint'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'isAutoReorder'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'customCategory'}},
           {kind: 'Field', name: {kind: 'Name', value: 'createdAt'}},
           {kind: 'Field', name: {kind: 'Name', value: 'updatedAt'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'tags'}},
           {
             kind: 'Field',
             name: {kind: 'Name', value: 'usageRecords'},
@@ -22568,12 +22685,17 @@ export const GetPantryItemDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'expiresAt'}},
           {kind: 'Field', name: {kind: 'Name', value: 'storageLocation'}},
           {kind: 'Field', name: {kind: 'Name', value: 'storageState'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'storageNotes'}},
           {kind: 'Field', name: {kind: 'Name', value: 'initialQuantity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'currentQuantity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'consumedQuantity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'reservedQuantity'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'autoReorderPoint'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'isAutoReorder'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'customCategory'}},
           {kind: 'Field', name: {kind: 'Name', value: 'createdAt'}},
           {kind: 'Field', name: {kind: 'Name', value: 'updatedAt'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'tags'}},
           {
             kind: 'Field',
             name: {kind: 'Name', value: 'usageRecords'},
@@ -23115,12 +23237,17 @@ export const AddItemToPantryDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'expiresAt'}},
           {kind: 'Field', name: {kind: 'Name', value: 'storageLocation'}},
           {kind: 'Field', name: {kind: 'Name', value: 'storageState'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'storageNotes'}},
           {kind: 'Field', name: {kind: 'Name', value: 'initialQuantity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'currentQuantity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'consumedQuantity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'reservedQuantity'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'autoReorderPoint'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'isAutoReorder'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'customCategory'}},
           {kind: 'Field', name: {kind: 'Name', value: 'createdAt'}},
           {kind: 'Field', name: {kind: 'Name', value: 'updatedAt'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'tags'}},
           {
             kind: 'Field',
             name: {kind: 'Name', value: 'usageRecords'},
@@ -23540,12 +23667,17 @@ export const UpdatePantryItemDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'expiresAt'}},
           {kind: 'Field', name: {kind: 'Name', value: 'storageLocation'}},
           {kind: 'Field', name: {kind: 'Name', value: 'storageState'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'storageNotes'}},
           {kind: 'Field', name: {kind: 'Name', value: 'initialQuantity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'currentQuantity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'consumedQuantity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'reservedQuantity'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'autoReorderPoint'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'isAutoReorder'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'customCategory'}},
           {kind: 'Field', name: {kind: 'Name', value: 'createdAt'}},
           {kind: 'Field', name: {kind: 'Name', value: 'updatedAt'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'tags'}},
           {
             kind: 'Field',
             name: {kind: 'Name', value: 'usageRecords'},
@@ -23950,12 +24082,17 @@ export const RemoveItemFromPantryDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'expiresAt'}},
           {kind: 'Field', name: {kind: 'Name', value: 'storageLocation'}},
           {kind: 'Field', name: {kind: 'Name', value: 'storageState'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'storageNotes'}},
           {kind: 'Field', name: {kind: 'Name', value: 'initialQuantity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'currentQuantity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'consumedQuantity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'reservedQuantity'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'autoReorderPoint'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'isAutoReorder'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'customCategory'}},
           {kind: 'Field', name: {kind: 'Name', value: 'createdAt'}},
           {kind: 'Field', name: {kind: 'Name', value: 'updatedAt'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'tags'}},
           {
             kind: 'Field',
             name: {kind: 'Name', value: 'usageRecords'},

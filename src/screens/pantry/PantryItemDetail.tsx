@@ -1,7 +1,6 @@
 import React from 'react';
 import {View, Text, Alert} from 'react-native';
 import {useNavigation, useRoute} from '@react-navigation/native';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {
   useGetPantryItemQuery,
   useRemoveItemFromPantryMutation,
@@ -10,11 +9,13 @@ import {
 import {DetailTemplate} from '#components/templates/DetailTemplate';
 import {useStore} from '#/store';
 import {PantryItemDetailNavProp} from '#/navigation';
+import {commonStyles} from '#styles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 
 export const PantryItemDetail: React.FC = () => {
-  const {theme} = useUnistyles();
   const navigation = useNavigation<PantryItemDetailNavProp>();
   const route = useRoute();
+  const {theme} = useUnistyles();
   const {itemId} = route.params as {itemId: string};
   const {selectedShoppingListId} = useStore();
 
@@ -53,7 +54,7 @@ export const PantryItemDetail: React.FC = () => {
         variables: {
           input: {
             shoppingListId: selectedShoppingListId || '',
-            itemId: itemId,
+            itemId: data?.pantryItem?.item?.id || '',
             quantity: data?.pantryItem?.currentQuantity || 1,
             unitId: data?.pantryItem?.unit?.id || '',
             itemName: data?.pantryItem?.item?.name || '',
@@ -72,9 +73,11 @@ export const PantryItemDetail: React.FC = () => {
     {
       content: (
         <View>
-          <Text style={styles.itemName}>{item?.item?.name}</Text>
-          {item?.item?.brands && (
-            <Text style={styles.brandName}>
+          <Text style={[commonStyles.title, styles.itemName]}>
+            {item?.item?.name}
+          </Text>
+          {item?.item?.brands && item.item.brands.length > 0 && (
+            <Text style={[commonStyles.subtitle, styles.brandName]}>
               {item.item.brands
                 .filter(brand => brand.isPrimary)
                 .map(brand => brand.brand.name)
@@ -89,30 +92,40 @@ export const PantryItemDetail: React.FC = () => {
       content: (
         <View>
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Quantity</Text>
+            <Text style={[commonStyles.caption, styles.detailLabel]}>
+              Quantity
+            </Text>
             <Text style={styles.detailValue}>
               {item?.currentQuantity} {item?.unit?.symbol}
             </Text>
           </View>
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Minimum Stock</Text>
+            <Text style={[commonStyles.caption, styles.detailLabel]}>
+              Minimum Stock
+            </Text>
             <Text style={styles.detailValue}>
               {item?.reservedQuantity} {item?.unit?.symbol}
             </Text>
           </View>
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Storage</Text>
+            <Text style={[commonStyles.caption, styles.detailLabel]}>
+              Storage
+            </Text>
             <Text style={styles.detailValue}>{item?.storageState}</Text>
           </View>
           {item?.storageLocation && (
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Location</Text>
+              <Text style={[commonStyles.caption, styles.detailLabel]}>
+                Location
+              </Text>
               <Text style={styles.detailValue}>{item.storageLocation}</Text>
             </View>
           )}
           {item?.expiresAt && (
             <View style={styles.detailRow}>
-              <Text style={styles.detailLabel}>Expires</Text>
+              <Text style={[commonStyles.caption, styles.detailLabel]}>
+                Expires
+              </Text>
               <Text style={styles.detailValue}>
                 {new Date(item.expiresAt).toLocaleDateString()}
               </Text>
@@ -122,6 +135,17 @@ export const PantryItemDetail: React.FC = () => {
       ),
     },
   ];
+
+  if (item?.storageNotes) {
+    sections.push({
+      title: 'Notes',
+      content: (
+        <Text style={[commonStyles.body, styles.notes]}>
+          {item.storageNotes}
+        </Text>
+      ),
+    });
+  }
 
   return (
     <DetailTemplate
@@ -150,34 +174,28 @@ export const PantryItemDetail: React.FC = () => {
 
 const styles = StyleSheet.create(theme => ({
   itemName: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
+    fontSize: theme.fonts.size['2xl'],
   },
   brandName: {
-    fontSize: 16,
-    color: theme.colors.textSecondary,
-    marginTop: 4,
+    marginTop: theme.spacing.xs,
   },
   detailRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 8,
+    paddingVertical: theme.spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
   detailLabel: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
+    flex: 1,
   },
   detailValue: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: theme.fonts.size.sm,
+    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
   },
   notes: {
-    fontSize: 16,
-    color: theme.colors.textPrimary,
-    lineHeight: 24,
+    lineHeight: theme.fonts.size.base * theme.typography.lineHeight.relaxed,
   },
 }));

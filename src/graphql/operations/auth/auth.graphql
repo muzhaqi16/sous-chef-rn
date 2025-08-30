@@ -50,11 +50,17 @@ mutation VerifyEmail($code: String!) {
 }
 
 mutation ForgotPassword($email: String!) {
-  forgotPassword(email: $email)
+  forgotPassword(email: $email) {
+    success
+    message
+  }
 }
 
-mutation ResetPassword($input: ResetPasswordInput!) {
-  resetPassword(input: $input)
+mutation ResetPassword($token: String!, $newPassword: String!) {
+  resetPassword(token: $token, newPassword: $newPassword) {
+    success
+    message
+  }
 }
 
 mutation ResendVerificationEmail($email: String!) {

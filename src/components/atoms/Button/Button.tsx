@@ -1,12 +1,11 @@
 import React from 'react';
 import {TouchableOpacity, Text, ActivityIndicator} from 'react-native';
 import {UnistylesVariants, withUnistyles} from 'react-native-unistyles';
+import {commonStyles} from '#/styles/commonStyles';
 import buttonStyles from './Button.styles';
 
-// Use withUnistyles for ActivityIndicator to properly map theme colors
 const UniActivityIndicator = withUnistyles(ActivityIndicator);
 
-// Use UnistylesVariants to infer types from your stylesheet
 export type ButtonProps = UnistylesVariants<typeof buttonStyles> & {
   title: string;
   onPress: () => void;
@@ -32,7 +31,7 @@ export const Button: React.FC<ButtonProps> = ({
   ...rest
 }) => {
   buttonStyles.useVariants({
-    variant,
+    variant: variant === 'ghost' ? 'ghost' : undefined,
     size,
     disabled,
     fullWidth,
@@ -40,7 +39,14 @@ export const Button: React.FC<ButtonProps> = ({
 
   return (
     <TouchableOpacity
-      style={[buttonStyles.button, btnStyle]}
+      style={[
+        commonStyles.button,
+        variant === 'primary' && commonStyles.buttonPrimary,
+        variant === 'secondary' && commonStyles.buttonSecondary,
+        buttonStyles.button,
+        disabled && commonStyles.buttonDisabled,
+        btnStyle,
+      ]}
       onPress={onPress}
       disabled={disabled || loading}
       {...rest}>
@@ -48,11 +54,21 @@ export const Button: React.FC<ButtonProps> = ({
         <UniActivityIndicator
           size="small"
           uniProps={theme => ({
-            color: theme.colors.primary,
+            color:
+              variant === 'primary' ? theme.colors.white : theme.colors.primary,
           })}
         />
       ) : (
-        <Text style={[buttonStyles.text, txtStyle]}>{title}</Text>
+        <Text
+          style={[
+            commonStyles.buttonText,
+            variant === 'primary' && commonStyles.buttonTextPrimary,
+            variant === 'secondary' && commonStyles.buttonTextSecondary,
+            buttonStyles.text,
+            txtStyle,
+          ]}>
+          {title}
+        </Text>
       )}
     </TouchableOpacity>
   );

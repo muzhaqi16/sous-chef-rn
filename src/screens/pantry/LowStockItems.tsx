@@ -8,15 +8,18 @@ import {
   Alert,
 } from 'react-native';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
+
 import Icon from '@react-native-vector-icons/material-icons';
 import {useNavigation} from '@react-navigation/native';
 import {SwipeableItem} from '#components';
 import {usePantryItems, useDefaultHome} from '#hooks';
 import {useGetHomeQuery, useAddItemToShoppingListMutation} from '#generated';
 import {LowStockItemsNavProp} from '#navigation/types';
+import {commonStyles} from '#styles';
 
 export const LowStockItems: React.FC = () => {
   const {theme} = useUnistyles();
+
   const navigation = useNavigation<LowStockItemsNavProp>();
   const [refreshing, setRefreshing] = React.useState(false);
 
@@ -57,12 +60,14 @@ export const LowStockItems: React.FC = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={commonStyles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Icon name="arrow-back" size={24} color={theme.colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.title}>Low Stock Items</Text>
+        <Text style={[commonStyles.title, styles.headerTitle]}>
+          Low Stock Items
+        </Text>
         <View style={styles.placeholder} />
       </View>
 
@@ -70,12 +75,17 @@ export const LowStockItems: React.FC = () => {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={[theme.colors.primary]}
+            tintColor={theme.colors.primary}
+          />
         }>
         {lowStockItems.length === 0 ? (
-          <View style={styles.emptyState}>
+          <View style={[commonStyles.center, styles.emptyState]}>
             <Icon name="inventory" size={64} color={theme.colors.success} />
-            <Text style={styles.emptyText}>
+            <Text style={[commonStyles.body, styles.emptyText]}>
               All items are above minimum stock levels
             </Text>
           </View>
@@ -86,15 +96,17 @@ export const LowStockItems: React.FC = () => {
               onPress={() =>
                 navigation.navigate('PantryItemDetail', {itemId: item.id})
               }>
-              <View style={styles.itemCard}>
+              <View style={[commonStyles.card, styles.itemCard]}>
                 <View style={styles.itemInfo}>
                   <Text style={styles.itemName}>{item.item?.name}</Text>
-                  <Text style={styles.itemDetails}>
+                  <Text style={[commonStyles.caption, styles.itemDetails]}>
                     {item.currentQuantity} / {item.reservedQuantity}{' '}
                     {item.unit?.symbol}
                   </Text>
                 </View>
-                <TouchableOpacity onPress={() => handleAddToList(item.id)}>
+                <TouchableOpacity
+                  onPress={() => handleAddToList(item.id)}
+                  style={styles.actionButton}>
                   <Icon
                     name="add-shopping-cart"
                     size={20}
@@ -109,24 +121,15 @@ export const LowStockItems: React.FC = () => {
     </View>
   );
 };
-const styles = StyleSheet.create(theme => ({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
 
+const styles = StyleSheet.create(theme => ({
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
+    ...commonStyles.rowSpaceBetween,
+    padding: theme.spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
-  title: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
+  headerTitle: {
     flex: 1,
     textAlign: 'center',
   },
@@ -137,40 +140,32 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
+    padding: theme.spacing.md,
   },
   emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 32,
+    padding: theme.spacing['2xl'],
   },
   emptyText: {
-    fontSize: 16,
-    color: theme.colors.textSecondary,
-    marginTop: 16,
-    marginBottom: 24,
+    marginTop: theme.spacing.md,
+    marginBottom: theme.spacing.lg,
     textAlign: 'center',
   },
   itemCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: 'white',
-    marginBottom: 8,
-    borderRadius: 8,
+    ...commonStyles.rowSpaceBetween,
+    marginBottom: theme.spacing.sm,
   },
   itemInfo: {
     flex: 1,
   },
   itemName: {
-    fontSize: 16,
-    fontWeight: '500',
+    fontSize: theme.fonts.size.base,
+    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
   },
   itemDetails: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-    marginTop: 4,
+    marginTop: theme.spacing.xs,
+  },
+  actionButton: {
+    padding: theme.spacing.xs,
   },
 }));

@@ -1,4 +1,4 @@
-export {AddPantryItem} from './AddPantryItem';
+export {AddPantryItem} from './addPantryItems';
 export {ExpiringItems} from './ExpiringItems';
 export {PantryMain} from './PantryMain';
 export {PantryItemDetail} from './PantryItemDetail';

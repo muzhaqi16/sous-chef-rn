@@ -7,9 +7,8 @@ import {LeftActions} from './LeftActions';
 import {SwipeableContent} from './SwipeableContent';
 import {useSwipeableAnimation} from './hooks/useSwipeableAnimation';
 import {useSwipeableActions} from './hooks/useSwipeableActions';
-import {stylesheet} from './styles';
+import {styles} from './styles';
 import {SwipeableItemProps} from './types';
-import {useUnistyles} from 'react-native-unistyles';
 
 export const SwipeableItem: React.FC<SwipeableItemProps> = ({
   children,

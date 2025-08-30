@@ -816,6 +816,12 @@ export type FailedIpStat = {
   ipAddress?: Maybe<Scalars['String']['output']>;
 };
 
+export type ForgotPasswordResponse = {
+  __typename?: 'ForgotPasswordResponse';
+  message: Scalars['String']['output'];
+  success: Scalars['Boolean']['output'];
+};
+
 export enum HealthBenefitCategory {
   Dietary = 'DIETARY',
   Fitness = 'FITNESS',
@@ -1730,7 +1736,8 @@ export type Mutation = {
   exportItems: ExportResponse;
   flagLoginAsRisky: LoginHistory;
   flagMultipleLoginsAsRisky: Array<LoginHistory>;
-  forgotPassword: Scalars['Boolean']['output'];
+  /** Request a password reset email */
+  forgotPassword: ForgotPasswordResponse;
   generateShoppingListShareCode: ShoppingList;
   hardDeleteDevice: Scalars['Boolean']['output'];
   importItemsFromCSV: ImportItemsResponse;
@@ -1769,7 +1776,8 @@ export type Mutation = {
   removePushToken: Device;
   removeRestrictions: UserModeration;
   resendVerificationEmail: Scalars['Boolean']['output'];
-  resetPassword: Scalars['Boolean']['output'];
+  /** Reset password using token from email */
+  resetPassword: ResetPasswordResponse;
   restoreItem: Item;
   reviewAppeal: UserModeration;
   revokeHomeInvite: Scalars['Boolean']['output'];
@@ -1834,6 +1842,8 @@ export type Mutation = {
   updateUser: User;
   updateUserAddress: UserAddress;
   validateItem: ValidationResult;
+  /** Validate if a password reset token is still valid */
+  validatePasswordResetToken: ValidateTokenResponse;
   verifyDevice: Device;
   verifyEmail: Scalars['Boolean']['output'];
   verifyItemUnit: ItemUnit;
@@ -2274,7 +2284,8 @@ export type MutationResendVerificationEmailArgs = {
 };
 
 export type MutationResetPasswordArgs = {
-  input: ResetPasswordInput;
+  newPassword: Scalars['String']['input'];
+  token: Scalars['String']['input'];
 };
 
 export type MutationRestoreItemArgs = {
@@ -2586,6 +2597,10 @@ export type MutationUpdateUserAddressArgs = {
 export type MutationValidateItemArgs = {
   deep?: InputMaybe<Scalars['Boolean']['input']>;
   id: Scalars['ID']['input'];
+};
+
+export type MutationValidatePasswordResetTokenArgs = {
+  token: Scalars['String']['input'];
 };
 
 export type MutationVerifyDeviceArgs = {
@@ -3748,6 +3763,12 @@ export type RemoveRestrictionsInput = {
 export type ResetPasswordInput = {
   password: Scalars['String']['input'];
   token: Scalars['String']['input'];
+};
+
+export type ResetPasswordResponse = {
+  __typename?: 'ResetPasswordResponse';
+  message: Scalars['String']['output'];
+  success: Scalars['Boolean']['output'];
 };
 
 export type ReviewAppealInput = {
@@ -5074,6 +5095,12 @@ export type UserUpdatedPayload = {
   userId: Scalars['String']['output'];
 };
 
+export type ValidateTokenResponse = {
+  __typename?: 'ValidateTokenResponse';
+  email?: Maybe<Scalars['String']['output']>;
+  valid: Scalars['Boolean']['output'];
+};
+
 export type ValidationError = {
   __typename?: 'ValidationError';
   code: Scalars['String']['output'];
@@ -5285,16 +5312,25 @@ export type ForgotPasswordMutationVariables = Exact<{
 
 export type ForgotPasswordMutation = {
   __typename?: 'Mutation';
-  forgotPassword: boolean;
+  forgotPassword: {
+    __typename?: 'ForgotPasswordResponse';
+    success: boolean;
+    message: string;
+  };
 };
 
 export type ResetPasswordMutationVariables = Exact<{
-  input: ResetPasswordInput;
+  token: Scalars['String']['input'];
+  newPassword: Scalars['String']['input'];
 }>;
 
 export type ResetPasswordMutation = {
   __typename?: 'Mutation';
-  resetPassword: boolean;
+  resetPassword: {
+    __typename?: 'ResetPasswordResponse';
+    success: boolean;
+    message: string;
+  };
 };
 
 export type ResendVerificationEmailMutationVariables = Exact<{
@@ -6388,12 +6424,17 @@ export type PantryItemFragmentFragment = {
   expiresAt?: string | null;
   storageLocation?: string | null;
   storageState: StorageState;
+  storageNotes?: string | null;
   initialQuantity: number;
   currentQuantity: number;
   consumedQuantity: number;
   reservedQuantity: number;
+  autoReorderPoint?: number | null;
+  isAutoReorder: boolean;
+  customCategory?: string | null;
   createdAt: string;
   updatedAt: string;
+  tags: Array<string>;
   item: {
     __typename?: 'Item';
     id: string;
@@ -6659,12 +6700,17 @@ export type PantryFragmentFragment = {
     expiresAt?: string | null;
     storageLocation?: string | null;
     storageState: StorageState;
+    storageNotes?: string | null;
     initialQuantity: number;
     currentQuantity: number;
     consumedQuantity: number;
     reservedQuantity: number;
+    autoReorderPoint?: number | null;
+    isAutoReorder: boolean;
+    customCategory?: string | null;
     createdAt: string;
     updatedAt: string;
+    tags: Array<string>;
     item: {
       __typename?: 'Item';
       id: string;
@@ -7022,12 +7068,17 @@ export type HomeFragmentFragment = {
       expiresAt?: string | null;
       storageLocation?: string | null;
       storageState: StorageState;
+      storageNotes?: string | null;
       initialQuantity: number;
       currentQuantity: number;
       consumedQuantity: number;
       reservedQuantity: number;
+      autoReorderPoint?: number | null;
+      isAutoReorder: boolean;
+      customCategory?: string | null;
       createdAt: string;
       updatedAt: string;
+      tags: Array<string>;
       item: {
         __typename?: 'Item';
         id: string;
@@ -7392,12 +7443,17 @@ export type GetHomeQuery = {
         expiresAt?: string | null;
         storageLocation?: string | null;
         storageState: StorageState;
+        storageNotes?: string | null;
         initialQuantity: number;
         currentQuantity: number;
         consumedQuantity: number;
         reservedQuantity: number;
+        autoReorderPoint?: number | null;
+        isAutoReorder: boolean;
+        customCategory?: string | null;
         createdAt: string;
         updatedAt: string;
+        tags: Array<string>;
         item: {
           __typename?: 'Item';
           id: string;
@@ -7860,12 +7916,17 @@ export type CreateHomeMutation = {
         expiresAt?: string | null;
         storageLocation?: string | null;
         storageState: StorageState;
+        storageNotes?: string | null;
         initialQuantity: number;
         currentQuantity: number;
         consumedQuantity: number;
         reservedQuantity: number;
+        autoReorderPoint?: number | null;
+        isAutoReorder: boolean;
+        customCategory?: string | null;
         createdAt: string;
         updatedAt: string;
+        tags: Array<string>;
         item: {
           __typename?: 'Item';
           id: string;
@@ -8232,12 +8293,17 @@ export type UpdateHomeMutation = {
         expiresAt?: string | null;
         storageLocation?: string | null;
         storageState: StorageState;
+        storageNotes?: string | null;
         initialQuantity: number;
         currentQuantity: number;
         consumedQuantity: number;
         reservedQuantity: number;
+        autoReorderPoint?: number | null;
+        isAutoReorder: boolean;
+        customCategory?: string | null;
         createdAt: string;
         updatedAt: string;
+        tags: Array<string>;
         item: {
           __typename?: 'Item';
           id: string;
@@ -8603,12 +8669,17 @@ export type DeleteHomeMutation = {
         expiresAt?: string | null;
         storageLocation?: string | null;
         storageState: StorageState;
+        storageNotes?: string | null;
         initialQuantity: number;
         currentQuantity: number;
         consumedQuantity: number;
         reservedQuantity: number;
+        autoReorderPoint?: number | null;
+        isAutoReorder: boolean;
+        customCategory?: string | null;
         createdAt: string;
         updatedAt: string;
+        tags: Array<string>;
         item: {
           __typename?: 'Item';
           id: string;
@@ -9229,12 +9300,17 @@ export type GetDefaultHomeQuery = {
         expiresAt?: string | null;
         storageLocation?: string | null;
         storageState: StorageState;
+        storageNotes?: string | null;
         initialQuantity: number;
         currentQuantity: number;
         consumedQuantity: number;
         reservedQuantity: number;
+        autoReorderPoint?: number | null;
+        isAutoReorder: boolean;
+        customCategory?: string | null;
         createdAt: string;
         updatedAt: string;
+        tags: Array<string>;
         item: {
           __typename?: 'Item';
           id: string;
@@ -9876,12 +9952,17 @@ export type GetPantryItemsQuery = {
     expiresAt?: string | null;
     storageLocation?: string | null;
     storageState: StorageState;
+    storageNotes?: string | null;
     initialQuantity: number;
     currentQuantity: number;
     consumedQuantity: number;
     reservedQuantity: number;
+    autoReorderPoint?: number | null;
+    isAutoReorder: boolean;
+    customCategory?: string | null;
     createdAt: string;
     updatedAt: string;
+    tags: Array<string>;
     item: {
       __typename?: 'Item';
       id: string;
@@ -10057,12 +10138,17 @@ export type GetPantryItemQuery = {
     expiresAt?: string | null;
     storageLocation?: string | null;
     storageState: StorageState;
+    storageNotes?: string | null;
     initialQuantity: number;
     currentQuantity: number;
     consumedQuantity: number;
     reservedQuantity: number;
+    autoReorderPoint?: number | null;
+    isAutoReorder: boolean;
+    customCategory?: string | null;
     createdAt: string;
     updatedAt: string;
+    tags: Array<string>;
     item: {
       __typename?: 'Item';
       id: string;
@@ -10261,12 +10347,17 @@ export type AddItemToPantryMutation = {
     expiresAt?: string | null;
     storageLocation?: string | null;
     storageState: StorageState;
+    storageNotes?: string | null;
     initialQuantity: number;
     currentQuantity: number;
     consumedQuantity: number;
     reservedQuantity: number;
+    autoReorderPoint?: number | null;
+    isAutoReorder: boolean;
+    customCategory?: string | null;
     createdAt: string;
     updatedAt: string;
+    tags: Array<string>;
     item: {
       __typename?: 'Item';
       id: string;
@@ -10443,12 +10534,17 @@ export type UpdatePantryItemMutation = {
     expiresAt?: string | null;
     storageLocation?: string | null;
     storageState: StorageState;
+    storageNotes?: string | null;
     initialQuantity: number;
     currentQuantity: number;
     consumedQuantity: number;
     reservedQuantity: number;
+    autoReorderPoint?: number | null;
+    isAutoReorder: boolean;
+    customCategory?: string | null;
     createdAt: string;
     updatedAt: string;
+    tags: Array<string>;
     item: {
       __typename?: 'Item';
       id: string;
@@ -10624,12 +10720,17 @@ export type RemoveItemFromPantryMutation = {
     expiresAt?: string | null;
     storageLocation?: string | null;
     storageState: StorageState;
+    storageNotes?: string | null;
     initialQuantity: number;
     currentQuantity: number;
     consumedQuantity: number;
     reservedQuantity: number;
+    autoReorderPoint?: number | null;
+    isAutoReorder: boolean;
+    customCategory?: string | null;
     createdAt: string;
     updatedAt: string;
+    tags: Array<string>;
     item: {
       __typename?: 'Item';
       id: string;

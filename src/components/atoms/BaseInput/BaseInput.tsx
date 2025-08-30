@@ -7,6 +7,8 @@ import {
   StyleProp,
   ViewStyle,
 } from 'react-native';
+import {useUnistyles} from 'react-native-unistyles';
+import {commonStyles} from '#/styles/commonStyles';
 import styles from './BaseInput.styles';
 
 export interface BaseInputProps extends TextInputProps {
@@ -24,13 +26,23 @@ export const BaseInput: React.FC<BaseInputProps> = ({
   style,
   ...textInputProps
 }) => {
+  const {theme} = useUnistyles();
+
   return (
     <View style={containerStyle}>
-      {label != null && <Text style={styles.label}>{label}</Text>}
-      <View style={styles.inputRow}>
+      {label != null && (
+        <Text style={[commonStyles.label, styles.label]}>{label}</Text>
+      )}
+      <View
+        style={[
+          commonStyles.row,
+          commonStyles.input,
+          styles.inputRow,
+          errorMessage && commonStyles.inputError,
+        ]}>
         <TextInput
-          style={[styles.input, style]}
-          placeholderTextColor={styles.input.color} // Can access computed styles
+          style={[commonStyles.flex1, styles.input, style]}
+          placeholderTextColor={theme.colors.inputPlaceholder}
           {...textInputProps}
         />
         {rightIcon != null && (
@@ -38,7 +50,9 @@ export const BaseInput: React.FC<BaseInputProps> = ({
         )}
       </View>
       {errorMessage != null && (
-        <Text style={styles.errorText}>{errorMessage}</Text>
+        <Text style={[commonStyles.errorText, styles.errorText]}>
+          {errorMessage}
+        </Text>
       )}
     </View>
   );

@@ -19,7 +19,8 @@
       "#components": ["./src/components"],
       "#components/*": ["./src/components/*"],
       "#types": ["./src/types"],
-      "#config": ["./src/config"]
+      "#config": ["./src/config"],
+      "#styles": ["./src/styles"]
     }
   }
 }

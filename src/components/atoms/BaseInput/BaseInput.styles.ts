@@ -2,42 +2,29 @@ import {StyleSheet} from 'react-native-unistyles';
 
 export default StyleSheet.create((theme, rt) => ({
   label: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
-    marginBottom: 4,
+    // Only overrides to commonStyles.label if needed
+    fontSize: 15, // Specific override from common 14
   },
   inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.white,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 8,
-    height: 44,
-    paddingHorizontal: 12,
-    ...{
-      ':w[0, sm]': {
-        height: 40,
-      },
-      ':w[md]': {
-        height: 48,
-      },
+    // Additional styles not in commonStyles.input
+    paddingHorizontal: theme.spacing.md,
+    height: {
+      sm: 44,
+      md: 48,
     },
   },
   input: {
-    backgroundColor: theme.colors.inputBackground,
-    flex: 1,
+    // Reset some defaults for the actual TextInput
+    backgroundColor: 'transparent',
+    borderWidth: 0,
     fontSize: 15,
-    color: theme.colors.inputText,
     padding: 0,
   },
   iconWrapper: {
-    marginLeft: 8,
+    marginLeft: theme.spacing.sm,
   },
   errorText: {
-    marginTop: 4,
-    color: theme.colors.error,
-    fontSize: 13,
+    // Any specific overrides to commonStyles.errorText
+    fontSize: 13, // Specific override from common 12
   },
 }));
