@@ -1,5 +1,7 @@
 import {StateCreator} from 'zustand';
 import {RootState} from '../index';
+import {storage} from '#/storage/mmkv';
+import NavigationService from '#/services/NavigationService';
 import {
   RefreshTokenMutation,
   LoginMutation,
@@ -19,16 +21,41 @@ type AuthUser = NonNullable<GetAuthUserQuery['me']>;
 // Complete user type (from profile queries)
 type CompleteUser = NonNullable<GetCompleteUserQuery['me']>;
 
+// User-specific navigation state
+interface UserNavigationState {
+  lastRoute?: string;
+  onboardingProgress?: string;
+  lastLoginTimestamp?: number;
+  rememberMeChoice?: boolean;
+  hasCompletedOnboarding?: boolean;
+}
+
+// Auth flow tracking
+interface AuthFlow {
+  isNewUser: boolean;
+  requiresVerification: boolean;
+  loginMethod: 'email' | 'biometric' | 'social' | null;
+  lastLoginTimestamp: number | null;
+}
+
 export interface AuthState {
-  user: AuthUser | CompleteUser | null; // Can be minimal or complete user data
+  user: AuthUser | CompleteUser | null;
   accessToken: string | null;
   refreshToken: string | null;
   pendingEmail?: string;
   pendingPassword?: string;
   isAuthenticated: boolean;
+  authFlow: AuthFlow;
+
+  // User-specific state management
+  userStates: Record<string, UserNavigationState>;
 
   // Auth methods
   setAuthFromResponse: (response: AuthResponse) => void;
+  completeAuthentication: (
+    response: AuthResponse,
+    rememberMe?: boolean,
+  ) => Promise<void>;
   setCompleteUser: (user: CompleteUser) => void;
   setAuth: (
     user: AuthUser | CompleteUser,
@@ -51,8 +78,19 @@ export interface AuthState {
   clearPendingCredentials: () => void;
   logout: () => Promise<void>;
 
+  // Auth flow methods
+  setAuthFlow: (flow: Partial<AuthFlow>) => void;
+
+  // User-specific state methods
+  setUserNavigationState: (
+    userId: string,
+    state: Partial<UserNavigationState>,
+  ) => void;
+  getUserNavigationState: (userId: string) => UserNavigationState | null;
+  clearUserNavigationState: (userId: string) => void;
+
   // Utility methods
-  hasCompleteUserData: () => boolean; // Check if user has complete data
+  hasCompleteUserData: () => boolean;
 }
 
 const initialAuthState = {
@@ -62,7 +100,17 @@ const initialAuthState = {
   pendingEmail: undefined,
   pendingPassword: undefined,
   isAuthenticated: false,
+  authFlow: {
+    isNewUser: false,
+    requiresVerification: false,
+    loginMethod: null,
+    lastLoginTimestamp: null,
+  },
+  userStates: {},
 };
+
+// Helper to get user state key
+const getUserStateKey = (userId: string) => `user_nav_state_${userId}`;
 
 export const createAuthSlice: StateCreator<
   RootState,
@@ -79,14 +127,64 @@ export const createAuthSlice: StateCreator<
 
   setAuthFromResponse: response =>
     set(state => {
-      state.user = response.user; // Minimal user data from auth
+      state.user = response.user;
       state.accessToken = response.accessToken;
       state.refreshToken = response.refreshToken;
+
+      // Set auth flow based on response
+      state.authFlow.requiresVerification = !response.user.emailVerified;
+      state.authFlow.lastLoginTimestamp = Date.now();
     }),
+
+  completeAuthentication: async (
+    response: AuthResponse,
+    rememberMe?: boolean,
+  ) => {
+    const {user, accessToken, refreshToken} = response;
+
+    // Load any existing user state
+    const existingUserState = storage.getString(getUserStateKey(user.id));
+    let userNavState: UserNavigationState = {};
+
+    if (existingUserState) {
+      try {
+        userNavState = JSON.parse(existingUserState);
+      } catch (e) {
+        console.error('Failed to parse user state:', e);
+      }
+    }
+
+    // Update store
+    set(state => {
+      state.user = user;
+      state.accessToken = accessToken;
+      state.refreshToken = refreshToken;
+      state.authFlow = {
+        ...state.authFlow,
+        lastLoginTimestamp: Date.now(),
+        requiresVerification: !user.emailVerified,
+      };
+
+      // Store user-specific state
+      state.userStates[user.id] = {
+        ...userNavState,
+        lastLoginTimestamp: Date.now(),
+        rememberMeChoice: rememberMe,
+      };
+    });
+
+    // Save to persistent storage
+    storage.set(
+      getUserStateKey(user.id),
+      JSON.stringify(get().userStates[user.id]),
+    );
+
+    // Handle navigation based on user state
+    NavigationService.navigatePostAuth(user, rememberMe);
+  },
 
   setCompleteUser: user =>
     set(state => {
-      // Keep existing tokens, just update user data to complete version
       state.user = user;
     }),
 
@@ -135,11 +233,87 @@ export const createAuthSlice: StateCreator<
       state.pendingPassword = undefined;
     }),
 
-  // Enhanced logout that properly clears everything
+  setAuthFlow: flow =>
+    set(state => {
+      state.authFlow = {...state.authFlow, ...flow};
+    }),
+
+  // User-specific navigation state management
+  setUserNavigationState: (
+    userId: string,
+    navState: Partial<UserNavigationState>,
+  ) => {
+    const state = get();
+    const currentUserState = state.userStates[userId] || {};
+    const updatedState = {...currentUserState, ...navState};
+
+    // Update in-memory state
+    set(state => {
+      state.userStates[userId] = updatedState;
+    });
+
+    // Persist to storage
+    storage.set(getUserStateKey(userId), JSON.stringify(updatedState));
+  },
+
+  getUserNavigationState: (userId: string) => {
+    const state = get();
+
+    // Check in-memory first
+    if (state.userStates[userId]) {
+      return state.userStates[userId];
+    }
+
+    // Check persistent storage
+    const stored = storage.getString(getUserStateKey(userId));
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        // Update in-memory cache
+        set(state => {
+          state.userStates[userId] = parsed;
+        });
+        return parsed;
+      } catch (e) {
+        console.error('Failed to parse user navigation state:', e);
+      }
+    }
+
+    return null;
+  },
+
+  clearUserNavigationState: (userId: string) => {
+    // Clear from memory
+    set(state => {
+      delete state.userStates[userId];
+    });
+
+    // Clear from storage
+    storage.delete(getUserStateKey(userId));
+  },
+
   logout: async () => {
     console.log('AuthSlice: Starting logout process...');
 
+    const currentUser = get().user;
+
     try {
+      // Save any important user state before logout
+      if (currentUser?.id) {
+        const userState = get().userStates[currentUser.id];
+        if (userState) {
+          // Keep remember me choice but clear session data
+          const preservedState: UserNavigationState = {
+            rememberMeChoice: userState.rememberMeChoice,
+            hasCompletedOnboarding: currentUser.onBoarded,
+          };
+          storage.set(
+            getUserStateKey(currentUser.id),
+            JSON.stringify(preservedState),
+          );
+        }
+      }
+
       // The reset manager will be available on the store when this is called
       const store = get();
       if ('resetStore' in store) {
@@ -149,19 +323,19 @@ export const createAuthSlice: StateCreator<
         console.error(
           'AuthSlice: Reset manager not available, performing manual reset',
         );
-        // Fallback manual reset
         set(initialAuthState);
       }
+
+      // Navigate to auth
+      NavigationService.navigateToAuth();
     } catch (error) {
       console.error('AuthSlice: Error during logout:', error);
-      // Ensure we at least clear the auth state even if other cleanup fails
       set(initialAuthState);
     }
   },
 
   hasCompleteUserData: () => {
     const state = get();
-    // Check if user has properties that only exist in complete user data
     return !!(state.user && 'addresses' in state.user);
   },
 });

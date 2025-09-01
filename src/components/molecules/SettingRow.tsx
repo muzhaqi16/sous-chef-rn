@@ -19,7 +19,7 @@ import {
   getInputLabelForField,
   getPlaceholderForField,
 } from '#utils/inputMapping';
-import {getValidationSchemaForField} from '#utils/validation';
+import {getValidationSchemaForField} from '#/utils/validation/profile';
 import {SettingItem} from '#types';
 
 export interface SettingRowProps {

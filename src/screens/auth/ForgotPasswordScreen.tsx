@@ -5,7 +5,7 @@ import {useNavigation, NavigationProp} from '@react-navigation/native';
 import {type AuthStackParamList} from '../../navigation/types';
 import {AuthFormTemplate} from '../../components/templates/AuthFormTemplate';
 import {EmailInput} from '../../components/atoms';
-import {getForgotPasswordValidationSchema} from '../../utils/validation';
+import {getForgotPasswordValidationSchema} from '../../utils/validation/profile';
 import {AuthWrapper} from '../../components/templates/AuthWrapper';
 import {useForgotPasswordMutation} from '../../graphql/generated';
 

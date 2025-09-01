@@ -1,5 +1,5 @@
 import React, {useEffect, useState, useCallback} from 'react';
-import {View, TouchableOpacity, Text, Alert} from 'react-native';
+import {View, TouchableOpacity, Text, Alert, Modal} from 'react-native';
 import {useForm} from 'react-hook-form';
 import {yupResolver} from '@hookform/resolvers/yup';
 import Icon from '@react-native-vector-icons/material-icons';
@@ -8,16 +8,20 @@ import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {LoginNavProp} from '#navigation/types';
 import {AuthFormTemplate, AuthWrapper} from '#components/templates';
 import {EmailInput, PasswordInput} from '#components/atoms';
-import {getLoginValidationSchema} from '#utils/validation';
+import {getLoginValidationSchema} from '#/utils/validation/profile';
 import {useStore} from '#store';
 import {useLoginMutation, type LoginInput} from '#generated';
 import {
   useAuthErrorHandler,
   useSafeNavigation,
-  usePostAuthNavigation,
   useCredentialLoader,
 } from '#hooks';
-import {hasCredentials, getEmailOnly} from '#/storage/keychain';
+import {
+  hasCredentials,
+  getEmailOnly,
+  saveCredentials,
+} from '#/storage/keychain';
+import {RememberMeModal} from './RememberMeModal';
 
 // Helper function to obscure email
 const obscureEmail = (email: string): string => {
@@ -36,12 +40,20 @@ const obscureEmail = (email: string): string => {
 export function LoginScreen() {
   const {theme} = useUnistyles();
   const {navigation, canGoBack, goBack} = useSafeNavigation<LoginNavProp>();
-  const {rememberMe, setAuthFromResponse, setPendingCredentials} = useStore();
+  const {
+    rememberMe,
+    completeAuthentication,
+    getUserNavigationState,
+    setUserNavigationState,
+    user,
+  } = useStore();
 
   // State for credential management
   const [savedEmail, setSavedEmail] = useState<string>('');
   const [hasStoredCredentials, setHasStoredCredentials] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showRememberModal, setShowRememberModal] = useState(false);
+  const [pendingAuthResponse, setPendingAuthResponse] = useState<any>(null);
 
   // Use the credential loader hook
   const {loadingCreds, pwFromKeychain, loadStoredCredentials} =
@@ -49,7 +61,6 @@ export function LoginScreen() {
 
   // Shared hooks
   const {handleAuthError} = useAuthErrorHandler();
-  const {navigateAfterAuth} = usePostAuthNavigation();
 
   // Apollo mutation
   const [login, {loading: isLoggingIn}] = useLoginMutation();
@@ -66,28 +77,21 @@ export function LoginScreen() {
 
     const checkStoredCredentials = async () => {
       try {
-        // Add a small delay to avoid race conditions with keychain
         await new Promise(resolve => setTimeout(resolve, 100));
-
-        // Check if credentials exist without triggering biometric prompt
         const hasCreds = await hasCredentials();
 
         if (!isMounted) return;
         setHasStoredCredentials(hasCreds);
 
         if (hasCreds) {
-          // Get just the email without triggering biometric prompt
           const email = await getEmailOnly();
-
           if (!isMounted) return;
           if (email) {
             setSavedEmail(email);
-            // Set the obscured email in the form
             form.setValue('email', obscureEmail(email));
           }
         }
       } catch (error) {
-        // Silently handle errors - credentials just won't be available
         if (isMounted) {
           setHasStoredCredentials(false);
         }
@@ -101,7 +105,7 @@ export function LoginScreen() {
     };
   }, [form]);
 
-  // Biometric authentication to reveal and fill credentials using the hook
+  // Biometric authentication to reveal and fill credentials
   const authenticateAndFillCredentials = async () => {
     if (loadingCreds) return;
 
@@ -109,14 +113,12 @@ export function LoginScreen() {
       const credentials = await loadStoredCredentials();
 
       if (credentials) {
-        // Successfully authenticated - fill both fields
         form.setValue('email', credentials.email);
         form.setValue('password', credentials.password);
         setSavedEmail(credentials.email);
         setIsAuthenticated(true);
       }
     } catch (error: any) {
-      // Handle specific error codes from react-native-keychain
       if (error.code === 'UserCancel') {
         // User cancelled - do nothing
       } else if (
@@ -148,10 +150,39 @@ export function LoginScreen() {
     setIsAuthenticated(false);
   }, [form, hasStoredCredentials, savedEmail]);
 
-  // Memoized handlers to prevent constant re-renders
+  // Handle remember me choice
+  const handleRememberChoice = async (remember: boolean) => {
+    setShowRememberModal(false);
+
+    if (!pendingAuthResponse) return;
+
+    const {user, email, password} = pendingAuthResponse;
+
+    // Save user's remember me choice
+    if (user?.id) {
+      setUserNavigationState(user.id, {
+        rememberMeChoice: remember,
+        lastLoginTimestamp: Date.now(),
+      });
+    }
+
+    // Save credentials if user chose to remember
+    if (remember && email && password) {
+      try {
+        await saveCredentials(email, password);
+      } catch (error) {
+        console.error('Failed to save credentials:', error);
+      }
+    }
+
+    // Complete authentication flow
+    await completeAuthentication(pendingAuthResponse, remember);
+    setPendingAuthResponse(null);
+  };
+
+  // Memoized handlers
   const handleEmailFocus = useCallback(() => {
     const currentEmail = form.getValues('email');
-    // If showing obscured email and user focuses the field, clear it
     if (currentEmail.includes('***') && !isAuthenticated) {
       form.setValue('email', '');
     }
@@ -169,7 +200,7 @@ export function LoginScreen() {
     }
   }, [form, hasStoredCredentials, savedEmail, isAuthenticated]);
 
-  // Memoized EmailInput wrapper to prevent re-creation
+  // Memoized EmailInput wrapper
   const EmailInputWrapper = useCallback(
     (props: any) => (
       <EmailInput
@@ -190,7 +221,6 @@ export function LoginScreen() {
   // Submit handler
   const onSubmit = async (input: LoginInput) => {
     try {
-      // If the email contains '***', it's obscured - use the real saved email instead
       const actualEmail =
         input.email.includes('***') && savedEmail ? savedEmail : input.email;
 
@@ -206,15 +236,28 @@ export function LoginScreen() {
 
       if (response.data?.login) {
         const loginData = response.data.login;
-        setAuthFromResponse(loginData);
 
-        // Only set pending credentials if they weren't loaded from keychain
-        // and rememberMe preference hasn't been set yet
-        if (rememberMe === undefined && !pwFromKeychain) {
-          setPendingCredentials(actualEmail, input.password);
+        // Check if this user has a saved remember me preference
+        const userNavState = getUserNavigationState(loginData.user.id);
+
+        if (userNavState?.rememberMeChoice !== undefined) {
+          // User has previously made a choice, use it
+          await completeAuthentication(
+            loginData,
+            userNavState.rememberMeChoice,
+          );
+        } else if (rememberMe === undefined && !pwFromKeychain) {
+          // First time login, show remember me modal
+          setPendingAuthResponse({
+            ...loginData,
+            email: actualEmail,
+            password: input.password,
+          });
+          setShowRememberModal(true);
+        } else {
+          // Use existing remember me preference
+          await completeAuthentication(loginData, rememberMe);
         }
-
-        navigateAfterAuth(loginData.user, rememberMe);
       } else {
         throw new Error('Login failed: No data returned');
       }
@@ -309,6 +352,14 @@ export function LoginScreen() {
           </View>
         </View>
       )}
+
+      {/* Remember Me Modal */}
+      <RememberMeModal
+        visible={showRememberModal}
+        onAccept={() => handleRememberChoice(true)}
+        onDecline={() => handleRememberChoice(false)}
+        email={pendingAuthResponse?.email || ''}
+      />
     </AuthWrapper>
   );
 }

@@ -1,21 +1,22 @@
 import React, {useEffect} from 'react';
 import {useForm} from 'react-hook-form';
 import {StyleSheet, Text} from 'react-native';
-import {useNavigation, CommonActions} from '@react-navigation/native';
+import {useNavigation} from '@react-navigation/native';
 import {AuthWrapper, AuthFormTemplate, CodeInputAdapter} from '#components';
 import {useStore} from '#store';
 import {
   useVerifyEmailMutation,
   useResendVerificationEmailMutation,
 } from '#generated';
-import { useAuth } from '#/hooks';
+import {useAuth} from '#/hooks';
+import NavigationService from '#/services/NavigationService';
 
 type CodeVerificationValues = {
   code: string;
 };
 
 export function CodeVerificationScreen() {
-  const {setEmailVerified} = useStore();
+  const {setEmailVerified, setUserNavigationState} = useStore();
   const {user} = useAuth();
   const [verifyEmail] = useVerifyEmailMutation();
   const [resendVerificationEmail] = useResendVerificationEmailMutation();
@@ -32,19 +33,21 @@ export function CodeVerificationScreen() {
   // Handle navigation when email verification status changes
   useEffect(() => {
     if (user?.emailVerified) {
+      // Save verification completion for this user
+      if (user.id) {
+        setUserNavigationState(user.id, {
+          lastLoginTimestamp: Date.now(),
+        });
+      }
+
       // Small delay to ensure state has fully updated
       const timeoutId = setTimeout(() => {
-        navigation.dispatch(
-          CommonActions.reset({
-            index: 0,
-            routes: [{name: user.onBoarded ? 'HomeStack' : 'OnBoardingStack'}],
-          }),
-        );
+        NavigationService.navigatePostAuth(user);
       }, 100);
 
       return () => clearTimeout(timeoutId);
     }
-  }, [user?.emailVerified, user?.onBoarded, navigation]);
+  }, [user?.emailVerified, user?.onBoarded, user?.id, setUserNavigationState]);
 
   const onVerifyCode = async (data: CodeVerificationValues) => {
     const {code} = data;
@@ -52,11 +55,18 @@ export function CodeVerificationScreen() {
       const response = await verifyEmail({
         variables: {code},
       });
-      
+
       if (response.data?.verifyEmail) {
         setEmailVerified(true);
-        // The useEffect above will handle navigation when emailVerified becomes true
-        // No need to duplicate navigation logic here
+
+        // Save verification state for user
+        if (user?.id) {
+          setUserNavigationState(user.id, {
+            lastLoginTimestamp: Date.now(),
+          });
+        }
+
+        // Navigation will be handled by the useEffect above
       } else {
         console.error('Email verification failed');
       }
@@ -71,11 +81,11 @@ export function CodeVerificationScreen() {
         console.error('No email available to resend verification');
         return;
       }
-      
+
       const response = await resendVerificationEmail({
         variables: {email: user.email},
       });
-      
+
       if (response.data?.resendVerificationEmail) {
         console.log('Verification email resent successfully');
         // You might want to show a success message to the user here

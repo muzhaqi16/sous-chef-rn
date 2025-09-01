@@ -1,4 +1,4 @@
-export {LoginScreen} from './LoginScreen';
+export * from './login';
 export {SignUpScreen} from './SignUpScreen';
 export {ForgotPasswordScreen} from './ForgotPasswordScreen';
 export {RememberLoginInfoScreen} from './RememberLoginInfo';
