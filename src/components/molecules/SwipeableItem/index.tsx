@@ -1,7 +1,7 @@
 import React from 'react';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
-import Reanimated, {useAnimatedStyle} from 'react-native-reanimated';
+import Reanimated, {useAnimatedStyle, SharedValue} from 'react-native-reanimated';
 import {RightActions} from './RightActions';
 import {LeftActions} from './LeftActions';
 import {SwipeableContent} from './SwipeableContent';
@@ -39,8 +39,8 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({
   });
 
   const renderRightActions = (
-    progress: Reanimated.SharedValue<number>,
-    dragX: Reanimated.SharedValue<number>,
+    progress: SharedValue<number>,
+    dragX: SharedValue<number>,
   ) => (
     <RightActions
       dragX={dragX}
@@ -52,8 +52,8 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({
   );
 
   const renderLeftActions = (
-    progress: Reanimated.SharedValue<number>,
-    dragX: Reanimated.SharedValue<number>,
+    progress: SharedValue<number>,
+    dragX: SharedValue<number>,
   ) => (
     <LeftActions
       dragX={dragX}

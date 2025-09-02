@@ -1,13 +1,12 @@
 import React from 'react';
-import Reanimated, {useAnimatedStyle} from 'react-native-reanimated';
+import Reanimated, {useAnimatedStyle, SharedValue} from 'react-native-reanimated';
 import {ActionButton} from './ActionButton';
-import {stylesheet} from './styles';
+import {styles} from './styles';
 import {SwipeActionsProps} from './types';
-import {useUnistyles} from 'react-native-unistyles';
 
 interface RightActionsProps extends SwipeActionsProps {
-  dragX: Reanimated.SharedValue<number>;
-  progress: Reanimated.SharedValue<number>;
+  dragX: SharedValue<number>;
+  progress: SharedValue<number>;
 }
 
 export const RightActions: React.FC<RightActionsProps> = ({

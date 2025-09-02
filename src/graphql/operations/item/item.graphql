@@ -86,8 +86,33 @@ query AutocompleteItems($input: AutocompleteInput!) {
       id
       name
       imageUrl
+      defaultUnit {
+        id
+        name
+        symbol
+        type
+        isDefault
+        isPreferred
+      }
+      brand {
+        id
+        name
+      }
+      category {
+        id
+        name
+        type
+        isPrimary
+      }
     }
     totalCount
+  }
+}
+
+query SearchBrands($search: String!, $limit: Int) {
+  brands(search: $search, take: $limit, isActive: true) {
+    id
+    name
   }
 }
 

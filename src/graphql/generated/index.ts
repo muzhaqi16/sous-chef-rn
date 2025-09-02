@@ -59,7 +59,12 @@ export type AddPantryItemInput = {
   expiresAt?: InputMaybe<Scalars['String']['input']>;
   initialQuantity: Scalars['Float']['input'];
   isAutoReorder?: InputMaybe<Scalars['Boolean']['input']>;
-  itemId: Scalars['String']['input'];
+  itemBarcode?: InputMaybe<Scalars['String']['input']>;
+  itemBrand?: InputMaybe<Scalars['String']['input']>;
+  itemCategory?: InputMaybe<Scalars['String']['input']>;
+  itemDescription?: InputMaybe<Scalars['String']['input']>;
+  itemId?: InputMaybe<Scalars['String']['input']>;
+  itemName?: InputMaybe<Scalars['String']['input']>;
   lastUsedAt?: InputMaybe<Scalars['DateTime']['input']>;
   lotNumber?: InputMaybe<Scalars['String']['input']>;
   pantryId: Scalars['ID']['input'];
@@ -183,6 +188,12 @@ export type BrandInput = {
   website?: InputMaybe<Scalars['String']['input']>;
 };
 
+export type BrandSuggestion = {
+  __typename?: 'BrandSuggestion';
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+};
+
 export type BrowserStat = {
   __typename?: 'BrowserStat';
   browserName: Scalars['String']['output'];
@@ -275,6 +286,14 @@ export enum CategorySource {
   Import = 'IMPORT',
   Manual = 'MANUAL',
 }
+
+export type CategorySuggestion = {
+  __typename?: 'CategorySuggestion';
+  id: Scalars['ID']['output'];
+  isPrimary: Scalars['Boolean']['output'];
+  name: Scalars['String']['output'];
+  type: CategoryType;
+};
 
 export enum CategoryType {
   Cuisine = 'CUISINE',
@@ -1196,6 +1215,9 @@ export type ItemStoreSku = {
 
 export type ItemSuggestion = {
   __typename?: 'ItemSuggestion';
+  brand?: Maybe<BrandSuggestion>;
+  category?: Maybe<CategorySuggestion>;
+  defaultUnit?: Maybe<ItemUnitSuggestion>;
   id: Scalars['ID']['output'];
   imageUrl?: Maybe<Scalars['String']['output']>;
   name: Scalars['String']['output'];
@@ -1261,6 +1283,16 @@ export type ItemUnitInput = {
   retailUnit?: InputMaybe<Scalars['Boolean']['input']>;
   unitId: Scalars['String']['input'];
   usageContext?: InputMaybe<Array<UnitUsageContext>>;
+};
+
+export type ItemUnitSuggestion = {
+  __typename?: 'ItemUnitSuggestion';
+  id: Scalars['ID']['output'];
+  isDefault: Scalars['Boolean']['output'];
+  isPreferred: Scalars['Boolean']['output'];
+  name: Scalars['String']['output'];
+  symbol: Scalars['String']['output'];
+  type: UnitType;
 };
 
 export type ItemsResponse = {
@@ -3203,6 +3235,7 @@ export type Query = {
   searchRecipes: Array<Recipe>;
   searchShoppingLists: Array<ShoppingList>;
   searchStores: Array<Store>;
+  searchUnits: Array<Unit>;
   shoppingList?: Maybe<ShoppingList>;
   shoppingListByShareCode?: Maybe<ShoppingList>;
   shoppingListCollaborators: Array<ShoppingListCollaborator>;
@@ -3245,6 +3278,15 @@ export type QueryAutocompleteItemsArgs = {
 
 export type QueryBrandArgs = {
   id: Scalars['ID']['input'];
+};
+
+export type QueryBrandsArgs = {
+  country?: InputMaybe<Scalars['String']['input']>;
+  isActive?: InputMaybe<Scalars['Boolean']['input']>;
+  parentId?: InputMaybe<Scalars['String']['input']>;
+  search?: InputMaybe<Scalars['String']['input']>;
+  skip?: InputMaybe<Scalars['Int']['input']>;
+  take?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type QueryCategoriesArgs = {
@@ -3566,6 +3608,11 @@ export type QuerySearchShoppingListsArgs = {
 
 export type QuerySearchStoresArgs = {
   query: Scalars['String']['input'];
+};
+
+export type QuerySearchUnitsArgs = {
+  query: Scalars['String']['input'];
+  type?: InputMaybe<UnitType>;
 };
 
 export type QueryShoppingListArgs = {
@@ -6846,8 +6893,44 @@ export type AutocompleteItemsQuery = {
       id: string;
       name: string;
       imageUrl?: string | null | undefined;
+      defaultUnit?:
+        | {
+            __typename?: 'ItemUnitSuggestion';
+            id: string;
+            name: string;
+            symbol: string;
+            type: UnitType;
+            isDefault: boolean;
+            isPreferred: boolean;
+          }
+        | null
+        | undefined;
+      brand?:
+        | {__typename?: 'BrandSuggestion'; id: string; name: string}
+        | null
+        | undefined;
+      category?:
+        | {
+            __typename?: 'CategorySuggestion';
+            id: string;
+            name: string;
+            type: CategoryType;
+            isPrimary: boolean;
+          }
+        | null
+        | undefined;
     }>;
   };
+};
+
+export type SearchBrandsQueryVariables = Exact<{
+  search: Scalars['String']['input'];
+  limit?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+export type SearchBrandsQuery = {
+  __typename?: 'Query';
+  brands: Array<{__typename?: 'Brand'; id: string; name: string}>;
 };
 
 export type CreateItemMutationVariables = Exact<{
@@ -7011,6 +7094,41 @@ export type GetUnitBySymbolQuery = {
     | undefined;
 };
 
+export type SearchUnitsQueryVariables = Exact<{
+  query: Scalars['String']['input'];
+  type?: InputMaybe<UnitType>;
+}>;
+
+export type SearchUnitsQuery = {
+  __typename?: 'Query';
+  searchUnits: Array<{
+    __typename?: 'Unit';
+    id: string;
+    name: string;
+    symbol: string;
+    type: UnitType;
+    isCommon: boolean;
+    sortOrder: number;
+  }>;
+};
+
+export type GetCommonUnitsQueryVariables = Exact<{
+  type?: InputMaybe<UnitType>;
+}>;
+
+export type GetCommonUnitsQuery = {
+  __typename?: 'Query';
+  units: Array<{
+    __typename?: 'Unit';
+    id: string;
+    name: string;
+    symbol: string;
+    type: UnitType;
+    isCommon: boolean;
+    sortOrder: number;
+  }>;
+};
+
 export type GetMyNotificationsQueryVariables = Exact<{
   filter?: InputMaybe<NotificationFilterInput>;
   first?: InputMaybe<Scalars['Int']['input']>;
@@ -7169,6 +7287,15 @@ export type GetPantryItemQuery = {
   pantryItem: {__typename?: 'PantryItem'} & PantryItemFragment;
 };
 
+export type AddItemToPantryMutationVariables = Exact<{
+  input: AddPantryItemInput;
+}>;
+
+export type AddItemToPantryMutation = {
+  __typename?: 'Mutation';
+  addItemToPantry: {__typename?: 'PantryItem'} & PantryItemFragment;
+};
+
 export type CreatePantryMutationVariables = Exact<{
   input: CreatePantryInput;
 }>;
@@ -7190,15 +7317,6 @@ export type CreatePantryMutation = {
     createdAt: string;
     updatedAt?: string | null | undefined;
   };
-};
-
-export type AddItemToPantryMutationVariables = Exact<{
-  input: AddPantryItemInput;
-}>;
-
-export type AddItemToPantryMutation = {
-  __typename?: 'Mutation';
-  addItemToPantry: {__typename?: 'PantryItem'} & PantryItemFragment;
 };
 
 export type UpdatePantryItemMutationVariables = Exact<{
@@ -20129,6 +20247,72 @@ export const AutocompleteItemsDocument = {
                       {kind: 'Field', name: {kind: 'Name', value: 'id'}},
                       {kind: 'Field', name: {kind: 'Name', value: 'name'}},
                       {kind: 'Field', name: {kind: 'Name', value: 'imageUrl'}},
+                      {
+                        kind: 'Field',
+                        name: {kind: 'Name', value: 'defaultUnit'},
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {kind: 'Field', name: {kind: 'Name', value: 'id'}},
+                            {
+                              kind: 'Field',
+                              name: {kind: 'Name', value: 'name'},
+                            },
+                            {
+                              kind: 'Field',
+                              name: {kind: 'Name', value: 'symbol'},
+                            },
+                            {
+                              kind: 'Field',
+                              name: {kind: 'Name', value: 'type'},
+                            },
+                            {
+                              kind: 'Field',
+                              name: {kind: 'Name', value: 'isDefault'},
+                            },
+                            {
+                              kind: 'Field',
+                              name: {kind: 'Name', value: 'isPreferred'},
+                            },
+                          ],
+                        },
+                      },
+                      {
+                        kind: 'Field',
+                        name: {kind: 'Name', value: 'brand'},
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {kind: 'Field', name: {kind: 'Name', value: 'id'}},
+                            {
+                              kind: 'Field',
+                              name: {kind: 'Name', value: 'name'},
+                            },
+                          ],
+                        },
+                      },
+                      {
+                        kind: 'Field',
+                        name: {kind: 'Name', value: 'category'},
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {kind: 'Field', name: {kind: 'Name', value: 'id'}},
+                            {
+                              kind: 'Field',
+                              name: {kind: 'Name', value: 'name'},
+                            },
+                            {
+                              kind: 'Field',
+                              name: {kind: 'Name', value: 'type'},
+                            },
+                            {
+                              kind: 'Field',
+                              name: {kind: 'Name', value: 'isPrimary'},
+                            },
+                          ],
+                        },
+                      },
                     ],
                   },
                 },
@@ -20220,6 +20404,145 @@ export function refetchAutocompleteItemsQuery(
   variables: AutocompleteItemsQueryVariables,
 ) {
   return {query: AutocompleteItemsDocument, variables: variables};
+}
+export const SearchBrandsDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'query',
+      name: {kind: 'Name', value: 'SearchBrands'},
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {kind: 'Variable', name: {kind: 'Name', value: 'search'}},
+          type: {
+            kind: 'NonNullType',
+            type: {kind: 'NamedType', name: {kind: 'Name', value: 'String'}},
+          },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {kind: 'Variable', name: {kind: 'Name', value: 'limit'}},
+          type: {kind: 'NamedType', name: {kind: 'Name', value: 'Int'}},
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: {kind: 'Name', value: 'brands'},
+            arguments: [
+              {
+                kind: 'Argument',
+                name: {kind: 'Name', value: 'search'},
+                value: {
+                  kind: 'Variable',
+                  name: {kind: 'Name', value: 'search'},
+                },
+              },
+              {
+                kind: 'Argument',
+                name: {kind: 'Name', value: 'take'},
+                value: {kind: 'Variable', name: {kind: 'Name', value: 'limit'}},
+              },
+              {
+                kind: 'Argument',
+                name: {kind: 'Name', value: 'isActive'},
+                value: {kind: 'BooleanValue', value: true},
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {kind: 'Field', name: {kind: 'Name', value: 'id'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'name'}},
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+
+/**
+ * __useSearchBrandsQuery__
+ *
+ * To run a query within a React component, call `useSearchBrandsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useSearchBrandsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useSearchBrandsQuery({
+ *   variables: {
+ *      search: // value for 'search'
+ *      limit: // value for 'limit'
+ *   },
+ * });
+ */
+export function useSearchBrandsQuery(
+  baseOptions: ApolloReactHooks.QueryHookOptions<
+    SearchBrandsQuery,
+    SearchBrandsQueryVariables
+  > &
+    ({variables: SearchBrandsQueryVariables; skip?: boolean} | {skip: boolean}),
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useQuery<
+    SearchBrandsQuery,
+    SearchBrandsQueryVariables
+  >(SearchBrandsDocument, options);
+}
+export function useSearchBrandsLazyQuery(
+  baseOptions?: ApolloReactHooks.LazyQueryHookOptions<
+    SearchBrandsQuery,
+    SearchBrandsQueryVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useLazyQuery<
+    SearchBrandsQuery,
+    SearchBrandsQueryVariables
+  >(SearchBrandsDocument, options);
+}
+export function useSearchBrandsSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        SearchBrandsQuery,
+        SearchBrandsQueryVariables
+      >,
+) {
+  const options =
+    baseOptions === ApolloReactHooks.skipToken
+      ? baseOptions
+      : {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSuspenseQuery<
+    SearchBrandsQuery,
+    SearchBrandsQueryVariables
+  >(SearchBrandsDocument, options);
+}
+export type SearchBrandsQueryHookResult = ReturnType<
+  typeof useSearchBrandsQuery
+>;
+export type SearchBrandsLazyQueryHookResult = ReturnType<
+  typeof useSearchBrandsLazyQuery
+>;
+export type SearchBrandsSuspenseQueryHookResult = ReturnType<
+  typeof useSearchBrandsSuspenseQuery
+>;
+export type SearchBrandsQueryResult = ApolloReactCommon.QueryResult<
+  SearchBrandsQuery,
+  SearchBrandsQueryVariables
+>;
+export function refetchSearchBrandsQuery(
+  variables: SearchBrandsQueryVariables,
+) {
+  return {query: SearchBrandsDocument, variables: variables};
 }
 export const CreateItemDocument = {
   kind: 'Document',
@@ -20915,6 +21238,262 @@ export function refetchGetUnitBySymbolQuery(
   variables: GetUnitBySymbolQueryVariables,
 ) {
   return {query: GetUnitBySymbolDocument, variables: variables};
+}
+export const SearchUnitsDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'query',
+      name: {kind: 'Name', value: 'SearchUnits'},
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {kind: 'Variable', name: {kind: 'Name', value: 'query'}},
+          type: {
+            kind: 'NonNullType',
+            type: {kind: 'NamedType', name: {kind: 'Name', value: 'String'}},
+          },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {kind: 'Variable', name: {kind: 'Name', value: 'type'}},
+          type: {kind: 'NamedType', name: {kind: 'Name', value: 'UnitType'}},
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: {kind: 'Name', value: 'searchUnits'},
+            arguments: [
+              {
+                kind: 'Argument',
+                name: {kind: 'Name', value: 'query'},
+                value: {kind: 'Variable', name: {kind: 'Name', value: 'query'}},
+              },
+              {
+                kind: 'Argument',
+                name: {kind: 'Name', value: 'type'},
+                value: {kind: 'Variable', name: {kind: 'Name', value: 'type'}},
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {kind: 'Field', name: {kind: 'Name', value: 'id'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'name'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'symbol'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'type'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'isCommon'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'sortOrder'}},
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+
+/**
+ * __useSearchUnitsQuery__
+ *
+ * To run a query within a React component, call `useSearchUnitsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useSearchUnitsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useSearchUnitsQuery({
+ *   variables: {
+ *      query: // value for 'query'
+ *      type: // value for 'type'
+ *   },
+ * });
+ */
+export function useSearchUnitsQuery(
+  baseOptions: ApolloReactHooks.QueryHookOptions<
+    SearchUnitsQuery,
+    SearchUnitsQueryVariables
+  > &
+    ({variables: SearchUnitsQueryVariables; skip?: boolean} | {skip: boolean}),
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useQuery<SearchUnitsQuery, SearchUnitsQueryVariables>(
+    SearchUnitsDocument,
+    options,
+  );
+}
+export function useSearchUnitsLazyQuery(
+  baseOptions?: ApolloReactHooks.LazyQueryHookOptions<
+    SearchUnitsQuery,
+    SearchUnitsQueryVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useLazyQuery<
+    SearchUnitsQuery,
+    SearchUnitsQueryVariables
+  >(SearchUnitsDocument, options);
+}
+export function useSearchUnitsSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        SearchUnitsQuery,
+        SearchUnitsQueryVariables
+      >,
+) {
+  const options =
+    baseOptions === ApolloReactHooks.skipToken
+      ? baseOptions
+      : {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSuspenseQuery<
+    SearchUnitsQuery,
+    SearchUnitsQueryVariables
+  >(SearchUnitsDocument, options);
+}
+export type SearchUnitsQueryHookResult = ReturnType<typeof useSearchUnitsQuery>;
+export type SearchUnitsLazyQueryHookResult = ReturnType<
+  typeof useSearchUnitsLazyQuery
+>;
+export type SearchUnitsSuspenseQueryHookResult = ReturnType<
+  typeof useSearchUnitsSuspenseQuery
+>;
+export type SearchUnitsQueryResult = ApolloReactCommon.QueryResult<
+  SearchUnitsQuery,
+  SearchUnitsQueryVariables
+>;
+export function refetchSearchUnitsQuery(variables: SearchUnitsQueryVariables) {
+  return {query: SearchUnitsDocument, variables: variables};
+}
+export const GetCommonUnitsDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'query',
+      name: {kind: 'Name', value: 'GetCommonUnits'},
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {kind: 'Variable', name: {kind: 'Name', value: 'type'}},
+          type: {kind: 'NamedType', name: {kind: 'Name', value: 'UnitType'}},
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: {kind: 'Name', value: 'units'},
+            arguments: [
+              {
+                kind: 'Argument',
+                name: {kind: 'Name', value: 'isCommon'},
+                value: {kind: 'BooleanValue', value: true},
+              },
+              {
+                kind: 'Argument',
+                name: {kind: 'Name', value: 'type'},
+                value: {kind: 'Variable', name: {kind: 'Name', value: 'type'}},
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {kind: 'Field', name: {kind: 'Name', value: 'id'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'name'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'symbol'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'type'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'isCommon'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'sortOrder'}},
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+
+/**
+ * __useGetCommonUnitsQuery__
+ *
+ * To run a query within a React component, call `useGetCommonUnitsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetCommonUnitsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetCommonUnitsQuery({
+ *   variables: {
+ *      type: // value for 'type'
+ *   },
+ * });
+ */
+export function useGetCommonUnitsQuery(
+  baseOptions?: ApolloReactHooks.QueryHookOptions<
+    GetCommonUnitsQuery,
+    GetCommonUnitsQueryVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useQuery<
+    GetCommonUnitsQuery,
+    GetCommonUnitsQueryVariables
+  >(GetCommonUnitsDocument, options);
+}
+export function useGetCommonUnitsLazyQuery(
+  baseOptions?: ApolloReactHooks.LazyQueryHookOptions<
+    GetCommonUnitsQuery,
+    GetCommonUnitsQueryVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useLazyQuery<
+    GetCommonUnitsQuery,
+    GetCommonUnitsQueryVariables
+  >(GetCommonUnitsDocument, options);
+}
+export function useGetCommonUnitsSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetCommonUnitsQuery,
+        GetCommonUnitsQueryVariables
+      >,
+) {
+  const options =
+    baseOptions === ApolloReactHooks.skipToken
+      ? baseOptions
+      : {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSuspenseQuery<
+    GetCommonUnitsQuery,
+    GetCommonUnitsQueryVariables
+  >(GetCommonUnitsDocument, options);
+}
+export type GetCommonUnitsQueryHookResult = ReturnType<
+  typeof useGetCommonUnitsQuery
+>;
+export type GetCommonUnitsLazyQueryHookResult = ReturnType<
+  typeof useGetCommonUnitsLazyQuery
+>;
+export type GetCommonUnitsSuspenseQueryHookResult = ReturnType<
+  typeof useGetCommonUnitsSuspenseQuery
+>;
+export type GetCommonUnitsQueryResult = ApolloReactCommon.QueryResult<
+  GetCommonUnitsQuery,
+  GetCommonUnitsQueryVariables
+>;
+export function refetchGetCommonUnitsQuery(
+  variables?: GetCommonUnitsQueryVariables,
+) {
+  return {query: GetCommonUnitsDocument, variables: variables};
 }
 export const GetMyNotificationsDocument = {
   kind: 'Document',
@@ -22810,105 +23389,6 @@ export function refetchGetPantryItemQuery(
 ) {
   return {query: GetPantryItemDocument, variables: variables};
 }
-export const CreatePantryDocument = {
-  kind: 'Document',
-  definitions: [
-    {
-      kind: 'OperationDefinition',
-      operation: 'mutation',
-      name: {kind: 'Name', value: 'CreatePantry'},
-      variableDefinitions: [
-        {
-          kind: 'VariableDefinition',
-          variable: {kind: 'Variable', name: {kind: 'Name', value: 'input'}},
-          type: {
-            kind: 'NonNullType',
-            type: {
-              kind: 'NamedType',
-              name: {kind: 'Name', value: 'CreatePantryInput'},
-            },
-          },
-        },
-      ],
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          {
-            kind: 'Field',
-            name: {kind: 'Name', value: 'createPantry'},
-            arguments: [
-              {
-                kind: 'Argument',
-                name: {kind: 'Name', value: 'input'},
-                value: {kind: 'Variable', name: {kind: 'Name', value: 'input'}},
-              },
-            ],
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                {kind: 'Field', name: {kind: 'Name', value: 'id'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'homeId'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'name'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'description'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'isDefault'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'location'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'temperature'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'tags'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'metadata'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'version'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'createdAt'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'updatedAt'}},
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
-export type CreatePantryMutationFn = ApolloReactCommon.MutationFunction<
-  CreatePantryMutation,
-  CreatePantryMutationVariables
->;
-
-/**
- * __useCreatePantryMutation__
- *
- * To run a mutation, you first call `useCreatePantryMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useCreatePantryMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [createPantryMutation, { data, loading, error }] = useCreatePantryMutation({
- *   variables: {
- *      input: // value for 'input'
- *   },
- * });
- */
-export function useCreatePantryMutation(
-  baseOptions?: ApolloReactHooks.MutationHookOptions<
-    CreatePantryMutation,
-    CreatePantryMutationVariables
-  >,
-) {
-  const options = {...defaultOptions, ...baseOptions};
-  return ApolloReactHooks.useMutation<
-    CreatePantryMutation,
-    CreatePantryMutationVariables
-  >(CreatePantryDocument, options);
-}
-export type CreatePantryMutationHookResult = ReturnType<
-  typeof useCreatePantryMutation
->;
-export type CreatePantryMutationResult =
-  ApolloReactCommon.MutationResult<CreatePantryMutation>;
-export type CreatePantryMutationOptions = ApolloReactCommon.BaseMutationOptions<
-  CreatePantryMutation,
-  CreatePantryMutationVariables
->;
 export const AddItemToPantryDocument = {
   kind: 'Document',
   definitions: [
@@ -23326,6 +23806,105 @@ export type AddItemToPantryMutationOptions =
     AddItemToPantryMutation,
     AddItemToPantryMutationVariables
   >;
+export const CreatePantryDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: {kind: 'Name', value: 'CreatePantry'},
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {kind: 'Variable', name: {kind: 'Name', value: 'input'}},
+          type: {
+            kind: 'NonNullType',
+            type: {
+              kind: 'NamedType',
+              name: {kind: 'Name', value: 'CreatePantryInput'},
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: {kind: 'Name', value: 'createPantry'},
+            arguments: [
+              {
+                kind: 'Argument',
+                name: {kind: 'Name', value: 'input'},
+                value: {kind: 'Variable', name: {kind: 'Name', value: 'input'}},
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {kind: 'Field', name: {kind: 'Name', value: 'id'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'homeId'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'name'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'description'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'isDefault'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'location'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'temperature'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'tags'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'metadata'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'version'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'createdAt'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'updatedAt'}},
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type CreatePantryMutationFn = ApolloReactCommon.MutationFunction<
+  CreatePantryMutation,
+  CreatePantryMutationVariables
+>;
+
+/**
+ * __useCreatePantryMutation__
+ *
+ * To run a mutation, you first call `useCreatePantryMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreatePantryMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createPantryMutation, { data, loading, error }] = useCreatePantryMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useCreatePantryMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    CreatePantryMutation,
+    CreatePantryMutationVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useMutation<
+    CreatePantryMutation,
+    CreatePantryMutationVariables
+  >(CreatePantryDocument, options);
+}
+export type CreatePantryMutationHookResult = ReturnType<
+  typeof useCreatePantryMutation
+>;
+export type CreatePantryMutationResult =
+  ApolloReactCommon.MutationResult<CreatePantryMutation>;
+export type CreatePantryMutationOptions = ApolloReactCommon.BaseMutationOptions<
+  CreatePantryMutation,
+  CreatePantryMutationVariables
+>;
 export const UpdatePantryItemDocument = {
   kind: 'Document',
   definitions: [

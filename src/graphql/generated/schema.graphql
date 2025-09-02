@@ -322,7 +322,12 @@ input AddPantryItemInput {
   expiresAt: String
   initialQuantity: Float!
   isAutoReorder: Boolean
-  itemId: String!
+  itemBarcode: String
+  itemBrand: String
+  itemCategory: String
+  itemDescription: String
+  itemId: String
+  itemName: String
   lastUsedAt: DateTime
   lotNumber: String
   pantryId: ID!
@@ -442,6 +447,11 @@ input BrandInput {
   website: String
 }
 
+type BrandSuggestion {
+  id: ID!
+  name: String!
+}
+
 type BrowserStat {
   browserName: String!
   count: Int!
@@ -528,6 +538,13 @@ enum CategorySource {
   CROWD
   IMPORT
   MANUAL
+}
+
+type CategorySuggestion {
+  id: ID!
+  isPrimary: Boolean!
+  name: String!
+  type: CategoryType!
 }
 
 enum CategoryType {
@@ -1424,6 +1441,9 @@ type ItemStoreSku {
 }
 
 type ItemSuggestion {
+  brand: BrandSuggestion
+  category: CategorySuggestion
+  defaultUnit: ItemUnitSuggestion
   id: ID!
   imageUrl: String
   name: String!
@@ -1488,6 +1508,15 @@ input ItemUnitInput {
   retailUnit: Boolean
   unitId: String!
   usageContext: [UnitUsageContext!]
+}
+
+type ItemUnitSuggestion {
+  id: ID!
+  isDefault: Boolean!
+  isPreferred: Boolean!
+  name: String!
+  symbol: String!
+  type: UnitType!
 }
 
 type ItemsResponse {
@@ -2614,7 +2643,14 @@ type Query {
   activeModerations: [UserModeration!]!
   autocompleteItems(input: AutocompleteInput!): AutocompleteResponse!
   brand(id: ID!): Brand
-  brands: [Brand!]!
+  brands(
+    country: String
+    isActive: Boolean
+    parentId: String
+    search: String
+    skip: Int = 0
+    take: Int = 50
+  ): [Brand!]!
   categories(parentId: String, type: CategoryType): [Category!]!
   category(id: ID!): Category
   categoryBySlug(slug: String!): Category
@@ -2737,6 +2773,7 @@ type Query {
   searchRecipes(query: String!): [Recipe!]!
   searchShoppingLists(query: String!): [ShoppingList!]!
   searchStores(query: String!): [Store!]!
+  searchUnits(query: String!, type: UnitType): [Unit!]!
   shoppingList(id: ID!): ShoppingList
   shoppingListByShareCode(shareCode: String!): ShoppingList
   shoppingListCollaborators(shoppingListId: ID!): [ShoppingListCollaborator!]!

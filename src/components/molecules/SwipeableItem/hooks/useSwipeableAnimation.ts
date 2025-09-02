@@ -1,4 +1,5 @@
-import {useSharedValue, withTiming, runOnJS} from 'react-native-reanimated';
+import {useSharedValue, withTiming} from 'react-native-reanimated';
+import {scheduleOnRN} from 'react-native-worklets';
 
 export const useSwipeableAnimation = (onDelete?: () => void) => {
   const itemOpacity = useSharedValue(1);
@@ -10,7 +11,9 @@ export const useSwipeableAnimation = (onDelete?: () => void) => {
     itemHeight.value = withTiming(0, {duration: 300}, () => {
       'worklet';
       if (onDelete) {
-        runOnJS(onDelete)();
+        scheduleOnRN(() => {
+          onDelete();
+        });
       }
     });
   };

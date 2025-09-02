@@ -1,6 +1,6 @@
 import React from 'react';
 import {Text, View, StyleProp, ViewStyle} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import IconButton from '../atoms/IconButton';
 
 type ActionButtonProps = {
@@ -17,6 +17,7 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
   color,
   size = 24, // Default size for the icon
 }) => {
+  const {theme} = useUnistyles();
   return (
     <View style={[styles.button, style]}>
       <IconButton

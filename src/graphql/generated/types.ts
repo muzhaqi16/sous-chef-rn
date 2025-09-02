@@ -53,7 +53,12 @@ export type AddPantryItemInput = {
   expiresAt?: InputMaybe<Scalars['String']['input']>;
   initialQuantity: Scalars['Float']['input'];
   isAutoReorder?: InputMaybe<Scalars['Boolean']['input']>;
-  itemId: Scalars['String']['input'];
+  itemBarcode?: InputMaybe<Scalars['String']['input']>;
+  itemBrand?: InputMaybe<Scalars['String']['input']>;
+  itemCategory?: InputMaybe<Scalars['String']['input']>;
+  itemDescription?: InputMaybe<Scalars['String']['input']>;
+  itemId?: InputMaybe<Scalars['String']['input']>;
+  itemName?: InputMaybe<Scalars['String']['input']>;
   lastUsedAt?: InputMaybe<Scalars['DateTime']['input']>;
   lotNumber?: InputMaybe<Scalars['String']['input']>;
   pantryId: Scalars['ID']['input'];
@@ -177,6 +182,12 @@ export type BrandInput = {
   website?: InputMaybe<Scalars['String']['input']>;
 };
 
+export type BrandSuggestion = {
+  __typename?: 'BrandSuggestion';
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+};
+
 export type BrowserStat = {
   __typename?: 'BrowserStat';
   browserName: Scalars['String']['output'];
@@ -269,6 +280,14 @@ export enum CategorySource {
   Import = 'IMPORT',
   Manual = 'MANUAL',
 }
+
+export type CategorySuggestion = {
+  __typename?: 'CategorySuggestion';
+  id: Scalars['ID']['output'];
+  isPrimary: Scalars['Boolean']['output'];
+  name: Scalars['String']['output'];
+  type: CategoryType;
+};
 
 export enum CategoryType {
   Cuisine = 'CUISINE',
@@ -1190,6 +1209,9 @@ export type ItemStoreSku = {
 
 export type ItemSuggestion = {
   __typename?: 'ItemSuggestion';
+  brand?: Maybe<BrandSuggestion>;
+  category?: Maybe<CategorySuggestion>;
+  defaultUnit?: Maybe<ItemUnitSuggestion>;
   id: Scalars['ID']['output'];
   imageUrl?: Maybe<Scalars['String']['output']>;
   name: Scalars['String']['output'];
@@ -1255,6 +1277,16 @@ export type ItemUnitInput = {
   retailUnit?: InputMaybe<Scalars['Boolean']['input']>;
   unitId: Scalars['String']['input'];
   usageContext?: InputMaybe<Array<UnitUsageContext>>;
+};
+
+export type ItemUnitSuggestion = {
+  __typename?: 'ItemUnitSuggestion';
+  id: Scalars['ID']['output'];
+  isDefault: Scalars['Boolean']['output'];
+  isPreferred: Scalars['Boolean']['output'];
+  name: Scalars['String']['output'];
+  symbol: Scalars['String']['output'];
+  type: UnitType;
 };
 
 export type ItemsResponse = {
@@ -3197,6 +3229,7 @@ export type Query = {
   searchRecipes: Array<Recipe>;
   searchShoppingLists: Array<ShoppingList>;
   searchStores: Array<Store>;
+  searchUnits: Array<Unit>;
   shoppingList?: Maybe<ShoppingList>;
   shoppingListByShareCode?: Maybe<ShoppingList>;
   shoppingListCollaborators: Array<ShoppingListCollaborator>;
@@ -3239,6 +3272,15 @@ export type QueryAutocompleteItemsArgs = {
 
 export type QueryBrandArgs = {
   id: Scalars['ID']['input'];
+};
+
+export type QueryBrandsArgs = {
+  country?: InputMaybe<Scalars['String']['input']>;
+  isActive?: InputMaybe<Scalars['Boolean']['input']>;
+  parentId?: InputMaybe<Scalars['String']['input']>;
+  search?: InputMaybe<Scalars['String']['input']>;
+  skip?: InputMaybe<Scalars['Int']['input']>;
+  take?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type QueryCategoriesArgs = {
@@ -3560,6 +3602,11 @@ export type QuerySearchShoppingListsArgs = {
 
 export type QuerySearchStoresArgs = {
   query: Scalars['String']['input'];
+};
+
+export type QuerySearchUnitsArgs = {
+  query: Scalars['String']['input'];
+  type?: InputMaybe<UnitType>;
 };
 
 export type QueryShoppingListArgs = {
@@ -9592,8 +9639,35 @@ export type AutocompleteItemsQuery = {
       id: string;
       name: string;
       imageUrl?: string | null;
+      defaultUnit?: {
+        __typename?: 'ItemUnitSuggestion';
+        id: string;
+        name: string;
+        symbol: string;
+        type: UnitType;
+        isDefault: boolean;
+        isPreferred: boolean;
+      } | null;
+      brand?: {__typename?: 'BrandSuggestion'; id: string; name: string} | null;
+      category?: {
+        __typename?: 'CategorySuggestion';
+        id: string;
+        name: string;
+        type: CategoryType;
+        isPrimary: boolean;
+      } | null;
     }>;
   };
+};
+
+export type SearchBrandsQueryVariables = Exact<{
+  search: Scalars['String']['input'];
+  limit?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+export type SearchBrandsQuery = {
+  __typename?: 'Query';
+  brands: Array<{__typename?: 'Brand'; id: string; name: string}>;
 };
 
 export type CreateItemMutationVariables = Exact<{
@@ -9743,6 +9817,41 @@ export type GetUnitBySymbolQuery = {
       baseUnitId?: string | null;
     } | null;
   } | null;
+};
+
+export type SearchUnitsQueryVariables = Exact<{
+  query: Scalars['String']['input'];
+  type?: InputMaybe<UnitType>;
+}>;
+
+export type SearchUnitsQuery = {
+  __typename?: 'Query';
+  searchUnits: Array<{
+    __typename?: 'Unit';
+    id: string;
+    name: string;
+    symbol: string;
+    type: UnitType;
+    isCommon: boolean;
+    sortOrder: number;
+  }>;
+};
+
+export type GetCommonUnitsQueryVariables = Exact<{
+  type?: InputMaybe<UnitType>;
+}>;
+
+export type GetCommonUnitsQuery = {
+  __typename?: 'Query';
+  units: Array<{
+    __typename?: 'Unit';
+    id: string;
+    name: string;
+    symbol: string;
+    type: UnitType;
+    isCommon: boolean;
+    sortOrder: number;
+  }>;
 };
 
 export type GetMyNotificationsQueryVariables = Exact<{
@@ -10306,29 +10415,6 @@ export type GetPantryItemQuery = {
   };
 };
 
-export type CreatePantryMutationVariables = Exact<{
-  input: CreatePantryInput;
-}>;
-
-export type CreatePantryMutation = {
-  __typename?: 'Mutation';
-  createPantry: {
-    __typename?: 'Pantry';
-    id: string;
-    homeId: string;
-    name: string;
-    description?: string | null;
-    isDefault: boolean;
-    location?: string | null;
-    temperature?: string | null;
-    tags: Array<string>;
-    metadata?: any | null;
-    version: number;
-    createdAt: string;
-    updatedAt?: string | null;
-  };
-};
-
 export type AddItemToPantryMutationVariables = Exact<{
   input: AddPantryItemInput;
 }>;
@@ -10512,6 +10598,29 @@ export type AddItemToPantryMutation = {
       recipeId?: string | null;
       usedBy: {__typename?: 'User'; id: string};
     }>;
+  };
+};
+
+export type CreatePantryMutationVariables = Exact<{
+  input: CreatePantryInput;
+}>;
+
+export type CreatePantryMutation = {
+  __typename?: 'Mutation';
+  createPantry: {
+    __typename?: 'Pantry';
+    id: string;
+    homeId: string;
+    name: string;
+    description?: string | null;
+    isDefault: boolean;
+    location?: string | null;
+    temperature?: string | null;
+    tags: Array<string>;
+    metadata?: any | null;
+    version: number;
+    createdAt: string;
+    updatedAt?: string | null;
   };
 };
 

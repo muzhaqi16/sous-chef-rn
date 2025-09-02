@@ -26,12 +26,6 @@ export default function AppNavigator() {
   const {user} = useStore();
   const {navigationState, targetRoute, isReady, saveUserProgress} =
     useNavigationState();
-  console.log(
-    'Navigation State:',
-    navigationState,
-    'Target Route:',
-    targetRoute,
-  );
   // Set up navigation service
   useEffect(() => {
     if (navigationRef.current) {

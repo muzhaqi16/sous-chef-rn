@@ -1,7 +1,7 @@
 import React from 'react';
 import {View, Text, TouchableOpacity} from 'react-native';
 import Icon from '@react-native-vector-icons/material-icons';
-import {StyleSheet} from 'react-native-unistyles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {Badge} from '../base/Badge';
 
 interface ListItemProps {
@@ -28,8 +28,7 @@ export const ListItem: React.FC<ListItemProps> = ({
   rightElement,
   leftElement,
 }) => {
-  const {styles, theme} = useStyles(listItemStyles);
-
+  const {theme} = useUnistyles();
   const content = (
     <>
       {/* Optional left element for image or icon */}
@@ -62,7 +61,7 @@ export const ListItem: React.FC<ListItemProps> = ({
   return <View style={styles.container}>{content}</View>;
 };
 
-const listItemStyles = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flexDirection: 'row',
     alignItems: 'center',

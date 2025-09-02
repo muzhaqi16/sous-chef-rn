@@ -27,9 +27,8 @@ export const useSwipeableActions = ({
   };
 
   const handleSwipeableOpen = (direction: 'left' | 'right') => {
-    if (direction === 'left' && enableSwipeToDelete && onDelete) {
-      animateDelete();
-    }
+    // Swipe only reveals actions, doesn't execute them
+    // Actions are only executed when clicked
   };
 
   return {

@@ -8,7 +8,7 @@ import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {LoginNavProp} from '#navigation/types';
 import {AuthFormTemplate, AuthWrapper} from '#components/templates';
 import {EmailInput, PasswordInput} from '#components/atoms';
-import {getLoginValidationSchema} from '#/utils/validation/profile';
+import {getLoginValidationSchema} from '#/utils';
 import {useStore} from '#store';
 import {useLoginMutation, type LoginInput} from '#generated';
 import {

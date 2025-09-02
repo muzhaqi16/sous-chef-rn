@@ -2,16 +2,25 @@ import {StateCreator} from 'zustand';
 import {RootState} from '../index';
 import {zustandStorage, STORAGE_KEY} from '../../storage/mmkv';
 
+interface Unit {
+  id: string;
+  name: string;
+  symbol: string;
+  abbreviation?: string;
+}
+
 export interface AppState {
   isHydrated: boolean;
   isLoading: boolean;
   isError: boolean;
   isFetching: boolean;
+  cachedUnits: Unit[];
 
   setHydrated: (flag: boolean) => void;
   setLoading: (flag: boolean) => void;
   setFetching: (flag: boolean) => void;
   setError: (flag: boolean) => void;
+  setCachedUnits: (units: Unit[]) => void;
   reset: () => void;
 }
 
@@ -20,6 +29,7 @@ export const initialAppState = {
   isLoading: false,
   isError: false,
   isFetching: false,
+  cachedUnits: [],
 };
 
 export const createAppSlice: StateCreator<
@@ -34,6 +44,7 @@ export const createAppSlice: StateCreator<
   setLoading: flag => set({isLoading: flag}),
   setFetching: flag => set({isFetching: flag}),
   setError: flag => set({isError: flag}),
+  setCachedUnits: units => set({cachedUnits: units}),
 
   reset: () => {
     zustandStorage.removeItem(STORAGE_KEY);

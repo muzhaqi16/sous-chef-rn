@@ -16,9 +16,11 @@ export default StyleSheet.create(theme => ({
   },
 
   segment: {
-    flex: 1,
-    paddingVertical: 10,
+    flexGrow: 1,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.sm,
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: theme.colors.surface,
   },
 
@@ -44,5 +46,11 @@ export default StyleSheet.create(theme => ({
     fontSize: 16,
     color: theme.colors.textPrimary,
     marginLeft: theme.spacing.md,
+  },
+
+  quantityContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingVertical: theme.spacing.sm,
   },
 }));

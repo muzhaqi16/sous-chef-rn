@@ -38,6 +38,12 @@ query GetPantryItem($id: ID!) {
 # MUTATIONS
 # ============================================
 
+mutation AddItemToPantry($input: AddPantryItemInput!) {
+  addItemToPantry(input: $input) {
+    ...PantryItemFragment
+  }
+}
+
 mutation CreatePantry($input: CreatePantryInput!) {
   createPantry(input: $input) {
     id

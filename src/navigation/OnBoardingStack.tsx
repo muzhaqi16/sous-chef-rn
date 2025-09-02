@@ -25,7 +25,7 @@ const OnBoardingStack = () => {
         onboardingProgress: onBoardingStep,
       });
     }
-  }, [user?.id, onBoardingStep, saveUserProgress]);
+  }, [user?.id, onBoardingStep]);
 
   // Map step to component for easier management
   const getInitialRouteName = (): keyof OnBoardingStackParamList => {

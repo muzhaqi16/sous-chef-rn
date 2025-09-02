@@ -1,5 +1,5 @@
 import {useStore} from '#store';
-import {useMemo, useEffect} from 'react';
+import {useMemo, useEffect, useCallback} from 'react';
 
 export enum NavigationState {
   UNAUTHENTICATED = 'UNAUTHENTICATED',
@@ -47,7 +47,7 @@ export const useNavigationState = () => {
     return NavigationState.AUTHENTICATED;
   }, [user, isHydrated]);
 
-  const getTargetRoute = () => {
+  const getTargetRoute = useCallback(() => {
     switch (navigationState) {
       case NavigationState.UNAUTHENTICATED:
         return 'AuthStack';
@@ -60,9 +60,9 @@ export const useNavigationState = () => {
       default:
         return 'AuthStack';
     }
-  };
+  }, [navigationState]);
 
-  const getAuthStackInitialRoute = () => {
+  const getAuthStackInitialRoute = useCallback(() => {
     if (!user) {
       return rememberMe === undefined ? 'LandingAuth' : 'Login';
     }
@@ -70,9 +70,9 @@ export const useNavigationState = () => {
       return 'CodeVerification';
     }
     return 'Login';
-  };
+  }, [user, rememberMe]);
 
-  const getOnboardingInitialRoute = () => {
+  const getOnboardingInitialRoute = useCallback(() => {
     if (user?.onBoarded) {
       return 'OnboardingComplete';
     }
@@ -93,13 +93,13 @@ export const useNavigationState = () => {
       default:
         return 'CreateHome';
     }
-  };
+  }, [user, getUserNavigationState, onBoardingStep]);
 
-  const saveUserProgress = (progressData: Partial<UserNavigationState>) => {
+  const saveUserProgress = useCallback((progressData: Partial<UserNavigationState>) => {
     if (user?.id) {
       setUserNavigationState(user.id, progressData);
     }
-  };
+  }, [user?.id, setUserNavigationState]);
 
   return {
     navigationState,

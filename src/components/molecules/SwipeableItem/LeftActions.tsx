@@ -1,12 +1,8 @@
 import React from 'react';
 import {View, Text} from 'react-native';
-import Reanimated, {
-  useAnimatedStyle,
-  SharedValue,
-} from 'react-native-reanimated';
+import Animated, {useAnimatedStyle, SharedValue} from 'react-native-reanimated';
 import Icon from '@react-native-vector-icons/material-icons';
-import {stylesheet} from './styles';
-import {useUnistyles} from 'react-native-unistyles';
+import {styles} from './styles';
 
 interface LeftActionsProps {
   dragX: SharedValue<number>;
@@ -21,24 +17,17 @@ export const LeftActions: React.FC<LeftActionsProps> = ({
 }) => {
   if (!enabled) return null;
 
-  const translateX = useAnimatedStyle(() => {
-    return {
-      transform: [{translateX: dragX.value - 80}],
-    };
-  });
-
-  const opacity = useAnimatedStyle(() => {
-    return {
-      opacity: progress.value,
-    };
-  });
+  const animatedStyles = useAnimatedStyle(() => ({
+    transform: [{translateX: dragX.value - 80}],
+    opacity: progress.value,
+  }));
 
   return (
-    <Reanimated.View style={[styles.leftActionContainer, translateX, opacity]}>
+    <Animated.View style={[styles.leftActionContainer, animatedStyles]}>
       <View style={styles.deleteIconContainer}>
         <Icon name="delete" size={24} color="white" />
         <Text style={styles.deleteText}>Delete</Text>
       </View>
-    </Reanimated.View>
+    </Animated.View>
   );
 };

@@ -1,6 +1,6 @@
 import React from 'react';
 import {TextInput, View, Text} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 
 interface InputProps {
   value: string;
@@ -27,8 +27,7 @@ export const Input: React.FC<InputProps> = ({
   autoFocus = false,
   required = false,
 }) => {
-  const {styles, theme} = useStyles(inputStyles);
-
+  const {theme} = useUnistyles();
   return (
     <View style={styles.container}>
       {label && (
@@ -56,7 +55,7 @@ export const Input: React.FC<InputProps> = ({
   );
 };
 
-const inputStyles = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     marginBottom: 16,
   },

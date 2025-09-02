@@ -15,7 +15,7 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
 
   return (
     <TouchableOpacity
-      style={[styles.actionButton, {backgroundColor}]}
+      style={[styles.actionButton, {backgroundColor: backgroundColor}]}
       onPress={onPress}>
       <Icon name={icon} size={20} color={theme.colors.white} />
       {label && <Text style={styles.deleteText}>{label}</Text>}

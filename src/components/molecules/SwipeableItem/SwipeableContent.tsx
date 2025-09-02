@@ -1,7 +1,6 @@
 import React from 'react';
 import {TouchableOpacity} from 'react-native';
-import {stylesheet} from './styles';
-import {useUnistyles} from 'react-native-unistyles';
+import {styles} from './styles';
 
 interface SwipeableContentProps {
   children: React.ReactNode;
