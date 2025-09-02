@@ -2,27 +2,60 @@ import {StyleSheet} from 'react-native-unistyles';
 
 export default StyleSheet.create(theme => ({
   button: {
-    // Only variant-specific overrides that aren't in commonStyles
+    // Base responsive styles using v3 breakpoint syntax
+    paddingVertical: {
+      xs: theme.spacing.sm,
+      md: theme.spacing.md,
+    },
+    paddingHorizontal: {
+      xs: theme.spacing.md,
+      md: theme.spacing.lg,
+    },
+    borderRadius: theme.radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+
     variants: {
       variant: {
+        primary: {
+          backgroundColor: theme.colors.primary,
+        },
+        secondary: {
+          backgroundColor: theme.colors.surface,
+          borderWidth: 1,
+          borderColor: theme.colors.border,
+        },
         ghost: {
           backgroundColor: 'transparent',
-          borderWidth: 1.5,
+          borderWidth: 1,
           borderColor: 'transparent',
         },
-        default: {},
       },
       size: {
         small: {
-          paddingVertical: theme.spacing.xs,
-          paddingHorizontal: theme.spacing.sm,
+          paddingVertical: {
+            xs: theme.spacing.xs,
+            md: theme.spacing.sm,
+          },
+          paddingHorizontal: {
+            xs: theme.spacing.sm,
+            md: theme.spacing.md,
+          },
         },
-        medium: {}, // Uses commonStyles.button defaults
+        medium: {
+          // Uses base responsive defaults - empty variant
+        },
         large: {
-          paddingVertical: theme.spacing.md,
-          paddingHorizontal: theme.spacing.lg,
+          paddingVertical: {
+            xs: theme.spacing.md,
+            md: theme.spacing.lg,
+          },
+          paddingHorizontal: {
+            xs: theme.spacing.lg,
+            md: theme.spacing.xl,
+          },
         },
-        default: {},
       },
       disabled: {
         true: {
@@ -35,27 +68,73 @@ export default StyleSheet.create(theme => ({
         },
       },
     },
+
+    compoundVariants: [
+      {
+        variant: 'ghost',
+        disabled: true,
+        styles: {
+          borderColor: theme.colors.border,
+          opacity: 0.3,
+        },
+      },
+      {
+        variant: 'primary',
+        size: 'large',
+        styles: {
+          ...theme.shadows.md,
+        },
+      },
+    ],
   },
 
   text: {
-    // Only specific overrides
+    fontSize: {
+      xs: theme.fonts.size.sm,
+      md: theme.fonts.size.md,
+    },
+    fontWeight: theme.fonts.weight.semibold,
+    textAlign: 'center',
+
     variants: {
       variant: {
+        primary: {
+          color: theme.colors.white,
+        },
+        secondary: {
+          color: theme.colors.textPrimary,
+        },
         ghost: {
           color: theme.colors.primary,
         },
-        default: {},
       },
       size: {
         small: {
-          fontSize: theme.fonts.size.sm,
+          fontSize: {
+            xs: theme.fonts.size.xs,
+            md: theme.fonts.size.sm,
+          },
         },
-        medium: {}, // Uses commonStyles.buttonText defaults
+        medium: {
+          // Uses base responsive defaults - empty variant
+        },
         large: {
-          fontSize: theme.fonts.size.lg,
+          fontSize: {
+            xs: theme.fonts.size.md,
+            md: theme.fonts.size.lg,
+          },
         },
-        default: {},
       },
     },
   },
+
+  // Dynamic function for loading state
+  loadingContainer: (isLoading: boolean) => ({
+    opacity: isLoading ? 0 : 1,
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  }),
 }));

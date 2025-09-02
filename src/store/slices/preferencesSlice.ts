@@ -10,9 +10,9 @@ export enum OnBoardingSteps {
 }
 
 export interface PreferencesState {
-  // Theme
-  theme: 'light' | 'dark';
-  setTheme: (theme: 'light' | 'dark') => void;
+  // Theme - now supports 'system' option
+  theme: 'light' | 'dark' | 'system';
+  setTheme: (theme: 'light' | 'dark' | 'system') => void;
 
   // Language
   language?: string;
@@ -64,7 +64,7 @@ const initialPreferencesState: Omit<
   | 'resetPreferences'
   | 'reset'
 > = {
-  theme: 'light',
+  theme: 'system', // Default to system preference
   onBoardingStep: null,
   language: undefined,
   emailNotifications: false,

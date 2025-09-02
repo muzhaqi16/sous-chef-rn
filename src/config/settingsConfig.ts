@@ -92,9 +92,14 @@ export const PROFILE_SETTINGS_CONFIG: SettingsSection[] = [
     title: 'Theme & Language',
     items: [
       {
-        key: 'darkMode',
-        label: 'Dark Mode',
-        type: 'switch',
+        key: 'theme',
+        label: 'Theme',
+        type: 'modal',
+        options: [
+          {label: '☀️ Light', value: 'light'},
+          {label: '🌙 Dark', value: 'dark'},
+          {label: '📱 System', value: 'system'},
+        ],
       },
       {
         key: 'language',

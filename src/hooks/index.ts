@@ -17,3 +17,4 @@ export {useBarcodeScanner} from './useBarcodeScanner';
 export {useUserData} from './useUserData';
 export {useDefaultHome} from './home/useDefaultHome';
 export {useStoreReset} from './useStoreReset';
+export {useTheme} from './useTheme';

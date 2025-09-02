@@ -1,5 +1,6 @@
 import {useMemo, useCallback} from 'react';
 import {useStore} from '#store';
+import {useTheme} from '#hooks';
 import {useApolloClient} from '@apollo/client';
 import {
   useUpdateUserProfileMutation,
@@ -21,6 +22,7 @@ export const useConfigurableSettings = (profile: any) => {
   const store = useStore();
   const client = useApolloClient();
   const {logout} = useStore();
+  const {userThemePreference, setTheme} = useTheme();
   const [updateProfileMutation] = useUpdateUserProfileMutation();
   const [updateSettingsMutation] = useUpdateUserPreferencesMutation();
 
@@ -241,12 +243,29 @@ export const useConfigurableSettings = (profile: any) => {
           break;
 
         // Theme & Language settings
+        case 'theme':
+          if (config.type === 'modal') {
+            baseItem.value = userThemePreference;
+            baseItem.options = config.options || [
+              {label: '☀️ Light', value: 'light'},
+              {label: '🌙 Dark', value: 'dark'},
+              {label: '📱 System', value: 'system'},
+            ];
+            baseItem.onSave = (value: 'light' | 'dark' | 'system') => {
+              setTheme(value);
+              updateUserPreferences({theme: value});
+            };
+          }
+          break;
+
+        // Keep backward compatibility with old darkMode setting
         case 'darkMode':
           if (config.type === 'switch') {
-            baseItem.value = store.theme === 'dark';
+            baseItem.value = userThemePreference === 'dark';
             baseItem.onPress = () => {
-              const newTheme = store.theme === 'dark' ? 'light' : 'dark';
-              store.setTheme(newTheme);
+              const newTheme =
+                userThemePreference === 'dark' ? 'light' : 'dark';
+              setTheme(newTheme);
               updateUserPreferences({theme: newTheme});
             };
           }
@@ -284,7 +303,14 @@ export const useConfigurableSettings = (profile: any) => {
 
       return baseItem;
     },
-    [profile, store, updateProfile, updateUserPreferences],
+    [
+      profile,
+      store,
+      updateProfile,
+      updateUserPreferences,
+      userThemePreference,
+      setTheme,
+    ],
   );
 
   const sections = useMemo((): SettingsSection[] => {

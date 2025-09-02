@@ -1,4 +1,4 @@
-import React, {ReactNode} from 'react';
+import React, {ReactNode, useState} from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,6 @@ import {
   ViewStyle,
 } from 'react-native';
 import {useUnistyles} from 'react-native-unistyles';
-import {commonStyles} from '#/styles/commonStyles';
 import styles from './BaseInput.styles';
 
 export interface BaseInputProps extends TextInputProps {
@@ -24,33 +23,43 @@ export const BaseInput: React.FC<BaseInputProps> = ({
   errorMessage,
   rightIcon,
   style,
+  onFocus,
+  onBlur,
   ...textInputProps
 }) => {
   const {theme} = useUnistyles();
+  const [isFocused, setIsFocused] = useState(false);
+  const hasError = Boolean(errorMessage);
+
+  const handleFocus = (e: any) => {
+    setIsFocused(true);
+    onFocus?.(e);
+  };
+
+  const handleBlur = (e: any) => {
+    setIsFocused(false);
+    onBlur?.(e);
+  };
 
   return (
-    <View style={containerStyle}>
+    <View style={[styles.container, containerStyle]}>
       {label != null && (
-        <Text style={[commonStyles.label, styles.label]}>{label}</Text>
+        <Text style={styles.label}>{label}</Text>
       )}
-      <View
-        style={[
-          commonStyles.row,
-          commonStyles.input,
-          styles.inputRow,
-          errorMessage && commonStyles.inputError,
-        ]}>
+      <View style={styles.inputContainer(isFocused, hasError)}>
         <TextInput
-          style={[commonStyles.flex1, styles.input, style]}
+          style={[styles.input, style]}
           placeholderTextColor={theme.colors.inputPlaceholder}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
           {...textInputProps}
         />
         {rightIcon != null && (
           <View style={styles.iconWrapper}>{rightIcon}</View>
         )}
       </View>
-      {errorMessage != null && (
-        <Text style={[commonStyles.errorText, styles.errorText]}>
+      {hasError && (
+        <Text style={styles.errorText(hasError)}>
           {errorMessage}
         </Text>
       )}

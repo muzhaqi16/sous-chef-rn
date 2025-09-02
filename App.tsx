@@ -1,6 +1,6 @@
 import React from 'react';
-import {StatusBar, useColorScheme} from 'react-native';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
+import {StatusBar} from 'react-native';
+import {StyleSheet} from 'react-native-unistyles';
 import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {BottomSheetModalProvider} from '@gorhom/bottom-sheet';
@@ -10,15 +10,12 @@ import {client} from './src/apollo/client';
 import AppNavigator from '#navigation/AppNavigator';
 import SplashScreen from '#/screens/SplashScreen';
 import {ToastProvider} from '#/components/atoms';
+import {useTheme} from '#/hooks/useTheme';
 
 const App = () => {
   const isHydrated = useStore(store => store.isHydrated);
-  const darkMode = useColorScheme() === 'dark';
-
-  const {theme: userTheme} = useStore();
-  const {theme} = useUnistyles();
-  const effectiveDark =
-    darkMode !== undefined ? darkMode : userTheme === 'dark';
+  const { theme, isFollowingSystem } = useTheme();
+  const isDark = theme === 'dark';
 
   // Early return for loading state - before any conditional hooks
   if (!isHydrated || !client) {
@@ -31,8 +28,8 @@ const App = () => {
       <ApolloProvider client={client}>
         <SafeAreaProvider>
           <StatusBar
-            barStyle={effectiveDark ? 'light-content' : 'dark-content'}
-            backgroundColor={theme.colors.background}
+            barStyle={isDark ? 'light-content' : 'dark-content'}
+            backgroundColor={isDark ? '#212121' : '#FAFAFA'} // Use theme colors directly
           />
           <SafeAreaView style={styles.container}>
             <ToastProvider>
