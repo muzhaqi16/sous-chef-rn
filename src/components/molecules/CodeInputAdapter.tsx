@@ -1,4 +1,3 @@
-// CodeInputAdapter.tsx
 import React from 'react';
 import type {FC} from 'react';
 import {CodeInput} from '../atoms/CodeInput'; // wherever your original lives

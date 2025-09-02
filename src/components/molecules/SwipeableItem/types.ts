@@ -1,4 +1,4 @@
-import {MaterialIconName} from '#/types';
+import {Icon} from '#/utils/iconUtils';
 
 export interface SwipeableItemProps {
   children: React.ReactNode;
@@ -13,7 +13,7 @@ export interface SwipeableItemProps {
 
 export interface ActionButtonProps {
   onPress: () => void;
-  icon: MaterialIconName;
+  icon: React.ComponentProps<typeof Icon>['name'];
   backgroundColor: string;
   label?: string;
 }

@@ -61,7 +61,6 @@ export const PantryItemDetail: React.FC = () => {
           },
         },
       });
-      Alert.alert('Success', 'Item added to shopping list');
     } catch (error) {
       Alert.alert('Error', 'Failed to add to shopping list');
     }
@@ -80,7 +79,7 @@ export const PantryItemDetail: React.FC = () => {
             <Text style={[commonStyles.subtitle, styles.brandName]}>
               {item.item.brands
                 .filter(brand => brand.isPrimary)
-                .map(brand => brand.brand.name)
+                .map(brand => brand?.brand?.name)
                 .join(', ')}
             </Text>
           )}

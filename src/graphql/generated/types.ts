@@ -70,7 +70,7 @@ export type AddPantryItemInput = {
   storeId?: InputMaybe<Scalars['String']['input']>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
   totalCost?: InputMaybe<Scalars['Float']['input']>;
-  unitId: Scalars['String']['input'];
+  unitId?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type AddRestrictionsInput = {
@@ -165,7 +165,7 @@ export type Brand = {
   description?: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
   itemCount: Scalars['Int']['output'];
-  items: Array<ItemBrand>;
+  items?: Maybe<Array<ItemBrand>>;
   logo?: Maybe<Scalars['String']['output']>;
   metadata?: Maybe<Scalars['JSON']['output']>;
   name: Scalars['String']['output'];
@@ -1070,11 +1070,11 @@ export type ItemAvailability = {
 
 export type ItemBrand = {
   __typename?: 'ItemBrand';
-  brand: Brand;
-  createdAt: Scalars['DateTime']['output'];
+  brand?: Maybe<Brand>;
+  createdAt?: Maybe<Scalars['DateTime']['output']>;
   id: Scalars['ID']['output'];
-  isPrimary: Scalars['Boolean']['output'];
-  item: Item;
+  isPrimary?: Maybe<Scalars['Boolean']['output']>;
+  item?: Maybe<Item>;
 };
 
 export type ItemCategory = {
@@ -1706,6 +1706,7 @@ export type Mutation = {
   __typename?: 'Mutation';
   _empty?: Maybe<Scalars['String']['output']>;
   acceptHomeInvite: Membership;
+  acceptShoppingListInvite: ShoppingListCollaborator;
   addCollaborator: ShoppingListCollaborator;
   addItemImage: Item;
   addItemTags: Item;
@@ -1747,6 +1748,7 @@ export type Mutation = {
   deactivateDevice: Device;
   deactivateMultipleDevices: Array<Device>;
   declineHomeInvite: Scalars['Boolean']['output'];
+  declineShoppingListInvite: Scalars['Boolean']['output'];
   deleteAccount: Scalars['Boolean']['output'];
   deleteAllReadNotifications: Scalars['Int']['output'];
   deleteBrand: Brand;
@@ -1777,6 +1779,7 @@ export type Mutation = {
   incrementDeviceLoginCount: Device;
   incrementItemPopularity: Item;
   inviteToHome: HomeInvite;
+  inviteToShoppingList: ShoppingListCollaborator;
   joinHomeByCode: Membership;
   joinShoppingListByShareCode: ShoppingList;
   leaveHome: Scalars['Boolean']['output'];
@@ -1807,6 +1810,7 @@ export type Mutation = {
   removeMember: Scalars['Boolean']['output'];
   removePushToken: Device;
   removeRestrictions: UserModeration;
+  removeShoppingListCollaborator: Scalars['Boolean']['output'];
   resendVerificationEmail: Scalars['Boolean']['output'];
   /** Reset password using token from email */
   resetPassword: ResetPasswordResponse;
@@ -1883,6 +1887,10 @@ export type Mutation = {
 };
 
 export type MutationAcceptHomeInviteArgs = {
+  token: Scalars['String']['input'];
+};
+
+export type MutationAcceptShoppingListInviteArgs = {
   token: Scalars['String']['input'];
 };
 
@@ -2066,6 +2074,10 @@ export type MutationDeclineHomeInviteArgs = {
   token: Scalars['String']['input'];
 };
 
+export type MutationDeclineShoppingListInviteArgs = {
+  token: Scalars['String']['input'];
+};
+
 export type MutationDeleteBrandArgs = {
   id: Scalars['ID']['input'];
 };
@@ -2176,6 +2188,10 @@ export type MutationIncrementItemPopularityArgs = {
 
 export type MutationInviteToHomeArgs = {
   input: InviteToHomeInput;
+};
+
+export type MutationInviteToShoppingListArgs = {
+  input: InviteToShoppingListInput;
 };
 
 export type MutationJoinHomeByCodeArgs = {
@@ -2309,6 +2325,10 @@ export type MutationRemovePushTokenArgs = {
 
 export type MutationRemoveRestrictionsArgs = {
   input: RemoveRestrictionsInput;
+};
+
+export type MutationRemoveShoppingListCollaboratorArgs = {
+  id: Scalars['ID']['input'];
 };
 
 export type MutationResendVerificationEmailArgs = {
@@ -3191,6 +3211,7 @@ export type Query = {
   myModeration?: Maybe<UserModeration>;
   myNotifications: NotificationConnection;
   myPurchases: Array<Purchase>;
+  myShoppingListInvites: Array<ShoppingListCollaborator>;
   nearbyStores: Array<Store>;
   notification?: Maybe<Notification>;
   notificationPreferences: NotificationPreferences;
@@ -6274,9 +6295,9 @@ export type UnitFragmentFragment = {
 export type BrandFragmentFragment = {
   __typename?: 'ItemBrand';
   id: string;
-  isPrimary: boolean;
-  createdAt: string;
-  brand: {
+  isPrimary?: boolean | null;
+  createdAt?: string | null;
+  brand?: {
     __typename?: 'Brand';
     id: string;
     name: string;
@@ -6288,7 +6309,7 @@ export type BrandFragmentFragment = {
     updatedAt: string;
     deletedAt?: string | null;
     version: number;
-  };
+  } | null;
 };
 
 export type CategoryFragmentFragment = {
@@ -6378,9 +6399,9 @@ export type ItemFragmentFragment = {
   brands: Array<{
     __typename?: 'ItemBrand';
     id: string;
-    isPrimary: boolean;
-    createdAt: string;
-    brand: {
+    isPrimary?: boolean | null;
+    createdAt?: string | null;
+    brand?: {
       __typename?: 'Brand';
       id: string;
       name: string;
@@ -6392,7 +6413,7 @@ export type ItemFragmentFragment = {
       updatedAt: string;
       deletedAt?: string | null;
       version: number;
-    };
+    } | null;
   }>;
   categories?: Array<{
     __typename?: 'ItemCategory';
@@ -6548,9 +6569,9 @@ export type PantryItemFragmentFragment = {
     brands: Array<{
       __typename?: 'ItemBrand';
       id: string;
-      isPrimary: boolean;
-      createdAt: string;
-      brand: {
+      isPrimary?: boolean | null;
+      createdAt?: string | null;
+      brand?: {
         __typename?: 'Brand';
         id: string;
         name: string;
@@ -6562,7 +6583,7 @@ export type PantryItemFragmentFragment = {
         updatedAt: string;
         deletedAt?: string | null;
         version: number;
-      };
+      } | null;
     }>;
     categories?: Array<{
       __typename?: 'ItemCategory';
@@ -6824,9 +6845,9 @@ export type PantryFragmentFragment = {
       brands: Array<{
         __typename?: 'ItemBrand';
         id: string;
-        isPrimary: boolean;
-        createdAt: string;
-        brand: {
+        isPrimary?: boolean | null;
+        createdAt?: string | null;
+        brand?: {
           __typename?: 'Brand';
           id: string;
           name: string;
@@ -6838,7 +6859,7 @@ export type PantryFragmentFragment = {
           updatedAt: string;
           deletedAt?: string | null;
           version: number;
-        };
+        } | null;
       }>;
       categories?: Array<{
         __typename?: 'ItemCategory';
@@ -7192,9 +7213,9 @@ export type HomeFragmentFragment = {
         brands: Array<{
           __typename?: 'ItemBrand';
           id: string;
-          isPrimary: boolean;
-          createdAt: string;
-          brand: {
+          isPrimary?: boolean | null;
+          createdAt?: string | null;
+          brand?: {
             __typename?: 'Brand';
             id: string;
             name: string;
@@ -7206,7 +7227,7 @@ export type HomeFragmentFragment = {
             updatedAt: string;
             deletedAt?: string | null;
             version: number;
-          };
+          } | null;
         }>;
         categories?: Array<{
           __typename?: 'ItemCategory';
@@ -7567,9 +7588,9 @@ export type GetHomeQuery = {
           brands: Array<{
             __typename?: 'ItemBrand';
             id: string;
-            isPrimary: boolean;
-            createdAt: string;
-            brand: {
+            isPrimary?: boolean | null;
+            createdAt?: string | null;
+            brand?: {
               __typename?: 'Brand';
               id: string;
               name: string;
@@ -7581,7 +7602,7 @@ export type GetHomeQuery = {
               updatedAt: string;
               deletedAt?: string | null;
               version: number;
-            };
+            } | null;
           }>;
           categories?: Array<{
             __typename?: 'ItemCategory';
@@ -8040,9 +8061,9 @@ export type CreateHomeMutation = {
           brands: Array<{
             __typename?: 'ItemBrand';
             id: string;
-            isPrimary: boolean;
-            createdAt: string;
-            brand: {
+            isPrimary?: boolean | null;
+            createdAt?: string | null;
+            brand?: {
               __typename?: 'Brand';
               id: string;
               name: string;
@@ -8054,7 +8075,7 @@ export type CreateHomeMutation = {
               updatedAt: string;
               deletedAt?: string | null;
               version: number;
-            };
+            } | null;
           }>;
           categories?: Array<{
             __typename?: 'ItemCategory';
@@ -8417,9 +8438,9 @@ export type UpdateHomeMutation = {
           brands: Array<{
             __typename?: 'ItemBrand';
             id: string;
-            isPrimary: boolean;
-            createdAt: string;
-            brand: {
+            isPrimary?: boolean | null;
+            createdAt?: string | null;
+            brand?: {
               __typename?: 'Brand';
               id: string;
               name: string;
@@ -8431,7 +8452,7 @@ export type UpdateHomeMutation = {
               updatedAt: string;
               deletedAt?: string | null;
               version: number;
-            };
+            } | null;
           }>;
           categories?: Array<{
             __typename?: 'ItemCategory';
@@ -8793,9 +8814,9 @@ export type DeleteHomeMutation = {
           brands: Array<{
             __typename?: 'ItemBrand';
             id: string;
-            isPrimary: boolean;
-            createdAt: string;
-            brand: {
+            isPrimary?: boolean | null;
+            createdAt?: string | null;
+            brand?: {
               __typename?: 'Brand';
               id: string;
               name: string;
@@ -8807,7 +8828,7 @@ export type DeleteHomeMutation = {
               updatedAt: string;
               deletedAt?: string | null;
               version: number;
-            };
+            } | null;
           }>;
           categories?: Array<{
             __typename?: 'ItemCategory';
@@ -9424,9 +9445,9 @@ export type GetDefaultHomeQuery = {
           brands: Array<{
             __typename?: 'ItemBrand';
             id: string;
-            isPrimary: boolean;
-            createdAt: string;
-            brand: {
+            isPrimary?: boolean | null;
+            createdAt?: string | null;
+            brand?: {
               __typename?: 'Brand';
               id: string;
               name: string;
@@ -9438,7 +9459,7 @@ export type GetDefaultHomeQuery = {
               updatedAt: string;
               deletedAt?: string | null;
               version: number;
-            };
+            } | null;
           }>;
           categories?: Array<{
             __typename?: 'ItemCategory';
@@ -10138,9 +10159,9 @@ export type GetPantryItemsQuery = {
       brands: Array<{
         __typename?: 'ItemBrand';
         id: string;
-        isPrimary: boolean;
-        createdAt: string;
-        brand: {
+        isPrimary?: boolean | null;
+        createdAt?: string | null;
+        brand?: {
           __typename?: 'Brand';
           id: string;
           name: string;
@@ -10152,7 +10173,7 @@ export type GetPantryItemsQuery = {
           updatedAt: string;
           deletedAt?: string | null;
           version: number;
-        };
+        } | null;
       }>;
       categories?: Array<{
         __typename?: 'ItemCategory';
@@ -10324,9 +10345,9 @@ export type GetPantryItemQuery = {
       brands: Array<{
         __typename?: 'ItemBrand';
         id: string;
-        isPrimary: boolean;
-        createdAt: string;
-        brand: {
+        isPrimary?: boolean | null;
+        createdAt?: string | null;
+        brand?: {
           __typename?: 'Brand';
           id: string;
           name: string;
@@ -10338,7 +10359,7 @@ export type GetPantryItemQuery = {
           updatedAt: string;
           deletedAt?: string | null;
           version: number;
-        };
+        } | null;
       }>;
       categories?: Array<{
         __typename?: 'ItemCategory';
@@ -10510,9 +10531,9 @@ export type AddItemToPantryMutation = {
       brands: Array<{
         __typename?: 'ItemBrand';
         id: string;
-        isPrimary: boolean;
-        createdAt: string;
-        brand: {
+        isPrimary?: boolean | null;
+        createdAt?: string | null;
+        brand?: {
           __typename?: 'Brand';
           id: string;
           name: string;
@@ -10524,7 +10545,7 @@ export type AddItemToPantryMutation = {
           updatedAt: string;
           deletedAt?: string | null;
           version: number;
-        };
+        } | null;
       }>;
       categories?: Array<{
         __typename?: 'ItemCategory';
@@ -10720,9 +10741,9 @@ export type UpdatePantryItemMutation = {
       brands: Array<{
         __typename?: 'ItemBrand';
         id: string;
-        isPrimary: boolean;
-        createdAt: string;
-        brand: {
+        isPrimary?: boolean | null;
+        createdAt?: string | null;
+        brand?: {
           __typename?: 'Brand';
           id: string;
           name: string;
@@ -10734,7 +10755,7 @@ export type UpdatePantryItemMutation = {
           updatedAt: string;
           deletedAt?: string | null;
           version: number;
-        };
+        } | null;
       }>;
       categories?: Array<{
         __typename?: 'ItemCategory';
@@ -10906,9 +10927,9 @@ export type RemoveItemFromPantryMutation = {
       brands: Array<{
         __typename?: 'ItemBrand';
         id: string;
-        isPrimary: boolean;
-        createdAt: string;
-        brand: {
+        isPrimary?: boolean | null;
+        createdAt?: string | null;
+        brand?: {
           __typename?: 'Brand';
           id: string;
           name: string;
@@ -10920,7 +10941,7 @@ export type RemoveItemFromPantryMutation = {
           updatedAt: string;
           deletedAt?: string | null;
           version: number;
-        };
+        } | null;
       }>;
       categories?: Array<{
         __typename?: 'ItemCategory';
@@ -11139,6 +11160,137 @@ export type PantryItemsChangedSubscription = {
       unit: {__typename?: 'Unit'; name: string};
     };
   };
+};
+
+export type MyShoppingListInvitesQueryVariables = Exact<{[key: string]: never}>;
+
+export type MyShoppingListInvitesQuery = {
+  __typename?: 'Query';
+  myShoppingListInvites: Array<{
+    __typename?: 'ShoppingListCollaborator';
+    id: string;
+    shoppingListId: string;
+    collaboratorId?: string | null;
+    email?: string | null;
+    role: CollaboratorRole;
+    status: CollaboratorStatus;
+    canEdit: boolean;
+    canAddItems: boolean;
+    canRemoveItems: boolean;
+    canMarkPurchased: boolean;
+    canInviteOthers: boolean;
+    inviteToken?: string | null;
+    invitedAt: string;
+    expiresAt?: string | null;
+    shoppingList: {
+      __typename?: 'ShoppingList';
+      id: string;
+      name: string;
+      description?: string | null;
+    };
+    collaborator?: {
+      __typename?: 'User';
+      id: string;
+      email: string;
+      profile?: {
+        __typename?: 'UserProfile';
+        displayName?: string | null;
+        avatar?: string | null;
+      } | null;
+    } | null;
+    invitedBy?: {
+      __typename?: 'User';
+      id: string;
+      email: string;
+      profile?: {
+        __typename?: 'UserProfile';
+        displayName?: string | null;
+      } | null;
+    } | null;
+  }>;
+};
+
+export type InviteToShoppingListMutationVariables = Exact<{
+  input: InviteToShoppingListInput;
+}>;
+
+export type InviteToShoppingListMutation = {
+  __typename?: 'Mutation';
+  inviteToShoppingList: {
+    __typename?: 'ShoppingListCollaborator';
+    id: string;
+    shoppingListId: string;
+    collaboratorId?: string | null;
+    email?: string | null;
+    role: CollaboratorRole;
+    status: CollaboratorStatus;
+    canEdit: boolean;
+    canAddItems: boolean;
+    canRemoveItems: boolean;
+    canMarkPurchased: boolean;
+    canInviteOthers: boolean;
+    inviteToken?: string | null;
+    invitedAt: string;
+    expiresAt?: string | null;
+    shoppingList: {__typename?: 'ShoppingList'; id: string; name: string};
+    invitedBy?: {
+      __typename?: 'User';
+      id: string;
+      email: string;
+      profile?: {
+        __typename?: 'UserProfile';
+        displayName?: string | null;
+      } | null;
+    } | null;
+  };
+};
+
+export type AcceptShoppingListInviteMutationVariables = Exact<{
+  token: Scalars['String']['input'];
+}>;
+
+export type AcceptShoppingListInviteMutation = {
+  __typename?: 'Mutation';
+  acceptShoppingListInvite: {
+    __typename?: 'ShoppingListCollaborator';
+    id: string;
+    shoppingListId: string;
+    collaboratorId?: string | null;
+    email?: string | null;
+    role: CollaboratorRole;
+    status: CollaboratorStatus;
+    canEdit: boolean;
+    canAddItems: boolean;
+    canRemoveItems: boolean;
+    canMarkPurchased: boolean;
+    canInviteOthers: boolean;
+    invitedAt: string;
+    shoppingList: {
+      __typename?: 'ShoppingList';
+      id: string;
+      name: string;
+      description?: string | null;
+    };
+    collaborator?: {
+      __typename?: 'User';
+      id: string;
+      email: string;
+      profile?: {
+        __typename?: 'UserProfile';
+        displayName?: string | null;
+        avatar?: string | null;
+      } | null;
+    } | null;
+  };
+};
+
+export type DeclineShoppingListInviteMutationVariables = Exact<{
+  token: Scalars['String']['input'];
+}>;
+
+export type DeclineShoppingListInviteMutation = {
+  __typename?: 'Mutation';
+  declineShoppingListInvite: boolean;
 };
 
 export type CollaborationMemberAddedSubscriptionVariables = Exact<{

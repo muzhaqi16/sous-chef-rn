@@ -1,4 +1,14 @@
 import type {CodegenConfig} from '@graphql-codegen/cli';
+import {config as dotenvConfig} from 'dotenv';
+
+// Load environment variables from the specified ENVFILE or default .env
+dotenvConfig({
+  path: {
+    development: '.env',
+    staging: '.env.staging',
+    production: '.env.production',
+  }[process.env.NODE_ENV || 'development'],
+});
 
 // Environment-based endpoint configuration
 const getEndpoint = () => {

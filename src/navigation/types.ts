@@ -94,6 +94,13 @@ export type ShoppingListStackParamList = {
         listId?: string;
       }
     | undefined;
+  AcceptInvite: {
+    token?: string;
+    inviteId?: string;
+  };
+  JoinList: {
+    listId: string;
+  };
 };
 
 export type PantryStackParamList = {

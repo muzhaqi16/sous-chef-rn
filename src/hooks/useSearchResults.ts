@@ -1,10 +1,24 @@
 import {useEffect} from 'react';
 import {
-  useSearchItemByBarcodeQuery,
+  useSearchItemsByBarcodeQuery,
   useCreateItemMutation,
 } from '../graphql/generated';
 import {useStore} from '../store';
+import {ScannedItem} from '../store/slices/barcodeScannerSlice';
 import {Alert} from 'react-native';
+
+// Helper function to convert GraphQL Item to ScannedItem
+const convertToScannedItem = (
+  item: any,
+  fallbackBarcode: string,
+): ScannedItem => ({
+  id: item.id,
+  name: item.name,
+  description: item.description || undefined,
+  imageUrl: item.imageUrl || undefined,
+  barcode: item.barcode || fallbackBarcode,
+  price: item.averagePrice || undefined,
+});
 
 export const useSearchResults = (barcode: string) => {
   const {
@@ -21,7 +35,7 @@ export const useSearchResults = (barcode: string) => {
   const [addNewItem, {loading: addingItem}] = useCreateItemMutation({
     onCompleted: data => {
       if (data.createItem) {
-        const newItem = data.createItem;
+        const newItem = convertToScannedItem(data.createItem, barcode);
         setSearchResults([newItem]);
         addToRecentlyScanned(newItem);
         hideBottomSheet();
@@ -33,12 +47,12 @@ export const useSearchResults = (barcode: string) => {
     },
   });
 
-  const {data, loading, error} = useSearchItemByBarcodeQuery({
+  const {data, loading, error} = useSearchItemsByBarcodeQuery({
     variables: {barcode},
     onCompleted: data => {
       setSearching(false);
-      if (data.itemByBarcode) {
-        const item = data.itemByBarcode;
+      if (data.searchItemsByBarcode) {
+        const item = convertToScannedItem(data.searchItemsByBarcode, barcode);
         setSearchResults([item]);
         addToRecentlyScanned(item);
       } else {

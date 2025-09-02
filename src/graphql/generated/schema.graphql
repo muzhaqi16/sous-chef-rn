@@ -339,7 +339,7 @@ input AddPantryItemInput {
   storeId: String
   tags: [String!]
   totalCost: Float
-  unitId: String!
+  unitId: String
 }
 
 input AddRestrictionsInput {
@@ -430,7 +430,7 @@ type Brand {
   description: String
   id: ID!
   itemCount: Int!
-  items: [ItemBrand!]!
+  items: [ItemBrand!]
   logo: String
   metadata: JSON
   name: String!
@@ -1309,11 +1309,11 @@ type ItemAvailability {
 }
 
 type ItemBrand {
-  brand: Brand!
-  createdAt: DateTime!
+  brand: Brand
+  createdAt: DateTime
   id: ID!
-  isPrimary: Boolean!
-  item: Item!
+  isPrimary: Boolean
+  item: Item
 }
 
 type ItemCategory {
@@ -1919,6 +1919,7 @@ enum ModerationStatus {
 type Mutation {
   _empty: String
   acceptHomeInvite(token: String!): Membership!
+  acceptShoppingListInvite(token: String!): ShoppingListCollaborator!
   addCollaborator(data: AddCollaboratorInput!): ShoppingListCollaborator!
   addItemImage(image: ImageInput!, itemId: ID!): Item!
   addItemTags(id: ID!, tags: [String!]!): Item!
@@ -1974,6 +1975,7 @@ type Mutation {
   deactivateDevice(id: ID!): Device!
   deactivateMultipleDevices(deviceIds: [ID!]!): [Device!]!
   declineHomeInvite(token: String!): Boolean!
+  declineShoppingListInvite(token: String!): Boolean!
   deleteAccount: Boolean!
   deleteAllReadNotifications: Int!
   deleteBrand(id: ID!): Brand!
@@ -2020,6 +2022,9 @@ type Mutation {
   incrementDeviceLoginCount(id: ID!): Device!
   incrementItemPopularity(id: ID!): Item!
   inviteToHome(input: InviteToHomeInput!): HomeInvite!
+  inviteToShoppingList(
+    input: InviteToShoppingListInput!
+  ): ShoppingListCollaborator!
   joinHomeByCode(joinCode: String!): Membership!
   joinShoppingListByShareCode(shareCode: String!): ShoppingList!
   leaveHome(homeId: ID!): Boolean!
@@ -2069,6 +2074,7 @@ type Mutation {
   removeMember(membershipId: ID!): Boolean!
   removePushToken(id: ID!): Device!
   removeRestrictions(input: RemoveRestrictionsInput!): UserModeration!
+  removeShoppingListCollaborator(id: ID!): Boolean!
   resendVerificationEmail(email: String!): Boolean!
   """
   Reset password using token from email
@@ -2724,6 +2730,7 @@ type Query {
     orderBy: NotificationOrderBy
   ): NotificationConnection!
   myPurchases: [Purchase!]!
+  myShoppingListInvites: [ShoppingListCollaborator!]!
   nearbyStores(lat: Float!, lng: Float!, radius: Float): [Store!]!
   notification(id: ID!): Notification
   notificationPreferences: NotificationPreferences!

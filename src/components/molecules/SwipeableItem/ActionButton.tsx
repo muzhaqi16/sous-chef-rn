@@ -1,6 +1,6 @@
 import React from 'react';
 import {TouchableOpacity, Text} from 'react-native';
-import Icon from '@react-native-vector-icons/material-icons';
+import {Icon} from '#utils/iconUtils';
 import {styles} from './styles';
 import {useUnistyles} from 'react-native-unistyles';
 import {ActionButtonProps} from './types';

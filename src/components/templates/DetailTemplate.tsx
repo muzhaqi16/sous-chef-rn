@@ -34,7 +34,7 @@ export const DetailTemplate: React.FC<DetailTemplateProps> = ({
       <Header
         title={title}
         onBack={onBack}
-        actions={headerActions}
+        leftActions={headerActions}
         centerTitle
       />
       <ScrollView style={styles.content}>

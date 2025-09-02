@@ -3,7 +3,7 @@ import {useStore} from '#store';
 import {LANGUAGE_OPTIONS} from '../../constants/languages';
 
 export const useLanguagePicker = () => {
-  const {language, setLanguage, updatePreferences} = useStore();
+  const {language, setLanguage} = useStore();
   const [langPickerVisible, setLangPickerVisible] = useState(false);
 
   const showLanguagePicker = () => setLangPickerVisible(true);
@@ -11,7 +11,6 @@ export const useLanguagePicker = () => {
 
   const selectLanguage = (value: string) => {
     setLanguage(value);
-    updatePreferences({language: value});
     hideLanguagePicker();
   };
 

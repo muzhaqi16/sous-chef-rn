@@ -19,7 +19,7 @@ export interface PantryItemInput {
   brand?: string;
   quantity: number;
   unit?: string;
-  unitId?: string;
+  unitId: string;
   minimumQuantity?: number;
   storageState: StorageState;
   location?: string;

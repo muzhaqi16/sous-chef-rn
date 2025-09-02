@@ -6,7 +6,7 @@ import {
   ActivityIndicator,
   View,
 } from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 
 // Generic interface for selectable items
 interface SelectableItem {
@@ -39,6 +39,8 @@ export function ItemSelector<T extends SelectableItem>({
   keyExtractor,
   renderCustomItem,
 }: ItemSelectorProps<T>) {
+  const {theme} = useUnistyles();
+
   const defaultKeyExtractor = (item: T) => item.id;
   const getKey = keyExtractor || defaultKeyExtractor;
 

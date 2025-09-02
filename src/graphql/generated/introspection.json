@@ -356,11 +356,7 @@
           {
             "name": "unitId",
             "description": null,
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {"kind": "SCALAR", "name": "String", "ofType": null}
-            },
+            "type": {"kind": "SCALAR", "name": "String", "ofType": null},
             "defaultValue": null,
             "isDeprecated": false,
             "deprecationReason": null
@@ -1026,19 +1022,15 @@
             "description": null,
             "args": [],
             "type": {
-              "kind": "NON_NULL",
+              "kind": "LIST",
               "name": null,
               "ofType": {
-                "kind": "LIST",
+                "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "ItemBrand",
-                    "ofType": null
-                  }
+                  "kind": "OBJECT",
+                  "name": "ItemBrand",
+                  "ofType": null
                 }
               }
             },
@@ -8601,11 +8593,7 @@
             "name": "brand",
             "description": null,
             "args": [],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {"kind": "OBJECT", "name": "Brand", "ofType": null}
-            },
+            "type": {"kind": "OBJECT", "name": "Brand", "ofType": null},
             "isDeprecated": false,
             "deprecationReason": null
           },
@@ -8613,11 +8601,7 @@
             "name": "createdAt",
             "description": null,
             "args": [],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {"kind": "SCALAR", "name": "DateTime", "ofType": null}
-            },
+            "type": {"kind": "SCALAR", "name": "DateTime", "ofType": null},
             "isDeprecated": false,
             "deprecationReason": null
           },
@@ -8637,11 +8621,7 @@
             "name": "isPrimary",
             "description": null,
             "args": [],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {"kind": "SCALAR", "name": "Boolean", "ofType": null}
-            },
+            "type": {"kind": "SCALAR", "name": "Boolean", "ofType": null},
             "isDeprecated": false,
             "deprecationReason": null
           },
@@ -8649,11 +8629,7 @@
             "name": "item",
             "description": null,
             "args": [],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {"kind": "OBJECT", "name": "Item", "ofType": null}
-            },
+            "type": {"kind": "OBJECT", "name": "Item", "ofType": null},
             "isDeprecated": false,
             "deprecationReason": null
           }
@@ -13566,6 +13542,35 @@
             "deprecationReason": null
           },
           {
+            "name": "acceptShoppingListInvite",
+            "description": null,
+            "args": [
+              {
+                "name": "token",
+                "description": null,
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {"kind": "SCALAR", "name": "String", "ofType": null}
+                },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              }
+            ],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "ShoppingListCollaborator",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "addCollaborator",
             "description": null,
             "args": [
@@ -15043,6 +15048,31 @@
             "deprecationReason": null
           },
           {
+            "name": "declineShoppingListInvite",
+            "description": null,
+            "args": [
+              {
+                "name": "token",
+                "description": null,
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {"kind": "SCALAR", "name": "String", "ofType": null}
+                },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              }
+            ],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {"kind": "SCALAR", "name": "Boolean", "ofType": null}
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "deleteAccount",
             "description": null,
             "args": [],
@@ -15892,6 +15922,39 @@
               "kind": "NON_NULL",
               "name": null,
               "ofType": {"kind": "OBJECT", "name": "HomeInvite", "ofType": null}
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "inviteToShoppingList",
+            "description": null,
+            "args": [
+              {
+                "name": "input",
+                "description": null,
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "INPUT_OBJECT",
+                    "name": "InviteToShoppingListInput",
+                    "ofType": null
+                  }
+                },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              }
+            ],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "ShoppingListCollaborator",
+                "ofType": null
+              }
             },
             "isDeprecated": false,
             "deprecationReason": null
@@ -16953,6 +17016,31 @@
                 "name": "UserModeration",
                 "ofType": null
               }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "removeShoppingListCollaborator",
+            "description": null,
+            "args": [
+              {
+                "name": "id",
+                "description": null,
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {"kind": "SCALAR", "name": "ID", "ofType": null}
+                },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              }
+            ],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {"kind": "SCALAR", "name": "Boolean", "ofType": null}
             },
             "isDeprecated": false,
             "deprecationReason": null
@@ -25223,6 +25311,30 @@
                   "ofType": {
                     "kind": "OBJECT",
                     "name": "Purchase",
+                    "ofType": null
+                  }
+                }
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "myShoppingListInvites",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "OBJECT",
+                    "name": "ShoppingListCollaborator",
                     "ofType": null
                   }
                 }

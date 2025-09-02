@@ -1,7 +1,7 @@
 import React from 'react';
 import {View, Text, TouchableOpacity} from 'react-native';
 import Icon from '@react-native-vector-icons/material-icons';
-import {StyleSheet} from 'react-native-unistyles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {useStore} from '#store';
 import {useNavigation} from '@react-navigation/native';
 import {RootNavProp} from '#navigation';
@@ -18,6 +18,7 @@ export const NotificationBadge: React.FC<NotificationBadgeProps> = ({
   onPress,
 }) => {
   const navigation = useNavigation<RootNavProp>();
+  const {theme} = useUnistyles();
   const unreadCount = useStore(state => state.unreadCount);
 
   const handlePress = () => {

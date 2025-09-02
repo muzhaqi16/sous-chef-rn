@@ -1,7 +1,7 @@
 import React, {useState} from 'react';
 import {TouchableOpacity, View, Text, TextInput} from 'react-native';
 import FeatherIcon from '@react-native-vector-icons/feather';
-import {StyleSheet} from 'react-native-unistyles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 
 export interface RowProps {
   label: string;
@@ -24,6 +24,7 @@ export const Row: React.FC<RowProps> = ({
   isFirst = false,
   isLast = false,
 }) => {
+  const {theme} = useUnistyles();
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(value ?? '');
 

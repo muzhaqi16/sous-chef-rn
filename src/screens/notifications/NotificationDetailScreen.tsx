@@ -7,10 +7,15 @@ import Icon from '@react-native-vector-icons/material-icons';
 import {format} from 'date-fns';
 import {NotificationItem} from '#store/slices/notificationSlice';
 
+type NotificationDetailRouteParams = {
+  notification: NotificationItem;
+};
+
 export const NotificationDetailScreen: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation();
-  const notification = route.params?.notification as NotificationItem;
+  const notification = (route.params as NotificationDetailRouteParams)
+    ?.notification;
 
   if (!notification) {
     return (
@@ -28,7 +33,7 @@ export const NotificationDetailScreen: React.FC = () => {
   const handleAction = () => {
     switch (notification.type) {
       case 'MEMBERSHIP_INVITE':
-        navigation.navigate('HomeStack', {
+        navigation.navigate('ShoppingListStack', {
           screen: 'AcceptInvite',
           params: {inviteId: payload.inviteId},
         });

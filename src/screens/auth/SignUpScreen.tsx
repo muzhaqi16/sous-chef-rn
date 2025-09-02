@@ -4,7 +4,7 @@ import {yupResolver} from '@hookform/resolvers/yup';
 
 import {AuthFormTemplate, AuthWrapper} from '#components/templates';
 import {EmailInput, PasswordInput, BaseInput} from '#components/atoms';
-import {getSignUpValidationSchema} from '#/utils/validation/profile';
+import {getSignUpValidationSchema} from '#/utils';
 import {SignUpNavProp} from '#navigation';
 import {useRegisterMutation, type RegisterInput} from '#generated';
 import {useStore} from '#store';

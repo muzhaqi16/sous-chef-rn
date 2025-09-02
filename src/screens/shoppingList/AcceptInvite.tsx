@@ -8,31 +8,42 @@ import {
 } from 'react-native';
 import Icon from '@react-native-vector-icons/material-icons';
 import {useNavigation, useRoute} from '@react-navigation/native';
-import {StyleSheet} from 'react-native-unistyles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {
-  useInviteQuery,
-  useAcceptInviteMutation,
-  useDeclineInviteMutation,
+  useMyShoppingListInvitesQuery,
+  useAcceptShoppingListInviteMutation,
+  useDeclineShoppingListInviteMutation,
 } from '#generated';
 
 export const AcceptInvite: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const {inviteId} = route.params as {inviteId: string};
+  const {token, inviteId} = route.params as {token?: string; inviteId?: string};
+  const {theme} = useUnistyles();
 
   const [processing, setProcessing] = useState(false);
 
-  const {data, loading} = useInviteQuery({
-    variables: {id: inviteId},
-  });
+  // Get user's invites to find the specific invite
+  const {data, loading} = useMyShoppingListInvitesQuery();
 
-  const [acceptInvite] = useAcceptInviteMutation();
-  const [declineInvite] = useDeclineInviteMutation();
+  const [acceptInvite] = useAcceptShoppingListInviteMutation();
+  const [declineInvite] = useDeclineShoppingListInviteMutation();
+
+  // Find the specific invite
+  const invite = data?.myShoppingListInvites?.find(inv =>
+    token ? inv.inviteToken === token : inv.id === inviteId,
+  );
 
   const handleAccept = async () => {
+    if (!token && !invite?.inviteToken) {
+      Alert.alert('Error', 'Invalid invite token');
+      return;
+    }
+
     setProcessing(true);
     try {
-      await acceptInvite({variables: {inviteId}});
+      const inviteToken = token || invite?.inviteToken;
+      await acceptInvite({variables: {token: inviteToken!}});
       Alert.alert('Success', 'Invitation accepted!', [
         {text: 'OK', onPress: () => navigation.goBack()},
       ]);
@@ -44,6 +55,11 @@ export const AcceptInvite: React.FC = () => {
   };
 
   const handleDecline = async () => {
+    if (!token && !invite?.inviteToken) {
+      Alert.alert('Error', 'Invalid invite token');
+      return;
+    }
+
     Alert.alert(
       'Decline Invitation',
       'Are you sure you want to decline this invitation?',
@@ -55,7 +71,8 @@ export const AcceptInvite: React.FC = () => {
           onPress: async () => {
             setProcessing(true);
             try {
-              await declineInvite({variables: {inviteId}});
+              const inviteToken = token || invite?.inviteToken;
+              await declineInvite({variables: {token: inviteToken!}});
               navigation.goBack();
             } catch (error) {
               Alert.alert('Error', 'Failed to decline invitation');
@@ -76,7 +93,20 @@ export const AcceptInvite: React.FC = () => {
     );
   }
 
-  const invite = data?.invite;
+  if (!invite) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={[styles.inviteText, {color: theme.colors.error}]}>
+          Invitation not found or expired
+        </Text>
+        <TouchableOpacity
+          style={[styles.button, styles.declineButton]}
+          onPress={() => navigation.goBack()}>
+          <Text style={styles.declineButtonText}>Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -88,28 +118,30 @@ export const AcceptInvite: React.FC = () => {
 
       <View style={styles.content}>
         <View style={styles.iconContainer}>
-          <Icon name="mail" size={64} color={theme.colors.primary} />
+          <Icon name="shopping-cart" size={64} color={theme.colors.primary} />
         </View>
 
         <Text style={styles.title}>You've been invited!</Text>
 
         <Text style={styles.inviteText}>
-          {invite?.inviterName || 'Someone'} has invited you to join
+          {invite?.invitedBy?.profile?.displayName ||
+            invite?.invitedBy?.email ||
+            'Someone'}{' '}
+          has invited you to collaborate on
         </Text>
 
         <View style={styles.inviteDetails}>
-          <Text style={styles.inviteName}>
-            {invite?.homeName || invite?.listName}
-          </Text>
-          <Text style={styles.inviteType}>
-            {invite?.type === 'HOME' ? 'Home' : 'Shopping List'}
-          </Text>
+          <Text style={styles.inviteName}>{invite?.shoppingList?.name}</Text>
+          <Text style={styles.inviteType}>Shopping List</Text>
+          <Text style={styles.inviteRole}>Role: {invite?.role}</Text>
         </View>
 
-        {invite?.message && (
+        {invite?.shoppingList?.description && (
           <View style={styles.messageContainer}>
-            <Text style={styles.messageLabel}>Message:</Text>
-            <Text style={styles.message}>{invite.message}</Text>
+            <Text style={styles.messageLabel}>Description:</Text>
+            <Text style={styles.message}>
+              {invite.shoppingList.description}
+            </Text>
           </View>
         )}
 
@@ -136,6 +168,9 @@ export const AcceptInvite: React.FC = () => {
     </View>
   );
 };
+
+export default AcceptInvite;
+
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
@@ -193,6 +228,12 @@ const styles = StyleSheet.create(theme => ({
     fontSize: 14,
     color: theme.colors.textSecondary,
     marginTop: 4,
+  },
+  inviteRole: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
+    fontWeight: '500',
   },
   messageContainer: {
     marginTop: 24,

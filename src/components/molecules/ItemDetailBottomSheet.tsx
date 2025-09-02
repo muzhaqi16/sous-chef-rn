@@ -3,9 +3,9 @@ import {View} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
 import QuantitySelector from '../organisms/QuantitySelector';
 import {BottomSheetTextInput} from '@gorhom/bottom-sheet';
-import Button from '../atoms/Button/Button';
+import {Button} from '../atoms/Button/Button';
 import {useUpdateShoppingListItemMutation} from '../../graphql/generated';
-import {useUnitsQuery, Unit} from '../../graphql/generated';
+import {useGetUnitsQuery, Unit} from '../../graphql/generated';
 import {ShoppingListItemDetail} from '../../types';
 
 interface ItemDetailProps {
@@ -22,7 +22,7 @@ export const ItemDetailBottomSheet: React.FC<ItemDetailProps> = ({
   const [name, setName] = useState(item.itemName || '');
   const [quantity, setQuantity] = useState(1);
   const [unit, setUnit] = useState('pcs');
-  const {data} = useUnitsQuery();
+  const {data} = useGetUnitsQuery();
 
   const [updateItem] = useUpdateShoppingListItemMutation({
     onCompleted: () => onClose(),
