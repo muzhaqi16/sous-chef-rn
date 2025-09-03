@@ -404,10 +404,6 @@ export type CreateItemInput = {
   images?: InputMaybe<Array<ImageInput>>;
   ingredients?: InputMaybe<Array<IngredientInput>>;
   inventoryStatus?: InputMaybe<Scalars['String']['input']>;
-  isEverydaySavings?: InputMaybe<Scalars['Boolean']['input']>;
-  isFoodStampItem?: InputMaybe<Scalars['Boolean']['input']>;
-  isFsaEligible?: InputMaybe<Scalars['Boolean']['input']>;
-  isNewLowPrice?: InputMaybe<Scalars['Boolean']['input']>;
   lastSyncedAt?: InputMaybe<Scalars['String']['input']>;
   maxPrice?: InputMaybe<Scalars['Float']['input']>;
   metadata?: InputMaybe<Scalars['JSON']['input']>;
@@ -415,7 +411,6 @@ export type CreateItemInput = {
   name: Scalars['String']['input'];
   nutritionFacts?: InputMaybe<Array<NutritionFactInput>>;
   offers?: InputMaybe<Array<OfferInput>>;
-  popularity?: InputMaybe<Scalars['Int']['input']>;
   price?: InputMaybe<Scalars['Float']['input']>;
   productLocation?: InputMaybe<Scalars['String']['input']>;
   shelfLifeDays?: InputMaybe<Scalars['Int']['input']>;
@@ -3163,14 +3158,14 @@ export type Query = {
   _empty?: Maybe<Scalars['String']['output']>;
   activeDevices: Array<Device>;
   activeModerations: Array<UserModeration>;
-  autocompleteItems: AutocompleteResponse;
+  autocompleteItems?: Maybe<AutocompleteResponse>;
   brand?: Maybe<Brand>;
   brands: Array<Brand>;
   categories: Array<Category>;
   category?: Maybe<Category>;
   categoryBySlug?: Maybe<Category>;
-  checkItemAvailability: Array<ItemAvailability>;
-  compareItemPrices: Array<StorePriceComparison>;
+  checkItemAvailability?: Maybe<Array<ItemAvailability>>;
+  compareItemPrices?: Maybe<Array<StorePriceComparison>>;
   currencies: Array<Currency>;
   currency?: Maybe<Currency>;
   currencyByCode?: Maybe<Currency>;
@@ -3193,7 +3188,7 @@ export type Query = {
   itemByBarcode?: Maybe<Item>;
   itemByExternalId?: Maybe<Item>;
   itemBySku?: Maybe<Item>;
-  itemPriceHistory: Array<ItemPriceHistory>;
+  itemPriceHistory?: Maybe<Array<ItemPriceHistory>>;
   items: ItemsResponse;
   loginHistory?: Maybe<LoginHistory>;
   loginHistoryByIP: Array<LoginHistory>;
@@ -3228,7 +3223,7 @@ export type Query = {
   pantryStats: PantryStats;
   popularBrands: Array<Brand>;
   popularCategories: Array<Category>;
-  popularItems: Array<Item>;
+  popularItems?: Maybe<Array<Item>>;
   popularStores: Array<Store>;
   purchase?: Maybe<Purchase>;
   purchaseStats: PurchaseStats;
@@ -3236,16 +3231,16 @@ export type Query = {
   purchasesByItem: Array<Purchase>;
   purchasesByShoppingListItem: Array<Purchase>;
   purchasesByStore: Array<Purchase>;
-  recentItems: Array<Item>;
+  recentItems?: Maybe<Array<Item>>;
   recentNotifications: Array<Notification>;
-  recommendedItems: Array<ItemSuggestion>;
+  recommendedItems?: Maybe<Array<ItemSuggestion>>;
   recommendedStores: Array<Store>;
-  relatedItems: RelatedItemsResponse;
+  relatedItems?: Maybe<RelatedItemsResponse>;
   rootBrands: Array<Brand>;
   rootCategories: Array<Category>;
   searchDevicesByUserAgent: Array<Device>;
-  searchItems: ItemsResponse;
-  searchItemsByBarcode: Array<Item>;
+  searchItems?: Maybe<ItemsResponse>;
+  searchItemsByBarcode?: Maybe<Array<Item>>;
   searchLoginHistory: Array<LoginHistory>;
   searchRecipes: Array<Recipe>;
   searchShoppingLists: Array<ShoppingList>;
@@ -3266,7 +3261,7 @@ export type Query = {
   stores: Array<Store>;
   suggestedRecipes: Array<Recipe>;
   suspiciousLoginActivity: SuspiciousActivity;
-  trendingItems: Array<Item>;
+  trendingItems?: Maybe<Array<Item>>;
   trustedDevices: Array<Device>;
   unit?: Maybe<Unit>;
   unitBySymbol?: Maybe<Unit>;
@@ -3319,7 +3314,7 @@ export type QueryCategoryBySlugArgs = {
 
 export type QueryCheckItemAvailabilityArgs = {
   itemId: Scalars['ID']['input'];
-  storeIds: Array<Scalars['String']['input']>;
+  storeIds?: InputMaybe<Array<Scalars['String']['input']>>;
 };
 
 export type QueryCompareItemPricesArgs = {
@@ -4625,10 +4620,8 @@ export type UpdateItemInput = {
   images?: InputMaybe<Array<ImageInput>>;
   ingredients?: InputMaybe<Array<IngredientInput>>;
   inventoryStatus?: InputMaybe<Scalars['String']['input']>;
-  isEverydaySavings?: InputMaybe<Scalars['Boolean']['input']>;
   isFoodStampItem?: InputMaybe<Scalars['Boolean']['input']>;
   isFsaEligible?: InputMaybe<Scalars['Boolean']['input']>;
-  isNewLowPrice?: InputMaybe<Scalars['Boolean']['input']>;
   lastSyncedAt?: InputMaybe<Scalars['String']['input']>;
   maxPrice?: InputMaybe<Scalars['Float']['input']>;
   metadata?: InputMaybe<Scalars['JSON']['input']>;
@@ -9600,12 +9593,12 @@ export type SearchItemsQueryVariables = Exact<{
 
 export type SearchItemsQuery = {
   __typename?: 'Query';
-  searchItems: {
+  searchItems?: {
     __typename?: 'ItemsResponse';
     totalCount: number;
     hasMore: boolean;
     items?: Array<{__typename?: 'Item'; id: string; name: string}> | null;
-  };
+  } | null;
 };
 
 export type SearchItemsByBarcodeQueryVariables = Exact<{
@@ -9614,14 +9607,14 @@ export type SearchItemsByBarcodeQueryVariables = Exact<{
 
 export type SearchItemsByBarcodeQuery = {
   __typename?: 'Query';
-  searchItemsByBarcode: Array<{
+  searchItemsByBarcode?: Array<{
     __typename?: 'Item';
     id: string;
     name: string;
     description?: string | null;
     imageUrl?: string | null;
     barcode?: string | null;
-  }>;
+  }> | null;
 };
 
 export type GetOnboardingItemsQueryVariables = Exact<{[key: string]: never}>;
@@ -9652,7 +9645,7 @@ export type AutocompleteItemsQueryVariables = Exact<{
 
 export type AutocompleteItemsQuery = {
   __typename?: 'Query';
-  autocompleteItems: {
+  autocompleteItems?: {
     __typename?: 'AutocompleteResponse';
     totalCount: number;
     suggestions: Array<{
@@ -9678,7 +9671,7 @@ export type AutocompleteItemsQuery = {
         isPrimary: boolean;
       } | null;
     }>;
-  };
+  } | null;
 };
 
 export type SearchBrandsQueryVariables = Exact<{

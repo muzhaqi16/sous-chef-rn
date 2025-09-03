@@ -3011,38 +3011,6 @@
             "deprecationReason": null
           },
           {
-            "name": "isEverydaySavings",
-            "description": null,
-            "type": {"kind": "SCALAR", "name": "Boolean", "ofType": null},
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "isFoodStampItem",
-            "description": null,
-            "type": {"kind": "SCALAR", "name": "Boolean", "ofType": null},
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "isFsaEligible",
-            "description": null,
-            "type": {"kind": "SCALAR", "name": "Boolean", "ofType": null},
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "isNewLowPrice",
-            "description": null,
-            "type": {"kind": "SCALAR", "name": "Boolean", "ofType": null},
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
             "name": "lastSyncedAt",
             "description": null,
             "type": {"kind": "SCALAR", "name": "String", "ofType": null},
@@ -3122,14 +3090,6 @@
                 }
               }
             },
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "popularity",
-            "description": null,
-            "type": {"kind": "SCALAR", "name": "Int", "ofType": null},
             "defaultValue": null,
             "isDeprecated": false,
             "deprecationReason": null
@@ -23798,13 +23758,9 @@
               }
             ],
             "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "OBJECT",
-                "name": "AutocompleteResponse",
-                "ofType": null
-              }
+              "kind": "OBJECT",
+              "name": "AutocompleteResponse",
+              "ofType": null
             },
             "isDeprecated": false,
             "deprecationReason": null
@@ -24006,19 +23962,15 @@
                 "name": "storeIds",
                 "description": null,
                 "type": {
-                  "kind": "NON_NULL",
+                  "kind": "LIST",
                   "name": null,
                   "ofType": {
-                    "kind": "LIST",
+                    "kind": "NON_NULL",
                     "name": null,
                     "ofType": {
-                      "kind": "NON_NULL",
-                      "name": null,
-                      "ofType": {
-                        "kind": "SCALAR",
-                        "name": "String",
-                        "ofType": null
-                      }
+                      "kind": "SCALAR",
+                      "name": "String",
+                      "ofType": null
                     }
                   }
                 },
@@ -24028,19 +23980,15 @@
               }
             ],
             "type": {
-              "kind": "NON_NULL",
+              "kind": "LIST",
               "name": null,
               "ofType": {
-                "kind": "LIST",
+                "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "ItemAvailability",
-                    "ofType": null
-                  }
+                  "kind": "OBJECT",
+                  "name": "ItemAvailability",
+                  "ofType": null
                 }
               }
             },
@@ -24085,19 +24033,15 @@
               }
             ],
             "type": {
-              "kind": "NON_NULL",
+              "kind": "LIST",
               "name": null,
               "ofType": {
-                "kind": "LIST",
+                "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "StorePriceComparison",
-                    "ofType": null
-                  }
+                  "kind": "OBJECT",
+                  "name": "StorePriceComparison",
+                  "ofType": null
                 }
               }
             },
@@ -24756,19 +24700,15 @@
               }
             ],
             "type": {
-              "kind": "NON_NULL",
+              "kind": "LIST",
               "name": null,
               "ofType": {
-                "kind": "LIST",
+                "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "ItemPriceHistory",
-                    "ofType": null
-                  }
+                  "kind": "OBJECT",
+                  "name": "ItemPriceHistory",
+                  "ofType": null
                 }
               }
             },
@@ -25907,16 +25847,12 @@
               }
             ],
             "type": {
-              "kind": "NON_NULL",
+              "kind": "LIST",
               "name": null,
               "ofType": {
-                "kind": "LIST",
+                "kind": "NON_NULL",
                 "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {"kind": "OBJECT", "name": "Item", "ofType": null}
-                }
+                "ofType": {"kind": "OBJECT", "name": "Item", "ofType": null}
               }
             },
             "isDeprecated": false,
@@ -26203,16 +26139,12 @@
               }
             ],
             "type": {
-              "kind": "NON_NULL",
+              "kind": "LIST",
               "name": null,
               "ofType": {
-                "kind": "LIST",
+                "kind": "NON_NULL",
                 "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {"kind": "OBJECT", "name": "Item", "ofType": null}
-                }
+                "ofType": {"kind": "OBJECT", "name": "Item", "ofType": null}
               }
             },
             "isDeprecated": false,
@@ -26273,19 +26205,15 @@
               }
             ],
             "type": {
-              "kind": "NON_NULL",
+              "kind": "LIST",
               "name": null,
               "ofType": {
-                "kind": "LIST",
+                "kind": "NON_NULL",
                 "name": null,
                 "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "ItemSuggestion",
-                    "ofType": null
-                  }
+                  "kind": "OBJECT",
+                  "name": "ItemSuggestion",
+                  "ofType": null
                 }
               }
             },
@@ -26330,13 +26258,9 @@
               }
             ],
             "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "OBJECT",
-                "name": "RelatedItemsResponse",
-                "ofType": null
-              }
+              "kind": "OBJECT",
+              "name": "RelatedItemsResponse",
+              "ofType": null
             },
             "isDeprecated": false,
             "deprecationReason": null
@@ -26452,15 +26376,7 @@
                 "deprecationReason": null
               }
             ],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "OBJECT",
-                "name": "ItemsResponse",
-                "ofType": null
-              }
-            },
+            "type": {"kind": "OBJECT", "name": "ItemsResponse", "ofType": null},
             "isDeprecated": false,
             "deprecationReason": null
           },
@@ -26482,16 +26398,12 @@
               }
             ],
             "type": {
-              "kind": "NON_NULL",
+              "kind": "LIST",
               "name": null,
               "ofType": {
-                "kind": "LIST",
+                "kind": "NON_NULL",
                 "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {"kind": "OBJECT", "name": "Item", "ofType": null}
-                }
+                "ofType": {"kind": "OBJECT", "name": "Item", "ofType": null}
               }
             },
             "isDeprecated": false,
@@ -27108,16 +27020,12 @@
               }
             ],
             "type": {
-              "kind": "NON_NULL",
+              "kind": "LIST",
               "name": null,
               "ofType": {
-                "kind": "LIST",
+                "kind": "NON_NULL",
                 "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {"kind": "OBJECT", "name": "Item", "ofType": null}
-                }
+                "ofType": {"kind": "OBJECT", "name": "Item", "ofType": null}
               }
             },
             "isDeprecated": false,
@@ -34607,14 +34515,6 @@
             "deprecationReason": null
           },
           {
-            "name": "isEverydaySavings",
-            "description": null,
-            "type": {"kind": "SCALAR", "name": "Boolean", "ofType": null},
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
             "name": "isFoodStampItem",
             "description": null,
             "type": {"kind": "SCALAR", "name": "Boolean", "ofType": null},
@@ -34624,14 +34524,6 @@
           },
           {
             "name": "isFsaEligible",
-            "description": null,
-            "type": {"kind": "SCALAR", "name": "Boolean", "ofType": null},
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "isNewLowPrice",
             "description": null,
             "type": {"kind": "SCALAR", "name": "Boolean", "ofType": null},
             "defaultValue": null,

@@ -1,4 +1,4 @@
-import React, {use, useMemo} from 'react';
+import React, {useMemo} from 'react';
 import {Alert} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {useUnistyles} from 'react-native-unistyles';
@@ -254,7 +254,7 @@ export const PantryMain: React.FC = () => {
         key={'select'}
         sheetRef={selectPantrySheet.ref}
         sheetTitle={'Select Pantry'}
-        snapPoints={['25%', '50%', '90%']}>
+        snapPoints={['50%', '90%']}>
         <ItemSelector
           data={selector.data}
           selectedId={selector.selectedId}

@@ -662,10 +662,6 @@ input CreateItemInput {
   images: [ImageInput!]
   ingredients: [IngredientInput!]
   inventoryStatus: String
-  isEverydaySavings: Boolean
-  isFoodStampItem: Boolean
-  isFsaEligible: Boolean
-  isNewLowPrice: Boolean
   lastSyncedAt: String
   maxPrice: Float
   metadata: JSON
@@ -673,7 +669,6 @@ input CreateItemInput {
   name: String!
   nutritionFacts: [NutritionFactInput!]
   offers: [OfferInput!]
-  popularity: Int
   price: Float
   productLocation: String
   shelfLifeDays: Int
@@ -2647,7 +2642,7 @@ type Query {
   _empty: String
   activeDevices(userId: ID!): [Device!]!
   activeModerations: [UserModeration!]!
-  autocompleteItems(input: AutocompleteInput!): AutocompleteResponse!
+  autocompleteItems(input: AutocompleteInput!): AutocompleteResponse
   brand(id: ID!): Brand
   brands(
     country: String
@@ -2660,8 +2655,8 @@ type Query {
   categories(parentId: String, type: CategoryType): [Category!]!
   category(id: ID!): Category
   categoryBySlug(slug: String!): Category
-  checkItemAvailability(itemId: ID!, storeIds: [String!]!): [ItemAvailability!]!
-  compareItemPrices(itemId: ID!, storeIds: [String!]): [StorePriceComparison!]!
+  checkItemAvailability(itemId: ID!, storeIds: [String!]): [ItemAvailability!]
+  compareItemPrices(itemId: ID!, storeIds: [String!]): [StorePriceComparison!]
   currencies(isActive: Boolean): [Currency!]!
   currency(id: ID!): Currency
   currencyByCode(code: String!): Currency
@@ -2691,11 +2686,7 @@ type Query {
   itemByBarcode(barcode: String!): Item
   itemByExternalId(externalId: String!, provider: ProviderType!): Item
   itemBySku(sku: String!, storeId: String): Item
-  itemPriceHistory(
-    days: Int
-    itemId: ID!
-    storeId: String
-  ): [ItemPriceHistory!]!
+  itemPriceHistory(days: Int, itemId: ID!, storeId: String): [ItemPriceHistory!]
   items(
     filters: ItemFilters
     pagination: PaginationInput
@@ -2755,7 +2746,7 @@ type Query {
   pantryStats(pantryId: ID!): PantryStats!
   popularBrands(limit: Int = 10): [Brand!]!
   popularCategories(limit: Int, type: CategoryType): [Category!]!
-  popularItems(category: String, limit: Int, timeRange: DateRange): [Item!]!
+  popularItems(category: String, limit: Int, timeRange: DateRange): [Item!]
   popularStores(limit: Int): [Store!]!
   purchase(id: ID!): Purchase
   purchaseStats(userId: ID): PurchaseStats!
@@ -2763,16 +2754,16 @@ type Query {
   purchasesByItem(itemId: ID!, userId: ID): [Purchase!]!
   purchasesByShoppingListItem(limit: Int, shoppingListItemId: ID!): [Purchase!]!
   purchasesByStore(storeId: ID!, userId: ID): [Purchase!]!
-  recentItems(limit: Int, userId: String): [Item!]!
+  recentItems(limit: Int, userId: String): [Item!]
   recentNotifications(limit: Int = 10): [Notification!]!
-  recommendedItems(limit: Int, userId: String): [ItemSuggestion!]!
+  recommendedItems(limit: Int, userId: String): [ItemSuggestion!]
   recommendedStores: [Store!]!
-  relatedItems(itemId: ID!): RelatedItemsResponse!
+  relatedItems(itemId: ID!): RelatedItemsResponse
   rootBrands: [Brand!]!
   rootCategories(type: CategoryType): [Category!]!
   searchDevicesByUserAgent(userAgent: String!): [Device!]!
-  searchItems(input: SearchItemsInput!): ItemsResponse!
-  searchItemsByBarcode(barcode: String!): [Item!]!
+  searchItems(input: SearchItemsInput!): ItemsResponse
+  searchItemsByBarcode(barcode: String!): [Item!]
   searchLoginHistory(
     filters: LoginHistoryFiltersInput
     query: String!
@@ -2796,7 +2787,7 @@ type Query {
   stores: [Store!]!
   suggestedRecipes: [Recipe!]!
   suspiciousLoginActivity(hours: Int = 24, userId: ID!): SuspiciousActivity!
-  trendingItems(category: String, limit: Int): [Item!]!
+  trendingItems(category: String, limit: Int): [Item!]
   trustedDevices(userId: ID!): [Device!]!
   unit(id: ID!): Unit
   unitBySymbol(symbol: String!): Unit
@@ -3513,10 +3504,8 @@ input UpdateItemInput {
   images: [ImageInput!]
   ingredients: [IngredientInput!]
   inventoryStatus: String
-  isEverydaySavings: Boolean
   isFoodStampItem: Boolean
   isFsaEligible: Boolean
-  isNewLowPrice: Boolean
   lastSyncedAt: String
   maxPrice: Float
   metadata: JSON

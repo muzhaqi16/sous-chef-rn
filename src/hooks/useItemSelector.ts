@@ -38,7 +38,7 @@ export const useItemSelector = ({
   const {data: pantryData, loading: pantryLoading} = useGetPantriesQuery({
     variables: {homeId: selectedHomeId || ''},
     fetchPolicy: 'cache-and-network',
-    skip: type !== 'pantry',
+    skip: type !== 'pantry' || !selectedHomeId,
   });
 
   const {data: homeData, loading: homeLoading} = useGetHomesQuery({

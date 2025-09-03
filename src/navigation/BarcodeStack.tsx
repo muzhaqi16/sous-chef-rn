@@ -2,8 +2,7 @@ import React from 'react';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {type BarcodeStackParamList} from './types';
 
-import BarcodeScannerScreen from '../screens/BarcodeScannerScreen';
-import SearchResultsScreen from '../screens/SearchResultsScreen';
+import {BarcodeScannerScreen, SearchResultsScreen} from '#screens';
 
 const Stack = createNativeStackNavigator<BarcodeStackParamList>();
 

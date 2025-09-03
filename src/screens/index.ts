@@ -5,3 +5,4 @@ export * from './ProfileScreen';
 export * from './pantry';
 export * from './shoppingList';
 export * from './home';
+export * from './barcode';

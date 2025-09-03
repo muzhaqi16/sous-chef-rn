@@ -32,7 +32,7 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     alignItems: 'center',
     paddingHorizontal: 20,
   },

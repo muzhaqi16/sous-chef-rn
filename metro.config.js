@@ -11,11 +11,7 @@ const defaultConfig = getDefaultConfig(__dirname);
  *
  * @type {import('@react-native/metro-config').MetroConfig}
  */
-const config = {
-  server: {
-    experimentalDebugger: false, // Disable new debugger to avoid duplicate targets
-  },
-};
+const config = {};
 
 module.exports = wrapWithReanimatedMetroConfig(
   mergeConfig(defaultConfig, config),
