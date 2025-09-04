@@ -383,11 +383,13 @@ export type CreateHomeInput = {
 export type CreateItemInput = {
   allergens?: InputMaybe<Scalars['JSON']['input']>;
   brandId?: InputMaybe<Scalars['String']['input']>;
+  brandName?: InputMaybe<Scalars['String']['input']>;
   categories?: InputMaybe<Array<CategoryInput>>;
   categoryIds?: InputMaybe<Array<Scalars['String']['input']>>;
   defaultUnit?: InputMaybe<Scalars['String']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
   displayUnitId?: InputMaybe<Scalars['String']['input']>;
+  displayUnitName?: InputMaybe<Scalars['String']['input']>;
   healthBenefits?: InputMaybe<Scalars['JSON']['input']>;
   imageUrl?: InputMaybe<Scalars['String']['input']>;
   ingredients?: InputMaybe<Scalars['JSON']['input']>;
@@ -1247,7 +1249,8 @@ export type ItemUnitInput = {
   packageSize?: InputMaybe<Scalars['Float']['input']>;
   recommendedFor?: InputMaybe<Array<UnitRecommendation>>;
   retailUnit?: InputMaybe<Scalars['Boolean']['input']>;
-  unitId: Scalars['String']['input'];
+  unitId?: InputMaybe<Scalars['String']['input']>;
+  unitName?: InputMaybe<Scalars['String']['input']>;
   usageContext?: InputMaybe<Array<UnitUsageContext>>;
 };
 
@@ -3217,7 +3220,6 @@ export type Query = {
   rootCategories: Array<Category>;
   searchDevicesByUserAgent: Array<Device>;
   searchItems?: Maybe<ItemsResponse>;
-  searchItemsByUpc?: Maybe<Array<Item>>;
   searchLoginHistory: Array<LoginHistory>;
   searchRecipes: Array<Recipe>;
   searchShoppingLists: Array<ShoppingList>;
@@ -3574,10 +3576,6 @@ export type QuerySearchDevicesByUserAgentArgs = {
 
 export type QuerySearchItemsArgs = {
   input: SearchItemsInput;
-};
-
-export type QuerySearchItemsByUpcArgs = {
-  upc: Scalars['String']['input'];
 };
 
 export type QuerySearchLoginHistoryArgs = {
@@ -4597,11 +4595,13 @@ export type UpdateItemInput = {
   addUnits?: InputMaybe<Array<ItemUnitInput>>;
   allergens?: InputMaybe<Scalars['JSON']['input']>;
   brandId?: InputMaybe<Scalars['String']['input']>;
+  brandName?: InputMaybe<Scalars['String']['input']>;
   categories?: InputMaybe<Array<CategoryInput>>;
   categoryIds?: InputMaybe<Array<Scalars['String']['input']>>;
   defaultUnit?: InputMaybe<Scalars['String']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
   displayUnitId?: InputMaybe<Scalars['String']['input']>;
+  displayUnitName?: InputMaybe<Scalars['String']['input']>;
   editReason?: InputMaybe<Scalars['String']['input']>;
   fdcId?: InputMaybe<Scalars['String']['input']>;
   healthBenefits?: InputMaybe<Scalars['JSON']['input']>;
@@ -9535,20 +9535,26 @@ export type SearchItemsQuery = {
   } | null;
 };
 
-export type SearchItemsByUpcQueryVariables = Exact<{
+export type ItemByUpcQueryVariables = Exact<{
   upc: Scalars['String']['input'];
 }>;
 
-export type SearchItemsByUpcQuery = {
+export type ItemByUpcQuery = {
   __typename?: 'Query';
-  searchItemsByUpc?: Array<{
+  itemByUpc?: {
     __typename?: 'Item';
     id: string;
-    name: string;
-    description?: string | null;
     imageUrl?: string | null;
+    name: string;
+    netWeight?: number | null;
     upc?: string | null;
-  }> | null;
+    description?: string | null;
+    units: Array<{
+      __typename?: 'ItemUnit';
+      isDefault?: boolean | null;
+      unitId: string;
+    }>;
+  } | null;
 };
 
 export type GetOnboardingItemsQueryVariables = Exact<{[key: string]: never}>;
@@ -9660,8 +9666,7 @@ export type CreateItemMutation = {
     units: Array<{
       __typename?: 'ItemUnit';
       isDefault?: boolean | null;
-      packageSize?: number | null;
-      unit?: {__typename?: 'Unit'; name: string; symbol: string} | null;
+      unitId: string;
     }>;
   };
 };

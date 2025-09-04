@@ -1,7 +1,5 @@
 import React from 'react';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
-import {TouchableOpacity} from 'react-native';
-import Icon from '@react-native-vector-icons/material-icons';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {
   PantryMain,
@@ -10,6 +8,7 @@ import {
   PantryItemDetail,
   LowStockItems,
   CategoryManagement,
+  EditPantryItem,
 } from '#screens';
 import {PantryStackParamList} from './types';
 import {useNavigation} from '@react-navigation/native';
@@ -49,20 +48,9 @@ export function PantryStack() {
       />
       <Stack.Screen
         name="EditPantryItem"
-        component={AddPantryItem}
+        component={EditPantryItem}
         options={{
-          title: 'Edit Pantry Item',
-          headerLeft: () => (
-            <TouchableOpacity
-              style={styles.headerButton}
-              onPress={() => navigation.goBack()}>
-              <Icon
-                name="arrow-back"
-                size={24}
-                color={theme.colors.textPrimary}
-              />
-            </TouchableOpacity>
-          ),
+          headerShown: false,
         }}
       />
       <Stack.Screen

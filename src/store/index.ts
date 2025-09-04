@@ -1,4 +1,3 @@
-// src/store/index.ts - Updated with async reset manager
 import {create} from 'zustand';
 import {immer} from 'zustand/middleware/immer';
 import {
@@ -50,7 +49,9 @@ export const useStore = create<RootState>()(
   subscribeWithSelector(
     persist(
       immer(
-        logger((set, get, store) => {
+        // Enable for debugging state changes
+        // logger((set, get, store) => {
+        (set, get, store) => {
           // Create the reset manager
           const resetManager = createResetManager(set, get);
 
@@ -63,7 +64,8 @@ export const useStore = create<RootState>()(
             // Add reset manager methods to the store
             ...resetManager,
           };
-        }),
+        },
+        // ),
       ),
       {
         name: STORAGE_KEY,

@@ -166,7 +166,16 @@ export const ShoppingListMain: React.FC = () => {
         onRefresh={handleRefresh}
         // Display configuration
         showSearchBar={true}
-        showFAB={false} // Don't show FAB since we have add in search bar
+        showFAB={true}
+        onFabPress={() =>
+          navigation.getParent()?.navigate('BarcodeStack', {
+            screen: 'BarcodeScanner',
+            params: {
+              source: 'shoppingList',
+              shoppingListId: currentListId,
+            },
+          })
+        }
         // Actions
         searchBarActions={searchBarActions}
         emptyState={{

@@ -641,11 +641,13 @@ input CreateHomeInput {
 input CreateItemInput {
   allergens: JSON
   brandId: String
+  brandName: String
   categories: [CategoryInput!]
   categoryIds: [String!]
   defaultUnit: String
   description: String
   displayUnitId: String
+  displayUnitName: String
   healthBenefits: JSON
   imageUrl: String
   ingredients: JSON
@@ -1478,7 +1480,8 @@ input ItemUnitInput {
   packageSize: Float
   recommendedFor: [UnitRecommendation!]
   retailUnit: Boolean
-  unitId: String!
+  unitId: String
+  unitName: String
   usageContext: [UnitUsageContext!]
 }
 
@@ -2740,7 +2743,6 @@ type Query {
   rootCategories(type: CategoryType): [Category!]!
   searchDevicesByUserAgent(userAgent: String!): [Device!]!
   searchItems(input: SearchItemsInput!): ItemsResponse
-  searchItemsByUpc(upc: String!): [Item!]
   searchLoginHistory(
     filters: LoginHistoryFiltersInput
     query: String!
@@ -3479,11 +3481,13 @@ input UpdateItemInput {
   addUnits: [ItemUnitInput!]
   allergens: JSON
   brandId: String
+  brandName: String
   categories: [CategoryInput!]
   categoryIds: [String!]
   defaultUnit: String
   description: String
   displayUnitId: String
+  displayUnitName: String
   editReason: String
   fdcId: String
   healthBenefits: JSON

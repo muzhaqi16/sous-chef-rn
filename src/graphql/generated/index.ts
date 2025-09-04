@@ -389,11 +389,13 @@ export type CreateHomeInput = {
 export type CreateItemInput = {
   allergens?: InputMaybe<Scalars['JSON']['input']>;
   brandId?: InputMaybe<Scalars['String']['input']>;
+  brandName?: InputMaybe<Scalars['String']['input']>;
   categories?: InputMaybe<Array<CategoryInput>>;
   categoryIds?: InputMaybe<Array<Scalars['String']['input']>>;
   defaultUnit?: InputMaybe<Scalars['String']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
   displayUnitId?: InputMaybe<Scalars['String']['input']>;
+  displayUnitName?: InputMaybe<Scalars['String']['input']>;
   healthBenefits?: InputMaybe<Scalars['JSON']['input']>;
   imageUrl?: InputMaybe<Scalars['String']['input']>;
   ingredients?: InputMaybe<Scalars['JSON']['input']>;
@@ -1253,7 +1255,8 @@ export type ItemUnitInput = {
   packageSize?: InputMaybe<Scalars['Float']['input']>;
   recommendedFor?: InputMaybe<Array<UnitRecommendation>>;
   retailUnit?: InputMaybe<Scalars['Boolean']['input']>;
-  unitId: Scalars['String']['input'];
+  unitId?: InputMaybe<Scalars['String']['input']>;
+  unitName?: InputMaybe<Scalars['String']['input']>;
   usageContext?: InputMaybe<Array<UnitUsageContext>>;
 };
 
@@ -3223,7 +3226,6 @@ export type Query = {
   rootCategories: Array<Category>;
   searchDevicesByUserAgent: Array<Device>;
   searchItems?: Maybe<ItemsResponse>;
-  searchItemsByUpc?: Maybe<Array<Item>>;
   searchLoginHistory: Array<LoginHistory>;
   searchRecipes: Array<Recipe>;
   searchShoppingLists: Array<ShoppingList>;
@@ -3580,10 +3582,6 @@ export type QuerySearchDevicesByUserAgentArgs = {
 
 export type QuerySearchItemsArgs = {
   input: SearchItemsInput;
-};
-
-export type QuerySearchItemsByUpcArgs = {
-  upc: Scalars['String']['input'];
 };
 
 export type QuerySearchLoginHistoryArgs = {
@@ -4603,11 +4601,13 @@ export type UpdateItemInput = {
   addUnits?: InputMaybe<Array<ItemUnitInput>>;
   allergens?: InputMaybe<Scalars['JSON']['input']>;
   brandId?: InputMaybe<Scalars['String']['input']>;
+  brandName?: InputMaybe<Scalars['String']['input']>;
   categories?: InputMaybe<Array<CategoryInput>>;
   categoryIds?: InputMaybe<Array<Scalars['String']['input']>>;
   defaultUnit?: InputMaybe<Scalars['String']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
   displayUnitId?: InputMaybe<Scalars['String']['input']>;
+  displayUnitName?: InputMaybe<Scalars['String']['input']>;
   editReason?: InputMaybe<Scalars['String']['input']>;
   fdcId?: InputMaybe<Scalars['String']['input']>;
   healthBenefits?: InputMaybe<Scalars['JSON']['input']>;
@@ -6836,21 +6836,27 @@ export type SearchItemsQuery = {
     | undefined;
 };
 
-export type SearchItemsByUpcQueryVariables = Exact<{
+export type ItemByUpcQueryVariables = Exact<{
   upc: Scalars['String']['input'];
 }>;
 
-export type SearchItemsByUpcQuery = {
+export type ItemByUpcQuery = {
   __typename?: 'Query';
-  searchItemsByUpc?:
-    | Array<{
+  itemByUpc?:
+    | {
         __typename?: 'Item';
         id: string;
-        name: string;
-        description?: string | null | undefined;
         imageUrl?: string | null | undefined;
+        name: string;
+        netWeight?: number | null | undefined;
         upc?: string | null | undefined;
-      }>
+        description?: string | null | undefined;
+        units: Array<{
+          __typename?: 'ItemUnit';
+          isDefault?: boolean | null | undefined;
+          unitId: string;
+        }>;
+      }
     | null
     | undefined;
 };
@@ -6981,11 +6987,7 @@ export type CreateItemMutation = {
     units: Array<{
       __typename?: 'ItemUnit';
       isDefault?: boolean | null | undefined;
-      packageSize?: number | null | undefined;
-      unit?:
-        | {__typename?: 'Unit'; name: string; symbol: string}
-        | null
-        | undefined;
+      unitId: string;
     }>;
   };
 };
@@ -20060,13 +20062,13 @@ export type SearchItemsQueryResult = ApolloReactCommon.QueryResult<
 export function refetchSearchItemsQuery(variables: SearchItemsQueryVariables) {
   return {query: SearchItemsDocument, variables: variables};
 }
-export const SearchItemsByUpcDocument = {
+export const ItemByUpcDocument = {
   kind: 'Document',
   definitions: [
     {
       kind: 'OperationDefinition',
       operation: 'query',
-      name: {kind: 'Name', value: 'SearchItemsByUpc'},
+      name: {kind: 'Name', value: 'ItemByUpc'},
       variableDefinitions: [
         {
           kind: 'VariableDefinition',
@@ -20082,7 +20084,7 @@ export const SearchItemsByUpcDocument = {
         selections: [
           {
             kind: 'Field',
-            name: {kind: 'Name', value: 'searchItemsByUpc'},
+            name: {kind: 'Name', value: 'itemByUpc'},
             arguments: [
               {
                 kind: 'Argument',
@@ -20094,10 +20096,22 @@ export const SearchItemsByUpcDocument = {
               kind: 'SelectionSet',
               selections: [
                 {kind: 'Field', name: {kind: 'Name', value: 'id'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'name'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'description'}},
                 {kind: 'Field', name: {kind: 'Name', value: 'imageUrl'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'name'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'netWeight'}},
                 {kind: 'Field', name: {kind: 'Name', value: 'upc'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'description'}},
+                {
+                  kind: 'Field',
+                  name: {kind: 'Name', value: 'units'},
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {kind: 'Field', name: {kind: 'Name', value: 'isDefault'}},
+                      {kind: 'Field', name: {kind: 'Name', value: 'unitId'}},
+                    ],
+                  },
+                },
               ],
             },
           },
@@ -20108,55 +20122,52 @@ export const SearchItemsByUpcDocument = {
 } as unknown as DocumentNode;
 
 /**
- * __useSearchItemsByUpcQuery__
+ * __useItemByUpcQuery__
  *
- * To run a query within a React component, call `useSearchItemsByUpcQuery` and pass it any options that fit your needs.
- * When your component renders, `useSearchItemsByUpcQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * To run a query within a React component, call `useItemByUpcQuery` and pass it any options that fit your needs.
+ * When your component renders, `useItemByUpcQuery` returns an object from Apollo Client that contains loading, error, and data properties
  * you can use to render your UI.
  *
  * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
  *
  * @example
- * const { data, loading, error } = useSearchItemsByUpcQuery({
+ * const { data, loading, error } = useItemByUpcQuery({
  *   variables: {
  *      upc: // value for 'upc'
  *   },
  * });
  */
-export function useSearchItemsByUpcQuery(
+export function useItemByUpcQuery(
   baseOptions: ApolloReactHooks.QueryHookOptions<
-    SearchItemsByUpcQuery,
-    SearchItemsByUpcQueryVariables
+    ItemByUpcQuery,
+    ItemByUpcQueryVariables
   > &
-    (
-      | {variables: SearchItemsByUpcQueryVariables; skip?: boolean}
-      | {skip: boolean}
-    ),
+    ({variables: ItemByUpcQueryVariables; skip?: boolean} | {skip: boolean}),
 ) {
   const options = {...defaultOptions, ...baseOptions};
-  return ApolloReactHooks.useQuery<
-    SearchItemsByUpcQuery,
-    SearchItemsByUpcQueryVariables
-  >(SearchItemsByUpcDocument, options);
+  return ApolloReactHooks.useQuery<ItemByUpcQuery, ItemByUpcQueryVariables>(
+    ItemByUpcDocument,
+    options,
+  );
 }
-export function useSearchItemsByUpcLazyQuery(
+export function useItemByUpcLazyQuery(
   baseOptions?: ApolloReactHooks.LazyQueryHookOptions<
-    SearchItemsByUpcQuery,
-    SearchItemsByUpcQueryVariables
+    ItemByUpcQuery,
+    ItemByUpcQueryVariables
   >,
 ) {
   const options = {...defaultOptions, ...baseOptions};
-  return ApolloReactHooks.useLazyQuery<
-    SearchItemsByUpcQuery,
-    SearchItemsByUpcQueryVariables
-  >(SearchItemsByUpcDocument, options);
+  return ApolloReactHooks.useLazyQuery<ItemByUpcQuery, ItemByUpcQueryVariables>(
+    ItemByUpcDocument,
+    options,
+  );
 }
-export function useSearchItemsByUpcSuspenseQuery(
+export function useItemByUpcSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
     | ApolloReactHooks.SuspenseQueryHookOptions<
-        SearchItemsByUpcQuery,
-        SearchItemsByUpcQueryVariables
+        ItemByUpcQuery,
+        ItemByUpcQueryVariables
       >,
 ) {
   const options =
@@ -20164,27 +20175,23 @@ export function useSearchItemsByUpcSuspenseQuery(
       ? baseOptions
       : {...defaultOptions, ...baseOptions};
   return ApolloReactHooks.useSuspenseQuery<
-    SearchItemsByUpcQuery,
-    SearchItemsByUpcQueryVariables
-  >(SearchItemsByUpcDocument, options);
+    ItemByUpcQuery,
+    ItemByUpcQueryVariables
+  >(ItemByUpcDocument, options);
 }
-export type SearchItemsByUpcQueryHookResult = ReturnType<
-  typeof useSearchItemsByUpcQuery
+export type ItemByUpcQueryHookResult = ReturnType<typeof useItemByUpcQuery>;
+export type ItemByUpcLazyQueryHookResult = ReturnType<
+  typeof useItemByUpcLazyQuery
 >;
-export type SearchItemsByUpcLazyQueryHookResult = ReturnType<
-  typeof useSearchItemsByUpcLazyQuery
+export type ItemByUpcSuspenseQueryHookResult = ReturnType<
+  typeof useItemByUpcSuspenseQuery
 >;
-export type SearchItemsByUpcSuspenseQueryHookResult = ReturnType<
-  typeof useSearchItemsByUpcSuspenseQuery
+export type ItemByUpcQueryResult = ApolloReactCommon.QueryResult<
+  ItemByUpcQuery,
+  ItemByUpcQueryVariables
 >;
-export type SearchItemsByUpcQueryResult = ApolloReactCommon.QueryResult<
-  SearchItemsByUpcQuery,
-  SearchItemsByUpcQueryVariables
->;
-export function refetchSearchItemsByUpcQuery(
-  variables: SearchItemsByUpcQueryVariables,
-) {
-  return {query: SearchItemsByUpcDocument, variables: variables};
+export function refetchItemByUpcQuery(variables: ItemByUpcQueryVariables) {
+  return {query: ItemByUpcDocument, variables: variables};
 }
 export const GetOnboardingItemsDocument = {
   kind: 'Document',
@@ -20797,28 +20804,8 @@ export const CreateItemDocument = {
                   selectionSet: {
                     kind: 'SelectionSet',
                     selections: [
-                      {
-                        kind: 'Field',
-                        name: {kind: 'Name', value: 'unit'},
-                        selectionSet: {
-                          kind: 'SelectionSet',
-                          selections: [
-                            {
-                              kind: 'Field',
-                              name: {kind: 'Name', value: 'name'},
-                            },
-                            {
-                              kind: 'Field',
-                              name: {kind: 'Name', value: 'symbol'},
-                            },
-                          ],
-                        },
-                      },
                       {kind: 'Field', name: {kind: 'Name', value: 'isDefault'}},
-                      {
-                        kind: 'Field',
-                        name: {kind: 'Name', value: 'packageSize'},
-                      },
+                      {kind: 'Field', name: {kind: 'Name', value: 'unitId'}},
                     ],
                   },
                 },

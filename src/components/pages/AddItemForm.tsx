@@ -44,6 +44,7 @@ const detectScanType = (value: string): 'barcode' | 'sku' => {
 
 const getFormSections = (
   setSelectedBrandId: (id: string | null) => void,
+  setSelectedUnitId: (id: string | null) => void,
 ): Array<{
   title: string;
   fields: FieldDef<CreateItemFormData>[];
@@ -130,14 +131,18 @@ const getFormSections = (
         label: 'Net Weight',
         placeholder: 'Enter net weight',
         component: FormNumberInput,
-        props: {componentType: 'number', keyboardType: 'numeric'},
+        props: {componentType: 'number', keyboardType: 'decimal-pad'},
       },
       {
         name: 'displayUnitId',
         label: 'Display Unit',
         placeholder: 'kg, lbs, pcs, etc.',
         component: UnitsAutocompleteInput,
-        props: {componentType: 'autocomplete'},
+        props: {
+          componentType: 'autocomplete',
+          onUnitSelected: (unitId: string | null) =>
+            setSelectedUnitId(unitId),
+        },
       },
     ],
   },
@@ -160,7 +165,8 @@ const getFormSections = (
         name: 'tags',
         label: 'Tags',
         placeholder: 'Comma-separated tags (e.g., organic, gluten-free)',
-        component: FormInput,
+        component: FormTextArea,
+        props: {numberOfLines: 2},
         renderValue: (value: any) => {
           if (Array.isArray(value)) {
             return value.join(', ');
@@ -207,8 +213,9 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
   title = 'Add New Item',
   enableAutocomplete = false,
 }) => {
-  // Track selected brand ID separately from the display name
+  // Track selected brand and unit IDs separately from the display names
   const [selectedBrandId, setSelectedBrandId] = useState<string | null>(null);
+  const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
 
   // Determine what to populate based on scanned value
   const getInitialValues = () => {
@@ -247,8 +254,8 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
     return values;
   };
 
-  // Get form sections with access to setSelectedBrandId
-  const FORM_SECTIONS = getFormSections(setSelectedBrandId);
+  // Get form sections with access to setSelectedBrandId and setSelectedUnitId
+  const FORM_SECTIONS = getFormSections(setSelectedBrandId, setSelectedUnitId);
 
   const {
     control,
@@ -259,7 +266,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
   } = useForm<CreateItemFormData>({
     resolver: yupResolver(createItemSchema) as any,
     defaultValues: getInitialValues(),
-    mode: 'onSubmit',
+    mode: 'onChange',
   });
 
   const handleFormSubmit = (data: CreateItemFormData) => {
@@ -287,20 +294,44 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
       systemTags.push('fsa-eligible');
     }
 
-    // Process brand field - use selectedBrandId if available
+    // Process brand field - send both ID and name when available
     let brandId: string | undefined;
+    let brandName: string | undefined;
     if (selectedBrandId) {
       brandId = selectedBrandId;
+      brandName = data.vendor; // The display name from the form
+    } else if (data.vendor) {
+      // Only name provided (manual entry)
+      brandName = data.vendor;
     }
 
-    // Process units array - create a basic unit entry if displayUnitId is provided
+    // Process display unit - send both ID and name when available
+    let displayUnitId: string | undefined;
+    let displayUnitName: string | undefined;
+    if (selectedUnitId) {
+      displayUnitId = selectedUnitId;
+      displayUnitName = data.displayUnitId; // The display name from the form
+    } else if (data.displayUnitId) {
+      // Only name provided (manual entry)
+      displayUnitName = data.displayUnitId;
+    }
+
+    // Process units array - create a basic unit entry if unit info is provided
     let units: any[] = [];
-    if (data.displayUnitId && data.netWeight) {
-      units = [{
-        unitId: data.displayUnitId,
+    if ((displayUnitId || displayUnitName) && data.netWeight) {
+      const unitEntry: any = {
         isDefault: true,
         packageSize: data.netWeight,
-      }];
+      };
+      
+      if (displayUnitId) {
+        unitEntry.unitId = displayUnitId;
+      }
+      if (displayUnitName) {
+        unitEntry.unitName = displayUnitName;
+      }
+      
+      units = [unitEntry];
     }
 
     const processedData = {
@@ -309,12 +340,14 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
       upc: data.upc || undefined,
       sku: data.sku || undefined,
       netWeight: data.netWeight || undefined,
-      displayUnitId: data.displayUnitId || undefined,
+      displayUnitId: displayUnitId || undefined,
+      displayUnitName: displayUnitName || undefined,
       type: data.type,
       storageState: data.storageState,
       shelfLifeDays: data.shelfLifeDays || undefined,
       imageUrl: data.imageUrl || undefined,
-      brandId,
+      brandId: brandId || undefined,
+      brandName: brandName || undefined,
       categoryIds: data.categoryIds && data.categoryIds.length > 0 ? data.categoryIds : undefined,
       units: units.length > 0 ? units : undefined,
       tags: tags.length > 0 || systemTags.length > 0 ? [...tags, ...systemTags] : undefined,

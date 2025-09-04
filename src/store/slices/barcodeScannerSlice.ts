@@ -7,8 +7,8 @@ export interface ScannedItem {
   name: string;
   description?: string;
   imageUrl?: string;
-  barcode: string;
-  price?: number; // Optional price field
+  upc: string;
+  unitId?: string;
 }
 
 export interface BarcodeScannerState {
@@ -108,7 +108,7 @@ export const createBarcodeScannerSlice: StateCreator<
     set(state => {
       // Remove if already exists to avoid duplicates
       const existingIndex = state.recentlyScanned.findIndex(
-        existing => existing.barcode === item.barcode,
+        existing => existing.upc === item.upc,
       );
       if (existingIndex !== -1) {
         state.recentlyScanned.splice(existingIndex, 1);

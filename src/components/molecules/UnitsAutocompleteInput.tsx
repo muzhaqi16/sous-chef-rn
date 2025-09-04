@@ -25,6 +25,7 @@ interface UnitsAutocompleteInputProps {
   placeholder?: string;
   required?: boolean;
   error?: string;
+  onUnitSelected?: (unitId: string | null) => void;
 }
 
 export const UnitsAutocompleteInput: React.FC<UnitsAutocompleteInputProps> = ({
@@ -34,6 +35,7 @@ export const UnitsAutocompleteInput: React.FC<UnitsAutocompleteInputProps> = ({
   placeholder,
   required,
   error,
+  onUnitSelected,
 }) => {
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
@@ -79,6 +81,8 @@ export const UnitsAutocompleteInput: React.FC<UnitsAutocompleteInputProps> = ({
   const handleTextChange = (text: string) => {
     onChangeText(text);
     setSearchTerm(text);
+    // Clear unit selection when user types manually
+    onUnitSelected?.(null);
 
     if (text.length >= 1 && !showAutocomplete && units.length > 0) {
       setShowAutocomplete(true);
@@ -92,10 +96,13 @@ export const UnitsAutocompleteInput: React.FC<UnitsAutocompleteInputProps> = ({
   const handleBottomSheetTextChange = (text: string) => {
     setSearchTerm(text);
     onChangeText(text);
+    // Clear unit selection when user types manually in bottom sheet
+    onUnitSelected?.(null);
   };
 
   const handleSelectUnit = (unit: Unit) => {
     onChangeText(unit.symbol);
+    onUnitSelected?.(unit.id);
     setShowAutocomplete(false);
     bottomSheetRef.current?.dismiss();
   };

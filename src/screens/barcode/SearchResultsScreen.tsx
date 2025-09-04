@@ -23,7 +23,7 @@ import {useSearchResults} from '#hooks';
 export const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({
   route,
 }) => {
-  const {barcode, format} = route.params;
+  const {barcode, format, source, pantryId, shoppingListId} = route.params;
 
   const navigation = useNavigation<SearchResultsNavProp>();
 
@@ -66,7 +66,11 @@ export const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({
 
   const handleScanAnother = () => {
     clearSearch();
-    navigation.navigate('BarcodeScanner');
+    navigation.navigate('BarcodeScanner', {
+      source,
+      pantryId,
+      shoppingListId,
+    });
   };
 
   const renderBackdrop = (props: any) => (
@@ -99,6 +103,9 @@ export const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({
           item={searchResults[0]}
           format={format}
           onScanAnother={handleScanAnother}
+          source={source}
+          pantryId={pantryId}
+          shoppingListId={shoppingListId}
         />
       );
     }

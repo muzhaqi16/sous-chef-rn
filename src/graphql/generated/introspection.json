@@ -2759,6 +2759,14 @@
             "deprecationReason": null
           },
           {
+            "name": "brandName",
+            "description": null,
+            "type": {"kind": "SCALAR", "name": "String", "ofType": null},
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "categories",
             "description": null,
             "type": {
@@ -2812,6 +2820,14 @@
           },
           {
             "name": "displayUnitId",
+            "description": null,
+            "type": {"kind": "SCALAR", "name": "String", "ofType": null},
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "displayUnitName",
             "description": null,
             "type": {"kind": "SCALAR", "name": "String", "ofType": null},
             "defaultValue": null,
@@ -9967,11 +9983,15 @@
           {
             "name": "unitId",
             "description": null,
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {"kind": "SCALAR", "name": "String", "ofType": null}
-            },
+            "type": {"kind": "SCALAR", "name": "String", "ofType": null},
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "unitName",
+            "description": null,
+            "type": {"kind": "SCALAR", "name": "String", "ofType": null},
             "defaultValue": null,
             "isDeprecated": false,
             "deprecationReason": null
@@ -26101,35 +26121,6 @@
             "deprecationReason": null
           },
           {
-            "name": "searchItemsByUpc",
-            "description": null,
-            "args": [
-              {
-                "name": "upc",
-                "description": null,
-                "type": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {"kind": "SCALAR", "name": "String", "ofType": null}
-                },
-                "defaultValue": null,
-                "isDeprecated": false,
-                "deprecationReason": null
-              }
-            ],
-            "type": {
-              "kind": "LIST",
-              "name": null,
-              "ofType": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {"kind": "OBJECT", "name": "Item", "ofType": null}
-              }
-            },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
             "name": "searchLoginHistory",
             "description": null,
             "args": [
@@ -34105,6 +34096,14 @@
             "deprecationReason": null
           },
           {
+            "name": "brandName",
+            "description": null,
+            "type": {"kind": "SCALAR", "name": "String", "ofType": null},
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "categories",
             "description": null,
             "type": {
@@ -34158,6 +34157,14 @@
           },
           {
             "name": "displayUnitId",
+            "description": null,
+            "type": {"kind": "SCALAR", "name": "String", "ofType": null},
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "displayUnitName",
             "description": null,
             "type": {"kind": "SCALAR", "name": "String", "ofType": null},
             "defaultValue": null,

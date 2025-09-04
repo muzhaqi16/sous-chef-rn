@@ -54,13 +54,18 @@ query SearchItems($input: SearchItemsInput!) {
   }
 }
 
-query SearchItemsByUpc($upc: String!) {
-  searchItemsByUpc(upc: $upc) {
+query ItemByUpc($upc: String!) {
+  itemByUpc(upc: $upc) {
     id
-    name
-    description
     imageUrl
+    name
+    netWeight
     upc
+    description
+    units {
+      isDefault
+      unitId
+    }
   }
 }
 
@@ -159,12 +164,8 @@ mutation CreateItem($input: CreateItemInput!) {
       }
     }
     units {
-      unit {
-        name
-        symbol
-      }
       isDefault
-      packageSize
+      unitId
     }
   }
 }

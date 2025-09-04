@@ -1,23 +1,30 @@
 import {useEffect} from 'react';
-import {
-  useSearchItemsByUpcQuery,
-  useCreateItemMutation,
-} from '../graphql/generated';
+import {useItemByUpcQuery, useCreateItemMutation, Item} from '#generated';
 import {useStore} from '../store';
 import {ScannedItem} from '../store/slices/barcodeScannerSlice';
 import {Alert} from 'react-native';
 
 // Helper function to convert GraphQL Item to ScannedItem
 const convertToScannedItem = (
-  item: any,
+  item: {
+    id: string;
+    name: string;
+    description?: string | null;
+    imageUrl?: string | null;
+    upc?: string | null;
+    units: Array<{
+      unitId: string;
+      isDefault?: boolean | null;
+    }>;
+  },
   fallbackBarcode: string,
 ): ScannedItem => ({
   id: item.id,
   name: item.name,
   description: item.description || undefined,
   imageUrl: item.imageUrl || undefined,
-  barcode: item.upc || fallbackBarcode,
-  price: undefined,
+  upc: item.upc || fallbackBarcode,
+  unitId: item.units?.find((u: any) => u.isDefault)?.unitId || undefined,
 });
 
 export const useSearchResults = (barcode: string) => {
@@ -47,14 +54,18 @@ export const useSearchResults = (barcode: string) => {
     },
   });
 
-  const {data, loading, error} = useSearchItemsByUpcQuery({
+  const {data, loading, error} = useItemByUpcQuery({
     variables: {upc: barcode},
-    onCompleted: (data: any) => {
+    onCompleted: data => {
       setSearching(false);
-      if (data.searchItemsByUpc) {
-        const item = convertToScannedItem(data.searchItemsByUpc, barcode);
+      console.log('ItemByUpc data:', data);
+      if (data.itemByUpc) {
+        // itemByUpc returns a single item, not an array
+        const item = convertToScannedItem(data.itemByUpc, barcode);
         setSearchResults([item]);
         addToRecentlyScanned(item);
+        // Make sure bottom sheet is hidden when item is found
+        hideBottomSheet();
       } else {
         setSearchResults([]);
         showBottomSheet(1);
@@ -100,10 +111,10 @@ export const useSearchResults = (barcode: string) => {
         // Weight and Units
         netWeight: formData.netWeight || undefined,
         displayUnitId: formData.displayUnitId || undefined,
-        
+
         // Categories
         categoryIds: formData.categoryIds || undefined,
-        
+
         // Units array
         units: formData.units || undefined,
 

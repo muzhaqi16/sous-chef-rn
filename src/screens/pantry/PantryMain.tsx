@@ -235,6 +235,10 @@ export const PantryMain: React.FC = () => {
         onFabPress={() =>
           navigation.getParent()?.navigate('BarcodeStack', {
             screen: 'BarcodeScanner',
+            params: {
+              source: 'pantry',
+              pantryId: pantry?.id,
+            },
           })
         }
         // Actions

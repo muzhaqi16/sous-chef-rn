@@ -62,10 +62,17 @@ export type OnBoardingStackParamList = {
 };
 
 export type BarcodeStackParamList = {
-  BarcodeScanner: undefined;
+  BarcodeScanner: {
+    source?: 'pantry' | 'shoppingList';
+    pantryId?: string;
+    shoppingListId?: string;
+  } | undefined;
   SearchResults: {
     barcode: string;
     format: string;
+    source?: 'pantry' | 'shoppingList';
+    pantryId?: string;
+    shoppingListId?: string;
   };
 };
 

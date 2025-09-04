@@ -23,8 +23,11 @@ import {BarcodeScannerNavProp, BarcodeScannerScreenProps} from '#navigation';
 
 const {width: screenWidth, height: screenHeight} = Dimensions.get('window');
 
-export const BarcodeScannerScreen: React.FC<BarcodeScannerScreenProps> = () => {
+export const BarcodeScannerScreen: React.FC<BarcodeScannerScreenProps> = ({
+  route,
+}) => {
   const navigation = useNavigation<BarcodeScannerNavProp>();
+  const {source, pantryId, shoppingListId} = route?.params || {};
   const devices = useCameraDevices();
   const device = useMemo(
     () => devices.find(d => d.position === 'back'),
@@ -104,7 +107,13 @@ export const BarcodeScannerScreen: React.FC<BarcodeScannerScreenProps> = () => {
           HapticFeedback?.impact?.(HapticFeedback.ImpactFeedbackStyle.Medium);
         }
 
-        navigation.navigate('SearchResults', {barcode: value, format: type});
+        navigation.navigate('SearchResults', {
+          barcode: value,
+          format: type,
+          source,
+          pantryId,
+          shoppingListId,
+        });
       }
     },
   });

@@ -22,6 +22,7 @@ interface BrandAutocompleteInputProps {
   placeholder?: string;
   required?: boolean;
   error?: string;
+  onBrandSelected?: (brandId: string | null) => void;
 }
 
 export const BrandAutocompleteInput: React.FC<BrandAutocompleteInputProps> = ({
@@ -31,6 +32,7 @@ export const BrandAutocompleteInput: React.FC<BrandAutocompleteInputProps> = ({
   placeholder,
   required,
   error,
+  onBrandSelected,
 }) => {
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
@@ -52,6 +54,8 @@ export const BrandAutocompleteInput: React.FC<BrandAutocompleteInputProps> = ({
   const handleTextChange = (text: string) => {
     onChangeText(text);
     setSearchTerm(text);
+    // Clear brand selection when user types manually
+    onBrandSelected?.(null);
 
     if (text.length >= 1 && !showAutocomplete) {
       setShowAutocomplete(true);
@@ -65,10 +69,13 @@ export const BrandAutocompleteInput: React.FC<BrandAutocompleteInputProps> = ({
   const handleBottomSheetTextChange = (text: string) => {
     setSearchTerm(text);
     onChangeText(text);
+    // Clear brand selection when user types manually in bottom sheet
+    onBrandSelected?.(null);
   };
 
-  const handleSelectBrand = (brand: string) => {
-    onChangeText(brand);
+  const handleSelectBrand = (brand: BrandItem) => {
+    onChangeText(brand.name);
+    onBrandSelected?.(brand.id);
     setShowAutocomplete(false);
     bottomSheetRef.current?.dismiss();
   };
@@ -93,7 +100,7 @@ export const BrandAutocompleteInput: React.FC<BrandAutocompleteInputProps> = ({
 
   const renderBrand = ({item}: {item: BrandItem}) => (
     <TouchableOpacity
-      onPress={() => handleSelectBrand(item.name)}
+      onPress={() => handleSelectBrand(item)}
       style={styles.brandItem}
       activeOpacity={0.7}>
       <Text style={styles.brandName}>{item.name}</Text>
