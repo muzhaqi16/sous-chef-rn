@@ -59,12 +59,12 @@ export type AddPantryItemInput = {
   expiresAt?: InputMaybe<Scalars['String']['input']>;
   initialQuantity: Scalars['Float']['input'];
   isAutoReorder?: InputMaybe<Scalars['Boolean']['input']>;
-  itemBarcode?: InputMaybe<Scalars['String']['input']>;
   itemBrand?: InputMaybe<Scalars['String']['input']>;
   itemCategory?: InputMaybe<Scalars['String']['input']>;
   itemDescription?: InputMaybe<Scalars['String']['input']>;
   itemId?: InputMaybe<Scalars['String']['input']>;
   itemName?: InputMaybe<Scalars['String']['input']>;
+  itemUpc?: InputMaybe<Scalars['String']['input']>;
   lastUsedAt?: InputMaybe<Scalars['DateTime']['input']>;
   lotNumber?: InputMaybe<Scalars['String']['input']>;
   pantryId: Scalars['ID']['input'];
@@ -153,14 +153,6 @@ export enum AutomatedFlag {
 export type BanUserInput = {
   reason: Scalars['String']['input'];
   userId: Scalars['ID']['input'];
-};
-
-export type BarcodeValidation = {
-  __typename?: 'BarcodeValidation';
-  exists: Scalars['Boolean']['output'];
-  format?: Maybe<Scalars['String']['output']>;
-  isValid: Scalars['Boolean']['output'];
-  item?: Maybe<Item>;
 };
 
 export type Brand = {
@@ -328,6 +320,12 @@ export type Connection = {
   totalCount: Scalars['Int']['output'];
 };
 
+export type ConvertedValue = {
+  __typename?: 'ConvertedValue';
+  unit: Unit;
+  value: Scalars['Float']['output'];
+};
+
 export type CreateBrandInput = {
   description?: InputMaybe<Scalars['String']['input']>;
   name: Scalars['String']['input'];
@@ -389,49 +387,27 @@ export type CreateHomeInput = {
 };
 
 export type CreateItemInput = {
-  allergens?: InputMaybe<Array<AllergenInput>>;
-  averagePrice?: InputMaybe<Scalars['Float']['input']>;
-  barcode?: InputMaybe<Scalars['String']['input']>;
+  allergens?: InputMaybe<Scalars['JSON']['input']>;
   brandId?: InputMaybe<Scalars['String']['input']>;
   categories?: InputMaybe<Array<CategoryInput>>;
   categoryIds?: InputMaybe<Array<Scalars['String']['input']>>;
-  comparedPrice?: InputMaybe<Scalars['Float']['input']>;
-  dataSource?: InputMaybe<DataSource>;
   defaultUnit?: InputMaybe<Scalars['String']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
-  displayItemSize?: InputMaybe<Scalars['String']['input']>;
-  displayPricePerUnit?: InputMaybe<Scalars['String']['input']>;
-  externalId?: InputMaybe<Scalars['String']['input']>;
-  fdcId?: InputMaybe<Scalars['String']['input']>;
-  fulfillmentMethods?: InputMaybe<Array<Scalars['String']['input']>>;
-  healthBenefits?: InputMaybe<Array<HealthBenefitInput>>;
-  healthClaims?: InputMaybe<Array<Scalars['String']['input']>>;
+  displayUnitId?: InputMaybe<Scalars['String']['input']>;
+  healthBenefits?: InputMaybe<Scalars['JSON']['input']>;
   imageUrl?: InputMaybe<Scalars['String']['input']>;
-  images?: InputMaybe<Array<ImageInput>>;
-  ingredients?: InputMaybe<Array<IngredientInput>>;
-  inventoryStatus?: InputMaybe<Scalars['String']['input']>;
-  lastSyncedAt?: InputMaybe<Scalars['String']['input']>;
-  maxPrice?: InputMaybe<Scalars['Float']['input']>;
+  ingredients?: InputMaybe<Scalars['JSON']['input']>;
   metadata?: InputMaybe<Scalars['JSON']['input']>;
-  minPrice?: InputMaybe<Scalars['Float']['input']>;
   name: Scalars['String']['input'];
-  nutritionFacts?: InputMaybe<Array<NutritionFactInput>>;
-  offers?: InputMaybe<Array<OfferInput>>;
-  price?: InputMaybe<Scalars['Float']['input']>;
-  productLocation?: InputMaybe<Scalars['String']['input']>;
+  netWeight?: InputMaybe<Scalars['Float']['input']>;
   shelfLifeDays?: InputMaybe<Scalars['Int']['input']>;
-  showInOnboarding?: InputMaybe<Scalars['Boolean']['input']>;
   sku?: InputMaybe<Scalars['String']['input']>;
-  status?: InputMaybe<ItemStatus>;
   storageState?: InputMaybe<StorageState>;
-  storeSkus?: InputMaybe<Array<StoreSkuInput>>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
   type?: InputMaybe<ItemType>;
-  unitPrice?: InputMaybe<Scalars['Float']['input']>;
-  unitQty?: InputMaybe<Scalars['Float']['input']>;
   units?: InputMaybe<Array<ItemUnitInput>>;
+  upc?: InputMaybe<Scalars['String']['input']>;
   vendor?: InputMaybe<Scalars['String']['input']>;
-  visibility?: InputMaybe<Visibility>;
 };
 
 export type CreateLoginHistoryInput = {
@@ -1019,41 +995,41 @@ export type InviteToShoppingListInput = {
 export type Item = {
   __typename?: 'Item';
   allergens?: Maybe<Scalars['JSON']['output']>;
-  averagePrice?: Maybe<Scalars['Float']['output']>;
-  barcode?: Maybe<Scalars['String']['output']>;
   brands: Array<ItemBrand>;
   categories?: Maybe<Array<ItemCategory>>;
+  convertedNetWeight?: Maybe<ConvertedValue>;
   createdAt: Scalars['DateTime']['output'];
   creations: Array<ItemCreation>;
   dataSource: DataSource;
   deletedAt?: Maybe<Scalars['DateTime']['output']>;
   description?: Maybe<Scalars['String']['output']>;
+  displayUnit?: Maybe<Unit>;
   edits: Array<ItemEdit>;
   fdcId?: Maybe<Scalars['String']['output']>;
   healthBenefits?: Maybe<Scalars['JSON']['output']>;
   id: Scalars['ID']['output'];
   imageUrl?: Maybe<Scalars['String']['output']>;
   ingredients?: Maybe<Scalars['JSON']['output']>;
-  maxPrice?: Maybe<Scalars['Float']['output']>;
   metadata?: Maybe<Scalars['JSON']['output']>;
-  minPrice?: Maybe<Scalars['Float']['output']>;
   name: Scalars['String']['output'];
+  netWeight?: Maybe<Scalars['Float']['output']>;
   nutritions?: Maybe<Scalars['JSON']['output']>;
   pantryItems: Array<PantryItem>;
   popularity: Scalars['Int']['output'];
   priceHistory: Array<ItemPriceHistory>;
-  priceUpdatedAt?: Maybe<Scalars['DateTime']['output']>;
   purchases: Array<Purchase>;
   recipeIngredients: Array<RecipeIngredient>;
   shelfLifeDays?: Maybe<Scalars['Int']['output']>;
   shoppingListItems: Array<ShoppingListItem>;
   showInOnboarding: Scalars['Boolean']['output'];
+  sku?: Maybe<Scalars['String']['output']>;
   status: ItemStatus;
   storageState: StorageState;
   storeSkus: Array<ItemStoreSku>;
   tags: Array<Scalars['String']['output']>;
   type: ItemType;
   units: Array<ItemUnit>;
+  upc?: Maybe<Scalars['String']['output']>;
   updatedAt: Scalars['DateTime']['output'];
   version: Scalars['Int']['output'];
   visibility: Visibility;
@@ -1076,6 +1052,7 @@ export type ItemBrand = {
   id: Scalars['ID']['output'];
   isPrimary?: Maybe<Scalars['Boolean']['output']>;
   item?: Maybe<Item>;
+  sku?: Maybe<Scalars['String']['output']>;
 };
 
 export type ItemCategory = {
@@ -1797,7 +1774,7 @@ export type Mutation = {
   recordLoginAttempt: LoginHistory;
   recordPantryItemUsage: PantryItemUsage;
   recordPriceObservation: ItemPriceHistory;
-  refresh: AuthPayload;
+  refresh: RefreshTokenPayload;
   register: AuthPayload;
   registerDevice: Device;
   removeCollaborator: Scalars['Boolean']['output'];
@@ -2961,9 +2938,9 @@ export type PantryItem = {
   isComposted: Scalars['Boolean']['output'];
   isRecycled: Scalars['Boolean']['output'];
   item: Item;
-  itemBarcode?: Maybe<Scalars['String']['output']>;
   itemId: Scalars['String']['output'];
   itemName: Scalars['String']['output'];
+  itemUpc?: Maybe<Scalars['String']['output']>;
   lastModifiedBy?: Maybe<User>;
   lastReorderDate?: Maybe<Scalars['String']['output']>;
   lastUsedAt?: Maybe<Scalars['String']['output']>;
@@ -3118,9 +3095,9 @@ export type Purchase = {
   expirationDate?: Maybe<Scalars['DateTime']['output']>;
   id: Scalars['ID']['output'];
   item: Item;
-  itemBarcode?: Maybe<Scalars['String']['output']>;
   itemId: Scalars['String']['output'];
   itemName: Scalars['String']['output'];
+  itemUpc?: Maybe<Scalars['String']['output']>;
   originalPrice?: Maybe<Scalars['Float']['output']>;
   pantryItems: Array<PantryItem>;
   purchaseDate: Scalars['DateTime']['output'];
@@ -3191,9 +3168,9 @@ export type Query = {
   homeMemberships: Array<Membership>;
   homes: Array<Home>;
   item?: Maybe<Item>;
-  itemByBarcode?: Maybe<Item>;
   itemByExternalId?: Maybe<Item>;
   itemBySku?: Maybe<Item>;
+  itemByUpc?: Maybe<Item>;
   itemPriceHistory?: Maybe<Array<ItemPriceHistory>>;
   items: ItemsResponse;
   loginHistory?: Maybe<LoginHistory>;
@@ -3246,7 +3223,7 @@ export type Query = {
   rootCategories: Array<Category>;
   searchDevicesByUserAgent: Array<Device>;
   searchItems?: Maybe<ItemsResponse>;
-  searchItemsByBarcode?: Maybe<Array<Item>>;
+  searchItemsByUpc?: Maybe<Array<Item>>;
   searchLoginHistory: Array<LoginHistory>;
   searchRecipes: Array<Recipe>;
   searchShoppingLists: Array<ShoppingList>;
@@ -3280,7 +3257,7 @@ export type Query = {
   userPurchases: Array<Purchase>;
   userSettings?: Maybe<UserSettings>;
   users: Array<User>;
-  validateBarcode: BarcodeValidation;
+  validateUpc: UpcValidation;
   verifiedDevices: Array<Device>;
 };
 
@@ -3395,10 +3372,6 @@ export type QueryItemArgs = {
   id: Scalars['ID']['input'];
 };
 
-export type QueryItemByBarcodeArgs = {
-  barcode: Scalars['String']['input'];
-};
-
 export type QueryItemByExternalIdArgs = {
   externalId: Scalars['String']['input'];
   provider: ProviderType;
@@ -3407,6 +3380,10 @@ export type QueryItemByExternalIdArgs = {
 export type QueryItemBySkuArgs = {
   sku: Scalars['String']['input'];
   storeId?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type QueryItemByUpcArgs = {
+  upc: Scalars['String']['input'];
 };
 
 export type QueryItemPriceHistoryArgs = {
@@ -3605,8 +3582,8 @@ export type QuerySearchItemsArgs = {
   input: SearchItemsInput;
 };
 
-export type QuerySearchItemsByBarcodeArgs = {
-  barcode: Scalars['String']['input'];
+export type QuerySearchItemsByUpcArgs = {
+  upc: Scalars['String']['input'];
 };
 
 export type QuerySearchLoginHistoryArgs = {
@@ -3731,8 +3708,8 @@ export type QueryUsersArgs = {
   take?: InputMaybe<Scalars['Int']['input']>;
 };
 
-export type QueryValidateBarcodeArgs = {
-  barcode: Scalars['String']['input'];
+export type QueryValidateUpcArgs = {
+  upc: Scalars['String']['input'];
 };
 
 export type QueryVerifiedDevicesArgs = {
@@ -3805,6 +3782,12 @@ export enum RecurringPattern {
   Monthly = 'MONTHLY',
   Weekly = 'WEEKLY',
 }
+
+export type RefreshTokenPayload = {
+  __typename?: 'RefreshTokenPayload';
+  accessToken: Scalars['String']['output'];
+  refreshToken: Scalars['String']['output'];
+};
 
 export type RegisterInput = {
   email: Scalars['String']['input'];
@@ -4519,6 +4502,12 @@ export enum UnitSource {
   RecipeDerived = 'RECIPE_DERIVED',
 }
 
+export enum UnitSystem {
+  Imperial = 'IMPERIAL',
+  Metric = 'METRIC',
+  System = 'SYSTEM',
+}
+
 export enum UnitType {
   Area = 'AREA',
   Count = 'COUNT',
@@ -4538,6 +4527,14 @@ export enum UnitUsageContext {
   Shopping = 'SHOPPING',
   Storing = 'STORING',
 }
+
+export type UpcValidation = {
+  __typename?: 'UpcValidation';
+  exists: Scalars['Boolean']['output'];
+  format?: Maybe<Scalars['String']['output']>;
+  isValid: Scalars['Boolean']['output'];
+  item?: Maybe<Item>;
+};
 
 export type UpdateBrandInput = {
   description?: InputMaybe<Scalars['String']['input']>;
@@ -4604,40 +4601,22 @@ export type UpdateItemInput = {
   addStoreSkus?: InputMaybe<Array<StoreSkuInput>>;
   addTags?: InputMaybe<Array<Scalars['String']['input']>>;
   addUnits?: InputMaybe<Array<ItemUnitInput>>;
-  allergens?: InputMaybe<Array<AllergenInput>>;
-  averagePrice?: InputMaybe<Scalars['Float']['input']>;
-  barcode?: InputMaybe<Scalars['String']['input']>;
-  brand?: InputMaybe<BrandInput>;
+  allergens?: InputMaybe<Scalars['JSON']['input']>;
   brandId?: InputMaybe<Scalars['String']['input']>;
   categories?: InputMaybe<Array<CategoryInput>>;
   categoryIds?: InputMaybe<Array<Scalars['String']['input']>>;
-  comparedPrice?: InputMaybe<Scalars['Float']['input']>;
   defaultUnit?: InputMaybe<Scalars['String']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
-  displayItemSize?: InputMaybe<Scalars['String']['input']>;
-  displayPricePerUnit?: InputMaybe<Scalars['String']['input']>;
+  displayUnitId?: InputMaybe<Scalars['String']['input']>;
   editReason?: InputMaybe<Scalars['String']['input']>;
-  externalId?: InputMaybe<Scalars['String']['input']>;
   fdcId?: InputMaybe<Scalars['String']['input']>;
-  fulfillmentMethods?: InputMaybe<Array<Scalars['String']['input']>>;
-  healthBenefits?: InputMaybe<Array<HealthBenefitInput>>;
-  healthClaims?: InputMaybe<Array<Scalars['String']['input']>>;
+  healthBenefits?: InputMaybe<Scalars['JSON']['input']>;
   imageUrl?: InputMaybe<Scalars['String']['input']>;
-  images?: InputMaybe<Array<ImageInput>>;
-  ingredients?: InputMaybe<Array<IngredientInput>>;
-  inventoryStatus?: InputMaybe<Scalars['String']['input']>;
-  isFoodStampItem?: InputMaybe<Scalars['Boolean']['input']>;
-  isFsaEligible?: InputMaybe<Scalars['Boolean']['input']>;
-  lastSyncedAt?: InputMaybe<Scalars['String']['input']>;
-  maxPrice?: InputMaybe<Scalars['Float']['input']>;
+  ingredients?: InputMaybe<Scalars['JSON']['input']>;
   metadata?: InputMaybe<Scalars['JSON']['input']>;
-  minPrice?: InputMaybe<Scalars['Float']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
-  nutritionFacts?: InputMaybe<Array<NutritionFactInput>>;
-  offers?: InputMaybe<Array<OfferInput>>;
+  netWeight?: InputMaybe<Scalars['Float']['input']>;
   popularity?: InputMaybe<Scalars['Int']['input']>;
-  price?: InputMaybe<Scalars['Float']['input']>;
-  productLocation?: InputMaybe<Scalars['String']['input']>;
   removeCategoryIds?: InputMaybe<Array<Scalars['String']['input']>>;
   removeStoreSkuIds?: InputMaybe<Array<Scalars['String']['input']>>;
   removeTags?: InputMaybe<Array<Scalars['String']['input']>>;
@@ -4650,9 +4629,8 @@ export type UpdateItemInput = {
   storeSkus?: InputMaybe<Array<StoreSkuInput>>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
   type?: InputMaybe<ItemType>;
-  unitPrice?: InputMaybe<Scalars['Float']['input']>;
-  unitQty?: InputMaybe<Scalars['Float']['input']>;
   units?: InputMaybe<Array<ItemUnitInput>>;
+  upc?: InputMaybe<Scalars['String']['input']>;
   vendor?: InputMaybe<Scalars['String']['input']>;
   visibility?: InputMaybe<Visibility>;
 };
@@ -4889,6 +4867,7 @@ export type UpdateUserSettingsInput = {
   lowStockAlerts?: InputMaybe<Scalars['Boolean']['input']>;
   offlineMode?: InputMaybe<Scalars['Boolean']['input']>;
   personalizedAds?: InputMaybe<Scalars['Boolean']['input']>;
+  preferredUnitSystem?: InputMaybe<UnitSystem>;
   pushNotifications?: InputMaybe<Scalars['Boolean']['input']>;
   recipeRecommendations?: InputMaybe<Scalars['Boolean']['input']>;
   shareUsageData?: InputMaybe<Scalars['Boolean']['input']>;
@@ -5093,6 +5072,7 @@ export type UserSettings = {
   lowStockAlerts: Scalars['Boolean']['output'];
   offlineMode: Scalars['Boolean']['output'];
   personalizedAds: Scalars['Boolean']['output'];
+  preferredUnitSystem: UnitSystem;
   pushNotifications: Scalars['Boolean']['output'];
   recipeRecommendations: Scalars['Boolean']['output'];
   shareUsageData: Scalars['Boolean']['output'];
@@ -5255,7 +5235,7 @@ export type RefreshTokenMutationVariables = Exact<{
 export type RefreshTokenMutation = {
   __typename?: 'Mutation';
   refresh: {
-    __typename?: 'AuthPayload';
+    __typename?: 'RefreshTokenPayload';
     accessToken: string;
     refreshToken: string;
   };
@@ -5905,7 +5885,6 @@ export type ShoppingListItemFragment = {
   estimatedPrice?: number | null | undefined;
   budgetPrice?: number | null | undefined;
   lastKnownPrice?: number | null | undefined;
-  averagePrice?: number | null | undefined;
   lowestPrice?: number | null | undefined;
   highestPrice?: number | null | undefined;
   priceLastUpdated?: string | null | undefined;
@@ -5919,7 +5898,6 @@ export type ShoppingListItemFragment = {
   lastPurchaseDate?: string | null | undefined;
   purchaseCount: number;
   itemName?: string | null | undefined;
-  itemBarcode?: string | null | undefined;
   unitName?: string | null | undefined;
   notes?: string | null | undefined;
   priority: number;
@@ -6191,7 +6169,7 @@ export type ItemFragment = {
   id: string;
   name: string;
   description?: string | null | undefined;
-  barcode?: string | null | undefined;
+  upc?: string | null | undefined;
   fdcId?: string | null | undefined;
   dataSource: DataSource;
   type: ItemType;
@@ -6201,10 +6179,6 @@ export type ItemFragment = {
   popularity: number;
   status: ItemStatus;
   visibility: Visibility;
-  averagePrice?: number | null | undefined;
-  minPrice?: number | null | undefined;
-  maxPrice?: number | null | undefined;
-  priceUpdatedAt?: string | null | undefined;
   imageUrl?: string | null | undefined;
   tags: Array<string>;
   healthBenefits?: any | null | undefined;
@@ -6276,7 +6250,6 @@ export type PantryItemFragment = {
   pantryId: string;
   itemId: string;
   itemName: string;
-  itemBarcode?: string | null | undefined;
   unitName: string;
   unitId: string;
   expiresAt?: string | null | undefined;
@@ -6812,7 +6785,7 @@ export type GetItemsQuery = {
           name: string;
           description?: string | null | undefined;
           type: ItemType;
-          barcode?: string | null | undefined;
+          upc?: string | null | undefined;
           storageState: StorageState;
           imageUrl?: string | null | undefined;
           shelfLifeDays?: number | null | undefined;
@@ -6863,20 +6836,20 @@ export type SearchItemsQuery = {
     | undefined;
 };
 
-export type SearchItemsByBarcodeQueryVariables = Exact<{
-  barcode: Scalars['String']['input'];
+export type SearchItemsByUpcQueryVariables = Exact<{
+  upc: Scalars['String']['input'];
 }>;
 
-export type SearchItemsByBarcodeQuery = {
+export type SearchItemsByUpcQuery = {
   __typename?: 'Query';
-  searchItemsByBarcode?:
+  searchItemsByUpc?:
     | Array<{
         __typename?: 'Item';
         id: string;
         name: string;
         description?: string | null | undefined;
         imageUrl?: string | null | undefined;
-        barcode?: string | null | undefined;
+        upc?: string | null | undefined;
       }>
     | null
     | undefined;
@@ -6970,39 +6943,50 @@ export type CreateItemMutation = {
     id: string;
     name: string;
     description?: string | null | undefined;
-    barcode?: string | null | undefined;
-    fdcId?: string | null | undefined;
-    dataSource: DataSource;
+    upc?: string | null | undefined;
+    sku?: string | null | undefined;
+    netWeight?: number | null | undefined;
     type: ItemType;
     storageState: StorageState;
-    showInOnboarding: boolean;
     shelfLifeDays?: number | null | undefined;
-    popularity: number;
-    status: ItemStatus;
-    visibility: Visibility;
-    averagePrice?: number | null | undefined;
-    minPrice?: number | null | undefined;
-    maxPrice?: number | null | undefined;
-    priceUpdatedAt?: string | null | undefined;
     imageUrl?: string | null | undefined;
     tags: Array<string>;
-    healthBenefits?: any | null | undefined;
-    allergens?: any | null | undefined;
-    nutritions?: any | null | undefined;
-    metadata?: any | null | undefined;
-    ingredients?: any | null | undefined;
-    createdAt: string;
-    updatedAt: string;
-    deletedAt?: string | null | undefined;
-    version: number;
+    displayUnit?:
+      | {__typename?: 'Unit'; id: string; name: string; symbol: string}
+      | null
+      | undefined;
+    convertedNetWeight?:
+      | {
+          __typename?: 'ConvertedValue';
+          value: number;
+          unit: {__typename?: 'Unit'; name: string; symbol: string};
+        }
+      | null
+      | undefined;
+    brands: Array<{
+      __typename?: 'ItemBrand';
+      sku?: string | null | undefined;
+      brand?:
+        | {__typename?: 'Brand'; id: string; name: string}
+        | null
+        | undefined;
+    }>;
     categories?:
       | Array<{
           __typename?: 'ItemCategory';
-          id: string;
-          category: {__typename?: 'Category'; name: string};
+          category: {__typename?: 'Category'; id: string; name: string};
         }>
       | null
       | undefined;
+    units: Array<{
+      __typename?: 'ItemUnit';
+      isDefault?: boolean | null | undefined;
+      packageSize?: number | null | undefined;
+      unit?:
+        | {__typename?: 'Unit'; name: string; symbol: string}
+        | null
+        | undefined;
+    }>;
   };
 };
 
@@ -7456,7 +7440,6 @@ export type PantryLowStockAlertSubscription = {
       id: string;
       name: string;
       imageUrl?: string | null | undefined;
-      averagePrice?: number | null | undefined;
     };
   }>;
 };
@@ -7895,11 +7878,10 @@ export type GetShoppingListQuery = {
                 id: string;
                 name: string;
                 description?: string | null | undefined;
-                barcode?: string | null | undefined;
+                upc?: string | null | undefined;
                 imageUrl?: string | null | undefined;
                 type: ItemType;
                 storageState: StorageState;
-                averagePrice?: number | null | undefined;
               }
             | null
             | undefined;
@@ -8645,7 +8627,6 @@ export const ShoppingListItemFragmentDoc = {
           {kind: 'Field', name: {kind: 'Name', value: 'estimatedPrice'}},
           {kind: 'Field', name: {kind: 'Name', value: 'budgetPrice'}},
           {kind: 'Field', name: {kind: 'Name', value: 'lastKnownPrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'averagePrice'}},
           {kind: 'Field', name: {kind: 'Name', value: 'lowestPrice'}},
           {kind: 'Field', name: {kind: 'Name', value: 'highestPrice'}},
           {kind: 'Field', name: {kind: 'Name', value: 'priceLastUpdated'}},
@@ -8659,7 +8640,6 @@ export const ShoppingListItemFragmentDoc = {
           {kind: 'Field', name: {kind: 'Name', value: 'lastPurchaseDate'}},
           {kind: 'Field', name: {kind: 'Name', value: 'purchaseCount'}},
           {kind: 'Field', name: {kind: 'Name', value: 'itemName'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'itemBarcode'}},
           {kind: 'Field', name: {kind: 'Name', value: 'unitName'}},
           {kind: 'Field', name: {kind: 'Name', value: 'notes'}},
           {kind: 'Field', name: {kind: 'Name', value: 'priority'}},
@@ -9315,7 +9295,7 @@ export const ItemFragmentDoc = {
           {kind: 'Field', name: {kind: 'Name', value: 'id'}},
           {kind: 'Field', name: {kind: 'Name', value: 'name'}},
           {kind: 'Field', name: {kind: 'Name', value: 'description'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'barcode'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'upc'}},
           {kind: 'Field', name: {kind: 'Name', value: 'fdcId'}},
           {kind: 'Field', name: {kind: 'Name', value: 'dataSource'}},
           {kind: 'Field', name: {kind: 'Name', value: 'type'}},
@@ -9325,10 +9305,6 @@ export const ItemFragmentDoc = {
           {kind: 'Field', name: {kind: 'Name', value: 'popularity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'status'}},
           {kind: 'Field', name: {kind: 'Name', value: 'visibility'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'averagePrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'minPrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'maxPrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'priceUpdatedAt'}},
           {kind: 'Field', name: {kind: 'Name', value: 'imageUrl'}},
           {kind: 'Field', name: {kind: 'Name', value: 'tags'}},
           {kind: 'Field', name: {kind: 'Name', value: 'healthBenefits'}},
@@ -9553,7 +9529,6 @@ export const PantryItemFragmentDoc = {
           {kind: 'Field', name: {kind: 'Name', value: 'pantryId'}},
           {kind: 'Field', name: {kind: 'Name', value: 'itemId'}},
           {kind: 'Field', name: {kind: 'Name', value: 'itemName'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'itemBarcode'}},
           {
             kind: 'Field',
             name: {kind: 'Name', value: 'item'},
@@ -9753,7 +9728,7 @@ export const PantryItemFragmentDoc = {
           {kind: 'Field', name: {kind: 'Name', value: 'id'}},
           {kind: 'Field', name: {kind: 'Name', value: 'name'}},
           {kind: 'Field', name: {kind: 'Name', value: 'description'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'barcode'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'upc'}},
           {kind: 'Field', name: {kind: 'Name', value: 'fdcId'}},
           {kind: 'Field', name: {kind: 'Name', value: 'dataSource'}},
           {kind: 'Field', name: {kind: 'Name', value: 'type'}},
@@ -9763,10 +9738,6 @@ export const PantryItemFragmentDoc = {
           {kind: 'Field', name: {kind: 'Name', value: 'popularity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'status'}},
           {kind: 'Field', name: {kind: 'Name', value: 'visibility'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'averagePrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'minPrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'maxPrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'priceUpdatedAt'}},
           {kind: 'Field', name: {kind: 'Name', value: 'imageUrl'}},
           {kind: 'Field', name: {kind: 'Name', value: 'tags'}},
           {kind: 'Field', name: {kind: 'Name', value: 'healthBenefits'}},
@@ -10022,7 +9993,7 @@ export const PantryFragmentDoc = {
           {kind: 'Field', name: {kind: 'Name', value: 'id'}},
           {kind: 'Field', name: {kind: 'Name', value: 'name'}},
           {kind: 'Field', name: {kind: 'Name', value: 'description'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'barcode'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'upc'}},
           {kind: 'Field', name: {kind: 'Name', value: 'fdcId'}},
           {kind: 'Field', name: {kind: 'Name', value: 'dataSource'}},
           {kind: 'Field', name: {kind: 'Name', value: 'type'}},
@@ -10032,10 +10003,6 @@ export const PantryFragmentDoc = {
           {kind: 'Field', name: {kind: 'Name', value: 'popularity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'status'}},
           {kind: 'Field', name: {kind: 'Name', value: 'visibility'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'averagePrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'minPrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'maxPrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'priceUpdatedAt'}},
           {kind: 'Field', name: {kind: 'Name', value: 'imageUrl'}},
           {kind: 'Field', name: {kind: 'Name', value: 'tags'}},
           {kind: 'Field', name: {kind: 'Name', value: 'healthBenefits'}},
@@ -10147,7 +10114,6 @@ export const PantryFragmentDoc = {
           {kind: 'Field', name: {kind: 'Name', value: 'pantryId'}},
           {kind: 'Field', name: {kind: 'Name', value: 'itemId'}},
           {kind: 'Field', name: {kind: 'Name', value: 'itemName'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'itemBarcode'}},
           {
             kind: 'Field',
             name: {kind: 'Name', value: 'item'},
@@ -10537,7 +10503,7 @@ export const HomeFragmentDoc = {
           {kind: 'Field', name: {kind: 'Name', value: 'id'}},
           {kind: 'Field', name: {kind: 'Name', value: 'name'}},
           {kind: 'Field', name: {kind: 'Name', value: 'description'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'barcode'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'upc'}},
           {kind: 'Field', name: {kind: 'Name', value: 'fdcId'}},
           {kind: 'Field', name: {kind: 'Name', value: 'dataSource'}},
           {kind: 'Field', name: {kind: 'Name', value: 'type'}},
@@ -10547,10 +10513,6 @@ export const HomeFragmentDoc = {
           {kind: 'Field', name: {kind: 'Name', value: 'popularity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'status'}},
           {kind: 'Field', name: {kind: 'Name', value: 'visibility'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'averagePrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'minPrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'maxPrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'priceUpdatedAt'}},
           {kind: 'Field', name: {kind: 'Name', value: 'imageUrl'}},
           {kind: 'Field', name: {kind: 'Name', value: 'tags'}},
           {kind: 'Field', name: {kind: 'Name', value: 'healthBenefits'}},
@@ -10662,7 +10624,6 @@ export const HomeFragmentDoc = {
           {kind: 'Field', name: {kind: 'Name', value: 'pantryId'}},
           {kind: 'Field', name: {kind: 'Name', value: 'itemId'}},
           {kind: 'Field', name: {kind: 'Name', value: 'itemName'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'itemBarcode'}},
           {
             kind: 'Field',
             name: {kind: 'Name', value: 'item'},
@@ -14634,7 +14595,7 @@ export const GetHomeDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'id'}},
           {kind: 'Field', name: {kind: 'Name', value: 'name'}},
           {kind: 'Field', name: {kind: 'Name', value: 'description'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'barcode'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'upc'}},
           {kind: 'Field', name: {kind: 'Name', value: 'fdcId'}},
           {kind: 'Field', name: {kind: 'Name', value: 'dataSource'}},
           {kind: 'Field', name: {kind: 'Name', value: 'type'}},
@@ -14644,10 +14605,6 @@ export const GetHomeDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'popularity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'status'}},
           {kind: 'Field', name: {kind: 'Name', value: 'visibility'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'averagePrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'minPrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'maxPrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'priceUpdatedAt'}},
           {kind: 'Field', name: {kind: 'Name', value: 'imageUrl'}},
           {kind: 'Field', name: {kind: 'Name', value: 'tags'}},
           {kind: 'Field', name: {kind: 'Name', value: 'healthBenefits'}},
@@ -14759,7 +14716,6 @@ export const GetHomeDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'pantryId'}},
           {kind: 'Field', name: {kind: 'Name', value: 'itemId'}},
           {kind: 'Field', name: {kind: 'Name', value: 'itemName'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'itemBarcode'}},
           {
             kind: 'Field',
             name: {kind: 'Name', value: 'item'},
@@ -15811,7 +15767,7 @@ export const CreateHomeDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'id'}},
           {kind: 'Field', name: {kind: 'Name', value: 'name'}},
           {kind: 'Field', name: {kind: 'Name', value: 'description'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'barcode'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'upc'}},
           {kind: 'Field', name: {kind: 'Name', value: 'fdcId'}},
           {kind: 'Field', name: {kind: 'Name', value: 'dataSource'}},
           {kind: 'Field', name: {kind: 'Name', value: 'type'}},
@@ -15821,10 +15777,6 @@ export const CreateHomeDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'popularity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'status'}},
           {kind: 'Field', name: {kind: 'Name', value: 'visibility'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'averagePrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'minPrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'maxPrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'priceUpdatedAt'}},
           {kind: 'Field', name: {kind: 'Name', value: 'imageUrl'}},
           {kind: 'Field', name: {kind: 'Name', value: 'tags'}},
           {kind: 'Field', name: {kind: 'Name', value: 'healthBenefits'}},
@@ -15936,7 +15888,6 @@ export const CreateHomeDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'pantryId'}},
           {kind: 'Field', name: {kind: 'Name', value: 'itemId'}},
           {kind: 'Field', name: {kind: 'Name', value: 'itemName'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'itemBarcode'}},
           {
             kind: 'Field',
             name: {kind: 'Name', value: 'item'},
@@ -16571,7 +16522,7 @@ export const UpdateHomeDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'id'}},
           {kind: 'Field', name: {kind: 'Name', value: 'name'}},
           {kind: 'Field', name: {kind: 'Name', value: 'description'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'barcode'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'upc'}},
           {kind: 'Field', name: {kind: 'Name', value: 'fdcId'}},
           {kind: 'Field', name: {kind: 'Name', value: 'dataSource'}},
           {kind: 'Field', name: {kind: 'Name', value: 'type'}},
@@ -16581,10 +16532,6 @@ export const UpdateHomeDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'popularity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'status'}},
           {kind: 'Field', name: {kind: 'Name', value: 'visibility'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'averagePrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'minPrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'maxPrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'priceUpdatedAt'}},
           {kind: 'Field', name: {kind: 'Name', value: 'imageUrl'}},
           {kind: 'Field', name: {kind: 'Name', value: 'tags'}},
           {kind: 'Field', name: {kind: 'Name', value: 'healthBenefits'}},
@@ -16696,7 +16643,6 @@ export const UpdateHomeDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'pantryId'}},
           {kind: 'Field', name: {kind: 'Name', value: 'itemId'}},
           {kind: 'Field', name: {kind: 'Name', value: 'itemName'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'itemBarcode'}},
           {
             kind: 'Field',
             name: {kind: 'Name', value: 'item'},
@@ -17316,7 +17262,7 @@ export const DeleteHomeDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'id'}},
           {kind: 'Field', name: {kind: 'Name', value: 'name'}},
           {kind: 'Field', name: {kind: 'Name', value: 'description'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'barcode'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'upc'}},
           {kind: 'Field', name: {kind: 'Name', value: 'fdcId'}},
           {kind: 'Field', name: {kind: 'Name', value: 'dataSource'}},
           {kind: 'Field', name: {kind: 'Name', value: 'type'}},
@@ -17326,10 +17272,6 @@ export const DeleteHomeDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'popularity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'status'}},
           {kind: 'Field', name: {kind: 'Name', value: 'visibility'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'averagePrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'minPrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'maxPrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'priceUpdatedAt'}},
           {kind: 'Field', name: {kind: 'Name', value: 'imageUrl'}},
           {kind: 'Field', name: {kind: 'Name', value: 'tags'}},
           {kind: 'Field', name: {kind: 'Name', value: 'healthBenefits'}},
@@ -17441,7 +17383,6 @@ export const DeleteHomeDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'pantryId'}},
           {kind: 'Field', name: {kind: 'Name', value: 'itemId'}},
           {kind: 'Field', name: {kind: 'Name', value: 'itemName'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'itemBarcode'}},
           {
             kind: 'Field',
             name: {kind: 'Name', value: 'item'},
@@ -19118,7 +19059,7 @@ export const GetDefaultHomeDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'id'}},
           {kind: 'Field', name: {kind: 'Name', value: 'name'}},
           {kind: 'Field', name: {kind: 'Name', value: 'description'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'barcode'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'upc'}},
           {kind: 'Field', name: {kind: 'Name', value: 'fdcId'}},
           {kind: 'Field', name: {kind: 'Name', value: 'dataSource'}},
           {kind: 'Field', name: {kind: 'Name', value: 'type'}},
@@ -19128,10 +19069,6 @@ export const GetDefaultHomeDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'popularity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'status'}},
           {kind: 'Field', name: {kind: 'Name', value: 'visibility'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'averagePrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'minPrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'maxPrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'priceUpdatedAt'}},
           {kind: 'Field', name: {kind: 'Name', value: 'imageUrl'}},
           {kind: 'Field', name: {kind: 'Name', value: 'tags'}},
           {kind: 'Field', name: {kind: 'Name', value: 'healthBenefits'}},
@@ -19243,7 +19180,6 @@ export const GetDefaultHomeDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'pantryId'}},
           {kind: 'Field', name: {kind: 'Name', value: 'itemId'}},
           {kind: 'Field', name: {kind: 'Name', value: 'itemName'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'itemBarcode'}},
           {
             kind: 'Field',
             name: {kind: 'Name', value: 'item'},
@@ -19841,7 +19777,7 @@ export const GetItemsDocument = {
                         name: {kind: 'Name', value: 'description'},
                       },
                       {kind: 'Field', name: {kind: 'Name', value: 'type'}},
-                      {kind: 'Field', name: {kind: 'Name', value: 'barcode'}},
+                      {kind: 'Field', name: {kind: 'Name', value: 'upc'}},
                       {
                         kind: 'Field',
                         name: {kind: 'Name', value: 'storageState'},
@@ -20124,17 +20060,17 @@ export type SearchItemsQueryResult = ApolloReactCommon.QueryResult<
 export function refetchSearchItemsQuery(variables: SearchItemsQueryVariables) {
   return {query: SearchItemsDocument, variables: variables};
 }
-export const SearchItemsByBarcodeDocument = {
+export const SearchItemsByUpcDocument = {
   kind: 'Document',
   definitions: [
     {
       kind: 'OperationDefinition',
       operation: 'query',
-      name: {kind: 'Name', value: 'SearchItemsByBarcode'},
+      name: {kind: 'Name', value: 'SearchItemsByUpc'},
       variableDefinitions: [
         {
           kind: 'VariableDefinition',
-          variable: {kind: 'Variable', name: {kind: 'Name', value: 'barcode'}},
+          variable: {kind: 'Variable', name: {kind: 'Name', value: 'upc'}},
           type: {
             kind: 'NonNullType',
             type: {kind: 'NamedType', name: {kind: 'Name', value: 'String'}},
@@ -20146,15 +20082,12 @@ export const SearchItemsByBarcodeDocument = {
         selections: [
           {
             kind: 'Field',
-            name: {kind: 'Name', value: 'searchItemsByBarcode'},
+            name: {kind: 'Name', value: 'searchItemsByUpc'},
             arguments: [
               {
                 kind: 'Argument',
-                name: {kind: 'Name', value: 'barcode'},
-                value: {
-                  kind: 'Variable',
-                  name: {kind: 'Name', value: 'barcode'},
-                },
+                name: {kind: 'Name', value: 'upc'},
+                value: {kind: 'Variable', name: {kind: 'Name', value: 'upc'}},
               },
             ],
             selectionSet: {
@@ -20164,7 +20097,7 @@ export const SearchItemsByBarcodeDocument = {
                 {kind: 'Field', name: {kind: 'Name', value: 'name'}},
                 {kind: 'Field', name: {kind: 'Name', value: 'description'}},
                 {kind: 'Field', name: {kind: 'Name', value: 'imageUrl'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'barcode'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'upc'}},
               ],
             },
           },
@@ -20175,55 +20108,55 @@ export const SearchItemsByBarcodeDocument = {
 } as unknown as DocumentNode;
 
 /**
- * __useSearchItemsByBarcodeQuery__
+ * __useSearchItemsByUpcQuery__
  *
- * To run a query within a React component, call `useSearchItemsByBarcodeQuery` and pass it any options that fit your needs.
- * When your component renders, `useSearchItemsByBarcodeQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * To run a query within a React component, call `useSearchItemsByUpcQuery` and pass it any options that fit your needs.
+ * When your component renders, `useSearchItemsByUpcQuery` returns an object from Apollo Client that contains loading, error, and data properties
  * you can use to render your UI.
  *
  * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
  *
  * @example
- * const { data, loading, error } = useSearchItemsByBarcodeQuery({
+ * const { data, loading, error } = useSearchItemsByUpcQuery({
  *   variables: {
- *      barcode: // value for 'barcode'
+ *      upc: // value for 'upc'
  *   },
  * });
  */
-export function useSearchItemsByBarcodeQuery(
+export function useSearchItemsByUpcQuery(
   baseOptions: ApolloReactHooks.QueryHookOptions<
-    SearchItemsByBarcodeQuery,
-    SearchItemsByBarcodeQueryVariables
+    SearchItemsByUpcQuery,
+    SearchItemsByUpcQueryVariables
   > &
     (
-      | {variables: SearchItemsByBarcodeQueryVariables; skip?: boolean}
+      | {variables: SearchItemsByUpcQueryVariables; skip?: boolean}
       | {skip: boolean}
     ),
 ) {
   const options = {...defaultOptions, ...baseOptions};
   return ApolloReactHooks.useQuery<
-    SearchItemsByBarcodeQuery,
-    SearchItemsByBarcodeQueryVariables
-  >(SearchItemsByBarcodeDocument, options);
+    SearchItemsByUpcQuery,
+    SearchItemsByUpcQueryVariables
+  >(SearchItemsByUpcDocument, options);
 }
-export function useSearchItemsByBarcodeLazyQuery(
+export function useSearchItemsByUpcLazyQuery(
   baseOptions?: ApolloReactHooks.LazyQueryHookOptions<
-    SearchItemsByBarcodeQuery,
-    SearchItemsByBarcodeQueryVariables
+    SearchItemsByUpcQuery,
+    SearchItemsByUpcQueryVariables
   >,
 ) {
   const options = {...defaultOptions, ...baseOptions};
   return ApolloReactHooks.useLazyQuery<
-    SearchItemsByBarcodeQuery,
-    SearchItemsByBarcodeQueryVariables
-  >(SearchItemsByBarcodeDocument, options);
+    SearchItemsByUpcQuery,
+    SearchItemsByUpcQueryVariables
+  >(SearchItemsByUpcDocument, options);
 }
-export function useSearchItemsByBarcodeSuspenseQuery(
+export function useSearchItemsByUpcSuspenseQuery(
   baseOptions?:
     | ApolloReactHooks.SkipToken
     | ApolloReactHooks.SuspenseQueryHookOptions<
-        SearchItemsByBarcodeQuery,
-        SearchItemsByBarcodeQueryVariables
+        SearchItemsByUpcQuery,
+        SearchItemsByUpcQueryVariables
       >,
 ) {
   const options =
@@ -20231,27 +20164,27 @@ export function useSearchItemsByBarcodeSuspenseQuery(
       ? baseOptions
       : {...defaultOptions, ...baseOptions};
   return ApolloReactHooks.useSuspenseQuery<
-    SearchItemsByBarcodeQuery,
-    SearchItemsByBarcodeQueryVariables
-  >(SearchItemsByBarcodeDocument, options);
+    SearchItemsByUpcQuery,
+    SearchItemsByUpcQueryVariables
+  >(SearchItemsByUpcDocument, options);
 }
-export type SearchItemsByBarcodeQueryHookResult = ReturnType<
-  typeof useSearchItemsByBarcodeQuery
+export type SearchItemsByUpcQueryHookResult = ReturnType<
+  typeof useSearchItemsByUpcQuery
 >;
-export type SearchItemsByBarcodeLazyQueryHookResult = ReturnType<
-  typeof useSearchItemsByBarcodeLazyQuery
+export type SearchItemsByUpcLazyQueryHookResult = ReturnType<
+  typeof useSearchItemsByUpcLazyQuery
 >;
-export type SearchItemsByBarcodeSuspenseQueryHookResult = ReturnType<
-  typeof useSearchItemsByBarcodeSuspenseQuery
+export type SearchItemsByUpcSuspenseQueryHookResult = ReturnType<
+  typeof useSearchItemsByUpcSuspenseQuery
 >;
-export type SearchItemsByBarcodeQueryResult = ApolloReactCommon.QueryResult<
-  SearchItemsByBarcodeQuery,
-  SearchItemsByBarcodeQueryVariables
+export type SearchItemsByUpcQueryResult = ApolloReactCommon.QueryResult<
+  SearchItemsByUpcQuery,
+  SearchItemsByUpcQueryVariables
 >;
-export function refetchSearchItemsByBarcodeQuery(
-  variables: SearchItemsByBarcodeQueryVariables,
+export function refetchSearchItemsByUpcQuery(
+  variables: SearchItemsByUpcQueryVariables,
 ) {
-  return {query: SearchItemsByBarcodeDocument, variables: variables};
+  return {query: SearchItemsByUpcDocument, variables: variables};
 }
 export const GetOnboardingItemsDocument = {
   kind: 'Document',
@@ -20764,44 +20697,31 @@ export const CreateItemDocument = {
                 {kind: 'Field', name: {kind: 'Name', value: 'id'}},
                 {kind: 'Field', name: {kind: 'Name', value: 'name'}},
                 {kind: 'Field', name: {kind: 'Name', value: 'description'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'barcode'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'fdcId'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'dataSource'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'type'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'storageState'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'upc'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'sku'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'netWeight'}},
                 {
                   kind: 'Field',
-                  name: {kind: 'Name', value: 'showInOnboarding'},
-                },
-                {kind: 'Field', name: {kind: 'Name', value: 'shelfLifeDays'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'popularity'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'status'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'visibility'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'averagePrice'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'minPrice'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'maxPrice'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'priceUpdatedAt'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'imageUrl'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'tags'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'healthBenefits'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'allergens'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'nutritions'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'metadata'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'ingredients'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'createdAt'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'updatedAt'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'deletedAt'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'version'}},
-                {
-                  kind: 'Field',
-                  name: {kind: 'Name', value: 'categories'},
+                  name: {kind: 'Name', value: 'displayUnit'},
                   selectionSet: {
                     kind: 'SelectionSet',
                     selections: [
                       {kind: 'Field', name: {kind: 'Name', value: 'id'}},
+                      {kind: 'Field', name: {kind: 'Name', value: 'name'}},
+                      {kind: 'Field', name: {kind: 'Name', value: 'symbol'}},
+                    ],
+                  },
+                },
+                {
+                  kind: 'Field',
+                  name: {kind: 'Name', value: 'convertedNetWeight'},
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {kind: 'Field', name: {kind: 'Name', value: 'value'}},
                       {
                         kind: 'Field',
-                        name: {kind: 'Name', value: 'category'},
+                        name: {kind: 'Name', value: 'unit'},
                         selectionSet: {
                           kind: 'SelectionSet',
                           selections: [
@@ -20809,8 +20729,95 @@ export const CreateItemDocument = {
                               kind: 'Field',
                               name: {kind: 'Name', value: 'name'},
                             },
+                            {
+                              kind: 'Field',
+                              name: {kind: 'Name', value: 'symbol'},
+                            },
                           ],
                         },
+                      },
+                    ],
+                  },
+                },
+                {kind: 'Field', name: {kind: 'Name', value: 'type'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'storageState'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'shelfLifeDays'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'imageUrl'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'tags'}},
+                {
+                  kind: 'Field',
+                  name: {kind: 'Name', value: 'brands'},
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: {kind: 'Name', value: 'brand'},
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {kind: 'Field', name: {kind: 'Name', value: 'id'}},
+                            {
+                              kind: 'Field',
+                              name: {kind: 'Name', value: 'name'},
+                            },
+                          ],
+                        },
+                      },
+                      {kind: 'Field', name: {kind: 'Name', value: 'sku'}},
+                    ],
+                  },
+                },
+                {
+                  kind: 'Field',
+                  name: {kind: 'Name', value: 'categories'},
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: {kind: 'Name', value: 'category'},
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {kind: 'Field', name: {kind: 'Name', value: 'id'}},
+                            {
+                              kind: 'Field',
+                              name: {kind: 'Name', value: 'name'},
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
+                {
+                  kind: 'Field',
+                  name: {kind: 'Name', value: 'units'},
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: {kind: 'Name', value: 'unit'},
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'Field',
+                              name: {kind: 'Name', value: 'name'},
+                            },
+                            {
+                              kind: 'Field',
+                              name: {kind: 'Name', value: 'symbol'},
+                            },
+                          ],
+                        },
+                      },
+                      {kind: 'Field', name: {kind: 'Name', value: 'isDefault'}},
+                      {
+                        kind: 'Field',
+                        name: {kind: 'Name', value: 'packageSize'},
                       },
                     ],
                   },
@@ -22831,7 +22838,7 @@ export const GetPantryItemsDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'id'}},
           {kind: 'Field', name: {kind: 'Name', value: 'name'}},
           {kind: 'Field', name: {kind: 'Name', value: 'description'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'barcode'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'upc'}},
           {kind: 'Field', name: {kind: 'Name', value: 'fdcId'}},
           {kind: 'Field', name: {kind: 'Name', value: 'dataSource'}},
           {kind: 'Field', name: {kind: 'Name', value: 'type'}},
@@ -22841,10 +22848,6 @@ export const GetPantryItemsDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'popularity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'status'}},
           {kind: 'Field', name: {kind: 'Name', value: 'visibility'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'averagePrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'minPrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'maxPrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'priceUpdatedAt'}},
           {kind: 'Field', name: {kind: 'Name', value: 'imageUrl'}},
           {kind: 'Field', name: {kind: 'Name', value: 'tags'}},
           {kind: 'Field', name: {kind: 'Name', value: 'healthBenefits'}},
@@ -22956,7 +22959,6 @@ export const GetPantryItemsDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'pantryId'}},
           {kind: 'Field', name: {kind: 'Name', value: 'itemId'}},
           {kind: 'Field', name: {kind: 'Name', value: 'itemName'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'itemBarcode'}},
           {
             kind: 'Field',
             name: {kind: 'Name', value: 'item'},
@@ -23281,7 +23283,7 @@ export const GetPantryItemDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'id'}},
           {kind: 'Field', name: {kind: 'Name', value: 'name'}},
           {kind: 'Field', name: {kind: 'Name', value: 'description'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'barcode'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'upc'}},
           {kind: 'Field', name: {kind: 'Name', value: 'fdcId'}},
           {kind: 'Field', name: {kind: 'Name', value: 'dataSource'}},
           {kind: 'Field', name: {kind: 'Name', value: 'type'}},
@@ -23291,10 +23293,6 @@ export const GetPantryItemDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'popularity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'status'}},
           {kind: 'Field', name: {kind: 'Name', value: 'visibility'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'averagePrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'minPrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'maxPrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'priceUpdatedAt'}},
           {kind: 'Field', name: {kind: 'Name', value: 'imageUrl'}},
           {kind: 'Field', name: {kind: 'Name', value: 'tags'}},
           {kind: 'Field', name: {kind: 'Name', value: 'healthBenefits'}},
@@ -23406,7 +23404,6 @@ export const GetPantryItemDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'pantryId'}},
           {kind: 'Field', name: {kind: 'Name', value: 'itemId'}},
           {kind: 'Field', name: {kind: 'Name', value: 'itemName'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'itemBarcode'}},
           {
             kind: 'Field',
             name: {kind: 'Name', value: 'item'},
@@ -23734,7 +23731,7 @@ export const AddItemToPantryDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'id'}},
           {kind: 'Field', name: {kind: 'Name', value: 'name'}},
           {kind: 'Field', name: {kind: 'Name', value: 'description'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'barcode'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'upc'}},
           {kind: 'Field', name: {kind: 'Name', value: 'fdcId'}},
           {kind: 'Field', name: {kind: 'Name', value: 'dataSource'}},
           {kind: 'Field', name: {kind: 'Name', value: 'type'}},
@@ -23744,10 +23741,6 @@ export const AddItemToPantryDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'popularity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'status'}},
           {kind: 'Field', name: {kind: 'Name', value: 'visibility'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'averagePrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'minPrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'maxPrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'priceUpdatedAt'}},
           {kind: 'Field', name: {kind: 'Name', value: 'imageUrl'}},
           {kind: 'Field', name: {kind: 'Name', value: 'tags'}},
           {kind: 'Field', name: {kind: 'Name', value: 'healthBenefits'}},
@@ -23859,7 +23852,6 @@ export const AddItemToPantryDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'pantryId'}},
           {kind: 'Field', name: {kind: 'Name', value: 'itemId'}},
           {kind: 'Field', name: {kind: 'Name', value: 'itemName'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'itemBarcode'}},
           {
             kind: 'Field',
             name: {kind: 'Name', value: 'item'},
@@ -24263,7 +24255,7 @@ export const UpdatePantryItemDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'id'}},
           {kind: 'Field', name: {kind: 'Name', value: 'name'}},
           {kind: 'Field', name: {kind: 'Name', value: 'description'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'barcode'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'upc'}},
           {kind: 'Field', name: {kind: 'Name', value: 'fdcId'}},
           {kind: 'Field', name: {kind: 'Name', value: 'dataSource'}},
           {kind: 'Field', name: {kind: 'Name', value: 'type'}},
@@ -24273,10 +24265,6 @@ export const UpdatePantryItemDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'popularity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'status'}},
           {kind: 'Field', name: {kind: 'Name', value: 'visibility'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'averagePrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'minPrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'maxPrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'priceUpdatedAt'}},
           {kind: 'Field', name: {kind: 'Name', value: 'imageUrl'}},
           {kind: 'Field', name: {kind: 'Name', value: 'tags'}},
           {kind: 'Field', name: {kind: 'Name', value: 'healthBenefits'}},
@@ -24388,7 +24376,6 @@ export const UpdatePantryItemDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'pantryId'}},
           {kind: 'Field', name: {kind: 'Name', value: 'itemId'}},
           {kind: 'Field', name: {kind: 'Name', value: 'itemName'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'itemBarcode'}},
           {
             kind: 'Field',
             name: {kind: 'Name', value: 'item'},
@@ -24678,7 +24665,7 @@ export const RemoveItemFromPantryDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'id'}},
           {kind: 'Field', name: {kind: 'Name', value: 'name'}},
           {kind: 'Field', name: {kind: 'Name', value: 'description'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'barcode'}},
+          {kind: 'Field', name: {kind: 'Name', value: 'upc'}},
           {kind: 'Field', name: {kind: 'Name', value: 'fdcId'}},
           {kind: 'Field', name: {kind: 'Name', value: 'dataSource'}},
           {kind: 'Field', name: {kind: 'Name', value: 'type'}},
@@ -24688,10 +24675,6 @@ export const RemoveItemFromPantryDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'popularity'}},
           {kind: 'Field', name: {kind: 'Name', value: 'status'}},
           {kind: 'Field', name: {kind: 'Name', value: 'visibility'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'averagePrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'minPrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'maxPrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'priceUpdatedAt'}},
           {kind: 'Field', name: {kind: 'Name', value: 'imageUrl'}},
           {kind: 'Field', name: {kind: 'Name', value: 'tags'}},
           {kind: 'Field', name: {kind: 'Name', value: 'healthBenefits'}},
@@ -24803,7 +24786,6 @@ export const RemoveItemFromPantryDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'pantryId'}},
           {kind: 'Field', name: {kind: 'Name', value: 'itemId'}},
           {kind: 'Field', name: {kind: 'Name', value: 'itemName'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'itemBarcode'}},
           {
             kind: 'Field',
             name: {kind: 'Name', value: 'item'},
@@ -25303,10 +25285,6 @@ export const PantryLowStockAlertDocument = {
                       {kind: 'Field', name: {kind: 'Name', value: 'id'}},
                       {kind: 'Field', name: {kind: 'Name', value: 'name'}},
                       {kind: 'Field', name: {kind: 'Name', value: 'imageUrl'}},
-                      {
-                        kind: 'Field',
-                        name: {kind: 'Name', value: 'averagePrice'},
-                      },
                     ],
                   },
                 },
@@ -26964,10 +26942,7 @@ export const GetShoppingListDocument = {
                               kind: 'Field',
                               name: {kind: 'Name', value: 'description'},
                             },
-                            {
-                              kind: 'Field',
-                              name: {kind: 'Name', value: 'barcode'},
-                            },
+                            {kind: 'Field', name: {kind: 'Name', value: 'upc'}},
                             {
                               kind: 'Field',
                               name: {kind: 'Name', value: 'imageUrl'},
@@ -26979,10 +26954,6 @@ export const GetShoppingListDocument = {
                             {
                               kind: 'Field',
                               name: {kind: 'Name', value: 'storageState'},
-                            },
-                            {
-                              kind: 'Field',
-                              name: {kind: 'Name', value: 'averagePrice'},
                             },
                           ],
                         },
@@ -27588,7 +27559,6 @@ export const GetShoppingListItemsDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'estimatedPrice'}},
           {kind: 'Field', name: {kind: 'Name', value: 'budgetPrice'}},
           {kind: 'Field', name: {kind: 'Name', value: 'lastKnownPrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'averagePrice'}},
           {kind: 'Field', name: {kind: 'Name', value: 'lowestPrice'}},
           {kind: 'Field', name: {kind: 'Name', value: 'highestPrice'}},
           {kind: 'Field', name: {kind: 'Name', value: 'priceLastUpdated'}},
@@ -27602,7 +27572,6 @@ export const GetShoppingListItemsDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'lastPurchaseDate'}},
           {kind: 'Field', name: {kind: 'Name', value: 'purchaseCount'}},
           {kind: 'Field', name: {kind: 'Name', value: 'itemName'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'itemBarcode'}},
           {kind: 'Field', name: {kind: 'Name', value: 'unitName'}},
           {kind: 'Field', name: {kind: 'Name', value: 'notes'}},
           {kind: 'Field', name: {kind: 'Name', value: 'priority'}},
@@ -27893,7 +27862,6 @@ export const GetShoppingListItemDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'estimatedPrice'}},
           {kind: 'Field', name: {kind: 'Name', value: 'budgetPrice'}},
           {kind: 'Field', name: {kind: 'Name', value: 'lastKnownPrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'averagePrice'}},
           {kind: 'Field', name: {kind: 'Name', value: 'lowestPrice'}},
           {kind: 'Field', name: {kind: 'Name', value: 'highestPrice'}},
           {kind: 'Field', name: {kind: 'Name', value: 'priceLastUpdated'}},
@@ -27907,7 +27875,6 @@ export const GetShoppingListItemDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'lastPurchaseDate'}},
           {kind: 'Field', name: {kind: 'Name', value: 'purchaseCount'}},
           {kind: 'Field', name: {kind: 'Name', value: 'itemName'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'itemBarcode'}},
           {kind: 'Field', name: {kind: 'Name', value: 'unitName'}},
           {kind: 'Field', name: {kind: 'Name', value: 'notes'}},
           {kind: 'Field', name: {kind: 'Name', value: 'priority'}},
@@ -29076,7 +29043,6 @@ export const AddItemToShoppingListDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'estimatedPrice'}},
           {kind: 'Field', name: {kind: 'Name', value: 'budgetPrice'}},
           {kind: 'Field', name: {kind: 'Name', value: 'lastKnownPrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'averagePrice'}},
           {kind: 'Field', name: {kind: 'Name', value: 'lowestPrice'}},
           {kind: 'Field', name: {kind: 'Name', value: 'highestPrice'}},
           {kind: 'Field', name: {kind: 'Name', value: 'priceLastUpdated'}},
@@ -29090,7 +29056,6 @@ export const AddItemToShoppingListDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'lastPurchaseDate'}},
           {kind: 'Field', name: {kind: 'Name', value: 'purchaseCount'}},
           {kind: 'Field', name: {kind: 'Name', value: 'itemName'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'itemBarcode'}},
           {kind: 'Field', name: {kind: 'Name', value: 'unitName'}},
           {kind: 'Field', name: {kind: 'Name', value: 'notes'}},
           {kind: 'Field', name: {kind: 'Name', value: 'priority'}},
@@ -29362,7 +29327,6 @@ export const UpdateShoppingListItemDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'estimatedPrice'}},
           {kind: 'Field', name: {kind: 'Name', value: 'budgetPrice'}},
           {kind: 'Field', name: {kind: 'Name', value: 'lastKnownPrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'averagePrice'}},
           {kind: 'Field', name: {kind: 'Name', value: 'lowestPrice'}},
           {kind: 'Field', name: {kind: 'Name', value: 'highestPrice'}},
           {kind: 'Field', name: {kind: 'Name', value: 'priceLastUpdated'}},
@@ -29376,7 +29340,6 @@ export const UpdateShoppingListItemDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'lastPurchaseDate'}},
           {kind: 'Field', name: {kind: 'Name', value: 'purchaseCount'}},
           {kind: 'Field', name: {kind: 'Name', value: 'itemName'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'itemBarcode'}},
           {kind: 'Field', name: {kind: 'Name', value: 'unitName'}},
           {kind: 'Field', name: {kind: 'Name', value: 'notes'}},
           {kind: 'Field', name: {kind: 'Name', value: 'priority'}},
@@ -30130,7 +30093,6 @@ export const ShoppingListItemsChangedDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'estimatedPrice'}},
           {kind: 'Field', name: {kind: 'Name', value: 'budgetPrice'}},
           {kind: 'Field', name: {kind: 'Name', value: 'lastKnownPrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'averagePrice'}},
           {kind: 'Field', name: {kind: 'Name', value: 'lowestPrice'}},
           {kind: 'Field', name: {kind: 'Name', value: 'highestPrice'}},
           {kind: 'Field', name: {kind: 'Name', value: 'priceLastUpdated'}},
@@ -30144,7 +30106,6 @@ export const ShoppingListItemsChangedDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'lastPurchaseDate'}},
           {kind: 'Field', name: {kind: 'Name', value: 'purchaseCount'}},
           {kind: 'Field', name: {kind: 'Name', value: 'itemName'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'itemBarcode'}},
           {kind: 'Field', name: {kind: 'Name', value: 'unitName'}},
           {kind: 'Field', name: {kind: 'Name', value: 'notes'}},
           {kind: 'Field', name: {kind: 'Name', value: 'priority'}},
@@ -30668,7 +30629,6 @@ export const ShoppingListItemAddedDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'estimatedPrice'}},
           {kind: 'Field', name: {kind: 'Name', value: 'budgetPrice'}},
           {kind: 'Field', name: {kind: 'Name', value: 'lastKnownPrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'averagePrice'}},
           {kind: 'Field', name: {kind: 'Name', value: 'lowestPrice'}},
           {kind: 'Field', name: {kind: 'Name', value: 'highestPrice'}},
           {kind: 'Field', name: {kind: 'Name', value: 'priceLastUpdated'}},
@@ -30682,7 +30642,6 @@ export const ShoppingListItemAddedDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'lastPurchaseDate'}},
           {kind: 'Field', name: {kind: 'Name', value: 'purchaseCount'}},
           {kind: 'Field', name: {kind: 'Name', value: 'itemName'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'itemBarcode'}},
           {kind: 'Field', name: {kind: 'Name', value: 'unitName'}},
           {kind: 'Field', name: {kind: 'Name', value: 'notes'}},
           {kind: 'Field', name: {kind: 'Name', value: 'priority'}},
@@ -30937,7 +30896,6 @@ export const ShoppingListItemUpdatedDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'estimatedPrice'}},
           {kind: 'Field', name: {kind: 'Name', value: 'budgetPrice'}},
           {kind: 'Field', name: {kind: 'Name', value: 'lastKnownPrice'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'averagePrice'}},
           {kind: 'Field', name: {kind: 'Name', value: 'lowestPrice'}},
           {kind: 'Field', name: {kind: 'Name', value: 'highestPrice'}},
           {kind: 'Field', name: {kind: 'Name', value: 'priceLastUpdated'}},
@@ -30951,7 +30909,6 @@ export const ShoppingListItemUpdatedDocument = {
           {kind: 'Field', name: {kind: 'Name', value: 'lastPurchaseDate'}},
           {kind: 'Field', name: {kind: 'Name', value: 'purchaseCount'}},
           {kind: 'Field', name: {kind: 'Name', value: 'itemName'}},
-          {kind: 'Field', name: {kind: 'Name', value: 'itemBarcode'}},
           {kind: 'Field', name: {kind: 'Name', value: 'unitName'}},
           {kind: 'Field', name: {kind: 'Name', value: 'notes'}},
           {kind: 'Field', name: {kind: 'Name', value: 'priority'}},

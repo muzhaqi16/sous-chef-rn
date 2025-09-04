@@ -206,14 +206,6 @@
             "deprecationReason": null
           },
           {
-            "name": "itemBarcode",
-            "description": null,
-            "type": {"kind": "SCALAR", "name": "String", "ofType": null},
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
             "name": "itemBrand",
             "description": null,
             "type": {"kind": "SCALAR", "name": "String", "ofType": null},
@@ -247,6 +239,14 @@
           },
           {
             "name": "itemName",
+            "description": null,
+            "type": {"kind": "SCALAR", "name": "String", "ofType": null},
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "itemUpc",
             "description": null,
             "type": {"kind": "SCALAR", "name": "String", "ofType": null},
             "defaultValue": null,
@@ -873,58 +873,6 @@
           }
         ],
         "interfaces": null,
-        "enumValues": null,
-        "possibleTypes": null
-      },
-      {
-        "kind": "OBJECT",
-        "name": "BarcodeValidation",
-        "description": null,
-        "isOneOf": null,
-        "fields": [
-          {
-            "name": "exists",
-            "description": null,
-            "args": [],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {"kind": "SCALAR", "name": "Boolean", "ofType": null}
-            },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "format",
-            "description": null,
-            "args": [],
-            "type": {"kind": "SCALAR", "name": "String", "ofType": null},
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "isValid",
-            "description": null,
-            "args": [],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {"kind": "SCALAR", "name": "Boolean", "ofType": null}
-            },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "item",
-            "description": null,
-            "args": [],
-            "type": {"kind": "OBJECT", "name": "Item", "ofType": null},
-            "isDeprecated": false,
-            "deprecationReason": null
-          }
-        ],
-        "inputFields": null,
-        "interfaces": [],
         "enumValues": null,
         "possibleTypes": null
       },
@@ -2288,6 +2236,42 @@
         ]
       },
       {
+        "kind": "OBJECT",
+        "name": "ConvertedValue",
+        "description": null,
+        "isOneOf": null,
+        "fields": [
+          {
+            "name": "unit",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {"kind": "OBJECT", "name": "Unit", "ofType": null}
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "value",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {"kind": "SCALAR", "name": "Float", "ofType": null}
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [],
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
         "kind": "INPUT_OBJECT",
         "name": "CreateBrandInput",
         "description": null,
@@ -2761,35 +2745,7 @@
           {
             "name": "allergens",
             "description": null,
-            "type": {
-              "kind": "LIST",
-              "name": null,
-              "ofType": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "INPUT_OBJECT",
-                  "name": "AllergenInput",
-                  "ofType": null
-                }
-              }
-            },
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "averagePrice",
-            "description": null,
-            "type": {"kind": "SCALAR", "name": "Float", "ofType": null},
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "barcode",
-            "description": null,
-            "type": {"kind": "SCALAR", "name": "String", "ofType": null},
+            "type": {"kind": "SCALAR", "name": "JSON", "ofType": null},
             "defaultValue": null,
             "isDeprecated": false,
             "deprecationReason": null
@@ -2839,22 +2795,6 @@
             "deprecationReason": null
           },
           {
-            "name": "comparedPrice",
-            "description": null,
-            "type": {"kind": "SCALAR", "name": "Float", "ofType": null},
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "dataSource",
-            "description": null,
-            "type": {"kind": "ENUM", "name": "DataSource", "ofType": null},
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
             "name": "defaultUnit",
             "description": null,
             "type": {"kind": "SCALAR", "name": "String", "ofType": null},
@@ -2871,49 +2811,9 @@
             "deprecationReason": null
           },
           {
-            "name": "displayItemSize",
+            "name": "displayUnitId",
             "description": null,
             "type": {"kind": "SCALAR", "name": "String", "ofType": null},
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "displayPricePerUnit",
-            "description": null,
-            "type": {"kind": "SCALAR", "name": "String", "ofType": null},
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "externalId",
-            "description": null,
-            "type": {"kind": "SCALAR", "name": "String", "ofType": null},
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "fdcId",
-            "description": null,
-            "type": {"kind": "SCALAR", "name": "String", "ofType": null},
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "fulfillmentMethods",
-            "description": null,
-            "type": {
-              "kind": "LIST",
-              "name": null,
-              "ofType": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {"kind": "SCALAR", "name": "String", "ofType": null}
-              }
-            },
             "defaultValue": null,
             "isDeprecated": false,
             "deprecationReason": null
@@ -2921,35 +2821,7 @@
           {
             "name": "healthBenefits",
             "description": null,
-            "type": {
-              "kind": "LIST",
-              "name": null,
-              "ofType": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "INPUT_OBJECT",
-                  "name": "HealthBenefitInput",
-                  "ofType": null
-                }
-              }
-            },
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "healthClaims",
-            "description": null,
-            "type": {
-              "kind": "LIST",
-              "name": null,
-              "ofType": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {"kind": "SCALAR", "name": "String", "ofType": null}
-              }
-            },
+            "type": {"kind": "SCALAR", "name": "JSON", "ofType": null},
             "defaultValue": null,
             "isDeprecated": false,
             "deprecationReason": null
@@ -2963,65 +2835,9 @@
             "deprecationReason": null
           },
           {
-            "name": "images",
-            "description": null,
-            "type": {
-              "kind": "LIST",
-              "name": null,
-              "ofType": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "INPUT_OBJECT",
-                  "name": "ImageInput",
-                  "ofType": null
-                }
-              }
-            },
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
             "name": "ingredients",
             "description": null,
-            "type": {
-              "kind": "LIST",
-              "name": null,
-              "ofType": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "INPUT_OBJECT",
-                  "name": "IngredientInput",
-                  "ofType": null
-                }
-              }
-            },
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "inventoryStatus",
-            "description": null,
-            "type": {"kind": "SCALAR", "name": "String", "ofType": null},
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "lastSyncedAt",
-            "description": null,
-            "type": {"kind": "SCALAR", "name": "String", "ofType": null},
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "maxPrice",
-            "description": null,
-            "type": {"kind": "SCALAR", "name": "Float", "ofType": null},
+            "type": {"kind": "SCALAR", "name": "JSON", "ofType": null},
             "defaultValue": null,
             "isDeprecated": false,
             "deprecationReason": null
@@ -3030,14 +2846,6 @@
             "name": "metadata",
             "description": null,
             "type": {"kind": "SCALAR", "name": "JSON", "ofType": null},
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "minPrice",
-            "description": null,
-            "type": {"kind": "SCALAR", "name": "Float", "ofType": null},
             "defaultValue": null,
             "isDeprecated": false,
             "deprecationReason": null
@@ -3055,57 +2863,9 @@
             "deprecationReason": null
           },
           {
-            "name": "nutritionFacts",
-            "description": null,
-            "type": {
-              "kind": "LIST",
-              "name": null,
-              "ofType": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "INPUT_OBJECT",
-                  "name": "NutritionFactInput",
-                  "ofType": null
-                }
-              }
-            },
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "offers",
-            "description": null,
-            "type": {
-              "kind": "LIST",
-              "name": null,
-              "ofType": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "INPUT_OBJECT",
-                  "name": "OfferInput",
-                  "ofType": null
-                }
-              }
-            },
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "price",
+            "name": "netWeight",
             "description": null,
             "type": {"kind": "SCALAR", "name": "Float", "ofType": null},
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "productLocation",
-            "description": null,
-            "type": {"kind": "SCALAR", "name": "String", "ofType": null},
             "defaultValue": null,
             "isDeprecated": false,
             "deprecationReason": null
@@ -3119,14 +2879,6 @@
             "deprecationReason": null
           },
           {
-            "name": "showInOnboarding",
-            "description": null,
-            "type": {"kind": "SCALAR", "name": "Boolean", "ofType": null},
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
             "name": "sku",
             "description": null,
             "type": {"kind": "SCALAR", "name": "String", "ofType": null},
@@ -3135,37 +2887,9 @@
             "deprecationReason": null
           },
           {
-            "name": "status",
-            "description": null,
-            "type": {"kind": "ENUM", "name": "ItemStatus", "ofType": null},
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
             "name": "storageState",
             "description": null,
             "type": {"kind": "ENUM", "name": "StorageState", "ofType": null},
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "storeSkus",
-            "description": null,
-            "type": {
-              "kind": "LIST",
-              "name": null,
-              "ofType": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "INPUT_OBJECT",
-                  "name": "StoreSkuInput",
-                  "ofType": null
-                }
-              }
-            },
             "defaultValue": null,
             "isDeprecated": false,
             "deprecationReason": null
@@ -3195,22 +2919,6 @@
             "deprecationReason": null
           },
           {
-            "name": "unitPrice",
-            "description": null,
-            "type": {"kind": "SCALAR", "name": "Float", "ofType": null},
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "unitQty",
-            "description": null,
-            "type": {"kind": "SCALAR", "name": "Float", "ofType": null},
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
             "name": "units",
             "description": null,
             "type": {
@@ -3231,7 +2939,7 @@
             "deprecationReason": null
           },
           {
-            "name": "vendor",
+            "name": "upc",
             "description": null,
             "type": {"kind": "SCALAR", "name": "String", "ofType": null},
             "defaultValue": null,
@@ -3239,9 +2947,9 @@
             "deprecationReason": null
           },
           {
-            "name": "visibility",
+            "name": "vendor",
             "description": null,
-            "type": {"kind": "ENUM", "name": "Visibility", "ofType": null},
+            "type": {"kind": "SCALAR", "name": "String", "ofType": null},
             "defaultValue": null,
             "isDeprecated": false,
             "deprecationReason": null
@@ -7926,22 +7634,6 @@
             "deprecationReason": null
           },
           {
-            "name": "averagePrice",
-            "description": null,
-            "args": [],
-            "type": {"kind": "SCALAR", "name": "Float", "ofType": null},
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "barcode",
-            "description": null,
-            "args": [],
-            "type": {"kind": "SCALAR", "name": "String", "ofType": null},
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
             "name": "brands",
             "description": null,
             "args": [],
@@ -7981,6 +7673,18 @@
                   "ofType": null
                 }
               }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "convertedNetWeight",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "OBJECT",
+              "name": "ConvertedValue",
+              "ofType": null
             },
             "isDeprecated": false,
             "deprecationReason": null
@@ -8046,6 +7750,14 @@
             "description": null,
             "args": [],
             "type": {"kind": "SCALAR", "name": "String", "ofType": null},
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "displayUnit",
+            "description": null,
+            "args": [],
+            "type": {"kind": "OBJECT", "name": "Unit", "ofType": null},
             "isDeprecated": false,
             "deprecationReason": null
           },
@@ -8118,26 +7830,10 @@
             "deprecationReason": null
           },
           {
-            "name": "maxPrice",
-            "description": null,
-            "args": [],
-            "type": {"kind": "SCALAR", "name": "Float", "ofType": null},
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
             "name": "metadata",
             "description": null,
             "args": [],
             "type": {"kind": "SCALAR", "name": "JSON", "ofType": null},
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "minPrice",
-            "description": null,
-            "args": [],
-            "type": {"kind": "SCALAR", "name": "Float", "ofType": null},
             "isDeprecated": false,
             "deprecationReason": null
           },
@@ -8150,6 +7846,14 @@
               "name": null,
               "ofType": {"kind": "SCALAR", "name": "String", "ofType": null}
             },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "netWeight",
+            "description": null,
+            "args": [],
+            "type": {"kind": "SCALAR", "name": "Float", "ofType": null},
             "isDeprecated": false,
             "deprecationReason": null
           },
@@ -8218,14 +7922,6 @@
                 }
               }
             },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "priceUpdatedAt",
-            "description": null,
-            "args": [],
-            "type": {"kind": "SCALAR", "name": "DateTime", "ofType": null},
             "isDeprecated": false,
             "deprecationReason": null
           },
@@ -8318,6 +8014,14 @@
               "name": null,
               "ofType": {"kind": "SCALAR", "name": "Boolean", "ofType": null}
             },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "sku",
+            "description": null,
+            "args": [],
+            "type": {"kind": "SCALAR", "name": "String", "ofType": null},
             "isDeprecated": false,
             "deprecationReason": null
           },
@@ -8422,6 +8126,14 @@
                 }
               }
             },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "upc",
+            "description": null,
+            "args": [],
+            "type": {"kind": "SCALAR", "name": "String", "ofType": null},
             "isDeprecated": false,
             "deprecationReason": null
           },
@@ -8590,6 +8302,14 @@
             "description": null,
             "args": [],
             "type": {"kind": "OBJECT", "name": "Item", "ofType": null},
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "sku",
+            "description": null,
+            "args": [],
+            "type": {"kind": "SCALAR", "name": "String", "ofType": null},
             "isDeprecated": false,
             "deprecationReason": null
           }
@@ -16564,7 +16284,7 @@
               "name": null,
               "ofType": {
                 "kind": "OBJECT",
-                "name": "AuthPayload",
+                "name": "RefreshTokenPayload",
                 "ofType": null
               }
             },
@@ -21996,14 +21716,6 @@
             "deprecationReason": null
           },
           {
-            "name": "itemBarcode",
-            "description": null,
-            "args": [],
-            "type": {"kind": "SCALAR", "name": "String", "ofType": null},
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
             "name": "itemId",
             "description": null,
             "args": [],
@@ -22024,6 +21736,14 @@
               "name": null,
               "ofType": {"kind": "SCALAR", "name": "String", "ofType": null}
             },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "itemUpc",
+            "description": null,
+            "args": [],
+            "type": {"kind": "SCALAR", "name": "String", "ofType": null},
             "isDeprecated": false,
             "deprecationReason": null
           },
@@ -23264,14 +22984,6 @@
             "deprecationReason": null
           },
           {
-            "name": "itemBarcode",
-            "description": null,
-            "args": [],
-            "type": {"kind": "SCALAR", "name": "String", "ofType": null},
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
             "name": "itemId",
             "description": null,
             "args": [],
@@ -23292,6 +23004,14 @@
               "name": null,
               "ofType": {"kind": "SCALAR", "name": "String", "ofType": null}
             },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "itemUpc",
+            "description": null,
+            "args": [],
+            "type": {"kind": "SCALAR", "name": "String", "ofType": null},
             "isDeprecated": false,
             "deprecationReason": null
           },
@@ -24580,27 +24300,6 @@
             "deprecationReason": null
           },
           {
-            "name": "itemByBarcode",
-            "description": null,
-            "args": [
-              {
-                "name": "barcode",
-                "description": null,
-                "type": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {"kind": "SCALAR", "name": "String", "ofType": null}
-                },
-                "defaultValue": null,
-                "isDeprecated": false,
-                "deprecationReason": null
-              }
-            ],
-            "type": {"kind": "OBJECT", "name": "Item", "ofType": null},
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
             "name": "itemByExternalId",
             "description": null,
             "args": [
@@ -24657,6 +24356,27 @@
                 "name": "storeId",
                 "description": null,
                 "type": {"kind": "SCALAR", "name": "String", "ofType": null},
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              }
+            ],
+            "type": {"kind": "OBJECT", "name": "Item", "ofType": null},
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "itemByUpc",
+            "description": null,
+            "args": [
+              {
+                "name": "upc",
+                "description": null,
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {"kind": "SCALAR", "name": "String", "ofType": null}
+                },
                 "defaultValue": null,
                 "isDeprecated": false,
                 "deprecationReason": null
@@ -26381,11 +26101,11 @@
             "deprecationReason": null
           },
           {
-            "name": "searchItemsByBarcode",
+            "name": "searchItemsByUpc",
             "description": null,
             "args": [
               {
-                "name": "barcode",
+                "name": "upc",
                 "description": null,
                 "type": {
                   "kind": "NON_NULL",
@@ -27354,11 +27074,11 @@
             "deprecationReason": null
           },
           {
-            "name": "validateBarcode",
+            "name": "validateUpc",
             "description": null,
             "args": [
               {
-                "name": "barcode",
+                "name": "upc",
                 "description": null,
                 "type": {
                   "kind": "NON_NULL",
@@ -27375,7 +27095,7 @@
               "name": null,
               "ofType": {
                 "kind": "OBJECT",
-                "name": "BarcodeValidation",
+                "name": "UpcValidation",
                 "ofType": null
               }
             },
@@ -27957,6 +27677,42 @@
             "deprecationReason": null
           }
         ],
+        "possibleTypes": null
+      },
+      {
+        "kind": "OBJECT",
+        "name": "RefreshTokenPayload",
+        "description": null,
+        "isOneOf": null,
+        "fields": [
+          {
+            "name": "accessToken",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {"kind": "SCALAR", "name": "String", "ofType": null}
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "refreshToken",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {"kind": "SCALAR", "name": "String", "ofType": null}
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [],
+        "enumValues": null,
         "possibleTypes": null
       },
       {
@@ -33633,6 +33389,36 @@
       },
       {
         "kind": "ENUM",
+        "name": "UnitSystem",
+        "description": null,
+        "isOneOf": null,
+        "fields": null,
+        "inputFields": null,
+        "interfaces": null,
+        "enumValues": [
+          {
+            "name": "IMPERIAL",
+            "description": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "METRIC",
+            "description": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "SYSTEM",
+            "description": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "possibleTypes": null
+      },
+      {
+        "kind": "ENUM",
         "name": "UnitType",
         "description": null,
         "isOneOf": null,
@@ -33737,6 +33523,58 @@
             "deprecationReason": null
           }
         ],
+        "possibleTypes": null
+      },
+      {
+        "kind": "OBJECT",
+        "name": "UpcValidation",
+        "description": null,
+        "isOneOf": null,
+        "fields": [
+          {
+            "name": "exists",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {"kind": "SCALAR", "name": "Boolean", "ofType": null}
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "format",
+            "description": null,
+            "args": [],
+            "type": {"kind": "SCALAR", "name": "String", "ofType": null},
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "isValid",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {"kind": "SCALAR", "name": "Boolean", "ofType": null}
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "item",
+            "description": null,
+            "args": [],
+            "type": {"kind": "OBJECT", "name": "Item", "ofType": null},
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [],
+        "enumValues": null,
         "possibleTypes": null
       },
       {
@@ -34253,47 +34091,7 @@
           {
             "name": "allergens",
             "description": null,
-            "type": {
-              "kind": "LIST",
-              "name": null,
-              "ofType": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "INPUT_OBJECT",
-                  "name": "AllergenInput",
-                  "ofType": null
-                }
-              }
-            },
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "averagePrice",
-            "description": null,
-            "type": {"kind": "SCALAR", "name": "Float", "ofType": null},
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "barcode",
-            "description": null,
-            "type": {"kind": "SCALAR", "name": "String", "ofType": null},
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "brand",
-            "description": null,
-            "type": {
-              "kind": "INPUT_OBJECT",
-              "name": "BrandInput",
-              "ofType": null
-            },
+            "type": {"kind": "SCALAR", "name": "JSON", "ofType": null},
             "defaultValue": null,
             "isDeprecated": false,
             "deprecationReason": null
@@ -34343,14 +34141,6 @@
             "deprecationReason": null
           },
           {
-            "name": "comparedPrice",
-            "description": null,
-            "type": {"kind": "SCALAR", "name": "Float", "ofType": null},
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
             "name": "defaultUnit",
             "description": null,
             "type": {"kind": "SCALAR", "name": "String", "ofType": null},
@@ -34367,15 +34157,7 @@
             "deprecationReason": null
           },
           {
-            "name": "displayItemSize",
-            "description": null,
-            "type": {"kind": "SCALAR", "name": "String", "ofType": null},
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "displayPricePerUnit",
+            "name": "displayUnitId",
             "description": null,
             "type": {"kind": "SCALAR", "name": "String", "ofType": null},
             "defaultValue": null,
@@ -34391,14 +34173,6 @@
             "deprecationReason": null
           },
           {
-            "name": "externalId",
-            "description": null,
-            "type": {"kind": "SCALAR", "name": "String", "ofType": null},
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
             "name": "fdcId",
             "description": null,
             "type": {"kind": "SCALAR", "name": "String", "ofType": null},
@@ -34407,53 +34181,9 @@
             "deprecationReason": null
           },
           {
-            "name": "fulfillmentMethods",
-            "description": null,
-            "type": {
-              "kind": "LIST",
-              "name": null,
-              "ofType": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {"kind": "SCALAR", "name": "String", "ofType": null}
-              }
-            },
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
             "name": "healthBenefits",
             "description": null,
-            "type": {
-              "kind": "LIST",
-              "name": null,
-              "ofType": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "INPUT_OBJECT",
-                  "name": "HealthBenefitInput",
-                  "ofType": null
-                }
-              }
-            },
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "healthClaims",
-            "description": null,
-            "type": {
-              "kind": "LIST",
-              "name": null,
-              "ofType": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {"kind": "SCALAR", "name": "String", "ofType": null}
-              }
-            },
+            "type": {"kind": "SCALAR", "name": "JSON", "ofType": null},
             "defaultValue": null,
             "isDeprecated": false,
             "deprecationReason": null
@@ -34467,81 +34197,9 @@
             "deprecationReason": null
           },
           {
-            "name": "images",
-            "description": null,
-            "type": {
-              "kind": "LIST",
-              "name": null,
-              "ofType": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "INPUT_OBJECT",
-                  "name": "ImageInput",
-                  "ofType": null
-                }
-              }
-            },
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
             "name": "ingredients",
             "description": null,
-            "type": {
-              "kind": "LIST",
-              "name": null,
-              "ofType": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "INPUT_OBJECT",
-                  "name": "IngredientInput",
-                  "ofType": null
-                }
-              }
-            },
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "inventoryStatus",
-            "description": null,
-            "type": {"kind": "SCALAR", "name": "String", "ofType": null},
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "isFoodStampItem",
-            "description": null,
-            "type": {"kind": "SCALAR", "name": "Boolean", "ofType": null},
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "isFsaEligible",
-            "description": null,
-            "type": {"kind": "SCALAR", "name": "Boolean", "ofType": null},
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "lastSyncedAt",
-            "description": null,
-            "type": {"kind": "SCALAR", "name": "String", "ofType": null},
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "maxPrice",
-            "description": null,
-            "type": {"kind": "SCALAR", "name": "Float", "ofType": null},
+            "type": {"kind": "SCALAR", "name": "JSON", "ofType": null},
             "defaultValue": null,
             "isDeprecated": false,
             "deprecationReason": null
@@ -34555,14 +34213,6 @@
             "deprecationReason": null
           },
           {
-            "name": "minPrice",
-            "description": null,
-            "type": {"kind": "SCALAR", "name": "Float", "ofType": null},
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
             "name": "name",
             "description": null,
             "type": {"kind": "SCALAR", "name": "String", "ofType": null},
@@ -34571,41 +34221,9 @@
             "deprecationReason": null
           },
           {
-            "name": "nutritionFacts",
+            "name": "netWeight",
             "description": null,
-            "type": {
-              "kind": "LIST",
-              "name": null,
-              "ofType": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "INPUT_OBJECT",
-                  "name": "NutritionFactInput",
-                  "ofType": null
-                }
-              }
-            },
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "offers",
-            "description": null,
-            "type": {
-              "kind": "LIST",
-              "name": null,
-              "ofType": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "INPUT_OBJECT",
-                  "name": "OfferInput",
-                  "ofType": null
-                }
-              }
-            },
+            "type": {"kind": "SCALAR", "name": "Float", "ofType": null},
             "defaultValue": null,
             "isDeprecated": false,
             "deprecationReason": null
@@ -34614,22 +34232,6 @@
             "name": "popularity",
             "description": null,
             "type": {"kind": "SCALAR", "name": "Int", "ofType": null},
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "price",
-            "description": null,
-            "type": {"kind": "SCALAR", "name": "Float", "ofType": null},
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "productLocation",
-            "description": null,
-            "type": {"kind": "SCALAR", "name": "String", "ofType": null},
             "defaultValue": null,
             "isDeprecated": false,
             "deprecationReason": null
@@ -34783,22 +34385,6 @@
             "deprecationReason": null
           },
           {
-            "name": "unitPrice",
-            "description": null,
-            "type": {"kind": "SCALAR", "name": "Float", "ofType": null},
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "unitQty",
-            "description": null,
-            "type": {"kind": "SCALAR", "name": "Float", "ofType": null},
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
             "name": "units",
             "description": null,
             "type": {
@@ -34814,6 +34400,14 @@
                 }
               }
             },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "upc",
+            "description": null,
+            "type": {"kind": "SCALAR", "name": "String", "ofType": null},
             "defaultValue": null,
             "isDeprecated": false,
             "deprecationReason": null
@@ -36611,6 +36205,14 @@
             "deprecationReason": null
           },
           {
+            "name": "preferredUnitSystem",
+            "description": null,
+            "type": {"kind": "ENUM", "name": "UnitSystem", "ofType": null},
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "pushNotifications",
             "description": null,
             "type": {"kind": "SCALAR", "name": "Boolean", "ofType": null},
@@ -38382,6 +37984,18 @@
               "kind": "NON_NULL",
               "name": null,
               "ofType": {"kind": "SCALAR", "name": "Boolean", "ofType": null}
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "preferredUnitSystem",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {"kind": "ENUM", "name": "UnitSystem", "ofType": null}
             },
             "isDeprecated": false,
             "deprecationReason": null

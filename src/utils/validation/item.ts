@@ -19,52 +19,21 @@ export const descriptionRule = yup
   .max(500, 'Description cannot exceed 500 characters')
   .optional();
 
-// Barcode validation
-export const barcodeRule = yup
+// UPC validation (replaces barcode)
+export const upcRule = yup
   .string()
-  .matches(/^[0-9]+$/, 'Barcode must contain only numbers')
-  .min(8, 'Barcode must be at least 8 digits')
-  .max(18, 'Barcode cannot exceed 18 digits')
+  .matches(/^[0-9]+$/, 'UPC must contain only numbers')
+  .min(8, 'UPC must be at least 8 digits')
+  .max(18, 'UPC cannot exceed 18 digits')
   .optional();
 
-// SKU validation
 export const skuRule = yup
   .string()
   .max(50, 'SKU cannot exceed 50 characters')
   .optional();
 
-// FDC ID validation
-export const fdcIdRule = yup
-  .string()
-  .max(20, 'FDC ID cannot exceed 20 characters')
-  .optional();
-
 // URL validation
 export const urlRule = yup.string().url('Please enter a valid URL').optional();
-
-// Price validation (up to 2 decimal places)
-export const priceRule = yup
-  .number()
-  .min(0, 'Price must be zero or positive')
-  .test('decimal-places', 'Price can have at most 2 decimal places', value => {
-    if (value == null) return true;
-    return Number(value.toFixed(2)) === value;
-  })
-  .optional();
-
-// Unit price validation
-export const unitPriceRule = yup
-  .number()
-  .min(0, 'Unit price must be zero or positive')
-  .test(
-    'decimal-places',
-    'Unit price can have at most 2 decimal places',
-    value => {
-      if (value == null) return true;
-      return Number(value.toFixed(2)) === value;
-    },
-  )
-  .optional();
 
 // Shelf life validation (in days)
 export const shelfLifeDaysRule = yup
@@ -86,6 +55,17 @@ export const displayPricePerUnitRule = yup
   .max(50, 'Display price per unit cannot exceed 50 characters')
   .optional();
 
+// Net weight validation
+export const netWeightRule = yup
+  .number()
+  .min(0.001, 'Net weight must be greater than 0')
+  .optional();
+
+// Display unit ID validation
+export const displayUnitIdRule = yup
+  .string()
+  .optional();
+
 // Unit quantity validation
 export const unitQtyRule = yup
   .number()
@@ -96,6 +76,26 @@ export const unitQtyRule = yup
 export const defaultUnitRule = yup
   .string()
   .max(10, 'Unit symbol cannot exceed 10 characters')
+  .optional();
+
+// Category IDs validation
+export const categoryIdsRule = yup
+  .array()
+  .of(yup.string().required())
+  .optional();
+
+// Units array validation
+export const unitsRule = yup
+  .array()
+  .of(
+    yup.object({
+      unitId: yup.string().required(),
+      isDefault: yup.boolean().default(false),
+      packageSize: yup.number().min(0.001).required(),
+      packageDescription: yup.string().optional(),
+      conversionRatio: yup.number().min(0.001).optional(),
+    })
+  )
   .optional();
 
 // Vendor/Brand name validation
@@ -111,65 +111,6 @@ export const tagsRule = yup
   .max(10, 'Cannot have more than 10 tags')
   .optional();
 
-// Popularity score validation
-export const popularityRule = yup
-  .number()
-  .integer('Popularity must be a whole number')
-  .min(0, 'Popularity must be zero or positive')
-  .max(100, 'Popularity cannot exceed 100')
-  .optional();
-
-// External ID validation
-export const externalIdRule = yup
-  .string()
-  .max(100, 'External ID cannot exceed 100 characters')
-  .optional();
-
-// Product location validation
-export const productLocationRule = yup
-  .string()
-  .max(100, 'Product location cannot exceed 100 characters')
-  .optional();
-
-// Inventory status validation
-export const inventoryStatusRule = yup
-  .string()
-  .max(50, 'Inventory status cannot exceed 50 characters')
-  .optional();
-
-// Health claims validation
-export const healthClaimsRule = yup
-  .array()
-  .of(
-    yup
-      .string()
-      .trim()
-      .max(100, 'Each health claim cannot exceed 100 characters'),
-  )
-  .max(20, 'Cannot have more than 20 health claims')
-  .optional();
-
-// Fulfillment methods validation
-export const fulfillmentMethodsRule = yup
-  .array()
-  .of(
-    yup
-      .string()
-      .trim()
-      .max(50, 'Each fulfillment method cannot exceed 50 characters'),
-  )
-  .max(10, 'Cannot have more than 10 fulfillment methods')
-  .optional();
-
-// Last synced at validation (ISO string)
-export const lastSyncedAtRule = yup
-  .string()
-  .matches(
-    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/,
-    'Must be a valid ISO date string',
-  )
-  .optional();
-
 // --- Create Item validation schema -------------------------------------------
 
 export const createItemSchema = yup.object({
@@ -178,59 +119,37 @@ export const createItemSchema = yup.object({
 
   // Basic Information (optional)
   description: descriptionRule.nullable(),
-  barcode: barcodeRule,
+  upc: upcRule,
   sku: skuRule,
-  fdcId: fdcIdRule,
+
+  // Weight and Units
+  netWeight: netWeightRule,
+  displayUnitId: displayUnitIdRule,
 
   // Product Details
   type: yup.string().nullable().optional(),
   storageState: yup.string().nullable().optional(),
   shelfLifeDays: shelfLifeDaysRule,
-  displayItemSize: displayItemSizeRule,
-
-  // System fields
-  dataSource: yup.string().nullable().optional(),
-  status: yup.string().nullable().optional(),
-  visibility: yup.string().nullable().optional(),
 
   // Images
   imageUrl: urlRule,
-
-  // Pricing
-  price: priceRule,
-  averagePrice: priceRule,
-  minPrice: priceRule,
-  maxPrice: priceRule,
-  unitPrice: unitPriceRule,
-  displayPricePerUnit: displayPricePerUnitRule,
-  comparedPrice: priceRule,
 
   // Brand Information
   brandId: yup.string().optional(),
   vendor: vendorRule,
 
+  // Categories
+  categoryIds: categoryIdsRule,
+
   // Units
+  units: unitsRule,
   unitQty: unitQtyRule,
   defaultUnit: defaultUnitRule,
 
   // Metadata
   tags: tagsRule,
-  popularity: popularityRule,
-
-  // Store-specific
-  inventoryStatus: inventoryStatusRule,
-  fulfillmentMethods: fulfillmentMethodsRule,
-  productLocation: productLocationRule,
-
-  // Additional metadata
-  healthClaims: healthClaimsRule,
-
-  // Tracking
-  externalId: externalIdRule,
-  lastSyncedAt: lastSyncedAtRule,
 
   // Boolean flags
-  showInOnboarding: yup.boolean().optional(),
   isFoodStampItem: yup.boolean().optional(),
   isFsaEligible: yup.boolean().optional(),
 });

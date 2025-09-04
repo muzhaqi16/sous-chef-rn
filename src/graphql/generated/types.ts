@@ -53,12 +53,12 @@ export type AddPantryItemInput = {
   expiresAt?: InputMaybe<Scalars['String']['input']>;
   initialQuantity: Scalars['Float']['input'];
   isAutoReorder?: InputMaybe<Scalars['Boolean']['input']>;
-  itemBarcode?: InputMaybe<Scalars['String']['input']>;
   itemBrand?: InputMaybe<Scalars['String']['input']>;
   itemCategory?: InputMaybe<Scalars['String']['input']>;
   itemDescription?: InputMaybe<Scalars['String']['input']>;
   itemId?: InputMaybe<Scalars['String']['input']>;
   itemName?: InputMaybe<Scalars['String']['input']>;
+  itemUpc?: InputMaybe<Scalars['String']['input']>;
   lastUsedAt?: InputMaybe<Scalars['DateTime']['input']>;
   lotNumber?: InputMaybe<Scalars['String']['input']>;
   pantryId: Scalars['ID']['input'];
@@ -147,14 +147,6 @@ export enum AutomatedFlag {
 export type BanUserInput = {
   reason: Scalars['String']['input'];
   userId: Scalars['ID']['input'];
-};
-
-export type BarcodeValidation = {
-  __typename?: 'BarcodeValidation';
-  exists: Scalars['Boolean']['output'];
-  format?: Maybe<Scalars['String']['output']>;
-  isValid: Scalars['Boolean']['output'];
-  item?: Maybe<Item>;
 };
 
 export type Brand = {
@@ -322,6 +314,12 @@ export type Connection = {
   totalCount: Scalars['Int']['output'];
 };
 
+export type ConvertedValue = {
+  __typename?: 'ConvertedValue';
+  unit: Unit;
+  value: Scalars['Float']['output'];
+};
+
 export type CreateBrandInput = {
   description?: InputMaybe<Scalars['String']['input']>;
   name: Scalars['String']['input'];
@@ -383,49 +381,27 @@ export type CreateHomeInput = {
 };
 
 export type CreateItemInput = {
-  allergens?: InputMaybe<Array<AllergenInput>>;
-  averagePrice?: InputMaybe<Scalars['Float']['input']>;
-  barcode?: InputMaybe<Scalars['String']['input']>;
+  allergens?: InputMaybe<Scalars['JSON']['input']>;
   brandId?: InputMaybe<Scalars['String']['input']>;
   categories?: InputMaybe<Array<CategoryInput>>;
   categoryIds?: InputMaybe<Array<Scalars['String']['input']>>;
-  comparedPrice?: InputMaybe<Scalars['Float']['input']>;
-  dataSource?: InputMaybe<DataSource>;
   defaultUnit?: InputMaybe<Scalars['String']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
-  displayItemSize?: InputMaybe<Scalars['String']['input']>;
-  displayPricePerUnit?: InputMaybe<Scalars['String']['input']>;
-  externalId?: InputMaybe<Scalars['String']['input']>;
-  fdcId?: InputMaybe<Scalars['String']['input']>;
-  fulfillmentMethods?: InputMaybe<Array<Scalars['String']['input']>>;
-  healthBenefits?: InputMaybe<Array<HealthBenefitInput>>;
-  healthClaims?: InputMaybe<Array<Scalars['String']['input']>>;
+  displayUnitId?: InputMaybe<Scalars['String']['input']>;
+  healthBenefits?: InputMaybe<Scalars['JSON']['input']>;
   imageUrl?: InputMaybe<Scalars['String']['input']>;
-  images?: InputMaybe<Array<ImageInput>>;
-  ingredients?: InputMaybe<Array<IngredientInput>>;
-  inventoryStatus?: InputMaybe<Scalars['String']['input']>;
-  lastSyncedAt?: InputMaybe<Scalars['String']['input']>;
-  maxPrice?: InputMaybe<Scalars['Float']['input']>;
+  ingredients?: InputMaybe<Scalars['JSON']['input']>;
   metadata?: InputMaybe<Scalars['JSON']['input']>;
-  minPrice?: InputMaybe<Scalars['Float']['input']>;
   name: Scalars['String']['input'];
-  nutritionFacts?: InputMaybe<Array<NutritionFactInput>>;
-  offers?: InputMaybe<Array<OfferInput>>;
-  price?: InputMaybe<Scalars['Float']['input']>;
-  productLocation?: InputMaybe<Scalars['String']['input']>;
+  netWeight?: InputMaybe<Scalars['Float']['input']>;
   shelfLifeDays?: InputMaybe<Scalars['Int']['input']>;
-  showInOnboarding?: InputMaybe<Scalars['Boolean']['input']>;
   sku?: InputMaybe<Scalars['String']['input']>;
-  status?: InputMaybe<ItemStatus>;
   storageState?: InputMaybe<StorageState>;
-  storeSkus?: InputMaybe<Array<StoreSkuInput>>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
   type?: InputMaybe<ItemType>;
-  unitPrice?: InputMaybe<Scalars['Float']['input']>;
-  unitQty?: InputMaybe<Scalars['Float']['input']>;
   units?: InputMaybe<Array<ItemUnitInput>>;
+  upc?: InputMaybe<Scalars['String']['input']>;
   vendor?: InputMaybe<Scalars['String']['input']>;
-  visibility?: InputMaybe<Visibility>;
 };
 
 export type CreateLoginHistoryInput = {
@@ -1013,41 +989,41 @@ export type InviteToShoppingListInput = {
 export type Item = {
   __typename?: 'Item';
   allergens?: Maybe<Scalars['JSON']['output']>;
-  averagePrice?: Maybe<Scalars['Float']['output']>;
-  barcode?: Maybe<Scalars['String']['output']>;
   brands: Array<ItemBrand>;
   categories?: Maybe<Array<ItemCategory>>;
+  convertedNetWeight?: Maybe<ConvertedValue>;
   createdAt: Scalars['DateTime']['output'];
   creations: Array<ItemCreation>;
   dataSource: DataSource;
   deletedAt?: Maybe<Scalars['DateTime']['output']>;
   description?: Maybe<Scalars['String']['output']>;
+  displayUnit?: Maybe<Unit>;
   edits: Array<ItemEdit>;
   fdcId?: Maybe<Scalars['String']['output']>;
   healthBenefits?: Maybe<Scalars['JSON']['output']>;
   id: Scalars['ID']['output'];
   imageUrl?: Maybe<Scalars['String']['output']>;
   ingredients?: Maybe<Scalars['JSON']['output']>;
-  maxPrice?: Maybe<Scalars['Float']['output']>;
   metadata?: Maybe<Scalars['JSON']['output']>;
-  minPrice?: Maybe<Scalars['Float']['output']>;
   name: Scalars['String']['output'];
+  netWeight?: Maybe<Scalars['Float']['output']>;
   nutritions?: Maybe<Scalars['JSON']['output']>;
   pantryItems: Array<PantryItem>;
   popularity: Scalars['Int']['output'];
   priceHistory: Array<ItemPriceHistory>;
-  priceUpdatedAt?: Maybe<Scalars['DateTime']['output']>;
   purchases: Array<Purchase>;
   recipeIngredients: Array<RecipeIngredient>;
   shelfLifeDays?: Maybe<Scalars['Int']['output']>;
   shoppingListItems: Array<ShoppingListItem>;
   showInOnboarding: Scalars['Boolean']['output'];
+  sku?: Maybe<Scalars['String']['output']>;
   status: ItemStatus;
   storageState: StorageState;
   storeSkus: Array<ItemStoreSku>;
   tags: Array<Scalars['String']['output']>;
   type: ItemType;
   units: Array<ItemUnit>;
+  upc?: Maybe<Scalars['String']['output']>;
   updatedAt: Scalars['DateTime']['output'];
   version: Scalars['Int']['output'];
   visibility: Visibility;
@@ -1070,6 +1046,7 @@ export type ItemBrand = {
   id: Scalars['ID']['output'];
   isPrimary?: Maybe<Scalars['Boolean']['output']>;
   item?: Maybe<Item>;
+  sku?: Maybe<Scalars['String']['output']>;
 };
 
 export type ItemCategory = {
@@ -1791,7 +1768,7 @@ export type Mutation = {
   recordLoginAttempt: LoginHistory;
   recordPantryItemUsage: PantryItemUsage;
   recordPriceObservation: ItemPriceHistory;
-  refresh: AuthPayload;
+  refresh: RefreshTokenPayload;
   register: AuthPayload;
   registerDevice: Device;
   removeCollaborator: Scalars['Boolean']['output'];
@@ -2955,9 +2932,9 @@ export type PantryItem = {
   isComposted: Scalars['Boolean']['output'];
   isRecycled: Scalars['Boolean']['output'];
   item: Item;
-  itemBarcode?: Maybe<Scalars['String']['output']>;
   itemId: Scalars['String']['output'];
   itemName: Scalars['String']['output'];
+  itemUpc?: Maybe<Scalars['String']['output']>;
   lastModifiedBy?: Maybe<User>;
   lastReorderDate?: Maybe<Scalars['String']['output']>;
   lastUsedAt?: Maybe<Scalars['String']['output']>;
@@ -3112,9 +3089,9 @@ export type Purchase = {
   expirationDate?: Maybe<Scalars['DateTime']['output']>;
   id: Scalars['ID']['output'];
   item: Item;
-  itemBarcode?: Maybe<Scalars['String']['output']>;
   itemId: Scalars['String']['output'];
   itemName: Scalars['String']['output'];
+  itemUpc?: Maybe<Scalars['String']['output']>;
   originalPrice?: Maybe<Scalars['Float']['output']>;
   pantryItems: Array<PantryItem>;
   purchaseDate: Scalars['DateTime']['output'];
@@ -3185,9 +3162,9 @@ export type Query = {
   homeMemberships: Array<Membership>;
   homes: Array<Home>;
   item?: Maybe<Item>;
-  itemByBarcode?: Maybe<Item>;
   itemByExternalId?: Maybe<Item>;
   itemBySku?: Maybe<Item>;
+  itemByUpc?: Maybe<Item>;
   itemPriceHistory?: Maybe<Array<ItemPriceHistory>>;
   items: ItemsResponse;
   loginHistory?: Maybe<LoginHistory>;
@@ -3240,7 +3217,7 @@ export type Query = {
   rootCategories: Array<Category>;
   searchDevicesByUserAgent: Array<Device>;
   searchItems?: Maybe<ItemsResponse>;
-  searchItemsByBarcode?: Maybe<Array<Item>>;
+  searchItemsByUpc?: Maybe<Array<Item>>;
   searchLoginHistory: Array<LoginHistory>;
   searchRecipes: Array<Recipe>;
   searchShoppingLists: Array<ShoppingList>;
@@ -3274,7 +3251,7 @@ export type Query = {
   userPurchases: Array<Purchase>;
   userSettings?: Maybe<UserSettings>;
   users: Array<User>;
-  validateBarcode: BarcodeValidation;
+  validateUpc: UpcValidation;
   verifiedDevices: Array<Device>;
 };
 
@@ -3389,10 +3366,6 @@ export type QueryItemArgs = {
   id: Scalars['ID']['input'];
 };
 
-export type QueryItemByBarcodeArgs = {
-  barcode: Scalars['String']['input'];
-};
-
 export type QueryItemByExternalIdArgs = {
   externalId: Scalars['String']['input'];
   provider: ProviderType;
@@ -3401,6 +3374,10 @@ export type QueryItemByExternalIdArgs = {
 export type QueryItemBySkuArgs = {
   sku: Scalars['String']['input'];
   storeId?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type QueryItemByUpcArgs = {
+  upc: Scalars['String']['input'];
 };
 
 export type QueryItemPriceHistoryArgs = {
@@ -3599,8 +3576,8 @@ export type QuerySearchItemsArgs = {
   input: SearchItemsInput;
 };
 
-export type QuerySearchItemsByBarcodeArgs = {
-  barcode: Scalars['String']['input'];
+export type QuerySearchItemsByUpcArgs = {
+  upc: Scalars['String']['input'];
 };
 
 export type QuerySearchLoginHistoryArgs = {
@@ -3725,8 +3702,8 @@ export type QueryUsersArgs = {
   take?: InputMaybe<Scalars['Int']['input']>;
 };
 
-export type QueryValidateBarcodeArgs = {
-  barcode: Scalars['String']['input'];
+export type QueryValidateUpcArgs = {
+  upc: Scalars['String']['input'];
 };
 
 export type QueryVerifiedDevicesArgs = {
@@ -3799,6 +3776,12 @@ export enum RecurringPattern {
   Monthly = 'MONTHLY',
   Weekly = 'WEEKLY',
 }
+
+export type RefreshTokenPayload = {
+  __typename?: 'RefreshTokenPayload';
+  accessToken: Scalars['String']['output'];
+  refreshToken: Scalars['String']['output'];
+};
 
 export type RegisterInput = {
   email: Scalars['String']['input'];
@@ -4513,6 +4496,12 @@ export enum UnitSource {
   RecipeDerived = 'RECIPE_DERIVED',
 }
 
+export enum UnitSystem {
+  Imperial = 'IMPERIAL',
+  Metric = 'METRIC',
+  System = 'SYSTEM',
+}
+
 export enum UnitType {
   Area = 'AREA',
   Count = 'COUNT',
@@ -4532,6 +4521,14 @@ export enum UnitUsageContext {
   Shopping = 'SHOPPING',
   Storing = 'STORING',
 }
+
+export type UpcValidation = {
+  __typename?: 'UpcValidation';
+  exists: Scalars['Boolean']['output'];
+  format?: Maybe<Scalars['String']['output']>;
+  isValid: Scalars['Boolean']['output'];
+  item?: Maybe<Item>;
+};
 
 export type UpdateBrandInput = {
   description?: InputMaybe<Scalars['String']['input']>;
@@ -4598,40 +4595,22 @@ export type UpdateItemInput = {
   addStoreSkus?: InputMaybe<Array<StoreSkuInput>>;
   addTags?: InputMaybe<Array<Scalars['String']['input']>>;
   addUnits?: InputMaybe<Array<ItemUnitInput>>;
-  allergens?: InputMaybe<Array<AllergenInput>>;
-  averagePrice?: InputMaybe<Scalars['Float']['input']>;
-  barcode?: InputMaybe<Scalars['String']['input']>;
-  brand?: InputMaybe<BrandInput>;
+  allergens?: InputMaybe<Scalars['JSON']['input']>;
   brandId?: InputMaybe<Scalars['String']['input']>;
   categories?: InputMaybe<Array<CategoryInput>>;
   categoryIds?: InputMaybe<Array<Scalars['String']['input']>>;
-  comparedPrice?: InputMaybe<Scalars['Float']['input']>;
   defaultUnit?: InputMaybe<Scalars['String']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
-  displayItemSize?: InputMaybe<Scalars['String']['input']>;
-  displayPricePerUnit?: InputMaybe<Scalars['String']['input']>;
+  displayUnitId?: InputMaybe<Scalars['String']['input']>;
   editReason?: InputMaybe<Scalars['String']['input']>;
-  externalId?: InputMaybe<Scalars['String']['input']>;
   fdcId?: InputMaybe<Scalars['String']['input']>;
-  fulfillmentMethods?: InputMaybe<Array<Scalars['String']['input']>>;
-  healthBenefits?: InputMaybe<Array<HealthBenefitInput>>;
-  healthClaims?: InputMaybe<Array<Scalars['String']['input']>>;
+  healthBenefits?: InputMaybe<Scalars['JSON']['input']>;
   imageUrl?: InputMaybe<Scalars['String']['input']>;
-  images?: InputMaybe<Array<ImageInput>>;
-  ingredients?: InputMaybe<Array<IngredientInput>>;
-  inventoryStatus?: InputMaybe<Scalars['String']['input']>;
-  isFoodStampItem?: InputMaybe<Scalars['Boolean']['input']>;
-  isFsaEligible?: InputMaybe<Scalars['Boolean']['input']>;
-  lastSyncedAt?: InputMaybe<Scalars['String']['input']>;
-  maxPrice?: InputMaybe<Scalars['Float']['input']>;
+  ingredients?: InputMaybe<Scalars['JSON']['input']>;
   metadata?: InputMaybe<Scalars['JSON']['input']>;
-  minPrice?: InputMaybe<Scalars['Float']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
-  nutritionFacts?: InputMaybe<Array<NutritionFactInput>>;
-  offers?: InputMaybe<Array<OfferInput>>;
+  netWeight?: InputMaybe<Scalars['Float']['input']>;
   popularity?: InputMaybe<Scalars['Int']['input']>;
-  price?: InputMaybe<Scalars['Float']['input']>;
-  productLocation?: InputMaybe<Scalars['String']['input']>;
   removeCategoryIds?: InputMaybe<Array<Scalars['String']['input']>>;
   removeStoreSkuIds?: InputMaybe<Array<Scalars['String']['input']>>;
   removeTags?: InputMaybe<Array<Scalars['String']['input']>>;
@@ -4644,9 +4623,8 @@ export type UpdateItemInput = {
   storeSkus?: InputMaybe<Array<StoreSkuInput>>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
   type?: InputMaybe<ItemType>;
-  unitPrice?: InputMaybe<Scalars['Float']['input']>;
-  unitQty?: InputMaybe<Scalars['Float']['input']>;
   units?: InputMaybe<Array<ItemUnitInput>>;
+  upc?: InputMaybe<Scalars['String']['input']>;
   vendor?: InputMaybe<Scalars['String']['input']>;
   visibility?: InputMaybe<Visibility>;
 };
@@ -4883,6 +4861,7 @@ export type UpdateUserSettingsInput = {
   lowStockAlerts?: InputMaybe<Scalars['Boolean']['input']>;
   offlineMode?: InputMaybe<Scalars['Boolean']['input']>;
   personalizedAds?: InputMaybe<Scalars['Boolean']['input']>;
+  preferredUnitSystem?: InputMaybe<UnitSystem>;
   pushNotifications?: InputMaybe<Scalars['Boolean']['input']>;
   recipeRecommendations?: InputMaybe<Scalars['Boolean']['input']>;
   shareUsageData?: InputMaybe<Scalars['Boolean']['input']>;
@@ -5087,6 +5066,7 @@ export type UserSettings = {
   lowStockAlerts: Scalars['Boolean']['output'];
   offlineMode: Scalars['Boolean']['output'];
   personalizedAds: Scalars['Boolean']['output'];
+  preferredUnitSystem: UnitSystem;
   pushNotifications: Scalars['Boolean']['output'];
   recipeRecommendations: Scalars['Boolean']['output'];
   shareUsageData: Scalars['Boolean']['output'];
@@ -5352,7 +5332,7 @@ export type RefreshTokenMutationVariables = Exact<{
 export type RefreshTokenMutation = {
   __typename?: 'Mutation';
   refresh: {
-    __typename?: 'AuthPayload';
+    __typename?: 'RefreshTokenPayload';
     accessToken: string;
     refreshToken: string;
   };
@@ -5999,7 +5979,6 @@ export type ShoppingListItemFragmentFragment = {
   estimatedPrice?: number | null;
   budgetPrice?: number | null;
   lastKnownPrice?: number | null;
-  averagePrice?: number | null;
   lowestPrice?: number | null;
   highestPrice?: number | null;
   priceLastUpdated?: string | null;
@@ -6013,7 +5992,6 @@ export type ShoppingListItemFragmentFragment = {
   lastPurchaseDate?: string | null;
   purchaseCount: number;
   itemName?: string | null;
-  itemBarcode?: string | null;
   unitName?: string | null;
   notes?: string | null;
   priority: number;
@@ -6331,7 +6309,7 @@ export type ItemFragmentFragment = {
   id: string;
   name: string;
   description?: string | null;
-  barcode?: string | null;
+  upc?: string | null;
   fdcId?: string | null;
   dataSource: DataSource;
   type: ItemType;
@@ -6341,10 +6319,6 @@ export type ItemFragmentFragment = {
   popularity: number;
   status: ItemStatus;
   visibility: Visibility;
-  averagePrice?: number | null;
-  minPrice?: number | null;
-  maxPrice?: number | null;
-  priceUpdatedAt?: string | null;
   imageUrl?: string | null;
   tags: Array<string>;
   healthBenefits?: any | null;
@@ -6479,7 +6453,6 @@ export type PantryItemFragmentFragment = {
   pantryId: string;
   itemId: string;
   itemName: string;
-  itemBarcode?: string | null;
   unitName: string;
   unitId: string;
   expiresAt?: string | null;
@@ -6501,7 +6474,7 @@ export type PantryItemFragmentFragment = {
     id: string;
     name: string;
     description?: string | null;
-    barcode?: string | null;
+    upc?: string | null;
     fdcId?: string | null;
     dataSource: DataSource;
     type: ItemType;
@@ -6511,10 +6484,6 @@ export type PantryItemFragmentFragment = {
     popularity: number;
     status: ItemStatus;
     visibility: Visibility;
-    averagePrice?: number | null;
-    minPrice?: number | null;
-    maxPrice?: number | null;
-    priceUpdatedAt?: string | null;
     imageUrl?: string | null;
     tags: Array<string>;
     healthBenefits?: any | null;
@@ -6755,7 +6724,6 @@ export type PantryFragmentFragment = {
     pantryId: string;
     itemId: string;
     itemName: string;
-    itemBarcode?: string | null;
     unitName: string;
     unitId: string;
     expiresAt?: string | null;
@@ -6777,7 +6745,7 @@ export type PantryFragmentFragment = {
       id: string;
       name: string;
       description?: string | null;
-      barcode?: string | null;
+      upc?: string | null;
       fdcId?: string | null;
       dataSource: DataSource;
       type: ItemType;
@@ -6787,10 +6755,6 @@ export type PantryFragmentFragment = {
       popularity: number;
       status: ItemStatus;
       visibility: Visibility;
-      averagePrice?: number | null;
-      minPrice?: number | null;
-      maxPrice?: number | null;
-      priceUpdatedAt?: string | null;
       imageUrl?: string | null;
       tags: Array<string>;
       healthBenefits?: any | null;
@@ -7123,7 +7087,6 @@ export type HomeFragmentFragment = {
       pantryId: string;
       itemId: string;
       itemName: string;
-      itemBarcode?: string | null;
       unitName: string;
       unitId: string;
       expiresAt?: string | null;
@@ -7145,7 +7108,7 @@ export type HomeFragmentFragment = {
         id: string;
         name: string;
         description?: string | null;
-        barcode?: string | null;
+        upc?: string | null;
         fdcId?: string | null;
         dataSource: DataSource;
         type: ItemType;
@@ -7155,10 +7118,6 @@ export type HomeFragmentFragment = {
         popularity: number;
         status: ItemStatus;
         visibility: Visibility;
-        averagePrice?: number | null;
-        minPrice?: number | null;
-        maxPrice?: number | null;
-        priceUpdatedAt?: string | null;
         imageUrl?: string | null;
         tags: Array<string>;
         healthBenefits?: any | null;
@@ -7498,7 +7457,6 @@ export type GetHomeQuery = {
         pantryId: string;
         itemId: string;
         itemName: string;
-        itemBarcode?: string | null;
         unitName: string;
         unitId: string;
         expiresAt?: string | null;
@@ -7520,7 +7478,7 @@ export type GetHomeQuery = {
           id: string;
           name: string;
           description?: string | null;
-          barcode?: string | null;
+          upc?: string | null;
           fdcId?: string | null;
           dataSource: DataSource;
           type: ItemType;
@@ -7530,10 +7488,6 @@ export type GetHomeQuery = {
           popularity: number;
           status: ItemStatus;
           visibility: Visibility;
-          averagePrice?: number | null;
-          minPrice?: number | null;
-          maxPrice?: number | null;
-          priceUpdatedAt?: string | null;
           imageUrl?: string | null;
           tags: Array<string>;
           healthBenefits?: any | null;
@@ -7971,7 +7925,6 @@ export type CreateHomeMutation = {
         pantryId: string;
         itemId: string;
         itemName: string;
-        itemBarcode?: string | null;
         unitName: string;
         unitId: string;
         expiresAt?: string | null;
@@ -7993,7 +7946,7 @@ export type CreateHomeMutation = {
           id: string;
           name: string;
           description?: string | null;
-          barcode?: string | null;
+          upc?: string | null;
           fdcId?: string | null;
           dataSource: DataSource;
           type: ItemType;
@@ -8003,10 +7956,6 @@ export type CreateHomeMutation = {
           popularity: number;
           status: ItemStatus;
           visibility: Visibility;
-          averagePrice?: number | null;
-          minPrice?: number | null;
-          maxPrice?: number | null;
-          priceUpdatedAt?: string | null;
           imageUrl?: string | null;
           tags: Array<string>;
           healthBenefits?: any | null;
@@ -8348,7 +8297,6 @@ export type UpdateHomeMutation = {
         pantryId: string;
         itemId: string;
         itemName: string;
-        itemBarcode?: string | null;
         unitName: string;
         unitId: string;
         expiresAt?: string | null;
@@ -8370,7 +8318,7 @@ export type UpdateHomeMutation = {
           id: string;
           name: string;
           description?: string | null;
-          barcode?: string | null;
+          upc?: string | null;
           fdcId?: string | null;
           dataSource: DataSource;
           type: ItemType;
@@ -8380,10 +8328,6 @@ export type UpdateHomeMutation = {
           popularity: number;
           status: ItemStatus;
           visibility: Visibility;
-          averagePrice?: number | null;
-          minPrice?: number | null;
-          maxPrice?: number | null;
-          priceUpdatedAt?: string | null;
           imageUrl?: string | null;
           tags: Array<string>;
           healthBenefits?: any | null;
@@ -8724,7 +8668,6 @@ export type DeleteHomeMutation = {
         pantryId: string;
         itemId: string;
         itemName: string;
-        itemBarcode?: string | null;
         unitName: string;
         unitId: string;
         expiresAt?: string | null;
@@ -8746,7 +8689,7 @@ export type DeleteHomeMutation = {
           id: string;
           name: string;
           description?: string | null;
-          barcode?: string | null;
+          upc?: string | null;
           fdcId?: string | null;
           dataSource: DataSource;
           type: ItemType;
@@ -8756,10 +8699,6 @@ export type DeleteHomeMutation = {
           popularity: number;
           status: ItemStatus;
           visibility: Visibility;
-          averagePrice?: number | null;
-          minPrice?: number | null;
-          maxPrice?: number | null;
-          priceUpdatedAt?: string | null;
           imageUrl?: string | null;
           tags: Array<string>;
           healthBenefits?: any | null;
@@ -9355,7 +9294,6 @@ export type GetDefaultHomeQuery = {
         pantryId: string;
         itemId: string;
         itemName: string;
-        itemBarcode?: string | null;
         unitName: string;
         unitId: string;
         expiresAt?: string | null;
@@ -9377,7 +9315,7 @@ export type GetDefaultHomeQuery = {
           id: string;
           name: string;
           description?: string | null;
-          barcode?: string | null;
+          upc?: string | null;
           fdcId?: string | null;
           dataSource: DataSource;
           type: ItemType;
@@ -9387,10 +9325,6 @@ export type GetDefaultHomeQuery = {
           popularity: number;
           status: ItemStatus;
           visibility: Visibility;
-          averagePrice?: number | null;
-          minPrice?: number | null;
-          maxPrice?: number | null;
-          priceUpdatedAt?: string | null;
           imageUrl?: string | null;
           tags: Array<string>;
           healthBenefits?: any | null;
@@ -9561,7 +9495,7 @@ export type GetItemsQuery = {
       name: string;
       description?: string | null;
       type: ItemType;
-      barcode?: string | null;
+      upc?: string | null;
       storageState: StorageState;
       imageUrl?: string | null;
       shelfLifeDays?: number | null;
@@ -9601,19 +9535,19 @@ export type SearchItemsQuery = {
   } | null;
 };
 
-export type SearchItemsByBarcodeQueryVariables = Exact<{
-  barcode: Scalars['String']['input'];
+export type SearchItemsByUpcQueryVariables = Exact<{
+  upc: Scalars['String']['input'];
 }>;
 
-export type SearchItemsByBarcodeQuery = {
+export type SearchItemsByUpcQuery = {
   __typename?: 'Query';
-  searchItemsByBarcode?: Array<{
+  searchItemsByUpc?: Array<{
     __typename?: 'Item';
     id: string;
     name: string;
     description?: string | null;
     imageUrl?: string | null;
-    barcode?: string | null;
+    upc?: string | null;
   }> | null;
 };
 
@@ -9695,36 +9629,40 @@ export type CreateItemMutation = {
     id: string;
     name: string;
     description?: string | null;
-    barcode?: string | null;
-    fdcId?: string | null;
-    dataSource: DataSource;
+    upc?: string | null;
+    sku?: string | null;
+    netWeight?: number | null;
     type: ItemType;
     storageState: StorageState;
-    showInOnboarding: boolean;
     shelfLifeDays?: number | null;
-    popularity: number;
-    status: ItemStatus;
-    visibility: Visibility;
-    averagePrice?: number | null;
-    minPrice?: number | null;
-    maxPrice?: number | null;
-    priceUpdatedAt?: string | null;
     imageUrl?: string | null;
     tags: Array<string>;
-    healthBenefits?: any | null;
-    allergens?: any | null;
-    nutritions?: any | null;
-    metadata?: any | null;
-    ingredients?: any | null;
-    createdAt: string;
-    updatedAt: string;
-    deletedAt?: string | null;
-    version: number;
+    displayUnit?: {
+      __typename?: 'Unit';
+      id: string;
+      name: string;
+      symbol: string;
+    } | null;
+    convertedNetWeight?: {
+      __typename?: 'ConvertedValue';
+      value: number;
+      unit: {__typename?: 'Unit'; name: string; symbol: string};
+    } | null;
+    brands: Array<{
+      __typename?: 'ItemBrand';
+      sku?: string | null;
+      brand?: {__typename?: 'Brand'; id: string; name: string} | null;
+    }>;
     categories?: Array<{
       __typename?: 'ItemCategory';
-      id: string;
-      category: {__typename?: 'Category'; name: string};
+      category: {__typename?: 'Category'; id: string; name: string};
     }> | null;
+    units: Array<{
+      __typename?: 'ItemUnit';
+      isDefault?: boolean | null;
+      packageSize?: number | null;
+      unit?: {__typename?: 'Unit'; name: string; symbol: string} | null;
+    }>;
   };
 };
 
@@ -10069,7 +10007,6 @@ export type GetPantryItemsQuery = {
     pantryId: string;
     itemId: string;
     itemName: string;
-    itemBarcode?: string | null;
     unitName: string;
     unitId: string;
     expiresAt?: string | null;
@@ -10091,7 +10028,7 @@ export type GetPantryItemsQuery = {
       id: string;
       name: string;
       description?: string | null;
-      barcode?: string | null;
+      upc?: string | null;
       fdcId?: string | null;
       dataSource: DataSource;
       type: ItemType;
@@ -10101,10 +10038,6 @@ export type GetPantryItemsQuery = {
       popularity: number;
       status: ItemStatus;
       visibility: Visibility;
-      averagePrice?: number | null;
-      minPrice?: number | null;
-      maxPrice?: number | null;
-      priceUpdatedAt?: string | null;
       imageUrl?: string | null;
       tags: Array<string>;
       healthBenefits?: any | null;
@@ -10255,7 +10188,6 @@ export type GetPantryItemQuery = {
     pantryId: string;
     itemId: string;
     itemName: string;
-    itemBarcode?: string | null;
     unitName: string;
     unitId: string;
     expiresAt?: string | null;
@@ -10277,7 +10209,7 @@ export type GetPantryItemQuery = {
       id: string;
       name: string;
       description?: string | null;
-      barcode?: string | null;
+      upc?: string | null;
       fdcId?: string | null;
       dataSource: DataSource;
       type: ItemType;
@@ -10287,10 +10219,6 @@ export type GetPantryItemQuery = {
       popularity: number;
       status: ItemStatus;
       visibility: Visibility;
-      averagePrice?: number | null;
-      minPrice?: number | null;
-      maxPrice?: number | null;
-      priceUpdatedAt?: string | null;
       imageUrl?: string | null;
       tags: Array<string>;
       healthBenefits?: any | null;
@@ -10441,7 +10369,6 @@ export type AddItemToPantryMutation = {
     pantryId: string;
     itemId: string;
     itemName: string;
-    itemBarcode?: string | null;
     unitName: string;
     unitId: string;
     expiresAt?: string | null;
@@ -10463,7 +10390,7 @@ export type AddItemToPantryMutation = {
       id: string;
       name: string;
       description?: string | null;
-      barcode?: string | null;
+      upc?: string | null;
       fdcId?: string | null;
       dataSource: DataSource;
       type: ItemType;
@@ -10473,10 +10400,6 @@ export type AddItemToPantryMutation = {
       popularity: number;
       status: ItemStatus;
       visibility: Visibility;
-      averagePrice?: number | null;
-      minPrice?: number | null;
-      maxPrice?: number | null;
-      priceUpdatedAt?: string | null;
       imageUrl?: string | null;
       tags: Array<string>;
       healthBenefits?: any | null;
@@ -10651,7 +10574,6 @@ export type UpdatePantryItemMutation = {
     pantryId: string;
     itemId: string;
     itemName: string;
-    itemBarcode?: string | null;
     unitName: string;
     unitId: string;
     expiresAt?: string | null;
@@ -10673,7 +10595,7 @@ export type UpdatePantryItemMutation = {
       id: string;
       name: string;
       description?: string | null;
-      barcode?: string | null;
+      upc?: string | null;
       fdcId?: string | null;
       dataSource: DataSource;
       type: ItemType;
@@ -10683,10 +10605,6 @@ export type UpdatePantryItemMutation = {
       popularity: number;
       status: ItemStatus;
       visibility: Visibility;
-      averagePrice?: number | null;
-      minPrice?: number | null;
-      maxPrice?: number | null;
-      priceUpdatedAt?: string | null;
       imageUrl?: string | null;
       tags: Array<string>;
       healthBenefits?: any | null;
@@ -10837,7 +10755,6 @@ export type RemoveItemFromPantryMutation = {
     pantryId: string;
     itemId: string;
     itemName: string;
-    itemBarcode?: string | null;
     unitName: string;
     unitId: string;
     expiresAt?: string | null;
@@ -10859,7 +10776,7 @@ export type RemoveItemFromPantryMutation = {
       id: string;
       name: string;
       description?: string | null;
-      barcode?: string | null;
+      upc?: string | null;
       fdcId?: string | null;
       dataSource: DataSource;
       type: ItemType;
@@ -10869,10 +10786,6 @@ export type RemoveItemFromPantryMutation = {
       popularity: number;
       status: ItemStatus;
       visibility: Visibility;
-      averagePrice?: number | null;
-      minPrice?: number | null;
-      maxPrice?: number | null;
-      priceUpdatedAt?: string | null;
       imageUrl?: string | null;
       tags: Array<string>;
       healthBenefits?: any | null;
@@ -11104,7 +11017,6 @@ export type PantryLowStockAlertSubscription = {
       id: string;
       name: string;
       imageUrl?: string | null;
-      averagePrice?: number | null;
     };
   }>;
 };
@@ -11499,11 +11411,10 @@ export type GetShoppingListQuery = {
         id: string;
         name: string;
         description?: string | null;
-        barcode?: string | null;
+        upc?: string | null;
         imageUrl?: string | null;
         type: ItemType;
         storageState: StorageState;
-        averagePrice?: number | null;
       } | null;
       unit?: {
         __typename?: 'Unit';
@@ -11622,7 +11533,6 @@ export type GetShoppingListItemsQuery = {
     estimatedPrice?: number | null;
     budgetPrice?: number | null;
     lastKnownPrice?: number | null;
-    averagePrice?: number | null;
     lowestPrice?: number | null;
     highestPrice?: number | null;
     priceLastUpdated?: string | null;
@@ -11636,7 +11546,6 @@ export type GetShoppingListItemsQuery = {
     lastPurchaseDate?: string | null;
     purchaseCount: number;
     itemName?: string | null;
-    itemBarcode?: string | null;
     unitName?: string | null;
     notes?: string | null;
     priority: number;
@@ -11761,7 +11670,6 @@ export type GetShoppingListItemQuery = {
     estimatedPrice?: number | null;
     budgetPrice?: number | null;
     lastKnownPrice?: number | null;
-    averagePrice?: number | null;
     lowestPrice?: number | null;
     highestPrice?: number | null;
     priceLastUpdated?: string | null;
@@ -11775,7 +11683,6 @@ export type GetShoppingListItemQuery = {
     lastPurchaseDate?: string | null;
     purchaseCount: number;
     itemName?: string | null;
-    itemBarcode?: string | null;
     unitName?: string | null;
     notes?: string | null;
     priority: number;
@@ -12059,7 +11966,6 @@ export type AddItemToShoppingListMutation = {
     estimatedPrice?: number | null;
     budgetPrice?: number | null;
     lastKnownPrice?: number | null;
-    averagePrice?: number | null;
     lowestPrice?: number | null;
     highestPrice?: number | null;
     priceLastUpdated?: string | null;
@@ -12073,7 +11979,6 @@ export type AddItemToShoppingListMutation = {
     lastPurchaseDate?: string | null;
     purchaseCount: number;
     itemName?: string | null;
-    itemBarcode?: string | null;
     unitName?: string | null;
     notes?: string | null;
     priority: number;
@@ -12199,7 +12104,6 @@ export type UpdateShoppingListItemMutation = {
     estimatedPrice?: number | null;
     budgetPrice?: number | null;
     lastKnownPrice?: number | null;
-    averagePrice?: number | null;
     lowestPrice?: number | null;
     highestPrice?: number | null;
     priceLastUpdated?: string | null;
@@ -12213,7 +12117,6 @@ export type UpdateShoppingListItemMutation = {
     lastPurchaseDate?: string | null;
     purchaseCount: number;
     itemName?: string | null;
-    itemBarcode?: string | null;
     unitName?: string | null;
     notes?: string | null;
     priority: number;
@@ -12445,7 +12348,6 @@ export type ShoppingListItemsChangedSubscription = {
       estimatedPrice?: number | null;
       budgetPrice?: number | null;
       lastKnownPrice?: number | null;
-      averagePrice?: number | null;
       lowestPrice?: number | null;
       highestPrice?: number | null;
       priceLastUpdated?: string | null;
@@ -12459,7 +12361,6 @@ export type ShoppingListItemsChangedSubscription = {
       lastPurchaseDate?: string | null;
       purchaseCount: number;
       itemName?: string | null;
-      itemBarcode?: string | null;
       unitName?: string | null;
       notes?: string | null;
       priority: number;
@@ -12657,7 +12558,6 @@ export type ShoppingListItemAddedSubscription = {
     estimatedPrice?: number | null;
     budgetPrice?: number | null;
     lastKnownPrice?: number | null;
-    averagePrice?: number | null;
     lowestPrice?: number | null;
     highestPrice?: number | null;
     priceLastUpdated?: string | null;
@@ -12671,7 +12571,6 @@ export type ShoppingListItemAddedSubscription = {
     lastPurchaseDate?: string | null;
     purchaseCount: number;
     itemName?: string | null;
-    itemBarcode?: string | null;
     unitName?: string | null;
     notes?: string | null;
     priority: number;
@@ -12796,7 +12695,6 @@ export type ShoppingListItemUpdatedSubscription = {
     estimatedPrice?: number | null;
     budgetPrice?: number | null;
     lastKnownPrice?: number | null;
-    averagePrice?: number | null;
     lowestPrice?: number | null;
     highestPrice?: number | null;
     priceLastUpdated?: string | null;
@@ -12810,7 +12708,6 @@ export type ShoppingListItemUpdatedSubscription = {
     lastPurchaseDate?: string | null;
     purchaseCount: number;
     itemName?: string | null;
-    itemBarcode?: string | null;
     unitName?: string | null;
     notes?: string | null;
     priority: number;

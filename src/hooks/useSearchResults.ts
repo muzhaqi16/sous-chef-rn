@@ -1,6 +1,6 @@
 import {useEffect} from 'react';
 import {
-  useSearchItemsByBarcodeQuery,
+  useSearchItemsByUpcQuery,
   useCreateItemMutation,
 } from '../graphql/generated';
 import {useStore} from '../store';
@@ -16,8 +16,8 @@ const convertToScannedItem = (
   name: item.name,
   description: item.description || undefined,
   imageUrl: item.imageUrl || undefined,
-  barcode: item.barcode || fallbackBarcode,
-  price: item.averagePrice || undefined,
+  barcode: item.upc || fallbackBarcode,
+  price: undefined,
 });
 
 export const useSearchResults = (barcode: string) => {
@@ -47,12 +47,12 @@ export const useSearchResults = (barcode: string) => {
     },
   });
 
-  const {data, loading, error} = useSearchItemsByBarcodeQuery({
-    variables: {barcode},
-    onCompleted: data => {
+  const {data, loading, error} = useSearchItemsByUpcQuery({
+    variables: {upc: barcode},
+    onCompleted: (data: any) => {
       setSearching(false);
-      if (data.searchItemsByBarcode) {
-        const item = convertToScannedItem(data.searchItemsByBarcode, barcode);
+      if (data.searchItemsByUpc) {
+        const item = convertToScannedItem(data.searchItemsByUpc, barcode);
         setSearchResults([item]);
         addToRecentlyScanned(item);
       } else {
@@ -60,7 +60,7 @@ export const useSearchResults = (barcode: string) => {
         showBottomSheet(1);
       }
     },
-    onError: error => {
+    onError: (error: any) => {
       setSearching(false);
       setSearchError(error.message);
       showBottomSheet(1);
@@ -79,16 +79,12 @@ export const useSearchResults = (barcode: string) => {
       const processedInput = {
         name: formData.name,
         description: formData.description || undefined,
-        barcode: formData.barcode || barcode,
+        upc: formData.upc || barcode,
         sku: formData.sku || undefined,
-        fdcId: formData.fdcId || undefined,
 
         // Classification
         type: formData.type || undefined,
         storageState: formData.storageState || undefined,
-        dataSource: formData.dataSource || undefined,
-        status: formData.status || undefined,
-        visibility: formData.visibility || undefined,
 
         // Product Details
         shelfLifeDays: formData.shelfLifeDays || undefined,
@@ -97,48 +93,34 @@ export const useSearchResults = (barcode: string) => {
         // Images
         imageUrl: formData.imageUrl || undefined,
 
-        // Pricing (convert to numbers)
-        price: formData.price
-          ? parseFloat(formData.price.toString())
-          : undefined,
-        averagePrice: formData.averagePrice
-          ? parseFloat(formData.averagePrice.toString())
-          : undefined,
-        minPrice: formData.minPrice
-          ? parseFloat(formData.minPrice.toString())
-          : undefined,
-        maxPrice: formData.maxPrice
-          ? parseFloat(formData.maxPrice.toString())
-          : undefined,
-        unitPrice: formData.unitPrice
-          ? parseFloat(formData.unitPrice.toString())
-          : undefined,
-        displayPricePerUnit: formData.displayPricePerUnit || undefined,
-        comparedPrice: formData.comparedPrice
-          ? parseFloat(formData.comparedPrice.toString())
-          : undefined,
-
         // Brand Information
         brandId: formData.brandId || undefined,
         vendor: formData.vendor || undefined,
 
-        // Units
-        unitQty: formData.unitQty
-          ? parseFloat(formData.unitQty.toString())
-          : undefined,
-        defaultUnit: formData.defaultUnit || undefined,
+        // Weight and Units
+        netWeight: formData.netWeight || undefined,
+        displayUnitId: formData.displayUnitId || undefined,
+        
+        // Categories
+        categoryIds: formData.categoryIds || undefined,
+        
+        // Units array
+        units: formData.units || undefined,
 
         // Metadata
         tags: (() => {
           let tags: string[] = [];
-          
+
           // Include existing tags
           if (formData.tags && Array.isArray(formData.tags)) {
             tags = [...formData.tags];
           } else if (formData.tags && typeof formData.tags === 'string') {
-            tags = formData.tags.split(',').map((tag: string) => tag.trim()).filter(Boolean);
+            tags = formData.tags
+              .split(',')
+              .map((tag: string) => tag.trim())
+              .filter(Boolean);
           }
-          
+
           // Add tags based on boolean flags
           if (formData.isFoodStampItem) {
             tags.push('food-stamp-eligible');
@@ -146,27 +128,9 @@ export const useSearchResults = (barcode: string) => {
           if (formData.isFsaEligible) {
             tags.push('fsa-eligible');
           }
-          
+
           return tags.length > 0 ? tags : undefined;
         })(),
-        popularity: formData.popularity
-          ? parseInt(formData.popularity.toString())
-          : undefined,
-
-        // Store-specific
-        inventoryStatus: formData.inventoryStatus || undefined,
-        fulfillmentMethods: formData.fulfillmentMethods || undefined,
-        productLocation: formData.productLocation || undefined,
-
-        // Health claims
-        healthClaims: formData.healthClaims || undefined,
-
-        // Boolean flags (only include the ones we want to send to API)
-        showInOnboarding: formData.showInOnboarding || false,
-
-        // Tracking
-        externalId: formData.externalId || undefined,
-        lastSyncedAt: formData.lastSyncedAt || undefined,
       };
 
       await addNewItem({

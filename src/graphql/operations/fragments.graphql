@@ -34,7 +34,6 @@ fragment ShoppingListItemFragment on ShoppingListItem {
   estimatedPrice
   budgetPrice
   lastKnownPrice
-  averagePrice
   lowestPrice
   highestPrice
   priceLastUpdated
@@ -48,7 +47,6 @@ fragment ShoppingListItemFragment on ShoppingListItem {
   lastPurchaseDate
   purchaseCount
   itemName
-  itemBarcode
   unitName
   notes
   priority
@@ -270,7 +268,7 @@ fragment ItemFragment on Item {
   id
   name
   description
-  barcode
+  upc
   fdcId
   dataSource
   type
@@ -280,10 +278,6 @@ fragment ItemFragment on Item {
   popularity
   status
   visibility
-  averagePrice
-  minPrice
-  maxPrice
-  priceUpdatedAt
   imageUrl
   tags
   healthBenefits
@@ -349,7 +343,6 @@ fragment PantryItemFragment on PantryItem {
   pantryId
   itemId
   itemName
-  itemBarcode
   item {
     ...ItemFragment
   }

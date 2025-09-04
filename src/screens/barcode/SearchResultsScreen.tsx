@@ -1,7 +1,11 @@
 import React, {useRef, useEffect} from 'react';
-import {SafeAreaView} from 'react-native';
+import {SafeAreaView, View, StatusBar} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
-import BottomSheet, {BottomSheetView} from '@gorhom/bottom-sheet';
+import BottomSheet, {
+  BottomSheetView,
+  BottomSheetBackdrop,
+  BottomSheetScrollView,
+} from '@gorhom/bottom-sheet';
 import {StyleSheet} from 'react-native-unistyles';
 
 import {
@@ -51,10 +55,28 @@ export const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({
     }
   }, [bottomSheetVisible, bottomSheetIndex]);
 
+  // Handle status bar styling based on backdrop visibility
+  useEffect(() => {
+    if (bottomSheetVisible) {
+      StatusBar.setBarStyle('dark-content', true);
+    } else {
+      StatusBar.setBarStyle('light-content', true);
+    }
+  }, [bottomSheetVisible]);
+
   const handleScanAnother = () => {
     clearSearch();
     navigation.navigate('BarcodeScanner');
   };
+
+  const renderBackdrop = (props: any) => (
+    <BottomSheetBackdrop
+      {...props}
+      appearsOnIndex={0}
+      disappearsOnIndex={-1}
+      opacity={0.3}
+    />
+  );
 
   const renderContent = () => {
     if (isSearching || loading) {
@@ -96,13 +118,14 @@ export const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({
       {bottomSheetVisible && (
         <BottomSheet
           ref={bottomSheetRef}
-          snapPoints={['50%', '90%']}
+          snapPoints={['50%', '65%', '90%']}
           enablePanDownToClose
           animateOnMount={true}
           onClose={hideBottomSheet}
           backgroundStyle={styles.bottomSheetBackground}
-          handleIndicatorStyle={styles.bottomSheetHandle}>
-          <BottomSheetView style={styles.bottomSheetContent}>
+          handleIndicatorStyle={styles.bottomSheetHandle}
+          backdropComponent={renderBackdrop}>
+          <BottomSheetScrollView style={styles.bottomSheetContent}>
             <AddItemForm
               barcode={barcode}
               format={format}
@@ -110,7 +133,7 @@ export const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({
               onClose={hideBottomSheet}
               loading={addingItem}
             />
-          </BottomSheetView>
+          </BottomSheetScrollView>
         </BottomSheet>
       )}
     </SafeAreaView>

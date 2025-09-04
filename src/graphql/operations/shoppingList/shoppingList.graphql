@@ -47,11 +47,10 @@ query GetShoppingList($id: ID!) {
         id
         name
         description
-        barcode
+        upc
         imageUrl
         type
         storageState
-        averagePrice
       }
       unit {
         id

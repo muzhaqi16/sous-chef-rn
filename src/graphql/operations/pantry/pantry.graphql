@@ -151,7 +151,6 @@ subscription PantryLowStockAlert($pantryId: ID!) {
       id
       name
       imageUrl
-      averagePrice
     }
   }
 }

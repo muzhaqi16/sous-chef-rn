@@ -146,7 +146,7 @@ export const UnitsAutocompleteInput: React.FC<UnitsAutocompleteInputProps> = ({
 
       <BottomSheetModal
         ref={bottomSheetRef}
-        snapPoints={['50%', '75%']}
+        snapPoints={['65%', '75%']}
         onDismiss={handleDismiss}
         backdropComponent={renderBackdrop}
         keyboardBehavior="extend"

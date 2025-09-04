@@ -322,12 +322,12 @@ input AddPantryItemInput {
   expiresAt: String
   initialQuantity: Float!
   isAutoReorder: Boolean
-  itemBarcode: String
   itemBrand: String
   itemCategory: String
   itemDescription: String
   itemId: String
   itemName: String
+  itemUpc: String
   lastUsedAt: DateTime
   lotNumber: String
   pantryId: ID!
@@ -414,13 +414,6 @@ enum AutomatedFlag {
 input BanUserInput {
   reason: String!
   userId: ID!
-}
-
-type BarcodeValidation {
-  exists: Boolean!
-  format: String
-  isValid: Boolean!
-  item: Item
 }
 
 type Brand {
@@ -580,6 +573,11 @@ interface Connection {
   totalCount: Int!
 }
 
+type ConvertedValue {
+  unit: Unit!
+  value: Float!
+}
+
 input CreateBrandInput {
   description: String
   name: String!
@@ -641,49 +639,27 @@ input CreateHomeInput {
 }
 
 input CreateItemInput {
-  allergens: [AllergenInput!]
-  averagePrice: Float
-  barcode: String
+  allergens: JSON
   brandId: String
   categories: [CategoryInput!]
   categoryIds: [String!]
-  comparedPrice: Float
-  dataSource: DataSource
   defaultUnit: String
   description: String
-  displayItemSize: String
-  displayPricePerUnit: String
-  externalId: String
-  fdcId: String
-  fulfillmentMethods: [String!]
-  healthBenefits: [HealthBenefitInput!]
-  healthClaims: [String!]
+  displayUnitId: String
+  healthBenefits: JSON
   imageUrl: String
-  images: [ImageInput!]
-  ingredients: [IngredientInput!]
-  inventoryStatus: String
-  lastSyncedAt: String
-  maxPrice: Float
+  ingredients: JSON
   metadata: JSON
-  minPrice: Float
   name: String!
-  nutritionFacts: [NutritionFactInput!]
-  offers: [OfferInput!]
-  price: Float
-  productLocation: String
+  netWeight: Float
   shelfLifeDays: Int
-  showInOnboarding: Boolean
   sku: String
-  status: ItemStatus
   storageState: StorageState
-  storeSkus: [StoreSkuInput!]
   tags: [String!]
   type: ItemType
-  unitPrice: Float
-  unitQty: Float
   units: [ItemUnitInput!]
+  upc: String
   vendor: String
-  visibility: Visibility
 }
 
 input CreateLoginHistoryInput {
@@ -1254,41 +1230,41 @@ input InviteToShoppingListInput {
 
 type Item {
   allergens: JSON
-  averagePrice: Float
-  barcode: String
   brands: [ItemBrand!]!
   categories: [ItemCategory!]
+  convertedNetWeight: ConvertedValue
   createdAt: DateTime!
   creations: [ItemCreation!]!
   dataSource: DataSource!
   deletedAt: DateTime
   description: String
+  displayUnit: Unit
   edits: [ItemEdit!]!
   fdcId: String
   healthBenefits: JSON
   id: ID!
   imageUrl: String
   ingredients: JSON
-  maxPrice: Float
   metadata: JSON
-  minPrice: Float
   name: String!
+  netWeight: Float
   nutritions: JSON
   pantryItems: [PantryItem!]!
   popularity: Int!
   priceHistory: [ItemPriceHistory!]!
-  priceUpdatedAt: DateTime
   purchases: [Purchase!]!
   recipeIngredients: [RecipeIngredient!]!
   shelfLifeDays: Int
   shoppingListItems: [ShoppingListItem!]!
   showInOnboarding: Boolean!
+  sku: String
   status: ItemStatus!
   storageState: StorageState!
   storeSkus: [ItemStoreSku!]!
   tags: [String!]!
   type: ItemType!
   units: [ItemUnit!]!
+  upc: String
   updatedAt: DateTime!
   version: Int!
   visibility: Visibility!
@@ -1309,6 +1285,7 @@ type ItemBrand {
   id: ID!
   isPrimary: Boolean
   item: Item
+  sku: String
 }
 
 type ItemCategory {
@@ -2055,7 +2032,7 @@ type Mutation {
     price: Float!
     storeId: String!
   ): ItemPriceHistory!
-  refresh(token: String!): AuthPayload!
+  refresh(token: String!): RefreshTokenPayload!
   register(input: RegisterInput!): AuthPayload!
   registerDevice(input: DeviceRegistrationInput!): Device!
   removeCollaborator(data: RemoveCollaboratorInput!): Boolean!
@@ -2448,9 +2425,9 @@ type PantryItem {
   isComposted: Boolean!
   isRecycled: Boolean!
   item: Item!
-  itemBarcode: String
   itemId: String!
   itemName: String!
+  itemUpc: String
   lastModifiedBy: User
   lastReorderDate: String
   lastUsedAt: String
@@ -2598,9 +2575,9 @@ type Purchase {
   expirationDate: DateTime
   id: ID!
   item: Item!
-  itemBarcode: String
   itemId: String!
   itemName: String!
+  itemUpc: String
   originalPrice: Float
   pantryItems: [PantryItem!]!
   purchaseDate: DateTime!
@@ -2683,9 +2660,9 @@ type Query {
   homeMemberships(homeId: ID!): [Membership!]!
   homes: [Home!]!
   item(id: ID!): Item
-  itemByBarcode(barcode: String!): Item
   itemByExternalId(externalId: String!, provider: ProviderType!): Item
   itemBySku(sku: String!, storeId: String): Item
+  itemByUpc(upc: String!): Item
   itemPriceHistory(days: Int, itemId: ID!, storeId: String): [ItemPriceHistory!]
   items(
     filters: ItemFilters
@@ -2763,7 +2740,7 @@ type Query {
   rootCategories(type: CategoryType): [Category!]!
   searchDevicesByUserAgent(userAgent: String!): [Device!]!
   searchItems(input: SearchItemsInput!): ItemsResponse
-  searchItemsByBarcode(barcode: String!): [Item!]
+  searchItemsByUpc(upc: String!): [Item!]
   searchLoginHistory(
     filters: LoginHistoryFiltersInput
     query: String!
@@ -2800,7 +2777,7 @@ type Query {
   userPurchases(userId: ID!): [Purchase!]!
   userSettings(userId: String): UserSettings
   users(search: String, skip: Int, take: Int): [User!]!
-  validateBarcode(barcode: String!): BarcodeValidation!
+  validateUpc(upc: String!): UpcValidation!
   verifiedDevices(userId: ID!): [Device!]!
   __schema: __Schema!
   __type(name: String!): __Type
@@ -2867,6 +2844,11 @@ enum RecurringPattern {
   DAILY
   MONTHLY
   WEEKLY
+}
+
+type RefreshTokenPayload {
+  accessToken: String!
+  refreshToken: String!
 }
 
 input RegisterInput {
@@ -3397,6 +3379,12 @@ enum UnitSource {
   RECIPE_DERIVED
 }
 
+enum UnitSystem {
+  IMPERIAL
+  METRIC
+  SYSTEM
+}
+
 enum UnitType {
   AREA
   COUNT
@@ -3415,6 +3403,13 @@ enum UnitUsageContext {
   SERVING
   SHOPPING
   STORING
+}
+
+type UpcValidation {
+  exists: Boolean!
+  format: String
+  isValid: Boolean!
+  item: Item
 }
 
 input UpdateBrandInput {
@@ -3482,40 +3477,22 @@ input UpdateItemInput {
   addStoreSkus: [StoreSkuInput!]
   addTags: [String!]
   addUnits: [ItemUnitInput!]
-  allergens: [AllergenInput!]
-  averagePrice: Float
-  barcode: String
-  brand: BrandInput
+  allergens: JSON
   brandId: String
   categories: [CategoryInput!]
   categoryIds: [String!]
-  comparedPrice: Float
   defaultUnit: String
   description: String
-  displayItemSize: String
-  displayPricePerUnit: String
+  displayUnitId: String
   editReason: String
-  externalId: String
   fdcId: String
-  fulfillmentMethods: [String!]
-  healthBenefits: [HealthBenefitInput!]
-  healthClaims: [String!]
+  healthBenefits: JSON
   imageUrl: String
-  images: [ImageInput!]
-  ingredients: [IngredientInput!]
-  inventoryStatus: String
-  isFoodStampItem: Boolean
-  isFsaEligible: Boolean
-  lastSyncedAt: String
-  maxPrice: Float
+  ingredients: JSON
   metadata: JSON
-  minPrice: Float
   name: String
-  nutritionFacts: [NutritionFactInput!]
-  offers: [OfferInput!]
+  netWeight: Float
   popularity: Int
-  price: Float
-  productLocation: String
   removeCategoryIds: [String!]
   removeStoreSkuIds: [String!]
   removeTags: [String!]
@@ -3528,9 +3505,8 @@ input UpdateItemInput {
   storeSkus: [StoreSkuInput!]
   tags: [String!]
   type: ItemType
-  unitPrice: Float
-  unitQty: Float
   units: [ItemUnitInput!]
+  upc: String
   vendor: String
   visibility: Visibility
 }
@@ -3767,6 +3743,7 @@ input UpdateUserSettingsInput {
   lowStockAlerts: Boolean
   offlineMode: Boolean
   personalizedAds: Boolean
+  preferredUnitSystem: UnitSystem
   pushNotifications: Boolean
   recipeRecommendations: Boolean
   shareUsageData: Boolean
@@ -3964,6 +3941,7 @@ type UserSettings {
   lowStockAlerts: Boolean!
   offlineMode: Boolean!
   personalizedAds: Boolean!
+  preferredUnitSystem: UnitSystem!
   pushNotifications: Boolean!
   recipeRecommendations: Boolean!
   shareUsageData: Boolean!

@@ -91,63 +91,36 @@ export const useCreateItemAndAddToPantry = () => {
 
     setLoading(true);
     try {
-      // Step 1: Create the item
+      // Step 1: Create the item with new schema structure
       const processedItemData = {
         name: input.itemData.name,
         description: input.itemData.description || undefined,
-        barcode: input.itemData.barcode || undefined,
+        upc: input.itemData.upc || undefined,
         sku: input.itemData.sku || undefined,
-        fdcId: input.itemData.fdcId || undefined,
+        netWeight: input.itemData.netWeight || undefined,
+        displayUnitId: input.itemData.displayUnitId || undefined,
         
         // Classification
         type: input.itemData.type as ItemType | undefined,
         storageState: input.itemData.storageState as StorageState | undefined,
-        dataSource: input.itemData.dataSource as DataSource | undefined,
-        status: input.itemData.status as ItemStatus | undefined,
-        visibility: input.itemData.visibility as Visibility | undefined,
         
         // Product Details
         shelfLifeDays: input.itemData.shelfLifeDays || undefined,
-        displayItemSize: input.itemData.displayItemSize || undefined,
         
         // Images
         imageUrl: input.itemData.imageUrl || undefined,
         
-        // Pricing
-        price: input.itemData.price || undefined,
-        averagePrice: input.itemData.averagePrice || undefined,
-        minPrice: input.itemData.minPrice || undefined,
-        maxPrice: input.itemData.maxPrice || undefined,
-        unitPrice: input.itemData.unitPrice || undefined,
-        displayPricePerUnit: input.itemData.displayPricePerUnit || undefined,
-        comparedPrice: input.itemData.comparedPrice || undefined,
-        
         // Brand Information
         brandId: input.itemData.brandId || undefined,
-        vendor: input.itemData.vendor || undefined,
         
-        // Units
-        unitQty: input.itemData.unitQty || undefined,
-        defaultUnit: input.itemData.defaultUnit || undefined,
+        // Categories
+        categoryIds: input.itemData.categoryIds || undefined,
+        
+        // Units array
+        units: input.itemData.units || undefined,
         
         // Metadata
         tags: input.itemData.tags?.filter((tag): tag is string => Boolean(tag)) || undefined,
-        popularity: input.itemData.popularity || undefined,
-        
-        // Store-specific
-        inventoryStatus: input.itemData.inventoryStatus || undefined,
-        fulfillmentMethods: input.itemData.fulfillmentMethods?.filter((method): method is string => Boolean(method)) || undefined,
-        productLocation: input.itemData.productLocation || undefined,
-        
-        // Health claims
-        healthClaims: input.itemData.healthClaims?.filter((claim): claim is string => Boolean(claim)) || undefined,
-        
-        // Boolean flags
-        showInOnboarding: input.itemData.showInOnboarding || false,
-        
-        // Tracking
-        externalId: input.itemData.externalId || undefined,
-        lastSyncedAt: input.itemData.lastSyncedAt || undefined,
       };
 
       const createItemResult = await createItem({

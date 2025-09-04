@@ -113,7 +113,7 @@ export const BrandAutocompleteInput: React.FC<BrandAutocompleteInputProps> = ({
 
       <BottomSheetModal
         ref={bottomSheetRef}
-        snapPoints={['50%', '75%']}
+        snapPoints={['65%', '75%']}
         onDismiss={handleDismiss}
         backdropComponent={renderBackdrop}
         keyboardBehavior="extend"
