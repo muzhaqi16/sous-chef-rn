@@ -6,7 +6,7 @@ import {BarcodeScannerScreen, SearchResultsScreen} from '#screens';
 
 const Stack = createNativeStackNavigator<BarcodeStackParamList>();
 
-const BarcodeStack = () => {
+export const BarcodeStack = () => {
   return (
     <Stack.Navigator
       initialRouteName="BarcodeScanner"
@@ -30,5 +30,3 @@ const BarcodeStack = () => {
     </Stack.Navigator>
   );
 };
-
-export default BarcodeStack;

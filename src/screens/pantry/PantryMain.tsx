@@ -98,7 +98,7 @@ export const PantryMain: React.FC = () => {
       );
       return;
     }
-    navigation.navigate('AddPantryItem');
+    navigation.navigate('PantryItem', {});
   };
 
   const handleDeleteItem = async (itemId: string) => {
@@ -223,7 +223,7 @@ export const PantryMain: React.FC = () => {
         onItemPress={id =>
           navigation.navigate('PantryItemDetail', {itemId: id})
         }
-        onItemEdit={id => navigation.navigate('EditPantryItem', {itemId: id})}
+        onItemEdit={id => navigation.navigate('PantryItem', {itemId: id})}
         onItemDelete={handleDeleteItem}
         onRefresh={async () => {
           await refetch();

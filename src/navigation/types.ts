@@ -31,6 +31,10 @@ export type RootStackParamList = {
   PantryStack: NavigatorScreenParams<PantryStackParamList>;
   SettingsStack: NavigatorScreenParams<SettingsStackParamList>;
   HomeManagementStack: NavigatorScreenParams<HomeManagementStackParamList>;
+  ProfilePhotoUpload: undefined;
+  ImageCrop: {
+    imageFile: any; // ImageFile type
+  };
   NotFound: undefined;
 };
 
@@ -115,9 +119,8 @@ export type PantryStackParamList = {
   PantryItemDetail: {
     itemId: string;
   };
-  AddPantryItem: undefined;
-  EditPantryItem: {
-    itemId: string;
+  PantryItem: {
+    itemId?: string; // Optional - if present, edit mode; if not, add mode
   };
   ExpiringItems: undefined;
   LowStockItems: undefined;
@@ -315,9 +318,7 @@ export type PantryStackScreenProps<T extends keyof PantryStackParamList> =
 export type PantryMainScreenProps = PantryStackScreenProps<'PantryMain'>;
 export type PantryItemDetailScreenProps =
   PantryStackScreenProps<'PantryItemDetail'>;
-export type AddPantryItemScreenProps = PantryStackScreenProps<'AddPantryItem'>;
-export type EditPantryItemScreenProps =
-  PantryStackScreenProps<'EditPantryItem'>;
+export type PantryItemScreenProps = PantryStackScreenProps<'PantryItem'>;
 export type ExpiringItemsScreenProps = PantryStackScreenProps<'ExpiringItems'>;
 export type LowStockItemsScreenProps = PantryStackScreenProps<'LowStockItems'>;
 export type CategoryManagementScreenProps =
@@ -332,13 +333,9 @@ export type PantryItemDetailNavProp = NativeStackNavigationProp<
   PantryStackParamList,
   'PantryItemDetail'
 >;
-export type AddPantryItemNavProp = NativeStackNavigationProp<
+export type PantryItemNavProp = NativeStackNavigationProp<
   PantryStackParamList,
-  'AddPantryItem'
->;
-export type EditPantryItemNavProp = NativeStackNavigationProp<
-  PantryStackParamList,
-  'EditPantryItem'
+  'PantryItem'
 >;
 export type ExpiringItemsNavProp = NativeStackNavigationProp<
   PantryStackParamList,
@@ -354,9 +351,9 @@ export type PantryItemDetailRouteProp = RouteProp<
   PantryStackParamList,
   'PantryItemDetail'
 >;
-export type EditPantryItemRouteProp = RouteProp<
+export type PantryItemRouteProp = RouteProp<
   PantryStackParamList,
-  'EditPantryItem'
+  'PantryItem'
 >;
 
 // ============================================================================

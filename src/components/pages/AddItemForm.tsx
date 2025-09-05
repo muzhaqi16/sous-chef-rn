@@ -1,5 +1,6 @@
 import React, {useState} from 'react';
-import {View, Text, TouchableOpacity, ActivityIndicator} from 'react-native';
+import {View, Text, TouchableOpacity, ActivityIndicator, Image} from 'react-native';
+import Icon from '@react-native-vector-icons/material-icons';
 import {StyleSheet} from 'react-native-unistyles';
 import {useForm} from 'react-hook-form';
 import {yupResolver} from '@hookform/resolvers/yup';
@@ -10,6 +11,8 @@ import {FormTextArea} from '../molecules/FormTextArea';
 import {FormNumberInput} from '../molecules/FormNumberInput';
 import {FormSelect} from '../molecules/FormSelect';
 import {FormCheckbox} from '../molecules/FormCheckbox';
+import {ImageFile} from '../molecules/ImagePicker';
+import {ProductImagePicker} from '../molecules/ProductImagePicker';
 import {UnitsAutocompleteInput} from '../molecules/UnitsAutocompleteInput';
 import {BrandAutocompleteInput} from '../molecules/BrandAutocompleteInput';
 import {DynamicFormFields, FieldDef} from '../molecules/DynamicFormFields';
@@ -147,18 +150,6 @@ const getFormSections = (
     ],
   },
   {
-    title: 'Images',
-    fields: [
-      {
-        name: 'imageUrl',
-        label: 'Image URL',
-        placeholder: 'https://example.com/image.jpg',
-        component: FormInput,
-        props: {keyboardType: 'url', autoCapitalize: 'none'},
-      },
-    ],
-  },
-  {
     title: 'Tags & Metadata',
     fields: [
       {
@@ -216,6 +207,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
   // Track selected brand and unit IDs separately from the display names
   const [selectedBrandId, setSelectedBrandId] = useState<string | null>(null);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<ImageFile | null>(null);
 
   // Determine what to populate based on scanned value
   const getInitialValues = () => {
@@ -351,6 +343,8 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
       categoryIds: data.categoryIds && data.categoryIds.length > 0 ? data.categoryIds : undefined,
       units: units.length > 0 ? units : undefined,
       tags: tags.length > 0 || systemTags.length > 0 ? [...tags, ...systemTags] : undefined,
+      // Pass the selected image for post-creation upload
+      selectedImage: selectedImage,
     };
 
     onSubmit(processedData);
@@ -395,6 +389,19 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
             />
           </View>
         ))}
+        
+        {/* Image Picker Section */}
+        <View style={styles.section}>
+          <ProductImagePicker
+            selectedImage={selectedImage}
+            onImageSelected={setSelectedImage}
+            onImageRemoved={() => setSelectedImage(null)}
+            onError={(error) => {
+              console.error('Image selection error:', error);
+            }}
+            disabled={loading}
+          />
+        </View>
       </View>
 
       <View style={styles.buttonContainer}>

@@ -29,7 +29,7 @@ const headerStyles = StyleSheet.create((theme, rt) => ({
     borderBottomWidth: 1,
     paddingVertical: theme.spacing.sm,
     borderBottomColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: theme.colors.background,
 
     // Add safe area padding on tablets/desktop
     ...{

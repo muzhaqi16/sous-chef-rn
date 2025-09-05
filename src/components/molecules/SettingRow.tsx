@@ -8,7 +8,6 @@ import {
   SafeAreaView,
   ScrollView,
 } from 'react-native';
-import FeatherIcon from '@react-native-vector-icons/feather';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {Controller, useForm} from 'react-hook-form';
@@ -21,6 +20,7 @@ import {
 } from '#utils/inputMapping';
 import {getValidationSchemaForField} from '#/utils/validation/profile';
 import {SettingItem} from '#types';
+import {Icon} from '#/utils';
 
 export interface SettingRowProps {
   item: SettingItem;
@@ -111,11 +111,11 @@ export const SettingRow: React.FC<SettingRowProps> = ({
           {item.type === 'text' && (
             <>
               <ValueText>{item.value as string}</ValueText>
-              <FeatherIcon
+              <Icon
+                library="Feather"
                 name="edit-2"
                 size={16}
                 color={theme.colors.textSecondary}
-                style={styles.editIcon}
               />
             </>
           )}
@@ -149,7 +149,8 @@ export const SettingRow: React.FC<SettingRowProps> = ({
                 {item.options?.find(opt => opt.value === item.value)?.label ||
                   'Select'}
               </ValueText>
-              <FeatherIcon
+              <Icon
+                library="Feather"
                 name="chevron-right"
                 size={20}
                 color={theme.colors.textSecondary}
@@ -158,7 +159,8 @@ export const SettingRow: React.FC<SettingRowProps> = ({
           )}
 
           {item.type === 'action' && (
-            <FeatherIcon
+            <Icon
+              library="Feather"
               name="chevron-right"
               size={20}
               color={theme.colors.textSecondary}
@@ -215,7 +217,8 @@ export const SettingRow: React.FC<SettingRowProps> = ({
               <TouchableOpacity
                 onPress={() => setModalVisible(false)}
                 style={styles.modalCloseButton}>
-                <FeatherIcon
+                <Icon
+                  library="Feather"
                   name="x"
                   size={24}
                   color={theme.colors.textPrimary}
@@ -233,7 +236,8 @@ export const SettingRow: React.FC<SettingRowProps> = ({
                   onPress={handleModalOptionPress(opt.value)}>
                   <Text style={styles.modalOptionText}>{opt.label}</Text>
                   {item.value === opt.value && (
-                    <FeatherIcon
+                    <Icon
+                      library="Feather"
                       name="check"
                       size={20}
                       color={theme.colors.primary}
@@ -265,9 +269,6 @@ const styles = StyleSheet.create(theme => ({
   row: {flexDirection: 'row', alignItems: 'center'},
   rowLabel: {marginLeft: 8, fontSize: 16, color: theme.colors.textPrimary},
   rowSpacer: {flex: 1},
-  editIcon: {
-    marginLeft: 8,
-  },
   modalValueContainer: {
     flexDirection: 'row',
     alignItems: 'center',

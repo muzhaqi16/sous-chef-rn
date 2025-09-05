@@ -11,7 +11,7 @@ import {ShoppingListStack} from './ShoppingListStack';
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 const Tab = createBottomTabNavigator<HomeTabParamList>();
 
-const HomeTab = () => {
+export const HomeTab = () => {
   const {theme} = useUnistyles();
 
   return (
@@ -76,5 +76,3 @@ const styles = StyleSheet.create(theme => ({
     // height: 60, // you can customize height if needed
   },
 }));
-
-export default HomeTab;

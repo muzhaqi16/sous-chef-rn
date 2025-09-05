@@ -1,3 +1,4 @@
+import {Icon} from '#/utils';
 import React, {ReactNode} from 'react';
 import {
   SafeAreaView,
@@ -9,7 +10,6 @@ import {
   Text,
 } from 'react-native';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
-import FeatherIcon from '@react-native-vector-icons/feather';
 
 interface OnboardingWrapperProps {
   children: ReactNode;
@@ -38,7 +38,8 @@ export const OnBoardingWrapper = ({
       <View style={styles.headerContainer}>
         {onBack && (
           <TouchableOpacity onPress={onBack} style={styles.iconButton}>
-            <FeatherIcon
+            <Icon
+              library="Feather"
               name="arrow-left"
               size={24}
               color={theme.colors.primary}

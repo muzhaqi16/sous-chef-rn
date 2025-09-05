@@ -49,21 +49,6 @@ export const PROFILE_SETTINGS_CONFIG: SettingsSection[] = [
     ],
   },
   {
-    title: 'Profile Images',
-    items: [
-      {
-        key: 'avatar',
-        label: 'Avatar',
-        type: 'text',
-      },
-      {
-        key: 'coverImage',
-        label: 'Cover Image',
-        type: 'text',
-      },
-    ],
-  },
-  {
     title: 'Privacy Settings',
     items: [
       {

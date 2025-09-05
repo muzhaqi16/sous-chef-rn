@@ -1170,6 +1170,13 @@ enum ImageKind {
   THUMBNAIL
 }
 
+enum ImageUploadPurpose {
+  ITEM_IMAGE
+  PANTRY_ITEM_PHOTO
+  PROFILE_AVATAR
+  PROFILE_COVER
+}
+
 input ImportItemsFromProviderInput {
   categoryUrl: String
   dryRun: Boolean
@@ -1896,7 +1903,6 @@ type Mutation {
   acceptHomeInvite(token: String!): Membership!
   acceptShoppingListInvite(token: String!): ShoppingListCollaborator!
   addCollaborator(data: AddCollaboratorInput!): ShoppingListCollaborator!
-  addItemImage(image: ImageInput!, itemId: ID!): Item!
   addItemTags(id: ID!, tags: [String!]!): Item!
   addItemToCategory(categoryId: ID!, isPrimary: Boolean, itemId: ID!): Item!
   addItemToPantry(input: AddPantryItemInput!): PantryItem!
@@ -1929,6 +1935,8 @@ type Mutation {
     reviewNotes: String
     userId: ID!
   ): UserModeration!
+  confirmItemImageUpload(itemId: String!, key: String!): String!
+  confirmProfileImageUpload(key: String!): String!
   createBrand(input: CreateBrandInput): Brand!
   createBulkPurchases(purchases: [CreatePurchaseInput!]!): [Purchase!]!
   createBulkStores(stores: [CreateStoreInput!]!): [Store!]!
@@ -1936,6 +1944,11 @@ type Mutation {
   createCurrency(input: CreateCurrencyInput!): Currency!
   createDevice(input: CreateDeviceInput!): Device!
   createHome(input: CreateHomeInput!): Home!
+  createImageUploadUrl(
+    itemId: String
+    mime: String!
+    purpose: ImageUploadPurpose!
+  ): PresignPayload!
   createItem(input: CreateItemInput!): Item!
   createLoginHistory(input: CreateLoginHistoryInput!): LoginHistory!
   createMembership(input: CreateMembershipInput!): Membership!
@@ -1947,6 +1960,7 @@ type Mutation {
   createShoppingList(input: CreateShoppingListInput!): ShoppingList!
   createStore(input: CreateStoreInput!): Store!
   createUnit(input: CreateUnitInput!): Unit!
+  createUploadUrl(ext: String!, mime: String!): PresignPayload!
   deactivateDevice(id: ID!): Device!
   deactivateMultipleDevices(deviceIds: [ID!]!): [Device!]!
   declineHomeInvite(token: String!): Boolean!
@@ -2043,10 +2057,12 @@ type Mutation {
   removeItemFromCategory(categoryId: ID!, itemId: ID!): Item!
   removeItemFromPantry(id: ID!): PantryItem!
   removeItemFromShoppingList(id: ID!): Boolean!
-  removeItemImage(imageUrl: String!, itemId: ID!): Item!
+  removeItemImage(id: ID!): Item!
   removeItemTags(id: ID!, tags: [String!]!): Item!
   removeItemUnit(id: ID!): Boolean!
   removeMember(membershipId: ID!): Boolean!
+  removeProfileAvatar: UserProfile!
+  removeProfileCover: UserProfile!
   removePushToken(id: ID!): Device!
   removeRestrictions(input: RemoveRestrictionsInput!): UserModeration!
   removeShoppingListCollaborator(id: ID!): Boolean!
@@ -2065,7 +2081,6 @@ type Mutation {
   setDefaultShoppingList(id: ID!): ShoppingList!
   setItemBrand(brandId: ID!, isPrimary: Boolean, itemId: ID!): Item!
   setItemCategories(categoryIds: [ID!]!, itemId: ID!): Item!
-  setItemPrimaryImage(imageUrl: String!, itemId: ID!): Item!
   shareShoppingList(id: ID!, input: ShareShoppingListInput!): ShoppingList!
   submitAppeal(input: SubmitAppealInput!): UserModeration!
   suspendUser(input: SuspendUserInput!): UserModeration!
@@ -2090,6 +2105,7 @@ type Mutation {
   updateHome(id: ID!, input: UpdateHomeInput!): Home!
   updateItem(id: ID!, input: UpdateItemInput!): Item!
   updateItemAllergens(allergens: [AllergenInput!]!, id: ID!): Item!
+  updateItemImage(id: ID!, imageUrl: String!): Item!
   updateItemIngredients(id: ID!, ingredients: [IngredientInput!]!): Item!
   updateItemMetadata(id: ID!, merge: Boolean, metadata: JSON!): Item!
   updateItemNutrition(id: ID!, nutritionFacts: [NutritionFactInput!]!): Item!
@@ -2120,6 +2136,8 @@ type Mutation {
   updatePantry(id: ID!, input: UpdatePantryInput!): Pantry!
   updatePantryItem(id: ID!, input: UpdatePantryItemInput!): PantryItem!
   updateProfile(input: UpdateUserProfileInput!): UserProfile!
+  updateProfileAvatar(avatarUrl: String!): UserProfile!
+  updateProfileCover(coverImageUrl: String!): UserProfile!
   updatePurchase(id: ID!, input: UpdatePurchaseInput!): Purchase!
   updatePushToken(id: ID!, pushToken: String!): Device!
   updateRiskScore(riskScore: Float!, userId: ID!): UserModeration!
@@ -2512,6 +2530,11 @@ type PantryUpdatedPayload {
 type PlatformStat {
   count: Int!
   platform: MobilePlatform!
+}
+
+type PresignPayload {
+  key: String!
+  url: String!
 }
 
 type PriceRangeFacet {

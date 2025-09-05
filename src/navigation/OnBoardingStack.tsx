@@ -12,7 +12,7 @@ import {OnBoardingSteps} from '../store/slices/preferencesSlice';
 
 const Stack = createNativeStackNavigator<OnBoardingStackParamList>();
 
-const OnBoardingStack = () => {
+export const OnBoardingStack = () => {
   const {user, onBoardingStep, setOnBoardingStep, setUserNavigationState} =
     useStore();
 
@@ -110,5 +110,3 @@ const OnBoardingStack = () => {
     </Stack.Navigator>
   );
 };
-
-export default OnBoardingStack;

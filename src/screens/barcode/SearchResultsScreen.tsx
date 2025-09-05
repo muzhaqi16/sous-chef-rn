@@ -1,8 +1,7 @@
 import React, {useRef, useEffect} from 'react';
-import {SafeAreaView, View, StatusBar} from 'react-native';
+import {SafeAreaView, StatusBar} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import BottomSheet, {
-  BottomSheetView,
   BottomSheetBackdrop,
   BottomSheetScrollView,
 } from '@gorhom/bottom-sheet';

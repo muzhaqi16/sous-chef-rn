@@ -927,6 +927,13 @@ export enum ImageKind {
   Thumbnail = 'THUMBNAIL',
 }
 
+export enum ImageUploadPurpose {
+  ItemImage = 'ITEM_IMAGE',
+  PantryItemPhoto = 'PANTRY_ITEM_PHOTO',
+  ProfileAvatar = 'PROFILE_AVATAR',
+  ProfileCover = 'PROFILE_COVER',
+}
+
 export type ImportItemsFromProviderInput = {
   categoryUrl?: InputMaybe<Scalars['String']['input']>;
   dryRun?: InputMaybe<Scalars['Boolean']['input']>;
@@ -1683,7 +1690,6 @@ export type Mutation = {
   acceptHomeInvite: Membership;
   acceptShoppingListInvite: ShoppingListCollaborator;
   addCollaborator: ShoppingListCollaborator;
-  addItemImage: Item;
   addItemTags: Item;
   addItemToCategory: Item;
   addItemToPantry: PantryItem;
@@ -1702,6 +1708,8 @@ export type Mutation = {
   cleanupDeletedDevices: Scalars['Int']['output'];
   cleanupStaleDevices: Scalars['Int']['output'];
   completeReview: UserModeration;
+  confirmItemImageUpload: Scalars['String']['output'];
+  confirmProfileImageUpload: Scalars['String']['output'];
   createBrand: Brand;
   createBulkPurchases: Array<Purchase>;
   createBulkStores: Array<Store>;
@@ -1709,6 +1717,7 @@ export type Mutation = {
   createCurrency: Currency;
   createDevice: Device;
   createHome: Home;
+  createImageUploadUrl: PresignPayload;
   createItem: Item;
   createLoginHistory: LoginHistory;
   createMembership: Membership;
@@ -1720,6 +1729,7 @@ export type Mutation = {
   createShoppingList: ShoppingList;
   createStore: Store;
   createUnit: Unit;
+  createUploadUrl: PresignPayload;
   deactivateDevice: Device;
   deactivateMultipleDevices: Array<Device>;
   declineHomeInvite: Scalars['Boolean']['output'];
@@ -1783,6 +1793,8 @@ export type Mutation = {
   removeItemTags: Item;
   removeItemUnit: Scalars['Boolean']['output'];
   removeMember: Scalars['Boolean']['output'];
+  removeProfileAvatar: UserProfile;
+  removeProfileCover: UserProfile;
   removePushToken: Device;
   removeRestrictions: UserModeration;
   removeShoppingListCollaborator: Scalars['Boolean']['output'];
@@ -1799,7 +1811,6 @@ export type Mutation = {
   setDefaultShoppingList: ShoppingList;
   setItemBrand: Item;
   setItemCategories: Item;
-  setItemPrimaryImage: Item;
   shareShoppingList: ShoppingList;
   submitAppeal: UserModeration;
   suspendUser: UserModeration;
@@ -1824,6 +1835,7 @@ export type Mutation = {
   updateHome: Home;
   updateItem: Item;
   updateItemAllergens: Item;
+  updateItemImage: Item;
   updateItemIngredients: Item;
   updateItemMetadata: Item;
   updateItemNutrition: Item;
@@ -1838,6 +1850,8 @@ export type Mutation = {
   updatePantry: Pantry;
   updatePantryItem: PantryItem;
   updateProfile: UserProfile;
+  updateProfileAvatar: UserProfile;
+  updateProfileCover: UserProfile;
   updatePurchase: Purchase;
   updatePushToken: Device;
   updateRiskScore: UserModeration;
@@ -1871,11 +1885,6 @@ export type MutationAcceptShoppingListInviteArgs = {
 
 export type MutationAddCollaboratorArgs = {
   data: AddCollaboratorInput;
-};
-
-export type MutationAddItemImageArgs = {
-  image: ImageInput;
-  itemId: Scalars['ID']['input'];
 };
 
 export type MutationAddItemTagsArgs = {
@@ -1965,6 +1974,15 @@ export type MutationCompleteReviewArgs = {
   userId: Scalars['ID']['input'];
 };
 
+export type MutationConfirmItemImageUploadArgs = {
+  itemId: Scalars['String']['input'];
+  key: Scalars['String']['input'];
+};
+
+export type MutationConfirmProfileImageUploadArgs = {
+  key: Scalars['String']['input'];
+};
+
 export type MutationCreateBrandArgs = {
   input?: InputMaybe<CreateBrandInput>;
 };
@@ -1991,6 +2009,12 @@ export type MutationCreateDeviceArgs = {
 
 export type MutationCreateHomeArgs = {
   input: CreateHomeInput;
+};
+
+export type MutationCreateImageUploadUrlArgs = {
+  itemId?: InputMaybe<Scalars['String']['input']>;
+  mime: Scalars['String']['input'];
+  purpose: ImageUploadPurpose;
 };
 
 export type MutationCreateItemArgs = {
@@ -2035,6 +2059,11 @@ export type MutationCreateStoreArgs = {
 
 export type MutationCreateUnitArgs = {
   input: CreateUnitInput;
+};
+
+export type MutationCreateUploadUrlArgs = {
+  ext: Scalars['String']['input'];
+  mime: Scalars['String']['input'];
 };
 
 export type MutationDeactivateDeviceArgs = {
@@ -2277,8 +2306,7 @@ export type MutationRemoveItemFromShoppingListArgs = {
 };
 
 export type MutationRemoveItemImageArgs = {
-  imageUrl: Scalars['String']['input'];
-  itemId: Scalars['ID']['input'];
+  id: Scalars['ID']['input'];
 };
 
 export type MutationRemoveItemTagsArgs = {
@@ -2356,11 +2384,6 @@ export type MutationSetItemBrandArgs = {
 
 export type MutationSetItemCategoriesArgs = {
   categoryIds: Array<Scalars['ID']['input']>;
-  itemId: Scalars['ID']['input'];
-};
-
-export type MutationSetItemPrimaryImageArgs = {
-  imageUrl: Scalars['String']['input'];
   itemId: Scalars['ID']['input'];
 };
 
@@ -2474,6 +2497,11 @@ export type MutationUpdateItemAllergensArgs = {
   id: Scalars['ID']['input'];
 };
 
+export type MutationUpdateItemImageArgs = {
+  id: Scalars['ID']['input'];
+  imageUrl: Scalars['String']['input'];
+};
+
 export type MutationUpdateItemIngredientsArgs = {
   id: Scalars['ID']['input'];
   ingredients: Array<IngredientInput>;
@@ -2546,6 +2574,14 @@ export type MutationUpdatePantryItemArgs = {
 
 export type MutationUpdateProfileArgs = {
   input: UpdateUserProfileInput;
+};
+
+export type MutationUpdateProfileAvatarArgs = {
+  avatarUrl: Scalars['String']['input'];
+};
+
+export type MutationUpdateProfileCoverArgs = {
+  coverImageUrl: Scalars['String']['input'];
 };
 
 export type MutationUpdatePurchaseArgs = {
@@ -3024,6 +3060,12 @@ export type PlatformStat = {
   __typename?: 'PlatformStat';
   count: Scalars['Int']['output'];
   platform: MobilePlatform;
+};
+
+export type PresignPayload = {
+  __typename?: 'PresignPayload';
+  key: Scalars['String']['output'];
+  url: Scalars['String']['output'];
 };
 
 export type PriceRangeFacet = {
@@ -9476,6 +9518,109 @@ export type SetDefaultHomeMutation = {
     id: string;
     defaultHome?: {__typename?: 'Home'; id: string; name: string} | null;
   };
+};
+
+export type CreateImageUploadUrlMutationVariables = Exact<{
+  mime: Scalars['String']['input'];
+  purpose: ImageUploadPurpose;
+  itemId?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+export type CreateImageUploadUrlMutation = {
+  __typename?: 'Mutation';
+  createImageUploadUrl: {
+    __typename?: 'PresignPayload';
+    url: string;
+    key: string;
+  };
+};
+
+export type ConfirmProfileImageUploadMutationVariables = Exact<{
+  key: Scalars['String']['input'];
+}>;
+
+export type ConfirmProfileImageUploadMutation = {
+  __typename?: 'Mutation';
+  confirmProfileImageUpload: string;
+};
+
+export type ConfirmItemImageUploadMutationVariables = Exact<{
+  itemId: Scalars['String']['input'];
+  key: Scalars['String']['input'];
+}>;
+
+export type ConfirmItemImageUploadMutation = {
+  __typename?: 'Mutation';
+  confirmItemImageUpload: string;
+};
+
+export type UpdateProfileAvatarMutationVariables = Exact<{
+  avatarUrl: Scalars['String']['input'];
+}>;
+
+export type UpdateProfileAvatarMutation = {
+  __typename?: 'Mutation';
+  updateProfileAvatar: {
+    __typename?: 'UserProfile';
+    id: string;
+    avatar?: string | null;
+  };
+};
+
+export type UpdateProfileCoverMutationVariables = Exact<{
+  coverImageUrl: Scalars['String']['input'];
+}>;
+
+export type UpdateProfileCoverMutation = {
+  __typename?: 'Mutation';
+  updateProfileCover: {
+    __typename?: 'UserProfile';
+    id: string;
+    coverImage?: string | null;
+  };
+};
+
+export type RemoveProfileAvatarMutationVariables = Exact<{
+  [key: string]: never;
+}>;
+
+export type RemoveProfileAvatarMutation = {
+  __typename?: 'Mutation';
+  removeProfileAvatar: {
+    __typename?: 'UserProfile';
+    id: string;
+    avatar?: string | null;
+  };
+};
+
+export type RemoveProfileCoverMutationVariables = Exact<{[key: string]: never}>;
+
+export type RemoveProfileCoverMutation = {
+  __typename?: 'Mutation';
+  removeProfileCover: {
+    __typename?: 'UserProfile';
+    id: string;
+    coverImage?: string | null;
+  };
+};
+
+export type UpdateItemImageMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+  imageUrl: Scalars['String']['input'];
+}>;
+
+export type UpdateItemImageMutation = {
+  __typename?: 'Mutation';
+  updateItemImage: {__typename?: 'Item'; id: string; imageUrl?: string | null};
+};
+
+export type RemoveItemImageMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type RemoveItemImageMutation = {
+  __typename?: 'Mutation';
+  removeItemImage: {__typename?: 'Item'; id: string; imageUrl?: string | null};
 };
 
 export type GetItemsQueryVariables = Exact<{

@@ -4,7 +4,7 @@ import {StyleSheet} from 'react-native-unistyles';
 import Loader from '../components/atoms/Loader';
 import {useStore} from '../store';
 
-const SplashScreen = () => {
+export const SplashScreen = () => {
   const isLoading = useStore(store => store.isLoading);
 
   useEffect(() => {
@@ -64,5 +64,3 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.md,
   },
 }));
-
-export default SplashScreen;

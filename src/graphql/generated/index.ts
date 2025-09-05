@@ -933,6 +933,13 @@ export enum ImageKind {
   Thumbnail = 'THUMBNAIL',
 }
 
+export enum ImageUploadPurpose {
+  ItemImage = 'ITEM_IMAGE',
+  PantryItemPhoto = 'PANTRY_ITEM_PHOTO',
+  ProfileAvatar = 'PROFILE_AVATAR',
+  ProfileCover = 'PROFILE_COVER',
+}
+
 export type ImportItemsFromProviderInput = {
   categoryUrl?: InputMaybe<Scalars['String']['input']>;
   dryRun?: InputMaybe<Scalars['Boolean']['input']>;
@@ -1689,7 +1696,6 @@ export type Mutation = {
   acceptHomeInvite: Membership;
   acceptShoppingListInvite: ShoppingListCollaborator;
   addCollaborator: ShoppingListCollaborator;
-  addItemImage: Item;
   addItemTags: Item;
   addItemToCategory: Item;
   addItemToPantry: PantryItem;
@@ -1708,6 +1714,8 @@ export type Mutation = {
   cleanupDeletedDevices: Scalars['Int']['output'];
   cleanupStaleDevices: Scalars['Int']['output'];
   completeReview: UserModeration;
+  confirmItemImageUpload: Scalars['String']['output'];
+  confirmProfileImageUpload: Scalars['String']['output'];
   createBrand: Brand;
   createBulkPurchases: Array<Purchase>;
   createBulkStores: Array<Store>;
@@ -1715,6 +1723,7 @@ export type Mutation = {
   createCurrency: Currency;
   createDevice: Device;
   createHome: Home;
+  createImageUploadUrl: PresignPayload;
   createItem: Item;
   createLoginHistory: LoginHistory;
   createMembership: Membership;
@@ -1726,6 +1735,7 @@ export type Mutation = {
   createShoppingList: ShoppingList;
   createStore: Store;
   createUnit: Unit;
+  createUploadUrl: PresignPayload;
   deactivateDevice: Device;
   deactivateMultipleDevices: Array<Device>;
   declineHomeInvite: Scalars['Boolean']['output'];
@@ -1789,6 +1799,8 @@ export type Mutation = {
   removeItemTags: Item;
   removeItemUnit: Scalars['Boolean']['output'];
   removeMember: Scalars['Boolean']['output'];
+  removeProfileAvatar: UserProfile;
+  removeProfileCover: UserProfile;
   removePushToken: Device;
   removeRestrictions: UserModeration;
   removeShoppingListCollaborator: Scalars['Boolean']['output'];
@@ -1805,7 +1817,6 @@ export type Mutation = {
   setDefaultShoppingList: ShoppingList;
   setItemBrand: Item;
   setItemCategories: Item;
-  setItemPrimaryImage: Item;
   shareShoppingList: ShoppingList;
   submitAppeal: UserModeration;
   suspendUser: UserModeration;
@@ -1830,6 +1841,7 @@ export type Mutation = {
   updateHome: Home;
   updateItem: Item;
   updateItemAllergens: Item;
+  updateItemImage: Item;
   updateItemIngredients: Item;
   updateItemMetadata: Item;
   updateItemNutrition: Item;
@@ -1844,6 +1856,8 @@ export type Mutation = {
   updatePantry: Pantry;
   updatePantryItem: PantryItem;
   updateProfile: UserProfile;
+  updateProfileAvatar: UserProfile;
+  updateProfileCover: UserProfile;
   updatePurchase: Purchase;
   updatePushToken: Device;
   updateRiskScore: UserModeration;
@@ -1877,11 +1891,6 @@ export type MutationAcceptShoppingListInviteArgs = {
 
 export type MutationAddCollaboratorArgs = {
   data: AddCollaboratorInput;
-};
-
-export type MutationAddItemImageArgs = {
-  image: ImageInput;
-  itemId: Scalars['ID']['input'];
 };
 
 export type MutationAddItemTagsArgs = {
@@ -1971,6 +1980,15 @@ export type MutationCompleteReviewArgs = {
   userId: Scalars['ID']['input'];
 };
 
+export type MutationConfirmItemImageUploadArgs = {
+  itemId: Scalars['String']['input'];
+  key: Scalars['String']['input'];
+};
+
+export type MutationConfirmProfileImageUploadArgs = {
+  key: Scalars['String']['input'];
+};
+
 export type MutationCreateBrandArgs = {
   input?: InputMaybe<CreateBrandInput>;
 };
@@ -1997,6 +2015,12 @@ export type MutationCreateDeviceArgs = {
 
 export type MutationCreateHomeArgs = {
   input: CreateHomeInput;
+};
+
+export type MutationCreateImageUploadUrlArgs = {
+  itemId?: InputMaybe<Scalars['String']['input']>;
+  mime: Scalars['String']['input'];
+  purpose: ImageUploadPurpose;
 };
 
 export type MutationCreateItemArgs = {
@@ -2041,6 +2065,11 @@ export type MutationCreateStoreArgs = {
 
 export type MutationCreateUnitArgs = {
   input: CreateUnitInput;
+};
+
+export type MutationCreateUploadUrlArgs = {
+  ext: Scalars['String']['input'];
+  mime: Scalars['String']['input'];
 };
 
 export type MutationDeactivateDeviceArgs = {
@@ -2283,8 +2312,7 @@ export type MutationRemoveItemFromShoppingListArgs = {
 };
 
 export type MutationRemoveItemImageArgs = {
-  imageUrl: Scalars['String']['input'];
-  itemId: Scalars['ID']['input'];
+  id: Scalars['ID']['input'];
 };
 
 export type MutationRemoveItemTagsArgs = {
@@ -2362,11 +2390,6 @@ export type MutationSetItemBrandArgs = {
 
 export type MutationSetItemCategoriesArgs = {
   categoryIds: Array<Scalars['ID']['input']>;
-  itemId: Scalars['ID']['input'];
-};
-
-export type MutationSetItemPrimaryImageArgs = {
-  imageUrl: Scalars['String']['input'];
   itemId: Scalars['ID']['input'];
 };
 
@@ -2480,6 +2503,11 @@ export type MutationUpdateItemAllergensArgs = {
   id: Scalars['ID']['input'];
 };
 
+export type MutationUpdateItemImageArgs = {
+  id: Scalars['ID']['input'];
+  imageUrl: Scalars['String']['input'];
+};
+
 export type MutationUpdateItemIngredientsArgs = {
   id: Scalars['ID']['input'];
   ingredients: Array<IngredientInput>;
@@ -2552,6 +2580,14 @@ export type MutationUpdatePantryItemArgs = {
 
 export type MutationUpdateProfileArgs = {
   input: UpdateUserProfileInput;
+};
+
+export type MutationUpdateProfileAvatarArgs = {
+  avatarUrl: Scalars['String']['input'];
+};
+
+export type MutationUpdateProfileCoverArgs = {
+  coverImageUrl: Scalars['String']['input'];
 };
 
 export type MutationUpdatePurchaseArgs = {
@@ -3030,6 +3066,12 @@ export type PlatformStat = {
   __typename?: 'PlatformStat';
   count: Scalars['Int']['output'];
   platform: MobilePlatform;
+};
+
+export type PresignPayload = {
+  __typename?: 'PresignPayload';
+  key: Scalars['String']['output'];
+  url: Scalars['String']['output'];
 };
 
 export type PriceRangeFacet = {
@@ -6764,6 +6806,117 @@ export type SetDefaultHomeMutation = {
       | {__typename?: 'Home'; id: string; name: string}
       | null
       | undefined;
+  };
+};
+
+export type CreateImageUploadUrlMutationVariables = Exact<{
+  mime: Scalars['String']['input'];
+  purpose: ImageUploadPurpose;
+  itemId?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+export type CreateImageUploadUrlMutation = {
+  __typename?: 'Mutation';
+  createImageUploadUrl: {
+    __typename?: 'PresignPayload';
+    url: string;
+    key: string;
+  };
+};
+
+export type ConfirmProfileImageUploadMutationVariables = Exact<{
+  key: Scalars['String']['input'];
+}>;
+
+export type ConfirmProfileImageUploadMutation = {
+  __typename?: 'Mutation';
+  confirmProfileImageUpload: string;
+};
+
+export type ConfirmItemImageUploadMutationVariables = Exact<{
+  itemId: Scalars['String']['input'];
+  key: Scalars['String']['input'];
+}>;
+
+export type ConfirmItemImageUploadMutation = {
+  __typename?: 'Mutation';
+  confirmItemImageUpload: string;
+};
+
+export type UpdateProfileAvatarMutationVariables = Exact<{
+  avatarUrl: Scalars['String']['input'];
+}>;
+
+export type UpdateProfileAvatarMutation = {
+  __typename?: 'Mutation';
+  updateProfileAvatar: {
+    __typename?: 'UserProfile';
+    id: string;
+    avatar?: string | null | undefined;
+  };
+};
+
+export type UpdateProfileCoverMutationVariables = Exact<{
+  coverImageUrl: Scalars['String']['input'];
+}>;
+
+export type UpdateProfileCoverMutation = {
+  __typename?: 'Mutation';
+  updateProfileCover: {
+    __typename?: 'UserProfile';
+    id: string;
+    coverImage?: string | null | undefined;
+  };
+};
+
+export type RemoveProfileAvatarMutationVariables = Exact<{
+  [key: string]: never;
+}>;
+
+export type RemoveProfileAvatarMutation = {
+  __typename?: 'Mutation';
+  removeProfileAvatar: {
+    __typename?: 'UserProfile';
+    id: string;
+    avatar?: string | null | undefined;
+  };
+};
+
+export type RemoveProfileCoverMutationVariables = Exact<{[key: string]: never}>;
+
+export type RemoveProfileCoverMutation = {
+  __typename?: 'Mutation';
+  removeProfileCover: {
+    __typename?: 'UserProfile';
+    id: string;
+    coverImage?: string | null | undefined;
+  };
+};
+
+export type UpdateItemImageMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+  imageUrl: Scalars['String']['input'];
+}>;
+
+export type UpdateItemImageMutation = {
+  __typename?: 'Mutation';
+  updateItemImage: {
+    __typename?: 'Item';
+    id: string;
+    imageUrl?: string | null | undefined;
+  };
+};
+
+export type RemoveItemImageMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type RemoveItemImageMutation = {
+  __typename?: 'Mutation';
+  removeItemImage: {
+    __typename?: 'Item';
+    id: string;
+    imageUrl?: string | null | undefined;
   };
 };
 
@@ -19700,6 +19853,821 @@ export type SetDefaultHomeMutationOptions =
   ApolloReactCommon.BaseMutationOptions<
     SetDefaultHomeMutation,
     SetDefaultHomeMutationVariables
+  >;
+export const CreateImageUploadUrlDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: {kind: 'Name', value: 'CreateImageUploadUrl'},
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {kind: 'Variable', name: {kind: 'Name', value: 'mime'}},
+          type: {
+            kind: 'NonNullType',
+            type: {kind: 'NamedType', name: {kind: 'Name', value: 'String'}},
+          },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {kind: 'Variable', name: {kind: 'Name', value: 'purpose'}},
+          type: {
+            kind: 'NonNullType',
+            type: {
+              kind: 'NamedType',
+              name: {kind: 'Name', value: 'ImageUploadPurpose'},
+            },
+          },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {kind: 'Variable', name: {kind: 'Name', value: 'itemId'}},
+          type: {kind: 'NamedType', name: {kind: 'Name', value: 'String'}},
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: {kind: 'Name', value: 'createImageUploadUrl'},
+            arguments: [
+              {
+                kind: 'Argument',
+                name: {kind: 'Name', value: 'mime'},
+                value: {kind: 'Variable', name: {kind: 'Name', value: 'mime'}},
+              },
+              {
+                kind: 'Argument',
+                name: {kind: 'Name', value: 'purpose'},
+                value: {
+                  kind: 'Variable',
+                  name: {kind: 'Name', value: 'purpose'},
+                },
+              },
+              {
+                kind: 'Argument',
+                name: {kind: 'Name', value: 'itemId'},
+                value: {
+                  kind: 'Variable',
+                  name: {kind: 'Name', value: 'itemId'},
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {kind: 'Field', name: {kind: 'Name', value: 'url'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'key'}},
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type CreateImageUploadUrlMutationFn = ApolloReactCommon.MutationFunction<
+  CreateImageUploadUrlMutation,
+  CreateImageUploadUrlMutationVariables
+>;
+
+/**
+ * __useCreateImageUploadUrlMutation__
+ *
+ * To run a mutation, you first call `useCreateImageUploadUrlMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateImageUploadUrlMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createImageUploadUrlMutation, { data, loading, error }] = useCreateImageUploadUrlMutation({
+ *   variables: {
+ *      mime: // value for 'mime'
+ *      purpose: // value for 'purpose'
+ *      itemId: // value for 'itemId'
+ *   },
+ * });
+ */
+export function useCreateImageUploadUrlMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    CreateImageUploadUrlMutation,
+    CreateImageUploadUrlMutationVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useMutation<
+    CreateImageUploadUrlMutation,
+    CreateImageUploadUrlMutationVariables
+  >(CreateImageUploadUrlDocument, options);
+}
+export type CreateImageUploadUrlMutationHookResult = ReturnType<
+  typeof useCreateImageUploadUrlMutation
+>;
+export type CreateImageUploadUrlMutationResult =
+  ApolloReactCommon.MutationResult<CreateImageUploadUrlMutation>;
+export type CreateImageUploadUrlMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    CreateImageUploadUrlMutation,
+    CreateImageUploadUrlMutationVariables
+  >;
+export const ConfirmProfileImageUploadDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: {kind: 'Name', value: 'ConfirmProfileImageUpload'},
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {kind: 'Variable', name: {kind: 'Name', value: 'key'}},
+          type: {
+            kind: 'NonNullType',
+            type: {kind: 'NamedType', name: {kind: 'Name', value: 'String'}},
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: {kind: 'Name', value: 'confirmProfileImageUpload'},
+            arguments: [
+              {
+                kind: 'Argument',
+                name: {kind: 'Name', value: 'key'},
+                value: {kind: 'Variable', name: {kind: 'Name', value: 'key'}},
+              },
+            ],
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type ConfirmProfileImageUploadMutationFn =
+  ApolloReactCommon.MutationFunction<
+    ConfirmProfileImageUploadMutation,
+    ConfirmProfileImageUploadMutationVariables
+  >;
+
+/**
+ * __useConfirmProfileImageUploadMutation__
+ *
+ * To run a mutation, you first call `useConfirmProfileImageUploadMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useConfirmProfileImageUploadMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [confirmProfileImageUploadMutation, { data, loading, error }] = useConfirmProfileImageUploadMutation({
+ *   variables: {
+ *      key: // value for 'key'
+ *   },
+ * });
+ */
+export function useConfirmProfileImageUploadMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    ConfirmProfileImageUploadMutation,
+    ConfirmProfileImageUploadMutationVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useMutation<
+    ConfirmProfileImageUploadMutation,
+    ConfirmProfileImageUploadMutationVariables
+  >(ConfirmProfileImageUploadDocument, options);
+}
+export type ConfirmProfileImageUploadMutationHookResult = ReturnType<
+  typeof useConfirmProfileImageUploadMutation
+>;
+export type ConfirmProfileImageUploadMutationResult =
+  ApolloReactCommon.MutationResult<ConfirmProfileImageUploadMutation>;
+export type ConfirmProfileImageUploadMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    ConfirmProfileImageUploadMutation,
+    ConfirmProfileImageUploadMutationVariables
+  >;
+export const ConfirmItemImageUploadDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: {kind: 'Name', value: 'ConfirmItemImageUpload'},
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {kind: 'Variable', name: {kind: 'Name', value: 'itemId'}},
+          type: {
+            kind: 'NonNullType',
+            type: {kind: 'NamedType', name: {kind: 'Name', value: 'String'}},
+          },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {kind: 'Variable', name: {kind: 'Name', value: 'key'}},
+          type: {
+            kind: 'NonNullType',
+            type: {kind: 'NamedType', name: {kind: 'Name', value: 'String'}},
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: {kind: 'Name', value: 'confirmItemImageUpload'},
+            arguments: [
+              {
+                kind: 'Argument',
+                name: {kind: 'Name', value: 'itemId'},
+                value: {
+                  kind: 'Variable',
+                  name: {kind: 'Name', value: 'itemId'},
+                },
+              },
+              {
+                kind: 'Argument',
+                name: {kind: 'Name', value: 'key'},
+                value: {kind: 'Variable', name: {kind: 'Name', value: 'key'}},
+              },
+            ],
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type ConfirmItemImageUploadMutationFn =
+  ApolloReactCommon.MutationFunction<
+    ConfirmItemImageUploadMutation,
+    ConfirmItemImageUploadMutationVariables
+  >;
+
+/**
+ * __useConfirmItemImageUploadMutation__
+ *
+ * To run a mutation, you first call `useConfirmItemImageUploadMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useConfirmItemImageUploadMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [confirmItemImageUploadMutation, { data, loading, error }] = useConfirmItemImageUploadMutation({
+ *   variables: {
+ *      itemId: // value for 'itemId'
+ *      key: // value for 'key'
+ *   },
+ * });
+ */
+export function useConfirmItemImageUploadMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    ConfirmItemImageUploadMutation,
+    ConfirmItemImageUploadMutationVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useMutation<
+    ConfirmItemImageUploadMutation,
+    ConfirmItemImageUploadMutationVariables
+  >(ConfirmItemImageUploadDocument, options);
+}
+export type ConfirmItemImageUploadMutationHookResult = ReturnType<
+  typeof useConfirmItemImageUploadMutation
+>;
+export type ConfirmItemImageUploadMutationResult =
+  ApolloReactCommon.MutationResult<ConfirmItemImageUploadMutation>;
+export type ConfirmItemImageUploadMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    ConfirmItemImageUploadMutation,
+    ConfirmItemImageUploadMutationVariables
+  >;
+export const UpdateProfileAvatarDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: {kind: 'Name', value: 'UpdateProfileAvatar'},
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: {kind: 'Name', value: 'avatarUrl'},
+          },
+          type: {
+            kind: 'NonNullType',
+            type: {kind: 'NamedType', name: {kind: 'Name', value: 'String'}},
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: {kind: 'Name', value: 'updateProfileAvatar'},
+            arguments: [
+              {
+                kind: 'Argument',
+                name: {kind: 'Name', value: 'avatarUrl'},
+                value: {
+                  kind: 'Variable',
+                  name: {kind: 'Name', value: 'avatarUrl'},
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {kind: 'Field', name: {kind: 'Name', value: 'id'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'avatar'}},
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type UpdateProfileAvatarMutationFn = ApolloReactCommon.MutationFunction<
+  UpdateProfileAvatarMutation,
+  UpdateProfileAvatarMutationVariables
+>;
+
+/**
+ * __useUpdateProfileAvatarMutation__
+ *
+ * To run a mutation, you first call `useUpdateProfileAvatarMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateProfileAvatarMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateProfileAvatarMutation, { data, loading, error }] = useUpdateProfileAvatarMutation({
+ *   variables: {
+ *      avatarUrl: // value for 'avatarUrl'
+ *   },
+ * });
+ */
+export function useUpdateProfileAvatarMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    UpdateProfileAvatarMutation,
+    UpdateProfileAvatarMutationVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useMutation<
+    UpdateProfileAvatarMutation,
+    UpdateProfileAvatarMutationVariables
+  >(UpdateProfileAvatarDocument, options);
+}
+export type UpdateProfileAvatarMutationHookResult = ReturnType<
+  typeof useUpdateProfileAvatarMutation
+>;
+export type UpdateProfileAvatarMutationResult =
+  ApolloReactCommon.MutationResult<UpdateProfileAvatarMutation>;
+export type UpdateProfileAvatarMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    UpdateProfileAvatarMutation,
+    UpdateProfileAvatarMutationVariables
+  >;
+export const UpdateProfileCoverDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: {kind: 'Name', value: 'UpdateProfileCover'},
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: {kind: 'Name', value: 'coverImageUrl'},
+          },
+          type: {
+            kind: 'NonNullType',
+            type: {kind: 'NamedType', name: {kind: 'Name', value: 'String'}},
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: {kind: 'Name', value: 'updateProfileCover'},
+            arguments: [
+              {
+                kind: 'Argument',
+                name: {kind: 'Name', value: 'coverImageUrl'},
+                value: {
+                  kind: 'Variable',
+                  name: {kind: 'Name', value: 'coverImageUrl'},
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {kind: 'Field', name: {kind: 'Name', value: 'id'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'coverImage'}},
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type UpdateProfileCoverMutationFn = ApolloReactCommon.MutationFunction<
+  UpdateProfileCoverMutation,
+  UpdateProfileCoverMutationVariables
+>;
+
+/**
+ * __useUpdateProfileCoverMutation__
+ *
+ * To run a mutation, you first call `useUpdateProfileCoverMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateProfileCoverMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateProfileCoverMutation, { data, loading, error }] = useUpdateProfileCoverMutation({
+ *   variables: {
+ *      coverImageUrl: // value for 'coverImageUrl'
+ *   },
+ * });
+ */
+export function useUpdateProfileCoverMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    UpdateProfileCoverMutation,
+    UpdateProfileCoverMutationVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useMutation<
+    UpdateProfileCoverMutation,
+    UpdateProfileCoverMutationVariables
+  >(UpdateProfileCoverDocument, options);
+}
+export type UpdateProfileCoverMutationHookResult = ReturnType<
+  typeof useUpdateProfileCoverMutation
+>;
+export type UpdateProfileCoverMutationResult =
+  ApolloReactCommon.MutationResult<UpdateProfileCoverMutation>;
+export type UpdateProfileCoverMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    UpdateProfileCoverMutation,
+    UpdateProfileCoverMutationVariables
+  >;
+export const RemoveProfileAvatarDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: {kind: 'Name', value: 'RemoveProfileAvatar'},
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: {kind: 'Name', value: 'removeProfileAvatar'},
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {kind: 'Field', name: {kind: 'Name', value: 'id'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'avatar'}},
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type RemoveProfileAvatarMutationFn = ApolloReactCommon.MutationFunction<
+  RemoveProfileAvatarMutation,
+  RemoveProfileAvatarMutationVariables
+>;
+
+/**
+ * __useRemoveProfileAvatarMutation__
+ *
+ * To run a mutation, you first call `useRemoveProfileAvatarMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useRemoveProfileAvatarMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [removeProfileAvatarMutation, { data, loading, error }] = useRemoveProfileAvatarMutation({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useRemoveProfileAvatarMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    RemoveProfileAvatarMutation,
+    RemoveProfileAvatarMutationVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useMutation<
+    RemoveProfileAvatarMutation,
+    RemoveProfileAvatarMutationVariables
+  >(RemoveProfileAvatarDocument, options);
+}
+export type RemoveProfileAvatarMutationHookResult = ReturnType<
+  typeof useRemoveProfileAvatarMutation
+>;
+export type RemoveProfileAvatarMutationResult =
+  ApolloReactCommon.MutationResult<RemoveProfileAvatarMutation>;
+export type RemoveProfileAvatarMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    RemoveProfileAvatarMutation,
+    RemoveProfileAvatarMutationVariables
+  >;
+export const RemoveProfileCoverDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: {kind: 'Name', value: 'RemoveProfileCover'},
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: {kind: 'Name', value: 'removeProfileCover'},
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {kind: 'Field', name: {kind: 'Name', value: 'id'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'coverImage'}},
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type RemoveProfileCoverMutationFn = ApolloReactCommon.MutationFunction<
+  RemoveProfileCoverMutation,
+  RemoveProfileCoverMutationVariables
+>;
+
+/**
+ * __useRemoveProfileCoverMutation__
+ *
+ * To run a mutation, you first call `useRemoveProfileCoverMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useRemoveProfileCoverMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [removeProfileCoverMutation, { data, loading, error }] = useRemoveProfileCoverMutation({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useRemoveProfileCoverMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    RemoveProfileCoverMutation,
+    RemoveProfileCoverMutationVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useMutation<
+    RemoveProfileCoverMutation,
+    RemoveProfileCoverMutationVariables
+  >(RemoveProfileCoverDocument, options);
+}
+export type RemoveProfileCoverMutationHookResult = ReturnType<
+  typeof useRemoveProfileCoverMutation
+>;
+export type RemoveProfileCoverMutationResult =
+  ApolloReactCommon.MutationResult<RemoveProfileCoverMutation>;
+export type RemoveProfileCoverMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    RemoveProfileCoverMutation,
+    RemoveProfileCoverMutationVariables
+  >;
+export const UpdateItemImageDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: {kind: 'Name', value: 'UpdateItemImage'},
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {kind: 'Variable', name: {kind: 'Name', value: 'id'}},
+          type: {
+            kind: 'NonNullType',
+            type: {kind: 'NamedType', name: {kind: 'Name', value: 'ID'}},
+          },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {kind: 'Variable', name: {kind: 'Name', value: 'imageUrl'}},
+          type: {
+            kind: 'NonNullType',
+            type: {kind: 'NamedType', name: {kind: 'Name', value: 'String'}},
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: {kind: 'Name', value: 'updateItemImage'},
+            arguments: [
+              {
+                kind: 'Argument',
+                name: {kind: 'Name', value: 'id'},
+                value: {kind: 'Variable', name: {kind: 'Name', value: 'id'}},
+              },
+              {
+                kind: 'Argument',
+                name: {kind: 'Name', value: 'imageUrl'},
+                value: {
+                  kind: 'Variable',
+                  name: {kind: 'Name', value: 'imageUrl'},
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {kind: 'Field', name: {kind: 'Name', value: 'id'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'imageUrl'}},
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type UpdateItemImageMutationFn = ApolloReactCommon.MutationFunction<
+  UpdateItemImageMutation,
+  UpdateItemImageMutationVariables
+>;
+
+/**
+ * __useUpdateItemImageMutation__
+ *
+ * To run a mutation, you first call `useUpdateItemImageMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateItemImageMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateItemImageMutation, { data, loading, error }] = useUpdateItemImageMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      imageUrl: // value for 'imageUrl'
+ *   },
+ * });
+ */
+export function useUpdateItemImageMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    UpdateItemImageMutation,
+    UpdateItemImageMutationVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useMutation<
+    UpdateItemImageMutation,
+    UpdateItemImageMutationVariables
+  >(UpdateItemImageDocument, options);
+}
+export type UpdateItemImageMutationHookResult = ReturnType<
+  typeof useUpdateItemImageMutation
+>;
+export type UpdateItemImageMutationResult =
+  ApolloReactCommon.MutationResult<UpdateItemImageMutation>;
+export type UpdateItemImageMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    UpdateItemImageMutation,
+    UpdateItemImageMutationVariables
+  >;
+export const RemoveItemImageDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: {kind: 'Name', value: 'RemoveItemImage'},
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {kind: 'Variable', name: {kind: 'Name', value: 'id'}},
+          type: {
+            kind: 'NonNullType',
+            type: {kind: 'NamedType', name: {kind: 'Name', value: 'ID'}},
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: {kind: 'Name', value: 'removeItemImage'},
+            arguments: [
+              {
+                kind: 'Argument',
+                name: {kind: 'Name', value: 'id'},
+                value: {kind: 'Variable', name: {kind: 'Name', value: 'id'}},
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {kind: 'Field', name: {kind: 'Name', value: 'id'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'imageUrl'}},
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type RemoveItemImageMutationFn = ApolloReactCommon.MutationFunction<
+  RemoveItemImageMutation,
+  RemoveItemImageMutationVariables
+>;
+
+/**
+ * __useRemoveItemImageMutation__
+ *
+ * To run a mutation, you first call `useRemoveItemImageMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useRemoveItemImageMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [removeItemImageMutation, { data, loading, error }] = useRemoveItemImageMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useRemoveItemImageMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    RemoveItemImageMutation,
+    RemoveItemImageMutationVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useMutation<
+    RemoveItemImageMutation,
+    RemoveItemImageMutationVariables
+  >(RemoveItemImageDocument, options);
+}
+export type RemoveItemImageMutationHookResult = ReturnType<
+  typeof useRemoveItemImageMutation
+>;
+export type RemoveItemImageMutationResult =
+  ApolloReactCommon.MutationResult<RemoveItemImageMutation>;
+export type RemoveItemImageMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    RemoveItemImageMutation,
+    RemoveItemImageMutationVariables
   >;
 export const GetItemsDocument = {
   kind: 'Document',

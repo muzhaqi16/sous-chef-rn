@@ -3,7 +3,10 @@ import {StateStorage} from 'zustand/middleware';
 
 export const STORAGE_KEY = 'sous-chef-storage';
 
-export const storage = new MMKV();
+export const storage = new MMKV({
+  id: STORAGE_KEY,
+  encryptionKey: 'sous-chef-encryption-key', // In a real app, use a more secure key management strategy
+});
 
 export const zustandStorage: StateStorage = {
   setItem: (name, value) => {

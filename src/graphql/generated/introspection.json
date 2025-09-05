@@ -7123,6 +7123,42 @@
         "possibleTypes": null
       },
       {
+        "kind": "ENUM",
+        "name": "ImageUploadPurpose",
+        "description": null,
+        "isOneOf": null,
+        "fields": null,
+        "inputFields": null,
+        "interfaces": null,
+        "enumValues": [
+          {
+            "name": "ITEM_IMAGE",
+            "description": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "PANTRY_ITEM_PHOTO",
+            "description": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "PROFILE_AVATAR",
+            "description": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "PROFILE_COVER",
+            "description": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "possibleTypes": null
+      },
+      {
         "kind": "INPUT_OBJECT",
         "name": "ImportItemsFromProviderInput",
         "description": null,
@@ -13304,47 +13340,6 @@
             "deprecationReason": null
           },
           {
-            "name": "addItemImage",
-            "description": null,
-            "args": [
-              {
-                "name": "image",
-                "description": null,
-                "type": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "INPUT_OBJECT",
-                    "name": "ImageInput",
-                    "ofType": null
-                  }
-                },
-                "defaultValue": null,
-                "isDeprecated": false,
-                "deprecationReason": null
-              },
-              {
-                "name": "itemId",
-                "description": null,
-                "type": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {"kind": "SCALAR", "name": "ID", "ofType": null}
-                },
-                "defaultValue": null,
-                "isDeprecated": false,
-                "deprecationReason": null
-              }
-            ],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {"kind": "OBJECT", "name": "Item", "ofType": null}
-            },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
             "name": "addItemTags",
             "description": null,
             "args": [
@@ -14083,6 +14078,68 @@
             "deprecationReason": null
           },
           {
+            "name": "confirmItemImageUpload",
+            "description": null,
+            "args": [
+              {
+                "name": "itemId",
+                "description": null,
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {"kind": "SCALAR", "name": "String", "ofType": null}
+                },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
+                "name": "key",
+                "description": null,
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {"kind": "SCALAR", "name": "String", "ofType": null}
+                },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              }
+            ],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {"kind": "SCALAR", "name": "String", "ofType": null}
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "confirmProfileImageUpload",
+            "description": null,
+            "args": [
+              {
+                "name": "key",
+                "description": null,
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {"kind": "SCALAR", "name": "String", "ofType": null}
+                },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              }
+            ],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {"kind": "SCALAR", "name": "String", "ofType": null}
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "createBrand",
             "description": null,
             "args": [
@@ -14313,6 +14370,59 @@
               "kind": "NON_NULL",
               "name": null,
               "ofType": {"kind": "OBJECT", "name": "Home", "ofType": null}
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "createImageUploadUrl",
+            "description": null,
+            "args": [
+              {
+                "name": "itemId",
+                "description": null,
+                "type": {"kind": "SCALAR", "name": "String", "ofType": null},
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
+                "name": "mime",
+                "description": null,
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {"kind": "SCALAR", "name": "String", "ofType": null}
+                },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
+                "name": "purpose",
+                "description": null,
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "ENUM",
+                    "name": "ImageUploadPurpose",
+                    "ofType": null
+                  }
+                },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              }
+            ],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "PresignPayload",
+                "ofType": null
+              }
             },
             "isDeprecated": false,
             "deprecationReason": null
@@ -14652,6 +14762,47 @@
               "kind": "NON_NULL",
               "name": null,
               "ofType": {"kind": "OBJECT", "name": "Unit", "ofType": null}
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "createUploadUrl",
+            "description": null,
+            "args": [
+              {
+                "name": "ext",
+                "description": null,
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {"kind": "SCALAR", "name": "String", "ofType": null}
+                },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
+                "name": "mime",
+                "description": null,
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {"kind": "SCALAR", "name": "String", "ofType": null}
+                },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              }
+            ],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "PresignPayload",
+                "ofType": null
+              }
             },
             "isDeprecated": false,
             "deprecationReason": null
@@ -16531,19 +16682,7 @@
             "description": null,
             "args": [
               {
-                "name": "imageUrl",
-                "description": null,
-                "type": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {"kind": "SCALAR", "name": "String", "ofType": null}
-                },
-                "defaultValue": null,
-                "isDeprecated": false,
-                "deprecationReason": null
-              },
-              {
-                "name": "itemId",
+                "name": "id",
                 "description": null,
                 "type": {
                   "kind": "NON_NULL",
@@ -16658,6 +16797,38 @@
               "kind": "NON_NULL",
               "name": null,
               "ofType": {"kind": "SCALAR", "name": "Boolean", "ofType": null}
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "removeProfileAvatar",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "UserProfile",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "removeProfileCover",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "UserProfile",
+                "ofType": null
+              }
             },
             "isDeprecated": false,
             "deprecationReason": null
@@ -17119,43 +17290,6 @@
                       "ofType": {"kind": "SCALAR", "name": "ID", "ofType": null}
                     }
                   }
-                },
-                "defaultValue": null,
-                "isDeprecated": false,
-                "deprecationReason": null
-              },
-              {
-                "name": "itemId",
-                "description": null,
-                "type": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {"kind": "SCALAR", "name": "ID", "ofType": null}
-                },
-                "defaultValue": null,
-                "isDeprecated": false,
-                "deprecationReason": null
-              }
-            ],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {"kind": "OBJECT", "name": "Item", "ofType": null}
-            },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "setItemPrimaryImage",
-            "description": null,
-            "args": [
-              {
-                "name": "imageUrl",
-                "description": null,
-                "type": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {"kind": "SCALAR", "name": "String", "ofType": null}
                 },
                 "defaultValue": null,
                 "isDeprecated": false,
@@ -18067,6 +18201,43 @@
             "deprecationReason": null
           },
           {
+            "name": "updateItemImage",
+            "description": null,
+            "args": [
+              {
+                "name": "id",
+                "description": null,
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {"kind": "SCALAR", "name": "ID", "ofType": null}
+                },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
+                "name": "imageUrl",
+                "description": null,
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {"kind": "SCALAR", "name": "String", "ofType": null}
+                },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              }
+            ],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {"kind": "OBJECT", "name": "Item", "ofType": null}
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "updateItemIngredients",
             "description": null,
             "args": [
@@ -18670,6 +18841,64 @@
                     "name": "UpdateUserProfileInput",
                     "ofType": null
                   }
+                },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              }
+            ],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "UserProfile",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "updateProfileAvatar",
+            "description": null,
+            "args": [
+              {
+                "name": "avatarUrl",
+                "description": null,
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {"kind": "SCALAR", "name": "String", "ofType": null}
+                },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              }
+            ],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "UserProfile",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "updateProfileCover",
+            "description": null,
+            "args": [
+              {
+                "name": "coverImageUrl",
+                "description": null,
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {"kind": "SCALAR", "name": "String", "ofType": null}
                 },
                 "defaultValue": null,
                 "isDeprecated": false,
@@ -22563,6 +22792,42 @@
                 "name": "MobilePlatform",
                 "ofType": null
               }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [],
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "OBJECT",
+        "name": "PresignPayload",
+        "description": null,
+        "isOneOf": null,
+        "fields": [
+          {
+            "name": "key",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {"kind": "SCALAR", "name": "String", "ofType": null}
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "url",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {"kind": "SCALAR", "name": "String", "ofType": null}
             },
             "isDeprecated": false,
             "deprecationReason": null

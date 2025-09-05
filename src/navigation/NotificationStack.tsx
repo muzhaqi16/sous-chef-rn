@@ -10,7 +10,7 @@ import {NotificationStackParamList} from './types';
 
 const Stack = createNativeStackNavigator<NotificationStackParamList>();
 
-export default function NotificationStack() {
+export const NotificationStack = () => {
   const {theme} = useUnistyles();
   return (
     <Stack.Navigator
@@ -42,7 +42,7 @@ export default function NotificationStack() {
       />
     </Stack.Navigator>
   );
-}
+};
 
 const styles = StyleSheet.create(theme => ({
   header: {

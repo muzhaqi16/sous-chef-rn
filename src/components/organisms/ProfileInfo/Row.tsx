@@ -1,6 +1,6 @@
+import {Icon} from '#/utils';
 import React, {useState} from 'react';
 import {TouchableOpacity, View, Text, TextInput} from 'react-native';
-import FeatherIcon from '@react-native-vector-icons/feather';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 
 export interface RowProps {
@@ -56,10 +56,20 @@ export const Row: React.FC<RowProps> = ({
           autoFocus
         />
         <TouchableOpacity onPress={handleSave} style={styles.editIcon}>
-          <FeatherIcon name="check" size={20} color={theme.colors.primary} />
+          <Icon
+            library="Feather"
+            name="check"
+            size={20}
+            color={theme.colors.primary}
+          />
         </TouchableOpacity>
         <TouchableOpacity onPress={handleCancel} style={styles.editIcon}>
-          <FeatherIcon name="x" size={20} color={theme.colors.error} />
+          <Icon
+            library="Feather"
+            name="x"
+            size={20}
+            color={theme.colors.error}
+          />
         </TouchableOpacity>
       </View>
     );
@@ -98,7 +108,8 @@ export const Row: React.FC<RowProps> = ({
         ) : null}
 
         {(onSave || onPress) && (
-          <FeatherIcon
+          <Icon
+            library="Feather"
             name={onSave ? 'edit-2' : 'chevron-right'}
             size={20}
             color={theme.colors.textSecondary}

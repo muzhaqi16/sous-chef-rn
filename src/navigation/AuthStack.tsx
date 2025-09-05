@@ -13,7 +13,7 @@ import {
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
 
-const AuthStack = () => {
+export const AuthStack = () => {
   const {isHydrated, user} = useStore();
   const {authStackInitialRoute} = useNavigationState();
 
@@ -73,5 +73,3 @@ const AuthStack = () => {
     </Stack.Navigator>
   );
 };
-
-export default AuthStack;

@@ -2,7 +2,7 @@ import React from 'react';
 import {View, Text, Image, TouchableOpacity} from 'react-native';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {IconButton} from '../atoms/IconButton';
-import FeatherIcon from '@react-native-vector-icons/feather';
+import {Icon} from '#/utils';
 
 export interface ProfileHeaderProps {
   avatarUrl?: string | null;
@@ -31,10 +31,19 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
       />
       <TouchableOpacity onPress={onAvatarPress} style={styles.avatarContainer}>
         {avatarUrl ? (
-          <Image source={{uri: avatarUrl}} style={styles.avatar} />
+          <Image
+            source={{uri: avatarUrl}}
+            style={styles.avatar}
+            resizeMode="cover"
+            onError={() =>
+              console.log('Avatar image failed to load:', avatarUrl)
+            }
+            onLoad={() => console.log('Avatar image loaded successfully')}
+          />
         ) : (
           <View style={[styles.avatar, styles.avatarPlaceholder]}>
-            <FeatherIcon
+            <Icon
+              library="Feather"
               name="user"
               size={32}
               color={theme.colors.textSecondary}
@@ -65,6 +74,7 @@ const styles = StyleSheet.create(theme => ({
     height: 80,
     borderRadius: theme.sizes.avatar,
     backgroundColor: theme.colors.surface,
+    overflow: 'hidden',
   },
   avatarPlaceholder: {
     justifyContent: 'center',

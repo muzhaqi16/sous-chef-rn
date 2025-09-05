@@ -4,19 +4,20 @@ import {
   NavigationContainerRef,
 } from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
-import {useStore} from '../store';
-import {useNavigationState} from '../hooks/navigation/useNavigationState';
+import {useStore} from '#store';
 import NavigationService from '../services/NavigationService';
-import AuthStack from './AuthStack';
-import HomeTab from './TabNavigator';
-import OnBoardingStack from './OnBoardingStack';
-import BarcodeStack from './BarcodeStack';
-import NotificationStack from './NotificationStack';
-import {NotFoundScreen} from '../screens/NotFoundScreen';
+import {
+  AuthStack,
+  HomeManagementStack,
+  HomeTab,
+  OnBoardingStack,
+  BarcodeStack,
+  NotificationStack,
+} from './index';
+import {ProfilePhotoUploadScreen, NotFoundScreen, SplashScreen} from '#screens';
+import {ImageCropScreen} from '../screens/profile/ImageCropScreen';
 import type {RootStackParamList} from './types';
-import {HomeManagementStack} from './HomeStack';
-import {useTokenRefresh} from '#/hooks/auth/useTokenRefresh';
-import SplashScreen from '../screens/SplashScreen';
+import {useTokenRefresh, useNavigationState} from '#hooks';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -77,6 +78,14 @@ export default function AppNavigator() {
         />
         <Stack.Screen name="BarcodeStack" component={BarcodeStack} />
         <Stack.Screen name="NotificationStack" component={NotificationStack} />
+        <Stack.Screen
+          name="ProfilePhotoUpload"
+          component={ProfilePhotoUploadScreen}
+        />
+        <Stack.Screen
+          name="ImageCrop"
+          component={ImageCropScreen}
+        />
         <Stack.Screen name="NotFound" component={NotFoundScreen} />
       </Stack.Navigator>
     </NavigationContainer>

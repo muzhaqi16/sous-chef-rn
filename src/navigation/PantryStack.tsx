@@ -4,11 +4,10 @@ import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {
   PantryMain,
   ExpiringItems,
-  AddPantryItem,
   PantryItemDetail,
+  PantryItemScreen,
   LowStockItems,
   CategoryManagement,
-  EditPantryItem,
 } from '#screens';
 import {PantryStackParamList} from './types';
 import {useNavigation} from '@react-navigation/native';
@@ -33,8 +32,8 @@ export function PantryStack() {
         })}
       />
       <Stack.Screen
-        name="AddPantryItem"
-        component={AddPantryItem}
+        name="PantryItem"
+        component={PantryItemScreen}
         options={{
           headerShown: false,
         }}
@@ -42,13 +41,6 @@ export function PantryStack() {
       <Stack.Screen
         name="PantryItemDetail"
         component={PantryItemDetail}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        name="EditPantryItem"
-        component={EditPantryItem}
         options={{
           headerShown: false,
         }}

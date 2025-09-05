@@ -1,13 +1,12 @@
 import React from 'react';
 import {View, Text, TouchableOpacity, Image} from 'react-native';
-import FeatherIcon from '@react-native-vector-icons/feather';
 import {StyleSheet} from 'react-native-unistyles';
 import {useNavigation} from '@react-navigation/native';
-import {useStore} from '../../store';
+import {useProfileData} from '#/hooks';
 
 export const UserHeader: React.FC = () => {
   const navigation = useNavigation();
-  const {user} = useStore();
+  const {profile} = useProfileData();
   return (
     <View style={styles.header}>
       <Text style={styles.headerTitle}>
@@ -15,27 +14,17 @@ export const UserHeader: React.FC = () => {
       </Text>
 
       <View style={styles.headerActions}>
-        {/* Notifications */}
         <TouchableOpacity
           onPress={() => {
             navigation.navigate('NotificationStack', {
               screen: 'NotificationList',
             });
           }}>
-          <View style={styles.headerNotifications}>
-            <FeatherIcon color="#222" name="bell" size={20} />
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => {
-            // handle onPress
-          }}>
           <View style={styles.avatar}>
             <Image
               alt=""
               source={{
-                uri: 'https://images.unsplash.com/photo-1633332755192-727a05c4013d?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=facearea&facepad=2.5&w=256&h=256&q=80',
+                uri: profile?.avatar || 'https://via.placeholder.com/150',
               }}
               style={styles.avatarImg}
             />

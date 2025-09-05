@@ -153,7 +153,7 @@ export const PantryItemDetail: React.FC = () => {
       headerActions={[
         {
           icon: 'edit',
-          onPress: () => navigation.navigate('EditPantryItem', {itemId}),
+          onPress: () => navigation.navigate('PantryItem', {itemId}),
         },
         {
           icon: 'delete',

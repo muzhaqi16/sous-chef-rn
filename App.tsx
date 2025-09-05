@@ -8,13 +8,13 @@ import {ApolloProvider} from '@apollo/client';
 import {useStore} from '#store';
 import {client} from './src/apollo/client';
 import AppNavigator from '#navigation/AppNavigator';
-import SplashScreen from '#/screens/SplashScreen';
+import {SplashScreen} from '#screens';
 import {ToastProvider} from '#/components/atoms';
 import {useTheme} from '#/hooks/useTheme';
 
 const App = () => {
   const isHydrated = useStore(store => store.isHydrated);
-  const { theme, isFollowingSystem } = useTheme();
+  const {theme, isFollowingSystem} = useTheme();
   const isDark = theme === 'dark';
 
   // Early return for loading state - before any conditional hooks

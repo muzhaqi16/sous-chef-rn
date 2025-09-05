@@ -58,7 +58,6 @@ export const useSearchResults = (barcode: string) => {
     variables: {upc: barcode},
     onCompleted: data => {
       setSearching(false);
-      console.log('ItemByUpc data:', data);
       if (data.itemByUpc) {
         // itemByUpc returns a single item, not an array
         const item = convertToScannedItem(data.itemByUpc, barcode);

@@ -176,27 +176,6 @@ export const useConfigurableSettings = (profile: any) => {
           }
           break;
 
-        // Profile Images
-        case 'avatar':
-          baseItem.value = profile?.avatar || '';
-          baseItem.onSave = (value: string) => {
-            const updateObj = {avatar: value} as Partial<
-              Record<ProfileFieldKey, any>
-            >;
-            updateProfile(updateObj);
-          };
-          break;
-
-        case 'coverImage':
-          baseItem.value = profile?.coverImage || '';
-          baseItem.onSave = (value: string) => {
-            const updateObj = {coverImage: value} as Partial<
-              Record<ProfileFieldKey, any>
-            >;
-            updateProfile(updateObj);
-          };
-          break;
-
         // Privacy Settings
         case 'profileVisibility':
           if (config.type === 'modal') {

@@ -1,0 +1,561 @@
+import React, {useState, useCallback, useEffect} from 'react';
+import {
+  SafeAreaView,
+  View,
+  TouchableOpacity,
+  Text,
+  Image,
+  Dimensions,
+  Alert,
+} from 'react-native';
+import {Gesture, GestureDetector} from 'react-native-gesture-handler';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  clamp,
+} from 'react-native-reanimated';
+import {useRoute, RouteProp} from '@react-navigation/native';
+import {useSafeNavigation} from '#hooks';
+import {Icon} from '#utils';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
+import {MAX_PROFILE_SIZE} from '#utils/imageValidation';
+import ImageEditor from '@react-native-community/image-editor';
+import {ImageFile} from '#components/molecules/ImagePicker';
+import {storage} from '#/storage/mmkv';
+
+type RootStackParamList = {
+  ImageCrop: {
+    imageFile: ImageFile;
+  };
+};
+
+type ImageCropRouteProp = RouteProp<RootStackParamList, 'ImageCrop'>;
+
+const {width: screenWidth} = Dimensions.get('window');
+const CROP_SIZE = Math.min(screenWidth * 0.8, 300);
+
+export const ImageCropScreen = () => {
+  const {goBack} = useSafeNavigation();
+  const route = useRoute<ImageCropRouteProp>();
+  const {theme} = useUnistyles();
+  const {imageFile} = route.params;
+
+  const [imageSize, setImageSize] = useState({width: 0, height: 0});
+  const [isCropping, setIsCropping] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [debugInfo, setDebugInfo] = useState({scale: 1, x: 0, y: 0});
+
+  // Shared values for animations
+  const scale = useSharedValue(1);
+  const startScale = useSharedValue(1);
+  const offset = useSharedValue({x: 0, y: 0});
+  const startOffset = useSharedValue({x: 0, y: 0});
+
+  // Update debug info using shared values directly
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDebugInfo({
+        scale: scale.value,
+        x: offset.value.x,
+        y: offset.value.y,
+      });
+    }, 100); // Update every 100ms
+
+    return () => clearInterval(interval);
+  }, [scale, offset]);
+
+  // Get image dimensions when loaded
+  const handleImageLoad = useCallback(() => {
+    console.log('Image load called for:', imageFile.uri);
+    setImageLoaded(true);
+
+    Image.getSize(
+      imageFile.uri,
+      (width, height) => {
+        console.log('Original image dimensions:', width, height);
+        const aspectRatio = width / height;
+
+        // Make sure the image fills the crop area
+        let displayWidth, displayHeight;
+
+        if (aspectRatio >= 1) {
+          // Image is wider or square - fit to crop size
+          displayHeight = CROP_SIZE * 1.2; // Slightly larger than crop area
+          displayWidth = displayHeight * aspectRatio;
+        } else {
+          // Image is taller - fit to crop size
+          displayWidth = CROP_SIZE * 1.2; // Slightly larger than crop area
+          displayHeight = displayWidth / aspectRatio;
+        }
+
+        console.log('Display dimensions:', displayWidth, displayHeight);
+        setImageSize({width: displayWidth, height: displayHeight});
+
+        // Reset transforms
+        scale.value = 1;
+        startScale.value = 1;
+        offset.value = {x: 0, y: 0};
+        startOffset.value = {x: 0, y: 0};
+      },
+      error => {
+        console.error('Failed to get image size:', error);
+        Alert.alert('Error', 'Failed to load image dimensions');
+      },
+    );
+  }, [imageFile.uri, scale, startScale, offset, startOffset]);
+
+  // Create pinch gesture
+  const pinch = Gesture.Pinch()
+    .onStart(() => {
+      'worklet';
+      startScale.value = scale.value;
+    })
+    .onUpdate(e => {
+      'worklet';
+      scale.value = clamp(startScale.value * e.scale, 0.5, 3);
+    });
+
+  // Create pan gesture
+  const pan = Gesture.Pan()
+    .averageTouches(true)
+    .onStart(() => {
+      'worklet';
+      startOffset.value = {x: offset.value.x, y: offset.value.y};
+    })
+    .onUpdate(e => {
+      'worklet';
+      // Calculate bounds based on current scale and image size
+      const scaledWidth = (imageSize.width || CROP_SIZE) * scale.value;
+      const scaledHeight = (imageSize.height || CROP_SIZE) * scale.value;
+
+      const maxX = Math.max(0, (scaledWidth - CROP_SIZE) / 2);
+      const maxY = Math.max(0, (scaledHeight - CROP_SIZE) / 2);
+
+      const newX = clamp(startOffset.value.x + e.translationX, -maxX, maxX);
+      const newY = clamp(startOffset.value.y + e.translationY, -maxY, maxY);
+
+      offset.value = {x: newX, y: newY};
+    });
+
+  // Compose gestures
+  const composed = Gesture.Simultaneous(pan, pinch);
+
+  // Animated style
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        {translateX: offset.value.x},
+        {translateY: offset.value.y},
+        {scale: scale.value},
+      ],
+    };
+  });
+
+  const handleCrop = async () => {
+    if (!imageSize.width || !imageSize.height) {
+      Alert.alert('Error', 'Image not loaded properly');
+      return;
+    }
+
+    setIsCropping(true);
+    try {
+      // Get the original image dimensions
+      const originalImageSize = await new Promise<{
+        width: number;
+        height: number;
+      }>((resolve, reject) => {
+        Image.getSize(
+          imageFile.uri,
+          (width, height) => resolve({width, height}),
+          error => reject(error),
+        );
+      });
+
+      // Calculate the current display dimensions after scaling
+      const currentDisplayWidth = imageSize.width * scale.value;
+      const currentDisplayHeight = imageSize.height * scale.value;
+
+      // Calculate the center position of the crop area relative to the image
+      const cropCenterX = CROP_SIZE / 2;
+      const cropCenterY = CROP_SIZE / 2;
+
+      // Calculate where the image center is positioned on screen after transforms
+      const imageCenterX = CROP_SIZE / 2 + offset.value.x;
+      const imageCenterY = CROP_SIZE / 2 + offset.value.y;
+
+      // Calculate the offset from image center to crop center
+      const offsetFromImageCenter = {
+        x: cropCenterX - imageCenterX,
+        y: cropCenterY - imageCenterY,
+      };
+
+      // Convert display coordinates to original image coordinates
+      const scaleRatio = originalImageSize.width / imageSize.width;
+
+      // Calculate crop position in original image coordinates
+      const cropX = Math.max(
+        0,
+        originalImageSize.width / 2 +
+          (offsetFromImageCenter.x * scaleRatio) / scale.value,
+      );
+      const cropY = Math.max(
+        0,
+        originalImageSize.height / 2 +
+          (offsetFromImageCenter.y * scaleRatio) / scale.value,
+      );
+
+      // Calculate crop size in original image coordinates
+      const cropSizeInOriginal = (CROP_SIZE * scaleRatio) / scale.value;
+
+      // Ensure crop doesn't go outside image boundaries
+      const finalCropX = Math.max(
+        0,
+        Math.min(
+          cropX - cropSizeInOriginal / 2,
+          originalImageSize.width - cropSizeInOriginal,
+        ),
+      );
+      const finalCropY = Math.max(
+        0,
+        Math.min(
+          cropY - cropSizeInOriginal / 2,
+          originalImageSize.height - cropSizeInOriginal,
+        ),
+      );
+      const finalCropSize = Math.min(
+        cropSizeInOriginal,
+        originalImageSize.width - finalCropX,
+        originalImageSize.height - finalCropY,
+      );
+
+      console.log('Crop parameters:', {
+        originalSize: originalImageSize,
+        displaySize: imageSize,
+        scale: scale.value,
+        offset: offset.value,
+        cropX: finalCropX,
+        cropY: finalCropY,
+        cropSize: finalCropSize,
+      });
+
+      const cropData = {
+        offset: {
+          x: finalCropX,
+          y: finalCropY,
+        },
+        size: {
+          width: finalCropSize,
+          height: finalCropSize,
+        },
+        displaySize: {
+          width: CROP_SIZE,
+          height: CROP_SIZE,
+        },
+        resizeMode: 'contain' as const,
+      };
+
+      const {uri: croppedUri} = await ImageEditor.cropImage(
+        imageFile.uri,
+        cropData,
+      );
+
+      // Get the file size of the cropped image - this is critical for validation
+      let croppedFileSize: number;
+      try {
+        const response = await fetch(croppedUri);
+        const blob = await response.blob();
+        croppedFileSize = blob.size;
+        console.log('Cropped image actual size:', croppedFileSize, 'bytes');
+      } catch (error) {
+        console.warn(
+          'Could not fetch cropped image for size calculation:',
+          error,
+        );
+        // Estimate based on crop ratio as fallback
+        const cropRatio =
+          (finalCropSize * finalCropSize) /
+          (originalImageSize.width * originalImageSize.height);
+        croppedFileSize = imageFile.fileSize
+          ? Math.floor(imageFile.fileSize * cropRatio * 0.8)
+          : MAX_PROFILE_SIZE;
+        console.log(
+          'Estimated cropped image size:',
+          croppedFileSize,
+          'bytes (ratio:',
+          cropRatio,
+          ')',
+        );
+      }
+
+      // Check if the cropped image exceeds size limits
+      if (croppedFileSize > MAX_PROFILE_SIZE) {
+        Alert.alert(
+          'Image Too Large',
+          `The cropped image is ${(croppedFileSize / 1024 / 1024).toFixed(1)}MB. Profile images must be under ${MAX_PROFILE_SIZE / 1024 / 1024}MB. Please try cropping a smaller area or use a lower quality image.`,
+          [
+            {text: 'Try Again', style: 'default'},
+            {
+              text: 'Use Anyway',
+              style: 'destructive',
+              onPress: () => proceedWithCrop(),
+            },
+          ],
+        );
+        return;
+      }
+
+      proceedWithCrop();
+
+      function proceedWithCrop() {
+        const croppedImage: ImageFile = {
+          uri: croppedUri,
+          fileName: `cropped_${imageFile.fileName || 'profile.jpg'}`,
+          fileSize: croppedFileSize,
+          type: imageFile.type || 'image/jpeg',
+        };
+
+        // Store to MMKV
+        storage.set('temp_cropped_image', JSON.stringify(croppedImage));
+        console.log('Stored cropped image in MMKV:', {
+          uri: croppedUri,
+          fileName: croppedImage.fileName,
+          fileSize: croppedFileSize,
+          type: croppedImage.type,
+        });
+
+        goBack();
+      }
+    } catch (error) {
+      console.error('Crop failed:', error);
+      Alert.alert('Error', 'Failed to crop image. Please try again.');
+    } finally {
+      setIsCropping(false);
+    }
+  };
+
+  const resetTransforms = () => {
+    scale.value = withSpring(1);
+    startScale.value = 1;
+    offset.value = withSpring({x: 0, y: 0});
+    startOffset.value = {x: 0, y: 0};
+  };
+
+  return (
+    <SafeAreaView
+      style={[styles.container, {backgroundColor: theme.colors.background}]}>
+      <View style={styles.header}>
+        <TouchableOpacity
+          onPress={goBack}
+          style={styles.headerButton}
+          disabled={isCropping}>
+          <Icon
+            color={theme.colors.textPrimary}
+            name="chevron-left"
+            size={24}
+            library="Feather"
+          />
+        </TouchableOpacity>
+
+        <View style={styles.headerTitleContainer}>
+          <Text style={[styles.headerTitle, {color: theme.colors.textPrimary}]}>
+            Crop Photo
+          </Text>
+          <Text style={[styles.debugText, {color: theme.colors.textSecondary}]}>
+            Scale: {debugInfo.scale.toFixed(2)} | Pan: {debugInfo.x.toFixed(0)},
+            {debugInfo.y.toFixed(0)}
+          </Text>
+        </View>
+
+        <TouchableOpacity
+          onPress={resetTransforms}
+          style={styles.headerButton}
+          disabled={isCropping}>
+          <Icon
+            color={theme.colors.textPrimary}
+            name="refresh-cw"
+            size={20}
+            library="Feather"
+          />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.content}>
+        <Text
+          style={[styles.instructions, {color: theme.colors.textSecondary}]}>
+          {!imageLoaded
+            ? 'Loading image...'
+            : 'Pinch to zoom, drag to move. The square area will be your profile photo.'}
+        </Text>
+
+        <View style={styles.cropContainer}>
+          {/* Crop overlay */}
+          <View
+            style={[
+              styles.cropOverlay,
+              {
+                width: CROP_SIZE,
+                height: CROP_SIZE,
+                borderColor: theme.colors.primary,
+              },
+            ]}
+          />
+
+          {/* Image container with gesture detection */}
+          <View style={styles.imageContainer}>
+            {imageLoaded && imageSize.width > 0 ? (
+              <GestureDetector gesture={composed}>
+                <Animated.View
+                  style={[
+                    styles.animatedImageContainer,
+                    animatedStyle,
+                    {
+                      width: CROP_SIZE,
+                      height: CROP_SIZE,
+                    },
+                  ]}>
+                  <Image
+                    source={{uri: imageFile.uri}}
+                    style={[styles.image, imageSize]}
+                    resizeMode="cover"
+                  />
+                </Animated.View>
+              </GestureDetector>
+            ) : (
+              <View style={styles.loadingContainer}>
+                <Image
+                  source={{uri: imageFile.uri}}
+                  style={styles.imageFallback}
+                  onLoad={handleImageLoad}
+                  resizeMode="cover"
+                />
+                <View style={styles.loadingIconContainer}>
+                  <Icon
+                    color={theme.colors.textSecondary}
+                    name="image"
+                    size={40}
+                    library="Feather"
+                  />
+                </View>
+              </View>
+            )}
+          </View>
+        </View>
+
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity
+            onPress={handleCrop}
+            style={[styles.cropButton, {backgroundColor: theme.colors.primary}]}
+            disabled={isCropping || !imageLoaded}>
+            <Text
+              style={[styles.cropButtonText, {color: theme.colors.background}]}>
+              {isCropping ? 'Cropping...' : 'Crop Photo'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create(theme => ({
+  container: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  headerButton: {
+    padding: 8,
+    width: 40,
+    alignItems: 'center',
+  },
+  headerTitleContainer: {
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  debugText: {
+    fontSize: 10,
+    marginTop: 2,
+  },
+  content: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 24,
+  },
+  instructions: {
+    textAlign: 'center',
+    paddingHorizontal: 24,
+    marginBottom: 24,
+    fontSize: 14,
+  },
+  cropContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  cropOverlay: {
+    position: 'absolute',
+    borderWidth: 2,
+    borderRadius: CROP_SIZE / 2,
+    zIndex: 2,
+    backgroundColor: 'transparent',
+    pointerEvents: 'none',
+  },
+  imageContainer: {
+    overflow: 'hidden',
+    width: CROP_SIZE,
+    height: CROP_SIZE,
+    borderRadius: CROP_SIZE / 2,
+    backgroundColor: 'transparent',
+  },
+  animatedImageContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  image: {
+    // Dynamic size set by imageSize state
+  },
+  imageFallback: {
+    width: CROP_SIZE,
+    height: CROP_SIZE,
+    opacity: 0.01, // Nearly invisible but still triggers onLoad
+  },
+  loadingContainer: {
+    width: CROP_SIZE,
+    height: CROP_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  loadingIconContainer: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonContainer: {
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    width: '100%',
+  },
+  cropButton: {
+    paddingVertical: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cropButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+}));

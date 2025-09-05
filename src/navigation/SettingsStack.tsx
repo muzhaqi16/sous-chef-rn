@@ -31,6 +31,8 @@ export function SettingsStack() {
               <Icon name="edit" size={24} color={theme.colors.textPrimary} />
             </TouchableOpacity>
           ),
+          // This prevents the screen from being unmounted
+          unmountOnBlur: false,
         })}
       />
       <Stack.Screen

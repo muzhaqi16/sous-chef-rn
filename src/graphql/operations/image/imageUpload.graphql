@@ -1,0 +1,56 @@
+mutation CreateImageUploadUrl($mime: String!, $purpose: ImageUploadPurpose!, $itemId: String) {
+  createImageUploadUrl(mime: $mime, purpose: $purpose, itemId: $itemId) {
+    url
+    key
+  }
+}
+
+mutation ConfirmProfileImageUpload($key: String!) {
+  confirmProfileImageUpload(key: $key)
+}
+
+mutation ConfirmItemImageUpload($itemId: String!, $key: String!) {
+  confirmItemImageUpload(itemId: $itemId, key: $key)
+}
+
+mutation UpdateProfileAvatar($avatarUrl: String!) {
+  updateProfileAvatar(avatarUrl: $avatarUrl) {
+    id
+    avatar
+  }
+}
+
+mutation UpdateProfileCover($coverImageUrl: String!) {
+  updateProfileCover(coverImageUrl: $coverImageUrl) {
+    id
+    coverImage
+  }
+}
+
+mutation RemoveProfileAvatar {
+  removeProfileAvatar {
+    id
+    avatar
+  }
+}
+
+mutation RemoveProfileCover {
+  removeProfileCover {
+    id
+    coverImage
+  }
+}
+
+mutation UpdateItemImage($id: ID!, $imageUrl: String!) {
+  updateItemImage(id: $id, imageUrl: $imageUrl) {
+    id
+    imageUrl
+  }
+}
+
+mutation RemoveItemImage($id: ID!) {
+  removeItemImage(id: $id) {
+    id
+    imageUrl
+  }
+}
