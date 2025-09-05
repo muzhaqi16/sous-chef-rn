@@ -21,7 +21,6 @@
   },
   "dependencies": {
     "@apollo/client": "^3.13.8",
-    "@bam.tech/react-native-image-resizer": "^3.0.11",
     "@gorhom/bottom-sheet": "^5.2.4",
     "@hookform/resolvers": "^5.0.1",
     "@notifee/react-native": "^9.1.8",
