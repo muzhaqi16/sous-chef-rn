@@ -1,0 +1,336 @@
+import React, {useState} from 'react';
+import {
+  View,
+  Text,
+  Modal,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+} from 'react-native';
+import {StyleSheet} from 'react-native-unistyles';
+import Icon from '@react-native-vector-icons/material-icons';
+import {
+  useAcceptHomeInviteMutation,
+  useAcceptShoppingListInviteMutation,
+} from '#generated';
+import {useStore} from '#store';
+
+export interface InvitationData {
+  type: 'HOME_INVITE' | 'SHOPPING_LIST_INVITE';
+  id: string;
+  title: string;
+  description: string;
+  inviterName?: string;
+  entityName: string; // Home name or Shopping List name
+  token?: string;
+  payload: any;
+}
+
+interface InvitationAcceptanceModalProps {
+  visible: boolean;
+  invitation: InvitationData | null;
+  onClose: () => void;
+  onAccept?: (invitation: InvitationData) => void;
+  onReject?: (invitation: InvitationData) => void;
+}
+
+export const InvitationAcceptanceModal: React.FC<InvitationAcceptanceModalProps> = ({
+  visible,
+  invitation,
+  onClose,
+  onAccept,
+  onReject,
+}) => {
+  const [accepting, setAccepting] = useState(false);
+  const [rejecting, setRejecting] = useState(false);
+  const user = useStore(state => state.user);
+
+  const [acceptHomeInvite] = useAcceptHomeInviteMutation();
+  const [acceptShoppingListInvite] = useAcceptShoppingListInviteMutation();
+
+  const handleAccept = async () => {
+    if (!invitation) return;
+
+    setAccepting(true);
+    try {
+      if (invitation.type === 'HOME_INVITE') {
+        const result = await acceptHomeInvite({
+          variables: {
+            token: invitation.token!,
+          },
+        });
+
+        if (result.data?.acceptHomeInvite) {
+          Alert.alert(
+            'Success',
+            `You've successfully joined ${invitation.entityName}!`,
+            [
+              {
+                text: 'OK',
+                onPress: () => {
+                  onAccept?.(invitation);
+                  onClose();
+                },
+              },
+            ],
+          );
+        }
+      } else if (invitation.type === 'SHOPPING_LIST_INVITE') {
+        const result = await acceptShoppingListInvite({
+          variables: {
+            token: invitation.token!,
+          },
+        });
+
+        if (result.data?.acceptShoppingListInvite) {
+          Alert.alert(
+            'Success',
+            `You've been added to ${invitation.entityName}!`,
+            [
+              {
+                text: 'OK',
+                onPress: () => {
+                  onAccept?.(invitation);
+                  onClose();
+                },
+              },
+            ],
+          );
+        }
+      }
+    } catch (error: any) {
+      Alert.alert(
+        'Error',
+        error.message || 'Failed to accept invitation. Please try again.',
+      );
+    } finally {
+      setAccepting(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!invitation) return;
+
+    // Show confirmation alert
+    Alert.alert(
+      'Reject Invitation',
+      `Are you sure you want to reject this invitation to ${invitation.entityName}?`,
+      [
+        {text: 'Cancel', style: 'cancel'},
+        {
+          text: 'Reject',
+          style: 'destructive',
+          onPress: async () => {
+            // For now, just close the modal and call onReject
+            // The actual rejection logic would need to be implemented
+            // based on your GraphQL schema
+            onReject?.(invitation);
+            onClose();
+          },
+        },
+      ],
+    );
+  };
+
+  if (!invitation) return null;
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}>
+      <View style={styles.overlay}>
+        <View style={styles.modal}>
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={styles.iconContainer}>
+              <Icon
+                name={
+                  invitation.type === 'HOME_INVITE' ? 'home' : 'shopping-cart'
+                }
+                size={32}
+                color="#4CAF50"
+              />
+            </View>
+            <Text style={styles.title}>{invitation.title}</Text>
+            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+              <Icon name="close" size={24} color="#666" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Content */}
+          <View style={styles.content}>
+            <Text style={styles.description}>{invitation.description}</Text>
+
+            {invitation.inviterName && (
+              <View style={styles.inviterContainer}>
+                <Icon name="person" size={16} color="#666" />
+                <Text style={styles.inviterText}>
+                  Invited by {invitation.inviterName}
+                </Text>
+              </View>
+            )}
+
+            <View style={styles.entityContainer}>
+              <Icon
+                name={
+                  invitation.type === 'HOME_INVITE' ? 'home' : 'shopping-cart'
+                }
+                size={16}
+                color="#666"
+              />
+              <Text style={styles.entityText}>{invitation.entityName}</Text>
+            </View>
+          </View>
+
+          {/* Actions */}
+          <View style={styles.actions}>
+            <TouchableOpacity
+              style={[styles.button, styles.rejectButton]}
+              onPress={handleReject}
+              disabled={accepting || rejecting}>
+              {rejecting ? (
+                <ActivityIndicator color="#f44336" />
+              ) : (
+                <>
+                  <Icon name="close" size={20} color="#f44336" />
+                  <Text style={[styles.buttonText, styles.rejectText]}>
+                    Reject
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.button, styles.acceptButton]}
+              onPress={handleAccept}
+              disabled={accepting || rejecting}>
+              {accepting ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <>
+                  <Icon name="check" size={20} color="#fff" />
+                  <Text style={[styles.buttonText, styles.acceptText]}>
+                    Accept
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
+const styles = StyleSheet.create(theme => ({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: theme.spacing.lg,
+  },
+  modal: {
+    backgroundColor: theme.colors.background,
+    borderRadius: 12,
+    width: '100%',
+    maxWidth: 400,
+    overflow: 'hidden',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: theme.spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border || '#E0E0E0',
+  },
+  iconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#E8F5E8',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: theme.spacing.md,
+  },
+  title: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
+  },
+  closeButton: {
+    padding: theme.spacing.xs,
+  },
+  content: {
+    padding: theme.spacing.lg,
+  },
+  description: {
+    fontSize: 16,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.md,
+    lineHeight: 22,
+  },
+  inviterContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing.sm,
+  },
+  inviterText: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    marginLeft: theme.spacing.xs,
+  },
+  entityContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing.md,
+  },
+  entityText: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    marginLeft: theme.spacing.xs,
+    fontWeight: '500',
+  },
+  actions: {
+    flexDirection: 'row',
+    padding: theme.spacing.lg,
+    paddingTop: 0,
+    gap: theme.spacing.sm,
+  },
+  button: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
+    borderRadius: 8,
+    gap: theme.spacing.xs,
+  },
+  rejectButton: {
+    backgroundColor: '#ffebee',
+    borderWidth: 1,
+    borderColor: '#f44336',
+  },
+  acceptButton: {
+    backgroundColor: '#4CAF50',
+  },
+  buttonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  rejectText: {
+    color: '#f44336',
+  },
+  acceptText: {
+    color: '#fff',
+  },
+}));

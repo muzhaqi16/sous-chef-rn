@@ -61,16 +61,19 @@ export type OnBoardingStackParamList = {
   CreateHome: undefined;
   CreateShoppingList: undefined;
   SelectPantryItems: undefined;
+  ProfilePictureUpload: undefined;
   InviteMembers: undefined;
   OnboardingComplete: undefined;
 };
 
 export type BarcodeStackParamList = {
-  BarcodeScanner: {
-    source?: 'pantry' | 'shoppingList';
-    pantryId?: string;
-    shoppingListId?: string;
-  } | undefined;
+  BarcodeScanner:
+    | {
+        source?: 'pantry' | 'shoppingList';
+        pantryId?: string;
+        shoppingListId?: string;
+      }
+    | undefined;
   SearchResults: {
     barcode: string;
     format: string;
@@ -121,6 +124,9 @@ export type PantryStackParamList = {
   };
   PantryItem: {
     itemId?: string; // Optional - if present, edit mode; if not, add mode
+  };
+  PantrySettings: {
+    pantryId?: string; // Optional - if present, edit mode; if not, create mode
   };
   ExpiringItems: undefined;
   LowStockItems: undefined;
@@ -219,6 +225,10 @@ export type CreateHomeNavProp = NativeStackNavigationProp<
 export type SelectPantryItemsNavProp = NativeStackNavigationProp<
   OnBoardingStackParamList,
   'SelectPantryItems'
+>;
+export type ProfilePictureUploadNavProp = NativeStackNavigationProp<
+  OnBoardingStackParamList,
+  'ProfilePictureUpload'
 >;
 export type InviteMembersNavProp = NativeStackNavigationProp<
   OnBoardingStackParamList,
@@ -319,6 +329,8 @@ export type PantryMainScreenProps = PantryStackScreenProps<'PantryMain'>;
 export type PantryItemDetailScreenProps =
   PantryStackScreenProps<'PantryItemDetail'>;
 export type PantryItemScreenProps = PantryStackScreenProps<'PantryItem'>;
+export type PantrySettingsScreenProps =
+  PantryStackScreenProps<'PantrySettings'>;
 export type ExpiringItemsScreenProps = PantryStackScreenProps<'ExpiringItems'>;
 export type LowStockItemsScreenProps = PantryStackScreenProps<'LowStockItems'>;
 export type CategoryManagementScreenProps =
@@ -337,6 +349,10 @@ export type PantryItemNavProp = NativeStackNavigationProp<
   PantryStackParamList,
   'PantryItem'
 >;
+export type PantrySettingsNavProp = NativeStackNavigationProp<
+  PantryStackParamList,
+  'PantrySettings'
+>;
 export type ExpiringItemsNavProp = NativeStackNavigationProp<
   PantryStackParamList,
   'ExpiringItems'
@@ -351,9 +367,10 @@ export type PantryItemDetailRouteProp = RouteProp<
   PantryStackParamList,
   'PantryItemDetail'
 >;
-export type PantryItemRouteProp = RouteProp<
+export type PantryItemRouteProp = RouteProp<PantryStackParamList, 'PantryItem'>;
+export type PantrySettingsRouteProp = RouteProp<
   PantryStackParamList,
-  'PantryItem'
+  'PantrySettings'
 >;
 
 // ============================================================================

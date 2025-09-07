@@ -181,7 +181,7 @@ export const CreateShoppingListScreen = () => {
         title="Create your shopping list"
         subtitle="Checking your existing lists..."
         step={2}
-        totalSteps={5}
+        totalSteps={6}
         onBack={handleBack}
         onSkip={handleSkip}>
         <View style={styles.loadingContainer}>
@@ -202,7 +202,7 @@ export const CreateShoppingListScreen = () => {
       title="Create your shopping list"
       subtitle="You can add items to it later"
       step={2}
-      totalSteps={5}
+      totalSteps={6}
       onBack={handleBack}
       onSkip={handleSkip}>
       <DynamicFormFields<FormValues>

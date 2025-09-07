@@ -86,6 +86,8 @@ export const useNavigationState = () => {
         return 'CreateShoppingList';
       case 'selectPantryItems':
         return 'SelectPantryItems';
+      case 'profilePictureUpload':
+        return 'ProfilePictureUpload';
       case 'inviteMembers':
         return 'InviteMembers';
       case 'complete':

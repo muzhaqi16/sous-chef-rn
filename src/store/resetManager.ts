@@ -1,4 +1,3 @@
-// src/store/resetManager.ts
 import {RootState} from './index';
 import {zustandStorage, STORAGE_KEY} from '#/storage/mmkv';
 import {storage} from '#/storage/mmkv';

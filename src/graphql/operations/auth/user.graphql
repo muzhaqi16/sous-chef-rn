@@ -235,21 +235,3 @@ subscription UserProfileChanged($userId: ID) {
     timestamp
   }
 }
-
-subscription UserAuth($userId: ID) {
-  userAuth(userId: $userId) {
-    userId
-    authType
-    deviceInfo
-    timestamp
-  }
-}
-
-subscription UserSocial($userId: ID) {
-  userSocial(userId: $userId) {
-    userId
-    targetUserId
-    action
-    timestamp
-  }
-}

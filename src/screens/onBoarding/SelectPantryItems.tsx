@@ -51,7 +51,7 @@ export const SelectPantryItems = () => {
         title="Stock your pantry"
         subtitle="Select items you already have at home"
         step={3}
-        totalSteps={5}
+        totalSteps={6}
         onBack={() => navigation.goBack()}
         onSkip={() => handleSkip()}>
         <ActivityIndicator style={styles.loader} />
@@ -65,7 +65,7 @@ export const SelectPantryItems = () => {
         title="Stock your pantry"
         subtitle="Select items you already have at home"
         step={3}
-        totalSteps={5}
+        totalSteps={6}
         onBack={() => navigation.goBack()}
         onSkip={() => handleSkip()}>
         <Text style={styles.errorText}>
@@ -91,7 +91,7 @@ export const SelectPantryItems = () => {
 
   const handleSkip = () => {
     setOnBoardingStep(OnBoardingSteps.selectPantryItems);
-    navigation.replace('InviteMembers');
+    navigation.replace('ProfilePictureUpload');
   };
 
   const onNext = async () => {
@@ -145,7 +145,7 @@ export const SelectPantryItems = () => {
 
   const moveToNextStep = () => {
     setOnBoardingStep(OnBoardingSteps.selectPantryItems);
-    navigation.replace('InviteMembers');
+    navigation.replace('ProfilePictureUpload');
   };
 
   return (
@@ -153,7 +153,7 @@ export const SelectPantryItems = () => {
       title="Stock your pantry"
       subtitle="Select items you already have at home (optional)"
       step={3}
-      totalSteps={5}
+      totalSteps={6}
       onBack={() => navigation.goBack()}
       onSkip={handleSkip}>
       <KeyboardAwareScrollView style={styles.form}>

@@ -370,6 +370,7 @@ export type CreateDeviceInput = {
 
 export type CreateHomeInput = {
   allowJoinCode?: InputMaybe<Scalars['Boolean']['input']>;
+  createDefaultPantry?: InputMaybe<Scalars['Boolean']['input']>;
   currency?: InputMaybe<Scalars['String']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
   isPublic?: InputMaybe<Scalars['Boolean']['input']>;
@@ -869,6 +870,7 @@ export type HomeInvite = {
   invitedUserId?: Maybe<Scalars['String']['output']>;
   inviter: User;
   lastReminderAt?: Maybe<Scalars['String']['output']>;
+  logs: Array<InviteLog>;
   message?: Maybe<Scalars['String']['output']>;
   recipientName?: Maybe<Scalars['String']['output']>;
   reminderCount: Scalars['Int']['output'];
@@ -877,6 +879,25 @@ export type HomeInvite = {
   sentAt: Scalars['String']['output'];
   status: InviteStatus;
   token: Scalars['String']['output'];
+};
+
+export type HomeInviteLogsArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type HomeInviteStatsGroup = {
+  __typename?: 'HomeInviteStatsGroup';
+  _count: InviteActionCount;
+  action: InviteAction;
+};
+
+export type HomeMember = {
+  __typename?: 'HomeMember';
+  homeId: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  joinedAt: Scalars['DateTime']['output'];
+  role?: Maybe<Scalars['String']['output']>;
+  userId: Scalars['String']['output'];
 };
 
 export type HomeOwnership = {
@@ -965,6 +986,59 @@ export type IngredientInput = {
   subIngredients?: InputMaybe<Array<IngredientInput>>;
 };
 
+export enum InviteAction {
+  InviteAccepted = 'INVITE_ACCEPTED',
+  InviteDeclined = 'INVITE_DECLINED',
+  InviteExpired = 'INVITE_EXPIRED',
+  InviteRevoked = 'INVITE_REVOKED',
+  InviteSent = 'INVITE_SENT',
+  InviteViewed = 'INVITE_VIEWED',
+  PermissionsUpdated = 'PERMISSIONS_UPDATED',
+  ReminderSent = 'REMINDER_SENT',
+  StatusChanged = 'STATUS_CHANGED',
+}
+
+export type InviteActionCount = {
+  __typename?: 'InviteActionCount';
+  action: Scalars['Int']['output'];
+};
+
+export type InviteActionStats = {
+  __typename?: 'InviteActionStats';
+  INVITE_ACCEPTED?: Maybe<Scalars['Int']['output']>;
+  INVITE_CANCELLED?: Maybe<Scalars['Int']['output']>;
+  INVITE_CREATED?: Maybe<Scalars['Int']['output']>;
+  INVITE_DECLINED?: Maybe<Scalars['Int']['output']>;
+  INVITE_EXPIRED?: Maybe<Scalars['Int']['output']>;
+  INVITE_RESENT?: Maybe<Scalars['Int']['output']>;
+  INVITE_SENT?: Maybe<Scalars['Int']['output']>;
+  INVITE_VIEWED?: Maybe<Scalars['Int']['output']>;
+};
+
+export type InviteLog = {
+  __typename?: 'InviteLog';
+  action: InviteAction;
+  actor?: Maybe<User>;
+  actorId?: Maybe<Scalars['String']['output']>;
+  createdAt: Scalars['DateTime']['output'];
+  description: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  invite: HomeInvite;
+  inviteId: Scalars['String']['output'];
+  ipAddress?: Maybe<Scalars['String']['output']>;
+  metadata?: Maybe<Scalars['JSON']['output']>;
+  newStatus?: Maybe<InviteStatus>;
+  oldStatus?: Maybe<InviteStatus>;
+  userAgent?: Maybe<Scalars['String']['output']>;
+};
+
+export type InviteStats = {
+  __typename?: 'InviteStats';
+  actions: InviteActionStats;
+  timeline: Array<InviteTimelineEntry>;
+  total: Scalars['Int']['output'];
+};
+
 export enum InviteStatus {
   Accepted = 'ACCEPTED',
   Declined = 'DECLINED',
@@ -972,6 +1046,12 @@ export enum InviteStatus {
   Pending = 'PENDING',
   Revoked = 'REVOKED',
 }
+
+export type InviteTimelineEntry = {
+  __typename?: 'InviteTimelineEntry';
+  action: InviteAction;
+  timestamp: Scalars['DateTime']['output'];
+};
 
 export type InviteToHomeInput = {
   email: Scalars['String']['input'];
@@ -2828,6 +2908,7 @@ export type NotificationSubscriptionPayload = {
 export enum NotificationType {
   CollaborationInvite = 'COLLABORATION_INVITE',
   ExpiryReminder = 'EXPIRY_REMINDER',
+  HomeInvitation = 'HOME_INVITATION',
   HomeJoined = 'HOME_JOINED',
   ItemDeleted = 'ITEM_DELETED',
   ItemUpdated = 'ITEM_UPDATED',
@@ -3032,6 +3113,16 @@ export type PantryItemUsage = {
   usedById: Scalars['String']['output'];
 };
 
+export type PantryItemUsageChangedPayload = {
+  __typename?: 'PantryItemUsageChangedPayload';
+  mutation: MutationType;
+  pantryId: Scalars['String']['output'];
+  previousValues?: Maybe<PantryItemUsage>;
+  timestamp: Scalars['DateTime']['output'];
+  usage: PantryItemUsage;
+  userId: Scalars['String']['output'];
+};
+
 export type PantryStats = {
   __typename?: 'PantryStats';
   activeItems: Scalars['Int']['output'];
@@ -3054,6 +3145,17 @@ export type PantryUpdatedPayload = {
   temperature?: Maybe<Scalars['String']['output']>;
   updatedAt: Scalars['DateTime']['output'];
   version: Scalars['Int']['output'];
+};
+
+export type PantryWasteAlertPayload = {
+  __typename?: 'PantryWasteAlertPayload';
+  item: PantryItem;
+  pantryId: Scalars['String']['output'];
+  timestamp: Scalars['DateTime']['output'];
+  userId: Scalars['String']['output'];
+  wasteAmount: Scalars['Float']['output'];
+  wasteReason: Scalars['String']['output'];
+  wasteValue?: Maybe<Scalars['Float']['output']>;
 };
 
 export type PlatformStat = {
@@ -3203,9 +3305,15 @@ export type Query = {
   hasUrgentNotifications: Scalars['Boolean']['output'];
   home?: Maybe<Home>;
   homeByJoinCode?: Maybe<Home>;
+  homeInviteByToken?: Maybe<HomeInvite>;
+  homeInviteLogs: Array<InviteLog>;
+  homeInviteStats: Array<HomeInviteStatsGroup>;
   homeInvites: Array<HomeInvite>;
   homeMemberships: Array<Membership>;
   homes: Array<Home>;
+  inviteLogs: Array<InviteLog>;
+  inviteStats: InviteStats;
+  invitesSentByMe: Array<HomeInvite>;
   item?: Maybe<Item>;
   itemByExternalId?: Maybe<Item>;
   itemBySku?: Maybe<Item>;
@@ -3221,12 +3329,16 @@ export type Query = {
   membership?: Maybe<Membership>;
   membershipStats: MembershipStats;
   mobileDevices: Array<Device>;
+  myCollaboratedShoppingLists: Array<ShoppingList>;
   myDevices: Array<Device>;
-  myHomes: Array<Home>;
+  myHomes?: Maybe<Array<Home>>;
+  myInviteLogs: Array<InviteLog>;
   myMembershipInHome?: Maybe<Membership>;
-  myMemberships: Array<Membership>;
+  myMemberships?: Maybe<Array<Membership>>;
   myModeration?: Maybe<UserModeration>;
   myNotifications: NotificationConnection;
+  myPendingCollaborationInvites: Array<ShoppingListCollaborator>;
+  myPendingInvites: Array<HomeInvite>;
   myPurchases: Array<Purchase>;
   myShoppingListInvites: Array<ShoppingListCollaborator>;
   nearbyStores: Array<Store>;
@@ -3281,6 +3393,7 @@ export type Query = {
   storeWithPurchases?: Maybe<Store>;
   stores: Array<Store>;
   suggestedRecipes: Array<Recipe>;
+  suspiciousInviteActivity: Array<InviteLog>;
   suspiciousLoginActivity: SuspiciousActivity;
   trendingItems?: Maybe<Array<Item>>;
   trustedDevices: Array<Device>;
@@ -3398,12 +3511,34 @@ export type QueryHomeByJoinCodeArgs = {
   joinCode: Scalars['String']['input'];
 };
 
+export type QueryHomeInviteByTokenArgs = {
+  token: Scalars['String']['input'];
+};
+
+export type QueryHomeInviteLogsArgs = {
+  homeId: Scalars['String']['input'];
+  limit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type QueryHomeInviteStatsArgs = {
+  homeId: Scalars['String']['input'];
+};
+
 export type QueryHomeInvitesArgs = {
   homeId: Scalars['ID']['input'];
 };
 
 export type QueryHomeMembershipsArgs = {
   homeId: Scalars['ID']['input'];
+};
+
+export type QueryInviteLogsArgs = {
+  inviteId: Scalars['String']['input'];
+  limit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type QueryInviteStatsArgs = {
+  inviteId: Scalars['String']['input'];
 };
 
 export type QueryItemArgs = {
@@ -3473,6 +3608,10 @@ export type QueryMobileDevicesArgs = {
 
 export type QueryMyDevicesArgs = {
   filters?: InputMaybe<DeviceFiltersInput>;
+};
+
+export type QueryMyInviteLogsArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type QueryMyMembershipInHomeArgs = {
@@ -3686,6 +3825,10 @@ export type QueryStoreWithPriceHistoryArgs = {
 export type QueryStoreWithPurchasesArgs = {
   id: Scalars['ID']['input'];
   limit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type QuerySuspiciousInviteActivityArgs = {
+  timeWindowHours?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type QuerySuspiciousLoginActivityArgs = {
@@ -4251,16 +4394,17 @@ export type Subscription = {
   membershipRoleChanged: MembershipRoleChangedPayload;
   membershipUpdated: MembershipUpdatePayload;
   myMembershipUpdated: MembershipUpdatePayload;
-  myPantriesUpdated: Array<Pantry>;
   myShoppingListsUpdated?: Maybe<ShoppingListUpdatedPayload>;
   notificationByType: NotificationPayload;
   notificationReceived: NotificationPayload;
   notificationUpdated: NotificationPayload;
   pantryActivityAdded: PantryActivity;
   pantryExpiringItemsAlert: Array<PantryItem>;
+  pantryItemUsageChanged: PantryItemUsageChangedPayload;
   pantryItemsChanged: PantryItemChangedPayload;
   pantryLowStockAlert: Array<PantryItem>;
   pantryUpdated: PantryUpdatedPayload;
+  pantryWasteAlert: PantryWasteAlertPayload;
   purchaseCreated: Purchase;
   purchaseDeleted: Purchase;
   purchaseUpdated: Purchase;
@@ -4277,10 +4421,8 @@ export type Subscription = {
   suspiciousActivity: SuspiciousActivity;
   urgentNotificationReceived: NotificationPayload;
   userActivity: UserActivityPayload;
-  userAuth: UserAuthPayload;
   userModerationChanged: UserModerationChangedPayload;
   userProfileChanged: UserProfileChangedPayload;
-  userSocial: UserSocialPayload;
   userStatusChanged: UserStatusChangedPayload;
   userUpdated: UserUpdatedPayload;
 };
@@ -4349,10 +4491,6 @@ export type SubscriptionMembershipUpdatedArgs = {
   homeId?: InputMaybe<Scalars['ID']['input']>;
 };
 
-export type SubscriptionMyPantriesUpdatedArgs = {
-  homeId: Scalars['ID']['input'];
-};
-
 export type SubscriptionNotificationByTypeArgs = {
   type: NotificationType;
 };
@@ -4362,6 +4500,10 @@ export type SubscriptionPantryActivityAddedArgs = {
 };
 
 export type SubscriptionPantryExpiringItemsAlertArgs = {
+  pantryId: Scalars['ID']['input'];
+};
+
+export type SubscriptionPantryItemUsageChangedArgs = {
   pantryId: Scalars['ID']['input'];
 };
 
@@ -4375,6 +4517,10 @@ export type SubscriptionPantryLowStockAlertArgs = {
 
 export type SubscriptionPantryUpdatedArgs = {
   id: Scalars['ID']['input'];
+};
+
+export type SubscriptionPantryWasteAlertArgs = {
+  pantryId: Scalars['ID']['input'];
 };
 
 export type SubscriptionPurchaseCreatedArgs = {
@@ -4437,19 +4583,11 @@ export type SubscriptionUserActivityArgs = {
   userId?: InputMaybe<Scalars['ID']['input']>;
 };
 
-export type SubscriptionUserAuthArgs = {
-  userId?: InputMaybe<Scalars['ID']['input']>;
-};
-
 export type SubscriptionUserModerationChangedArgs = {
   userId?: InputMaybe<Scalars['ID']['input']>;
 };
 
 export type SubscriptionUserProfileChangedArgs = {
-  userId?: InputMaybe<Scalars['ID']['input']>;
-};
-
-export type SubscriptionUserSocialArgs = {
   userId?: InputMaybe<Scalars['ID']['input']>;
 };
 
@@ -4477,6 +4615,19 @@ export type SuspiciousActivity = {
   riskyLogins: Array<LoginHistory>;
   suspiciousActivity: Scalars['Boolean']['output'];
   unusualTimeLogins?: Maybe<Array<LoginHistory>>;
+};
+
+export type SuspiciousActivitySummary = {
+  __typename?: 'SuspiciousActivitySummary';
+  actionsBreakdown: InviteActionStats;
+  timeWindow: Scalars['Int']['output'];
+  totalSuspiciousActions: Scalars['Int']['output'];
+};
+
+export type SuspiciousInviteActivity = {
+  __typename?: 'SuspiciousInviteActivity';
+  logs: Array<InviteLog>;
+  summary: SuspiciousActivitySummary;
 };
 
 export type Timestamped = {
@@ -5981,36 +6132,6 @@ export type UserProfileChangedSubscription = {
       bio?: string | null;
       avatar?: string | null;
     } | null;
-  };
-};
-
-export type UserAuthSubscriptionVariables = Exact<{
-  userId?: InputMaybe<Scalars['ID']['input']>;
-}>;
-
-export type UserAuthSubscription = {
-  __typename?: 'Subscription';
-  userAuth: {
-    __typename?: 'UserAuthPayload';
-    userId: string;
-    authType: string;
-    deviceInfo?: any | null;
-    timestamp: string;
-  };
-};
-
-export type UserSocialSubscriptionVariables = Exact<{
-  userId?: InputMaybe<Scalars['ID']['input']>;
-}>;
-
-export type UserSocialSubscription = {
-  __typename?: 'Subscription';
-  userSocial: {
-    __typename?: 'UserSocialPayload';
-    userId: string;
-    targetUserId: string;
-    action: string;
-    timestamp: string;
   };
 };
 
@@ -9103,7 +9224,36 @@ export type MemberLeftSubscriptionVariables = Exact<{
 
 export type MemberLeftSubscription = {
   __typename?: 'Subscription';
-  memberLeft: {__typename?: 'MembershipUpdatePayload'; userId: string};
+  memberLeft: {
+    __typename?: 'MembershipUpdatePayload';
+    mutation: MembershipMutationType;
+    updatedFields?: Array<string> | null;
+    userId: string;
+    node?: {
+      __typename?: 'Membership';
+      id: string;
+      homeId: string;
+      userId: string;
+      role: MembershipRole;
+      status: MembershipStatus;
+      displayName?: string | null;
+      user: {
+        __typename?: 'User';
+        id: string;
+        profile?: {
+          __typename?: 'UserProfile';
+          displayName?: string | null;
+          avatar?: string | null;
+        } | null;
+      };
+    } | null;
+    previousValues?: {
+      __typename?: 'Membership';
+      role: MembershipRole;
+      status: MembershipStatus;
+      displayName?: string | null;
+    } | null;
+  };
 };
 
 export type MembershipRoleChangedSubscriptionVariables = Exact<{
@@ -10097,7 +10247,7 @@ export type UrgentNotificationReceivedSubscription = {
 };
 
 export type NotificationUpdatedSubscriptionVariables = Exact<{
-  id: Scalars['ID']['input'];
+  [key: string]: never;
 }>;
 
 export type NotificationUpdatedSubscription = {
@@ -10143,6 +10293,35 @@ export type GetPantriesQuery = {
       item: {__typename?: 'Item'; name: string};
     }> | null;
   }>;
+};
+
+export type GetPantryQueryVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type GetPantryQuery = {
+  __typename?: 'Query';
+  pantry?: {
+    __typename?: 'Pantry';
+    id: string;
+    homeId: string;
+    name: string;
+    description?: string | null;
+    isDefault: boolean;
+    location?: string | null;
+    temperature?: string | null;
+    tags: Array<string>;
+    metadata?: any | null;
+    version: number;
+    createdAt: string;
+    updatedAt?: string | null;
+    items?: Array<{
+      __typename?: 'PantryItem';
+      id: string;
+      itemName: string;
+      item: {__typename?: 'Item'; name: string};
+    }> | null;
+  } | null;
 };
 
 export type GetPantryItemsQueryVariables = Exact<{
@@ -10711,6 +10890,39 @@ export type CreatePantryMutation = {
   };
 };
 
+export type UpdatePantryMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+  input: UpdatePantryInput;
+}>;
+
+export type UpdatePantryMutation = {
+  __typename?: 'Mutation';
+  updatePantry: {
+    __typename?: 'Pantry';
+    id: string;
+    homeId: string;
+    name: string;
+    description?: string | null;
+    isDefault: boolean;
+    location?: string | null;
+    temperature?: string | null;
+    tags: Array<string>;
+    metadata?: any | null;
+    version: number;
+    createdAt: string;
+    updatedAt?: string | null;
+  };
+};
+
+export type DeletePantryMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type DeletePantryMutation = {
+  __typename?: 'Mutation';
+  deletePantry: boolean;
+};
+
 export type UpdatePantryItemMutationVariables = Exact<{
   id: Scalars['ID']['input'];
   input: UpdatePantryItemInput;
@@ -11096,27 +11308,6 @@ export type PantryUpdatedSubscription = {
   };
 };
 
-export type MyPantriesUpdatedSubscriptionVariables = Exact<{
-  homeId: Scalars['ID']['input'];
-}>;
-
-export type MyPantriesUpdatedSubscription = {
-  __typename?: 'Subscription';
-  myPantriesUpdated: Array<{
-    __typename?: 'Pantry';
-    id: string;
-    name: string;
-    description?: string | null;
-    isDefault: boolean;
-    location?: string | null;
-    items?: Array<{
-      __typename?: 'PantryItem';
-      id: string;
-      currentQuantity: number;
-    }> | null;
-  }>;
-};
-
 export type PantryActivityAddedSubscriptionVariables = Exact<{
   pantryId: Scalars['ID']['input'];
 }>;
@@ -11213,6 +11404,68 @@ export type PantryItemsChangedSubscription = {
       id: string;
       itemName: string;
       unit: {__typename?: 'Unit'; name: string};
+    };
+  };
+};
+
+export type PantryItemUsageChangedSubscriptionVariables = Exact<{
+  pantryId: Scalars['ID']['input'];
+}>;
+
+export type PantryItemUsageChangedSubscription = {
+  __typename?: 'Subscription';
+  pantryItemUsageChanged: {
+    __typename?: 'PantryItemUsageChangedPayload';
+    mutation: MutationType;
+    pantryId: string;
+    userId: string;
+    timestamp: string;
+    usage: {
+      __typename?: 'PantryItemUsage';
+      id: string;
+      pantryItemId: string;
+      quantityUsed: number;
+      usedById: string;
+      usedAt: string;
+      purpose: UsagePurpose;
+      notes?: string | null;
+    };
+    previousValues?: {
+      __typename?: 'PantryItemUsage';
+      quantityUsed: number;
+      purpose: UsagePurpose;
+    } | null;
+  };
+};
+
+export type PantryWasteAlertSubscriptionVariables = Exact<{
+  pantryId: Scalars['ID']['input'];
+}>;
+
+export type PantryWasteAlertSubscription = {
+  __typename?: 'Subscription';
+  pantryWasteAlert: {
+    __typename?: 'PantryWasteAlertPayload';
+    pantryId: string;
+    wasteAmount: number;
+    wasteReason: string;
+    wasteValue?: number | null;
+    userId: string;
+    timestamp: string;
+    item: {
+      __typename?: 'PantryItem';
+      id: string;
+      itemId: string;
+      itemName: string;
+      pantryId: string;
+      currentQuantity: number;
+      unit: {__typename?: 'Unit'; id: string; name: string; symbol: string};
+      item: {
+        __typename?: 'Item';
+        id: string;
+        name: string;
+        imageUrl?: string | null;
+      };
     };
   };
 };

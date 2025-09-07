@@ -199,8 +199,8 @@ export const InviteMembersScreen = () => {
     <OnBoardingWrapper
       title="Invite family & friends"
       subtitle="Share your home and shopping lists with others (optional)"
-      step={4}
-      totalSteps={5}
+      step={5}
+      totalSteps={6}
       onBack={() => navigation.goBack()}
       onSkip={handleSkip}>
       <View style={styles.container}>

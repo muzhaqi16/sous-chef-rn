@@ -36,40 +36,32 @@ export const AuthStack = () => {
         gestureEnabled: true,
         gestureDirection: 'horizontal',
       }}>
-      {/* Unauthenticated screens */}
-      {!user && (
-        <>
-          <Stack.Screen
-            name="LandingAuth"
-            component={LandingAuthScreen}
-            options={{animation: 'fade_from_bottom'}}
-          />
-          <Stack.Screen
-            name="Login"
-            component={LoginScreen}
-            options={{animation: 'slide_from_left'}}
-          />
-          <Stack.Screen
-            name="SignUp"
-            component={SignUpScreen}
-            options={{animation: 'slide_from_right'}}
-          />
-          <Stack.Screen
-            name="ForgotPassword"
-            component={ForgotPasswordScreen}
-            options={{animation: 'slide_from_right'}}
-          />
-        </>
-      )}
-
-      {/* Email verification screen (for authenticated but unverified users) */}
-      {user && !user.emailVerified && (
-        <Stack.Screen
-          name="CodeVerification"
-          component={CodeVerificationScreen}
-          options={{animation: 'slide_from_bottom'}}
-        />
-      )}
+      {/* Always render all auth screens to avoid initialRouteName issues */}
+      <Stack.Screen
+        name="LandingAuth"
+        component={LandingAuthScreen}
+        options={{animation: 'fade_from_bottom'}}
+      />
+      <Stack.Screen
+        name="Login"
+        component={LoginScreen}
+        options={{animation: 'slide_from_left'}}
+      />
+      <Stack.Screen
+        name="SignUp"
+        component={SignUpScreen}
+        options={{animation: 'slide_from_right'}}
+      />
+      <Stack.Screen
+        name="ForgotPassword"
+        component={ForgotPasswordScreen}
+        options={{animation: 'slide_from_right'}}
+      />
+      <Stack.Screen
+        name="CodeVerification"
+        component={CodeVerificationScreen}
+        options={{animation: 'slide_from_bottom'}}
+      />
     </Stack.Navigator>
   );
 };

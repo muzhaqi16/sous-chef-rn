@@ -6,6 +6,7 @@ import {type OnBoardingStackParamList} from './types';
 import {CreateHomeScreen} from '../screens/onBoarding/createHome/CreateHomeScreen';
 import {CreateShoppingListScreen} from '../screens/onBoarding/CreateShoppingListScreen';
 import {SelectPantryItems} from '../screens/onBoarding/SelectPantryItems';
+import {ProfilePictureUploadScreen} from '../screens/onBoarding/ProfilePictureUploadScreen';
 import {InviteMembersScreen} from '../screens/onBoarding/InviteMemberScreen';
 import {OnboardingCompleteScreen} from '../screens/onBoarding/OnboardingCompleteScreen';
 import {OnBoardingSteps} from '../store/slices/preferencesSlice';
@@ -82,6 +83,15 @@ export const OnBoardingStack = () => {
         listeners={{
           beforeRemove: () => {
             handleStepChange(OnBoardingSteps.selectPantryItems);
+          },
+        }}
+      />
+      <Stack.Screen
+        name="ProfilePictureUpload"
+        component={ProfilePictureUploadScreen}
+        listeners={{
+          beforeRemove: () => {
+            handleStepChange(OnBoardingSteps.profilePictureUpload);
           },
         }}
       />

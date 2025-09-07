@@ -5,6 +5,7 @@ export enum OnBoardingSteps {
   createHome = 'createHome',
   createShoppingList = 'createShoppingList',
   selectPantryItems = 'selectPantryItems',
+  profilePictureUpload = 'profilePictureUpload',
   inviteMembers = 'inviteMembers',
   complete = 'complete',
 }

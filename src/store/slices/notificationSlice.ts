@@ -1,6 +1,7 @@
 import {StateCreator} from 'zustand';
 import {RootState} from '../index';
 import {NotificationType} from '#/graphql/generated';
+import {safeParseDate} from '#utils/dateUtils';
 
 export enum NotificationPriority {
   LOW = 'LOW',
@@ -114,6 +115,14 @@ export const createNotificationSlice: StateCreator<
   addNotification: notification => {
     const state = get();
 
+    console.log('addNotification called with:', {
+      notification,
+      userEmailVerified: state.user?.emailVerified,
+      selectedHomeId: state.selectedHomeId,
+      selectedPantryId: state.selectedPantryId,
+      selectedShoppingListId: state.selectedShoppingListId,
+    });
+
     // Safety check: Don't add notifications if user can't receive them
     if (!state.user?.emailVerified) {
       console.log('Skipping notification - user not verified');
@@ -148,12 +157,19 @@ export const createNotificationSlice: StateCreator<
     }
 
     set(state => {
-      const newNotification = {...notification, isRead: false};
+      const newNotification = {
+        ...notification, 
+        isRead: false,
+        // Ensure sentAt is always a valid ISO string
+        sentAt: safeParseDate(notification.sentAt)?.toISOString() || new Date().toISOString()
+      };
+      console.log('Successfully adding notification to store:', newNotification);
       state.notifications.unshift(newNotification);
       state.unreadCount = state.notifications.filter(n => !n.isRead).length;
       state.urgentCount = state.notifications.filter(
         n => !n.isRead && n.priority === NotificationPriority.URGENT,
       ).length;
+      console.log(`Notification added. Total notifications: ${state.notifications.length}, Unread: ${state.unreadCount}`);
     });
   },
 
@@ -202,6 +218,8 @@ export const createNotificationSlice: StateCreator<
       const newNotifications = validNotifications.map(n => ({
         ...n,
         isRead: false,
+        // Ensure sentAt is always a valid ISO string
+        sentAt: safeParseDate(n.sentAt)?.toISOString() || new Date().toISOString()
       }));
       state.notifications.unshift(...newNotifications);
       state.unreadCount = state.notifications.filter(n => !n.isRead).length;

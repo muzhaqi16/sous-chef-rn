@@ -18,6 +18,7 @@ import {
   NotificationGroupHeader,
 } from '#components/notifications';
 import {useNotifications} from '#hooks';
+import {useRealTimeNotifications} from '#hooks';
 import {
   NotificationItem as NotificationType,
   NotificationCategory,
@@ -27,6 +28,8 @@ import {NotificationListNavProp} from '#navigation';
 import {useGetMyNotificationsQuery} from '#generated';
 import {useStore} from '#store';
 import {Header} from '#components/molecules/Header';
+import {NotificationActionHandler} from '#components/notifications/NotificationActionHandler';
+import {safeParseDate} from '#utils/dateUtils';
 
 export const NotificationListScreen: React.FC = () => {
   const navigation = useNavigation<NotificationListNavProp>();
@@ -45,7 +48,19 @@ export const NotificationListScreen: React.FC = () => {
     getNotificationsByCategory,
   } = useNotifications();
 
-  const urgentNotifications = groupedNotifications.urgent || [];
+  // Initialize real-time notifications
+  const {notificationCount, config} = useRealTimeNotifications({
+    enablePantryNotifications: true,
+    enableShoppingListNotifications: true,
+    enableMembershipNotifications: true,
+    enableLowStockAlerts: true,
+    enableExpirationAlerts: true,
+    enableCollaborationNotifications: true,
+    showInAppNotifications: true,
+    showPushNotifications: true,
+  });
+
+  const urgentNotifications = (groupedNotifications.urgent || []).filter(n => !n.isRead);
 
   // Filter notifications based on selected category
   const filteredNotifications = useMemo(() => {
@@ -67,16 +82,19 @@ export const NotificationListScreen: React.FC = () => {
     };
 
     filteredNotifications.forEach(notification => {
-      // Urgent notifications go to urgent group
-      if (
-        notification.priority === NotificationPriority.URGENT &&
-        !notification.isRead
-      ) {
+      // Urgent notifications go to urgent group (both read and unread)
+      if (notification.priority === NotificationPriority.URGENT) {
         groups.urgent.push(notification);
         return;
       }
 
-      const notificationDate = new Date(notification.sentAt);
+      // Handle invalid dates safely
+      const notificationDate = safeParseDate(notification.sentAt);
+      if (!notificationDate) {
+        // If we can't parse the date, put it in older group
+        groups.older.push(notification);
+        return;
+      }
 
       if (notificationDate.toDateString() === today.toDateString()) {
         groups.today.push(notification);
@@ -96,20 +114,35 @@ export const NotificationListScreen: React.FC = () => {
   });
 
   const handleNotificationPress = useCallback(
-    async (notification: NotificationType) => {
+    async (
+      notification: NotificationType,
+      actionHandler?: (notification: NotificationType) => void,
+    ) => {
       // Mark as read
       if (!notification.isRead) {
         await handleMarkAsRead(notification.id);
+      }
+
+      // Handle actionable notifications first
+      if (
+        notification.requiresAction &&
+        notification.actionType &&
+        actionHandler
+      ) {
+        actionHandler(notification);
+        return;
       }
 
       // Navigate based on type and action
       if (notification.requiresAction && notification.actionType) {
         switch (notification.actionType) {
           case 'ACCEPT_INVITE':
-            navigation.getParent()?.navigate('HomeStack', {
-              screen: 'Main',
-              params: notification.actionData,
-            });
+          case 'ACCEPT_HOME_INVITE':
+          case 'ACCEPT_SHOPPING_LIST_INVITE':
+            // These will be handled by the action handler
+            if (actionHandler) {
+              actionHandler(notification);
+            }
             break;
           case 'ADD_TO_SHOPPING_LIST':
             navigation.getParent()?.navigate('ShoppingListStack', {
@@ -170,6 +203,23 @@ export const NotificationListScreen: React.FC = () => {
     setIsRefreshing(false);
   }, [refetch]);
 
+  // Test notification creation
+  const addNotification = useStore(state => state.addNotification);
+  const handleTestNotification = () => {
+    const testNotification = {
+      id: `test-${Date.now()}`,
+      type: 'HomeJoined' as any,
+      category: NotificationCategory.MEMBERSHIP,
+      priority: NotificationPriority.HIGH,
+      title: 'Test Notification',
+      message: 'This is a test notification to verify the system is working',
+      payload: { test: true },
+      sentAt: new Date().toISOString(),
+    };
+    console.log('Creating test notification:', testNotification);
+    addNotification(testNotification);
+  };
+
   // Prepare sections for SectionList
   const sections = [
     {title: '🚨 Urgent', data: filteredGroups.urgent},
@@ -188,6 +238,10 @@ export const NotificationListScreen: React.FC = () => {
         centerTitle={true}
         onBack={navigation.goBack}
         rightActions={[
+          {
+            icon: 'bug-report',
+            onPress: handleTestNotification,
+          },
           {
             icon: 'settings',
             onPress: () => navigation.navigate('NotificationSettings'),
@@ -235,47 +289,59 @@ export const NotificationListScreen: React.FC = () => {
   );
 
   return (
-    <View style={styles.container}>
-      {urgentNotifications.length > 0 && (
-        <View style={styles.urgentBanner}>
-          <Icon name="warning" size={20} color="#FFF" />
-          <Text style={styles.urgentText}>
-            {urgentNotifications.length} urgent notification
-            {urgentNotifications.length !== 1 ? 's' : ''}
-          </Text>
+    <NotificationActionHandler>
+      {({handleNotificationAction}) => (
+        <View style={styles.container}>
+          {urgentNotifications.length > 0 && (
+            <View style={styles.urgentBanner}>
+              <Icon name="warning" size={20} color="#FFF" />
+              <Text style={styles.urgentText}>
+                {urgentNotifications.length} urgent notification
+                {urgentNotifications.length !== 1 ? 's' : ''}
+              </Text>
+            </View>
+          )}
+
+          <NotificationHeader
+            onMarkAllRead={handleMarkAllAsRead}
+            onClearAll={clearAll}
+            hasNotifications={hasNotifications}
+          />
+
+          {renderCategoryFilters()}
+
+          <SectionList
+            sections={sections}
+            keyExtractor={item => item.id}
+            renderItem={({item}) => (
+              <NotificationItem
+                notification={item}
+                onPress={notification =>
+                  handleNotificationPress(
+                    notification,
+                    handleNotificationAction,
+                  )
+                }
+                onDismiss={handleRemoveNotification}
+              />
+            )}
+            renderSectionHeader={({section}) => (
+              <NotificationGroupHeader title={section.title} />
+            )}
+            ListEmptyComponent={<EmptyNotifications />}
+            contentContainerStyle={
+              !hasNotifications ? styles.emptyContainer : undefined
+            }
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefreshing}
+                onRefresh={handleRefresh}
+              />
+            }
+          />
         </View>
       )}
-
-      <NotificationHeader
-        onMarkAllRead={handleMarkAllAsRead}
-        onClearAll={clearAll}
-        hasNotifications={hasNotifications}
-      />
-
-      {renderCategoryFilters()}
-
-      <SectionList
-        sections={sections}
-        keyExtractor={item => item.id}
-        renderItem={({item}) => (
-          <NotificationItem
-            notification={item}
-            onPress={handleNotificationPress}
-            onDismiss={handleRemoveNotification}
-          />
-        )}
-        renderSectionHeader={({section}) => (
-          <NotificationGroupHeader title={section.title} />
-        )}
-        ListEmptyComponent={<EmptyNotifications />}
-        contentContainerStyle={
-          !hasNotifications ? styles.emptyContainer : undefined
-        }
-        refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
-        }
-      />
-    </View>
+    </NotificationActionHandler>
   );
 };
 

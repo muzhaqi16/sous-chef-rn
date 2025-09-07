@@ -43,30 +43,43 @@ export const ListSettings: React.FC = () => {
     // Update the cache when a new list is created
     update(cache, {data}) {
       if (data?.createShoppingList) {
-        // Read the existing query from cache
-        const existingData = cache.readQuery<{shoppingLists: ShoppingList[]}>({
-          query: GetShoppingListsDocument,
-        });
-
-        if (existingData) {
-          // Write the updated data back to cache
-          cache.writeQuery({
+        try {
+          // Read the existing query from cache
+          const existingData = cache.readQuery<{shoppingLists: ShoppingList[]}>({
             query: GetShoppingListsDocument,
-            data: {
-              ...existingData,
-              shoppingLists: [
-                ...(existingData.shoppingLists || []),
-                data.createShoppingList,
-              ],
-            },
           });
+
+          if (existingData) {
+            // Write the updated data back to cache
+            cache.writeQuery({
+              query: GetShoppingListsDocument,
+              data: {
+                ...existingData,
+                shoppingLists: [
+                  ...(existingData.shoppingLists || []),
+                  data.createShoppingList,
+                ],
+              },
+            });
+            console.log('Shopping list cache updated successfully');
+          }
+        } catch (error) {
+          console.log('Cache update failed during shopping list create:', error);
         }
       }
     },
     onCompleted: data => {
       if (data?.createShoppingList) {
-        // Set the new list as selected
+        console.log('Shopping list created successfully:', data.createShoppingList);
+        // Always set the new list as selected
         setSelectedShoppingListId(data.createShoppingList.id);
+        console.log('Set new shopping list as selected:', data.createShoppingList.id);
+        
+        // Show success message
+        Alert.alert(
+          'Success', 
+          `Shopping list "${data.createShoppingList.name}" created successfully!${isDefault ? ' It has been set as your default list.' : ''}`
+        );
         navigation.goBack();
       }
     },
@@ -127,7 +140,7 @@ export const ListSettings: React.FC = () => {
   };
 
   const handleDelete = () => {
-    if (listId) return; // Should never happen as delete button is hidden
+    if (!listId) return; // Should never happen as delete button is hidden
     Alert.alert(
       'Delete List',
       'Are you sure you want to delete this list? This action cannot be undone.',

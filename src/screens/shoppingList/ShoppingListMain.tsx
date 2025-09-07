@@ -1,4 +1,4 @@
-import React, {useMemo} from 'react';
+import React, {useMemo, useEffect} from 'react';
 import {TouchableOpacity, Text, Alert, Image, View} from 'react-native';
 import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
@@ -12,16 +12,16 @@ import {
   ListTemplate,
   SearchBarAction,
   BottomSheetAction,
-  ItemSelector,
   EmptyState,
 } from '#components';
+import {ItemSelectorWithActions} from '#components/organisms/ItemSelectorWithActions';
 import {
   useShoppingListSelector,
   useBottomSheetModal,
   useShoppingList,
 } from '#/hooks';
 import {useStore} from '#/store';
-import {Icon} from '#/utils/iconUtils';
+import {Icon, type IconLibrary} from '#/utils/iconUtils';
 
 export const ShoppingListMain: React.FC = () => {
   const {theme} = useUnistyles();
@@ -42,6 +42,14 @@ export const ShoppingListMain: React.FC = () => {
   const currentListId = selectedShoppingListId || defaultList?.id;
   const currentList =
     lists.find(list => list.id === currentListId) || defaultList;
+
+  // Auto-select the default list if none is selected
+  useEffect(() => {
+    if (!selectedShoppingListId && defaultList?.id) {
+      console.log('Auto-selecting default shopping list:', defaultList.id);
+      setSelectedShoppingListId(defaultList.id);
+    }
+  }, [selectedShoppingListId, defaultList?.id, setSelectedShoppingListId]);
 
   const {items, query, setQuery} = useShoppingList(currentListId);
 
@@ -194,48 +202,49 @@ export const ShoppingListMain: React.FC = () => {
         sheetRef={selectShoppingListSheet.ref}
         sheetTitle={'Select Shopping List'}
         snapPoints={['50%', '90%']}>
-        <ItemSelector
+        <ItemSelectorWithActions
           data={selector.data}
           selectedId={selector.selectedId}
           onSelect={selector.handleSelect}
           displayProperty="name"
           loading={selector.loading}
           emptyMessage={selector.emptyMessage}
+          actions={[
+            {
+              icon: 'add',
+              label: 'Create New List',
+              onPress: () => {
+                selectShoppingListSheet.close();
+                navigation.navigate('ListSettings');
+              },
+              iconLibrary: 'MaterialIcons' as IconLibrary,
+            },
+            ...(currentListId
+              ? [
+                  {
+                    icon: 'share',
+                    label: 'Share Current List',
+                    onPress: () => {
+                      selectShoppingListSheet.close();
+                      navigation.navigate('ShareList', {listId: currentListId});
+                    },
+                    iconLibrary: 'MaterialIcons' as IconLibrary,
+                  },
+                  {
+                    icon: 'settings',
+                    label: 'List Settings',
+                    onPress: () => {
+                      selectShoppingListSheet.close();
+                      navigation.navigate('ListSettings', {
+                        listId: currentListId,
+                      });
+                    },
+                    iconLibrary: 'MaterialIcons' as IconLibrary,
+                  },
+                ]
+              : []),
+          ]}
         />
-
-        {/* Action buttons for list management */}
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => {
-            navigation.navigate('ListSettings');
-          }}>
-          <Icon name="add" size={20} color={theme.colors.primary} />
-          <Text style={styles.actionButtonText}>Create New List</Text>
-        </TouchableOpacity>
-
-        {currentListId && (
-          <>
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => {
-                selectShoppingListSheet.close();
-                navigation.navigate('ShareList', {listId: currentListId});
-              }}>
-              <Icon name="share" size={20} color={theme.colors.primary} />
-              <Text style={styles.actionButtonText}>Share Current List</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => {
-                selectShoppingListSheet.close();
-                navigation.navigate('ListSettings', {listId: currentListId});
-              }}>
-              <Icon name="settings" size={20} color={theme.colors.primary} />
-              <Text style={styles.actionButtonText}>List Settings</Text>
-            </TouchableOpacity>
-          </>
-        )}
       </BottomSheetAction>
     </>
   );

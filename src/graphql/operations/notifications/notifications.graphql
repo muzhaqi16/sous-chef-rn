@@ -85,8 +85,11 @@ subscription UrgentNotificationReceived {
   }
 }
 
-subscription NotificationUpdated($id: ID!) {
+subscription NotificationUpdated {
   notificationUpdated {
     ...NotificationSubscription
   }
 }
+
+
+

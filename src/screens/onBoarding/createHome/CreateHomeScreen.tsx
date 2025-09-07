@@ -18,6 +18,8 @@ import {
   useCreatePantryMutation,
   useGetHomesQuery,
   useGetPantriesQuery,
+  GetHomesDocument,
+  GetHomesQuery,
 } from '#generated';
 
 // Store & Navigation
@@ -76,7 +78,43 @@ export const CreateHomeScreen = () => {
 
   // GraphQL Mutations
   const [createHome] = useCreateHomeMutation();
-  const [createPantry] = useCreatePantryMutation();
+  const [createPantry] = useCreatePantryMutation({
+    update: (cache, {data}) => {
+      if (data?.createPantry) {
+        try {
+          // Update the GetHomes cache to include the new pantry
+          const existingHomesData = cache.readQuery<GetHomesQuery>({
+            query: GetHomesDocument,
+          });
+          
+          if (existingHomesData?.homes) {
+            const updatedHomes = existingHomesData.homes.map((home: any) => {
+              if (home.id === data.createPantry.homeId) {
+                return {
+                  ...home,
+                  pantries: [...(home.pantries || []), {
+                    id: data.createPantry.id,
+                    name: data.createPantry.name,
+                    isDefault: data.createPantry.isDefault,
+                  }]
+                };
+              }
+              return home;
+            });
+
+            cache.writeQuery<GetHomesQuery>({
+              query: GetHomesDocument,
+              data: {
+                homes: updatedHomes,
+              },
+            });
+          }
+        } catch (error) {
+          console.log('Cache update failed, will rely on refetch:', error);
+        }
+      }
+    },
+  });
 
   // Form Setup
   const form = useForm<FormValues>({
@@ -207,7 +245,7 @@ export const CreateHomeScreen = () => {
           : `Let's add a pantry to ${existingHomeName}`
       }
       step={1}
-      totalSteps={5}
+      totalSteps={6}
       onSkip={handleSkip}>
       <FormContent
         form={form}
@@ -232,7 +270,7 @@ const LoadingView = ({onSkip}: {onSkip: () => void}) => (
     title="Welcome! Let's set up your home"
     subtitle="Checking your existing setup..."
     step={1}
-    totalSteps={5}
+    totalSteps={6}
     onSkip={onSkip}>
     <View style={styles.loadingContainer}>
       <ActivityIndicator size="large" color={styles.loadingIndicator.color} />

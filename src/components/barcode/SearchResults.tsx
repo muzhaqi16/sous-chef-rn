@@ -6,6 +6,10 @@ import {StyleSheet} from 'react-native-unistyles';
 import {
   useAddItemToPantryMutation,
   useAddItemToShoppingListMutation,
+  GetPantryItemsDocument,
+  GetPantryItemsQuery,
+  GetShoppingListItemsDocument,
+  GetShoppingListItemsQuery,
 } from '#generated';
 
 interface SearchResultsProps {
@@ -25,8 +29,51 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   pantryId,
   shoppingListId,
 }) => {
-  const [addToPantry] = useAddItemToPantryMutation();
-  const [addToShoppingList] = useAddItemToShoppingListMutation();
+  const [addToPantry] = useAddItemToPantryMutation({
+    update: (cache, {data}) => {
+      if (data?.addItemToPantry && pantryId) {
+        // Read the existing pantry items from cache
+        const existingData = cache.readQuery<GetPantryItemsQuery>({
+          query: GetPantryItemsDocument,
+          variables: {pantryId},
+        });
+
+        if (existingData?.pantryItems) {
+          // Add the new item to the cache
+          cache.writeQuery<GetPantryItemsQuery>({
+            query: GetPantryItemsDocument,
+            variables: {pantryId},
+            data: {
+              pantryItems: [...existingData.pantryItems, data.addItemToPantry],
+            },
+          });
+        }
+      }
+    },
+  });
+
+  const [addToShoppingList] = useAddItemToShoppingListMutation({
+    update: (cache, {data}) => {
+      if (data?.addItemToShoppingList && shoppingListId) {
+        // Read the existing shopping list items from cache
+        const existingData = cache.readQuery<GetShoppingListItemsQuery>({
+          query: GetShoppingListItemsDocument,
+          variables: {listId: shoppingListId},
+        });
+
+        if (existingData?.shoppingListItems) {
+          // Add the new item to the cache
+          cache.writeQuery<GetShoppingListItemsQuery>({
+            query: GetShoppingListItemsDocument,
+            variables: {listId: shoppingListId},
+            data: {
+              shoppingListItems: [...existingData.shoppingListItems, data.addItemToShoppingList],
+            },
+          });
+        }
+      }
+    },
+  });
 
   const handleAddItem = async () => {
     if (!source) {

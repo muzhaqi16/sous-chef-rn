@@ -1,8 +1,11 @@
 import {useEffect} from 'react';
-import {useItemByUpcQuery, useCreateItemMutation, Item} from '#generated';
+import {useItemByUpcQuery, useCreateItemMutation, Item, GetPantryItemsDocument, GetPantryItemsQuery} from '#generated';
 import {useStore} from '../store';
 import {ScannedItem} from '../store/slices/barcodeScannerSlice';
 import {Alert} from 'react-native';
+import {useImageUpload} from './useImageUpload';
+import {useApolloClient} from '@apollo/client';
+import {storage} from '#/storage/mmkv';
 
 // Helper function to convert GraphQL Item to ScannedItem
 const convertToScannedItem = (
@@ -37,12 +40,52 @@ export const useSearchResults = (barcode: string) => {
     setSearchError,
     showBottomSheet,
     setSearchResults,
+    selectedPantryId,
   } = useStore();
 
+  const {uploadItemImage} = useImageUpload();
+  const client = useApolloClient();
+
   const [addNewItem, {loading: addingItem}] = useCreateItemMutation({
-    onCompleted: data => {
+    onCompleted: async data => {
       if (data.createItem) {
-        const newItem = convertToScannedItem(data.createItem, barcode);
+        const createdItem = data.createItem;
+        let finalItem = createdItem;
+
+        // If there was an image selected, upload it after item creation
+        try {
+          const pendingImageUpload = storage.getString('temp_pending_item_image');
+          if (pendingImageUpload && createdItem.id) {
+            const imageFile = JSON.parse(pendingImageUpload);
+            console.log('Uploading image for newly created item:', createdItem.id);
+            
+            const imageUrl = await uploadItemImage(imageFile, createdItem.id, {
+              onProgress: (progress: number) => {
+                console.log('Image upload progress:', progress);
+              },
+              onSuccess: (url: string) => {
+                console.log('Image uploaded successfully:', url);
+              },
+              onError: (error: Error) => {
+                console.error('Image upload failed:', error.message);
+                // Don't show error to user since item was created successfully
+              },
+            });
+
+            if (imageUrl) {
+              // Update the finalItem with the new image URL for display
+              finalItem = {...createdItem, imageUrl};
+            }
+          }
+        } catch (error) {
+          console.error('Error handling pending image upload:', error);
+          // Continue without showing error since item was created successfully
+        } finally {
+          // Clean up the temporary storage
+          storage.delete('temp_pending_item_image');
+        }
+
+        const newItem = convertToScannedItem(finalItem, barcode);
         setSearchResults([newItem]);
         addToRecentlyScanned(newItem);
         hideBottomSheet();
@@ -50,6 +93,8 @@ export const useSearchResults = (barcode: string) => {
       }
     },
     onError: error => {
+      // Clean up pending image upload on error
+      storage.delete('temp_pending_item_image');
       Alert.alert('Error', `Failed to add item: ${error.message}`);
     },
   });
@@ -85,6 +130,12 @@ export const useSearchResults = (barcode: string) => {
 
   const handleAddItem = async (formData: any) => {
     try {
+      // Store the selected image in MMKV for post-creation upload
+      if (formData.selectedImage) {
+        storage.set('temp_pending_item_image', JSON.stringify(formData.selectedImage));
+        console.log('Stored pending image for upload:', formData.selectedImage.uri);
+      }
+
       // Process the form data to match the CreateItemInput type
       const processedInput = {
         name: formData.name,

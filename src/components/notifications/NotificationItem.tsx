@@ -5,6 +5,7 @@ import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {formatDistanceToNow} from 'date-fns';
 import {NotificationItem as NotificationType} from '#store/slices/notificationSlice';
 import {getNotificationIcon} from '#utils/notifications/notificationHelpers';
+import {safeParseDate} from '#utils/dateUtils';
 
 interface NotificationItemProps {
   notification: NotificationType;
@@ -48,9 +49,12 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
           {notification.message}
         </Text>
         <Text style={styles.timestamp}>
-          {formatDistanceToNow(new Date(notification.sentAt), {
-            addSuffix: true,
-          })}
+          {(() => {
+            const date = safeParseDate(notification.sentAt);
+            return date 
+              ? formatDistanceToNow(date, { addSuffix: true })
+              : 'Recently';
+          })()}
         </Text>
       </View>
 

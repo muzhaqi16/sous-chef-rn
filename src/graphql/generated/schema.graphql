@@ -628,6 +628,7 @@ input CreateDeviceInput {
 
 input CreateHomeInput {
   allowJoinCode: Boolean
+  createDefaultPantry: Boolean
   currency: String
   description: String
   isPublic: Boolean
@@ -1114,6 +1115,7 @@ type HomeInvite {
   invitedUserId: String
   inviter: User!
   lastReminderAt: String
+  logs(limit: Int): [InviteLog!]!
   message: String
   recipientName: String
   reminderCount: Int!
@@ -1122,6 +1124,19 @@ type HomeInvite {
   sentAt: String!
   status: InviteStatus!
   token: String!
+}
+
+type HomeInviteStatsGroup {
+  _count: InviteActionCount!
+  action: InviteAction!
+}
+
+type HomeMember {
+  homeId: String!
+  id: ID!
+  joinedAt: DateTime!
+  role: String
+  userId: String!
 }
 
 type HomeOwnership {
@@ -1207,12 +1222,66 @@ input IngredientInput {
   subIngredients: [IngredientInput!]
 }
 
+enum InviteAction {
+  INVITE_ACCEPTED
+  INVITE_DECLINED
+  INVITE_EXPIRED
+  INVITE_REVOKED
+  INVITE_SENT
+  INVITE_VIEWED
+  PERMISSIONS_UPDATED
+  REMINDER_SENT
+  STATUS_CHANGED
+}
+
+type InviteActionCount {
+  action: Int!
+}
+
+type InviteActionStats {
+  INVITE_ACCEPTED: Int
+  INVITE_CANCELLED: Int
+  INVITE_CREATED: Int
+  INVITE_DECLINED: Int
+  INVITE_EXPIRED: Int
+  INVITE_RESENT: Int
+  INVITE_SENT: Int
+  INVITE_VIEWED: Int
+}
+
+type InviteLog {
+  action: InviteAction!
+  actor: User
+  actorId: String
+  createdAt: DateTime!
+  description: String!
+  id: ID!
+  invite: HomeInvite!
+  inviteId: String!
+  ipAddress: String
+  metadata: JSON
+  newStatus: InviteStatus
+  oldStatus: InviteStatus
+  userAgent: String
+}
+
+type InviteStats {
+  actions: InviteActionStats!
+  timeline: [InviteTimelineEntry!]!
+  total: Int!
+}
+
 enum InviteStatus {
   ACCEPTED
   DECLINED
   EXPIRED
   PENDING
   REVOKED
+}
+
+type InviteTimelineEntry {
+  action: InviteAction!
+  timestamp: DateTime!
 }
 
 input InviteToHomeInput {
@@ -2310,6 +2379,7 @@ type NotificationSubscriptionPayload {
 enum NotificationType {
   COLLABORATION_INVITE
   EXPIRY_REMINDER
+  HOME_INVITATION
   HOME_JOINED
   ITEM_DELETED
   ITEM_UPDATED
@@ -2505,6 +2575,15 @@ type PantryItemUsage {
   usedById: String!
 }
 
+type PantryItemUsageChangedPayload {
+  mutation: MutationType!
+  pantryId: String!
+  previousValues: PantryItemUsage
+  timestamp: DateTime!
+  usage: PantryItemUsage!
+  userId: String!
+}
+
 type PantryStats {
   activeItems: Int!
   expiringCount: Int!
@@ -2525,6 +2604,16 @@ type PantryUpdatedPayload {
   temperature: String
   updatedAt: DateTime!
   version: Int!
+}
+
+type PantryWasteAlertPayload {
+  item: PantryItem!
+  pantryId: String!
+  timestamp: DateTime!
+  userId: String!
+  wasteAmount: Float!
+  wasteReason: String!
+  wasteValue: Float
 }
 
 type PlatformStat {
@@ -2682,9 +2771,15 @@ type Query {
   hasUrgentNotifications: Boolean!
   home(id: ID!): Home
   homeByJoinCode(joinCode: String!): Home
+  homeInviteByToken(token: String!): HomeInvite
+  homeInviteLogs(homeId: String!, limit: Int): [InviteLog!]!
+  homeInviteStats(homeId: String!): [HomeInviteStatsGroup!]!
   homeInvites(homeId: ID!): [HomeInvite!]!
   homeMemberships(homeId: ID!): [Membership!]!
   homes: [Home!]!
+  inviteLogs(inviteId: String!, limit: Int): [InviteLog!]!
+  inviteStats(inviteId: String!): InviteStats!
+  invitesSentByMe: [HomeInvite!]!
   item(id: ID!): Item
   itemByExternalId(externalId: String!, provider: ProviderType!): Item
   itemBySku(sku: String!, storeId: String): Item
@@ -2710,10 +2805,12 @@ type Query {
   membership(id: ID!): Membership
   membershipStats(homeId: ID!): MembershipStats!
   mobileDevices(userId: ID!): [Device!]!
+  myCollaboratedShoppingLists: [ShoppingList!]!
   myDevices(filters: DeviceFiltersInput): [Device!]!
-  myHomes: [Home!]!
+  myHomes: [Home!]
+  myInviteLogs(limit: Int): [InviteLog!]!
   myMembershipInHome(homeId: ID!): Membership
-  myMemberships: [Membership!]!
+  myMemberships: [Membership!]
   myModeration: UserModeration
   myNotifications(
     after: String
@@ -2723,6 +2820,8 @@ type Query {
     last: Int
     orderBy: NotificationOrderBy
   ): NotificationConnection!
+  myPendingCollaborationInvites: [ShoppingListCollaborator!]!
+  myPendingInvites: [HomeInvite!]!
   myPurchases: [Purchase!]!
   myShoppingListInvites: [ShoppingListCollaborator!]!
   nearbyStores(lat: Float!, lng: Float!, radius: Float): [Store!]!
@@ -2788,6 +2887,7 @@ type Query {
   storeWithPurchases(id: ID!, limit: Int): Store
   stores: [Store!]!
   suggestedRecipes: [Recipe!]!
+  suspiciousInviteActivity(timeWindowHours: Int): [InviteLog!]!
   suspiciousLoginActivity(hours: Int = 24, userId: ID!): SuspiciousActivity!
   trendingItems(category: String, limit: Int): [Item!]
   trustedDevices(userId: ID!): [Device!]!
@@ -3295,16 +3395,17 @@ type Subscription {
   membershipRoleChanged(homeId: ID!): MembershipRoleChangedPayload!
   membershipUpdated(homeId: ID): MembershipUpdatePayload!
   myMembershipUpdated: MembershipUpdatePayload!
-  myPantriesUpdated(homeId: ID!): [Pantry!]!
   myShoppingListsUpdated: ShoppingListUpdatedPayload
   notificationByType(type: NotificationType!): NotificationPayload!
   notificationReceived: NotificationPayload!
   notificationUpdated: NotificationPayload!
   pantryActivityAdded(pantryId: ID!): PantryActivity!
   pantryExpiringItemsAlert(pantryId: ID!): [PantryItem!]!
+  pantryItemUsageChanged(pantryId: ID!): PantryItemUsageChangedPayload!
   pantryItemsChanged(pantryId: ID!): PantryItemChangedPayload!
   pantryLowStockAlert(pantryId: ID!): [PantryItem!]!
   pantryUpdated(id: ID!): PantryUpdatedPayload!
+  pantryWasteAlert(pantryId: ID!): PantryWasteAlertPayload!
   purchaseCreated(userId: ID): Purchase!
   purchaseDeleted(userId: ID): Purchase!
   purchaseUpdated(userId: ID): Purchase!
@@ -3323,10 +3424,8 @@ type Subscription {
   suspiciousActivity(userId: ID!): SuspiciousActivity!
   urgentNotificationReceived: NotificationPayload!
   userActivity(userId: ID): UserActivityPayload!
-  userAuth(userId: ID): UserAuthPayload!
   userModerationChanged(userId: ID): UserModerationChangedPayload!
   userProfileChanged(userId: ID): UserProfileChangedPayload!
-  userSocial(userId: ID): UserSocialPayload!
   userStatusChanged(userId: ID): UserStatusChangedPayload!
   userUpdated(userId: ID): UserUpdatedPayload!
 }
@@ -3346,6 +3445,17 @@ type SuspiciousActivity {
   riskyLogins: [LoginHistory!]!
   suspiciousActivity: Boolean!
   unusualTimeLogins: [LoginHistory!]
+}
+
+type SuspiciousActivitySummary {
+  actionsBreakdown: InviteActionStats!
+  timeWindow: Int!
+  totalSuspiciousActions: Int!
+}
+
+type SuspiciousInviteActivity {
+  logs: [InviteLog!]!
+  summary: SuspiciousActivitySummary!
 }
 
 interface Timestamped {

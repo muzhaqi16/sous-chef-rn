@@ -37,6 +37,12 @@ export const useTokenRefresh = () => {
       return;
     }
 
+    console.log('useTokenRefresh: Sending refresh token mutation with token:', {
+      tokenPreview: refreshToken.substring(0, 20) + '...',
+      tokenLength: refreshToken.length,
+      isAccessToken: refreshToken === accessToken,
+    });
+
     try {
       const response = await client.mutate<RefreshTokenMutation>({
         mutation: RefreshTokenDocument,

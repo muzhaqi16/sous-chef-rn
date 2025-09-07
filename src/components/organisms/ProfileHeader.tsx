@@ -50,9 +50,13 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             />
           </View>
         )}
+        <View style={styles.profileAction}>
+          <Icon library="Feather" color="#fff" name="edit-3" size={15} />
+        </View>
       </TouchableOpacity>
       <IconButton
         name="more-vertical"
+        library="Feather"
         onPress={onMore}
         color={theme.colors.textPrimary}
       />
@@ -79,5 +83,16 @@ const styles = StyleSheet.create(theme => ({
   avatarPlaceholder: {
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  profileAction: {
+    position: 'absolute',
+    right: -4,
+    bottom: -10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 28,
+    height: 28,
+    borderRadius: 9999,
+    backgroundColor: theme.colors.primary,
   },
 }));

@@ -1,6 +1,6 @@
 {
   "name": "sous-chef-app",
-  "version": "0.5.5",
+  "version": "0.5.8",
   "private": true,
   "scripts": {
     "android": "npm run adb:gql && npm run codegen && react-native run-android",

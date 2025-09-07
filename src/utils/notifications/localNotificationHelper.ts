@@ -49,11 +49,32 @@ export const showLocalNotification = async ({
                 text: body,
               }
             : undefined,
-        smallIcon: 'ic_notification', // You'll need to add this to your Android resources
+        smallIcon: 'ic_notification',
       },
     });
+    
+    console.log('Local notification displayed successfully:', { id, title });
   } catch (error) {
     console.error('Failed to show local notification:', error);
+    
+    // If notification fails, try a basic fallback (without styling)
+    if (Platform.OS === 'android') {
+      try {
+        await notifee.displayNotification({
+          id: `${id}_fallback`,
+          title,
+          body,
+          android: {
+            channelId: 'default',
+            importance: AndroidImportance.DEFAULT,
+            smallIcon: 'ic_notification',
+          },
+        });
+        console.log('Fallback notification displayed successfully');
+      } catch (fallbackError) {
+        console.error('Fallback notification also failed:', fallbackError);
+      }
+    }
   }
 };
 

@@ -119,6 +119,28 @@ subscription MemberJoined($homeId: ID!) {
 
 subscription MemberLeft($homeId: ID!) {
   memberLeft(homeId: $homeId) {
+    mutation
+    node {
+      id
+      homeId
+      userId
+      role
+      status
+      displayName
+      user {
+        id
+        profile {
+          displayName
+          avatar
+        }
+      }
+    }
+    previousValues {
+      role
+      status
+      displayName
+    }
+    updatedFields
     userId
   }
 }

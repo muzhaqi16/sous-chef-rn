@@ -376,6 +376,7 @@ export type CreateDeviceInput = {
 
 export type CreateHomeInput = {
   allowJoinCode?: InputMaybe<Scalars['Boolean']['input']>;
+  createDefaultPantry?: InputMaybe<Scalars['Boolean']['input']>;
   currency?: InputMaybe<Scalars['String']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
   isPublic?: InputMaybe<Scalars['Boolean']['input']>;
@@ -875,6 +876,7 @@ export type HomeInvite = {
   invitedUserId?: Maybe<Scalars['String']['output']>;
   inviter: User;
   lastReminderAt?: Maybe<Scalars['String']['output']>;
+  logs: Array<InviteLog>;
   message?: Maybe<Scalars['String']['output']>;
   recipientName?: Maybe<Scalars['String']['output']>;
   reminderCount: Scalars['Int']['output'];
@@ -883,6 +885,25 @@ export type HomeInvite = {
   sentAt: Scalars['String']['output'];
   status: InviteStatus;
   token: Scalars['String']['output'];
+};
+
+export type HomeInviteLogsArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type HomeInviteStatsGroup = {
+  __typename?: 'HomeInviteStatsGroup';
+  _count: InviteActionCount;
+  action: InviteAction;
+};
+
+export type HomeMember = {
+  __typename?: 'HomeMember';
+  homeId: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  joinedAt: Scalars['DateTime']['output'];
+  role?: Maybe<Scalars['String']['output']>;
+  userId: Scalars['String']['output'];
 };
 
 export type HomeOwnership = {
@@ -971,6 +992,59 @@ export type IngredientInput = {
   subIngredients?: InputMaybe<Array<IngredientInput>>;
 };
 
+export enum InviteAction {
+  InviteAccepted = 'INVITE_ACCEPTED',
+  InviteDeclined = 'INVITE_DECLINED',
+  InviteExpired = 'INVITE_EXPIRED',
+  InviteRevoked = 'INVITE_REVOKED',
+  InviteSent = 'INVITE_SENT',
+  InviteViewed = 'INVITE_VIEWED',
+  PermissionsUpdated = 'PERMISSIONS_UPDATED',
+  ReminderSent = 'REMINDER_SENT',
+  StatusChanged = 'STATUS_CHANGED',
+}
+
+export type InviteActionCount = {
+  __typename?: 'InviteActionCount';
+  action: Scalars['Int']['output'];
+};
+
+export type InviteActionStats = {
+  __typename?: 'InviteActionStats';
+  INVITE_ACCEPTED?: Maybe<Scalars['Int']['output']>;
+  INVITE_CANCELLED?: Maybe<Scalars['Int']['output']>;
+  INVITE_CREATED?: Maybe<Scalars['Int']['output']>;
+  INVITE_DECLINED?: Maybe<Scalars['Int']['output']>;
+  INVITE_EXPIRED?: Maybe<Scalars['Int']['output']>;
+  INVITE_RESENT?: Maybe<Scalars['Int']['output']>;
+  INVITE_SENT?: Maybe<Scalars['Int']['output']>;
+  INVITE_VIEWED?: Maybe<Scalars['Int']['output']>;
+};
+
+export type InviteLog = {
+  __typename?: 'InviteLog';
+  action: InviteAction;
+  actor?: Maybe<User>;
+  actorId?: Maybe<Scalars['String']['output']>;
+  createdAt: Scalars['DateTime']['output'];
+  description: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  invite: HomeInvite;
+  inviteId: Scalars['String']['output'];
+  ipAddress?: Maybe<Scalars['String']['output']>;
+  metadata?: Maybe<Scalars['JSON']['output']>;
+  newStatus?: Maybe<InviteStatus>;
+  oldStatus?: Maybe<InviteStatus>;
+  userAgent?: Maybe<Scalars['String']['output']>;
+};
+
+export type InviteStats = {
+  __typename?: 'InviteStats';
+  actions: InviteActionStats;
+  timeline: Array<InviteTimelineEntry>;
+  total: Scalars['Int']['output'];
+};
+
 export enum InviteStatus {
   Accepted = 'ACCEPTED',
   Declined = 'DECLINED',
@@ -978,6 +1052,12 @@ export enum InviteStatus {
   Pending = 'PENDING',
   Revoked = 'REVOKED',
 }
+
+export type InviteTimelineEntry = {
+  __typename?: 'InviteTimelineEntry';
+  action: InviteAction;
+  timestamp: Scalars['DateTime']['output'];
+};
 
 export type InviteToHomeInput = {
   email: Scalars['String']['input'];
@@ -2834,6 +2914,7 @@ export type NotificationSubscriptionPayload = {
 export enum NotificationType {
   CollaborationInvite = 'COLLABORATION_INVITE',
   ExpiryReminder = 'EXPIRY_REMINDER',
+  HomeInvitation = 'HOME_INVITATION',
   HomeJoined = 'HOME_JOINED',
   ItemDeleted = 'ITEM_DELETED',
   ItemUpdated = 'ITEM_UPDATED',
@@ -3038,6 +3119,16 @@ export type PantryItemUsage = {
   usedById: Scalars['String']['output'];
 };
 
+export type PantryItemUsageChangedPayload = {
+  __typename?: 'PantryItemUsageChangedPayload';
+  mutation: MutationType;
+  pantryId: Scalars['String']['output'];
+  previousValues?: Maybe<PantryItemUsage>;
+  timestamp: Scalars['DateTime']['output'];
+  usage: PantryItemUsage;
+  userId: Scalars['String']['output'];
+};
+
 export type PantryStats = {
   __typename?: 'PantryStats';
   activeItems: Scalars['Int']['output'];
@@ -3060,6 +3151,17 @@ export type PantryUpdatedPayload = {
   temperature?: Maybe<Scalars['String']['output']>;
   updatedAt: Scalars['DateTime']['output'];
   version: Scalars['Int']['output'];
+};
+
+export type PantryWasteAlertPayload = {
+  __typename?: 'PantryWasteAlertPayload';
+  item: PantryItem;
+  pantryId: Scalars['String']['output'];
+  timestamp: Scalars['DateTime']['output'];
+  userId: Scalars['String']['output'];
+  wasteAmount: Scalars['Float']['output'];
+  wasteReason: Scalars['String']['output'];
+  wasteValue?: Maybe<Scalars['Float']['output']>;
 };
 
 export type PlatformStat = {
@@ -3209,9 +3311,15 @@ export type Query = {
   hasUrgentNotifications: Scalars['Boolean']['output'];
   home?: Maybe<Home>;
   homeByJoinCode?: Maybe<Home>;
+  homeInviteByToken?: Maybe<HomeInvite>;
+  homeInviteLogs: Array<InviteLog>;
+  homeInviteStats: Array<HomeInviteStatsGroup>;
   homeInvites: Array<HomeInvite>;
   homeMemberships: Array<Membership>;
   homes: Array<Home>;
+  inviteLogs: Array<InviteLog>;
+  inviteStats: InviteStats;
+  invitesSentByMe: Array<HomeInvite>;
   item?: Maybe<Item>;
   itemByExternalId?: Maybe<Item>;
   itemBySku?: Maybe<Item>;
@@ -3227,12 +3335,16 @@ export type Query = {
   membership?: Maybe<Membership>;
   membershipStats: MembershipStats;
   mobileDevices: Array<Device>;
+  myCollaboratedShoppingLists: Array<ShoppingList>;
   myDevices: Array<Device>;
-  myHomes: Array<Home>;
+  myHomes?: Maybe<Array<Home>>;
+  myInviteLogs: Array<InviteLog>;
   myMembershipInHome?: Maybe<Membership>;
-  myMemberships: Array<Membership>;
+  myMemberships?: Maybe<Array<Membership>>;
   myModeration?: Maybe<UserModeration>;
   myNotifications: NotificationConnection;
+  myPendingCollaborationInvites: Array<ShoppingListCollaborator>;
+  myPendingInvites: Array<HomeInvite>;
   myPurchases: Array<Purchase>;
   myShoppingListInvites: Array<ShoppingListCollaborator>;
   nearbyStores: Array<Store>;
@@ -3287,6 +3399,7 @@ export type Query = {
   storeWithPurchases?: Maybe<Store>;
   stores: Array<Store>;
   suggestedRecipes: Array<Recipe>;
+  suspiciousInviteActivity: Array<InviteLog>;
   suspiciousLoginActivity: SuspiciousActivity;
   trendingItems?: Maybe<Array<Item>>;
   trustedDevices: Array<Device>;
@@ -3404,12 +3517,34 @@ export type QueryHomeByJoinCodeArgs = {
   joinCode: Scalars['String']['input'];
 };
 
+export type QueryHomeInviteByTokenArgs = {
+  token: Scalars['String']['input'];
+};
+
+export type QueryHomeInviteLogsArgs = {
+  homeId: Scalars['String']['input'];
+  limit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type QueryHomeInviteStatsArgs = {
+  homeId: Scalars['String']['input'];
+};
+
 export type QueryHomeInvitesArgs = {
   homeId: Scalars['ID']['input'];
 };
 
 export type QueryHomeMembershipsArgs = {
   homeId: Scalars['ID']['input'];
+};
+
+export type QueryInviteLogsArgs = {
+  inviteId: Scalars['String']['input'];
+  limit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type QueryInviteStatsArgs = {
+  inviteId: Scalars['String']['input'];
 };
 
 export type QueryItemArgs = {
@@ -3479,6 +3614,10 @@ export type QueryMobileDevicesArgs = {
 
 export type QueryMyDevicesArgs = {
   filters?: InputMaybe<DeviceFiltersInput>;
+};
+
+export type QueryMyInviteLogsArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type QueryMyMembershipInHomeArgs = {
@@ -3692,6 +3831,10 @@ export type QueryStoreWithPriceHistoryArgs = {
 export type QueryStoreWithPurchasesArgs = {
   id: Scalars['ID']['input'];
   limit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type QuerySuspiciousInviteActivityArgs = {
+  timeWindowHours?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type QuerySuspiciousLoginActivityArgs = {
@@ -4257,16 +4400,17 @@ export type Subscription = {
   membershipRoleChanged: MembershipRoleChangedPayload;
   membershipUpdated: MembershipUpdatePayload;
   myMembershipUpdated: MembershipUpdatePayload;
-  myPantriesUpdated: Array<Pantry>;
   myShoppingListsUpdated?: Maybe<ShoppingListUpdatedPayload>;
   notificationByType: NotificationPayload;
   notificationReceived: NotificationPayload;
   notificationUpdated: NotificationPayload;
   pantryActivityAdded: PantryActivity;
   pantryExpiringItemsAlert: Array<PantryItem>;
+  pantryItemUsageChanged: PantryItemUsageChangedPayload;
   pantryItemsChanged: PantryItemChangedPayload;
   pantryLowStockAlert: Array<PantryItem>;
   pantryUpdated: PantryUpdatedPayload;
+  pantryWasteAlert: PantryWasteAlertPayload;
   purchaseCreated: Purchase;
   purchaseDeleted: Purchase;
   purchaseUpdated: Purchase;
@@ -4283,10 +4427,8 @@ export type Subscription = {
   suspiciousActivity: SuspiciousActivity;
   urgentNotificationReceived: NotificationPayload;
   userActivity: UserActivityPayload;
-  userAuth: UserAuthPayload;
   userModerationChanged: UserModerationChangedPayload;
   userProfileChanged: UserProfileChangedPayload;
-  userSocial: UserSocialPayload;
   userStatusChanged: UserStatusChangedPayload;
   userUpdated: UserUpdatedPayload;
 };
@@ -4355,10 +4497,6 @@ export type SubscriptionMembershipUpdatedArgs = {
   homeId?: InputMaybe<Scalars['ID']['input']>;
 };
 
-export type SubscriptionMyPantriesUpdatedArgs = {
-  homeId: Scalars['ID']['input'];
-};
-
 export type SubscriptionNotificationByTypeArgs = {
   type: NotificationType;
 };
@@ -4368,6 +4506,10 @@ export type SubscriptionPantryActivityAddedArgs = {
 };
 
 export type SubscriptionPantryExpiringItemsAlertArgs = {
+  pantryId: Scalars['ID']['input'];
+};
+
+export type SubscriptionPantryItemUsageChangedArgs = {
   pantryId: Scalars['ID']['input'];
 };
 
@@ -4381,6 +4523,10 @@ export type SubscriptionPantryLowStockAlertArgs = {
 
 export type SubscriptionPantryUpdatedArgs = {
   id: Scalars['ID']['input'];
+};
+
+export type SubscriptionPantryWasteAlertArgs = {
+  pantryId: Scalars['ID']['input'];
 };
 
 export type SubscriptionPurchaseCreatedArgs = {
@@ -4443,19 +4589,11 @@ export type SubscriptionUserActivityArgs = {
   userId?: InputMaybe<Scalars['ID']['input']>;
 };
 
-export type SubscriptionUserAuthArgs = {
-  userId?: InputMaybe<Scalars['ID']['input']>;
-};
-
 export type SubscriptionUserModerationChangedArgs = {
   userId?: InputMaybe<Scalars['ID']['input']>;
 };
 
 export type SubscriptionUserProfileChangedArgs = {
-  userId?: InputMaybe<Scalars['ID']['input']>;
-};
-
-export type SubscriptionUserSocialArgs = {
   userId?: InputMaybe<Scalars['ID']['input']>;
 };
 
@@ -4483,6 +4621,19 @@ export type SuspiciousActivity = {
   riskyLogins: Array<LoginHistory>;
   suspiciousActivity: Scalars['Boolean']['output'];
   unusualTimeLogins?: Maybe<Array<LoginHistory>>;
+};
+
+export type SuspiciousActivitySummary = {
+  __typename?: 'SuspiciousActivitySummary';
+  actionsBreakdown: InviteActionStats;
+  timeWindow: Scalars['Int']['output'];
+  totalSuspiciousActions: Scalars['Int']['output'];
+};
+
+export type SuspiciousInviteActivity = {
+  __typename?: 'SuspiciousInviteActivity';
+  logs: Array<InviteLog>;
+  summary: SuspiciousActivitySummary;
 };
 
 export type Timestamped = {
@@ -5890,36 +6041,6 @@ export type UserProfileChangedSubscription = {
   };
 };
 
-export type UserAuthSubscriptionVariables = Exact<{
-  userId?: InputMaybe<Scalars['ID']['input']>;
-}>;
-
-export type UserAuthSubscription = {
-  __typename?: 'Subscription';
-  userAuth: {
-    __typename?: 'UserAuthPayload';
-    userId: string;
-    authType: string;
-    deviceInfo?: any | null | undefined;
-    timestamp: string;
-  };
-};
-
-export type UserSocialSubscriptionVariables = Exact<{
-  userId?: InputMaybe<Scalars['ID']['input']>;
-}>;
-
-export type UserSocialSubscription = {
-  __typename?: 'Subscription';
-  userSocial: {
-    __typename?: 'UserSocialPayload';
-    userId: string;
-    targetUserId: string;
-    action: string;
-    timestamp: string;
-  };
-};
-
 export type ShoppingListItemFragment = {
   __typename?: 'ShoppingListItem';
   id: string;
@@ -6748,7 +6869,45 @@ export type MemberLeftSubscriptionVariables = Exact<{
 
 export type MemberLeftSubscription = {
   __typename?: 'Subscription';
-  memberLeft: {__typename?: 'MembershipUpdatePayload'; userId: string};
+  memberLeft: {
+    __typename?: 'MembershipUpdatePayload';
+    mutation: MembershipMutationType;
+    updatedFields?: Array<string> | null | undefined;
+    userId: string;
+    node?:
+      | {
+          __typename?: 'Membership';
+          id: string;
+          homeId: string;
+          userId: string;
+          role: MembershipRole;
+          status: MembershipStatus;
+          displayName?: string | null | undefined;
+          user: {
+            __typename?: 'User';
+            id: string;
+            profile?:
+              | {
+                  __typename?: 'UserProfile';
+                  displayName?: string | null | undefined;
+                  avatar?: string | null | undefined;
+                }
+              | null
+              | undefined;
+          };
+        }
+      | null
+      | undefined;
+    previousValues?:
+      | {
+          __typename?: 'Membership';
+          role: MembershipRole;
+          status: MembershipStatus;
+          displayName?: string | null | undefined;
+        }
+      | null
+      | undefined;
+  };
 };
 
 export type MembershipRoleChangedSubscriptionVariables = Exact<{
@@ -7396,7 +7555,7 @@ export type UrgentNotificationReceivedSubscription = {
 };
 
 export type NotificationUpdatedSubscriptionVariables = Exact<{
-  id: Scalars['ID']['input'];
+  [key: string]: never;
 }>;
 
 export type NotificationUpdatedSubscription = {
@@ -7432,6 +7591,41 @@ export type GetPantriesQuery = {
       | null
       | undefined;
   }>;
+};
+
+export type GetPantryQueryVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type GetPantryQuery = {
+  __typename?: 'Query';
+  pantry?:
+    | {
+        __typename?: 'Pantry';
+        id: string;
+        homeId: string;
+        name: string;
+        description?: string | null | undefined;
+        isDefault: boolean;
+        location?: string | null | undefined;
+        temperature?: string | null | undefined;
+        tags: Array<string>;
+        metadata?: any | null | undefined;
+        version: number;
+        createdAt: string;
+        updatedAt?: string | null | undefined;
+        items?:
+          | Array<{
+              __typename?: 'PantryItem';
+              id: string;
+              itemName: string;
+              item: {__typename?: 'Item'; name: string};
+            }>
+          | null
+          | undefined;
+      }
+    | null
+    | undefined;
 };
 
 export type GetPantryItemsQueryVariables = Exact<{
@@ -7484,6 +7678,39 @@ export type CreatePantryMutation = {
   };
 };
 
+export type UpdatePantryMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+  input: UpdatePantryInput;
+}>;
+
+export type UpdatePantryMutation = {
+  __typename?: 'Mutation';
+  updatePantry: {
+    __typename?: 'Pantry';
+    id: string;
+    homeId: string;
+    name: string;
+    description?: string | null | undefined;
+    isDefault: boolean;
+    location?: string | null | undefined;
+    temperature?: string | null | undefined;
+    tags: Array<string>;
+    metadata?: any | null | undefined;
+    version: number;
+    createdAt: string;
+    updatedAt?: string | null | undefined;
+  };
+};
+
+export type DeletePantryMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type DeletePantryMutation = {
+  __typename?: 'Mutation';
+  deletePantry: boolean;
+};
+
 export type UpdatePantryItemMutationVariables = Exact<{
   id: Scalars['ID']['input'];
   input: UpdatePantryItemInput;
@@ -7523,26 +7750,6 @@ export type PantryUpdatedSubscription = {
     updatedAt: string;
     home: {__typename?: 'Home'; id: string; name: string};
   };
-};
-
-export type MyPantriesUpdatedSubscriptionVariables = Exact<{
-  homeId: Scalars['ID']['input'];
-}>;
-
-export type MyPantriesUpdatedSubscription = {
-  __typename?: 'Subscription';
-  myPantriesUpdated: Array<{
-    __typename?: 'Pantry';
-    id: string;
-    name: string;
-    description?: string | null | undefined;
-    isDefault: boolean;
-    location?: string | null | undefined;
-    items?:
-      | Array<{__typename?: 'PantryItem'; id: string; currentQuantity: number}>
-      | null
-      | undefined;
-  }>;
 };
 
 export type PantryActivityAddedSubscriptionVariables = Exact<{
@@ -7641,6 +7848,71 @@ export type PantryItemsChangedSubscription = {
       id: string;
       itemName: string;
       unit: {__typename?: 'Unit'; name: string};
+    };
+  };
+};
+
+export type PantryItemUsageChangedSubscriptionVariables = Exact<{
+  pantryId: Scalars['ID']['input'];
+}>;
+
+export type PantryItemUsageChangedSubscription = {
+  __typename?: 'Subscription';
+  pantryItemUsageChanged: {
+    __typename?: 'PantryItemUsageChangedPayload';
+    mutation: MutationType;
+    pantryId: string;
+    userId: string;
+    timestamp: string;
+    usage: {
+      __typename?: 'PantryItemUsage';
+      id: string;
+      pantryItemId: string;
+      quantityUsed: number;
+      usedById: string;
+      usedAt: string;
+      purpose: UsagePurpose;
+      notes?: string | null | undefined;
+    };
+    previousValues?:
+      | {
+          __typename?: 'PantryItemUsage';
+          quantityUsed: number;
+          purpose: UsagePurpose;
+        }
+      | null
+      | undefined;
+  };
+};
+
+export type PantryWasteAlertSubscriptionVariables = Exact<{
+  pantryId: Scalars['ID']['input'];
+}>;
+
+export type PantryWasteAlertSubscription = {
+  __typename?: 'Subscription';
+  pantryWasteAlert: {
+    __typename?: 'PantryWasteAlertPayload';
+    pantryId: string;
+    wasteAmount: number;
+    wasteReason: string;
+    wasteValue?: number | null | undefined;
+    userId: string;
+    timestamp: string;
+    item: {
+      __typename?: 'PantryItem';
+      id: string;
+      itemId: string;
+      itemName: string;
+      pantryId: string;
+      currentQuantity: number;
+      unit: {__typename?: 'Unit'; id: string; name: string; symbol: string};
+      item: {
+        __typename?: 'Item';
+        id: string;
+        name: string;
+        imageUrl?: string | null | undefined;
+      };
     };
   };
 };
@@ -14358,164 +14630,6 @@ export type UserProfileChangedSubscriptionHookResult = ReturnType<
 >;
 export type UserProfileChangedSubscriptionResult =
   ApolloReactCommon.SubscriptionResult<UserProfileChangedSubscription>;
-export const UserAuthDocument = {
-  kind: 'Document',
-  definitions: [
-    {
-      kind: 'OperationDefinition',
-      operation: 'subscription',
-      name: {kind: 'Name', value: 'UserAuth'},
-      variableDefinitions: [
-        {
-          kind: 'VariableDefinition',
-          variable: {kind: 'Variable', name: {kind: 'Name', value: 'userId'}},
-          type: {kind: 'NamedType', name: {kind: 'Name', value: 'ID'}},
-        },
-      ],
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          {
-            kind: 'Field',
-            name: {kind: 'Name', value: 'userAuth'},
-            arguments: [
-              {
-                kind: 'Argument',
-                name: {kind: 'Name', value: 'userId'},
-                value: {
-                  kind: 'Variable',
-                  name: {kind: 'Name', value: 'userId'},
-                },
-              },
-            ],
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                {kind: 'Field', name: {kind: 'Name', value: 'userId'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'authType'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'deviceInfo'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'timestamp'}},
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
-
-/**
- * __useUserAuthSubscription__
- *
- * To run a query within a React component, call `useUserAuthSubscription` and pass it any options that fit your needs.
- * When your component renders, `useUserAuthSubscription` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useUserAuthSubscription({
- *   variables: {
- *      userId: // value for 'userId'
- *   },
- * });
- */
-export function useUserAuthSubscription(
-  baseOptions?: ApolloReactHooks.SubscriptionHookOptions<
-    UserAuthSubscription,
-    UserAuthSubscriptionVariables
-  >,
-) {
-  const options = {...defaultOptions, ...baseOptions};
-  return ApolloReactHooks.useSubscription<
-    UserAuthSubscription,
-    UserAuthSubscriptionVariables
-  >(UserAuthDocument, options);
-}
-export type UserAuthSubscriptionHookResult = ReturnType<
-  typeof useUserAuthSubscription
->;
-export type UserAuthSubscriptionResult =
-  ApolloReactCommon.SubscriptionResult<UserAuthSubscription>;
-export const UserSocialDocument = {
-  kind: 'Document',
-  definitions: [
-    {
-      kind: 'OperationDefinition',
-      operation: 'subscription',
-      name: {kind: 'Name', value: 'UserSocial'},
-      variableDefinitions: [
-        {
-          kind: 'VariableDefinition',
-          variable: {kind: 'Variable', name: {kind: 'Name', value: 'userId'}},
-          type: {kind: 'NamedType', name: {kind: 'Name', value: 'ID'}},
-        },
-      ],
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          {
-            kind: 'Field',
-            name: {kind: 'Name', value: 'userSocial'},
-            arguments: [
-              {
-                kind: 'Argument',
-                name: {kind: 'Name', value: 'userId'},
-                value: {
-                  kind: 'Variable',
-                  name: {kind: 'Name', value: 'userId'},
-                },
-              },
-            ],
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                {kind: 'Field', name: {kind: 'Name', value: 'userId'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'targetUserId'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'action'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'timestamp'}},
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
-
-/**
- * __useUserSocialSubscription__
- *
- * To run a query within a React component, call `useUserSocialSubscription` and pass it any options that fit your needs.
- * When your component renders, `useUserSocialSubscription` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useUserSocialSubscription({
- *   variables: {
- *      userId: // value for 'userId'
- *   },
- * });
- */
-export function useUserSocialSubscription(
-  baseOptions?: ApolloReactHooks.SubscriptionHookOptions<
-    UserSocialSubscription,
-    UserSocialSubscriptionVariables
-  >,
-) {
-  const options = {...defaultOptions, ...baseOptions};
-  return ApolloReactHooks.useSubscription<
-    UserSocialSubscription,
-    UserSocialSubscriptionVariables
-  >(UserSocialDocument, options);
-}
-export type UserSocialSubscriptionHookResult = ReturnType<
-  typeof useUserSocialSubscription
->;
-export type UserSocialSubscriptionResult =
-  ApolloReactCommon.SubscriptionResult<UserSocialSubscription>;
 export const GetHomeDocument = {
   kind: 'Document',
   definitions: [
@@ -18826,6 +18940,68 @@ export const MemberLeftDocument = {
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
+                {kind: 'Field', name: {kind: 'Name', value: 'mutation'}},
+                {
+                  kind: 'Field',
+                  name: {kind: 'Name', value: 'node'},
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {kind: 'Field', name: {kind: 'Name', value: 'id'}},
+                      {kind: 'Field', name: {kind: 'Name', value: 'homeId'}},
+                      {kind: 'Field', name: {kind: 'Name', value: 'userId'}},
+                      {kind: 'Field', name: {kind: 'Name', value: 'role'}},
+                      {kind: 'Field', name: {kind: 'Name', value: 'status'}},
+                      {
+                        kind: 'Field',
+                        name: {kind: 'Name', value: 'displayName'},
+                      },
+                      {
+                        kind: 'Field',
+                        name: {kind: 'Name', value: 'user'},
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {kind: 'Field', name: {kind: 'Name', value: 'id'}},
+                            {
+                              kind: 'Field',
+                              name: {kind: 'Name', value: 'profile'},
+                              selectionSet: {
+                                kind: 'SelectionSet',
+                                selections: [
+                                  {
+                                    kind: 'Field',
+                                    name: {kind: 'Name', value: 'displayName'},
+                                  },
+                                  {
+                                    kind: 'Field',
+                                    name: {kind: 'Name', value: 'avatar'},
+                                  },
+                                ],
+                              },
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
+                {
+                  kind: 'Field',
+                  name: {kind: 'Name', value: 'previousValues'},
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {kind: 'Field', name: {kind: 'Name', value: 'role'}},
+                      {kind: 'Field', name: {kind: 'Name', value: 'status'}},
+                      {
+                        kind: 'Field',
+                        name: {kind: 'Name', value: 'displayName'},
+                      },
+                    ],
+                  },
+                },
+                {kind: 'Field', name: {kind: 'Name', value: 'updatedFields'}},
                 {kind: 'Field', name: {kind: 'Name', value: 'userId'}},
               ],
             },
@@ -23379,16 +23555,6 @@ export const NotificationUpdatedDocument = {
       kind: 'OperationDefinition',
       operation: 'subscription',
       name: {kind: 'Name', value: 'NotificationUpdated'},
-      variableDefinitions: [
-        {
-          kind: 'VariableDefinition',
-          variable: {kind: 'Variable', name: {kind: 'Name', value: 'id'}},
-          type: {
-            kind: 'NonNullType',
-            type: {kind: 'NamedType', name: {kind: 'Name', value: 'ID'}},
-          },
-        },
-      ],
       selectionSet: {
         kind: 'SelectionSet',
         selections: [
@@ -23455,19 +23621,14 @@ export const NotificationUpdatedDocument = {
  * @example
  * const { data, loading, error } = useNotificationUpdatedSubscription({
  *   variables: {
- *      id: // value for 'id'
  *   },
  * });
  */
 export function useNotificationUpdatedSubscription(
-  baseOptions: ApolloReactHooks.SubscriptionHookOptions<
+  baseOptions?: ApolloReactHooks.SubscriptionHookOptions<
     NotificationUpdatedSubscription,
     NotificationUpdatedSubscriptionVariables
-  > &
-    (
-      | {variables: NotificationUpdatedSubscriptionVariables; skip?: boolean}
-      | {skip: boolean}
-    ),
+  >,
 ) {
   const options = {...defaultOptions, ...baseOptions};
   return ApolloReactHooks.useSubscription<
@@ -23628,6 +23789,156 @@ export type GetPantriesQueryResult = ApolloReactCommon.QueryResult<
 >;
 export function refetchGetPantriesQuery(variables: GetPantriesQueryVariables) {
   return {query: GetPantriesDocument, variables: variables};
+}
+export const GetPantryDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'query',
+      name: {kind: 'Name', value: 'GetPantry'},
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {kind: 'Variable', name: {kind: 'Name', value: 'id'}},
+          type: {
+            kind: 'NonNullType',
+            type: {kind: 'NamedType', name: {kind: 'Name', value: 'ID'}},
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: {kind: 'Name', value: 'pantry'},
+            arguments: [
+              {
+                kind: 'Argument',
+                name: {kind: 'Name', value: 'id'},
+                value: {kind: 'Variable', name: {kind: 'Name', value: 'id'}},
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {kind: 'Field', name: {kind: 'Name', value: 'id'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'homeId'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'name'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'description'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'isDefault'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'location'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'temperature'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'tags'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'metadata'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'version'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'createdAt'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'updatedAt'}},
+                {
+                  kind: 'Field',
+                  name: {kind: 'Name', value: 'items'},
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {kind: 'Field', name: {kind: 'Name', value: 'id'}},
+                      {kind: 'Field', name: {kind: 'Name', value: 'itemName'}},
+                      {
+                        kind: 'Field',
+                        name: {kind: 'Name', value: 'item'},
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'Field',
+                              name: {kind: 'Name', value: 'name'},
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+
+/**
+ * __useGetPantryQuery__
+ *
+ * To run a query within a React component, call `useGetPantryQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetPantryQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetPantryQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useGetPantryQuery(
+  baseOptions: ApolloReactHooks.QueryHookOptions<
+    GetPantryQuery,
+    GetPantryQueryVariables
+  > &
+    ({variables: GetPantryQueryVariables; skip?: boolean} | {skip: boolean}),
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useQuery<GetPantryQuery, GetPantryQueryVariables>(
+    GetPantryDocument,
+    options,
+  );
+}
+export function useGetPantryLazyQuery(
+  baseOptions?: ApolloReactHooks.LazyQueryHookOptions<
+    GetPantryQuery,
+    GetPantryQueryVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useLazyQuery<GetPantryQuery, GetPantryQueryVariables>(
+    GetPantryDocument,
+    options,
+  );
+}
+export function useGetPantrySuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetPantryQuery,
+        GetPantryQueryVariables
+      >,
+) {
+  const options =
+    baseOptions === ApolloReactHooks.skipToken
+      ? baseOptions
+      : {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSuspenseQuery<
+    GetPantryQuery,
+    GetPantryQueryVariables
+  >(GetPantryDocument, options);
+}
+export type GetPantryQueryHookResult = ReturnType<typeof useGetPantryQuery>;
+export type GetPantryLazyQueryHookResult = ReturnType<
+  typeof useGetPantryLazyQuery
+>;
+export type GetPantrySuspenseQueryHookResult = ReturnType<
+  typeof useGetPantrySuspenseQuery
+>;
+export type GetPantryQueryResult = ApolloReactCommon.QueryResult<
+  GetPantryQuery,
+  GetPantryQueryVariables
+>;
+export function refetchGetPantryQuery(variables: GetPantryQueryVariables) {
+  return {query: GetPantryDocument, variables: variables};
 }
 export const GetPantryItemsDocument = {
   kind: 'Document',
@@ -25033,6 +25344,198 @@ export type CreatePantryMutationOptions = ApolloReactCommon.BaseMutationOptions<
   CreatePantryMutation,
   CreatePantryMutationVariables
 >;
+export const UpdatePantryDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: {kind: 'Name', value: 'UpdatePantry'},
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {kind: 'Variable', name: {kind: 'Name', value: 'id'}},
+          type: {
+            kind: 'NonNullType',
+            type: {kind: 'NamedType', name: {kind: 'Name', value: 'ID'}},
+          },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {kind: 'Variable', name: {kind: 'Name', value: 'input'}},
+          type: {
+            kind: 'NonNullType',
+            type: {
+              kind: 'NamedType',
+              name: {kind: 'Name', value: 'UpdatePantryInput'},
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: {kind: 'Name', value: 'updatePantry'},
+            arguments: [
+              {
+                kind: 'Argument',
+                name: {kind: 'Name', value: 'id'},
+                value: {kind: 'Variable', name: {kind: 'Name', value: 'id'}},
+              },
+              {
+                kind: 'Argument',
+                name: {kind: 'Name', value: 'input'},
+                value: {kind: 'Variable', name: {kind: 'Name', value: 'input'}},
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {kind: 'Field', name: {kind: 'Name', value: 'id'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'homeId'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'name'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'description'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'isDefault'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'location'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'temperature'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'tags'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'metadata'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'version'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'createdAt'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'updatedAt'}},
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type UpdatePantryMutationFn = ApolloReactCommon.MutationFunction<
+  UpdatePantryMutation,
+  UpdatePantryMutationVariables
+>;
+
+/**
+ * __useUpdatePantryMutation__
+ *
+ * To run a mutation, you first call `useUpdatePantryMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdatePantryMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updatePantryMutation, { data, loading, error }] = useUpdatePantryMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useUpdatePantryMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    UpdatePantryMutation,
+    UpdatePantryMutationVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useMutation<
+    UpdatePantryMutation,
+    UpdatePantryMutationVariables
+  >(UpdatePantryDocument, options);
+}
+export type UpdatePantryMutationHookResult = ReturnType<
+  typeof useUpdatePantryMutation
+>;
+export type UpdatePantryMutationResult =
+  ApolloReactCommon.MutationResult<UpdatePantryMutation>;
+export type UpdatePantryMutationOptions = ApolloReactCommon.BaseMutationOptions<
+  UpdatePantryMutation,
+  UpdatePantryMutationVariables
+>;
+export const DeletePantryDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: {kind: 'Name', value: 'DeletePantry'},
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {kind: 'Variable', name: {kind: 'Name', value: 'id'}},
+          type: {
+            kind: 'NonNullType',
+            type: {kind: 'NamedType', name: {kind: 'Name', value: 'ID'}},
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: {kind: 'Name', value: 'deletePantry'},
+            arguments: [
+              {
+                kind: 'Argument',
+                name: {kind: 'Name', value: 'id'},
+                value: {kind: 'Variable', name: {kind: 'Name', value: 'id'}},
+              },
+            ],
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type DeletePantryMutationFn = ApolloReactCommon.MutationFunction<
+  DeletePantryMutation,
+  DeletePantryMutationVariables
+>;
+
+/**
+ * __useDeletePantryMutation__
+ *
+ * To run a mutation, you first call `useDeletePantryMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeletePantryMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deletePantryMutation, { data, loading, error }] = useDeletePantryMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeletePantryMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    DeletePantryMutation,
+    DeletePantryMutationVariables
+  >,
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useMutation<
+    DeletePantryMutation,
+    DeletePantryMutationVariables
+  >(DeletePantryDocument, options);
+}
+export type DeletePantryMutationHookResult = ReturnType<
+  typeof useDeletePantryMutation
+>;
+export type DeletePantryMutationResult =
+  ApolloReactCommon.MutationResult<DeletePantryMutation>;
+export type DeletePantryMutationOptions = ApolloReactCommon.BaseMutationOptions<
+  DeletePantryMutation,
+  DeletePantryMutationVariables
+>;
 export const UpdatePantryItemDocument = {
   kind: 'Document',
   definitions: [
@@ -25968,107 +26471,6 @@ export type PantryUpdatedSubscriptionHookResult = ReturnType<
 >;
 export type PantryUpdatedSubscriptionResult =
   ApolloReactCommon.SubscriptionResult<PantryUpdatedSubscription>;
-export const MyPantriesUpdatedDocument = {
-  kind: 'Document',
-  definitions: [
-    {
-      kind: 'OperationDefinition',
-      operation: 'subscription',
-      name: {kind: 'Name', value: 'MyPantriesUpdated'},
-      variableDefinitions: [
-        {
-          kind: 'VariableDefinition',
-          variable: {kind: 'Variable', name: {kind: 'Name', value: 'homeId'}},
-          type: {
-            kind: 'NonNullType',
-            type: {kind: 'NamedType', name: {kind: 'Name', value: 'ID'}},
-          },
-        },
-      ],
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          {
-            kind: 'Field',
-            name: {kind: 'Name', value: 'myPantriesUpdated'},
-            arguments: [
-              {
-                kind: 'Argument',
-                name: {kind: 'Name', value: 'homeId'},
-                value: {
-                  kind: 'Variable',
-                  name: {kind: 'Name', value: 'homeId'},
-                },
-              },
-            ],
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                {kind: 'Field', name: {kind: 'Name', value: 'id'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'name'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'description'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'isDefault'}},
-                {kind: 'Field', name: {kind: 'Name', value: 'location'}},
-                {
-                  kind: 'Field',
-                  name: {kind: 'Name', value: 'items'},
-                  selectionSet: {
-                    kind: 'SelectionSet',
-                    selections: [
-                      {kind: 'Field', name: {kind: 'Name', value: 'id'}},
-                      {
-                        kind: 'Field',
-                        name: {kind: 'Name', value: 'currentQuantity'},
-                      },
-                    ],
-                  },
-                },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
-
-/**
- * __useMyPantriesUpdatedSubscription__
- *
- * To run a query within a React component, call `useMyPantriesUpdatedSubscription` and pass it any options that fit your needs.
- * When your component renders, `useMyPantriesUpdatedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useMyPantriesUpdatedSubscription({
- *   variables: {
- *      homeId: // value for 'homeId'
- *   },
- * });
- */
-export function useMyPantriesUpdatedSubscription(
-  baseOptions: ApolloReactHooks.SubscriptionHookOptions<
-    MyPantriesUpdatedSubscription,
-    MyPantriesUpdatedSubscriptionVariables
-  > &
-    (
-      | {variables: MyPantriesUpdatedSubscriptionVariables; skip?: boolean}
-      | {skip: boolean}
-    ),
-) {
-  const options = {...defaultOptions, ...baseOptions};
-  return ApolloReactHooks.useSubscription<
-    MyPantriesUpdatedSubscription,
-    MyPantriesUpdatedSubscriptionVariables
-  >(MyPantriesUpdatedDocument, options);
-}
-export type MyPantriesUpdatedSubscriptionHookResult = ReturnType<
-  typeof useMyPantriesUpdatedSubscription
->;
-export type MyPantriesUpdatedSubscriptionResult =
-  ApolloReactCommon.SubscriptionResult<MyPantriesUpdatedSubscription>;
 export const PantryActivityAddedDocument = {
   kind: 'Document',
   definitions: [
@@ -26504,6 +26906,269 @@ export type PantryItemsChangedSubscriptionHookResult = ReturnType<
 >;
 export type PantryItemsChangedSubscriptionResult =
   ApolloReactCommon.SubscriptionResult<PantryItemsChangedSubscription>;
+export const PantryItemUsageChangedDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'subscription',
+      name: {kind: 'Name', value: 'PantryItemUsageChanged'},
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {kind: 'Variable', name: {kind: 'Name', value: 'pantryId'}},
+          type: {
+            kind: 'NonNullType',
+            type: {kind: 'NamedType', name: {kind: 'Name', value: 'ID'}},
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: {kind: 'Name', value: 'pantryItemUsageChanged'},
+            arguments: [
+              {
+                kind: 'Argument',
+                name: {kind: 'Name', value: 'pantryId'},
+                value: {
+                  kind: 'Variable',
+                  name: {kind: 'Name', value: 'pantryId'},
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {kind: 'Field', name: {kind: 'Name', value: 'mutation'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'pantryId'}},
+                {
+                  kind: 'Field',
+                  name: {kind: 'Name', value: 'usage'},
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {kind: 'Field', name: {kind: 'Name', value: 'id'}},
+                      {
+                        kind: 'Field',
+                        name: {kind: 'Name', value: 'pantryItemId'},
+                      },
+                      {
+                        kind: 'Field',
+                        name: {kind: 'Name', value: 'quantityUsed'},
+                      },
+                      {kind: 'Field', name: {kind: 'Name', value: 'usedById'}},
+                      {kind: 'Field', name: {kind: 'Name', value: 'usedAt'}},
+                      {kind: 'Field', name: {kind: 'Name', value: 'purpose'}},
+                      {kind: 'Field', name: {kind: 'Name', value: 'notes'}},
+                    ],
+                  },
+                },
+                {
+                  kind: 'Field',
+                  name: {kind: 'Name', value: 'previousValues'},
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: {kind: 'Name', value: 'quantityUsed'},
+                      },
+                      {kind: 'Field', name: {kind: 'Name', value: 'purpose'}},
+                    ],
+                  },
+                },
+                {kind: 'Field', name: {kind: 'Name', value: 'userId'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'timestamp'}},
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+
+/**
+ * __usePantryItemUsageChangedSubscription__
+ *
+ * To run a query within a React component, call `usePantryItemUsageChangedSubscription` and pass it any options that fit your needs.
+ * When your component renders, `usePantryItemUsageChangedSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = usePantryItemUsageChangedSubscription({
+ *   variables: {
+ *      pantryId: // value for 'pantryId'
+ *   },
+ * });
+ */
+export function usePantryItemUsageChangedSubscription(
+  baseOptions: ApolloReactHooks.SubscriptionHookOptions<
+    PantryItemUsageChangedSubscription,
+    PantryItemUsageChangedSubscriptionVariables
+  > &
+    (
+      | {variables: PantryItemUsageChangedSubscriptionVariables; skip?: boolean}
+      | {skip: boolean}
+    ),
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    PantryItemUsageChangedSubscription,
+    PantryItemUsageChangedSubscriptionVariables
+  >(PantryItemUsageChangedDocument, options);
+}
+export type PantryItemUsageChangedSubscriptionHookResult = ReturnType<
+  typeof usePantryItemUsageChangedSubscription
+>;
+export type PantryItemUsageChangedSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<PantryItemUsageChangedSubscription>;
+export const PantryWasteAlertDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'subscription',
+      name: {kind: 'Name', value: 'PantryWasteAlert'},
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {kind: 'Variable', name: {kind: 'Name', value: 'pantryId'}},
+          type: {
+            kind: 'NonNullType',
+            type: {kind: 'NamedType', name: {kind: 'Name', value: 'ID'}},
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: {kind: 'Name', value: 'pantryWasteAlert'},
+            arguments: [
+              {
+                kind: 'Argument',
+                name: {kind: 'Name', value: 'pantryId'},
+                value: {
+                  kind: 'Variable',
+                  name: {kind: 'Name', value: 'pantryId'},
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {kind: 'Field', name: {kind: 'Name', value: 'pantryId'}},
+                {
+                  kind: 'Field',
+                  name: {kind: 'Name', value: 'item'},
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {kind: 'Field', name: {kind: 'Name', value: 'id'}},
+                      {kind: 'Field', name: {kind: 'Name', value: 'itemId'}},
+                      {kind: 'Field', name: {kind: 'Name', value: 'itemName'}},
+                      {kind: 'Field', name: {kind: 'Name', value: 'pantryId'}},
+                      {
+                        kind: 'Field',
+                        name: {kind: 'Name', value: 'currentQuantity'},
+                      },
+                      {
+                        kind: 'Field',
+                        name: {kind: 'Name', value: 'unit'},
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {kind: 'Field', name: {kind: 'Name', value: 'id'}},
+                            {
+                              kind: 'Field',
+                              name: {kind: 'Name', value: 'name'},
+                            },
+                            {
+                              kind: 'Field',
+                              name: {kind: 'Name', value: 'symbol'},
+                            },
+                          ],
+                        },
+                      },
+                      {
+                        kind: 'Field',
+                        name: {kind: 'Name', value: 'item'},
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {kind: 'Field', name: {kind: 'Name', value: 'id'}},
+                            {
+                              kind: 'Field',
+                              name: {kind: 'Name', value: 'name'},
+                            },
+                            {
+                              kind: 'Field',
+                              name: {kind: 'Name', value: 'imageUrl'},
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
+                {kind: 'Field', name: {kind: 'Name', value: 'wasteAmount'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'wasteReason'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'wasteValue'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'userId'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'timestamp'}},
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+
+/**
+ * __usePantryWasteAlertSubscription__
+ *
+ * To run a query within a React component, call `usePantryWasteAlertSubscription` and pass it any options that fit your needs.
+ * When your component renders, `usePantryWasteAlertSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = usePantryWasteAlertSubscription({
+ *   variables: {
+ *      pantryId: // value for 'pantryId'
+ *   },
+ * });
+ */
+export function usePantryWasteAlertSubscription(
+  baseOptions: ApolloReactHooks.SubscriptionHookOptions<
+    PantryWasteAlertSubscription,
+    PantryWasteAlertSubscriptionVariables
+  > &
+    (
+      | {variables: PantryWasteAlertSubscriptionVariables; skip?: boolean}
+      | {skip: boolean}
+    ),
+) {
+  const options = {...defaultOptions, ...baseOptions};
+  return ApolloReactHooks.useSubscription<
+    PantryWasteAlertSubscription,
+    PantryWasteAlertSubscriptionVariables
+  >(PantryWasteAlertDocument, options);
+}
+export type PantryWasteAlertSubscriptionHookResult = ReturnType<
+  typeof usePantryWasteAlertSubscription
+>;
+export type PantryWasteAlertSubscriptionResult =
+  ApolloReactCommon.SubscriptionResult<PantryWasteAlertSubscription>;
 export const MyShoppingListInvitesDocument = {
   kind: 'Document',
   definitions: [

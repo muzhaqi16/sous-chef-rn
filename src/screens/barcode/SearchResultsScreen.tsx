@@ -72,6 +72,20 @@ export const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({
     });
   };
 
+  const handleBackPress = () => {
+    // Navigate back to the appropriate screen based on source
+    if (source === 'pantry') {
+      navigation.getParent()?.navigate('PantryStack', {screen: 'PantryMain'});
+    } else if (source === 'shoppingList') {
+      navigation
+        .getParent()
+        ?.navigate('ShoppingListStack', {screen: 'ShoppingListMain'});
+    } else {
+      // Fallback to normal back navigation
+      navigation.goBack();
+    }
+  };
+
   const renderBackdrop = (props: any) => (
     <BottomSheetBackdrop
       {...props}
@@ -116,7 +130,7 @@ export const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({
     <SafeAreaView style={styles.container}>
       <Header
         title="Search Results"
-        onBackPress={() => navigation.goBack()}
+        onBackPress={handleBackPress}
         onScanPress={handleScanAnother}
       />
       {renderContent()}

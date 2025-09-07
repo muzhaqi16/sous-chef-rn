@@ -1,6 +1,7 @@
 import {onError} from '@apollo/client/link/error';
 import {fromPromise} from '@apollo/client';
 import {attemptTokenRefresh} from './refreshToken';
+import {isKnownServerError} from '#utils/subscriptionErrorHandler';
 
 export const errorLink = onError(
   ({graphQLErrors, networkError, operation, forward}) => {
@@ -9,10 +10,22 @@ export const errorLink = onError(
       return;
     }
 
+    // Check if this is a known server subscription error
+    const isSubscription = operation.query.definitions.some(
+      def => def.kind === 'OperationDefinition' && def.operation === 'subscription'
+    );
+
+    if (isSubscription && networkError && isKnownServerError({networkError} as any)) {
+      console.warn(`Known server subscription error for ${operation.operationName}:`, networkError.message);
+      // Don't propagate these errors further, they're handled by the subscription hooks
+      return;
+    }
+
     console.log('Error link triggered:', {
       graphQLErrors,
       networkError,
       operationName: operation.operationName,
+      isSubscription,
     });
 
     // 1) Handle GraphQL errors

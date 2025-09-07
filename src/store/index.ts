@@ -24,7 +24,7 @@ import {
   ResetOptions,
   RESET_SCENARIOS,
 } from './resetManager';
-import {logger} from './logger';
+// import {logger} from './logger';
 import {zustandStorage, STORAGE_KEY} from '#/storage/mmkv';
 
 // Add reset manager interface to root state

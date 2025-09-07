@@ -7,9 +7,10 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/material-icons';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {useHomeManagement} from '#/hooks';
+import {useCallback} from 'react';
 import {useEmailInputModal} from '#/hooks/useEmailInputModal';
 import {
   HomeStats,
@@ -38,7 +39,16 @@ export const HomeManagement: React.FC = () => {
     setDefaultHome,
     inviteUserToHome,
     stats,
+    refetch,
   } = useHomeManagement();
+
+  // Refetch data when screen comes into focus to ensure fresh data
+  useFocusEffect(
+    useCallback(() => {
+      console.log('HomeManagement screen focused - refetching data');
+      refetch();
+    }, [refetch])
+  );
 
   const {show, EmailModalComponent} = useEmailInputModal();
   const inviteUserPrompt = (homeId: string) => {

@@ -8,6 +8,7 @@ import {
   PantryItemScreen,
   LowStockItems,
   CategoryManagement,
+  PantrySettings,
 } from '#screens';
 import {PantryStackParamList} from './types';
 import {useNavigation} from '@react-navigation/native';
@@ -62,6 +63,13 @@ export function PantryStack() {
       <Stack.Screen
         name="CategoryManagement"
         component={CategoryManagement}
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="PantrySettings"
+        component={PantrySettings}
         options={{
           headerShown: false,
         }}

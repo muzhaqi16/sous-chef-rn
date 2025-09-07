@@ -1,5 +1,3 @@
-// utils/dateUtils.ts - Robust date handling for various formats
-
 /**
  * Safely extracts YYYY-MM-DD from any date-like value
  * Handles formats like:
@@ -121,4 +119,43 @@ export const isValidDateString = (dateStr: string): boolean => {
     date.getMonth() === month - 1 &&
     date.getDate() === day
   );
+};
+
+/**
+ * Safely creates a Date object from any value, returns null if invalid
+ * Useful for handling potentially invalid date strings in notifications
+ */
+export const safeParseDate = (value: any): Date | null => {
+  if (!value) return null;
+
+  // If it's already a Date object
+  if (value instanceof Date) {
+    return !isNaN(value.getTime()) ? value : null;
+  }
+
+  // Check if it's a number (Unix timestamp)
+  if (typeof value === 'number' || !isNaN(Number(value))) {
+    const timestamp = Number(value);
+    if (timestamp > 0 && timestamp < 4102444800000) {
+      const msTimestamp = timestamp < 10000000000 ? timestamp * 1000 : timestamp;
+      const date = new Date(msTimestamp);
+      return !isNaN(date.getTime()) ? date : null;
+    }
+  }
+
+  // Try to parse string values
+  try {
+    const date = new Date(value);
+    return !isNaN(date.getTime()) ? date : null;
+  } catch (error) {
+    return null;
+  }
+};
+
+/**
+ * Safely formats a date value for display, with fallback text
+ */
+export const safeFormatDate = (value: any, fallback = 'Recently'): string => {
+  const date = safeParseDate(value);
+  return date ? date.toISOString() : fallback;
 };

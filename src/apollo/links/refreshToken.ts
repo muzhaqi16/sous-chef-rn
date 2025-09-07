@@ -30,6 +30,16 @@ export const attemptTokenRefresh = (
   // Get tokens from the store instead of directly from storage
   const state = useStore.getState();
   const refreshToken = state.refreshToken;
+  const accessToken = state.accessToken;
+
+  console.log('Token refresh debug:', {
+    hasRefreshToken: !!refreshToken,
+    hasAccessToken: !!accessToken,
+    refreshTokenLength: refreshToken?.length,
+    accessTokenLength: accessToken?.length,
+    refreshTokenPreview: refreshToken ? refreshToken.substring(0, 20) + '...' : null,
+    accessTokenPreview: accessToken ? accessToken.substring(0, 20) + '...' : null,
+  });
 
   if (!refreshToken) {
     // If no refresh token is available, log out
@@ -64,10 +74,16 @@ export const attemptTokenRefresh = (
 
     isRefreshing = true;
 
+    console.log('Sending refresh token mutation with token:', {
+      tokenPreview: refreshToken.substring(0, 20) + '...',
+      tokenLength: refreshToken.length,
+      isAccessToken: refreshToken === accessToken,
+    });
+
     client
       .mutate<RefreshTokenMutation>({
         mutation: RefreshTokenDocument,
-        variables: {refreshToken}, // Adjust based on your schema
+        variables: {token: refreshToken},
         // Don't use the error link for this mutation to avoid infinite loop
         context: {
           skipErrorLink: true,

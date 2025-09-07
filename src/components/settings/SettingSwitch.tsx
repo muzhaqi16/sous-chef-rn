@@ -8,6 +8,8 @@ interface SettingSwitchProps {
   value: boolean;
   onValueChange: (value: boolean) => void;
   disabled?: boolean;
+  loading?: boolean;
+  isAction?: boolean;
 }
 
 export const SettingSwitch: React.FC<SettingSwitchProps> = ({
@@ -16,6 +18,8 @@ export const SettingSwitch: React.FC<SettingSwitchProps> = ({
   value,
   onValueChange,
   disabled = false,
+  loading = false,
+  isAction = false,
 }) => {
   const {theme} = useUnistyles();
   return (
@@ -37,7 +41,7 @@ export const SettingSwitch: React.FC<SettingSwitchProps> = ({
       <Switch
         value={value}
         onValueChange={onValueChange}
-        disabled={disabled}
+        disabled={disabled || loading}
         trackColor={{
           false: theme.colors.border || '#E0E0E0',
           true: theme.colors.primary || '#62B1F6',

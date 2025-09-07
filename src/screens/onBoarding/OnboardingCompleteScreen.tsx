@@ -73,8 +73,8 @@ export const OnboardingCompleteScreen = () => {
     <OnBoardingWrapper
       title="All set!"
       subtitle="Your home is ready to use"
-      step={5}
-      totalSteps={5}>
+      step={6}
+      totalSteps={6}>
       <View style={styles.container}>
         <View style={styles.successIcon}>
           <Text style={styles.checkmark}>✓</Text>

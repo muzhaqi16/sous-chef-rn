@@ -1,4 +1,4 @@
-import {useMemo, useEffect} from 'react';
+import {useMemo, useEffect, useCallback} from 'react';
 import {Platform, Alert} from 'react-native';
 import {
   useGetHomesQuery,
@@ -341,6 +341,11 @@ export function useHomeManagement() {
 
   const isSynced = selectedHomeId === remoteDefaultHomeId;
 
+  // Memoize the refetch function to prevent unnecessary re-renders
+  const memoizedRefetch = useCallback(async () => {
+    await Promise.all([refetch(), refetchDefaultHome()]);
+  }, [refetch, refetchDefaultHome]);
+
   return {
     // Data
     homes: filtered,
@@ -369,8 +374,6 @@ export function useHomeManagement() {
     deleteHome,
     setDefaultHome,
     inviteUserToHome,
-    refetch: async () => {
-      await Promise.all([refetch(), refetchDefaultHome()]);
-    },
+    refetch: memoizedRefetch,
   };
 }

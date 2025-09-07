@@ -22,6 +22,30 @@ query GetPantries($homeId: ID!) {
   }
 }
 
+query GetPantry($id: ID!) {
+  pantry(id: $id) {
+    id
+    homeId
+    name
+    description
+    isDefault
+    location
+    temperature
+    tags
+    metadata
+    version
+    createdAt
+    updatedAt
+    items {
+      id
+      itemName
+      item {
+        name
+      }
+    }
+  }
+}
+
 query GetPantryItems($pantryId: ID!) {
   pantryItems(pantryId: $pantryId) {
     ...PantryItemFragment
@@ -61,6 +85,27 @@ mutation CreatePantry($input: CreatePantryInput!) {
   }
 }
 
+mutation UpdatePantry($id: ID!, $input: UpdatePantryInput!) {
+  updatePantry(id: $id, input: $input) {
+    id
+    homeId
+    name
+    description
+    isDefault
+    location
+    temperature
+    tags
+    metadata
+    version
+    createdAt
+    updatedAt
+  }
+}
+
+mutation DeletePantry($id: ID!) {
+  deletePantry(id: $id)
+}
+
 mutation AddItemToPantry($input: AddPantryItemInput!) {
   addItemToPantry(input: $input) {
     ...PantryItemFragment
@@ -98,20 +143,6 @@ subscription PantryUpdated($id: ID!) {
     home {
       id
       name
-    }
-  }
-}
-
-subscription MyPantriesUpdated($homeId: ID!) {
-  myPantriesUpdated(homeId: $homeId) {
-    id
-    name
-    description
-    isDefault
-    location
-    items {
-      id
-      currentQuantity
     }
   }
 }
@@ -186,5 +217,55 @@ subscription PantryItemsChanged($pantryId: ID!) {
     mutation
     timestamp
     userId
+  }
+}
+
+subscription PantryItemUsageChanged($pantryId: ID!) {
+  pantryItemUsageChanged(pantryId: $pantryId) {
+    mutation
+    pantryId
+    usage {
+      id
+      pantryItemId
+      quantityUsed
+      usedById
+      usedAt
+      purpose
+      notes
+    }
+    previousValues {
+      quantityUsed
+      purpose
+    }
+    userId
+    timestamp
+  }
+}
+
+subscription PantryWasteAlert($pantryId: ID!) {
+  pantryWasteAlert(pantryId: $pantryId) {
+    pantryId
+    item {
+      id
+      itemId
+      itemName
+      pantryId
+      currentQuantity
+      unit {
+        id
+        name
+        symbol
+      }
+      item {
+        id
+        name
+        imageUrl
+      }
+    }
+    wasteAmount
+    wasteReason
+    wasteValue
+    userId
+    timestamp
   }
 }

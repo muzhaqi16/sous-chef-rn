@@ -1,4 +1,4 @@
-import React, {useMemo} from 'react';
+import React, {useMemo, useEffect} from 'react';
 import {Alert} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {useUnistyles} from 'react-native-unistyles';
@@ -8,6 +8,7 @@ import {
   useBottomSheetModal,
   usePantrySelector,
 } from '#hooks';
+import {useStore} from '#store';
 import {useGetHomeQuery} from '#generated';
 import {PantryMainNavProp} from '#navigation/types';
 import {
@@ -15,9 +16,9 @@ import {
   SearchBarAction,
   BottomSheetAction,
   HeaderAction,
-  ItemSelector,
   EmptyState,
 } from '#components';
+import {ItemSelectorWithActions} from '#components/organisms/ItemSelectorWithActions';
 
 export const PantryMain: React.FC = () => {
   const navigation = useNavigation<PantryMainNavProp>();
@@ -25,6 +26,8 @@ export const PantryMain: React.FC = () => {
   const {theme} = useUnistyles();
 
   const selectPantrySheet = useBottomSheetModal();
+  const setSelectedPantryId = useStore(state => state.setSelectedPantryId);
+  const selectedPantryId = useStore(state => state.selectedPantryId);
 
   const {
     selectedHomeId,
@@ -38,13 +41,27 @@ export const PantryMain: React.FC = () => {
     skip: !selectedHomeId,
   });
 
-  const pantry = getDefaultPantry(homeData);
+  // Use selected pantry from store or fall back to default pantry
+  const defaultPantry = getDefaultPantry(homeData);
+  const pantry = selectedPantryId 
+    ? homeData?.home?.pantries?.find((p: any) => p.id === selectedPantryId) || defaultPantry
+    : defaultPantry;
+
+  // Auto-select the default pantry if none is selected
+  useEffect(() => {
+    if (!selectedPantryId && defaultPantry?.id) {
+      console.log('Auto-selecting default pantry:', defaultPantry.id);
+      setSelectedPantryId(defaultPantry.id);
+    }
+  }, [selectedPantryId, defaultPantry?.id, setSelectedPantryId]);
 
   const selector = usePantrySelector({
     initialSelected: pantry?.id,
     onSelect: (id, item) => {
-      // Do something with the selected pantry
       console.log('Selected pantry:', id, item);
+      // Update the global store with the selected pantry
+      setSelectedPantryId(id);
+      selectPantrySheet.close();
     },
   });
   const {
@@ -258,14 +275,36 @@ export const PantryMain: React.FC = () => {
         key={'select'}
         sheetRef={selectPantrySheet.ref}
         sheetTitle={'Select Pantry'}
-        snapPoints={['50%', '90%']}>
-        <ItemSelector
+        snapPoints={['60%', '90%']}>
+        <ItemSelectorWithActions
           data={selector.data}
           selectedId={selector.selectedId}
           onSelect={selector.handleSelect}
           displayProperty="name"
           loading={selector.loading}
           emptyMessage={selector.emptyMessage}
+          actions={[
+            {
+              icon: 'add',
+              label: 'Create New Pantry',
+              onPress: () => {
+                selectPantrySheet.close();
+                navigation.navigate('PantrySettings', {pantryId: undefined});
+              },
+              iconLibrary: 'MaterialIcons',
+            },
+            {
+              icon: 'settings',
+              label: 'Edit Current Pantry',
+              onPress: () => {
+                selectPantrySheet.close();
+                if (pantry?.id) {
+                  navigation.navigate('PantrySettings', {pantryId: pantry.id});
+                }
+              },
+              iconLibrary: 'MaterialIcons',
+            },
+          ]}
         />
       </BottomSheetAction>
     </>

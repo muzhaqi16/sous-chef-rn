@@ -91,8 +91,8 @@ export const useNotificationSubscriptions = (
 
   // Subscribe to member joined events
   const {data: memberJoinedData} = useMemberJoinedSubscription({
-    variables: {homeId: selectedHomeId!},
-    skip: !selectedHomeId,
+    variables: {homeId: selectedHomeId || ''},
+    skip: !userId || !selectedHomeId,
   });
 
   // Subscribe to shopping list updates (general)
@@ -103,20 +103,20 @@ export const useNotificationSubscriptions = (
   // Subscribe to collaboration changes for current list
   const {data: collaborationData} =
     useShoppingListCollaboratorsChangedSubscription({
-      variables: {listId: currentShoppingListId!},
+      variables: {listId: currentShoppingListId || ''},
       skip: !userId || !currentShoppingListId,
     });
 
   // Subscribe to shopping list items changes for current list
   const {data: itemsChangedData} = useShoppingListItemsChangedSubscription({
-    variables: {listId: currentShoppingListId!},
+    variables: {listId: currentShoppingListId || ''},
     skip: !userId || !currentShoppingListId,
   });
 
   // Poll for home invites
   const {data: invitesData} = useGetHomeInvitesQuery({
-    variables: {homeId: selectedHomeId!},
-    skip: !selectedHomeId,
+    variables: {homeId: selectedHomeId || ''},
+    skip: !userId || !selectedHomeId,
     pollInterval: 30000,
   });
   // Handle app state changes
