@@ -1,29 +1,8 @@
 import type {CodegenConfig} from '@graphql-codegen/cli';
-import {config as dotenvConfig} from 'dotenv';
 
-// Load environment variables from the specified ENVFILE or default .env
-dotenvConfig({
-  path: {
-    development: '.env',
-    staging: '.env.staging',
-    production: '.env.production',
-  }[process.env.NODE_ENV || 'development'],
-});
-
-// Environment-based endpoint configuration
 const getEndpoint = () => {
-  const env = process.env.NODE_ENV || 'development';
-
-  switch (env) {
-    case 'production':
-      return process.env.API_URL || 'https://your-api.com/graphql';
-    case 'staging':
-      return process.env.API_URL || 'https://staging-api.com/graphql';
-    default:
-      return process.env.API_URL || 'http://localhost:4000/graphql';
-  }
+  return process.env.API_URL || 'http://localhost:4000/graphql';
 };
-
 const endpoint = getEndpoint();
 
 const config: CodegenConfig = {

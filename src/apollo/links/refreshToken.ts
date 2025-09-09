@@ -37,13 +37,16 @@ export const attemptTokenRefresh = (
     hasAccessToken: !!accessToken,
     refreshTokenLength: refreshToken?.length,
     accessTokenLength: accessToken?.length,
-    refreshTokenPreview: refreshToken ? refreshToken.substring(0, 20) + '...' : null,
-    accessTokenPreview: accessToken ? accessToken.substring(0, 20) + '...' : null,
+    refreshTokenPreview: refreshToken
+      ? refreshToken.substring(0, 20) + '...'
+      : null,
+    accessTokenPreview: accessToken
+      ? accessToken.substring(0, 20) + '...'
+      : null,
   });
 
   if (!refreshToken) {
     // If no refresh token is available, log out
-    console.log('No refresh token available, logging out');
     state.logout();
     return new Observable<FetchResult>(observer => {
       observer.error(new Error('No refresh token available'));

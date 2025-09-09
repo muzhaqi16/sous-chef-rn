@@ -25,8 +25,6 @@ export const AuthStack = () => {
   const initialRoute: keyof AuthStackParamList =
     authStackInitialRoute as keyof AuthStackParamList;
 
-  console.log('AuthStack initialRoute:', initialRoute);
-
   return (
     <Stack.Navigator
       key={`auth-${user?.id || 'anonymous'}-${initialRoute}`}

@@ -22,7 +22,6 @@ const App = () => {
     console.error('App is not hydrated or Apollo client is not initialized');
     return <SplashScreen />;
   }
-
   return (
     <GestureHandlerRootView style={styles.container}>
       <ApolloProvider client={client}>

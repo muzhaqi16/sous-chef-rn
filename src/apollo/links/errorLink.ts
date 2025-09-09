@@ -12,21 +12,42 @@ export const errorLink = onError(
 
     // Check if this is a known server subscription error
     const isSubscription = operation.query.definitions.some(
-      def => def.kind === 'OperationDefinition' && def.operation === 'subscription'
+      def =>
+        def.kind === 'OperationDefinition' && def.operation === 'subscription',
     );
 
-    if (isSubscription && networkError && isKnownServerError({networkError} as any)) {
-      console.warn(`Known server subscription error for ${operation.operationName}:`, networkError.message);
+    if (
+      isSubscription &&
+      networkError &&
+      isKnownServerError({networkError} as any)
+    ) {
+      console.warn(
+        `Known server subscription error for ${operation.operationName}:`,
+        networkError.message,
+      );
       // Don't propagate these errors further, they're handled by the subscription hooks
       return;
     }
 
     console.log('Error link triggered:', {
+      uri: operation.getContext().uri,
       graphQLErrors,
       networkError,
       operationName: operation.operationName,
       isSubscription,
     });
+
+    // Enhanced network error debugging
+    if (networkError) {
+      console.error('[Network Error Details]', {
+        message: networkError.message,
+        name: networkError.name,
+        statusCode: (networkError as any).statusCode,
+        stack: networkError.stack,
+        // Log additional network error properties
+        ...(networkError as any),
+      });
+    }
 
     // 1) Handle GraphQL errors
     if (graphQLErrors) {

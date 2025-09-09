@@ -33,7 +33,6 @@ export const useTokenRefresh = () => {
   // Function to refresh token
   const refreshAccessToken = async () => {
     if (!refreshToken) {
-      console.log('No refresh token available');
       return;
     }
 

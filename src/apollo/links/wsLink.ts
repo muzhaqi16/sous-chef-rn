@@ -10,15 +10,38 @@ const webSocketImpl =
     ? WebSocket // for RN-Web
     : global.WebSocket; // for iOS & Android
 
+// Environment-based WebSocket URL with fallbacks
+const getWebSocketUrl = () => {
+  // First try react-native-config
+  if (Config.WEB_SOCKET_URL) {
+    return Config.WEB_SOCKET_URL;
+  }
+  
+  // Fallback based on __DEV__ flag
+  if (__DEV__) {
+    return 'ws://localhost:4000/graphql';
+  } else {
+    // Production fallback
+    return 'wss://api.souschef.com/graphql';
+  }
+};
+
+const WS_URL = getWebSocketUrl();
+console.log('WebSocket Link using WS_URL:', WS_URL);
+
 export const wsLink = new GraphQLWsLink(
   createClient({
-    url: Config.WEB_SOCKET_URL || 'ws://localhost:4000/graphql',
+    url: WS_URL,
     webSocketImpl, // ← critical for RN
     lazy: true, // only connect on first subscribe
     keepAlive: 12_000, // send ping every 12s to keep alive
     connectionParams: () => {
       const token = useStore.getState().accessToken;
       const apiKey = Config.API_KEY;
+
+      if (!apiKey) {
+        console.error('[WebSocket] API_KEY is not configured from react-native-config');
+      }
 
       const params: Record<string, string> = {};
 

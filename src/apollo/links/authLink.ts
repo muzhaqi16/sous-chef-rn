@@ -6,6 +6,12 @@ export const authLink = setContext(async (operation, {headers}) => {
   // Always include the API key for all requests
   const apiKey = Config.API_KEY;
 
+  console.log('[AuthLink] Operation:', operation.operationName);
+  console.log('[AuthLink] API_KEY present:', !!apiKey);
+  if (apiKey) {
+    console.log('[AuthLink] API_KEY preview:', apiKey.substring(0, 8) + '...');
+  }
+
   if (!apiKey) {
     console.warn('[AuthLink] No API key configured');
   }
