@@ -29,12 +29,12 @@ jobs:
     environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || (contains(github.ref, 'prod') || contains(github.ref, 'release')) && 'prod' || 'dev' }}
 
     env:
-      # Android SDK Configuration (THIS IS THE FIX)
-      ANDROID_HOME: /home/runner/Android/Sdk
-      ANDROID_SDK_ROOT: /home/runner/Android/Sdk
+      # CORRECTED Android SDK Path
+      ANDROID_HOME: /opt/android-sdk
+      ANDROID_SDK_ROOT: /opt/android-sdk
       JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
 
-      # Your existing build configuration
+      # Build Configuration
       GRADLE_OPTS: -Xmx4096m -Dorg.gradle.daemon=false -Dorg.gradle.parallel=true
       NODE_OPTIONS: --max-old-space-size=4096
       BUILD_ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || (contains(github.ref, 'prod') || contains(github.ref, 'release')) && 'prod' || 'dev' }}
@@ -53,10 +53,9 @@ jobs:
           echo "Java version: $(java -version 2>&1 | head -n 1)"
           echo "Android SDK: $ANDROID_HOME"
 
-      # Create local.properties for Android SDK (THIS IS ALSO NEEDED)
       - name: Setup Android local.properties
         run: |
-          echo "sdk.dir=$ANDROID_HOME" > android/local.properties
+          echo "sdk.dir=/opt/android-sdk" > android/local.properties
           echo "✅ Created android/local.properties"
 
       - name: Validate Gradle wrapper
