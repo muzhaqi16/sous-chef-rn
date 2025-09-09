@@ -105,6 +105,22 @@ jobs:
           echo "✅ $ENV_FILE file created"
           cp $ENV_FILE .env
 
+      - name: Generate Codegen Artifacts
+        run: |
+          echo "Generating codegen artifacts for native modules..."
+          cd android
+
+          # Generate codegen for react-native-config and other modules
+          ./gradlew generateCodegenArtifactsFromSchema
+
+          # Alternative: Build react-native-config specifically
+          ./gradlew :react-native-config:generateCodegenArtifactsFromSchema || true
+
+          # Clean and prepare
+          ./gradlew clean
+
+          cd ..
+
       - name: Build application apk
         run: |
           echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode > ./android/app/releases.keystore
