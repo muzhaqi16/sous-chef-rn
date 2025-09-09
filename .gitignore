@@ -79,4 +79,3 @@ yarn-error.log
 .env.staging
 .env.development
 .claude
-src/graphql/generated
