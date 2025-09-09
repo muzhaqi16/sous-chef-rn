@@ -1,15 +1,15 @@
 name: Build Android .apk
-run-name: "Building ${{ github.event_name == 'workflow_dispatch' && inputs.environment || (contains(github.ref, 'prod') && 'prod' || 'dev') }} .apk triggered by @${{ github.actor }}"
+run-name: Building ${{ github.event_name == 'workflow_dispatch' && inputs.environment || (contains(github.ref, 'prod') && 'prod' || 'dev') }} .apk triggered by @${{ github.actor }}
 permissions:
   contents: write
 
 on:
   push:
     tags:
-      - 'v*' # dev builds
-      - 'prod-v*' # production builds
-      - 'android-v*' # dev builds
-      - 'release-v*' # production builds
+      - 'v*'
+      - 'prod-v*'
+      - 'android-v*'
+      - 'release-v*'
   workflow_dispatch:
     inputs:
       environment:
@@ -26,17 +26,12 @@ jobs:
     runs-on: self-hosted
     timeout-minutes: 30
 
-    # Determine environment based on tag or manual input
-    environment: ${{
-      github.event_name == 'workflow_dispatch' && inputs.environment ||
-      (contains(github.ref, 'prod') || contains(github.ref, 'release')) && 'prod' || 'dev' }}
+    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || (contains(github.ref, 'prod') || contains(github.ref, 'release')) && 'prod' || 'dev' }}
 
     env:
       GRADLE_OPTS: -Xmx4096m -Dorg.gradle.daemon=false -Dorg.gradle.parallel=true
       NODE_OPTIONS: --max-old-space-size=4096
-      BUILD_ENV: ${{
-        github.event_name == 'workflow_dispatch' && inputs.environment ||
-        (contains(github.ref, 'prod') || contains(github.ref, 'release')) && 'prod' || 'dev' }}
+      BUILD_ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || (contains(github.ref, 'prod') || contains(github.ref, 'release')) && 'prod' || 'dev' }}
 
     steps:
       - name: Checkout repository
@@ -48,10 +43,8 @@ jobs:
         run: |
           echo "🔧 Building for environment: ${{ env.BUILD_ENV }}"
           echo "📦 Tag/Ref: ${{ github.ref }}"
-          echo "🏃 Runner: ${{ runner.name }}"
           echo "Node version: $(node -v)"
           echo "Java version: $(java -version 2>&1 | head -n 1)"
-          echo "Android SDK: $ANDROID_HOME"
 
       - name: Validate Gradle wrapper
         uses: gradle/actions/wrapper-validation@v3
@@ -79,53 +72,45 @@ jobs:
             ${{ runner.os }}-gradle-
 
       - name: Run Yarn Install
-        run: |
-          yarn install --frozen-lockfile --network-timeout 100000
+        run: yarn install --frozen-lockfile --network-timeout 100000
 
-      # CREATE ENVIRONMENT-SPECIFIC .env FILE
-      - name: Create .env.${{ env.BUILD_ENV }} file
+      - name: Create environment file
         run: |
-          # Determine env file name
           ENV_FILE=".env.${{ env.BUILD_ENV }}"
           if [ "${{ env.BUILD_ENV }}" = "prod" ]; then
             ENV_FILE=".env.production"
           fi
 
-          echo "📝 Creating $ENV_FILE file from ${{ env.BUILD_ENV }} environment secrets..."
+          echo "📝 Creating $ENV_FILE file..."
 
           cat > $ENV_FILE << EOF
-          # API Configuration
           API_URL=${{ vars.API_URL }}
           WEB_SOCKET_URL=${{ vars.WEB_SOCKET_URL }}
           API_KEY=${{ secrets.API_KEY }}
-
-          # Environment
           NODE_ENV=${{ vars.NODE_ENV || env.BUILD_ENV }}
-
-          # Additional environment-specific variables
-          ${{ vars.ADDITIONAL_ENV_VARS }}
           EOF
 
-          # If you have more secrets/vars, add them here
-          # For example, if you have Firebase config:
-          if [ -n "${{ secrets.FIREBASE_CONFIG }}" ]; then
-            echo "FIREBASE_CONFIG=${{ secrets.FIREBASE_CONFIG }}" >> $ENV_FILE
-          fi
-
-          if [ -n "${{ secrets.GOOGLE_MAPS_API_KEY }}" ]; then
-            echo "GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }}" >> $ENV_FILE
-          fi
-
-          # Display what was configured (without showing values)
           echo "✅ $ENV_FILE file created"
-          echo "📊 Environment file contains $(wc -l < $ENV_FILE) variables"
-          echo "📝 Variables configured:"
-          grep -o '^[^=]*' $ENV_FILE | while read var; do echo "  - $var"; done
+          cp $ENV_FILE .env
 
-          # Copy to .env.production if needed for React Native
-          if [ "${{ env.BUILD_ENV }}" = "prod" ] && [ "$ENV_FILE" != ".env.production" ]; then
-            cp $ENV_FILE .env.production
+      - name: Generate GraphQL Types
+        run: |
+          echo "🔧 Generating GraphQL types for ${{ env.BUILD_ENV }} environment..."
+          export API_URL="${{ vars.API_URL }}"
+          export API_KEY="${{ secrets.API_KEY }}"
+          npm run codegen
+
+          if [ -f "src/graphql/generated/index.ts" ]; then
+            echo "✅ GraphQL types generated successfully"
+            echo "📊 Generated files:"
+            ls -la src/graphql/generated/
+          else
+            echo "❌ GraphQL generation failed!"
+            exit 1
           fi
+        env:
+          API_URL: ${{ vars.API_URL }}
+          API_KEY: ${{ secrets.API_KEY }}
 
       - name: Build application apk
         run: |
@@ -146,22 +131,13 @@ jobs:
 
       - name: Rename the .apk release files
         run: |
-          # Add environment suffix to APK name
           ENV_SUFFIX="${{ env.BUILD_ENV }}"
           TAG_NAME="${{ github.ref_name }}"
 
           if [ -f "./android/app/build/outputs/apk/release/app-universal-release.apk" ]; then
-            mv ./android/app/build/outputs/apk/release/app-universal-release.apk \
+            mv "./android/app/build/outputs/apk/release/app-universal-release.apk" \
                "./android/app/build/outputs/apk/release/sous-chef-${ENV_SUFFIX}-${TAG_NAME}.apk"
           fi
-
-          # Optionally rename architecture-specific APKs
-          for arch in arm64-v8a armeabi-v7a x86_64 x86; do
-            if [ -f "./android/app/build/outputs/apk/release/app-${arch}-release.apk" ]; then
-              mv "./android/app/build/outputs/apk/release/app-${arch}-release.apk" \
-                 "./android/app/build/outputs/apk/release/sous-chef-${ENV_SUFFIX}-${arch}-${TAG_NAME}.apk"
-            fi
-          done
 
       - name: Create Release and Upload Files
         uses: softprops/action-gh-release@v2
@@ -177,5 +153,5 @@ jobs:
         if: always()
         run: |
           rm -f ./android/app/releases.keystore
-          rm -f .env.production .env.prod .env.dev .env.*
+          rm -f .env.production .env.prod .env.dev .env
           cd android && ./gradlew --stop || true
