@@ -8,6 +8,7 @@ import {
   useShoppingListCollaboratorsChangedSubscription,
   useMemberJoinedSubscription,
   useGetHomeInvitesQuery,
+  useGetMyPendingInvitesQuery,
   useMyShoppingListsUpdatedSubscription,
   NotificationType,
   NotificationStatus,
@@ -113,10 +114,9 @@ export const useNotificationSubscriptions = (
     skip: !userId || !currentShoppingListId,
   });
 
-  // Poll for home invites
-  const {data: invitesData} = useGetHomeInvitesQuery({
-    variables: {homeId: selectedHomeId || ''},
-    skip: !userId || !selectedHomeId,
+  // Poll for my pending home invites
+  const {data: invitesData} = useGetMyPendingInvitesQuery({
+    skip: !userId,
     pollInterval: 30000,
   });
   // Handle app state changes
@@ -323,8 +323,8 @@ export const useNotificationSubscriptions = (
 
   // Handle home invites (polling)
   useEffect(() => {
-    if (invitesData?.homeInvites) {
-      const pendingInvites = invitesData.homeInvites.filter(
+    if (invitesData?.myPendingInvites) {
+      const pendingInvites = invitesData.myPendingInvites.filter(
         invite => invite.status === 'PENDING',
       );
 

@@ -513,3 +513,14 @@ fragment HomeFragment on Home {
     ...PantryFragment
   }
 }
+
+fragment NotificationFragment on Notification {
+  id
+  userId
+  type
+  payload
+  status
+  sentAt
+  readAt
+  createdAt
+}

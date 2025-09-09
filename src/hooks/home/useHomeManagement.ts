@@ -1,4 +1,4 @@
-import {useMemo, useEffect, useCallback} from 'react';
+import {useMemo, useEffect, useCallback, useRef} from 'react';
 import {Platform, Alert} from 'react-native';
 import {
   useGetHomesQuery,
@@ -316,29 +316,49 @@ export function useHomeManagement() {
     return result.data;
   };
 
+  // Track the last known pantries count to avoid flickering to 0 during refetch
+  const lastKnownPantriesCount = useRef<number>(0);
+
   // Statistics and computed values
   const stats = useMemo(() => {
     const validHomes = Array.isArray(homes) ? homes.filter(Boolean) : [];
     
     console.log('Computing stats for homes:', validHomes.length);
     validHomes.forEach((home, index) => {
-      console.log(`Home ${index + 1} (${home.name}): ${home.pantries?.length || 0} pantries`);
+      const pantriesCount = Array.isArray(home?.pantries) ? home.pantries.length : (home.pantries === null ? 'loading' : 0);
+      console.log(`Home ${index + 1} (${home.name}): ${pantriesCount} pantries`);
     });
 
+    // Check if all homes have loaded their pantries data
+    const allHomesLoaded = validHomes.every(home => home.pantries !== null);
+    
+    let totalPantries: number;
+    
+    if (allHomesLoaded) {
+      // All data is loaded, calculate the actual count
+      totalPantries = validHomes.reduce((acc, home) => {
+        const count = Array.isArray(home?.pantries) ? home.pantries.length : 0;
+        console.log(`Home ${home.name}: ${count} pantries`);
+        return acc + count;
+      }, 0);
+      // Update our last known count
+      lastKnownPantriesCount.current = totalPantries;
+    } else {
+      // Some data is still loading, use the last known count to prevent flickering
+      totalPantries = lastKnownPantriesCount.current;
+      console.log('Using last known pantries count during data loading:', totalPantries);
+    }
+    
     const result = {
       totalHomes: validHomes.length,
       totalMembers: validHomes.reduce((acc, home) => {
         const count = Array.isArray(home?.members) ? home.members.length : 0;
         return acc + count;
       }, 0),
-      totalPantries: validHomes.reduce((acc, home) => {
-        const count = Array.isArray(home?.pantries) ? home.pantries.length : 0;
-        console.log(`Home ${home.name}: ${count} pantries`);
-        return acc + count;
-      }, 0),
+      totalPantries,
     };
 
-    console.log('Final stats:', result);
+    console.log('Final stats:', result, `(all homes loaded: ${allHomesLoaded})`);
     return result;
   }, [homes]);
   // Computed value for current default home

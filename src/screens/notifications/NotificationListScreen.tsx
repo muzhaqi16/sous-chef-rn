@@ -1,4 +1,4 @@
-import React, {useState, useCallback, useMemo} from 'react';
+import React, {useState, useCallback, useMemo, useEffect, useRef} from 'react';
 import {
   View,
   SectionList,
@@ -109,9 +109,84 @@ export const NotificationListScreen: React.FC = () => {
   }, [filteredNotifications]);
 
   // Fetch notifications from server
-  const {refetch} = useGetMyNotificationsQuery({
+  const {data: serverNotifications, refetch} = useGetMyNotificationsQuery({
     skip: !userId,
   });
+
+  // Sync server notifications to local store
+  const addMultipleNotifications = useStore(state => state.addMultipleNotifications);
+  const processedNotificationIds = useRef(new Set<string>());
+  
+  useEffect(() => {
+    if (serverNotifications?.myNotifications?.edges) {
+      const serverNotifs = serverNotifications.myNotifications.edges
+        .filter(edge => !processedNotificationIds.current.has(edge.node.id)) // Only add new ones
+        .map(edge => {
+          const node = edge.node;
+          // Mark as processed immediately
+          processedNotificationIds.current.add(node.id);
+          
+          return {
+            id: node.id,
+            type: node.type,
+            category: getCategoryFromNotificationType(node.type),
+            priority: NotificationPriority.MEDIUM,
+            title: getNotificationTitle(node.type, node.payload),
+            message: getNotificationMessage(node.type, node.payload),
+            payload: node.payload,
+            sentAt: node.sentAt,
+            readAt: node.readAt,
+            requiresAction: node.type === 'HOME_INVITATION',
+            actionType: node.type === 'HOME_INVITATION' ? 'ACCEPT_HOME_INVITE' : undefined,
+          };
+        });
+      
+      if (serverNotifs.length > 0) {
+        console.log(`Adding ${serverNotifs.length} new server notifications to store`);
+        addMultipleNotifications(serverNotifs);
+      }
+    }
+  }, [serverNotifications, addMultipleNotifications]); // Removed existingNotifications dependency
+
+  // Helper functions for server notifications
+  const getCategoryFromNotificationType = (type: string): NotificationCategory => {
+    switch (type) {
+      case 'HOME_INVITATION':
+        return NotificationCategory.MEMBERSHIP;
+      case 'EXPIRY_REMINDER':
+        return NotificationCategory.PANTRY;
+      case 'LOW_STOCK':
+        return NotificationCategory.PANTRY;
+      default:
+        return NotificationCategory.SYSTEM;
+    }
+  };
+
+  const getNotificationTitle = (type: string, payload: any): string => {
+    switch (type) {
+      case 'HOME_INVITATION':
+        return 'Home Invitation';
+      case 'EXPIRY_REMINDER':
+        return 'Items Expiring Soon';
+      case 'LOW_STOCK':
+        return 'Low Stock Alert';
+      default:
+        return 'Notification';
+    }
+  };
+
+  const getNotificationMessage = (type: string, payload: any): string => {
+    switch (type) {
+      case 'HOME_INVITATION':
+        return `You've been invited to join ${payload?.homeName || 'a home'}`;
+      case 'EXPIRY_REMINDER':
+        return `${payload?.itemCount || 'Some'} items are expiring soon`;
+      case 'LOW_STOCK':
+        return `${payload?.itemCount || 'Some'} items are running low`;
+      default:
+        return 'You have a new notification';
+    }
+  };
 
   const handleNotificationPress = useCallback(
     async (

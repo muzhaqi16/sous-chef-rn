@@ -20,14 +20,7 @@ query GetMyNotifications(
   ) {
     edges {
       node {
-        id
-        userId
-        type
-        payload
-        status
-        sentAt
-        readAt
-        createdAt
+        ...NotificationFragment
       }
       cursor
     }
@@ -48,14 +41,7 @@ query GetMyNotifications(
 
 mutation MarkNotificationAsRead($id: ID!) {
   markNotificationAsRead(id: $id) {
-    id
-    userId
-    type
-    payload
-    status
-    sentAt
-    readAt
-    createdAt
+    ...NotificationFragment
   }
 }
 

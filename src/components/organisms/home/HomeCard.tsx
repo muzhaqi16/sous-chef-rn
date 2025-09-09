@@ -17,6 +17,12 @@ export type PartialHome = {
     };
   }>;
   pantries?: Array<{id: string}>;
+  myMembership?: {
+    id: string;
+    role: string;
+    status: string;
+    displayName?: string;
+  } | null;
 };
 
 interface HomeCardProps {
@@ -38,6 +44,36 @@ export const HomeCard: React.FC<HomeCardProps> = ({
     onDelete(home.id, home.name);
   };
 
+  const formatRole = (role: string): string => {
+    switch (role) {
+      case 'OWNER':
+        return 'Owner';
+      case 'ADMIN':
+        return 'Admin';
+      case 'MEMBER':
+        return 'Member';
+      case 'GUEST':
+        return 'Guest';
+      default:
+        return role;
+    }
+  };
+
+  const getRoleBadgeColor = (role: string): string => {
+    switch (role) {
+      case 'OWNER':
+        return '#FF6B35'; // Orange for owner
+      case 'ADMIN':
+        return '#4CAF50'; // Green for admin
+      case 'MEMBER':
+        return '#2196F3'; // Blue for member
+      case 'GUEST':
+        return '#9E9E9E'; // Gray for guest
+      default:
+        return '#9E9E9E';
+    }
+  };
+
   return (
     <View style={styles.homeCard}>
       <View style={styles.homeHeader}>
@@ -48,11 +84,26 @@ export const HomeCard: React.FC<HomeCardProps> = ({
             pantries
           </Text>
         </View>
-        {isDefault && (
-          <View style={styles.defaultBadge}>
-            <Text style={styles.defaultText}>Default</Text>
-          </View>
-        )}
+        <View style={styles.badgeContainer}>
+          {home.myMembership?.role && (
+            <View style={[
+              styles.roleBadge,
+              { backgroundColor: getRoleBadgeColor(home.myMembership.role) + '20' }
+            ]}>
+              <Text style={[
+                styles.roleText,
+                { color: getRoleBadgeColor(home.myMembership.role) }
+              ]}>
+                {formatRole(home.myMembership.role)}
+              </Text>
+            </View>
+          )}
+          {isDefault && (
+            <View style={styles.defaultBadge}>
+              <Text style={styles.defaultText}>Default</Text>
+            </View>
+          )}
+        </View>
       </View>
 
       <HomeActions
@@ -100,12 +151,25 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
     marginTop: 4,
   },
+  badgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  roleBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  roleText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
   defaultBadge: {
     backgroundColor: theme.colors.primary + '20',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 4,
-    marginLeft: 8,
   },
   defaultText: {
     fontSize: 12,

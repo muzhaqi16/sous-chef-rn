@@ -11,6 +11,7 @@ import {
   useMyMembershipUpdatedSubscription,
   useMemberJoinedSubscription,
   useGetHomeInvitesQuery,
+  useGetMyPendingInvitesQuery,
   NotificationType,
   NotificationStatus,
   MutationType,
@@ -291,10 +292,9 @@ export const useRealTimeNotifications = (
     },
   });
 
-  // Poll for home invites
-  const {data: invitesData} = useGetHomeInvitesQuery({
-    variables: {homeId: selectedHomeId || ''},
-    skip: !user?.id || !selectedHomeId,
+  // Poll for my pending home invites  
+  const {data: invitesData} = useGetMyPendingInvitesQuery({
+    skip: !user?.id,
     pollInterval: 30000, // Poll every 30 seconds
   });
 
@@ -742,12 +742,9 @@ export const useRealTimeNotifications = (
 
   // Handle home invites (polling)
   useEffect(() => {
-    if (invitesData?.homeInvites) {
-      const pendingInvites = invitesData.homeInvites.filter(
-        invite => 
-          invite.status === 'PENDING' && 
-          // Don't show invitations that the current user sent
-          invite.inviter.id !== user?.id
+    if (invitesData?.myPendingInvites) {
+      const pendingInvites = invitesData.myPendingInvites.filter(
+        invite => invite.status === 'PENDING'
       );
 
       pendingInvites.forEach(invite => {
