@@ -46,6 +46,22 @@ jobs:
           echo "Node version: $(node -v)"
           echo "Java version: $(java -version 2>&1 | head -n 1)"
 
+      - name: Setup Android SDK
+        run: |
+          # Create local.properties for Android SDK path
+          echo "sdk.dir=$ANDROID_HOME" > android/local.properties
+          echo "✅ Created android/local.properties with SDK path: $ANDROID_HOME"
+
+          # Verify Android SDK tools are available
+          if [ -d "$ANDROID_HOME" ]; then
+            echo "✅ Android SDK found at: $ANDROID_HOME"
+            ls -la $ANDROID_HOME
+          else
+            echo "❌ Android SDK not found at: $ANDROID_HOME"
+            echo "Creating Android SDK directory..."
+            mkdir -p $ANDROID_HOME
+          fi
+
       - name: Validate Gradle wrapper
         uses: gradle/actions/wrapper-validation@v3
 
