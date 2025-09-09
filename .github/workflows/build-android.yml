@@ -29,6 +29,12 @@ jobs:
     environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || (contains(github.ref, 'prod') || contains(github.ref, 'release')) && 'prod' || 'dev' }}
 
     env:
+      # Android SDK Configuration (THIS IS THE FIX)
+      ANDROID_HOME: /home/runner/Android/Sdk
+      ANDROID_SDK_ROOT: /home/runner/Android/Sdk
+      JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
+
+      # Your existing build configuration
       GRADLE_OPTS: -Xmx4096m -Dorg.gradle.daemon=false -Dorg.gradle.parallel=true
       NODE_OPTIONS: --max-old-space-size=4096
       BUILD_ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || (contains(github.ref, 'prod') || contains(github.ref, 'release')) && 'prod' || 'dev' }}
@@ -45,22 +51,13 @@ jobs:
           echo "📦 Tag/Ref: ${{ github.ref }}"
           echo "Node version: $(node -v)"
           echo "Java version: $(java -version 2>&1 | head -n 1)"
+          echo "Android SDK: $ANDROID_HOME"
 
-      - name: Setup Android SDK
+      # Create local.properties for Android SDK (THIS IS ALSO NEEDED)
+      - name: Setup Android local.properties
         run: |
-          # Create local.properties for Android SDK path
           echo "sdk.dir=$ANDROID_HOME" > android/local.properties
-          echo "✅ Created android/local.properties with SDK path: $ANDROID_HOME"
-
-          # Verify Android SDK tools are available
-          if [ -d "$ANDROID_HOME" ]; then
-            echo "✅ Android SDK found at: $ANDROID_HOME"
-            ls -la $ANDROID_HOME
-          else
-            echo "❌ Android SDK not found at: $ANDROID_HOME"
-            echo "Creating Android SDK directory..."
-            mkdir -p $ANDROID_HOME
-          fi
+          echo "✅ Created android/local.properties"
 
       - name: Validate Gradle wrapper
         uses: gradle/actions/wrapper-validation@v3
@@ -150,5 +147,6 @@ jobs:
         if: always()
         run: |
           rm -f ./android/app/releases.keystore
+          rm -f android/local.properties
           rm -f .env.production .env.prod .env.dev .env
           cd android && ./gradlew --stop || true
