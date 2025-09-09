@@ -8,12 +8,10 @@ on:
     tags:
       - 'v*'
       - 'android-v*'
-  workflow_dispatch: # Allow manual triggers for testing
 
 jobs:
   build:
-    # Use your self-hosted runner instead of ubuntu-latest
-    runs-on: [self-hosted, linux, android]
+    runs-on: self-hosted
     timeout-minutes: 30
 
     env:
