@@ -1,58 +1,88 @@
 name: Build Android .apk
-
 run-name: 'Building the .apk with the tag triggered by @${{ github.actor }}'
-
 permissions:
   contents: write
 
 on:
   push:
-    # branches:
-    #   - main
     tags:
       - 'v*'
       - 'android-v*'
+  workflow_dispatch: # Allow manual triggers for testing
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # Use your self-hosted runner instead of ubuntu-latest
+    runs-on: [self-hosted, linux, android]
+    timeout-minutes: 30
+
+    env:
+      # Optimize for self-hosted runner
+      GRADLE_OPTS: -Xmx4096m -Dorg.gradle.daemon=false -Dorg.gradle.parallel=true
+      NODE_OPTIONS: --max-old-space-size=4096
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Install Java
-        uses: actions/setup-java@v4
         with:
-          java-version: '21'
-          distribution: 'adopt'
-          cache: 'gradle'
+          clean: true # Clean workspace on self-hosted runner
+
+      # Java and Node are pre-installed on your runner, so we skip setup
+      # Just verify they're available
+      - name: Verify environment
+        run: |
+          echo "Node version: $(node -v)"
+          echo "Java version: $(java -version 2>&1 | head -n 1)"
+          echo "Android SDK: $ANDROID_HOME"
 
       - name: Validate Gradle wrapper
         uses: gradle/actions/wrapper-validation@v3
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          # cache: 'yarn'
-
       - name: Setup gradlew as executable
         run: chmod +x ./android/gradlew
 
-      - name: Run Yarn Install
-        run: yarn install
+      # Cache node_modules for faster builds on self-hosted runner
+      - name: Cache node_modules
+        uses: actions/cache@v3
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-node-modules-
 
-      - name: Build application apk and aab
+      # Cache Gradle for self-hosted runner
+      - name: Cache Gradle
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            android/.gradle
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Run Yarn Install
         run: |
+          # Use yarn with frozen lockfile for consistency
+          yarn install --frozen-lockfile --network-timeout 100000
+
+      - name: Build application apk
+        run: |
+          # Decode and place keystore
           echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode > ./android/app/releases.keystore
+
+          # Clean previous builds
           cd android
+          ./gradlew clean
+
+          # Build APKs
           ./gradlew assembleRelease
         env:
           BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
           MYAPP_UPLOAD_STORE_FILE: 'releases.keystore'
           MYAPP_UPLOAD_STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          MYAPP_UPLOAD_KEY_ALIAS: ${{ env.KEY_ALIAS }}
+          MYAPP_UPLOAD_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           MYAPP_UPLOAD_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           ENVFILE: .env.production
 
@@ -60,7 +90,11 @@ jobs:
         run: ls ./android/app/build/outputs/apk/release/ -hal
 
       - name: Rename the .apk release files to the tag version
-        run: mv ./android/app/build/outputs/apk/release/app-universal-release.apk ./android/app/build/outputs/apk/release/sous-chef-${{ github.ref_name }}.apk
+        run: |
+          if [ -f "./android/app/build/outputs/apk/release/app-universal-release.apk" ]; then
+            mv ./android/app/build/outputs/apk/release/app-universal-release.apk \
+               ./android/app/build/outputs/apk/release/sous-chef-${{ github.ref_name }}.apk
+          fi
 
       # Creating and Uploading the releases
       - name: Create Release and Uploading Files
@@ -73,3 +107,17 @@ jobs:
             android/app/build/outputs/apk/release/app-x86_64-release.apk
             android/app/build/outputs/apk/release/app-x86-release.apk
             android/app/build/outputs/apk/release/sous-chef-${{ github.ref_name }}.apk
+          generate_release_notes: true
+
+      # Clean up sensitive files on self-hosted runner
+      - name: Cleanup
+        if: always()
+        run: |
+          # Remove keystore
+          rm -f ./android/app/releases.keystore
+
+          # Stop gradle daemon to free memory
+          cd android && ./gradlew --stop || true
+
+          # Clean workspace for next run (optional)
+          # rm -rf node_modules
