@@ -105,7 +105,6 @@ jobs:
           echo "✅ $ENV_FILE file created"
           cp $ENV_FILE .env
 
-      # FIXED: Clean BEFORE generating codegen, not after
       - name: Clean Android build
         run: |
           cd android
@@ -132,7 +131,6 @@ jobs:
         run: |
           echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode > ./android/app/releases.keystore
           cd android
-          # REMOVED the duplicate clean here
           ./gradlew assembleRelease
         env:
           BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
