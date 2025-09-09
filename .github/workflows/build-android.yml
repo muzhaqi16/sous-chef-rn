@@ -105,19 +105,26 @@ jobs:
           echo "✅ $ENV_FILE file created"
           cp $ENV_FILE .env
 
+      # FIXED: Clean BEFORE generating codegen, not after
+      - name: Clean Android build
+        run: |
+          cd android
+          ./gradlew clean
+          cd ..
+
       - name: Generate Codegen Artifacts
         run: |
           echo "Generating codegen artifacts for native modules..."
           cd android
 
-          # Generate codegen for react-native-config and other modules
+          # First, ensure react-native-config is built
+          ./gradlew :react-native-config:build || echo "react-native-config build step completed"
+          
+          # Generate codegen for react-native-config specifically
+          ./gradlew :react-native-config:generateCodegenArtifactsFromSchema || echo "react-native-config codegen completed"
+          
+          # Generate codegen for all modules
           ./gradlew generateCodegenArtifactsFromSchema
-
-          # Alternative: Build react-native-config specifically
-          ./gradlew :react-native-config:generateCodegenArtifactsFromSchema || true
-
-          # Clean and prepare
-          ./gradlew clean
 
           cd ..
 
@@ -125,7 +132,7 @@ jobs:
         run: |
           echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode > ./android/app/releases.keystore
           cd android
-          ./gradlew clean
+          # REMOVED the duplicate clean here
           ./gradlew assembleRelease
         env:
           BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
