@@ -93,58 +93,6 @@ jobs:
           echo "✅ $ENV_FILE file created"
           cp $ENV_FILE .env
 
-      - name: Debug Environment Variables
-        run: |
-          echo "🔍 Debugging environment variables..."
-          echo "Environment name: ${{ env.BUILD_ENV }}"
-          echo "GitHub Environment being used: dev"
-          echo "API_URL from vars: '${{ vars.API_URL }}'"
-          echo "API_KEY exists: ${{ secrets.API_KEY != '' }}"
-
-          # Check what's in the .env file
-          echo "Contents of .env file:"
-          cat .env
-
-          # Check if the variables are exported
-          echo "Checking exported variables:"
-          echo "API_URL=$API_URL"
-
-          # Check what Node sees
-          node -e "console.log('Node sees API_URL:', process.env.API_URL)"
-
-      - name: Generate GraphQL Types
-        run: |
-          echo "🔧 Generating GraphQL types for ${{ env.BUILD_ENV }} environment..."
-
-          # Load from .env file
-          export $(cat .env | xargs)
-
-          # Verify it's loaded
-          echo "After loading .env, API_URL is: $API_URL"
-
-          npm run codegen
-        env:
-          API_URL: ${{ vars.API_URL }}
-          API_KEY: ${{ secrets.API_KEY }}
-      - name: Generate GraphQL Types
-        run: |
-          echo "🔧 Generating GraphQL types for ${{ env.BUILD_ENV }} environment..."
-          export API_URL="${{ vars.API_URL }}"
-          export API_KEY="${{ secrets.API_KEY }}"
-          npm run codegen
-
-          if [ -f "src/graphql/generated/index.ts" ]; then
-            echo "✅ GraphQL types generated successfully"
-            echo "📊 Generated files:"
-            ls -la src/graphql/generated/
-          else
-            echo "❌ GraphQL generation failed!"
-            exit 1
-          fi
-        env:
-          API_URL: ${{ vars.API_URL }}
-          API_KEY: ${{ secrets.API_KEY }}
-
       - name: Build application apk
         run: |
           echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode > ./android/app/releases.keystore
