@@ -67,8 +67,8 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     backgroundColor: 'white',
     padding: 16,
-    borderRadius: 8,
-    marginBottom: 8,
+    borderRadius: 12,
+    marginBottom: 12,
   },
   leftIcon: {
     marginRight: 12,

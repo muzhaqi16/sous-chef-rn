@@ -75,11 +75,15 @@ export const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({
   const handleBackPress = () => {
     // Navigate back to the appropriate screen based on source
     if (source === 'pantry') {
-      navigation.getParent()?.navigate('PantryStack', {screen: 'PantryMain'});
+      navigation.getParent()?.navigate('HomeStack', {
+        screen: 'Main',
+        params: {screen: 'PantryMain'}
+      });
     } else if (source === 'shoppingList') {
-      navigation
-        .getParent()
-        ?.navigate('ShoppingListStack', {screen: 'ShoppingListMain'});
+      navigation.getParent()?.navigate('HomeStack', {
+        screen: 'ShoppingList',
+        params: {screen: 'ShoppingListMain'}
+      });
     } else {
       // Fallback to normal back navigation
       navigation.goBack();

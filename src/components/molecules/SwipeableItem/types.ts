@@ -16,6 +16,7 @@ export interface ActionButtonProps {
   icon: React.ComponentProps<typeof Icon>['name'];
   backgroundColor: string;
   label?: string;
+  circular?: boolean;
 }
 
 export interface SwipeActionsProps {

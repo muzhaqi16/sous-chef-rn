@@ -21,8 +21,11 @@ query GetHomes {
     }
     members {
       id
+      homeId
+      userId
       role
       status
+      displayName
       user {
         ...PartialUser
       }

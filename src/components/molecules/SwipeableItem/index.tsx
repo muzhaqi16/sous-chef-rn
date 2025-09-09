@@ -1,7 +1,11 @@
 import React from 'react';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
-import Reanimated, {useAnimatedStyle, SharedValue} from 'react-native-reanimated';
+import Reanimated, {
+  useAnimatedStyle,
+  SharedValue,
+  useSharedValue,
+} from 'react-native-reanimated';
 import {RightActions} from './RightActions';
 import {LeftActions} from './LeftActions';
 import {SwipeableContent} from './SwipeableContent';
@@ -16,10 +20,12 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({
   onDelete,
   onEdit,
   enableSwipeToDelete = true,
-  leftThreshold = 80,
-  rightThreshold = 40,
-  friction = 2,
+  leftThreshold = 120,
+  rightThreshold = 120,
+  friction = 1,
 }) => {
+  const dragX = useSharedValue(0);
+
   const {itemOpacity, itemHeight, animateDelete} =
     useSwipeableAnimation(onDelete);
 
@@ -40,27 +46,33 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({
 
   const renderRightActions = (
     progress: SharedValue<number>,
-    dragX: SharedValue<number>,
-  ) => (
-    <RightActions
-      dragX={dragX}
-      progress={progress}
-      onEdit={onEdit}
-      onDelete={onDelete}
-      onActionPress={handleActionPress}
-    />
-  );
+    dragXValue: SharedValue<number>,
+  ) => {
+    return (
+      <RightActions
+        dragX={dragXValue}
+        progress={progress}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        onActionPress={handleActionPress}
+      />
+    );
+  };
 
   const renderLeftActions = (
     progress: SharedValue<number>,
-    dragX: SharedValue<number>,
-  ) => (
-    <LeftActions
-      dragX={dragX}
-      progress={progress}
-      enabled={enableSwipeToDelete && !!onDelete}
-    />
-  );
+    dragXValue: SharedValue<number>,
+  ) => {
+    return (
+      <LeftActions
+        dragX={dragXValue}
+        progress={progress}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        onActionPress={handleActionPress}
+      />
+    );
+  };
 
   return (
     <GestureHandlerRootView style={styles.gestureContainer}>
@@ -75,7 +87,9 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({
           onSwipeableOpen={handleSwipeableOpen}
           overshootLeft={false}
           overshootRight={false}>
-          <SwipeableContent onPress={onPress}>{children}</SwipeableContent>
+          <SwipeableContent onPress={onPress} dragX={dragX}>
+            {children}
+          </SwipeableContent>
         </ReanimatedSwipeable>
       </Reanimated.View>
     </GestureHandlerRootView>

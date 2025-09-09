@@ -1,9 +1,11 @@
-import React, {useState, useRef, useCallback} from 'react';
+import React, {useState, useRef, useCallback, useEffect} from 'react';
 import {View, Text} from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetBackdrop,
   BottomSheetTextInput,
+  BottomSheetView,
+  useBottomSheetModal,
 } from '@gorhom/bottom-sheet';
 import {StyleSheet} from 'react-native-unistyles';
 import {Input} from '#components/base/Input';
@@ -21,7 +23,9 @@ interface EnhancedAutocompleteInputProps {
   error?: string;
 }
 
-export const EnhancedAutocompleteInput: React.FC<EnhancedAutocompleteInputProps> = ({
+export const EnhancedAutocompleteInput: React.FC<
+  EnhancedAutocompleteInputProps
+> = ({
   label,
   value,
   onChangeText,
@@ -31,23 +35,30 @@ export const EnhancedAutocompleteInput: React.FC<EnhancedAutocompleteInputProps>
   onSelectItem,
   error,
 }) => {
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
+  const {dismiss, dismissAll} = useBottomSheetModal();
+  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(value || '');
+
+  // Sync searchTerm with external value changes
+  useEffect(() => {
+    setSearchTerm(value || '');
+  }, [value]);
 
   const handleTextChange = (text: string) => {
-    onChangeText(text);
+    setSearchTerm(text);
 
     if (text.length >= 2 && !showAutocomplete) {
       setShowAutocomplete(true);
-      setSearchTerm(text);
-      bottomSheetRef.current?.present();
+      setTimeout(() => {
+        bottomSheetModalRef.current?.present();
+      }, 50);
     } else if (text.length < 2 && showAutocomplete) {
       setShowAutocomplete(false);
-      bottomSheetRef.current?.dismiss();
-    } else if (text.length >= 2) {
-      setSearchTerm(text);
+      bottomSheetModalRef.current?.dismiss();
     }
+
+    onChangeText(text);
   };
 
   const handleBottomSheetTextChange = (text: string) => {
@@ -58,12 +69,14 @@ export const EnhancedAutocompleteInput: React.FC<EnhancedAutocompleteInputProps>
   const handleSelectItem = (item: ItemSuggestion) => {
     onChangeText(item.name);
     setShowAutocomplete(false);
-    bottomSheetRef.current?.dismiss();
+    bottomSheetModalRef.current?.dismiss();
     onSelectItem?.(item);
   };
 
-  const handleDismiss = useCallback(() => {
-    setShowAutocomplete(false);
+  const handleSheetChanges = useCallback((index: number) => {
+    if (index === -1) {
+      setShowAutocomplete(false);
+    }
   }, []);
 
   const renderBackdrop = useCallback(
@@ -74,12 +87,11 @@ export const EnhancedAutocompleteInput: React.FC<EnhancedAutocompleteInputProps>
         appearsOnIndex={0}
         opacity={0.5}
         enableTouchThrough={false}
-        onPress={() => bottomSheetRef.current?.dismiss()}
+        onPress={() => bottomSheetModalRef.current?.dismiss()}
       />
     ),
     [],
   );
-
   return (
     <View>
       <Input
@@ -93,15 +105,17 @@ export const EnhancedAutocompleteInput: React.FC<EnhancedAutocompleteInputProps>
       />
 
       <BottomSheetModal
-        ref={bottomSheetRef}
+        ref={bottomSheetModalRef}
         snapPoints={['75%', '100%']}
-        onDismiss={handleDismiss}
+        onChange={handleSheetChanges}
         backdropComponent={renderBackdrop}
-        keyboardBehavior="extend"
+        keyboardBehavior="interactive"
         enableDynamicSizing={false}
-        keyboardBlurBehavior="none"
-        android_keyboardInputMode="adjustResize">
-        <View style={styles.autocompleteContainer}>
+        keyboardBlurBehavior="restore"
+        android_keyboardInputMode="adjustResize"
+        enablePanDownToClose={true}
+        enableContentPanningGesture={false}>
+        <BottomSheetView style={styles.autocompleteContainer}>
           <Text style={styles.autocompleteTitle}>Search for an item</Text>
 
           <BottomSheetTextInput
@@ -109,7 +123,6 @@ export const EnhancedAutocompleteInput: React.FC<EnhancedAutocompleteInputProps>
             value={searchTerm}
             onChangeText={handleBottomSheetTextChange}
             placeholder="Type to search items..."
-            autoFocus={true}
             returnKeyType="search"
           />
 
@@ -117,7 +130,7 @@ export const EnhancedAutocompleteInput: React.FC<EnhancedAutocompleteInputProps>
             searchTerm={searchTerm}
             onSelectItem={handleSelectItem}
           />
-        </View>
+        </BottomSheetView>
       </BottomSheetModal>
     </View>
   );

@@ -1,7 +1,7 @@
 import React, {useMemo, useEffect} from 'react';
-import {Alert} from 'react-native';
+import {Alert, View, Image} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
-import {useUnistyles} from 'react-native-unistyles';
+import {useUnistyles, StyleSheet} from 'react-native-unistyles';
 import {
   useDefaultHome,
   usePantryManagement,
@@ -43,8 +43,9 @@ export const PantryMain: React.FC = () => {
 
   // Use selected pantry from store or fall back to default pantry
   const defaultPantry = getDefaultPantry(homeData);
-  const pantry = selectedPantryId 
-    ? homeData?.home?.pantries?.find((p: any) => p.id === selectedPantryId) || defaultPantry
+  const pantry = selectedPantryId
+    ? homeData?.home?.pantries?.find((p: any) => p.id === selectedPantryId) ||
+      defaultPantry
     : defaultPantry;
 
   // Auto-select the default pantry if none is selected
@@ -92,6 +93,11 @@ export const PantryMain: React.FC = () => {
           : isLowStock
             ? {text: 'Low Stock', variant: 'warning' as const}
             : undefined,
+        leftElement: item.item?.imageUrl ? (
+          <View style={styles.imageContainer}>
+            <Image source={{uri: item.item.imageUrl}} style={styles.leftImage} />
+          </View>
+        ) : undefined,
       };
     });
   }, [pantryItems]);
@@ -310,3 +316,20 @@ export const PantryMain: React.FC = () => {
     </>
   );
 };
+
+const styles = StyleSheet.create(theme => ({
+  imageContainer: {
+    width: 60,
+    height: 60,
+    marginRight: 16,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  leftImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    resizeMode: 'cover',
+    elevation: 2,
+  },
+}));

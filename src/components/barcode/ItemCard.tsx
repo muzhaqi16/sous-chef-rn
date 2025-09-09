@@ -20,7 +20,11 @@ export const ItemCard: React.FC<ItemCardProps> = ({item, format}) => {
   return (
     <View style={styles.itemCard}>
       {item.imageUrl ? (
-        <Image source={{uri: item.imageUrl}} style={styles.itemImage} />
+        <Image
+          source={{uri: item.imageUrl}}
+          style={styles.itemImage}
+          resizeMode="cover"
+        />
       ) : (
         <View style={styles.placeholderImage}>
           <Text style={styles.placeholderText}>📦</Text>

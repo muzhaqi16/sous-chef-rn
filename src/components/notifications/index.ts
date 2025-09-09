@@ -6,3 +6,6 @@ export {NotificationGroupHeader} from './NotificationGroupHeader';
 export {InvitationAcceptanceModal} from './InvitationAcceptanceModal';
 export {NotificationActionHandler} from './NotificationActionHandler';
 export {NotificationProvider} from './NotificationProvider';
+export {useNotificationSync} from './NotificationSyncManager';
+export {NotificationFilters} from './NotificationFilters';
+export {UrgentNotificationsBanner} from './UrgentNotificationsBanner';

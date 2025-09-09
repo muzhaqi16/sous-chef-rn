@@ -36,10 +36,15 @@ export const BrandAutocompleteInput: React.FC<BrandAutocompleteInputProps> = ({
 }) => {
   const bottomSheetRef = useRef<BottomSheetModal>(null);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(value || '');
 
   const [searchBrands, {data: brandsData, loading: brandsLoading}] =
     useSearchBrandsLazyQuery();
+
+  // Sync searchTerm with external value changes
+  useEffect(() => {
+    setSearchTerm(value || '');
+  }, [value]);
 
   useEffect(() => {
     if (searchTerm.length >= 2) {
@@ -57,10 +62,10 @@ export const BrandAutocompleteInput: React.FC<BrandAutocompleteInputProps> = ({
     // Clear brand selection when user types manually
     onBrandSelected?.(null);
 
-    if (text.length >= 1 && !showAutocomplete) {
+    if (text.length >= 2 && !showAutocomplete) {
       setShowAutocomplete(true);
       bottomSheetRef.current?.present();
-    } else if (text.length === 0 && showAutocomplete) {
+    } else if (text.length < 2 && showAutocomplete) {
       setShowAutocomplete(false);
       bottomSheetRef.current?.dismiss();
     }
@@ -126,7 +131,9 @@ export const BrandAutocompleteInput: React.FC<BrandAutocompleteInputProps> = ({
         keyboardBehavior="extend"
         enableDynamicSizing={false}
         keyboardBlurBehavior="none"
-        android_keyboardInputMode="adjustResize">
+        android_keyboardInputMode="adjustResize"
+        enablePanDownToClose={true}
+        enableContentPanningGesture={false}>
         <View style={styles.autocompleteContainer}>
           <Text style={styles.autocompleteTitle}>Select a brand</Text>
 
@@ -135,7 +142,7 @@ export const BrandAutocompleteInput: React.FC<BrandAutocompleteInputProps> = ({
             value={searchTerm}
             onChangeText={handleBottomSheetTextChange}
             placeholder="Type to search brands..."
-            autoFocus={true}
+            autoFocus={showAutocomplete}
             returnKeyType="search"
           />
 

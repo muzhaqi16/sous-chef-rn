@@ -144,13 +144,42 @@ export const ShoppingListMain: React.FC = () => {
   // If no lists exist at all
   if (lists.length === 0) {
     return (
-      <EmptyState
-        icon="shopping-cart"
-        title="No Shopping Lists"
-        description="Create your first shopping list to get started."
-        action={{
-          label: 'Create your first list',
-          onPress: () => navigation.navigate('ListSettings', {listId: ''}),
+      <ListTemplate
+        title={currentList?.name || 'Shopping List'}
+        subtitle="Shopping List"
+        items={listItems}
+        searchQuery={query}
+        onSearchChange={setQuery}
+        onItemPress={id =>
+          navigation.navigate('EditItem', {listId: currentListId, itemId: id})
+        }
+        onItemEdit={id =>
+          navigation.navigate('EditItem', {listId: currentListId, itemId: id})
+        }
+        onItemDelete={handleDeleteItem}
+        onRefresh={handleRefresh}
+        // Display configuration
+        showSearchBar={true}
+        showFAB={true}
+        onFabPress={() =>
+          navigation.getParent()?.navigate('BarcodeStack', {
+            screen: 'BarcodeScanner',
+            params: {
+              source: 'shoppingList',
+              shoppingListId: currentListId,
+            },
+          })
+        }
+        // Actions
+        searchBarActions={searchBarActions}
+        emptyState={{
+          icon: 'add-shopping-cart',
+          title: 'No shopping lists',
+          description: 'Create a shopping list to get started',
+          action: {
+            label: 'Create List',
+            onPress: () => navigation.navigate('ListSettings'),
+          },
         }}
       />
     );

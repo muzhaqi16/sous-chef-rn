@@ -35,6 +35,7 @@ export interface NotificationItem {
   actionType?: string;
   actionData?: any;
   expiresAt?: string | null;
+  source?: 'server' | 'local'; // Track notification source
 }
 
 export interface NotificationState {
@@ -50,7 +51,11 @@ export interface NotificationState {
   addMultipleNotifications: (
     notifications: Omit<NotificationItem, 'isRead'>[],
   ) => void;
+  syncNotificationsFromServer: (
+    serverNotifications: NotificationItem[],
+  ) => void;
   markAsRead: (notificationId: string) => void;
+  markAsReadWithSync: (notificationId: string, callback?: (success: boolean) => void) => void;
   markAllAsRead: () => void;
   removeNotification: (notificationId: string) => void;
   clearAll: () => void;
@@ -78,7 +83,9 @@ const initialNotificationState: Omit<
   NotificationState,
   | 'addNotification'
   | 'addMultipleNotifications'
+  | 'syncNotificationsFromServer'
   | 'markAsRead'
+  | 'markAsReadWithSync'
   | 'markAllAsRead'
   | 'removeNotification'
   | 'clearAll'
@@ -156,10 +163,18 @@ export const createNotificationSlice: StateCreator<
       return;
     }
 
+    // Check for duplicates before adding
+    const existingNotification = get().notifications.find(n => n.id === notification.id);
+    if (existingNotification) {
+      console.log('Skipping duplicate notification:', notification.id);
+      return;
+    }
+
     set(state => {
       const newNotification = {
         ...notification, 
         isRead: false,
+        source: notification.source || 'local' as const, // Mark as local by default
         // Ensure sentAt is always a valid ISO string
         sentAt: safeParseDate(notification.sentAt)?.toISOString() || new Date().toISOString()
       };
@@ -215,17 +230,69 @@ export const createNotificationSlice: StateCreator<
     );
 
     set(state => {
-      const newNotifications = validNotifications.map(n => ({
-        ...n,
-        isRead: false,
-        // Ensure sentAt is always a valid ISO string
-        sentAt: safeParseDate(n.sentAt)?.toISOString() || new Date().toISOString()
-      }));
-      state.notifications.unshift(...newNotifications);
+      // Get existing notification IDs to prevent duplicates
+      const existingIds = new Set(state.notifications.map(n => n.id));
+      
+      const newNotifications = validNotifications
+        .filter(n => !existingIds.has(n.id)) // Only add notifications that don't exist
+        .map(n => ({
+          ...n,
+          isRead: false,
+          source: n.source || 'local' as const, // Mark as local by default
+          // Ensure sentAt is always a valid ISO string
+          sentAt: safeParseDate(n.sentAt)?.toISOString() || new Date().toISOString()
+        }));
+
+      if (newNotifications.length > 0) {
+        console.log(`Actually adding ${newNotifications.length} new notifications (filtered ${validNotifications.length - newNotifications.length} duplicates)`);
+        state.notifications.unshift(...newNotifications);
+      } else {
+        console.log('No new notifications to add (all were duplicates)');
+      }
+      
       state.unreadCount = state.notifications.filter(n => !n.isRead).length;
       state.urgentCount = state.notifications.filter(
         n => !n.isRead && n.priority === NotificationPriority.URGENT,
       ).length;
+    });
+  },
+
+  // Sync notifications from server - replaces existing with server truth while preserving newer local ones
+  syncNotificationsFromServer: serverNotifications => {
+    const state = get();
+
+    if (!state.user?.emailVerified) {
+      console.log('Skipping notification sync - user not verified');
+      return;
+    }
+
+    console.log(`Syncing ${serverNotifications.length} notifications from server`);
+
+    set(state => {
+      // Keep track of local notifications that are newer than last fetch (real-time additions)
+      const lastFetch = state.lastFetchedAt ? new Date(state.lastFetchedAt) : new Date(0);
+      const localRealtimeNotifications = state.notifications.filter(n => {
+        const notifDate = new Date(n.sentAt);
+        return notifDate > lastFetch && !serverNotifications.find(sn => sn.id === n.id);
+      });
+
+      console.log(`Preserving ${localRealtimeNotifications.length} real-time notifications`);
+
+      // Merge server notifications with preserved local ones
+      const allNotifications = [...serverNotifications, ...localRealtimeNotifications];
+
+      // Sort by sentAt (newest first)
+      allNotifications.sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime());
+
+      // Update state
+      state.notifications = allNotifications;
+      state.unreadCount = allNotifications.filter(n => !n.isRead).length;
+      state.urgentCount = allNotifications.filter(
+        n => !n.isRead && n.priority === NotificationPriority.URGENT,
+      ).length;
+      state.lastFetchedAt = new Date().toISOString();
+
+      console.log(`Sync complete. Total: ${state.notifications.length}, Unread: ${state.unreadCount}`);
     });
   },
 
@@ -275,6 +342,7 @@ export const createNotificationSlice: StateCreator<
       }
 
       // Remove notifications for entities that no longer exist
+      const originalCount = draft.notifications.length;
       draft.notifications = draft.notifications.filter(notification => {
         if (
           notification.category === NotificationCategory.PANTRY &&
@@ -296,6 +364,11 @@ export const createNotificationSlice: StateCreator<
         }
         return true;
       });
+
+      const cleanedCount = originalCount - draft.notifications.length;
+      if (cleanedCount > 0) {
+        console.log(`Cleaned up ${cleanedCount} orphaned notifications`);
+      }
 
       // Recalculate counts
       draft.unreadCount = draft.notifications.filter(n => !n.isRead).length;
@@ -319,6 +392,18 @@ export const createNotificationSlice: StateCreator<
         }
       }
     });
+  },
+
+  markAsReadWithSync: (notificationId, callback) => {
+    // First mark as read locally for immediate UI feedback
+    get().markAsRead(notificationId);
+    
+    // TODO: Add server sync call here when GraphQL mutation is available
+    // This would call a mutation like `markNotificationAsRead(id: $id)`
+    // For now, we'll just mark locally and rely on periodic sync
+    if (callback) {
+      callback(true); // Assume success for now
+    }
   },
 
   markAllAsRead: () => {

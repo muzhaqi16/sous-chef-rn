@@ -3,20 +3,39 @@ import {commonStyles} from '#/styles/commonStyles';
 
 export const styles = StyleSheet.create(theme => ({
   gestureContainer: {
-    marginBottom: theme.spacing.sm,
+    marginBottom: 12, // Space for shadow and card separation
+    overflow: 'visible', // Allow shadow to show
   },
 
   container: {
-    overflow: 'hidden',
-  },
-
-  itemContainer: {
-    ...commonStyles.surface,
+    borderRadius: 12, // Match card radius
+    overflow: 'hidden', // Prevent actions from going off screen
   },
 
   actionsContainer: {
     ...commonStyles.row,
     height: '100%',
+    backgroundColor: '#2C2B3B', // Correct background color from prototype
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 160, // Fixed width for consistent spacing
+    borderTopLeftRadius: 0, // Square connection to card
+    borderBottomLeftRadius: 0, // Square connection to card
+    borderTopRightRadius: 12, // Round the outer edge
+    borderBottomRightRadius: 12, // Round the outer edge
+  },
+
+  leftActionsContainer: {
+    ...commonStyles.row,
+    height: '100%',
+    backgroundColor: '#2C2B3B', // Correct background color from prototype
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 120, // Fixed width for consistent spacing
+    borderTopRightRadius: 0, // Square connection to card
+    borderBottomRightRadius: 0, // Square connection to card
+    borderTopLeftRadius: 12, // Round the outer edge
+    borderBottomLeftRadius: 12, // Round the outer edge
   },
 
   actionButton: {
@@ -25,25 +44,21 @@ export const styles = StyleSheet.create(theme => ({
     height: '100%',
   },
 
+  circularActionButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#6C757D', // Gray circle background
+    ...commonStyles.center,
+    marginHorizontal: 8,
+  },
+
   editButton: {
     backgroundColor: theme.colors.success,
   },
 
   deleteButton: {
     backgroundColor: theme.colors.error,
-  },
-
-  leftActionContainer: {
-    ...commonStyles.flex1,
-    backgroundColor: theme.colors.error,
-    justifyContent: 'flex-end',
-    alignItems: 'flex-start',
-  },
-
-  deleteIconContainer: {
-    ...commonStyles.center,
-    paddingHorizontal: theme.spacing.lg,
-    height: '100%',
   },
 
   deleteText: {

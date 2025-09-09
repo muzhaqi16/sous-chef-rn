@@ -1,6 +1,5 @@
 import React, {useState} from 'react';
-import {View, Text, TouchableOpacity, ActivityIndicator, Image} from 'react-native';
-import Icon from '@react-native-vector-icons/material-icons';
+import {View, Text, TouchableOpacity, ActivityIndicator} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
 import {useForm} from 'react-hook-form';
 import {yupResolver} from '@hookform/resolvers/yup';
@@ -143,8 +142,7 @@ const getFormSections = (
         component: UnitsAutocompleteInput,
         props: {
           componentType: 'autocomplete',
-          onUnitSelected: (unitId: string | null) =>
-            setSelectedUnitId(unitId),
+          onUnitSelected: (unitId: string | null) => setSelectedUnitId(unitId),
         },
       },
     ],
@@ -315,14 +313,14 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
         isDefault: true,
         packageSize: data.netWeight,
       };
-      
+
       if (displayUnitId) {
         unitEntry.unitId = displayUnitId;
       }
       if (displayUnitName) {
         unitEntry.unitName = displayUnitName;
       }
-      
+
       units = [unitEntry];
     }
 
@@ -340,9 +338,15 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
       imageUrl: data.imageUrl || undefined,
       brandId: brandId || undefined,
       brandName: brandName || undefined,
-      categoryIds: data.categoryIds && data.categoryIds.length > 0 ? data.categoryIds : undefined,
+      categoryIds:
+        data.categoryIds && data.categoryIds.length > 0
+          ? data.categoryIds
+          : undefined,
       units: units.length > 0 ? units : undefined,
-      tags: tags.length > 0 || systemTags.length > 0 ? [...tags, ...systemTags] : undefined,
+      tags:
+        tags.length > 0 || systemTags.length > 0
+          ? [...tags, ...systemTags]
+          : undefined,
       // Pass the selected image for post-creation upload
       selectedImage: selectedImage,
     };
@@ -389,14 +393,14 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
             />
           </View>
         ))}
-        
+
         {/* Image Picker Section */}
         <View style={styles.section}>
           <ProductImagePicker
             selectedImage={selectedImage}
             onImageSelected={setSelectedImage}
             onImageRemoved={() => setSelectedImage(null)}
-            onError={(error) => {
+            onError={error => {
               console.error('Image selection error:', error);
             }}
             disabled={loading}

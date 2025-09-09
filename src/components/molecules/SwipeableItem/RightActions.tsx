@@ -16,26 +16,22 @@ export const RightActions: React.FC<RightActionsProps> = ({
   onDelete,
   onActionPress,
 }) => {
-  const translateX = useAnimatedStyle(() => {
-    return {
-      transform: [{translateX: dragX.value + 120}],
-    };
-  });
-
   return (
-    <Reanimated.View style={[styles.actionsContainer, translateX]}>
+    <Reanimated.View style={styles.actionsContainer}>
       {onEdit && (
         <ActionButton
           onPress={() => onActionPress('edit')}
           icon="edit"
-          backgroundColor="#4CAF50"
+          backgroundColor="transparent"
+          circular={true}
         />
       )}
       {onDelete && (
         <ActionButton
           onPress={() => onActionPress('delete')}
           icon="delete"
-          backgroundColor="#F44336"
+          backgroundColor="transparent"
+          circular={true}
         />
       )}
     </Reanimated.View>

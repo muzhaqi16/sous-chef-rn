@@ -1,6 +1,7 @@
 import React from 'react';
-import {useRoute} from '@react-navigation/native';
-import {PantryItemForm} from '#components/pages/PantryItemForm';
+import {useRoute, useNavigation} from '@react-navigation/native';
+import {AddPantryItemForm} from '#components/forms/AddPantryItemForm';
+import {EditPantryItemForm} from '#components/forms/EditPantryItemForm';
 
 type PantryItemScreenParams = {
   itemId?: string;
@@ -8,15 +9,19 @@ type PantryItemScreenParams = {
 
 export const PantryItemScreen: React.FC = () => {
   const route = useRoute();
+  const navigation = useNavigation();
   const params = route.params as PantryItemScreenParams | undefined;
-  
-  // Determine mode based on whether itemId is present
-  const mode = params?.itemId ? 'edit' : 'add';
-  
-  return (
-    <PantryItemForm 
-      mode={mode} 
-      itemId={params?.itemId}
-    />
-  );
+
+  const handleSuccess = () => {
+    navigation.goBack();
+  };
+
+  // Render the appropriate form based on whether itemId is present
+  if (params?.itemId) {
+    return (
+      <EditPantryItemForm itemId={params.itemId} onSuccess={handleSuccess} />
+    );
+  }
+
+  return <AddPantryItemForm onSuccess={handleSuccess} />;
 };

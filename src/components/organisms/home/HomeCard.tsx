@@ -9,10 +9,17 @@ export type PartialHome = {
   name: string;
   members?: Array<{
     id: string;
+    role: string;
+    status: string;
+    userId?: string;
+    displayName?: string;
     user?: {
+      id: string;
       email?: string;
       profile?: {
         firstName?: string;
+        lastName?: string;
+        displayName?: string;
       };
     };
   }>;

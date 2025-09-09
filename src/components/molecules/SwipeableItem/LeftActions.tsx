@@ -1,33 +1,33 @@
 import React from 'react';
-import {View, Text} from 'react-native';
-import Animated, {useAnimatedStyle, SharedValue} from 'react-native-reanimated';
-import Icon from '@react-native-vector-icons/material-icons';
+import Reanimated from 'react-native-reanimated';
+import {ActionButton} from './ActionButton';
 import {styles} from './styles';
+import {SwipeActionsProps} from './types';
+import {SharedValue} from 'react-native-reanimated';
 
-interface LeftActionsProps {
+interface LeftActionsProps extends SwipeActionsProps {
   dragX: SharedValue<number>;
   progress: SharedValue<number>;
-  enabled: boolean;
 }
 
 export const LeftActions: React.FC<LeftActionsProps> = ({
   dragX,
   progress,
-  enabled,
+  onEdit,
+  onDelete,
+  onActionPress,
 }) => {
-  if (!enabled) return null;
-
-  const animatedStyles = useAnimatedStyle(() => ({
-    transform: [{translateX: dragX.value - 80}],
-    opacity: progress.value,
-  }));
-
+  // Always show left actions for consistency (placeholder for now)
   return (
-    <Animated.View style={[styles.leftActionContainer, animatedStyles]}>
-      <View style={styles.deleteIconContainer}>
-        <Icon name="delete" size={24} color="white" />
-        <Text style={styles.deleteText}>Delete</Text>
-      </View>
-    </Animated.View>
+    <Reanimated.View style={styles.leftActionsContainer}>
+      <ActionButton
+        onPress={() => {
+          /* placeholder action */
+        }}
+        icon="favorite"
+        backgroundColor="transparent"
+        circular={true}
+      />
+    </Reanimated.View>
   );
 };

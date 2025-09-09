@@ -88,5 +88,6 @@ const styles = StyleSheet.create(() => ({
   },
   content: {
     padding: 16,
+    paddingBottom: 28, // Extra space for larger shadow at bottom
   },
 }));

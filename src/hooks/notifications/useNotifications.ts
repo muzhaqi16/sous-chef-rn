@@ -21,12 +21,14 @@ export const useNotifications = () => {
 
   const handleMarkAsRead = useCallback(
     async (notificationId: string) => {
+      // Find the notification to check its source
+      const notification = notifications.find(n => n.id === notificationId);
+      
       // Mark locally
       markAsRead(notificationId);
 
-      // Sync with server if it's a server notification
-      if (!notificationId.includes('-')) {
-        // Server notifications have UUID format
+      // Sync with server only if it's a server notification
+      if (notification?.source === 'server') {
         try {
           await markNotificationReadMutation({
             variables: {id: notificationId},
@@ -36,24 +38,24 @@ export const useNotifications = () => {
         }
       }
     },
-    [markAsRead, markNotificationReadMutation],
+    [markAsRead, markNotificationReadMutation, notifications],
   );
 
   const handleMarkAllAsRead = useCallback(async () => {
-    const unreadIds = notifications.filter(n => !n.isRead).map(n => n.id);
+    const unreadNotifications = notifications.filter(n => !n.isRead);
 
     // Mark all locally
     markAllAsRead();
 
-    // Sync with server for server notifications
-    for (const id of unreadIds) {
-      if (!id.includes('-')) {
+    // Sync with server for server notifications only
+    for (const notification of unreadNotifications) {
+      if (notification.source === 'server') {
         try {
           await markNotificationReadMutation({
-            variables: {id},
+            variables: {id: notification.id},
           });
         } catch (error) {
-          console.error(`Failed to mark notification ${id} as read:`, error);
+          console.error(`Failed to mark notification ${notification.id} as read:`, error);
         }
       }
     }
@@ -61,11 +63,14 @@ export const useNotifications = () => {
 
   const handleRemoveNotification = useCallback(
     async (notificationId: string) => {
+      // Find the notification to check its source
+      const notification = notifications.find(n => n.id === notificationId);
+      
       // Remove locally
       removeNotification(notificationId);
 
-      // Delete from server if it's a server notification
-      if (!notificationId.includes('-')) {
+      // Delete from server only if it's a server notification
+      if (notification?.source === 'server') {
         try {
           await deleteNotificationMutation({
             variables: {id: notificationId},
@@ -75,7 +80,7 @@ export const useNotifications = () => {
         }
       }
     },
-    [removeNotification, deleteNotificationMutation],
+    [removeNotification, deleteNotificationMutation, notifications],
   );
 
   const groupedNotifications = useMemo(() => {
