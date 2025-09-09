@@ -319,6 +319,11 @@ export function useHomeManagement() {
   // Statistics and computed values
   const stats = useMemo(() => {
     const validHomes = Array.isArray(homes) ? homes.filter(Boolean) : [];
+    
+    console.log('Computing stats for homes:', validHomes.length);
+    validHomes.forEach((home, index) => {
+      console.log(`Home ${index + 1} (${home.name}): ${home.pantries?.length || 0} pantries`);
+    });
 
     const result = {
       totalHomes: validHomes.length,
@@ -328,10 +333,12 @@ export function useHomeManagement() {
       }, 0),
       totalPantries: validHomes.reduce((acc, home) => {
         const count = Array.isArray(home?.pantries) ? home.pantries.length : 0;
+        console.log(`Home ${home.name}: ${count} pantries`);
         return acc + count;
       }, 0),
     };
 
+    console.log('Final stats:', result);
     return result;
   }, [homes]);
   // Computed value for current default home

@@ -91,10 +91,13 @@ export const PantrySettings: React.FC = () => {
             query: GetHomesDocument,
           });
 
+          console.log('Existing homes data:', existingHomesData);
+
           if (existingHomesData?.homes) {
             const updatedHomes = existingHomesData.homes.map((home: any) => {
               if (home.id === data.createPantry.homeId) {
-                return {
+                console.log('Adding pantry to home:', home.id, 'pantries before:', home.pantries?.length || 0);
+                const updatedHome = {
                   ...home,
                   pantries: [
                     ...(home.pantries || []),
@@ -105,6 +108,8 @@ export const PantrySettings: React.FC = () => {
                     },
                   ],
                 };
+                console.log('Pantries after:', updatedHome.pantries.length);
+                return updatedHome;
               }
               return home;
             });
@@ -113,6 +118,9 @@ export const PantrySettings: React.FC = () => {
               query: GetHomesDocument,
               data: {homes: updatedHomes},
             });
+            console.log('GetHomes cache updated with new pantry');
+          } else {
+            console.log('No existing homes data found in cache');
           }
 
           // Also update GetPantries cache if it exists
@@ -140,6 +148,17 @@ export const PantrySettings: React.FC = () => {
 
         } catch (error) {
           console.log('Cache update failed during create:', error);
+        }
+
+        // Force refresh of GetHomes query to ensure stats update
+        try {
+          cache.evict({ 
+            id: 'ROOT_QUERY', 
+            fieldName: 'homes' 
+          });
+          console.log('Evicted homes query from cache to force refresh');
+        } catch (evictError) {
+          console.log('Failed to evict homes query:', evictError);
         }
       }
     },
