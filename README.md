@@ -107,5 +107,5 @@ Push with tags
 
 # Create a test tag
 
-git tag -a android-v0.6.1-test -m "Test build env secrets"
-git push origin android-v0.6.1-test
+git tag -a android-v0.6.2-test -m "Test build env secrets"
+git push origin android-v0.6.2-test
