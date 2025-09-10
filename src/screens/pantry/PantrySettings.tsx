@@ -225,7 +225,6 @@ export const PantrySettings: React.FC = () => {
             },
           },
         });
-        Alert.alert('Success', 'Pantry settings saved');
       }
     } catch (error) {
       Alert.alert(

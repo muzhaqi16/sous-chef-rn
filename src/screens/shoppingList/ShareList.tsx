@@ -130,28 +130,85 @@ export const ShareList: React.FC = () => {
       <View style={styles.membersSection}>
         <Text style={styles.sectionTitle}>Current Members</Text>
         <ScrollView>
-          {collaborators.map((member: any) => (
-            <View key={member.id} style={styles.memberCard}>
-              <View style={styles.memberInfo}>
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>
-                    {member.name?.[0]?.toUpperCase() ||
-                      member.email[0].toUpperCase()}
-                  </Text>
+          {collaborators.map((member: any) => {
+            const getStatusColor = (status: string) => {
+              switch (status?.toUpperCase()) {
+                case 'ACCEPTED':
+                case 'ACTIVE':
+                  return '#4CAF50'; // Green
+                case 'PENDING':
+                  return '#FFA500'; // Orange
+                case 'DECLINED':
+                  return '#F44336'; // Red
+                case 'EXPIRED':
+                  return '#9E9E9E'; // Gray
+                default:
+                  return '#9E9E9E';
+              }
+            };
+
+            const formatStatus = (status: string) => {
+              switch (status?.toUpperCase()) {
+                case 'ACCEPTED':
+                case 'ACTIVE':
+                  return 'Active';
+                case 'PENDING':
+                  return 'Invited';
+                case 'DECLINED':
+                  return 'Declined';
+                case 'EXPIRED':
+                  return 'Expired';
+                default:
+                  return status || 'Unknown';
+              }
+            };
+
+            const statusColor = getStatusColor(member.status);
+            const statusText = formatStatus(member.status);
+
+            return (
+              <View key={member.id} style={styles.memberCard}>
+                <View style={styles.memberInfo}>
+                  <View style={styles.avatar}>
+                    <Text style={styles.avatarText}>
+                      {member.name?.[0]?.toUpperCase() ||
+                        member.email[0].toUpperCase()}
+                    </Text>
+                  </View>
+                  <View style={styles.memberDetails}>
+                    <Text style={styles.memberName}>
+                      {member.name || member.email}
+                    </Text>
+                    <Text style={styles.memberEmail}>{member.email}</Text>
+                    <View style={styles.statusContainer}>
+                      <View 
+                        style={[
+                          styles.statusBadge,
+                          { 
+                            backgroundColor: statusColor + '20',
+                            borderColor: statusColor
+                          }
+                        ]}
+                      >
+                        <Text style={[styles.statusText, { color: statusColor }]}>
+                          {statusText}
+                        </Text>
+                      </View>
+                      {member.invitedAt && (
+                        <Text style={styles.invitedText}>
+                          Invited {new Date(member.invitedAt).toLocaleDateString()}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
                 </View>
-                <View>
-                  <Text style={styles.memberName}>
-                    {member.name || member.email}
-                  </Text>
-                  <Text style={styles.memberEmail}>{member.email}</Text>
-                </View>
+                <TouchableOpacity
+                  onPress={() => handleRemoveMember(member.email)}>
+                  <Icon name="close" size={20} color={theme.colors.error} />
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity
-                onPress={() => handleRemoveMember(member.email)}>
-                <Icon name="close" size={20} color={theme.colors.error} />
-              </TouchableOpacity>
-            </View>
-          ))}
+            );
+          })}
         </ScrollView>
       </View>
     </View>
@@ -234,7 +291,11 @@ const styles = StyleSheet.create(theme => ({
   },
   memberInfo: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    flex: 1,
+  },
+  memberDetails: {
+    flex: 1,
   },
   avatar: {
     width: 40,
@@ -259,5 +320,27 @@ const styles = StyleSheet.create(theme => ({
     fontSize: 14,
     color: theme.colors.textSecondary,
     marginTop: 2,
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  invitedText: {
+    fontSize: 11,
+    color: theme.colors.textSecondary,
+    fontStyle: 'italic',
   },
 }));

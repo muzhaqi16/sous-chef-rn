@@ -1,6 +1,4 @@
-// useItemSelector.ts - A custom hook to make the ItemSelector even easier to use
-
-import {useState, useCallback} from 'react';
+import {useState, useCallback, useEffect} from 'react';
 import {
   useGetShoppingListsQuery,
   useGetPantriesQuery,
@@ -27,6 +25,11 @@ export const useItemSelector = ({
   const [selectedId, setSelectedId] = useState<string | undefined>(
     initialSelected,
   );
+
+  // Sync with the initialSelected when it changes
+  useEffect(() => {
+    setSelectedId(initialSelected);
+  }, [initialSelected]);
   const {selectedHomeId} = useDefaultHome();
   // Query data based on type
   const {data: shoppingListData, loading: shoppingListLoading} =

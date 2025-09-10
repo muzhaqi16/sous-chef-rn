@@ -20,6 +20,7 @@ export function useHomeManagement() {
 
   const {data, loading, error, refetch} = useGetHomesQuery({
     fetchPolicy: 'cache-and-network',
+    notifyOnNetworkStatusChange: true,
   });
 
   const {

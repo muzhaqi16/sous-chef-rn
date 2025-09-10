@@ -70,9 +70,6 @@ export const AddEditItem: React.FC = () => {
         // Cache update failed, but mutation still succeeded
       }
     },
-    onCompleted: () => {
-      console.log('Item added successfully');
-    },
     onError: error => {
       console.error('Add item error:', error);
     },

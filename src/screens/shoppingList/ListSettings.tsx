@@ -123,7 +123,6 @@ export const ListSettings: React.FC = () => {
             input: {name: name.trim(), isDefault},
           },
         });
-        Alert.alert('Success', 'Settings saved');
       }
     } catch (error) {
       Alert.alert(

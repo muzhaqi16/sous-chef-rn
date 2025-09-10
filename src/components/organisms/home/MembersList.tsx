@@ -2,6 +2,7 @@ import React from 'react';
 import {View, Text} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
 import {useStore} from '#store';
+import {HomeInviteFragment} from '#generated';
 
 interface Member {
   id: string;
@@ -20,14 +21,36 @@ interface Member {
   };
 }
 
-interface MembersListProps {
-  members: Member[];
+interface Invite {
+  id: string;
+  email: string;
+  recipientName?: string;
+  role: string;
+  status: string;
+  sentAt?: string;
+  acceptedAt?: string;
+  declinedAt?: string;
+  revokedAt?: string;
+  expiresAt?: string;
+  inviter?: {
+    id: string;
+    email?: string;
+    profile?: {
+      displayName?: string;
+    };
+  };
 }
 
-export const MembersList: React.FC<MembersListProps> = ({members}) => {
+interface MembersListProps {
+  members: Member[];
+  invites?: HomeInviteFragment[];
+}
+
+export const MembersList: React.FC<MembersListProps> = ({members, invites = []}) => {
   const currentUser = useStore(state => state.user);
   
-  if (!members || members.length === 0) return null;
+  
+  if ((!members || members.length === 0) && (!invites || invites.length === 0)) return null;
 
   const getMemberDisplayName = (member: Member): string => {
     // Check if this member is the current user
@@ -67,6 +90,44 @@ export const MembersList: React.FC<MembersListProps> = ({members}) => {
     }
   };
 
+  const getInviteDisplayName = (invite: HomeInviteFragment): string => {
+    return invite.recipientName || invite.email.split('@')[0] || invite.email;
+  };
+
+  const formatInviteStatus = (status: string): string => {
+    switch (status) {
+      case 'PENDING':
+        return 'Invited';
+      case 'ACCEPTED':
+        return 'Accepted';
+      case 'DECLINED':
+        return 'Declined';
+      case 'EXPIRED':
+        return 'Expired';
+      case 'REVOKED':
+        return 'Revoked';
+      default:
+        return status;
+    }
+  };
+
+  const getInviteStatusColor = (status: string): string => {
+    switch (status) {
+      case 'PENDING':
+        return '#FFA500'; // Orange
+      case 'ACCEPTED':
+        return '#4CAF50'; // Green
+      case 'DECLINED':
+        return '#F44336'; // Red
+      case 'EXPIRED':
+        return '#9E9E9E'; // Gray
+      case 'REVOKED':
+        return '#9E9E9E'; // Gray
+      default:
+        return '#9E9E9E';
+    }
+  };
+
   return (
     <View style={styles.membersSection}>
       <Text style={styles.membersSectionTitle}>Members</Text>
@@ -91,6 +152,34 @@ export const MembersList: React.FC<MembersListProps> = ({members}) => {
               </Text>
               <Text style={styles.memberRole}>
                 {formatRole(member.role)}
+              </Text>
+            </View>
+          );
+        })}
+        
+        {invites.map(invite => {
+          const displayName = getInviteDisplayName(invite);
+          const statusColor = getInviteStatusColor(invite.status);
+          
+          return (
+            <View 
+              key={invite.id} 
+              style={[
+                styles.inviteChip,
+                { borderColor: statusColor }
+              ]}
+            >
+              <Text style={[
+                styles.inviteChipText,
+                { color: statusColor }
+              ]}>
+                {displayName}
+              </Text>
+              <Text style={[
+                styles.inviteStatus,
+                { color: statusColor }
+              ]}>
+                {formatInviteStatus(invite.status)}
               </Text>
             </View>
           );
@@ -145,5 +234,25 @@ const styles = StyleSheet.create(theme => ({
   currentUserText: {
     color: 'white',
     fontWeight: '700',
+  },
+  inviteChip: {
+    backgroundColor: 'transparent',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    minWidth: 60,
+    alignItems: 'center',
+  },
+  inviteChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  inviteStatus: {
+    fontSize: 10,
+    marginTop: 2,
+    textAlign: 'center',
+    fontWeight: '500',
   },
 }));

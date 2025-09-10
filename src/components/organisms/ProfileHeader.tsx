@@ -38,7 +38,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             onError={() =>
               console.log('Avatar image failed to load:', avatarUrl)
             }
-            onLoad={() => console.log('Avatar image loaded successfully')}
+            onLoad={() => {}}
           />
         ) : (
           <View style={[styles.avatar, styles.avatarPlaceholder]}>

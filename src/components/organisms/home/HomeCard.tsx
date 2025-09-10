@@ -1,6 +1,7 @@
 import React from 'react';
 import {View, Text} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
+import {useGetHomeInvitesQuery} from '#generated';
 import {HomeActions} from './HomeActions';
 import {MembersList} from './MembersList';
 
@@ -47,6 +48,14 @@ export const HomeCard: React.FC<HomeCardProps> = ({
   onInvite,
   onDelete,
 }) => {
+  // Fetch invites for this specific home
+  const {data: invitesData, loading: invitesLoading} = useGetHomeInvitesQuery({
+    variables: {homeId: home.id},
+    fetchPolicy: 'cache-and-network',
+  });
+
+  const homeInvites = invitesData?.homeInvites || [];
+
   const handleDelete = () => {
     onDelete(home.id, home.name);
   };
@@ -80,27 +89,32 @@ export const HomeCard: React.FC<HomeCardProps> = ({
         return '#9E9E9E';
     }
   };
-
   return (
     <View style={styles.homeCard}>
       <View style={styles.homeHeader}>
         <View style={styles.homeInfo}>
           <Text style={styles.homeName}>{home.name}</Text>
           <Text style={styles.homeDetails}>
-            {home.members?.length || 0} members • {home.pantries?.length || 0}{' '}
-            pantries
+            {home.members?.length || 0} members
+            {'  '}
+            {home.pantries?.length || 0} pantries
           </Text>
         </View>
         <View style={styles.badgeContainer}>
           {home.myMembership?.role && (
-            <View style={[
-              styles.roleBadge,
-              { backgroundColor: getRoleBadgeColor(home.myMembership.role) + '20' }
-            ]}>
-              <Text style={[
-                styles.roleText,
-                { color: getRoleBadgeColor(home.myMembership.role) }
+            <View
+              style={[
+                styles.roleBadge,
+                {
+                  backgroundColor:
+                    getRoleBadgeColor(home.myMembership.role) + '20',
+                },
               ]}>
+              <Text
+                style={[
+                  styles.roleText,
+                  {color: getRoleBadgeColor(home.myMembership.role)},
+                ]}>
                 {formatRole(home.myMembership.role)}
               </Text>
             </View>
@@ -121,7 +135,7 @@ export const HomeCard: React.FC<HomeCardProps> = ({
         onDelete={handleDelete}
       />
 
-      <MembersList members={home.members || []} />
+      <MembersList members={home.members || []} invites={homeInvites || []} />
     </View>
   );
 };
