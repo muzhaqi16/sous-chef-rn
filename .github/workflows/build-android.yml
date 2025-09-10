@@ -101,6 +101,14 @@ jobs:
             echo "WEB_SOCKET_URL=${{ vars.WEB_SOCKET_URL }}" >> .env.dev
           fi
 
+      - name: Prepare .env for react-native-config
+        run: |
+          if [ "${{ env.BUILD_ENV }}" = "prod" ]; then
+            cp .env.production .env
+          else
+            cp .env.dev .env
+          fi
+
       - name: Build application apk
         run: |
           echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode > ./android/app/releases.keystore
