@@ -83,29 +83,6 @@ jobs:
       - name: Run Yarn Install
         run: yarn install --frozen-lockfile --network-timeout 100000
 
-      - name: Fix react-native-config New Architecture compatibility
-        run: |
-          # Create the expected codegen directories for react-native-config
-          # This is a workaround for https://github.com/lugg/react-native-config/issues/848
-          CODEGEN_PATH="node_modules/react-native-config/android/build/generated/source/codegen"
-          mkdir -p "$CODEGEN_PATH/jni"
-          mkdir -p "$CODEGEN_PATH/java"
-
-          # Create minimal CMakeLists.txt to satisfy CMake
-          cat > "$CODEGEN_PATH/jni/CMakeLists.txt" << 'EOF'
-          # Auto-generated placeholder for react-native-config
-          # This file is required for New Architecture compatibility
-          # See: https://github.com/lugg/react-native-config/issues/848
-          cmake_minimum_required(VERSION 3.13)
-          project(react_codegen_RNCConfigModule)
-          EOF
-
-          # Ensure directories are preserved
-          touch "$CODEGEN_PATH/jni/.keep"
-          touch "$CODEGEN_PATH/java/.keep"
-
-          echo "✅ Created react-native-config codegen placeholder files"
-
       - name: Clean Android build
         run: |
           cd android
