@@ -1,22 +1,27 @@
 {
   "name": "sous-chef-app",
-  "version": "0.6.11",
+  "version": "0.6.12",
   "private": true,
   "scripts": {
     "android": "npm run adb:gql && npm run codegen && react-native run-android",
     "android:stg": "npm run adb:gql && npm run codegen && npx react-native run-android --mode=staging",
     "android:release": "npx react-native run-android --mode=release",
+
     "ios": "react-native run-ios",
     "lint": "eslint .",
-    "adb:log": "adb logcat *:S ReactNative:V ReactNativeJS:V",
     "start": "react-native start",
     "reset:cache": "npx react-native start --reset-cache",
+
     "android:clean": "cd android && gradlew clean",
     "android:build": "npx react-native build-android --mode=release",
     "android:build:prod": "npm run android:clean && npx react-native build-android --mode=release",
+    
+    "adb:log": "adb logcat *:S ReactNative:V ReactNativeJS:V",
     "adb:gql": "adb reverse tcp:4000 tcp:4000",
+    
     "codegen": "graphql-codegen --config codegen.ts",
     "codegen:watch": "graphql-codegen --watch --config codegen.ts",
+    
     "typecheck": "tsc --noEmit",
     "watchman": "watchman watch-del-all && watchman shutdown-server",
     "test": "jest",
