@@ -86,52 +86,19 @@ jobs:
       - name: Run Yarn Install
         run: yarn install --frozen-lockfile --network-timeout 100000
 
-      - name: Create environment file
-        run: |
-          ENV_FILE=".env.${{ env.BUILD_ENV }}"
-          if [ "${{ env.BUILD_ENV }}" = "prod" ]; then
-            ENV_FILE=".env.production"
-          fi
-
-          echo "📝 Creating $ENV_FILE file..."
-
-          cat > $ENV_FILE << EOF
-          API_URL=${{ vars.API_URL }}
-          WEB_SOCKET_URL=${{ vars.WEB_SOCKET_URL }}
-          API_KEY=${{ secrets.API_KEY }}
-          NODE_ENV=${{ vars.NODE_ENV || env.BUILD_ENV }}
-          EOF
-
-          echo "✅ $ENV_FILE file created"
-          cp $ENV_FILE .env
-
       - name: Clean Android build
         run: |
           cd android
           ./gradlew clean
           cd ..
 
-      - name: Generate Codegen Artifacts
-        run: |
-          echo "Generating codegen artifacts for native modules..."
-          cd android
-
-          # First, ensure react-native-config is built
-          ./gradlew :react-native-config:build || echo "react-native-config build step completed"
-          
-          # Generate codegen for react-native-config specifically
-          ./gradlew :react-native-config:generateCodegenArtifactsFromSchema || echo "react-native-config codegen completed"
-          
-          # Generate codegen for all modules
-          ./gradlew generateCodegenArtifactsFromSchema
-
-          cd ..
-
       - name: Build application apk
         run: |
           echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode > ./android/app/releases.keystore
           cd android
-          ./gradlew assembleRelease
+          ./gradlew assembleRelease \
+            -PAPI_URL="${{ vars.API_URL }}" \
+            -PWEB_SOCKET_URL="${{ vars.WEB_SOCKET_URL }}"
         env:
           BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
           MYAPP_UPLOAD_STORE_FILE: 'releases.keystore'

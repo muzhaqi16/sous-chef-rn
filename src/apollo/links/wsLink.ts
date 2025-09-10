@@ -1,7 +1,6 @@
 import {GraphQLWsLink} from '@apollo/client/link/subscriptions';
 import {createClient} from 'graphql-ws';
 import {Platform} from 'react-native';
-import Config from 'react-native-config';
 import {useStore} from '../../store';
 
 // pick the right WebSocket constructor
@@ -12,9 +11,8 @@ const webSocketImpl =
 
 // Environment-based WebSocket URL with fallbacks
 const getWebSocketUrl = () => {
-  // First try react-native-config
-  if (Config.WEB_SOCKET_URL) {
-    return Config.WEB_SOCKET_URL;
+  if (process.env.WEB_SOCKET_URL) {
+    return process.env.WEB_SOCKET_URL;
   }
   
   // Fallback based on __DEV__ flag
@@ -27,7 +25,6 @@ const getWebSocketUrl = () => {
 };
 
 const WS_URL = getWebSocketUrl();
-console.log('WebSocket Link using WS_URL:', WS_URL);
 
 export const wsLink = new GraphQLWsLink(
   createClient({
@@ -37,11 +34,7 @@ export const wsLink = new GraphQLWsLink(
     keepAlive: 12_000, // send ping every 12s to keep alive
     connectionParams: () => {
       const token = useStore.getState().accessToken;
-      const apiKey = Config.API_KEY;
-
-      if (!apiKey) {
-        console.error('[WebSocket] API_KEY is not configured from react-native-config');
-      }
+      const apiKey = process.env.API_KEY;
 
       const params: Record<string, string> = {};
 
