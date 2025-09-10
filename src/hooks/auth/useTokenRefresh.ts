@@ -36,12 +36,6 @@ export const useTokenRefresh = () => {
       return;
     }
 
-    console.log('useTokenRefresh: Sending refresh token mutation with token:', {
-      tokenPreview: refreshToken.substring(0, 20) + '...',
-      tokenLength: refreshToken.length,
-      isAccessToken: refreshToken === accessToken,
-    });
-
     try {
       const response = await client.mutate<RefreshTokenMutation>({
         mutation: RefreshTokenDocument,
@@ -87,14 +81,6 @@ export const useTokenRefresh = () => {
       const refreshIn = Math.max(0, (timeUntilExpiry - 60) * 1000);
 
       if (refreshIn > 0) {
-        console.log(`Scheduling token refresh in ${refreshIn / 1000} seconds`);
-        // console log refreshing time in hours, minutes, seconds
-        const hours = Math.floor(refreshIn / 3600000);
-        const minutes = Math.floor((refreshIn % 3600000) / 60000);
-        const seconds = Math.floor((refreshIn % 60000) / 1000);
-        console.log(
-          `Token will be refreshed in ${hours}h ${minutes}m ${seconds}s`,
-        );
         refreshTimeoutRef.current = setTimeout(refreshAccessToken, refreshIn);
       }
     } catch (error) {

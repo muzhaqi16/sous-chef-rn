@@ -15,10 +15,6 @@ export function useShoppingListDetails(listId: string | undefined) {
     variables: {listId: listId!},
     skip: !listId,
     onData: ({data: subscriptionData, client}) => {
-      console.log(
-        'ShoppingListMetadataUpdated subscription data:',
-        subscriptionData,
-      );
       const updatedList = subscriptionData?.data?.shoppingListUpdated;
 
       if (!updatedList || !listId) {

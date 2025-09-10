@@ -77,12 +77,6 @@ export const attemptTokenRefresh = (
 
     isRefreshing = true;
 
-    console.log('Sending refresh token mutation with token:', {
-      tokenPreview: refreshToken.substring(0, 20) + '...',
-      tokenLength: refreshToken.length,
-      isAccessToken: refreshToken === accessToken,
-    });
-
     client
       .mutate<RefreshTokenMutation>({
         mutation: RefreshTokenDocument,

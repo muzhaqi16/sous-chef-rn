@@ -55,7 +55,10 @@ export interface NotificationState {
     serverNotifications: NotificationItem[],
   ) => void;
   markAsRead: (notificationId: string) => void;
-  markAsReadWithSync: (notificationId: string, callback?: (success: boolean) => void) => void;
+  markAsReadWithSync: (
+    notificationId: string,
+    callback?: (success: boolean) => void,
+  ) => void;
   markAllAsRead: () => void;
   removeNotification: (notificationId: string) => void;
   clearAll: () => void;
@@ -122,17 +125,8 @@ export const createNotificationSlice: StateCreator<
   addNotification: notification => {
     const state = get();
 
-    console.log('addNotification called with:', {
-      notification,
-      userEmailVerified: state.user?.emailVerified,
-      selectedHomeId: state.selectedHomeId,
-      selectedPantryId: state.selectedPantryId,
-      selectedShoppingListId: state.selectedShoppingListId,
-    });
-
     // Safety check: Don't add notifications if user can't receive them
     if (!state.user?.emailVerified) {
-      console.log('Skipping notification - user not verified');
       return;
     }
 
@@ -141,7 +135,6 @@ export const createNotificationSlice: StateCreator<
       notification.category === NotificationCategory.PANTRY &&
       !state.selectedPantryId
     ) {
-      console.log('Skipping pantry notification - no pantry selected');
       return;
     }
 
@@ -150,7 +143,6 @@ export const createNotificationSlice: StateCreator<
       notification.category === NotificationCategory.MEMBERSHIP &&
       !state.selectedHomeId
     ) {
-      console.log('Skipping home notification - no home selected');
       return;
     }
 
@@ -159,32 +151,32 @@ export const createNotificationSlice: StateCreator<
       notification.category === NotificationCategory.SHOPPING_LIST &&
       !state.selectedShoppingListId
     ) {
-      console.log('Skipping shopping list notification - no list selected');
       return;
     }
 
     // Check for duplicates before adding
-    const existingNotification = get().notifications.find(n => n.id === notification.id);
+    const existingNotification = get().notifications.find(
+      n => n.id === notification.id,
+    );
     if (existingNotification) {
-      console.log('Skipping duplicate notification:', notification.id);
       return;
     }
 
     set(state => {
       const newNotification = {
-        ...notification, 
+        ...notification,
         isRead: false,
-        source: notification.source || 'local' as const, // Mark as local by default
+        source: notification.source || ('local' as const), // Mark as local by default
         // Ensure sentAt is always a valid ISO string
-        sentAt: safeParseDate(notification.sentAt)?.toISOString() || new Date().toISOString()
+        sentAt:
+          safeParseDate(notification.sentAt)?.toISOString() ||
+          new Date().toISOString(),
       };
-      console.log('Successfully adding notification to store:', newNotification);
       state.notifications.unshift(newNotification);
       state.unreadCount = state.notifications.filter(n => !n.isRead).length;
       state.urgentCount = state.notifications.filter(
         n => !n.isRead && n.priority === NotificationPriority.URGENT,
       ).length;
-      console.log(`Notification added. Total notifications: ${state.notifications.length}, Unread: ${state.unreadCount}`);
     });
   },
 
@@ -193,7 +185,6 @@ export const createNotificationSlice: StateCreator<
     const state = get();
 
     if (!state.user?.emailVerified) {
-      console.log('Skipping all notifications - user not verified');
       return;
     }
 
@@ -225,31 +216,27 @@ export const createNotificationSlice: StateCreator<
       return;
     }
 
-    console.log(
-      `Adding ${validNotifications.length} of ${notifications.length} notifications`,
-    );
-
     set(state => {
       // Get existing notification IDs to prevent duplicates
       const existingIds = new Set(state.notifications.map(n => n.id));
-      
+
       const newNotifications = validNotifications
         .filter(n => !existingIds.has(n.id)) // Only add notifications that don't exist
         .map(n => ({
           ...n,
           isRead: false,
-          source: n.source || 'local' as const, // Mark as local by default
+          source: n.source || ('local' as const), // Mark as local by default
           // Ensure sentAt is always a valid ISO string
-          sentAt: safeParseDate(n.sentAt)?.toISOString() || new Date().toISOString()
+          sentAt:
+            safeParseDate(n.sentAt)?.toISOString() || new Date().toISOString(),
         }));
 
       if (newNotifications.length > 0) {
-        console.log(`Actually adding ${newNotifications.length} new notifications (filtered ${validNotifications.length - newNotifications.length} duplicates)`);
         state.notifications.unshift(...newNotifications);
       } else {
         console.log('No new notifications to add (all were duplicates)');
       }
-      
+
       state.unreadCount = state.notifications.filter(n => !n.isRead).length;
       state.urgentCount = state.notifications.filter(
         n => !n.isRead && n.priority === NotificationPriority.URGENT,
@@ -266,23 +253,29 @@ export const createNotificationSlice: StateCreator<
       return;
     }
 
-    console.log(`Syncing ${serverNotifications.length} notifications from server`);
-
     set(state => {
       // Keep track of local notifications that are newer than last fetch (real-time additions)
-      const lastFetch = state.lastFetchedAt ? new Date(state.lastFetchedAt) : new Date(0);
+      const lastFetch = state.lastFetchedAt
+        ? new Date(state.lastFetchedAt)
+        : new Date(0);
       const localRealtimeNotifications = state.notifications.filter(n => {
         const notifDate = new Date(n.sentAt);
-        return notifDate > lastFetch && !serverNotifications.find(sn => sn.id === n.id);
+        return (
+          notifDate > lastFetch &&
+          !serverNotifications.find(sn => sn.id === n.id)
+        );
       });
 
-      console.log(`Preserving ${localRealtimeNotifications.length} real-time notifications`);
-
       // Merge server notifications with preserved local ones
-      const allNotifications = [...serverNotifications, ...localRealtimeNotifications];
+      const allNotifications = [
+        ...serverNotifications,
+        ...localRealtimeNotifications,
+      ];
 
       // Sort by sentAt (newest first)
-      allNotifications.sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime());
+      allNotifications.sort(
+        (a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime(),
+      );
 
       // Update state
       state.notifications = allNotifications;
@@ -291,8 +284,6 @@ export const createNotificationSlice: StateCreator<
         n => !n.isRead && n.priority === NotificationPriority.URGENT,
       ).length;
       state.lastFetchedAt = new Date().toISOString();
-
-      console.log(`Sync complete. Total: ${state.notifications.length}, Unread: ${state.unreadCount}`);
     });
   },
 
@@ -397,7 +388,7 @@ export const createNotificationSlice: StateCreator<
   markAsReadWithSync: (notificationId, callback) => {
     // First mark as read locally for immediate UI feedback
     get().markAsRead(notificationId);
-    
+
     // TODO: Add server sync call here when GraphQL mutation is available
     // This would call a mutation like `markNotificationAsRead(id: $id)`
     // For now, we'll just mark locally and rely on periodic sync

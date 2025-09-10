@@ -18,8 +18,6 @@ export const OnboardingCompleteScreen = () => {
 
   const [updateUserMutation] = useUpdateUserMutation({
     onCompleted: data => {
-      console.log('User onboarding marked as complete');
-
       // Update the user in the store with the response from the server
       if (data?.updateUser) {
         updateUser(data.updateUser);

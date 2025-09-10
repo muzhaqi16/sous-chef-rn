@@ -62,19 +62,15 @@ export const ProfilePhotoUploadScreen = () => {
   // Check for cropped image from MMKV when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      console.log('Screen focused, checking MMKV for cropped image...');
-
       try {
         const storedCroppedImage = storage.getString('temp_cropped_image');
         if (storedCroppedImage) {
           const croppedImageFile: ImageFile = JSON.parse(storedCroppedImage);
-          console.log('Found cropped image in MMKV:', croppedImageFile.uri);
 
           setCroppedImage(croppedImageFile);
 
           // Clean up the temporary storage
           storage.delete('temp_cropped_image');
-          console.log('Cleaned up temporary cropped image from MMKV');
         }
       } catch (error) {
         console.error('Error reading cropped image from MMKV:', error);
@@ -87,7 +83,6 @@ export const ProfilePhotoUploadScreen = () => {
   // Clean up MMKV on unmount
   useEffect(() => {
     return () => {
-      console.log('Cleaning up temporary MMKV data');
       storage.delete('temp_cropped_image');
     };
   }, []);
@@ -152,7 +147,6 @@ export const ProfilePhotoUploadScreen = () => {
   const handleCropImage = useCallback(() => {
     if (!selectedImage) return;
 
-    console.log('Navigating to crop with image:', selectedImage.uri);
     navigation.navigate('ImageCrop' as any, {
       imageFile: selectedImage,
     });
@@ -169,12 +163,6 @@ export const ProfilePhotoUploadScreen = () => {
         imageToUpload,
         'PROFILE_AVATAR',
         {
-          onProgress: (progress: number) => {
-            console.log('Upload progress:', progress);
-          },
-          onSuccess: (url: string) => {
-            console.log('Upload successful:', url);
-          },
           onError: (error: Error) => {
             Alert.alert('Upload Failed', error.message);
           },
@@ -182,13 +170,11 @@ export const ProfilePhotoUploadScreen = () => {
       );
 
       if (imageUrl) {
-        console.log('Profile image uploaded:', imageUrl);
         // Update the profile avatar URL in the database
         await updateProfileAvatarUrl(imageUrl);
         goBack();
       }
     } catch (error) {
-      console.error('Avatar upload error:', error);
       Alert.alert('Upload Failed', 'Failed to update profile photo');
     } finally {
       setIsUploading(false);
@@ -203,16 +189,6 @@ export const ProfilePhotoUploadScreen = () => {
     setSelectedImage(null);
     setCroppedImage(null);
   };
-
-  // Debug logging
-  useEffect(() => {
-    console.log(
-      'State update - selectedImage:',
-      !!selectedImage,
-      'croppedImage:',
-      !!croppedImage,
-    );
-  }, [selectedImage, croppedImage]);
 
   return (
     <SafeAreaView

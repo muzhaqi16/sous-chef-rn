@@ -34,11 +34,7 @@ export const SelectPantryItems = () => {
     fetchPolicy: 'cache-and-network',
     onError: e => console.error(e),
   });
-  console.log('Onboarding items data:', data);
   const [addItemToPantry] = useAddItemToPantryMutation({
-    onCompleted: () => {
-      console.log('Item added to pantry successfully');
-    },
     onError: e => console.error(e),
   });
 

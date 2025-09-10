@@ -66,7 +66,6 @@ export const EmailInputModal: React.FC<EmailInputModalProps> = ({
       // Only close on success
       handleClose();
     } catch (err: any) {
-      console.log('❌ Modal caught error:', err);
       // Extract the actual error message from the API
       let errorMessage = 'Failed to send invite. Please try again.';
 

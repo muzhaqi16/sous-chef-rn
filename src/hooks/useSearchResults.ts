@@ -1,5 +1,11 @@
 import {useEffect} from 'react';
-import {useItemByUpcQuery, useCreateItemMutation, Item, GetPantryItemsDocument, GetPantryItemsQuery} from '#generated';
+import {
+  useItemByUpcQuery,
+  useCreateItemMutation,
+  Item,
+  GetPantryItemsDocument,
+  GetPantryItemsQuery,
+} from '#generated';
 import {useStore} from '../store';
 import {ScannedItem} from '../store/slices/barcodeScannerSlice';
 import {Alert} from 'react-native';
@@ -54,24 +60,13 @@ export const useSearchResults = (barcode: string) => {
 
         // If there was an image selected, upload it after item creation
         try {
-          const pendingImageUpload = storage.getString('temp_pending_item_image');
+          const pendingImageUpload = storage.getString(
+            'temp_pending_item_image',
+          );
           if (pendingImageUpload && createdItem.id) {
             const imageFile = JSON.parse(pendingImageUpload);
-            console.log('Uploading image for newly created item:', createdItem.id);
-            
-            const imageUrl = await uploadItemImage(imageFile, createdItem.id, {
-              onProgress: (progress: number) => {
-                console.log('Image upload progress:', progress);
-              },
-              onSuccess: (url: string) => {
-                console.log('Image uploaded successfully:', url);
-              },
-              onError: (error: Error) => {
-                console.error('Image upload failed:', error.message);
-                // Don't show error to user since item was created successfully
-              },
-            });
 
+            const imageUrl = await uploadItemImage(imageFile, createdItem.id);
             if (imageUrl) {
               // Update the finalItem with the new image URL for display
               finalItem = {...createdItem, imageUrl};
@@ -132,8 +127,10 @@ export const useSearchResults = (barcode: string) => {
     try {
       // Store the selected image in MMKV for post-creation upload
       if (formData.selectedImage) {
-        storage.set('temp_pending_item_image', JSON.stringify(formData.selectedImage));
-        console.log('Stored pending image for upload:', formData.selectedImage.uri);
+        storage.set(
+          'temp_pending_item_image',
+          JSON.stringify(formData.selectedImage),
+        );
       }
 
       // Process the form data to match the CreateItemInput type

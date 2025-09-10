@@ -91,13 +91,7 @@ export const CreateShoppingListScreen = () => {
 
         if (lists.length > 0) {
           const defaultList = lists.find(list => list.isDefault) || lists[0];
-          console.log('Found existing shopping list:', defaultList.id);
           setSelectedShoppingListId(defaultList.id);
-
-          // Skip to next step
-          console.log(
-            'Shopping list exists, skipping to pantry items selection',
-          );
           navigateToNext();
           return;
         }
@@ -143,10 +137,6 @@ export const CreateShoppingListScreen = () => {
       });
 
       if (response.data?.createShoppingList) {
-        console.log(
-          'Shopping list created:',
-          response.data.createShoppingList.id,
-        );
         setSelectedShoppingListId(response.data.createShoppingList.id);
         navigateToNext();
       } else {
@@ -164,7 +154,6 @@ export const CreateShoppingListScreen = () => {
 
   // Handlers
   const handleSkip = useCallback(() => {
-    console.log('Skipping shopping list creation');
     navigateToNext();
   }, [navigateToNext]);
 

@@ -46,7 +46,6 @@ export const ShoppingListMain: React.FC = () => {
   // Auto-select the default list if none is selected
   useEffect(() => {
     if (!selectedShoppingListId && defaultList?.id) {
-      console.log('Auto-selecting default shopping list:', defaultList.id);
       setSelectedShoppingListId(defaultList.id);
     }
   }, [selectedShoppingListId, defaultList?.id, setSelectedShoppingListId]);

@@ -207,12 +207,15 @@ export const useConfigurableSettings = (profile: any) => {
           if (config.type === 'modal') {
             baseItem.value = userThemePreference;
             baseItem.options = config.options || [
-              {label: '☀️ Light', value: 'light'},
-              {label: '🌙 Dark', value: 'dark'},
-              {label: '📱 System', value: 'system'},
+              {label: '☀️ Light', value: 'LIGHT'},
+              {label: '🌙 Dark', value: 'DARK'},
+              {label: '📱 System', value: 'SYSTEM'},
             ];
-            baseItem.onSave = (value: 'light' | 'dark' | 'system') => {
-              setTheme(value);
+            baseItem.onSave = (value: 'LIGHT' | 'DARK' | 'SYSTEM') => {
+              // Convert to lowercase for local theme management
+              const localThemeValue = value.toLowerCase() as 'light' | 'dark' | 'system';
+              setTheme(localThemeValue);
+              // Use uppercase for GraphQL mutation
               updateUserPreferences({theme: value});
             };
           }
@@ -226,7 +229,9 @@ export const useConfigurableSettings = (profile: any) => {
               const newTheme =
                 userThemePreference === 'dark' ? 'light' : 'dark';
               setTheme(newTheme);
-              updateUserPreferences({theme: newTheme});
+              // Convert to uppercase for GraphQL mutation
+              const graphqlThemeValue = newTheme.toUpperCase() as 'LIGHT' | 'DARK';
+              updateUserPreferences({theme: graphqlThemeValue});
             };
           }
           break;

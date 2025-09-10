@@ -29,13 +29,7 @@ export const useNavigationState = () => {
   // Load user-specific navigation state
   useEffect(() => {
     if (user?.id) {
-      const userNavState = getUserNavigationState(user.id);
-      if (userNavState) {
-        console.log(
-          `Restored navigation state for user ${user.id}:`,
-          userNavState,
-        );
-      }
+      getUserNavigationState(user.id);
     }
   }, [user?.id]);
 
@@ -97,11 +91,14 @@ export const useNavigationState = () => {
     }
   }, [user, getUserNavigationState, onBoardingStep]);
 
-  const saveUserProgress = useCallback((progressData: Partial<UserNavigationState>) => {
-    if (user?.id) {
-      setUserNavigationState(user.id, progressData);
-    }
-  }, [user?.id, setUserNavigationState]);
+  const saveUserProgress = useCallback(
+    (progressData: Partial<UserNavigationState>) => {
+      if (user?.id) {
+        setUserNavigationState(user.id, progressData);
+      }
+    },
+    [user?.id, setUserNavigationState],
+  );
 
   return {
     navigationState,

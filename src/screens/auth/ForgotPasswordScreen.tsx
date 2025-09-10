@@ -30,12 +30,10 @@ export function ForgotPasswordScreen() {
   const sendResetEmail = async (data: ForgotPasswordValues) => {
     const {email} = data;
     // Simulate sending reset email
-    console.log(`Sending reset email to: ${email}`);
     try {
       await forgotPasswordApi({
         variables: {email},
       });
-      console.log('Reset email sent successfully');
       navigation.navigate('Login'); // Navigate back to login after sending
     } catch (error) {
       console.error('Error sending reset email:', error);

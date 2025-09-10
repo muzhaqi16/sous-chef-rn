@@ -72,13 +72,11 @@ export const useStore = create<RootState>()(
         version: 3,
         storage: createJSONStorage(() => zustandStorage),
         onRehydrateStorage: state => {
-          console.log('Store hydration starts');
           return (state, error) => {
             if (error) {
               console.log('An error happened during hydration', error);
             } else {
               state?.setHydrated(true);
-              console.log('Store hydration finished');
             }
           };
         },

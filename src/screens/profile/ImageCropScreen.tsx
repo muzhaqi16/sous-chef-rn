@@ -67,13 +67,11 @@ export const ImageCropScreen = () => {
 
   // Get image dimensions when loaded
   const handleImageLoad = useCallback(() => {
-    console.log('Image load called for:', imageFile.uri);
     setImageLoaded(true);
 
     Image.getSize(
       imageFile.uri,
       (width, height) => {
-        console.log('Original image dimensions:', width, height);
         const aspectRatio = width / height;
 
         // Make sure the image fills the crop area
@@ -89,7 +87,6 @@ export const ImageCropScreen = () => {
           displayHeight = displayWidth / aspectRatio;
         }
 
-        console.log('Display dimensions:', displayWidth, displayHeight);
         setImageSize({width: displayWidth, height: displayHeight});
 
         // Reset transforms
@@ -99,7 +96,6 @@ export const ImageCropScreen = () => {
         startOffset.value = {x: 0, y: 0};
       },
       error => {
-        console.error('Failed to get image size:', error);
         Alert.alert('Error', 'Failed to load image dimensions');
       },
     );
@@ -229,16 +225,6 @@ export const ImageCropScreen = () => {
         originalImageSize.height - finalCropY,
       );
 
-      console.log('Crop parameters:', {
-        originalSize: originalImageSize,
-        displaySize: imageSize,
-        scale: scale.value,
-        offset: offset.value,
-        cropX: finalCropX,
-        cropY: finalCropY,
-        cropSize: finalCropSize,
-      });
-
       const cropData = {
         offset: {
           x: finalCropX,
@@ -266,7 +252,6 @@ export const ImageCropScreen = () => {
         const response = await fetch(croppedUri);
         const blob = await response.blob();
         croppedFileSize = blob.size;
-        console.log('Cropped image actual size:', croppedFileSize, 'bytes');
       } catch (error) {
         console.warn(
           'Could not fetch cropped image for size calculation:',
@@ -279,13 +264,6 @@ export const ImageCropScreen = () => {
         croppedFileSize = imageFile.fileSize
           ? Math.floor(imageFile.fileSize * cropRatio * 0.8)
           : MAX_PROFILE_SIZE;
-        console.log(
-          'Estimated cropped image size:',
-          croppedFileSize,
-          'bytes (ratio:',
-          cropRatio,
-          ')',
-        );
       }
 
       // Check if the cropped image exceeds size limits

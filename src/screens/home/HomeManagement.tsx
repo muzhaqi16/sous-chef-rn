@@ -45,9 +45,8 @@ export const HomeManagement: React.FC = () => {
   // Refetch data when screen comes into focus to ensure fresh data
   useFocusEffect(
     useCallback(() => {
-      console.log('HomeManagement screen focused - refetching data');
       refetch();
-    }, [refetch])
+    }, [refetch]),
   );
 
   const {show, EmailModalComponent} = useEmailInputModal();

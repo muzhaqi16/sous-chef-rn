@@ -31,13 +31,8 @@ export function useHomeManagement() {
   });
 
   const [setDefaultHomeMutation] = useSetDefaultHomeMutation({
-    update: (cache, {data}) => {
-      console.log('Set default response:', data);
-      // Add any cache updates here if you have them
-    },
     onError: error => {
       Alert.alert('Error', 'Failed to set default home');
-      console.error('Set default home error:', error);
     },
   });
   const homes = data?.homes || [];
@@ -54,7 +49,6 @@ export function useHomeManagement() {
   useEffect(() => {
     const syncLocalToRemote = async () => {
       if (selectedHomeId && !remoteDefaultHomeId && !loadingDefaultHome) {
-        console.log('Syncing local default home to remote:', selectedHomeId);
         try {
           await setDefaultHomeMutation({
             variables: {homeId: selectedHomeId},
@@ -322,23 +316,24 @@ export function useHomeManagement() {
   // Statistics and computed values
   const stats = useMemo(() => {
     const validHomes = Array.isArray(homes) ? homes.filter(Boolean) : [];
-    
-    console.log('Computing stats for homes:', validHomes.length);
+
     validHomes.forEach((home, index) => {
-      const pantriesCount = Array.isArray(home?.pantries) ? home.pantries.length : (home.pantries === null ? 'loading' : 0);
-      console.log(`Home ${index + 1} (${home.name}): ${pantriesCount} pantries`);
+      const pantriesCount = Array.isArray(home?.pantries)
+        ? home.pantries.length
+        : home.pantries === null
+          ? 'loading'
+          : 0;
     });
 
     // Check if all homes have loaded their pantries data
     const allHomesLoaded = validHomes.every(home => home.pantries !== null);
-    
+
     let totalPantries: number;
-    
+
     if (allHomesLoaded) {
       // All data is loaded, calculate the actual count
       totalPantries = validHomes.reduce((acc, home) => {
         const count = Array.isArray(home?.pantries) ? home.pantries.length : 0;
-        console.log(`Home ${home.name}: ${count} pantries`);
         return acc + count;
       }, 0);
       // Update our last known count
@@ -346,9 +341,8 @@ export function useHomeManagement() {
     } else {
       // Some data is still loading, use the last known count to prevent flickering
       totalPantries = lastKnownPantriesCount.current;
-      console.log('Using last known pantries count during data loading:', totalPantries);
     }
-    
+
     const result = {
       totalHomes: validHomes.length,
       totalMembers: validHomes.reduce((acc, home) => {
@@ -358,7 +352,6 @@ export function useHomeManagement() {
       totalPantries,
     };
 
-    console.log('Final stats:', result, `(all homes loaded: ${allHomesLoaded})`);
     return result;
   }, [homes]);
   // Computed value for current default home

@@ -82,13 +82,6 @@ export const useImageUpload = () => {
         setUploading(true);
         setProgress(0);
 
-        console.log('Starting upload for file:', {
-          uri: file.uri,
-          fileName: file.fileName,
-          fileSize: file.fileSize,
-          type: file.type,
-        });
-
         // Ensure we have file size - critical for validation
         let fileToUpload = {...file};
         if (!fileToUpload.fileSize) {
@@ -97,16 +90,13 @@ export const useImageUpload = () => {
             const response = await fetch(file.uri);
             const blob = await response.blob();
             fileToUpload.fileSize = blob.size;
-            console.log('Determined file size:', fileToUpload.fileSize);
           } catch (fetchError) {
-            console.error('Could not determine file size:', fetchError);
             throw new Error('Unable to determine file size for upload');
           }
         }
 
         // Validate the image file
         validateImageFile(fileToUpload, true);
-        console.log('File validation passed');
 
         onProgress?.(10);
 
@@ -124,7 +114,6 @@ export const useImageUpload = () => {
           throw new Error('Failed to get upload URL');
         }
 
-        console.log('Got presigned URL for upload');
         onProgress?.(30);
 
         // Step 2: Upload to MinIO
@@ -136,7 +125,6 @@ export const useImageUpload = () => {
           },
         );
 
-        console.log('File uploaded to MinIO successfully');
         onProgress?.(80);
 
         // Step 3: Confirm upload
@@ -151,14 +139,12 @@ export const useImageUpload = () => {
         }
 
         const finalImageUrl = confirmData.confirmProfileImageUpload;
-        console.log('Upload confirmed, final URL:', finalImageUrl);
 
         onProgress?.(100);
         onSuccess?.(finalImageUrl);
 
         return finalImageUrl;
       } catch (error) {
-        console.error('Profile image upload failed:', error);
         const errorMessage =
           error instanceof Error ? error.message : 'Upload failed';
 
@@ -196,14 +182,6 @@ export const useImageUpload = () => {
         setUploading(true);
         setProgress(0);
 
-        console.log('uploadItemImage called with:', {
-          itemId,
-          fileUri: file.uri,
-          fileName: file.fileName,
-          fileSize: file.fileSize,
-          fileType: file.type
-        });
-
         // Validate the image file
         validateImageFile(file, false);
 
@@ -211,12 +189,7 @@ export const useImageUpload = () => {
 
         // Step 1: Get presigned URL
         const mimeType = file.type || getMimeTypeFromUri(file.uri);
-        console.log('Calling createUploadUrl with:', {
-          mime: mimeType,
-          purpose: 'ITEM_IMAGE',
-          itemId: itemId,
-        });
-        
+
         const {data: uploadData} = await createUploadUrl({
           variables: {
             mime: mimeType,
@@ -224,8 +197,6 @@ export const useImageUpload = () => {
             itemId: itemId,
           },
         });
-
-        console.log('createUploadUrl response:', uploadData);
 
         if (!uploadData?.createImageUploadUrl) {
           throw new Error('Failed to get upload URL');

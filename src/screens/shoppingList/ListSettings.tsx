@@ -45,9 +45,11 @@ export const ListSettings: React.FC = () => {
       if (data?.createShoppingList) {
         try {
           // Read the existing query from cache
-          const existingData = cache.readQuery<{shoppingLists: ShoppingList[]}>({
-            query: GetShoppingListsDocument,
-          });
+          const existingData = cache.readQuery<{shoppingLists: ShoppingList[]}>(
+            {
+              query: GetShoppingListsDocument,
+            },
+          );
 
           if (existingData) {
             // Write the updated data back to cache
@@ -61,25 +63,19 @@ export const ListSettings: React.FC = () => {
                 ],
               },
             });
-            console.log('Shopping list cache updated successfully');
           }
         } catch (error) {
-          console.log('Cache update failed during shopping list create:', error);
+          console.log(
+            'Cache update failed during shopping list create:',
+            error,
+          );
         }
       }
     },
     onCompleted: data => {
       if (data?.createShoppingList) {
-        console.log('Shopping list created successfully:', data.createShoppingList);
         // Always set the new list as selected
         setSelectedShoppingListId(data.createShoppingList.id);
-        console.log('Set new shopping list as selected:', data.createShoppingList.id);
-        
-        // Show success message
-        Alert.alert(
-          'Success', 
-          `Shopping list "${data.createShoppingList.name}" created successfully!${isDefault ? ' It has been set as your default list.' : ''}`
-        );
         navigation.goBack();
       }
     },

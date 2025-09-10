@@ -50,12 +50,6 @@ export const createConsoleLink = (
         style = 'color: #f59e0b; font-weight: bold';
       }
 
-      // Main log line
-      console.log(
-        `%c🚀 ${operationType} ${operationName} (${duration}ms) ${emoji}`,
-        style,
-      );
-
       // Log variables as expandable object
       if (
         logVariables &&

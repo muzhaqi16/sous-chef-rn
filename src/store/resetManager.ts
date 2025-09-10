@@ -59,8 +59,6 @@ export const createResetManager = (
       typeof options === 'string' ? RESET_SCENARIOS[options] : options;
     const currentState = get();
 
-    console.log('Resetting store with options:', resetOptions);
-
     // Build the new state based on reset options
     const newState: Partial<RootState> = {};
 
@@ -82,18 +80,15 @@ export const createResetManager = (
 
     // Handle storage reset
     if (resetOptions.storage) {
-      console.log('Clearing all storage data');
       zustandStorage.removeItem(STORAGE_KEY);
       storage.clearAll();
     } else if (resetOptions.auth) {
       // Only clear auth-related storage data
-      console.log('Clearing auth data from storage');
       await clearAuthFromStorage();
     }
 
     // Clear Apollo cache if requested
     if (resetOptions.clearApolloCache) {
-      console.log('Clearing Apollo cache');
       try {
         const {client} = await import('#/apollo/client');
         await client.clearStore();
@@ -109,31 +104,25 @@ export const createResetManager = (
 
     // Ensure hydration flag remains true
     set({isHydrated: true});
-
-    console.log('Store reset completed');
   },
 
   // Convenience methods for common scenarios
   logout: async () => {
-    console.log('Logging out user...');
     const resetManager = createResetManager(set, get);
     await resetManager.resetStore('LOGOUT');
   },
 
   fullReset: async () => {
-    console.log('Performing full reset...');
     const resetManager = createResetManager(set, get);
     await resetManager.resetStore('FULL_RESET');
   },
 
   sessionExpired: async () => {
-    console.log('Session expired, resetting auth...');
     const resetManager = createResetManager(set, get);
     await resetManager.resetStore('SESSION_EXPIRED');
   },
 
   resetOnboarding: async () => {
-    console.log('Resetting onboarding...');
     const resetManager = createResetManager(set, get);
     await resetManager.resetStore('ONBOARDING_RESET');
   },

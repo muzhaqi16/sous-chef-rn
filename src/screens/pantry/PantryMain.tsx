@@ -51,7 +51,6 @@ export const PantryMain: React.FC = () => {
   // Auto-select the default pantry if none is selected
   useEffect(() => {
     if (!selectedPantryId && defaultPantry?.id) {
-      console.log('Auto-selecting default pantry:', defaultPantry.id);
       setSelectedPantryId(defaultPantry.id);
     }
   }, [selectedPantryId, defaultPantry?.id, setSelectedPantryId]);
@@ -59,7 +58,6 @@ export const PantryMain: React.FC = () => {
   const selector = usePantrySelector({
     initialSelected: pantry?.id,
     onSelect: (id, item) => {
-      console.log('Selected pantry:', id, item);
       // Update the global store with the selected pantry
       setSelectedPantryId(id);
       selectPantrySheet.close();
@@ -95,7 +93,10 @@ export const PantryMain: React.FC = () => {
             : undefined,
         leftElement: item.item?.imageUrl ? (
           <View style={styles.imageContainer}>
-            <Image source={{uri: item.item.imageUrl}} style={styles.leftImage} />
+            <Image
+              source={{uri: item.item.imageUrl}}
+              style={styles.leftImage}
+            />
           </View>
         ) : undefined,
       };

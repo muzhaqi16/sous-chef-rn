@@ -24,7 +24,10 @@ import {
   NotificationCategory,
   NotificationPriority,
 } from '#store/slices/notificationSlice';
-import {handleSubscriptionError, clearAllRetryStates} from '#utils/subscriptionErrorHandler';
+import {
+  handleSubscriptionError,
+  clearAllRetryStates,
+} from '#utils/subscriptionErrorHandler';
 
 interface RealTimeNotificationConfig {
   enablePantryNotifications?: boolean;
@@ -51,43 +54,20 @@ export const useRealTimeNotifications = (
   const pushNotifications = useStore(state => state.pushNotifications);
 
   // Default configuration
-  const finalConfig = useMemo<RealTimeNotificationConfig>(
-    () => {
-      const config_result = {
-        enablePantryNotifications: true,
-        enableShoppingListNotifications: true,
-        enableMembershipNotifications: true,
-        enableLowStockAlerts: true,
-        enableExpirationAlerts: true,
-        enableCollaborationNotifications: true,
-        showInAppNotifications: true,
-        showPushNotifications: pushNotifications,
-        ...config,
-      };
-      console.log('Final notification config:', config_result);
-      return config_result;
-    },
-    [config, pushNotifications],
-  );
-
-  // Debug logging for user state
-  useEffect(() => {
-    console.log('Real-time notifications state:', {
-      userId: user?.id,
-      selectedHomeId,
-      selectedPantryId,
-      selectedShoppingListId,
-      pushNotifications,
-      userEmailVerified: user?.emailVerified,
-    });
-    
-    // Log subscription readiness
-    console.log('Subscription readiness:', {
-      memberJoinedReady: !!selectedHomeId && !!finalConfig.enableMembershipNotifications,
-      pantrySubscriptionsReady: !!selectedPantryId && !!finalConfig.enablePantryNotifications,
-      shoppingListReady: !!selectedShoppingListId && !!finalConfig.enableShoppingListNotifications,
-    });
-  }, [user?.id, selectedHomeId, selectedPantryId, selectedShoppingListId, pushNotifications, user?.emailVerified, finalConfig]);
+  const finalConfig = useMemo<RealTimeNotificationConfig>(() => {
+    const config_result = {
+      enablePantryNotifications: true,
+      enableShoppingListNotifications: true,
+      enableMembershipNotifications: true,
+      enableLowStockAlerts: true,
+      enableExpirationAlerts: true,
+      enableCollaborationNotifications: true,
+      showInAppNotifications: true,
+      showPushNotifications: pushNotifications,
+      ...config,
+    };
+    return config_result;
+  }, [config, pushNotifications]);
 
   // Helper functions
   const getCategoryFromType = (
@@ -164,24 +144,16 @@ export const useRealTimeNotifications = (
 
   const {data: notificationData} = useNotificationReceivedSubscription({
     skip: !user?.id,
-    onError: (error) => {
-      console.log('NotificationReceived subscription error:', error);
+    onError: error => {
       handleSubscriptionError('NotificationReceived', error);
-    },
-    onComplete: () => {
-      console.log('NotificationReceived subscription completed');
     },
   });
 
   const {data: urgentNotificationData} =
     useUrgentNotificationReceivedSubscription({
       skip: !user?.id,
-      onError: (error) => {
-        console.log('UrgentNotificationReceived subscription error:', error);
+      onError: error => {
         handleSubscriptionError('UrgentNotificationReceived', error);
-      },
-      onComplete: () => {
-        console.log('UrgentNotificationReceived subscription completed');
       },
     });
 
@@ -191,37 +163,26 @@ export const useRealTimeNotifications = (
 
   const {data: pantryItemsChanged} = usePantryItemsChangedSubscription({
     variables: {pantryId: selectedPantryId || ''},
-    skip: !user?.id || !selectedPantryId || !finalConfig.enablePantryNotifications,
-    onError: (error) => {
-      console.log('PantryItemsChanged subscription error:', error);
+    skip:
+      !user?.id || !selectedPantryId || !finalConfig.enablePantryNotifications,
+    onError: error => {
       handleSubscriptionError('PantryItemsChanged', error);
-    },
-    onComplete: () => {
-      console.log('PantryItemsChanged subscription completed');
     },
   });
 
   const {data: lowStockAlert} = usePantryLowStockAlertSubscription({
     variables: {pantryId: selectedPantryId || ''},
     skip: !user?.id || !selectedPantryId || !finalConfig.enableLowStockAlerts,
-    onError: (error) => {
-      console.log('PantryLowStockAlert subscription error:', error);
+    onError: error => {
       handleSubscriptionError('PantryLowStockAlert', error);
-    },
-    onComplete: () => {
-      console.log('PantryLowStockAlert subscription completed');
     },
   });
 
   const {data: expirationAlert} = usePantryExpiringItemsAlertSubscription({
     variables: {pantryId: selectedPantryId || ''},
     skip: !user?.id || !selectedPantryId || !finalConfig.enableExpirationAlerts,
-    onError: (error) => {
-      console.log('PantryExpiringItemsAlert subscription error:', error);
+    onError: error => {
       handleSubscriptionError('PantryExpiringItemsAlert', error);
-    },
-    onComplete: () => {
-      console.log('PantryExpiringItemsAlert subscription completed');
     },
   });
 
@@ -233,13 +194,11 @@ export const useRealTimeNotifications = (
     useShoppingListItemsChangedSubscription({
       variables: {listId: selectedShoppingListId || ''},
       skip:
-        !user?.id || !selectedShoppingListId || !finalConfig.enableShoppingListNotifications,
-      onError: (error) => {
-        console.log('ShoppingListItemsChanged subscription error:', error);
+        !user?.id ||
+        !selectedShoppingListId ||
+        !finalConfig.enableShoppingListNotifications,
+      onError: error => {
         handleSubscriptionError('ShoppingListItemsChanged', error);
-      },
-      onComplete: () => {
-        console.log('ShoppingListItemsChanged subscription completed');
       },
     });
 
@@ -247,14 +206,11 @@ export const useRealTimeNotifications = (
     useShoppingListCollaboratorsChangedSubscription({
       variables: {listId: selectedShoppingListId || ''},
       skip:
-        !user?.id || !selectedShoppingListId ||
+        !user?.id ||
+        !selectedShoppingListId ||
         !finalConfig.enableCollaborationNotifications,
-      onError: (error) => {
-        console.log('ShoppingListCollaboratorsChanged subscription error:', error);
+      onError: error => {
         handleSubscriptionError('ShoppingListCollaboratorsChanged', error);
-      },
-      onComplete: () => {
-        console.log('ShoppingListCollaboratorsChanged subscription completed');
       },
     });
 
@@ -263,36 +219,28 @@ export const useRealTimeNotifications = (
   // ============================================
 
   const {data: membershipUpdated} = useMyMembershipUpdatedSubscription({
-    skip: !user?.id || !user?.emailVerified || !finalConfig.enableMembershipNotifications,
-    onError: (error) => {
-      console.log('MyMembershipUpdated subscription error:', error);
+    skip:
+      !user?.id ||
+      !user?.emailVerified ||
+      !finalConfig.enableMembershipNotifications,
+    onError: error => {
       handleSubscriptionError('MyMembershipUpdated', error);
-    },
-    onComplete: () => {
-      console.log('MyMembershipUpdated subscription completed');
     },
   });
 
   const {data: memberJoined} = useMemberJoinedSubscription({
     variables: {homeId: selectedHomeId || ''},
-    skip: !user?.id || !user?.emailVerified || !selectedHomeId || !finalConfig.enableMembershipNotifications,
-    onError: (error) => {
-      console.log('MemberJoined subscription error:', error);
-      console.log('MemberJoined subscription variables:', {homeId: selectedHomeId});
-      console.log('MemberJoined subscription skip conditions:', {
-        userId: user?.id,
-        emailVerified: user?.emailVerified,
-        homeId: selectedHomeId,
-        enableMembership: finalConfig.enableMembershipNotifications
-      });
+    skip:
+      !user?.id ||
+      !user?.emailVerified ||
+      !selectedHomeId ||
+      !finalConfig.enableMembershipNotifications,
+    onError: error => {
       handleSubscriptionError('MemberJoined', error);
-    },
-    onComplete: () => {
-      console.log('MemberJoined subscription completed');
     },
   });
 
-  // Poll for my pending home invites  
+  // Poll for my pending home invites
   const {data: invitesData} = useGetMyPendingInvitesQuery({
     skip: !user?.id,
     pollInterval: 30000, // Poll every 30 seconds
@@ -405,13 +353,8 @@ export const useRealTimeNotifications = (
             sentAt: new Date().toISOString(),
           };
 
-          console.log('Creating pantry notification:', notification);
-
           if (finalConfig.showInAppNotifications) {
-            console.log('Adding pantry notification to store');
             addNotification(notification);
-          } else {
-            console.log('Skipping in-app notification (showInAppNotifications = false)');
           }
 
           // Only show push notification if app is in background
@@ -484,7 +427,7 @@ export const useRealTimeNotifications = (
         const expiresDate = new Date(alert.expiresAt || alert.bestByDate || '');
         const today = new Date();
         const daysUntilExpiration = Math.ceil(
-          (expiresDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+          (expiresDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
         );
 
         const notification = {
@@ -701,7 +644,6 @@ export const useRealTimeNotifications = (
   useEffect(() => {
     if (memberJoined?.memberJoined) {
       const newMember = memberJoined.memberJoined;
-      console.log('Member joined data:', newMember);
 
       const notification = {
         id: `member-joined-${Date.now()}`,
@@ -710,8 +652,7 @@ export const useRealTimeNotifications = (
         priority: NotificationPriority.LOW,
         title: 'New Member Joined',
         message: `${
-          newMember.node?.user?.profile?.displayName ||
-          'Someone'
+          newMember.node?.user?.profile?.displayName || 'Someone'
         } joined your home`,
         payload: {
           homeId: newMember.node?.homeId,
@@ -721,13 +662,8 @@ export const useRealTimeNotifications = (
         sentAt: new Date().toISOString(),
       };
 
-      console.log('Creating member joined notification:', notification);
-
       if (finalConfig.showInAppNotifications) {
-        console.log('Adding member joined notification to store');
         addNotification(notification);
-      } else {
-        console.log('Skipping member joined notification (showInAppNotifications = false)');
       }
 
       if (finalConfig.showPushNotifications) {
@@ -744,7 +680,7 @@ export const useRealTimeNotifications = (
   useEffect(() => {
     if (invitesData?.myPendingInvites) {
       const pendingInvites = invitesData.myPendingInvites.filter(
-        invite => invite.status === 'PENDING'
+        invite => invite.status === 'PENDING',
       );
 
       pendingInvites.forEach(invite => {
@@ -798,7 +734,6 @@ export const useRealTimeNotifications = (
   // Cleanup retry states when user changes or component unmounts
   useEffect(() => {
     return () => {
-      console.log('Cleaning up subscription retry states');
       clearAllRetryStates();
     };
   }, [user?.id]);

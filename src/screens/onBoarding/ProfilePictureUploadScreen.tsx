@@ -54,19 +54,15 @@ export const ProfilePictureUploadScreen = () => {
   // Check for cropped image from MMKV when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      console.log('ProfilePictureUploadScreen focused, checking MMKV for cropped image...');
-
       try {
         const storedCroppedImage = storage.getString('temp_cropped_image');
         if (storedCroppedImage) {
           const croppedImageFile: ImageFile = JSON.parse(storedCroppedImage);
-          console.log('Found cropped image in MMKV:', croppedImageFile.uri);
 
           setCroppedImage(croppedImageFile);
 
           // Clean up the temporary storage
           storage.delete('temp_cropped_image');
-          console.log('Cleaned up temporary cropped image from MMKV');
         }
       } catch (error) {
         console.error('Error reading cropped image from MMKV:', error);
@@ -79,7 +75,6 @@ export const ProfilePictureUploadScreen = () => {
   // Clean up MMKV on unmount
   useEffect(() => {
     return () => {
-      console.log('Cleaning up temporary MMKV data');
       storage.delete('temp_cropped_image');
     };
   }, []);
@@ -144,7 +139,6 @@ export const ProfilePictureUploadScreen = () => {
   const handleCropImage = useCallback(() => {
     if (!selectedImage) return;
 
-    console.log('Navigating to crop with image:', selectedImage.uri);
     navigation.navigate('ImageCrop' as any, {
       imageFile: selectedImage,
     });
@@ -161,12 +155,6 @@ export const ProfilePictureUploadScreen = () => {
         imageToUpload,
         'PROFILE_AVATAR',
         {
-          onProgress: (progress: number) => {
-            console.log('Upload progress:', progress);
-          },
-          onSuccess: (url: string) => {
-            console.log('Upload successful:', url);
-          },
           onError: (error: Error) => {
             Alert.alert('Upload Failed', error.message);
           },
@@ -174,7 +162,6 @@ export const ProfilePictureUploadScreen = () => {
       );
 
       if (imageUrl) {
-        console.log('Profile image uploaded:', imageUrl);
         // Update the profile avatar URL in the database
         await updateProfileAvatarUrl(imageUrl);
         moveToNextStep();
@@ -250,13 +237,18 @@ export const ProfilePictureUploadScreen = () => {
           <View style={styles.cropContainer}>
             <TouchableOpacity
               onPress={handleCropImage}
-              style={[styles.cropButton, {backgroundColor: theme.colors.primary}]}
+              style={[
+                styles.cropButton,
+                {backgroundColor: theme.colors.primary},
+              ]}
               disabled={isUploading}>
-              <Text style={[styles.cropButtonText, {color: theme.colors.white}]}>
+              <Text
+                style={[styles.cropButtonText, {color: theme.colors.white}]}>
                 Crop & Center
               </Text>
             </TouchableOpacity>
-            <Text style={[styles.cropHint, {color: theme.colors.textSecondary}]}>
+            <Text
+              style={[styles.cropHint, {color: theme.colors.textSecondary}]}>
               Recommended to optimize your photo
             </Text>
           </View>
@@ -345,7 +337,11 @@ export const ProfilePictureUploadScreen = () => {
         )}
 
         <View style={styles.formFooter}>
-          <Text style={[styles.formFooterText, {color: theme.colors.textSecondary}]}>
+          <Text
+            style={[
+              styles.formFooterText,
+              {color: theme.colors.textSecondary},
+            ]}>
             By continuing you agree to our
           </Text>
 
@@ -364,7 +360,11 @@ export const ProfilePictureUploadScreen = () => {
               </Text>
             </TouchableOpacity>
 
-            <Text style={[styles.formFooterText, {color: theme.colors.textSecondary}]}>
+            <Text
+              style={[
+                styles.formFooterText,
+                {color: theme.colors.textSecondary},
+              ]}>
               {' '}
               and
               {'   '}
@@ -396,10 +396,7 @@ export const ProfilePictureUploadScreen = () => {
               : 'Skip for now'
         }
         onPress={croppedImage || selectedImage ? handleUpload : handleSkip}
-        btnStyle={[
-          styles.nextButton,
-          {backgroundColor: theme.colors.primary},
-        ]}
+        btnStyle={[styles.nextButton, {backgroundColor: theme.colors.primary}]}
         txtStyle={[styles.nextText, {color: theme.colors.white}]}
         disabled={isUploading}
       />

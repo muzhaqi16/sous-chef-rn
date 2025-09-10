@@ -10,14 +10,18 @@ interface UseNotificationSyncProps {
   userId?: string;
 }
 
-export const useNotificationSync = ({
-  userId,
-}: UseNotificationSyncProps) => {
-  const syncNotificationsFromServer = useStore(state => state.syncNotificationsFromServer);
-  const cleanupOrphanedSubscriptions = useStore(state => state.cleanupOrphanedSubscriptions);
+export const useNotificationSync = ({userId}: UseNotificationSyncProps) => {
+  const syncNotificationsFromServer = useStore(
+    state => state.syncNotificationsFromServer,
+  );
+  const cleanupOrphanedSubscriptions = useStore(
+    state => state.cleanupOrphanedSubscriptions,
+  );
   const selectedHomeId = useStore(state => state.selectedHomeId);
   const selectedPantryId = useStore(state => state.selectedPantryId);
-  const selectedShoppingListId = useStore(state => state.selectedShoppingListId);
+  const selectedShoppingListId = useStore(
+    state => state.selectedShoppingListId,
+  );
 
   // Fetch notifications from server
   const {data: serverNotifications, refetch} = useGetMyNotificationsQuery({
@@ -27,26 +31,30 @@ export const useNotificationSync = ({
   // Sync server notifications to local store using server-first approach
   useEffect(() => {
     if (serverNotifications?.myNotifications?.edges) {
-      const serverNotifs = serverNotifications.myNotifications.edges.map(edge => {
-        const node = edge.node;
-        return {
-          id: node.id,
-          type: node.type,
-          category: getCategoryFromNotificationType(node.type),
-          priority: NotificationPriority.MEDIUM,
-          title: getNotificationTitle(node.type, node.payload),
-          message: getNotificationMessage(node.type, node.payload),
-          payload: node.payload,
-          sentAt: node.sentAt,
-          readAt: node.readAt,
-          isRead: Boolean(node.readAt), // Proper read state sync
-          requiresAction: node.type === 'HOME_INVITATION',
-          actionType: node.type === 'HOME_INVITATION' ? 'ACCEPT_HOME_INVITE' : undefined,
-          source: 'server' as const, // Mark as server notifications
-        };
-      });
-      
-      console.log(`Syncing ${serverNotifs.length} server notifications using server-first approach`);
+      const serverNotifs = serverNotifications.myNotifications.edges.map(
+        edge => {
+          const node = edge.node;
+          return {
+            id: node.id,
+            type: node.type,
+            category: getCategoryFromNotificationType(node.type),
+            priority: NotificationPriority.MEDIUM,
+            title: getNotificationTitle(node.type, node.payload),
+            message: getNotificationMessage(node.type, node.payload),
+            payload: node.payload,
+            sentAt: node.sentAt,
+            readAt: node.readAt,
+            isRead: Boolean(node.readAt), // Proper read state sync
+            requiresAction: node.type === 'HOME_INVITATION',
+            actionType:
+              node.type === 'HOME_INVITATION'
+                ? 'ACCEPT_HOME_INVITE'
+                : undefined,
+            source: 'server' as const, // Mark as server notifications
+          };
+        },
+      );
+
       syncNotificationsFromServer(serverNotifs); // Use server-first sync
     }
   }, [serverNotifications, syncNotificationsFromServer]);
@@ -55,10 +63,17 @@ export const useNotificationSync = ({
   useEffect(() => {
     // Run cleanup when user context changes (home, pantry, shopping list selection)
     cleanupOrphanedSubscriptions();
-  }, [selectedHomeId, selectedPantryId, selectedShoppingListId, cleanupOrphanedSubscriptions]);
+  }, [
+    selectedHomeId,
+    selectedPantryId,
+    selectedShoppingListId,
+    cleanupOrphanedSubscriptions,
+  ]);
 
   // Helper functions for server notifications
-  const getCategoryFromNotificationType = (type: string): NotificationCategory => {
+  const getCategoryFromNotificationType = (
+    type: string,
+  ): NotificationCategory => {
     switch (type) {
       case 'HOME_INVITATION':
         return NotificationCategory.MEMBERSHIP;

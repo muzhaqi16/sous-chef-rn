@@ -17,10 +17,6 @@ export function useShoppingList(listId: string | null) {
     variables: {listId: listId!},
     skip: !listId,
     onData: ({data: subscriptionData, client}) => {
-      console.log(
-        'ShoppingListItemsChanged subscription data:',
-        subscriptionData,
-      );
       const changeData = subscriptionData?.data?.shoppingListItemsChanged;
 
       if (!changeData || !listId) {

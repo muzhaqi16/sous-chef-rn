@@ -38,18 +38,12 @@ export const InviteMembersScreen = () => {
   const [isInviting, setIsInviting] = useState(false);
 
   const [inviteToHome] = useInviteToHomeMutation({
-    onCompleted: () => {
-      console.log('Home invite sent successfully');
-    },
     onError: error => {
       console.error('Failed to invite to home:', error);
     },
   });
 
   const [addCollaborator] = useAddCollaboratorMutation({
-    onCompleted: () => {
-      console.log('Shopping list collaborator added successfully');
-    },
     onError: error => {
       console.error('Failed to add collaborator:', error);
     },
