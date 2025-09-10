@@ -17,7 +17,9 @@ export const ProfileScreen = () => {
   const handleLogout = () => {
     // Find and execute logout action
     const logoutSection = sections.find(s => s.title === '');
-    const logoutItem = logoutSection?.items.find(i => i.key === 'logout');
+    const logoutItem = logoutSection?.items.find(
+      (i: any) => i.key === 'logout',
+    );
 
     if (logoutItem?.onPress) {
       logoutItem.onPress();
@@ -47,7 +49,7 @@ export const ProfileScreen = () => {
           <SettingsSection
             key={`section-${index}`}
             title={section.title}
-            items={section.items.map(item => {
+            items={section.items.map((item: any) => {
               // Override logout handler to include navigation
               if (item.key === 'logout') {
                 return {

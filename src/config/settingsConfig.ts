@@ -1,6 +1,4 @@
-import {SettingsSection} from '#types';
-
-export const PROFILE_SETTINGS_CONFIG: SettingsSection[] = [
+export const PROFILE_SETTINGS_CONFIG = [
   {
     title: 'Personal Information',
     items: [

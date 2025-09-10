@@ -4,14 +4,17 @@ import {StyleSheet} from 'react-native-unistyles';
 import QuantitySelector from '../organisms/QuantitySelector';
 import {BottomSheetTextInput} from '@gorhom/bottom-sheet';
 import {Button} from '../atoms/Button/Button';
-import {useUpdateShoppingListItemMutation} from '../../graphql/generated';
-import {useGetUnitsQuery, Unit} from '../../graphql/generated';
-import {ShoppingListItemDetail} from '../../types';
+import {
+  useUpdateShoppingListItemMutation,
+  useGetUnitsQuery,
+  Unit,
+  ShoppingListItem,
+} from '#generated';
 
 interface ItemDetailProps {
-  item: ShoppingListItemDetail;
+  item: ShoppingListItem;
   onClose: () => void;
-  onUpdate: (updates: Partial<ShoppingListItemDetail>) => void;
+  onUpdate: (updates: Partial<ShoppingListItem>) => void;
   onRemove: () => void;
 }
 

@@ -1,10 +1,10 @@
 import {setContext} from '@apollo/client/link/context';
-import {useStore} from '../../store';
+import Config from 'react-native-config';
+import {useStore} from '#store';
 
 export const authLink = setContext(async (operation, {headers}) => {
   // Always include the API key for all requests
-  const apiKey = process.env.API_KEY;
-
+  const apiKey = Config.API_KEY;
 
   // Get the access token for authentication (if available)
   const token = useStore.getState().accessToken;

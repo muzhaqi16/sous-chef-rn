@@ -1,7 +1,8 @@
 import {GraphQLWsLink} from '@apollo/client/link/subscriptions';
 import {createClient} from 'graphql-ws';
 import {Platform} from 'react-native';
-import {useStore} from '../../store';
+import Config from 'react-native-config';
+import {useStore} from '#store';
 
 // pick the right WebSocket constructor
 const webSocketImpl =
@@ -11,10 +12,10 @@ const webSocketImpl =
 
 // Environment-based WebSocket URL with fallbacks
 const getWebSocketUrl = () => {
-  if (process.env.WEB_SOCKET_URL) {
-    return process.env.WEB_SOCKET_URL;
+  if (Config.WEB_SOCKET_URL) {
+    return Config.WEB_SOCKET_URL;
   }
-  
+
   // Fallback based on __DEV__ flag
   if (__DEV__) {
     return 'ws://localhost:4000/graphql';

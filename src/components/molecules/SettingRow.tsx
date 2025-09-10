@@ -19,11 +19,10 @@ import {
   getPlaceholderForField,
 } from '#utils/inputMapping';
 import {getValidationSchemaForField} from '#/utils/validation/profile';
-import {SettingItem} from '#types';
 import {Icon} from '#/utils';
 
 export interface SettingRowProps {
-  item: SettingItem;
+  item: any;
   isFirst: boolean;
   isLast: boolean;
 }
@@ -146,8 +145,8 @@ export const SettingRow: React.FC<SettingRowProps> = ({
           {item.type === 'modal' && (
             <View style={styles.modalValueContainer}>
               <ValueText>
-                {item.options?.find(opt => opt.value === item.value)?.label ||
-                  'Select'}
+                {item.options?.find((opt: any) => opt.value === item.value)
+                  ?.label || 'Select'}
               </ValueText>
               <Icon
                 library="Feather"
@@ -229,7 +228,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
             </View>
 
             <ScrollView>
-              {item.options.map(opt => (
+              {item.options.map((opt: any) => (
                 <TouchableOpacity
                   key={opt.value}
                   style={styles.modalOption}

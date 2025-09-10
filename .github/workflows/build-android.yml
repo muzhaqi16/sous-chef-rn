@@ -99,13 +99,13 @@ jobs:
           ./gradlew assembleRelease \
             -PAPI_URL="${{ vars.API_URL }}" \
             -PWEB_SOCKET_URL="${{ vars.WEB_SOCKET_URL }}"
+            -PAPI_KEY="${{ secrets.API_KEY }}"
         env:
           BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
           MYAPP_UPLOAD_STORE_FILE: 'releases.keystore'
           MYAPP_UPLOAD_STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           MYAPP_UPLOAD_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           MYAPP_UPLOAD_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-          ENVFILE: ${{ env.BUILD_ENV == 'prod' && '.env.production' || '.env.dev' }}
 
       - name: List the .apks compiled
         run: ls ./android/app/build/outputs/apk/release/ -hal

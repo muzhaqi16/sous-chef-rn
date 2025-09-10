@@ -9,12 +9,7 @@ import {
   GetUserProfileDocument,
   ProfileVisibility,
 } from '#generated';
-import {
-  SettingItem,
-  SettingsSection,
-  SettingConfig,
-  ProfileFieldKey,
-} from '#types';
+
 import {PROFILE_SETTINGS_CONFIG} from '#config';
 import {dateStringToISO, extractDateString} from '#utils/dateUtils';
 
@@ -27,7 +22,7 @@ export const useConfigurableSettings = (profile: any) => {
   const [updateSettingsMutation] = useUpdateUserPreferencesMutation();
 
   const updateProfile = useCallback(
-    async (input: Partial<Record<ProfileFieldKey, any>>) => {
+    async (input: Partial<Record<any, any>>) => {
       try {
         // Read current cache
         const cache = client.readQuery<GetUserProfileQuery>({
@@ -78,8 +73,8 @@ export const useConfigurableSettings = (profile: any) => {
   );
 
   const createSettingItem = useCallback(
-    (config: SettingConfig): SettingItem => {
-      const baseItem: SettingItem = {
+    (config: any) => {
+      const baseItem: any = {
         key: config.key,
         label: config.label,
         type: config.type,
@@ -91,9 +86,7 @@ export const useConfigurableSettings = (profile: any) => {
         case 'firstName':
           baseItem.value = profile?.firstName || '';
           baseItem.onSave = (value: string) => {
-            const updateObj = {firstName: value} as Partial<
-              Record<ProfileFieldKey, any>
-            >;
+            const updateObj = {firstName: value} as Partial<Record<any, any>>;
             updateProfile(updateObj);
           };
           break;
@@ -101,9 +94,7 @@ export const useConfigurableSettings = (profile: any) => {
         case 'lastName':
           baseItem.value = profile?.lastName || '';
           baseItem.onSave = (value: string) => {
-            const updateObj = {lastName: value} as Partial<
-              Record<ProfileFieldKey, any>
-            >;
+            const updateObj = {lastName: value} as Partial<Record<any, any>>;
             updateProfile(updateObj);
           };
           break;
@@ -111,9 +102,7 @@ export const useConfigurableSettings = (profile: any) => {
         case 'displayName':
           baseItem.value = profile?.displayName || '';
           baseItem.onSave = (value: string) => {
-            const updateObj = {displayName: value} as Partial<
-              Record<ProfileFieldKey, any>
-            >;
+            const updateObj = {displayName: value} as Partial<Record<any, any>>;
             updateProfile(updateObj);
           };
           break;
@@ -121,9 +110,7 @@ export const useConfigurableSettings = (profile: any) => {
         case 'bio':
           baseItem.value = profile?.bio || '';
           baseItem.onSave = (value: string) => {
-            const updateObj = {bio: value} as Partial<
-              Record<ProfileFieldKey, any>
-            >;
+            const updateObj = {bio: value} as Partial<Record<any, any>>;
             updateProfile(updateObj);
           };
           break;
@@ -131,9 +118,7 @@ export const useConfigurableSettings = (profile: any) => {
         case 'phone':
           baseItem.value = profile?.phone || '';
           baseItem.onSave = (value: string) => {
-            const updateObj = {phone: value} as Partial<
-              Record<ProfileFieldKey, any>
-            >;
+            const updateObj = {phone: value} as Partial<Record<any, any>>;
             updateProfile(updateObj);
           };
           break;
@@ -141,9 +126,7 @@ export const useConfigurableSettings = (profile: any) => {
         case 'website':
           baseItem.value = profile?.website || '';
           baseItem.onSave = (value: string) => {
-            const updateObj = {website: value} as Partial<
-              Record<ProfileFieldKey, any>
-            >;
+            const updateObj = {website: value} as Partial<Record<any, any>>;
             updateProfile(updateObj);
           };
           break;
@@ -168,9 +151,7 @@ export const useConfigurableSettings = (profile: any) => {
               {label: 'Prefer not to say', value: 'prefer-not-to-say'},
             ];
             baseItem.onSave = (value: string) => {
-              const updateObj = {gender: value} as Partial<
-                Record<ProfileFieldKey, any>
-              >;
+              const updateObj = {gender: value} as Partial<Record<any, any>>;
               updateProfile(updateObj);
             };
           }
@@ -188,7 +169,7 @@ export const useConfigurableSettings = (profile: any) => {
             ];
             baseItem.onSave = (value: string) => {
               const updateObj = {profileVisibility: value} as Partial<
-                Record<ProfileFieldKey, any>
+                Record<any, any>
               >;
               updateProfile(updateObj);
             };
@@ -201,7 +182,7 @@ export const useConfigurableSettings = (profile: any) => {
             baseItem.onPress = () => {
               const newValue = !profile?.showEmail;
               const updateObj = {showEmail: newValue} as Partial<
-                Record<ProfileFieldKey, any>
+                Record<any, any>
               >;
               updateProfile(updateObj);
             };
@@ -214,7 +195,7 @@ export const useConfigurableSettings = (profile: any) => {
             baseItem.onPress = () => {
               const newValue = !profile?.showPhone;
               const updateObj = {showPhone: newValue} as Partial<
-                Record<ProfileFieldKey, any>
+                Record<any, any>
               >;
               updateProfile(updateObj);
             };
@@ -292,7 +273,7 @@ export const useConfigurableSettings = (profile: any) => {
     ],
   );
 
-  const sections = useMemo((): SettingsSection[] => {
+  const sections = useMemo((): any[] => {
     return PROFILE_SETTINGS_CONFIG.map(configSection => ({
       title: configSection.title,
       items: configSection.items.map(createSettingItem),

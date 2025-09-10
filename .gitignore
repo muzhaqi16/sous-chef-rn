@@ -78,4 +78,6 @@ yarn-error.log
 .env.production
 .env.staging
 .env.development
+# react-native-config codegen
+ios/tmp.xcconfig
 .claude

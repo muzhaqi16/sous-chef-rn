@@ -1,9 +1,7 @@
-import {SettingItem} from '#types';
-
 export const createPersonalItems = (
   profile: any,
   updateProfile: (input: any) => void,
-): SettingItem[] => [
+): any[] => [
   {
     key: 'firstName',
     label: 'First Name',
@@ -37,7 +35,7 @@ export const createPersonalItems = (
 export const createThemeItems = (
   store: any,
   updatePreferences: (input: any) => void,
-): SettingItem[] => [
+): any[] => [
   {
     key: 'darkMode',
     label: 'Dark Mode',
@@ -64,7 +62,7 @@ export const createThemeItems = (
 export const createNotificationItems = (
   store: any,
   updatePreferences: (input: any) => void,
-): SettingItem[] => [
+): any[] => [
   {
     key: 'emailNotif',
     label: 'Email Notifications',
@@ -89,7 +87,7 @@ export const createNotificationItems = (
   },
 ];
 
-export const createLogoutItem = (logout: () => void): SettingItem => ({
+export const createLogoutItem = (logout: () => void): any => ({
   key: 'logout',
   label: 'Log Out',
   type: 'text',
