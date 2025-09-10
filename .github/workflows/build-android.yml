@@ -29,12 +29,9 @@ jobs:
     environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || (contains(github.ref, 'prod') || contains(github.ref, 'release')) && 'prod' || 'dev' }}
 
     env:
-      # CORRECTED Android SDK Path
       ANDROID_HOME: /opt/android-sdk
       ANDROID_SDK_ROOT: /opt/android-sdk
       JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
-
-      # Build Configuration
       GRADLE_OPTS: -Xmx4096m -Dorg.gradle.daemon=false -Dorg.gradle.parallel=true
       NODE_OPTIONS: --max-old-space-size=4096
       BUILD_ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || (contains(github.ref, 'prod') || contains(github.ref, 'release')) && 'prod' || 'dev' }}
@@ -92,14 +89,23 @@ jobs:
           ./gradlew clean
           cd ..
 
+      - name: Generate .env file
+        run: |
+          if [ "${{ env.BUILD_ENV }}" = "prod" ]; then
+            echo "API_URL=${{ vars.API_URL }}" > .env.production
+            echo "API_KEY=${{ secrets.API_KEY }}" >> .env.production
+            echo "WEB_SOCKET_URL=${{ vars.WEB_SOCKET_URL }}" >> .env.production
+          else
+            echo "API_URL=${{ vars.API_URL }}" > .env.dev
+            echo "API_KEY=${{ secrets.API_KEY }}" >> .env.dev
+            echo "WEB_SOCKET_URL=${{ vars.WEB_SOCKET_URL }}" >> .env.dev
+          fi
+
       - name: Build application apk
         run: |
           echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode > ./android/app/releases.keystore
           cd android
-          ./gradlew assembleRelease \
-            -PAPI_URL="${{ vars.API_URL }}" \
-            -PWEB_SOCKET_URL="${{ vars.WEB_SOCKET_URL }}"
-            -PAPI_KEY="${{ secrets.API_KEY }}"
+          ./gradlew assembleRelease
         env:
           BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
           MYAPP_UPLOAD_STORE_FILE: 'releases.keystore'
