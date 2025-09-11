@@ -1,4 +1,4 @@
-import React, {useRef, useEffect} from 'react';
+import React, {useRef, useEffect, useState} from 'react';
 import {
   NavigationContainer,
   NavigationContainerRef,
@@ -17,7 +17,7 @@ import {
 import {ProfilePhotoUploadScreen, NotFoundScreen, SplashScreen} from '#screens';
 import {ImageCropScreen} from '../screens/profile/ImageCropScreen';
 import type {RootStackParamList} from './types';
-import {useTokenRefresh, useNavigationState} from '#hooks';
+import {useTokenRefresh, useNavigationState, useAutoLogin} from '#hooks';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -25,13 +25,29 @@ export default function AppNavigator() {
   const navigationRef =
     useRef<NavigationContainerRef<RootStackParamList>>(null);
   const {user} = useStore();
-  const {navigationState, targetRoute, isReady, saveUserProgress} =
+  const {navigationState, targetRoute, isReady, saveUserProgress, hasStoredCredentials} =
     useNavigationState();
+  
+  // Auto-login hook for automatic authentication
+  const {isAutoLoginAttempting, autoLoginCompleted} = useAutoLogin();
+  
+  // Minimum splash screen duration to prevent rapid transitions
+  const [minSplashComplete, setMinSplashComplete] = useState(false);
+  
   // Set up navigation service
   useEffect(() => {
     if (navigationRef.current) {
       NavigationService.setNavigator(navigationRef.current);
     }
+  }, []);
+
+  // Minimum splash screen duration (1.5 seconds)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setMinSplashComplete(true);
+    }, 1500);
+
+    return () => clearTimeout(timer);
   }, []);
 
   // Call token refresh at the app navigator level
@@ -54,8 +70,15 @@ export default function AppNavigator() {
     return unsubscribe;
   }, [user?.id, saveUserProgress]);
 
-  // If not hydrated, show splash screen
-  if (!isReady) {
+  // Show splash screen until everything is ready AND minimum duration has passed
+  const shouldShowSplash = 
+    !isReady || // This already includes credential check completion
+    isAutoLoginAttempting || 
+    !minSplashComplete ||
+    (!autoLoginCompleted && !user); // Wait for auto-login to complete if no user
+
+
+  if (shouldShowSplash) {
     return <SplashScreen />;
   }
 
@@ -69,7 +92,9 @@ export default function AppNavigator() {
         key={`${targetRoute}-${user?.id || 'anonymous'}`} // Key by route and user
         initialRouteName={targetRoute as keyof RootStackParamList}
         screenOptions={{headerShown: false}}>
-        <Stack.Screen name="AuthStack" component={AuthStack} />
+        <Stack.Screen name="AuthStack">
+          {() => <AuthStack hasStoredCredentials={hasStoredCredentials} />}
+        </Stack.Screen>
         <Stack.Screen name="OnBoardingStack" component={OnBoardingStack} />
         <Stack.Screen name="HomeStack" component={HomeTab} />
         <Stack.Screen

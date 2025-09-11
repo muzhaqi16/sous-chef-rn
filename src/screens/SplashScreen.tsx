@@ -1,27 +1,9 @@
-import React, {useEffect} from 'react';
+import React from 'react';
 import {View, Text, Image} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
 import Loader from '../components/atoms/Loader';
-import {useStore} from '../store';
 
 export const SplashScreen = () => {
-  const isLoading = useStore(store => store.isLoading);
-
-  useEffect(() => {
-    // Handle loading indicator
-    const loadingIndicator = setInterval(() => {
-      console.log('Loading...');
-    }, 1000);
-
-    // Handle error handling
-    const handleError = (error: any) => {
-      console.error('Error:', error);
-    };
-
-    return () => {
-      clearInterval(loadingIndicator);
-    };
-  }, []);
   return (
     <View style={styles.container}>
       <View style={styles.imageWrapper}>

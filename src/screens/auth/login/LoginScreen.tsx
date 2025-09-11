@@ -15,6 +15,7 @@ import {
   useAuthErrorHandler,
   useSafeNavigation,
   useCredentialLoader,
+  useAutoLogin,
 } from '#hooks';
 import {
   hasCredentials,
@@ -37,7 +38,11 @@ const obscureEmail = (email: string): string => {
   return `${obscured}@${domain}`;
 };
 
-export function LoginScreen() {
+interface LoginScreenProps {
+  hasStoredCredentials: boolean | null;
+}
+
+export function LoginScreen({hasStoredCredentials}: LoginScreenProps) {
   const {theme} = useUnistyles();
   const {navigation, canGoBack, goBack} = useSafeNavigation<LoginNavProp>();
   const {
@@ -50,7 +55,6 @@ export function LoginScreen() {
 
   // State for credential management
   const [savedEmail, setSavedEmail] = useState<string>('');
-  const [hasStoredCredentials, setHasStoredCredentials] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showRememberModal, setShowRememberModal] = useState(false);
   const [pendingAuthResponse, setPendingAuthResponse] = useState<any>(null);
@@ -58,6 +62,9 @@ export function LoginScreen() {
   // Use the credential loader hook
   const {loadingCreds, pwFromKeychain, loadStoredCredentials} =
     useCredentialLoader(rememberMe);
+
+  // Auto-login hook for post-verification login
+  const {attemptCredentialAutoLogin} = useAutoLogin();
 
   // Shared hooks
   const {handleAuthError} = useAuthErrorHandler();
@@ -71,52 +78,76 @@ export function LoginScreen() {
     defaultValues: {email: '', password: ''},
   });
 
-  // Check for stored credentials on mount (non-blocking)
+  // Load email if credentials exist (hasStoredCredentials already determined by navigation)
   useEffect(() => {
     let isMounted = true;
 
-    const checkStoredCredentials = async () => {
-      try {
-        await new Promise(resolve => setTimeout(resolve, 100));
-        const hasCreds = await hasCredentials();
-
-        if (!isMounted) return;
-        setHasStoredCredentials(hasCreds);
-
-        if (hasCreds) {
+    const loadEmailIfExists = async () => {
+      if (hasStoredCredentials) {
+        try {
           const email = await getEmailOnly();
-          if (!isMounted) return;
-          if (email) {
+          if (isMounted && email) {
             setSavedEmail(email);
             form.setValue('email', obscureEmail(email));
           }
-        }
-      } catch (error) {
-        if (isMounted) {
-          setHasStoredCredentials(false);
+        } catch (error) {
+          console.error('Error loading saved email:', error);
         }
       }
     };
 
-    checkStoredCredentials();
+    loadEmailIfExists();
 
     return () => {
       isMounted = false;
     };
-  }, [form]);
+  }, [hasStoredCredentials, form]);
 
-  // Biometric authentication to reveal and fill credentials
-  const authenticateAndFillCredentials = async () => {
+  // Biometric authentication that attempts auto-login, no form filling fallback
+  const authenticateAndAutoLogin = async () => {
     if (loadingCreds) return;
 
     try {
+      // Load credentials first (this triggers biometric prompt)
       const credentials = await loadStoredCredentials();
 
-      if (credentials) {
-        form.setValue('email', credentials.email);
-        form.setValue('password', credentials.password);
-        setSavedEmail(credentials.email);
-        setIsAuthenticated(true);
+      if (!credentials) {
+        console.log('LoginScreen: No credentials loaded');
+        return;
+      }
+
+      // Attempt automatic login after successful biometric verification
+      console.log(
+        'LoginScreen: Attempting auto-login after biometric verification...',
+      );
+
+      try {
+        const result = await login({
+          variables: {
+            input: {
+              email: credentials.email,
+              password: credentials.password,
+            },
+          },
+        });
+
+        if (result.data?.login) {
+          console.log(
+            'LoginScreen: Auto-login successful after biometric verification',
+          );
+          // Small delay to ensure navigation is ready
+          await new Promise(resolve => setTimeout(resolve, 100));
+          await completeAuthentication(result.data.login, rememberMe ?? false);
+          return;
+        }
+      } catch (loginError) {
+        console.log('LoginScreen: Auto-login failed:', loginError);
+        Alert.alert(
+          'Login Failed',
+          'Auto-login was unsuccessful. Please try logging in manually.',
+          [{text: 'OK'}],
+        );
+        return;
       }
     } catch (error: any) {
       if (error.code === 'UserCancel') {
@@ -144,7 +175,7 @@ export function LoginScreen() {
   const clearCredentials = useCallback(() => {
     form.setValue(
       'email',
-      hasStoredCredentials && savedEmail ? obscureEmail(savedEmail) : '',
+      hasStoredCredentials === true && savedEmail ? obscureEmail(savedEmail) : '',
     );
     form.setValue('password', '');
     setIsAuthenticated(false);
@@ -192,7 +223,7 @@ export function LoginScreen() {
     const currentEmail = form.getValues('email');
     if (
       !currentEmail &&
-      hasStoredCredentials &&
+      hasStoredCredentials === true &&
       savedEmail &&
       !isAuthenticated
     ) {
@@ -297,61 +328,83 @@ export function LoginScreen() {
         isLoading={isLoggingIn}
       />
 
-      {/* Credential Management Bar */}
-      {hasStoredCredentials && (
-        <View style={styles.credentialBar}>
-          <View style={styles.credentialInfo}>
-            <Icon
-              name={isAuthenticated ? 'lock-open' : 'lock'}
-              size={20}
-              color={theme.colors.textSecondary}
-            />
-            <Text style={styles.credentialText}>
-              {isAuthenticated
-                ? 'Using saved credentials'
-                : 'Tap to use saved credentials'}
-            </Text>
-          </View>
-
-          <View style={styles.credentialActions}>
-            {!isAuthenticated ? (
+      {/* Credential Management Bar - Reserve space to prevent layout shift */}
+      <View style={styles.credentialBarContainer}>
+        {hasStoredCredentials === null ? (
+          // Loading placeholder - reserves the exact same space with invisible content
+          <View style={[styles.credentialBar, styles.credentialBarPlaceholder]}>
+            <View style={styles.credentialInfo}>
+              <Icon
+                name="lock"
+                size={20}
+                color="transparent"
+              />
+              <Text style={[styles.credentialText, {color: 'transparent'}]}>
+                Tap to use saved credentials
+              </Text>
+            </View>
+            <View style={styles.credentialActions}>
               <TouchableOpacity
                 style={styles.authButton}
-                onPress={authenticateAndFillCredentials}
-                disabled={loadingCreds}
-                activeOpacity={0.7}>
+                disabled
+                activeOpacity={1}>
                 <Icon
                   name="fingerprint"
-                  size={20}
-                  color={
-                    loadingCreds
-                      ? theme.colors.textSecondary
-                      : theme.colors.primary
-                  }
-                />
-                <Text
-                  style={[
-                    styles.authButtonText,
-                    loadingCreds && styles.authButtonTextDisabled,
-                  ]}>
-                  {loadingCreds ? 'Authenticating...' : 'Unlock'}
-                </Text>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity
-                style={styles.clearButton}
-                onPress={clearCredentials}
-                activeOpacity={0.7}>
-                <Icon
-                  name="close"
-                  size={18}
-                  color={theme.colors.textSecondary}
+                  size={26}
+                  color="transparent"
                 />
               </TouchableOpacity>
-            )}
+            </View>
           </View>
-        </View>
-      )}
+        ) : hasStoredCredentials ? (
+          // Show actual credential bar
+          <View style={styles.credentialBar}>
+            <View style={styles.credentialInfo}>
+              <Icon
+                name={isAuthenticated ? 'lock-open' : 'lock'}
+                size={20}
+                color={theme.colors.textSecondary}
+              />
+              <Text style={styles.credentialText}>
+                {isAuthenticated
+                  ? 'Using saved credentials'
+                  : 'Tap to use saved credentials'}
+              </Text>
+            </View>
+
+            <View style={styles.credentialActions}>
+              {!isAuthenticated ? (
+                <TouchableOpacity
+                  style={styles.authButton}
+                  onPress={authenticateAndAutoLogin}
+                  disabled={loadingCreds}
+                  activeOpacity={0.7}>
+                  <Icon
+                    name="fingerprint"
+                    size={26}
+                    color={
+                      loadingCreds
+                        ? theme.colors.textSecondary
+                        : theme.colors.textSecondary
+                    }
+                  />
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={styles.clearButton}
+                  onPress={clearCredentials}
+                  activeOpacity={0.7}>
+                  <Icon
+                    name="close"
+                    size={18}
+                    color={theme.colors.textSecondary}
+                  />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        ) : null}
+      </View>
 
       {/* Remember Me Modal */}
       <RememberMeModal
@@ -365,6 +418,9 @@ export function LoginScreen() {
 }
 
 const styles = StyleSheet.create(theme => ({
+  credentialBarContainer: {
+    // Container to maintain consistent spacing
+  },
   credentialBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -377,6 +433,11 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
+  credentialBarPlaceholder: {
+    backgroundColor: 'transparent',
+    borderColor: 'transparent',
+    opacity: 0, // Make completely invisible while preserving layout
+  },
   credentialInfo: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -386,10 +447,6 @@ const styles = StyleSheet.create(theme => ({
     fontSize: 14,
     color: theme.colors.textSecondary,
     marginLeft: 8,
-  },
-  credentialActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
   },
   authButton: {
     flexDirection: 'row',
@@ -407,6 +464,10 @@ const styles = StyleSheet.create(theme => ({
   },
   authButtonTextDisabled: {
     color: theme.colors.textSecondary,
+  },
+  credentialActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   clearButton: {
     padding: 6,

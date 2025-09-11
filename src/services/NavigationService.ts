@@ -11,6 +11,14 @@ class NavigationService {
 
   setIsReady(ready: boolean) {
     this.isReady = ready;
+    
+    // Execute any pending navigation when navigator becomes ready
+    if (ready && this.pendingNavigation) {
+      console.log('Navigator ready, executing pending navigation');
+      const pending = this.pendingNavigation;
+      this.pendingNavigation = null;
+      pending();
+    }
   }
 
   // Main navigation methods
@@ -92,11 +100,13 @@ class NavigationService {
     // to save to user-specific storage
   }
 
+  private pendingNavigation: (() => void) | null = null;
+
   private reset(routes: any[]) {
     if (!this.isReady || !this.navigator) {
       console.warn('Navigator not ready, queueing navigation');
-      // Queue the navigation for when navigator is ready
-      setTimeout(() => this.reset(routes), 100);
+      // Store the pending navigation instead of infinite setTimeout loop
+      this.pendingNavigation = () => this.reset(routes);
       return;
     }
 
@@ -106,6 +116,9 @@ class NavigationService {
         routes,
       }),
     );
+    
+    // Clear pending navigation after successful execution
+    this.pendingNavigation = null;
   }
 
   // Direct navigation methods

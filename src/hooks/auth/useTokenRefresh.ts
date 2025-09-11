@@ -1,4 +1,4 @@
-import {useEffect, useRef} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import {AppState, AppStateStatus} from 'react-native';
 import {useStore} from '#store';
 import {client} from '#/apollo/client';
@@ -13,6 +13,7 @@ interface DecodedToken {
 export const useTokenRefresh = () => {
   const {accessToken, refreshToken, setTokens, logout} = useStore();
   const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Function to check if token is expired or about to expire
   const isTokenExpiringSoon = (token: string | null): boolean => {
@@ -31,12 +32,21 @@ export const useTokenRefresh = () => {
   };
 
   // Function to refresh token
-  const refreshAccessToken = async () => {
+  const refreshAccessToken = async (): Promise<boolean> => {
     if (!refreshToken) {
-      return;
+      console.log('TokenRefresh: No refresh token available');
+      return false;
     }
 
+    if (isRefreshing) {
+      console.log('TokenRefresh: Already refreshing, skipping');
+      return false;
+    }
+
+    setIsRefreshing(true);
+
     try {
+      console.log('TokenRefresh: Attempting to refresh access token...');
       const response = await client.mutate<RefreshTokenMutation>({
         mutation: RefreshTokenDocument,
         variables: {token: refreshToken},
@@ -47,6 +57,7 @@ export const useTokenRefresh = () => {
 
       const data = response.data?.refresh;
       if (data?.accessToken && data?.refreshToken) {
+        console.log('TokenRefresh: Token refresh successful');
         setTokens({
           accessToken: data.accessToken,
           refreshToken: data.refreshToken,
@@ -54,12 +65,27 @@ export const useTokenRefresh = () => {
 
         // Schedule next refresh
         scheduleTokenRefresh(data.accessToken);
+        return true;
       } else {
-        throw new Error('Invalid refresh response');
+        console.log('TokenRefresh: Invalid refresh response');
+        return false;
       }
-    } catch (error) {
-      console.error('Failed to refresh token:', error);
-      logout();
+    } catch (error: any) {
+      console.error('TokenRefresh: Failed to refresh token:', error);
+      
+      // Check if this is a refresh token expiry vs other errors
+      if (error?.networkError?.statusCode === 401 || 
+          error?.graphQLErrors?.some((e: any) => e.extensions?.code === 'UNAUTHENTICATED')) {
+        console.log('TokenRefresh: Refresh token appears to be expired');
+        // Don't immediately logout - let auto-login handle this gracefully
+        return false;
+      }
+      
+      // For other types of errors (network, etc.), also don't logout immediately
+      console.log('TokenRefresh: Network or other error, will retry later');
+      return false;
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -81,7 +107,11 @@ export const useTokenRefresh = () => {
       const refreshIn = Math.max(0, (timeUntilExpiry - 60) * 1000);
 
       if (refreshIn > 0) {
-        refreshTimeoutRef.current = setTimeout(refreshAccessToken, refreshIn);
+        refreshTimeoutRef.current = setTimeout(() => {
+          refreshAccessToken().catch(error => {
+            console.error('Scheduled token refresh failed:', error);
+          });
+        }, refreshIn);
       }
     } catch (error) {
       console.error('Failed to decode token:', error);
@@ -92,7 +122,9 @@ export const useTokenRefresh = () => {
   useEffect(() => {
     // Check if token needs refresh on mount
     if (isTokenExpiringSoon(accessToken)) {
-      refreshAccessToken();
+      refreshAccessToken().catch(error => {
+        console.error('Initial token refresh failed:', error);
+      });
     } else {
       scheduleTokenRefresh(accessToken);
     }
@@ -104,7 +136,9 @@ export const useTokenRefresh = () => {
         if (nextAppState === 'active') {
           // Check token when app becomes active
           if (isTokenExpiringSoon(accessToken)) {
-            refreshAccessToken();
+            refreshAccessToken().catch(error => {
+              console.error('App state token refresh failed:', error);
+            });
           }
         }
       },
@@ -117,4 +151,10 @@ export const useTokenRefresh = () => {
       }
     };
   }, [accessToken, refreshToken]);
+
+  return {
+    refreshAccessToken,
+    isRefreshing,
+    isTokenExpiringSoon,
+  };
 };

@@ -63,7 +63,67 @@ query GetMyPendingInvites {
 
 mutation CreateHome($input: CreateHomeInput!) {
   createHome(input: $input) {
-    ...HomeFragment
+    id
+    name
+    type
+    description
+    timezone
+    currency
+    isPublic
+    joinCode
+    allowJoinCode
+    maxMembers
+    tags
+    metadata
+    version
+    createdAt
+    updatedAt
+
+    invites {
+      ...HomeInviteFragment
+    }
+
+    members {
+      ...MemberShipFragment
+    }
+
+    myMembership {
+      ...MemberShipFragment
+    }
+
+    membershipStats {
+      total
+      active
+      byRole {
+        OWNER
+        ADMIN
+        MEMBER
+        GUEST
+      }
+      byStatus {
+        ACTIVE
+        SUSPENDED
+        LEFT
+        REMOVED
+      }
+      recentlyActive
+    }
+
+    # Use simplified pantry structure without items
+    pantries {
+      id
+      homeId
+      name
+      description
+      isDefault
+      location
+      temperature
+      tags
+      metadata
+      version
+      createdAt
+      updatedAt
+    }
   }
 }
 

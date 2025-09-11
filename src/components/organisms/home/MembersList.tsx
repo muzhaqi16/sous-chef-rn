@@ -49,8 +49,10 @@ interface MembersListProps {
 export const MembersList: React.FC<MembersListProps> = ({members, invites = []}) => {
   const currentUser = useStore(state => state.user);
   
+  // Filter out accepted invites since they are now members
+  const pendingInvites = invites.filter(invite => invite.status !== 'ACCEPTED');
   
-  if ((!members || members.length === 0) && (!invites || invites.length === 0)) return null;
+  if ((!members || members.length === 0) && (!pendingInvites || pendingInvites.length === 0)) return null;
 
   const getMemberDisplayName = (member: Member): string => {
     // Check if this member is the current user
@@ -157,33 +159,33 @@ export const MembersList: React.FC<MembersListProps> = ({members, invites = []})
           );
         })}
         
-        {invites.map(invite => {
-          const displayName = getInviteDisplayName(invite);
-          const statusColor = getInviteStatusColor(invite.status);
-          
-          return (
-            <View 
-              key={invite.id} 
-              style={[
-                styles.inviteChip,
-                { borderColor: statusColor }
-              ]}
-            >
-              <Text style={[
-                styles.inviteChipText,
-                { color: statusColor }
-              ]}>
-                {displayName}
-              </Text>
-              <Text style={[
-                styles.inviteStatus,
-                { color: statusColor }
-              ]}>
-                {formatInviteStatus(invite.status)}
-              </Text>
-            </View>
-          );
-        })}
+        {pendingInvites.map(invite => {
+            const displayName = getInviteDisplayName(invite);
+            const statusColor = getInviteStatusColor(invite.status);
+            
+            return (
+              <View 
+                key={invite.id} 
+                style={[
+                  styles.inviteChip,
+                  { borderColor: statusColor }
+                ]}
+              >
+                <Text style={[
+                  styles.inviteChipText,
+                  { color: statusColor }
+                ]}>
+                  {displayName}
+                </Text>
+                <Text style={[
+                  styles.inviteStatus,
+                  { color: statusColor }
+                ]}>
+                  {formatInviteStatus(invite.status)}
+                </Text>
+              </View>
+            );
+          })}
       </View>
     </View>
   );

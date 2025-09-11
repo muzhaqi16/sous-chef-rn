@@ -1,5 +1,6 @@
 import {useStore} from '#store';
-import {useMemo, useEffect, useCallback} from 'react';
+import {useMemo, useEffect, useCallback, useState} from 'react';
+import {hasCredentials} from '#/storage/keychain';
 
 export enum NavigationState {
   UNAUTHENTICATED = 'UNAUTHENTICATED',
@@ -26,6 +27,27 @@ export const useNavigationState = () => {
     getUserNavigationState,
   } = useStore();
 
+  const [hasStoredCredentials, setHasStoredCredentials] = useState<boolean | null>(null);
+
+  // Check for stored credentials on hydration
+  useEffect(() => {
+    if (isHydrated && !user) {
+      const checkCredentials = async () => {
+        try {
+          const hasCreds = await hasCredentials();
+          setHasStoredCredentials(hasCreds);
+        } catch (error) {
+          console.error('Error checking stored credentials:', error);
+          setHasStoredCredentials(false);
+        }
+      };
+      checkCredentials();
+    } else if (user) {
+      // If user is already logged in, we don't need to check credentials
+      setHasStoredCredentials(null);
+    }
+  }, [isHydrated, user]);
+
   // Load user-specific navigation state
   useEffect(() => {
     if (user?.id) {
@@ -35,11 +57,13 @@ export const useNavigationState = () => {
 
   const navigationState = useMemo(() => {
     if (!isHydrated) return NavigationState.LOADING;
+    // Wait for credential check to complete for unauthenticated users
+    if (!user && hasStoredCredentials === null) return NavigationState.LOADING;
     if (!user) return NavigationState.UNAUTHENTICATED;
     if (!user.emailVerified) return NavigationState.NEEDS_VERIFICATION;
     if (!user.onBoarded) return NavigationState.NEEDS_ONBOARDING;
     return NavigationState.AUTHENTICATED;
-  }, [user, isHydrated]);
+  }, [user, isHydrated, hasStoredCredentials]);
 
   const getTargetRoute = useCallback(() => {
     switch (navigationState) {
@@ -58,13 +82,22 @@ export const useNavigationState = () => {
 
   const getAuthStackInitialRoute = useCallback(() => {
     if (!user) {
-      return rememberMe === undefined ? 'LandingAuth' : 'Login';
+      // For unauthenticated users, decide based on whether they've used the app before
+      if (hasStoredCredentials === true) {
+        // User has used the app before and has saved credentials - go directly to Login
+        return 'Login';
+      } else if (hasStoredCredentials === false) {
+        // No stored credentials - check if they've set a remember preference
+        return rememberMe === undefined ? 'LandingAuth' : 'Login';
+      }
+      // Still checking credentials - return Login silently (AuthStack will handle the actual logic)
+      return 'Login';
     }
     if (!user.emailVerified) {
       return 'CodeVerification';
     }
     return 'Login';
-  }, [user, rememberMe]);
+  }, [user, rememberMe, hasStoredCredentials]);
 
   const getOnboardingInitialRoute = useCallback(() => {
     if (user?.onBoarded) {
@@ -100,12 +133,15 @@ export const useNavigationState = () => {
     [user?.id, setUserNavigationState],
   );
 
+  const readyState = isHydrated && (user || hasStoredCredentials !== null);
+
   return {
     navigationState,
     targetRoute: getTargetRoute(),
-    authStackInitialRoute: getAuthStackInitialRoute(),
+    authStackInitialRoute: readyState ? getAuthStackInitialRoute() : 'Login', // Only compute when ready
     onboardingInitialRoute: getOnboardingInitialRoute(),
-    isReady: isHydrated,
+    isReady: readyState,
     saveUserProgress,
+    hasStoredCredentials,
   };
 };

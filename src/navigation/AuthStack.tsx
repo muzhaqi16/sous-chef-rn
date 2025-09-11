@@ -11,15 +11,40 @@ import {
   LandingAuthScreen,
 } from '../screens/auth';
 
+interface AuthStackProps {
+  hasStoredCredentials: boolean | null;
+}
+
 const Stack = createNativeStackNavigator<AuthStackParamList>();
 
-export const AuthStack = () => {
-  const {isHydrated, user} = useStore();
-  const {authStackInitialRoute} = useNavigationState();
+export const AuthStack = ({hasStoredCredentials}: AuthStackProps) => {
+  const {isHydrated, user, rememberMe} = useStore();
+  
+  // Get the initial route logic without calling the full hook
+  const getAuthStackInitialRoute = () => {
+    if (!user) {
+      if (hasStoredCredentials === true) {
+        return 'Login';
+      } else if (hasStoredCredentials === false) {
+        return rememberMe === undefined ? 'LandingAuth' : 'Login';
+      }
+      console.warn('AuthStack rendering but credentials still null - defaulting to Login');
+      return 'Login';
+    }
+    if (!user.emailVerified) {
+      return 'CodeVerification';
+    }
+    return 'Login';
+  };
+  
+  const authStackInitialRoute = getAuthStackInitialRoute();
 
-  // Wait for the store to be hydrated before rendering the stack
-  if (!isHydrated) {
-    return null; // or a loading spinner
+  // Wait for the store to be hydrated AND navigation decision to be made
+  const credentialCheckComplete = user || hasStoredCredentials !== null;
+  const shouldRender = isHydrated && credentialCheckComplete;
+  
+  if (!shouldRender) {
+    return null; // Navigation decision not ready yet
   }
 
   const initialRoute: keyof AuthStackParamList =
@@ -42,9 +67,9 @@ export const AuthStack = () => {
       />
       <Stack.Screen
         name="Login"
-        component={LoginScreen}
-        options={{animation: 'slide_from_left'}}
-      />
+        options={{animation: 'slide_from_left'}}>
+        {() => <LoginScreen hasStoredCredentials={hasStoredCredentials} />}
+      </Stack.Screen>
       <Stack.Screen
         name="SignUp"
         component={SignUpScreen}

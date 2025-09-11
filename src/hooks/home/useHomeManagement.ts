@@ -16,7 +16,7 @@ import {useSearchableList} from '../useSearchableList';
 import {useStore} from '#store';
 
 export function useHomeManagement() {
-  const {selectedHomeId, setSelectedHomeId} = useStore();
+  const {selectedHomeId, setSelectedHomeId, setSelectedPantryId} = useStore();
 
   const {data, loading, error, refetch} = useGetHomesQuery({
     fetchPolicy: 'cache-and-network',
@@ -84,6 +84,7 @@ export function useHomeManagement() {
         });
 
         if (existingHomes?.homes) {
+          // Now we can safely add the new home since it has compatible structure
           const newHomesArray = [...existingHomes.homes, data.createHome];
 
           cache.writeQuery<GetHomesQuery>({
@@ -100,6 +101,16 @@ export function useHomeManagement() {
           setDefaultHomeMutation({
             variables: {homeId: data.createHome.id},
           });
+        }
+
+        // If a default pantry was created, set it as selected
+        const newHome = data.createHome;
+        if (newHome.pantries && newHome.pantries.length > 0) {
+          const defaultPantry = newHome.pantries.find(pantry => pantry.isDefault);
+          if (defaultPantry) {
+            console.log('Setting default pantry:', defaultPantry.id);
+            setSelectedPantryId(defaultPantry.id);
+          }
         }
       }
     },
@@ -185,7 +196,7 @@ export function useHomeManagement() {
   const [inviteUserMutation, {loading: inviting}] = useInviteToHomeMutation();
 
   // Helper functions
-  const createHome = async (name: string) => {
+  const createHome = async (name: string, createDefaultPantry: boolean = true) => {
     if (!name.trim()) {
       Alert.alert('Error', 'Please enter a home name');
       return false;
@@ -193,11 +204,27 @@ export function useHomeManagement() {
 
     try {
       const result = await createHomeMutation({
-        variables: {input: {name: name.trim()}},
+        variables: {
+          input: {
+            name: name.trim(),
+            createDefaultPantry,
+          }
+        },
       });
 
       if (result.data?.createHome) {
-        return result.data.createHome;
+        const newHome = result.data.createHome;
+        
+        // If a default pantry was created, set it as selected in the store
+        if (newHome.pantries && newHome.pantries.length > 0) {
+          const defaultPantry = newHome.pantries.find(pantry => pantry.isDefault);
+          if (defaultPantry) {
+            console.log('Setting default pantry after home creation:', defaultPantry.id);
+            setSelectedPantryId(defaultPantry.id);
+          }
+        }
+        
+        return newHome;
       }
       return false;
     } catch (error) {

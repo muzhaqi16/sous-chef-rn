@@ -179,8 +179,7 @@ export const createAuthSlice: StateCreator<
       JSON.stringify(get().userStates[user.id]),
     );
 
-    // Handle navigation based on user state
-    NavigationService.navigatePostAuth(user, rememberMe);
+    // Navigation will be handled automatically by AppNavigator based on the updated user state
   },
 
   setCompleteUser: user =>

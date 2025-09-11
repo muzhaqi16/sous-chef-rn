@@ -138,16 +138,23 @@ export const HomeManagement: React.FC = () => {
           style={styles.scrollView}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag">
-          {homes.map(home => (
-            <HomeCard
-              key={home.id}
-              home={home as PartialHome}
-              isDefault={home.id === defaultHomeId}
-              onSetDefault={handleSetDefault}
-              onInvite={handleInviteMember}
-              onDelete={handleDeleteHome}
-            />
-          ))}
+          {[...homes]
+            .sort((a, b) => {
+              // Put default home first, keep rest in original order
+              if (a.id === defaultHomeId) return -1;
+              if (b.id === defaultHomeId) return 1;
+              return 0;
+            })
+            .map(home => (
+              <HomeCard
+                key={home.id}
+                home={home as PartialHome}
+                isDefault={home.id === defaultHomeId}
+                onSetDefault={handleSetDefault}
+                onInvite={handleInviteMember}
+                onDelete={handleDeleteHome}
+              />
+            ))}
         </ScrollView>
       </View>
       {EmailModalComponent}

@@ -55,7 +55,13 @@ export const useItemSelector = ({
       case 'shoppingList':
         return shoppingListData?.shoppingLists ?? [];
       case 'pantry':
-        return pantryData?.pantries ?? [];
+        // Sort pantries by creation date, newest first
+        const pantries = pantryData?.pantries ?? [];
+        return [...pantries].sort((a, b) => {
+          const dateA = new Date(a.createdAt);
+          const dateB = new Date(b.createdAt);
+          return dateB.getTime() - dateA.getTime(); // Newest first
+        });
       case 'home':
         return homeData?.homes ?? [];
       case 'custom':
