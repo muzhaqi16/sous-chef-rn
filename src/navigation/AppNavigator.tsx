@@ -15,8 +15,12 @@ import {
   BarcodeStack,
   NotificationStack,
 } from './index';
-import {ProfilePhotoUploadScreen, NotFoundScreen, SplashScreen} from '#screens';
-import {ImageCropScreen} from '../screens/profile/ImageCropScreen';
+import {
+  ProfilePhotoUploadScreen,
+  NotFoundScreen,
+  SplashScreen,
+  ImageCropScreen,
+} from '#screens';
 import type {RootStackParamList} from './types';
 import {linkingConfig} from './linking';
 import {useTokenRefresh, useNavigationState, useAutoLogin} from '#hooks';

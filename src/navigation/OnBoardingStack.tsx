@@ -9,7 +9,6 @@ import {SelectPantryItems} from '../screens/onBoarding/SelectPantryItems';
 import {ProfilePictureUploadScreen} from '../screens/onBoarding/ProfilePictureUploadScreen';
 import {InviteMembersScreen} from '../screens/onBoarding/InviteMemberScreen';
 import {OnboardingCompleteScreen} from '../screens/onBoarding/OnboardingCompleteScreen';
-import {OnBoardingSteps} from '../store/slices/preferencesSlice';
 
 const Stack = createNativeStackNavigator<OnBoardingStackParamList>();
 

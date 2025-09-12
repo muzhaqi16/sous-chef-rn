@@ -46,6 +46,7 @@ interface AuthFlow {
 
 export interface AuthState {
   user: AuthUser | CompleteUser | null;
+  hasStoredCredentials: boolean | null;
   accessToken: string | null;
   refreshToken: string | null;
   pendingEmail?: string;
@@ -58,6 +59,7 @@ export interface AuthState {
 
   // Auth methods
   setAuthFromResponse: (response: AuthResponse) => void;
+  checkStoredCredentials: () => Promise<void>;
   completeAuthentication: (
     response: AuthResponse,
     rememberMe?: boolean,
@@ -106,6 +108,7 @@ const initialAuthState = {
   pendingEmail: undefined,
   pendingPassword: undefined,
   isAuthenticated: false,
+  hasStoredCredentials: null,
   authFlow: {
     isNewUser: false,
     requiresVerification: false,
@@ -360,7 +363,7 @@ export const createAuthSlice: StateCreator<
       }
 
       // 9. Navigate to auth
-      NavigationService.navigateToAuth();
+      NavigationService.push('AuthStack' as any);
 
       console.log('✅ AuthSlice: Logout completed successfully');
     } catch (error) {
@@ -376,12 +379,22 @@ export const createAuthSlice: StateCreator<
       }
 
       set(initialAuthState);
-      NavigationService.navigateToAuth();
+      NavigationService.push('AuthStack' as any);
     }
   },
 
   hasCompleteUserData: () => {
     const state = get();
     return !!(state.user && 'addresses' in state.user);
+  },
+  checkStoredCredentials: async () => {
+    try {
+      const {hasCredentials} = await import('#/storage/keychain');
+      const hasCreds = await hasCredentials();
+      set({hasStoredCredentials: hasCreds});
+    } catch (error) {
+      console.error('Error checking stored credentials:', error);
+      set({hasStoredCredentials: false});
+    }
   },
 });

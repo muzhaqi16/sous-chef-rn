@@ -35,6 +35,8 @@ export default function (api) {
             '#types': './src/types',
             '#config': './src/config',
             '#styles': './src/styles',
+            '#services': './src/services',
+            '#services/*': './src/services/*',
           },
         },
       ],
