@@ -2,7 +2,7 @@ import type {LinkingOptions} from '@react-navigation/native';
 import type {RootStackParamList} from './types';
 
 export const linkingConfig: LinkingOptions<RootStackParamList> = {
-  prefixes: ['souchef://', 'https://souschef.dev'],
+  prefixes: ['souchef://', 'https://app.souschef.dev'],
   config: {
     screens: {
       AuthStack: {

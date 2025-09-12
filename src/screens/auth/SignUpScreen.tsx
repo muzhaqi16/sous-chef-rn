@@ -9,6 +9,7 @@ import {SignUpNavProp} from '#navigation';
 import {useRegisterMutation, type RegisterInput} from '#generated';
 import {useStore} from '#store';
 import {useAuthErrorHandler, useSafeNavigation} from '#hooks';
+import {useNavigationFlow, useAuthFlow} from '#hooks';
 import {saveCredentials} from '#/storage/keychain';
 import {StyleSheet} from 'react-native-unistyles';
 import {RememberMeModal} from './login';
@@ -16,7 +17,10 @@ import {RememberMeModal} from './login';
 type SignUpValues = RegisterInput & {confirmPassword: string; name: string};
 
 export const SignUpScreen = () => {
-  const {navigation, canGoBack, goBack} = useSafeNavigation<SignUpNavProp>();
+  const {handleRegistration} = useAuthFlow();
+  const {navigateToLogin} = useNavigationFlow();
+
+  const {canGoBack, goBack} = useSafeNavigation<SignUpNavProp>();
   const {completeAuthentication, setUserNavigationState, setAuthFlow} =
     useStore();
 
@@ -46,22 +50,7 @@ export const SignUpScreen = () => {
 
     if (!pendingAuthResponse) return;
 
-    const {user, email, password} = pendingAuthResponse;
-
-    // Save user's remember me choice and mark as new user
-    if (user?.id) {
-      setUserNavigationState(user.id, {
-        rememberMeChoice: remember,
-        lastLoginTimestamp: Date.now(),
-      });
-
-      // Mark as new user in auth flow
-      setAuthFlow({
-        isNewUser: true,
-        requiresVerification: !user.emailVerified,
-        loginMethod: 'email',
-      });
-    }
+    const {email, password} = pendingAuthResponse;
 
     // Save credentials if user chose to remember
     if (remember && email && password) {
@@ -72,8 +61,8 @@ export const SignUpScreen = () => {
       }
     }
 
-    // Complete authentication flow
-    await completeAuthentication(pendingAuthResponse, remember);
+    handleRegistration(pendingAuthResponse, remember);
+
     setPendingAuthResponse(null);
   };
 
@@ -127,12 +116,12 @@ export const SignUpScreen = () => {
         control={form.control}
         errors={form.formState.errors}
         linkText="Already have an account?"
-        onLinkPress={() => navigation.navigate('Login')}
+        onLinkPress={() => navigateToLogin()}
         submitText={isRegistering ? 'Creating account…' : 'Sign Up'}
         onSubmit={form.handleSubmit(onSubmit)}
         footerText="Already have an account?"
         footerLinkText="Sign In"
-        onFooterLinkPress={() => navigation.navigate('Login')}
+        onFooterLinkPress={() => navigateToLogin()}
         isLoading={isRegistering}
       />
 

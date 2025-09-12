@@ -2,12 +2,9 @@ import {StyleSheet} from 'react-native-unistyles';
 
 export default StyleSheet.create((theme, rt) => ({
   container: {
-    marginBottom: {
-      xs: theme.spacing.sm,
-      md: theme.spacing.md,
-    },
+    gap: theme.spacing.xs,
   },
-  
+
   label: {
     fontSize: {
       xs: theme.fonts.size.sm,
@@ -20,16 +17,16 @@ export default StyleSheet.create((theme, rt) => ({
       md: theme.spacing.sm,
     },
   },
-  
+
   // Dynamic function for input container with focus and error states
   inputContainer: (isFocused: boolean, hasError: boolean) => ({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: hasError 
-      ? theme.colors.error 
-      : isFocused 
-        ? theme.colors.primary 
+    borderColor: hasError
+      ? theme.colors.error
+      : isFocused
+        ? theme.colors.primary
         : theme.colors.border,
     borderRadius: theme.radii.md,
     backgroundColor: theme.colors.inputBackground,
@@ -42,14 +39,14 @@ export default StyleSheet.create((theme, rt) => ({
       sm: 48,
       md: 52,
     },
-    
+
     // Subtle animation effect through opacity
     opacity: isFocused ? 1 : 0.95,
-    
+
     // Enhanced shadow when focused
     ...(isFocused ? theme.shadows.sm : {}),
   }),
-  
+
   input: {
     flex: 1,
     fontSize: {
@@ -66,7 +63,7 @@ export default StyleSheet.create((theme, rt) => ({
       md: theme.fonts.size.md * 1.4,
     },
   },
-  
+
   iconWrapper: {
     marginLeft: {
       xs: theme.spacing.sm,
@@ -75,7 +72,7 @@ export default StyleSheet.create((theme, rt) => ({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  
+
   // Dynamic function for error text with animation state
   errorText: (hasError: boolean) => ({
     fontSize: {

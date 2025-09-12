@@ -3,6 +3,7 @@ import {View, Text, TouchableOpacity, Image} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
 import {useNavigation} from '@react-navigation/native';
 import {useProfileData} from '#/hooks';
+import {Icon} from '#utils';
 
 export const UserHeader: React.FC = () => {
   const navigation = useNavigation();
@@ -10,7 +11,12 @@ export const UserHeader: React.FC = () => {
   return (
     <View style={styles.header}>
       <Text style={styles.headerTitle}>
-        Hello <Text style={{fontWeight: 'bold'}}>Tani</Text>
+        Hello{' '}
+        <Text style={{fontWeight: 'bold'}}>
+          {profile?.displayName
+            ? profile.displayName.split(' ')[0]
+            : profile?.firstName || 'User'}
+        </Text>
       </Text>
 
       <View style={styles.headerActions}>
@@ -21,13 +27,22 @@ export const UserHeader: React.FC = () => {
             });
           }}>
           <View style={styles.avatar}>
-            <Image
-              alt=""
-              source={{
-                uri: profile?.avatar || 'https://via.placeholder.com/150',
-              }}
-              style={styles.avatarImg}
-            />
+            {profile?.avatar ? (
+              <Image
+                alt=""
+                source={{uri: profile.avatar}}
+                style={styles.avatarImg}
+              />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <Icon
+                  library="Ionicons"
+                  name="person"
+                  size={24}
+                  color={styles.avatarIcon.color}
+                />
+              </View>
+            )}
 
             <View style={styles.avatarNotification} />
           </View>
@@ -73,6 +88,19 @@ const styles = StyleSheet.create(theme => ({
     width: 48,
     height: 48,
     borderRadius: 9999,
+  },
+  avatarPlaceholder: {
+    width: 48,
+    height: 48,
+    borderRadius: 9999,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarIcon: {
+    color: theme.colors.textSecondary,
   },
   avatarNotification: {
     position: 'absolute',

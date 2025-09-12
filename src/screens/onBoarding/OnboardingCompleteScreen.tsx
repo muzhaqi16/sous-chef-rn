@@ -1,18 +1,17 @@
 import React, {useState} from 'react';
 import {Text, View, ActivityIndicator} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
-import {useNavigation, CommonActions} from '@react-navigation/native';
 import {OnBoardingWrapper} from '#components/templates';
 import {Button} from '#components';
-import {OnboardingCompleteNavProp} from '#navigation/types';
 import {useStore} from '#store';
-import {OnBoardingSteps} from '#store/slices/preferencesSlice';
 import {useUpdateUserMutation} from '#generated';
+import {useNavigationFlow, useOnboardingFlow} from '#hooks';
 
 export const OnboardingCompleteScreen = () => {
-  const navigation = useNavigation<OnboardingCompleteNavProp>();
+  const {completeOnboarding} = useOnboardingFlow();
+  const {navigateToHome} = useNavigationFlow();
 
-  const {setOnBoardingStep, user, updateUser} = useStore(); // Add setUser
+  const {user, updateUser, setUserNavigationState} = useStore();
   const [isCompleting, setIsCompleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,17 +21,8 @@ export const OnboardingCompleteScreen = () => {
       if (data?.updateUser) {
         updateUser(data.updateUser);
       }
-
-      // Mark onboarding as fully complete in store
-      setOnBoardingStep(OnBoardingSteps.complete);
-
-      // Navigate to home and clear the navigation stack
-      navigation.dispatch(
-        CommonActions.reset({
-          index: 0,
-          routes: [{name: 'HomeStack'}],
-        }),
-      );
+      // Reset onboarding step in store
+      navigateToHome();
 
       setIsCompleting(false);
     },
@@ -53,16 +43,26 @@ export const OnboardingCompleteScreen = () => {
     setError(null);
 
     try {
+      // Update user in database
       await updateUserMutation({
         variables: {
           id: user.id,
-          input: {
-            onBoarded: true,
-          },
+          input: {onBoarded: true},
         },
       });
+
+      // Mark onboarding as complete
+      if (completeOnboarding()) {
+        // Track completion
+        setUserNavigationState(user.id, {
+          hasCompletedOnboarding: true,
+          onboardingCompletedAt: Date.now(),
+        });
+
+        // Navigate to home
+        navigateToHome();
+      }
     } catch (err) {
-      // Error handling is done in onError callback
       console.error('Error in handleComplete:', err);
     }
   };

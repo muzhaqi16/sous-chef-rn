@@ -14,7 +14,6 @@ class NavigationService {
     
     // Execute any pending navigation when navigator becomes ready
     if (ready && this.pendingNavigation) {
-      console.log('Navigator ready, executing pending navigation');
       const pending = this.pendingNavigation;
       this.pendingNavigation = null;
       pending();
@@ -104,7 +103,6 @@ class NavigationService {
 
   private reset(routes: any[]) {
     if (!this.isReady || !this.navigator) {
-      console.warn('Navigator not ready, queueing navigation');
       // Store the pending navigation instead of infinite setTimeout loop
       this.pendingNavigation = () => this.reset(routes);
       return;

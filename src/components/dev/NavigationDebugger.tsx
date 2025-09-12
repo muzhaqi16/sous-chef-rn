@@ -6,7 +6,8 @@ import {
   ScrollView,
   StyleSheet,
 } from 'react-native';
-import {useNavigationState, NavigationState} from '#hooks';
+import {useNavigationState} from '#hooks';
+import {useStore} from '#store';
 
 interface NavigationDebuggerProps {
   visible?: boolean;
@@ -17,26 +18,22 @@ export const NavigationDebugger: React.FC<NavigationDebuggerProps> = ({
 }) => {
   const {
     navigationState,
-    canTransitionTo,
-    transitionTo,
-    forceTransition,
-    getTransitionHistory,
-    getStateMachineInfo,
-    computedState,
+    targetRoute,
+    isReady,
+    authStackInitialRoute,
+    onboardingInitialRoute,
+    hasStoredCredentials,
   } = useNavigationState();
+
+  const {user, isHydrated, onBoardingStep, rememberMe, getUserNavigationState} =
+    useStore();
 
   const [expanded, setExpanded] = useState(false);
 
   if (!visible && !__DEV__) return null;
 
-  const stateMachineInfo = getStateMachineInfo();
-  const transitionHistory = getTransitionHistory();
-
-  const handleForceTransition = (newState: NavigationState) => {
-    forceTransition(newState, 'Developer Tools');
-  };
-
-  const isStateComputed = navigationState === computedState;
+  // Get user navigation state if user exists
+  const userNavState = user?.id ? getUserNavigationState(user.id) : null;
 
   return (
     <View style={styles.container}>
@@ -44,7 +41,7 @@ export const NavigationDebugger: React.FC<NavigationDebuggerProps> = ({
         style={styles.header}
         onPress={() => setExpanded(!expanded)}>
         <Text style={styles.headerText}>
-          🔧 Navigation State Machine {expanded ? '▼' : '▶'}
+          🔧 Navigation Debug {expanded ? '▼' : '▶'}
         </Text>
         <View style={styles.badge}>
           <Text style={styles.badgeText}>{navigationState}</Text>
@@ -55,76 +52,192 @@ export const NavigationDebugger: React.FC<NavigationDebuggerProps> = ({
         <ScrollView style={styles.content} nestedScrollEnabled>
           {/* Current State Info */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Current State</Text>
+            <Text style={styles.sectionTitle}>Navigation State</Text>
             <Text style={styles.stateText}>
-              Navigation:{' '}
-              <Text style={styles.highlight}>{navigationState}</Text>
+              State: <Text style={styles.highlight}>{navigationState}</Text>
             </Text>
             <Text style={styles.stateText}>
-              Computed: <Text style={styles.highlight}>{computedState}</Text>
+              Target Route: <Text style={styles.highlight}>{targetRoute}</Text>
             </Text>
-            {!isStateComputed && (
-              <Text style={styles.warningText}>
-                ⚠️ State mismatch detected!
+            <Text style={styles.stateText}>
+              Ready:{' '}
+              <Text style={styles.highlight}>{isReady ? 'Yes' : 'No'}</Text>
+            </Text>
+          </View>
+
+          {/* App State */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>App State</Text>
+            <Text style={styles.stateText}>
+              Hydrated:{' '}
+              <Text style={styles.highlight}>{isHydrated ? 'Yes' : 'No'}</Text>
+            </Text>
+            <Text style={styles.stateText}>
+              Has Credentials:{' '}
+              <Text style={styles.highlight}>
+                {hasStoredCredentials === null
+                  ? 'Checking...'
+                  : hasStoredCredentials
+                    ? 'Yes'
+                    : 'No'}
               </Text>
-            )}
-          </View>
-
-          {/* Possible Transitions */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Valid Transitions</Text>
-            <View style={styles.transitionGrid}>
-              {stateMachineInfo.possibleTransitions.map(state => (
-                <TouchableOpacity
-                  key={state}
-                  style={[
-                    styles.transitionButton,
-                    canTransitionTo(state) && styles.validTransition,
-                  ]}
-                  onPress={() => handleForceTransition(state)}>
-                  <Text style={styles.transitionText}>{state}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          {/* Transition History */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              Transition History ({transitionHistory.length})
             </Text>
-            {transitionHistory.slice(0, 5).map((transition, index) => (
-              <View key={index} style={styles.historyItem}>
-                <Text style={styles.historyText}>
-                  {transition.from} → {transition.to}
+            <Text style={styles.stateText}>
+              Remember Me:{' '}
+              <Text style={styles.highlight}>
+                {rememberMe === undefined
+                  ? 'Not Set'
+                  : rememberMe
+                    ? 'Yes'
+                    : 'No'}
+              </Text>
+            </Text>
+          </View>
+
+          {/* User Info */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>User Info</Text>
+            {user ? (
+              <>
+                <Text style={styles.stateText}>
+                  ID:{' '}
+                  <Text style={styles.highlight}>{user.id.slice(0, 8)}...</Text>
                 </Text>
-                <Text style={styles.historyEvent}>{transition.event}</Text>
-                <Text style={styles.historyTime}>
-                  {new Date(transition.timestamp).toLocaleTimeString()}
+                <Text style={styles.stateText}>
+                  Email: <Text style={styles.highlight}>{user.email}</Text>
                 </Text>
-              </View>
-            ))}
-            {transitionHistory.length === 0 && (
-              <Text style={styles.emptyText}>No transitions yet</Text>
+                <Text style={styles.stateText}>
+                  Verified:{' '}
+                  <Text style={styles.highlight}>
+                    {user.emailVerified ? 'Yes' : 'No'}
+                  </Text>
+                </Text>
+                <Text style={styles.stateText}>
+                  Onboarded:{' '}
+                  <Text style={styles.highlight}>
+                    {user.onBoarded ? 'Yes' : 'No'}
+                  </Text>
+                </Text>
+              </>
+            ) : (
+              <Text style={styles.emptyText}>No user logged in</Text>
             )}
           </View>
+
+          {/* Onboarding State */}
+          {!user?.onBoarded && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Onboarding</Text>
+              <Text style={styles.stateText}>
+                Current Step:{' '}
+                <Text style={styles.highlight}>
+                  {onBoardingStep || 'Not Started'}
+                </Text>
+              </Text>
+              <Text style={styles.stateText}>
+                Initial Route:{' '}
+                <Text style={styles.highlight}>{onboardingInitialRoute}</Text>
+              </Text>
+              {userNavState?.onboardingProgress && (
+                <Text style={styles.stateText}>
+                  Saved Progress:{' '}
+                  <Text style={styles.highlight}>
+                    {userNavState.onboardingProgress}
+                  </Text>
+                </Text>
+              )}
+              {userNavState?.skippedOnboardingSteps && (
+                <Text style={styles.stateText}>
+                  Skipped:{' '}
+                  <Text style={styles.highlight}>
+                    {userNavState.skippedOnboardingSteps.join(', ')}
+                  </Text>
+                </Text>
+              )}
+            </View>
+          )}
+
+          {/* Auth Stack State */}
+          {navigationState === 'UNAUTHENTICATED' && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Auth Stack</Text>
+              <Text style={styles.stateText}>
+                Initial Route:{' '}
+                <Text style={styles.highlight}>{authStackInitialRoute}</Text>
+              </Text>
+            </View>
+          )}
+
+          {/* User Navigation State */}
+          {userNavState && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>User Navigation State</Text>
+              {userNavState.rememberMeChoice !== undefined && (
+                <Text style={styles.stateText}>
+                  Remember Choice:{' '}
+                  <Text style={styles.highlight}>
+                    {userNavState.rememberMeChoice ? 'Yes' : 'No'}
+                  </Text>
+                </Text>
+              )}
+              {userNavState.lastLoginTimestamp && (
+                <Text style={styles.stateText}>
+                  Last Login:{' '}
+                  <Text style={styles.highlight}>
+                    {new Date(
+                      userNavState.lastLoginTimestamp,
+                    ).toLocaleTimeString()}
+                  </Text>
+                </Text>
+              )}
+              {userNavState.onboardingStartedAt && (
+                <Text style={styles.stateText}>
+                  Onboarding Started:{' '}
+                  <Text style={styles.highlight}>
+                    {new Date(
+                      userNavState.onboardingStartedAt,
+                    ).toLocaleTimeString()}
+                  </Text>
+                </Text>
+              )}
+              {userNavState.isNewUser !== undefined && (
+                <Text style={styles.stateText}>
+                  New User:{' '}
+                  <Text style={styles.highlight}>
+                    {userNavState.isNewUser ? 'Yes' : 'No'}
+                  </Text>
+                </Text>
+              )}
+            </View>
+          )}
 
           {/* Debug Actions */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Debug Actions</Text>
             <TouchableOpacity
               style={styles.debugButton}
-              onPress={() =>
-                console.log('Navigation State Machine Info:', stateMachineInfo)
-              }>
-              <Text style={styles.debugButtonText}>Log State Machine Info</Text>
+              onPress={() => {
+                console.log('Navigation State:', {
+                  navigationState,
+                  targetRoute,
+                  isReady,
+                  authStackInitialRoute,
+                  onboardingInitialRoute,
+                  hasStoredCredentials,
+                });
+              }}>
+              <Text style={styles.debugButtonText}>Log Navigation State</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.debugButton}
-              onPress={() =>
-                console.log('Transition History:', transitionHistory)
-              }>
-              <Text style={styles.debugButtonText}>Log Transition History</Text>
+              onPress={() => {
+                console.log('User State:', {
+                  user,
+                  userNavState,
+                  onBoardingStep,
+                });
+              }}>
+              <Text style={styles.debugButtonText}>Log User State</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -138,10 +251,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 50,
     right: 10,
-    backgroundColor: 'rgba(0,0,0,0.8)',
+    backgroundColor: 'rgba(0,0,0,0.9)',
     borderRadius: 8,
     minWidth: 200,
-    maxWidth: 300,
+    maxWidth: 320,
     zIndex: 9999,
   },
   header: {
@@ -179,6 +292,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     marginBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#444',
+    paddingBottom: 4,
   },
   stateText: {
     color: '#ccc',
@@ -188,50 +304,6 @@ const styles = StyleSheet.create({
   highlight: {
     color: '#4CAF50',
     fontWeight: 'bold',
-  },
-  warningText: {
-    color: '#FF9800',
-    fontSize: 12,
-    fontStyle: 'italic',
-  },
-  transitionGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  transitionButton: {
-    backgroundColor: '#333',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    minWidth: 60,
-  },
-  validTransition: {
-    backgroundColor: '#4CAF50',
-  },
-  transitionText: {
-    color: 'white',
-    fontSize: 10,
-    textAlign: 'center',
-  },
-  historyItem: {
-    backgroundColor: '#222',
-    padding: 8,
-    borderRadius: 4,
-    marginBottom: 4,
-  },
-  historyText: {
-    color: 'white',
-    fontSize: 11,
-    fontWeight: 'bold',
-  },
-  historyEvent: {
-    color: '#81C784',
-    fontSize: 10,
-  },
-  historyTime: {
-    color: '#999',
-    fontSize: 9,
   },
   emptyText: {
     color: '#666',

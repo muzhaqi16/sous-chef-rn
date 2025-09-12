@@ -1,5 +1,5 @@
 import {useMemo, useEffect, useCallback, useRef} from 'react';
-import {Platform, Alert} from 'react-native';
+import {Alert} from 'react-native';
 import {
   useGetHomesQuery,
   useCreateHomeMutation,
@@ -31,11 +31,7 @@ export function useHomeManagement() {
     fetchPolicy: 'cache-and-network',
   });
 
-  const [setDefaultHomeMutation] = useSetDefaultHomeMutation({
-    onError: error => {
-      Alert.alert('Error', 'Failed to set default home');
-    },
-  });
+  const [setDefaultHomeMutation] = useSetDefaultHomeMutation();
   const homes = data?.homes || [];
   const remoteDefaultHomeId = defaultHomeData?.getDefaultHome?.id;
 
@@ -50,6 +46,14 @@ export function useHomeManagement() {
   useEffect(() => {
     const syncLocalToRemote = async () => {
       if (selectedHomeId && !remoteDefaultHomeId && !loadingDefaultHome) {
+        // Verify the selectedHomeId still exists in the homes list
+        const homeExists = homes.some(home => home.id === selectedHomeId);
+        if (!homeExists) {
+          console.warn('Selected home no longer exists, clearing selection');
+          setSelectedHomeId(null);
+          return;
+        }
+
         try {
           await setDefaultHomeMutation({
             variables: {homeId: selectedHomeId},
@@ -57,6 +61,7 @@ export function useHomeManagement() {
           refetchDefaultHome();
         } catch (error) {
           console.error('Failed to sync local default to remote:', error);
+          // Don't show alert for background sync failures
         }
       }
     };
@@ -68,6 +73,7 @@ export function useHomeManagement() {
     loadingDefaultHome,
     setDefaultHomeMutation,
     refetchDefaultHome,
+    homes,
   ]);
 
   // Search functionality for homes
@@ -98,15 +104,21 @@ export function useHomeManagement() {
         // If this is the first home, set it as default
         if (!existingHomes?.homes?.length) {
           setSelectedHomeId(data.createHome.id);
+          // Set as default home, but don't block the UI if this fails
           setDefaultHomeMutation({
             variables: {homeId: data.createHome.id},
+          }).catch(error => {
+            console.warn('Failed to set newly created home as default:', error);
+            // Don't show alert here since the home was created successfully
           });
         }
 
         // If a default pantry was created, set it as selected
         const newHome = data.createHome;
         if (newHome.pantries && newHome.pantries.length > 0) {
-          const defaultPantry = newHome.pantries.find(pantry => pantry.isDefault);
+          const defaultPantry = newHome.pantries.find(
+            pantry => pantry.isDefault,
+          );
           if (defaultPantry) {
             console.log('Setting default pantry:', defaultPantry.id);
             setSelectedPantryId(defaultPantry.id);
@@ -196,7 +208,10 @@ export function useHomeManagement() {
   const [inviteUserMutation, {loading: inviting}] = useInviteToHomeMutation();
 
   // Helper functions
-  const createHome = async (name: string, createDefaultPantry: boolean = true) => {
+  const createHome = async (
+    name: string,
+    createDefaultPantry: boolean = true,
+  ) => {
     if (!name.trim()) {
       Alert.alert('Error', 'Please enter a home name');
       return false;
@@ -208,22 +223,27 @@ export function useHomeManagement() {
           input: {
             name: name.trim(),
             createDefaultPantry,
-          }
+          },
         },
       });
 
       if (result.data?.createHome) {
         const newHome = result.data.createHome;
-        
+
         // If a default pantry was created, set it as selected in the store
         if (newHome.pantries && newHome.pantries.length > 0) {
-          const defaultPantry = newHome.pantries.find(pantry => pantry.isDefault);
+          const defaultPantry = newHome.pantries.find(
+            pantry => pantry.isDefault,
+          );
           if (defaultPantry) {
-            console.log('Setting default pantry after home creation:', defaultPantry.id);
+            console.log(
+              'Setting default pantry after home creation:',
+              defaultPantry.id,
+            );
             setSelectedPantryId(defaultPantry.id);
           }
         }
-        
+
         return newHome;
       }
       return false;
@@ -294,6 +314,19 @@ export function useHomeManagement() {
   };
 
   const setDefaultHome = async (homeId: string) => {
+    // Validate homeId exists
+    if (!homeId) {
+      Alert.alert('Error', 'Invalid home ID');
+      return false;
+    }
+
+    // Check if home exists
+    const homeExists = homes.some(home => home.id === homeId);
+    if (!homeExists) {
+      Alert.alert('Error', 'Home not found');
+      return false;
+    }
+
     try {
       // Update local state immediately for responsive UI
       setSelectedHomeId(homeId);

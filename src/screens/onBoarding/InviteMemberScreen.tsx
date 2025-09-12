@@ -20,6 +20,7 @@ import {
 } from '#generated';
 import {useStore} from '#store';
 import {OnBoardingSteps} from '#store/slices/preferencesSlice';
+import {useOnboardingFlow, useNavigationFlow} from '#hooks';
 
 type InviteEntry = {
   id: string;
@@ -28,10 +29,16 @@ type InviteEntry = {
 };
 
 export const InviteMembersScreen = () => {
-  const navigation = useNavigation<InviteMembersNavProp>();
+  const {progressToNextStep, skipToStep} = useOnboardingFlow();
+  const {navigateWithinStack, goBack} = useNavigationFlow();
 
-  const {selectedHomeId, selectedShoppingListId, setOnBoardingStep, user} =
-    useStore();
+  const {
+    selectedHomeId,
+    selectedShoppingListId,
+    getUserNavigationState,
+    setUserNavigationState,
+    user,
+  } = useStore();
 
   const [invites, setInvites] = useState<InviteEntry[]>([]);
   const [currentEmail, setCurrentEmail] = useState('');
@@ -105,12 +112,24 @@ export const InviteMembersScreen = () => {
   };
 
   const handleSkip = () => {
+    if (user?.id) {
+      const userState = getUserNavigationState(user.id);
+      const skippedSteps = userState?.skippedOnboardingSteps || [];
+      setUserNavigationState(user.id, {
+        skippedOnboardingSteps: [
+          ...skippedSteps,
+          OnBoardingSteps.inviteMembers,
+        ],
+      });
+    }
     moveToCompletion();
   };
 
   const moveToCompletion = () => {
-    setOnBoardingStep(OnBoardingSteps.inviteMembers);
-    navigation.replace('OnboardingComplete');
+    const nextScreen = progressToNextStep();
+    if (nextScreen) {
+      navigateWithinStack(nextScreen);
+    }
   };
 
   const sendInvites = async () => {
@@ -195,7 +214,6 @@ export const InviteMembersScreen = () => {
       subtitle="Share your home and shopping lists with others (optional)"
       step={5}
       totalSteps={6}
-      onBack={() => navigation.goBack()}
       onSkip={handleSkip}>
       <View style={styles.container}>
         <View style={styles.inputContainer}>

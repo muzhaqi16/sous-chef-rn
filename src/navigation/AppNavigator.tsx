@@ -1,4 +1,4 @@
-import React, {useRef, useEffect, useState, useCallback} from 'react';
+import React, {useRef, useEffect, useState} from 'react';
 import {
   NavigationContainer,
   NavigationContainerRef,
@@ -17,15 +17,9 @@ import {
 } from './index';
 import {ProfilePhotoUploadScreen, NotFoundScreen, SplashScreen} from '#screens';
 import {ImageCropScreen} from '../screens/profile/ImageCropScreen';
-import {NavigationDebugger} from '../components/dev/NavigationDebugger';
 import type {RootStackParamList} from './types';
 import {linkingConfig} from './linking';
-import {
-  useTokenRefresh,
-  useNavigationState,
-  useAutoLogin,
-  useNavigationGuards,
-} from '#hooks';
+import {useTokenRefresh, useNavigationState, useAutoLogin} from '#hooks';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -33,93 +27,32 @@ export default function AppNavigator() {
   const navigationRef =
     useRef<NavigationContainerRef<RootStackParamList>>(null);
   const {user} = useStore();
-  const {
-    navigationState,
-    isReady,
-    saveUserProgress,
-    hasStoredCredentials,
-    getStateMachineInfo,
-  } = useNavigationState();
+  const {targetRoute, isReady, saveUserProgress, hasStoredCredentials} =
+    useNavigationState();
 
-  // Auto-login hook for automatic authentication
   const {isAutoLoginAttempting, autoLoginCompleted} = useAutoLogin();
 
-  // Simple route determination without React Navigation hooks
-  const getInitialRoute = useCallback(
-    (
-      currentUser: any,
-      hasStoredCredentials?: boolean | null,
-    ): keyof RootStackParamList => {
-      // No user - go to auth
-      if (!currentUser) {
-        return 'AuthStack';
-      }
-
-      // User exists - check verification status
-      if (!currentUser.emailVerified) {
-        return 'AuthStack';
-      }
-
-      // User verified - check onboarding status
-      if (!currentUser.onBoarded) {
-        return 'OnBoardingStack';
-      }
-
-      // Fully onboarded user
-      return 'HomeStack';
-    },
-    [],
-  );
-
-  // Navigation state persistence
-  const [initialNavigationState, setInitialNavigationState] = useState<any>();
-  const [isStateRestored, setIsStateRestored] = useState(false);
-
-  // Minimum splash screen duration to prevent rapid transitions
+  const [isNavigationReady, setIsNavigationReady] = useState(false);
   const [minSplashComplete, setMinSplashComplete] = useState(false);
-
-  // Restore navigation state on app start
-  useEffect(() => {
-    const restoreNavigationState = async () => {
-      try {
-        const savedStateString = storage.getString('navigation_state');
-        if (savedStateString && user) {
-          // Only restore state if user is already authenticated
-          const savedState = JSON.parse(savedStateString);
-          setInitialNavigationState(savedState);
-        }
-      } catch (error) {
-        console.warn('Failed to restore navigation state:', error);
-      } finally {
-        setIsStateRestored(true);
-      }
-    };
-
-    if (isReady) {
-      restoreNavigationState();
-    }
-  }, [isReady, user]);
 
   // Set up navigation service
   useEffect(() => {
-    if (navigationRef.current) {
+    if (navigationRef.current && isNavigationReady) {
       NavigationService.setNavigator(navigationRef.current);
+      NavigationService.setIsReady(true);
     }
-  }, []);
+  }, [isNavigationReady]);
 
   // Minimum splash screen duration (1.5 seconds)
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setMinSplashComplete(true);
-    }, 1500);
-
+    const timer = setTimeout(() => setMinSplashComplete(true), 1500);
     return () => clearTimeout(timer);
   }, []);
 
-  // Call token refresh at the app navigator level
+  // Token refresh
   useTokenRefresh();
 
-  // Track navigation state changes for user
+  // Track navigation state changes for authenticated users
   useEffect(() => {
     if (!navigationRef.current || !user?.id) return;
 
@@ -136,68 +69,68 @@ export default function AppNavigator() {
     return unsubscribe;
   }, [user?.id, saveUserProgress]);
 
-  // Save navigation state on changes
-  const onNavigationStateChange = (state: any) => {
-    if (state && user) {
-      // Only save navigation state for authenticated users
-      try {
-        storage.set('navigation_state', JSON.stringify(state));
-      } catch (error) {
-        console.warn('Failed to save navigation state:', error);
-      }
+  // Navigate when target route changes and navigation is ready
+  useEffect(() => {
+    if (!isNavigationReady || !navigationRef.current) return;
+
+    const currentRoute = navigationRef.current.getCurrentRoute();
+
+    // Only navigate if we're not already on the target route
+    if (currentRoute?.name !== targetRoute) {
+      navigationRef.current.reset({
+        index: 0,
+        routes: [{name: targetRoute as keyof RootStackParamList}],
+      });
     }
-  };
+  }, [targetRoute, isNavigationReady]);
 
-  // Show splash screen until everything is ready AND minimum duration has passed
-  const shouldShowSplash =
-    !isReady || // This already includes credential check completion
-    !isStateRestored ||
-    isAutoLoginAttempting ||
+  // Simplified splash screen logic
+  const showSplash =
+    !isReady ||
     !minSplashComplete ||
-    (!autoLoginCompleted && !user); // Wait for auto-login to complete if no user
+    isAutoLoginAttempting ||
+    (!user && !autoLoginCompleted);
 
-  if (shouldShowSplash) {
+  if (showSplash) {
     return <SplashScreen />;
   }
 
   return (
-    <>
-      <NavigationContainer
-        ref={navigationRef}
-        initialState={initialNavigationState}
-        onStateChange={onNavigationStateChange}
-        linking={linkingConfig}
-        onReady={() => {
-          NavigationService.setIsReady(true);
-        }}>
-        <Stack.Navigator
-          initialRouteName={getInitialRoute(user, hasStoredCredentials)}
-          screenOptions={{headerShown: false}}>
-          <Stack.Screen name="AuthStack">
-            {() => <AuthStack hasStoredCredentials={hasStoredCredentials} />}
-          </Stack.Screen>
-          <Stack.Screen name="OnBoardingStack" component={OnBoardingStack} />
-          <Stack.Screen name="HomeStack" component={HomeTab} />
-          <Stack.Screen
-            name="HomeManagementStack"
-            component={HomeManagementStack}
-          />
-          <Stack.Screen name="BarcodeStack" component={BarcodeStack} />
-          <Stack.Screen
-            name="NotificationStack"
-            component={NotificationStack}
-          />
-          <Stack.Screen
-            name="ProfilePhotoUpload"
-            component={ProfilePhotoUploadScreen}
-          />
-          <Stack.Screen name="ImageCrop" component={ImageCropScreen} />
-          <Stack.Screen name="NotFound" component={NotFoundScreen} />
-        </Stack.Navigator>
-      </NavigationContainer>
-
-      {/* Development Navigation Debugger - rendered outside NavigationContainer */}
-      {/* {__DEV__ && <NavigationDebugger visible={false} />} */}
-    </>
+    <NavigationContainer
+      ref={navigationRef}
+      linking={linkingConfig}
+      onReady={() => setIsNavigationReady(true)}
+      onStateChange={state => {
+        // Save navigation state for authenticated users only
+        if (state && user) {
+          try {
+            storage.set('navigation_state', JSON.stringify(state));
+          } catch (error) {
+            console.warn('Failed to save navigation state:', error);
+          }
+        }
+      }}>
+      <Stack.Navigator
+        initialRouteName={targetRoute as keyof RootStackParamList}
+        screenOptions={{headerShown: false}}>
+        <Stack.Screen name="AuthStack">
+          {() => <AuthStack hasStoredCredentials={hasStoredCredentials} />}
+        </Stack.Screen>
+        <Stack.Screen name="OnBoardingStack" component={OnBoardingStack} />
+        <Stack.Screen name="HomeStack" component={HomeTab} />
+        <Stack.Screen
+          name="HomeManagementStack"
+          component={HomeManagementStack}
+        />
+        <Stack.Screen name="BarcodeStack" component={BarcodeStack} />
+        <Stack.Screen name="NotificationStack" component={NotificationStack} />
+        <Stack.Screen
+          name="ProfilePhotoUpload"
+          component={ProfilePhotoUploadScreen}
+        />
+        <Stack.Screen name="ImageCrop" component={ImageCropScreen} />
+        <Stack.Screen name="NotFound" component={NotFoundScreen} />
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 }

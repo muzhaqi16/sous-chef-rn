@@ -23,7 +23,7 @@ import {
 } from 'react-native-image-picker';
 import {request, PERMISSIONS, RESULTS} from 'react-native-permissions';
 import {validateImageFile, ImageValidationError} from '#utils/imageValidation';
-import {useImageUpload} from '#hooks';
+import {useImageUpload, useNavigationFlow, useOnboardingFlow} from '#hooks';
 import {ImageFile} from '#components/molecules/ImagePicker';
 import {storage} from '#/storage/mmkv';
 import {useStore} from '#store';
@@ -45,7 +45,9 @@ export const ProfilePictureUploadScreen = () => {
   const navigation = useNavigation<ProfilePictureUploadNavProp>();
   const {theme} = useUnistyles();
   const {uploadProfileImage, updateProfileAvatarUrl} = useImageUpload();
-  const {setOnBoardingStep, user} = useStore();
+  const {progressToNextStep} = useOnboardingFlow();
+  const {navigateWithinStack} = useNavigationFlow();
+  const {user, getUserNavigationState, setUserNavigationState} = useStore();
 
   const [selectedImage, setSelectedImage] = useState<ImageFile | null>(null);
   const [croppedImage, setCroppedImage] = useState<ImageFile | null>(null);
@@ -175,12 +177,23 @@ export const ProfilePictureUploadScreen = () => {
   };
 
   const handleSkip = () => {
+    // Track skipped step
+    if (user?.id) {
+      const userState = getUserNavigationState(user.id);
+      const skippedSteps = userState?.skippedOnboardingSteps || [];
+      setUserNavigationState(user.id, {
+        skippedOnboardingSteps: [...skippedSteps, 'profilePictureUpload'],
+      });
+    }
+
     moveToNextStep();
   };
 
   const moveToNextStep = () => {
-    setOnBoardingStep(OnBoardingSteps.profilePictureUpload);
-    navigation.replace('InviteMembers');
+    const nextScreen = progressToNextStep();
+    if (nextScreen) {
+      navigateWithinStack(nextScreen);
+    }
   };
 
   const handleBack = () => {

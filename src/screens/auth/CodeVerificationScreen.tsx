@@ -1,6 +1,6 @@
 import React, {useEffect} from 'react';
 import {useForm} from 'react-hook-form';
-import {StyleSheet, Text} from 'react-native';
+import {StyleSheet, Text, View} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {AuthWrapper, AuthFormTemplate, CodeInputAdapter} from '#components';
 import {useStore} from '#store';
@@ -8,8 +8,7 @@ import {
   useVerifyEmailMutation,
   useResendVerificationEmailMutation,
 } from '#generated';
-import {useAuth} from '#/hooks';
-import NavigationService from '#/services/NavigationService';
+import {useAuth, useNavigationFlow} from '#/hooks';
 
 type CodeVerificationValues = {
   code: string;
@@ -18,6 +17,7 @@ type CodeVerificationValues = {
 export function CodeVerificationScreen() {
   const {setEmailVerified, setUserNavigationState} = useStore();
   const {user} = useAuth();
+  const {navigateToHome, navigateToVerification} = useNavigationFlow();
   const [verifyEmail] = useVerifyEmailMutation();
   const [resendVerificationEmail] = useResendVerificationEmailMutation();
   const navigation = useNavigation();
@@ -40,14 +40,10 @@ export function CodeVerificationScreen() {
         });
       }
 
-      // Small delay to ensure state has fully updated
-      const timeoutId = setTimeout(() => {
-        NavigationService.navigatePostAuth(user);
-      }, 100);
-
-      return () => clearTimeout(timeoutId);
+      // Use the proper navigation flow system
+      navigateToHome();
     }
-  }, [user?.emailVerified, user?.onBoarded, user?.id, setUserNavigationState]);
+  }, [user?.emailVerified, user?.id, setUserNavigationState, navigateToHome]);
 
   const onVerifyCode = async (data: CodeVerificationValues) => {
     const {code} = data;
@@ -99,6 +95,11 @@ export function CodeVerificationScreen() {
 
   // Don't render the screen if already verified
   if (user?.emailVerified) {
+    return null;
+  }
+
+  // Don't render if no user - should be redirected
+  if (!user) {
     return null;
   }
 

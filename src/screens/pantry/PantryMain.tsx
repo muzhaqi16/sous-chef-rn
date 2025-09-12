@@ -16,7 +16,6 @@ import {
   SearchBarAction,
   BottomSheetAction,
   HeaderAction,
-  EmptyState,
 } from '#components';
 import {ItemSelectorWithActions} from '#components/organisms/ItemSelectorWithActions';
 
@@ -71,11 +70,8 @@ export const PantryMain: React.FC = () => {
     removeItem,
     refetch,
     loading,
-    refreshing,
     hasLoadedCache,
     cacheInfo,
-    getExpiredItems,
-    getLowStockItems,
   } = usePantryManagement(pantry?.id);
 
   // Transform pantry items to list items format
@@ -198,16 +194,20 @@ export const PantryMain: React.FC = () => {
 
   if (!selectedHomeId) {
     return (
-      <EmptyState
-        icon="home"
-        title="No Home Selected"
-        description="You need to create or be a member of a home to manage pantry items."
-        action={{
-          label: 'Manage Homes',
-          onPress: () =>
-            navigation.getParent()?.navigate('HomeManagementStack', {
-              screen: 'HomeManagement',
-            }),
+      <ListTemplate
+        showHeader={true}
+        emptyState={{
+          icon: 'home',
+          title: 'No Home Selected',
+          description:
+            'You need to create or be a member of a home to manage pantry items.',
+          action: {
+            label: 'Manage Homes',
+            onPress: () =>
+              navigation.getParent()?.navigate('HomeManagementStack', {
+                screen: 'HomeManagement',
+              }),
+          },
         }}
       />
     );
@@ -241,9 +241,10 @@ export const PantryMain: React.FC = () => {
   }
 
   // Debug info for development
-  const debugSubtitle = __DEV__ && cacheInfo 
-    ? `${pantry?.name || 'Your Pantry'} • ${cacheInfo.itemCount} cached (${Math.round(cacheInfo.age / 1000)}s ago)`
-    : pantry?.name || 'Your Pantry';
+  const debugSubtitle =
+    __DEV__ && cacheInfo
+      ? `${pantry?.name || 'Your Pantry'} • ${cacheInfo.itemCount} cached (${Math.round(cacheInfo.age / 1000)}s ago)`
+      : pantry?.name || 'Your Pantry';
 
   return (
     <>

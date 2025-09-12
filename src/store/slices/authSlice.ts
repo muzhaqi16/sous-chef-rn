@@ -29,6 +29,11 @@ interface UserNavigationState {
   lastLoginTimestamp?: number;
   rememberMeChoice?: boolean;
   hasCompletedOnboarding?: boolean;
+  // Add these if you want to track more onboarding details
+  onboardingStartedAt?: number;
+  onboardingCompletedAt?: number;
+  skippedOnboardingSteps?: string[];
+  isNewUser?: boolean;
 }
 
 // Auth flow tracking

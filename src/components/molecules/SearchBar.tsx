@@ -1,4 +1,4 @@
-import React from 'react';
+import {useMemo, type FC} from 'react';
 import {View, StyleProp, ViewStyle, TextInputProps} from 'react-native';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {BaseInput, ActionButton} from '#components';
@@ -29,7 +29,7 @@ type SearchBarProps = Omit<TextInputProps, 'style'> & {
   onPressAdd?: () => void;
 };
 
-export const SearchBar: React.FC<SearchBarProps> = ({
+export const SearchBar: FC<SearchBarProps> = ({
   value,
   onChangeText,
   placeholder = 'Search…',
@@ -45,7 +45,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
 }) => {
   const {theme} = useUnistyles();
   // Handle legacy props by converting them to action arrays
-  const finalLeftActions = React.useMemo(() => {
+  const finalLeftActions = useMemo(() => {
     const actions = [...leftActions];
     if (onPressList && !leftActions.some(action => action.icon === 'list')) {
       actions.push({
@@ -58,7 +58,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     return actions;
   }, [leftActions, onPressList, theme.colors.primary]);
 
-  const finalRightActions = React.useMemo(() => {
+  const finalRightActions = useMemo(() => {
     const actions = [...rightActions];
     if (onPressAdd && !rightActions.some(action => action.icon === 'add')) {
       actions.push({

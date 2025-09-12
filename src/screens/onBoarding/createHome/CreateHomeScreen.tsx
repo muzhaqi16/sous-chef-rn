@@ -1,15 +1,16 @@
-// screens/onboarding/CreateHomeScreen.tsx
-import React, {useState, useEffect, useCallback} from 'react';
-import {Text, ActivityIndicator, View} from 'react-native';
+import React, {useState, useEffect, useCallback, useRef} from 'react';
 import {useForm} from 'react-hook-form';
 import {yupResolver} from '@hookform/resolvers/yup';
+import {View, Text} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
-import * as yup from 'yup';
 
 // Components
+import {FormContent, type FormValues} from './FormContent';
+import {LoadingView} from './LoadingView';
 import {OnBoardingWrapper} from '#components/templates';
-import {DynamicFormFields} from '#components/molecules/DynamicFormFields';
-import {BaseInput, Button} from '#components';
+import {SubmitButton} from './SubmitButton';
+import {ErrorMessage} from './ErrorMessage';
+import {Button} from '#components';
 
 // GraphQL
 import {
@@ -24,40 +25,39 @@ import {
 
 // Store & Navigation
 import {useStore} from '#store';
-import {OnBoardingSteps} from '#store/slices/preferencesSlice';
-import {useNavigationState, useNavigationFlow} from '#hooks';
+import {useOnboardingFlow, useNavigationFlow} from '#hooks';
 
 // Validation & Helpers
 import {getCreateHomeSchema} from '#/utils';
-import {
-  checkExistingResources,
-  createPantryForHome,
-  showPantryCreationError,
-  showSkipPantryWarning,
-} from './helpers';
-
-type FormValues = {
-  homeName: string;
-  pantryName: string;
-};
+import {createPantryForHome, showPantryCreationError} from './helpers';
 
 export const CreateHomeScreen = () => {
-  const {saveUserProgress} = useNavigationState();
-  const {handleOnboardingStep} = useNavigationFlow();
-
+  const {progressToNextStep} = useOnboardingFlow();
+  const {navigateWithinStack} = useNavigationFlow();
   const {
-    setSelectedHomeId,
-    setSelectedPantryId,
-    setOnBoardingStep,
-    setUserNavigationState,
     user,
     selectedHomeId,
+    setSelectedHomeId,
+    setSelectedPantryId,
+    setUserNavigationState,
   } = useStore();
 
   // State
   const [graphqlError, setGraphqlError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [checkingExisting, setCheckingExisting] = useState(true);
+
+  // Track onboarding start (only once at the beginning)
+  const hasTrackedStartRef = useRef(false);
+  useEffect(() => {
+    if (user?.id && !hasTrackedStartRef.current) {
+      setUserNavigationState(user.id, {
+        onboardingStartedAt: Date.now(),
+        isNewUser: true,
+      });
+      hasTrackedStartRef.current = true;
+    }
+  }, [user?.id, setUserNavigationState]);
 
   // GraphQL Queries
   const {data: homesData, loading: homesLoading} = useGetHomesQuery({
@@ -73,7 +73,10 @@ export const CreateHomeScreen = () => {
 
   const homes = homesData?.homes || [];
   const pantries = pantriesData?.pantries || [];
-  const needsHome = homes.length === 0;
+  const existingHome = homes[0];
+  const existingPantry = pantries.find(p => p.isDefault) || pantries[0];
+  const needsHome = !existingHome;
+  const needsPantry = !existingPantry;
 
   // GraphQL Mutations
   const [createHome] = useCreateHomeMutation();
@@ -81,21 +84,23 @@ export const CreateHomeScreen = () => {
     update: (cache, {data}) => {
       if (data?.createPantry) {
         try {
-          // Update the GetHomes cache to include the new pantry
           const existingHomesData = cache.readQuery<GetHomesQuery>({
             query: GetHomesDocument,
           });
-          
+
           if (existingHomesData?.homes) {
             const updatedHomes = existingHomesData.homes.map((home: any) => {
               if (home.id === data.createPantry.homeId) {
                 return {
                   ...home,
-                  pantries: [...(home.pantries || []), {
-                    id: data.createPantry.id,
-                    name: data.createPantry.name,
-                    isDefault: data.createPantry.isDefault,
-                  }]
+                  pantries: [
+                    ...(home.pantries || []),
+                    {
+                      id: data.createPantry.id,
+                      name: data.createPantry.name,
+                      isDefault: data.createPantry.isDefault,
+                    },
+                  ],
                 };
               }
               return home;
@@ -103,9 +108,7 @@ export const CreateHomeScreen = () => {
 
             cache.writeQuery<GetHomesQuery>({
               query: GetHomesDocument,
-              data: {
-                homes: updatedHomes,
-              },
+              data: {homes: updatedHomes},
             });
           }
         } catch (error) {
@@ -124,27 +127,51 @@ export const CreateHomeScreen = () => {
     },
   });
 
-  // Navigation helper
   const goToNextStep = useCallback(() => {
-    handleOnboardingStep(OnBoardingSteps.createShoppingList);
-  }, [handleOnboardingStep]);
-
-  // Check existing resources on mount
-  useEffect(() => {
-    if (!homesLoading && !pantriesLoading) {
-      checkExistingResources(homes, pantries, {
-        onComplete: () => setCheckingExisting(false),
-        onBothExist: goToNextStep,
-        setSelectedHomeId,
-        setSelectedPantryId,
-      });
+    const nextScreen = progressToNextStep();
+    if (nextScreen) {
+      navigateWithinStack(nextScreen);
     }
+  }, [progressToNextStep, navigateWithinStack]);
+
+  // Check existing resources without auto-navigating
+  useEffect(() => {
+    let isMounted = true;
+
+    const checkExisting = async () => {
+      if (homesLoading || (selectedHomeId && pantriesLoading)) return;
+
+      try {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        if (!isMounted) return;
+
+        // Set selected IDs if they exist, but don't auto-navigate
+        if (existingHome) {
+          setSelectedHomeId(existingHome.id);
+          if (existingPantry) {
+            setSelectedPantryId(existingPantry.id);
+          }
+        }
+
+        setCheckingExisting(false);
+      } catch (error) {
+        if (isMounted) {
+          setCheckingExisting(false);
+        }
+      }
+    };
+
+    checkExisting();
+
+    return () => {
+      isMounted = false;
+    };
   }, [
-    homes,
-    pantries,
     homesLoading,
     pantriesLoading,
-    goToNextStep,
+    selectedHomeId,
+    existingHome,
+    existingPantry,
     setSelectedHomeId,
     setSelectedPantryId,
   ]);
@@ -181,8 +208,8 @@ export const CreateHomeScreen = () => {
           }
         }
 
-        // Create pantry
-        if (homeId) {
+        // Create pantry if needed
+        if (needsPantry && homeId) {
           const success = await createPantryForHome(
             homeId,
             data.pantryName,
@@ -205,6 +232,7 @@ export const CreateHomeScreen = () => {
     },
     [
       needsHome,
+      needsPantry,
       selectedHomeId,
       createHome,
       createPantry,
@@ -214,37 +242,102 @@ export const CreateHomeScreen = () => {
     ],
   );
 
-  // Skip handler
+  // Skip handler - uses existing resources
   const handleSkip = useCallback(() => {
-    if (homes.length > 0 && pantries.length === 0) {
-      showSkipPantryWarning(goToNextStep);
-    } else {
-      goToNextStep();
+    if (existingHome && existingPantry) {
+      // Both exist, just continue
+      setSelectedHomeId(existingHome.id);
+      setSelectedPantryId(existingPantry.id);
     }
-  }, [homes.length, pantries.length, goToNextStep]);
+    goToNextStep();
+  }, [
+    existingHome,
+    existingPantry,
+    setSelectedHomeId,
+    setSelectedPantryId,
+    goToNextStep,
+  ]);
 
   // Loading state
   if (checkingExisting || homesLoading || (selectedHomeId && pantriesLoading)) {
     return <LoadingView onSkip={handleSkip} />;
   }
 
-  const existingHomeName = homes[0]?.name;
+  // Determine what needs to be created
+  const getTitle = () => {
+    if (!existingHome) return "Welcome! Let's set up your home";
+    if (!existingPantry) return 'Almost there!';
+    return "You're all set!";
+  };
 
+  const getSubtitle = () => {
+    if (!existingHome) return 'Create your home and pantry to get started';
+    if (!existingPantry) return `Let's add a pantry to ${existingHome.name}`;
+    return 'Your home and pantry are already configured';
+  };
+
+  // If both exist, show summary and continue button
+  if (existingHome && existingPantry) {
+    return (
+      <OnBoardingWrapper
+        title={getTitle()}
+        subtitle={getSubtitle()}
+        step={1}
+        totalSteps={6}
+        onSkip={handleSkip}>
+        <View style={styles.existingResourcesContainer}>
+          <View style={styles.resourceCard}>
+            <Text style={styles.resourceLabel}>Home</Text>
+            <Text style={styles.resourceName}>{existingHome.name}</Text>
+          </View>
+
+          <View style={styles.resourceCard}>
+            <Text style={styles.resourceLabel}>Pantry</Text>
+            <Text style={styles.resourceName}>{existingPantry.name}</Text>
+            {existingPantry.isDefault && (
+              <View style={styles.defaultBadge}>
+                <Text style={styles.defaultBadgeText}>Default</Text>
+              </View>
+            )}
+          </View>
+
+          <Text style={styles.infoText}>
+            These were already set up. You can continue to the next step or
+            create additional ones later in settings.
+          </Text>
+        </View>
+
+        <Button
+          title="Continue"
+          onPress={handleSkip}
+          btnStyle={styles.continueButton}
+          txtStyle={styles.continueText}
+        />
+      </OnBoardingWrapper>
+    );
+  }
+
+  // Show form for creating what's missing
   return (
     <OnBoardingWrapper
-      title={needsHome ? "Welcome! Let's set up your home" : 'Almost there!'}
-      subtitle={
-        needsHome
-          ? 'Create your home and pantry to get started'
-          : `Let's add a pantry to ${existingHomeName}`
-      }
+      title={getTitle()}
+      subtitle={getSubtitle()}
       step={1}
       totalSteps={6}
       onSkip={handleSkip}>
+      {existingHome && (
+        <View style={styles.existingResourcesContainer}>
+          <View style={styles.resourceCard}>
+            <Text style={styles.resourceLabel}>Existing Home</Text>
+            <Text style={styles.resourceName}>{existingHome.name}</Text>
+          </View>
+        </View>
+      )}
+
       <FormContent
         form={form}
         needsHome={needsHome}
-        existingHomeName={existingHomeName}
+        existingHomeName={existingHome?.name}
       />
 
       <SubmitButton
@@ -258,133 +351,63 @@ export const CreateHomeScreen = () => {
   );
 };
 
-// Sub-components for better organization
-const LoadingView = ({onSkip}: {onSkip: () => void}) => (
-  <OnBoardingWrapper
-    title="Welcome! Let's set up your home"
-    subtitle="Checking your existing setup..."
-    step={1}
-    totalSteps={6}
-    onSkip={onSkip}>
-    <View style={styles.loadingContainer}>
-      <ActivityIndicator size="large" color={styles.loadingIndicator.color} />
-      <Text style={styles.loadingText}>Checking your existing setup...</Text>
-    </View>
-  </OnBoardingWrapper>
-);
-
-const FormContent = ({
-  form,
-  needsHome,
-  existingHomeName,
-}: {
-  form: any;
-  needsHome: boolean;
-  existingHomeName?: string;
-}) => (
-  <>
-    <DynamicFormFields<FormValues>
-      fields={[
-        ...(needsHome
-          ? [
-              {
-                name: 'homeName' as const,
-                label: 'Home Name',
-                placeholder: 'e.g. Smith Family Home',
-                component: BaseInput,
-              },
-            ]
-          : []),
-        {
-          name: 'pantryName' as const,
-          label: needsHome ? 'Default Pantry Name' : 'Pantry Name',
-          placeholder: 'e.g. Kitchen Pantry',
-          component: BaseInput,
-        },
-      ]}
-      control={form.control}
-      errors={form.formState.errors}
-    />
-
-    {!needsHome && existingHomeName && (
-      <View style={styles.infoBox}>
-        <Text style={styles.infoText}>
-          Using existing home: {existingHomeName}
-        </Text>
-      </View>
-    )}
-  </>
-);
-
-const SubmitButton = ({
-  isCreating,
-  needsHome,
-  onPress,
-}: {
-  isCreating: boolean;
-  needsHome: boolean;
-  onPress: () => void;
-}) => (
-  <Button
-    title={
-      isCreating
-        ? needsHome
-          ? 'Creating Home & Pantry...'
-          : 'Creating Pantry...'
-        : 'Next'
-    }
-    onPress={onPress}
-    btnStyle={styles.nextButton}
-    txtStyle={styles.nextText}
-    disabled={isCreating}
-  />
-);
-
-const ErrorMessage = ({message}: {message: string}) => (
-  <Text style={styles.errorText}>{message}</Text>
-);
-
-// Styles
 const styles = StyleSheet.create(theme => ({
-  nextButton: {
+  existingResourcesContainer: {
+    marginVertical: 20,
+  },
+  resourceCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    marginBottom: 12,
+  },
+  resourceLabel: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  resourceName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
+  },
+  defaultBadge: {
+    backgroundColor: theme.colors.surface,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+  },
+  defaultBadgeText: {
+    fontSize: 11,
+    color: theme.colors.primary,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+  },
+  infoText: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+    marginTop: 16,
+    lineHeight: 20,
+  },
+  continueButton: {
     backgroundColor: theme.colors.primary,
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
     marginTop: 20,
   },
-  nextText: {
+  continueText: {
     color: theme.colors.white,
     fontSize: 16,
     fontWeight: 'bold',
-  },
-  errorText: {
-    color: theme.colors.error,
-    marginTop: 12,
-    textAlign: 'center',
-  },
-  loadingContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 40,
-  },
-  loadingIndicator: {
-    color: theme.colors.primary,
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: theme.colors.textSecondary,
-  },
-  infoBox: {
-    backgroundColor: theme.colors.primaryLight,
-    borderRadius: 8,
-    padding: 12,
-    marginTop: 16,
-  },
-  infoText: {
-    fontSize: 14,
-    color: theme.colors.primary,
-    textAlign: 'center',
   },
 }));

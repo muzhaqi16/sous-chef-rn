@@ -5,6 +5,7 @@ import {OnBoardingWrapper} from '#components/templates';
 import {useNavigation} from '@react-navigation/native';
 import {SelectPantryItemsNavProp} from '#navigation/types';
 import {StyleSheet} from 'react-native-unistyles';
+import {useOnboardingFlow, useNavigationFlow} from '#hooks';
 import {
   useGetOnboardingItemsQuery,
   useAddItemToPantryMutation,
@@ -23,8 +24,15 @@ type OnboardingItemType = NonNullable<
 
 export const SelectPantryItems = () => {
   const navigation = useNavigation<SelectPantryItemsNavProp>();
+  const {progressToNextStep, skipToStep} = useOnboardingFlow();
+  const {navigateWithinStack} = useNavigationFlow();
 
-  const {selectedPantryId, setOnBoardingStep} = useStore();
+  const {
+    user,
+    selectedPantryId,
+    getUserNavigationState,
+    setUserNavigationState,
+  } = useStore();
 
   const {
     data,
@@ -86,8 +94,18 @@ export const SelectPantryItems = () => {
   };
 
   const handleSkip = () => {
-    setOnBoardingStep(OnBoardingSteps.selectPantryItems);
-    navigation.replace('ProfilePictureUpload');
+    // Track that this step was skipped
+    if (user?.id) {
+      const userState = getUserNavigationState(user.id);
+      const skippedSteps = userState?.skippedOnboardingSteps || [];
+      setUserNavigationState(user.id, {
+        skippedOnboardingSteps: [...skippedSteps, 'selectPantryItems'],
+      });
+    }
+
+    // Use skipToStep instead of manual navigation
+    const nextScreen = skipToStep(OnBoardingSteps.profilePictureUpload);
+    navigateWithinStack(nextScreen);
   };
 
   const onNext = async () => {
@@ -140,8 +158,10 @@ export const SelectPantryItems = () => {
   };
 
   const moveToNextStep = () => {
-    setOnBoardingStep(OnBoardingSteps.selectPantryItems);
-    navigation.replace('ProfilePictureUpload');
+    const nextScreen = progressToNextStep();
+    if (nextScreen) {
+      navigateWithinStack(nextScreen);
+    }
   };
 
   return (

@@ -144,33 +144,7 @@ export const ShoppingListMain: React.FC = () => {
   if (lists.length === 0) {
     return (
       <ListTemplate
-        title={currentList?.name || 'Shopping List'}
-        subtitle="Shopping List"
-        items={listItems}
-        searchQuery={query}
-        onSearchChange={setQuery}
-        onItemPress={id =>
-          navigation.navigate('EditItem', {listId: currentListId, itemId: id})
-        }
-        onItemEdit={id =>
-          navigation.navigate('EditItem', {listId: currentListId, itemId: id})
-        }
-        onItemDelete={handleDeleteItem}
-        onRefresh={handleRefresh}
-        // Display configuration
-        showSearchBar={true}
-        showFAB={true}
-        onFabPress={() =>
-          navigation.getParent()?.navigate('BarcodeStack', {
-            screen: 'BarcodeScanner',
-            params: {
-              source: 'shoppingList',
-              shoppingListId: currentListId,
-            },
-          })
-        }
-        // Actions
-        searchBarActions={searchBarActions}
+        showHeader={true}
         emptyState={{
           icon: 'add-shopping-cart',
           title: 'No shopping lists',

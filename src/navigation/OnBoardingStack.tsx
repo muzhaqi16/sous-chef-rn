@@ -26,95 +26,49 @@ export const OnBoardingStack = () => {
         onboardingProgress: onBoardingStep,
       });
     }
-  }, [user?.id, onBoardingStep]);
+  }, [user?.id, onBoardingStep, saveUserProgress]);
 
-  // Map step to component for easier management
   const getInitialRouteName = (): keyof OnBoardingStackParamList => {
     if (user?.onBoarded) {
       return 'OnboardingComplete';
     }
-
     return onboardingInitialRoute as keyof OnBoardingStackParamList;
   };
 
-  const handleStepChange = (newStep: OnBoardingSteps) => {
-    setOnBoardingStep(newStep);
+  const initialRoute = getInitialRouteName();
 
-    // Save user-specific progress
-    if (user?.id) {
-      setUserNavigationState(user.id, {
-        onboardingProgress: newStep,
-      });
-    }
-  };
-
-  console.log('Onboarding initial route:', getInitialRouteName());
+  // Remove the console.log in production
+  if (__DEV__) {
+    console.log('Onboarding initial route:', initialRoute);
+  }
 
   return (
     <Stack.Navigator
-      key={`onboarding-${user?.id || 'anonymous'}`}
-      initialRouteName={getInitialRouteName()}
+      // REMOVE the dynamic key - it's causing remounts
+      // key={`onboarding-${user?.id || 'anonymous'}-${getInitialRouteName()}`}
+      initialRouteName={initialRoute}
       screenOptions={{
         headerShown: false,
         animation: 'slide_from_right',
-        gestureEnabled: false, // Disable swipe back during onboarding
+        gestureEnabled: false,
       }}>
-      <Stack.Screen
-        name="CreateHome"
-        component={CreateHomeScreen}
-        listeners={{
-          beforeRemove: () => {
-            handleStepChange(OnBoardingSteps.createHome);
-          },
-        }}
-      />
+      <Stack.Screen name="CreateHome" component={CreateHomeScreen} />
       <Stack.Screen
         name="CreateShoppingList"
         component={CreateShoppingListScreen}
-        listeners={{
-          beforeRemove: () => {
-            handleStepChange(OnBoardingSteps.createShoppingList);
-          },
-        }}
       />
-      <Stack.Screen
-        name="SelectPantryItems"
-        component={SelectPantryItems}
-        listeners={{
-          beforeRemove: () => {
-            handleStepChange(OnBoardingSteps.selectPantryItems);
-          },
-        }}
-      />
+      <Stack.Screen name="SelectPantryItems" component={SelectPantryItems} />
       <Stack.Screen
         name="ProfilePictureUpload"
         component={ProfilePictureUploadScreen}
-        listeners={{
-          beforeRemove: () => {
-            handleStepChange(OnBoardingSteps.profilePictureUpload);
-          },
-        }}
       />
-      <Stack.Screen
-        name="InviteMembers"
-        component={InviteMembersScreen}
-        listeners={{
-          beforeRemove: () => {
-            handleStepChange(OnBoardingSteps.inviteMembers);
-          },
-        }}
-      />
+      <Stack.Screen name="InviteMembers" component={InviteMembersScreen} />
       <Stack.Screen
         name="OnboardingComplete"
         component={OnboardingCompleteScreen}
         options={{
           animation: 'fade',
           gestureEnabled: false,
-        }}
-        listeners={{
-          beforeRemove: () => {
-            handleStepChange(OnBoardingSteps.complete);
-          },
         }}
       />
     </Stack.Navigator>

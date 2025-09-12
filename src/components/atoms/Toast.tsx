@@ -28,12 +28,7 @@ export const ToastProvider: React.FC<{children: ReactNode}> = ({children}) => {
     type = 'default',
   }) => {
     if (Platform.OS === 'android') {
-      // Optionally prefix with emoji based on type
-      let prefix = '';
-      if (type === 'success') prefix = '✅ ';
-      if (type === 'error') prefix = '❌ ';
-      if (type === 'info') prefix = 'ℹ️ ';
-      ToastAndroid.show(prefix + message, duration);
+      ToastAndroid.show(message, duration);
     } else {
       setOpts({message, duration, type});
       setVisible(true);

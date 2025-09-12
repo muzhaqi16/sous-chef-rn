@@ -16,13 +16,10 @@ import {
   useSafeNavigation,
   useCredentialLoader,
   useAutoLogin,
+  useAuthFlow,
   useNavigationFlow,
 } from '#hooks';
-import {
-  hasCredentials,
-  getEmailOnly,
-  saveCredentials,
-} from '#/storage/keychain';
+import {getEmailOnly, saveCredentials} from '#/storage/keychain';
 import {RememberMeModal} from './RememberMeModal';
 
 // Helper function to obscure email
@@ -45,17 +42,13 @@ interface LoginScreenProps {
 
 export function LoginScreen({hasStoredCredentials}: LoginScreenProps) {
   const {theme} = useUnistyles();
-  const {navigation, canGoBack, goBack} = useSafeNavigation<LoginNavProp>();
-  const {
-    rememberMe,
-    completeAuthentication,
-    getUserNavigationState,
-    setUserNavigationState,
-    user,
-  } = useStore();
+  const {canGoBack, goBack} = useSafeNavigation<LoginNavProp>();
+  const {rememberMe, getUserNavigationState, setUserNavigationState, user} =
+    useStore();
 
   // Navigation flow hook
-  const {handleAuthComplete} = useNavigationFlow();
+  const {handleLogin} = useAuthFlow();
+  const {navigateToForgotPassword, navigateToSignUp} = useNavigationFlow();
 
   // State for credential management
   const [savedEmail, setSavedEmail] = useState<string>('');
@@ -139,9 +132,18 @@ export function LoginScreen({hasStoredCredentials}: LoginScreenProps) {
           console.log(
             'LoginScreen: Auto-login successful after biometric verification',
           );
-          // Use the new navigation system
-          await completeAuthentication(result.data.login, rememberMe ?? false);
-          handleAuthComplete(result.data.login, rememberMe ?? false, true);
+
+          // Use the new auth flow - it handles everything internally
+          handleLogin(result.data.login, rememberMe ?? false);
+
+          // Track that this was a biometric login
+          if (result.data.login.user.id) {
+            setUserNavigationState(result.data.login.user.id, {
+              lastLoginTimestamp: Date.now(),
+              rememberMeChoice: rememberMe ?? false,
+            });
+          }
+
           return;
         }
       } catch (loginError) {
@@ -179,7 +181,9 @@ export function LoginScreen({hasStoredCredentials}: LoginScreenProps) {
   const clearCredentials = useCallback(() => {
     form.setValue(
       'email',
-      hasStoredCredentials === true && savedEmail ? obscureEmail(savedEmail) : '',
+      hasStoredCredentials === true && savedEmail
+        ? obscureEmail(savedEmail)
+        : '',
     );
     form.setValue('password', '');
     setIsAuthenticated(false);
@@ -193,11 +197,13 @@ export function LoginScreen({hasStoredCredentials}: LoginScreenProps) {
 
     const {user, email, password} = pendingAuthResponse;
 
-    // Save user's remember me choice
+    // Save user's remember me choice and track login
     if (user?.id) {
       setUserNavigationState(user.id, {
         rememberMeChoice: remember,
         lastLoginTimestamp: Date.now(),
+        // Track if this is their first login (useful for onboarding)
+        isNewUser: !user.onBoarded,
       });
     }
 
@@ -207,12 +213,15 @@ export function LoginScreen({hasStoredCredentials}: LoginScreenProps) {
         await saveCredentials(email, password);
       } catch (error) {
         console.error('Failed to save credentials:', error);
+        // Don't block the login flow if credential saving fails
       }
     }
 
-    // Complete authentication flow
-    await completeAuthentication(pendingAuthResponse, remember);
-    handleAuthComplete(pendingAuthResponse, remember, true);
+    // Use ONLY the new auth flow - it handles everything internally
+    // This replaces both completeAuthentication and handleAuthComplete
+    handleLogin(pendingAuthResponse, remember);
+
+    // Clear pending response
     setPendingAuthResponse(null);
   };
 
@@ -270,19 +279,17 @@ export function LoginScreen({hasStoredCredentials}: LoginScreenProps) {
         errorPolicy: 'all',
       });
 
+      if (response.errors && response.errors.length > 0) {
+        throw new Error(response.errors[0].message);
+      }
+
       if (response.data?.login) {
         const loginData = response.data.login;
-
-        // Check if this user has a saved remember me preference
         const userNavState = getUserNavigationState(loginData.user.id);
 
         if (userNavState?.rememberMeChoice !== undefined) {
           // User has previously made a choice, use it
-          await completeAuthentication(
-            loginData,
-            userNavState.rememberMeChoice,
-          );
-          handleAuthComplete(loginData, userNavState.rememberMeChoice, true);
+          handleLogin(loginData, userNavState.rememberMeChoice);
         } else if (rememberMe === undefined && !pwFromKeychain) {
           // First time login, show remember me modal
           setPendingAuthResponse({
@@ -293,8 +300,7 @@ export function LoginScreen({hasStoredCredentials}: LoginScreenProps) {
           setShowRememberModal(true);
         } else {
           // Use existing remember me preference
-          await completeAuthentication(loginData, rememberMe);
-          handleAuthComplete(loginData, rememberMe, true);
+          handleLogin(loginData, rememberMe ?? false);
         }
       } else {
         throw new Error('Login failed: No data returned');
@@ -303,7 +309,6 @@ export function LoginScreen({hasStoredCredentials}: LoginScreenProps) {
       handleAuthError(err, 'Login failed. Please try again.');
     }
   };
-
   return (
     <AuthWrapper>
       <AuthFormTemplate<LoginInput>
@@ -326,12 +331,12 @@ export function LoginScreen({hasStoredCredentials}: LoginScreenProps) {
         control={form.control}
         errors={form.formState.errors}
         linkText="Forgot password?"
-        onLinkPress={() => navigation.navigate('ForgotPassword')}
+        onLinkPress={() => navigateToForgotPassword()}
         submitText={isLoggingIn ? 'Logging in…' : 'Login'}
         onSubmit={form.handleSubmit(onSubmit)}
         footerText="Don't have an account?"
         footerLinkText="Sign Up"
-        onFooterLinkPress={() => navigation.navigate('SignUp')}
+        onFooterLinkPress={() => navigateToSignUp()}
         isLoading={isLoggingIn}
       />
 
@@ -341,11 +346,7 @@ export function LoginScreen({hasStoredCredentials}: LoginScreenProps) {
           // Loading placeholder - reserves the exact same space with invisible content
           <View style={[styles.credentialBar, styles.credentialBarPlaceholder]}>
             <View style={styles.credentialInfo}>
-              <Icon
-                name="lock"
-                size={20}
-                color="transparent"
-              />
+              <Icon name="lock" size={20} color="transparent" />
               <Text style={[styles.credentialText, {color: 'transparent'}]}>
                 Tap to use saved credentials
               </Text>
@@ -355,11 +356,7 @@ export function LoginScreen({hasStoredCredentials}: LoginScreenProps) {
                 style={styles.authButton}
                 disabled
                 activeOpacity={1}>
-                <Icon
-                  name="fingerprint"
-                  size={26}
-                  color="transparent"
-                />
+                <Icon name="fingerprint" size={26} color="transparent" />
               </TouchableOpacity>
             </View>
           </View>

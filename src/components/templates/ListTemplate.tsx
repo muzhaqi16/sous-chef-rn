@@ -21,10 +21,10 @@ interface ListTemplateProps {
   // Core list functionality
   title?: string;
   subtitle?: string;
-  items: any[];
-  searchQuery: string;
-  onSearchChange: (query: string) => void;
-  onItemPress: (id: string) => void;
+  items?: any[];
+  searchQuery?: string;
+  onSearchChange?: (query: string) => void;
+  onItemPress?: (id: string) => void;
   onItemEdit?: (id: string) => void;
   onItemDelete?: (id: string) => void;
   onRefresh?: () => Promise<void>;
@@ -50,19 +50,19 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
   // Core props
   title = '',
   subtitle = '',
-  items,
-  searchQuery,
-  onSearchChange,
-  onItemPress,
-  onItemEdit,
-  onItemDelete,
-  onRefresh,
+  items = [],
+  searchQuery = '',
+  onSearchChange = () => {},
+  onItemPress = () => {},
+  onItemEdit = () => {},
+  onItemDelete = () => {},
+  onRefresh = async () => {},
   emptyState,
 
   // Display controls
   showUserHeader = true,
   showHeader = false,
-  showSearchBar = true,
+  showSearchBar = false,
   showFAB = true,
 
   // Actions
@@ -89,7 +89,7 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
 
       {showSearchBar && (
         <SearchBar
-          value={searchQuery}
+          value={searchQuery || ''}
           onChangeText={onSearchChange}
           placeholder={
             searchPlaceholder || `Search ${subtitle.toLowerCase()}...`
@@ -97,13 +97,13 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
           leftActions={searchBarActions?.left || []}
           rightActions={searchBarActions?.right || []}
           listName={title}
-          itemCount={items.length}
-          completedCount={items.filter(item => item.completed).length}
+          itemCount={items?.length || 0}
+          completedCount={items?.filter(item => item.completed).length}
         />
       )}
 
       <ItemList
-        items={items}
+        items={items || []}
         onItemPress={onItemPress}
         onItemEdit={onItemEdit}
         onItemDelete={onItemDelete}

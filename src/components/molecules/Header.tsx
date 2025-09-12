@@ -27,7 +27,6 @@ const headerStyles = StyleSheet.create((theme, rt) => ({
     justifyContent: 'space-between',
     paddingHorizontal: theme.spacing.md,
     borderBottomWidth: 1,
-    paddingVertical: theme.spacing.sm,
     borderBottomColor: theme.colors.border,
     backgroundColor: theme.colors.background,
 

@@ -10,6 +10,7 @@ export interface ResetOptions {
   scanner?: boolean;
   storage?: boolean;
   clearApolloCache?: boolean;
+  resetOnboarding?: boolean;
 }
 
 // Predefined reset scenarios
@@ -21,6 +22,7 @@ export const RESET_SCENARIOS = {
     scanner: true,
     storage: false, // Don't clear storage completely, just auth data
     clearApolloCache: true, // Clear Apollo cache on logout
+    resetOnboarding: true, // Custom flag to reset onboarding state
   },
   FULL_RESET: {
     auth: true,
@@ -29,6 +31,7 @@ export const RESET_SCENARIOS = {
     scanner: true,
     storage: true,
     clearApolloCache: true,
+    resetOnboarding: true,
   },
   SESSION_EXPIRED: {
     auth: true,
@@ -37,6 +40,7 @@ export const RESET_SCENARIOS = {
     scanner: true,
     storage: false,
     clearApolloCache: true,
+    resetOnboarding: false,
   },
   ONBOARDING_RESET: {
     auth: false,
@@ -45,6 +49,7 @@ export const RESET_SCENARIOS = {
     scanner: false,
     storage: false,
     clearApolloCache: false,
+    resetOnboarding: true,
   },
 } as const;
 
@@ -76,6 +81,16 @@ export const createResetManager = (
 
     if (resetOptions.scanner) {
       Object.assign(newState, getScannerResetState());
+    }
+
+    // Handle selective onboarding reset (without affecting theme preferences)
+    if (resetOptions.resetOnboarding) {
+      Object.assign(newState, {
+        onBoardingStep: null,
+        selectedHomeId: null,
+        selectedPantryId: null,
+        selectedShoppingListId: null,
+      });
     }
 
     // Handle storage reset
@@ -135,6 +150,17 @@ const getAuthResetState = () => ({
   refreshToken: null,
   pendingEmail: undefined,
   pendingPassword: undefined,
+  authFlow: {
+    isNewUser: false,
+    requiresVerification: false,
+    loginMethod: null,
+    lastLoginTimestamp: null,
+  },
+  userStates: {}, // Clear all user navigation states when resetting auth
+  // Clear selected IDs that belong to the previous user
+  selectedHomeId: null,
+  selectedPantryId: null,
+  selectedShoppingListId: null,
 });
 
 const getPreferencesResetState = (currentState: RootState) => ({
@@ -191,6 +217,8 @@ const clearAuthFromStorage = async () => {
         delete parsedData.state.refreshToken;
         delete parsedData.state.pendingEmail;
         delete parsedData.state.pendingPassword;
+        delete parsedData.state.authFlow;
+        delete parsedData.state.userStates;
 
         // Clear selected IDs that are tied to the user
         delete parsedData.state.selectedHomeId;
@@ -214,6 +242,14 @@ const clearAuthFromStorage = async () => {
     // Clear navigation state to prevent restoring to authenticated screens
     console.log('Clearing navigation state from storage');
     storage.delete('navigation_state');
+
+    // Clear all user navigation states (keys like "user_nav_state_userId")
+    const allKeys = storage.getAllKeys();
+    allKeys.forEach(key => {
+      if (key.startsWith('user_nav_state_')) {
+        storage.delete(key);
+      }
+    });
   } catch (error) {
     console.error('Error clearing auth from storage:', error);
   }
