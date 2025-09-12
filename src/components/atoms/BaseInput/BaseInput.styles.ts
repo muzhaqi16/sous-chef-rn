@@ -3,6 +3,10 @@ import {StyleSheet} from 'react-native-unistyles';
 export default StyleSheet.create((theme, rt) => ({
   container: {
     gap: theme.spacing.xs,
+    marginBottom: {
+      xs: theme.spacing.md,
+      md: theme.spacing.lg,
+    },
   },
 
   label: {
@@ -59,8 +63,8 @@ export default StyleSheet.create((theme, rt) => ({
     padding: 0,
     // Responsive line height
     lineHeight: {
-      xs: theme.fonts.size.sm * 1.4,
-      md: theme.fonts.size.md * 1.4,
+      xs: theme.fonts.size.sm * 1.6,
+      md: theme.fonts.size.md * 1.6,
     },
   },
 

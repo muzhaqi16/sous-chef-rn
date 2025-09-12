@@ -63,7 +63,7 @@ export const AddEditItem: React.FC = () => {
             query: GetShoppingListItemsDocument,
             variables: {shoppingListId: listId},
             data: {
-              shoppingListItems: [...existingData.shoppingListItems, newItem],
+              shoppingListItems: [newItem, ...existingData.shoppingListItems],
             },
           });
         }

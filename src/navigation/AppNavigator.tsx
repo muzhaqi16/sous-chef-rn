@@ -23,6 +23,24 @@ import {useTokenRefresh, useNavigationState, useAutoLogin} from '#hooks';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
+// Helper function to get the root stack name from navigation state
+const getRootStackName = (state: any): string | undefined => {
+  if (!state) return undefined;
+
+  // Navigate to the root of the state
+  let currentState = state;
+  while (currentState.routes && currentState.index !== undefined) {
+    const route = currentState.routes[currentState.index];
+    if (!route.state) {
+      // This is the deepest route
+      return state.routes[state.index].name;
+    }
+    currentState = route.state;
+  }
+
+  return state.routes?.[state.index]?.name;
+};
+
 export default function AppNavigator() {
   const navigationRef =
     useRef<NavigationContainerRef<RootStackParamList>>(null);
@@ -34,6 +52,7 @@ export default function AppNavigator() {
 
   const [isNavigationReady, setIsNavigationReady] = useState(false);
   const [minSplashComplete, setMinSplashComplete] = useState(false);
+  const [hasNavigatedToTarget, setHasNavigatedToTarget] = useState(false);
 
   // Set up navigation service
   useEffect(() => {
@@ -71,18 +90,31 @@ export default function AppNavigator() {
 
   // Navigate when target route changes and navigation is ready
   useEffect(() => {
-    if (!isNavigationReady || !navigationRef.current) return;
+    if (!isNavigationReady || !navigationRef.current || !targetRoute) return;
 
-    const currentRoute = navigationRef.current.getCurrentRoute();
+    // Get the current root stack name
+    const state = navigationRef.current.getState();
+    const currentRootStack = getRootStackName(state);
 
-    // Only navigate if we're not already on the target route
-    if (currentRoute?.name !== targetRoute) {
-      navigationRef.current.reset({
-        index: 0,
-        routes: [{name: targetRoute as keyof RootStackParamList}],
-      });
+    // Only navigate if we're not already on the target stack
+    if (currentRootStack !== targetRoute && !hasNavigatedToTarget) {
+      console.log(`Navigating from ${currentRootStack} to ${targetRoute}`);
+
+      // Use setTimeout to ensure state updates have propagated
+      setTimeout(() => {
+        navigationRef.current?.reset({
+          index: 0,
+          routes: [{name: targetRoute as keyof RootStackParamList}],
+        });
+        setHasNavigatedToTarget(true);
+      }, 0);
     }
-  }, [targetRoute, isNavigationReady]);
+  }, [targetRoute, isNavigationReady, hasNavigatedToTarget]);
+
+  // Reset navigation flag when target route changes
+  useEffect(() => {
+    setHasNavigatedToTarget(false);
+  }, [targetRoute]);
 
   // Simplified splash screen logic
   const showSplash =
@@ -94,6 +126,10 @@ export default function AppNavigator() {
   if (showSplash) {
     return <SplashScreen />;
   }
+
+  // Use a safe initial route - default to AuthStack if targetRoute is null
+  const initialRouteName = (targetRoute ||
+    'AuthStack') as keyof RootStackParamList;
 
   return (
     <NavigationContainer
@@ -111,7 +147,7 @@ export default function AppNavigator() {
         }
       }}>
       <Stack.Navigator
-        initialRouteName={targetRoute as keyof RootStackParamList}
+        initialRouteName={initialRouteName}
         screenOptions={{headerShown: false}}>
         <Stack.Screen name="AuthStack">
           {() => <AuthStack hasStoredCredentials={hasStoredCredentials} />}

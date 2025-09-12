@@ -138,6 +138,10 @@ const styles = StyleSheet.create(theme => ({
   actionsContainer: {
     flexDirection: 'row',
     gap: theme.spacing.xs,
+    marginBottom: {
+      xs: theme.spacing.md,
+      md: theme.spacing.lg,
+    },
   },
   leftActions: {
     // Any specific styling for left actions

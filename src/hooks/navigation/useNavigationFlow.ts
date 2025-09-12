@@ -31,7 +31,9 @@ export const useNavigationFlow = () => {
 
   // Go back if possible
   const goBack = useCallback(() => {
+    console.log('Attempting to go back');
     if (navigation.canGoBack()) {
+      console.log('Going back');
       navigation.goBack();
     }
   }, [navigation]);

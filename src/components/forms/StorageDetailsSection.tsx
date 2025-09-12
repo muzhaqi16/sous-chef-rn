@@ -4,7 +4,10 @@ import {Control, FieldErrors} from 'react-hook-form';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Icon from '@react-native-vector-icons/material-icons';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
-import {DynamicFormFields, FieldDef} from '#components/molecules/DynamicFormFields';
+import {
+  DynamicFormFields,
+  FieldDef,
+} from '#components/molecules/DynamicFormFields';
 import {FormInput} from '#components/molecules/FormInput';
 import {FormTextArea} from '#components/molecules/FormTextArea';
 import {StorageState} from '#generated';
@@ -73,16 +76,13 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
     {
       name: 'expirationDate',
       label: 'Expiration Date',
-      component: () => (
-        <>
+      component: ({label}: {label: string}) => (
+        <View>
+          <Text style={styles.fieldLabel}>{label}</Text>
           <TouchableOpacity
             style={[commonStyles.input, commonStyles.row, styles.dateInput]}
             onPress={onDatePickerToggle}>
-            <Icon
-              name="event"
-              size={20}
-              color={theme.colors.textSecondary}
-            />
+            <Icon name="event" size={20} color={theme.colors.textSecondary} />
             <Text style={styles.dateText}>
               {expirationDate
                 ? expirationDate.toLocaleDateString()
@@ -98,7 +98,7 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
               }}
             />
           )}
-        </>
+        </View>
       ),
     },
     {
@@ -147,6 +147,7 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.border,
     borderRadius: theme.radii.md,
     overflow: 'hidden',
+    marginBottom: theme.spacing.md,
   },
   segment: {
     flex: 1,
@@ -169,10 +170,16 @@ const styles = StyleSheet.create(theme => ({
   },
   dateInput: {
     justifyContent: 'flex-start',
+    marginBottom: theme.spacing.md,
   },
   dateText: {
     fontSize: theme.fonts.size.base,
     color: theme.colors.textPrimary,
     marginLeft: theme.spacing.md,
+  },
+  fieldLabel: {
+    fontSize: theme.fonts.size.md,
+    fontWeight: theme.fonts.weight.medium,
+    marginBottom: theme.spacing.sm,
   },
 }));

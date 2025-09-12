@@ -22,7 +22,7 @@ import {
 import {HomeManagementNavProp} from '#/navigation';
 
 export const HomeManagement: React.FC = () => {
-  const {goBack} = useNavigationFlow();
+  const {navigateToPantry} = useNavigationFlow();
 
   const {theme} = useUnistyles();
 
@@ -104,7 +104,7 @@ export const HomeManagement: React.FC = () => {
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => goBack()}>
+          <TouchableOpacity onPress={() => navigateToPantry()}>
             <Icon
               name="arrow-back"
               size={24}

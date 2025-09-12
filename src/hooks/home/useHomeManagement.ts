@@ -49,7 +49,6 @@ export function useHomeManagement() {
         // Verify the selectedHomeId still exists in the homes list
         const homeExists = homes.some(home => home.id === selectedHomeId);
         if (!homeExists) {
-          console.warn('Selected home no longer exists, clearing selection');
           setSelectedHomeId(null);
           return;
         }

@@ -131,7 +131,9 @@ export const NotificationListScreen: React.FC = () => {
         // Default navigation based on category
         switch (notification.category) {
           case NotificationCategory.SHOPPING_LIST:
-            navigateToShoppingList('ListSettings', {listId: notification.payload.listId});
+            navigateToShoppingList('ListSettings', {
+              listId: notification.payload.listId,
+            });
             break;
           case NotificationCategory.PANTRY:
             navigateToPantry();
@@ -249,6 +251,7 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+    paddingVertical: theme.spacing.md,
   },
   emptyContainer: {
     flex: 1,

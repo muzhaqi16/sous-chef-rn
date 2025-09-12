@@ -2,7 +2,10 @@ import React from 'react';
 import {View, Text} from 'react-native';
 import {Control, FieldErrors} from 'react-hook-form';
 import {StyleSheet} from 'react-native-unistyles';
-import {DynamicFormFields, FieldDef} from '#components/molecules/DynamicFormFields';
+import {
+  DynamicFormFields,
+  FieldDef,
+} from '#components/molecules/DynamicFormFields';
 import {Counter} from '#components/molecules/Counter';
 import {FormInput} from '#components/molecules/FormInput';
 import {FormCheckbox} from '#components/molecules/FormCheckbox';
@@ -18,6 +21,7 @@ interface QuantitySectionProps {
   onIncrementQuantity: () => void;
   onDecrementQuantity: () => void;
   onUnitSelected?: (unitId: string | null) => void;
+  onUnitChange?: (unit: string) => void;
 }
 
 export const QuantitySection: React.FC<QuantitySectionProps> = ({
@@ -25,7 +29,6 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
   errors,
   mode,
   quantity,
-  unit,
   isAutoReorder,
   onIncrementQuantity,
   onDecrementQuantity,
@@ -38,22 +41,14 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
           name: 'quantity',
           label: 'Quantity',
           component: () => (
-            <View style={[commonStyles.row, commonStyles.gap]}>
-              <View style={[commonStyles.inputGroup, commonStyles.flex1]}>
-                <Text style={commonStyles.label}>Quantity *</Text>
-                <View style={styles.quantityContainer}>
-                  <Counter
-                    count={quantity}
-                    onIncrement={onIncrementQuantity}
-                    onDecrement={onDecrementQuantity}
-                  />
-                </View>
-              </View>
-              <View style={[commonStyles.inputGroup, commonStyles.flex1]}>
-                <Text style={commonStyles.label}>Unit</Text>
-                <View style={styles.quantityContainer}>
-                  <Text style={styles.unitText}>{unit || 'Select unit'}</Text>
-                </View>
+            <View style={[commonStyles.inputGroup]}>
+              <Text style={commonStyles.label}>Quantity *</Text>
+              <View style={styles.quantityContainer}>
+                <Counter
+                  count={quantity}
+                  onIncrement={onIncrementQuantity}
+                  onDecrement={onDecrementQuantity}
+                />
               </View>
             </View>
           ),
@@ -82,15 +77,6 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
           placeholder: '1',
           component: FormInput,
           props: {keyboardType: 'numeric'},
-        },
-        {
-          name: 'unit',
-          label: 'Unit',
-          component: () => (
-            <View style={styles.readOnlyField}>
-              <Text style={styles.readOnlyText}>{unit}</Text>
-            </View>
-          ),
         },
         {
           name: 'reservedQuantity',
@@ -168,5 +154,28 @@ const styles = StyleSheet.create(theme => ({
   readOnlyText: {
     fontSize: theme.fonts.size.base,
     color: theme.colors.textTertiary,
+  },
+  unitInputContainer: {
+    flex: 1,
+  },
+  unitDisplayField: {
+    backgroundColor: theme.colors.surfaceVariant,
+    color: theme.colors.textSecondary,
+  },
+  unitContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radii.md,
+    backgroundColor: theme.colors.surface,
+    minHeight: 44,
+  },
+  unitDisplay: {
+    fontSize: theme.fonts.size.base,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
   },
 }));

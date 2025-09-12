@@ -91,7 +91,7 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
             query: GetPantryItemsDocument,
             variables: {pantryId: pantry.id},
             data: {
-              pantryItems: [...existingData.pantryItems, newItem],
+              pantryItems: [newItem, ...existingData.pantryItems],
             },
           });
         }
@@ -236,6 +236,7 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
             onIncrementQuantity={handleIncrementQuantity}
             onDecrementQuantity={handleDecrementQuantity}
             onUnitSelected={setSelectedUnitId}
+            onUnitChange={(unit) => setValue('unit', unit)}
           />
 
           <StorageDetailsSection

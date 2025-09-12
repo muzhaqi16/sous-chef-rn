@@ -45,20 +45,43 @@ export const useNavigationState = () => {
       .catch(() => setHasStoredCredentials(false));
   }, [isHydrated, user]);
 
-  // Compute the current navigation state
+  // Compute the current navigation state with strict checks
   const navigationState = useMemo(() => {
-    if (!isHydrated || (!user && hasStoredCredentials === null)) {
+    // Always return loading if not hydrated
+    if (!isHydrated) {
       return NavigationState.LOADING;
     }
-    if (!user) return NavigationState.UNAUTHENTICATED;
-    if (!user.emailVerified) return NavigationState.NEEDS_VERIFICATION;
-    if (!user.onBoarded) return NavigationState.NEEDS_ONBOARDING;
+
+    // If checking for stored credentials, stay in loading
+    if (!user && hasStoredCredentials === null) {
+      return NavigationState.LOADING;
+    }
+
+    // No user means unauthenticated
+    if (!user) {
+      return NavigationState.UNAUTHENTICATED;
+    }
+
+    // IMPORTANT: Check email verification first
+    if (!user.emailVerified) {
+      return NavigationState.NEEDS_VERIFICATION;
+    }
+
+    // IMPORTANT: Explicitly check onBoarded flag
+    // Treat undefined, null, or false as not onboarded
+    if (user.onBoarded !== true) {
+      return NavigationState.NEEDS_ONBOARDING;
+    }
+
+    // Only return authenticated if all checks pass
     return NavigationState.AUTHENTICATED;
   }, [user, isHydrated, hasStoredCredentials]);
 
-  // Get target route based on navigation state
+  // Get target route based on navigation state with defensive checks
   const targetRoute = useMemo(() => {
     switch (navigationState) {
+      case NavigationState.LOADING:
+        return null; // Don't navigate while loading
       case NavigationState.NEEDS_VERIFICATION:
       case NavigationState.UNAUTHENTICATED:
         return 'AuthStack';
@@ -86,7 +109,8 @@ export const useNavigationState = () => {
 
   // Get initial route for onboarding stack
   const getOnboardingInitialRoute = useCallback(() => {
-    if (user?.onBoarded) return 'OnboardingComplete';
+    // Defensive check - if somehow onBoarded is true, show complete screen
+    if (user?.onBoarded === true) return 'OnboardingComplete';
 
     const userNavState = user?.id ? getUserNavigationState(user.id) : null;
     const savedStep = userNavState?.onboardingProgress || onBoardingStep;

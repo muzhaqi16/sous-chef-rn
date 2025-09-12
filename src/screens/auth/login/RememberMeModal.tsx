@@ -1,4 +1,3 @@
-// Remember Me Modal Component
 import React from 'react';
 import {View, TouchableOpacity, Text, Modal} from 'react-native';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
