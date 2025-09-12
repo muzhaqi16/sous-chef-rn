@@ -1,4 +1,4 @@
-import {useMemo} from 'react';
+import {useMemo, useState, useEffect} from 'react';
 import {Alert} from 'react-native';
 import {
   useGetPantryItemsQuery,
@@ -13,6 +13,9 @@ import {
 } from '#generated';
 import {useSearchableList} from '../useSearchableList';
 import {ApolloClient} from '@apollo/client';
+import {pantryStorage} from '#/storage/pantryCache';
+import {useStore} from '#store';
+import {LogoutCleanup} from '#/apollo/logoutCleanup';
 
 export interface PantryItemInput {
   itemName: string;
@@ -35,17 +38,71 @@ export interface PantryItemUpdate extends Partial<PantryItemInput> {
 }
 
 export function usePantryManagement(pantryId: string | undefined) {
-  // Fetch pantry items with real-time updates
-  const {data, loading, error, refetch} = useGetPantryItemsQuery({
-    fetchPolicy: 'cache-and-network',
-    skip: !pantryId,
+  // Get user state to check for logout
+  const user = useStore(state => state.user);
+  const isLoggedOut = !user;
+
+  // State for optimistic/cached items
+  const [optimisticItems, setOptimisticItems] = useState<any[]>([]);
+  const [hasLoadedCache, setHasLoadedCache] = useState(false);
+
+  // Clear optimistic state immediately on logout
+  useEffect(() => {
+    if (isLoggedOut) {
+      setOptimisticItems([]);
+      setHasLoadedCache(false);
+    }
+  }, [isLoggedOut]);
+
+  // Load cached items immediately on pantryId change
+  useEffect(() => {
+    if (pantryId) {
+      const cachedItems = pantryStorage.getPantryItems(pantryId);
+      if (cachedItems && cachedItems.length > 0) {
+        setOptimisticItems(cachedItems);
+        setHasLoadedCache(true);
+      } else {
+        setOptimisticItems([]);
+        setHasLoadedCache(false);
+      }
+    } else {
+      setOptimisticItems([]);
+      setHasLoadedCache(false);
+    }
+  }, [pantryId]);
+
+  // Cache-first query - try cache first, skip during logout
+  const {data: cachedData, loading: cacheLoading} = useGetPantryItemsQuery({
+    fetchPolicy: 'cache-first',
+    skip: !pantryId || isLoggedOut,
     variables: {pantryId: pantryId ?? ''},
+    notifyOnNetworkStatusChange: false,
   });
 
-  // Subscribe to pantry item changes
-  usePantryItemsChangedSubscription({
+  // Network query - only fetch if we have cached data or no cache, skip during logout
+  const {
+    data: networkData,
+    loading: networkLoading,
+    error,
+    refetch: networkRefetch,
+  } = useGetPantryItemsQuery({
+    fetchPolicy: 'cache-and-network',
+    skip: !pantryId || isLoggedOut,
     variables: {pantryId: pantryId ?? ''},
-    skip: !pantryId,
+    notifyOnNetworkStatusChange: true,
+    onCompleted: (data) => {
+      // Update MMKV cache when network data arrives (only if not logging out)
+      if (data?.pantryItems && pantryId && !isLoggedOut) {
+        pantryStorage.setPantryItems(pantryId, data.pantryItems);
+        setOptimisticItems(data.pantryItems);
+      }
+    },
+  });
+
+  // Subscribe to pantry item changes with enhanced cache sync, skip during logout
+  const subscription = usePantryItemsChangedSubscription({
+    variables: {pantryId: pantryId ?? ''},
+    skip: !pantryId || isLoggedOut,
     onData: ({
       data: subData,
       client,
@@ -54,31 +111,54 @@ export function usePantryManagement(pantryId: string | undefined) {
       client: ApolloClient<any>;
     }) => {
       const updatedItem = subData?.data?.pantryItemUpdated;
-      if (!updatedItem) return;
+      if (!updatedItem || !pantryId) return;
 
+      // Update Apollo cache
       const cache = client.readQuery<GetPantryItemsQuery>({
         query: GetPantryItemsDocument,
         variables: {pantryId},
       });
 
-      if (!cache?.pantryItems) return;
+      if (cache?.pantryItems) {
+        const exists = cache.pantryItems.some(i => i.id === updatedItem.id);
+        const updated = exists
+          ? cache.pantryItems.map(i =>
+              i.id === updatedItem.id ? updatedItem : i,
+            )
+          : [...cache.pantryItems, updatedItem];
 
-      const exists = cache.pantryItems.some(i => i.id === updatedItem.id);
-      const updated = exists
-        ? cache.pantryItems.map(i =>
-            i.id === updatedItem.id ? updatedItem : i,
-          )
-        : [...cache.pantryItems, updatedItem];
+        client.writeQuery<GetPantryItemsQuery>({
+          query: GetPantryItemsDocument,
+          variables: {pantryId},
+          data: {pantryItems: updated},
+        });
+      }
 
-      client.writeQuery<GetPantryItemsQuery>({
-        query: GetPantryItemsDocument,
-        variables: {pantryId},
-        data: {pantryItems: updated},
+      // Update MMKV cache and optimistic state
+      pantryStorage.updateCachedItem(pantryId, updatedItem);
+      setOptimisticItems(prev => {
+        const exists = prev.some(item => item.id === updatedItem.id);
+        return exists
+          ? prev.map(item => item.id === updatedItem.id ? updatedItem : item)
+          : [...prev, updatedItem];
       });
     },
   });
 
-  const pantryItems = data?.pantryItems || [];
+  // Determine which data to use - prioritize network data, then cached data, then optimistic
+  const pantryItems = useMemo(() => {
+    if (networkData?.pantryItems) {
+      return networkData.pantryItems;
+    }
+    if (cachedData?.pantryItems) {
+      return cachedData.pantryItems;
+    }
+    return optimisticItems;
+  }, [networkData?.pantryItems, cachedData?.pantryItems, optimisticItems]);
+
+  // Loading states
+  const isInitialLoading = cacheLoading && !hasLoadedCache && optimisticItems.length === 0;
+  const isRefreshing = networkLoading && (pantryItems.length > 0 || hasLoadedCache);
 
   // Simple search functionality
   const {
@@ -100,13 +180,18 @@ export function usePantryManagement(pantryId: string | undefined) {
         });
 
         if (existingItems?.pantryItems) {
+          const updatedItems = [...existingItems.pantryItems, data.addItemToPantry];
           cache.writeQuery<GetPantryItemsQuery>({
             query: GetPantryItemsDocument,
             variables: {pantryId},
             data: {
-              pantryItems: [...existingItems.pantryItems, data.addItemToPantry],
+              pantryItems: updatedItems,
             },
           });
+
+          // Update MMKV cache and optimistic state
+          pantryStorage.setPantryItems(pantryId, updatedItems);
+          setOptimisticItems(updatedItems);
         }
       }
     },
@@ -140,6 +225,10 @@ export function usePantryManagement(pantryId: string | undefined) {
                 pantryItems: updatedItems,
               },
             });
+
+            // Update MMKV cache and optimistic state
+            pantryStorage.setPantryItems(pantryId, updatedItems);
+            setOptimisticItems(updatedItems);
           }
         }
       },
@@ -172,6 +261,10 @@ export function usePantryManagement(pantryId: string | undefined) {
                 pantryItems: filteredItems,
               },
             });
+
+            // Update MMKV cache and optimistic state
+            pantryStorage.setPantryItems(pantryId, filteredItems);
+            setOptimisticItems(filteredItems);
           }
         }
       },
@@ -349,11 +442,22 @@ export function usePantryManagement(pantryId: string | undefined) {
     });
   };
 
+  // Enhanced refetch that updates both Apollo and MMKV cache
+  const refetch = async () => {
+    const result = await networkRefetch();
+    if (result.data?.pantryItems && pantryId) {
+      pantryStorage.setPantryItems(pantryId, result.data.pantryItems);
+      setOptimisticItems(result.data.pantryItems);
+    }
+    return result;
+  };
+
   return {
     // Data
     items: filteredItems,
     allItems: pantryItems,
-    loading,
+    loading: isInitialLoading,
+    refreshing: isRefreshing,
     error,
     stats,
 
@@ -365,6 +469,10 @@ export function usePantryManagement(pantryId: string | undefined) {
     adding,
     updating,
     removing,
+
+    // Cache info for debugging
+    hasLoadedCache,
+    cacheInfo: pantryId ? pantryStorage.getCacheInfo(pantryId) : null,
 
     // Actions
     addItem,

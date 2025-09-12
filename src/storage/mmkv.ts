@@ -20,3 +20,7 @@ export const zustandStorage: StateStorage = {
     return storage.delete(name);
   },
 };
+
+// Export cache utilities for easy access
+export {pantryStorage} from './pantryCache';
+export {shoppingListStorage} from './shoppingListCache';

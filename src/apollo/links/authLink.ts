@@ -1,8 +1,15 @@
 import {setContext} from '@apollo/client/link/context';
 import {useStore} from '#store';
 import Config from 'react-native-config';
+import {LogoutCleanup} from '../logoutCleanup';
 
 export const authLink = setContext(async (operation, {headers}) => {
+  // Skip operations during logout to prevent unnecessary auth errors
+  if (LogoutCleanup.shouldSkipOperation(operation.operationName)) {
+    console.log(`[AuthLink] Skipping operation during logout: ${operation.operationName}`);
+    throw new Error('Operation cancelled due to logout process');
+  }
+
   // Always include the API key for all requests
   const apiKey = Config.API_KEY;
 

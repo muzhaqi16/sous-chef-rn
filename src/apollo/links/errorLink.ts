@@ -2,12 +2,24 @@ import {onError} from '@apollo/client/link/error';
 import {fromPromise} from '@apollo/client';
 import {attemptTokenRefresh} from './refreshToken';
 import {isKnownServerError} from '#utils/subscriptionErrorHandler';
+import {LogoutCleanup} from '../logoutCleanup';
 
 export const errorLink = onError(
   ({graphQLErrors, networkError, operation, forward}) => {
     // Skip error handling for refresh token mutation
     if (operation.getContext().skipErrorLink) {
       return;
+    }
+
+    // Handle logout-related errors gracefully
+    if (LogoutCleanup.isInLogoutProcess()) {
+      console.log(`🔇 Suppressing error during logout: ${operation.operationName}`);
+      return; // Skip all error handling during logout
+    }
+
+    // Also handle errors with our utility
+    if (LogoutCleanup.handleLogoutError({message: networkError?.message || graphQLErrors?.[0]?.message}, operation.operationName)) {
+      return; // Error was suppressed during logout
     }
 
     // Check if this is a known server subscription error
@@ -80,6 +92,12 @@ export const errorLink = onError(
           msg.toLowerCase().includes('jwt');
 
         if (isAuthError && operation.operationName !== 'RefreshToken') {
+          // Skip token refresh if we're in logout process
+          if (LogoutCleanup.isInLogoutProcess()) {
+            console.log('Skipping token refresh during logout process');
+            return;
+          }
+
           console.log(
             'Received authentication error, attempting token refresh…',
           );
@@ -112,6 +130,12 @@ export const errorLink = onError(
         if (isApiKeyIssue) {
           console.error('API Key authentication failed');
           // Don't attempt token refresh for API key issues
+          return;
+        }
+
+        // Skip token refresh if we're in logout process
+        if (LogoutCleanup.isInLogoutProcess()) {
+          console.log('Skipping token refresh for 401 during logout process');
           return;
         }
 

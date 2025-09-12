@@ -16,6 +16,7 @@ import {usePantryItems, useDefaultHome} from '#hooks';
 import {useGetHomeQuery, useAddItemToShoppingListMutation} from '#generated';
 import {LowStockItemsNavProp} from '#navigation/types';
 import {commonStyles} from '#styles';
+import {useStore} from '#store';
 
 export const LowStockItems: React.FC = () => {
   const {theme} = useUnistyles();
@@ -24,9 +25,10 @@ export const LowStockItems: React.FC = () => {
   const [refreshing, setRefreshing] = React.useState(false);
 
   const {selectedHomeId, getDefaultPantry} = useDefaultHome();
+  const isLoggingOut = useStore(state => state.isLoggingOut);
   const {data: homeData} = useGetHomeQuery({
     variables: {homeId: selectedHomeId ?? ''},
-    skip: !selectedHomeId,
+    skip: !selectedHomeId || isLoggingOut,
   });
 
   const pantry = getDefaultPantry(homeData);

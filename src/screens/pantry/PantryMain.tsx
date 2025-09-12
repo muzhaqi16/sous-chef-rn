@@ -37,7 +37,7 @@ export const PantryMain: React.FC = () => {
 
   const {data: homeData} = useGetHomeQuery({
     variables: {homeId: selectedHomeId ?? ''},
-    fetchPolicy: 'cache-and-network',
+    fetchPolicy: 'cache-first', // Use cache-first for immediate display
     skip: !selectedHomeId,
   });
 
@@ -71,6 +71,9 @@ export const PantryMain: React.FC = () => {
     removeItem,
     refetch,
     loading,
+    refreshing,
+    hasLoadedCache,
+    cacheInfo,
     getExpiredItems,
     getLowStockItems,
   } = usePantryManagement(pantry?.id);
@@ -210,7 +213,8 @@ export const PantryMain: React.FC = () => {
     );
   }
 
-  if (loading || homesLoading) {
+  // Only show loading state if we have no cached data and are still loading
+  if ((loading || homesLoading) && !hasLoadedCache && items.length === 0) {
     return (
       <ListTemplate
         title="Pantry"
@@ -221,7 +225,7 @@ export const PantryMain: React.FC = () => {
         onItemPress={() => {}}
         showHeader={true}
         showSearchBar={true}
-        showFAB={false} // Don't show FAB since we have add in search bar
+        showFAB={false}
         headerActions={headerActions}
         searchBarActions={searchBarActions}
         onRefresh={async () => {
@@ -236,11 +240,16 @@ export const PantryMain: React.FC = () => {
     );
   }
 
+  // Debug info for development
+  const debugSubtitle = __DEV__ && cacheInfo 
+    ? `${pantry?.name || 'Your Pantry'} • ${cacheInfo.itemCount} cached (${Math.round(cacheInfo.age / 1000)}s ago)`
+    : pantry?.name || 'Your Pantry';
+
   return (
     <>
       <ListTemplate
         title={homeData?.home?.name || 'Pantry'}
-        subtitle={pantry?.name || 'Your Pantry'}
+        subtitle={debugSubtitle}
         items={items}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}

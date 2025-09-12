@@ -16,6 +16,7 @@ import {
   useSafeNavigation,
   useCredentialLoader,
   useAutoLogin,
+  useNavigationFlow,
 } from '#hooks';
 import {
   hasCredentials,
@@ -52,6 +53,9 @@ export function LoginScreen({hasStoredCredentials}: LoginScreenProps) {
     setUserNavigationState,
     user,
   } = useStore();
+
+  // Navigation flow hook
+  const {handleAuthComplete} = useNavigationFlow();
 
   // State for credential management
   const [savedEmail, setSavedEmail] = useState<string>('');
@@ -135,9 +139,9 @@ export function LoginScreen({hasStoredCredentials}: LoginScreenProps) {
           console.log(
             'LoginScreen: Auto-login successful after biometric verification',
           );
-          // Small delay to ensure navigation is ready
-          await new Promise(resolve => setTimeout(resolve, 100));
+          // Use the new navigation system
           await completeAuthentication(result.data.login, rememberMe ?? false);
+          handleAuthComplete(result.data.login, rememberMe ?? false, true);
           return;
         }
       } catch (loginError) {
@@ -208,6 +212,7 @@ export function LoginScreen({hasStoredCredentials}: LoginScreenProps) {
 
     // Complete authentication flow
     await completeAuthentication(pendingAuthResponse, remember);
+    handleAuthComplete(pendingAuthResponse, remember, true);
     setPendingAuthResponse(null);
   };
 
@@ -277,6 +282,7 @@ export function LoginScreen({hasStoredCredentials}: LoginScreenProps) {
             loginData,
             userNavState.rememberMeChoice,
           );
+          handleAuthComplete(loginData, userNavState.rememberMeChoice, true);
         } else if (rememberMe === undefined && !pwFromKeychain) {
           // First time login, show remember me modal
           setPendingAuthResponse({
@@ -288,6 +294,7 @@ export function LoginScreen({hasStoredCredentials}: LoginScreenProps) {
         } else {
           // Use existing remember me preference
           await completeAuthentication(loginData, rememberMe);
+          handleAuthComplete(loginData, rememberMe, true);
         }
       } else {
         throw new Error('Login failed: No data returned');

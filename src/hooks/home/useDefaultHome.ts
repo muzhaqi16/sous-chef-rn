@@ -3,7 +3,7 @@ import {useGetHomesQuery} from '#generated';
 import {useStore} from '#store';
 
 export const useDefaultHome = () => {
-  const {selectedHomeId, setSelectedHomeId} = useStore();
+  const {selectedHomeId, setSelectedHomeId, user, isLoggingOut} = useStore();
 
   const {
     data: homes,
@@ -11,7 +11,7 @@ export const useDefaultHome = () => {
     error,
   } = useGetHomesQuery({
     fetchPolicy: 'cache-and-network',
-    skip: !!selectedHomeId, // Skip if we already have a selected home
+    skip: !!selectedHomeId || !user || isLoggingOut, // Skip if we have a selected home, no user, or logging out
   });
 
   useEffect(() => {

@@ -1,27 +1,4 @@
 import {Alert} from 'react-native';
-import NavigationService from '#/services/NavigationService';
-import {OnBoardingSteps} from '#store/slices/preferencesSlice';
-
-// Navigation helpers
-export const navigateToNextStep = (
-  user: any,
-  setUserNavigationState: (userId: string, state: any) => void,
-  setOnBoardingStep: (step: OnBoardingSteps) => void,
-  saveUserProgress: (progress: any) => void,
-) => {
-  if (user?.id) {
-    setUserNavigationState(user.id, {
-      onboardingProgress: OnBoardingSteps.createShoppingList,
-    });
-  }
-
-  setOnBoardingStep(OnBoardingSteps.createShoppingList);
-  saveUserProgress({
-    onboardingProgress: OnBoardingSteps.createShoppingList,
-  });
-
-  NavigationService.navigate('CreateShoppingList');
-};
 
 // Resource checking helpers
 export const checkExistingResources = async (

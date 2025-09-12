@@ -25,13 +25,11 @@ import {
 // Store & Navigation
 import {useStore} from '#store';
 import {OnBoardingSteps} from '#store/slices/preferencesSlice';
-import {useNavigationState} from '#hooks';
-import NavigationService from '#/services/NavigationService';
+import {useNavigationState, useNavigationFlow} from '#hooks';
 
 // Validation & Helpers
 import {getCreateHomeSchema} from '#/utils';
 import {
-  navigateToNextStep,
   checkExistingResources,
   createPantryForHome,
   showPantryCreationError,
@@ -45,6 +43,7 @@ type FormValues = {
 
 export const CreateHomeScreen = () => {
   const {saveUserProgress} = useNavigationState();
+  const {handleOnboardingStep} = useNavigationFlow();
 
   const {
     setSelectedHomeId,
@@ -127,13 +126,8 @@ export const CreateHomeScreen = () => {
 
   // Navigation helper
   const goToNextStep = useCallback(() => {
-    navigateToNextStep(
-      user,
-      setUserNavigationState,
-      setOnBoardingStep,
-      saveUserProgress,
-    );
-  }, [user, setUserNavigationState, setOnBoardingStep, saveUserProgress]);
+    handleOnboardingStep(OnBoardingSteps.createShoppingList);
+  }, [handleOnboardingStep]);
 
   // Check existing resources on mount
   useEffect(() => {

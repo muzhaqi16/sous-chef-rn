@@ -13,6 +13,7 @@ import {FormModal} from '#components/organisms/FormModal';
 import {Input} from '#components/base/Input';
 import {FormGroup} from '#components/molecules/FormGroup';
 import {AutocompleteInput} from '#components/molecules/AutoCompleteInput';
+import {UnitsAutocompleteInput} from '#components/molecules/UnitsAutocompleteInput';
 
 interface RouteParams {
   listId: string;
@@ -29,6 +30,7 @@ export const AddEditItem: React.FC = () => {
   const [itemName, setItemName] = useState('');
   const [quantity, setQuantity] = useState('1');
   const [unit, setUnit] = useState('');
+  const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
   const [category, setCategory] = useState('');
   const [saving, setSaving] = useState(false);
@@ -138,6 +140,11 @@ export const AddEditItem: React.FC = () => {
     setItemName(item.name);
   };
 
+  // Handle unit selection from autocomplete
+  const handleUnitSelect = (unitId: string | null) => {
+    setSelectedUnitId(unitId);
+  };
+
   // Handle form submission
   const handleSave = async () => {
     if (!itemName.trim()) {
@@ -147,6 +154,12 @@ export const AddEditItem: React.FC = () => {
 
     setSaving(true);
     try {
+      // Prepare unit data - prioritize selected unit ID if available
+      const unitData = {
+        unitName: unit, // Always include the display name
+        ...(selectedUnitId && { unitId: selectedUnitId }), // Include unit ID if selected from autocomplete
+      };
+
       if (isEdit) {
         await updateItem({
           variables: {
@@ -154,7 +167,7 @@ export const AddEditItem: React.FC = () => {
             input: {
               itemName,
               quantity: parseFloat(quantity) || 1,
-              unitName: unit,
+              ...unitData,
               notes,
               category,
             },
@@ -167,7 +180,7 @@ export const AddEditItem: React.FC = () => {
               shoppingListId: listId,
               itemName,
               quantity: parseFloat(quantity) || 1,
-              unitName: unit,
+              ...unitData,
               notes,
               category,
             },
@@ -220,11 +233,12 @@ export const AddEditItem: React.FC = () => {
           placeholder="1"
           keyboardType="numeric"
         />
-        <Input
+        <UnitsAutocompleteInput
           label="Unit"
           value={unit}
           onChangeText={setUnit}
-          placeholder="e.g., kg, lbs"
+          onUnitSelected={handleUnitSelect}
+          placeholder="kg, lbs, pcs, etc."
         />
       </FormGroup>
 

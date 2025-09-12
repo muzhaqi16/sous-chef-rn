@@ -210,6 +210,10 @@ const clearAuthFromStorage = async () => {
         zustandStorage.setItem(STORAGE_KEY, JSON.stringify(parsedData));
       }
     }
+
+    // Clear navigation state to prevent restoring to authenticated screens
+    console.log('Clearing navigation state from storage');
+    storage.delete('navigation_state');
   } catch (error) {
     console.error('Error clearing auth from storage:', error);
   }

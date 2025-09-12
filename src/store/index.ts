@@ -24,6 +24,7 @@ import {
   ResetOptions,
   RESET_SCENARIOS,
 } from './resetManager';
+import {NavigationState} from '#/hooks/navigation/useNavigationState';
 // import {logger} from './logger';
 import {zustandStorage, STORAGE_KEY} from '#/storage/mmkv';
 
@@ -38,12 +39,19 @@ interface ResetManagerState {
   resetOnboarding: () => Promise<void>;
 }
 
+// Add navigation state machine interface
+interface NavigationStateManagerState {
+  initiateLogout: () => boolean;
+  completeLogout: () => boolean;
+}
+
 export type RootState = AuthState &
   PreferencesState &
   AppState &
   NotificationState &
   BarcodeScannerState &
-  ResetManagerState;
+  ResetManagerState &
+  NavigationStateManagerState;
 
 export const useStore = create<RootState>()(
   subscribeWithSelector(
@@ -55,6 +63,24 @@ export const useStore = create<RootState>()(
           // Create the reset manager
           const resetManager = createResetManager(set, get);
 
+          // Create navigation state manager
+          const navigationStateManager: NavigationStateManagerState = {
+            initiateLogout: () => {
+              console.log('🔄 Store: Logout initiated - setting global logout state');
+              set(state => {
+                state.isLoggingOut = true;
+              });
+              return true; // Success
+            },
+            completeLogout: () => {
+              console.log('🔄 Store: Logout completed - clearing global logout state');
+              set(state => {
+                state.isLoggingOut = false;
+              });
+              return true; // Success
+            },
+          };
+
           return {
             ...createAuthSlice(set, get, store),
             ...createPreferencesSlice(set, get, store),
@@ -63,6 +89,8 @@ export const useStore = create<RootState>()(
             ...createNotificationSlice(set, get, store),
             // Add reset manager methods to the store
             ...resetManager,
+            // Add navigation state manager methods
+            ...navigationStateManager,
           };
         },
         // ),

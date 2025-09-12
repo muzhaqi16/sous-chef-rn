@@ -2,6 +2,7 @@ import {StateCreator} from 'zustand';
 import {RootState} from '../index';
 import {storage} from '#/storage/mmkv';
 import NavigationService from '#/services/NavigationService';
+import {LogoutCleanup} from '#/apollo/logoutCleanup';
 import {
   RefreshTokenMutation,
   LoginMutation,
@@ -179,7 +180,7 @@ export const createAuthSlice: StateCreator<
       JSON.stringify(get().userStates[user.id]),
     );
 
-    // Navigation will be handled automatically by AppNavigator based on the updated user state
+    // Navigation is now handled declaratively via useNavigationFlow
   },
 
   setCompleteUser: user =>
@@ -292,12 +293,28 @@ export const createAuthSlice: StateCreator<
   },
 
   logout: async () => {
-    console.log('AuthSlice: Starting logout process...');
+    console.log('🔐 AuthSlice: Starting logout process...');
 
     const currentUser = get().user;
 
     try {
-      // Save any important user state before logout
+      // 1. Set logout state immediately to prevent queries
+      const store = get();
+      if ('setLoggingOut' in store) {
+        store.setLoggingOut(true);
+        console.log('🔄 Set global logout state to true');
+      }
+
+      // 2. Initiate logout in navigation state machine
+      if ('initiateLogout' in store) {
+        store.initiateLogout();
+      }
+
+      // 3. Perform Apollo cleanup first
+      console.log('🧹 Starting Apollo cleanup...');
+      await LogoutCleanup.performLogoutCleanup();
+
+      // 4. Save any important user state before logout
       if (currentUser?.id) {
         const userState = get().userStates[currentUser.id];
         if (userState) {
@@ -313,11 +330,9 @@ export const createAuthSlice: StateCreator<
         }
       }
 
-      // The reset manager will be available on the store when this is called
-      const store = get();
+      // 5. Reset the store via reset manager
       if ('resetStore' in store) {
-        await (store as any).resetStore('LOGOUT');
-        console.log('AuthSlice: Logout completed successfully');
+        await store.resetStore('LOGOUT');
       } else {
         console.error(
           'AuthSlice: Reset manager not available, performing manual reset',
@@ -325,11 +340,38 @@ export const createAuthSlice: StateCreator<
         set(initialAuthState);
       }
 
-      // Navigate to auth
+      // 6. Complete logout cleanup
+      LogoutCleanup.completeLogout();
+
+      // 7. Complete navigation state transition
+      if ('completeLogout' in store) {
+        store.completeLogout();
+      }
+
+      // 8. Clear logout state
+      if ('setLoggingOut' in store) {
+        store.setLoggingOut(false);
+        console.log('🔄 Cleared global logout state');
+      }
+
+      // 9. Navigate to auth
       NavigationService.navigateToAuth();
+
+      console.log('✅ AuthSlice: Logout completed successfully');
     } catch (error) {
-      console.error('AuthSlice: Error during logout:', error);
+      console.error('❌ AuthSlice: Error during logout:', error);
+
+      // Fallback: complete cleanup and reset state
+      LogoutCleanup.completeLogout();
+
+      // Clear logout state in error case too
+      const store = get();
+      if ('setLoggingOut' in store) {
+        store.setLoggingOut(false);
+      }
+
       set(initialAuthState);
+      NavigationService.navigateToAuth();
     }
   },
 

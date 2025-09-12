@@ -22,7 +22,7 @@ import type {NotificationItem} from '#store/slices/notificationSlice';
 // ============================================================================
 
 export type RootStackParamList = {
-  HomeStack: NavigatorScreenParams<HomeTabParamList>;
+  readonly HomeStack: NavigatorScreenParams<HomeTabParamList>;
   AuthStack: NavigatorScreenParams<AuthStackParamList>;
   OnBoardingStack: NavigatorScreenParams<OnBoardingStackParamList>;
   BarcodeStack: NavigatorScreenParams<BarcodeStackParamList>;
