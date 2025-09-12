@@ -1,17 +1,21 @@
 import React from 'react';
 import {SafeAreaView, ScrollView} from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigationFlow} from '#hooks';
 import {StyleSheet} from 'react-native-unistyles';
 import {ProfileHeader, SettingsSection} from '#components';
 import {useProfileData, useConfigurableSettings} from '#hooks';
 
 export const ProfileScreen = () => {
-  const navigation = useNavigation();
+  const {
+    navigateWithinStack,
+    navigateToAuth,
+    goBack,
+  } = useNavigationFlow();
   const {profile, user, loading} = useProfileData();
   const {sections} = useConfigurableSettings(profile);
 
   const handleAvatarPress = () => {
-    navigation.navigate('ProfilePhotoUpload');
+    navigateWithinStack('ProfilePhotoUpload');
   };
 
   const handleLogout = () => {
@@ -23,10 +27,7 @@ export const ProfileScreen = () => {
 
     if (logoutItem?.onPress) {
       logoutItem.onPress();
-      navigation.reset({
-        index: 0,
-        routes: [{name: 'AuthStack'}],
-      });
+      navigateToAuth();
     }
   };
 
@@ -39,7 +40,7 @@ export const ProfileScreen = () => {
         avatarUrl={profile?.avatar}
         name={`${profile?.firstName || ''} ${profile?.lastName || ''}`.trim()}
         subtitle={user?.email || ''}
-        onBack={() => navigation.goBack()}
+        onBack={() => goBack()}
         onMore={() => {}}
         onAvatarPress={handleAvatarPress}
       />

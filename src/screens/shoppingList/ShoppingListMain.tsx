@@ -1,6 +1,7 @@
 import React, {useMemo, useEffect} from 'react';
 import {TouchableOpacity, Text, Alert, Image, View} from 'react-native';
-import {useNavigation, useFocusEffect} from '@react-navigation/native';
+import {useFocusEffect} from '@react-navigation/native';
+import {useNavigationFlow} from '#hooks';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {
   useGetShoppingListsQuery,
@@ -25,7 +26,10 @@ import {Icon, type IconLibrary} from '#/utils/iconUtils';
 
 export const ShoppingListMain: React.FC = () => {
   const {theme} = useUnistyles();
-  const navigation = useNavigation<ShoppingListMainNavProp>();
+  const {
+    navigateWithinStack,
+    navigateToBarcode,
+  } = useNavigationFlow();
   const selectShoppingListSheet = useBottomSheetModal();
   const {selectedShoppingListId, setSelectedShoppingListId} = useStore();
   const [toggleItem] = useMarkItemPurchasedMutation();
@@ -93,13 +97,13 @@ export const ShoppingListMain: React.FC = () => {
           {text: 'Cancel', style: 'cancel'},
           {
             text: 'Create List',
-            onPress: () => navigation.navigate('ListSettings'),
+            onPress: () => navigateWithinStack('ListSettings'),
           },
         ],
       );
       return;
     }
-    navigation.navigate('AddItem', {listId: currentListId});
+    navigateWithinStack('AddItem', {listId: currentListId});
   };
 
   const handleDeleteItem = async (itemId: string) => {
@@ -151,7 +155,7 @@ export const ShoppingListMain: React.FC = () => {
           description: 'Create a shopping list to get started',
           action: {
             label: 'Create List',
-            onPress: () => navigation.navigate('ListSettings'),
+            onPress: () => navigateWithinStack('ListSettings'),
           },
         }}
       />
@@ -167,10 +171,10 @@ export const ShoppingListMain: React.FC = () => {
         searchQuery={query}
         onSearchChange={setQuery}
         onItemPress={id =>
-          navigation.navigate('EditItem', {listId: currentListId, itemId: id})
+          navigateWithinStack('EditItem', {listId: currentListId, itemId: id})
         }
         onItemEdit={id =>
-          navigation.navigate('EditItem', {listId: currentListId, itemId: id})
+          navigateWithinStack('EditItem', {listId: currentListId, itemId: id})
         }
         onItemDelete={handleDeleteItem}
         onRefresh={handleRefresh}
@@ -178,13 +182,7 @@ export const ShoppingListMain: React.FC = () => {
         showSearchBar={true}
         showFAB={true}
         onFabPress={() =>
-          navigation.getParent()?.navigate('BarcodeStack', {
-            screen: 'BarcodeScanner',
-            params: {
-              source: 'shoppingList',
-              shoppingListId: currentListId,
-            },
-          })
+          navigateToBarcode('shoppingList', currentListId)
         }
         // Actions
         searchBarActions={searchBarActions}
@@ -217,7 +215,7 @@ export const ShoppingListMain: React.FC = () => {
               label: 'Create New List',
               onPress: () => {
                 selectShoppingListSheet.close();
-                navigation.navigate('ListSettings');
+                navigateWithinStack('ListSettings');
               },
               iconLibrary: 'MaterialIcons' as IconLibrary,
             },
@@ -228,7 +226,7 @@ export const ShoppingListMain: React.FC = () => {
                     label: 'Share Current List',
                     onPress: () => {
                       selectShoppingListSheet.close();
-                      navigation.navigate('ShareList', {listId: currentListId});
+                      navigateWithinStack('ShareList', {listId: currentListId});
                     },
                     iconLibrary: 'MaterialIcons' as IconLibrary,
                   },
@@ -237,7 +235,7 @@ export const ShoppingListMain: React.FC = () => {
                     label: 'List Settings',
                     onPress: () => {
                       selectShoppingListSheet.close();
-                      navigation.navigate('ListSettings', {
+                      navigateWithinStack('ListSettings', {
                         listId: currentListId,
                       });
                     },

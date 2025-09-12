@@ -1,6 +1,6 @@
 import React, {useMemo, useEffect} from 'react';
 import {Alert, View, Image} from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigationFlow} from '#hooks';
 import {useUnistyles, StyleSheet} from 'react-native-unistyles';
 import {
   useDefaultHome,
@@ -20,7 +20,11 @@ import {
 import {ItemSelectorWithActions} from '#components/organisms/ItemSelectorWithActions';
 
 export const PantryMain: React.FC = () => {
-  const navigation = useNavigation<PantryMainNavProp>();
+  const {
+    navigateToHomeManagement,
+    navigateWithinStack,
+    navigateToBarcode,
+  } = useNavigationFlow();
 
   const {theme} = useUnistyles();
 
@@ -111,17 +115,14 @@ export const PantryMain: React.FC = () => {
           {text: 'Cancel', style: 'cancel'},
           {
             text: 'Manage Homes',
-            onPress: () =>
-              navigation.getParent()?.navigate('HomeManagementStack', {
-                screen: 'HomeManagement',
-              }),
+            onPress: () => navigateToHomeManagement(),
             style: 'default',
           },
         ],
       );
       return;
     }
-    navigation.navigate('PantryItem', {});
+    navigateWithinStack('PantryItem', {});
   };
 
   const handleDeleteItem = async (itemId: string) => {
@@ -134,11 +135,7 @@ export const PantryMain: React.FC = () => {
       left: [
         {
           icon: 'home-switch-outline',
-          onPress: () =>
-            navigation.getParent()?.navigate('HomeManagementStack', {
-              screen: 'HomeManagement',
-              params: {homeId: selectedHomeId},
-            }),
+          onPress: () => navigateToHomeManagement(selectedHomeId || undefined),
           size: 34,
           color: theme.colors.primary,
           library: 'MaterialDesignIcons',
@@ -147,24 +144,24 @@ export const PantryMain: React.FC = () => {
       right: [
         {
           icon: 'schedule',
-          onPress: () => navigation.navigate('ExpiringItems'),
+          onPress: () => navigateWithinStack('ExpiringItems'),
           badge: stats.expired,
           color: '#FF6B6B',
         },
         {
           icon: 'warning',
-          onPress: () => navigation.navigate('LowStockItems'),
+          onPress: () => navigateWithinStack('LowStockItems'),
           badge: stats.lowStock,
           color: '#FFB84D',
         },
         {
           icon: 'category',
-          onPress: () => navigation.navigate('CategoryManagement'),
+          onPress: () => navigateWithinStack('CategoryManagement'),
         },
       ] as HeaderAction[],
     }),
     [
-      navigation,
+      navigateToHomeManagement,
       selectedHomeId,
       theme.colors.primary,
       stats.expired,
@@ -189,7 +186,7 @@ export const PantryMain: React.FC = () => {
         },
       ] as SearchBarAction[],
     }),
-    [navigation, theme.colors, handleAddItem],
+    [theme.colors, handleAddItem],
   );
 
   if (!selectedHomeId) {
@@ -203,10 +200,7 @@ export const PantryMain: React.FC = () => {
             'You need to create or be a member of a home to manage pantry items.',
           action: {
             label: 'Manage Homes',
-            onPress: () =>
-              navigation.getParent()?.navigate('HomeManagementStack', {
-                screen: 'HomeManagement',
-              }),
+            onPress: () => navigateToHomeManagement(),
           },
         }}
       />
@@ -255,9 +249,9 @@ export const PantryMain: React.FC = () => {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         onItemPress={id =>
-          navigation.navigate('PantryItemDetail', {itemId: id})
+          navigateWithinStack('PantryItemDetail', {itemId: id})
         }
-        onItemEdit={id => navigation.navigate('PantryItem', {itemId: id})}
+        onItemEdit={id => navigateWithinStack('PantryItem', {itemId: id})}
         onItemDelete={handleDeleteItem}
         onRefresh={async () => {
           await refetch();
@@ -267,13 +261,7 @@ export const PantryMain: React.FC = () => {
         showSearchBar={true}
         showFAB={true} // Don't show FAB since we have add in search bar
         onFabPress={() =>
-          navigation.getParent()?.navigate('BarcodeStack', {
-            screen: 'BarcodeScanner',
-            params: {
-              source: 'pantry',
-              pantryId: pantry?.id,
-            },
-          })
+          navigateToBarcode('pantry', pantry?.id)
         }
         // Actions
         headerActions={headerActions}
@@ -306,7 +294,7 @@ export const PantryMain: React.FC = () => {
               label: 'Create New Pantry',
               onPress: () => {
                 selectPantrySheet.close();
-                navigation.navigate('PantrySettings', {pantryId: undefined});
+                navigateWithinStack('PantrySettings', {pantryId: undefined});
               },
               iconLibrary: 'MaterialIcons',
             },
@@ -316,7 +304,7 @@ export const PantryMain: React.FC = () => {
               onPress: () => {
                 selectPantrySheet.close();
                 if (pantry?.id) {
-                  navigation.navigate('PantrySettings', {pantryId: pantry.id});
+                  navigateWithinStack('PantrySettings', {pantryId: pantry.id});
                 }
               },
               iconLibrary: 'MaterialIcons',

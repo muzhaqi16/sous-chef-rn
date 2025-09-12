@@ -1,6 +1,6 @@
 import React, {useState, useCallback, useMemo} from 'react';
 import {View, SectionList, RefreshControl} from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigationFlow} from '#hooks';
 import {StyleSheet} from 'react-native-unistyles';
 import {
   NotificationItem,
@@ -31,7 +31,13 @@ import {
 } from '#utils/notificationGrouping';
 
 export const NotificationListScreen: React.FC = () => {
-  const navigation = useNavigation<NotificationListNavProp>();
+  const {
+    navigateWithinStack,
+    navigateToShoppingList,
+    navigateToPantry,
+    navigateToProfile,
+    goBack,
+  } = useNavigationFlow();
   const [filterCategory, setFilterCategory] =
     useState<NotificationCategory | null>(null);
   const userId = useStore(state => state.user?.id);
@@ -108,24 +114,16 @@ export const NotificationListScreen: React.FC = () => {
             }
             break;
           case 'ADD_TO_SHOPPING_LIST':
-            navigation.getParent()?.navigate('ShoppingListStack', {
-              screen: 'ShoppingListMain',
-              params: notification.actionData,
-            });
+            navigateToShoppingList('ShoppingListMain', notification.actionData);
             break;
           case 'VIEW_EXPIRING_ITEMS':
-            navigation.getParent()?.navigate('PantryStack', {
-              screen: 'ExpiringItems',
-              params: notification.actionData,
-            });
+            navigateToPantry('ExpiringItems', notification.actionData);
             break;
           case 'REVIEW_SECURITY':
-            navigation.getParent()?.navigate('SettingsStack', {
-              screen: 'ProfileSettings',
-            });
+            navigateToProfile('ProfileSettings');
             break;
           default:
-            navigation.navigate('NotificationDetail', {
+            navigateWithinStack('NotificationDetail', {
               notification,
             });
         }
@@ -133,29 +131,22 @@ export const NotificationListScreen: React.FC = () => {
         // Default navigation based on category
         switch (notification.category) {
           case NotificationCategory.SHOPPING_LIST:
-            navigation.getParent()?.navigate('ShoppingListStack', {
-              screen: 'ListSettings',
-              params: {listId: notification.payload.listId},
-            });
+            navigateToShoppingList('ListSettings', {listId: notification.payload.listId});
             break;
           case NotificationCategory.PANTRY:
-            navigation.getParent()?.navigate('PantryStack', {
-              screen: 'PantryMain',
-            });
+            navigateToPantry();
             break;
           case NotificationCategory.SECURITY:
-            navigation.getParent()?.navigate('SettingsStack', {
-              screen: 'ProfileSettings',
-            });
+            navigateToProfile('ProfileSettings');
             break;
           default:
-            navigation.navigate('NotificationDetail', {
+            navigateWithinStack('NotificationDetail', {
               notification,
             });
         }
       }
     },
-    [handleMarkAsRead, navigation],
+    [handleMarkAsRead, navigateWithinStack],
   );
 
   // Test notification creation
@@ -184,7 +175,7 @@ export const NotificationListScreen: React.FC = () => {
     <Header
       title={'Notifications'}
       centerTitle={true}
-      onBack={navigation.goBack}
+      onBack={goBack}
       rightActions={[
         {
           icon: 'bug-report',
@@ -192,7 +183,7 @@ export const NotificationListScreen: React.FC = () => {
         },
         {
           icon: 'settings',
-          onPress: () => navigation.navigate('NotificationSettings'),
+          onPress: () => navigateWithinStack('NotificationSettings'),
         },
       ]}
     />

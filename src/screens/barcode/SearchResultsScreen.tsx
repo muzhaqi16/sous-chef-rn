@@ -1,6 +1,6 @@
 import React, {useRef, useEffect} from 'react';
 import {SafeAreaView, StatusBar} from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigationFlow} from '#hooks';
 import BottomSheet, {
   BottomSheetBackdrop,
   BottomSheetScrollView,
@@ -24,7 +24,11 @@ export const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({
 }) => {
   const {barcode, format, source, pantryId, shoppingListId} = route.params;
 
-  const navigation = useNavigation<SearchResultsNavProp>();
+  const {
+    navigateWithinStack,
+    navigateToPantry,
+    navigateToShoppingList,
+  } = useNavigationFlow();
 
   const bottomSheetRef = useRef<BottomSheet>(null);
 
@@ -65,7 +69,7 @@ export const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({
 
   const handleScanAnother = () => {
     clearSearch();
-    navigation.navigate('BarcodeScanner', {
+    navigateWithinStack('BarcodeScanner', {
       source,
       pantryId,
       shoppingListId,
@@ -75,18 +79,12 @@ export const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({
   const handleBackPress = () => {
     // Navigate back to the appropriate screen based on source
     if (source === 'pantry') {
-      navigation.getParent()?.navigate('HomeStack', {
-        screen: 'Main',
-        params: {screen: 'PantryMain'}
-      });
+      navigateToPantry();
     } else if (source === 'shoppingList') {
-      navigation.getParent()?.navigate('HomeStack', {
-        screen: 'ShoppingList',
-        params: {screen: 'ShoppingListMain'}
-      });
+      navigateToShoppingList();
     } else {
       // Fallback to normal back navigation
-      navigation.goBack();
+      navigateWithinStack('BarcodeScanner');
     }
   };
 

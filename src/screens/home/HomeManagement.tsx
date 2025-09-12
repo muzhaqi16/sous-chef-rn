@@ -7,7 +7,8 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import Icon from '@react-native-vector-icons/material-icons';
-import {useNavigation, useFocusEffect} from '@react-navigation/native';
+import {useFocusEffect} from '@react-navigation/native';
+import {useNavigationFlow} from '#hooks';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {useHomeManagement} from '#/hooks';
 import {useCallback} from 'react';
@@ -21,7 +22,7 @@ import {
 import {HomeManagementNavProp} from '#/navigation';
 
 export const HomeManagement: React.FC = () => {
-  const navigation = useNavigation<HomeManagementNavProp>();
+  const {goBack} = useNavigationFlow();
 
   const {theme} = useUnistyles();
 
@@ -103,7 +104,7 @@ export const HomeManagement: React.FC = () => {
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
+          <TouchableOpacity onPress={() => goBack()}>
             <Icon
               name="arrow-back"
               size={24}

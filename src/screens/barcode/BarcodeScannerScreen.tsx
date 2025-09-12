@@ -15,7 +15,8 @@ import {
   useCodeScanner,
   useCameraPermission,
 } from 'react-native-vision-camera';
-import {useFocusEffect, useNavigation} from '@react-navigation/native';
+import {useFocusEffect} from '@react-navigation/native';
+import {useNavigationFlow} from '#hooks';
 
 import {useBarcodeScanner} from '#hooks';
 import BarcodeMask from '#components/organisms/BarcodeMask';
@@ -26,7 +27,7 @@ const {width: screenWidth, height: screenHeight} = Dimensions.get('window');
 export const BarcodeScannerScreen: React.FC<BarcodeScannerScreenProps> = ({
   route,
 }) => {
-  const navigation = useNavigation<BarcodeScannerNavProp>();
+  const {navigateWithinStack, goBack} = useNavigationFlow();
   const {source, pantryId, shoppingListId} = route?.params || {};
   const devices = useCameraDevices();
   const device = useMemo(
@@ -107,7 +108,7 @@ export const BarcodeScannerScreen: React.FC<BarcodeScannerScreenProps> = ({
           HapticFeedback?.impact?.(HapticFeedback.ImpactFeedbackStyle.Medium);
         }
 
-        navigation.navigate('SearchResults', {
+        navigateWithinStack('SearchResults', {
           barcode: value,
           format: type,
           source,
@@ -140,7 +141,7 @@ export const BarcodeScannerScreen: React.FC<BarcodeScannerScreenProps> = ({
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.linkButton}
-          onPress={() => navigation.goBack()}>
+          onPress={() => goBack()}>
           <Text style={styles.linkButtonText}>Cancel</Text>
         </TouchableOpacity>
       </View>
@@ -154,7 +155,7 @@ export const BarcodeScannerScreen: React.FC<BarcodeScannerScreenProps> = ({
         <Text style={styles.messageText}>No camera device found</Text>
         <TouchableOpacity
           style={styles.button}
-          onPress={() => navigation.goBack()}>
+          onPress={() => goBack()}>
           <Text style={styles.buttonText}>Go Back</Text>
         </TouchableOpacity>
       </View>
@@ -187,7 +188,7 @@ export const BarcodeScannerScreen: React.FC<BarcodeScannerScreenProps> = ({
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.headerButton}
-          onPress={() => navigation.goBack()}>
+          onPress={() => goBack()}>
           <Text style={styles.headerButtonText}>✕</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Scan Barcode</Text>
