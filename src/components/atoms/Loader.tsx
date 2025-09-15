@@ -1,6 +1,6 @@
 import React from 'react';
 import {ActivityIndicator, View} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
+import {createStyleSheet, useStyles} from 'react-native-unistyles';
 
 interface LoaderProps {
   size?: 'small' | 'large';
@@ -8,6 +8,7 @@ interface LoaderProps {
 }
 
 const Loader: React.FC<LoaderProps> = ({size = 'small', color = '#000'}) => {
+  const {styles} = useStyles(stylesheet);
   return (
     <View style={styles.loaderContainer}>
       <ActivityIndicator size={size} color={color} />
@@ -15,7 +16,7 @@ const Loader: React.FC<LoaderProps> = ({size = 'small', color = '#000'}) => {
   );
 };
 
-const styles = StyleSheet.create(theme => ({
+const stylesheet = createStyleSheet(theme => ({
   loaderContainer: {
     flex: 1,
     justifyContent: 'center',

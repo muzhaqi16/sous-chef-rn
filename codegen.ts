@@ -1,185 +1,38 @@
 import type {CodegenConfig} from '@graphql-codegen/cli';
 
-const getEndpoint = () => {
-  return process.env.API_URL || 'http://localhost:4000/graphql';
-};
-const endpoint = getEndpoint();
+const endpoint = 'http://localhost:4000/graphql';
 
 const config: CodegenConfig = {
-  // Remote introspection with headers for API key and optional auth
-  schema: [
-    {
-      [endpoint]: {
-        headers: {
-          // API Key is always required for schema introspection
-          'x-api-key':
-            process.env.API_KEY || 'mobile_ck_your_secure_random_key_here',
-          'Content-Type': 'application/json',
-        },
-      },
-    },
-  ],
+  // You can point to a local schema file or remote endpoint:
+  // For remote introspection:
+  schema: endpoint,
+  // Or local schema file:
+  //   schema: './schema.graphql',
 
-  // Include GraphQL documents from your mobile app
+  // Include both inline gql in TS/TSX and any standalone .graphql files:
   documents: [
-    'src/graphql/operations/fragments.graphql', // Load fragments first
-    // Standalone GraphQL files
-    'src/graphql/operations/**/*.{graphql,gql}',
-    // Exclude generated files
-    '!src/graphql/generated/**/*.{ts,tsx}',
-    // Exclude node_modules and other irrelevant paths
-    '!src/**/node_modules/**',
+    // include all your real .ts/.tsx/.graphql/.gql files…
+    'src/**/*.{ts,tsx,graphql,gql}',
+    // …but explicitly ignore the generated file
+    '!src/api/graphql/generated.ts',
   ],
-
+  // ignore the generates file
   ignoreNoDocuments: true,
 
   generates: {
-    // Main generated types and hooks
-    'src/graphql/generated/index.ts': {
+    'src/api/graphql/generated.ts': {
       plugins: [
-        {
-          add: {
-            content: [
-              '// This file is auto-generated. Do not edit manually.',
-              '/* eslint-disable */',
-              '// @ts-nocheck',
-            ].join('\n'),
-          },
-        },
         'typescript',
         'typescript-operations',
         'typescript-react-apollo',
       ],
       config: {
-        // React hooks configuration
         withHooks: true,
-        withComponent: false,
-        withHOC: false,
-        withSubscriptionHooks: true, // Enable subscription hooks
-        withRefetchFn: true, // Enable refetch functions
-        withMutationFn: true, // Enable mutation functions
-
-        // Apollo Client configuration
-        apolloReactCommonImportFrom: '@apollo/client',
-        apolloReactHooksImportFrom: '@apollo/client',
-
-        // Document mode - important for subscriptions
-        documentMode: 'documentNode',
-
-        // Type safety improvements
-        avoidOptionals: {
-          field: false,
-          inputValue: false,
-          object: false,
-        },
-
-        // Scalars for mobile (dates as strings)
-        scalars: {
-          DateTime: 'string',
-          Date: 'string',
-          JSON: 'any',
-          Upload: 'File',
-        },
-
-        // Code style preferences
-        useTypeImports: true,
-        maybeValue: 'T | null | undefined',
-        inputMaybeValue: 'T | null | undefined',
-
-        // Error handling
-        errorType: 'ApolloError',
-
-        // Deduplication and naming
-        dedupeOperationSuffix: true,
-        skipTypename: false,
-        flattenGeneratedTypes: false,
-
-        // Fragment types
-        inlineFragmentTypes: 'combine', // Better fragment handling
-        nonOptionalTypename: false, // Don't include __typename
-
-        // Immutable types for better type safety
-        immutableTypes: false, // Set to true if you want readonly types
-
-        // Enum handling
-        enumsAsTypes: false, // Set to true if you prefer union types over enums
+        withTypedDocumentNode: true,
       },
     },
-
-    // Generate fragment matcher for Apollo Client (for unions/interfaces)
-    'src/graphql/generated/fragmentMatcher.json': {
-      plugins: ['fragment-matcher'],
-      config: {
-        apolloClientVersion: 3,
-      },
-    },
-
-    // Generate introspection result for offline schema
-    'src/graphql/generated/introspection.json': {
-      plugins: ['introspection'],
-      config: {
-        minify: true,
-      },
-    },
-
-    // Generate a local schema file for development/debugging
-    'src/graphql/generated/schema.graphql': {
-      plugins: ['schema-ast'],
-      config: {
-        includeDirectives: true,
-        includeIntrospectionTypes: true, // Include subscription types
-        sort: true,
-      },
-    },
-
-    // Generate TypeScript types only (no hooks) for shared types
-    'src/graphql/generated/types.ts': {
-      plugins: [
-        {
-          add: {
-            content: '// Shared GraphQL types - no hooks',
-          },
-        },
-        'typescript',
-        'typescript-operations',
-      ],
-      config: {
-        onlyOperationTypes: false,
-        skipTypename: false,
-        useTypeImports: true,
-        scalars: {
-          DateTime: 'string',
-          Date: 'string',
-          JSON: 'any',
-        },
-      },
-    },
-  },
-
-  // Global configuration
-  config: {
-    // Validation
-    skipDocumentsValidation: false,
-
-    // Performance
-    silent: false,
-    errorsOnly: false,
-
-    // Watch mode for development
-    watch: process.env.NODE_ENV === 'development',
-  },
-
-  // Hooks for post-processing
-  hooks: {
-    afterOneFileWrite: [
-      // Format generated files
-      'prettier --write',
-      // Optional: Run ESLint fix
-      // 'eslint --fix',
-    ],
-    afterAllFileWrite: [
-      'echo "✅ Mobile GraphQL types generated successfully!"',
-    ],
+    // Optionally, you can also generate a local copy of schema:
+    // 'schema.graphql': { plugins: ['schema-ast'] },
   },
 };
 

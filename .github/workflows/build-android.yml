@@ -1,115 +1,49 @@
 name: Build Android .apk
-run-name: Building ${{ github.event_name == 'workflow_dispatch' && inputs.environment || (contains(github.ref, 'prod') && 'prod' || 'dev') }} .apk triggered by @${{ github.actor }}
+
+run-name: 'Building the .apk with the tag triggered by @${{ github.actor }}'
+
 permissions:
   contents: write
 
 on:
   push:
+    # branches:
+    #   - main
     tags:
       - 'v*'
-      - 'prod-v*'
       - 'android-v*'
-      - 'release-v*'
-  workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Environment to build'
-        required: true
-        default: 'dev'
-        type: choice
-        options:
-          - dev
-          - prod
 
 jobs:
   build:
-    runs-on: self-hosted
-    timeout-minutes: 30
-
-    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || (contains(github.ref, 'prod') || contains(github.ref, 'release')) && 'prod' || 'dev' }}
-
-    env:
-      ANDROID_HOME: /opt/android-sdk
-      ANDROID_SDK_ROOT: /opt/android-sdk
-      JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
-      GRADLE_OPTS: -Xmx4096m -Dorg.gradle.daemon=false -Dorg.gradle.parallel=true
-      NODE_OPTIONS: --max-old-space-size=4096
-      BUILD_ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || (contains(github.ref, 'prod') || contains(github.ref, 'release')) && 'prod' || 'dev' }}
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Install Java
+        uses: actions/setup-java@v4
         with:
-          clean: true
-
-      - name: Display build environment
-        run: |
-          echo "🔧 Building for environment: ${{ env.BUILD_ENV }}"
-          echo "📦 Tag/Ref: ${{ github.ref }}"
-          echo "Node version: $(node -v)"
-          echo "Java version: $(java -version 2>&1 | head -n 1)"
-          echo "Android SDK: $ANDROID_HOME"
-
-      - name: Setup Android local.properties
-        run: |
-          echo "sdk.dir=/opt/android-sdk" > android/local.properties
-          echo "✅ Created android/local.properties"
+          java-version: '21'
+          distribution: 'adopt'
+          cache: 'gradle'
 
       - name: Validate Gradle wrapper
         uses: gradle/actions/wrapper-validation@v3
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          # cache: 'yarn'
+
       - name: Setup gradlew as executable
         run: chmod +x ./android/gradlew
 
-      - name: Cache node_modules
-        uses: actions/cache@v3
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node-modules-${{ hashFiles('yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-node-modules-
-
-      - name: Cache Gradle
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-            android/.gradle
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-
       - name: Run Yarn Install
-        run: yarn install --frozen-lockfile --network-timeout 100000
+        run: yarn install
 
-      - name: Clean Android build
-        run: |
-          cd android
-          ./gradlew clean
-          cd ..
-
-      - name: Generate .env file
-        run: |
-          if [ "${{ env.BUILD_ENV }}" = "prod" ]; then
-            echo "API_URL=${{ vars.API_URL }}" > .env.production
-            echo "API_KEY=${{ secrets.API_KEY }}" >> .env.production
-            echo "WEB_SOCKET_URL=${{ vars.WEB_SOCKET_URL }}" >> .env.production
-          else
-            echo "API_URL=${{ vars.API_URL }}" > .env.dev
-            echo "API_KEY=${{ secrets.API_KEY }}" >> .env.dev
-            echo "WEB_SOCKET_URL=${{ vars.WEB_SOCKET_URL }}" >> .env.dev
-          fi
-
-      - name: Prepare .env for react-native-config
-        run: |
-          if [ "${{ env.BUILD_ENV }}" = "prod" ]; then
-            cp .env.production .env
-          else
-            cp .env.dev .env
-          fi
-
-      - name: Build application apk
+      - name: Build application apk and aab
         run: |
           echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode > ./android/app/releases.keystore
           cd android
@@ -118,36 +52,24 @@ jobs:
           BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
           MYAPP_UPLOAD_STORE_FILE: 'releases.keystore'
           MYAPP_UPLOAD_STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          MYAPP_UPLOAD_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          MYAPP_UPLOAD_KEY_ALIAS: ${{ env.KEY_ALIAS }}
           MYAPP_UPLOAD_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          ENVFILE: .env.production
 
       - name: List the .apks compiled
         run: ls ./android/app/build/outputs/apk/release/ -hal
 
-      - name: Rename the .apk release files
-        run: |
-          ENV_SUFFIX="${{ env.BUILD_ENV }}"
-          TAG_NAME="${{ github.ref_name }}"
+      - name: Rename the .apk release files to the tag version
+        run: mv ./android/app/build/outputs/apk/release/app-universal-release.apk ./android/app/build/outputs/apk/release/sous-chef-${{ github.ref_name }}.apk
 
-          if [ -f "./android/app/build/outputs/apk/release/app-universal-release.apk" ]; then
-            mv "./android/app/build/outputs/apk/release/app-universal-release.apk" \
-               "./android/app/build/outputs/apk/release/sous-chef-${ENV_SUFFIX}-${TAG_NAME}.apk"
-          fi
-
-      - name: Create Release and Upload Files
+      # Creating and Uploading the releases
+      - name: Create Release and Uploading Files
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          name: ${{ env.BUILD_ENV == 'prod' && 'Production' || 'Development' }} Release ${{ github.ref_name }}
           files: |
-            android/app/build/outputs/apk/release/sous-chef-*.apk
-          generate_release_notes: true
-          prerelease: ${{ env.BUILD_ENV != 'prod' }}
-
-      - name: Cleanup
-        if: always()
-        run: |
-          rm -f ./android/app/releases.keystore
-          rm -f android/local.properties
-          rm -f .env.production .env.prod .env.dev .env
-          cd android && ./gradlew --stop || true
+            android/app/build/outputs/apk/release/app-arm64-v8a-release.apk
+            android/app/build/outputs/apk/release/app-armeabi-v7a-release.apk
+            android/app/build/outputs/apk/release/app-x86_64-release.apk
+            android/app/build/outputs/apk/release/app-x86-release.apk
+            android/app/build/outputs/apk/release/sous-chef-${{ github.ref_name }}.apk

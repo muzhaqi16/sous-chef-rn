@@ -104,8 +104,3 @@ Tag with message and push
 
 Push with tags
 `git push --tags`
-
-# Create a test tag
-
-git tag -a android-v0.6.2-test -m "Test build env secrets"
-git push origin android-v0.6.2-test

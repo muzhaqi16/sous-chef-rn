@@ -1,19 +1,12 @@
 import React from 'react';
 import {View, Text, Image} from 'react-native';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
-import {useGetUserProfileQuery} from '../../graphql/generated';
+import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {useStore} from '../../store/useStore';
 
 const ShoppingListHeader: React.FC = ({}) => {
-  const {theme} = useUnistyles();
-  // Fetch the user's avatar URL from the query
-  const {data: userProfileData} = useGetUserProfileQuery({
-    fetchPolicy: 'cache-and-network',
-    onError: error => console.error('Error fetching user profile:', error),
-  });
-  // Use the avatar URL from the user profile data
-  // Fallback to a placeholder if the avatar URL is not available
-  const avatarUrl =
-    userProfileData?.userProfile?.avatar || 'https://via.placeholder.com/40';
+  const {styles, theme} = useStyles(stylesheet);
+
+  const avatarUrl = useStore(state => state?.userProfile?.avatarUrl);
 
   return (
     <View style={styles.container}>
@@ -31,11 +24,11 @@ const ShoppingListHeader: React.FC = ({}) => {
     </View>
   );
 };
-const styles = StyleSheet.create(theme => ({
+const stylesheet = createStyleSheet(theme => ({
   container: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingTop: theme.spacing.sm,
+    paddingTop: theme.spacing.padding.lg,
     paddingBottom: theme.spacing.lg,
     backgroundColor: theme.colors.background,
   },

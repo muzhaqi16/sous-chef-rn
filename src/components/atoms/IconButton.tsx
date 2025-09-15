@@ -1,9 +1,10 @@
 import React from 'react';
 import {TouchableOpacity, StyleProp, ViewStyle} from 'react-native';
-import {StyleSheet, withUnistyles} from 'react-native-unistyles';
-import {IconLibrary, Icon} from '#/utils/iconUtils';
+import type {IconProps} from '@react-native-vector-icons/common';
+import Feather from '@react-native-vector-icons/feather';
+import {createStyleSheet, useStyles} from 'react-native-unistyles';
 
-const UniIcon = withUnistyles(Icon);
+export type IconLibrary = React.ComponentType<IconProps<any>>;
 
 export interface IconButtonProps {
   /** glyph name to render */
@@ -20,30 +21,34 @@ export interface IconButtonProps {
   library?: IconLibrary;
 }
 
+// Default to Feather
+const DEFAULT_LIBRARY: IconLibrary = Feather;
+
 export const IconButton: React.FC<IconButtonProps> = ({
   name,
   onPress,
   size = 24,
   color,
   style,
-  library = 'MaterialIcons',
+  library: IconComponent = DEFAULT_LIBRARY,
 }) => {
+  const {styles, theme} = useStyles(stylesheet);
+
   return (
     <TouchableOpacity
       style={[styles.button, style]}
       onPress={onPress}
       hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
-      <UniIcon
-        library={library}
+      <IconComponent
         name={name}
         size={size}
-        uniProps={theme => ({color: color ?? theme.colors.iconPrimary})}
+        color={color ?? theme.colors.iconPrimary}
       />
     </TouchableOpacity>
   );
 };
 
-const styles = StyleSheet.create(theme => ({
+const stylesheet = createStyleSheet(theme => ({
   button: {
     justifyContent: 'center',
     alignItems: 'center',

@@ -1,6 +1,6 @@
 import React from 'react';
 import {View, Text} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
+import {createStyleSheet, useStyles} from 'react-native-unistyles';
 import {SettingRow, SettingRowProps} from '../molecules/SettingRow';
 
 export interface SettingsSectionProps {
@@ -12,6 +12,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
   title,
   items,
 }) => {
+  const {styles} = useStyles(stylesheet);
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>{title}</Text>
@@ -29,7 +30,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
   );
 };
 
-const styles = StyleSheet.create(theme => ({
+const stylesheet = createStyleSheet(theme => ({
   section: {marginBottom: 32},
   sectionTitle: {
     fontSize: 12,

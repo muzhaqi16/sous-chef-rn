@@ -7,8 +7,8 @@ import {
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
-import {Icon} from '#/utils';
+import FeatherIcon from '@react-native-vector-icons/feather';
+import {createStyleSheet, useStyles} from 'react-native-unistyles';
 
 export interface ModalPickerProps {
   label: string;
@@ -27,20 +27,14 @@ export const ModalPicker: React.FC<ModalPickerProps> = ({
   onSelect,
   onCancel,
 }) => {
-  const {theme} = useUnistyles();
-
+  const {styles, theme} = useStyles(stylesheet);
   return (
     <Modal visible={visible} animationType="slide">
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>{label}</Text>
           <TouchableOpacity onPress={onCancel}>
-            <Icon
-              library="Feather"
-              name="x"
-              size={24}
-              color={theme.colors.textPrimary}
-            />
+            <FeatherIcon name="x" size={24} color={theme.colors.textPrimary} />
           </TouchableOpacity>
         </View>
         <ScrollView>
@@ -51,8 +45,7 @@ export const ModalPicker: React.FC<ModalPickerProps> = ({
               onPress={() => onSelect(opt.value)}>
               <Text style={styles.optionText}>{opt.label}</Text>
               {selected === opt.value && (
-                <Icon
-                  library="Feather"
+                <FeatherIcon
                   name="check"
                   size={20}
                   color={theme.colors.primary}
@@ -66,7 +59,7 @@ export const ModalPicker: React.FC<ModalPickerProps> = ({
   );
 };
 
-const styles = StyleSheet.create(theme => ({
+const stylesheet = createStyleSheet(theme => ({
   container: {flex: 1, backgroundColor: theme.colors.background, padding: 16},
   header: {
     flexDirection: 'row',

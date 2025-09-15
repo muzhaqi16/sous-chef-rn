@@ -1,12 +1,13 @@
 import React from 'react';
 import {View} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
+import {createStyleSheet, useStyles} from 'react-native-unistyles';
 
 export const Divider: React.FC = () => {
+  const {styles} = useStyles(stylesheet);
   return <View style={styles.divider} />;
 };
 
-const styles = StyleSheet.create(theme => ({
+const stylesheet = createStyleSheet(theme => ({
   divider: {
     height: 1,
     backgroundColor: theme.colors.divider,

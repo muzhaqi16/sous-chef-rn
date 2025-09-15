@@ -1,1 +1,0 @@
-export {HomeManagement} from './HomeManagement';

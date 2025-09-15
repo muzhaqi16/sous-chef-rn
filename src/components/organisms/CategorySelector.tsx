@@ -1,6 +1,6 @@
 import React from 'react';
 import {View, Text, ScrollView, TouchableOpacity} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
+import {createStyleSheet, useStyles} from 'react-native-unistyles';
 import Chip from '../atoms/Chip';
 
 type Category = {
@@ -15,7 +15,7 @@ type CategorySelectorProps = {
   onSeeAll?: () => void;
 };
 
-const styles = StyleSheet.create(theme => ({
+const stylesheet = createStyleSheet(theme => ({
   container: {
     marginVertical: theme.spacing.md,
     paddingHorizontal: theme.spacing.md,
@@ -46,6 +46,8 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
   onSelectCategory,
   onSeeAll,
 }) => {
+  const {styles} = useStyles(stylesheet);
+
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>

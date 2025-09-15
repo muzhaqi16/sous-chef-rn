@@ -1,48 +1,62 @@
-import React from 'react';
+import React, {useEffect} from 'react';
 import {View, Text, Image} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
+import {createStyleSheet, useStyles} from 'react-native-unistyles';
 import Loader from '../components/atoms/Loader';
 
-export const SplashScreen = () => {
+const SplashScreen = () => {
+  const {styles, theme} = useStyles(stylesheet);
+  useEffect(() => {
+    // Handle loading indicator
+    const loadingIndicator = setInterval(() => {
+      console.log('Loading...');
+    }, 1000);
+
+    // Handle error handling
+    const handleError = (error: any) => {
+      console.error('Error:', error);
+    };
+
+    return () => {
+      clearInterval(loadingIndicator);
+    };
+  }, []);
   return (
     <View style={styles.container}>
-      <View style={styles.imageWrapper}>
-        <Image
-          source={require('../assets/images/logo.png')}
-          resizeMode="contain"
-          style={styles.image}
-        />
-      </View>
-
-      <View style={styles.loaderWrapper}>
-        <Loader />
+      <Image
+        source={{uri: 'https://example.com/splash-screen-image.jpg'}}
+        style={styles.image}
+      />
+      <View style={styles.loader}>
+        <Loader size="large" color={theme.colors.primary} />
         <Text style={styles.text}>Loading...</Text>
       </View>
     </View>
   );
 };
 
-const styles = StyleSheet.create(theme => ({
+const stylesheet = createStyleSheet(theme => ({
   container: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     backgroundColor: theme.colors.background,
   },
-  imageWrapper: {
-    flex: 1, // fill the screen
-    justifyContent: 'center', // center vertically
-    alignItems: 'center', // center horizontally
+  loader: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: [{translateX: -50}, {translateY: -50}],
   },
   image: {
-    width: 300,
-    height: 300,
-  },
-  loaderWrapper: {
-    paddingVertical: 20,
-    alignItems: 'center',
+    width: 200,
+    height: 200,
+    marginBottom: 20,
   },
   text: {
-    fontSize: theme.fonts.size.xl,
+    fontSize: theme.font.size.xl,
     color: theme.colors.textPrimary,
-    paddingVertical: theme.spacing.md,
+    paddingVertical: theme.spacing.padding.lg,
   },
 }));
+
+export default SplashScreen;

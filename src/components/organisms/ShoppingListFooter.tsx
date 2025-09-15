@@ -1,13 +1,14 @@
+// src/organisms/ShoppingListFooter.tsx
 import React from 'react';
 import {View} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
+import {createStyleSheet, useStyles} from 'react-native-unistyles';
 import IconButton from '../atoms/IconButton';
 
 type Props = {
   onAddPress: () => void;
 };
 
-const styles = StyleSheet.create(theme => ({
+const stylesheet = createStyleSheet(theme => ({
   container: {
     position: 'absolute',
     bottom: 0,
@@ -26,10 +27,11 @@ const styles = StyleSheet.create(theme => ({
 }));
 
 const ShoppingListFooter: React.FC<Props> = ({onAddPress}) => {
+  const {styles} = useStyles(stylesheet);
   return (
     <View style={styles.container}>
       <IconButton
-        name="add"
+        iconName="add"
         onPress={onAddPress}
         size={30}
         style={styles.addButton}

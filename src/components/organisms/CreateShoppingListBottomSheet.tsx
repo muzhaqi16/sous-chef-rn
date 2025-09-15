@@ -1,9 +1,9 @@
 import React, {useState, useRef} from 'react';
 import {Text, StyleSheet} from 'react-native';
 import BottomSheet, {BottomSheetRef} from '../pages/BottomSheet';
-import {Button} from '../atoms/Button/Button';
+import Button from '../atoms/Button';
 import {BaseInput as Input} from '../atoms';
-import {useCreateShoppingListMutation} from '../../graphql/generated';
+import {useStore} from '../../store/useStore';
 
 const CreateShoppingListBottomSheet: React.FC = ({}) => {
   const bottomSheetRef = useRef<BottomSheetRef>(null);
@@ -11,7 +11,7 @@ const CreateShoppingListBottomSheet: React.FC = ({}) => {
   const [renderBottomSheet, setRenderBottomSheet] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [createShoppingList] = useCreateShoppingListMutation();
+  const createShoppingList = useStore(state => state.createShoppingList);
 
   const handleShow = () => {
     setRenderBottomSheet(true);
@@ -23,15 +23,7 @@ const CreateShoppingListBottomSheet: React.FC = ({}) => {
       return;
     }
     try {
-      await createShoppingList({
-        variables: {
-          input: {
-            name: listName.trim(),
-            isDefault: true, // Assuming you want to set this as default
-            tags: ['onboarding'], // Example tag, you can modify or add more
-          },
-        },
-      });
+      await createShoppingList(listName.trim());
       bottomSheetRef.current?.close();
       setListName('');
       setError(null);
