@@ -10,7 +10,7 @@ export type ShoppingListStackParamList = {
   ShoppingListMain: undefined;
   ListSettings: {listId?: string};
   ShareList: {listId: string};
-  AddItem: {listId?: string};
+  AddItem: {listId: string};
   EditItem: {listId: string; itemId: string};
 };
 

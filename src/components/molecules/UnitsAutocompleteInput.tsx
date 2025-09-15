@@ -141,7 +141,7 @@ export const UnitsAutocompleteInput: React.FC<UnitsAutocompleteInputProps> = ({
   );
 
   return (
-    <View>
+    <>
       <Input
         label={label}
         value={value}
@@ -196,7 +196,7 @@ export const UnitsAutocompleteInput: React.FC<UnitsAutocompleteInputProps> = ({
           )}
         </View>
       </BottomSheetModal>
-    </View>
+    </>
   );
 };
 

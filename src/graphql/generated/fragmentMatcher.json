@@ -1,16 +1,8 @@
 {
   "possibleTypes": {
-    "Connection": [
-      "NotificationConnection"
-    ],
-    "Edge": [
-      "NotificationEdge"
-    ],
-    "Node": [
-      "Notification"
-    ],
-    "Timestamped": [
-      "Notification"
-    ]
+    "Connection": ["NotificationConnection"],
+    "Edge": ["NotificationEdge"],
+    "Node": ["Notification"],
+    "Timestamped": ["Notification"]
   }
 }

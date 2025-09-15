@@ -2,7 +2,7 @@ import React, {useMemo, useEffect} from 'react';
 import {TouchableOpacity, Alert, Image, View} from 'react-native';
 import {useFocusEffect} from '@react-navigation/native';
 import {useAppNavigation} from '#hooks';
-import {StyleSheet} from 'react-native-unistyles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {
   useGetShoppingListsQuery,
   useRemoveItemFromShoppingListMutation,
@@ -20,6 +20,7 @@ import {Icon, type IconLibrary} from '#/utils/iconUtils';
 
 export const ShoppingListMain: React.FC = () => {
   const {navigate, navigateTo} = useAppNavigation();
+  const {theme} = useUnistyles();
   const selectShoppingListSheet = useBottomSheetModal();
   const {selectedShoppingListId, setSelectedShoppingListId} = useStore();
   const [deleteItem] = useRemoveItemFromShoppingListMutation();
@@ -151,15 +152,16 @@ export const ShoppingListMain: React.FC = () => {
       rightActions.unshift({
         icon: 'add',
         onPress: () => handleAddItemFromSearch(query),
-        color: '#4CAF50', // Green color to make it prominent
-        backgroundColor: 'rgba(76, 175, 80, 0.2)',
+        color: theme.colors.primary,
+        backgroundColor: theme.colors.primaryLight,
       });
     } else {
       // Show regular add button when not searching
       rightActions.unshift({
         icon: 'add',
         onPress: handleAddItem,
-        color: '#fff',
+        color: theme.colors.primary,
+        backgroundColor: 'white',
       });
     }
 

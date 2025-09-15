@@ -58,6 +58,7 @@ export const Input: React.FC<InputProps> = ({
 const styles = StyleSheet.create(theme => ({
   container: {
     marginBottom: 16,
+    flex: 1,
   },
   label: {
     fontSize: 14,

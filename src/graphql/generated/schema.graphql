@@ -1,4 +1,6 @@
-"""Marks an element of a GraphQL schema as no longer supported."""
+"""
+Marks an element of a GraphQL schema as no longer supported.
+"""
 directive @deprecated(
   """
   Explains why this element was deprecated, usually also including a suggestion for how to access supported similar data. Formatted using the Markdown syntax, as specified by [CommonMark](https://commonmark.org/).
@@ -10,7 +12,9 @@ directive @deprecated(
 Directs the executor to include this field or fragment only when the `if` argument is true.
 """
 directive @include(
-  """Included when true."""
+  """
+  Included when true.
+  """
   if: Boolean!
 ) on FIELD | FRAGMENT_SPREAD | INLINE_FRAGMENT
 
@@ -23,13 +27,19 @@ directive @oneOf on INPUT_OBJECT
 Directs the executor to skip this field or fragment when the `if` argument is true.
 """
 directive @skip(
-  """Skipped when true."""
+  """
+  Skipped when true.
+  """
   if: Boolean!
 ) on FIELD | FRAGMENT_SPREAD | INLINE_FRAGMENT
 
-"""Exposes a URL that specifies the behavior of this scalar."""
+"""
+Exposes a URL that specifies the behavior of this scalar.
+"""
 directive @specifiedBy(
-  """The URL that specifies the behavior of this scalar."""
+  """
+  The URL that specifies the behavior of this scalar.
+  """
   url: String!
 ) on SCALAR
 
@@ -50,61 +60,99 @@ type __Directive {
 A Directive can be adjacent to many parts of the GraphQL language, a __DirectiveLocation describes one such possible adjacencies.
 """
 enum __DirectiveLocation {
-  """Location adjacent to a query operation."""
+  """
+  Location adjacent to a query operation.
+  """
   QUERY
 
-  """Location adjacent to a mutation operation."""
+  """
+  Location adjacent to a mutation operation.
+  """
   MUTATION
 
-  """Location adjacent to a subscription operation."""
+  """
+  Location adjacent to a subscription operation.
+  """
   SUBSCRIPTION
 
-  """Location adjacent to a field."""
+  """
+  Location adjacent to a field.
+  """
   FIELD
 
-  """Location adjacent to a fragment definition."""
+  """
+  Location adjacent to a fragment definition.
+  """
   FRAGMENT_DEFINITION
 
-  """Location adjacent to a fragment spread."""
+  """
+  Location adjacent to a fragment spread.
+  """
   FRAGMENT_SPREAD
 
-  """Location adjacent to an inline fragment."""
+  """
+  Location adjacent to an inline fragment.
+  """
   INLINE_FRAGMENT
 
-  """Location adjacent to a variable definition."""
+  """
+  Location adjacent to a variable definition.
+  """
   VARIABLE_DEFINITION
 
-  """Location adjacent to a schema definition."""
+  """
+  Location adjacent to a schema definition.
+  """
   SCHEMA
 
-  """Location adjacent to a scalar definition."""
+  """
+  Location adjacent to a scalar definition.
+  """
   SCALAR
 
-  """Location adjacent to an object type definition."""
+  """
+  Location adjacent to an object type definition.
+  """
   OBJECT
 
-  """Location adjacent to a field definition."""
+  """
+  Location adjacent to a field definition.
+  """
   FIELD_DEFINITION
 
-  """Location adjacent to an argument definition."""
+  """
+  Location adjacent to an argument definition.
+  """
   ARGUMENT_DEFINITION
 
-  """Location adjacent to an interface definition."""
+  """
+  Location adjacent to an interface definition.
+  """
   INTERFACE
 
-  """Location adjacent to a union definition."""
+  """
+  Location adjacent to a union definition.
+  """
   UNION
 
-  """Location adjacent to an enum definition."""
+  """
+  Location adjacent to an enum definition.
+  """
   ENUM
 
-  """Location adjacent to an enum value definition."""
+  """
+  Location adjacent to an enum value definition.
+  """
   ENUM_VALUE
 
-  """Location adjacent to an input object type definition."""
+  """
+  Location adjacent to an input object type definition.
+  """
   INPUT_OBJECT
 
-  """Location adjacent to an input object field definition."""
+  """
+  Location adjacent to an input object field definition.
+  """
   INPUT_FIELD_DEFINITION
 }
 
@@ -152,10 +200,14 @@ A GraphQL Schema defines the capabilities of a GraphQL server. It exposes all av
 type __Schema {
   description: String
 
-  """A list of all types supported by this server."""
+  """
+  A list of all types supported by this server.
+  """
   types: [__Type!]!
 
-  """The type that query operations will be rooted at."""
+  """
+  The type that query operations will be rooted at.
+  """
   queryType: __Type!
 
   """
@@ -168,7 +220,9 @@ type __Schema {
   """
   subscriptionType: __Type
 
-  """A list of all directives supported by this server."""
+  """
+  A list of all directives supported by this server.
+  """
   directives: [__Directive!]!
 }
 
@@ -191,9 +245,13 @@ type __Type {
   isOneOf: Boolean
 }
 
-"""An enum describing what kind of type a given `__Type` is."""
+"""
+An enum describing what kind of type a given `__Type` is.
+"""
 enum __TypeKind {
-  """Indicates this type is a scalar."""
+  """
+  Indicates this type is a scalar.
+  """
   SCALAR
 
   """
@@ -206,10 +264,14 @@ enum __TypeKind {
   """
   INTERFACE
 
-  """Indicates this type is a union. `possibleTypes` is a valid field."""
+  """
+  Indicates this type is a union. `possibleTypes` is a valid field.
+  """
   UNION
 
-  """Indicates this type is an enum. `enumValues` is a valid field."""
+  """
+  Indicates this type is an enum. `enumValues` is a valid field.
+  """
   ENUM
 
   """
@@ -217,10 +279,14 @@ enum __TypeKind {
   """
   INPUT_OBJECT
 
-  """Indicates this type is a list. `ofType` is a valid field."""
+  """
+  Indicates this type is a list. `ofType` is a valid field.
+  """
   LIST
 
-  """Indicates this type is a non-null. `ofType` is a valid field."""
+  """
+  Indicates this type is a non-null. `ofType` is a valid field.
+  """
   NON_NULL
 }
 schema {
@@ -1991,7 +2057,16 @@ type Mutation {
   addItemToPantry(input: AddPantryItemInput!): PantryItem!
   addItemToShoppingList(input: CreateShoppingListItemInput!): ShoppingListItem!
   addItemUnit(input: ItemUnitInput!, itemId: ID!): ItemUnit!
-  addRecipe(category: RecipeCategory, cookTimeMinutes: Int, difficulty: Difficulty, ingredients: [String!]!, instructions: JSON!, name: String!, prepTimeMinutes: Int, servings: Int): Recipe!
+  addRecipe(
+    category: RecipeCategory
+    cookTimeMinutes: Int
+    difficulty: Difficulty
+    ingredients: [String!]!
+    instructions: JSON!
+    name: String!
+    prepTimeMinutes: Int
+    servings: Int
+  ): Recipe!
   addRestrictions(input: AddRestrictionsInput!): UserModeration!
   addUserAddress(input: CreateUserAddressInput!): UserAddress!
   addWarning(input: AddWarningInput!): UserModeration!
@@ -2000,10 +2075,18 @@ type Mutation {
   bulkCreateItems(input: BulkCreateItemInput!): BulkCreateItemsResponse!
   bulkDeleteItems(ids: [ID!]!, permanent: Boolean): BulkOperationSummary!
   bulkUpdateItems(ids: [ID!]!, input: UpdateItemInput!): BulkOperationSummary!
-  categorizeItem(categoryId: ID!, isPrimary: Boolean, itemId: ID!): ItemCategory!
+  categorizeItem(
+    categoryId: ID!
+    isPrimary: Boolean
+    itemId: ID!
+  ): ItemCategory!
   cleanupDeletedDevices(olderThanDays: Int = 30): Int!
   cleanupStaleDevices(daysInactive: Int = 365, userId: ID!): Int!
-  completeReview(newStatus: ModerationStatus!, reviewNotes: String, userId: ID!): UserModeration!
+  completeReview(
+    newStatus: ModerationStatus!
+    reviewNotes: String
+    userId: ID!
+  ): UserModeration!
   confirmItemImageUpload(itemId: String!, key: String!): String!
   confirmProfileImageUpload(key: String!): String!
   createBrand(input: CreateBrandInput): Brand!
@@ -2013,7 +2096,11 @@ type Mutation {
   createCurrency(input: CreateCurrencyInput!): Currency!
   createDevice(input: CreateDeviceInput!): Device!
   createHome(input: CreateHomeInput!): Home!
-  createImageUploadUrl(itemId: String, mime: String!, purpose: ImageUploadPurpose!): PresignPayload!
+  createImageUploadUrl(
+    itemId: String
+    mime: String!
+    purpose: ImageUploadPurpose!
+  ): PresignPayload!
   createItem(input: CreateItemInput!): Item!
   createLoginHistory(input: CreateLoginHistoryInput!): LoginHistory!
   createMealPlan(input: CreateMealPlanInput!): MealPlan!
@@ -2051,34 +2138,71 @@ type Mutation {
   deleteUnit(id: ID!): Boolean!
   deleteUserAddress(id: ID!): UserAddress!
   exportItems(filters: ItemFilters, format: ExportFormat!): ExportResponse!
-  flagLoginAsRisky(flaggedById: ID!, loginId: ID!, reason: String!): LoginHistory!
-  flagMultipleLoginsAsRisky(flaggedById: ID!, loginIds: [ID!]!, reason: String!): [LoginHistory!]!
-  """Request a password reset email"""
+  flagLoginAsRisky(
+    flaggedById: ID!
+    loginId: ID!
+    reason: String!
+  ): LoginHistory!
+  flagMultipleLoginsAsRisky(
+    flaggedById: ID!
+    loginIds: [ID!]!
+    reason: String!
+  ): [LoginHistory!]!
+  """
+  Request a password reset email
+  """
   forgotPassword(email: String!): ForgotPasswordResponse!
   generateShoppingListShareCode(id: ID!): ShoppingList!
   hardDeleteDevice(id: ID!): Boolean!
-  importItemsFromCSV(file: Upload!, mappings: JSON, skipDuplicates: Boolean): ImportItemsResponse!
-  importItemsFromProvider(input: ImportItemsFromProviderInput!): ImportItemsResponse!
+  importItemsFromCSV(
+    file: Upload!
+    mappings: JSON
+    skipDuplicates: Boolean
+  ): ImportItemsResponse!
+  importItemsFromProvider(
+    input: ImportItemsFromProviderInput!
+  ): ImportItemsResponse!
   incrementDeviceLoginCount(id: ID!): Device!
   incrementItemPopularity(id: ID!): Item!
   inviteToHome(input: InviteToHomeInput!): HomeInvite!
-  inviteToShoppingList(input: InviteToShoppingListInput!): ShoppingListCollaborator!
+  inviteToShoppingList(
+    input: InviteToShoppingListInput!
+  ): ShoppingListCollaborator!
   joinHomeByCode(joinCode: String!): Membership!
   joinShoppingListByShareCode(shareCode: String!): ShoppingList!
   leaveHome(homeId: ID!): Boolean!
   login(input: LoginInput!): AuthPayload!
   markAllNotificationsAsRead: [Notification!]!
-  markItemAsWaste(id: ID!, isComposted: Boolean, isRecycled: Boolean, wasteAmount: Float!, wasteReason: WasteReason!): PantryItem!
+  markItemAsWaste(
+    id: ID!
+    isComposted: Boolean
+    isRecycled: Boolean
+    wasteAmount: Float!
+    wasteReason: WasteReason!
+  ): PantryItem!
   markItemPurchased(id: ID!, status: Boolean!): ShoppingListItem!
-  markLoginAsReviewed(loginId: ID!, notes: String, reviewerId: ID!): LoginHistory!
-  markMultipleLoginsAsReviewed(loginIds: [ID!]!, notes: String, reviewerId: ID!): [LoginHistory!]!
+  markLoginAsReviewed(
+    loginId: ID!
+    notes: String
+    reviewerId: ID!
+  ): LoginHistory!
+  markMultipleLoginsAsReviewed(
+    loginIds: [ID!]!
+    notes: String
+    reviewerId: ID!
+  ): [LoginHistory!]!
   markNotificationAsRead(id: ID!): Notification!
   mergeItems(duplicateIds: [ID!]!, primaryId: ID!): Item!
   putUnderReview(input: PutUnderReviewInput!): UserModeration!
   reactivateDevice(id: ID!): Device!
   recordLoginAttempt(input: LoginAttemptInput!): LoginHistory!
   recordPantryItemUsage(input: RecordPantryItemUsageInput!): PantryItemUsage!
-  recordPriceObservation(itemId: ID!, observedAt: DateTime, price: Float!, storeId: String!): ItemPriceHistory!
+  recordPriceObservation(
+    itemId: ID!
+    observedAt: DateTime
+    price: Float!
+    storeId: String!
+  ): ItemPriceHistory!
   refresh(token: String!): RefreshTokenPayload!
   register(input: RegisterInput!): AuthPayload!
   registerDevice(input: DeviceRegistrationInput!): Device!
@@ -2097,7 +2221,9 @@ type Mutation {
   removeRestrictions(input: RemoveRestrictionsInput!): UserModeration!
   removeShoppingListCollaborator(id: ID!): Boolean!
   resendVerificationEmail(email: String!): Boolean!
-  """Reset password using token from email"""
+  """
+  Reset password using token from email
+  """
   resetPassword(newPassword: String!, token: String!): ResetPasswordResponse!
   restoreItem(id: ID!): Item!
   reviewAppeal(input: ReviewAppealInput!): UserModeration!
@@ -2137,15 +2263,31 @@ type Mutation {
   updateItemIngredients(id: ID!, ingredients: [IngredientInput!]!): Item!
   updateItemMetadata(id: ID!, merge: Boolean, metadata: JSON!): Item!
   updateItemNutrition(id: ID!, nutritionFacts: [NutritionFactInput!]!): Item!
-  updateItemPrice(itemId: ID!, price: Float!, source: String, storeId: String): Item!
+  updateItemPrice(
+    itemId: ID!
+    price: Float!
+    source: String
+    storeId: String
+  ): Item!
   updateItemUnit(id: ID!, input: ItemUnitInput!): ItemUnit!
   updateLoginHistory(id: ID!, input: UpdateLoginHistoryInput!): LoginHistory!
-  updateLoginSession(lastActivityAt: DateTime, loggedOutAt: DateTime, loginId: ID!, sessionDuration: Int): LoginHistory!
+  updateLoginSession(
+    lastActivityAt: DateTime
+    loggedOutAt: DateTime
+    loginId: ID!
+    sessionDuration: Int
+  ): LoginHistory!
   updateMealPlan(id: ID!, input: UpdateMealPlanInput!): MealPlan!
   updateMembership(id: ID!, input: UpdateMembershipInput!): Membership!
-  updateModerationStatus(reason: String, status: ModerationStatus!, userId: ID!): UserModeration!
+  updateModerationStatus(
+    reason: String
+    status: ModerationStatus!
+    userId: ID!
+  ): UserModeration!
   updateNotification(id: ID!, input: UpdateNotificationInput!): Notification!
-  updateNotificationPreferences(input: NotificationPreferencesInput!): NotificationPreferences!
+  updateNotificationPreferences(
+    input: NotificationPreferencesInput!
+  ): NotificationPreferences!
   updatePantry(id: ID!, input: UpdatePantryInput!): Pantry!
   updatePantryItem(id: ID!, input: UpdatePantryItemInput!): PantryItem!
   updateProfile(input: UpdateUserProfileInput!): UserProfile!
@@ -2156,9 +2298,20 @@ type Mutation {
   updateRiskScore(riskScore: Float!, userId: ID!): UserModeration!
   updateSettings(input: UpdateUserSettingsInput!): UserSettings!
   updateShoppingList(id: ID!, input: UpdateShoppingListInput!): ShoppingList!
-  updateShoppingListItem(id: ID!, input: UpdateShoppingListItemInput!): ShoppingListItem!
+  updateShoppingListItem(
+    id: ID!
+    input: UpdateShoppingListItemInput!
+  ): ShoppingListItem!
   updateStore(id: ID!, input: UpdateStoreInput!): Store!
-  updateStoreInfo(email: String, hoursJSON: JSON, lat: Float, lng: Float, phone: String, storeId: ID!, website: String): StoreInfo!
+  updateStoreInfo(
+    email: String
+    hoursJSON: JSON
+    lat: Float
+    lng: Float
+    phone: String
+    storeId: ID!
+    website: String
+  ): StoreInfo!
   updateStorePriceAccuracy(accuracy: Float!, id: ID!): Store!
   updateStoreQualityRating(id: ID!, rating: Float!): Store!
   updateTrustLevel(trustLevel: TrustLevel!, userId: ID!): UserModeration!
@@ -2166,7 +2319,9 @@ type Mutation {
   updateUser(id: ID!, input: UpdateUserInput!): User!
   updateUserAddress(input: UpdateUserAddressInput!): UserAddress!
   validateItem(deep: Boolean, id: ID!): ValidationResult!
-  """Validate if a password reset token is still valid"""
+  """
+  Validate if a password reset token is still valid
+  """
   validatePasswordResetToken(token: String!): ValidateTokenResponse!
   verifyDevice(id: ID!): Device!
   verifyEmail(code: String!): Boolean!
@@ -2685,7 +2840,14 @@ type Query {
   activeModerations: [UserModeration!]!
   autocompleteItems(input: AutocompleteInput!): AutocompleteResponse
   brand(id: ID!): Brand
-  brands(country: String, isActive: Boolean, parentId: String, search: String, skip: Int = 0, take: Int = 50): [Brand!]!
+  brands(
+    country: String
+    isActive: Boolean
+    parentId: String
+    search: String
+    skip: Int = 0
+    take: Int = 50
+  ): [Brand!]!
   categories(parentId: String, type: CategoryType): [Category!]!
   category(id: ID!): Category
   categoryBySlug(slug: String!): Category
@@ -2697,7 +2859,14 @@ type Query {
   defaultShoppingList: ShoppingList
   device(id: ID!): Device
   deviceByDeviceId(deviceId: String!): Device
-  deviceCount(activeOnly: Boolean = true, deviceType: DeviceType, platform: MobilePlatform, trustedOnly: Boolean = false, userId: ID!, verifiedOnly: Boolean = false): Int!
+  deviceCount(
+    activeOnly: Boolean = true
+    deviceType: DeviceType
+    platform: MobilePlatform
+    trustedOnly: Boolean = false
+    userId: ID!
+    verifiedOnly: Boolean = false
+  ): Int!
   deviceStats(userId: ID!): DeviceStats!
   devicesByPlatform(platform: MobilePlatform!, userId: ID!): [Device!]!
   expiringItems(pantryId: ID!): [PantryItem!]!
@@ -2720,15 +2889,30 @@ type Query {
   itemBySku(sku: String!, storeId: String): Item
   itemByUpc(upc: String!): Item
   itemPriceHistory(days: Int, itemId: ID!, storeId: String): [ItemPriceHistory!]
-  items(filters: ItemFilters, pagination: PaginationInput, sort: ItemSortInput): ItemsResponse!
+  items(
+    filters: ItemFilters
+    pagination: PaginationInput
+    sort: ItemSortInput
+  ): ItemsResponse!
   loginHistory(id: ID!): LoginHistory
-  loginHistoryByIP(filters: LoginHistoryByIPFiltersInput, ipAddress: String!): [LoginHistory!]!
-  loginHistoryForUser(filters: LoginHistoryFiltersInput, userId: ID!): [LoginHistory!]!
+  loginHistoryByIP(
+    filters: LoginHistoryByIPFiltersInput
+    ipAddress: String!
+  ): [LoginHistory!]!
+  loginHistoryForUser(
+    filters: LoginHistoryFiltersInput
+    userId: ID!
+  ): [LoginHistory!]!
   loginHistoryStats(days: Int = 30, userId: ID!): LoginHistoryStats!
   lowStockItems(pantryId: ID!): [PantryItem!]!
   me: User
   mealPlan(id: ID!): MealPlan
-  mealPlans(endDate: DateTime, skip: Int, startDate: DateTime, take: Int): [MealPlan!]!
+  mealPlans(
+    endDate: DateTime
+    skip: Int
+    startDate: DateTime
+    take: Int
+  ): [MealPlan!]!
   membership(id: ID!): Membership
   membershipStats(homeId: ID!): MembershipStats!
   mobileDevices(userId: ID!): [Device!]!
@@ -2739,7 +2923,14 @@ type Query {
   myMembershipInHome(homeId: ID!): Membership
   myMemberships: [Membership!]
   myModeration: UserModeration
-  myNotifications(after: String, before: String, filter: NotificationFilterInput, first: Int, last: Int, orderBy: NotificationOrderBy): NotificationConnection!
+  myNotifications(
+    after: String
+    before: String
+    filter: NotificationFilterInput
+    first: Int
+    last: Int
+    orderBy: NotificationOrderBy
+  ): NotificationConnection!
   myPendingCollaborationInvites: [ShoppingListCollaborator!]!
   myPendingInvites: [HomeInvite!]!
   myPurchases: [Purchase!]!
@@ -2748,8 +2939,16 @@ type Query {
   notification(id: ID!): Notification
   notificationPreferences: NotificationPreferences!
   notificationStats(filter: NotificationFilterInput): NotificationStats!
-  notificationsByCategory(after: String, category: String!, first: Int): NotificationConnection!
-  notificationsByType(after: String, first: Int, type: NotificationType!): NotificationConnection!
+  notificationsByCategory(
+    after: String
+    category: String!
+    first: Int
+  ): NotificationConnection!
+  notificationsByType(
+    after: String
+    first: Int
+    type: NotificationType!
+  ): NotificationConnection!
   onboardingItems: [Item!]!
   pantries(homeId: ID!): [Pantry!]!
   pantry(id: ID!): Pantry
@@ -2777,7 +2976,10 @@ type Query {
   rootCategories(type: CategoryType): [Category!]!
   searchDevicesByUserAgent(userAgent: String!): [Device!]!
   searchItems(input: SearchItemsInput!): ItemsResponse
-  searchLoginHistory(filters: LoginHistoryFiltersInput, query: String!): [LoginHistory!]!
+  searchLoginHistory(
+    filters: LoginHistoryFiltersInput
+    query: String!
+  ): [LoginHistory!]!
   searchRecipes(query: String!): [Recipe!]!
   searchShoppingLists(query: String!): [ShoppingList!]!
   searchStores(query: String!): [Store!]!
@@ -3357,10 +3559,22 @@ input SubmitAppealInput {
 
 type Subscription {
   _empty: String
-  collaborationInviteAccepted(email: String!, shoppingListId: ID!): ShoppingListCollaborator!
-  collaborationInviteSent(email: String!, shoppingListId: ID!): ShoppingListCollaborator!
-  collaborationMemberAdded(email: String!, shoppingListId: ID!): ShoppingListCollaborator!
-  collaborationMemberRemoved(email: String!, shoppingListId: ID!): ShoppingListCollaborator!
+  collaborationInviteAccepted(
+    email: String!
+    shoppingListId: ID!
+  ): ShoppingListCollaborator!
+  collaborationInviteSent(
+    email: String!
+    shoppingListId: ID!
+  ): ShoppingListCollaborator!
+  collaborationMemberAdded(
+    email: String!
+    shoppingListId: ID!
+  ): ShoppingListCollaborator!
+  collaborationMemberRemoved(
+    email: String!
+    shoppingListId: ID!
+  ): ShoppingListCollaborator!
   deviceActivity(userId: ID!): Device!
   deviceRegistered(userId: ID!): Device!
   deviceStatusChanged(userId: ID!): Device!
@@ -3388,7 +3602,9 @@ type Subscription {
   purchaseDeleted(userId: ID): Purchase!
   purchaseUpdated(userId: ID): Purchase!
   riskyLoginAlerts(userId: ID!): LoginHistory!
-  shoppingListCollaboratorsChanged(listId: ID!): ShoppingListCollaboratorChangedPayload
+  shoppingListCollaboratorsChanged(
+    listId: ID!
+  ): ShoppingListCollaboratorChangedPayload
   shoppingListItemAdded(shoppingListId: ID!): ShoppingListItem!
   shoppingListItemRemoved(shoppingListId: ID!): ShoppingListItem!
   shoppingListItemUpdated(shoppingListId: ID!): ShoppingListItem!

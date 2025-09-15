@@ -2,6 +2,7 @@ import {useMemo, type FC} from 'react';
 import {View, StyleProp, ViewStyle, TextInputProps} from 'react-native';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {BaseInput, ActionButton} from '#components';
+import {commonStyles} from '#/styles/commonStyles';
 
 export interface SearchBarAction {
   icon: string;
@@ -78,18 +79,13 @@ export const SearchBar: FC<SearchBarProps> = ({
     if (actions.length === 0) return null;
 
     return (
-      <View
-        style={[
-          styles.actionsContainer,
-          side === 'left' ? styles.leftActions : styles.rightActions,
-        ]}>
+      <View style={[styles.actionsContainer]}>
         {actions.map((action, index) => (
           <ActionButton
             key={`${side}-${index}-${action.icon}`}
             name={action.icon}
             onPress={action.onPress}
             style={[
-              styles.actionButton,
               {
                 backgroundColor: action.backgroundColor || theme.colors.primary,
               },
@@ -111,8 +107,10 @@ export const SearchBar: FC<SearchBarProps> = ({
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        style={[styles.input, inputStyle]}
+        style={inputStyle}
         containerStyle={styles.inputContainer}
+        showClearIcon={true}
+        onClear={() => onChangeText('')}
         {...textInputProps}
       />
 
@@ -121,30 +119,17 @@ export const SearchBar: FC<SearchBarProps> = ({
   );
 };
 
-const styles = StyleSheet.create(theme => ({
+const styles = StyleSheet.create((theme, rt) => ({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: theme.spacing.sm,
     borderRadius: theme.radii.sm,
-    gap: theme.spacing.xs,
   },
   inputContainer: {
     flex: 1,
   },
-  input: {
-    // any default text-input styling you want
-  },
   actionsContainer: {
     flexDirection: 'row',
-  },
-  leftActions: {
-    // Any specific styling for left actions
-  },
-  rightActions: {
-    // Any specific styling for right actions
-  },
-  actionButton: {
-    // Default action button styling
   },
 }));

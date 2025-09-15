@@ -2,6 +2,7 @@ import {Observable, FetchResult} from '@apollo/client';
 import {client} from '#/apollo/client';
 import {useStore} from '#store';
 import {RefreshTokenDocument, RefreshTokenMutation} from '#generated';
+import {reconnectWebSocket} from './wsLink';
 
 // Track if we're currently refreshing to prevent multiple refresh attempts
 let isRefreshing = false;
@@ -99,6 +100,9 @@ export const attemptTokenRefresh = (
           accessToken: newToken,
           refreshToken: newRefreshToken,
         });
+
+        // Reconnect WebSocket with new token
+        reconnectWebSocket();
 
         // Notify all subscribers
         onTokenRefreshed(newToken);

@@ -1,6 +1,5 @@
 import React, {useState, useEffect} from 'react';
 import {Alert} from 'react-native';
-import {useNavigation, useRoute} from '@react-navigation/native';
 import {
   useAddItemToShoppingListMutation,
   useUpdateShoppingListItemMutation,
@@ -14,16 +13,18 @@ import {Input} from '#components/base/Input';
 import {FormGroup} from '#components/molecules/FormGroup';
 import {AutocompleteInput} from '#components/molecules/AutoCompleteInput';
 import {UnitsAutocompleteInput} from '#components/molecules/UnitsAutocompleteInput';
+import {useAppNavigation} from '#hooks';
+import {ShoppingListStackParamList} from '#navigation/stacks/ShoppingListStack';
 
-interface RouteParams {
-  listId: string;
+type RouteParams = ShoppingListStackParamList['AddItem' | 'EditItem'] & {
   itemId?: string;
-}
+};
 
-export const AddEditItem: React.FC = () => {
-  const navigation = useNavigation();
-  const route = useRoute();
-  const {listId, itemId} = route.params as RouteParams;
+export const AddEditItem: React.FC<{
+  route: {params: RouteParams};
+}> = ({route}) => {
+  const navigation = useAppNavigation();
+  const {listId, itemId} = route.params;
   const isEdit = !!itemId;
 
   // Form state
@@ -157,7 +158,7 @@ export const AddEditItem: React.FC = () => {
       // Prepare unit data - prioritize selected unit ID if available
       const unitData = {
         unitName: unit, // Always include the display name
-        ...(selectedUnitId && { unitId: selectedUnitId }), // Include unit ID if selected from autocomplete
+        ...(selectedUnitId && {unitId: selectedUnitId}), // Include unit ID if selected from autocomplete
       };
 
       if (isEdit) {

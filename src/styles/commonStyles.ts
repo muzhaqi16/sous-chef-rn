@@ -56,6 +56,11 @@ export const commonStyles = StyleSheet.create(theme => ({
     elevation: 3,
   },
 
+  bottomBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+
   // ============= FLEX PATTERNS =============
 
   row: {
@@ -140,10 +145,19 @@ export const commonStyles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: theme.spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: theme.colors.background,
+    // Add safe area padding on tablets/desktop
+    paddingTop: {
+      xs: theme.spacing.xs,
+      md: theme.spacing.md,
+    },
+    paddingHorizontal: {
+      xs: theme.spacing.sm,
+      md: theme.spacing.md,
+      lg: theme.spacing.lg,
+    },
   },
 
   headerTitle: {

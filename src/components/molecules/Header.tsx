@@ -2,6 +2,7 @@ import React from 'react';
 import {View, Text, TouchableOpacity} from 'react-native';
 import {StyleSheet, mq, Display, Hide} from 'react-native-unistyles';
 import {Icon, IconName, IconLibrary} from '#utils/iconUtils';
+import {commonStyles} from '#/styles/commonStyles';
 
 export interface HeaderAction {
   icon: IconName;
@@ -20,44 +21,76 @@ interface HeaderProps {
   centerTitle?: boolean;
 }
 
-const headerStyles = StyleSheet.create((theme, rt) => ({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    backgroundColor: theme.colors.background,
+export const Header: React.FC<HeaderProps> = ({
+  title,
+  leftActions = [],
+  rightActions = [],
+  centerTitle = false,
+  onBack,
+}) => {
+  return (
+    <View style={commonStyles.header}>
+      {/* Left side */}
+      <View style={styles.actions}>
+        {onBack && (
+          <TouchableOpacity style={styles.action} onPress={onBack}>
+            <Icon name="arrow-back" size={24} color={styles.title.color} />
+          </TouchableOpacity>
+        )}
+        {leftActions.map((action, index) => (
+          <TouchableOpacity
+            key={index}
+            style={styles.action}
+            onPress={action.onPress}>
+            <Icon
+              name={action.icon}
+              size={action.size || 24}
+              color={action.color || styles.title.color}
+              library={action.library}
+            />
+            {action.badge !== undefined && action.badge > 0 && (
+              <View style={styles.badge}>
+                <Text style={commonStyles.badgeText}>{action.badge}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        ))}
+      </View>
 
-    // Add safe area padding on tablets/desktop
-    ...{
-      ':w[md]': {
-        paddingTop: rt.insets.top + theme.spacing.sm,
-        paddingHorizontal: theme.spacing.lg,
-      },
-      ':w[lg]': {
-        paddingHorizontal: theme.spacing.xl,
-      },
-    },
-  },
+      {/* Title */}
+      <Text style={[styles.title, centerTitle && styles.centerTitle]}>
+        {title}
+      </Text>
 
+      {/* Right side */}
+      <View style={styles.actions}>
+        {rightActions.map((action, index) => (
+          <TouchableOpacity
+            key={index}
+            style={styles.action}
+            onPress={action.onPress}>
+            <Icon
+              name={action.icon}
+              size={24}
+              color={action.color || styles.title.color}
+            />
+            {action.badge !== undefined && action.badge > 0 && (
+              <View style={styles.badge}>
+                <Text style={commonStyles.badgeText}>{action.badge}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create((theme, rt) => ({
   title: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
+    ...commonStyles.headerTitle,
     flex: 1,
     marginHorizontal: 8,
-
-    // Larger title on bigger screens
-    ...{
-      ':w[md]': {
-        fontSize: 18,
-      },
-      ':w[lg]': {
-        fontSize: 20,
-      },
-    },
   },
 
   centerTitle: {
@@ -76,6 +109,7 @@ const headerStyles = StyleSheet.create((theme, rt) => ({
   },
 
   badge: {
+    ...commonStyles.badge,
     position: 'absolute',
     top: -4,
     right: -4,
@@ -86,80 +120,4 @@ const headerStyles = StyleSheet.create((theme, rt) => ({
     justifyContent: 'center',
     alignItems: 'center',
   },
-
-  badgeText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: '600',
-  },
 }));
-
-export const Header: React.FC<HeaderProps> = ({
-  title,
-  leftActions = [],
-  rightActions = [],
-  centerTitle = false,
-  onBack,
-}) => {
-  return (
-    <View style={headerStyles.container}>
-      {/* Left side */}
-      <View style={headerStyles.actions}>
-        {onBack && (
-          <TouchableOpacity style={headerStyles.action} onPress={onBack}>
-            <Icon
-              name="arrow-back"
-              size={24}
-              color={headerStyles.title.color}
-            />
-          </TouchableOpacity>
-        )}
-        {leftActions.map((action, index) => (
-          <TouchableOpacity
-            key={index}
-            style={headerStyles.action}
-            onPress={action.onPress}>
-            <Icon
-              name={action.icon}
-              size={action.size || 24}
-              color={action.color || headerStyles.title.color}
-              library={action.library}
-            />
-            {action.badge !== undefined && action.badge > 0 && (
-              <View style={headerStyles.badge}>
-                <Text style={headerStyles.badgeText}>{action.badge}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Title */}
-      <Text
-        style={[headerStyles.title, centerTitle && headerStyles.centerTitle]}>
-        {title}
-      </Text>
-
-      {/* Right side */}
-      <View style={headerStyles.actions}>
-        {rightActions.map((action, index) => (
-          <TouchableOpacity
-            key={index}
-            style={headerStyles.action}
-            onPress={action.onPress}>
-            <Icon
-              name={action.icon}
-              size={24}
-              color={action.color || headerStyles.title.color}
-            />
-            {action.badge !== undefined && action.badge > 0 && (
-              <View style={headerStyles.badge}>
-                <Text style={headerStyles.badgeText}>{action.badge}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        ))}
-      </View>
-    </View>
-  );
-};

@@ -20,6 +20,7 @@ const styles = StyleSheet.create(() => ({
   },
   row: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     gap: 12,
   },
 }));
