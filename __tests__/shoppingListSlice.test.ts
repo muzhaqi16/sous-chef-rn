@@ -1,5 +1,4 @@
-// __tests__/shoppingListSlice.test.ts
-import type {ShoppingList} from '../src/types';
+import type {ShoppingList} from '../src/graphql/generated';
 import {create} from 'zustand';
 import {UseBoundStore, StoreApi} from 'zustand';
 import {

@@ -1,0 +1,187 @@
+# ============================================
+# QUERIES
+# ============================================
+
+query MyShoppingListInvites {
+  myShoppingListInvites {
+    id
+    shoppingListId
+    collaboratorId
+    email
+    role
+    status
+    canEdit
+    canAddItems
+    canRemoveItems
+    canMarkPurchased
+    canInviteOthers
+    inviteToken
+    invitedAt
+    expiresAt
+    shoppingList {
+      id
+      name
+      description
+    }
+    collaborator {
+      id
+      email
+      profile {
+        displayName
+        avatar
+      }
+    }
+    invitedBy {
+      id
+      email
+      profile {
+        displayName
+      }
+    }
+  }
+}
+
+
+# ============================================
+# MUTATIONS
+# ============================================
+
+mutation InviteToShoppingList($input: InviteToShoppingListInput!) {
+  inviteToShoppingList(input: $input) {
+    id
+    shoppingListId
+    collaboratorId
+    email
+    role
+    status
+    canEdit
+    canAddItems
+    canRemoveItems
+    canMarkPurchased
+    canInviteOthers
+    inviteToken
+    invitedAt
+    expiresAt
+    shoppingList {
+      id
+      name
+    }
+    invitedBy {
+      id
+      email
+      profile {
+        displayName
+      }
+    }
+  }
+}
+
+mutation AcceptShoppingListInvite($token: String!) {
+  acceptShoppingListInvite(token: $token) {
+    id
+    shoppingListId
+    collaboratorId
+    email
+    role
+    status
+    canEdit
+    canAddItems
+    canRemoveItems
+    canMarkPurchased
+    canInviteOthers
+    invitedAt
+    shoppingList {
+      id
+      name
+      description
+    }
+    collaborator {
+      id
+      email
+      profile {
+        displayName
+        avatar
+      }
+    }
+  }
+}
+
+mutation DeclineShoppingListInvite($token: String!) {
+  declineShoppingListInvite(token: $token)
+}
+
+# ============================================
+# SUBSCRIPTIONS
+# ============================================
+
+subscription CollaborationMemberAdded($shoppingListId: ID!, $email: String!) {
+  collaborationMemberAdded(shoppingListId: $shoppingListId, email: $email) {
+    id
+    shoppingListId
+    collaboratorId
+    email
+    role
+    status
+    canEdit
+    canAddItems
+    canRemoveItems
+    canMarkPurchased
+    canInviteOthers
+    invitedAt
+    shoppingList {
+      id
+      name
+    }
+    collaborator {
+      id
+      email
+      profile {
+        displayName
+        avatar
+      }
+    }
+    invitedBy {
+      id
+      email
+      profile {
+        displayName
+      }
+    }
+  }
+}
+
+subscription CollaborationMemberRemoved($shoppingListId: ID!, $email: String!) {
+  collaborationMemberRemoved(shoppingListId: $shoppingListId, email: $email) {
+    id
+    email
+    collaboratorId
+    shoppingList {
+      id
+      name
+    }
+  }
+}
+
+subscription CollaborationInviteSent($shoppingListId: ID!, $email: String!) {
+  collaborationInviteSent(shoppingListId: $shoppingListId, email: $email) {
+    id
+    shoppingListId
+    email
+    role
+    status
+    inviteToken
+    invitedAt
+    expiresAt
+    shoppingList {
+      id
+      name
+    }
+    invitedBy {
+      id
+      email
+      profile {
+        displayName
+      }
+    }
+  }
+}

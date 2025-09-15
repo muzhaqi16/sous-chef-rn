@@ -1,7 +1,7 @@
 import React from 'react';
 import Icon from '@react-native-vector-icons/ionicons';
 import {Text, View, TouchableOpacity} from 'react-native';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 
 export const Counter = ({
   count,
@@ -12,9 +12,8 @@ export const Counter = ({
   onIncrement: () => void;
   onDecrement: () => void;
 }) => {
-  const {styles} = useStyles(stylesheet);
   return (
-    <View style={styles.counter}>
+    <View style={styles.container}>
       <TouchableOpacity onPress={onDecrement} style={styles.cardAdd}>
         <Icon color="#1d1d1d" name="remove" size={11} />
       </TouchableOpacity>
@@ -25,14 +24,14 @@ export const Counter = ({
     </View>
   );
 };
-const stylesheet = createStyleSheet(theme => ({
-  counter: {
+const styles = StyleSheet.create(theme => ({
+  container: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'center',
     marginRight: 10,
     borderWidth: 1,
+    backgroundColor: theme.colors.white,
     borderColor: '#ececec',
     borderStyle: 'solid',
     borderRadius: 9999,

@@ -38,6 +38,8 @@ local.properties
 # node.js
 #
 node_modules/
+package-lock.json
+yarn.lock
 npm-debug.log
 yarn-error.log
 
@@ -73,3 +75,11 @@ yarn-error.log
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+*.env
+.env.production
+.env.staging
+.env.development
+# react-native-config codegen
+ios/tmp.xcconfig
+.claude

@@ -1,6 +1,6 @@
 import React from 'react';
 import {View, Text} from 'react-native';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 import IconButton from '../atoms/IconButton';
 
 type QuantitySelectorProps = {
@@ -9,7 +9,7 @@ type QuantitySelectorProps = {
   onDecrement: () => void;
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -17,7 +17,7 @@ const stylesheet = createStyleSheet(theme => ({
   quantityText: {
     fontSize: 16,
     fontWeight: '600',
-    color: theme.colors.typography,
+    color: theme.colors.textPrimary || '#000',
     marginHorizontal: 8,
     minWidth: 20,
     textAlign: 'center',
@@ -29,20 +29,15 @@ const QuantitySelector: React.FC<QuantitySelectorProps> = ({
   onIncrement,
   onDecrement,
 }) => {
-  const {styles} = useStyles(stylesheet);
   return (
     <View style={styles.container}>
       <IconButton
-        iconName="remove-circle-outline"
+        name="remove-circle-outline"
         onPress={onDecrement}
         size={24}
       />
       <Text style={styles.quantityText}>{quantity}</Text>
-      <IconButton
-        iconName="add-circle-outline"
-        onPress={onIncrement}
-        size={24}
-      />
+      <IconButton name="add-circle-outline" onPress={onIncrement} size={24} />
     </View>
   );
 };

@@ -1,20 +1,19 @@
 import React from 'react';
 import {Text} from 'react-native';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 
 interface ShoppingListHeaderProps {
   title: string;
 }
 
 const ShoppingListHeader: React.FC<ShoppingListHeaderProps> = ({title}) => {
-  const {styles} = useStyles(stylesheet);
   return <Text style={styles.header}>{title}</Text>;
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   header: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: theme.fonts.size['3xl'],
+    fontWeight: theme.fonts.weight.bold,
     marginBottom: 16,
   },
 }));

@@ -1,0 +1,45 @@
+import React from 'react';
+import {View, Text} from 'react-native';
+import {StyleSheet} from 'react-native-unistyles';
+import {Icon} from '#utils';
+import {NotificationItem} from '#store/slices/notificationSlice';
+
+interface UrgentNotificationsBannerProps {
+  urgentNotifications: NotificationItem[];
+}
+
+export const UrgentNotificationsBanner: React.FC<
+  UrgentNotificationsBannerProps
+> = ({urgentNotifications}) => {
+  const unreadUrgentCount = urgentNotifications.filter(n => !n.isRead).length;
+
+  if (unreadUrgentCount === 0) {
+    return null;
+  }
+
+  return (
+    <View style={styles.urgentBanner}>
+      <Icon name="warning" size={20} color="#FFF" />
+      <Text style={styles.urgentText}>
+        {unreadUrgentCount} urgent notification
+        {unreadUrgentCount !== 1 ? 's' : ''}
+      </Text>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create(theme => ({
+  urgentBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.error || '#FF3B30',
+    padding: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+  },
+  urgentText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginLeft: theme.spacing.sm,
+  },
+}));

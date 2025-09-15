@@ -1,12 +1,13 @@
 import React from 'react';
-import {View, Text, TouchableOpacity} from 'react-native';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {View, Text, TouchableOpacity, Platform} from 'react-native';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import type {FieldValues, Control, FieldErrors} from 'react-hook-form';
 import {DynamicFormFields, FieldDef} from '../molecules/DynamicFormFields';
+import {Button, IconButton} from '../atoms';
 
 interface Props<T extends FieldValues> {
   title: string;
-  subtitle?: string;
+  subtitle?: string | React.ReactNode;
   onBackPress?: () => void;
   fields: FieldDef<T>[];
   control: Control<T>;
@@ -18,11 +19,12 @@ interface Props<T extends FieldValues> {
   onFooterLinkPress?: () => void;
   onLinkPress?: () => void;
   linkText?: string;
+  isLoading?: boolean;
 }
 export function AuthFormTemplate<T extends FieldValues>({
   title,
   subtitle,
-  onBackPress,
+  onBackPress = undefined,
   fields,
   control,
   errors,
@@ -33,18 +35,24 @@ export function AuthFormTemplate<T extends FieldValues>({
   onFooterLinkPress,
   linkText,
   onLinkPress,
+  isLoading = false,
 }: Props<T>) {
-  const {styles} = useStyles(stylesheet);
-
+  // adjust this if you have a fixed header height
+  const keyboardVerticalOffset = Platform.select({ios: 64, android: 0});
+  const {theme} = useUnistyles();
   return (
     <>
       <View style={styles.header}>
         {onBackPress && (
-          <TouchableOpacity onPress={onBackPress} style={styles.headerAction}>
-            {/* you could even parametrize the icon */}
-            <Text>{'<'}</Text>
-          </TouchableOpacity>
+          <IconButton
+            name="chevron-left"
+            onPress={onBackPress}
+            size={24}
+            style={styles.headerAction}
+            color={theme.colors.textOnSurfaceVariant}
+          />
         )}
+
         <Text style={styles.title}>{title}</Text>
         {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
       </View>
@@ -58,9 +66,13 @@ export function AuthFormTemplate<T extends FieldValues>({
       )}
 
       <View style={styles.action}>
-        <TouchableOpacity onPress={onSubmit} style={styles.button}>
-          <Text style={styles.buttonText}>{submitText}</Text>
-        </TouchableOpacity>
+        <Button
+          title={submitText}
+          onPress={onSubmit}
+          btnStyle={styles.button}
+          txtStyle={styles.buttonText}
+          disabled={isLoading}
+        />
       </View>
 
       {footerText && footerLinkText && onFooterLinkPress && (
@@ -74,20 +86,20 @@ export function AuthFormTemplate<T extends FieldValues>({
   );
 }
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   header: {
     paddingHorizontal: 0,
-    marginVertical: 28,
   },
   headerAction: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: theme.colors.secondary,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
+    backgroundColor: 'transparent',
   },
+
   title: {
     fontSize: 24,
     fontWeight: '700',

@@ -1,7 +1,7 @@
+import {Icon} from '#/utils';
 import React, {useState} from 'react';
 import {TouchableOpacity, View, Text, TextInput} from 'react-native';
-import FeatherIcon from '@react-native-vector-icons/feather';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 
 export interface RowProps {
   label: string;
@@ -24,7 +24,7 @@ export const Row: React.FC<RowProps> = ({
   isFirst = false,
   isLast = false,
 }) => {
-  const {styles, theme} = useStyles(stylesheet);
+  const {theme} = useUnistyles();
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(value ?? '');
 
@@ -56,10 +56,20 @@ export const Row: React.FC<RowProps> = ({
           autoFocus
         />
         <TouchableOpacity onPress={handleSave} style={styles.editIcon}>
-          <FeatherIcon name="check" size={20} color={theme.colors.primary} />
+          <Icon
+            library="Feather"
+            name="check"
+            size={20}
+            color={theme.colors.primary}
+          />
         </TouchableOpacity>
         <TouchableOpacity onPress={handleCancel} style={styles.editIcon}>
-          <FeatherIcon name="x" size={20} color={theme.colors.error} />
+          <Icon
+            library="Feather"
+            name="x"
+            size={20}
+            color={theme.colors.error}
+          />
         </TouchableOpacity>
       </View>
     );
@@ -98,7 +108,8 @@ export const Row: React.FC<RowProps> = ({
         ) : null}
 
         {(onSave || onPress) && (
-          <FeatherIcon
+          <Icon
+            library="Feather"
             name={onSave ? 'edit-2' : 'chevron-right'}
             size={20}
             color={theme.colors.textSecondary}
@@ -109,7 +120,7 @@ export const Row: React.FC<RowProps> = ({
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   rowWrapper: {
     borderTopWidth: 1,
     borderColor: theme.colors.border,

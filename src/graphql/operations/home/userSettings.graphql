@@ -1,0 +1,15 @@
+query GetDefaultHome {
+  getDefaultHome {
+    ...HomeFragment
+  }
+}
+
+mutation SetDefaultHome($homeId: ID!) {
+  setDefaultHome(homeId: $homeId) {
+    id
+    defaultHome {
+      id
+      name
+    }
+  }
+}

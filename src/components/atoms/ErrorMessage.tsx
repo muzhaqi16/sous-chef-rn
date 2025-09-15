@@ -1,14 +1,12 @@
-// src/components/atoms/ErrorMessage.tsx
 import React from 'react';
 import {Text, View} from 'react-native';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 
 interface ErrorMessageProps {
   message: string;
 }
 
 const ErrorMessage: React.FC<ErrorMessageProps> = ({message}) => {
-  const {styles} = useStyles(stylesheet);
   return (
     <View style={styles.errorContainer}>
       <Text style={styles.errorText}>{message}</Text>
@@ -16,7 +14,7 @@ const ErrorMessage: React.FC<ErrorMessageProps> = ({message}) => {
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   errorContainer: {
     flex: 1,
     justifyContent: 'center',

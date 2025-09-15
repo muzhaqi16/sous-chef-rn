@@ -1,11 +1,11 @@
 import React from 'react';
 import {View, Text, Image, TouchableOpacity} from 'react-native';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {IconButton} from '../atoms/IconButton';
-import FeatherIcon from '@react-native-vector-icons/feather';
+import {Icon} from '#/utils';
 
 export interface ProfileHeaderProps {
-  avatarUrl?: string;
+  avatarUrl?: string | null;
   name: string;
   subtitle?: string;
   onBack: () => void;
@@ -21,7 +21,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   onMore,
   onAvatarPress,
 }) => {
-  const {styles, theme} = useStyles(stylesheet);
+  const {theme} = useUnistyles();
   return (
     <View style={styles.header}>
       <IconButton
@@ -31,19 +31,32 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
       />
       <TouchableOpacity onPress={onAvatarPress} style={styles.avatarContainer}>
         {avatarUrl ? (
-          <Image source={{uri: avatarUrl}} style={styles.avatar} />
+          <Image
+            source={{uri: avatarUrl}}
+            style={styles.avatar}
+            resizeMode="cover"
+            onError={() =>
+              console.log('Avatar image failed to load:', avatarUrl)
+            }
+            onLoad={() => {}}
+          />
         ) : (
           <View style={[styles.avatar, styles.avatarPlaceholder]}>
-            <FeatherIcon
+            <Icon
+              library="Feather"
               name="user"
               size={32}
               color={theme.colors.textSecondary}
             />
           </View>
         )}
+        <View style={styles.profileAction}>
+          <Icon library="Feather" color="#fff" name="edit-3" size={15} />
+        </View>
       </TouchableOpacity>
       <IconButton
         name="more-vertical"
+        library="Feather"
         onPress={onMore}
         color={theme.colors.textPrimary}
       />
@@ -51,7 +64,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -63,11 +76,23 @@ const stylesheet = createStyleSheet(theme => ({
   avatar: {
     width: 80,
     height: 80,
-    borderRadius: 40,
+    borderRadius: theme.sizes.avatar,
     backgroundColor: theme.colors.surface,
+    overflow: 'hidden',
   },
   avatarPlaceholder: {
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  profileAction: {
+    position: 'absolute',
+    right: -4,
+    bottom: -10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 28,
+    height: 28,
+    borderRadius: 9999,
+    backgroundColor: theme.colors.primary,
   },
 }));

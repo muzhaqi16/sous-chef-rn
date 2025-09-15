@@ -15,7 +15,7 @@
 />
 */
 import React from 'react';
-import {BaseInput, BaseInputProps} from './BaseInput';
+import {BaseInput, BaseInputProps} from './BaseInput/BaseInput';
 
 export const EmailInput: React.FC<
   Omit<

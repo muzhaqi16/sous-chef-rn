@@ -1,7 +1,7 @@
 import React from 'react';
 import {View, Text} from 'react-native';
-import Button from '../atoms/Button';
-import {createStyleSheet, useStyles} from 'react-native-unistyles';
+import {Button} from '../atoms/Button/Button';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 
 interface ProductCardProps {
   name: string;
@@ -14,8 +14,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   price,
   onAddToCart,
 }) => {
-  const {styles, theme} = useStyles(stylesheet);
-
+  const {theme} = useUnistyles();
   return (
     <View
       style={{
@@ -32,12 +31,12 @@ const ProductCard: React.FC<ProductCardProps> = ({
   );
 };
 
-const stylesheet = createStyleSheet(theme => ({
+const styles = StyleSheet.create(theme => ({
   text: {
     fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 10,
-    color: theme.colors.typography,
+    color: theme.colors.textPrimary || '#000',
   },
 }));
 

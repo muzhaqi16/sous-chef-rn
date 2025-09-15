@@ -1,0 +1,237 @@
+# QUERIES
+# ============================================
+
+query GetMe {
+  me {
+    ...PartialUser
+  }
+}
+
+query GetUserSettings {
+  userSettings {
+    id
+    user {
+      id
+      email
+    }
+    emailNotifications
+    pushNotifications
+    smsNotifications
+    weeklyDigest
+    expiredItemAlerts
+    lowStockAlerts
+    shoppingListUpdates
+    recipeRecommendations
+    theme
+    compactMode
+    showTutorials
+    autoSync
+    offlineMode
+    shareUsageData
+    shareWithPartners
+    personalizedAds
+    enabledFeatures
+    betaFeatures
+    createdAt
+    updatedAt
+    defaultHome {
+      id
+      name
+    }
+  }
+}
+
+query GetUserProfile {
+  userProfile {
+    id
+    userId
+    firstName
+    lastName
+    displayName
+    bio
+    avatar
+    coverImage
+    phone
+    website
+    dateOfBirth
+    gender
+    profileVisibility
+    showEmail
+    showPhone
+    createdAt
+    updatedAt
+  }
+}
+
+# ============================================
+# MUTATIONS
+# ============================================
+
+mutation UpdateUser($id: ID!, $input: UpdateUserInput!) {
+  updateUser(id: $id, input: $input) {
+    id
+    email
+    emailVerified
+    role
+    onBoarded
+    timezone
+    preferredCurrency
+    language
+    defaultShoppingListId
+    defaultHomeId
+    createdAt
+    updatedAt
+    lastActiveAt
+  }
+}
+
+mutation UpdateUserProfile($input: UpdateUserProfileInput!) {
+  updateProfile(input: $input) {
+    id
+    userId
+    firstName
+    lastName
+    displayName
+    bio
+    avatar
+    coverImage
+    phone
+    website
+    dateOfBirth
+    gender
+    profileVisibility
+    showEmail
+    showPhone
+    createdAt
+    updatedAt
+  }
+}
+
+mutation UpdateUserPreferences($input: UpdateUserSettingsInput!) {
+  updateSettings(input: $input) {
+    id
+    user {
+      id
+      email
+    }
+    emailNotifications
+    pushNotifications
+    smsNotifications
+    weeklyDigest
+    expiredItemAlerts
+    lowStockAlerts
+    shoppingListUpdates
+    recipeRecommendations
+    theme
+    compactMode
+    showTutorials
+    autoSync
+    offlineMode
+    shareUsageData
+    shareWithPartners
+    personalizedAds
+    enabledFeatures
+    betaFeatures
+    createdAt
+    updatedAt
+  }
+}
+
+# ============================================
+# SUBSCRIPTIONS
+# ============================================
+
+subscription UserUpdated($userId: ID) {
+  userUpdated(userId: $userId) {
+    mutation
+    node {
+      id
+      email
+      emailVerified
+      role
+      onBoarded
+      timezone
+      preferredCurrency
+      language
+      lastActiveAt
+      profile {
+        id
+        firstName
+        lastName
+        displayName
+        avatar
+        bio
+      }
+    }
+    previousValues {
+      email
+      role
+      timezone
+      preferredCurrency
+      language
+    }
+    updatedFields
+    userId
+    timestamp
+  }
+}
+
+subscription UserStatusChanged($userId: ID) {
+  userStatusChanged(userId: $userId) {
+    userId
+    newStatus
+    previousStatus
+    isOnline
+    lastActiveAt
+    timestamp
+  }
+}
+
+subscription UserActivity($userId: ID) {
+  userActivity(userId: $userId) {
+    userId
+    activityType
+    description
+    metadata
+    timestamp
+  }
+}
+
+subscription UserModerationChanged($userId: ID) {
+  userModerationChanged(userId: $userId) {
+    userId
+    moderationType
+    moderationStatus
+    reason
+    moderatedBy
+    timestamp
+  }
+}
+
+subscription UserProfileChanged($userId: ID) {
+  userProfileChanged(userId: $userId) {
+    userId
+    mutation
+    profile {
+      id
+      firstName
+      lastName
+      displayName
+      bio
+      avatar
+      coverImage
+      phone
+      website
+      profileVisibility
+    }
+    previousValues {
+      firstName
+      lastName
+      displayName
+      bio
+      avatar
+    }
+    updatedFields
+    timestamp
+  }
+}
