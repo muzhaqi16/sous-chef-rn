@@ -1,6 +1,6 @@
 import React from 'react';
 import {View, Text, TouchableOpacity, ActivityIndicator} from 'react-native';
-import Icon from '@react-native-vector-icons/material-icons';
+import {Icon} from '#utils';
 import {useNavigation} from '@react-navigation/native';
 import {useUnistyles} from 'react-native-unistyles';
 import {commonStyles} from '#/styles/commonStyles';

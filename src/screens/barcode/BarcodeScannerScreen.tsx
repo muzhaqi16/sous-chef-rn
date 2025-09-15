@@ -16,18 +16,18 @@ import {
   useCameraPermission,
 } from 'react-native-vision-camera';
 import {useFocusEffect} from '@react-navigation/native';
-import {useNavigationFlow} from '#hooks';
+import {useAppNavigation} from '#hooks';
+import {type BarcodeStackParamList} from '#navigation/stacks/BarcodeStack';
 
 import {useBarcodeScanner} from '#hooks';
 import BarcodeMask from '#components/organisms/BarcodeMask';
-import {BarcodeScannerNavProp, BarcodeScannerScreenProps} from '#navigation';
 
 const {width: screenWidth, height: screenHeight} = Dimensions.get('window');
 
-export const BarcodeScannerScreen: React.FC<BarcodeScannerScreenProps> = ({
-  route,
-}) => {
-  const {navigateWithinStack, goBack} = useNavigationFlow();
+export const BarcodeScannerScreen: React.FC<{
+  route: {params?: BarcodeStackParamList['BarcodeScanner']};
+}> = ({route}) => {
+  const {navigate, goBack} = useAppNavigation();
   const {source, pantryId, shoppingListId} = route?.params || {};
   const devices = useCameraDevices();
   const device = useMemo(
@@ -108,7 +108,7 @@ export const BarcodeScannerScreen: React.FC<BarcodeScannerScreenProps> = ({
           HapticFeedback?.impact?.(HapticFeedback.ImpactFeedbackStyle.Medium);
         }
 
-        navigateWithinStack('SearchResults', {
+        navigate('SearchResults', {
           barcode: value,
           format: type,
           source,
@@ -139,9 +139,7 @@ export const BarcodeScannerScreen: React.FC<BarcodeScannerScreenProps> = ({
         <TouchableOpacity style={styles.button} onPress={requestPermission}>
           <Text style={styles.buttonText}>Grant Permission</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.linkButton}
-          onPress={() => goBack()}>
+        <TouchableOpacity style={styles.linkButton} onPress={() => goBack()}>
           <Text style={styles.linkButtonText}>Cancel</Text>
         </TouchableOpacity>
       </View>
@@ -153,9 +151,7 @@ export const BarcodeScannerScreen: React.FC<BarcodeScannerScreenProps> = ({
     return (
       <View style={styles.centeredContainer}>
         <Text style={styles.messageText}>No camera device found</Text>
-        <TouchableOpacity
-          style={styles.button}
-          onPress={() => goBack()}>
+        <TouchableOpacity style={styles.button} onPress={() => goBack()}>
           <Text style={styles.buttonText}>Go Back</Text>
         </TouchableOpacity>
       </View>
@@ -186,9 +182,7 @@ export const BarcodeScannerScreen: React.FC<BarcodeScannerScreenProps> = ({
       />
 
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.headerButton}
-          onPress={() => goBack()}>
+        <TouchableOpacity style={styles.headerButton} onPress={() => goBack()}>
           <Text style={styles.headerButtonText}>✕</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Scan Barcode</Text>

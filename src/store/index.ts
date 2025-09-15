@@ -24,7 +24,8 @@ import {
   ResetOptions,
   RESET_SCENARIOS,
 } from './resetManager';
-import {NavigationState} from '#/hooks/navigation/useNavigationState';
+
+import {createNavigationSlice, NavigationState} from './slices/navigationSlice';
 // import {logger} from './logger';
 import {zustandStorage, STORAGE_KEY} from '#/storage/mmkv';
 
@@ -48,6 +49,7 @@ interface NavigationStateManagerState {
 export type RootState = AuthState &
   PreferencesState &
   AppState &
+  NavigationState &
   NotificationState &
   BarcodeScannerState &
   ResetManagerState &
@@ -66,14 +68,18 @@ export const useStore = create<RootState>()(
           // Create navigation state manager
           const navigationStateManager: NavigationStateManagerState = {
             initiateLogout: () => {
-              console.log('🔄 Store: Logout initiated - setting global logout state');
+              console.log(
+                '🔄 Store: Logout initiated - setting global logout state',
+              );
               set(state => {
                 state.isLoggingOut = true;
               });
               return true; // Success
             },
             completeLogout: () => {
-              console.log('🔄 Store: Logout completed - clearing global logout state');
+              console.log(
+                '🔄 Store: Logout completed - clearing global logout state',
+              );
               set(state => {
                 state.isLoggingOut = false;
               });
@@ -85,6 +91,7 @@ export const useStore = create<RootState>()(
             ...createAuthSlice(set, get, store),
             ...createPreferencesSlice(set, get, store),
             ...createAppSlice(set, get, store),
+            ...createNavigationSlice(set, get, store),
             ...createBarcodeScannerSlice(set, get, store),
             ...createNotificationSlice(set, get, store),
             // Add reset manager methods to the store

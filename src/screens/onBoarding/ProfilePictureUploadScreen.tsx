@@ -11,7 +11,6 @@ import {useNavigation} from '@react-navigation/native';
 import {OnBoardingWrapper} from '#components/templates';
 import {Button} from '#components';
 import {Icon} from '#utils';
-import {ProfilePictureUploadNavProp} from '#navigation/types';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {
   launchCamera,
@@ -23,11 +22,10 @@ import {
 } from 'react-native-image-picker';
 import {request, PERMISSIONS, RESULTS} from 'react-native-permissions';
 import {validateImageFile, ImageValidationError} from '#utils/imageValidation';
-import {useImageUpload, useNavigationFlow, useOnboardingFlow} from '#hooks';
+import {useImageUpload, useOnboardingNavigation} from '#hooks';
 import {ImageFile} from '#components/molecules/ImagePicker';
 import {storage} from '#/storage/mmkv';
 import {useStore} from '#store';
-import {OnBoardingSteps} from '#store/slices/preferencesSlice';
 import {useFocusEffect} from '@react-navigation/native';
 
 const DEFAULT_OPTIONS: CameraOptions | ImageLibraryOptions = {
@@ -42,11 +40,11 @@ const {width: screenWidth} = Dimensions.get('window');
 const AVATAR_SIZE = Math.min(screenWidth * 0.4, 200);
 
 export const ProfilePictureUploadScreen = () => {
-  const navigation = useNavigation<ProfilePictureUploadNavProp>();
+  const navigation = useNavigation();
   const {theme} = useUnistyles();
   const {uploadProfileImage, updateProfileAvatarUrl} = useImageUpload();
-  const {progressToNextStep} = useOnboardingFlow();
-  const {navigateWithinStack} = useNavigationFlow();
+  const {navigateToNextStep, navigateToPreviousStep, skipToStep} =
+    useOnboardingNavigation();
   const {user, getUserNavigationState, setUserNavigationState} = useStore();
 
   const [selectedImage, setSelectedImage] = useState<ImageFile | null>(null);
@@ -166,7 +164,7 @@ export const ProfilePictureUploadScreen = () => {
       if (imageUrl) {
         // Update the profile avatar URL in the database
         await updateProfileAvatarUrl(imageUrl);
-        moveToNextStep();
+        navigateToNextStep('ProfilePictureUpload');
       }
     } catch (error) {
       console.error('Avatar upload error:', error);
@@ -174,30 +172,6 @@ export const ProfilePictureUploadScreen = () => {
     } finally {
       setIsUploading(false);
     }
-  };
-
-  const handleSkip = () => {
-    // Track skipped step
-    if (user?.id) {
-      const userState = getUserNavigationState(user.id);
-      const skippedSteps = userState?.skippedOnboardingSteps || [];
-      setUserNavigationState(user.id, {
-        skippedOnboardingSteps: [...skippedSteps, 'profilePictureUpload'],
-      });
-    }
-
-    moveToNextStep();
-  };
-
-  const moveToNextStep = () => {
-    const nextScreen = progressToNextStep();
-    if (nextScreen) {
-      navigateWithinStack(nextScreen);
-    }
-  };
-
-  const handleBack = () => {
-    navigation.goBack();
   };
 
   const handleRemoveImage = () => {
@@ -211,8 +185,8 @@ export const ProfilePictureUploadScreen = () => {
       subtitle="Add a photo to personalize your profile"
       step={4}
       totalSteps={6}
-      onBack={handleBack}
-      onSkip={handleSkip}>
+      onBack={() => navigateToPreviousStep('ProfilePictureUpload')}
+      onSkip={() => skipToStep('InviteMembers')}>
       <View style={styles.container}>
         <View style={styles.avatarPreview}>
           {croppedImage || selectedImage ? (
@@ -408,7 +382,11 @@ export const ProfilePictureUploadScreen = () => {
               ? 'Upload & Continue'
               : 'Skip for now'
         }
-        onPress={croppedImage || selectedImage ? handleUpload : handleSkip}
+        onPress={
+          croppedImage || selectedImage
+            ? handleUpload
+            : () => skipToStep('InviteMembers')
+        }
         btnStyle={[styles.nextButton, {backgroundColor: theme.colors.primary}]}
         txtStyle={[styles.nextText, {color: theme.colors.white}]}
         disabled={isUploading}

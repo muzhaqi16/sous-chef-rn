@@ -1,142 +1,77 @@
-import {CommonActions, NavigationContainerRef} from '@react-navigation/native';
-import {RootStackParamList} from '#navigation/types';
+import {
+  createNavigationContainerRef,
+  CommonActions,
+  StackActions,
+} from '@react-navigation/native';
+import type {RootStackParamList} from '#/navigation/RootNavigator';
 
-class NavigationService {
-  private navigator: NavigationContainerRef<RootStackParamList> | null = null;
-  private isReady: boolean = false;
+export const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
-  setNavigator(ref: NavigationContainerRef<RootStackParamList>) {
-    this.navigator = ref;
-  }
-
-  setIsReady(ready: boolean) {
-    this.isReady = ready;
-    
-    // Execute any pending navigation when navigator becomes ready
-    if (ready && this.pendingNavigation) {
-      const pending = this.pendingNavigation;
-      this.pendingNavigation = null;
-      pending();
-    }
-  }
-
-  // Main navigation methods
-  navigateToAuthenticatedState() {
-    this.reset([{name: 'HomeStack'}]);
-  }
-
-  navigateToOnboarding(initialRoute?: string) {
-    this.reset([
-      {
-        name: 'OnBoardingStack',
-        params: {initialRoute},
-      },
-    ]);
-  }
-
-  navigateToVerification(email?: string, password?: string) {
-    this.reset([
-      {
-        name: 'AuthStack',
-        params: {
-          screen: 'CodeVerification',
-          params: {email, password},
-        },
-      },
-    ]);
-  }
-
-  navigateToAuth(initialRoute?: string) {
-    this.reset([
-      {
-        name: 'AuthStack',
-        params: {initialRoute},
-      },
-    ]);
-  }
-
-  navigateToLogin() {
-    this.reset([
-      {
-        name: 'AuthStack',
-        params: {screen: 'Login'},
-      },
-    ]);
-  }
-
-  // Helper to navigate after auth based on user state
-  navigatePostAuth(user: any, rememberMe?: boolean) {
-    if (!user.emailVerified) {
-      this.navigateToVerification(user.email);
-    } else if (!user.onBoarded) {
-      this.navigateToOnboarding();
-    } else {
-      this.navigateToAuthenticatedState();
-    }
-  }
-
-  // Navigation with user context saving
-  navigateWithContext(
-    routeName: string,
-    params?: any,
-    saveToHistory: boolean = true,
+class NavigationServiceClass {
+  navigate<T extends keyof RootStackParamList>(
+    name: T,
+    params?: RootStackParamList[T],
   ) {
-    if (!this.isReady || !this.navigator) {
-      console.warn('Navigator not ready');
-      return;
-    }
-
-    this.navigator.navigate(routeName as any, params);
-
-    if (saveToHistory) {
-      // This will be picked up by navigation state listener
-      this.saveCurrentRoute(routeName);
-    }
-  }
-
-  private saveCurrentRoute(routeName: string) {
-    // This will be implemented via navigation state listener
-    // to save to user-specific storage
-  }
-
-  private pendingNavigation: (() => void) | null = null;
-
-  private reset(routes: any[]) {
-    if (!this.isReady || !this.navigator) {
-      // Store the pending navigation instead of infinite setTimeout loop
-      this.pendingNavigation = () => this.reset(routes);
-      return;
-    }
-
-    this.navigator.dispatch(
-      CommonActions.reset({
-        index: 0,
-        routes,
-      }),
-    );
-    
-    // Clear pending navigation after successful execution
-    this.pendingNavigation = null;
-  }
-
-  // Direct navigation methods
-  navigate(routeName: string, params?: any) {
-    if (this.navigator && this.isReady) {
-      this.navigator.navigate(routeName as any, params);
+    if (navigationRef.isReady()) {
+      navigationRef.navigate(name as any, params);
     }
   }
 
   goBack() {
-    if (this.navigator && this.isReady && this.navigator.canGoBack()) {
-      this.navigator.goBack();
+    if (navigationRef.isReady() && navigationRef.canGoBack()) {
+      navigationRef.goBack();
     }
   }
 
-  // Get current route
-  getCurrentRoute() {
-    if (!this.navigator) return null;
-    return this.navigator.getCurrentRoute();
+  reset(routes: any[]) {
+    if (navigationRef.isReady()) {
+      navigationRef.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes,
+        }),
+      );
+    }
+  }
+
+  push<T extends keyof RootStackParamList>(
+    name: T,
+    params?: RootStackParamList[T],
+  ) {
+    if (navigationRef.isReady()) {
+      navigationRef.dispatch(StackActions.push(name as string, params));
+    }
+  }
+
+  replace<T extends keyof RootStackParamList>(
+    name: T,
+    params?: RootStackParamList[T],
+  ) {
+    if (navigationRef.isReady()) {
+      navigationRef.dispatch(StackActions.replace(name as string, params));
+    }
+  }
+
+  popToTop() {
+    if (navigationRef.isReady()) {
+      navigationRef.dispatch(StackActions.popToTop());
+    }
+  }
+
+  preload(name: keyof RootStackParamList) {
+    if (navigationRef.isReady()) {
+      navigationRef.dispatch(CommonActions.preload(name as string));
+    }
+  }
+
+  setIsReady(ready: boolean) {
+    // This is handled automatically by the Navigation component
+  }
+
+  setNavigator(ref: any) {
+    // This is handled automatically by the Navigation component
   }
 }
 
-export default new NavigationService();
+const NavigationService = new NavigationServiceClass();
+export default NavigationService;

@@ -10,7 +10,7 @@ import {
 } from 'react-native-image-picker';
 import {request, PERMISSIONS, RESULTS} from 'react-native-permissions';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
-import Icon from '@react-native-vector-icons/material-icons';
+import {Icon} from '#utils';
 import {validateImageFile, ImageValidationError} from '#utils/imageValidation';
 
 export interface ImageFile {
@@ -45,29 +45,32 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
 }) => {
   const {theme} = useUnistyles();
 
-  const handleImageResponse = useCallback((response: ImagePickerResponse) => {
-    if (response.didCancel || response.errorCode || !response.assets?.[0]) {
-      return;
-    }
+  const handleImageResponse = useCallback(
+    (response: ImagePickerResponse) => {
+      if (response.didCancel || response.errorCode || !response.assets?.[0]) {
+        return;
+      }
 
-    const asset = response.assets[0];
-    const imageFile: ImageFile = {
-      uri: asset.uri!,
-      fileName: asset.fileName,
-      fileSize: asset.fileSize,
-      type: asset.type,
-    };
+      const asset = response.assets[0];
+      const imageFile: ImageFile = {
+        uri: asset.uri!,
+        fileName: asset.fileName,
+        fileSize: asset.fileSize,
+        type: asset.type,
+      };
 
-    try {
-      // Validate the selected image
-      validateImageFile(imageFile, isProfile);
-      onImageSelected(imageFile);
-    } catch (error) {
-      const validationError = error as ImageValidationError;
-      onError?.(validationError);
-      Alert.alert('Invalid Image', validationError.message);
-    }
-  }, [onImageSelected, onError, isProfile]);
+      try {
+        // Validate the selected image
+        validateImageFile(imageFile, isProfile);
+        onImageSelected(imageFile);
+      } catch (error) {
+        const validationError = error as ImageValidationError;
+        onError?.(validationError);
+        Alert.alert('Invalid Image', validationError.message);
+      }
+    },
+    [onImageSelected, onError, isProfile],
+  );
 
   const showImagePicker = useCallback(() => {
     if (disabled) return;
@@ -80,13 +83,15 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
           text: 'Camera',
           onPress: async () => {
             try {
-              const result = await request(PERMISSIONS.ANDROID.CAMERA || PERMISSIONS.IOS.CAMERA);
+              const result = await request(
+                PERMISSIONS.ANDROID.CAMERA || PERMISSIONS.IOS.CAMERA,
+              );
               if (result === RESULTS.GRANTED) {
                 launchCamera(DEFAULT_OPTIONS, handleImageResponse);
               } else {
                 Alert.alert(
                   'Camera Permission',
-                  'Camera permission is required to take photos. Please enable it in your device settings.'
+                  'Camera permission is required to take photos. Please enable it in your device settings.',
                 );
               }
             } catch (error) {
@@ -101,8 +106,8 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
           onPress: async () => {
             try {
               const result = await request(
-                PERMISSIONS.ANDROID.READ_EXTERNAL_STORAGE || 
-                PERMISSIONS.IOS.PHOTO_LIBRARY
+                PERMISSIONS.ANDROID.READ_EXTERNAL_STORAGE ||
+                  PERMISSIONS.IOS.PHOTO_LIBRARY,
               );
               if (result === RESULTS.GRANTED || result === RESULTS.LIMITED) {
                 launchImageLibrary(DEFAULT_OPTIONS, handleImageResponse);
@@ -122,7 +127,7 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
           style: 'cancel',
         },
       ],
-      {cancelable: true}
+      {cancelable: true},
     );
   }, [disabled, handleImageResponse]);
 

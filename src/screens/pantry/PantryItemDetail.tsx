@@ -1,6 +1,5 @@
 import React from 'react';
 import {View, Text, Alert} from 'react-native';
-import {useNavigation, useRoute} from '@react-navigation/native';
 import {
   useGetPantryItemQuery,
   useRemoveItemFromPantryMutation,
@@ -8,15 +7,17 @@ import {
 } from '#generated';
 import {DetailTemplate} from '#components/templates/DetailTemplate';
 import {useStore} from '#/store';
-import {PantryItemDetailNavProp} from '#/navigation';
 import {commonStyles} from '#styles';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
+import {useAppNavigation} from '#hooks';
+import {PantryStackParamList} from '#navigation/stacks/PantryStack';
 
-export const PantryItemDetail: React.FC = () => {
-  const navigation = useNavigation<PantryItemDetailNavProp>();
-  const route = useRoute();
+export const PantryItemDetail: React.FC<{
+  route: {params: PantryStackParamList['PantryItemDetail']};
+}> = ({route}) => {
+  const itemId = route.params.itemId;
+  const {goBack, navigateTo} = useAppNavigation();
   const {theme} = useUnistyles();
-  const {itemId} = route.params as {itemId: string};
   const {selectedShoppingListId} = useStore();
 
   const {data, loading} = useGetPantryItemQuery({
@@ -39,7 +40,7 @@ export const PantryItemDetail: React.FC = () => {
                 id: itemId,
               },
             });
-            navigation.goBack();
+            goBack();
           } catch (error) {
             Alert.alert('Error', 'Failed to delete item');
           }
@@ -149,11 +150,11 @@ export const PantryItemDetail: React.FC = () => {
   return (
     <DetailTemplate
       title="Item Details"
-      onBack={() => navigation.goBack()}
+      onBack={() => goBack()}
       headerActions={[
         {
           icon: 'edit',
-          onPress: () => navigation.navigate('PantryItem', {itemId}),
+          onPress: () => navigateTo.pantryItem({itemId}),
         },
         {
           icon: 'delete',

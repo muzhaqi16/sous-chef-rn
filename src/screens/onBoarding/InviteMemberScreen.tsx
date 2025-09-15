@@ -10,7 +10,6 @@ import {
 import {useNavigation} from '@react-navigation/native';
 import {OnBoardingWrapper} from '#components/templates';
 import {Button} from '#components';
-import {InviteMembersNavProp} from '#navigation/types';
 import {StyleSheet} from 'react-native-unistyles';
 import {
   useInviteToHomeMutation,
@@ -19,8 +18,7 @@ import {
   MembershipRole,
 } from '#generated';
 import {useStore} from '#store';
-import {OnBoardingSteps} from '#store/slices/preferencesSlice';
-import {useOnboardingFlow, useNavigationFlow} from '#hooks';
+import {useOnboardingNavigation, useAuth} from '#hooks';
 
 type InviteEntry = {
   id: string;
@@ -29,16 +27,15 @@ type InviteEntry = {
 };
 
 export const InviteMembersScreen = () => {
-  const {progressToNextStep, skipToStep} = useOnboardingFlow();
-  const {navigateWithinStack, goBack} = useNavigationFlow();
-
   const {
-    selectedHomeId,
-    selectedShoppingListId,
-    getUserNavigationState,
+    navigateToNextStep,
     setUserNavigationState,
-    user,
-  } = useStore();
+    getUserNavigationState,
+    skipToStep,
+  } = useOnboardingNavigation();
+  const {user} = useAuth();
+
+  const {selectedHomeId, selectedShoppingListId} = useStore();
 
   const [invites, setInvites] = useState<InviteEntry[]>([]);
   const [currentEmail, setCurrentEmail] = useState('');
@@ -111,90 +108,71 @@ export const InviteMembersScreen = () => {
     );
   };
 
-  const handleSkip = () => {
-    if (user?.id) {
-      const userState = getUserNavigationState(user.id);
-      const skippedSteps = userState?.skippedOnboardingSteps || [];
-      setUserNavigationState(user.id, {
-        skippedOnboardingSteps: [
-          ...skippedSteps,
-          OnBoardingSteps.inviteMembers,
-        ],
-      });
-    }
-    moveToCompletion();
-  };
-
-  const moveToCompletion = () => {
-    const nextScreen = progressToNextStep();
-    if (nextScreen) {
-      navigateWithinStack(nextScreen);
-    }
-  };
-
   const sendInvites = async () => {
-    if (invites.length === 0) {
-      moveToCompletion();
-      return;
-    }
+    if (invites.length > 0) {
+      setIsInviting(true);
 
-    setIsInviting(true);
+      try {
+        const invitePromises = [];
 
-    try {
-      const invitePromises = [];
-
-      for (const invite of invites) {
-        // Invite to home
-        if (
-          (invite.type === 'home' || invite.type === 'both') &&
-          selectedHomeId
-        ) {
-          invitePromises.push(
-            inviteToHome({
-              variables: {
-                input: {
-                  homeId: selectedHomeId,
-                  email: invite.email,
-                  role: MembershipRole.Member,
-                  message: `${user?.email || 'A user'} has invited you to join their home for managing pantry and shopping lists together!`,
+        for (const invite of invites) {
+          // Invite to home
+          if (
+            (invite.type === 'home' || invite.type === 'both') &&
+            selectedHomeId
+          ) {
+            invitePromises.push(
+              inviteToHome({
+                variables: {
+                  input: {
+                    homeId: selectedHomeId,
+                    email: invite.email,
+                    role: MembershipRole.Member,
+                    message: `${user?.email || 'A user'} has invited you to join their home for managing pantry and shopping lists together!`,
+                  },
                 },
-              },
-            }),
-          );
+              }),
+            );
+          }
+
+          // Add as shopping list collaborator
+          if (
+            (invite.type === 'shopping' || invite.type === 'both') &&
+            selectedShoppingListId
+          ) {
+            invitePromises.push(
+              addCollaborator({
+                variables: {
+                  data: {
+                    shoppingListId: selectedShoppingListId,
+                    email: invite.email,
+                    role: CollaboratorRole.Contributor,
+                  },
+                },
+              }),
+            );
+          }
         }
 
-        // Add as shopping list collaborator
-        if (
-          (invite.type === 'shopping' || invite.type === 'both') &&
-          selectedShoppingListId
-        ) {
-          invitePromises.push(
-            addCollaborator({
-              variables: {
-                data: {
-                  shoppingListId: selectedShoppingListId,
-                  email: invite.email,
-                  role: CollaboratorRole.Contributor,
-                },
-              },
-            }),
-          );
-        }
+        await Promise.all(invitePromises);
+        // Add this line after successful completion
+      } catch (error) {
+        console.error('Error sending invites:', error);
+        Alert.alert(
+          'Partial Success',
+          'Some invitations may have failed. You can invite more members later from settings.',
+          [
+            {
+              text: 'Continue',
+              onPress: () => navigateToNextStep('InviteMembers'),
+            },
+          ],
+        );
+      } finally {
+        setIsInviting(false);
       }
-
-      await Promise.all(invitePromises);
-      // Add this line after successful completion
-      moveToCompletion();
-    } catch (error) {
-      console.error('Error sending invites:', error);
-      Alert.alert(
-        'Partial Success',
-        'Some invitations may have failed. You can invite more members later from settings.',
-        [{text: 'Continue', onPress: moveToCompletion}],
-      );
-    } finally {
-      setIsInviting(false);
     }
+    navigateToNextStep('InviteMembers');
   };
 
   const getInviteTypeLabel = (type: 'home' | 'shopping' | 'both') => {
@@ -214,7 +192,7 @@ export const InviteMembersScreen = () => {
       subtitle="Share your home and shopping lists with others (optional)"
       step={5}
       totalSteps={6}
-      onSkip={handleSkip}>
+      onSkip={() => skipToStep('OnboardingComplete')}>
       <View style={styles.container}>
         <View style={styles.inputContainer}>
           <TextInput

@@ -1,5 +1,10 @@
+// ============================================
+// hooks/auth/useAuthErrorHandler.ts
+// Keep existing error handler with minor updates
+// ============================================
+
 import {useCallback} from 'react';
-import {ToastAndroid} from 'react-native';
+import {ToastAndroid, Platform} from 'react-native';
 import {useToast} from '../useToast';
 
 export const useAuthErrorHandler = () => {
@@ -16,7 +21,7 @@ export const useAuthErrorHandler = () => {
       showToast({
         type: 'error',
         message: errorMessage,
-        duration: ToastAndroid.SHORT,
+        duration: Platform.OS === 'android' ? ToastAndroid.SHORT : 3000,
       });
     },
     [showToast],
@@ -27,7 +32,7 @@ export const useAuthErrorHandler = () => {
       showToast({
         type: 'success',
         message,
-        duration: ToastAndroid.SHORT,
+        duration: Platform.OS === 'android' ? ToastAndroid.SHORT : 3000,
       });
     },
     [showToast],

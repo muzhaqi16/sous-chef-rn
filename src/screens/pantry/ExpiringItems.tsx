@@ -1,4 +1,4 @@
-import React, {useMemo} from 'react';
+import React, {useMemo, useState} from 'react';
 import {
   View,
   Text,
@@ -6,19 +6,17 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from 'react-native';
-import Icon from '@react-native-vector-icons/material-icons';
-import {useNavigation} from '@react-navigation/native';
+import {Icon} from '#utils';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 
 import {SwipeableItem} from '#components';
-import {usePantryItems, useDefaultHome} from '#hooks';
+import {usePantryItems, useDefaultHome, useAppNavigation} from '#hooks';
 import {useGetHomeQuery} from '#generated';
-import {ExpiringItemsNavProp} from '#/navigation';
 import {commonStyles} from '#styles';
 
 export const ExpiringItems: React.FC = () => {
-  const navigation = useNavigation<ExpiringItemsNavProp>();
-  const [refreshing, setRefreshing] = React.useState(false);
+  const {goBack, navigateTo} = useAppNavigation();
+  const [refreshing, setRefreshing] = useState(false);
   const {theme} = useUnistyles();
 
   const {selectedHomeId, getDefaultPantry} = useDefaultHome();
@@ -67,7 +65,7 @@ export const ExpiringItems: React.FC = () => {
   return (
     <View style={commonStyles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => goBack()}>
           <Icon name="arrow-back" size={24} color={theme.colors.textPrimary} />
         </TouchableOpacity>
         <Text style={[commonStyles.title, styles.headerTitle]}>
@@ -108,7 +106,9 @@ export const ExpiringItems: React.FC = () => {
               <SwipeableItem
                 key={item.id}
                 onPress={() =>
-                  navigation.navigate('PantryItemDetail', {itemId: item.id})
+                  navigateTo.pantryItemDetail({
+                    itemId: item.id,
+                  })
                 }>
                 <View style={[commonStyles.card, styles.itemCard]}>
                   <View style={styles.itemInfo}>

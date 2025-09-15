@@ -1,6 +1,6 @@
 import React, {useState, useCallback, useMemo} from 'react';
 import {View, SectionList, RefreshControl} from 'react-native';
-import {useNavigationFlow} from '#hooks';
+import {useAppNavigation} from '#hooks';
 import {StyleSheet} from 'react-native-unistyles';
 import {
   NotificationItem,
@@ -21,7 +21,7 @@ import {
   NotificationCategory,
   NotificationPriority,
 } from '#store/slices/notificationSlice';
-import {NotificationListNavProp} from '#navigation';
+import {NotificationStackParamList} from '#navigation/stacks/NotificationStack';
 import {useStore} from '#store';
 import {Header} from '#components/molecules/Header';
 import {NotificationActionHandler} from '#components/notifications/NotificationActionHandler';
@@ -30,14 +30,10 @@ import {
   createSectionListData,
 } from '#utils/notificationGrouping';
 
-export const NotificationListScreen: React.FC = () => {
-  const {
-    navigateWithinStack,
-    navigateToShoppingList,
-    navigateToPantry,
-    navigateToProfile,
-    goBack,
-  } = useNavigationFlow();
+export const NotificationListScreen: React.FC<{
+  route: {params?: NotificationStackParamList['NotificationList']};
+}> = () => {
+  const {navigate, navigateTo, goBack} = useAppNavigation();
   const [filterCategory, setFilterCategory] =
     useState<NotificationCategory | null>(null);
   const userId = useStore(state => state.user?.id);
@@ -114,16 +110,16 @@ export const NotificationListScreen: React.FC = () => {
             }
             break;
           case 'ADD_TO_SHOPPING_LIST':
-            navigateToShoppingList('ShoppingListMain', notification.actionData);
+            navigateTo.shoppingListMain();
             break;
           case 'VIEW_EXPIRING_ITEMS':
-            navigateToPantry('ExpiringItems', notification.actionData);
+            navigate('ExpiringItems', notification.actionData);
             break;
           case 'REVIEW_SECURITY':
-            navigateToProfile('ProfileSettings');
+            navigateTo.profile();
             break;
           default:
-            navigateWithinStack('NotificationDetail', {
+            navigate('NotificationDetail', {
               notification,
             });
         }
@@ -131,24 +127,24 @@ export const NotificationListScreen: React.FC = () => {
         // Default navigation based on category
         switch (notification.category) {
           case NotificationCategory.SHOPPING_LIST:
-            navigateToShoppingList('ListSettings', {
+            navigate('ListSettings', {
               listId: notification.payload.listId,
             });
             break;
           case NotificationCategory.PANTRY:
-            navigateToPantry();
+            navigateTo.pantryMain();
             break;
           case NotificationCategory.SECURITY:
-            navigateToProfile('ProfileSettings');
+            navigateTo.profile();
             break;
           default:
-            navigateWithinStack('NotificationDetail', {
+            navigate('NotificationDetail', {
               notification,
             });
         }
       }
     },
-    [handleMarkAsRead, navigateWithinStack],
+    [handleMarkAsRead, navigate],
   );
 
   // Test notification creation
@@ -185,7 +181,7 @@ export const NotificationListScreen: React.FC = () => {
         },
         {
           icon: 'settings',
-          onPress: () => navigateWithinStack('NotificationSettings'),
+          onPress: () => navigate('NotificationSettings'),
         },
       ]}
     />

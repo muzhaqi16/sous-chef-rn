@@ -1,6 +1,6 @@
 import React, {useMemo, useEffect} from 'react';
 import {Alert, View, Image} from 'react-native';
-import {useNavigationFlow} from '#hooks';
+import {useAppNavigation} from '#hooks';
 import {useUnistyles, StyleSheet} from 'react-native-unistyles';
 import {
   useDefaultHome,
@@ -10,7 +10,6 @@ import {
 } from '#hooks';
 import {useStore} from '#store';
 import {useGetHomeQuery} from '#generated';
-import {PantryMainNavProp} from '#navigation/types';
 import {
   ListTemplate,
   SearchBarAction,
@@ -20,12 +19,7 @@ import {
 import {ItemSelectorWithActions} from '#components/organisms/ItemSelectorWithActions';
 
 export const PantryMain: React.FC = () => {
-  const {
-    navigateToHomeManagement,
-    navigateWithinStack,
-    navigateToBarcode,
-  } = useNavigationFlow();
-
+  const {navigate, navigateTo} = useAppNavigation();
   const {theme} = useUnistyles();
 
   const selectPantrySheet = useBottomSheetModal();
@@ -45,7 +39,7 @@ export const PantryMain: React.FC = () => {
   });
 
   // Use selected pantry from store or fall back to default pantry
-  const defaultPantry = getDefaultPantry(homeData);
+  const defaultPantry = useMemo(() => getDefaultPantry(homeData), [homeData]);
   const pantry = selectedPantryId
     ? homeData?.home?.pantries?.find((p: any) => p.id === selectedPantryId) ||
       defaultPantry
@@ -115,14 +109,14 @@ export const PantryMain: React.FC = () => {
           {text: 'Cancel', style: 'cancel'},
           {
             text: 'Manage Homes',
-            onPress: () => navigateToHomeManagement(),
+            onPress: () => navigate('HomeManagement'),
             style: 'default',
           },
         ],
       );
       return;
     }
-    navigateWithinStack('PantryItem', {});
+    navigateTo.pantryItem({});
   };
 
   const handleDeleteItem = async (itemId: string) => {
@@ -135,7 +129,7 @@ export const PantryMain: React.FC = () => {
       left: [
         {
           icon: 'home-switch-outline',
-          onPress: () => navigateToHomeManagement(selectedHomeId || undefined),
+          onPress: () => navigate('HomeManagement', {homeId: selectedHomeId}),
           size: 34,
           color: theme.colors.primary,
           library: 'MaterialDesignIcons',
@@ -144,24 +138,24 @@ export const PantryMain: React.FC = () => {
       right: [
         {
           icon: 'schedule',
-          onPress: () => navigateWithinStack('ExpiringItems'),
+          onPress: () => navigate('ExpiringItems'),
           badge: stats.expired,
           color: '#FF6B6B',
         },
         {
           icon: 'warning',
-          onPress: () => navigateWithinStack('LowStockItems'),
+          onPress: () => navigate('LowStockItems'),
           badge: stats.lowStock,
           color: '#FFB84D',
         },
         {
           icon: 'category',
-          onPress: () => navigateWithinStack('CategoryManagement'),
+          onPress: () => navigate('CategoryManagement'),
         },
       ] as HeaderAction[],
     }),
     [
-      navigateToHomeManagement,
+      navigate,
       selectedHomeId,
       theme.colors.primary,
       stats.expired,
@@ -186,7 +180,7 @@ export const PantryMain: React.FC = () => {
         },
       ] as SearchBarAction[],
     }),
-    [theme.colors, handleAddItem],
+    [handleAddItem],
   );
 
   if (!selectedHomeId) {
@@ -200,7 +194,7 @@ export const PantryMain: React.FC = () => {
             'You need to create or be a member of a home to manage pantry items.',
           action: {
             label: 'Manage Homes',
-            onPress: () => navigateToHomeManagement(),
+            onPress: () => navigate('HomeManagement'),
           },
         }}
       />
@@ -248,10 +242,8 @@ export const PantryMain: React.FC = () => {
         items={items}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
-        onItemPress={id =>
-          navigateWithinStack('PantryItemDetail', {itemId: id})
-        }
-        onItemEdit={id => navigateWithinStack('PantryItem', {itemId: id})}
+        onItemPress={id => navigateTo.pantryItemDetail({itemId: id})}
+        onItemEdit={id => navigateTo.pantryItem({itemId: id})}
         onItemDelete={handleDeleteItem}
         onRefresh={async () => {
           await refetch();
@@ -261,7 +253,7 @@ export const PantryMain: React.FC = () => {
         showSearchBar={true}
         showFAB={true} // Don't show FAB since we have add in search bar
         onFabPress={() =>
-          navigateToBarcode('pantry', pantry?.id)
+          navigateTo.barcode({mode: 'pantry', pantryId: pantry?.id})
         }
         // Actions
         headerActions={headerActions}
@@ -294,7 +286,7 @@ export const PantryMain: React.FC = () => {
               label: 'Create New Pantry',
               onPress: () => {
                 selectPantrySheet.close();
-                navigateWithinStack('PantrySettings', {pantryId: undefined});
+                navigate('PantrySettings', {pantryId: undefined});
               },
               iconLibrary: 'MaterialIcons',
             },
@@ -304,7 +296,7 @@ export const PantryMain: React.FC = () => {
               onPress: () => {
                 selectPantrySheet.close();
                 if (pantry?.id) {
-                  navigateWithinStack('PantrySettings', {pantryId: pantry.id});
+                  navigate('PantrySettings', {pantryId: pantry.id});
                 }
               },
               iconLibrary: 'MaterialIcons',

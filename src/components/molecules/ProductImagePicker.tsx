@@ -1,7 +1,7 @@
 import React from 'react';
 import {View, Text, TouchableOpacity, Image} from 'react-native';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
-import Icon from '@react-native-vector-icons/material-icons';
+import {Icon} from '#utils';
 import {ImagePicker, ImageFile} from './ImagePicker';
 
 interface ProductImagePickerProps {
@@ -48,10 +48,12 @@ export const ProductImagePicker: React.FC<ProductImagePickerProps> = ({
             disabled={disabled}
             isProfile={false}>
             <View style={styles.placeholderContainer}>
-              <Icon name="add-a-photo" size={32} color={theme.colors.textSecondary} />
-              <Text style={styles.placeholderText}>
-                Take or select a photo
-              </Text>
+              <Icon
+                name="add-a-photo"
+                size={32}
+                color={theme.colors.textSecondary}
+              />
+              <Text style={styles.placeholderText}>Take or select a photo</Text>
             </View>
           </ImagePicker>
         )}

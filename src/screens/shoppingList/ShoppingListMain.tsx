@@ -1,39 +1,31 @@
 import React, {useMemo, useEffect} from 'react';
-import {TouchableOpacity, Text, Alert, Image, View} from 'react-native';
+import {TouchableOpacity, Alert, Image, View} from 'react-native';
 import {useFocusEffect} from '@react-navigation/native';
-import {useNavigationFlow} from '#hooks';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
+import {useAppNavigation} from '#hooks';
+import {StyleSheet} from 'react-native-unistyles';
 import {
   useGetShoppingListsQuery,
-  useMarkItemPurchasedMutation,
   useRemoveItemFromShoppingListMutation,
 } from '#generated';
-import {ShoppingListMainNavProp} from '#navigation/types';
-import {
-  ListTemplate,
-  SearchBarAction,
-  BottomSheetAction,
-  EmptyState,
-} from '#components';
+import {ListTemplate, SearchBarAction, BottomSheetAction} from '#components';
 import {ItemSelectorWithActions} from '#components/organisms/ItemSelectorWithActions';
 import {
   useShoppingListSelector,
   useBottomSheetModal,
   useShoppingList,
+  useShoppingListManagement,
 } from '#/hooks';
 import {useStore} from '#/store';
 import {Icon, type IconLibrary} from '#/utils/iconUtils';
 
 export const ShoppingListMain: React.FC = () => {
-  const {theme} = useUnistyles();
-  const {
-    navigateWithinStack,
-    navigateToBarcode,
-  } = useNavigationFlow();
+  const {navigate, navigateTo} = useAppNavigation();
   const selectShoppingListSheet = useBottomSheetModal();
   const {selectedShoppingListId, setSelectedShoppingListId} = useStore();
-  const [toggleItem] = useMarkItemPurchasedMutation();
   const [deleteItem] = useRemoveItemFromShoppingListMutation();
+
+  // Use the shopping list management hook for proper cache updates
+  const {addItem, markItemPurchased} = useShoppingListManagement();
 
   const {data, refetch} = useGetShoppingListsQuery({
     fetchPolicy: 'cache-and-network',
@@ -64,18 +56,22 @@ export const ShoppingListMain: React.FC = () => {
     },
   });
 
-  // Transform shopping list items to list items format
+  // Transform shopping list items to list items format - separate purchased/unpurchased and move purchased to end
   const listItems = useMemo(() => {
-    return items.map((item: any) => ({
+    const unpurchasedItems = items.filter((item: any) => !item.isPurchased);
+    const purchasedItems = items.filter((item: any) => item.isPurchased);
+
+    // Combine unpurchased first, then purchased
+    const sortedItems = [...unpurchasedItems, ...purchasedItems];
+
+    return sortedItems.map((item: any) => ({
       id: item.id,
       title: item.itemName,
       subtitle: `${item.quantity} ${item.unitName || ''}`.trim(),
       rightElement: (
         <TouchableOpacity
           style={[styles.checkbox, item.isPurchased && styles.checkboxChecked]}
-          onPress={() =>
-            toggleItem({variables: {id: item.id, status: !item.isPurchased}})
-          }>
+          onPress={() => markItemPurchased(item.id, !item.isPurchased)}>
           {item.isPurchased && <Icon name="check" size={16} color="white" />}
         </TouchableOpacity>
       ),
@@ -85,8 +81,10 @@ export const ShoppingListMain: React.FC = () => {
           <Image source={{uri: item.item.imageUrl}} style={styles.leftImage} />
         </View>
       ) : null,
+      // Add visual styling for purchased items
+      style: item.isPurchased ? {opacity: 0.6} : undefined,
     }));
-  }, [items, toggleItem]);
+  }, [items, markItemPurchased]);
 
   const handleAddItem = () => {
     if (!currentListId) {
@@ -97,13 +95,35 @@ export const ShoppingListMain: React.FC = () => {
           {text: 'Cancel', style: 'cancel'},
           {
             text: 'Create List',
-            onPress: () => navigateWithinStack('ListSettings'),
+            onPress: () => navigate('ListSettings'),
           },
         ],
       );
       return;
     }
-    navigateWithinStack('AddItem', {listId: currentListId});
+    navigate('AddItem', {listId: currentListId});
+  };
+
+  const handleAddItemFromSearch = async (itemName: string) => {
+    if (!currentListId) {
+      Alert.alert('Error', 'Please select a shopping list first');
+      return;
+    }
+
+    try {
+      const result = await addItem(currentListId, {
+        itemName: itemName.trim(),
+        quantity: 1,
+      });
+
+      if (result) {
+        setQuery(''); // Clear search after adding
+      } else {
+        Alert.alert('Error', 'Failed to add item');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to add item');
+    }
   };
 
   const handleDeleteItem = async (itemId: string) => {
@@ -114,25 +134,40 @@ export const ShoppingListMain: React.FC = () => {
     }
   };
 
-  // Search bar actions - similar to PantryMain
-  const searchBarActions = useMemo(
-    () => ({
+  // Search bar actions - conditionally show "Add" button when searching with no results
+  const searchBarActions = useMemo(() => {
+    const hasSearchWithNoResults = query.trim() && listItems.length === 0;
+
+    const rightActions: SearchBarAction[] = [
+      {
+        icon: 'list',
+        color: '#fff',
+        onPress: () => selectShoppingListSheet.open(),
+      },
+    ];
+
+    // Add the "Add item from search" button when searching with no results
+    if (hasSearchWithNoResults) {
+      rightActions.unshift({
+        icon: 'add',
+        onPress: () => handleAddItemFromSearch(query),
+        color: '#4CAF50', // Green color to make it prominent
+        backgroundColor: 'rgba(76, 175, 80, 0.2)',
+      });
+    } else {
+      // Show regular add button when not searching
+      rightActions.unshift({
+        icon: 'add',
+        onPress: handleAddItem,
+        color: '#fff',
+      });
+    }
+
+    return {
       left: [] as SearchBarAction[],
-      right: [
-        {
-          icon: 'list',
-          color: '#fff',
-          onPress: () => selectShoppingListSheet.open(),
-        },
-        {
-          icon: 'add',
-          onPress: handleAddItem,
-          color: '#fff',
-        },
-      ] as SearchBarAction[],
-    }),
-    [handleAddItem],
-  );
+      right: rightActions,
+    };
+  }, [handleAddItem, handleAddItemFromSearch, query, listItems.length]);
 
   const handleRefresh = async () => {
     await Promise.all([refetch()]);
@@ -155,7 +190,7 @@ export const ShoppingListMain: React.FC = () => {
           description: 'Create a shopping list to get started',
           action: {
             label: 'Create List',
-            onPress: () => navigateWithinStack('ListSettings'),
+            onPress: () => navigate('ListSettings'),
           },
         }}
       />
@@ -171,10 +206,10 @@ export const ShoppingListMain: React.FC = () => {
         searchQuery={query}
         onSearchChange={setQuery}
         onItemPress={id =>
-          navigateWithinStack('EditItem', {listId: currentListId, itemId: id})
+          navigate('EditItem', {listId: currentListId, itemId: id})
         }
         onItemEdit={id =>
-          navigateWithinStack('EditItem', {listId: currentListId, itemId: id})
+          navigate('EditItem', {listId: currentListId, itemId: id})
         }
         onItemDelete={handleDeleteItem}
         onRefresh={handleRefresh}
@@ -182,19 +217,23 @@ export const ShoppingListMain: React.FC = () => {
         showSearchBar={true}
         showFAB={true}
         onFabPress={() =>
-          navigateToBarcode('shoppingList', currentListId)
+          navigateTo.barcode({mode: 'shoppingList', listId: currentListId})
         }
         // Actions
         searchBarActions={searchBarActions}
-        emptyState={{
-          icon: 'add-shopping-cart',
-          title: 'No items in this list',
-          description: 'Add items to your shopping list',
-          action: {
-            label: 'Add first item',
-            onPress: handleAddItem,
-          },
-        }}
+        emptyState={
+          query.trim()
+            ? undefined // No empty state during search - user can add via search bar button
+            : {
+                icon: 'add-shopping-cart',
+                title: 'No items in this list',
+                description: 'Add items to your shopping list',
+                action: {
+                  label: 'Add first item',
+                  onPress: handleAddItem,
+                },
+              }
+        }
       />
 
       <BottomSheetAction
@@ -215,7 +254,7 @@ export const ShoppingListMain: React.FC = () => {
               label: 'Create New List',
               onPress: () => {
                 selectShoppingListSheet.close();
-                navigateWithinStack('ListSettings');
+                navigate('ListSettings');
               },
               iconLibrary: 'MaterialIcons' as IconLibrary,
             },
@@ -226,7 +265,7 @@ export const ShoppingListMain: React.FC = () => {
                     label: 'Share Current List',
                     onPress: () => {
                       selectShoppingListSheet.close();
-                      navigateWithinStack('ShareList', {listId: currentListId});
+                      navigate('ShareList', {listId: currentListId});
                     },
                     iconLibrary: 'MaterialIcons' as IconLibrary,
                   },
@@ -235,7 +274,7 @@ export const ShoppingListMain: React.FC = () => {
                     label: 'List Settings',
                     onPress: () => {
                       selectShoppingListSheet.close();
-                      navigateWithinStack('ListSettings', {
+                      navigate('ListSettings', {
                         listId: currentListId,
                       });
                     },

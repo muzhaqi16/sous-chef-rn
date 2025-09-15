@@ -1,6 +1,9 @@
 import React from 'react';
-import {useRealTimeNotifications, useNotificationSettings} from '#hooks';
-import {useStore} from '#store';
+import {
+  useRealTimeNotifications,
+  useNotificationSettings,
+  useAuth,
+} from '#hooks';
 
 interface NotificationProviderProps {
   children: React.ReactNode;
@@ -14,9 +17,8 @@ interface NotificationProviderProps {
 export const NotificationProvider: React.FC<NotificationProviderProps> = ({
   children,
 }) => {
-  const user = useStore(state => state.user);
-  const isAuthenticated = useStore(state => state.isAuthenticated);
-  
+  const {user, isAuthenticated} = useAuth();
+
   // Get notification settings to configure the real-time system
   const {settings} = useNotificationSettings();
 
@@ -29,7 +31,8 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
     enableExpirationAlerts: settings.expiredItemAlerts,
     enableCollaborationNotifications: settings.collaboratorChanges,
     showInAppNotifications: settings.pushNotifications,
-    showPushNotifications: settings.pushNotifications && !settings.urgentNotificationsOnly,
+    showPushNotifications:
+      settings.pushNotifications && !settings.urgentNotificationsOnly,
   });
 
   // Only initialize notifications if user is authenticated

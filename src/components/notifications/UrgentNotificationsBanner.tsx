@@ -1,16 +1,16 @@
 import React from 'react';
 import {View, Text} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
-import Icon from '@react-native-vector-icons/material-icons';
+import {Icon} from '#utils';
 import {NotificationItem} from '#store/slices/notificationSlice';
 
 interface UrgentNotificationsBannerProps {
   urgentNotifications: NotificationItem[];
 }
 
-export const UrgentNotificationsBanner: React.FC<UrgentNotificationsBannerProps> = ({
-  urgentNotifications,
-}) => {
+export const UrgentNotificationsBanner: React.FC<
+  UrgentNotificationsBannerProps
+> = ({urgentNotifications}) => {
   const unreadUrgentCount = urgentNotifications.filter(n => !n.isRead).length;
 
   if (unreadUrgentCount === 0) {

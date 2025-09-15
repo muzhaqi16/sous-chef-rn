@@ -1,10 +1,9 @@
 import React from 'react';
 import {View, Text, TouchableOpacity} from 'react-native';
-import Icon from '@react-native-vector-icons/material-icons';
+import {Icon} from '#utils';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {useStore} from '#store';
-import {useNavigation} from '@react-navigation/native';
-import {RootNavProp} from '#navigation';
+import {useAppNavigation} from '#/hooks';
 
 interface NotificationBadgeProps {
   size?: number;
@@ -17,7 +16,7 @@ export const NotificationBadge: React.FC<NotificationBadgeProps> = ({
   color,
   onPress,
 }) => {
-  const navigation = useNavigation<RootNavProp>();
+  const {navigateTo} = useAppNavigation();
   const {theme} = useUnistyles();
   const unreadCount = useStore(state => state.unreadCount);
 
@@ -25,7 +24,7 @@ export const NotificationBadge: React.FC<NotificationBadgeProps> = ({
     if (onPress) {
       onPress();
     } else {
-      navigation.navigate('NotificationStack', {screen: 'NotificationList'});
+      navigateTo.notifications();
     }
   };
 

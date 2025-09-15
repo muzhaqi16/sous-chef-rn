@@ -9,19 +9,18 @@ import {
 } from 'react-native';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 
-import Icon from '@react-native-vector-icons/material-icons';
-import {useNavigation} from '@react-navigation/native';
+import {Icon} from '#utils';
 import {SwipeableItem} from '#components';
-import {usePantryItems, useDefaultHome} from '#hooks';
+import {usePantryItems, useDefaultHome, useAppNavigation} from '#hooks';
 import {useGetHomeQuery, useAddItemToShoppingListMutation} from '#generated';
-import {LowStockItemsNavProp} from '#navigation/types';
 import {commonStyles} from '#styles';
 import {useStore} from '#store';
 
 export const LowStockItems: React.FC = () => {
   const {theme} = useUnistyles();
 
-  const navigation = useNavigation<LowStockItemsNavProp>();
+  const {navigate, goBack, navigateTo} = useAppNavigation();
+
   const [refreshing, setRefreshing] = React.useState(false);
 
   const {selectedHomeId, getDefaultPantry} = useDefaultHome();
@@ -64,7 +63,7 @@ export const LowStockItems: React.FC = () => {
   return (
     <View style={commonStyles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => goBack()}>
           <Icon name="arrow-back" size={24} color={theme.colors.textPrimary} />
         </TouchableOpacity>
         <Text style={[commonStyles.title, styles.headerTitle]}>
@@ -95,9 +94,7 @@ export const LowStockItems: React.FC = () => {
           lowStockItems.map(item => (
             <SwipeableItem
               key={item.id}
-              onPress={() =>
-                navigation.navigate('PantryItemDetail', {itemId: item.id})
-              }>
+              onPress={() => navigateTo.pantryItemDetail({itemId: item.id})}>
               <View style={[commonStyles.card, styles.itemCard]}>
                 <View style={styles.itemInfo}>
                   <Text style={styles.itemName}>{item.item?.name}</Text>

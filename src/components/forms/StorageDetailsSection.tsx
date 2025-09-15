@@ -2,7 +2,7 @@ import React from 'react';
 import {View, Text, TouchableOpacity} from 'react-native';
 import {Control, FieldErrors} from 'react-hook-form';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import Icon from '@react-native-vector-icons/material-icons';
+import {Icon} from '#utils';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {
   DynamicFormFields,

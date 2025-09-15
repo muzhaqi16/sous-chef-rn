@@ -1,21 +1,17 @@
 import React from 'react';
 import {View, Text, ScrollView, TouchableOpacity} from 'react-native';
-import {useRoute, useNavigation} from '@react-navigation/native';
 import {StyleSheet} from 'react-native-unistyles';
-import Icon from '@react-native-vector-icons/material-icons';
+import {Icon} from '#utils';
+import {useAppNavigation} from '#/hooks';
 
 import {format} from 'date-fns';
-import {NotificationItem} from '#store/slices/notificationSlice';
+import {NotificationStackParamList} from '#navigation/stacks/NotificationStack';
 
-type NotificationDetailRouteParams = {
-  notification: NotificationItem;
-};
-
-export const NotificationDetailScreen: React.FC = () => {
-  const route = useRoute();
-  const navigation = useNavigation();
-  const notification = (route.params as NotificationDetailRouteParams)
-    ?.notification;
+export const NotificationDetailScreen: React.FC<{
+  route: {params: NotificationStackParamList['NotificationDetail']};
+}> = ({route}) => {
+  const navigation = useAppNavigation();
+  const notification = route.params?.notification;
 
   if (!notification) {
     return (

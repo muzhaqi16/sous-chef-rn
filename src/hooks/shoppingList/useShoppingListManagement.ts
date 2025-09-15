@@ -310,10 +310,38 @@ export function useShoppingListManagement() {
   const [markItemPurchasedMutation, {loading: markingPurchased}] = useMarkItemPurchasedMutation({
     update: (cache, {data}, {variables}) => {
       if (data?.markItemPurchased && variables?.id) {
-        // Similar to updateItem, we need the listId to update the cache properly
-        const item = data.markItemPurchased;
-        // This might need enhancement to get the listId
-        console.log('Item purchase status updated:', item);
+        const updatedItem = data.markItemPurchased;
+        const listId = (updatedItem as any).shoppingListId;
+
+        if (listId) {
+          try {
+            const existingItems = cache.readQuery({
+              query: GetShoppingListItemsDocument,
+              variables: {shoppingListId: listId},
+            }) as {shoppingListItems: any[]} | null;
+
+            if (existingItems?.shoppingListItems) {
+              const updatedItems = existingItems.shoppingListItems.map((existingItem: any) =>
+                existingItem.id === updatedItem.id
+                  ? {...existingItem, isPurchased: updatedItem.isPurchased}
+                  : existingItem,
+              );
+
+              cache.writeQuery({
+                query: GetShoppingListItemsDocument,
+                variables: {shoppingListId: listId},
+                data: {shoppingListItems: updatedItems},
+              });
+
+              // Update MMKV cache
+              if (!isLoggedOut && !isLoggingOut) {
+                shoppingListStorage.setShoppingListItems(listId, updatedItems);
+              }
+            }
+          } catch (error) {
+            console.warn('Could not update cache for mark purchased:', error);
+          }
+        }
       }
     },
     onError: error => {

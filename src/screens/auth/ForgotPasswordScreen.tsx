@@ -1,21 +1,19 @@
 import React from 'react';
 import {useForm} from 'react-hook-form';
 import {yupResolver} from '@hookform/resolvers/yup';
-import {useNavigation, NavigationProp} from '@react-navigation/native';
-import {type AuthStackParamList} from '../../navigation/types';
 import {AuthFormTemplate} from '../../components/templates/AuthFormTemplate';
 import {EmailInput} from '../../components/atoms';
 import {getForgotPasswordValidationSchema} from '#utils';
 import {AuthWrapper} from '../../components/templates/AuthWrapper';
 import {useForgotPasswordMutation} from '../../graphql/generated';
+import {useAuthNavigation} from '#/hooks';
 
 type ForgotPasswordValues = {
   email: string;
 };
 
 export function ForgotPasswordScreen() {
-  const navigation = useNavigation<NavigationProp<AuthStackParamList>>();
-
+  const {navigateToLogin} = useAuthNavigation();
   const [forgotPasswordApi] = useForgotPasswordMutation();
 
   const {
@@ -34,7 +32,8 @@ export function ForgotPasswordScreen() {
       await forgotPasswordApi({
         variables: {email},
       });
-      navigation.navigate('Login'); // Navigate back to login after sending
+      // On success, navigate to login
+      navigateToLogin();
     } catch (error) {
       console.error('Error sending reset email:', error);
       // Handle error, e.g., show a toast or alert
@@ -57,7 +56,7 @@ export function ForgotPasswordScreen() {
         onSubmit={handleSubmit(sendResetEmail)}
         footerText="Remembered it?"
         footerLinkText="Sign In"
-        onFooterLinkPress={() => navigation.navigate('Login')}
+        onFooterLinkPress={() => navigateToLogin()}
       />
     </AuthWrapper>
   );

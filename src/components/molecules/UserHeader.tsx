@@ -1,12 +1,11 @@
 import React from 'react';
 import {View, Text, TouchableOpacity, Image} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
-import {useNavigation} from '@react-navigation/native';
-import {useProfileData} from '#/hooks';
+import {useProfileData, useAppNavigation} from '#/hooks';
 import {Icon} from '#utils';
 
 export const UserHeader: React.FC = () => {
-  const navigation = useNavigation();
+  const {navigateTo} = useAppNavigation();
   const {profile} = useProfileData();
   return (
     <View style={styles.header}>
@@ -22,9 +21,7 @@ export const UserHeader: React.FC = () => {
       <View style={styles.headerActions}>
         <TouchableOpacity
           onPress={() => {
-            navigation.navigate('NotificationStack', {
-              screen: 'NotificationList',
-            });
+            navigateTo.notificationList();
           }}>
           <View style={styles.avatar}>
             {profile?.avatar ? (

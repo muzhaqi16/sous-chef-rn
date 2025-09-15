@@ -8,7 +8,7 @@ import {
   Modal,
 } from 'react-native';
 import {useUnistyles} from 'react-native-unistyles';
-import Icon from '@react-native-vector-icons/material-icons';
+import {Icon} from '#utils';
 
 interface SelectOption {
   label: string;
@@ -38,9 +38,9 @@ export const FormSelect: React.FC<FormSelectProps> = ({
 }) => {
   const {theme} = useUnistyles();
   const [modalVisible, setModalVisible] = useState(false);
-  
+
   const selectedOption = options.find(option => option.value === value);
-  
+
   const styles = StyleSheet.create({
     container: {
       marginBottom: 16,
@@ -68,7 +68,9 @@ export const FormSelect: React.FC<FormSelectProps> = ({
     },
     selectText: {
       fontSize: 16,
-      color: selectedOption ? theme.colors.textPrimary : theme.colors.textSecondary,
+      color: selectedOption
+        ? theme.colors.textPrimary
+        : theme.colors.textSecondary,
     },
     errorText: {
       fontSize: 14,
@@ -137,7 +139,8 @@ export const FormSelect: React.FC<FormSelectProps> = ({
       <TouchableOpacity
         style={[styles.option, isSelected && styles.selectedOption]}
         onPress={() => handleSelect(item.value)}>
-        <Text style={[styles.optionText, isSelected && styles.selectedOptionText]}>
+        <Text
+          style={[styles.optionText, isSelected && styles.selectedOptionText]}>
           {item.label}
         </Text>
       </TouchableOpacity>
@@ -150,22 +153,22 @@ export const FormSelect: React.FC<FormSelectProps> = ({
         {label}
         {required && <Text style={styles.required}> *</Text>}
       </Text>
-      
+
       <TouchableOpacity
         style={styles.selectButton}
         onPress={() => setModalVisible(true)}>
         <Text style={styles.selectText}>
           {selectedOption ? selectedOption.label : placeholder}
         </Text>
-        <Icon 
-          name="keyboard-arrow-down" 
-          size={24} 
-          color={theme.colors.textSecondary} 
+        <Icon
+          name="keyboard-arrow-down"
+          size={24}
+          color={theme.colors.textSecondary}
         />
       </TouchableOpacity>
-      
+
       {error && <Text style={styles.errorText}>{error}</Text>}
-      
+
       <Modal
         visible={modalVisible}
         transparent

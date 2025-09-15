@@ -3,9 +3,9 @@ import {StyleSheet} from 'react-native-unistyles';
 export default StyleSheet.create((theme, rt) => ({
   container: {
     gap: theme.spacing.xs,
-    marginBottom: {
-      xs: theme.spacing.md,
-      md: theme.spacing.lg,
+    marginVertical: {
+      xs: theme.spacing.sm,
+      md: theme.spacing.md,
     },
   },
 

@@ -8811,6 +8811,7 @@ export type CreateShoppingListMutation = {
     name: string;
     description?: string | null | undefined;
     isDefault: boolean;
+    isPublic: boolean;
     tags: Array<string>;
     metadata?: any | null | undefined;
     createdAt: string;
@@ -30119,6 +30120,7 @@ export const CreateShoppingListDocument = {
                 {kind: 'Field', name: {kind: 'Name', value: 'name'}},
                 {kind: 'Field', name: {kind: 'Name', value: 'description'}},
                 {kind: 'Field', name: {kind: 'Name', value: 'isDefault'}},
+                {kind: 'Field', name: {kind: 'Name', value: 'isPublic'}},
                 {kind: 'Field', name: {kind: 'Name', value: 'tags'}},
                 {kind: 'Field', name: {kind: 'Name', value: 'metadata'}},
                 {kind: 'Field', name: {kind: 'Name', value: 'createdAt'}},

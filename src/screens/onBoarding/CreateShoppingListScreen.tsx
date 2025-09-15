@@ -15,7 +15,7 @@ import {
   useGetShoppingListsQuery,
 } from '#generated';
 import {useStore} from '#store';
-import {useOnboardingFlow, useNavigationFlow} from '#hooks';
+import {useOnboardingNavigation} from '#hooks';
 import {createShoppingListSchema} from '#utils';
 
 type FormValues = {
@@ -23,8 +23,7 @@ type FormValues = {
 };
 
 export const CreateShoppingListScreen = () => {
-  const {progressToNextStep} = useOnboardingFlow();
-  const {navigateWithinStack, goBack, canGoBack} = useNavigationFlow();
+  const {navigateToNextStep, skipToStep} = useOnboardingNavigation();
 
   const {setSelectedShoppingListId, user} = useStore();
 
@@ -52,14 +51,6 @@ export const CreateShoppingListScreen = () => {
       shoppingListName: 'Weekly Groceries',
     },
   });
-
-  // Memoized navigation handler
-  const navigateToNext = useCallback(() => {
-    const nextScreen = progressToNextStep();
-    if (nextScreen) {
-      navigateWithinStack(nextScreen);
-    }
-  }, [progressToNextStep, navigateWithinStack]);
 
   // Check existing lists without auto-navigation
   useEffect(() => {
@@ -115,7 +106,7 @@ export const CreateShoppingListScreen = () => {
 
       if (response.data?.createShoppingList) {
         setSelectedShoppingListId(response.data.createShoppingList.id);
-        navigateToNext();
+        navigateToNextStep('CreateShoppingList');
       } else {
         throw new Error('Failed to create shopping list');
       }
@@ -129,15 +120,6 @@ export const CreateShoppingListScreen = () => {
     }
   };
 
-  // Skip handler - uses existing list
-  const handleSkip = useCallback(() => {
-    if (existingList) {
-      // Make sure existing list is selected
-      setSelectedShoppingListId(existingList.id);
-    }
-    navigateToNext();
-  }, [existingList, setSelectedShoppingListId, navigateToNext]);
-
   // Loading state
   if (checkingExisting || listsLoading) {
     return (
@@ -146,7 +128,7 @@ export const CreateShoppingListScreen = () => {
         subtitle="Checking your existing lists..."
         step={2}
         totalSteps={6}
-        onSkip={handleSkip}>
+        onSkip={() => skipToStep('SelectPantryItems')}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator
             size="large"
@@ -170,7 +152,7 @@ export const CreateShoppingListScreen = () => {
       }
       step={2}
       totalSteps={6}
-      onSkip={handleSkip}>
+      onSkip={() => skipToStep('SelectPantryItems')}>
       {existingList ? (
         <>
           {/* Show existing list info */}
@@ -207,7 +189,7 @@ export const CreateShoppingListScreen = () => {
           <View style={styles.buttonContainer}>
             <Button
               title="Continue with existing"
-              onPress={handleSkip}
+              onPress={() => skipToStep('SelectPantryItems')}
               btnStyle={styles.skipButton}
               txtStyle={styles.skipText}
             />

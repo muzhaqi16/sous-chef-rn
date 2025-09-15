@@ -1,40 +1,51 @@
-import React from 'react';
+import React, {useEffect} from 'react';
 import {StatusBar} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
 import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {BottomSheetModalProvider} from '@gorhom/bottom-sheet';
 import {ApolloProvider} from '@apollo/client';
+import {enableScreens} from 'react-native-screens';
 import {useStore} from '#store';
 import {client} from './src/apollo/client';
-import AppNavigator from '#navigation/AppNavigator';
+import {Navigation} from '#/navigation';
+import {hasCredentials} from '#storage/keychain';
 import {SplashScreen} from '#screens';
 import {ToastProvider} from '#/components/atoms';
 import {useTheme} from '#/hooks/useTheme';
 
+// Enable native screens for better performance
+enableScreens();
+
 const App = () => {
-  const isHydrated = useStore(store => store.isHydrated);
-  const {theme, isFollowingSystem} = useTheme();
+  const {isHydrated, setHasStoredCredentials} = useStore();
+  const {theme} = useTheme();
   const isDark = theme === 'dark';
 
-  // Early return for loading state - before any conditional hooks
+  useEffect(() => {
+    if (isHydrated) {
+      hasCredentials().then(setHasStoredCredentials);
+    }
+  }, [isHydrated, setHasStoredCredentials]);
+
+  // Early return for loading state
   if (!isHydrated || !client) {
     console.error('App is not hydrated or Apollo client is not initialized');
     return <SplashScreen />;
   }
+
   return (
     <GestureHandlerRootView style={styles.container}>
       <ApolloProvider client={client}>
         <SafeAreaProvider>
           <StatusBar
             barStyle={isDark ? 'light-content' : 'dark-content'}
-            backgroundColor={isDark ? '#212121' : '#FAFAFA'} // Use theme colors directly
+            backgroundColor={isDark ? '#212121' : '#FAFAFA'}
           />
           <SafeAreaView style={styles.container}>
             <ToastProvider>
-              {/* BottomSheetModalProvider needs to be above NavigationContainer */}
               <BottomSheetModalProvider>
-                <AppNavigator />
+                <Navigation />
               </BottomSheetModalProvider>
             </ToastProvider>
           </SafeAreaView>
@@ -48,8 +59,6 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-    // SafeAreaView padding for Android to avoid the status bar or notch overlapping the content.
-    // paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   text: {
     color: theme.colors.textPrimary,

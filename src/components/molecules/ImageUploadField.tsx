@@ -1,7 +1,13 @@
 import React, {useState, useCallback} from 'react';
-import {View, Text, Image, TouchableOpacity, ActivityIndicator} from 'react-native';
+import {
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
-import Icon from '@react-native-vector-icons/material-icons';
+import {Icon} from '#utils';
 import {ImagePicker, ImageFile} from './ImagePicker';
 import {useImageUpload} from '#hooks';
 import {commonStyles} from '#styles';
@@ -34,52 +40,62 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
   const {theme} = useUnistyles();
   const [selectedImage, setSelectedImage] = useState<ImageFile | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
-  
-  const {
-    uploading,
-    uploadProfileImage,
-    uploadItemImage,
-  } = useImageUpload();
 
-  const handleImageSelected = useCallback((image: ImageFile) => {
-    setSelectedImage(image);
-    
-    // Start upload immediately after selection
-    const startUpload = async () => {
-      try {
-        let imageUrl: string | null = null;
+  const {uploading, uploadProfileImage, uploadItemImage} = useImageUpload();
 
-        if (isProfile && profilePurpose) {
-          imageUrl = await uploadProfileImage(image, profilePurpose, {
-            onProgress: setUploadProgress,
-            onSuccess: onImageUploaded,
-            onError,
-          });
-        } else if (itemId) {
-          imageUrl = await uploadItemImage(image, itemId, {
-            onProgress: setUploadProgress,
-            onSuccess: onImageUploaded,
-            onError,
-          });
-        } else {
-          const error = new Error('Either itemId or profilePurpose must be provided');
-          onError?.(error);
-          return;
+  const handleImageSelected = useCallback(
+    (image: ImageFile) => {
+      setSelectedImage(image);
+
+      // Start upload immediately after selection
+      const startUpload = async () => {
+        try {
+          let imageUrl: string | null = null;
+
+          if (isProfile && profilePurpose) {
+            imageUrl = await uploadProfileImage(image, profilePurpose, {
+              onProgress: setUploadProgress,
+              onSuccess: onImageUploaded,
+              onError,
+            });
+          } else if (itemId) {
+            imageUrl = await uploadItemImage(image, itemId, {
+              onProgress: setUploadProgress,
+              onSuccess: onImageUploaded,
+              onError,
+            });
+          } else {
+            const error = new Error(
+              'Either itemId or profilePurpose must be provided',
+            );
+            onError?.(error);
+            return;
+          }
+
+          if (imageUrl) {
+            onImageUploaded?.(imageUrl);
+          }
+        } catch (error) {
+          const uploadError =
+            error instanceof Error ? error : new Error('Upload failed');
+          onError?.(uploadError);
+        } finally {
+          setUploadProgress(0);
         }
+      };
 
-        if (imageUrl) {
-          onImageUploaded?.(imageUrl);
-        }
-      } catch (error) {
-        const uploadError = error instanceof Error ? error : new Error('Upload failed');
-        onError?.(uploadError);
-      } finally {
-        setUploadProgress(0);
-      }
-    };
-
-    startUpload();
-  }, [isProfile, profilePurpose, itemId, uploadProfileImage, uploadItemImage, onImageUploaded, onError]);
+      startUpload();
+    },
+    [
+      isProfile,
+      profilePurpose,
+      itemId,
+      uploadProfileImage,
+      uploadItemImage,
+      onImageUploaded,
+      onError,
+    ],
+  );
 
   const handleRemoveImage = useCallback(() => {
     setSelectedImage(null);
@@ -98,28 +114,30 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
           {required && ' *'}
         </Text>
       )}
-      
+
       <View style={styles.container}>
         {hasImage ? (
           <View style={styles.imageContainer}>
-            <Image 
-              source={{uri: currentImageUri}} 
+            <Image
+              source={{uri: currentImageUri}}
               style={[
                 styles.imagePreview,
-                isProfile && styles.profileImagePreview
+                isProfile && styles.profileImagePreview,
               ]}
               resizeMode="cover"
             />
-            
+
             {uploading && (
               <View style={styles.uploadOverlay}>
                 <ActivityIndicator size="large" color={theme.colors.white} />
                 <Text style={styles.progressText}>
-                  {uploadProgress > 0 ? `${Math.round(uploadProgress)}%` : 'Uploading...'}
+                  {uploadProgress > 0
+                    ? `${Math.round(uploadProgress)}%`
+                    : 'Uploading...'}
                 </Text>
               </View>
             )}
-            
+
             {!uploading && (
               <View style={styles.imageActions}>
                 <ImagePicker
@@ -131,7 +149,7 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
                     <Icon name="edit" size={16} color={theme.colors.white} />
                   </View>
                 </ImagePicker>
-                
+
                 <TouchableOpacity
                   style={styles.actionButton}
                   onPress={handleRemoveImage}
@@ -148,13 +166,20 @@ export const ImageUploadField: React.FC<ImageUploadFieldProps> = ({
             disabled={disabled || uploading}
             isProfile={isProfile}>
             <View style={styles.placeholderContainer}>
-              <Icon name="add-a-photo" size={32} color={theme.colors.textSecondary} />
+              <Icon
+                name="add-a-photo"
+                size={32}
+                color={theme.colors.textSecondary}
+              />
               <Text style={styles.placeholderText}>
                 {uploading ? 'Uploading...' : placeholder}
               </Text>
               {uploading && (
                 <View style={styles.progressContainer}>
-                  <ActivityIndicator size="small" color={theme.colors.primary} />
+                  <ActivityIndicator
+                    size="small"
+                    color={theme.colors.primary}
+                  />
                   <Text style={styles.progressText}>
                     {uploadProgress > 0 ? `${Math.round(uploadProgress)}%` : ''}
                   </Text>

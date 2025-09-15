@@ -185,6 +185,7 @@ mutation CreateShoppingList($input: CreateShoppingListInput!) {
     name
     description
     isDefault
+    isPublic
     tags
     metadata
     createdAt

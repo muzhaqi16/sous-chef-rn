@@ -12352,6 +12352,7 @@ export type CreateShoppingListMutation = {
     name: string;
     description?: string | null;
     isDefault: boolean;
+    isPublic: boolean;
     tags: Array<string>;
     metadata?: any | null;
     createdAt: string;

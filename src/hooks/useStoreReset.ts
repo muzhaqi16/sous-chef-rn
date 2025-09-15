@@ -43,7 +43,7 @@ export const useStoreReset = () => {
 export const useAuth = () => {
   const {logout} = useStoreReset();
   const user = useStore(state => state.user);
-  const isAuthenticated = useStore(state => state.isAuthenticated);
+  const isAuthenticated = useStore(state => state.getIsAuthenticated());
 
   return {
     user,
