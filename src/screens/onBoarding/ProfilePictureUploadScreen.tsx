@@ -26,6 +26,7 @@ import {useImageUpload, useOnboardingNavigation} from '#hooks';
 import {ImageFile} from '#components/molecules/ImagePicker';
 import {storage} from '#/storage/mmkv';
 import {useStore} from '#store';
+import {ImageUploadPurpose} from '#generated';
 import {useFocusEffect} from '@react-navigation/native';
 
 const DEFAULT_OPTIONS: CameraOptions | ImageLibraryOptions = {
@@ -153,7 +154,7 @@ export const ProfilePictureUploadScreen = () => {
     try {
       const imageUrl = await uploadProfileImage(
         imageToUpload,
-        'PROFILE_AVATAR',
+        ImageUploadPurpose.ProfileAvatar,
         {
           onError: (error: Error) => {
             Alert.alert('Upload Failed', error.message);

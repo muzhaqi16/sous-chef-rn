@@ -1,4 +1,4 @@
-import {StyleSheet} from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 
 /**
  * Common style patterns used throughout the application
@@ -50,7 +50,7 @@ export const commonStyles = StyleSheet.create(theme => ({
     padding: theme.spacing.md,
     marginBottom: theme.spacing.sm,
     shadowColor: theme.colors.primaryDark,
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
@@ -432,7 +432,7 @@ export const commonStyles = StyleSheet.create(theme => ({
     alignItems: 'center',
     elevation: 8,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
   },

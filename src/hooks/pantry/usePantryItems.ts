@@ -4,32 +4,32 @@ import {
   GetPantryItemsQuery,
   GetPantryItemsDocument,
 } from '#generated';
-import {useSearchableList} from '../useSearchableList';
-import {ApolloClient} from '@apollo/client';
+import { useSearchableList } from '../useSearchableList';
+import { ApolloClient } from '@apollo/client';
 
 export function usePantryItems(pantryId: string | undefined) {
-  const {data, refetch, client} = useGetPantryItemsQuery({
+  const { data, refetch, client } = useGetPantryItemsQuery({
     fetchPolicy: 'cache-and-network',
     skip: !pantryId,
-    variables: {pantryId: pantryId ?? ''},
+    variables: { pantryId: pantryId ?? '' },
   });
 
   usePantryItemsChangedSubscription({
-    variables: {pantryId: pantryId ?? ''},
+    variables: { pantryId: pantryId ?? '' },
     skip: !pantryId,
     onData: ({
       data: subData,
       client,
     }: {
       data: any;
-      client: ApolloClient<any>;
+      client: ApolloClient;
     }) => {
       const updatedItem = subData?.data?.pantryItemUpdated;
       if (!updatedItem) return;
 
       const cache = client.readQuery<GetPantryItemsQuery>({
         query: GetPantryItemsDocument,
-        variables: {pantryId},
+        variables: { pantryId },
       });
 
       if (!cache?.pantryItems) return;
@@ -43,18 +43,18 @@ export function usePantryItems(pantryId: string | undefined) {
 
       client.writeQuery<GetPantryItemsQuery>({
         query: GetPantryItemsDocument,
-        variables: {pantryId},
-        data: {pantryItems: updated},
+        variables: { pantryId },
+        data: { pantryItems: updated },
       });
     },
   });
 
   const pantryItems = data?.pantryItems || [];
 
-  const {query, setQuery, filtered} = useSearchableList(
+  const { query, setQuery, filtered } = useSearchableList(
     pantryItems,
-    (item, q) => item?.itemName?.toLowerCase().includes(q.toLowerCase()),
+    (item: any, q: string) => item?.itemName?.toLowerCase().includes(q.toLowerCase()),
   );
 
-  return {items: filtered, query, setQuery, refetch};
+  return { items: filtered, query, setQuery, refetch };
 }

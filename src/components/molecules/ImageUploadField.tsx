@@ -11,6 +11,7 @@ import {Icon} from '#utils';
 import {ImagePicker, ImageFile} from './ImagePicker';
 import {useImageUpload} from '#hooks';
 import {commonStyles} from '#styles';
+import {ImageUploadPurpose} from '#generated';
 
 interface ImageUploadFieldProps {
   label?: string;
@@ -20,7 +21,7 @@ interface ImageUploadFieldProps {
   disabled?: boolean;
   isProfile?: boolean;
   itemId?: string; // Required for item image uploads
-  profilePurpose?: 'PROFILE_AVATAR' | 'PROFILE_COVER'; // Required for profile uploads
+  profilePurpose?: ImageUploadPurpose; // Required for profile uploads
   required?: boolean;
   placeholder?: string;
 }

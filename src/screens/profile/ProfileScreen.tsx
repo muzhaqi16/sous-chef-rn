@@ -1,7 +1,8 @@
 import React from 'react';
-import {SafeAreaView, ScrollView} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
-import {ProfileHeader, SettingsSection} from '#components';
+import { ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet } from 'react-native-unistyles';
+import { ProfileHeader, SettingsSection } from '#components';
 import {
   useProfileData,
   useConfigurableSettings,
@@ -9,9 +10,9 @@ import {
 } from '#hooks';
 
 export const ProfileScreen = () => {
-  const {navigate, navigateTo, goBack} = useAppNavigation();
-  const {profile, user, loading} = useProfileData();
-  const {sections} = useConfigurableSettings(profile);
+  const { navigate, navigateTo, goBack } = useAppNavigation();
+  const { profile, user, loading } = useProfileData();
+  const { sections } = useConfigurableSettings(profile);
 
   const handleAvatarPress = () => {
     navigate('ProfilePhotoUpload');

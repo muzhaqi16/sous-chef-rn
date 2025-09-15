@@ -1,8 +1,8 @@
-import {GraphQLWsLink} from '@apollo/client/link/subscriptions';
-import {createClient, Client} from 'graphql-ws';
-import {Platform} from 'react-native';
+import { GraphQLWsLink } from '@apollo/client/link/subscriptions';
+import { createClient, Client } from 'graphql-ws';
+import { Platform } from 'react-native';
 import Config from 'react-native-config';
-import {useStore} from '#store';
+import { useStore } from '#store';
 
 // pick the right WebSocket constructor
 const webSocketImpl =
@@ -52,7 +52,6 @@ const createWsClient = () => {
         params.authorization = `Bearer ${token}`;
       }
 
-      console.log('[WS] connectionParams called with token:', token ? 'present' : 'missing');
       return params;
     },
     on: {

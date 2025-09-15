@@ -1,9 +1,9 @@
 import React from 'react';
-import {View, ScrollView, Text} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
-import {Icon} from '#utils';
-import {Header} from '../molecules/Header';
-import {Button} from '../base/Button';
+import { View, ScrollView, Text } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { Icon } from '#utils';
+import { Header } from '../molecules/Header';
+import { Button } from '../base/Button';
 
 interface DetailSection {
   title?: string;
@@ -50,7 +50,8 @@ export const DetailTemplate: React.FC<DetailTemplateProps> = ({
           <Button
             onPress={primaryAction.onPress}
             icon={primaryAction.icon}
-            fullWidth>
+            fullWidth
+          >
             {primaryAction.label}
           </Button>
         )}
@@ -62,6 +63,8 @@ export const DetailTemplate: React.FC<DetailTemplateProps> = ({
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
+    gap: theme.spacing.md,
+    paddingTop: theme.spacing.md,
     backgroundColor: theme.colors.background,
   },
   content: {

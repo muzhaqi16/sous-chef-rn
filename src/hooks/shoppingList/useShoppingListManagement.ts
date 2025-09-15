@@ -77,24 +77,29 @@ export function useShoppingListManagement() {
   }, [isLoggedOut]);
 
   // Simple query - always fetch fresh, no Apollo cache complexity
-  const {refetch: networkRefetch, loading} = useGetShoppingListsQuery({
+  const {refetch: networkRefetch, loading, data: queryData, error: queryError} = useGetShoppingListsQuery({
     skip: isLoggedOut || isLoggingOut,
     fetchPolicy: 'network-only', // Always fetch fresh
     notifyOnNetworkStatusChange: true,
-    onCompleted: (data) => {
-      if (data?.shoppingLists) {
-        console.log('🌐 Received', data.shoppingLists.length, 'lists from network');
-        // Update MMKV (source of truth)
-        shoppingListStorage.setShoppingLists(data.shoppingLists, user?.id);
-        // Update local state
-        setLists(data.shoppingLists);
-      }
-    },
-    onError: (error) => {
-      console.warn('Network query failed, using cached data:', error.message);
-      // We already have MMKV cache loaded, so no need to do anything
-    },
   });
+
+  // Handle completed and error with useEffect
+  useEffect(() => {
+    if (queryData?.shoppingLists) {
+      console.log('🌐 Received', queryData.shoppingLists.length, 'lists from network');
+      // Update MMKV (source of truth)
+      shoppingListStorage.setShoppingLists(queryData.shoppingLists, user?.id);
+      // Update local state
+      setLists(queryData.shoppingLists);
+    }
+  }, [queryData, user?.id]);
+
+  useEffect(() => {
+    if (queryError) {
+      console.warn('Network query failed, using cached data:', queryError.message);
+      // We already have MMKV cache loaded, so no need to do anything
+    }
+  }, [queryError]);
 
   // Search functionality
   const {

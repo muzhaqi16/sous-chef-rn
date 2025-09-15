@@ -1,9 +1,9 @@
-import React, {useState} from 'react';
-import {TouchableOpacity, Text, View, ActivityIndicator} from 'react-native';
-import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
-import {OnBoardingWrapper} from '#components/templates';
-import {StyleSheet} from 'react-native-unistyles';
-import {useOnboardingNavigation, useAuth} from '#hooks';
+import React, { useState } from 'react';
+import { TouchableOpacity, Text, View, ActivityIndicator } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { OnBoardingWrapper } from '#components/templates';
+import { StyleSheet } from 'react-native-unistyles';
+import { useOnboardingNavigation, useAuth } from '#hooks';
 import {
   useGetOnboardingItemsQuery,
   useAddItemToPantryMutation,
@@ -12,8 +12,9 @@ import {
   AcquisitionMethod,
   GetOnboardingItemsQuery,
 } from '#generated';
-import {useStore} from '#store';
-import {Button} from '#components';
+import { useStore } from '#store';
+import { Button } from '#components';
+import { GraphQLError } from 'graphql';
 
 type OnboardingItemType = NonNullable<
   GetOnboardingItemsQuery['onboardingItems']
@@ -26,9 +27,9 @@ export const SelectPantryItems = () => {
     setUserNavigationState,
     skipToStep,
   } = useOnboardingNavigation();
-  const {user} = useAuth();
+  const { user } = useAuth();
 
-  const {selectedPantryId} = useStore();
+  const { selectedPantryId } = useStore();
 
   const {
     data,
@@ -36,7 +37,6 @@ export const SelectPantryItems = () => {
     error: queryError,
   } = useGetOnboardingItemsQuery({
     fetchPolicy: 'cache-and-network',
-    onError: e => console.error(e),
   });
   const [addItemToPantry] = useAddItemToPantryMutation({
     onError: e => console.error(e),
@@ -53,7 +53,8 @@ export const SelectPantryItems = () => {
         step={3}
         totalSteps={6}
         onBack={() => navigateToPreviousStep('CreateShoppingList')}
-        onSkip={() => navigateToNextStep('SelectPantryItems')}>
+        onSkip={() => navigateToNextStep('SelectPantryItems')}
+      >
         <ActivityIndicator style={styles.loader} />
       </OnBoardingWrapper>
     );
@@ -67,7 +68,8 @@ export const SelectPantryItems = () => {
         step={3}
         totalSteps={6}
         onBack={() => navigateToPreviousStep('CreateShoppingList')}
-        onSkip={() => navigateToNextStep('SelectPantryItems')}>
+        onSkip={() => navigateToNextStep('SelectPantryItems')}
+      >
         <Text style={styles.errorText}>
           Unable to load items. Please try again.
         </Text>
@@ -132,7 +134,8 @@ export const SelectPantryItems = () => {
       step={3}
       totalSteps={6}
       onBack={() => navigateToPreviousStep('CreateShoppingList')}
-      onSkip={() => navigateToNextStep('SelectPantryItems')}>
+      onSkip={() => navigateToNextStep('SelectPantryItems')}
+    >
       <KeyboardAwareScrollView style={styles.form}>
         <Text style={styles.helperText}>
           Select up to 5 items (you have {selected.length} selected)
@@ -146,12 +149,14 @@ export const SelectPantryItems = () => {
               <TouchableOpacity
                 key={item.id}
                 onPress={() => handleSelect(item)}
-                style={[styles.pickerItem, active && styles.pickerItemActive]}>
+                style={[styles.pickerItem, active && styles.pickerItemActive]}
+              >
                 <Text
                   style={[
                     styles.pickerLabel,
                     active && styles.pickerLabelActive,
-                  ]}>
+                  ]}
+                >
                   {item.name}
                 </Text>
               </TouchableOpacity>

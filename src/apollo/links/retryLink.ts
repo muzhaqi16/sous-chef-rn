@@ -11,11 +11,11 @@ export const retryLink = new RetryLink({
     //  • AND the device is currently online
     //  • AND it's not an auth error (handled by errorLink)
     retryIf: (error, _operation) => {
-      const isNetworkError = !!error && !!error.networkError;
+      const isNetworkError = !!error && !!(error as any).networkError;
       if (!isNetworkError) return false;
 
       // Don't retry auth errors (401, 403) - let errorLink handle them
-      const statusCode = (error.networkError as any)?.statusCode;
+      const statusCode = ((error as any).networkError as any)?.statusCode;
       if (statusCode === 401 || statusCode === 403) return false;
 
       // Don't retry client errors (4xx except auth)

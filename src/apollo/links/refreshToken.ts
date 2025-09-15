@@ -52,7 +52,7 @@ export const attemptTokenRefresh = (
     isRefreshing = true;
 
     // Get the client from the operation context
-    const client = operation.getContext().client as ApolloClient<any>;
+    const client = operation.getContext().client;
 
     if (!client) {
       console.error('Client not available in context');
@@ -69,7 +69,7 @@ export const attemptTokenRefresh = (
           skipErrorLink: true,
         },
       })
-      .then(response => {
+      .then((response: any) => {
         const data = (response.data as RefreshTokenMutation)?.refresh;
         if (!data?.accessToken || !data?.refreshToken) {
           throw new Error('Invalid refresh response');

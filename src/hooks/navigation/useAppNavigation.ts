@@ -95,7 +95,10 @@ export function useAppNavigation() {
 
       // Alternative: Direct navigation to root stacks
       notifications: () => navigate('Notifications'),
-      barcode: (params?: any) => navigate('Barcode', params),
+      barcode: (params?: any) => navigate('Barcode', {
+        screen: 'BarcodeScanner',
+        params: params,
+      }),
     }),
     [navigate, navigateToNested],
   );

@@ -1,7 +1,7 @@
-import {useMemo, useCallback} from 'react';
-import {useStore} from '#store';
-import {useTheme} from '#hooks';
-import {useApolloClient} from '@apollo/client';
+import { useMemo, useCallback } from 'react';
+import { useStore } from '#store';
+import { useTheme } from '#hooks';
+import { useApolloClient } from '@apollo/client/react';
 import {
   useUpdateUserProfileMutation,
   useUpdateUserPreferencesMutation,
@@ -10,14 +10,14 @@ import {
   ProfileVisibility,
 } from '#generated';
 
-import {PROFILE_SETTINGS_CONFIG} from '#config';
-import {dateStringToISO, extractDateString} from '#utils/dateUtils';
+import { PROFILE_SETTINGS_CONFIG } from '#config';
+import { dateStringToISO, extractDateString } from '#utils/dateUtils';
 
 export const useConfigurableSettings = (profile: any) => {
   const store = useStore();
   const client = useApolloClient();
-  const {logout} = useStore();
-  const {userThemePreference, setTheme} = useTheme();
+  const { logout } = useStore();
+  const { userThemePreference, setTheme } = useTheme();
   const [updateProfileMutation] = useUpdateUserProfileMutation();
   const [updateSettingsMutation] = useUpdateUserPreferencesMutation();
 
@@ -86,7 +86,7 @@ export const useConfigurableSettings = (profile: any) => {
         case 'firstName':
           baseItem.value = profile?.firstName || '';
           baseItem.onSave = (value: string) => {
-            const updateObj = {firstName: value} as Partial<Record<any, any>>;
+            const updateObj = { firstName: value } as Partial<Record<any, any>>;
             updateProfile(updateObj);
           };
           break;
@@ -94,7 +94,7 @@ export const useConfigurableSettings = (profile: any) => {
         case 'lastName':
           baseItem.value = profile?.lastName || '';
           baseItem.onSave = (value: string) => {
-            const updateObj = {lastName: value} as Partial<Record<any, any>>;
+            const updateObj = { lastName: value } as Partial<Record<any, any>>;
             updateProfile(updateObj);
           };
           break;
@@ -102,7 +102,9 @@ export const useConfigurableSettings = (profile: any) => {
         case 'displayName':
           baseItem.value = profile?.displayName || '';
           baseItem.onSave = (value: string) => {
-            const updateObj = {displayName: value} as Partial<Record<any, any>>;
+            const updateObj = { displayName: value } as Partial<
+              Record<any, any>
+            >;
             updateProfile(updateObj);
           };
           break;
@@ -110,7 +112,7 @@ export const useConfigurableSettings = (profile: any) => {
         case 'bio':
           baseItem.value = profile?.bio || '';
           baseItem.onSave = (value: string) => {
-            const updateObj = {bio: value} as Partial<Record<any, any>>;
+            const updateObj = { bio: value } as Partial<Record<any, any>>;
             updateProfile(updateObj);
           };
           break;
@@ -118,7 +120,7 @@ export const useConfigurableSettings = (profile: any) => {
         case 'phone':
           baseItem.value = profile?.phone || '';
           baseItem.onSave = (value: string) => {
-            const updateObj = {phone: value} as Partial<Record<any, any>>;
+            const updateObj = { phone: value } as Partial<Record<any, any>>;
             updateProfile(updateObj);
           };
           break;
@@ -126,7 +128,7 @@ export const useConfigurableSettings = (profile: any) => {
         case 'website':
           baseItem.value = profile?.website || '';
           baseItem.onSave = (value: string) => {
-            const updateObj = {website: value} as Partial<Record<any, any>>;
+            const updateObj = { website: value } as Partial<Record<any, any>>;
             updateProfile(updateObj);
           };
           break;
@@ -135,7 +137,7 @@ export const useConfigurableSettings = (profile: any) => {
           baseItem.value = extractDateString(profile?.dateOfBirth);
           baseItem.onSave = (value: string) => {
             const isoValue = dateStringToISO(value);
-            const updateObj = {dateOfBirth: isoValue};
+            const updateObj = { dateOfBirth: isoValue };
             updateProfile(updateObj);
           };
           break;
@@ -144,14 +146,14 @@ export const useConfigurableSettings = (profile: any) => {
           if (config.type === 'modal') {
             baseItem.value = profile?.gender || '';
             baseItem.options = config.options || [
-              {label: 'Male', value: 'male'},
-              {label: 'Female', value: 'female'},
-              {label: 'Non-binary', value: 'non-binary'},
-              {label: 'Other', value: 'other'},
-              {label: 'Prefer not to say', value: 'prefer-not-to-say'},
+              { label: 'Male', value: 'male' },
+              { label: 'Female', value: 'female' },
+              { label: 'Non-binary', value: 'non-binary' },
+              { label: 'Other', value: 'other' },
+              { label: 'Prefer not to say', value: 'prefer-not-to-say' },
             ];
             baseItem.onSave = (value: string) => {
-              const updateObj = {gender: value} as Partial<Record<any, any>>;
+              const updateObj = { gender: value } as Partial<Record<any, any>>;
               updateProfile(updateObj);
             };
           }
@@ -163,12 +165,12 @@ export const useConfigurableSettings = (profile: any) => {
             baseItem.value =
               profile?.profileVisibility || ProfileVisibility.Public;
             baseItem.options = config.options || [
-              {label: 'Public', value: ProfileVisibility.Public},
-              {label: 'Friends Only', value: ProfileVisibility.Friends},
-              {label: 'Private', value: ProfileVisibility.Private},
+              { label: 'Public', value: ProfileVisibility.Public },
+              { label: 'Friends Only', value: ProfileVisibility.Friends },
+              { label: 'Private', value: ProfileVisibility.Private },
             ];
             baseItem.onSave = (value: string) => {
-              const updateObj = {profileVisibility: value} as Partial<
+              const updateObj = { profileVisibility: value } as Partial<
                 Record<any, any>
               >;
               updateProfile(updateObj);
@@ -181,7 +183,7 @@ export const useConfigurableSettings = (profile: any) => {
             baseItem.value = profile?.showEmail || false;
             baseItem.onPress = () => {
               const newValue = !profile?.showEmail;
-              const updateObj = {showEmail: newValue} as Partial<
+              const updateObj = { showEmail: newValue } as Partial<
                 Record<any, any>
               >;
               updateProfile(updateObj);
@@ -194,7 +196,7 @@ export const useConfigurableSettings = (profile: any) => {
             baseItem.value = profile?.showPhone || false;
             baseItem.onPress = () => {
               const newValue = !profile?.showPhone;
-              const updateObj = {showPhone: newValue} as Partial<
+              const updateObj = { showPhone: newValue } as Partial<
                 Record<any, any>
               >;
               updateProfile(updateObj);
@@ -207,16 +209,19 @@ export const useConfigurableSettings = (profile: any) => {
           if (config.type === 'modal') {
             baseItem.value = userThemePreference;
             baseItem.options = config.options || [
-              {label: '☀️ Light', value: 'LIGHT'},
-              {label: '🌙 Dark', value: 'DARK'},
-              {label: '📱 System', value: 'SYSTEM'},
+              { label: '☀️ Light', value: 'LIGHT' },
+              { label: '🌙 Dark', value: 'DARK' },
+              { label: '📱 System', value: 'SYSTEM' },
             ];
             baseItem.onSave = (value: 'LIGHT' | 'DARK' | 'SYSTEM') => {
               // Convert to lowercase for local theme management
-              const localThemeValue = value.toLowerCase() as 'light' | 'dark' | 'system';
+              const localThemeValue = value.toLowerCase() as
+                | 'light'
+                | 'dark'
+                | 'system';
               setTheme(localThemeValue);
               // Use uppercase for GraphQL mutation
-              updateUserPreferences({theme: value});
+              updateUserPreferences({ theme: value });
             };
           }
           break;
@@ -230,8 +235,10 @@ export const useConfigurableSettings = (profile: any) => {
                 userThemePreference === 'dark' ? 'light' : 'dark';
               setTheme(newTheme);
               // Convert to uppercase for GraphQL mutation
-              const graphqlThemeValue = newTheme.toUpperCase() as 'LIGHT' | 'DARK';
-              updateUserPreferences({theme: graphqlThemeValue});
+              const graphqlThemeValue = newTheme.toUpperCase() as
+                | 'LIGHT'
+                | 'DARK';
+              updateUserPreferences({ theme: graphqlThemeValue });
             };
           }
           break;
@@ -240,13 +247,13 @@ export const useConfigurableSettings = (profile: any) => {
           if (config.type === 'modal') {
             baseItem.value = store.language || 'en';
             baseItem.options = config.options || [
-              {label: 'English', value: 'en'},
-              {label: 'Spanish', value: 'es'},
-              {label: 'French', value: 'fr'},
+              { label: 'English', value: 'en' },
+              { label: 'Spanish', value: 'es' },
+              { label: 'French', value: 'fr' },
             ];
             baseItem.onSave = (value: string) => {
               store.setLanguage(value);
-              updateUserPreferences({language: value});
+              updateUserPreferences({ language: value });
             };
           }
           break;

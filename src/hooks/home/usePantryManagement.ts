@@ -1,5 +1,5 @@
-import {useMemo, useState, useEffect} from 'react';
-import {Alert} from 'react-native';
+import { useMemo, useState, useEffect } from 'react';
+import { Alert } from 'react-native';
 import {
   useGetPantryItemsQuery,
   usePantryItemsChangedSubscription,
@@ -8,9 +8,9 @@ import {
   useRemoveItemFromPantryMutation,
   StorageState,
 } from '#generated';
-import {useSearchableList} from '../useSearchableList';
-import {pantryStorage} from '#/storage/pantryCache';
-import {useStore} from '#store';
+import { useSearchableList } from '../useSearchableList';
+import { pantryStorage } from '#/storage/pantryCache';
+import { useStore } from '#store';
 
 export interface PantryItemInput {
   itemName: string;
@@ -36,7 +36,6 @@ export function usePantryManagement(pantryId: string | undefined) {
   // Get user state to check for logout
   const user = useStore(state => state.user);
   const isLoggedOut = !user;
-  const addNotification = useStore(state => state.addNotification);
   // Local state - MMKV is source of truth
   const [items, setItems] = useState<any[]>([]);
   const [hasLoadedCache, setHasLoadedCache] = useState(false);
@@ -46,7 +45,6 @@ export function usePantryManagement(pantryId: string | undefined) {
     if (pantryId && !isLoggedOut) {
       const cached = pantryStorage.getPantryItems(pantryId);
       if (cached && cached.length > 0) {
-        console.log('📦 Loaded', cached.length, 'items from MMKV cache');
         setItems(cached);
         setHasLoadedCache(true);
       } else {
@@ -60,50 +58,40 @@ export function usePantryManagement(pantryId: string | undefined) {
   }, [pantryId, isLoggedOut]);
 
   // Simple query - always fetch fresh, no Apollo cache complexity
-  const {refetch: networkRefetch, loading} = useGetPantryItemsQuery({
-    variables: {pantryId: pantryId ?? ''},
+  const {
+    refetch: networkRefetch,
+    loading,
+    data: queryData,
+  } = useGetPantryItemsQuery({
+    variables: { pantryId: pantryId ?? '' },
     skip: !pantryId || isLoggedOut,
     fetchPolicy: 'network-only', // Always fetch fresh
     notifyOnNetworkStatusChange: true,
-    onCompleted: data => {
-      if (data?.pantryItems && pantryId) {
-        console.log(
-          '🌐 Received',
-          data.pantryItems.length,
-          'items from network',
-        );
-        // Update MMKV (source of truth)
-        pantryStorage.setPantryItems(pantryId, data.pantryItems);
-        // Update local state
-        setItems(data.pantryItems);
-      }
-    },
-    onError: error => {
-      console.warn('Network query failed, using cached data:', error.message);
-      // We already have MMKV cache loaded, so no need to do anything
-    },
   });
+
+  // Handle the completed logic with useEffect
+  useEffect(() => {
+    if (queryData?.pantryItems && pantryId) {
+      // Update MMKV (source of truth)
+      pantryStorage.setPantryItems(pantryId, queryData.pantryItems);
+      // Update local state
+      setItems(queryData.pantryItems);
+    }
+  }, [queryData, pantryId]);
 
   // Simple subscription - just triggers refetch
   usePantryItemsChangedSubscription({
-    variables: {pantryId: pantryId ?? ''},
+    variables: { pantryId: pantryId ?? '' },
     skip: !pantryId || isLoggedOut,
-    onData: ({data: subData}) => {
+    onData: ({ data: subData }: any) => {
       const changeData = subData?.data?.pantryItemsChanged;
       if (!changeData) return;
-
-      console.log(
-        '🔔 Subscription:',
-        changeData.mutation,
-        'for item',
-        changeData.item?.id,
-      );
 
       // Don't try to merge - just refetch the full list
       // This ensures we always have complete data
       networkRefetch();
     },
-    onError: error => {
+    onError: (error: any) => {
       console.warn('Subscription error:', error.message);
     },
   });
@@ -200,12 +188,12 @@ export function usePantryManagement(pantryId: string | undefined) {
             itemName: input.itemName,
             unitId: input.unitId,
             storageState: input.storageState,
-            ...(input.brand && {itemBrand: input.brand}),
-            ...(input.location && {storageLocation: input.location}),
-            ...(input.expirationDate && {expiresAt: input.expirationDate}),
-            ...(input.notes && {storageNotes: input.notes}),
-            ...(input.category && {itemCategory: input.category}),
-            ...(input.barcode && {itemUpc: input.barcode}),
+            ...(input.brand && { itemBrand: input.brand }),
+            ...(input.location && { storageLocation: input.location }),
+            ...(input.expirationDate && { expiresAt: input.expirationDate }),
+            ...(input.notes && { storageNotes: input.notes }),
+            ...(input.category && { itemCategory: input.category }),
+            ...(input.barcode && { itemUpc: input.barcode }),
           },
         },
       });
@@ -233,7 +221,7 @@ export function usePantryManagement(pantryId: string | undefined) {
     // Optimistic update
     const currentItems = items;
     const updatedItems = currentItems.map(item =>
-      item.id === itemId ? {...item, ...updates} : item,
+      item.id === itemId ? { ...item, ...updates } : item,
     );
     pantryStorage.setPantryItems(pantryId, updatedItems);
     setItems(updatedItems);
@@ -274,7 +262,7 @@ export function usePantryManagement(pantryId: string | undefined) {
 
     try {
       await removeItemMutation({
-        variables: {id: itemId},
+        variables: { id: itemId },
       });
 
       // Refetch to ensure consistency

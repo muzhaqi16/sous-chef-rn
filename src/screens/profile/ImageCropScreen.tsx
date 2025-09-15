@@ -1,6 +1,5 @@
-import React, {useState, useCallback, useEffect} from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
-  SafeAreaView,
   View,
   TouchableOpacity,
   Text,
@@ -8,21 +7,22 @@ import {
   Dimensions,
   Alert,
 } from 'react-native';
-import {Gesture, GestureDetector} from 'react-native-gesture-handler';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
   clamp,
 } from 'react-native-reanimated';
-import {useRoute, RouteProp} from '@react-navigation/native';
-import {useSafeNavigation} from '#hooks';
-import {Icon} from '#utils';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
-import {MAX_PROFILE_SIZE} from '#utils/imageValidation';
+import { useRoute, RouteProp } from '@react-navigation/native';
+import { useSafeNavigation } from '#hooks';
+import { Icon } from '#utils';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { MAX_PROFILE_SIZE } from '#utils/imageValidation';
 import ImageEditor from '@react-native-community/image-editor';
-import {ImageFile} from '#components/molecules/ImagePicker';
-import {storage} from '#/storage/mmkv';
+import { ImageFile } from '#components/molecules/ImagePicker';
+import { storage } from '#/storage/mmkv';
 
 type RootStackParamList = {
   ImageCrop: {
@@ -32,25 +32,25 @@ type RootStackParamList = {
 
 type ImageCropRouteProp = RouteProp<RootStackParamList, 'ImageCrop'>;
 
-const {width: screenWidth} = Dimensions.get('window');
+const { width: screenWidth } = Dimensions.get('window');
 const CROP_SIZE = Math.min(screenWidth * 0.8, 300);
 
 export const ImageCropScreen = () => {
-  const {goBack} = useSafeNavigation();
+  const { goBack } = useSafeNavigation();
   const route = useRoute<ImageCropRouteProp>();
-  const {theme} = useUnistyles();
-  const {imageFile} = route.params;
+  const { theme } = useUnistyles();
+  const { imageFile } = route.params;
 
-  const [imageSize, setImageSize] = useState({width: 0, height: 0});
+  const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   const [isCropping, setIsCropping] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
-  const [debugInfo, setDebugInfo] = useState({scale: 1, x: 0, y: 0});
+  const [debugInfo, setDebugInfo] = useState({ scale: 1, x: 0, y: 0 });
 
   // Shared values for animations
   const scale = useSharedValue(1);
   const startScale = useSharedValue(1);
-  const offset = useSharedValue({x: 0, y: 0});
-  const startOffset = useSharedValue({x: 0, y: 0});
+  const offset = useSharedValue({ x: 0, y: 0 });
+  const startOffset = useSharedValue({ x: 0, y: 0 });
 
   // Update debug info using shared values directly
   useEffect(() => {
@@ -87,13 +87,13 @@ export const ImageCropScreen = () => {
           displayHeight = displayWidth / aspectRatio;
         }
 
-        setImageSize({width: displayWidth, height: displayHeight});
+        setImageSize({ width: displayWidth, height: displayHeight });
 
         // Reset transforms
         scale.value = 1;
         startScale.value = 1;
-        offset.value = {x: 0, y: 0};
-        startOffset.value = {x: 0, y: 0};
+        offset.value = { x: 0, y: 0 };
+        startOffset.value = { x: 0, y: 0 };
       },
       error => {
         Alert.alert('Error', 'Failed to load image dimensions');
@@ -117,7 +117,7 @@ export const ImageCropScreen = () => {
     .averageTouches(true)
     .onStart(() => {
       'worklet';
-      startOffset.value = {x: offset.value.x, y: offset.value.y};
+      startOffset.value = { x: offset.value.x, y: offset.value.y };
     })
     .onUpdate(e => {
       'worklet';
@@ -131,7 +131,7 @@ export const ImageCropScreen = () => {
       const newX = clamp(startOffset.value.x + e.translationX, -maxX, maxX);
       const newY = clamp(startOffset.value.y + e.translationY, -maxY, maxY);
 
-      offset.value = {x: newX, y: newY};
+      offset.value = { x: newX, y: newY };
     });
 
   // Compose gestures
@@ -141,9 +141,9 @@ export const ImageCropScreen = () => {
   const animatedStyle = useAnimatedStyle(() => {
     return {
       transform: [
-        {translateX: offset.value.x},
-        {translateY: offset.value.y},
-        {scale: scale.value},
+        { translateX: offset.value.x },
+        { translateY: offset.value.y },
+        { scale: scale.value },
       ],
     };
   });
@@ -163,7 +163,7 @@ export const ImageCropScreen = () => {
       }>((resolve, reject) => {
         Image.getSize(
           imageFile.uri,
-          (width, height) => resolve({width, height}),
+          (width, height) => resolve({ width, height }),
           error => reject(error),
         );
       });
@@ -241,7 +241,7 @@ export const ImageCropScreen = () => {
         resizeMode: 'contain' as const,
       };
 
-      const {uri: croppedUri} = await ImageEditor.cropImage(
+      const { uri: croppedUri } = await ImageEditor.cropImage(
         imageFile.uri,
         cropData,
       );
@@ -272,7 +272,7 @@ export const ImageCropScreen = () => {
           'Image Too Large',
           `The cropped image is ${(croppedFileSize / 1024 / 1024).toFixed(1)}MB. Profile images must be under ${MAX_PROFILE_SIZE / 1024 / 1024}MB. Please try cropping a smaller area or use a lower quality image.`,
           [
-            {text: 'Try Again', style: 'default'},
+            { text: 'Try Again', style: 'default' },
             {
               text: 'Use Anyway',
               style: 'destructive',
@@ -315,18 +315,20 @@ export const ImageCropScreen = () => {
   const resetTransforms = () => {
     scale.value = withSpring(1);
     startScale.value = 1;
-    offset.value = withSpring({x: 0, y: 0});
-    startOffset.value = {x: 0, y: 0};
+    offset.value = withSpring({ x: 0, y: 0 });
+    startOffset.value = { x: 0, y: 0 };
   };
 
   return (
     <SafeAreaView
-      style={[styles.container, {backgroundColor: theme.colors.background}]}>
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+    >
       <View style={styles.header}>
         <TouchableOpacity
           onPress={goBack}
           style={styles.headerButton}
-          disabled={isCropping}>
+          disabled={isCropping}
+        >
           <Icon
             color={theme.colors.textPrimary}
             name="chevron-left"
@@ -336,10 +338,14 @@ export const ImageCropScreen = () => {
         </TouchableOpacity>
 
         <View style={styles.headerTitleContainer}>
-          <Text style={[styles.headerTitle, {color: theme.colors.textPrimary}]}>
+          <Text
+            style={[styles.headerTitle, { color: theme.colors.textPrimary }]}
+          >
             Crop Photo
           </Text>
-          <Text style={[styles.debugText, {color: theme.colors.textSecondary}]}>
+          <Text
+            style={[styles.debugText, { color: theme.colors.textSecondary }]}
+          >
             Scale: {debugInfo.scale.toFixed(2)} | Pan: {debugInfo.x.toFixed(0)},
             {debugInfo.y.toFixed(0)}
           </Text>
@@ -348,7 +354,8 @@ export const ImageCropScreen = () => {
         <TouchableOpacity
           onPress={resetTransforms}
           style={styles.headerButton}
-          disabled={isCropping}>
+          disabled={isCropping}
+        >
           <Icon
             color={theme.colors.textPrimary}
             name="refresh-cw"
@@ -360,7 +367,8 @@ export const ImageCropScreen = () => {
 
       <View style={styles.content}>
         <Text
-          style={[styles.instructions, {color: theme.colors.textSecondary}]}>
+          style={[styles.instructions, { color: theme.colors.textSecondary }]}
+        >
           {!imageLoaded
             ? 'Loading image...'
             : 'Pinch to zoom, drag to move. The square area will be your profile photo.'}
@@ -391,9 +399,10 @@ export const ImageCropScreen = () => {
                       width: CROP_SIZE,
                       height: CROP_SIZE,
                     },
-                  ]}>
+                  ]}
+                >
                   <Image
-                    source={{uri: imageFile.uri}}
+                    source={{ uri: imageFile.uri }}
                     style={[styles.image, imageSize]}
                     resizeMode="cover"
                   />
@@ -402,7 +411,7 @@ export const ImageCropScreen = () => {
             ) : (
               <View style={styles.loadingContainer}>
                 <Image
-                  source={{uri: imageFile.uri}}
+                  source={{ uri: imageFile.uri }}
                   style={styles.imageFallback}
                   onLoad={handleImageLoad}
                   resizeMode="cover"
@@ -423,10 +432,18 @@ export const ImageCropScreen = () => {
         <View style={styles.buttonContainer}>
           <TouchableOpacity
             onPress={handleCrop}
-            style={[styles.cropButton, {backgroundColor: theme.colors.primary}]}
-            disabled={isCropping || !imageLoaded}>
+            style={[
+              styles.cropButton,
+              { backgroundColor: theme.colors.primary },
+            ]}
+            disabled={isCropping || !imageLoaded}
+          >
             <Text
-              style={[styles.cropButtonText, {color: theme.colors.background}]}>
+              style={[
+                styles.cropButtonText,
+                { color: theme.colors.background },
+              ]}
+            >
               {isCropping ? 'Cropping...' : 'Crop Photo'}
             </Text>
           </TouchableOpacity>

@@ -1,7 +1,6 @@
-import {Icon} from '#/utils';
-import React, {ReactNode} from 'react';
+import { Icon } from '#/utils';
+import React, { ReactNode } from 'react';
 import {
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -9,7 +8,8 @@ import {
   TouchableOpacity,
   Text,
 } from 'react-native';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 interface OnboardingWrapperProps {
   children: ReactNode;
@@ -30,7 +30,7 @@ export const OnBoardingWrapper = ({
   onBack,
   onSkip,
 }: OnboardingWrapperProps) => {
-  const {theme} = useUnistyles();
+  const { theme } = useUnistyles();
   const progress = step && totalSteps ? (step / totalSteps) * 100 : 0;
 
   return (
@@ -50,10 +50,12 @@ export const OnBoardingWrapper = ({
 
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <ScrollView
           contentContainerStyle={styles.scrollContainer}
-          keyboardShouldPersistTaps="handled">
+          keyboardShouldPersistTaps="handled"
+        >
           {title && <Text style={styles.title}>{title}</Text>}
           {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
           <View style={styles.content}>{children}</View>
@@ -67,7 +69,7 @@ export const OnBoardingWrapper = ({
         )}
         {step != null && totalSteps != null && (
           <View style={styles.progressBarBackground}>
-            <View style={[styles.progressBarFill, {width: `${progress}%`}]} />
+            <View style={[styles.progressBarFill, { width: `${progress}%` }]} />
           </View>
         )}
       </View>

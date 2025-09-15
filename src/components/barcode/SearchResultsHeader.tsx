@@ -1,6 +1,7 @@
 import React from 'react';
-import {View, Text, TouchableOpacity} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
+import { View, Text } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { IconButton } from '#components/atoms/IconButton';
 
 interface HeaderProps {
   title: string;
@@ -17,44 +18,35 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   return (
     <View style={styles.header}>
-      <TouchableOpacity onPress={onBackPress}>
-        <Text style={styles.backButton}>← Back</Text>
-      </TouchableOpacity>
+      <IconButton name="arrow-back" onPress={onBackPress} size={24} />
       <Text style={styles.headerTitle}>{title}</Text>
-      {showScanButton && (
-        <TouchableOpacity onPress={onScanPress}>
-          <Text style={styles.scanButton}>Scan</Text>
-        </TouchableOpacity>
+      {showScanButton ? (
+        <IconButton name="qr-code-scanner" onPress={onScanPress} size={24} />
+      ) : (
+        <View style={styles.placeholder} />
       )}
     </View>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  // Common styles that would be shared across components
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: 'white',
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+    backgroundColor: theme.colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
-  },
-  backButton: {
-    color: '#62B1F6',
-    fontSize: 16,
-    fontWeight: '500',
+    borderBottomColor: theme.colors.border,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#212529',
+    fontSize: theme.fonts.size.lg,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textPrimary,
   },
-  scanButton: {
-    color: '#62B1F6',
-    fontSize: 16,
-    fontWeight: '500',
+  placeholder: {
+    width: 24,
+    height: 24,
   },
 }));

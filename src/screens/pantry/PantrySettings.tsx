@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import {Icon} from '#/utils';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
+import {ApolloCache} from '@apollo/client';
 import {
   useGetPantryQuery,
   useUpdatePantryMutation,
@@ -49,7 +50,7 @@ export const PantrySettings: React.FC<{
 
   const [updatePantry] = useUpdatePantryMutation();
   const [deletePantry] = useDeletePantryMutation({
-    update: (cache, {data}) => {
+    update: (cache: ApolloCache, {data}: any) => {
       if (data?.deletePantry) {
         try {
           // Update GetHomes cache to remove the pantry
@@ -83,7 +84,7 @@ export const PantrySettings: React.FC<{
   });
 
   const [createPantry] = useCreatePantryMutation({
-    update: (cache, {data}) => {
+    update: (cache: ApolloCache, {data}: any) => {
       if (data?.createPantry) {
         try {
           // Update GetHomes cache to include the new pantry

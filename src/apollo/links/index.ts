@@ -1,35 +1,31 @@
-import {ApolloLink, split} from '@apollo/client';
-import {getMainDefinition} from '@apollo/client/utilities';
-import {authLink} from './authLink';
-import {createConsoleLink} from './consoleLink';
-import {errorLink} from './errorLink';
-import {httpLink} from './httpLink';
-import {wsLink} from './wsLink';
-import {retryLink} from './retryLink';
-import {deduplicationLink} from './deduplicationLink';
+import { ApolloLink } from '@apollo/client';
+import { getMainDefinition } from '@apollo/client/utilities';
+import { authLink } from './authLink';
+import { createConsoleLink } from './consoleLink';
+import { errorLink } from './errorLink';
+import { httpLink } from './httpLink';
+import { batchLink } from './batchLink';
+import { wsLink } from './wsLink';
+import { retryLink } from './retryLink';
+import { deduplicationLink } from './deduplicationLink';
 
+// HTTP transport with retry and batching
 const retriableHttp = retryLink.concat(httpLink);
+const retriableBatch = retryLink.concat(batchLink);
 
-// Simple transport link routing:
+// Transport link routing:
 // • Subscriptions → WebSocket
-// • Queries & Mutations → HTTP with retry
-const transportLink = split(
-  ({query}) => {
+// • All other operations → HTTP with retry (temporarily disable batching to debug)
+const transportLink = ApolloLink.split(
+  ({ query }) => {
     const def = getMainDefinition(query);
     return (
       def.kind === 'OperationDefinition' && def.operation === 'subscription'
     );
   },
   wsLink,
-  retriableHttp,
+  retriableHttp, // Use regular HTTP for all non-subscription operations (temporarily)
 );
-
-// TODO: Future enhancement - HTTP Batch Link
-// Consider adding BatchHttpLink for query optimization:
-// - Combine multiple queries into single requests
-// - Reduce HTTP overhead
-// - Requires proper server-side batching support
-// - Need proper headers and fetch configuration
 
 // Default settings (recommended)
 const consoleLink = createConsoleLink({
@@ -61,6 +57,6 @@ export const link = ApolloLink.from([
   deduplicationLink, // Deduplicate identical queries first
   errorLink,
   authLink,
-  consoleLinkOptimized, // Use optimized console link by default
+  consoleLink, // Don't enable console link by default
   transportLink,
 ]);

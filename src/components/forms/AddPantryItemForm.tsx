@@ -4,6 +4,7 @@ import {useForm} from 'react-hook-form';
 import {yupResolver} from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import {StyleSheet} from 'react-native-unistyles';
+import {ApolloCache} from '@apollo/client';
 
 import {commonStyles} from '#/styles/commonStyles';
 import {useDefaultHome} from '#hooks';
@@ -76,7 +77,7 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
   const pantry = getDefaultPantry(homeData);
 
   const [addItem] = useAddItemToPantryMutation({
-    update: (cache, {data: mutationData}) => {
+    update: (cache: ApolloCache, {data: mutationData}: any) => {
       if (!mutationData?.addItemToPantry || !pantry?.id) return;
       const newItem = mutationData.addItemToPantry;
       try {

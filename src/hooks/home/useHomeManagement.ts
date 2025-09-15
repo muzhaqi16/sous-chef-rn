@@ -1,5 +1,5 @@
-import {useMemo, useEffect, useCallback, useRef} from 'react';
-import {Alert} from 'react-native';
+import { useMemo, useEffect, useCallback, useRef } from 'react';
+import { Alert } from 'react-native';
 import {
   useGetHomesQuery,
   useCreateHomeMutation,
@@ -12,13 +12,14 @@ import {
   useGetDefaultHomeQuery,
   useSetDefaultHomeMutation,
 } from '#generated';
-import {useSearchableList} from '../useSearchableList';
-import {useStore} from '#store';
+import type { ApolloCache } from '@apollo/client';
+import { useSearchableList } from '../useSearchableList';
+import { useStore } from '#store';
 
 export function useHomeManagement() {
-  const {selectedHomeId, setSelectedHomeId, setSelectedPantryId} = useStore();
+  const { selectedHomeId, setSelectedHomeId, setSelectedPantryId } = useStore();
 
-  const {data, loading, error, refetch} = useGetHomesQuery({
+  const { data, loading, error, refetch } = useGetHomesQuery({
     fetchPolicy: 'cache-and-network',
     notifyOnNetworkStatusChange: true,
   });
@@ -55,10 +56,10 @@ export function useHomeManagement() {
 
         try {
           await setDefaultHomeMutation({
-            variables: {homeId: selectedHomeId},
+            variables: { homeId: selectedHomeId },
           });
           refetchDefaultHome();
-        } catch (error) {
+        } catch (error: any) {
           console.error('Failed to sync local default to remote:', error);
           // Don't show alert for background sync failures
         }
@@ -76,13 +77,15 @@ export function useHomeManagement() {
   ]);
 
   // Search functionality for homes
-  const {query, setQuery, filtered} = useSearchableList(homes, (home, q) =>
-    home?.name?.toLowerCase().includes(q.toLowerCase()),
+  const { query, setQuery, filtered } = useSearchableList(
+    homes,
+    (home, q: string) => home?.name?.toLowerCase().includes(q.toLowerCase()),
   );
 
   // Add debugging to createHomeMutation
-  const [createHomeMutation, {loading: creating}] = useCreateHomeMutation({
-    update: (cache, {data}) => {
+  const [createHomeMutation, { loading: creating }] = useCreateHomeMutation({
+    update: (cache: ApolloCache, result) => {
+      const data = result.data;
       if (data?.createHome) {
         const existingHomes = cache.readQuery<GetHomesQuery>({
           query: GetHomesDocument,
@@ -105,8 +108,8 @@ export function useHomeManagement() {
           setSelectedHomeId(data.createHome.id);
           // Set as default home, but don't block the UI if this fails
           setDefaultHomeMutation({
-            variables: {homeId: data.createHome.id},
-          }).catch(error => {
+            variables: { homeId: data.createHome.id },
+          }).catch((error: any) => {
             console.warn('Failed to set newly created home as default:', error);
             // Don't show alert here since the home was created successfully
           });
@@ -125,15 +128,16 @@ export function useHomeManagement() {
         }
       }
     },
-    onError: error => {
+    onError: (error: any) => {
       Alert.alert('Error', 'Failed to create home');
       console.error('Create home error:', error);
     },
   });
 
   // Add debugging to updateHomeMutation
-  const [updateHomeMutation, {loading: updating}] = useUpdateHomeMutation({
-    update: (cache, {data}) => {
+  const [updateHomeMutation, { loading: updating }] = useUpdateHomeMutation({
+    update: (cache: ApolloCache, result) => {
+      const data = result.data;
       if (data?.updateHome) {
         const existingHomes = cache.readQuery<GetHomesQuery>({
           query: GetHomesDocument,
@@ -156,15 +160,16 @@ export function useHomeManagement() {
         }
       }
     },
-    onError: error => {
+    onError: (error: any) => {
       Alert.alert('Error', 'Failed to update home');
       console.error('Update home error:', error);
     },
   });
 
   // Add debugging to deleteHomeMutation
-  const [deleteHomeMutation, {loading: deleting}] = useDeleteHomeMutation({
-    update: (cache, {data}) => {
+  const [deleteHomeMutation, { loading: deleting }] = useDeleteHomeMutation({
+    update: (cache: ApolloCache, result) => {
+      const data = result.data;
       if (data?.deleteHome) {
         const existingHomes = cache.readQuery<GetHomesQuery>({
           query: GetHomesDocument,
@@ -188,7 +193,7 @@ export function useHomeManagement() {
             if (newDefaultHome) {
               setSelectedHomeId(newDefaultHome.id);
               setDefaultHomeMutation({
-                variables: {homeId: newDefaultHome.id},
+                variables: { homeId: newDefaultHome.id },
               });
             } else {
               setSelectedHomeId(null);
@@ -197,14 +202,14 @@ export function useHomeManagement() {
         }
       }
     },
-    onError: error => {
+    onError: (error: any) => {
       Alert.alert('Error', 'Failed to delete home');
       console.error('Delete home error:', error);
     },
   });
 
   // Invite user to home mutation
-  const [inviteUserMutation, {loading: inviting}] = useInviteToHomeMutation();
+  const [inviteUserMutation, { loading: inviting }] = useInviteToHomeMutation();
 
   // Helper functions
   const createHome = async (
@@ -232,7 +237,7 @@ export function useHomeManagement() {
         // If a default pantry was created, set it as selected in the store
         if (newHome.pantries && newHome.pantries.length > 0) {
           const defaultPantry = newHome.pantries.find(
-            pantry => pantry.isDefault,
+            (pantry: any) => pantry.isDefault,
           );
           if (defaultPantry) {
             console.log(
@@ -246,14 +251,14 @@ export function useHomeManagement() {
         return newHome;
       }
       return false;
-    } catch (error) {
+    } catch (error: any) {
       return false;
     }
   };
 
   const updateHome = async (
     homeId: string,
-    updates: {name?: string; isDefault?: boolean},
+    updates: { name?: string; isDefault?: boolean },
   ) => {
     try {
       // Handle default home update separately if needed
@@ -277,7 +282,7 @@ export function useHomeManagement() {
       }
 
       return true;
-    } catch (error) {
+    } catch (error: any) {
       return false;
     }
   };
@@ -299,10 +304,10 @@ export function useHomeManagement() {
             onPress: async () => {
               try {
                 await deleteHomeMutation({
-                  variables: {id: homeId},
+                  variables: { id: homeId },
                 });
                 resolve(true);
-              } catch (error) {
+              } catch (error: any) {
                 resolve(false);
               }
             },
@@ -332,7 +337,7 @@ export function useHomeManagement() {
 
       // Sync to remote
       const result = await setDefaultHomeMutation({
-        variables: {homeId},
+        variables: { homeId },
       });
 
       if (result.data) {
@@ -344,7 +349,7 @@ export function useHomeManagement() {
       // Rollback on failure
       setSelectedHomeId(remoteDefaultHomeId || null);
       return false;
-    } catch (error) {
+    } catch (error: any) {
       // Rollback on error
       setSelectedHomeId(remoteDefaultHomeId || null);
       Alert.alert('Error', 'Failed to set default home');

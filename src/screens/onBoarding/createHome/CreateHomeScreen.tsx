@@ -3,6 +3,7 @@ import {useForm} from 'react-hook-form';
 import {yupResolver} from '@hookform/resolvers/yup';
 import {View, Text} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
+import {ApolloCache} from '@apollo/client';
 
 // Components
 import {FormContent, type FormValues} from './FormContent';
@@ -77,7 +78,7 @@ export const CreateHomeScreen = () => {
   // GraphQL Mutations
   const [createHome] = useCreateHomeMutation();
   const [createPantry] = useCreatePantryMutation({
-    update: (cache, {data}) => {
+    update: (cache: ApolloCache, {data}: any) => {
       if (data?.createPantry) {
         try {
           const existingHomesData = cache.readQuery<GetHomesQuery>({

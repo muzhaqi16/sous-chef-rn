@@ -1,6 +1,6 @@
-import {useCallback, useMemo} from 'react';
-import {useGetShoppingListItemsQuery} from '#generated';
-import {useStore} from '#store';
+import { useCallback, useMemo, useEffect } from 'react';
+import { useGetShoppingListItemsQuery } from '#generated';
+import { useStore } from '#store';
 
 interface UseShoppingListDataOptions {
   onDataReceived?: (items: any[]) => void;
@@ -8,16 +8,16 @@ interface UseShoppingListDataOptions {
 
 /**
  * Hook to handle GraphQL queries for shopping list items
- * 
+ *
  * @param listId - The shopping list ID to fetch items for
  * @param options - Configuration options
  * @returns Query data, loading states, and refetch function
  */
 export function useShoppingListData(
-  listId: string | null, 
-  options: UseShoppingListDataOptions = {}
+  listId: string | null,
+  options: UseShoppingListDataOptions = {},
 ) {
-  const {onDataReceived} = options;
+  const { onDataReceived } = options;
   const user = useStore(state => state.user);
   const isLoggingOut = useStore(state => state.isLoggingOut);
   const isLoggedOut = !user;
@@ -27,11 +27,11 @@ export function useShoppingListData(
 
   // Cache-first query for immediate results
   const {
-    data: cachedData, 
+    data: cachedData,
     loading: cacheLoading,
     error: cacheError,
   } = useGetShoppingListItemsQuery({
-    variables: {shoppingListId: listId || ''},
+    variables: { shoppingListId: listId || '' },
     skip: shouldSkip,
     fetchPolicy: 'cache-first',
     notifyOnNetworkStatusChange: false,
@@ -45,22 +45,13 @@ export function useShoppingListData(
     error: networkError,
     refetch: networkRefetch,
   } = useGetShoppingListItemsQuery({
-    variables: {shoppingListId: listId || ''},
+    variables: { shoppingListId: listId || '' },
     skip: shouldSkip,
     fetchPolicy: 'cache-and-network',
     notifyOnNetworkStatusChange: true,
     errorPolicy: 'all',
-    onCompleted: (data) => {
-      if (data?.shoppingListItems && !isLoggedOut && !isLoggingOut) {
-        onDataReceived?.(data.shoppingListItems);
-      }
-    },
-    onError: (error) => {
-      console.error('Shopping list query error:', error);
-    },
   });
 
-  // Combine items from both queries
   const items = useMemo(() => {
     // Prefer network data, fall back to cached data
     if (networkData?.shoppingListItems) {

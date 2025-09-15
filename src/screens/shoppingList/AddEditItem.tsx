@@ -1,5 +1,6 @@
 import React, {useState, useEffect} from 'react';
 import {Alert} from 'react-native';
+import {ApolloCache} from '@apollo/client';
 import {
   useAddItemToShoppingListMutation,
   useUpdateShoppingListItemMutation,
@@ -44,7 +45,7 @@ export const AddEditItem: React.FC<{
 
   const [addItem] = useAddItemToShoppingListMutation({
     // Update cache immediately for optimistic UI
-    update: (cache, {data: mutationData}) => {
+    update: (cache: ApolloCache, {data: mutationData}: any) => {
       if (!mutationData?.addItemToShoppingList) return;
 
       const newItem = mutationData.addItemToShoppingList;
@@ -80,7 +81,7 @@ export const AddEditItem: React.FC<{
 
   const [updateItem] = useUpdateShoppingListItemMutation({
     // Update cache immediately for optimistic UI
-    update: (cache, {data: mutationData}) => {
+    update: (cache: ApolloCache, {data: mutationData}: any) => {
       if (!mutationData?.updateShoppingListItem) return;
 
       const updatedItem = mutationData.updateShoppingListItem;

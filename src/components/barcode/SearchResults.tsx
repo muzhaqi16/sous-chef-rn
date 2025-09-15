@@ -1,8 +1,9 @@
-import React from 'react';
-import {ScrollView, Alert} from 'react-native';
-import {ItemCard} from './ItemCard';
-import {ActionButtons} from './ActionButtons';
-import {StyleSheet} from 'react-native-unistyles';
+import React, { useState } from 'react';
+import { ScrollView, Alert } from 'react-native';
+import { ItemCard } from './ItemCard';
+import { ActionButtons } from './ActionButtons';
+import { StyleSheet } from 'react-native-unistyles';
+import { ApolloCache } from '@apollo/client';
 import {
   useAddItemToPantryMutation,
   useAddItemToShoppingListMutation,
@@ -29,20 +30,22 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   pantryId,
   shoppingListId,
 }) => {
+  const [isAdded, setIsAdded] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [addToPantry] = useAddItemToPantryMutation({
-    update: (cache, {data}) => {
+    update: (cache: ApolloCache, { data }: any) => {
       if (data?.addItemToPantry && pantryId) {
         // Read the existing pantry items from cache
         const existingData = cache.readQuery<GetPantryItemsQuery>({
           query: GetPantryItemsDocument,
-          variables: {pantryId},
+          variables: { pantryId },
         });
 
         if (existingData?.pantryItems) {
           // Add the new item to the cache
           cache.writeQuery<GetPantryItemsQuery>({
             query: GetPantryItemsDocument,
-            variables: {pantryId},
+            variables: { pantryId },
             data: {
               pantryItems: [...existingData.pantryItems, data.addItemToPantry],
             },
@@ -53,21 +56,24 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   });
 
   const [addToShoppingList] = useAddItemToShoppingListMutation({
-    update: (cache, {data}) => {
+    update: (cache: ApolloCache, { data }: any) => {
       if (data?.addItemToShoppingList && shoppingListId) {
         // Read the existing shopping list items from cache
         const existingData = cache.readQuery<GetShoppingListItemsQuery>({
           query: GetShoppingListItemsDocument,
-          variables: {listId: shoppingListId},
+          variables: { listId: shoppingListId },
         });
 
         if (existingData?.shoppingListItems) {
           // Add the new item to the cache
           cache.writeQuery<GetShoppingListItemsQuery>({
             query: GetShoppingListItemsDocument,
-            variables: {listId: shoppingListId},
+            variables: { listId: shoppingListId },
             data: {
-              shoppingListItems: [...existingData.shoppingListItems, data.addItemToShoppingList],
+              shoppingListItems: [
+                ...existingData.shoppingListItems,
+                data.addItemToShoppingList,
+              ],
             },
           });
         }
@@ -76,10 +82,11 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   });
 
   const handleAddItem = async () => {
-    if (!source) {
-      Alert.alert('Error', 'No destination specified');
+    if (!source || isAdded) {
       return;
     }
+
+    setIsLoading(true);
 
     try {
       if (source === 'pantry' && pantryId) {
@@ -97,6 +104,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             },
           },
         });
+        setIsAdded(true);
       } else if (source === 'shoppingList' && shoppingListId) {
         // Get the default unit or first unit from the item
         const defaultUnit =
@@ -116,17 +124,24 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             },
           },
         });
+        setIsAdded(true);
       } else {
         Alert.alert('Error', 'Missing required information');
       }
     } catch (error) {
       console.error('Error adding item:', error);
       Alert.alert('Error', 'Failed to add item. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Determine button label based on source
+  // Determine button label based on source and state
   const getButtonLabel = () => {
+    if (isAdded) {
+      return 'Added';
+    }
+
     switch (source) {
       case 'pantry':
         return 'Add to Pantry';
@@ -140,13 +155,16 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   return (
     <ScrollView
       style={styles.scrollView}
-      contentContainerStyle={styles.scrollContent}>
+      contentContainerStyle={styles.scrollContent}
+    >
       <ItemCard item={item} format={format} />
 
       <ActionButtons
         primaryAction={{
           label: getButtonLabel(),
           onPress: handleAddItem,
+          disabled: isAdded,
+          loading: isLoading,
         }}
         secondaryAction={{
           label: 'Scan Another',
@@ -162,6 +180,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
+    padding: theme.spacing.lg,
+    gap: theme.spacing.lg,
   },
 }));

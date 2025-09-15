@@ -1,5 +1,6 @@
 import React from 'react';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
+import {useUnistyles} from 'react-native-unistyles';
 import {Icon} from '#/utils';
 import {PantryStack} from './PantryStack';
 import {ShoppingListStack} from './ShoppingListStack';
@@ -13,12 +14,17 @@ export type HomeTabParamList = {
 
 const Tab = createBottomTabNavigator<HomeTabParamList>();
 
-export const HomeTabs = () => (
-  <Tab.Navigator
-    screenOptions={({route}) => ({
-      headerShown: false,
-      tabBarHideOnKeyboard: true,
-      tabBarIcon: ({focused, color, size}) => {
+export const HomeTabs = () => {
+  const {theme} = useUnistyles();
+
+  return (
+    <Tab.Navigator
+      screenOptions={({route}) => ({
+        headerShown: false,
+        tabBarHideOnKeyboard: true,
+        tabBarActiveTintColor: theme.colors.primary,
+        tabBarInactiveTintColor: theme.colors.textSecondary,
+        tabBarIcon: ({focused, color, size}) => {
         const iconMap: Record<string, [string, string]> = {
           Pantry: ['home', 'home-outline'],
           ShoppingList: ['list', 'list-outline'],
@@ -56,4 +62,5 @@ export const HomeTabs = () => (
       options={{title: 'Profile'}}
     />
   </Tab.Navigator>
-);
+  );
+};

@@ -27,21 +27,23 @@ export const ItemDetailBottomSheet: React.FC<ItemDetailProps> = ({
   const [unit, setUnit] = useState('pcs');
   const {data} = useGetUnitsQuery();
 
-  const [updateItem] = useUpdateShoppingListItemMutation({
-    onCompleted: () => onClose(),
-    onError: e => console.error('Update error', e),
-  });
+  const [updateItem] = useUpdateShoppingListItemMutation();
 
-  const handleSave = () => {
-    updateItem({
-      variables: {
-        id: item.id,
-        input: {
-          itemName: item.itemName,
-          quantity,
+  const handleSave = async () => {
+    try {
+      await updateItem({
+        variables: {
+          id: item.id,
+          input: {
+            itemName: item.itemName || undefined,
+            quantity,
+          },
         },
-      },
-    });
+      });
+      onClose();
+    } catch (e) {
+      console.error('Update error', e);
+    }
   };
   return (
     <View style={styles.container}>

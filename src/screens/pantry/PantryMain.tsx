@@ -253,7 +253,7 @@ export const PantryMain: React.FC = () => {
         showSearchBar={true}
         showFAB={true} // Don't show FAB since we have add in search bar
         onFabPress={() =>
-          navigateTo.barcode({mode: 'pantry', pantryId: pantry?.id})
+          navigateTo.barcode({source: 'pantry', pantryId: pantry?.id})
         }
         // Actions
         headerActions={headerActions}

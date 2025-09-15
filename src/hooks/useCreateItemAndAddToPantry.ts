@@ -1,5 +1,6 @@
 import {useState} from 'react';
 import {Alert} from 'react-native';
+import {ApolloCache} from '@apollo/client';
 import {
   useCreateItemMutation,
   useAddItemToPantryMutation,
@@ -39,16 +40,11 @@ export const useCreateItemAndAddToPantry = () => {
     skip: !selectedHomeId,
   });
   
-  const [createItem] = useCreateItemMutation({
-    onError: (error) => {
-      console.error('Create item error:', error);
-      Alert.alert('Error', `Failed to create item: ${error.message}`);
-    },
-  });
+  const [createItem] = useCreateItemMutation();
   
   const [addToPantry] = useAddItemToPantryMutation({
     // Update cache immediately for optimistic UI
-    update: (cache, {data: mutationData}, {variables}) => {
+    update: (cache: ApolloCache, {data: mutationData}: any, {variables}: any) => {
       if (!mutationData?.addItemToPantry || !variables?.input.pantryId) return;
 
       const newItem = mutationData.addItemToPantry;
@@ -76,10 +72,6 @@ export const useCreateItemAndAddToPantry = () => {
         console.warn('Cache update failed:', error);
         // Cache update failed, but mutation still succeeded
       }
-    },
-    onError: (error) => {
-      console.error('Add to pantry error:', error);
-      Alert.alert('Error', `Failed to add item to pantry: ${error.message}`);
     },
   });
 
@@ -150,9 +142,9 @@ export const useCreateItemAndAddToPantry = () => {
         itemId: newItem.id,
         initialQuantity: input.quantity,
         storageState: input.storageState || StorageState.Ambient,
-        expiresAt: input.expiresAt || null,
-        storageLocation: input.storageLocation || null,
-        storageNotes: input.storageNotes || null,
+        expiresAt: input.expiresAt || undefined,
+        storageLocation: input.storageLocation || undefined,
+        storageNotes: input.storageNotes || undefined,
         unitId: '', // We'll need to resolve this from the unit symbol
       };
 

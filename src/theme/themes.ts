@@ -28,6 +28,7 @@ export const lightTheme = {
 
     // Background
     background: colors.neutral[50],
+    backgroundSecondary: colors.secondary[100],
     surface: colors.neutral[0],
     surfaceVariant: colors.neutral[100],
 
@@ -78,6 +79,7 @@ export const darkTheme = {
 
     // Background
     background: colors.neutral[900],
+    backgroundSecondary: colors.secondary[800],
     surface: colors.neutral[800],
     surfaceVariant: colors.neutral[700],
 

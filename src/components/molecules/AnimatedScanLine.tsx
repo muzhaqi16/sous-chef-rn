@@ -15,6 +15,7 @@ interface AnimatedScanLineProps {
   height: number;
   color: string;
   duration: number;
+  cornerOffset?: number;
 }
 
 const AnimatedScanLine: React.FC<AnimatedScanLineProps> = ({
@@ -24,6 +25,7 @@ const AnimatedScanLine: React.FC<AnimatedScanLineProps> = ({
   height,
   color,
   duration,
+  cornerOffset = 4,
 }) => {
   const animatedValue = useSharedValue(0);
 
@@ -35,7 +37,7 @@ const AnimatedScanLine: React.FC<AnimatedScanLineProps> = ({
     const translateY = interpolate(
       animatedValue.value,
       [0, 1],
-      [0, height - 2],
+      [0, height - (cornerOffset * 2) - 2], // Account for corner offset and line height
     );
 
     return {
@@ -47,10 +49,10 @@ const AnimatedScanLine: React.FC<AnimatedScanLineProps> = ({
     <View
       style={{
         position: 'absolute',
-        left: left + 10,
-        top: top + 10,
-        width: width - 20,
-        height: height - 20,
+        left: left + cornerOffset,
+        top: top + cornerOffset,
+        width: width - (cornerOffset * 2),
+        height: height - (cornerOffset * 2),
       }}>
       <Animated.View
         style={[
@@ -62,6 +64,7 @@ const AnimatedScanLine: React.FC<AnimatedScanLineProps> = ({
             shadowOffset: {width: 0, height: 0},
             shadowOpacity: 0.8,
             shadowRadius: 3,
+            elevation: 2, // For Android shadow
           },
           animatedStyle,
         ]}

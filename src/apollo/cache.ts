@@ -1,7 +1,8 @@
-import {InMemoryCache} from '@apollo/client';
-import {storage} from '#storage/mmkv';
+import { InMemoryCache } from '@apollo/client';
+import { storage } from '#storage/mmkv';
 
-const CACHE_KEY = 'apollo-cache';
+const CACHE_VERSION = '1.0';
+const CACHE_KEY = `apollo-cache-${CACHE_VERSION}`;
 
 export function makeCache(): InMemoryCache {
   const cache = new InMemoryCache({

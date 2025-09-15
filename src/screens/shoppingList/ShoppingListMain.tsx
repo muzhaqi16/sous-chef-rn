@@ -229,7 +229,7 @@ export const ShoppingListMain: React.FC = () => {
         showSearchBar={true}
         showFAB={true}
         onFabPress={() =>
-          navigateTo.barcode({mode: 'shoppingList', listId: currentListId})
+          navigateTo.barcode({source: 'shoppingList', shoppingListId: currentListId})
         }
         // Actions
         searchBarActions={searchBarActions}
