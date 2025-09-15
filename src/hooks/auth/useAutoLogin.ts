@@ -1,198 +1,114 @@
-import {useEffect, useState, useRef} from 'react';
+import {useEffect, useState, useRef, useCallback} from 'react';
 import {useStore} from '#store';
-import {useLoginMutation, type LoginInput} from '#generated';
-import {useTokenRefresh} from './useTokenRefresh';
-import {hasCredentials, loadCredentials} from '#/storage/keychain';
+import {useLoginMutation, LoginInput} from '#generated';
+import {useTokenManager} from './useTokenManager';
+import {useCredentialManager} from './useCredentialManager';
 
-interface AutoLoginStatus {
-  isAttempting: boolean;
-  completed: boolean;
+export interface AutoLoginState {
+  status: 'idle' | 'checking' | 'authenticating' | 'success' | 'failed';
   error: string | null;
 }
 
-export const useAutoLogin = () => {
-  const {
-    user,
-    accessToken,
-    refreshToken,
-    isHydrated,
-    completeAuthentication,
-    setTokens,
-    logout,
-  } = useStore();
-  
-  // Use the login mutation hook
-  const [loginMutation, {loading: isLoggingIn}] = useLoginMutation();
-  
-  // Use token refresh functionality
-  const {refreshAccessToken, isTokenExpiringSoon, isRefreshing} = useTokenRefresh();
-  
-  const [autoLoginStatus, setAutoLoginStatus] = useState<AutoLoginStatus>({
-    isAttempting: false,
-    completed: false,
+export const useAutoLogin = (enabled: boolean = true) => {
+  const {user, isHydrated, setAuth, accessToken, refreshToken} = useStore();
+  const [loginMutation] = useLoginMutation();
+  const {refreshAccessToken} = useTokenManager();
+  const {checkStoredCredentials, loadStoredCredentials} =
+    useCredentialManager();
+
+  const [autoLoginState, setAutoLoginState] = useState<AutoLoginState>({
+    status: 'idle',
     error: null,
   });
-  
+
   const hasAttemptedRef = useRef(false);
-  const isPostLogoutRef = useRef(false);
-  const isInitialLoadRef = useRef(true);
 
-
-  // Attempt auto-login with stored credentials
-  const attemptCredentialLogin = async (): Promise<boolean> => {
+  // Silent token refresh (no biometric prompt)
+  const attemptSilentLogin = useCallback(async (): Promise<boolean> => {
     try {
-      console.log('AutoLogin: Attempting credential-based login...');
-      
-      // Check if credentials exist
-      const hasCreds = await hasCredentials();
-      if (!hasCreds) {
-        console.log('AutoLogin: No stored credentials found');
+      // Only try if we have tokens
+      if (!accessToken && !refreshToken) {
         return false;
       }
 
-      // Load credentials (this may trigger biometric prompt)
-      const credentials = await loadCredentials();
+      // Try to refresh existing token
+      const refreshed = await refreshAccessToken();
+      return refreshed;
+    } catch (error) {
+      console.error('Silent login failed:', error);
+      return false;
+    }
+  }, [accessToken, refreshToken, refreshAccessToken]);
+
+  // Biometric login (requires user interaction)
+  const attemptBiometricLogin = useCallback(async (): Promise<boolean> => {
+    try {
+      setAutoLoginState({status: 'authenticating', error: null});
+
+      // Load credentials with biometric prompt
+      const credentials = await loadStoredCredentials();
       if (!credentials) {
-        console.log('AutoLogin: Failed to load credentials');
+        setAutoLoginState({status: 'failed', error: 'No credentials found'});
         return false;
       }
 
-      // Attempt login using the hook
+      // Attempt login
       const response = await loginMutation({
         variables: {
           input: {
-            email: credentials.username,
+            email: credentials.email,
             password: credentials.password,
-          } as LoginInput
+          } as LoginInput,
         },
-        errorPolicy: 'all',
       });
 
       if (response.data?.login) {
-        const loginData = response.data.login;
-        await completeAuthentication(loginData, true);
-        console.log('AutoLogin: Credential-based login successful');
+        const {user, accessToken, refreshToken} = response.data.login;
+        setAuth(user, accessToken, refreshToken);
+        setAutoLoginState({status: 'success', error: null});
         return true;
       }
-    } catch (error) {
-      console.log('AutoLogin: Credential-based login failed:', error);
-    }
 
-    return false;
-  };
-
-  // Attempt auto-login only for token-based authentication (no biometric prompts)
-  const attemptTokenBasedAutoLogin = async () => {
-    if (hasAttemptedRef.current || user || !isHydrated || isPostLogoutRef.current) {
-      return;
-    }
-
-    // Don't attempt auto-login if we have no tokens at all (likely after logout)
-    if (!accessToken && !refreshToken) {
-      console.log('AutoLogin: No tokens available, skipping auto-login attempt');
-      hasAttemptedRef.current = true;
-      setAutoLoginStatus({
-        isAttempting: false,
-        completed: true,
-        error: null,
+      setAutoLoginState({status: 'failed', error: 'Login failed'});
+      return false;
+    } catch (error: any) {
+      setAutoLoginState({
+        status: 'failed',
+        error: error?.message || 'Authentication failed',
       });
+      return false;
+    }
+  }, [loadStoredCredentials, loginMutation, setAuth]);
+
+  // Check for auto-login opportunity on mount
+  useEffect(() => {
+    if (!enabled || !isHydrated || user || hasAttemptedRef.current) {
       return;
     }
 
     hasAttemptedRef.current = true;
-    setAutoLoginStatus({
-      isAttempting: true,
-      completed: false,
-      error: null,
-    });
 
-    try {
-      console.log('AutoLogin: Starting token-based auto-login...');
+    const checkAutoLogin = async () => {
+      setAutoLoginState({status: 'checking', error: null});
 
-      // Strategy 1: Check if we have valid access token
-      if (accessToken && !isTokenExpiringSoon(accessToken)) {
-        console.log('AutoLogin: Valid access token found, no login needed');
-        setAutoLoginStatus({
-          isAttempting: false,
-          completed: true,
-          error: null,
-        });
+      // First try silent token refresh
+      const silentSuccess = await attemptSilentLogin();
+      if (silentSuccess) {
+        setAutoLoginState({status: 'success', error: null});
         return;
       }
 
-      // Strategy 2: Try token refresh if we have tokens that might be refreshable
-      if (refreshToken && await refreshAccessToken()) {
-        console.log('AutoLogin: Token refresh successful');
-        setAutoLoginStatus({
-          isAttempting: false,
-          completed: true,
-          error: null,
-        });
-        return;
-      }
+      // Check if we have stored credentials (but don't load them yet)
+      const hasStoredCreds = await checkStoredCredentials();
+      setAutoLoginState({status: 'idle', error: null});
+    };
 
-      // No automatic credential login - let user manually trigger biometric auth
-      console.log('AutoLogin: No valid tokens, user will need to authenticate manually');
-      setAutoLoginStatus({
-        isAttempting: false,
-        completed: true,
-        error: null,
-      });
-
-    } catch (error) {
-      console.error('AutoLogin: Unexpected error during token-based auto-login:', error);
-      setAutoLoginStatus({
-        isAttempting: false,
-        completed: true,
-        error: 'Auto-login failed unexpectedly',
-      });
-      
-      // Clear potentially corrupted tokens
-      await logout();
-    }
-  };
-
-  // Manual credential-based login (triggered after biometric verification)
-  const attemptCredentialAutoLogin = async (): Promise<boolean> => {
-    console.log('AutoLogin: Attempting post-verification credential login...');
-    return await attemptCredentialLogin();
-  };
-
-  // Trigger token-based auto-login when appropriate
-  useEffect(() => {
-    attemptTokenBasedAutoLogin();
-  }, [isHydrated, user]); // Remove token dependencies to prevent logout loops
-
-  // Track logout state and reset when user logs out
-  useEffect(() => {
-    if (!user && isHydrated) {
-      if (isInitialLoadRef.current) {
-        // This is the initial app load with no user - allow auto-login
-        isInitialLoadRef.current = false;
-        isPostLogoutRef.current = false;
-      } else {
-        // User just logged out, set post-logout flag to prevent auto-login
-        isPostLogoutRef.current = true;
-        setAutoLoginStatus({
-          isAttempting: false,
-          completed: true, // Keep completed true to prevent retries
-          error: null,
-        });
-      }
-    } else if (user && isHydrated) {
-      // User is logged in, clear flags
-      isInitialLoadRef.current = false;
-      isPostLogoutRef.current = false;
-    }
-  }, [user, isHydrated]);
-
-  const isAttempting = autoLoginStatus.isAttempting || isLoggingIn || isRefreshing;
+    checkAutoLogin();
+  }, [enabled, isHydrated, user, attemptSilentLogin, checkStoredCredentials]);
 
   return {
-    autoLoginStatus,
-    isAutoLoginAttempting: isAttempting,
-    autoLoginCompleted: autoLoginStatus.completed,
-    autoLoginError: autoLoginStatus.error,
-    attemptCredentialAutoLogin, // Export this for manual use after biometric verification
+    autoLoginState,
+    attemptBiometricLogin,
+    isAutoLoginPossible: autoLoginState.status === 'idle',
   };
 };

@@ -1,7 +1,7 @@
 import React from 'react';
 import {View, ScrollView, Text} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
-import Icon from '@react-native-vector-icons/material-icons';
+import {Icon} from '#utils';
 import {Header} from '../molecules/Header';
 import {Button} from '../base/Button';
 

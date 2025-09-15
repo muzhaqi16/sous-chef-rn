@@ -8,7 +8,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import Icon from '@react-native-vector-icons/material-icons';
+import {Icon} from '#utils';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {
@@ -181,22 +181,22 @@ export const ShareList: React.FC = () => {
                     </Text>
                     <Text style={styles.memberEmail}>{member.email}</Text>
                     <View style={styles.statusContainer}>
-                      <View 
+                      <View
                         style={[
                           styles.statusBadge,
-                          { 
+                          {
                             backgroundColor: statusColor + '20',
-                            borderColor: statusColor
-                          }
-                        ]}
-                      >
-                        <Text style={[styles.statusText, { color: statusColor }]}>
+                            borderColor: statusColor,
+                          },
+                        ]}>
+                        <Text style={[styles.statusText, {color: statusColor}]}>
                           {statusText}
                         </Text>
                       </View>
                       {member.invitedAt && (
                         <Text style={styles.invitedText}>
-                          Invited {new Date(member.invitedAt).toLocaleDateString()}
+                          Invited{' '}
+                          {new Date(member.invitedAt).toLocaleDateString()}
                         </Text>
                       )}
                     </View>

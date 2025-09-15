@@ -1,7 +1,7 @@
 import React from 'react';
 import {View, TouchableOpacity, Text, Modal} from 'react-native';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
-import Icon from '@react-native-vector-icons/material-icons';
+import {Icon} from '#utils';
 
 export const RememberMeModal: React.FC<{
   visible: boolean;
@@ -19,12 +19,7 @@ export const RememberMeModal: React.FC<{
       onRequestClose={onDecline}>
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
-          <Icon
-            name="lock"
-            size={48}
-            color={theme.colors.primary}
-            style={styles.modalIcon}
-          />
+          <Icon name="lock" size={48} color={theme.colors.primary} />
 
           <Text style={styles.modalTitle}>Remember login info?</Text>
           <Text style={styles.modalSubtitle}>
@@ -67,9 +62,6 @@ const styles = StyleSheet.create(theme => ({
     width: '100%',
     maxWidth: 400,
     alignItems: 'center',
-  },
-  modalIcon: {
-    marginBottom: 16,
   },
   modalTitle: {
     fontSize: 20,

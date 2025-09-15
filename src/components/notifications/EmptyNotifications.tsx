@@ -1,6 +1,6 @@
 import React from 'react';
 import {View, Text} from 'react-native';
-import Icon from '@react-native-vector-icons/material-icons';
+import {Icon} from '#utils';
 
 import {StyleSheet} from 'react-native-unistyles';
 

@@ -1,20 +1,14 @@
 import React, {useMemo, useEffect} from 'react';
-import {TouchableOpacity, Text, Alert, Image, View} from 'react-native';
+import {TouchableOpacity, Alert, Image, View} from 'react-native';
 import {useFocusEffect} from '@react-navigation/native';
-import {useNavigationFlow} from '#hooks';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
+import {useAppNavigation} from '#hooks';
+import {StyleSheet} from 'react-native-unistyles';
 import {
   useGetShoppingListsQuery,
   useMarkItemPurchasedMutation,
   useRemoveItemFromShoppingListMutation,
 } from '#generated';
-import {ShoppingListMainNavProp} from '#navigation/types';
-import {
-  ListTemplate,
-  SearchBarAction,
-  BottomSheetAction,
-  EmptyState,
-} from '#components';
+import {ListTemplate, SearchBarAction, BottomSheetAction} from '#components';
 import {ItemSelectorWithActions} from '#components/organisms/ItemSelectorWithActions';
 import {
   useShoppingListSelector,
@@ -25,11 +19,7 @@ import {useStore} from '#/store';
 import {Icon, type IconLibrary} from '#/utils/iconUtils';
 
 export const ShoppingListMain: React.FC = () => {
-  const {theme} = useUnistyles();
-  const {
-    navigateWithinStack,
-    navigateToBarcode,
-  } = useNavigationFlow();
+  const {navigate, navigateTo} = useAppNavigation();
   const selectShoppingListSheet = useBottomSheetModal();
   const {selectedShoppingListId, setSelectedShoppingListId} = useStore();
   const [toggleItem] = useMarkItemPurchasedMutation();
@@ -97,13 +87,13 @@ export const ShoppingListMain: React.FC = () => {
           {text: 'Cancel', style: 'cancel'},
           {
             text: 'Create List',
-            onPress: () => navigateWithinStack('ListSettings'),
+            onPress: () => navigate('ListSettings'),
           },
         ],
       );
       return;
     }
-    navigateWithinStack('AddItem', {listId: currentListId});
+    navigate('AddItem', {listId: currentListId});
   };
 
   const handleDeleteItem = async (itemId: string) => {
@@ -155,7 +145,7 @@ export const ShoppingListMain: React.FC = () => {
           description: 'Create a shopping list to get started',
           action: {
             label: 'Create List',
-            onPress: () => navigateWithinStack('ListSettings'),
+            onPress: () => navigate('ListSettings'),
           },
         }}
       />
@@ -171,10 +161,10 @@ export const ShoppingListMain: React.FC = () => {
         searchQuery={query}
         onSearchChange={setQuery}
         onItemPress={id =>
-          navigateWithinStack('EditItem', {listId: currentListId, itemId: id})
+          navigate('EditItem', {listId: currentListId, itemId: id})
         }
         onItemEdit={id =>
-          navigateWithinStack('EditItem', {listId: currentListId, itemId: id})
+          navigate('EditItem', {listId: currentListId, itemId: id})
         }
         onItemDelete={handleDeleteItem}
         onRefresh={handleRefresh}
@@ -182,7 +172,7 @@ export const ShoppingListMain: React.FC = () => {
         showSearchBar={true}
         showFAB={true}
         onFabPress={() =>
-          navigateToBarcode('shoppingList', currentListId)
+          navigateTo.barcode({mode: 'shoppingList', listId: currentListId})
         }
         // Actions
         searchBarActions={searchBarActions}
@@ -215,7 +205,7 @@ export const ShoppingListMain: React.FC = () => {
               label: 'Create New List',
               onPress: () => {
                 selectShoppingListSheet.close();
-                navigateWithinStack('ListSettings');
+                navigate('ListSettings');
               },
               iconLibrary: 'MaterialIcons' as IconLibrary,
             },
@@ -226,7 +216,7 @@ export const ShoppingListMain: React.FC = () => {
                     label: 'Share Current List',
                     onPress: () => {
                       selectShoppingListSheet.close();
-                      navigateWithinStack('ShareList', {listId: currentListId});
+                      navigate('ShareList', {listId: currentListId});
                     },
                     iconLibrary: 'MaterialIcons' as IconLibrary,
                   },
@@ -235,7 +225,7 @@ export const ShoppingListMain: React.FC = () => {
                     label: 'List Settings',
                     onPress: () => {
                       selectShoppingListSheet.close();
-                      navigateWithinStack('ListSettings', {
+                      navigate('ListSettings', {
                         listId: currentListId,
                       });
                     },

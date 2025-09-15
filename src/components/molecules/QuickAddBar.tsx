@@ -1,4 +1,3 @@
-// src/components/molecules/QuickAddBar.tsx
 import React, {useState} from 'react';
 import {View, TextInput, TouchableOpacity, Text, Keyboard} from 'react-native';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';

@@ -8,10 +8,9 @@ import {
   Alert,
   TextInput,
 } from 'react-native';
-import Icon from '@react-native-vector-icons/material-icons';
-import {useNavigation, useRoute} from '@react-navigation/native';
+import {Icon} from '#utils';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
-import {useShoppingListDetails} from '#/hooks';
+import {useShoppingListDetails, useAppNavigation} from '#/hooks';
 import {
   useUpdateShoppingListMutation,
   useDeleteShoppingListMutation,
@@ -21,14 +20,14 @@ import {
 } from '#generated';
 import {useStore} from '#store';
 
-import {ListSettingsNavProp, ListSettingsRouteProp} from '#navigation/types';
+import {ShoppingListStackParamList} from '#navigation/stacks/ShoppingListStack';
 
-export const ListSettings: React.FC = () => {
-  const navigation = useNavigation<ListSettingsNavProp>();
+export const ListSettings: React.FC<{
+  route: {params?: ShoppingListStackParamList['ListSettings']};
+}> = ({route}) => {
   const {theme} = useUnistyles();
-  const route = useRoute<ListSettingsRouteProp>();
   const listId = route.params?.listId;
-
+  const {navigate, goBack, navigateTo} = useAppNavigation();
   const {setSelectedShoppingListId} = useStore();
 
   const [name, setName] = useState('');
@@ -76,7 +75,7 @@ export const ListSettings: React.FC = () => {
       if (data?.createShoppingList) {
         // Always set the new list as selected
         setSelectedShoppingListId(data.createShoppingList.id);
-        navigation.goBack();
+        goBack();
       }
     },
     onError: error => {
@@ -147,7 +146,7 @@ export const ListSettings: React.FC = () => {
           onPress: async () => {
             try {
               await deleteList({variables: {id: listId!}});
-              navigation.navigate('ShoppingListMain');
+              navigateTo.shoppingListMain();
             } catch (error) {
               Alert.alert('Error', 'Failed to delete list');
             }
@@ -160,7 +159,7 @@ export const ListSettings: React.FC = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => goBack()}>
           <Icon name="arrow-back" size={24} color={theme.colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.title}>
@@ -210,9 +209,7 @@ export const ListSettings: React.FC = () => {
 
             <TouchableOpacity
               style={styles.actionRow}
-              onPress={() =>
-                navigation.navigate('ShareList', {listId: listId!})
-              }>
+              onPress={() => navigate('ShareList', {listId: listId!})}>
               <Icon name="person-add" size={20} color={theme.colors.primary} />
               <Text style={styles.actionText}>Manage Members</Text>
               <Icon

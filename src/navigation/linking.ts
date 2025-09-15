@@ -1,25 +1,22 @@
-import type {LinkingOptions} from '@react-navigation/native';
-import type {RootStackParamList} from './types';
+import {LinkingOptions} from '@react-navigation/native';
+import {Linking} from 'react-native';
+import type {RootStackParamList} from './RootNavigator';
 
 export const linkingConfig: LinkingOptions<RootStackParamList> = {
-  prefixes: ['souchef://', 'https://app.souschef.dev'],
+  prefixes: ['souschef://', 'https://app.souschef.dev'],
   config: {
     screens: {
-      AuthStack: {
+      Auth: {
         screens: {
           LandingAuth: 'welcome',
           Login: 'login',
           SignUp: 'signup',
           ForgotPassword: 'forgot-password',
-          CodeVerification: {
-            path: 'verify/:email?',
-            parse: {
-              email: (email: string) => decodeURIComponent(email),
-            },
-          },
+          CodeVerification: 'verify/:email?',
         },
       },
-      OnBoardingStack: {
+      Verification: 'verify/:email?',
+      Onboarding: {
         screens: {
           CreateHome: 'onboarding/home',
           CreateShoppingList: 'onboarding/shopping-list',
@@ -29,24 +26,33 @@ export const linkingConfig: LinkingOptions<RootStackParamList> = {
           OnboardingComplete: 'onboarding/complete',
         },
       },
-      HomeStack: {
+      Home: {
         screens: {
-          Main: 'home',
-          ShoppingList: 'shopping',
-          Recipes: 'recipes',
+          Pantry: {
+            screens: {
+              PantryMain: 'pantry',
+              PantryItem: 'pantry/item/:itemId?',
+              PantryItemDetail: 'pantry/detail/:itemId',
+            },
+          },
+          ShoppingList: {
+            screens: {
+              ShoppingListMain: 'shopping',
+              AddItem: 'shopping/add',
+              EditItem: 'shopping/edit/:itemId',
+            },
+          },
           Profile: 'profile',
         },
       },
-      HomeManagementStack: {
-        path: 'home-management',
-      },
-      BarcodeStack: {
+      HomeManagement: 'home-management/:selectedHomeId?',
+      Barcode: {
         screens: {
           BarcodeScanner: 'scan',
           SearchResults: 'scan/result',
         },
       },
-      NotificationStack: {
+      Notifications: {
         screens: {
           NotificationList: 'notifications',
           NotificationDetail: 'notifications/:id',
@@ -58,30 +64,15 @@ export const linkingConfig: LinkingOptions<RootStackParamList> = {
       NotFound: '*',
     },
   },
-
-  // Custom getInitialURL for handling deep links on app launch
   async getInitialURL() {
-    // Check if app was opened from a deep link
-    const url = await import('react-native').then(RN =>
-      RN.Linking.getInitialURL(),
-    );
-    return url;
+    return Linking.getInitialURL();
   },
-
-  // Subscribe to incoming links
   subscribe(listener) {
     const onReceiveURL = ({url}: {url: string}) => listener(url);
-
-    // Listen to incoming links from deep linking
-    let subscription: any;
-    import('react-native').then(RN => {
-      subscription = RN.Linking.addEventListener('url', onReceiveURL);
-    });
+    const subscription = Linking.addEventListener('url', onReceiveURL);
 
     return () => {
-      if (subscription?.remove) {
-        subscription.remove();
-      }
+      subscription.remove();
     };
   },
 };

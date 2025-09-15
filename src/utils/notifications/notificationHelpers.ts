@@ -1,5 +1,5 @@
 import {NotificationType} from '#generated';
-import Icon from '@react-native-vector-icons/material-icons';
+import {Icon} from '#utils';
 
 type IconProps = React.ComponentProps<typeof Icon>;
 

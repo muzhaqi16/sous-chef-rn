@@ -1,11 +1,11 @@
 import React, {useState} from 'react';
-import {useNavigation} from '@react-navigation/native';
 import {Alert} from 'react-native';
 import {
   InvitationAcceptanceModal,
   InvitationData,
 } from './InvitationAcceptanceModal';
 import {NotificationItem} from '#store/slices/notificationSlice';
+import {useAppNavigation} from '#/hooks';
 
 interface NotificationActionHandlerProps {
   children: (props: {
@@ -14,13 +14,13 @@ interface NotificationActionHandlerProps {
   }) => React.ReactElement;
 }
 
-export const NotificationActionHandler: React.FC<NotificationActionHandlerProps> = ({
-  children,
-}) => {
+export const NotificationActionHandler: React.FC<
+  NotificationActionHandlerProps
+> = ({children}) => {
   const [invitationModalVisible, setInvitationModalVisible] = useState(false);
-  const [currentInvitation, setCurrentInvitation] = useState<InvitationData | null>(null);
-  const navigation = useNavigation();
-
+  const [currentInvitation, setCurrentInvitation] =
+    useState<InvitationData | null>(null);
+  const {navigateTo, navigate} = useAppNavigation();
   const showInvitationModal = (notification: NotificationItem) => {
     if (
       notification.actionType === 'ACCEPT_HOME_INVITE' ||
@@ -37,7 +37,8 @@ export const NotificationActionHandler: React.FC<NotificationActionHandlerProps>
         title: notification.title,
         description: notification.message,
         inviterName: notification.payload.inviterName,
-        entityName: notification.payload.homeName || notification.payload.listName,
+        entityName:
+          notification.payload.homeName || notification.payload.listName,
         token: notification.payload.token,
         payload: notification.payload,
       };
@@ -61,54 +62,52 @@ export const NotificationActionHandler: React.FC<NotificationActionHandlerProps>
       case 'ADD_TO_SHOPPING_LIST':
         // Navigate to shopping list and pre-fill the item
         try {
-          (navigation as any).navigate('ShoppingListStack', {
-            screen: 'ShoppingListMain',
-            params: {
-              prefilledItem: {
-                name: notification.payload.itemName,
-                itemId: notification.payload.itemId,
-              },
-            },
-          });
+          // navigateTo.shoppingListMain({
+          //   prefilledItem: {
+          //     name: notification.payload.itemName,
+          //     itemId: notification.payload.itemId,
+          //   },
+          // });
         } catch (error) {
-          Alert.alert('Navigation Error', 'Could not navigate to shopping list.');
+          Alert.alert(
+            'Navigation Error',
+            'Could not navigate to shopping list.',
+          );
         }
         break;
 
       case 'VIEW_EXPIRING_ITEMS':
         // Navigate to pantry expiring items view
         try {
-          (navigation as any).navigate('PantryStack', {
-            screen: 'ExpiringItems',
-            params: {
-              itemId: notification.payload.itemId,
-            },
+          navigate('ExpiringItems', {
+            itemId: notification.payload.itemId,
           });
         } catch (error) {
-          Alert.alert('Navigation Error', 'Could not navigate to expiring items.');
+          Alert.alert(
+            'Navigation Error',
+            'Could not navigate to expiring items.',
+          );
         }
         break;
 
       case 'VIEW_LIST':
         // Navigate to specific shopping list
         try {
-          (navigation as any).navigate('ShoppingListStack', {
-            screen: 'ShoppingListMain',
-            params: {
-              listId: notification.payload.listId,
-            },
-          });
+          // navigateTo.shoppingListMain({
+          //   listId: notification.payload.listId,
+          // });
         } catch (error) {
-          Alert.alert('Navigation Error', 'Could not navigate to shopping list.');
+          Alert.alert(
+            'Navigation Error',
+            'Could not navigate to shopping list.',
+          );
         }
         break;
 
       case 'REVIEW_SECURITY':
         // Navigate to security settings
         try {
-          (navigation as any).navigate('SettingsStack', {
-            screen: 'ProfileSettings',
-          });
+          navigateTo.profile();
         } catch (error) {
           Alert.alert('Navigation Error', 'Could not navigate to settings.');
         }
@@ -125,9 +124,7 @@ export const NotificationActionHandler: React.FC<NotificationActionHandlerProps>
               text: 'Go to Notifications',
               onPress: () => {
                 try {
-                  (navigation as any).navigate('NotificationStack', {
-                    screen: 'NotificationList',
-                  });
+                  navigateTo.notifications();
                 } catch (error) {
                   console.log('Could not navigate to notifications');
                 }
@@ -145,25 +142,23 @@ export const NotificationActionHandler: React.FC<NotificationActionHandlerProps>
       Alert.alert('Success', `Welcome to ${invitation.entityName}!`, [
         {
           text: 'Explore Home',
-          onPress: () =>
-            navigation.navigate('HomeStack', {
-              screen: 'Main',
-            }),
+          onPress: () => navigateTo.pantryMain(),
         },
         {text: 'OK'},
       ]);
     } else {
       // Shopping list invitation accepted
-      Alert.alert('Success', `You can now collaborate on ${invitation.entityName}`, [
-        {
-          text: 'View List',
-          onPress: () =>
-            navigation.navigate('ShoppingListStack', {
-              screen: 'ShoppingListMain',
-            }),
-        },
-        {text: 'OK'},
-      ]);
+      Alert.alert(
+        'Success',
+        `You can now collaborate on ${invitation.entityName}`,
+        [
+          {
+            text: 'View List',
+            onPress: () => navigateTo.shoppingListMain,
+          },
+          {text: 'OK'},
+        ],
+      );
     }
   };
 

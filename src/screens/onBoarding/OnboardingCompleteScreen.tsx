@@ -5,12 +5,10 @@ import {OnBoardingWrapper} from '#components/templates';
 import {Button} from '#components';
 import {useStore} from '#store';
 import {useUpdateUserMutation} from '#generated';
-import {useNavigationFlow, useOnboardingFlow} from '#hooks';
+import {useOnboardingNavigation} from '#hooks';
 
 export const OnboardingCompleteScreen = () => {
-  const {completeOnboarding} = useOnboardingFlow();
-  const {navigateToHome} = useNavigationFlow();
-
+  const {completeOnboarding} = useOnboardingNavigation();
   const {user, updateUser, setUserNavigationState} = useStore();
   const [isCompleting, setIsCompleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,7 +20,7 @@ export const OnboardingCompleteScreen = () => {
         updateUser(data.updateUser);
       }
       // Reset onboarding step in store
-      navigateToHome();
+      completeOnboarding();
 
       setIsCompleting(false);
     },
@@ -59,8 +57,7 @@ export const OnboardingCompleteScreen = () => {
           onboardingCompletedAt: Date.now(),
         });
 
-        // Navigate to home
-        navigateToHome();
+        completeOnboarding();
       }
     } catch (err) {
       console.error('Error in handleComplete:', err);

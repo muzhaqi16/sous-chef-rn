@@ -25,22 +25,18 @@ import {
 
 // Store & Navigation
 import {useStore} from '#store';
-import {useOnboardingFlow, useNavigationFlow} from '#hooks';
+import {useOnboardingNavigation} from '#hooks';
 
 // Validation & Helpers
 import {getCreateHomeSchema} from '#/utils';
 import {createPantryForHome, showPantryCreationError} from './helpers';
 
 export const CreateHomeScreen = () => {
-  const {progressToNextStep} = useOnboardingFlow();
-  const {navigateWithinStack} = useNavigationFlow();
-  const {
-    user,
-    selectedHomeId,
-    setSelectedHomeId,
-    setSelectedPantryId,
-    setUserNavigationState,
-  } = useStore();
+  const {navigateToNextStep, setUserNavigationState, skipToStep} =
+    useOnboardingNavigation();
+
+  const {user, selectedHomeId, setSelectedHomeId, setSelectedPantryId} =
+    useStore();
 
   // State
   const [graphqlError, setGraphqlError] = useState<string | null>(null);
@@ -127,13 +123,6 @@ export const CreateHomeScreen = () => {
     },
   });
 
-  const goToNextStep = useCallback(() => {
-    const nextScreen = progressToNextStep();
-    if (nextScreen) {
-      navigateWithinStack(nextScreen);
-    }
-  }, [progressToNextStep, navigateWithinStack]);
-
   // Check existing resources without auto-navigating
   useEffect(() => {
     let isMounted = true;
@@ -218,12 +207,12 @@ export const CreateHomeScreen = () => {
           );
 
           if (!success) {
-            showPantryCreationError(goToNextStep);
+            showPantryCreationError(() => skipToStep('CreateShoppingList'));
             return;
           }
         }
 
-        goToNextStep();
+        navigateToNextStep('CreateHome');
       } catch (error: any) {
         setGraphqlError(error.message || 'An error occurred during setup');
       } finally {
@@ -238,29 +227,12 @@ export const CreateHomeScreen = () => {
       createPantry,
       setSelectedHomeId,
       setSelectedPantryId,
-      goToNextStep,
     ],
   );
 
-  // Skip handler - uses existing resources
-  const handleSkip = useCallback(() => {
-    if (existingHome && existingPantry) {
-      // Both exist, just continue
-      setSelectedHomeId(existingHome.id);
-      setSelectedPantryId(existingPantry.id);
-    }
-    goToNextStep();
-  }, [
-    existingHome,
-    existingPantry,
-    setSelectedHomeId,
-    setSelectedPantryId,
-    goToNextStep,
-  ]);
-
   // Loading state
   if (checkingExisting || homesLoading || (selectedHomeId && pantriesLoading)) {
-    return <LoadingView onSkip={handleSkip} />;
+    return <LoadingView onSkip={() => skipToStep('CreateShoppingList')} />;
   }
 
   // Determine what needs to be created
@@ -284,7 +256,7 @@ export const CreateHomeScreen = () => {
         subtitle={getSubtitle()}
         step={1}
         totalSteps={6}
-        onSkip={handleSkip}>
+        onSkip={() => skipToStep('CreateShoppingList')}>
         <View style={styles.existingResourcesContainer}>
           <View style={styles.resourceCard}>
             <Text style={styles.resourceLabel}>Home</Text>
@@ -309,7 +281,7 @@ export const CreateHomeScreen = () => {
 
         <Button
           title="Continue"
-          onPress={handleSkip}
+          onPress={() => navigateToNextStep('CreateHome')}
           btnStyle={styles.continueButton}
           txtStyle={styles.continueText}
         />
@@ -324,7 +296,7 @@ export const CreateHomeScreen = () => {
       subtitle={getSubtitle()}
       step={1}
       totalSteps={6}
-      onSkip={handleSkip}>
+      onSkip={() => skipToStep('CreateShoppingList')}>
       {existingHome && (
         <View style={styles.existingResourcesContainer}>
           <View style={styles.resourceCard}>

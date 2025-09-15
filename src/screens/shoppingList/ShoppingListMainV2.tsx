@@ -1,4 +1,3 @@
-// src/screens/shoppingList/ShoppingListMainV2.tsx
 import React, {useState, useMemo} from 'react';
 import {
   View,
@@ -7,6 +6,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  TouchableOpacity,
 } from 'react-native';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {

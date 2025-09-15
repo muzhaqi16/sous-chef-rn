@@ -1,6 +1,6 @@
 import React from 'react';
 import {View, Text, TouchableOpacity} from 'react-native';
-import Icon from '@react-native-vector-icons/material-icons';
+import {Icon} from '#utils';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {formatDistanceToNow} from 'date-fns';
 import {NotificationItem as NotificationType} from '#store/slices/notificationSlice';
@@ -51,8 +51,8 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
         <Text style={styles.timestamp}>
           {(() => {
             const date = safeParseDate(notification.sentAt);
-            return date 
-              ? formatDistanceToNow(date, { addSuffix: true })
+            return date
+              ? formatDistanceToNow(date, {addSuffix: true})
               : 'Recently';
           })()}
         </Text>

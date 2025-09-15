@@ -1,26 +1,21 @@
 import React, {useEffect} from 'react';
 import {useForm} from 'react-hook-form';
-import {StyleSheet, Text, View} from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import {Text} from 'react-native';
 import {AuthWrapper, AuthFormTemplate, CodeInputAdapter} from '#components';
 import {useStore} from '#store';
 import {
   useVerifyEmailMutation,
   useResendVerificationEmailMutation,
 } from '#generated';
-import {useAuth, useNavigationFlow} from '#/hooks';
 
 type CodeVerificationValues = {
   code: string;
 };
 
 export function CodeVerificationScreen() {
-  const {setEmailVerified, setUserNavigationState} = useStore();
-  const {user} = useAuth();
-  const {navigateToHome, navigateToVerification} = useNavigationFlow();
+  const {user, updateUser} = useStore();
   const [verifyEmail] = useVerifyEmailMutation();
   const [resendVerificationEmail] = useResendVerificationEmailMutation();
-  const navigation = useNavigation();
 
   const {
     control,
@@ -30,41 +25,25 @@ export function CodeVerificationScreen() {
     defaultValues: {code: ''},
   });
 
-  // Handle navigation when email verification status changes
+  // No navigation effects needed - conditional groups handle it
   useEffect(() => {
+    // If user is already verified, the conditional navigation
+    // will automatically move them to the next appropriate screen
     if (user?.emailVerified) {
-      // Save verification completion for this user
-      if (user.id) {
-        setUserNavigationState(user.id, {
-          lastLoginTimestamp: Date.now(),
-        });
-      }
-
-      // Use the proper navigation flow system
-      navigateToHome();
+      console.log('User email verified, navigation will update automatically');
     }
-  }, [user?.emailVerified, user?.id, setUserNavigationState, navigateToHome]);
+  }, [user?.emailVerified]);
 
   const onVerifyCode = async (data: CodeVerificationValues) => {
-    const {code} = data;
     try {
       const response = await verifyEmail({
-        variables: {code},
+        variables: {code: data.code},
       });
 
       if (response.data?.verifyEmail) {
-        setEmailVerified(true);
-
-        // Save verification state for user
-        if (user?.id) {
-          setUserNavigationState(user.id, {
-            lastLoginTimestamp: Date.now(),
-          });
-        }
-
-        // Navigation will be handled by the useEffect above
-      } else {
-        console.error('Email verification failed');
+        // Just update the user state
+        // Navigation happens automatically
+        updateUser({emailVerified: true});
       }
     } catch (error) {
       console.error('Error verifying email:', error);
@@ -73,33 +52,21 @@ export function CodeVerificationScreen() {
 
   const onResend = async () => {
     try {
-      if (!user?.email) {
-        console.error('No email available to resend verification');
-        return;
-      }
+      if (!user?.email) return;
 
-      const response = await resendVerificationEmail({
+      await resendVerificationEmail({
         variables: {email: user.email},
       });
 
-      if (response.data?.resendVerificationEmail) {
-        console.log('Verification email resent successfully');
-        // You might want to show a success message to the user here
-      } else {
-        console.error('Failed to resend verification email');
-      }
+      // Show success message
+      console.log('Verification email resent');
     } catch (error) {
       console.error('Error resending verification email:', error);
     }
   };
 
-  // Don't render the screen if already verified
-  if (user?.emailVerified) {
-    return null;
-  }
-
-  // Don't render if no user - should be redirected
-  if (!user) {
+  // Don't render if no user or already verified
+  if (!user || user.emailVerified) {
     return null;
   }
 
@@ -111,7 +78,7 @@ export function CodeVerificationScreen() {
           <>
             We emailed a code to{' '}
             <Text style={{fontWeight: 'bold'}}>
-              {user?.email || 'your email'}
+              {user.email || 'your email'}
             </Text>
             . Please enter the code to continue.
           </>
@@ -128,15 +95,3 @@ export function CodeVerificationScreen() {
     </AuthWrapper>
   );
 }
-
-const styles = StyleSheet.create({
-  headerAction: {
-    width: 40,
-    height: 40,
-    borderRadius: 9999,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#ffdada',
-    marginBottom: 16,
-  },
-});

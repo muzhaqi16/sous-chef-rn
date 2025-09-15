@@ -3,7 +3,7 @@ import {
   CommonActions,
   StackActions,
 } from '@react-navigation/native';
-import type {RootStackParamList} from '#navigation/RootNavigator';
+import type {RootStackParamList} from '#/navigation/RootNavigator';
 
 export const navigationRef = createNavigationContainerRef<RootStackParamList>();
 

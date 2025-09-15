@@ -2,10 +2,8 @@ import React, {useState} from 'react';
 import {TouchableOpacity, Text, View, ActivityIndicator} from 'react-native';
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import {OnBoardingWrapper} from '#components/templates';
-import {useNavigation} from '@react-navigation/native';
-import {SelectPantryItemsNavProp} from '#navigation/types';
 import {StyleSheet} from 'react-native-unistyles';
-import {useOnboardingFlow, useNavigationFlow} from '#hooks';
+import {useOnboardingNavigation, useAuth} from '#hooks';
 import {
   useGetOnboardingItemsQuery,
   useAddItemToPantryMutation,
@@ -15,7 +13,6 @@ import {
   GetOnboardingItemsQuery,
 } from '#generated';
 import {useStore} from '#store';
-import {OnBoardingSteps} from '#store/slices/preferencesSlice';
 import {Button} from '#components';
 
 type OnboardingItemType = NonNullable<
@@ -23,16 +20,15 @@ type OnboardingItemType = NonNullable<
 >[number];
 
 export const SelectPantryItems = () => {
-  const navigation = useNavigation<SelectPantryItemsNavProp>();
-  const {progressToNextStep, skipToStep} = useOnboardingFlow();
-  const {navigateWithinStack} = useNavigationFlow();
-
   const {
-    user,
-    selectedPantryId,
-    getUserNavigationState,
+    navigateToNextStep,
+    navigateToPreviousStep,
     setUserNavigationState,
-  } = useStore();
+    skipToStep,
+  } = useOnboardingNavigation();
+  const {user} = useAuth();
+
+  const {selectedPantryId} = useStore();
 
   const {
     data,
@@ -56,8 +52,8 @@ export const SelectPantryItems = () => {
         subtitle="Select items you already have at home"
         step={3}
         totalSteps={6}
-        onBack={() => navigation.goBack()}
-        onSkip={() => handleSkip()}>
+        onBack={() => navigateToPreviousStep('CreateShoppingList')}
+        onSkip={() => navigateToNextStep('SelectPantryItems')}>
         <ActivityIndicator style={styles.loader} />
       </OnBoardingWrapper>
     );
@@ -70,8 +66,8 @@ export const SelectPantryItems = () => {
         subtitle="Select items you already have at home"
         step={3}
         totalSteps={6}
-        onBack={() => navigation.goBack()}
-        onSkip={() => handleSkip()}>
+        onBack={() => navigateToPreviousStep('CreateShoppingList')}
+        onSkip={() => navigateToNextStep('SelectPantryItems')}>
         <Text style={styles.errorText}>
           Unable to load items. Please try again.
         </Text>
@@ -93,75 +89,40 @@ export const SelectPantryItems = () => {
     });
   };
 
-  const handleSkip = () => {
-    // Track that this step was skipped
-    if (user?.id) {
-      const userState = getUserNavigationState(user.id);
-      const skippedSteps = userState?.skippedOnboardingSteps || [];
-      setUserNavigationState(user.id, {
-        skippedOnboardingSteps: [...skippedSteps, 'selectPantryItems'],
-      });
-    }
-
-    // Use skipToStep instead of manual navigation
-    const nextScreen = skipToStep(OnBoardingSteps.profilePictureUpload);
-    navigateWithinStack(nextScreen);
-  };
-
   const onNext = async () => {
-    if (selected.length === 0) {
-      // If no items selected, just move to next step
-      moveToNextStep();
-      return;
-    }
+    if (selected.length > 0 && selectedPantryId) {
+      setIsAddingItems(true);
 
-    if (!selectedPantryId) {
-      console.warn('No pantry selected, skipping to next step');
-      moveToNextStep();
-      return;
-    }
+      try {
+        // Add all selected items to pantry
+        await Promise.all(
+          selected.map(item => {
+            // Find the default unit or use the first available unit
+            const defaultUnit = item.units?.find(u => u?.unit?.isCommon);
+            const unitToUse = defaultUnit || item.units?.[0];
 
-    setIsAddingItems(true);
-
-    try {
-      // Add all selected items to pantry
-      await Promise.all(
-        selected.map(item => {
-          // Find the default unit or use the first available unit
-          const defaultUnit = item.units?.find(u => u?.unit?.isCommon);
-          const unitToUse = defaultUnit || item.units?.[0];
-
-          return addItemToPantry({
-            variables: {
-              input: {
-                pantryId: selectedPantryId,
-                itemId: item.id,
-                unitId: unitToUse?.unit?.id || '',
-                initialQuantity: 1,
-                storageState: StorageState.Ambient,
-                condition: ItemCondition.Good,
-                acquisitionMethod: AcquisitionMethod.Purchased,
+            return addItemToPantry({
+              variables: {
+                input: {
+                  pantryId: selectedPantryId,
+                  itemId: item.id,
+                  unitId: unitToUse?.unit?.id || '',
+                  initialQuantity: 1,
+                  storageState: StorageState.Ambient,
+                  condition: ItemCondition.Good,
+                  acquisitionMethod: AcquisitionMethod.Purchased,
+                },
               },
-            },
-          });
-        }),
-      );
-
-      moveToNextStep();
-    } catch (error) {
-      console.error('Error adding items to pantry:', error);
-      // Continue anyway - items can be added later
-      moveToNextStep();
-    } finally {
-      setIsAddingItems(false);
+            });
+          }),
+        );
+      } catch (error) {
+        console.error('Error adding items to pantry:', error);
+      } finally {
+        setIsAddingItems(false);
+      }
     }
-  };
-
-  const moveToNextStep = () => {
-    const nextScreen = progressToNextStep();
-    if (nextScreen) {
-      navigateWithinStack(nextScreen);
-    }
+    navigateToNextStep('SelectPantryItems');
   };
 
   return (
@@ -170,8 +131,8 @@ export const SelectPantryItems = () => {
       subtitle="Select items you already have at home (optional)"
       step={3}
       totalSteps={6}
-      onBack={() => navigation.goBack()}
-      onSkip={handleSkip}>
+      onBack={() => navigateToPreviousStep('CreateShoppingList')}
+      onSkip={() => navigateToNextStep('SelectPantryItems')}>
       <KeyboardAwareScrollView style={styles.form}>
         <Text style={styles.helperText}>
           Select up to 5 items (you have {selected.length} selected)

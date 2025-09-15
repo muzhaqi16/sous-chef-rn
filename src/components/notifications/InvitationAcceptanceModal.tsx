@@ -8,7 +8,7 @@ import {
   Alert,
 } from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
-import Icon from '@react-native-vector-icons/material-icons';
+import {Icon} from '#utils';
 import {
   useAcceptHomeInviteMutation,
   useAcceptShoppingListInviteMutation,
@@ -34,13 +34,9 @@ interface InvitationAcceptanceModalProps {
   onReject?: (invitation: InvitationData) => void;
 }
 
-export const InvitationAcceptanceModal: React.FC<InvitationAcceptanceModalProps> = ({
-  visible,
-  invitation,
-  onClose,
-  onAccept,
-  onReject,
-}) => {
+export const InvitationAcceptanceModal: React.FC<
+  InvitationAcceptanceModalProps
+> = ({visible, invitation, onClose, onAccept, onReject}) => {
   const [accepting, setAccepting] = useState(false);
   const [rejecting, setRejecting] = useState(false);
   const user = useStore(state => state.user);

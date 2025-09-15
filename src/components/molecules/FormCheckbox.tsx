@@ -1,12 +1,7 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-} from 'react-native';
+import {View, Text, TouchableOpacity, StyleSheet} from 'react-native';
 import {useUnistyles} from 'react-native-unistyles';
-import Icon from '@react-native-vector-icons/material-icons';
+import {Icon} from '#utils';
 
 interface FormCheckboxProps {
   label: string;
@@ -26,7 +21,7 @@ export const FormCheckbox: React.FC<FormCheckboxProps> = ({
   containerStyle,
 }) => {
   const {theme} = useUnistyles();
-  
+
   const styles = StyleSheet.create({
     container: {
       marginBottom: 16,
@@ -73,13 +68,7 @@ export const FormCheckbox: React.FC<FormCheckboxProps> = ({
         disabled={disabled}
         activeOpacity={0.7}>
         <View style={[styles.checkbox, disabled && styles.disabledCheckbox]}>
-          {checked && (
-            <Icon 
-              name="check" 
-              size={18} 
-              color="white" 
-            />
-          )}
+          {checked && <Icon name="check" size={18} color="white" />}
         </View>
         <Text style={[styles.label, disabled && styles.disabledLabel]}>
           {label}

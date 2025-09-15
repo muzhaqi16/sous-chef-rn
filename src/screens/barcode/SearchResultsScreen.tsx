@@ -1,6 +1,6 @@
 import React, {useRef, useEffect} from 'react';
 import {SafeAreaView, StatusBar} from 'react-native';
-import {useNavigationFlow} from '#hooks';
+import {useAppNavigation} from '#hooks';
 import BottomSheet, {
   BottomSheetBackdrop,
   BottomSheetScrollView,
@@ -15,20 +15,16 @@ import {
   SearchResults,
 } from '#components/barcode';
 import AddItemForm from '#components/pages/AddItemForm';
-import {SearchResultsScreenProps, SearchResultsNavProp} from '#navigation';
+import {type BarcodeStackParamList} from '#navigation/stacks/BarcodeStack';
 import {useStore} from '#store';
 import {useSearchResults} from '#hooks';
 
-export const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({
-  route,
-}) => {
+export const SearchResultsScreen: React.FC<{
+  route: {params: BarcodeStackParamList['SearchResults']};
+}> = ({route}) => {
   const {barcode, format, source, pantryId, shoppingListId} = route.params;
 
-  const {
-    navigateWithinStack,
-    navigateToPantry,
-    navigateToShoppingList,
-  } = useNavigationFlow();
+  const {navigate, navigateTo} = useAppNavigation();
 
   const bottomSheetRef = useRef<BottomSheet>(null);
 
@@ -69,7 +65,7 @@ export const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({
 
   const handleScanAnother = () => {
     clearSearch();
-    navigateWithinStack('BarcodeScanner', {
+    navigate('BarcodeScanner', {
       source,
       pantryId,
       shoppingListId,
@@ -79,12 +75,12 @@ export const SearchResultsScreen: React.FC<SearchResultsScreenProps> = ({
   const handleBackPress = () => {
     // Navigate back to the appropriate screen based on source
     if (source === 'pantry') {
-      navigateToPantry();
+      navigateTo.pantryMain();
     } else if (source === 'shoppingList') {
-      navigateToShoppingList();
+      navigateTo.shoppingListMain();
     } else {
       // Fallback to normal back navigation
-      navigateWithinStack('BarcodeScanner');
+      navigate('BarcodeScanner');
     }
   };
 

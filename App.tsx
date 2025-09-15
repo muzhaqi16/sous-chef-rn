@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useEffect} from 'react';
 import {StatusBar} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
 import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
@@ -8,7 +8,8 @@ import {ApolloProvider} from '@apollo/client';
 import {enableScreens} from 'react-native-screens';
 import {useStore} from '#store';
 import {client} from './src/apollo/client';
-import {Navigation} from './src/navigation/RootNavigator';
+import {Navigation} from '#/navigation';
+import {hasCredentials} from '#storage/keychain';
 import {SplashScreen} from '#screens';
 import {ToastProvider} from '#/components/atoms';
 import {useTheme} from '#/hooks/useTheme';
@@ -17,9 +18,15 @@ import {useTheme} from '#/hooks/useTheme';
 enableScreens();
 
 const App = () => {
-  const isHydrated = useStore(store => store.isHydrated);
+  const {isHydrated, setHasStoredCredentials} = useStore();
   const {theme} = useTheme();
   const isDark = theme === 'dark';
+
+  useEffect(() => {
+    if (isHydrated) {
+      hasCredentials().then(setHasStoredCredentials);
+    }
+  }, [isHydrated, setHasStoredCredentials]);
 
   // Early return for loading state
   if (!isHydrated || !client) {
@@ -38,12 +45,7 @@ const App = () => {
           <SafeAreaView style={styles.container}>
             <ToastProvider>
               <BottomSheetModalProvider>
-                <Navigation
-                  linking={{
-                    enabled: 'auto',
-                    prefixes: ['souchef://', 'https://app.souschef.dev'],
-                  }}
-                />
+                <Navigation />
               </BottomSheetModalProvider>
             </ToastProvider>
           </SafeAreaView>

@@ -1,6 +1,6 @@
 import React, {useMemo} from 'react';
 import {View, Text, ScrollView, TouchableOpacity} from 'react-native';
-import Icon from '@react-native-vector-icons/material-icons';
+import {Icon} from '#utils';
 import {useNavigation} from '@react-navigation/native';
 import {usePantryItems, useDefaultHome} from '#hooks';
 import {useGetHomeQuery} from '#generated';

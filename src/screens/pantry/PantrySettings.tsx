@@ -8,8 +8,7 @@ import {
   Alert,
   TextInput,
 } from 'react-native';
-import Icon from '@react-native-vector-icons/material-icons';
-import {useNavigation, useRoute} from '@react-navigation/native';
+import {Icon} from '#/utils';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {
   useGetPantryQuery,
@@ -22,16 +21,14 @@ import {
   GetHomesQuery,
 } from '#generated';
 import {useStore} from '#store';
-import {useDefaultHome} from '#hooks';
-import {
-  PantrySettingsNavProp,
-  PantrySettingsRouteProp,
-} from '#navigation/types';
+import {useAppNavigation} from '#hooks';
+import {PantryStackParamList} from '#navigation/stacks/PantryStack';
 
-export const PantrySettings: React.FC = () => {
-  const navigation = useNavigation<PantrySettingsNavProp>();
+export const PantrySettings: React.FC<{
+  route: {params?: PantryStackParamList['PantrySettings']};
+}> = ({route}) => {
+  const {navigate, goBack} = useAppNavigation();
   const {theme} = useUnistyles();
-  const route = useRoute<PantrySettingsRouteProp>();
   const pantryId = route.params?.pantryId;
 
   const {selectedHomeId} = useStore();
@@ -168,7 +165,7 @@ export const PantrySettings: React.FC = () => {
           setSelectedPantryId(data.createPantry.id);
         }
       }
-      navigation.goBack();
+      goBack();
     },
     onError: error => {
       Alert.alert('Error', 'Failed to create pantry');
@@ -250,7 +247,7 @@ export const PantrySettings: React.FC = () => {
           onPress: async () => {
             try {
               await deletePantry({variables: {id: pantryId}});
-              navigation.goBack();
+              goBack();
             } catch (error) {
               Alert.alert('Error', 'Failed to delete pantry');
             }
@@ -263,7 +260,7 @@ export const PantrySettings: React.FC = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => goBack()}>
           <Icon name="arrow-back" size={24} color={theme.colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.title}>
