@@ -1,64 +1,61 @@
 import React, {useEffect} from 'react';
-import {StatusBar} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
+import {StatusBar, useColorScheme} from 'react-native';
 import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
-import {GestureHandlerRootView} from 'react-native-gesture-handler';
-import {BottomSheetModalProvider} from '@gorhom/bottom-sheet';
 import {ApolloProvider} from '@apollo/client';
-import {enableScreens} from 'react-native-screens';
-import {useStore} from '#store';
+import {useStore} from './src/store/useStore';
 import {client} from './src/apollo/client';
-import {Navigation} from '#/navigation';
-import {hasCredentials} from '#storage/keychain';
-import {SplashScreen} from '#screens';
-import {ToastProvider} from '#/components/atoms';
-import {useTheme} from '#/hooks/useTheme';
-
-// Enable native screens for better performance
-enableScreens();
+import {
+  useInitialTheme,
+  createStyleSheet,
+  UnistylesRuntime,
+  useStyles,
+} from 'react-native-unistyles';
+import AppNavigator from './src/navigation/AppNavigator';
+import SplashScreen from './src/screens/SplashScreen';
+import {ToastProvider} from './src/components/atoms';
 
 const App = () => {
-  const {isHydrated, setHasStoredCredentials} = useStore();
-  const {theme} = useTheme();
-  const isDark = theme === 'dark';
+  const systemIsDark = useColorScheme() === 'dark';
+  const {darkMode} = useStore(store => store.preferences);
+  const effectiveDark = darkMode !== undefined ? darkMode : systemIsDark;
+
+  useInitialTheme(effectiveDark ? 'dark' : 'light');
+  const {styles, theme} = useStyles(stylesheet);
+  const {colors} = theme;
 
   useEffect(() => {
-    if (isHydrated) {
-      hasCredentials().then(setHasStoredCredentials);
-    }
-  }, [isHydrated, setHasStoredCredentials]);
+    UnistylesRuntime.setTheme(effectiveDark ? 'dark' : 'light');
+  }, [effectiveDark]);
 
-  // Early return for loading state
-  if (!isHydrated || !client) {
-    console.error('App is not hydrated or Apollo client is not initialized');
+  const isHydrated = useStore(store => store.isHydrated);
+
+  if (!isHydrated) {
     return <SplashScreen />;
   }
 
   return (
-    <GestureHandlerRootView style={styles.container}>
-      <ApolloProvider client={client}>
-        <SafeAreaProvider>
-          <StatusBar
-            barStyle={isDark ? 'light-content' : 'dark-content'}
-            backgroundColor={isDark ? '#212121' : '#FAFAFA'}
-          />
-          <SafeAreaView style={styles.container}>
-            <ToastProvider>
-              <BottomSheetModalProvider>
-                <Navigation />
-              </BottomSheetModalProvider>
-            </ToastProvider>
-          </SafeAreaView>
-        </SafeAreaProvider>
-      </ApolloProvider>
-    </GestureHandlerRootView>
+    <ApolloProvider client={client}>
+      <SafeAreaProvider>
+        <StatusBar
+          barStyle={effectiveDark ? 'light-content' : 'dark-content'}
+          backgroundColor={colors.background}
+        />
+        <SafeAreaView style={styles.container}>
+          <ToastProvider>
+            <AppNavigator />
+          </ToastProvider>
+        </SafeAreaView>
+      </SafeAreaProvider>
+    </ApolloProvider>
   );
 };
 
-const styles = StyleSheet.create(theme => ({
+const stylesheet = createStyleSheet(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+    // SafeAreaView padding for Android to avoid the status bar or notch overlapping the content.
+    // paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   text: {
     color: theme.colors.textPrimary,

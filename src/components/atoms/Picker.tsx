@@ -1,13 +1,11 @@
 import {useState} from 'react';
-import {ViewStyle} from 'react-native';
 import {Picker} from '@react-native-picker/picker';
-import {StyleSheet} from 'react-native-unistyles';
+import {createStyleSheet, useStyles} from 'react-native-unistyles';
 
 type PickerSelectProps = {
-  items: {label: string; value: string; id: string}[];
+  items: {id: string; name: string}[] | undefined;
   initialValue: string;
   onValueChange: (itemValue: string) => void;
-  style: ViewStyle;
 };
 
 const Item: any = Picker.Item;
@@ -16,34 +14,27 @@ export const PickerSelect = ({
   items,
   initialValue,
   onValueChange,
-  style,
 }: PickerSelectProps) => {
   const [selectedValue] = useState(initialValue);
+  const {styles} = useStyles(stylesheet);
 
   return (
-    <Picker
-      selectedValue={selectedValue}
-      onValueChange={onValueChange}
-      style={[styles.picker, style]}>
+    <Picker selectedValue={selectedValue} onValueChange={onValueChange}>
       {items?.map(item => (
         <Item
           key={item.id}
-          label={item.label}
+          label={item.name}
           value={item.id}
-          color={styles.item}
+          color={styles.item.color}
         />
       ))}
     </Picker>
   );
 };
 
-const styles = StyleSheet.create(theme => ({
-  picker: {
-    backgroundColor: theme.colors.white,
-    borderRadius: 8,
-  },
+const stylesheet = createStyleSheet(theme => ({
   item: {
-    color: theme.colors.textPrimary,
+    color: theme.colors.white,
   },
 }));
 

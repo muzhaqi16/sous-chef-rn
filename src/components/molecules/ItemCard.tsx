@@ -1,11 +1,10 @@
 import React from 'react';
 import {View, Text, Image, TouchableOpacity} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
+import {createStyleSheet, useStyles} from 'react-native-unistyles';
 import {Counter} from './Counter';
 
 type ItemCardProps = {
   item: any;
-  onPress: () => void; // For item press action
   onIncrement: () => void;
   onDecrement: () => void;
   onMoreOptions?: () => void; // For ellipsis menu
@@ -14,17 +13,23 @@ type ItemCardProps = {
 
 const ItemCard: React.FC<ItemCardProps> = ({
   item,
-  onPress,
   onIncrement,
   onDecrement,
   onMoreOptions,
 }) => {
+  // console.log('ItemCard shoppingListItem:', shoppingListItem);
+  const {styles} = useStyles(stylesheet);
   return (
-    <TouchableOpacity key={item?.id} onPress={onPress} style={styles.card}>
+    <TouchableOpacity
+      key={item?.id}
+      onPress={() => {
+        // handle onPress
+      }}
+      style={styles.card}>
       <Image
         alt={item?.name}
         resizeMode="contain"
-        source={{uri: item?.item?.imageUrl || undefined}}
+        source={{uri: item?.item?.imageUrl}}
         style={styles.cardImg}
       />
       <View style={styles.cardBody}>
@@ -38,18 +43,18 @@ const ItemCard: React.FC<ItemCardProps> = ({
           onIncrement={onIncrement}
           onDecrement={onDecrement}
         />
-        {item?.unitName &&
+        {item?.unitSymbol &&
           // if quantity is higher than 1, show plural unit symbol
           (item?.quantity > 1 ? (
-            <Text style={styles.cardDescription}>{item?.unitName}s</Text>
+            <Text style={styles.cardDescription}>{item?.unitSymbol}s</Text>
           ) : (
-            <Text style={styles.cardDescription}>{item?.unitName}</Text>
+            <Text style={styles.cardDescription}>{item?.unitSymbol}</Text>
           ))}
       </View>
     </TouchableOpacity>
   );
 };
-const styles = StyleSheet.create(theme => ({
+const stylesheet = createStyleSheet(theme => ({
   card: {
     position: 'relative',
     flexDirection: 'row',
@@ -71,7 +76,7 @@ const styles = StyleSheet.create(theme => ({
   },
   cardTitle: {
     fontWeight: '600',
-    fontSize: theme.fonts.size.md,
+    fontSize: theme.font.size.md,
     lineHeight: 24,
     color: '#1d1d1d',
     marginBottom: 4,

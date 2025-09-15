@@ -1,7 +1,6 @@
 import * as Keychain from 'react-native-keychain';
 
 const DEFAULT_SERVICE = 'com.souschefrn.credentials';
-const CREDENTIALS_INDICATOR_SERVICE = 'com.souschefrn.credentials.indicator';
 
 export interface SaveOptions {
   /** namespace of this item */
@@ -21,46 +20,22 @@ export async function saveCredentials(
   password: string,
   service: string = DEFAULT_SERVICE,
 ): Promise<void> {
-  return queueOperation(async () => {
-    // First, clear any old, unprotected creds:
-    await Keychain.resetGenericPassword({service});
-    await Keychain.resetGenericPassword({
-      service: CREDENTIALS_INDICATOR_SERVICE,
-    });
+  // First, clear any old, unprotected creds:
+  await Keychain.resetGenericPassword({service});
 
-    // Now save with a policy that forces a prompt on load
-    const success = await Keychain.setGenericPassword(username, password, {
-      service,
-      // Allow either FaceID/TouchID (iOS) or any enrolled biometric (Android)
-      accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_ANY,
-      // On Android, insist on a hardware-backed keystore
-      securityLevel: Keychain.SECURITY_LEVEL.SECURE_HARDWARE,
-      // Only accessible when device is unlocked
-      accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
-    });
-
-    if (!success) {
-      throw new Error("Keychain couldn't save credentials");
-    }
-
-    // Save an unprotected indicator that credentials exist
-    // This allows us to check if credentials exist without triggering biometric authentication
-    const indicatorSuccess = await Keychain.setGenericPassword(
-      'credentials_exist',
-      Date.now().toString(),
-      {
-        service: CREDENTIALS_INDICATOR_SERVICE,
-        accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
-        // No access control - this can be read without biometric authentication
-      },
-    );
-
-    if (!indicatorSuccess) {
-      // If we can't save the indicator, clean up the credentials we just saved
-      await Keychain.resetGenericPassword({service});
-      throw new Error("Keychain couldn't save credentials indicator");
-    }
+  // Now save with a policy that forces a prompt on load
+  const success = await Keychain.setGenericPassword(username, password, {
+    service,
+    // Allow either FaceID/TouchID (iOS) or any enrolled biometric (Android)
+    accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_ANY,
+    // On Android, insist on a hardware-backed keystore
+    securityLevel: Keychain.SECURITY_LEVEL.SECURE_HARDWARE,
+    // Only accessible when device is unlocked
+    accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
   });
+  if (!success) {
+    throw new Error('Keychain couldn’t save credentials');
+  }
 }
 
 export interface LoadOptions {
@@ -86,127 +61,25 @@ export async function loadCredentials(
       },
     });
     if (!creds) {
-      // user hit "cancel" or failed the check
+      // user hit “cancel” or failed the check
       return null;
     }
     return {username: creds.username, password: creds.password};
   } catch (err) {
     // could also inspect err.code here if you want, but treating
-    // any error as "no creds" is simplest:
+    // any error as “no creds” is simplest:
     return null;
   }
 }
-
-/**
- * Check if credentials exist without triggering biometric authentication.
- * This checks the unprotected indicator, not the actual credentials.
- */
-// Simple queue to prevent concurrent keychain access on Android
-let isOperationInProgress = false;
-const operationQueue: Array<() => Promise<any>> = [];
-
-const queueOperation = async <T>(operation: () => Promise<T>): Promise<T> => {
-  return new Promise<T>((resolve, reject) => {
-    const wrappedOperation = async () => {
-      try {
-        const result = await operation();
-        resolve(result);
-      } catch (error) {
-        reject(error);
-      }
-    };
-
-    operationQueue.push(wrappedOperation);
-    processQueue();
-  });
-};
-
-const processQueue = async () => {
-  if (isOperationInProgress || operationQueue.length === 0) {
-    return;
-  }
-
-  isOperationInProgress = true;
-  const operation = operationQueue.shift();
-
-  if (operation) {
-    try {
-      await operation();
-    } catch (error) {
-      // Operation will handle its own error via reject
-    }
-  }
-
-  isOperationInProgress = false;
-
-  // Process next operation if any
-  if (operationQueue.length > 0) {
-    setImmediate(processQueue);
-  }
-};
 
 export async function hasCredentials(
   service: string = DEFAULT_SERVICE,
 ): Promise<boolean> {
-  return queueOperation(async () => {
-    try {
-      // Check the unprotected indicator instead of the protected credentials
-      const indicator = await Keychain.getGenericPassword({
-        service: CREDENTIALS_INDICATOR_SERVICE,
-      });
-      return !!indicator;
-    } catch (err: any) {
-      // Handle Android DataStore concurrency issue
-      if (err?.message?.includes('multiple DataStores active')) {
-        // Wait a bit and retry once
-        await new Promise(resolve => setTimeout(resolve, 100));
-        try {
-          const indicator = await Keychain.getGenericPassword({
-            service: CREDENTIALS_INDICATOR_SERVICE,
-          });
-          return !!indicator;
-        } catch (retryErr) {
-          return false;
-        }
-      }
-      return false;
-    }
-  });
-}
-
-/**
- * Clear both the protected credentials and the unprotected indicator.
- */
-export async function clearCredentials(
-  service: string = DEFAULT_SERVICE,
-): Promise<void> {
   try {
-    await Keychain.resetGenericPassword({service});
-    await Keychain.resetGenericPassword({
-      service: CREDENTIALS_INDICATOR_SERVICE,
-    });
+    const creds = await Keychain.getGenericPassword({service});
+    return !!creds;
   } catch (err) {
-    console.error('clearCredentials error:', err);
+    console.error('hasCredentials error:', err);
     throw err;
-  }
-}
-
-export async function saveEmailOnly(email: string): Promise<void> {
-  try {
-    await Keychain.setInternetCredentials('souschefrn-email', email, email, {
-      accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
-    });
-  } catch (error) {
-    console.error('Failed to save email:', error);
-  }
-}
-
-export async function getEmailOnly(): Promise<string | null> {
-  try {
-    const result = await Keychain.getInternetCredentials('souschefrn-email');
-    return result ? result.username : null;
-  } catch (error) {
-    console.error('Failed to get email:', error);
-    return null;
   }
 }

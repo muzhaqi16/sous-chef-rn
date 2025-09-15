@@ -1,6 +1,6 @@
 import React from 'react';
 import {TouchableOpacity, Text, StyleProp, ViewStyle} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
+import {createStyleSheet, useStyles} from 'react-native-unistyles';
 
 type ChipProps = {
   label: string;
@@ -10,6 +10,7 @@ type ChipProps = {
 };
 
 const Chip: React.FC<ChipProps> = ({label, selected, onPress, style}) => {
+  const {styles} = useStyles(stylesheet);
   return (
     <TouchableOpacity
       style={[
@@ -29,7 +30,7 @@ const Chip: React.FC<ChipProps> = ({label, selected, onPress, style}) => {
   );
 };
 
-const styles = StyleSheet.create(theme => ({
+const stylesheet = createStyleSheet(theme => ({
   chip: {
     paddingVertical: 6,
     paddingHorizontal: 12,

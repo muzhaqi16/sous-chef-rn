@@ -1,12 +1,7 @@
 import {MMKV} from 'react-native-mmkv';
 import {StateStorage} from 'zustand/middleware';
 
-export const STORAGE_KEY = 'sous-chef-storage';
-
-export const storage = new MMKV({
-  id: STORAGE_KEY,
-  encryptionKey: 'sous-chef-encryption-key', // In a real app, use a more secure key management strategy
-});
+export const storage = new MMKV();
 
 export const zustandStorage: StateStorage = {
   setItem: (name, value) => {
@@ -20,7 +15,3 @@ export const zustandStorage: StateStorage = {
     return storage.delete(name);
   },
 };
-
-// Export cache utilities for easy access
-export {pantryStorage} from './pantryCache';
-export {shoppingListStorage} from './shoppingListCache';

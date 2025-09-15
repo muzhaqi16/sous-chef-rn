@@ -1,6 +1,6 @@
 import React, {useState, useRef, useEffect} from 'react';
 import {View, Text, Animated, TouchableOpacity} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
+import {createStyleSheet, useStyles} from 'react-native-unistyles';
 
 interface NotificationBannerProps {
   title?: string;
@@ -17,6 +17,7 @@ export const NotificationBanner: React.FC<NotificationBannerProps> = ({
 }) => {
   const [show, setShow] = useState(true);
   const slide = useRef(new Animated.Value(-100)).current;
+  const {styles} = useStyles(stylesheet);
 
   useEffect(() => {
     // slide down
@@ -66,7 +67,7 @@ export const NotificationBanner: React.FC<NotificationBannerProps> = ({
   );
 };
 
-const styles = StyleSheet.create(theme => ({
+const stylesheet = createStyleSheet(theme => ({
   bannerContainer: {
     position: 'absolute',
     top: 0,
