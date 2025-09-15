@@ -8156,7 +8156,7 @@ export type PantryItemsChangedSubscription = {
       __typename?: 'PantryItem';
       id: string;
       itemName: string;
-      unit: {__typename?: 'Unit'; name: string};
+      unit: {__typename?: 'Unit'; id: string; name: string};
     };
   };
 };
@@ -27098,6 +27098,7 @@ export const PantryItemsChangedDocument = {
                         selectionSet: {
                           kind: 'SelectionSet',
                           selections: [
+                            {kind: 'Field', name: {kind: 'Name', value: 'id'}},
                             {
                               kind: 'Field',
                               name: {kind: 'Name', value: 'name'},

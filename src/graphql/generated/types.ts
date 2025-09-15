@@ -11522,7 +11522,7 @@ export type PantryItemsChangedSubscription = {
       __typename?: 'PantryItem';
       id: string;
       itemName: string;
-      unit: {__typename?: 'Unit'; name: string};
+      unit: {__typename?: 'Unit'; id: string; name: string};
     };
   };
 };
