@@ -161,10 +161,13 @@ export const useRealTimeNotifications = (
   // PANTRY SUBSCRIPTIONS
   // ============================================
 
+  // NOTE: Pantry item change notifications are now handled by the dedicated
+  // usePantryManagement hook in the PantryMain screen to avoid duplicate subscriptions.
+  // Only subscribe to pantry notifications when NOT actively viewing a pantry screen.
+  // This can be improved later with context to know which screen is active.
   const {data: pantryItemsChanged} = usePantryItemsChangedSubscription({
     variables: {pantryId: selectedPantryId || ''},
-    skip:
-      !user?.id || !selectedPantryId || !finalConfig.enablePantryNotifications,
+    skip: true, // Temporarily disabled to avoid duplicate subscriptions
     onError: error => {
       handleSubscriptionError('PantryItemsChanged', error);
     },
@@ -322,14 +325,17 @@ export const useRealTimeNotifications = (
 
         switch (change.mutation) {
           case MutationType.Created:
+          case MutationType.ItemAdded:
             title = 'Pantry Item Added';
             message = `${change.item?.itemName} was added to your pantry`;
             break;
           case MutationType.Updated:
+          case MutationType.ItemUpdated:
             title = 'Pantry Item Updated';
             message = `${change.item?.itemName} was updated in your pantry`;
             break;
           case MutationType.Deleted:
+          case MutationType.ItemRemoved:
             title = 'Pantry Item Removed';
             message = `${change.item?.itemName} was removed from your pantry`;
             break;
@@ -481,10 +487,12 @@ export const useRealTimeNotifications = (
 
         switch (change.mutation) {
           case MutationType.Created:
+          case MutationType.ItemAdded:
             title = 'Item Added';
             message = `${change.item?.itemName || change.item?.item?.name} was added to your shopping list`;
             break;
           case MutationType.Updated:
+          case MutationType.ItemUpdated:
             if (change.item?.isPurchased) {
               title = 'Item Purchased';
               message = `${change.item?.itemName || change.item?.item?.name} was marked as purchased`;
@@ -493,7 +501,12 @@ export const useRealTimeNotifications = (
               message = `${change.item?.itemName || change.item?.item?.name} was updated in your shopping list`;
             }
             break;
+          case MutationType.ItemCompleted:
+            title = 'Item Purchased';
+            message = `${change.item?.itemName || change.item?.item?.name} was marked as purchased`;
+            break;
           case MutationType.Deleted:
+          case MutationType.ItemRemoved:
             title = 'Item Removed';
             message = `${change.item?.itemName || change.item?.item?.name} was removed from your shopping list`;
             break;
@@ -554,10 +567,12 @@ export const useRealTimeNotifications = (
 
         switch (change.mutation) {
           case MutationType.Created:
+          case MutationType.CollaboratorAdded:
             title = 'Collaborator Added';
             message = `${change.collaborator?.email} was added to your shopping list`;
             break;
           case MutationType.Deleted:
+          case MutationType.CollaboratorRemoved:
             title = 'Collaborator Removed';
             message = `${change.collaborator?.email} was removed from your shopping list`;
             break;

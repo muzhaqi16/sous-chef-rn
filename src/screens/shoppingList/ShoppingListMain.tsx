@@ -62,8 +62,18 @@ export const ShoppingListMain: React.FC = () => {
     const unpurchasedItems = items.filter((item: any) => !item.isPurchased);
     const purchasedItems = items.filter((item: any) => item.isPurchased);
 
+    // Sort each group by createdAt date (newest first)
+    const sortByDateDesc = (a: any, b: any) => {
+      const dateA = new Date(a.createdAt).getTime();
+      const dateB = new Date(b.createdAt).getTime();
+      return dateB - dateA; // Newest first
+    };
+
+    const sortedUnpurchasedItems = unpurchasedItems.sort(sortByDateDesc);
+    const sortedPurchasedItems = purchasedItems.sort(sortByDateDesc);
+
     // Combine unpurchased first, then purchased
-    const sortedItems = [...unpurchasedItems, ...purchasedItems];
+    const sortedItems = [...sortedUnpurchasedItems, ...sortedPurchasedItems];
 
     return sortedItems.map((item: any) => ({
       id: item.id,

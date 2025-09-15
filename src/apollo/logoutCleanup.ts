@@ -45,7 +45,9 @@ export class LogoutCleanup {
   /**
    * Perform comprehensive logout cleanup
    */
-  static async performLogoutCleanup(options: LogoutCleanupOptions = {}): Promise<void> {
+  static async performLogoutCleanup(
+    options: LogoutCleanupOptions = {},
+  ): Promise<void> {
     const {
       clearCache = true,
       cancelSubscriptions = true,
@@ -105,8 +107,10 @@ export class LogoutCleanup {
    * Cancel all active subscriptions
    */
   private static cancelAllSubscriptions(): void {
-    console.log(`🔌 Cancelling ${LogoutCleanup.activeSubscriptions.size} active subscriptions`);
-    
+    console.log(
+      `🔌 Cancelling ${LogoutCleanup.activeSubscriptions.size} active subscriptions`,
+    );
+
     LogoutCleanup.activeSubscriptions.forEach(subscription => {
       try {
         if (subscription && typeof subscription.unsubscribe === 'function') {
@@ -140,14 +144,14 @@ export class LogoutCleanup {
    */
   private static async clearApolloCache(): Promise<void> {
     try {
-      // Clear Apollo cache completely
+      // Get client dynamically to avoid circular dependency
+      const {client} = await import('#/apollo/client');
       await client.clearStore();
-      
-      // Also clear persisted cache and navigation state from MMKV
+
       const {storage} = await import('#/storage/mmkv');
       storage.delete('apollo-cache');
       storage.delete('navigation_state');
-      
+
       console.log('🗑️ Apollo cache and navigation state cleared');
     } catch (error) {
       console.warn('Failed to clear Apollo cache:', error);
@@ -186,7 +190,7 @@ export class LogoutCleanup {
 
     // Allow certain operations during logout
     const allowedOperations = ['RefreshToken', 'Logout'];
-    
+
     return operationName ? !allowedOperations.includes(operationName) : true;
   }
 
@@ -205,12 +209,14 @@ export class LogoutCleanup {
     ];
 
     const errorMessage = error.message || error.toString();
-    const shouldSuppress = suppressibleErrors.some(msg => 
-      errorMessage.includes(msg)
+    const shouldSuppress = suppressibleErrors.some(msg =>
+      errorMessage.includes(msg),
     );
 
     if (shouldSuppress) {
-      console.log(`🔇 Suppressed logout error for ${operationName}: ${errorMessage}`);
+      console.log(
+        `🔇 Suppressed logout error for ${operationName}: ${errorMessage}`,
+      );
       return true;
     }
 

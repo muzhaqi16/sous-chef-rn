@@ -2,6 +2,7 @@ import {useCallback} from 'react';
 import {
   useShoppingListItemsChangedSubscription,
   GetShoppingListItemsDocument,
+  MutationType,
 } from '#generated';
 import {useStore} from '#store';
 
@@ -61,14 +62,14 @@ export function useShoppingListSubscription(
 
         // Apply the mutation to the items
         switch (mutation) {
-          case 'CREATED':
+          case MutationType.Created:
             // Add new item if it doesn't exist
             if (!newItems.some(existingItem => existingItem.id === item.id)) {
               newItems.push(item);
             }
             break;
 
-          case 'UPDATED':
+          case MutationType.ItemUpdated:
             // Update existing item
             newItems = newItems.map(existingItem =>
               existingItem.id === item.id
@@ -77,9 +78,26 @@ export function useShoppingListSubscription(
             );
             break;
 
-          case 'DELETED':
+          case MutationType.Deleted:
+          case MutationType.ItemRemoved:
             // Remove item
             newItems = newItems.filter(existingItem => existingItem.id !== item.id);
+            break;
+
+          case MutationType.ItemAdded:
+            // Add item (same as CREATED)
+            if (!newItems.some(existingItem => existingItem.id === item.id)) {
+              newItems.push(item);
+            }
+            break;
+
+          case MutationType.ItemCompleted:
+            // Update item completion status
+            newItems = newItems.map(existingItem =>
+              existingItem.id === item.id
+                ? {...existingItem, ...item}
+                : existingItem
+            );
             break;
 
           default:

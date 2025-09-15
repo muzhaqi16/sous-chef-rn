@@ -1,5 +1,8 @@
 import React from 'react';
-import Reanimated, {useAnimatedStyle, SharedValue} from 'react-native-reanimated';
+import Reanimated, {
+  useAnimatedStyle,
+  SharedValue,
+} from 'react-native-reanimated';
 import {ActionButton} from './ActionButton';
 import {styles} from './styles';
 import {SwipeActionsProps} from './types';

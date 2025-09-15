@@ -2,7 +2,10 @@ import React from 'react';
 import {TouchableOpacity} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
 import {commonStyles} from '#/styles/commonStyles';
-import Reanimated, {useAnimatedStyle, SharedValue} from 'react-native-reanimated';
+import Reanimated, {
+  useAnimatedStyle,
+  SharedValue,
+} from 'react-native-reanimated';
 
 interface SwipeableContentProps {
   children: React.ReactNode;
@@ -17,10 +20,10 @@ export const SwipeableContent: React.FC<SwipeableContentProps> = ({
 }) => {
   const animatedStyle = useAnimatedStyle(() => {
     if (!dragX) return {};
-    
+
     const isSwipingLeft = dragX.value > 0; // Positive = left swipe (revealing right actions)
     const isSwipingRight = dragX.value < 0; // Negative = right swipe (revealing left actions)
-    
+
     return {
       marginRight: isSwipingLeft ? 12 : 0, // 12pt gap from right actions when swiping left
       marginLeft: isSwipingRight ? 12 : 0, // 12pt gap from left actions when swiping right

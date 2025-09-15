@@ -1,93 +1,111 @@
-// src/apollo/cache.ts
-import {InMemoryCache, NormalizedCacheObject} from '@apollo/client';
-import {storage} from '../storage/mmkv';
+import {InMemoryCache} from '@apollo/client';
+import {storage} from '#storage/mmkv';
 
 const CACHE_KEY = 'apollo-cache';
 
-export async function makeCache(): Promise<InMemoryCache> {
+export function makeCache(): InMemoryCache {
   const cache = new InMemoryCache({
     typePolicies: {
       Query: {
         fields: {
-          shoppingListItems: {
-            keyArgs: ['shoppingListId'], // Required for proper normalization
-            merge(existing = [], incoming: any[]) {
-              // Merge and deduplicate by ID
-              const map = new Map();
-              [...existing, ...incoming].forEach(item => {
-                if (item?.id) map.set(item.id, item);
-              });
-              return Array.from(map.values());
-            },
-          },
           pantryItems: {
             keyArgs: ['pantryId'],
-            merge(existing = [], incoming: any[]) {
-              const map = new Map();
-              [...existing, ...incoming].forEach(item => {
-                if (item?.id) map.set(item.id, item);
-              });
-              return Array.from(map.values());
+            // Just replace with incoming data - no complex merging
+            merge(_, incoming) {
+              return incoming;
+            },
+          },
+          shoppingListItems: {
+            keyArgs: ['shoppingListId'],
+            merge(_, incoming) {
+              return incoming;
             },
           },
         },
       },
+      PantryItem: {
+        keyFields: ['id'],
+      },
+      ShoppingListItem: {
+        keyFields: ['id'],
+      },
+      Item: {
+        keyFields: ['id'],
+      },
+      User: {
+        keyFields: ['id'],
+        fields: {
+          // Merge user updates instead of replacing
+          profile: {
+            merge(existing, incoming) {
+              return { ...existing, ...incoming };
+            },
+          },
+        },
+      },
+      Home: {
+        keyFields: ['id'],
+        fields: {
+          members: {
+            merge(existing = [], incoming = []) {
+              // Simple replacement for home members
+              return incoming;
+            },
+          },
+          pantries: {
+            merge(existing = [], incoming = []) {
+              // Simple replacement for pantries list
+              return incoming;
+            },
+          },
+          shoppingLists: {
+            merge(existing = [], incoming = []) {
+              // Simple replacement for shopping lists
+              return incoming;
+            },
+          },
+        },
+      },
+      Unit: {
+        keyFields: ['id'],
+      },
+      ShoppingList: {
+        keyFields: ['id'],
+      },
+      Pantry: {
+        keyFields: ['id'],
+      },
     },
   });
 
-  // 1) Try to restore from MMKV
-  const saved = storage.getString(CACHE_KEY);
-  if (saved) {
-    try {
-      cache.restore(JSON.parse(saved) as NormalizedCacheObject);
-    } catch (err) {
-      console.warn(
-        'Failed to restore Apollo cache from MMKV, starting fresh:',
-        err,
-      );
-      storage.delete(CACHE_KEY);
+  // Simple restoration
+  try {
+    const saved = storage.getString(CACHE_KEY);
+    if (saved) {
+      cache.restore(JSON.parse(saved));
     }
+  } catch (e) {
+    storage.delete(CACHE_KEY);
   }
 
-  // 2) Helper to persist the full cache
+  // Simple persistence - debounced
+  let persistTimeout: NodeJS.Timeout;
   const persist = () => {
-    try {
-      const data = cache.extract();
-      storage.set(CACHE_KEY, JSON.stringify(data));
-    } catch (err) {
-      console.warn('Failed to persist Apollo cache to MMKV:', err);
-    }
+    clearTimeout(persistTimeout);
+    persistTimeout = setTimeout(() => {
+      try {
+        storage.set(CACHE_KEY, JSON.stringify(cache.extract()));
+      } catch (e) {
+        console.warn('Cache persist failed:', e);
+      }
+    }, 500); // Debounce for 500ms
   };
 
-  // 3) Monkey-patch writeQuery
-  const _writeQuery = cache.writeQuery.bind(cache);
-  cache.writeQuery = options => {
-    const result = _writeQuery(options);
+  // Only persist on writes
+  const originalWrite = cache.write;
+  cache.write = function (...args) {
+    const result = originalWrite.apply(this, args);
     persist();
-    return result;
-  };
-
-  // 4) Monkey-patch writeFragment
-  const _writeFragment = cache.writeFragment.bind(cache);
-  cache.writeFragment = options => {
-    const result = _writeFragment(options);
-    persist();
-    return result;
-  };
-
-  // 5) Monkey-patch evict (for example, on cache.clear or cache.evict calls)
-  const _evict = cache.evict.bind(cache);
-  cache.evict = options => {
-    const result = _evict(options);
-    persist();
-    return result;
-  };
-
-  // 6) Optionally also patch cache.reset / clearAll
-  const _reset = cache.reset.bind(cache);
-  cache.reset = async () => {
-    const result = await _reset();
-    storage.delete(CACHE_KEY);
     return result;
   };
 

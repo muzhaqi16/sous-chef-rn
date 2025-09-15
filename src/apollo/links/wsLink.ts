@@ -38,7 +38,7 @@ const createWsClient = () => {
     keepAlive: 12_000, // send ping every 12s to keep alive
     connectionParams: () => {
       const token = useStore.getState().accessToken;
-      const apiKey = process.env.API_KEY;
+      const apiKey = Config.API_KEY;
 
       const params: Record<string, string> = {};
 

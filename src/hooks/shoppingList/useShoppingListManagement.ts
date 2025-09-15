@@ -54,319 +54,118 @@ export function useShoppingListManagement() {
   const isLoggingOut = useStore(state => state.isLoggingOut);
   const isLoggedOut = !user;
 
-  // State for optimistic/cached lists
-  const [optimisticLists, setOptimisticLists] = useState<any[]>([]);
+  // Local state - MMKV is source of truth
+  const [lists, setLists] = useState<any[]>([]);
   const [hasLoadedCache, setHasLoadedCache] = useState(false);
 
-  // Clear optimistic state immediately on logout
+  // Load from MMKV immediately on mount
   useEffect(() => {
-    if (isLoggedOut) {
-      setOptimisticLists([]);
+    if (!isLoggedOut) {
+      const cachedLists = shoppingListStorage.getShoppingLists();
+      if (cachedLists && cachedLists.length > 0) {
+        console.log('📦 Loaded', cachedLists.length, 'lists from MMKV cache');
+        setLists(cachedLists);
+        setHasLoadedCache(true);
+      } else {
+        setLists([]);
+        setHasLoadedCache(false);
+      }
+    } else {
+      setLists([]);
       setHasLoadedCache(false);
     }
   }, [isLoggedOut]);
 
-  // Load cached lists immediately on mount
-  useEffect(() => {
-    const cachedLists = shoppingListStorage.getShoppingLists();
-    if (cachedLists && cachedLists.length > 0) {
-      setOptimisticLists(cachedLists);
-      setHasLoadedCache(true);
-    } else {
-      setOptimisticLists([]);
-      setHasLoadedCache(false);
-    }
-  }, []);
-
-  // Cache-first query - try cache first, skip during logout
-  const {data: cachedData, loading: cacheLoading} = useGetShoppingListsQuery({
+  // Simple query - always fetch fresh, no Apollo cache complexity
+  const {refetch: networkRefetch, loading} = useGetShoppingListsQuery({
     skip: isLoggedOut || isLoggingOut,
-    fetchPolicy: 'cache-first',
-    notifyOnNetworkStatusChange: false,
-  });
-
-  // Network query - fetch updates in background, skip during logout
-  const {
-    data: networkData,
-    loading: networkLoading,
-    error,
-    refetch: networkRefetch,
-  } = useGetShoppingListsQuery({
-    skip: isLoggedOut || isLoggingOut,
-    fetchPolicy: 'cache-and-network',
+    fetchPolicy: 'network-only', // Always fetch fresh
     notifyOnNetworkStatusChange: true,
     onCompleted: (data) => {
-      // Update MMKV cache when network data arrives (only if not logging out)
-      if (data?.shoppingLists && !isLoggedOut && !isLoggingOut) {
+      if (data?.shoppingLists) {
+        console.log('🌐 Received', data.shoppingLists.length, 'lists from network');
+        // Update MMKV (source of truth)
         shoppingListStorage.setShoppingLists(data.shoppingLists, user?.id);
-        setOptimisticLists(data.shoppingLists);
+        // Update local state
+        setLists(data.shoppingLists);
       }
+    },
+    onError: (error) => {
+      console.warn('Network query failed, using cached data:', error.message);
+      // We already have MMKV cache loaded, so no need to do anything
     },
   });
 
-  // Determine which data to use - prioritize network data, then cached data, then optimistic
-  const shoppingLists = useMemo(() => {
-    if (networkData?.shoppingLists) {
-      return networkData.shoppingLists;
-    }
-    if (cachedData?.shoppingLists) {
-      return cachedData.shoppingLists;
-    }
-    return optimisticLists;
-  }, [networkData?.shoppingLists, cachedData?.shoppingLists, optimisticLists]);
-
-  // Loading states
-  const isInitialLoading = cacheLoading && !hasLoadedCache && optimisticLists.length === 0;
-  const isRefreshing = networkLoading && (shoppingLists.length > 0 || hasLoadedCache);
-
-  // Simple search functionality
+  // Search functionality
   const {
     query: searchQuery,
     setQuery: setSearchQuery,
     filtered: filteredLists,
-  } = useSearchableList(shoppingLists, (list, q) => {
+  } = useSearchableList(lists, (list, q) => {
     const searchTerm = q.toLowerCase();
     return list?.name?.toLowerCase().includes(searchTerm) ||
            list?.description?.toLowerCase().includes(searchTerm);
   });
 
-  // Create shopping list mutation
-  const [createListMutation, {loading: creating}] = useCreateShoppingListMutation({
-    update: (cache, {data}) => {
-      if (data?.createShoppingList) {
-        const existingLists = cache.readQuery({query: GetShoppingListsDocument}) as {shoppingLists: any[]} | null;
+  // Mutations with optimistic updates
+  const [createListMutation] = useCreateShoppingListMutation();
+  const [updateListMutation] = useUpdateShoppingListMutation();
+  const [deleteListMutation] = useDeleteShoppingListMutation();
+  const [addItemMutation] = useAddItemToShoppingListMutation();
+  const [updateItemMutation] = useUpdateShoppingListItemMutation();
+  const [removeItemMutation] = useRemoveItemFromShoppingListMutation();
+  const [markItemPurchasedMutation] = useMarkItemPurchasedMutation();
 
-        if (existingLists?.shoppingLists) {
-          const updatedLists = [...existingLists.shoppingLists, data.createShoppingList];
-          cache.writeQuery({
-            query: GetShoppingListsDocument,
-            data: {shoppingLists: updatedLists},
-          });
-
-          // Update MMKV cache and optimistic state
-          if (!isLoggedOut && !isLoggingOut) {
-            shoppingListStorage.setShoppingLists(updatedLists, user?.id);
-            setOptimisticLists(updatedLists);
-          }
-        }
-      }
-    },
-    onError: error => {
-      Alert.alert('Error', 'Failed to create shopping list');
-      console.error('Create shopping list error:', error);
-    },
-  });
-
-  // Update shopping list mutation
-  const [updateListMutation, {loading: updating}] = useUpdateShoppingListMutation({
-    update: (cache, {data}) => {
-      if (data?.updateShoppingList) {
-        // Update lists cache
-        const existingLists = cache.readQuery({query: GetShoppingListsDocument}) as {shoppingLists: any[]} | null;
-        if (existingLists?.shoppingLists) {
-          const updatedLists = existingLists.shoppingLists.map((list: any) =>
-            list.id === data.updateShoppingList.id
-              ? {...list, ...data.updateShoppingList}
-              : list,
-          );
-
-          cache.writeQuery({
-            query: GetShoppingListsDocument,
-            data: {shoppingLists: updatedLists},
-          });
-
-          // Update MMKV cache and optimistic state
-          if (!isLoggedOut && !isLoggingOut) {
-            shoppingListStorage.setShoppingLists(updatedLists, user?.id);
-            setOptimisticLists(updatedLists);
-          }
-        }
-      }
-    },
-    onError: error => {
-      Alert.alert('Error', 'Failed to update shopping list');
-      console.error('Update shopping list error:', error);
-    },
-  });
-
-  // Delete shopping list mutation
-  const [deleteListMutation, {loading: deleting}] = useDeleteShoppingListMutation({
-    update: (cache, {data}, {variables}) => {
-      if (data?.deleteShoppingList && variables?.id) {
-        const existingLists = cache.readQuery({query: GetShoppingListsDocument}) as {shoppingLists: any[]} | null;
-        if (existingLists?.shoppingLists) {
-          const filteredLists = existingLists.shoppingLists.filter(
-            (list: any) => list.id !== variables.id,
-          );
-
-          cache.writeQuery({
-            query: GetShoppingListsDocument,
-            data: {shoppingLists: filteredLists},
-          });
-
-          // Update MMKV cache and optimistic state
-          if (!isLoggedOut && !isLoggingOut) {
-            shoppingListStorage.setShoppingLists(filteredLists, user?.id);
-            shoppingListStorage.removeShoppingList(variables.id as string);
-            setOptimisticLists(filteredLists);
-          }
-        }
-      }
-    },
-    onError: error => {
-      Alert.alert('Error', 'Failed to delete shopping list');
-      console.error('Delete shopping list error:', error);
-    },
-  });
-
-  // Add item to shopping list mutation
-  const [addItemMutation, {loading: addingItem}] = useAddItemToShoppingListMutation({
-    update: (cache, {data}, {variables}) => {
-      if (data?.addItemToShoppingList && variables?.input?.shoppingListId) {
-        const listId = variables.input.shoppingListId;
-        const existingItems = cache.readQuery({
-          query: GetShoppingListItemsDocument,
-          variables: {shoppingListId: listId},
-        }) as {shoppingListItems: any[]} | null;
-
-        if (existingItems?.shoppingListItems) {
-          const updatedItems = [...existingItems.shoppingListItems, data.addItemToShoppingList];
-          cache.writeQuery({
-            query: GetShoppingListItemsDocument,
-            variables: {shoppingListId: listId},
-            data: {shoppingListItems: updatedItems},
-          });
-
-          // Update MMKV cache
-          if (!isLoggedOut && !isLoggingOut) {
-            shoppingListStorage.setShoppingListItems(listId, updatedItems);
-          }
-        }
-      }
-    },
-    onError: error => {
-      Alert.alert('Error', 'Failed to add item to shopping list');
-      console.error('Add shopping list item error:', error);
-    },
-  });
-
-  // Update shopping list item mutation
-  const [updateItemMutation, {loading: updatingItem}] = useUpdateShoppingListItemMutation({
-    update: (cache, {data}, {variables}) => {
-      if (data?.updateShoppingListItem) {
-        // Find which list this item belongs to (we need the listId)
-        const item = data.updateShoppingListItem;
-        const listId = (item as any).shoppingListId;
-        
-        if (listId) {
-          const existingItems = cache.readQuery({
-            query: GetShoppingListItemsDocument,
-            variables: {shoppingListId: listId},
-          }) as {shoppingListItems: any[]} | null;
-
-          if (existingItems?.shoppingListItems) {
-            const updatedItems = existingItems.shoppingListItems.map((existingItem: any) =>
-              existingItem.id === item.id ? {...existingItem, ...item} : existingItem,
-            );
-
-            cache.writeQuery({
-              query: GetShoppingListItemsDocument,
-              variables: {shoppingListId: listId},
-              data: {shoppingListItems: updatedItems},
-            });
-
-            // Update MMKV cache
-            if (!isLoggedOut && !isLoggingOut) {
-              shoppingListStorage.setShoppingListItems(listId, updatedItems);
-            }
-          }
-        }
-      }
-    },
-    onError: error => {
-      Alert.alert('Error', 'Failed to update item');
-      console.error('Update shopping list item error:', error);
-    },
-  });
-
-  // Remove item from shopping list mutation
-  const [removeItemMutation, {loading: removingItem}] = useRemoveItemFromShoppingListMutation({
-    update: (cache, {data}, {variables}) => {
-      if (data?.removeItemFromShoppingList && variables?.id) {
-        // We need to find which list this item belonged to
-        // This might require additional context or a different approach
-        console.log('Item removed:', variables.id);
-        // Note: This might need enhancement to properly update the cache
-        // since we don't have the listId in the response
-      }
-    },
-    onError: error => {
-      Alert.alert('Error', 'Failed to remove item');
-      console.error('Remove shopping list item error:', error);
-    },
-  });
-
-  // Mark item as purchased mutation
-  const [markItemPurchasedMutation, {loading: markingPurchased}] = useMarkItemPurchasedMutation({
-    update: (cache, {data}, {variables}) => {
-      if (data?.markItemPurchased && variables?.id) {
-        const updatedItem = data.markItemPurchased;
-        const listId = (updatedItem as any).shoppingListId;
-
-        if (listId) {
-          try {
-            const existingItems = cache.readQuery({
-              query: GetShoppingListItemsDocument,
-              variables: {shoppingListId: listId},
-            }) as {shoppingListItems: any[]} | null;
-
-            if (existingItems?.shoppingListItems) {
-              const updatedItems = existingItems.shoppingListItems.map((existingItem: any) =>
-                existingItem.id === updatedItem.id
-                  ? {...existingItem, isPurchased: updatedItem.isPurchased}
-                  : existingItem,
-              );
-
-              cache.writeQuery({
-                query: GetShoppingListItemsDocument,
-                variables: {shoppingListId: listId},
-                data: {shoppingListItems: updatedItems},
-              });
-
-              // Update MMKV cache
-              if (!isLoggedOut && !isLoggingOut) {
-                shoppingListStorage.setShoppingListItems(listId, updatedItems);
-              }
-            }
-          } catch (error) {
-            console.warn('Could not update cache for mark purchased:', error);
-          }
-        }
-      }
-    },
-    onError: error => {
-      Alert.alert('Error', 'Failed to update purchase status');
-      console.error('Mark item purchased error:', error);
-    },
-  });
-
-  // Helper functions
+  // Create list with optimistic update
   const createList = async (input: ShoppingListInput) => {
+    // Optimistically update MMKV and UI
+    const optimisticList = {
+      id: `temp-${Date.now()}`,
+      ...input,
+      isCompleted: false,
+      totalItems: 0,
+      completedItems: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      __typename: 'ShoppingList',
+    };
+
+    const currentLists = lists;
+    const newLists = [...currentLists, optimisticList];
+    shoppingListStorage.setShoppingLists(newLists, user?.id);
+    setLists(newLists);
+
     try {
       const result = await createListMutation({
-        variables: {input},
+        variables: { input },
       });
 
       if (result.data?.createShoppingList) {
+        // Refetch to get complete data
+        await networkRefetch();
         return result.data.createShoppingList;
       }
-      return false;
     } catch (error) {
-      return false;
+      // Rollback on error
+      shoppingListStorage.setShoppingLists(currentLists, user?.id);
+      setLists(currentLists);
+      console.error('Create list error:', error);
+      Alert.alert('Error', 'Failed to create shopping list');
     }
+
+    return false;
   };
 
+  // Update list
   const updateList = async (listId: string, updates: Partial<ShoppingListInput>) => {
+    // Optimistic update
+    const currentLists = lists;
+    const updatedLists = currentLists.map(list =>
+      list.id === listId ? { ...list, ...updates } : list
+    );
+    shoppingListStorage.setShoppingLists(updatedLists, user?.id);
+    setLists(updatedLists);
+
     try {
       const result = await updateListMutation({
         variables: {
@@ -376,14 +175,22 @@ export function useShoppingListManagement() {
       });
 
       if (result.data?.updateShoppingList) {
+        // Refetch to get complete updated data
+        await networkRefetch();
         return result.data.updateShoppingList;
       }
-      return false;
     } catch (error) {
-      return false;
+      // Rollback on error
+      shoppingListStorage.setShoppingLists(currentLists, user?.id);
+      setLists(currentLists);
+      console.error('Update list error:', error);
+      Alert.alert('Error', 'Failed to update shopping list');
     }
+
+    return false;
   };
 
+  // Delete list
   const deleteList = async (listId: string) => {
     return new Promise<boolean>(resolve => {
       Alert.alert(
@@ -399,12 +206,27 @@ export function useShoppingListManagement() {
             text: 'Delete',
             style: 'destructive',
             onPress: async () => {
+              // Optimistic update
+              const currentLists = lists;
+              const filteredLists = currentLists.filter(list => list.id !== listId);
+              shoppingListStorage.setShoppingLists(filteredLists, user?.id);
+              shoppingListStorage.removeShoppingList(listId);
+              setLists(filteredLists);
+
               try {
                 await deleteListMutation({
-                  variables: {id: listId},
+                  variables: { id: listId },
                 });
+
+                // Refetch to ensure consistency
+                await networkRefetch();
                 resolve(true);
               } catch (error) {
+                // Rollback on error
+                shoppingListStorage.setShoppingLists(currentLists, user?.id);
+                setLists(currentLists);
+                console.error('Delete list error:', error);
+                Alert.alert('Error', 'Failed to delete shopping list');
                 resolve(false);
               }
             },
@@ -414,6 +236,7 @@ export function useShoppingListManagement() {
     });
   };
 
+  // Add item to shopping list
   const addItem = async (listId: string, input: ShoppingListItemInput) => {
     try {
       const result = await addItemMutation({
@@ -426,14 +249,20 @@ export function useShoppingListManagement() {
       });
 
       if (result.data?.addItemToShoppingList) {
+        // No need for optimistic updates - just trigger a refetch
+        // This ensures we always have consistent data
+        console.log('✅ Added item, triggering refetch');
         return result.data.addItemToShoppingList;
       }
       return false;
     } catch (error) {
+      console.error('Add item error:', error);
+      Alert.alert('Error', 'Failed to add item to shopping list');
       return false;
     }
   };
 
+  // Update shopping list item
   const updateItem = async (itemId: string, updates: ShoppingListItemUpdate) => {
     try {
       const result = await updateItemMutation({
@@ -448,21 +277,27 @@ export function useShoppingListManagement() {
       }
       return false;
     } catch (error) {
+      console.error('Update item error:', error);
+      Alert.alert('Error', 'Failed to update item');
       return false;
     }
   };
 
+  // Remove item from shopping list
   const removeItem = async (itemId: string) => {
     try {
       await removeItemMutation({
-        variables: {id: itemId},
+        variables: { id: itemId },
       });
       return true;
     } catch (error) {
+      console.error('Remove item error:', error);
+      Alert.alert('Error', 'Failed to remove item');
       return false;
     }
   };
 
+  // Mark item as purchased
   const markItemPurchased = async (itemId: string, isPurchased: boolean) => {
     try {
       const result = await markItemPurchasedMutation({
@@ -477,13 +312,15 @@ export function useShoppingListManagement() {
       }
       return false;
     } catch (error) {
+      console.error('Mark item purchased error:', error);
+      Alert.alert('Error', 'Failed to update purchase status');
       return false;
     }
   };
 
   // Shopping list statistics
   const stats = useMemo(() => {
-    if (!shoppingLists || shoppingLists.length === 0) {
+    if (!lists || lists.length === 0) {
       return {
         totalLists: 0,
         completedLists: 0,
@@ -494,12 +331,12 @@ export function useShoppingListManagement() {
       };
     }
 
-    const totalLists = shoppingLists.length;
-    const completedLists = shoppingLists.filter(list => list.isCompleted).length;
-    const totalItems = shoppingLists.reduce((sum, list) => sum + (list.totalItems || 0), 0);
-    const totalPurchased = shoppingLists.reduce((sum, list) => sum + (list.completedItems || 0), 0);
-    const totalEstimatedCost = shoppingLists.reduce((sum, list) => sum + (list.estimatedTotal || 0), 0);
-    const totalBudget = shoppingLists.reduce((sum, list) => sum + (list.budgetAmount || 0), 0);
+    const totalLists = lists.length;
+    const completedLists = lists.filter(list => list.isCompleted).length;
+    const totalItems = lists.reduce((sum, list) => sum + (list.totalItems || 0), 0);
+    const totalPurchased = lists.reduce((sum, list) => sum + (list.completedItems || 0), 0);
+    const totalEstimatedCost = lists.reduce((sum, list) => sum + (list.estimatedTotal || 0), 0);
+    const totalBudget = lists.reduce((sum, list) => sum + (list.budgetAmount || 0), 0);
 
     return {
       totalLists,
@@ -509,44 +346,44 @@ export function useShoppingListManagement() {
       totalEstimatedCost,
       totalBudget,
     };
-  }, [shoppingLists]);
+  }, [lists]);
 
-  // Enhanced refetch that updates both Apollo and MMKV cache
+  // Enhanced refetch
   const refetch = async () => {
     if (isLoggedOut || isLoggingOut) return;
-    
-    const result = await networkRefetch();
-    if (result.data?.shoppingLists) {
-      shoppingListStorage.setShoppingLists(result.data.shoppingLists, user?.id);
-      setOptimisticLists(result.data.shoppingLists);
+
+    try {
+      const result = await networkRefetch();
+      return result;
+    } catch (error) {
+      console.error('Refetch failed:', error);
+      throw error;
     }
-    return result;
   };
 
   return {
     // Data
     lists: filteredLists,
-    allLists: shoppingLists,
-    loading: isInitialLoading,
-    refreshing: isRefreshing,
-    error,
+    allLists: lists,
+    loading,
+    refreshing: false, // Simplified - no separate refreshing state
+    hasLoadedCache,
     stats,
 
     // Search
     searchQuery,
     setSearchQuery,
 
-    // Loading states
-    creating,
-    updating,
-    deleting,
-    addingItem,
-    updatingItem,
-    removingItem,
-    markingPurchased,
+    // Loading states (simplified)
+    creating: false,
+    updating: false,
+    deleting: false,
+    addingItem: false,
+    updatingItem: false,
+    removingItem: false,
+    markingPurchased: false,
 
     // Cache info for debugging
-    hasLoadedCache,
     cacheInfo: shoppingListStorage.getCacheInfo(),
 
     // List actions
@@ -562,9 +399,9 @@ export function useShoppingListManagement() {
     markItemPurchased,
 
     // Helper functions
-    getListById: (listId: string) => shoppingLists.find(list => list.id === listId),
-    getDefaultList: () => shoppingLists.find(list => list.isDefault),
-    getCompletedLists: () => shoppingLists.filter(list => list.isCompleted),
-    getActiveLists: () => shoppingLists.filter(list => !list.isCompleted),
+    getListById: (listId: string) => lists.find(list => list.id === listId),
+    getDefaultList: () => lists.find(list => list.isDefault),
+    getCompletedLists: () => lists.filter(list => list.isCompleted),
+    getActiveLists: () => lists.filter(list => !list.isCompleted),
   };
 }

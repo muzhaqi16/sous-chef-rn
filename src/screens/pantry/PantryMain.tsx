@@ -169,14 +169,14 @@ export const PantryMain: React.FC = () => {
       left: [] as SearchBarAction[],
       right: [
         {
-          icon: 'list',
-          color: '#fff',
-          onPress: () => selectPantrySheet.open(),
-        },
-        {
           icon: 'add',
           onPress: handleAddItem,
           color: '#fff',
+        },
+        {
+          icon: 'list',
+          color: '#fff',
+          onPress: () => selectPantrySheet.open(),
         },
       ] as SearchBarAction[],
     }),

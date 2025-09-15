@@ -16,6 +16,39 @@ import {useTheme} from '#/hooks/useTheme';
 
 // Enable native screens for better performance
 enableScreens();
+if (__DEV__) {
+  const originalWarn = console.warn;
+  const originalError = console.error;
+
+  console.warn = function (...args) {
+    if (
+      args[0] &&
+      typeof args[0] === 'string' &&
+      args[0].includes('Missing field')
+    ) {
+      return; // Suppress missing field warnings
+    }
+    return originalWarn.apply(console, args);
+  };
+
+  console.error = function (...args) {
+    if (
+      args[0] &&
+      typeof args[0] === 'string' &&
+      args[0].includes('Missing field')
+    ) {
+      return; // Suppress missing field errors too
+    }
+    return originalError.apply(console, args);
+  };
+}
+
+// if (__DEV__) {
+//   import('./src/storage/mmkv').then(({storage}) => {
+//     storage.delete('apollo-cache');
+//     console.log('Cleared Apollo cache for fresh start');
+//   });
+// }
 
 const App = () => {
   const {isHydrated, setHasStoredCredentials} = useStore();
@@ -28,9 +61,7 @@ const App = () => {
     }
   }, [isHydrated, setHasStoredCredentials]);
 
-  // Early return for loading state
-  if (!isHydrated || !client) {
-    console.error('App is not hydrated or Apollo client is not initialized');
+  if (!isHydrated) {
     return <SplashScreen />;
   }
 
