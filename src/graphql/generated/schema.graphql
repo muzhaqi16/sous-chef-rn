@@ -389,6 +389,18 @@ type AuthPayload {
   user: User!
 }
 
+input AutocompleteCategoryInput {
+  limit: Int = 10
+  parentId: String
+  query: String!
+  type: CategoryType
+}
+
+type AutocompleteCategoryResponse {
+  suggestions: [CategorySuggestion!]!
+  totalCount: Int!
+}
+
 input AutocompleteInput {
   category: String
   limit: Int = 10
@@ -534,9 +546,12 @@ enum CategorySource {
 }
 
 type CategorySuggestion {
+  color: String
+  icon: String
   id: ID!
   isPrimary: Boolean!
   name: String!
+  slug: String
   type: CategoryType!
 }
 
@@ -2712,6 +2727,13 @@ type PantryWasteAlertPayload {
   wasteValue: Float
 }
 
+type ParentCategorySuggestion {
+  id: ID!
+  name: String!
+  slug: String
+  type: CategoryType!
+}
+
 enum PhotoType {
   CONDITION
   EXPIRATION
@@ -2838,6 +2860,9 @@ type Query {
   _empty: String
   activeDevices(userId: ID!): [Device!]!
   activeModerations: [UserModeration!]!
+  autocompleteCategories(
+    input: AutocompleteCategoryInput!
+  ): AutocompleteCategoryResponse!
   autocompleteItems(input: AutocompleteInput!): AutocompleteResponse
   brand(id: ID!): Brand
   brands(

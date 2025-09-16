@@ -53,6 +53,7 @@ export const EditPantryItemForm: React.FC<EditPantryItemFormProps> = ({
   const {theme} = useUnistyles();
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
 
   const {data: existingItemData, loading: itemLoading} = useGetPantryItemQuery({
     variables: {id: itemId},
@@ -121,6 +122,13 @@ export const EditPantryItemForm: React.FC<EditPantryItemFormProps> = ({
     const current = watchedValues.quantity || 1;
     setValue('quantity', Math.max(1, current - 1));
   }, [setValue, watchedValues.quantity]);
+
+  const handleCategorySelect = useCallback(
+    (categoryId: string | null) => {
+      setSelectedCategoryId(categoryId);
+    },
+    [],
+  );
 
   const handleSave = async (data: EditPantryItemFormData) => {
     if (data.quantity <= 0) {
@@ -237,6 +245,7 @@ export const EditPantryItemForm: React.FC<EditPantryItemFormProps> = ({
               setShowDatePicker(Platform.OS === 'ios');
               if (date) setValue('expirationDate', date);
             }}
+            onCategorySelected={handleCategorySelect}
           />
 
           {/* Tags Section */}

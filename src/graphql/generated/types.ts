@@ -126,6 +126,19 @@ export type AuthPayload = {
   user: User;
 };
 
+export type AutocompleteCategoryInput = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  parentId?: InputMaybe<Scalars['String']['input']>;
+  query: Scalars['String']['input'];
+  type?: InputMaybe<CategoryType>;
+};
+
+export type AutocompleteCategoryResponse = {
+  __typename?: 'AutocompleteCategoryResponse';
+  suggestions: Array<CategorySuggestion>;
+  totalCount: Scalars['Int']['output'];
+};
+
 export type AutocompleteInput = {
   category?: InputMaybe<Scalars['String']['input']>;
   limit?: InputMaybe<Scalars['Int']['input']>;
@@ -280,9 +293,12 @@ export enum CategorySource {
 
 export type CategorySuggestion = {
   __typename?: 'CategorySuggestion';
+  color?: Maybe<Scalars['String']['output']>;
+  icon?: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
   isPrimary: Scalars['Boolean']['output'];
   name: Scalars['String']['output'];
+  slug?: Maybe<Scalars['String']['output']>;
   type: CategoryType;
 };
 
@@ -3275,6 +3291,14 @@ export type PantryWasteAlertPayload = {
   wasteValue?: Maybe<Scalars['Float']['output']>;
 };
 
+export type ParentCategorySuggestion = {
+  __typename?: 'ParentCategorySuggestion';
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+  slug?: Maybe<Scalars['String']['output']>;
+  type: CategoryType;
+};
+
 export enum PhotoType {
   Condition = 'CONDITION',
   Expiration = 'EXPIRATION',
@@ -3407,6 +3431,7 @@ export type Query = {
   _empty?: Maybe<Scalars['String']['output']>;
   activeDevices: Array<Device>;
   activeModerations: Array<UserModeration>;
+  autocompleteCategories: AutocompleteCategoryResponse;
   autocompleteItems?: Maybe<AutocompleteResponse>;
   brand?: Maybe<Brand>;
   brands: Array<Brand>;
@@ -3541,6 +3566,10 @@ export type Query = {
 
 export type QueryActiveDevicesArgs = {
   userId: Scalars['ID']['input'];
+};
+
+export type QueryAutocompleteCategoriesArgs = {
+  input: AutocompleteCategoryInput;
 };
 
 export type QueryAutocompleteItemsArgs = {
@@ -10487,6 +10516,25 @@ export type SearchBrandsQueryVariables = Exact<{
 export type SearchBrandsQuery = {
   __typename?: 'Query';
   brands: Array<{ __typename?: 'Brand'; id: string; name: string }>;
+};
+
+export type AutocompleteCategoriesQueryVariables = Exact<{
+  input: AutocompleteCategoryInput;
+}>;
+
+export type AutocompleteCategoriesQuery = {
+  __typename?: 'Query';
+  autocompleteCategories: {
+    __typename?: 'AutocompleteCategoryResponse';
+    totalCount: number;
+    suggestions: Array<{
+      __typename?: 'CategorySuggestion';
+      id: string;
+      name: string;
+      type: CategoryType;
+      icon?: string | null | undefined;
+    }>;
+  };
 };
 
 export type CreateItemMutationVariables = Exact<{

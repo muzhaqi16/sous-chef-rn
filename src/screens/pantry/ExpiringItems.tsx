@@ -26,7 +26,7 @@ export const ExpiringItems: React.FC = () => {
   });
 
   const pantry = getDefaultPantry(homeData);
-  const {items, refetch} = usePantryItems(pantry.id);
+  const {items, refetch} = usePantryItems(pantry?.id);
 
   const expiringItems = useMemo(() => {
     if (!items) return [];

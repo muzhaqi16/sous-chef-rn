@@ -59,6 +59,7 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [saving, setSaving] = useState(false);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
 
   const {
     selectedHomeId,
@@ -135,12 +136,21 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
       }
       if (item.category?.name) {
         setValue('category', item.category.name);
+        // Clear category selection since this comes from item selection
+        setSelectedCategoryId(null);
       }
       if (item.defaultUnit?.symbol) {
         setValue('unit', item.defaultUnit.symbol);
       }
     },
     [setValue],
+  );
+
+  const handleCategorySelect = useCallback(
+    (categoryId: string | null) => {
+      setSelectedCategoryId(categoryId);
+    },
+    [],
   );
 
   const handleIncrementQuantity = useCallback(() => {
@@ -253,6 +263,7 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
               setShowDatePicker(Platform.OS === 'ios');
               if (date) setValue('expirationDate', date);
             }}
+            onCategorySelected={handleCategorySelect}
           />
         </View>
       </ScrollView>

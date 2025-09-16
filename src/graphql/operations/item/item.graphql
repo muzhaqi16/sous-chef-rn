@@ -137,6 +137,18 @@ query SearchBrands($search: String!, $limit: Int) {
   }
 }
 
+query AutocompleteCategories($input: AutocompleteCategoryInput!) {
+  autocompleteCategories(input: $input) {
+    suggestions {
+      id
+      name
+      type
+      icon
+    }
+    totalCount
+  }
+}
+
 # ============================================
 # MUTATIONS
 # ============================================

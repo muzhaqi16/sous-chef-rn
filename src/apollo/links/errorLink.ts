@@ -41,14 +41,6 @@ export const errorLink = new ErrorLink(({error, operation}) => {
 
       console.log(`[GraphQL error]: Message: ${msg}, Location: ${err.locations}, Path: ${err.path}`);
 
-      // Log additional error details
-      if (err.extensions) {
-        console.log(`[GraphQL error extensions]:`, JSON.stringify(err.extensions, null, 2));
-      }
-
-      // Log the full error for debugging
-      console.log(`[GraphQL error full]:`, JSON.stringify(err, null, 2));
-
       // Check for API key related errors
       const isApiKeyError =
         code === 'API_KEY_REQUIRED' ||
