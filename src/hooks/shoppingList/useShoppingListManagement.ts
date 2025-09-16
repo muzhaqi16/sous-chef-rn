@@ -1,5 +1,5 @@
-import {useMemo, useState, useEffect} from 'react';
-import {Alert} from 'react-native';
+import { useMemo, useState, useEffect } from 'react';
+import { Alert } from 'react-native';
 import {
   useGetShoppingListsQuery,
   useShoppingListItemsChangedSubscription,
@@ -13,10 +13,10 @@ import {
   GetShoppingListsDocument,
   GetShoppingListItemsDocument,
 } from '#generated';
-import {useSearchableList} from '../useSearchableList';
-import {ApolloClient} from '@apollo/client';
-import {shoppingListStorage} from '#/storage/shoppingListCache';
-import {useStore} from '#store';
+import { useSearchableList } from '../useSearchableList';
+import { ApolloClient } from '@apollo/client';
+import { shoppingListStorage } from '#/storage/shoppingListCache';
+import { useStore } from '#store';
 
 export interface ShoppingListItemInput {
   itemName: string;
@@ -63,7 +63,6 @@ export function useShoppingListManagement() {
     if (!isLoggedOut) {
       const cachedLists = shoppingListStorage.getShoppingLists();
       if (cachedLists && cachedLists.length > 0) {
-        console.log('📦 Loaded', cachedLists.length, 'lists from MMKV cache');
         setLists(cachedLists);
         setHasLoadedCache(true);
       } else {
@@ -77,7 +76,12 @@ export function useShoppingListManagement() {
   }, [isLoggedOut]);
 
   // Simple query - always fetch fresh, no Apollo cache complexity
-  const {refetch: networkRefetch, loading, data: queryData, error: queryError} = useGetShoppingListsQuery({
+  const {
+    refetch: networkRefetch,
+    loading,
+    data: queryData,
+    error: queryError,
+  } = useGetShoppingListsQuery({
     skip: isLoggedOut || isLoggingOut,
     fetchPolicy: 'network-only', // Always fetch fresh
     notifyOnNetworkStatusChange: true,
@@ -86,7 +90,6 @@ export function useShoppingListManagement() {
   // Handle completed and error with useEffect
   useEffect(() => {
     if (queryData?.shoppingLists) {
-      console.log('🌐 Received', queryData.shoppingLists.length, 'lists from network');
       // Update MMKV (source of truth)
       shoppingListStorage.setShoppingLists(queryData.shoppingLists, user?.id);
       // Update local state
@@ -96,7 +99,10 @@ export function useShoppingListManagement() {
 
   useEffect(() => {
     if (queryError) {
-      console.warn('Network query failed, using cached data:', queryError.message);
+      console.warn(
+        'Network query failed, using cached data:',
+        queryError.message,
+      );
       // We already have MMKV cache loaded, so no need to do anything
     }
   }, [queryError]);
@@ -108,8 +114,10 @@ export function useShoppingListManagement() {
     filtered: filteredLists,
   } = useSearchableList(lists, (list, q) => {
     const searchTerm = q.toLowerCase();
-    return list?.name?.toLowerCase().includes(searchTerm) ||
-           list?.description?.toLowerCase().includes(searchTerm);
+    return (
+      list?.name?.toLowerCase().includes(searchTerm) ||
+      list?.description?.toLowerCase().includes(searchTerm)
+    );
   });
 
   // Mutations with optimistic updates
@@ -162,11 +170,14 @@ export function useShoppingListManagement() {
   };
 
   // Update list
-  const updateList = async (listId: string, updates: Partial<ShoppingListInput>) => {
+  const updateList = async (
+    listId: string,
+    updates: Partial<ShoppingListInput>,
+  ) => {
     // Optimistic update
     const currentLists = lists;
     const updatedLists = currentLists.map(list =>
-      list.id === listId ? { ...list, ...updates } : list
+      list.id === listId ? { ...list, ...updates } : list,
     );
     shoppingListStorage.setShoppingLists(updatedLists, user?.id);
     setLists(updatedLists);
@@ -213,7 +224,9 @@ export function useShoppingListManagement() {
             onPress: async () => {
               // Optimistic update
               const currentLists = lists;
-              const filteredLists = currentLists.filter(list => list.id !== listId);
+              const filteredLists = currentLists.filter(
+                list => list.id !== listId,
+              );
               shoppingListStorage.setShoppingLists(filteredLists, user?.id);
               shoppingListStorage.removeShoppingList(listId);
               setLists(filteredLists);
@@ -268,7 +281,10 @@ export function useShoppingListManagement() {
   };
 
   // Update shopping list item
-  const updateItem = async (itemId: string, updates: ShoppingListItemUpdate) => {
+  const updateItem = async (
+    itemId: string,
+    updates: ShoppingListItemUpdate,
+  ) => {
     try {
       const result = await updateItemMutation({
         variables: {
@@ -338,10 +354,22 @@ export function useShoppingListManagement() {
 
     const totalLists = lists.length;
     const completedLists = lists.filter(list => list.isCompleted).length;
-    const totalItems = lists.reduce((sum, list) => sum + (list.totalItems || 0), 0);
-    const totalPurchased = lists.reduce((sum, list) => sum + (list.completedItems || 0), 0);
-    const totalEstimatedCost = lists.reduce((sum, list) => sum + (list.estimatedTotal || 0), 0);
-    const totalBudget = lists.reduce((sum, list) => sum + (list.budgetAmount || 0), 0);
+    const totalItems = lists.reduce(
+      (sum, list) => sum + (list.totalItems || 0),
+      0,
+    );
+    const totalPurchased = lists.reduce(
+      (sum, list) => sum + (list.completedItems || 0),
+      0,
+    );
+    const totalEstimatedCost = lists.reduce(
+      (sum, list) => sum + (list.estimatedTotal || 0),
+      0,
+    );
+    const totalBudget = lists.reduce(
+      (sum, list) => sum + (list.budgetAmount || 0),
+      0,
+    );
 
     return {
       totalLists,

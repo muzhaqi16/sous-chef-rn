@@ -1,10 +1,10 @@
-import {useCallback} from 'react';
+import { useCallback } from 'react';
 import {
   useShoppingListItemsChangedSubscription,
   GetShoppingListItemsDocument,
   MutationType,
 } from '#generated';
-import {useStore} from '#store';
+import { useStore } from '#store';
 
 interface UseShoppingListSubscriptionOptions {
   onItemsChanged?: (items: any[]) => void;
@@ -13,15 +13,15 @@ interface UseShoppingListSubscriptionOptions {
 
 /**
  * Hook to handle real-time subscriptions for shopping list changes
- * 
+ *
  * @param listId - The shopping list ID to subscribe to
  * @param options - Configuration options
  */
 export function useShoppingListSubscription(
   listId: string | null,
-  options: UseShoppingListSubscriptionOptions = {}
+  options: UseShoppingListSubscriptionOptions = {},
 ) {
-  const {onItemsChanged, onError} = options;
+  const { onItemsChanged, onError } = options;
   const user = useStore(state => state.user);
   const isLoggingOut = useStore(state => state.isLoggingOut);
   const isLoggedOut = !user;
@@ -31,7 +31,7 @@ export function useShoppingListSubscription(
 
   // Handle subscription data
   const handleSubscriptionData = useCallback(
-    ({data: subscriptionData, client}: any) => {
+    ({ data: subscriptionData, client }: any) => {
       const changeData = subscriptionData?.data?.shoppingListItemsChanged;
 
       if (!changeData || !listId) {
@@ -39,7 +39,7 @@ export function useShoppingListSubscription(
         return;
       }
 
-      const {mutation, item} = changeData;
+      const { mutation, item } = changeData;
 
       if (!item || !item.id) {
         console.warn('Invalid item in subscription:', changeData);
@@ -50,7 +50,7 @@ export function useShoppingListSubscription(
         // Read current items from Apollo cache
         const cacheData = client.readQuery({
           query: GetShoppingListItemsDocument,
-          variables: {shoppingListId: listId},
+          variables: { shoppingListId: listId },
         });
 
         if (!cacheData?.shoppingListItems) {
@@ -73,15 +73,17 @@ export function useShoppingListSubscription(
             // Update existing item
             newItems = newItems.map(existingItem =>
               existingItem.id === item.id
-                ? {...existingItem, ...item}
-                : existingItem
+                ? { ...existingItem, ...item }
+                : existingItem,
             );
             break;
 
           case MutationType.Deleted:
           case MutationType.ItemRemoved:
             // Remove item
-            newItems = newItems.filter(existingItem => existingItem.id !== item.id);
+            newItems = newItems.filter(
+              existingItem => existingItem.id !== item.id,
+            );
             break;
 
           case MutationType.ItemAdded:
@@ -95,8 +97,8 @@ export function useShoppingListSubscription(
             // Update item completion status
             newItems = newItems.map(existingItem =>
               existingItem.id === item.id
-                ? {...existingItem, ...item}
-                : existingItem
+                ? { ...existingItem, ...item }
+                : existingItem,
             );
             break;
 
@@ -108,22 +110,20 @@ export function useShoppingListSubscription(
         // Write updated list back to Apollo cache
         client.writeQuery({
           query: GetShoppingListItemsDocument,
-          variables: {shoppingListId: listId},
-          data: {shoppingListItems: newItems},
+          variables: { shoppingListId: listId },
+          data: { shoppingListItems: newItems },
         });
 
         // Notify parent component and update MMKV cache
         if (!isLoggedOut && !isLoggingOut) {
           onItemsChanged?.(newItems);
         }
-
-        console.log(`Successfully handled ${mutation} for item:`, item.id);
       } catch (error) {
         console.error('Failed to handle subscription update:', error);
         onError?.(error instanceof Error ? error : new Error(String(error)));
       }
     },
-    [listId, onItemsChanged, onError, isLoggedOut, isLoggingOut]
+    [listId, onItemsChanged, onError, isLoggedOut, isLoggingOut],
   );
 
   // Handle subscription errors
@@ -132,12 +132,12 @@ export function useShoppingListSubscription(
       console.error('Subscription error:', error);
       onError?.(error instanceof Error ? error : new Error(String(error)));
     },
-    [onError]
+    [onError],
   );
 
   // Subscribe to shopping list item changes
   useShoppingListItemsChangedSubscription({
-    variables: {listId: listId || ''},
+    variables: { listId: listId || '' },
     skip: shouldSkip,
     onData: handleSubscriptionData,
     onError: handleSubscriptionError,

@@ -7,12 +7,15 @@ import {
   InviteMembersScreen,
   OnboardingCompleteScreen,
 } from '#screens/onBoarding';
+import {ImageCropScreen} from '#screens/profile';
+import {ImageFile} from '#components/molecules/ImagePicker';
 
 export type OnboardingStackParamList = {
   CreateHome: undefined;
   CreateShoppingList: undefined;
   SelectPantryItems: undefined;
   ProfilePictureUpload: undefined;
+  ImageCrop: { imageFile: ImageFile };
   InviteMembers: undefined;
   OnboardingComplete: undefined;
 };
@@ -35,6 +38,7 @@ export const OnboardingStack = () => (
       name="ProfilePictureUpload"
       component={ProfilePictureUploadScreen}
     />
+    <Stack.Screen name="ImageCrop" component={ImageCropScreen} />
     <Stack.Screen name="InviteMembers" component={InviteMembersScreen} />
     <Stack.Screen
       name="OnboardingComplete"

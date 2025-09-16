@@ -1,4 +1,4 @@
-import React, {useState, useCallback, useEffect} from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   TouchableOpacity,
@@ -7,11 +7,10 @@ import {
   Alert,
   Dimensions,
 } from 'react-native';
-import {useNavigation} from '@react-navigation/native';
-import {OnBoardingWrapper} from '#components/templates';
-import {Button} from '#components';
-import {Icon} from '#utils';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
+import { OnBoardingWrapper } from '#components/templates';
+import { Button } from '#components';
+import { Icon } from '#utils';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
   launchCamera,
   launchImageLibrary,
@@ -20,14 +19,18 @@ import {
   CameraOptions,
   ImageLibraryOptions,
 } from 'react-native-image-picker';
-import {request, PERMISSIONS, RESULTS} from 'react-native-permissions';
-import {validateImageFile, ImageValidationError} from '#utils/imageValidation';
-import {useImageUpload, useOnboardingNavigation} from '#hooks';
-import {ImageFile} from '#components/molecules/ImagePicker';
-import {storage} from '#/storage/mmkv';
-import {useStore} from '#store';
-import {ImageUploadPurpose} from '#generated';
-import {useFocusEffect} from '@react-navigation/native';
+import { request, PERMISSIONS, RESULTS } from 'react-native-permissions';
+import {
+  validateImageFile,
+  ImageValidationError,
+} from '#utils/imageValidation';
+import { useImageUpload, useOnboardingNavigation } from '#hooks';
+import { ImageFile } from '#components/molecules/ImagePicker';
+import { storage } from '#/storage/mmkv';
+import { useStore } from '#store';
+import { ImageUploadPurpose } from '#generated';
+import { useFocusEffect } from '@react-navigation/native';
+import { useAppNavigation } from '#hooks';
 
 const DEFAULT_OPTIONS: CameraOptions | ImageLibraryOptions = {
   mediaType: 'photo' as MediaType,
@@ -37,16 +40,16 @@ const DEFAULT_OPTIONS: CameraOptions | ImageLibraryOptions = {
   quality: 0.8,
 };
 
-const {width: screenWidth} = Dimensions.get('window');
+const { width: screenWidth } = Dimensions.get('window');
 const AVATAR_SIZE = Math.min(screenWidth * 0.4, 200);
 
 export const ProfilePictureUploadScreen = () => {
-  const navigation = useNavigation();
-  const {theme} = useUnistyles();
-  const {uploadProfileImage, updateProfileAvatarUrl} = useImageUpload();
-  const {navigateToNextStep, navigateToPreviousStep, skipToStep} =
+  const { navigate, navigateTo, navigateToNested } = useAppNavigation();
+  const { theme } = useUnistyles();
+  const { uploadProfileImage, updateProfileAvatarUrl } = useImageUpload();
+  const { navigateToNextStep, navigateToPreviousStep, skipToStep } =
     useOnboardingNavigation();
-  const {user, getUserNavigationState, setUserNavigationState} = useStore();
+  const { user, getUserNavigationState, setUserNavigationState } = useStore();
 
   const [selectedImage, setSelectedImage] = useState<ImageFile | null>(null);
   const [croppedImage, setCroppedImage] = useState<ImageFile | null>(null);
@@ -140,10 +143,10 @@ export const ProfilePictureUploadScreen = () => {
   const handleCropImage = useCallback(() => {
     if (!selectedImage) return;
 
-    navigation.navigate('ImageCrop' as any, {
+    navigateTo.imageCrop({
       imageFile: selectedImage,
     });
-  }, [selectedImage, navigation]);
+  }, [selectedImage, navigate]);
 
   const handleUpload = async () => {
     const imageToUpload = croppedImage || selectedImage;
@@ -187,20 +190,22 @@ export const ProfilePictureUploadScreen = () => {
       step={4}
       totalSteps={6}
       onBack={() => navigateToPreviousStep('ProfilePictureUpload')}
-      onSkip={() => skipToStep('InviteMembers')}>
+      onSkip={() => skipToStep('InviteMembers')}
+    >
       <View style={styles.container}>
         <View style={styles.avatarPreview}>
           {croppedImage || selectedImage ? (
             <>
               <Image
                 alt="Profile preview"
-                source={{uri: croppedImage?.uri || selectedImage?.uri}}
+                source={{ uri: croppedImage?.uri || selectedImage?.uri }}
                 style={styles.avatarImage}
               />
               <TouchableOpacity
                 onPress={handleRemoveImage}
                 style={styles.avatarRemove}
-                disabled={isUploading}>
+                disabled={isUploading}
+              >
                 <Icon
                   library="Ionicons"
                   color={theme.colors.error}
@@ -227,16 +232,19 @@ export const ProfilePictureUploadScreen = () => {
               onPress={handleCropImage}
               style={[
                 styles.cropButton,
-                {backgroundColor: theme.colors.primary},
+                { backgroundColor: theme.colors.primary },
               ]}
-              disabled={isUploading}>
+              disabled={isUploading}
+            >
               <Text
-                style={[styles.cropButtonText, {color: theme.colors.white}]}>
+                style={[styles.cropButtonText, { color: theme.colors.white }]}
+              >
                 Crop & Center
               </Text>
             </TouchableOpacity>
             <Text
-              style={[styles.cropHint, {color: theme.colors.textSecondary}]}>
+              style={[styles.cropHint, { color: theme.colors.textSecondary }]}
+            >
               Recommended to optimize your photo
             </Text>
           </View>
@@ -247,7 +255,8 @@ export const ProfilePictureUploadScreen = () => {
             <TouchableOpacity
               onPress={handleSelectPhoto}
               style={styles.uploadOption}
-              disabled={isUploading}>
+              disabled={isUploading}
+            >
               <View style={styles.uploadOptionIcon}>
                 <Icon
                   library="Ionicons"
@@ -261,16 +270,18 @@ export const ProfilePictureUploadScreen = () => {
                 <Text
                   style={[
                     styles.uploadOptionLabel,
-                    {color: theme.colors.textPrimary},
-                  ]}>
+                    { color: theme.colors.textPrimary },
+                  ]}
+                >
                   Choose from Gallery
                 </Text>
 
                 <Text
                   style={[
                     styles.uploadOptionDescription,
-                    {color: theme.colors.textSecondary},
-                  ]}>
+                    { color: theme.colors.textSecondary },
+                  ]}
+                >
                   Select a photo from your device
                 </Text>
               </View>
@@ -286,7 +297,8 @@ export const ProfilePictureUploadScreen = () => {
             <TouchableOpacity
               onPress={handleTakePhoto}
               style={styles.uploadOption}
-              disabled={isUploading}>
+              disabled={isUploading}
+            >
               <View style={styles.uploadOptionIcon}>
                 <Icon
                   library="Ionicons"
@@ -300,16 +312,18 @@ export const ProfilePictureUploadScreen = () => {
                 <Text
                   style={[
                     styles.uploadOptionLabel,
-                    {color: theme.colors.textPrimary},
-                  ]}>
+                    { color: theme.colors.textPrimary },
+                  ]}
+                >
                   Take a Photo
                 </Text>
 
                 <Text
                   style={[
                     styles.uploadOptionDescription,
-                    {color: theme.colors.textSecondary},
-                  ]}>
+                    { color: theme.colors.textSecondary },
+                  ]}
+                >
                   Use your camera to take a new photo
                 </Text>
               </View>
@@ -328,8 +342,9 @@ export const ProfilePictureUploadScreen = () => {
           <Text
             style={[
               styles.formFooterText,
-              {color: theme.colors.textSecondary},
-            ]}>
+              { color: theme.colors.textSecondary },
+            ]}
+          >
             By continuing you agree to our
           </Text>
 
@@ -338,12 +353,14 @@ export const ProfilePictureUploadScreen = () => {
               onPress={() => {
                 // handle onPress
               }}
-              style={styles.formFooterLink}>
+              style={styles.formFooterLink}
+            >
               <Text
                 style={[
                   styles.formFooterLinkText,
-                  {color: theme.colors.primary},
-                ]}>
+                  { color: theme.colors.primary },
+                ]}
+              >
                 Terms of Service
               </Text>
             </TouchableOpacity>
@@ -351,8 +368,9 @@ export const ProfilePictureUploadScreen = () => {
             <Text
               style={[
                 styles.formFooterText,
-                {color: theme.colors.textSecondary},
-              ]}>
+                { color: theme.colors.textSecondary },
+              ]}
+            >
               {' '}
               and
               {'   '}
@@ -362,12 +380,14 @@ export const ProfilePictureUploadScreen = () => {
               onPress={() => {
                 // handle onPress
               }}
-              style={styles.formFooterLink}>
+              style={styles.formFooterLink}
+            >
               <Text
                 style={[
                   styles.formFooterLinkText,
-                  {color: theme.colors.primary},
-                ]}>
+                  { color: theme.colors.primary },
+                ]}
+              >
                 Privacy Policy
               </Text>
             </TouchableOpacity>
@@ -388,8 +408,11 @@ export const ProfilePictureUploadScreen = () => {
             ? handleUpload
             : () => skipToStep('InviteMembers')
         }
-        btnStyle={[styles.nextButton, {backgroundColor: theme.colors.primary}]}
-        txtStyle={[styles.nextText, {color: theme.colors.white}]}
+        btnStyle={[
+          styles.nextButton,
+          { backgroundColor: theme.colors.primary },
+        ]}
+        txtStyle={[styles.nextText, { color: theme.colors.white }]}
         disabled={isUploading}
       />
     </OnBoardingWrapper>
