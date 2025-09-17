@@ -1,22 +1,23 @@
-import React, {useEffect, useState, useCallback} from 'react';
-import {View, TouchableOpacity, Text, Alert} from 'react-native';
-import {useForm} from 'react-hook-form';
-import {yupResolver} from '@hookform/resolvers/yup';
-import {Icon} from '#utils';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, TouchableOpacity, Text } from 'react-native';
+import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import { Icon } from '#utils';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import {AuthFormTemplate, AuthWrapper} from '#components/templates';
-import {EmailInput, PasswordInput} from '#components/atoms';
-import {getLoginValidationSchema} from '#/utils';
-import {useStore} from '#store';
-import {useLoginMutation, type LoginInput} from '#generated';
+import { AuthFormTemplate, AuthWrapper } from '#components/templates';
+import { EmailInput, PasswordInput } from '#components/atoms';
+import { getLoginValidationSchema } from '#/utils';
+import { useStore } from '#store';
+import { useLoginMutation, type LoginInput } from '#generated';
 import {
   useAuthErrorHandler,
   useCredentialManager,
   useAuthNavigation,
+  useAuthFlow,
 } from '#hooks';
-import {getEmailOnly, saveCredentials} from '#/storage/keychain';
-import {RememberMeModal} from './RememberMeModal';
+import { getEmailOnly } from '#/storage/keychain';
+import { RememberMeModal } from './RememberMeModal';
 
 const obscureEmail = (email: string): string => {
   if (!email || !email.includes('@')) return email;
@@ -30,23 +31,23 @@ const obscureEmail = (email: string): string => {
 };
 
 export function LoginScreen() {
-  const {theme} = useUnistyles();
-  const {setAuth, rememberMe, setRememberMe, hasStoredCredentials} = useStore();
+  const { theme } = useUnistyles();
+  const { rememberMe, setRememberMe, hasStoredCredentials } = useStore();
 
   const [savedEmail, setSavedEmail] = useState<string>('');
   const [showRememberModal, setShowRememberModal] = useState(false);
   const [pendingAuthResponse, setPendingAuthResponse] = useState<any>(null);
-  const [isManualLogin, setIsManualLogin] = useState(false);
   const [userHasTypedManually, setUserHasTypedManually] = useState(false);
 
-  const {loadStoredCredentials, isLoadingCredentials} = useCredentialManager();
-  const {handleAuthError} = useAuthErrorHandler();
-  const {navigateToForgotPassword, navigateToSignUp} = useAuthNavigation();
-  const [login, {loading: isLoggingIn}] = useLoginMutation();
+  const { loadStoredCredentials, isLoadingCredentials, storeCredentials } = useCredentialManager();
+  const { handleAuthError } = useAuthErrorHandler();
+  const { navigateToForgotPassword, navigateToSignUp } = useAuthNavigation();
+  const { handleLogin, isLoading: isLoggingIn } = useAuthFlow();
+  const [loginMutation] = useLoginMutation();
 
   const form = useForm<LoginInput>({
     resolver: yupResolver(getLoginValidationSchema()),
-    defaultValues: {email: '', password: ''},
+    defaultValues: { email: '', password: '' },
   });
 
   // Load saved email on mount
@@ -97,7 +98,7 @@ export function LoginScreen() {
       const credentials = await loadStoredCredentials();
       if (!credentials) return;
 
-      const result = await login({
+      const result = await loginMutation({
         variables: {
           input: {
             email: credentials.email,
@@ -107,59 +108,52 @@ export function LoginScreen() {
       });
 
       if (result.data?.login) {
-        // Just update auth state - navigation happens automatically
-        setAuth(
-          result.data.login.user,
-          result.data.login.accessToken,
-          result.data.login.refreshToken,
-        );
-        setRememberMe(true);
+        // Use the auth flow hook to handle login
+        await handleLogin(result.data.login, true);
       }
     } catch (error: any) {
       handleAuthError(error, 'Biometric authentication failed');
     }
   }, [
     loadStoredCredentials,
-    login,
-    setAuth,
-    setRememberMe,
+    loginMutation,
+    handleLogin,
     handleAuthError,
     isLoadingCredentials,
+    userHasTypedManually,
   ]);
 
   // Handle remember me choice
   const handleRememberChoice = async (remember: boolean) => {
-    setShowRememberModal(false);
-
     if (!pendingAuthResponse) return;
 
-    const {user, accessToken, refreshToken, email, password} =
-      pendingAuthResponse;
+    const { loginData, email, password } = pendingAuthResponse;
+
+    // Close modal first
+    setShowRememberModal(false);
 
     // Save credentials if user chose to remember and we don't already have stored credentials
     if (remember && email && password && !hasStoredCredentials) {
-      // Save credentials without blocking navigation
-      saveCredentials(email, password).catch(error => {
+      try {
+        // Wait for biometric authentication to complete before navigation
+        await storeCredentials(email, password);
+        console.log('Credentials saved successfully');
+      } catch (error) {
         console.error('Failed to save credentials:', error);
-        // Don't prevent auth flow if saving fails
-      });
+        // Continue with auth flow even if saving fails
+      }
     } else if (remember && hasStoredCredentials) {
       console.log('Skipping credential save - credentials already exist in keychain');
     }
 
-    // Update auth state and remember preference
-    setRememberMe(remember);
-    setAuth(user, accessToken, refreshToken);
-
-    // Navigation will happen automatically via conditional groups
+    // Use the auth flow hook to handle login completion
+    await handleLogin(loginData, remember);
     setPendingAuthResponse(null);
   };
 
   // Form submission
   const onSubmit = async (input: LoginInput) => {
     try {
-      setIsManualLogin(true); // Flag that this is a manual login
-
       // Determine if this is truly manual input (not using saved credentials)
       const isUsingObscuredEmail = input.email.includes('***');
       const actualEmail = isUsingObscuredEmail && savedEmail ? savedEmail : input.email;
@@ -171,9 +165,9 @@ export function LoginScreen() {
         hasStoredCredentials
       });
 
-      const response = await login({
+      const response = await loginMutation({
         variables: {
-          input: {...input, email: actualEmail},
+          input: { ...input, email: actualEmail },
         },
       });
 
@@ -184,22 +178,15 @@ export function LoginScreen() {
         // Skip modal if credentials already exist to prevent biometric prompts
         if (rememberMe === undefined && !hasStoredCredentials) {
           setPendingAuthResponse({
-            ...loginData,
+            loginData,
             email: actualEmail,
             password: input.password,
           });
           setShowRememberModal(true);
+          // Don't call handleLogin here - wait for user choice in modal
         } else {
           // Direct login with existing preference
-          setAuth(
-            loginData.user,
-            loginData.accessToken,
-            loginData.refreshToken,
-          );
-
-          // Don't save credentials automatically during manual login
-          // Let the user explicitly choose via RememberMeModal if needed
-          console.log('Manual login completed - skipping automatic credential save to prevent biometric prompts');
+          await handleLogin(loginData, rememberMe ?? false);
         }
       }
     } catch (err: any) {
@@ -222,7 +209,7 @@ export function LoginScreen() {
             name: 'password',
             label: 'Password',
             component: PasswordInput,
-            props: {showToggle: true},
+            props: { showToggle: true },
           },
         ]}
         control={form.control}

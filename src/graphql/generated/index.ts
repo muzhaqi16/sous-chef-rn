@@ -7711,6 +7711,9 @@ export type AutocompleteItemsQuery = {
                 name: string;
                 type: CategoryType;
                 isPrimary: boolean;
+                color: string | null | undefined;
+                icon: string | null | undefined;
+                slug: string | null | undefined;
               }
             | null
             | undefined;
@@ -24189,6 +24192,18 @@ export const AutocompleteItemsDocument = {
                             {
                               kind: 'Field',
                               name: { kind: 'Name', value: 'isPrimary' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'color' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'icon' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'slug' },
                             },
                           ],
                         },

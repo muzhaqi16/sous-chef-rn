@@ -1,8 +1,8 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import { Text, TouchableOpacity, View, Image } from 'react-native';
 import { BottomSheetFlatList, BottomSheetView } from '@gorhom/bottom-sheet';
 import { StyleSheet } from 'react-native-unistyles';
-import { useAutocompleteItemsLazyQuery, ItemSuggestion } from '#generated';
+import { useAutocompleteItemsLazyQuery, ItemSuggestion, AutocompleteItemsQuery } from '#generated';
 
 interface EnhancedAutocompleteProps {
   searchTerm: string;
@@ -17,6 +17,10 @@ const EnhancedAutocomplete: React.FC<EnhancedAutocompleteProps> = ({
     fetchPolicy: 'cache-and-network',
   });
 
+  // Keep track of previous results to show during loading
+  // Use the exact type from the GraphQL query to avoid type mismatches
+  const [previousResults, setPreviousResults] = useState<ItemSuggestion[]>([]);
+
   useEffect(() => {
     if (searchTerm.length >= 2) {
       fetchItems({ variables: { input: { query: searchTerm } } });
@@ -25,8 +29,18 @@ const EnhancedAutocomplete: React.FC<EnhancedAutocompleteProps> = ({
 
   const suggestions = useMemo(() => {
     if (searchTerm.length < 2) return [];
-    return data?.autocompleteItems?.suggestions || [];
-  }, [data, searchTerm]);
+
+    const newSuggestions = data?.autocompleteItems?.suggestions || [];
+
+    // Update previous results when we get new data
+    if (newSuggestions.length > 0 || !loading) {
+      setPreviousResults(newSuggestions);
+      return newSuggestions;
+    }
+
+    // If loading and no new data yet, show previous results
+    return previousResults;
+  }, [data, searchTerm, loading, previousResults]);
 
   const totalCount = data?.autocompleteItems?.totalCount || 0;
 
@@ -43,7 +57,7 @@ const EnhancedAutocomplete: React.FC<EnhancedAutocompleteProps> = ({
 
   const renderItem = ({ item }: { item: ItemSuggestion }) => (
     <TouchableOpacity
-      onPress={() => onSelectItem(item)}
+      onPress={() => onSelectItem(item )}
       style={styles.item}
       activeOpacity={0.7}
     >
@@ -72,7 +86,10 @@ const EnhancedAutocomplete: React.FC<EnhancedAutocompleteProps> = ({
   );
 
   const renderHeader = () => {
-    if (loading) {
+    const showingPreviousResults = loading && previousResults.length > 0;
+    const currentCount = showingPreviousResults ? previousResults.length : totalCount;
+
+    if (loading && previousResults.length === 0) {
       return (
         <View style={styles.headerContainer}>
           <Text style={styles.headerText}>Searching...</Text>
@@ -80,11 +97,14 @@ const EnhancedAutocomplete: React.FC<EnhancedAutocompleteProps> = ({
       );
     }
 
-    if (totalCount > 0) {
+    if (currentCount > 0) {
       return (
         <View style={styles.headerContainer}>
           <Text style={styles.headerText}>
-            {totalCount} item{totalCount !== 1 ? 's' : ''} found
+            {currentCount} item{currentCount !== 1 ? 's' : ''} found
+            {showingPreviousResults && (
+              <Text style={styles.loadingIndicator}> • Updating...</Text>
+            )}
           </Text>
         </View>
       );
@@ -111,9 +131,14 @@ const EnhancedAutocomplete: React.FC<EnhancedAutocompleteProps> = ({
     );
   };
 
+  const showingPreviousResults = loading && previousResults.length > 0;
+
   return (
     <BottomSheetFlatList
-      style={styles.flatList}
+      style={[
+        styles.flatList,
+        showingPreviousResults && styles.flatListLoading
+      ]}
       contentContainerStyle={styles.flatListContent}
       data={suggestions}
       keyExtractor={(item: ItemSuggestion) => item.id}
@@ -132,6 +157,9 @@ const styles = StyleSheet.create(theme => ({
   flatList: {
     flex: 1,
   },
+  flatListLoading: {
+    opacity: 0.8,
+  },
   flatListContent: {
     paddingBottom: theme.spacing.lg,
   },
@@ -147,6 +175,12 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: '600',
     color: theme.colors.textSecondary,
     textAlign: 'center',
+  },
+  loadingIndicator: {
+    fontSize: theme.typography.fontSize.sm,
+    fontWeight: '400',
+    color: theme.colors.primary,
+    opacity: 0.8,
   },
   item: {
     paddingVertical: theme.spacing.sm,

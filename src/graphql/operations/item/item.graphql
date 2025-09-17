@@ -124,6 +124,9 @@ query AutocompleteItems($input: AutocompleteInput!) {
         name
         type
         isPrimary
+        color
+        icon
+        slug
       }
     }
     totalCount

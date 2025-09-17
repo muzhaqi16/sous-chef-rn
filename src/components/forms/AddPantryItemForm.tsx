@@ -1,13 +1,12 @@
-import React, {useState, useCallback} from 'react';
-import {View, ScrollView, Alert, KeyboardAvoidingView, Platform} from 'react-native';
-import {useForm} from 'react-hook-form';
-import {yupResolver} from '@hookform/resolvers/yup';
+import React, { useState, useCallback } from 'react';
+import { View, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import {StyleSheet} from 'react-native-unistyles';
-import {ApolloCache} from '@apollo/client';
+import { ApolloCache } from '@apollo/client';
 
-import {commonStyles} from '#/styles/commonStyles';
-import {useDefaultHome} from '#hooks';
+import { commonStyles } from '#/styles/commonStyles';
+import { useDefaultHome } from '#hooks';
 import {
   StorageState,
   useAddItemToPantryMutation,
@@ -18,10 +17,10 @@ import {
   PantryItemFragment,
 } from '#generated';
 
-import {PantryItemFormHeader} from './PantryItemFormHeader';
-import {ItemInformationSection} from './ItemInformationSection';
-import {QuantitySection} from './QuantitySection';
-import {StorageDetailsSection} from './StorageDetailsSection';
+import { PantryItemFormHeader } from './PantryItemFormHeader';
+import { ItemInformationSection } from './ItemInformationSection';
+import { QuantitySection } from './QuantitySection';
+import { StorageDetailsSection } from './StorageDetailsSection';
 
 interface AddPantryItemFormData {
   itemName: string;
@@ -66,8 +65,8 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
     getDefaultPantry,
   } = useDefaultHome();
 
-  const {data: homeData} = useGetHomeQuery({
-    variables: {homeId: selectedHomeId ?? ''},
+  const { data: homeData } = useGetHomeQuery({
+    variables: { homeId: selectedHomeId ?? '' },
     skip: !selectedHomeId,
   });
 
@@ -78,7 +77,7 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
   const pantry = getDefaultPantry(homeData);
 
   const [addItem] = useAddItemToPantryMutation({
-    update: (cache: ApolloCache, {data: mutationData}: any) => {
+    update: (cache: ApolloCache, { data: mutationData }: any) => {
       if (!mutationData?.addItemToPantry || !pantry?.id) return;
       const newItem = mutationData.addItemToPantry;
       try {
@@ -86,12 +85,12 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
           pantryItems: PantryItemFragment[];
         }>({
           query: GetPantryItemsDocument,
-          variables: {pantryId: pantry.id},
+          variables: { pantryId: pantry.id },
         });
         if (existingData?.pantryItems) {
           cache.writeQuery({
             query: GetPantryItemsDocument,
-            variables: {pantryId: pantry.id},
+            variables: { pantryId: pantry.id },
             data: {
               pantryItems: [newItem, ...existingData.pantryItems],
             },
@@ -106,7 +105,7 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
   const {
     control,
     handleSubmit,
-    formState: {errors},
+    formState: { errors },
     setValue,
     watch,
   } = useForm<AddPantryItemFormData>({
@@ -174,16 +173,25 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
       return;
     }
 
+    if (!pantry?.id) {
+      Alert.alert('Error', 'No pantry selected. Please select a pantry first.');
+      return;
+    }
+
     setSaving(true);
     try {
-      const unitData = await unitQuery({
-        variables: {symbol: data.unit.trim()},
-      });
-      const unitId = unitData.data?.unitBySymbol?.id || '';
+      // Use selectedUnitId if available (from autocomplete), otherwise query by symbol
+      let unitId = selectedUnitId;
+      if (!unitId && data.unit.trim()) {
+        const unitData = await unitQuery({
+          variables: { symbol: data.unit.trim() },
+        });
+        unitId = unitData.data?.unitBySymbol?.id || '';
+      }
 
       const baseInput = {
-        pantryId: pantry?.id || '',
-        unitId: unitId,
+        pantryId: pantry.id, // Already validated above, so we know it exists
+        unitId: unitId || '',
         initialQuantity: data.quantity,
         storageState: data.storageState as StorageState,
         expiresAt: data.expirationDate?.toISOString() || null,
@@ -199,16 +207,25 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
           itemId: data.selectedItemId,
         };
       } else {
+        // Use selectedCategoryId if available, otherwise use category name
+        const categoryInput = selectedCategoryId
+          ? { customCategory: selectedCategoryId } // If we have a selected category ID, use it
+          : data.category.trim()
+            ? { itemCategory: data.category.trim() } // Otherwise use the typed category name
+            : {};
+
         input = {
           ...baseInput,
           itemName: data.itemName.trim(),
           itemDescription: data.notes.trim() || null,
           itemBrand: data.brand.trim() || null,
-          itemCategory: data.category.trim() || null,
+          ...categoryInput,
         };
       }
 
-      await addItem({variables: {input}});
+      console.log('AddPantryItemForm: Submitting with pantryId:', pantry.id, 'input:', input);
+
+      await addItem({ variables: { input } });
       onSuccess?.();
     } catch (error) {
       Alert.alert('Error', 'Failed to add pantry item');
@@ -247,7 +264,11 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
             onIncrementQuantity={handleIncrementQuantity}
             onDecrementQuantity={handleDecrementQuantity}
             onUnitSelected={setSelectedUnitId}
-            onUnitChange={(unit) => setValue('unit', unit)}
+            onUnitChange={(unit) => {
+              setValue('unit', unit);
+              // Clear selected unit ID when user types manually
+              setSelectedUnitId(null);
+            }}
           />
 
           <StorageDetailsSection

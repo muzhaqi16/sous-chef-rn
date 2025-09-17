@@ -10976,6 +10976,9 @@ export type AutocompleteItemsQuery = {
                 name: string;
                 type: CategoryType;
                 isPrimary: boolean;
+                color?: string | null | undefined;
+                icon?: string | null | undefined;
+                slug?: string | null | undefined;
               }
             | null
             | undefined;

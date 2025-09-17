@@ -10,6 +10,7 @@ import {
   hasCredentials,
   clearCredentials,
 } from '#/storage/keychain';
+import {useStore} from '#store';
 
 interface Credentials {
   email: string;
@@ -19,6 +20,7 @@ interface Credentials {
 export const useCredentialManager = () => {
   const [isLoadingCredentials, setIsLoadingCredentials] = useState(false);
   const [isSavingCredentials, setIsSavingCredentials] = useState(false);
+  const {setHasStoredCredentials} = useStore();
 
   const checkStoredCredentials = useCallback(async (): Promise<boolean> => {
     try {
@@ -63,6 +65,7 @@ export const useCredentialManager = () => {
       try {
         setIsSavingCredentials(true);
         await saveCredentials(email, password);
+        setHasStoredCredentials(true); // Update store state
         return true;
       } catch (error) {
         console.error('Error saving credentials:', error);
@@ -71,18 +74,19 @@ export const useCredentialManager = () => {
         setIsSavingCredentials(false);
       }
     },
-    [],
+    [setHasStoredCredentials],
   );
 
   const removeCredentials = useCallback(async (): Promise<boolean> => {
     try {
       await clearCredentials();
+      setHasStoredCredentials(false); // Update store state
       return true;
     } catch (error) {
       console.error('Error clearing credentials:', error);
       return false;
     }
-  }, []);
+  }, [setHasStoredCredentials]);
 
   return {
     isLoadingCredentials,

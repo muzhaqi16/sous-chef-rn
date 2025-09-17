@@ -3,19 +3,19 @@ import { useStore } from '#store';
 import { RefreshTokenDocument, RefreshTokenMutation } from '#generated';
 import { reconnectWebSocket, isWebSocketReconnecting } from './wsLink';
 import { client } from '../client';
+import { tokenRefreshStateManager } from '#storage/tokenRefreshStateManager';
 
 let isRefreshing = false;
 let refreshSubscribers: Array<(accessToken: string | null) => void> = [];
-let refreshPromise: Promise<string | null> | null = null;
 
 const subscribeTokenRefresh = (cb: (accessToken: string | null) => void) => {
   refreshSubscribers.push(cb);
 };
 
 const onTokenRefreshed = (accessToken: string | null) => {
+  console.log(`🔄 Token refresh completed, notifying ${refreshSubscribers.length} waiting requests`);
   refreshSubscribers.forEach(cb => cb(accessToken));
   refreshSubscribers = [];
-  refreshPromise = null;
 };
 
 const performTokenRefresh = async (): Promise<string | null> => {
@@ -69,10 +69,14 @@ export const attemptTokenRefresh = (
   forward: any,
 ): Observable<ApolloLink.Result> => {
   return new Observable<ApolloLink.Result>(observer => {
-    // If refresh is already in progress, wait for it
-    if (isRefreshing && refreshPromise) {
+    // If refresh is already in progress, queue this operation
+    if (isRefreshing) {
+      console.log(`⏳ Token refresh in progress, queuing ${operation.operationName}`);
+      tokenRefreshStateManager.queueOperation(operation.operationName);
+
       subscribeTokenRefresh((accessToken: string | null) => {
         if (accessToken) {
+          console.log(`🔄 Retrying queued operation ${operation.operationName} with new token`);
           operation.setContext({
             headers: {
               ...operation.getContext().headers,
@@ -94,12 +98,17 @@ export const attemptTokenRefresh = (
 
     // Start new refresh
     isRefreshing = true;
+    tokenRefreshStateManager.startRefresh();
+    console.log(`🔄 Starting token refresh for ${operation.operationName}`);
 
-    refreshPromise = performTokenRefresh()
+    performTokenRefresh()
       .then((newToken) => {
+        const success = !!newToken;
+        tokenRefreshStateManager.completeRefresh(success);
         onTokenRefreshed(newToken);
 
         if (newToken) {
+          console.log(`✅ Token refresh successful, retrying ${operation.operationName}`);
           operation.setContext({
             headers: {
               ...operation.getContext().headers,
@@ -109,14 +118,21 @@ export const attemptTokenRefresh = (
 
           forward(operation).subscribe({
             next: observer.next.bind(observer),
-            error: observer.error.bind(observer),
+            error: (retryError: any) => {
+              console.log(`❌ Retry failed for ${operation.operationName}:`, retryError.message);
+              observer.error(retryError);
+            },
             complete: observer.complete.bind(observer),
           });
+        } else {
+          observer.error(new Error('Token refresh failed'));
         }
 
         return newToken;
       })
       .catch((error) => {
+        console.log('❌ Token refresh failed:', error.message);
+        tokenRefreshStateManager.completeRefresh(false);
         onTokenRefreshed(null);
         observer.error(error);
         return null;

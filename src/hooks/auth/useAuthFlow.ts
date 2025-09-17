@@ -99,9 +99,9 @@ export const useAuthFlow = () => {
           // Store credentials if remember me
           if (rememberMe) {
             await storeCredentials(email, password);
-          } else {
-            await removeCredentials();
           }
+          // Don't remove existing credentials if user chooses not to remember
+          // Let them persist from previous sessions
 
           // Use handleLogin to update state
           await handleLogin(loginData, rememberMe);
@@ -178,14 +178,15 @@ export const useAuthFlow = () => {
       // Use the store's logout method which handles everything
       await store.logout();
 
-      // Clear stored credentials
-      await removeCredentials();
+      // DON'T clear stored credentials - keep them for future logins
+      // This follows mobile app best practices where credentials persist
+      // until user explicitly chooses "Forget this device"
 
       handleAuthSuccess('Logged out successfully');
     } catch (error: any) {
       handleAuthError(error, 'Logout failed');
     }
-  }, [removeCredentials, handleAuthSuccess, handleAuthError]);
+  }, [handleAuthSuccess, handleAuthError]);
 
   return {
     handleLogin, // For when you already have auth response

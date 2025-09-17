@@ -4,18 +4,7 @@ import { isKnownServerError } from '#utils/subscriptionErrorHandler';
 import { LogoutCleanup } from '../logoutCleanup';
 import { attemptTokenRefresh } from './refreshToken';
 
-// Debouncing mechanism to prevent too many simultaneous refresh attempts
-let lastRefreshAttempt = 0;
-const REFRESH_DEBOUNCE_MS = 1000; // 1 second debounce
-
-const shouldAttemptRefresh = (): boolean => {
-  const now = Date.now();
-  if (now - lastRefreshAttempt < REFRESH_DEBOUNCE_MS) {
-    return false;
-  }
-  lastRefreshAttempt = now;
-  return true;
-};
+// Debouncing is now handled in the refreshToken link itself
 
 
 export const errorLink = new ErrorLink(({ error, operation, forward }) => {
@@ -78,12 +67,9 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
           return;
         }
 
-        // Debounce refresh attempts
-        if (!shouldAttemptRefresh()) {
-          return;
-        }
-
-        // Use the dedicated refresh token link
+        console.log(`🔄 Auth error detected for ${operation.operationName}, attempting token refresh`);
+        // Always attempt token refresh - the refresh mechanism will handle queuing
+        // Don't debounce here, let the refreshToken link handle the coordination
         return attemptTokenRefresh(operation, forward);
       }
     }
@@ -101,10 +87,6 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
 
     // Check for WebSocket authentication errors
     if (isSubscription && error.message?.includes('Socket closed with event 4500')) {
-      // Debounce refresh attempts for WebSocket errors too
-      if (!shouldAttemptRefresh()) {
-        return;
-      }
       return attemptTokenRefresh(operation, forward);
     }
 
