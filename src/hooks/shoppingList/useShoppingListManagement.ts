@@ -2,7 +2,6 @@ import { useMemo, useState, useEffect } from 'react';
 import { Alert } from 'react-native';
 import {
   useGetShoppingListsQuery,
-  useShoppingListItemsChangedSubscription,
   useAddItemToShoppingListMutation,
   useUpdateShoppingListItemMutation,
   useRemoveItemFromShoppingListMutation,
@@ -10,49 +9,18 @@ import {
   useCreateShoppingListMutation,
   useUpdateShoppingListMutation,
   useDeleteShoppingListMutation,
-  GetShoppingListsDocument,
-  GetShoppingListItemsDocument,
+  CreateShoppingListItemInput,
+  CreateShoppingListInput,
+  UpdateShoppingListItemInput
 } from '#generated';
 import { useSearchableList } from '../useSearchableList';
-import { ApolloClient } from '@apollo/client';
 import { shoppingListStorage } from '#/storage/shoppingListCache';
-import { useStore } from '#store';
+import { useAuth } from '#hooks/auth/useAuth';
 
-export interface ShoppingListItemInput {
-  itemName: string;
-  quantity: number;
-  unitId?: string;
-  estimatedPrice?: number;
-  budgetPrice?: number;
-  notes?: string;
-  category?: string;
-  priority?: number;
-  itemBarcode?: string;
-  preferredStoreId?: string;
-}
-
-export interface ShoppingListItemUpdate extends Partial<ShoppingListItemInput> {
-  isPurchased?: boolean;
-  purchasedQuantity?: number;
-  purchasedPrice?: number;
-}
-
-export interface ShoppingListInput {
-  name: string;
-  description?: string;
-  budgetAmount?: number;
-  currency?: string;
-  category?: string;
-  priority?: number;
-  targetStoreId?: string;
-  tags?: string[];
-}
 
 export function useShoppingListManagement() {
-  // Get user state to check for logout
-  const user = useStore(state => state.user);
-  const isLoggingOut = useStore(state => state.isLoggingOut);
-  const isLoggedOut = !user;
+  // Get authentication state from useAuth hook
+  const { user, accessToken, isLoggingOut, isLoggedOut, canAttemptQueries } = useAuth();
 
   // Local state - MMKV is source of truth
   const [lists, setLists] = useState<any[]>([]);
@@ -62,10 +30,12 @@ export function useShoppingListManagement() {
   useEffect(() => {
     if (!isLoggedOut) {
       const cachedLists = shoppingListStorage.getShoppingLists();
-      if (cachedLists && cachedLists.length > 0) {
+      if (cachedLists !== null) {
+        // Cache exists (even if empty array), so we have loaded cache
         setLists(cachedLists);
         setHasLoadedCache(true);
       } else {
+        // No cache exists, start with empty state
         setLists([]);
         setHasLoadedCache(false);
       }
@@ -82,7 +52,7 @@ export function useShoppingListManagement() {
     data: queryData,
     error: queryError,
   } = useGetShoppingListsQuery({
-    skip: isLoggedOut || isLoggingOut,
+    skip: !canAttemptQueries,
     fetchPolicy: 'network-only', // Always fetch fresh
     notifyOnNetworkStatusChange: true,
   });
@@ -96,6 +66,20 @@ export function useShoppingListManagement() {
       setLists(queryData.shoppingLists);
     }
   }, [queryData, user?.id]);
+
+  // Retry mechanism: retry when we can attempt queries but no shopping lists data
+  useEffect(() => {
+    if (canAttemptQueries && !queryData?.shoppingLists && !loading && queryError) {
+      networkRefetch();
+    }
+  }, [canAttemptQueries, queryData?.shoppingLists, loading, queryError, networkRefetch]);
+
+  // Additional retry when user becomes available after token refresh
+  useEffect(() => {
+    if (user && accessToken && !queryData?.shoppingLists && !loading) {
+      networkRefetch();
+    }
+  }, [user, accessToken, queryData?.shoppingLists, loading, networkRefetch]);
 
   useEffect(() => {
     if (queryError) {
@@ -130,7 +114,7 @@ export function useShoppingListManagement() {
   const [markItemPurchasedMutation] = useMarkItemPurchasedMutation();
 
   // Create list with optimistic update
-  const createList = async (input: ShoppingListInput) => {
+  const createList = async (input: CreateShoppingListInput) => {
     // Optimistically update MMKV and UI
     const optimisticList = {
       id: `temp-${Date.now()}`,
@@ -172,7 +156,7 @@ export function useShoppingListManagement() {
   // Update list
   const updateList = async (
     listId: string,
-    updates: Partial<ShoppingListInput>,
+    updates: Partial<CreateShoppingListItemInput>,
   ) => {
     // Optimistic update
     const currentLists = lists;
@@ -255,12 +239,11 @@ export function useShoppingListManagement() {
   };
 
   // Add item to shopping list
-  const addItem = async (listId: string, input: ShoppingListItemInput) => {
+  const addItem = async (input: CreateShoppingListItemInput) => {
     try {
       const result = await addItemMutation({
         variables: {
           input: {
-            shoppingListId: listId,
             ...input,
           },
         },
@@ -283,7 +266,7 @@ export function useShoppingListManagement() {
   // Update shopping list item
   const updateItem = async (
     itemId: string,
-    updates: ShoppingListItemUpdate,
+    updates: UpdateShoppingListItemInput,
   ) => {
     try {
       const result = await updateItemMutation({
@@ -383,7 +366,10 @@ export function useShoppingListManagement() {
 
   // Enhanced refetch
   const refetch = async () => {
-    if (isLoggedOut || isLoggingOut) return;
+    if (!canAttemptQueries) {
+      console.warn('Cannot refetch: user not authenticated or logging out');
+      return;
+    }
 
     try {
       const result = await networkRefetch();

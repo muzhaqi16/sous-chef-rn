@@ -10,7 +10,7 @@ import {
 } from '#generated';
 import { useSearchableList } from '../useSearchableList';
 import { pantryStorage } from '#/storage/pantryCache';
-import { useStore } from '#store';
+import { useAuth } from '#hooks/auth/useAuth';
 
 export interface PantryItemInput {
   itemName: string;
@@ -33,9 +33,8 @@ export interface PantryItemUpdate extends Partial<PantryItemInput> {
 }
 
 export function usePantryManagement(pantryId: string | undefined) {
-  // Get user state to check for logout
-  const user = useStore(state => state.user);
-  const isLoggedOut = !user;
+  // Get authentication state from useAuth hook
+  const { isLoggedOut } = useAuth();
   // Local state - MMKV is source of truth
   const [items, setItems] = useState<any[]>([]);
   const [hasLoadedCache, setHasLoadedCache] = useState(false);
@@ -44,10 +43,12 @@ export function usePantryManagement(pantryId: string | undefined) {
   useEffect(() => {
     if (pantryId && !isLoggedOut) {
       const cached = pantryStorage.getPantryItems(pantryId);
-      if (cached && cached.length > 0) {
+      if (cached !== null) {
+        // Cache exists (even if empty array), so we have loaded cache
         setItems(cached);
         setHasLoadedCache(true);
       } else {
+        // No cache exists, start with empty state
         setItems([]);
         setHasLoadedCache(false);
       }
@@ -57,15 +58,19 @@ export function usePantryManagement(pantryId: string | undefined) {
     }
   }, [pantryId, isLoggedOut]);
 
-  // Simple query - always fetch fresh, no Apollo cache complexity
+  // Use cache-first for initial load, then network updates via subscription
+  const fetchPolicy = hasLoadedCache ? 'cache-first' : 'cache-and-network';
+  const shouldSkip = !pantryId || isLoggedOut;
+
+
   const {
     refetch: networkRefetch,
     loading,
     data: queryData,
   } = useGetPantryItemsQuery({
     variables: { pantryId: pantryId ?? '' },
-    skip: !pantryId || isLoggedOut,
-    fetchPolicy: 'network-only', // Always fetch fresh
+    skip: shouldSkip,
+    fetchPolicy,
     notifyOnNetworkStatusChange: true,
   });
 
@@ -77,7 +82,7 @@ export function usePantryManagement(pantryId: string | undefined) {
       // Update local state
       setItems(queryData.pantryItems);
     }
-  }, [queryData, pantryId]);
+  }, [queryData, pantryId, hasLoadedCache, loading]);
 
   // Simple subscription - just triggers refetch
   usePantryItemsChangedSubscription({
@@ -288,6 +293,7 @@ export function usePantryManagement(pantryId: string | undefined) {
       throw error;
     }
   };
+
 
   return {
     // Data

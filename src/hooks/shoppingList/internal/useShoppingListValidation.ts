@@ -1,6 +1,6 @@
 import {useMemo} from 'react';
 import {useGetShoppingListsQuery} from '#generated';
-import {useStore} from '#store';
+import {useAuth} from '#hooks/auth/useAuth';
 
 /**
  * Hook to validate that a shopping list ID belongs to the current user
@@ -9,13 +9,11 @@ import {useStore} from '#store';
  * @returns Object containing validation result and safe listId
  */
 export function useShoppingListValidation(listId: string | null) {
-  const user = useStore(state => state.user);
-  const isLoggingOut = useStore(state => state.isLoggingOut);
-  const isLoggedOut = !user;
+  const { isLoggingOut, isLoggedOut, canAttemptQueries } = useAuth();
 
   // Get user's shopping lists to validate the listId belongs to current user
   const {data: listsData} = useGetShoppingListsQuery({
-    skip: isLoggedOut || isLoggingOut,
+    skip: !canAttemptQueries,
     fetchPolicy: 'cache-first',
     errorPolicy: 'ignore', // Don't fail validation due to network errors
   });
@@ -34,7 +32,7 @@ export function useShoppingListValidation(listId: string | null) {
     }
     
     // User is logged out
-    if (isLoggedOut || isLoggingOut) {
+    if (!canAttemptQueries) {
       return {
         isValid: false,
         safeListId: null,
@@ -69,7 +67,7 @@ export function useShoppingListValidation(listId: string | null) {
       safeListId: listId,
       reason: listExists ? 'Valid' : 'Pending validation',
     };
-  }, [listId, isLoggedOut, isLoggingOut, userLists]);
+  }, [listId, canAttemptQueries, userLists]);
   
   return validation;
 }

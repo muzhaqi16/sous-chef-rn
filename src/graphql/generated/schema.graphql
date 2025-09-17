@@ -2641,9 +2641,9 @@ type PantryItem {
   storeId: String
   tags: [String!]!
   totalCost: Float
-  unit: Unit!
-  unitId: String!
-  unitName: String!
+  unit: Unit
+  unitId: String
+  unitName: String
   updatedAt: DateTime!
   usageFrequency: UsageFrequency!
   usageRecords: [PantryItemUsage!]!

@@ -3204,9 +3204,9 @@ export type PantryItem = {
   storeId: Maybe<Scalars['String']['output']>;
   tags: Array<Scalars['String']['output']>;
   totalCost: Maybe<Scalars['Float']['output']>;
-  unit: Unit;
-  unitId: Scalars['String']['output'];
-  unitName: Scalars['String']['output'];
+  unit: Maybe<Unit>;
+  unitId: Maybe<Scalars['String']['output']>;
+  unitName: Maybe<Scalars['String']['output']>;
   updatedAt: Scalars['DateTime']['output'];
   usageFrequency: UsageFrequency;
   usageRecords: Array<PantryItemUsage>;
@@ -6674,8 +6674,8 @@ export type PantryItemFragment = {
   pantryId: string;
   itemId: string;
   itemName: string;
-  unitName: string;
-  unitId: string;
+  unitName: string | null | undefined;
+  unitId: string | null | undefined;
   expiresAt: string | null | undefined;
   storageLocation: string | null | undefined;
   storageState: StorageState;
@@ -6691,17 +6691,20 @@ export type PantryItemFragment = {
   updatedAt: string;
   tags: Array<string>;
   item: { __typename?: 'Item' } & ItemFragment;
-  unit: {
-    __typename?: 'Unit';
-    id: string;
-    name: string;
-    symbol: string;
-    type: UnitType;
-    isMetric: boolean;
-    baseUnitId: string | null | undefined;
-    conversionFactor: number;
-    isCommon: boolean;
-  };
+  unit:
+    | {
+        __typename?: 'Unit';
+        id: string;
+        name: string;
+        symbol: string;
+        type: UnitType;
+        isMetric: boolean;
+        baseUnitId: string | null | undefined;
+        conversionFactor: number;
+        isCommon: boolean;
+      }
+    | null
+    | undefined;
   usageRecords: Array<{
     __typename?: 'PantryItemUsage';
     id: string;
@@ -6790,6 +6793,74 @@ export type PantryFragment = {
     | undefined;
 };
 
+export type BasicPantryFragment = {
+  __typename?: 'Pantry';
+  id: string;
+  homeId: string;
+  name: string;
+  description: string | null | undefined;
+  isDefault: boolean;
+  location: string | null | undefined;
+  temperature: string | null | undefined;
+  tags: Array<string>;
+  metadata: any | null | undefined;
+  version: number;
+  createdAt: string;
+  updatedAt: string | null | undefined;
+};
+
+export type HomeWithPantriesFragment = {
+  __typename?: 'Home';
+  id: string;
+  name: string;
+  type: HomeType;
+  description: string | null | undefined;
+  timezone: string | null | undefined;
+  currency: string | null | undefined;
+  isPublic: boolean;
+  joinCode: string | null | undefined;
+  allowJoinCode: boolean;
+  maxMembers: number | null | undefined;
+  tags: Array<string>;
+  metadata: string | null | undefined;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+  invites:
+    | Array<{ __typename?: 'HomeInvite' } & HomeInviteFragment>
+    | null
+    | undefined;
+  members: Array<{ __typename?: 'Membership' } & MemberShipFragment>;
+  myMembership:
+    | ({ __typename?: 'Membership' } & MemberShipFragment)
+    | null
+    | undefined;
+  membershipStats: {
+    __typename?: 'MembershipStats';
+    total: number;
+    active: number;
+    recentlyActive: number;
+    byRole: {
+      __typename?: 'MembershipRoleStats';
+      OWNER: number;
+      ADMIN: number;
+      MEMBER: number;
+      GUEST: number;
+    };
+    byStatus: {
+      __typename?: 'MembershipStatusStats';
+      ACTIVE: number;
+      SUSPENDED: number;
+      LEFT: number;
+      REMOVED: number;
+    };
+  };
+  pantries:
+    | Array<{ __typename?: 'Pantry' } & BasicPantryFragment>
+    | null
+    | undefined;
+};
+
 export type HomeFragment = {
   __typename?: 'Home';
   id: string;
@@ -6861,6 +6932,15 @@ export type GetHomeQueryVariables = Exact<{
 export type GetHomeQuery = {
   __typename?: 'Query';
   home: ({ __typename?: 'Home' } & HomeFragment) | null | undefined;
+};
+
+export type GetHomeBasicQueryVariables = Exact<{
+  homeId: Scalars['ID']['input'];
+}>;
+
+export type GetHomeBasicQuery = {
+  __typename?: 'Query';
+  home: ({ __typename?: 'Home' } & HomeWithPantriesFragment) | null | undefined;
 };
 
 export type GetHomesQueryVariables = Exact<{ [key: string]: never }>;
@@ -8202,7 +8282,7 @@ export type PantryLowStockAlertSubscription = {
     itemName: string;
     currentQuantity: number;
     autoReorderPoint: number | null | undefined;
-    unitName: string;
+    unitName: string | null | undefined;
     item: {
       __typename?: 'Item';
       id: string;
@@ -8226,7 +8306,7 @@ export type PantryExpiringItemsAlertSubscription = {
     expiresAt: string | null | undefined;
     bestByDate: string | null | undefined;
     currentQuantity: number;
-    unitName: string;
+    unitName: string | null | undefined;
     item: {
       __typename?: 'Item';
       id: string;
@@ -8253,7 +8333,10 @@ export type PantryItemsChangedSubscription = {
       __typename?: 'PantryItem';
       id: string;
       itemName: string;
-      unit: { __typename?: 'Unit'; id: string; name: string };
+      unit:
+        | { __typename?: 'Unit'; id: string; name: string }
+        | null
+        | undefined;
     };
   };
 };
@@ -8312,7 +8395,10 @@ export type PantryWasteAlertSubscription = {
       itemName: string;
       pantryId: string;
       currentQuantity: number;
-      unit: { __typename?: 'Unit'; id: string; name: string; symbol: string };
+      unit:
+        | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+        | null
+        | undefined;
       item: {
         __typename?: 'Item';
         id: string;
@@ -8912,9 +8998,30 @@ export type CreateShoppingListMutation = {
     isDefault: boolean;
     isPublic: boolean;
     tags: Array<string>;
+    totalItems: number;
+    completedItems: number;
+    estimatedTotal: number;
+    currency: string | null | undefined;
+    status: ListStatus;
+    isCompleted: boolean;
+    priority: number;
     metadata: any | null | undefined;
     createdAt: string;
     updatedAt: string;
+    items: Array<{
+      __typename?: 'ShoppingListItem';
+      id: string;
+      isPurchased: boolean;
+    }>;
+    collaborators:
+      | Array<{
+          __typename?: 'ShoppingListCollaborator';
+          id: string;
+          email: string | null | undefined;
+          role: CollaboratorRole;
+        }>
+      | null
+      | undefined;
     ownerships:
       | Array<{
           __typename?: 'ShoppingListOwnership';
@@ -8942,15 +9049,32 @@ export type UpdateShoppingListMutation = {
     id: string;
     name: string;
     description: string | null | undefined;
+    isDefault: boolean;
+    isPublic: boolean;
     tags: Array<string>;
-    budgetAmount: number | null | undefined;
+    totalItems: number;
+    completedItems: number;
+    estimatedTotal: number;
     currency: string | null | undefined;
-    category: string | null | undefined;
-    priority: number;
     status: ListStatus;
     isCompleted: boolean;
-    isDefault: boolean;
+    priority: number;
+    createdAt: string;
     updatedAt: string;
+    items: Array<{
+      __typename?: 'ShoppingListItem';
+      id: string;
+      isPurchased: boolean;
+    }>;
+    collaborators:
+      | Array<{
+          __typename?: 'ShoppingListCollaborator';
+          id: string;
+          email: string | null | undefined;
+          role: CollaboratorRole;
+        }>
+      | null
+      | undefined;
   };
 };
 
@@ -10046,6 +10170,389 @@ export const MemberShipFragmentDoc = {
               ],
             },
           },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const BasicPantryFragmentDoc = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'BasicPantryFragment' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'Pantry' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'homeId' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'description' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'isDefault' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'location' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'temperature' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'tags' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'metadata' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'version' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const HomeWithPantriesFragmentDoc = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'HomeWithPantriesFragment' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'Home' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'type' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'description' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'timezone' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'currency' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'isPublic' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'joinCode' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'allowJoinCode' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'maxMembers' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'tags' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'metadata' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'version' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'invites' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'FragmentSpread',
+                  name: { kind: 'Name', value: 'HomeInviteFragment' },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'members' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'FragmentSpread',
+                  name: { kind: 'Name', value: 'MemberShipFragment' },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'myMembership' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'FragmentSpread',
+                  name: { kind: 'Name', value: 'MemberShipFragment' },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'membershipStats' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'total' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'active' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'byRole' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'OWNER' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'ADMIN' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'MEMBER' },
+                      },
+                      { kind: 'Field', name: { kind: 'Name', value: 'GUEST' } },
+                    ],
+                  },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'byStatus' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'ACTIVE' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'SUSPENDED' },
+                      },
+                      { kind: 'Field', name: { kind: 'Name', value: 'LEFT' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'REMOVED' },
+                      },
+                    ],
+                  },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'recentlyActive' },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'pantries' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'FragmentSpread',
+                  name: { kind: 'Name', value: 'BasicPantryFragment' },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'BasicUser' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'User' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'email' } },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'PartialUser' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'User' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'email' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'emailVerified' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'role' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'onBoarded' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'timezone' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'preferredCurrency' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'language' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'defaultShoppingListId' },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'defaultHomeId' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'lastActiveAt' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'profile' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'firstName' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lastName' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'displayName' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'bio' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'avatar' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'phone' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'settings' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'emailNotifications' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'pushNotifications' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'theme' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'HomeInviteFragment' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'HomeInvite' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'email' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'token' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'homeId' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'invitedUserId' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'recipientName' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'role' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'customPermissions' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'status' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'expiresAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'sentAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'lastReminderAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'reminderCount' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'acceptedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'declinedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'revokedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'message' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'home' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'inviter' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'FragmentSpread',
+                  name: { kind: 'Name', value: 'BasicUser' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'profile' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'displayName' },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'MemberShipFragment' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'Membership' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'homeId' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'userId' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'user' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'FragmentSpread',
+                  name: { kind: 'Name', value: 'PartialUser' },
+                },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'role' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'status' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'displayName' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'canViewPantry' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'canEditPantry' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'canAddItems' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'canRemoveItems' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'canInviteOthers' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'canManageHome' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'lastActiveAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'joinedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'leftAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'BasicPantryFragment' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'Pantry' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'homeId' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'description' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'isDefault' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'location' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'temperature' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'tags' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'metadata' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'version' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
         ],
       },
     },
@@ -16405,6 +16912,485 @@ export type GetHomeQueryResult = ApolloReactCommon.QueryResult<
 >;
 export function refetchGetHomeQuery(variables: GetHomeQueryVariables) {
   return { query: GetHomeDocument, variables: variables };
+}
+export const GetHomeBasicDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'query',
+      name: { kind: 'Name', value: 'GetHomeBasic' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'homeId' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'home' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'id' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'homeId' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'FragmentSpread',
+                  name: { kind: 'Name', value: 'HomeWithPantriesFragment' },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'BasicUser' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'User' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'email' } },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'PartialUser' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'User' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'email' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'emailVerified' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'role' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'onBoarded' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'timezone' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'preferredCurrency' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'language' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'defaultShoppingListId' },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'defaultHomeId' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'lastActiveAt' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'profile' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'firstName' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lastName' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'displayName' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'bio' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'avatar' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'phone' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'settings' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'emailNotifications' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'pushNotifications' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'theme' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'HomeInviteFragment' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'HomeInvite' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'email' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'token' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'homeId' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'invitedUserId' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'recipientName' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'role' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'customPermissions' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'status' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'expiresAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'sentAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'lastReminderAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'reminderCount' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'acceptedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'declinedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'revokedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'message' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'home' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'inviter' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'FragmentSpread',
+                  name: { kind: 'Name', value: 'BasicUser' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'profile' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'displayName' },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'MemberShipFragment' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'Membership' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'homeId' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'userId' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'user' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'FragmentSpread',
+                  name: { kind: 'Name', value: 'PartialUser' },
+                },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'role' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'status' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'displayName' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'canViewPantry' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'canEditPantry' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'canAddItems' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'canRemoveItems' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'canInviteOthers' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'canManageHome' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'lastActiveAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'joinedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'leftAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'BasicPantryFragment' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'Pantry' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'homeId' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'description' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'isDefault' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'location' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'temperature' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'tags' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'metadata' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'version' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'HomeWithPantriesFragment' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'Home' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'type' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'description' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'timezone' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'currency' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'isPublic' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'joinCode' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'allowJoinCode' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'maxMembers' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'tags' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'metadata' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'version' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'invites' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'FragmentSpread',
+                  name: { kind: 'Name', value: 'HomeInviteFragment' },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'members' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'FragmentSpread',
+                  name: { kind: 'Name', value: 'MemberShipFragment' },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'myMembership' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'FragmentSpread',
+                  name: { kind: 'Name', value: 'MemberShipFragment' },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'membershipStats' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'total' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'active' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'byRole' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'OWNER' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'ADMIN' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'MEMBER' },
+                      },
+                      { kind: 'Field', name: { kind: 'Name', value: 'GUEST' } },
+                    ],
+                  },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'byStatus' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'ACTIVE' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'SUSPENDED' },
+                      },
+                      { kind: 'Field', name: { kind: 'Name', value: 'LEFT' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'REMOVED' },
+                      },
+                    ],
+                  },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'recentlyActive' },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'pantries' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'FragmentSpread',
+                  name: { kind: 'Name', value: 'BasicPantryFragment' },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+
+/**
+ * __useGetHomeBasicQuery__
+ *
+ * To run a query within a React component, call `useGetHomeBasicQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetHomeBasicQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetHomeBasicQuery({
+ *   variables: {
+ *      homeId: // value for 'homeId'
+ *   },
+ * });
+ */
+export function useGetHomeBasicQuery(
+  baseOptions: ApolloReactHooks.QueryHookOptions<
+    GetHomeBasicQuery,
+    GetHomeBasicQueryVariables
+  > &
+    (
+      | { variables: GetHomeBasicQueryVariables; skip?: boolean }
+      | { skip: boolean }
+    ),
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useQuery<
+    GetHomeBasicQuery,
+    GetHomeBasicQueryVariables
+  >(GetHomeBasicDocument, options);
+}
+export function useGetHomeBasicLazyQuery(
+  baseOptions?: ApolloReactHooks.LazyQueryHookOptions<
+    GetHomeBasicQuery,
+    GetHomeBasicQueryVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useLazyQuery<
+    GetHomeBasicQuery,
+    GetHomeBasicQueryVariables
+  >(GetHomeBasicDocument, options);
+}
+export function useGetHomeBasicSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetHomeBasicQuery,
+        GetHomeBasicQueryVariables
+      >,
+) {
+  const options =
+    baseOptions === ApolloReactHooks.skipToken
+      ? baseOptions
+      : { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useSuspenseQuery<
+    GetHomeBasicQuery,
+    GetHomeBasicQueryVariables
+  >(GetHomeBasicDocument, options);
+}
+export type GetHomeBasicQueryHookResult = ReturnType<
+  typeof useGetHomeBasicQuery
+>;
+export type GetHomeBasicLazyQueryHookResult = ReturnType<
+  typeof useGetHomeBasicLazyQuery
+>;
+export type GetHomeBasicSuspenseQueryHookResult = ReturnType<
+  typeof useGetHomeBasicSuspenseQuery
+>;
+export type GetHomeBasicQueryResult = ApolloReactCommon.QueryResult<
+  GetHomeBasicQuery,
+  GetHomeBasicQueryVariables
+>;
+export function refetchGetHomeBasicQuery(
+  variables: GetHomeBasicQueryVariables,
+) {
+  return { query: GetHomeBasicDocument, variables: variables };
 }
 export const GetHomesDocument = {
   kind: 'Document',
@@ -32308,9 +33294,48 @@ export const CreateShoppingListDocument = {
                 { kind: 'Field', name: { kind: 'Name', value: 'isDefault' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'isPublic' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'tags' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalItems' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'completedItems' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'estimatedTotal' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'currency' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'status' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'isCompleted' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'priority' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'metadata' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'items' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'isPurchased' },
+                      },
+                    ],
+                  },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'collaborators' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'email' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'role' } },
+                    ],
+                  },
+                },
                 {
                   kind: 'Field',
                   name: { kind: 'Name', value: 'ownerships' },
@@ -32472,18 +33497,50 @@ export const UpdateShoppingListDocument = {
                 { kind: 'Field', name: { kind: 'Name', value: 'id' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'name' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'description' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'isDefault' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'isPublic' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'tags' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalItems' } },
                 {
                   kind: 'Field',
-                  name: { kind: 'Name', value: 'budgetAmount' },
+                  name: { kind: 'Name', value: 'completedItems' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'estimatedTotal' },
                 },
                 { kind: 'Field', name: { kind: 'Name', value: 'currency' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'category' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'priority' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'status' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'isCompleted' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'isDefault' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'priority' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'items' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'isPurchased' },
+                      },
+                    ],
+                  },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'collaborators' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'email' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'role' } },
+                    ],
+                  },
+                },
               ],
             },
           },

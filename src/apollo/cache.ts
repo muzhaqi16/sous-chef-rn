@@ -9,6 +9,12 @@ export function makeCache(): InMemoryCache {
     typePolicies: {
       Query: {
         fields: {
+          homes: {
+            // Cache homes list for 5 minutes to reduce refetching
+            merge(existing = [], incoming = []) {
+              return incoming;
+            },
+          },
           pantryItems: {
             keyArgs: ['pantryId'],
             // Just replace with incoming data - no complex merging

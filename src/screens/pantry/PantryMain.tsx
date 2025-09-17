@@ -9,7 +9,7 @@ import {
   usePantrySelector,
 } from '#hooks';
 import {useStore} from '#store';
-import {useGetHomeQuery} from '#generated';
+import {useGetHomeBasicQuery} from '#generated';
 import {
   ListTemplate,
   SearchBarAction,
@@ -28,22 +28,36 @@ export const PantryMain: React.FC = () => {
 
   const {
     selectedHomeId,
+    homes,
     loading: homesLoading,
     getDefaultPantry,
   } = useDefaultHome();
 
-  const {data: homeData} = useGetHomeQuery({
+  // Try to get home data from homes list first to avoid extra query
+  const homeFromList = homes.find(home => home.id === selectedHomeId);
+
+  // Only skip the query if we have home data with pantries array
+  const hasCompletePantryData = homeFromList?.pantries && Array.isArray(homeFromList.pantries);
+
+  const {data: homeData} = useGetHomeBasicQuery({
     variables: {homeId: selectedHomeId ?? ''},
-    fetchPolicy: 'cache-first', // Use cache-first for immediate display
-    skip: !selectedHomeId,
+    fetchPolicy: 'cache-first',
+    skip: !selectedHomeId || !!hasCompletePantryData, // Only skip if we have complete pantry data
   });
 
+
+  // Use home data from either source
+  const currentHomeData = homeFromList ? { home: homeFromList } : homeData;
+
   // Use selected pantry from store or fall back to default pantry
-  const defaultPantry = useMemo(() => getDefaultPantry(homeData), [homeData]);
-  const pantry = selectedPantryId
-    ? homeData?.home?.pantries?.find((p: any) => p.id === selectedPantryId) ||
-      defaultPantry
-    : defaultPantry;
+  const defaultPantry = useMemo(() => getDefaultPantry(currentHomeData), [currentHomeData, getDefaultPantry]);
+
+  const pantry = useMemo(() => {
+    if (selectedPantryId) {
+      return currentHomeData?.home?.pantries?.find((p: any) => p.id === selectedPantryId) || defaultPantry;
+    }
+    return defaultPantry;
+  }, [selectedPantryId, currentHomeData, defaultPantry]);
 
   // Auto-select the default pantry if none is selected
   useEffect(() => {
@@ -54,7 +68,7 @@ export const PantryMain: React.FC = () => {
 
   const selector = usePantrySelector({
     initialSelected: pantry?.id,
-    onSelect: (id, item) => {
+    onSelect: (id, _item) => {
       // Update the global store with the selected pantry
       setSelectedPantryId(id);
       selectPantrySheet.close();
@@ -74,7 +88,7 @@ export const PantryMain: React.FC = () => {
 
   // Transform pantry items to list items format
   const items = useMemo(() => {
-    return pantryItems.map(item => {
+    const transformedItems = pantryItems.map(item => {
       const isExpired = item.expiresAt && new Date(item.expiresAt) < new Date();
       const isLowStock = item.currentQuantity <= (item.reservedQuantity || 0);
 
@@ -98,7 +112,10 @@ export const PantryMain: React.FC = () => {
         ) : undefined,
       };
     });
-  }, [pantryItems]);
+
+
+    return transformedItems;
+  }, [pantryItems, pantry?.id, hasLoadedCache, loading, cacheInfo]);
 
   const handleAddItem = () => {
     if (!selectedHomeId) {
@@ -237,7 +254,7 @@ export const PantryMain: React.FC = () => {
   return (
     <>
       <ListTemplate
-        title={homeData?.home?.name || 'Pantry'}
+        title={currentHomeData?.home?.name || 'Pantry'}
         subtitle={debugSubtitle}
         items={items}
         searchQuery={searchQuery}
@@ -308,7 +325,7 @@ export const PantryMain: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create(theme => ({
+const styles = StyleSheet.create(_theme => ({
   imageContainer: {
     width: 60,
     height: 60,

@@ -4,6 +4,19 @@ import { isKnownServerError } from '#utils/subscriptionErrorHandler';
 import { LogoutCleanup } from '../logoutCleanup';
 import { attemptTokenRefresh } from './refreshToken';
 
+// Debouncing mechanism to prevent too many simultaneous refresh attempts
+let lastRefreshAttempt = 0;
+const REFRESH_DEBOUNCE_MS = 1000; // 1 second debounce
+
+const shouldAttemptRefresh = (): boolean => {
+  const now = Date.now();
+  if (now - lastRefreshAttempt < REFRESH_DEBOUNCE_MS) {
+    return false;
+  }
+  lastRefreshAttempt = now;
+  return true;
+};
+
 
 export const errorLink = new ErrorLink(({ error, operation, forward }) => {
   // Skip error handling for refresh token mutation
@@ -25,11 +38,6 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
 
   // Handle GraphQL errors using v4 API
   if (CombinedGraphQLErrors.is(error)) {
-    console.log('GraphQL Error link triggered:', {
-      uri: operation.getContext().uri,
-      operationName: operation.operationName,
-      isSubscription,
-    });
 
     // Also handle errors with our utility
     const firstError = error.errors[0];
@@ -41,7 +49,6 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
       const code = err.extensions?.code;
       const msg = err.message || '';
 
-      console.log(`[GraphQL error]: Message: ${msg}, Location: ${err.locations}, Path: ${err.path}`);
 
       // Check for API key related errors
       const isApiKeyError =
@@ -68,11 +75,13 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
       if (isAuthError && operation.operationName !== 'RefreshToken') {
         // Skip token refresh if we're in logout process
         if (LogoutCleanup.isInLogoutProcess()) {
-          console.log('Skipping token refresh during logout process');
           return;
         }
 
-        console.log('Received authentication error, attempting token refresh…');
+        // Debounce refresh attempts
+        if (!shouldAttemptRefresh()) {
+          return;
+        }
 
         // Use the dedicated refresh token link
         return attemptTokenRefresh(operation, forward);
@@ -81,27 +90,22 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
   }
   // Handle Protocol errors using v4 API
   else if (CombinedProtocolErrors.is(error)) {
-    console.log('Protocol Error link triggered:', {
-      uri: operation.getContext().uri,
-      operationName: operation.operationName,
-      isSubscription,
-    });
-
-    error.errors.forEach(({ message, extensions }) => {
-      console.log(`[Protocol error]: Message: ${message}, Extensions: ${JSON.stringify(extensions)}`);
-    });
   }
   // Handle Network errors
   else {
-    console.log('Network Error link triggered:', {
-      uri: operation.getContext().uri,
-      operationName: operation.operationName,
-      isSubscription,
-    });
 
     // Also handle errors with our utility
     if (LogoutCleanup.handleLogoutError({ message: error.message }, operation.operationName)) {
       return; // Error was suppressed during logout
+    }
+
+    // Check for WebSocket authentication errors
+    if (isSubscription && error.message?.includes('Socket closed with event 4500')) {
+      // Debounce refresh attempts for WebSocket errors too
+      if (!shouldAttemptRefresh()) {
+        return;
+      }
+      return attemptTokenRefresh(operation, forward);
     }
 
     // Check if this is a known server subscription error

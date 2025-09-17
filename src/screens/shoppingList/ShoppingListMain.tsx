@@ -1,34 +1,30 @@
-import React, {useMemo, useEffect} from 'react';
-import {TouchableOpacity, Alert, Image, View} from 'react-native';
-import {useFocusEffect} from '@react-navigation/native';
-import {useAppNavigation} from '#hooks';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
+import React, { useMemo, useEffect } from 'react';
+import { TouchableOpacity, Alert, Image, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import { useAppNavigation } from '#hooks';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
   useGetShoppingListsQuery,
   useRemoveItemFromShoppingListMutation,
 } from '#generated';
-import {ListTemplate, SearchBarAction, BottomSheetAction} from '#components';
-import {ItemSelectorWithActions} from '#components/organisms/ItemSelectorWithActions';
+import { ListTemplate, SearchBarAction, BottomSheetAction } from '#components';
+import { ItemSelectorWithActions } from '#components/organisms/ItemSelectorWithActions';
 import {
   useShoppingListSelector,
   useBottomSheetModal,
   useShoppingList,
-  useShoppingListManagement,
 } from '#/hooks';
-import {useStore} from '#/store';
-import {Icon, type IconLibrary} from '#/utils/iconUtils';
+import { useStore } from '#/store';
+import { Icon, type IconLibrary } from '#/utils/iconUtils';
 
 export const ShoppingListMain: React.FC = () => {
-  const {navigate, navigateTo} = useAppNavigation();
-  const {theme} = useUnistyles();
+  const { navigate, navigateTo } = useAppNavigation();
+  const { theme } = useUnistyles();
   const selectShoppingListSheet = useBottomSheetModal();
-  const {selectedShoppingListId, setSelectedShoppingListId} = useStore();
+  const { selectedShoppingListId, setSelectedShoppingListId } = useStore();
   const [deleteItem] = useRemoveItemFromShoppingListMutation();
 
-  // Use the shopping list management hook for proper cache updates
-  const {addItem, markItemPurchased} = useShoppingListManagement();
-
-  const {data, refetch} = useGetShoppingListsQuery({
+  const { data, refetch } = useGetShoppingListsQuery({
     fetchPolicy: 'cache-and-network',
   });
 
@@ -47,7 +43,8 @@ export const ShoppingListMain: React.FC = () => {
     }
   }, [selectedShoppingListId, defaultList?.id, setSelectedShoppingListId]);
 
-  const {items, query, setQuery} = useShoppingList(currentListId);
+  // Use the shopping list hook for both data and mutations to ensure consistency
+  const { items, query, setQuery, addItem, markItemPurchased } = useShoppingList(currentListId);
 
   const selector = useShoppingListSelector({
     initialSelected: currentListId,
@@ -89,11 +86,11 @@ export const ShoppingListMain: React.FC = () => {
       // show image on the left if available
       leftElement: item.item.imageUrl ? (
         <View style={styles.imageContainer}>
-          <Image source={{uri: item.item.imageUrl}} style={styles.leftImage} />
+          <Image source={{ uri: item.item.imageUrl }} style={styles.leftImage} />
         </View>
       ) : null,
       // Add visual styling for purchased items
-      style: item.isPurchased ? {opacity: 0.6} : undefined,
+      style: item.isPurchased ? { opacity: 0.6 } : undefined,
     }));
   }, [items, markItemPurchased]);
 
@@ -103,7 +100,7 @@ export const ShoppingListMain: React.FC = () => {
         'No List Selected',
         'Please select or create a shopping list first.',
         [
-          {text: 'Cancel', style: 'cancel'},
+          { text: 'Cancel', style: 'cancel' },
           {
             text: 'Create List',
             onPress: () => navigate('ListSettings'),
@@ -112,7 +109,7 @@ export const ShoppingListMain: React.FC = () => {
       );
       return;
     }
-    navigate('AddItem', {listId: currentListId});
+    navigate('AddItem', { listId: currentListId });
   };
 
   const handleAddItemFromSearch = async (itemName: string) => {
@@ -122,7 +119,7 @@ export const ShoppingListMain: React.FC = () => {
     }
 
     try {
-      const result = await addItem(currentListId, {
+      const result = await addItem({
         itemName: itemName.trim(),
         quantity: 1,
       });
@@ -139,7 +136,7 @@ export const ShoppingListMain: React.FC = () => {
 
   const handleDeleteItem = async (itemId: string) => {
     try {
-      await deleteItem({variables: {id: itemId}});
+      await deleteItem({ variables: { id: itemId } });
     } catch (error) {
       Alert.alert('Error', 'Failed to delete item');
     }
@@ -218,10 +215,10 @@ export const ShoppingListMain: React.FC = () => {
         searchQuery={query}
         onSearchChange={setQuery}
         onItemPress={id =>
-          navigate('EditItem', {listId: currentListId, itemId: id})
+          navigate('EditItem', { listId: currentListId, itemId: id })
         }
         onItemEdit={id =>
-          navigate('EditItem', {listId: currentListId, itemId: id})
+          navigate('EditItem', { listId: currentListId, itemId: id })
         }
         onItemDelete={handleDeleteItem}
         onRefresh={handleRefresh}
@@ -229,7 +226,7 @@ export const ShoppingListMain: React.FC = () => {
         showSearchBar={true}
         showFAB={true}
         onFabPress={() =>
-          navigateTo.barcode({source: 'shoppingList', shoppingListId: currentListId})
+          navigateTo.barcode({ source: 'shoppingList', shoppingListId: currentListId })
         }
         // Actions
         searchBarActions={searchBarActions}
@@ -237,14 +234,14 @@ export const ShoppingListMain: React.FC = () => {
           query.trim()
             ? undefined // No empty state during search - user can add via search bar button
             : {
-                icon: 'add-shopping-cart',
-                title: 'No items in this list',
-                description: 'Add items to your shopping list',
-                action: {
-                  label: 'Add first item',
-                  onPress: handleAddItem,
-                },
-              }
+              icon: 'add-shopping-cart',
+              title: 'No items in this list',
+              description: 'Add items to your shopping list',
+              action: {
+                label: 'Add first item',
+                onPress: handleAddItem,
+              },
+            }
         }
       />
 
@@ -272,27 +269,27 @@ export const ShoppingListMain: React.FC = () => {
             },
             ...(currentListId
               ? [
-                  {
-                    icon: 'share',
-                    label: 'Share Current List',
-                    onPress: () => {
-                      selectShoppingListSheet.close();
-                      navigate('ShareList', {listId: currentListId});
-                    },
-                    iconLibrary: 'MaterialIcons' as IconLibrary,
+                {
+                  icon: 'share',
+                  label: 'Share Current List',
+                  onPress: () => {
+                    selectShoppingListSheet.close();
+                    navigate('ShareList', { listId: currentListId });
                   },
-                  {
-                    icon: 'settings',
-                    label: 'List Settings',
-                    onPress: () => {
-                      selectShoppingListSheet.close();
-                      navigate('ListSettings', {
-                        listId: currentListId,
-                      });
-                    },
-                    iconLibrary: 'MaterialIcons' as IconLibrary,
+                  iconLibrary: 'MaterialIcons' as IconLibrary,
+                },
+                {
+                  icon: 'settings',
+                  label: 'List Settings',
+                  onPress: () => {
+                    selectShoppingListSheet.close();
+                    navigate('ListSettings', {
+                      listId: currentListId,
+                    });
                   },
-                ]
+                  iconLibrary: 'MaterialIcons' as IconLibrary,
+                },
+              ]
               : []),
           ]}
         />
@@ -350,7 +347,7 @@ const styles = StyleSheet.create(theme => ({
     resizeMode: 'cover',
     elevation: 2,
     shadowColor: theme.colors.primary,
-    shadowOffset: {width: 0, height: 1},
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
     shadowRadius: 1.41,
   },

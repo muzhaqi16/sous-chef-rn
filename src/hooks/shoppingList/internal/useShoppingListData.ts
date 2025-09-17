@@ -1,6 +1,10 @@
-import { useCallback, useMemo, useEffect } from 'react';
+import { useCallback, useMemo, useEffect, useState, useRef } from 'react';
 import { useGetShoppingListItemsQuery } from '#generated';
-import { useStore } from '#store';
+import { useAuth } from '#hooks/auth/useAuth';
+import { shoppingListStorage } from '#/storage/shoppingListCache';
+
+// Debouncing mechanism to prevent too many retry attempts
+const RETRY_DEBOUNCE_MS = 2000; // 2 second debounce
 
 interface UseShoppingListDataOptions {
   onDataReceived?: (items: any[]) => void;
@@ -18,82 +22,102 @@ export function useShoppingListData(
   options: UseShoppingListDataOptions = {},
 ) {
   const { onDataReceived } = options;
-  const user = useStore(state => state.user);
-  const isLoggingOut = useStore(state => state.isLoggingOut);
-  const isLoggedOut = !user;
+  const { user, accessToken, isLoggingOut, isLoggedOut, canAttemptQueries } = useAuth();
+
+  // Local state - MMKV is source of truth
+  const [items, setItems] = useState<any[]>([]);
+  const [hasLoadedCache, setHasLoadedCache] = useState(false);
+  const lastRetryAttempt = useRef(0);
+
+  // Load from MMKV immediately when listId changes
+  useEffect(() => {
+    if (listId && !isLoggedOut) {
+      const cached = shoppingListStorage.getShoppingListItems(listId);
+      if (cached !== null) {
+        // Cache exists (even if empty array), so we have loaded cache
+        setItems(cached);
+        setHasLoadedCache(true);
+      } else {
+        // No cache exists, start with empty state
+        setItems([]);
+        setHasLoadedCache(false);
+      }
+    } else {
+      setItems([]);
+      setHasLoadedCache(false);
+    }
+  }, [listId, isLoggedOut]);
 
   // Should skip queries if no valid listId or user is logging out
-  const shouldSkip = !listId || listId === '' || isLoggedOut || isLoggingOut;
+  const shouldSkip = !listId || listId === '' || !canAttemptQueries;
 
-  // Cache-first query for immediate results
-  const {
-    data: cachedData,
-    loading: cacheLoading,
-    error: cacheError,
-  } = useGetShoppingListItemsQuery({
-    variables: { shoppingListId: listId || '' },
-    skip: shouldSkip,
-    fetchPolicy: 'cache-first',
-    notifyOnNetworkStatusChange: false,
-    errorPolicy: 'all', // Return both data and errors
-  });
+  // Use cache-first for initial load, then network updates via subscription
+  const fetchPolicy = hasLoadedCache ? 'cache-first' : 'cache-and-network';
 
-  // Network query for fresh data
+  // Single query with adaptive fetch policy
   const {
-    data: networkData,
-    loading: networkLoading,
-    error: networkError,
+    data: queryData,
+    loading,
+    error: queryError,
     refetch: networkRefetch,
   } = useGetShoppingListItemsQuery({
     variables: { shoppingListId: listId || '' },
     skip: shouldSkip,
-    fetchPolicy: 'cache-and-network',
+    fetchPolicy,
     notifyOnNetworkStatusChange: true,
-    errorPolicy: 'all',
+    errorPolicy: 'all', // Return both data and errors
   });
 
-  const items = useMemo(() => {
-    // Prefer network data, fall back to cached data
-    if (networkData?.shoppingListItems) {
-      return networkData.shoppingListItems;
+  // Handle the completed logic with useEffect
+  useEffect(() => {
+    if (queryData?.shoppingListItems && listId) {
+      // Update MMKV (source of truth)
+      shoppingListStorage.setShoppingListItems(listId, queryData.shoppingListItems);
+      // Update local state
+      setItems(queryData.shoppingListItems);
+      // Notify callback
+      onDataReceived?.(queryData.shoppingListItems);
     }
-    if (cachedData?.shoppingListItems) {
-      return cachedData.shoppingListItems;
-    }
-    return [];
-  }, [networkData?.shoppingListItems, cachedData?.shoppingListItems]);
+  }, [queryData, listId, onDataReceived]);
 
   // Loading states
-  const isInitialLoading = cacheLoading && !cachedData?.shoppingListItems;
-  const isRefreshing = networkLoading && !!cachedData?.shoppingListItems;
+  const isInitialLoading = loading && !hasLoadedCache && items.length === 0;
+  const isRefreshing = loading && (hasLoadedCache || items.length > 0);
 
   // Enhanced refetch function
   const refetch = useCallback(async () => {
     if (shouldSkip) {
-      console.warn('Cannot refetch: invalid listId or user logged out');
+      console.warn('Cannot refetch: invalid listId or user not authenticated');
       return;
     }
 
     try {
       const result = await networkRefetch();
-      if (result.data?.shoppingListItems && !isLoggedOut && !isLoggingOut) {
-        onDataReceived?.(result.data.shoppingListItems);
-      }
       return result;
     } catch (error) {
       console.error('Refetch failed:', error);
       throw error;
     }
-  }, [networkRefetch, shouldSkip, onDataReceived, isLoggedOut, isLoggingOut]);
+  }, [networkRefetch, shouldSkip]);
 
-  // Combine errors (prefer network errors as they're more recent)
-  const error = networkError || cacheError;
+  // Simplified retry mechanism with debouncing - only retry when user becomes available after token refresh
+  useEffect(() => {
+    if (user && accessToken && !queryData?.shoppingListItems && !loading && hasLoadedCache === false) {
+      const now = Date.now();
+      if (now - lastRetryAttempt.current > RETRY_DEBOUNCE_MS) {
+        lastRetryAttempt.current = now;
+        console.log('Retrying shopping list data fetch after token refresh');
+        networkRefetch();
+      }
+    }
+  }, [user, accessToken, queryData?.shoppingListItems, loading, hasLoadedCache, networkRefetch]);
 
   return {
     items,
     loading: isInitialLoading,
     refreshing: isRefreshing,
     refetch,
-    error,
+    error: queryError,
+    hasLoadedCache,
   };
 }

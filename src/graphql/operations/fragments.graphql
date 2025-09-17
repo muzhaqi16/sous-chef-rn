@@ -462,6 +462,73 @@ fragment PantryFragment on Pantry {
   }
 }
 
+fragment BasicPantryFragment on Pantry {
+  id
+  homeId
+  name
+  description
+  isDefault
+  location
+  temperature
+  tags
+  metadata
+  version
+  createdAt
+  updatedAt
+}
+
+fragment HomeWithPantriesFragment on Home {
+  id
+  name
+  type
+  description
+  timezone
+  currency
+  isPublic
+  joinCode
+  allowJoinCode
+  maxMembers
+  tags
+  metadata
+  version
+  createdAt
+  updatedAt
+
+  invites {
+    ...HomeInviteFragment
+  }
+
+  members {
+    ...MemberShipFragment
+  }
+
+  myMembership {
+    ...MemberShipFragment
+  }
+
+  membershipStats {
+    total
+    active
+    byRole {
+      OWNER
+      ADMIN
+      MEMBER
+      GUEST
+    }
+    byStatus {
+      ACTIVE
+      SUSPENDED
+      LEFT
+      REMOVED
+    }
+    recentlyActive
+  }
+
+  pantries {
+    ...BasicPantryFragment
+  }
+}
+
 fragment HomeFragment on Home {
   id
   name

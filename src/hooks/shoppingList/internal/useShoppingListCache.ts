@@ -1,6 +1,6 @@
 import {useState, useEffect, useCallback} from 'react';
 import {shoppingListStorage} from '#/storage/shoppingListCache';
-import {useStore} from '#store';
+import {useAuth} from '#hooks/auth/useAuth';
 
 /**
  * Hook to manage MMKV caching for shopping list items
@@ -9,9 +9,7 @@ import {useStore} from '#store';
  * @returns Cache management functions and state
  */
 export function useShoppingListCache(listId: string | null) {
-  const user = useStore(state => state.user);
-  const isLoggingOut = useStore(state => state.isLoggingOut);
-  const isLoggedOut = !user;
+  const { isLoggingOut, isLoggedOut, canAttemptQueries } = useAuth();
 
   const [optimisticItems, setOptimisticItems] = useState<any[]>([]);
   const [hasLoadedCache, setHasLoadedCache] = useState(false);
@@ -26,7 +24,7 @@ export function useShoppingListCache(listId: string | null) {
 
   // Load cached items when listId changes
   useEffect(() => {
-    if (!listId || isLoggedOut || isLoggingOut) {
+    if (!listId || !canAttemptQueries) {
       setOptimisticItems([]);
       setHasLoadedCache(false);
       return;
@@ -34,10 +32,12 @@ export function useShoppingListCache(listId: string | null) {
 
     try {
       const cachedItems = shoppingListStorage.getShoppingListItems(listId);
-      if (cachedItems && cachedItems.length > 0) {
+      if (cachedItems !== null) {
+        // Cache exists (even if empty array), so we have loaded cache
         setOptimisticItems(cachedItems);
         setHasLoadedCache(true);
       } else {
+        // No cache exists, start with empty state
         setOptimisticItems([]);
         setHasLoadedCache(false);
       }
@@ -46,11 +46,11 @@ export function useShoppingListCache(listId: string | null) {
       setOptimisticItems([]);
       setHasLoadedCache(false);
     }
-  }, [listId, isLoggedOut, isLoggingOut]);
+  }, [listId, canAttemptQueries]);
 
   // Update cache with new items
   const updateCache = useCallback((items: any[]) => {
-    if (!listId || isLoggedOut || isLoggingOut) return;
+    if (!listId || !canAttemptQueries) return;
     
     try {
       shoppingListStorage.setShoppingListItems(listId, items);
@@ -58,7 +58,7 @@ export function useShoppingListCache(listId: string | null) {
     } catch (error) {
       console.error('Error updating cache:', error);
     }
-  }, [listId, isLoggedOut, isLoggingOut]);
+  }, [listId, canAttemptQueries]);
 
   // Clear cache for current list
   const clearCache = useCallback(() => {

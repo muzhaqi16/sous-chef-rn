@@ -8,6 +8,12 @@ query GetHome($homeId: ID!) {
   }
 }
 
+query GetHomeBasic($homeId: ID!) {
+  home(id: $homeId) {
+    ...HomeWithPantriesFragment
+  }
+}
+
 query GetHomes {
   homes {
     id

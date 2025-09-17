@@ -187,9 +187,25 @@ mutation CreateShoppingList($input: CreateShoppingListInput!) {
     isDefault
     isPublic
     tags
+    totalItems
+    completedItems
+    estimatedTotal
+    currency
+    status
+    isCompleted
+    priority
     metadata
     createdAt
     updatedAt
+    items {
+      id
+      isPurchased
+    }
+    collaborators {
+      id
+      email
+      role
+    }
     ownerships {
       id
       user {
@@ -210,15 +226,27 @@ mutation UpdateShoppingList($id: ID!, $input: UpdateShoppingListInput!) {
     id
     name
     description
+    isDefault
+    isPublic
     tags
-    budgetAmount
+    totalItems
+    completedItems
+    estimatedTotal
     currency
-    category
-    priority
     status
     isCompleted
-    isDefault
+    priority
+    createdAt
     updatedAt
+    items {
+      id
+      isPurchased
+    }
+    collaborators {
+      id
+      email
+      role
+    }
   }
 }
 

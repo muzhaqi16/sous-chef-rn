@@ -1,106 +1,125 @@
 import { Observable, ApolloLink } from '@apollo/client';
 import { useStore } from '#store';
 import { RefreshTokenDocument, RefreshTokenMutation } from '#generated';
-import { reconnectWebSocket } from './wsLink';
+import { reconnectWebSocket, isWebSocketReconnecting } from './wsLink';
 import { client } from '../client';
 
 let isRefreshing = false;
-let refreshSubscribers: Array<(accessToken: string) => void> = [];
+let refreshSubscribers: Array<(accessToken: string | null) => void> = [];
+let refreshPromise: Promise<string | null> | null = null;
 
-const subscribeTokenRefresh = (cb: (accessToken: string) => void) => {
+const subscribeTokenRefresh = (cb: (accessToken: string | null) => void) => {
   refreshSubscribers.push(cb);
 };
 
-const onTokenRefreshed = (accessToken: string) => {
+const onTokenRefreshed = (accessToken: string | null) => {
   refreshSubscribers.forEach(cb => cb(accessToken));
   refreshSubscribers = [];
+  refreshPromise = null;
+};
+
+const performTokenRefresh = async (): Promise<string | null> => {
+  const state = useStore.getState();
+  const refreshToken = state.refreshToken;
+
+  if (!refreshToken) {
+    state.logout();
+    throw new Error('No refresh token available');
+  }
+
+
+  try {
+    const response = await client.mutate({
+      mutation: RefreshTokenDocument,
+      variables: { token: refreshToken },
+      context: {
+        skipErrorLink: true,
+      },
+    });
+
+    const data = (response.data as RefreshTokenMutation)?.refresh;
+    if (!data?.accessToken || !data?.refreshToken) {
+      throw new Error('Invalid refresh response');
+    }
+
+    const { accessToken: newToken, refreshToken: newRefreshToken } = data;
+
+    useStore.getState().setTokens({
+      accessToken: newToken,
+      refreshToken: newRefreshToken,
+    });
+
+
+    // Only reconnect WebSocket if it's not already reconnecting
+    if (!isWebSocketReconnecting()) {
+      reconnectWebSocket();
+    } else {
+      console.log('WebSocket reconnection already in progress, skipping...');
+    }
+
+    return newToken;
+  } catch (refreshError) {
+    useStore.getState().logout();
+    throw refreshError;
+  }
 };
 
 export const attemptTokenRefresh = (
   operation: any,
   forward: any,
 ): Observable<ApolloLink.Result> => {
-  const state = useStore.getState();
-  const refreshToken = state.refreshToken;
-
-  console.log('RefreshToken debug:', {
-    hasRefreshToken: !!refreshToken,
-    refreshTokenLength: refreshToken?.length,
-    refreshTokenPreview: refreshToken?.substring(0, 20) + '...',
-  });
-
-  if (!refreshToken) {
-    console.log('No refresh token available in state');
-    state.logout();
-    return new Observable<ApolloLink.Result>(observer => {
-      observer.error(new Error('No refresh token available'));
-    });
-  }
-
   return new Observable<ApolloLink.Result>(observer => {
-    if (isRefreshing) {
-      subscribeTokenRefresh((accessToken: string) => {
-        operation.setContext({
-          headers: {
-            ...operation.getContext().headers,
-            authorization: `Bearer ${accessToken}`,
-          },
-        });
+    // If refresh is already in progress, wait for it
+    if (isRefreshing && refreshPromise) {
+      subscribeTokenRefresh((accessToken: string | null) => {
+        if (accessToken) {
+          operation.setContext({
+            headers: {
+              ...operation.getContext().headers,
+              authorization: `Bearer ${accessToken}`,
+            },
+          });
 
-        forward(operation).subscribe({
-          next: observer.next.bind(observer),
-          error: observer.error.bind(observer),
-          complete: observer.complete.bind(observer),
-        });
+          forward(operation).subscribe({
+            next: observer.next.bind(observer),
+            error: observer.error.bind(observer),
+            complete: observer.complete.bind(observer),
+          });
+        } else {
+          observer.error(new Error('Token refresh failed'));
+        }
       });
       return;
     }
 
+    // Start new refresh
     isRefreshing = true;
 
-    console.log('Attempting refresh with token:', refreshToken?.substring(0, 10) + '...');
-
-    client
-      .mutate({
-        mutation: RefreshTokenDocument,
-        variables: { token: refreshToken },
-        context: {
-          skipErrorLink: true,
-        },
-      })
-      .then((response: any) => {
-        const data = (response.data as RefreshTokenMutation)?.refresh;
-        if (!data?.accessToken || !data?.refreshToken) {
-          throw new Error('Invalid refresh response');
-        }
-
-        const { accessToken: newToken, refreshToken: newRefreshToken } = data;
-
-        useStore.getState().setTokens({
-          accessToken: newToken,
-          refreshToken: newRefreshToken,
-        });
-
-        reconnectWebSocket();
+    refreshPromise = performTokenRefresh()
+      .then((newToken) => {
         onTokenRefreshed(newToken);
 
-        operation.setContext({
-          headers: {
-            ...operation.getContext().headers,
-            authorization: `Bearer ${newToken}`,
-          },
-        });
+        if (newToken) {
+          operation.setContext({
+            headers: {
+              ...operation.getContext().headers,
+              authorization: `Bearer ${newToken}`,
+            },
+          });
 
-        forward(operation).subscribe({
-          next: observer.next.bind(observer),
-          error: observer.error.bind(observer),
-          complete: observer.complete.bind(observer),
-        });
+          forward(operation).subscribe({
+            next: observer.next.bind(observer),
+            error: observer.error.bind(observer),
+            complete: observer.complete.bind(observer),
+          });
+        }
+
+        return newToken;
       })
-      .catch((refreshError: Error) => {
-        console.log('Token refresh failed:', refreshError);
-        useStore.getState().logout();
-        observer.error(refreshError);
+      .catch((error) => {
+        onTokenRefreshed(null);
+        observer.error(error);
+        return null;
       })
       .finally(() => {
         isRefreshing = false;

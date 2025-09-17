@@ -23,9 +23,8 @@ export const handleSubscriptionError = (
   const errorMessage = error.message || '';
   
   // Check if this is a server-side resolver issue
-  const isServerResolverError = 
-    errorMessage.includes('Subscription field must return Async Iterable') ||
-    errorMessage.includes('Socket closed with event 4500');
+  const isServerResolverError =
+    errorMessage.includes('Subscription field must return Async Iterable');
 
   if (!isServerResolverError) {
     // For non-resolver errors, don't retry
@@ -88,7 +87,6 @@ export const isKnownServerError = (error: SubscriptionError): boolean => {
   const errorMessage = error.message || '';
   return (
     errorMessage.includes('Subscription field must return Async Iterable') ||
-    errorMessage.includes('Socket closed with event 4500') ||
     errorMessage.includes('Server-side resolver returned undefined')
   );
 };
