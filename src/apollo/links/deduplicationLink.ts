@@ -1,9 +1,9 @@
-import { ApolloLink, Observable, FetchResult } from '@apollo/client';
+import { ApolloLink, Observable } from '@apollo/client';
 
 interface PendingRequest {
-  observable: Observable<FetchResult>;
+  observable: Observable<ApolloLink.Result>;
   subscribers: Array<{
-    next?: (value: FetchResult) => void;
+    next?: (value: ApolloLink.Result) => void;
     error?: (error: any) => void;
     complete?: () => void;
   }>;
@@ -22,7 +22,7 @@ export const deduplicationLink = new ApolloLink((operation, forward) => {
     const pending = pendingRequests.get(operationKey)!;
 
     // Return a new observable that shares the existing request
-    return new Observable<FetchResult>(observer => {
+    return new Observable<ApolloLink.Result>(observer => {
       // Add this observer to the list of subscribers
       pending.subscribers.push({
         next: observer.next.bind(observer),
@@ -52,7 +52,7 @@ export const deduplicationLink = new ApolloLink((operation, forward) => {
   };
   pendingRequests.set(operationKey, pending);
 
-  return new Observable<FetchResult>(observer => {
+  return new Observable<ApolloLink.Result>(observer => {
     // Subscribe to the actual request
     const subscription = observable.subscribe({
       next: (result) => {

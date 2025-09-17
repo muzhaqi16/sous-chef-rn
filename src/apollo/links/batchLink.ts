@@ -1,4 +1,4 @@
-import {BatchHttpLink} from '@apollo/client/link/batch-http';
+import { BatchHttpLink } from '@apollo/client/link/batch-http';
 import Config from 'react-native-config';
 
 export const batchLink = new BatchHttpLink({

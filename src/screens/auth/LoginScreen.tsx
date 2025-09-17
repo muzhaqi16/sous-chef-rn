@@ -36,6 +36,8 @@ export function LoginScreen() {
   const [savedEmail, setSavedEmail] = useState<string>('');
   const [showRememberModal, setShowRememberModal] = useState(false);
   const [pendingAuthResponse, setPendingAuthResponse] = useState<any>(null);
+  const [isManualLogin, setIsManualLogin] = useState(false);
+  const [userHasTypedManually, setUserHasTypedManually] = useState(false);
 
   const {loadStoredCredentials, isLoadingCredentials} = useCredentialManager();
   const {handleAuthError} = useAuthErrorHandler();
@@ -71,9 +73,25 @@ export function LoginScreen() {
     };
   }, [hasStoredCredentials, form]);
 
+  // Detect manual typing to disable biometric authentication
+  useEffect(() => {
+    const subscription = form.watch((data) => {
+      // If user changes email field from the obscured version, they're typing manually
+      if (data.email && savedEmail && !data.email.includes('***') && data.email !== obscureEmail(savedEmail)) {
+        setUserHasTypedManually(true);
+      }
+      // If user types anything in password field, they're doing manual login
+      if (data.password && data.password.length > 0) {
+        setUserHasTypedManually(true);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [form, savedEmail]);
+
   // Biometric authentication
   const authenticateWithBiometric = useCallback(async () => {
-    if (isLoadingCredentials) return;
+    if (isLoadingCredentials || userHasTypedManually) return;
 
     try {
       const credentials = await loadStoredCredentials();
@@ -118,13 +136,15 @@ export function LoginScreen() {
     const {user, accessToken, refreshToken, email, password} =
       pendingAuthResponse;
 
-    // Save credentials if user chose to remember
-    if (remember && email && password) {
-      try {
-        await saveCredentials(email, password);
-      } catch (error) {
+    // Save credentials if user chose to remember and we don't already have stored credentials
+    if (remember && email && password && !hasStoredCredentials) {
+      // Save credentials without blocking navigation
+      saveCredentials(email, password).catch(error => {
         console.error('Failed to save credentials:', error);
-      }
+        // Don't prevent auth flow if saving fails
+      });
+    } else if (remember && hasStoredCredentials) {
+      console.log('Skipping credential save - credentials already exist in keychain');
     }
 
     // Update auth state and remember preference
@@ -138,8 +158,18 @@ export function LoginScreen() {
   // Form submission
   const onSubmit = async (input: LoginInput) => {
     try {
-      const actualEmail =
-        input.email.includes('***') && savedEmail ? savedEmail : input.email;
+      setIsManualLogin(true); // Flag that this is a manual login
+
+      // Determine if this is truly manual input (not using saved credentials)
+      const isUsingObscuredEmail = input.email.includes('***');
+      const actualEmail = isUsingObscuredEmail && savedEmail ? savedEmail : input.email;
+
+      console.log('LoginScreen: Form submission', {
+        inputEmail: input.email,
+        isUsingObscuredEmail,
+        actualEmail,
+        hasStoredCredentials
+      });
 
       const response = await login({
         variables: {
@@ -150,8 +180,9 @@ export function LoginScreen() {
       if (response.data?.login) {
         const loginData = response.data.login;
 
-        // If rememberMe preference not set, show modal
-        if (rememberMe === undefined) {
+        // If rememberMe preference not set AND no stored credentials exist, show modal
+        // Skip modal if credentials already exist to prevent biometric prompts
+        if (rememberMe === undefined && !hasStoredCredentials) {
           setPendingAuthResponse({
             ...loginData,
             email: actualEmail,
@@ -166,9 +197,9 @@ export function LoginScreen() {
             loginData.refreshToken,
           );
 
-          if (rememberMe) {
-            await saveCredentials(actualEmail, input.password);
-          }
+          // Don't save credentials automatically during manual login
+          // Let the user explicitly choose via RememberMeModal if needed
+          console.log('Manual login completed - skipping automatic credential save to prevent biometric prompts');
         }
       }
     } catch (err: any) {
@@ -211,7 +242,7 @@ export function LoginScreen() {
       />
 
       {/* Biometric Authentication Bar */}
-      {hasStoredCredentials && (
+      {hasStoredCredentials && !userHasTypedManually && (
         <View style={styles.credentialBar}>
           <View style={styles.credentialInfo}>
             <Icon name="lock" size={20} color={theme.colors.textSecondary} />

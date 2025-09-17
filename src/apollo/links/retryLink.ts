@@ -1,4 +1,4 @@
-import {RetryLink} from '@apollo/client/link/retry';
+import { RetryLink } from '@apollo/client/link/retry';
 import NetInfo from '@react-native-community/netinfo';
 
 // Optimized RetryLink with exponential backoff and retry limits
@@ -9,16 +9,17 @@ export const retryLink = new RetryLink({
     // only retry if:
     //  • there's a network error
     //  • AND the device is currently online
-    //  • AND it's not an auth error (handled by errorLink)
+    //  • Auth errors (401, 403) are allowed to retry (handled by errorLink refresh logic)
     retryIf: (error, _operation) => {
       const isNetworkError = !!error && !!(error as any).networkError;
       if (!isNetworkError) return false;
 
-      // Don't retry auth errors (401, 403) - let errorLink handle them
       const statusCode = ((error as any).networkError as any)?.statusCode;
-      if (statusCode === 401 || statusCode === 403) return false;
 
-      // Don't retry client errors (4xx except auth)
+      // Allow retries for auth errors (401, 403) - they'll be handled by errorLink refresh logic
+      if (statusCode === 401 || statusCode === 403) return true;
+
+      // Don't retry other client errors (4xx)
       if (statusCode >= 400 && statusCode < 500) return false;
 
       // Check if device is online before retrying

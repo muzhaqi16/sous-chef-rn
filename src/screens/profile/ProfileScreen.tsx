@@ -10,7 +10,7 @@ import {
 } from '#hooks';
 
 export const ProfileScreen = () => {
-  const { navigate, navigateTo, goBack } = useAppNavigation();
+  const { navigate, goBack } = useAppNavigation();
   const { profile, user, loading } = useProfileData();
   const { sections } = useConfigurableSettings(profile);
 
@@ -27,7 +27,6 @@ export const ProfileScreen = () => {
 
     if (logoutItem?.onPress) {
       logoutItem.onPress();
-      navigateTo.login();
     }
   };
 
@@ -41,7 +40,7 @@ export const ProfileScreen = () => {
         name={`${profile?.firstName || ''} ${profile?.lastName || ''}`.trim()}
         subtitle={user?.email || ''}
         onBack={() => goBack()}
-        onMore={() => {}}
+        onMore={() => { }}
         onAvatarPress={handleAvatarPress}
       />
 

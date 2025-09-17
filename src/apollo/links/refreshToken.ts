@@ -1,8 +1,8 @@
-// src/apollo/links/refreshToken.ts
-import {Observable, FetchResult, ApolloClient} from '@apollo/client';
-import {useStore} from '#store';
-import {RefreshTokenDocument, RefreshTokenMutation} from '#generated';
-import {reconnectWebSocket} from './wsLink';
+import { Observable, ApolloLink } from '@apollo/client';
+import { useStore } from '#store';
+import { RefreshTokenDocument, RefreshTokenMutation } from '#generated';
+import { reconnectWebSocket } from './wsLink';
+import { client } from '../client';
 
 let isRefreshing = false;
 let refreshSubscribers: Array<(accessToken: string) => void> = [];
@@ -19,18 +19,25 @@ const onTokenRefreshed = (accessToken: string) => {
 export const attemptTokenRefresh = (
   operation: any,
   forward: any,
-): Observable<FetchResult> => {
+): Observable<ApolloLink.Result> => {
   const state = useStore.getState();
   const refreshToken = state.refreshToken;
 
+  console.log('RefreshToken debug:', {
+    hasRefreshToken: !!refreshToken,
+    refreshTokenLength: refreshToken?.length,
+    refreshTokenPreview: refreshToken?.substring(0, 20) + '...',
+  });
+
   if (!refreshToken) {
+    console.log('No refresh token available in state');
     state.logout();
-    return new Observable<FetchResult>(observer => {
+    return new Observable<ApolloLink.Result>(observer => {
       observer.error(new Error('No refresh token available'));
     });
   }
 
-  return new Observable<FetchResult>(observer => {
+  return new Observable<ApolloLink.Result>(observer => {
     if (isRefreshing) {
       subscribeTokenRefresh((accessToken: string) => {
         operation.setContext({
@@ -51,20 +58,12 @@ export const attemptTokenRefresh = (
 
     isRefreshing = true;
 
-    // Get the client from the operation context
-    const client = operation.getContext().client;
-
-    if (!client) {
-      console.error('Client not available in context');
-      observer.error(new Error('Client not available'));
-      isRefreshing = false;
-      return;
-    }
+    console.log('Attempting refresh with token:', refreshToken?.substring(0, 10) + '...');
 
     client
       .mutate({
         mutation: RefreshTokenDocument,
-        variables: {token: refreshToken},
+        variables: { token: refreshToken },
         context: {
           skipErrorLink: true,
         },
@@ -75,7 +74,7 @@ export const attemptTokenRefresh = (
           throw new Error('Invalid refresh response');
         }
 
-        const {accessToken: newToken, refreshToken: newRefreshToken} = data;
+        const { accessToken: newToken, refreshToken: newRefreshToken } = data;
 
         useStore.getState().setTokens({
           accessToken: newToken,

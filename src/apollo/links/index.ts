@@ -4,14 +4,12 @@ import { authLink } from './authLink';
 import { createConsoleLink } from './consoleLink';
 import { errorLink } from './errorLink';
 import { httpLink } from './httpLink';
-import { batchLink } from './batchLink';
 import { wsLink } from './wsLink';
 import { retryLink } from './retryLink';
 import { deduplicationLink } from './deduplicationLink';
 
 // HTTP transport with retry and batching
 const retriableHttp = retryLink.concat(httpLink);
-const retriableBatch = retryLink.concat(batchLink);
 
 // Transport link routing:
 // • Subscriptions → WebSocket

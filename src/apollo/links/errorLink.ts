@@ -1,9 +1,11 @@
-import {ErrorLink} from '@apollo/client/link/error';
-import {CombinedGraphQLErrors, CombinedProtocolErrors} from '@apollo/client/errors';
-import {isKnownServerError} from '#utils/subscriptionErrorHandler';
-import {LogoutCleanup} from '../logoutCleanup';
+import { ErrorLink } from '@apollo/client/link/error';
+import { CombinedGraphQLErrors, CombinedProtocolErrors } from '@apollo/client/errors';
+import { isKnownServerError } from '#utils/subscriptionErrorHandler';
+import { LogoutCleanup } from '../logoutCleanup';
+import { attemptTokenRefresh } from './refreshToken';
 
-export const errorLink = new ErrorLink(({error, operation}) => {
+
+export const errorLink = new ErrorLink(({ error, operation, forward }) => {
   // Skip error handling for refresh token mutation
   if (operation.getContext().skipErrorLink) {
     return;
@@ -31,7 +33,7 @@ export const errorLink = new ErrorLink(({error, operation}) => {
 
     // Also handle errors with our utility
     const firstError = error.errors[0];
-    if (LogoutCleanup.handleLogoutError({message: firstError?.message}, operation.operationName)) {
+    if (LogoutCleanup.handleLogoutError({ message: firstError?.message }, operation.operationName)) {
       return; // Error was suppressed during logout
     }
 
@@ -71,8 +73,9 @@ export const errorLink = new ErrorLink(({error, operation}) => {
         }
 
         console.log('Received authentication error, attempting token refresh…');
-        // Note: In v4 ErrorLink, token refresh should be handled via RetryLink
-        return;
+
+        // Use the dedicated refresh token link
+        return attemptTokenRefresh(operation, forward);
       }
     }
   }
@@ -84,7 +87,7 @@ export const errorLink = new ErrorLink(({error, operation}) => {
       isSubscription,
     });
 
-    error.errors.forEach(({message, extensions}) => {
+    error.errors.forEach(({ message, extensions }) => {
       console.log(`[Protocol error]: Message: ${message}, Extensions: ${JSON.stringify(extensions)}`);
     });
   }
@@ -97,12 +100,12 @@ export const errorLink = new ErrorLink(({error, operation}) => {
     });
 
     // Also handle errors with our utility
-    if (LogoutCleanup.handleLogoutError({message: error.message}, operation.operationName)) {
+    if (LogoutCleanup.handleLogoutError({ message: error.message }, operation.operationName)) {
       return; // Error was suppressed during logout
     }
 
     // Check if this is a known server subscription error
-    if (isSubscription && isKnownServerError({message: error.message})) {
+    if (isSubscription && isKnownServerError({ message: error.message })) {
       console.warn(
         `Known server subscription error for ${operation.operationName}:`,
         error.message,
