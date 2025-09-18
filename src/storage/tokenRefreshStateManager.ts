@@ -94,7 +94,6 @@ class TokenRefreshStateManager {
    * Start token refresh process
    */
   startRefresh(): void {
-    console.log('🔄 Token refresh state: Starting refresh');
     this.currentState = {
       ...this.currentState,
       isRefreshing: true,
@@ -111,7 +110,6 @@ class TokenRefreshStateManager {
    */
   queueOperation(operationName: string): void {
     if (this.currentState.isRefreshing) {
-      console.log(`⏳ Token refresh state: Queuing operation ${operationName}`);
       this.currentState.queuedOperations.push(operationName);
       this.notifySubscribers();
     }
@@ -124,9 +122,6 @@ class TokenRefreshStateManager {
     const refreshDuration = this.currentState.refreshStartTime
       ? Date.now() - this.currentState.refreshStartTime
       : 0;
-
-    console.log(`✅ Token refresh state: Completed ${success ? 'successfully' : 'with failure'} in ${refreshDuration}ms`);
-    console.log(`📋 Token refresh state: Processed ${this.currentState.queuedOperations.length} queued operations`);
 
     this.currentState = {
       ...this.currentState,

@@ -6,7 +6,6 @@ import { LogoutCleanup } from '../logoutCleanup';
 export const authLink = new SetContextLink(async ({ headers }, operation) => {
   // Skip operations during logout to prevent unnecessary auth errors
   if (LogoutCleanup.shouldSkipOperation(operation.operationName)) {
-    console.log(`[AuthLink] Skipping operation during logout: ${operation.operationName}`);
     throw new Error('Operation cancelled due to logout process');
   }
 
@@ -24,13 +23,6 @@ export const authLink = new SetContextLink(async ({ headers }, operation) => {
     operation.operationName &&
     publicOperations.includes(operation.operationName)
   ) {
-    console.log(`[AuthLink] Public operation detected: ${operation.operationName}`, {
-      hasApiKey: !!apiKey,
-      headers: {
-        ...headers,
-        ...(apiKey && { 'x-api-key': apiKey }),
-      }
-    });
     return {
       headers: {
         ...headers,

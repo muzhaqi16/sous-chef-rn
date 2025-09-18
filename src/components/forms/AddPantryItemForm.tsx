@@ -1,5 +1,11 @@
 import React, { useState, useCallback } from 'react';
-import { View, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import {
+  View,
+  ScrollView,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -7,6 +13,7 @@ import { ApolloCache } from '@apollo/client';
 
 import { commonStyles } from '#/styles/commonStyles';
 import { useDefaultHome } from '#hooks';
+import { useStore } from '#store';
 import {
   StorageState,
   useAddItemToPantryMutation,
@@ -58,12 +65,12 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [saving, setSaving] = useState(false);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
+    null,
+  );
 
-  const {
-    selectedHomeId,
-    getDefaultPantry,
-  } = useDefaultHome();
+  const { selectedPantryId } = useStore();
+  const { selectedHomeId, getDefaultPantry } = useDefaultHome();
 
   const { data: homeData } = useGetHomeQuery({
     variables: { homeId: selectedHomeId ?? '' },
@@ -76,21 +83,24 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
 
   const pantry = getDefaultPantry(homeData);
 
+  // Use selectedPantryId from store as primary source, fallback to pantry from home data
+  const currentPantryId = selectedPantryId || pantry?.id;
+
   const [addItem] = useAddItemToPantryMutation({
     update: (cache: ApolloCache, { data: mutationData }: any) => {
-      if (!mutationData?.addItemToPantry || !pantry?.id) return;
+      if (!mutationData?.addItemToPantry || !currentPantryId) return;
       const newItem = mutationData.addItemToPantry;
       try {
         const existingData = cache.readQuery<{
           pantryItems: PantryItemFragment[];
         }>({
           query: GetPantryItemsDocument,
-          variables: { pantryId: pantry.id },
+          variables: { pantryId: currentPantryId },
         });
         if (existingData?.pantryItems) {
           cache.writeQuery({
             query: GetPantryItemsDocument,
-            variables: { pantryId: pantry.id },
+            variables: { pantryId: currentPantryId },
             data: {
               pantryItems: [newItem, ...existingData.pantryItems],
             },
@@ -145,12 +155,9 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
     [setValue],
   );
 
-  const handleCategorySelect = useCallback(
-    (categoryId: string | null) => {
-      setSelectedCategoryId(categoryId);
-    },
-    [],
-  );
+  const handleCategorySelect = useCallback((categoryId: string | null) => {
+    setSelectedCategoryId(categoryId);
+  }, []);
 
   const handleIncrementQuantity = useCallback(() => {
     const current = watchedValues.quantity || 0;
@@ -173,7 +180,7 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
       return;
     }
 
-    if (!pantry?.id) {
+    if (!currentPantryId) {
       Alert.alert('Error', 'No pantry selected. Please select a pantry first.');
       return;
     }
@@ -190,7 +197,7 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
       }
 
       const baseInput = {
-        pantryId: pantry.id, // Already validated above, so we know it exists
+        pantryId: currentPantryId, // Already validated above, so we know it exists
         unitId: unitId || '',
         initialQuantity: data.quantity,
         storageState: data.storageState as StorageState,
@@ -223,8 +230,6 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
         };
       }
 
-      console.log('AddPantryItemForm: Submitting with pantryId:', pantry.id, 'input:', input);
-
       await addItem({ variables: { input } });
       onSuccess?.();
     } catch (error) {
@@ -237,7 +242,8 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
   return (
     <KeyboardAvoidingView
       style={commonStyles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
       <PantryItemFormHeader
         title="Add Pantry Item"
         onSave={handleSubmit(handleSave)}
@@ -246,7 +252,8 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
 
       <ScrollView
         style={commonStyles.scrollContent}
-        showsVerticalScrollIndicator={false}>
+        showsVerticalScrollIndicator={false}
+      >
         <View style={commonStyles.padding}>
           <ItemInformationSection
             control={control}
@@ -264,7 +271,7 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
             onIncrementQuantity={handleIncrementQuantity}
             onDecrementQuantity={handleDecrementQuantity}
             onUnitSelected={setSelectedUnitId}
-            onUnitChange={(unit) => {
+            onUnitChange={unit => {
               setValue('unit', unit);
               // Clear selected unit ID when user types manually
               setSelectedUnitId(null);
@@ -278,9 +285,9 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
             storageState={watchedValues.storageState}
             expirationDate={watchedValues.expirationDate}
             showDatePicker={showDatePicker}
-            onStorageStateChange={(state) => setValue('storageState', state)}
+            onStorageStateChange={state => setValue('storageState', state)}
             onDatePickerToggle={() => setShowDatePicker(!showDatePicker)}
-            onDateChange={(date) => {
+            onDateChange={date => {
               setShowDatePicker(Platform.OS === 'ios');
               if (date) setValue('expirationDate', date);
             }}

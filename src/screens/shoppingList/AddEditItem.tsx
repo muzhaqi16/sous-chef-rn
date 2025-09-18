@@ -8,12 +8,14 @@ import {
   GetShoppingListItemsDocument,
   ItemSuggestion,
   ShoppingListItemFragment,
+  CategoryType,
 } from '#generated';
 import {FormModal} from '#components/organisms/FormModal';
 import {Input} from '#components/base/Input';
 import {FormGroup} from '#components/molecules/FormGroup';
 import {AutocompleteInput} from '#components/molecules/AutoCompleteInput';
 import {UnitsAutocompleteInput} from '#components/molecules/UnitsAutocompleteInput';
+import {CategoryAutocompleteInput} from '#components/molecules/CategoryAutocompleteInput';
 import {useAppNavigation} from '#hooks';
 import {ShoppingListStackParamList} from '#navigation/stacks/ShoppingListStack';
 
@@ -35,6 +37,7 @@ export const AddEditItem: React.FC<{
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
   const [category, setCategory] = useState('');
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   // GraphQL hooks
@@ -245,11 +248,13 @@ export const AddEditItem: React.FC<{
       </FormGroup>
 
       {/* Category Field */}
-      <Input
+      <CategoryAutocompleteInput
         label="Category"
         value={category}
         onChangeText={setCategory}
+        onCategorySelected={setSelectedCategoryId}
         placeholder="e.g., Dairy, Produce"
+        categoryType={CategoryType.General}
       />
 
       {/* Notes Field */}

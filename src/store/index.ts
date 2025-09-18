@@ -38,6 +38,7 @@ interface ResetManagerState {
   fullReset: () => Promise<void>;
   sessionExpired: () => Promise<void>;
   resetOnboarding: () => Promise<void>;
+  tokenRefreshFailed: () => Promise<void>;
 }
 
 // Add navigation state machine interface

@@ -67,7 +67,6 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
           return;
         }
 
-        console.log(`🔄 Auth error detected for ${operation.operationName}, attempting token refresh`);
         // Always attempt token refresh - the refresh mechanism will handle queuing
         // Don't debounce here, let the refreshToken link handle the coordination
         return attemptTokenRefresh(operation, forward);

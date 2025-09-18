@@ -13,7 +13,6 @@ const subscribeTokenRefresh = (cb: (accessToken: string | null) => void) => {
 };
 
 const onTokenRefreshed = (accessToken: string | null) => {
-  console.log(`🔄 Token refresh completed, notifying ${refreshSubscribers.length} waiting requests`);
   refreshSubscribers.forEach(cb => cb(accessToken));
   refreshSubscribers = [];
 };
@@ -23,7 +22,7 @@ const performTokenRefresh = async (): Promise<string | null> => {
   const refreshToken = state.refreshToken;
 
   if (!refreshToken) {
-    state.logout();
+    state.tokenRefreshFailed();
     throw new Error('No refresh token available');
   }
 
@@ -59,7 +58,7 @@ const performTokenRefresh = async (): Promise<string | null> => {
 
     return newToken;
   } catch (refreshError) {
-    useStore.getState().logout();
+    useStore.getState().tokenRefreshFailed();
     throw refreshError;
   }
 };
@@ -71,12 +70,10 @@ export const attemptTokenRefresh = (
   return new Observable<ApolloLink.Result>(observer => {
     // If refresh is already in progress, queue this operation
     if (isRefreshing) {
-      console.log(`⏳ Token refresh in progress, queuing ${operation.operationName}`);
       tokenRefreshStateManager.queueOperation(operation.operationName);
 
       subscribeTokenRefresh((accessToken: string | null) => {
         if (accessToken) {
-          console.log(`🔄 Retrying queued operation ${operation.operationName} with new token`);
           operation.setContext({
             headers: {
               ...operation.getContext().headers,
@@ -99,7 +96,6 @@ export const attemptTokenRefresh = (
     // Start new refresh
     isRefreshing = true;
     tokenRefreshStateManager.startRefresh();
-    console.log(`🔄 Starting token refresh for ${operation.operationName}`);
 
     performTokenRefresh()
       .then((newToken) => {
@@ -108,7 +104,6 @@ export const attemptTokenRefresh = (
         onTokenRefreshed(newToken);
 
         if (newToken) {
-          console.log(`✅ Token refresh successful, retrying ${operation.operationName}`);
           operation.setContext({
             headers: {
               ...operation.getContext().headers,

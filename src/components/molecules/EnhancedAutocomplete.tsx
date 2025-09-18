@@ -27,14 +27,21 @@ const EnhancedAutocomplete: React.FC<EnhancedAutocompleteProps> = ({
     }
   }, [searchTerm, fetchItems]);
 
+  // Update previous results when we get new data
+  useEffect(() => {
+    const newSuggestions = data?.autocompleteItems?.suggestions || [];
+    if (newSuggestions.length > 0 || !loading) {
+      setPreviousResults(newSuggestions);
+    }
+  }, [data, loading]);
+
   const suggestions = useMemo(() => {
     if (searchTerm.length < 2) return [];
 
     const newSuggestions = data?.autocompleteItems?.suggestions || [];
 
-    // Update previous results when we get new data
+    // If we have new data or not loading, return new suggestions
     if (newSuggestions.length > 0 || !loading) {
-      setPreviousResults(newSuggestions);
       return newSuggestions;
     }
 

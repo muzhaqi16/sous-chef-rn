@@ -42,6 +42,15 @@ export const RESET_SCENARIOS = {
     clearApolloCache: true,
     resetOnboarding: false,
   },
+  TOKEN_REFRESH_FAILED: {
+    auth: true,
+    preferences: false,
+    notifications: false,
+    scanner: false,
+    storage: false,
+    clearApolloCache: true,
+    resetOnboarding: false,
+  },
   ONBOARDING_RESET: {
     auth: false,
     preferences: true, // Reset onboarding state
@@ -68,7 +77,12 @@ export const createResetManager = (
     const newState: Partial<RootState> = {};
 
     if (resetOptions.auth) {
-      Object.assign(newState, getAuthResetState());
+      // Use special reset state for token refresh failures to preserve navigation context
+      if (typeof options === 'string' && options === 'TOKEN_REFRESH_FAILED') {
+        Object.assign(newState, getTokenRefreshFailedResetState());
+      } else {
+        Object.assign(newState, getAuthResetState());
+      }
     }
 
     if (resetOptions.preferences) {
@@ -141,6 +155,11 @@ export const createResetManager = (
     const resetManager = createResetManager(set, get);
     await resetManager.resetStore('ONBOARDING_RESET');
   },
+
+  tokenRefreshFailed: async () => {
+    const resetManager = createResetManager(set, get);
+    await resetManager.resetStore('TOKEN_REFRESH_FAILED');
+  },
 });
 
 // Individual slice reset state getters
@@ -161,6 +180,23 @@ const getAuthResetState = () => ({
   selectedHomeId: null,
   selectedPantryId: null,
   selectedShoppingListId: null,
+});
+
+// Auth reset state for token refresh failures (preserves navigation state)
+const getTokenRefreshFailedResetState = () => ({
+  user: null,
+  accessToken: null,
+  refreshToken: null,
+  pendingEmail: undefined,
+  pendingPassword: undefined,
+  authFlow: {
+    isNewUser: false,
+    requiresVerification: false,
+    loginMethod: null,
+    lastLoginTimestamp: null,
+  },
+  userStates: {}, // Clear all user navigation states when resetting auth
+  // Don't clear selected IDs - user is still working in the same context
 });
 
 const getPreferencesResetState = (currentState: RootState) => ({

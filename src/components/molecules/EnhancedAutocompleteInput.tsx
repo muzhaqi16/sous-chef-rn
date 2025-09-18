@@ -40,10 +40,12 @@ export const EnhancedAutocompleteInput: React.FC<
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [searchTerm, setSearchTerm] = useState(value || '');
 
-  // Sync searchTerm with external value changes
+  // Sync searchTerm with external value changes (only when different from current searchTerm)
   useEffect(() => {
-    setSearchTerm(value || '');
-  }, [value]);
+    if (value !== searchTerm) {
+      setSearchTerm(value || '');
+    }
+  }, [value, searchTerm]);
 
   const handleTextChange = (text: string) => {
     setSearchTerm(text);
