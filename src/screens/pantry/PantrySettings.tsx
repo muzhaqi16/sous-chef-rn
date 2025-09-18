@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,9 +8,9 @@ import {
   Alert,
   TextInput,
 } from 'react-native';
-import {Icon} from '#/utils';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
-import {ApolloCache} from '@apollo/client';
+import { Icon } from '#/utils';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { ApolloCache } from '@apollo/client';
 import {
   useGetPantryQuery,
   useUpdatePantryMutation,
@@ -21,18 +21,18 @@ import {
   GetHomesDocument,
   GetHomesQuery,
 } from '#generated';
-import {useStore} from '#store';
-import {useAppNavigation} from '#hooks';
-import {PantryStackParamList} from '#navigation/stacks/PantryStack';
+import { useStore } from '#store';
+import { useAppNavigation } from '#hooks';
+import { PantryStackParamList } from '#navigation/stacks/PantryStack';
 
 export const PantrySettings: React.FC<{
-  route: {params?: PantryStackParamList['PantrySettings']};
-}> = ({route}) => {
-  const {navigate, goBack} = useAppNavigation();
-  const {theme} = useUnistyles();
+  route: { params?: PantryStackParamList['PantrySettings'] };
+}> = ({ route }) => {
+  const { goBack } = useAppNavigation();
+  const { theme } = useUnistyles();
   const pantryId = route.params?.pantryId;
 
-  const {selectedHomeId} = useStore();
+  const { selectedHomeId } = useStore();
   const setSelectedPantryId = useStore(state => state.setSelectedPantryId);
 
   const [name, setName] = useState('');
@@ -40,8 +40,8 @@ export const PantrySettings: React.FC<{
   const [isDefault, setIsDefault] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const {data: pantryData} = useGetPantryQuery({
-    variables: {id: pantryId ?? ''},
+  const { data: pantryData } = useGetPantryQuery({
+    variables: { id: pantryId ?? '' },
     skip: !pantryId,
     fetchPolicy: 'cache-and-network',
   });
@@ -50,7 +50,7 @@ export const PantrySettings: React.FC<{
 
   const [updatePantry] = useUpdatePantryMutation();
   const [deletePantry] = useDeletePantryMutation({
-    update: (cache: ApolloCache, {data}: any) => {
+    update: (cache: ApolloCache, { data }: any) => {
       if (data?.deletePantry) {
         try {
           // Update GetHomes cache to remove the pantry
@@ -73,7 +73,7 @@ export const PantrySettings: React.FC<{
 
             cache.writeQuery<GetHomesQuery>({
               query: GetHomesDocument,
-              data: {homes: updatedHomes},
+              data: { homes: updatedHomes },
             });
           }
         } catch (error) {
@@ -84,7 +84,7 @@ export const PantrySettings: React.FC<{
   });
 
   const [createPantry] = useCreatePantryMutation({
-    update: (cache: ApolloCache, {data}: any) => {
+    update: (cache: ApolloCache, { data }: any) => {
       if (data?.createPantry) {
         try {
           // Update GetHomes cache to include the new pantry
@@ -113,7 +113,7 @@ export const PantrySettings: React.FC<{
 
             cache.writeQuery<GetHomesQuery>({
               query: GetHomesDocument,
-              data: {homes: updatedHomes},
+              data: { homes: updatedHomes },
             });
           } else {
             console.log('No existing homes data found in cache');
@@ -123,13 +123,13 @@ export const PantrySettings: React.FC<{
           try {
             const existingPantriesData = cache.readQuery<GetPantriesQuery>({
               query: GetPantriesDocument,
-              variables: {homeId: data.createPantry.homeId},
+              variables: { homeId: data.createPantry.homeId },
             });
 
             if (existingPantriesData?.pantries) {
               cache.writeQuery<GetPantriesQuery>({
                 query: GetPantriesDocument,
-                variables: {homeId: data.createPantry.homeId},
+                variables: { homeId: data.createPantry.homeId },
                 data: {
                   pantries: [
                     ...existingPantriesData.pantries,
@@ -168,7 +168,7 @@ export const PantrySettings: React.FC<{
       }
       goBack();
     },
-    onError: error => {
+    onError: () => {
       Alert.alert('Error', 'Failed to create pantry');
     },
   });
@@ -241,13 +241,13 @@ export const PantrySettings: React.FC<{
       'Delete Pantry',
       'Are you sure you want to delete this pantry? This action cannot be undone and will remove all items in this pantry.',
       [
-        {text: 'Cancel', style: 'cancel'},
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
             try {
-              await deletePantry({variables: {id: pantryId}});
+              await deletePantry({ variables: { id: pantryId } });
               goBack();
             } catch (error) {
               Alert.alert('Error', 'Failed to delete pantry');
@@ -312,7 +312,7 @@ export const PantrySettings: React.FC<{
             <Switch
               value={isDefault}
               onValueChange={setIsDefault}
-              trackColor={{true: theme.colors.primary}}
+              trackColor={{ true: theme.colors.primary }}
             />
           </View>
         </View>
@@ -344,7 +344,8 @@ export const PantrySettings: React.FC<{
 
             <TouchableOpacity
               style={styles.deleteButton}
-              onPress={handleDelete}>
+              onPress={handleDelete}
+            >
               <Icon name="delete" size={20} color={theme.colors.error} />
               <Text style={styles.deleteButtonText}>Delete Pantry</Text>
             </TouchableOpacity>

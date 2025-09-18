@@ -3201,7 +3201,7 @@ export type PantryItem = {
   unit?: Maybe<Unit>;
   unitId?: Maybe<Scalars['String']['output']>;
   unitName?: Maybe<Scalars['String']['output']>;
-  updatedAt: Scalars['DateTime']['output'];
+  updatedAt?: Maybe<Scalars['DateTime']['output']>;
   usageFrequency: UsageFrequency;
   usageRecords: Array<PantryItemUsage>;
   wasteAmount: Scalars['Float']['output'];
@@ -6991,7 +6991,7 @@ export type PantryItemFragmentFragment = {
   isAutoReorder: boolean;
   customCategory?: string | null | undefined;
   createdAt: string;
-  updatedAt: string;
+  updatedAt?: string | null | undefined;
   tags: Array<string>;
   item: {
     __typename?: 'Item';
@@ -7281,7 +7281,7 @@ export type PantryFragmentFragment = {
         isAutoReorder: boolean;
         customCategory?: string | null | undefined;
         createdAt: string;
-        updatedAt: string;
+        updatedAt?: string | null | undefined;
         tags: Array<string>;
         item: {
           __typename?: 'Item';
@@ -7909,7 +7909,7 @@ export type HomeFragmentFragment = {
               isAutoReorder: boolean;
               customCategory?: string | null | undefined;
               createdAt: string;
-              updatedAt: string;
+              updatedAt?: string | null | undefined;
               tags: Array<string>;
               item: {
                 __typename?: 'Item';
@@ -8328,7 +8328,7 @@ export type GetHomeQuery = {
                     isAutoReorder: boolean;
                     customCategory?: string | null | undefined;
                     createdAt: string;
-                    updatedAt: string;
+                    updatedAt?: string | null | undefined;
                     tags: Array<string>;
                     item: {
                       __typename?: 'Item';
@@ -8903,53 +8903,14 @@ export type CreateHomeMutation = {
     __typename?: 'Home';
     id: string;
     name: string;
-    type: HomeType;
-    description?: string | null | undefined;
-    timezone?: string | null | undefined;
-    currency?: string | null | undefined;
-    isPublic: boolean;
-    joinCode?: string | null | undefined;
-    allowJoinCode: boolean;
-    maxMembers?: number | null | undefined;
-    tags: Array<string>;
-    metadata?: string | null | undefined;
-    version: number;
     createdAt: string;
     updatedAt: string;
-    invites?:
+    pantries?:
       | Array<{
-          __typename?: 'HomeInvite';
+          __typename?: 'Pantry';
           id: string;
-          email: string;
-          token: string;
-          homeId: string;
-          invitedUserId?: string | null | undefined;
-          recipientName?: string | null | undefined;
-          role: MembershipRole;
-          customPermissions?: string | null | undefined;
-          status: InviteStatus;
-          expiresAt: string;
-          sentAt: string;
-          lastReminderAt?: string | null | undefined;
-          reminderCount: number;
-          acceptedAt?: string | null | undefined;
-          declinedAt?: string | null | undefined;
-          revokedAt?: string | null | undefined;
-          message?: string | null | undefined;
-          createdAt: string;
-          home: { __typename?: 'Home'; id: string; name: string };
-          inviter: {
-            __typename?: 'User';
-            id: string;
-            email: string;
-            profile?:
-              | {
-                  __typename?: 'UserProfile';
-                  displayName?: string | null | undefined;
-                }
-              | null
-              | undefined;
-          };
+          name: string;
+          isDefault: boolean;
         }>
       | null
       | undefined;
@@ -8961,17 +8922,6 @@ export type CreateHomeMutation = {
       role: MembershipRole;
       status: MembershipStatus;
       displayName?: string | null | undefined;
-      canViewPantry: boolean;
-      canEditPantry: boolean;
-      canAddItems: boolean;
-      canRemoveItems: boolean;
-      canInviteOthers: boolean;
-      canManageHome: boolean;
-      lastActiveAt?: string | null | undefined;
-      joinedAt: string;
-      leftAt?: string | null | undefined;
-      createdAt: string;
-      updatedAt: string;
       user: {
         __typename?: 'User';
         id: string;
@@ -9016,8 +8966,6 @@ export type CreateHomeMutation = {
       | {
           __typename?: 'Membership';
           id: string;
-          homeId: string;
-          userId: string;
           role: MembershipRole;
           status: MembershipStatus;
           displayName?: string | null | undefined;
@@ -9027,89 +8975,7 @@ export type CreateHomeMutation = {
           canRemoveItems: boolean;
           canInviteOthers: boolean;
           canManageHome: boolean;
-          lastActiveAt?: string | null | undefined;
-          joinedAt: string;
-          leftAt?: string | null | undefined;
-          createdAt: string;
-          updatedAt: string;
-          user: {
-            __typename?: 'User';
-            id: string;
-            email: string;
-            emailVerified: boolean;
-            role: UserRole;
-            onBoarded: boolean;
-            timezone?: string | null | undefined;
-            preferredCurrency?: string | null | undefined;
-            language?: string | null | undefined;
-            defaultShoppingListId?: string | null | undefined;
-            defaultHomeId?: string | null | undefined;
-            createdAt: string;
-            updatedAt: string;
-            lastActiveAt?: string | null | undefined;
-            profile?:
-              | {
-                  __typename?: 'UserProfile';
-                  id: string;
-                  firstName?: string | null | undefined;
-                  lastName?: string | null | undefined;
-                  displayName?: string | null | undefined;
-                  bio?: string | null | undefined;
-                  avatar?: string | null | undefined;
-                  phone?: string | null | undefined;
-                }
-              | null
-              | undefined;
-            settings?:
-              | {
-                  __typename?: 'UserSettings';
-                  id: string;
-                  emailNotifications: boolean;
-                  pushNotifications: boolean;
-                  theme: AppTheme;
-                }
-              | null
-              | undefined;
-          };
         }
-      | null
-      | undefined;
-    membershipStats: {
-      __typename?: 'MembershipStats';
-      total: number;
-      active: number;
-      recentlyActive: number;
-      byRole: {
-        __typename?: 'MembershipRoleStats';
-        OWNER: number;
-        ADMIN: number;
-        MEMBER: number;
-        GUEST: number;
-      };
-      byStatus: {
-        __typename?: 'MembershipStatusStats';
-        ACTIVE: number;
-        SUSPENDED: number;
-        LEFT: number;
-        REMOVED: number;
-      };
-    };
-    pantries?:
-      | Array<{
-          __typename?: 'Pantry';
-          id: string;
-          homeId: string;
-          name: string;
-          description?: string | null | undefined;
-          isDefault: boolean;
-          location?: string | null | undefined;
-          temperature?: string | null | undefined;
-          tags: Array<string>;
-          metadata?: any | null | undefined;
-          version: number;
-          createdAt: string;
-          updatedAt?: string | null | undefined;
-        }>
       | null
       | undefined;
   };
@@ -9353,7 +9219,7 @@ export type UpdateHomeMutation = {
                 isAutoReorder: boolean;
                 customCategory?: string | null | undefined;
                 createdAt: string;
-                updatedAt: string;
+                updatedAt?: string | null | undefined;
                 tags: Array<string>;
                 item: {
                   __typename?: 'Item';
@@ -9760,7 +9626,7 @@ export type DeleteHomeMutation = {
                 isAutoReorder: boolean;
                 customCategory?: string | null | undefined;
                 createdAt: string;
-                updatedAt: string;
+                updatedAt?: string | null | undefined;
                 tags: Array<string>;
                 item: {
                   __typename?: 'Item';
@@ -10496,7 +10362,7 @@ export type GetDefaultHomeQuery = {
                     isAutoReorder: boolean;
                     customCategory?: string | null | undefined;
                     createdAt: string;
-                    updatedAt: string;
+                    updatedAt?: string | null | undefined;
                     tags: Array<string>;
                     item: {
                       __typename?: 'Item';
@@ -11490,7 +11356,7 @@ export type GetPantryItemsQuery = {
     isAutoReorder: boolean;
     customCategory?: string | null | undefined;
     createdAt: string;
-    updatedAt: string;
+    updatedAt?: string | null | undefined;
     tags: Array<string>;
     item: {
       __typename?: 'Item';
@@ -11680,7 +11546,7 @@ export type GetPantryItemQuery = {
     isAutoReorder: boolean;
     customCategory?: string | null | undefined;
     createdAt: string;
-    updatedAt: string;
+    updatedAt?: string | null | undefined;
     tags: Array<string>;
     item: {
       __typename?: 'Item';
@@ -11870,7 +11736,7 @@ export type AddItemToPantryMutation = {
     isAutoReorder: boolean;
     customCategory?: string | null | undefined;
     createdAt: string;
-    updatedAt: string;
+    updatedAt?: string | null | undefined;
     tags: Array<string>;
     item: {
       __typename?: 'Item';
@@ -12117,7 +11983,7 @@ export type UpdatePantryItemMutation = {
     isAutoReorder: boolean;
     customCategory?: string | null | undefined;
     createdAt: string;
-    updatedAt: string;
+    updatedAt?: string | null | undefined;
     tags: Array<string>;
     item: {
       __typename?: 'Item';
@@ -12307,7 +12173,7 @@ export type RemoveItemFromPantryMutation = {
     isAutoReorder: boolean;
     customCategory?: string | null | undefined;
     createdAt: string;
-    updatedAt: string;
+    updatedAt?: string | null | undefined;
     tags: Array<string>;
     item: {
       __typename?: 'Item';

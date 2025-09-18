@@ -1,4 +1,4 @@
-import {useRef, ComponentRef} from 'react';
+import { useRef, ComponentRef } from 'react';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 
 interface UseSwipeableActionsProps {
@@ -11,8 +11,6 @@ interface UseSwipeableActionsProps {
 export const useSwipeableActions = ({
   onEdit,
   onDelete,
-  animateDelete,
-  enableSwipeToDelete = true,
 }: UseSwipeableActionsProps) => {
   const swipeableRef = useRef<ComponentRef<typeof ReanimatedSwipeable>>(null);
 
@@ -26,7 +24,7 @@ export const useSwipeableActions = ({
     }
   };
 
-  const handleSwipeableOpen = (direction: 'left' | 'right') => {
+  const handleSwipeableOpen = () => {
     // Swipe only reveals actions, doesn't execute them
     // Actions are only executed when clicked
   };

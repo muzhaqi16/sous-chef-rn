@@ -1,5 +1,5 @@
-import React, {useCallback} from 'react';
-import {View, Text, TouchableOpacity, Alert} from 'react-native';
+import React, { useCallback } from 'react';
+import { Text, TouchableOpacity, Alert } from 'react-native';
 import {
   launchCamera,
   launchImageLibrary,
@@ -8,10 +8,13 @@ import {
   CameraOptions,
   ImageLibraryOptions,
 } from 'react-native-image-picker';
-import {request, PERMISSIONS, RESULTS} from 'react-native-permissions';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
-import {Icon} from '#utils';
-import {validateImageFile, ImageValidationError} from '#utils/imageValidation';
+import { request, PERMISSIONS, RESULTS } from 'react-native-permissions';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Icon } from '#utils';
+import {
+  validateImageFile,
+  ImageValidationError,
+} from '#utils/imageValidation';
 
 export interface ImageFile {
   uri: string;
@@ -43,7 +46,7 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
   isProfile = false,
   children,
 }) => {
-  const {theme} = useUnistyles();
+  const { theme } = useUnistyles();
 
   const handleImageResponse = useCallback(
     (response: ImagePickerResponse) => {
@@ -127,7 +130,7 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
           style: 'cancel',
         },
       ],
-      {cancelable: true},
+      { cancelable: true },
     );
   }, [disabled, handleImageResponse]);
 
@@ -143,7 +146,8 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
     <TouchableOpacity
       style={[styles.pickerButton, disabled && styles.pickerButtonDisabled]}
       onPress={showImagePicker}
-      disabled={disabled}>
+      disabled={disabled}
+    >
       <Icon name="add-a-photo" size={24} color={theme.colors.primary} />
       <Text style={styles.pickerButtonText}>Add Photo</Text>
     </TouchableOpacity>

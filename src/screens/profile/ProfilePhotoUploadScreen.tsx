@@ -8,7 +8,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRoute, RouteProp, useFocusEffect } from '@react-navigation/native';
+import { RouteProp, useFocusEffect } from '@react-navigation/native';
 import { useSafeNavigation } from '#hooks';
 import { Icon } from '#utils';
 import {
@@ -53,9 +53,10 @@ const DEFAULT_OPTIONS: CameraOptions | ImageLibraryOptions = {
 const { width: screenWidth } = Dimensions.get('window');
 const AVATAR_SIZE = Math.min(screenWidth * 0.6, 250);
 
-export const ProfilePhotoUploadScreen = () => {
+export const ProfilePhotoUploadScreen: React.FC<{
+  route: ProfilePhotoUploadRouteProp;
+}> = () => {
   const { navigation, goBack } = useSafeNavigation();
-  const route = useRoute<ProfilePhotoUploadRouteProp>();
   const { theme } = useUnistyles();
   const { uploadProfileImage, updateProfileAvatarUrl } = useImageUpload();
 
@@ -361,7 +362,7 @@ export const ProfilePhotoUploadScreen = () => {
   );
 };
 
-const styles = StyleSheet.create(theme => ({
+const styles = StyleSheet.create(() => ({
   container: {
     flex: 1,
   },

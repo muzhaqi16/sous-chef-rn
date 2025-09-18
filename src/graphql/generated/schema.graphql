@@ -2644,7 +2644,7 @@ type PantryItem {
   unit: Unit
   unitId: String
   unitName: String
-  updatedAt: DateTime!
+  updatedAt: DateTime
   usageFrequency: UsageFrequency!
   usageRecords: [PantryItemUsage!]!
   wasteAmount: Float!

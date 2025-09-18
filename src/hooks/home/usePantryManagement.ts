@@ -7,7 +7,6 @@ import {
   useUpdatePantryItemMutation,
   useRemoveItemFromPantryMutation,
   StorageState,
-  PantryItemFragment,
 } from '#generated';
 import { useSearchableList } from '../useSearchableList';
 import { useAuth } from '#hooks/auth/useAuth';
@@ -41,12 +40,7 @@ export function usePantryManagement(pantryId: string | undefined) {
   const shouldSkip = !pantryId || isLoggedOut;
 
   // Single source of truth: Apollo cache with network-first for freshness
-  const {
-    data,
-    loading,
-    error,
-    refetch,
-  } = useGetPantryItemsQuery({
+  const { data, loading, error, refetch } = useGetPantryItemsQuery({
     variables: { pantryId: pantryId ?? '' },
     skip: shouldSkip,
     fetchPolicy: 'cache-and-network', // Always try network for fresh data
@@ -62,14 +56,14 @@ export function usePantryManagement(pantryId: string | undefined) {
       // Apollo cache is automatically updated by subscription
       // No manual refetch needed - just let cache work
     },
-    onError: (error) => {
+    onError: error => {
       console.warn('Pantry subscription error:', error.message);
       // Fallback: refetch on subscription error
       refetch();
     },
   });
 
-  const items = data?.pantryItems ?? [];
+  const items = useMemo(() => data?.pantryItems ?? [], [data?.pantryItems]);
 
   // Search functionality
   const {
@@ -126,7 +120,7 @@ export function usePantryManagement(pantryId: string | undefined) {
   // Mutations with Apollo's optimistic updates
   const [addItemMutation] = useAddItemToPantryMutation({
     errorPolicy: 'all',
-    onError: (error) => {
+    onError: error => {
       console.error('Add item error:', error);
       Alert.alert('Error', 'Failed to add item');
     },
@@ -134,7 +128,7 @@ export function usePantryManagement(pantryId: string | undefined) {
 
   const [updateItemMutation] = useUpdatePantryItemMutation({
     errorPolicy: 'all',
-    onError: (error) => {
+    onError: error => {
       console.error('Update item error:', error);
       Alert.alert('Error', 'Failed to update item');
     },
@@ -142,7 +136,7 @@ export function usePantryManagement(pantryId: string | undefined) {
 
   const [removeItemMutation] = useRemoveItemFromPantryMutation({
     errorPolicy: 'all',
-    onError: (error) => {
+    onError: error => {
       console.error('Remove item error:', error);
       Alert.alert('Error', 'Failed to remove item');
     },

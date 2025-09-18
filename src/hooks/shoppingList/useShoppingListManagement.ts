@@ -7,7 +7,6 @@ import {
   useUpdateShoppingListItemMutation,
   useRemoveItemFromShoppingListMutation,
   useMarkItemPurchasedMutation,
-  ShoppingListItemFragment,
 } from '#generated';
 import { useSearchableList } from '../useSearchableList';
 import { useAuth } from '#hooks/auth/useAuth';
@@ -34,12 +33,7 @@ export function useShoppingListManagement(listId: string | undefined) {
   const shouldSkip = !listId || isLoggedOut;
 
   // Single source of truth: Apollo cache
-  const {
-    data,
-    loading,
-    error,
-    refetch,
-  } = useGetShoppingListItemsQuery({
+  const { data, loading, error, refetch } = useGetShoppingListItemsQuery({
     variables: { shoppingListId: listId ?? '' },
     skip: shouldSkip,
     fetchPolicy: 'cache-and-network',
@@ -54,13 +48,16 @@ export function useShoppingListManagement(listId: string | undefined) {
     onData: () => {
       // Apollo cache automatically updated
     },
-    onError: (error) => {
+    onError: error => {
       console.warn('Shopping list subscription error:', error.message);
       refetch();
     },
   });
 
-  const items = data?.shoppingListItems ?? [];
+  const items = useMemo(
+    () => data?.shoppingListItems ?? [],
+    [data?.shoppingListItems],
+  );
 
   // Search functionality
   const {
@@ -92,7 +89,7 @@ export function useShoppingListManagement(listId: string | undefined) {
   // Mutations
   const [addItemMutation] = useAddItemToShoppingListMutation({
     errorPolicy: 'all',
-    onError: (error) => {
+    onError: error => {
       console.error('Add shopping list item error:', error);
       Alert.alert('Error', 'Failed to add item');
     },
@@ -100,7 +97,7 @@ export function useShoppingListManagement(listId: string | undefined) {
 
   const [updateItemMutation] = useUpdateShoppingListItemMutation({
     errorPolicy: 'all',
-    onError: (error) => {
+    onError: error => {
       console.error('Update shopping list item error:', error);
       Alert.alert('Error', 'Failed to update item');
     },
@@ -108,7 +105,7 @@ export function useShoppingListManagement(listId: string | undefined) {
 
   const [removeItemMutation] = useRemoveItemFromShoppingListMutation({
     errorPolicy: 'all',
-    onError: (error) => {
+    onError: error => {
       console.error('Remove shopping list item error:', error);
       Alert.alert('Error', 'Failed to remove item');
     },
@@ -116,7 +113,7 @@ export function useShoppingListManagement(listId: string | undefined) {
 
   const [markPurchasedMutation] = useMarkItemPurchasedMutation({
     errorPolicy: 'all',
-    onError: (error) => {
+    onError: error => {
       console.error('Mark shopping list item purchased error:', error);
       Alert.alert('Error', 'Failed to mark item as purchased');
     },
@@ -150,7 +147,10 @@ export function useShoppingListManagement(listId: string | undefined) {
   };
 
   // Simplified update item
-  const updateItem = async (itemId: string, updates: ShoppingListItemUpdate) => {
+  const updateItem = async (
+    itemId: string,
+    updates: ShoppingListItemUpdate,
+  ) => {
     if (!listId) return false;
 
     try {
@@ -201,7 +201,7 @@ export function useShoppingListManagement(listId: string | undefined) {
       const result = await markPurchasedMutation({
         variables: {
           id: itemId,
-          status: newStatus
+          status: newStatus,
         },
         refetchQueries: ['GetShoppingListItems'],
       });

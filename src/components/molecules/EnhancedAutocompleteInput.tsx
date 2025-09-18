@@ -1,16 +1,15 @@
-import React, {useState, useRef, useCallback, useEffect} from 'react';
-import {View, Text} from 'react-native';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { View, Text } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetBackdrop,
   BottomSheetTextInput,
   BottomSheetView,
-  useBottomSheetModal,
 } from '@gorhom/bottom-sheet';
-import {StyleSheet} from 'react-native-unistyles';
-import {Input} from '#components/base/Input';
+import { StyleSheet } from 'react-native-unistyles';
+import { Input } from '#components/base/Input';
 import EnhancedAutocomplete from '#components/molecules/EnhancedAutocomplete';
-import {ItemSuggestion} from '#generated';
+import { ItemSuggestion } from '#generated';
 
 interface EnhancedAutocompleteInputProps {
   label?: string;
@@ -35,7 +34,6 @@ export const EnhancedAutocompleteInput: React.FC<
   onSelectItem,
   error,
 }) => {
-  const {dismiss, dismissAll} = useBottomSheetModal();
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [searchTerm, setSearchTerm] = useState(value || '');
@@ -116,7 +114,8 @@ export const EnhancedAutocompleteInput: React.FC<
         keyboardBlurBehavior="restore"
         android_keyboardInputMode="adjustResize"
         enablePanDownToClose={true}
-        enableContentPanningGesture={false}>
+        enableContentPanningGesture={false}
+      >
         <BottomSheetView style={styles.autocompleteContainer}>
           <Text style={styles.autocompleteTitle}>Search for an item</Text>
 

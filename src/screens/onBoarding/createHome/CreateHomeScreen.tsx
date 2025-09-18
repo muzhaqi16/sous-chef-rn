@@ -1,17 +1,17 @@
-import React, {useState, useEffect, useCallback, useRef} from 'react';
-import {useForm} from 'react-hook-form';
-import {yupResolver} from '@hookform/resolvers/yup';
-import {View, Text} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
-import {ApolloCache} from '@apollo/client';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import { View, Text } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { ApolloCache } from '@apollo/client';
 
 // Components
-import {FormContent, type FormValues} from './FormContent';
-import {LoadingView} from './LoadingView';
-import {OnBoardingWrapper} from '#components/templates';
-import {SubmitButton} from './SubmitButton';
-import {ErrorMessage} from './ErrorMessage';
-import {Button} from '#components';
+import { FormContent, type FormValues } from './FormContent';
+import { LoadingView } from './LoadingView';
+import { OnBoardingWrapper } from '#components/templates';
+import { SubmitButton } from './SubmitButton';
+import { ErrorMessage } from './ErrorMessage';
+import { Button } from '#components';
 
 // GraphQL
 import {
@@ -25,18 +25,18 @@ import {
 } from '#generated';
 
 // Store & Navigation
-import {useStore} from '#store';
-import {useOnboardingNavigation} from '#hooks';
+import { useStore } from '#store';
+import { useOnboardingNavigation } from '#hooks';
 
 // Validation & Helpers
-import {getCreateHomeSchema} from '#/utils';
-import {createPantryForHome, showPantryCreationError} from './helpers';
+import { getCreateHomeSchema } from '#/utils';
+import { createPantryForHome, showPantryCreationError } from './helpers';
 
 export const CreateHomeScreen = () => {
-  const {navigateToNextStep, setUserNavigationState, skipToStep} =
+  const { navigateToNextStep, setUserNavigationState, skipToStep } =
     useOnboardingNavigation();
 
-  const {user, selectedHomeId, setSelectedHomeId, setSelectedPantryId} =
+  const { user, selectedHomeId, setSelectedHomeId, setSelectedPantryId } =
     useStore();
 
   // State
@@ -57,13 +57,13 @@ export const CreateHomeScreen = () => {
   }, [user?.id, setUserNavigationState]);
 
   // GraphQL Queries
-  const {data: homesData, loading: homesLoading} = useGetHomesQuery({
+  const { data: homesData, loading: homesLoading } = useGetHomesQuery({
     skip: !user?.id,
     fetchPolicy: 'cache-and-network',
   });
 
-  const {data: pantriesData, loading: pantriesLoading} = useGetPantriesQuery({
-    variables: {homeId: selectedHomeId || ''},
+  const { data: pantriesData, loading: pantriesLoading } = useGetPantriesQuery({
+    variables: { homeId: selectedHomeId || '' },
     skip: !selectedHomeId,
     fetchPolicy: 'cache-and-network',
   });
@@ -78,7 +78,7 @@ export const CreateHomeScreen = () => {
   // GraphQL Mutations
   const [createHome] = useCreateHomeMutation();
   const [createPantry] = useCreatePantryMutation({
-    update: (cache: ApolloCache, {data}: any) => {
+    update: (cache: ApolloCache, { data }: any) => {
       if (data?.createPantry) {
         try {
           const existingHomesData = cache.readQuery<GetHomesQuery>({
@@ -105,7 +105,7 @@ export const CreateHomeScreen = () => {
 
             cache.writeQuery<GetHomesQuery>({
               query: GetHomesDocument,
-              data: {homes: updatedHomes},
+              data: { homes: updatedHomes },
             });
           }
         } catch (error) {
@@ -228,6 +228,8 @@ export const CreateHomeScreen = () => {
       createPantry,
       setSelectedHomeId,
       setSelectedPantryId,
+      navigateToNextStep,
+      skipToStep,
     ],
   );
 
@@ -257,7 +259,8 @@ export const CreateHomeScreen = () => {
         subtitle={getSubtitle()}
         step={1}
         totalSteps={6}
-        onSkip={() => skipToStep('CreateShoppingList')}>
+        onSkip={() => skipToStep('CreateShoppingList')}
+      >
         <View style={styles.existingResourcesContainer}>
           <View style={styles.resourceCard}>
             <Text style={styles.resourceLabel}>Home</Text>
@@ -297,7 +300,8 @@ export const CreateHomeScreen = () => {
       subtitle={getSubtitle()}
       step={1}
       totalSteps={6}
-      onSkip={() => skipToStep('CreateShoppingList')}>
+      onSkip={() => skipToStep('CreateShoppingList')}
+    >
       {existingHome && (
         <View style={styles.existingResourcesContainer}>
           <View style={styles.resourceCard}>

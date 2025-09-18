@@ -1,7 +1,7 @@
 import React from 'react';
-import {View, ScrollView} from 'react-native';
-import {StyleSheet, Display, Hide, mq} from 'react-native-unistyles';
-import {SafeAreaView} from 'react-native-safe-area-context';
+import { View, ScrollView } from 'react-native';
+import { StyleSheet, Display, mq } from 'react-native-unistyles';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface ResponsiveLayoutProps {
   children: React.ReactNode;
@@ -9,7 +9,7 @@ interface ResponsiveLayoutProps {
   header?: React.ReactNode;
 }
 
-const layoutStyles = StyleSheet.create((theme, rt) => ({
+const layoutStyles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
@@ -79,7 +79,8 @@ export const ResponsiveLayout: React.FC<ResponsiveLayoutProps> = ({
 
         <ScrollView
           style={layoutStyles.mainContent}
-          contentContainerStyle={layoutStyles.scrollContent}>
+          contentContainerStyle={layoutStyles.scrollContent}
+        >
           {children}
         </ScrollView>
       </View>

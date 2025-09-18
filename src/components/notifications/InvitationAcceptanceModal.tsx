@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -7,13 +7,12 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
-import {Icon} from '#utils';
+import { StyleSheet } from 'react-native-unistyles';
+import { Icon } from '#utils';
 import {
   useAcceptHomeInviteMutation,
   useAcceptShoppingListInviteMutation,
 } from '#generated';
-import {useStore} from '#store';
 
 export interface InvitationData {
   type: 'HOME_INVITE' | 'SHOPPING_LIST_INVITE';
@@ -36,10 +35,9 @@ interface InvitationAcceptanceModalProps {
 
 export const InvitationAcceptanceModal: React.FC<
   InvitationAcceptanceModalProps
-> = ({visible, invitation, onClose, onAccept, onReject}) => {
+> = ({ visible, invitation, onClose, onAccept, onReject }) => {
   const [accepting, setAccepting] = useState(false);
-  const [rejecting, setRejecting] = useState(false);
-  const user = useStore(state => state.user);
+  const [rejecting] = useState(false);
 
   const [acceptHomeInvite] = useAcceptHomeInviteMutation();
   const [acceptShoppingListInvite] = useAcceptShoppingListInviteMutation();
@@ -112,7 +110,7 @@ export const InvitationAcceptanceModal: React.FC<
       'Reject Invitation',
       `Are you sure you want to reject this invitation to ${invitation.entityName}?`,
       [
-        {text: 'Cancel', style: 'cancel'},
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Reject',
           style: 'destructive',
@@ -135,7 +133,8 @@ export const InvitationAcceptanceModal: React.FC<
       visible={visible}
       transparent
       animationType="slide"
-      onRequestClose={onClose}>
+      onRequestClose={onClose}
+    >
       <View style={styles.overlay}>
         <View style={styles.modal}>
           {/* Header */}
@@ -185,7 +184,8 @@ export const InvitationAcceptanceModal: React.FC<
             <TouchableOpacity
               style={[styles.button, styles.rejectButton]}
               onPress={handleReject}
-              disabled={accepting || rejecting}>
+              disabled={accepting || rejecting}
+            >
               {rejecting ? (
                 <ActivityIndicator color="#f44336" />
               ) : (
@@ -201,7 +201,8 @@ export const InvitationAcceptanceModal: React.FC<
             <TouchableOpacity
               style={[styles.button, styles.acceptButton]}
               onPress={handleAccept}
-              disabled={accepting || rejecting}>
+              disabled={accepting || rejecting}
+            >
               {accepting ? (
                 <ActivityIndicator color="#fff" />
               ) : (
@@ -236,7 +237,7 @@ const styles = StyleSheet.create(theme => ({
     overflow: 'hidden',
     elevation: 8,
     shadowColor: theme.colors.black,
-    shadowOffset: {width: 0, height: 4},
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
   },

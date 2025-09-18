@@ -1,26 +1,26 @@
-import React, {useMemo, useEffect} from 'react';
-import {Alert, View, Image} from 'react-native';
-import {useAppNavigation} from '#hooks';
-import {useUnistyles, StyleSheet} from 'react-native-unistyles';
+import React, { useMemo, useEffect, useCallback } from 'react';
+import { Alert, View, Image } from 'react-native';
+import { useAppNavigation } from '#hooks';
+import { useUnistyles, StyleSheet } from 'react-native-unistyles';
 import {
   useDefaultHome,
   usePantryManagement,
   useBottomSheetModal,
   usePantrySelector,
 } from '#hooks';
-import {useStore} from '#store';
-import {useGetHomeBasicQuery} from '#generated';
+import { useStore } from '#store';
+import { useGetHomeBasicQuery } from '#generated';
 import {
   ListTemplate,
   SearchBarAction,
   BottomSheetAction,
   HeaderAction,
 } from '#components';
-import {ItemSelectorWithActions} from '#components/organisms/ItemSelectorWithActions';
+import { ItemSelectorWithActions } from '#components/organisms/ItemSelectorWithActions';
 
 export const PantryMain: React.FC = () => {
-  const {navigate, navigateTo} = useAppNavigation();
-  const {theme} = useUnistyles();
+  const { navigate, navigateTo } = useAppNavigation();
+  const { theme } = useUnistyles();
 
   const selectPantrySheet = useBottomSheetModal();
   const setSelectedPantryId = useStore(state => state.setSelectedPantryId);
@@ -37,24 +37,33 @@ export const PantryMain: React.FC = () => {
   const homeFromList = homes.find(home => home.id === selectedHomeId);
 
   // Only skip the query if we have home data with pantries array
-  const hasCompletePantryData = homeFromList?.pantries && Array.isArray(homeFromList.pantries);
+  const hasCompletePantryData =
+    homeFromList?.pantries && Array.isArray(homeFromList.pantries);
 
-  const {data: homeData} = useGetHomeBasicQuery({
-    variables: {homeId: selectedHomeId ?? ''},
+  const { data: homeData } = useGetHomeBasicQuery({
+    variables: { homeId: selectedHomeId ?? '' },
     fetchPolicy: 'cache-first',
     skip: !selectedHomeId || !!hasCompletePantryData, // Only skip if we have complete pantry data
   });
 
-
   // Use home data from either source
-  const currentHomeData = homeFromList ? { home: homeFromList } : homeData;
+  const currentHomeData = useMemo(() => {
+    return homeFromList ? { home: homeFromList } : homeData;
+  }, [homeFromList, homeData]);
 
   // Use selected pantry from store or fall back to default pantry
-  const defaultPantry = useMemo(() => getDefaultPantry(currentHomeData), [currentHomeData, getDefaultPantry]);
+  const defaultPantry = useMemo(
+    () => getDefaultPantry(currentHomeData),
+    [currentHomeData, getDefaultPantry],
+  );
 
   const pantry = useMemo(() => {
     if (selectedPantryId) {
-      return currentHomeData?.home?.pantries?.find((p: any) => p.id === selectedPantryId) || defaultPantry;
+      return (
+        currentHomeData?.home?.pantries?.find(
+          (p: any) => p.id === selectedPantryId,
+        ) || defaultPantry
+      );
     }
     return defaultPantry;
   }, [selectedPantryId, currentHomeData, defaultPantry]);
@@ -88,7 +97,8 @@ export const PantryMain: React.FC = () => {
   const items = useMemo(() => {
     const transformedItems = pantryItems.map(item => {
       const isExpired = item.expiresAt && new Date(item.expiresAt) < new Date();
-      const isLowStock = item.autoReorderPoint && item.currentQuantity <= item.autoReorderPoint;
+      const isLowStock =
+        item.autoReorderPoint && item.currentQuantity <= item.autoReorderPoint;
 
       return {
         id: item.id,
@@ -96,14 +106,14 @@ export const PantryMain: React.FC = () => {
         subtitle:
           `${item.currentQuantity} ${item.unit?.symbol || ''} • ${item.storageState}`.trim(),
         badge: isExpired
-          ? {text: 'Expired', variant: 'danger' as const}
+          ? { text: 'Expired', variant: 'danger' as const }
           : isLowStock
-            ? {text: 'Low Stock', variant: 'warning' as const}
+            ? { text: 'Low Stock', variant: 'warning' as const }
             : undefined,
         leftElement: item.item?.imageUrl ? (
           <View style={styles.imageContainer}>
             <Image
-              source={{uri: item.item.imageUrl}}
+              source={{ uri: item.item.imageUrl }}
               style={styles.leftImage}
             />
           </View>
@@ -111,17 +121,16 @@ export const PantryMain: React.FC = () => {
       };
     });
 
-
     return transformedItems;
   }, [pantryItems]);
 
-  const handleAddItem = () => {
+  const handleAddItem = useCallback(() => {
     if (!selectedHomeId) {
       Alert.alert(
         'No Home Selected',
         'You need to be a member of a home to add pantry items.',
         [
-          {text: 'Cancel', style: 'cancel'},
+          { text: 'Cancel', style: 'cancel' },
           {
             text: 'Manage Homes',
             onPress: () => navigate('HomeManagement'),
@@ -132,7 +141,7 @@ export const PantryMain: React.FC = () => {
       return;
     }
     navigateTo.pantryItem({});
-  };
+  }, [selectedHomeId, navigate, navigateTo]);
 
   const handleDeleteItem = async (itemId: string) => {
     return await removeItem(itemId);
@@ -144,7 +153,7 @@ export const PantryMain: React.FC = () => {
       left: [
         {
           icon: 'home-switch-outline',
-          onPress: () => navigate('HomeManagement', {homeId: selectedHomeId}),
+          onPress: () => navigate('HomeManagement', { homeId: selectedHomeId }),
           size: 34,
           color: theme.colors.primary,
           library: 'MaterialDesignIcons',
@@ -195,7 +204,7 @@ export const PantryMain: React.FC = () => {
         },
       ] as SearchBarAction[],
     }),
-    [handleAddItem],
+    [handleAddItem, selectPantrySheet],
   );
 
   if (!selectedHomeId) {
@@ -254,8 +263,8 @@ export const PantryMain: React.FC = () => {
         items={items}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
-        onItemPress={id => navigateTo.pantryItemDetail({itemId: id})}
-        onItemEdit={id => navigateTo.pantryItem({itemId: id})}
+        onItemPress={id => navigateTo.pantryItemDetail({ itemId: id })}
+        onItemEdit={id => navigateTo.pantryItem({ itemId: id })}
         onItemDelete={handleDeleteItem}
         onRefresh={async () => {
           await refetch();
@@ -265,7 +274,7 @@ export const PantryMain: React.FC = () => {
         showSearchBar={true}
         showFAB={true} // Don't show FAB since we have add in search bar
         onFabPress={() =>
-          navigateTo.barcode({source: 'pantry', pantryId: pantry?.id})
+          navigateTo.barcode({ source: 'pantry', pantryId: pantry?.id })
         }
         // Actions
         headerActions={headerActions}
@@ -284,7 +293,8 @@ export const PantryMain: React.FC = () => {
         key={'select'}
         sheetRef={selectPantrySheet.ref}
         sheetTitle={'Select Pantry'}
-        snapPoints={['60%', '90%']}>
+        snapPoints={['60%', '90%']}
+      >
         <ItemSelectorWithActions
           data={selector.data}
           selectedId={selector.selectedId}
@@ -298,7 +308,7 @@ export const PantryMain: React.FC = () => {
               label: 'Create New Pantry',
               onPress: () => {
                 selectPantrySheet.close();
-                navigate('PantrySettings', {pantryId: undefined});
+                navigate('PantrySettings', { pantryId: undefined });
               },
               iconLibrary: 'MaterialIcons',
             },
@@ -308,7 +318,7 @@ export const PantryMain: React.FC = () => {
               onPress: () => {
                 selectPantrySheet.close();
                 if (pantry?.id) {
-                  navigate('PantrySettings', {pantryId: pantry.id});
+                  navigate('PantrySettings', { pantryId: pantry.id });
                 }
               },
               iconLibrary: 'MaterialIcons',

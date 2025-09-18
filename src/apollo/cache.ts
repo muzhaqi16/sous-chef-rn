@@ -11,7 +11,7 @@ export function makeCache(): InMemoryCache {
         fields: {
           homes: {
             // Cache homes list for 5 minutes to reduce refetching
-            merge(existing = [], incoming = []) {
+            merge(_existing = [], incoming = []) {
               return incoming;
             },
           },
@@ -25,6 +25,11 @@ export function makeCache(): InMemoryCache {
           shoppingListItems: {
             keyArgs: ['shoppingListId'],
             merge(_, incoming) {
+              return incoming;
+            },
+          },
+          shoppingLists: {
+            merge(_existing = [], incoming = []) {
               return incoming;
             },
           },
@@ -54,19 +59,19 @@ export function makeCache(): InMemoryCache {
         keyFields: ['id'],
         fields: {
           members: {
-            merge(existing = [], incoming = []) {
+            merge(_existing = [], incoming = []) {
               // Simple replacement for home members
               return incoming;
             },
           },
           pantries: {
-            merge(existing = [], incoming = []) {
+            merge(_existing = [], incoming = []) {
               // Simple replacement for pantries list
               return incoming;
             },
           },
           shoppingLists: {
-            merge(existing = [], incoming = []) {
+            merge(_existing = [], incoming = []) {
               // Simple replacement for shopping lists
               return incoming;
             },

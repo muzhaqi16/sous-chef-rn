@@ -3,9 +3,8 @@
 // Updated to work with your existing store structure
 // ============================================
 
-import {StateCreator} from 'zustand';
-import {RootState} from '../index';
-import {storage} from '#/storage/mmkv';
+import { StateCreator } from 'zustand';
+import { RootState } from '../index';
 
 export interface User {
   id: string;
@@ -38,7 +37,7 @@ export interface AuthState {
   // Actions
   setAuth: (user: User, accessToken: string, refreshToken: string) => void;
   updateUser: (updates: Partial<User>) => void;
-  setTokens: (tokens: {accessToken?: string; refreshToken?: string}) => void;
+  setTokens: (tokens: { accessToken?: string; refreshToken?: string }) => void;
   setEmailVerified: (verified: boolean) => void;
   setOnboarded: (onboarded: boolean) => void;
   clearAuth: () => void;
@@ -91,7 +90,7 @@ export const createAuthSlice: StateCreator<
     });
   },
 
-  setTokens: ({accessToken, refreshToken}) => {
+  setTokens: ({ accessToken, refreshToken }) => {
     set(state => {
       if (accessToken !== undefined) state.accessToken = accessToken;
       if (refreshToken !== undefined) state.refreshToken = refreshToken;

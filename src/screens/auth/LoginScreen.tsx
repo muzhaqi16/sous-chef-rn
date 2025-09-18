@@ -10,10 +10,7 @@ import { EmailInput, PasswordInput } from '#components/atoms';
 import { getLoginValidationSchema } from '#/utils';
 import { useStore } from '#store';
 import { type LoginInput } from '#generated';
-import {
-  useAuth,
-  useAuthNavigation,
-} from '#hooks';
+import { useAuth, useAuthNavigation } from '#hooks';
 import { getEmailOnly } from '#/storage/keychain';
 import { RememberMeModal } from './RememberMeModal';
 
@@ -30,7 +27,7 @@ const obscureEmail = (email: string): string => {
 
 export function LoginScreen() {
   const { theme } = useUnistyles();
-  const { rememberMe, setRememberMe, hasStoredCredentials } = useStore();
+  const { rememberMe, hasStoredCredentials } = useStore();
 
   const [savedEmail, setSavedEmail] = useState<string>('');
   const [showRememberModal, setShowRememberModal] = useState(false);
@@ -44,7 +41,7 @@ export function LoginScreen() {
     storeCredentials,
     handleAuthError,
     login,
-    isLoading: isLoggingIn
+    isLoading: isLoggingIn,
   } = useAuth();
 
   const form = useForm<LoginInput>({
@@ -78,9 +75,14 @@ export function LoginScreen() {
 
   // Detect manual typing to disable biometric authentication
   useEffect(() => {
-    const subscription = form.watch((data) => {
+    const subscription = form.watch(data => {
       // If user changes email field from the obscured version, they're typing manually
-      if (data.email && savedEmail && !data.email.includes('***') && data.email !== obscureEmail(savedEmail)) {
+      if (
+        data.email &&
+        savedEmail &&
+        !data.email.includes('***') &&
+        data.email !== obscureEmail(savedEmail)
+      ) {
         setUserHasTypedManually(true);
       }
       // If user types anything in password field, they're doing manual login
@@ -101,10 +103,13 @@ export function LoginScreen() {
       if (!credentials) return;
 
       // Use the consolidated login function for biometric login
-      await login({
-        email: credentials.email,
-        password: credentials.password,
-      }, true); // rememberMe = true for biometric login
+      await login(
+        {
+          email: credentials.email,
+          password: credentials.password,
+        },
+        true,
+      ); // rememberMe = true for biometric login
     } catch (error: any) {
       handleAuthError(error, 'Biometric authentication failed');
     }
@@ -136,7 +141,9 @@ export function LoginScreen() {
         // Continue with auth flow even if saving fails
       }
     } else if (remember && hasStoredCredentials) {
-      console.log('Skipping credential save - credentials already exist in keychain');
+      console.log(
+        'Skipping credential save - credentials already exist in keychain',
+      );
     }
 
     // Complete login with user's remember me choice
@@ -149,13 +156,14 @@ export function LoginScreen() {
     try {
       // Determine if this is truly manual input (not using saved credentials)
       const isUsingObscuredEmail = input.email.includes('***');
-      const actualEmail = isUsingObscuredEmail && savedEmail ? savedEmail : input.email;
+      const actualEmail =
+        isUsingObscuredEmail && savedEmail ? savedEmail : input.email;
 
       console.log('LoginScreen: Form submission', {
         inputEmail: input.email,
         isUsingObscuredEmail,
         actualEmail,
-        hasStoredCredentials
+        hasStoredCredentials,
       });
 
       // Check if we need to show remember me modal
@@ -221,7 +229,8 @@ export function LoginScreen() {
           <TouchableOpacity
             style={styles.authButton}
             onPress={authenticateWithBiometric}
-            disabled={isLoadingCredentials}>
+            disabled={isLoadingCredentials}
+          >
             <Icon
               name="fingerprint"
               size={26}

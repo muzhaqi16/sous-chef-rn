@@ -1,25 +1,16 @@
 import {useStore} from '#store';
 
-export const useAuthState = {
-  isUnauthenticated: () => {
-    const {user, isHydrated} = useStore();
-    return isHydrated && !user;
-  },
+export const useAuthState = () => {
+  const {user, isHydrated} = useStore();
 
-  needsVerification: () => {
-    const {user, isHydrated} = useStore();
-    return isHydrated && !!user && !user.emailVerified;
-  },
+  return {
+    isUnauthenticated: isHydrated && !user,
+    needsVerification: isHydrated && !!user && !user.emailVerified,
+    needsOnboarding: isHydrated && !!user && user.emailVerified && !user.onBoarded,
+    isFullyAuthenticated: isHydrated && !!user && user.emailVerified && user.onBoarded === true,
 
-  needsOnboarding: () => {
-    const {user, isHydrated} = useStore();
-    return isHydrated && !!user && user.emailVerified && !user.onBoarded;
-  },
-
-  isFullyAuthenticated: () => {
-    const {user, isHydrated} = useStore();
-    return (
-      isHydrated && !!user && user.emailVerified && user.onBoarded === true
-    );
-  },
+    // Raw values for convenience
+    user,
+    isHydrated,
+  };
 };

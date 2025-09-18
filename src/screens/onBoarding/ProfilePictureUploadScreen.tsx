@@ -27,7 +27,6 @@ import {
 import { useImageUpload, useOnboardingNavigation } from '#hooks';
 import { ImageFile } from '#components/molecules/ImagePicker';
 import { storage } from '#/storage/mmkv';
-import { useStore } from '#store';
 import { ImageUploadPurpose } from '#generated';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks';
@@ -44,12 +43,11 @@ const { width: screenWidth } = Dimensions.get('window');
 const AVATAR_SIZE = Math.min(screenWidth * 0.4, 200);
 
 export const ProfilePictureUploadScreen = () => {
-  const { navigate, navigateTo, navigateToNested } = useAppNavigation();
+  const { navigateTo } = useAppNavigation();
   const { theme } = useUnistyles();
   const { uploadProfileImage, updateProfileAvatarUrl } = useImageUpload();
   const { navigateToNextStep, navigateToPreviousStep, skipToStep } =
     useOnboardingNavigation();
-  const { user, getUserNavigationState, setUserNavigationState } = useStore();
 
   const [selectedImage, setSelectedImage] = useState<ImageFile | null>(null);
   const [croppedImage, setCroppedImage] = useState<ImageFile | null>(null);
@@ -146,7 +144,7 @@ export const ProfilePictureUploadScreen = () => {
     navigateTo.imageCrop({
       imageFile: selectedImage,
     });
-  }, [selectedImage, navigate]);
+  }, [selectedImage, navigateTo]);
 
   const handleUpload = async () => {
     const imageToUpload = croppedImage || selectedImage;

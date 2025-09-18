@@ -39,7 +39,7 @@ export const SignUpScreen = () => {
 
     if (!pendingAuthResponse) return;
 
-    const { email, password, input } = pendingAuthResponse;
+    const { input } = pendingAuthResponse;
 
     // Use the consolidated register function
     await authRegister(input, remember);

@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect, useCallback } from 'react';
 import { TouchableOpacity, Alert, Image, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks';
@@ -19,7 +19,11 @@ import { Icon, type IconLibrary } from '#/utils/iconUtils';
 
 export const ShoppingListMain: React.FC = () => {
   const { navigate, navigateTo } = useAppNavigation();
-  const { theme } = useUnistyles();
+  const {
+    theme: { colors },
+  } = useUnistyles();
+  const { primary: primaryColor, primaryLight: primaryLightColor } = colors;
+  // Step 2: Use the extracted variables INSIDE useMemo
   const selectShoppingListSheet = useBottomSheetModal();
   const { selectedShoppingListId, setSelectedShoppingListId } = useStore();
   const [deleteItem] = useRemoveItemFromShoppingListMutation();
@@ -28,7 +32,7 @@ export const ShoppingListMain: React.FC = () => {
     fetchPolicy: 'cache-and-network',
   });
 
-  const lists = data?.shoppingLists || [];
+  const lists = useMemo(() => data?.shoppingLists || [], [data?.shoppingLists]);
 
   // Get the default list or the first list if none is default
   const defaultList = lists.find(list => list.isDefault) || lists[0];
@@ -36,19 +40,31 @@ export const ShoppingListMain: React.FC = () => {
   const currentList =
     lists.find(list => list.id === currentListId) || defaultList;
 
-  // Auto-select the default list if none is selected
+  // Auto-select the default list if none is selected or if selected list no longer exists
   useEffect(() => {
-    if (!selectedShoppingListId && defaultList?.id) {
-      setSelectedShoppingListId(defaultList.id);
+    const selectedListExists =
+      selectedShoppingListId &&
+      lists.some(list => list.id === selectedShoppingListId);
+
+    if (!selectedShoppingListId || !selectedListExists) {
+      if (defaultList?.id) {
+        setSelectedShoppingListId(defaultList.id);
+      }
     }
-  }, [selectedShoppingListId, defaultList?.id, setSelectedShoppingListId]);
+  }, [
+    selectedShoppingListId,
+    defaultList?.id,
+    setSelectedShoppingListId,
+    lists,
+  ]);
 
   // Use the shopping list hook for both data and mutations to ensure consistency
-  const { items, searchQuery, setSearchQuery, addItem, toggleItem } = useShoppingListManagement(currentListId);
+  const { items, searchQuery, setSearchQuery, addItem, toggleItem } =
+    useShoppingListManagement(currentListId);
 
   const selector = useShoppingListSelector({
     initialSelected: currentListId,
-    onSelect: (id, item) => {
+    onSelect: id => {
       setSelectedShoppingListId(id);
       selectShoppingListSheet.close();
     },
@@ -79,14 +95,18 @@ export const ShoppingListMain: React.FC = () => {
       rightElement: (
         <TouchableOpacity
           style={[styles.checkbox, item.purchasedBy && styles.checkboxChecked]}
-          onPress={() => toggleItem(item.id)}>
+          onPress={() => toggleItem(item.id)}
+        >
           {item.purchasedBy && <Icon name="check" size={16} color="white" />}
         </TouchableOpacity>
       ),
       // show image on the left if available
       leftElement: item.item.imageUrl ? (
         <View style={styles.imageContainer}>
-          <Image source={{ uri: item.item.imageUrl }} style={styles.leftImage} />
+          <Image
+            source={{ uri: item.item.imageUrl }}
+            style={styles.leftImage}
+          />
         </View>
       ) : null,
       // Add visual styling for purchased items
@@ -94,7 +114,7 @@ export const ShoppingListMain: React.FC = () => {
     }));
   }, [items, toggleItem]);
 
-  const handleAddItem = () => {
+  const handleAddItem = useCallback(() => {
     if (!currentListId) {
       Alert.alert(
         'No List Selected',
@@ -110,29 +130,32 @@ export const ShoppingListMain: React.FC = () => {
       return;
     }
     navigate('AddItem', { listId: currentListId });
-  };
+  }, [currentListId, navigate]); // Add dependencies here
 
-  const handleAddItemFromSearch = async (itemName: string) => {
-    if (!currentListId) {
-      Alert.alert('Error', 'Please select a shopping list first');
-      return;
-    }
+  const handleAddItemFromSearch = useCallback(
+    async (itemName: string) => {
+      if (!currentListId) {
+        Alert.alert('Error', 'Please select a shopping list first');
+        return;
+      }
 
-    try {
-      const result = await addItem({
-        itemName: itemName.trim(),
-        quantity: 1,
-      });
+      try {
+        const result = await addItem({
+          itemName: itemName.trim(),
+          quantity: 1,
+        });
 
-      if (result) {
-        setSearchQuery(''); // Clear search after adding
-      } else {
+        if (result) {
+          setSearchQuery(''); // Clear search after adding
+        } else {
+          Alert.alert('Error', 'Failed to add item');
+        }
+      } catch (error) {
         Alert.alert('Error', 'Failed to add item');
       }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to add item');
-    }
-  };
+    },
+    [currentListId, addItem, setSearchQuery],
+  );
 
   const handleDeleteItem = async (itemId: string) => {
     try {
@@ -143,9 +166,9 @@ export const ShoppingListMain: React.FC = () => {
   };
 
   // Search bar actions - conditionally show "Add" button when searching with no results
+
   const searchBarActions = useMemo(() => {
     const hasSearchWithNoResults = searchQuery.trim() && listItems.length === 0;
-
     const rightActions: SearchBarAction[] = [
       {
         icon: 'list',
@@ -154,20 +177,18 @@ export const ShoppingListMain: React.FC = () => {
       },
     ];
 
-    // Add the "Add item from search" button when searching with no results
     if (hasSearchWithNoResults) {
       rightActions.unshift({
         icon: 'add',
         onPress: () => handleAddItemFromSearch(searchQuery),
-        color: theme.colors.primary,
-        backgroundColor: theme.colors.primaryLight,
+        color: primaryColor, // ← Use extracted variable, NOT theme.colors.primary
+        backgroundColor: primaryLightColor, // ← Use extracted variable
       });
     } else {
-      // Show regular add button when not searching
       rightActions.unshift({
         icon: 'add',
         onPress: handleAddItem,
-        color: theme.colors.primary,
+        color: primaryColor, // ← Use extracted variable
         backgroundColor: 'white',
       });
     }
@@ -176,8 +197,15 @@ export const ShoppingListMain: React.FC = () => {
       left: [] as SearchBarAction[],
       right: rightActions,
     };
-  }, [handleAddItem, handleAddItemFromSearch, searchQuery, listItems.length]);
-
+  }, [
+    handleAddItem,
+    handleAddItemFromSearch,
+    searchQuery,
+    listItems.length,
+    selectShoppingListSheet,
+    primaryColor, // ← Include extracted variable in deps
+    primaryLightColor, // ← Include extracted variable in deps
+  ]);
   const handleRefresh = async () => {
     await Promise.all([refetch()]);
   };
@@ -226,7 +254,10 @@ export const ShoppingListMain: React.FC = () => {
         showSearchBar={true}
         showFAB={true}
         onFabPress={() =>
-          navigateTo.barcode({ source: 'shoppingList', shoppingListId: currentListId })
+          navigateTo.barcode({
+            source: 'shoppingList',
+            shoppingListId: currentListId,
+          })
         }
         // Actions
         searchBarActions={searchBarActions}
@@ -234,14 +265,14 @@ export const ShoppingListMain: React.FC = () => {
           searchQuery.trim()
             ? undefined // No empty state during search - user can add via search bar button
             : {
-              icon: 'add-shopping-cart',
-              title: 'No items in this list',
-              description: 'Add items to your shopping list',
-              action: {
-                label: 'Add first item',
-                onPress: handleAddItem,
-              },
-            }
+                icon: 'add-shopping-cart',
+                title: 'No items in this list',
+                description: 'Add items to your shopping list',
+                action: {
+                  label: 'Add first item',
+                  onPress: handleAddItem,
+                },
+              }
         }
       />
 
@@ -249,7 +280,8 @@ export const ShoppingListMain: React.FC = () => {
         key={'select-list'}
         sheetRef={selectShoppingListSheet.ref}
         sheetTitle={'Select Shopping List'}
-        snapPoints={['50%', '90%']}>
+        snapPoints={['50%', '90%']}
+      >
         <ItemSelectorWithActions
           data={selector.data}
           selectedId={selector.selectedId}
@@ -269,27 +301,27 @@ export const ShoppingListMain: React.FC = () => {
             },
             ...(currentListId
               ? [
-                {
-                  icon: 'share',
-                  label: 'Share Current List',
-                  onPress: () => {
-                    selectShoppingListSheet.close();
-                    navigate('ShareList', { listId: currentListId });
+                  {
+                    icon: 'share',
+                    label: 'Share Current List',
+                    onPress: () => {
+                      selectShoppingListSheet.close();
+                      navigate('ShareList', { listId: currentListId });
+                    },
+                    iconLibrary: 'MaterialIcons' as IconLibrary,
                   },
-                  iconLibrary: 'MaterialIcons' as IconLibrary,
-                },
-                {
-                  icon: 'settings',
-                  label: 'List Settings',
-                  onPress: () => {
-                    selectShoppingListSheet.close();
-                    navigate('ListSettings', {
-                      listId: currentListId,
-                    });
+                  {
+                    icon: 'settings',
+                    label: 'List Settings',
+                    onPress: () => {
+                      selectShoppingListSheet.close();
+                      navigate('ListSettings', {
+                        listId: currentListId,
+                      });
+                    },
+                    iconLibrary: 'MaterialIcons' as IconLibrary,
                   },
-                  iconLibrary: 'MaterialIcons' as IconLibrary,
-                },
-              ]
+                ]
               : []),
           ]}
         />

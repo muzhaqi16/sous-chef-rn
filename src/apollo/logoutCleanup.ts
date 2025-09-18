@@ -1,5 +1,6 @@
-import {client} from './client';
-import {useStore} from '#store';
+import { client } from './client';
+import { useStore } from '#store';
+import { storage } from '#/storage/mmkv';
 
 interface LogoutCleanupOptions {
   clearCache?: boolean;
@@ -116,7 +117,7 @@ export class LogoutCleanup {
   private static async stopInFlightQueries(): Promise<void> {
     try {
       // Stop all queries by stopping the network layer temporarily
-      await client.stop();
+      client.stop();
       console.log('🛑 Stopped all in-flight queries');
     } catch (error) {
       console.warn('Failed to stop in-flight queries:', error);
@@ -128,11 +129,8 @@ export class LogoutCleanup {
    */
   private static async clearApolloCache(): Promise<void> {
     try {
-      // Get client dynamically to avoid circular dependency
-      const {client} = await import('#/apollo/client');
       await client.clearStore();
 
-      const {storage} = await import('#/storage/mmkv');
       storage.delete('apollo-cache');
       storage.delete('navigation_state');
 
@@ -141,7 +139,6 @@ export class LogoutCleanup {
       console.warn('Failed to clear Apollo cache:', error);
     }
   }
-
 
   /**
    * Utility to check if a GraphQL operation should be skipped during logout

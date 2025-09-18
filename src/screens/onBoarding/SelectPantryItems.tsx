@@ -3,7 +3,7 @@ import { TouchableOpacity, Text, View, ActivityIndicator } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { OnBoardingWrapper } from '#components/templates';
 import { StyleSheet } from 'react-native-unistyles';
-import { useOnboardingNavigation, useAuth } from '#hooks';
+import { useOnboardingNavigation } from '#hooks';
 import {
   useGetOnboardingItemsQuery,
   useAddItemToPantryMutation,
@@ -14,20 +14,14 @@ import {
 } from '#generated';
 import { useStore } from '#store';
 import { Button } from '#components';
-import { GraphQLError } from 'graphql';
 
 type OnboardingItemType = NonNullable<
   GetOnboardingItemsQuery['onboardingItems']
 >[number];
 
 export const SelectPantryItems = () => {
-  const {
-    navigateToNextStep,
-    navigateToPreviousStep,
-    setUserNavigationState,
-    skipToStep,
-  } = useOnboardingNavigation();
-  const { user } = useAuth();
+  const { navigateToNextStep, navigateToPreviousStep } =
+    useOnboardingNavigation();
 
   const { selectedPantryId } = useStore();
 

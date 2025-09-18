@@ -1,10 +1,9 @@
-// src/components/molecules/ShoppingListItem.tsx
-import React, {useState} from 'react';
-import {View, Text, TouchableOpacity, TextInput, Image} from 'react-native';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
-import {SwipeableItem} from './SwipeableItem';
-import {Counter} from './Counter';
-import {Icon} from '#/utils/iconUtils';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, Image } from 'react-native';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { SwipeableItem } from './SwipeableItem';
+import { Counter } from './Counter';
+import { Icon } from '#/utils/iconUtils';
 
 interface ShoppingListItemProps {
   id: string;
@@ -31,7 +30,7 @@ export const ShoppingListItem: React.FC<ShoppingListItemProps> = ({
   onDelete,
   onEdit,
 }) => {
-  const {theme} = useUnistyles();
+  const { theme } = useUnistyles();
   const [isEditingQuantity, setIsEditingQuantity] = useState(false);
   const [localQuantity, setLocalQuantity] = useState(quantity);
 
@@ -43,18 +42,21 @@ export const ShoppingListItem: React.FC<ShoppingListItemProps> = ({
   return (
     <SwipeableItem onDelete={() => onDelete(id)} onEdit={() => onEdit(id)}>
       <View
-        style={[styles.container, isPurchased && styles.purchasedContainer]}>
+        style={[styles.container, isPurchased && styles.purchasedContainer]}
+      >
         <TouchableOpacity
           style={styles.checkboxContainer}
-          onPress={() => onToggle(id)}>
+          onPress={() => onToggle(id)}
+        >
           <View
-            style={[styles.checkbox, isPurchased && styles.checkboxChecked]}>
+            style={[styles.checkbox, isPurchased && styles.checkboxChecked]}
+          >
             {isPurchased && <Icon name="check" size={16} color="white" />}
           </View>
         </TouchableOpacity>
 
         {imageUrl && (
-          <Image source={{uri: imageUrl}} style={styles.itemImage} />
+          <Image source={{ uri: imageUrl }} style={styles.itemImage} />
         )}
 
         <View style={styles.contentContainer}>
@@ -76,12 +78,14 @@ export const ShoppingListItem: React.FC<ShoppingListItemProps> = ({
           ) : (
             <TouchableOpacity
               style={styles.quantityContainer}
-              onPress={() => setIsEditingQuantity(true)}>
+              onPress={() => setIsEditingQuantity(true)}
+            >
               <Text
                 style={[
                   styles.quantityText,
                   isPurchased && styles.purchasedText,
-                ]}>
+                ]}
+              >
                 {quantity} {unit || ''}
               </Text>
               <Icon name="edit" size={14} color={theme.colors.textSecondary} />

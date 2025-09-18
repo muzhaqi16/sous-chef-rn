@@ -37,6 +37,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function RootNavigator() {
   const { isHydrated } = useStore();
+  const authState = useAuthState();
 
   // Don't render navigation until store is hydrated
   if (!isHydrated) {
@@ -46,22 +47,22 @@ function RootNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {/* Auth Group */}
-      {useAuthState.isUnauthenticated() && (
+      {authState.isUnauthenticated && (
         <Stack.Screen name="Auth" component={AuthStack} />
       )}
 
       {/* Verification Group */}
-      {useAuthState.needsVerification() && (
+      {authState.needsVerification && (
         <Stack.Screen name="Verification" component={CodeVerificationScreen} />
       )}
 
       {/* Onboarding Group */}
-      {useAuthState.needsOnboarding() && (
+      {authState.needsOnboarding && (
         <Stack.Screen name="Onboarding" component={OnboardingStack} />
       )}
 
       {/* Main App Group */}
-      {useAuthState.isFullyAuthenticated() && (
+      {authState.isFullyAuthenticated && (
         <>
           <Stack.Screen name="Home" component={HomeTabs} />
           <Stack.Screen name="HomeManagement" component={HomeManagement} />

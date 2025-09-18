@@ -53,7 +53,7 @@ export const EditPantryItemForm: React.FC<EditPantryItemFormProps> = ({
   const {theme} = useUnistyles();
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [_selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
 
   const {data: existingItemData, loading: itemLoading} = useGetPantryItemQuery({
     variables: {id: itemId},
@@ -62,7 +62,7 @@ export const EditPantryItemForm: React.FC<EditPantryItemFormProps> = ({
 
   const [updateItem] = useUpdatePantryItemMutation();
 
-  const getInitialValues = (): EditPantryItemFormData => {
+  const getInitialValues = useCallback((): EditPantryItemFormData => {
     if (existingItemData?.pantryItem) {
       const item = existingItemData.pantryItem;
       return {
@@ -90,7 +90,7 @@ export const EditPantryItemForm: React.FC<EditPantryItemFormProps> = ({
       isAutoReorder: false,
       autoReorderPoint: '',
     };
-  };
+  }, [existingItemData?.pantryItem]);
 
   const {
     control,
@@ -111,7 +111,7 @@ export const EditPantryItemForm: React.FC<EditPantryItemFormProps> = ({
     if (existingItemData?.pantryItem) {
       reset(getInitialValues());
     }
-  }, [existingItemData, reset]);
+  }, [existingItemData, reset, getInitialValues]);
 
   const handleIncrementQuantity = useCallback(() => {
     const current = watchedValues.quantity || 0;

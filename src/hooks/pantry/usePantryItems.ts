@@ -8,7 +8,7 @@ import { useSearchableList } from '../useSearchableList';
 import { ApolloClient } from '@apollo/client';
 
 export function usePantryItems(pantryId: string | undefined) {
-  const { data, refetch, client } = useGetPantryItemsQuery({
+  const { data, refetch } = useGetPantryItemsQuery({
     fetchPolicy: 'cache-and-network',
     skip: !pantryId,
     variables: { pantryId: pantryId ?? '' },

@@ -39,7 +39,7 @@ export const useTextInputModal = () => {
 
   const TextModalComponent = useMemo(
     () => <TextInputModal visible={visible} onClose={hide} {...modalConfig} />,
-    [visible, modalConfig.onSubmit, modalConfig.title, modalConfig.placeholder],
+    [visible, modalConfig],
   );
 
   return {

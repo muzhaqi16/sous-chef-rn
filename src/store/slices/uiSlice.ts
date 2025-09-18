@@ -39,7 +39,10 @@ export interface UIState {
   clearFormData: (formId: string) => void;
   setGlobalSearchQuery: (query: string) => void;
   setActiveFilters: (filters: Record<string, any>) => void;
-  showToast: (message: string, type: 'success' | 'error' | 'info' | 'warning') => void;
+  showToast: (
+    message: string,
+    type: 'success' | 'error' | 'info' | 'warning',
+  ) => void;
   hideToast: () => void;
   resetUI: () => void;
 }
@@ -63,34 +66,34 @@ export const createUISlice: StateCreator<
   [['zustand/immer', never]],
   [],
   UIState
-> = (set, get) => ({
+> = (set, _get) => ({
   ...initialUIState,
 
-  setLoading: (loading) => {
+  setLoading: loading => {
     set(state => {
       state.isLoading = loading;
     });
   },
 
-  setError: (error) => {
+  setError: error => {
     set(state => {
       state.isError = error;
     });
   },
 
-  setFetching: (fetching) => {
+  setFetching: fetching => {
     set(state => {
       state.isFetching = fetching;
     });
   },
 
-  setBottomSheetVisible: (visible) => {
+  setBottomSheetVisible: visible => {
     set(state => {
       state.bottomSheetVisible = visible;
     });
   },
 
-  setBottomSheetIndex: (index) => {
+  setBottomSheetIndex: index => {
     set(state => {
       state.bottomSheetIndex = index;
     });
@@ -114,19 +117,19 @@ export const createUISlice: StateCreator<
     });
   },
 
-  clearFormData: (formId) => {
+  clearFormData: formId => {
     set(state => {
       delete state.formData[formId];
     });
   },
 
-  setGlobalSearchQuery: (query) => {
+  setGlobalSearchQuery: query => {
     set(state => {
       state.globalSearchQuery = query;
     });
   },
 
-  setActiveFilters: (filters) => {
+  setActiveFilters: filters => {
     set(state => {
       state.activeFilters = filters;
     });

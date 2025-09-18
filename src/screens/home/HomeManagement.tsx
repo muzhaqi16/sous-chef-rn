@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,13 +6,13 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
-import {Icon} from '#utils';
-import {useFocusEffect} from '@react-navigation/native';
-import {useAppNavigation} from '#hooks';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
-import {useHomeManagement} from '#/hooks';
-import {useCallback} from 'react';
-import {useEmailInputModal} from '#/hooks/useEmailInputModal';
+import { Icon } from '#utils';
+import { useFocusEffect } from '@react-navigation/native';
+import { useAppNavigation } from '#hooks';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { useHomeManagement } from '#/hooks';
+import { useCallback } from 'react';
+import { useEmailInputModal } from '#/hooks/useEmailInputModal';
 import {
   HomeStats,
   CreateHomeForm,
@@ -21,16 +21,15 @@ import {
 } from '#/components/organisms/home';
 
 export const HomeManagement: React.FC = () => {
-  const {navigateTo, goBack} = useAppNavigation();
+  const { goBack } = useAppNavigation();
 
-  const {theme} = useUnistyles();
+  const { theme } = useUnistyles();
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [homeName, setHomeName] = useState('');
 
   const {
     homes,
-    allHomes,
     defaultHomeId,
     loading,
     creating,
@@ -49,7 +48,7 @@ export const HomeManagement: React.FC = () => {
     }, [refetch]),
   );
 
-  const {show, EmailModalComponent} = useEmailInputModal();
+  const { show, EmailModalComponent } = useEmailInputModal();
   const inviteUserPrompt = (homeId: string) => {
     show({
       title: 'Invite Member',
@@ -78,8 +77,8 @@ export const HomeManagement: React.FC = () => {
     setHomeName('');
   };
 
-  const handleDeleteHome = async (homeId: string, homeName: string) => {
-    await deleteHome(homeId, homeName);
+  const handleDeleteHome = async (homeId: string, name: string) => {
+    await deleteHome(homeId, name);
   };
 
   const handleSetDefault = async (homeId: string) => {
@@ -137,7 +136,8 @@ export const HomeManagement: React.FC = () => {
         <ScrollView
           style={styles.scrollView}
           keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag">
+          keyboardDismissMode="on-drag"
+        >
           {[...homes]
             .sort((a, b) => {
               // Put default home first, keep rest in original order

@@ -23,7 +23,7 @@ export async function saveCredentials(
 ): Promise<void> {
   return queueOperation(async () => {
     // First, clear any old, unprotected creds:
-    await Keychain.resetGenericPassword({service});
+    await Keychain.resetGenericPassword({ service });
     await Keychain.resetGenericPassword({
       service: CREDENTIALS_INDICATOR_SERVICE,
     });
@@ -57,7 +57,7 @@ export async function saveCredentials(
 
     if (!indicatorSuccess) {
       // If we can't save the indicator, clean up the credentials we just saved
-      await Keychain.resetGenericPassword({service});
+      await Keychain.resetGenericPassword({ service });
       throw new Error("Keychain couldn't save credentials indicator");
     }
   });
@@ -75,7 +75,7 @@ export interface LoadOptions {
  */
 export async function loadCredentials(
   service: string = DEFAULT_SERVICE,
-): Promise<{username: string; password: string} | null> {
+): Promise<{ username: string; password: string } | null> {
   try {
     // This call will now *always* trigger FaceID/TouchID (or device passcode)
     const creds = await Keychain.getGenericPassword({
@@ -89,7 +89,7 @@ export async function loadCredentials(
       // user hit "cancel" or failed the check
       return null;
     }
-    return {username: creds.username, password: creds.password};
+    return { username: creds.username, password: creds.password };
   } catch (err) {
     // could also inspect err.code here if you want, but treating
     // any error as "no creds" is simplest:
@@ -145,9 +145,7 @@ const processQueue = async () => {
   }
 };
 
-export async function hasCredentials(
-  service: string = DEFAULT_SERVICE,
-): Promise<boolean> {
+export async function hasCredentials(): Promise<boolean> {
   return queueOperation(async () => {
     try {
       // Check the unprotected indicator instead of the protected credentials
@@ -181,7 +179,7 @@ export async function clearCredentials(
   service: string = DEFAULT_SERVICE,
 ): Promise<void> {
   try {
-    await Keychain.resetGenericPassword({service});
+    await Keychain.resetGenericPassword({ service });
     await Keychain.resetGenericPassword({
       service: CREDENTIALS_INDICATOR_SERVICE,
     });

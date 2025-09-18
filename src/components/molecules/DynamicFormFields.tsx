@@ -1,6 +1,5 @@
-// DynamicFormFields.tsx
-import React, {useMemo} from 'react';
-import {View, Text} from 'react-native';
+import React, { useMemo } from 'react';
+import { View, Text } from 'react-native';
 import {
   type FieldValues,
   Control,
@@ -9,13 +8,13 @@ import {
   Path,
 } from 'react-hook-form';
 
-import {StyleSheet} from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 
 // Import your autocomplete components
-import {EnhancedAutocompleteInput} from './EnhancedAutocompleteInput';
-import {BrandAutocompleteInput} from './BrandAutocompleteInput';
-import {UnitsAutocompleteInput} from './UnitsAutocompleteInput';
-import {CategoryAutocompleteInput} from './CategoryAutocompleteInput';
+import { EnhancedAutocompleteInput } from './EnhancedAutocompleteInput';
+import { BrandAutocompleteInput } from './BrandAutocompleteInput';
+import { UnitsAutocompleteInput } from './UnitsAutocompleteInput';
+import { CategoryAutocompleteInput } from './CategoryAutocompleteInput';
 
 // Create memoized versions to prevent re-renders
 const MemoizedEnhancedAutocomplete = React.memo(EnhancedAutocompleteInput);
@@ -35,7 +34,7 @@ export type FieldDef<T extends FieldValues> = {
     | 'categoryAutocomplete';
   props?: Record<string, any>;
   // For select fields
-  options?: Array<{label: string; value: string}>;
+  options?: Array<{ label: string; value: string }>;
   // For checkbox fields
   onValueChange?: (value: any) => void;
   // For custom rendering logic
@@ -110,7 +109,6 @@ export function DynamicFormFields<T extends FieldValues>({
           Input,
           props,
           options,
-          onValueChange,
           renderValue,
           transformValue,
           transformOnBlur,
@@ -123,7 +121,7 @@ export function DynamicFormFields<T extends FieldValues>({
             <Controller
               control={control}
               name={name}
-              render={({field: {onChange, onBlur, value}}) => {
+              render={({ field: { onChange, onBlur, value } }) => {
                 // Custom onChange handler that transforms value if needed
                 const handleChange = (newValue: any) => {
                   const transformedValue =
@@ -219,7 +217,7 @@ export function DynamicFormFields<T extends FieldValues>({
                   // Handle different input types and their specific props
                   const inputProps: any = {
                     label,
-                    ...(placeholder && {placeholder}),
+                    ...(placeholder && { placeholder }),
                     ...props,
                   };
 

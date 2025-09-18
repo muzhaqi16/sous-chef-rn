@@ -33,7 +33,7 @@ export function useHomeManagement() {
   });
 
   const [setDefaultHomeMutation] = useSetDefaultHomeMutation();
-  const homes = data?.homes || [];
+  const homes = data?.homes;
   const remoteDefaultHomeId = defaultHomeData?.getDefaultHome?.id;
 
   // Sync remote default home with local store on initial load and changes
@@ -41,14 +41,14 @@ export function useHomeManagement() {
     if (remoteDefaultHomeId && remoteDefaultHomeId !== selectedHomeId) {
       setSelectedHomeId(remoteDefaultHomeId);
     }
-  }, [remoteDefaultHomeId, setSelectedHomeId]);
+  }, [remoteDefaultHomeId, selectedHomeId, setSelectedHomeId]);
 
   // If local store has a value but remote doesn't, sync to remote
   useEffect(() => {
     const syncLocalToRemote = async () => {
       if (selectedHomeId && !remoteDefaultHomeId && !loadingDefaultHome) {
         // Verify the selectedHomeId still exists in the homes list
-        const homeExists = homes.some(home => home.id === selectedHomeId);
+        const homeExists = homes?.some(home => home.id === selectedHomeId);
         if (!homeExists) {
           setSelectedHomeId(null);
           return;
@@ -72,8 +72,9 @@ export function useHomeManagement() {
     remoteDefaultHomeId,
     loadingDefaultHome,
     setDefaultHomeMutation,
-    refetchDefaultHome,
+    setSelectedHomeId,
     homes,
+    refetchDefaultHome,
   ]);
 
   // Search functionality for homes
@@ -82,49 +83,51 @@ export function useHomeManagement() {
     (home, q: string) => home?.name?.toLowerCase().includes(q.toLowerCase()),
   );
 
-  // Add debugging to createHomeMutation
   const [createHomeMutation, { loading: creating }] = useCreateHomeMutation({
     update: (cache: ApolloCache, result) => {
       const data = result.data;
       if (data?.createHome) {
-        const existingHomes = cache.readQuery<GetHomesQuery>({
-          query: GetHomesDocument,
-        });
+        try {
+          const existingHomes = cache.readQuery<GetHomesQuery>({
+            query: GetHomesDocument,
+          });
 
-        if (existingHomes?.homes) {
-          // Now we can safely add the new home since it has compatible structure
-          const newHomesArray = [...existingHomes.homes, data.createHome];
+          // Add the new home to the cache - structures now match
+          const updatedHomes = existingHomes?.homes
+            ? [...existingHomes.homes, data.createHome]
+            : [data.createHome];
 
           cache.writeQuery<GetHomesQuery>({
             query: GetHomesDocument,
             data: {
-              homes: newHomesArray,
+              homes: updatedHomes,
             },
           });
-        }
 
-        // If this is the first home, set it as default
-        if (!existingHomes?.homes?.length) {
-          setSelectedHomeId(data.createHome.id);
-          // Set as default home, but don't block the UI if this fails
-          setDefaultHomeMutation({
-            variables: { homeId: data.createHome.id },
-          }).catch((error: any) => {
-            console.warn('Failed to set newly created home as default:', error);
-            // Don't show alert here since the home was created successfully
-          });
-        }
-
-        // If a default pantry was created, set it as selected
-        const newHome = data.createHome;
-        if (newHome.pantries && newHome.pantries.length > 0) {
-          const defaultPantry = newHome.pantries.find(
-            pantry => pantry.isDefault,
-          );
-          if (defaultPantry) {
-            console.log('Setting default pantry:', defaultPantry.id);
-            setSelectedPantryId(defaultPantry.id);
+          // If this is the first home, set it as default
+          if (!existingHomes?.homes?.length) {
+            setSelectedHomeId(data.createHome.id);
+            setDefaultHomeMutation({
+              variables: { homeId: data.createHome.id },
+            }).catch((error: any) => {
+              console.warn('Failed to set newly created home as default:', error);
+            });
           }
+
+          // If a default pantry was created, set it as selected
+          const newHome = data.createHome;
+          if (newHome.pantries && newHome.pantries.length > 0) {
+            const defaultPantry = newHome.pantries.find(
+              pantry => pantry.isDefault,
+            );
+            if (defaultPantry) {
+              setSelectedPantryId(defaultPantry.id);
+            }
+          }
+        } catch (error) {
+          console.error('Failed to update cache after home creation:', error);
+          // Fallback: refetch the homes data
+          refetch();
         }
       }
     },
@@ -325,7 +328,7 @@ export function useHomeManagement() {
     }
 
     // Check if home exists
-    const homeExists = homes.some(home => home.id === homeId);
+    const homeExists = homes?.some(home => home.id === homeId);
     if (!homeExists) {
       Alert.alert('Error', 'Home not found');
       return false;
@@ -382,14 +385,6 @@ export function useHomeManagement() {
   const stats = useMemo(() => {
     const validHomes = Array.isArray(homes) ? homes.filter(Boolean) : [];
 
-    validHomes.forEach((home, index) => {
-      const pantriesCount = Array.isArray(home?.pantries)
-        ? home.pantries.length
-        : home.pantries === null
-          ? 'loading'
-          : 0;
-    });
-
     // Check if all homes have loaded their pantries data
     const allHomesLoaded = validHomes.every(home => home.pantries !== null);
 
@@ -421,7 +416,7 @@ export function useHomeManagement() {
   }, [homes]);
   // Computed value for current default home
   const defaultHome = useMemo(() => {
-    return homes.find(home => home.id === selectedHomeId) || null;
+    return homes?.find(home => home.id === selectedHomeId) || null;
   }, [homes, selectedHomeId]);
 
   const isSynced = selectedHomeId === remoteDefaultHomeId;

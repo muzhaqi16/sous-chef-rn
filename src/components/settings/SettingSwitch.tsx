@@ -1,6 +1,6 @@
 import React from 'react';
-import {View, Text, Switch} from 'react-native';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
+import { View, Text, Switch } from 'react-native';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 interface SettingSwitchProps {
   title: string;
@@ -19,9 +19,8 @@ export const SettingSwitch: React.FC<SettingSwitchProps> = ({
   onValueChange,
   disabled = false,
   loading = false,
-  isAction = false,
 }) => {
-  const {theme} = useUnistyles();
+  const { theme } = useUnistyles();
   return (
     <View style={[styles.container, disabled && styles.containerDisabled]}>
       <View style={styles.textContainer}>
@@ -30,10 +29,8 @@ export const SettingSwitch: React.FC<SettingSwitchProps> = ({
         </Text>
         {description && (
           <Text
-            style={[
-              styles.description,
-              disabled && styles.descriptionDisabled,
-            ]}>
+            style={[styles.description, disabled && styles.descriptionDisabled]}
+          >
             {description}
           </Text>
         )}

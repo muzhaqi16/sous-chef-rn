@@ -1,9 +1,9 @@
 import React from 'react';
-import {View, Text} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
-import {useGetHomeInvitesQuery} from '#generated';
-import {HomeActions} from './HomeActions';
-import {MembersList} from './MembersList';
+import { View, Text } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { useGetHomeInvitesQuery } from '#generated';
+import { HomeActions } from './HomeActions';
+import { MembersList } from './MembersList';
 
 export type PartialHome = {
   id: string;
@@ -24,7 +24,7 @@ export type PartialHome = {
       };
     };
   }>;
-  pantries?: Array<{id: string}>;
+  pantries?: Array<{ id: string }>;
   myMembership?: {
     id: string;
     role: string;
@@ -49,8 +49,8 @@ export const HomeCard: React.FC<HomeCardProps> = ({
   onDelete,
 }) => {
   // Fetch invites for this specific home
-  const {data: invitesData, loading: invitesLoading} = useGetHomeInvitesQuery({
-    variables: {homeId: home.id},
+  const { data: invitesData } = useGetHomeInvitesQuery({
+    variables: { homeId: home.id },
     fetchPolicy: 'cache-and-network',
   });
 
@@ -109,12 +109,14 @@ export const HomeCard: React.FC<HomeCardProps> = ({
                   backgroundColor:
                     getRoleBadgeColor(home.myMembership.role) + '20',
                 },
-              ]}>
+              ]}
+            >
               <Text
                 style={[
                   styles.roleText,
-                  {color: getRoleBadgeColor(home.myMembership.role)},
-                ]}>
+                  { color: getRoleBadgeColor(home.myMembership.role) },
+                ]}
+              >
                 {formatRole(home.myMembership.role)}
               </Text>
             </View>
@@ -148,7 +150,7 @@ const styles = StyleSheet.create(theme => ({
     marginHorizontal: theme.spacing.md,
     marginBottom: 12,
     shadowColor: theme.colors.black,
-    shadowOffset: {width: 0, height: 1},
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,

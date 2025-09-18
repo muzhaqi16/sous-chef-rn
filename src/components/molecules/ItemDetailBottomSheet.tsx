@@ -1,9 +1,9 @@
-import React, {useState} from 'react';
-import {View} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
+import React, { useState } from 'react';
+import { View } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
 import QuantitySelector from '../organisms/QuantitySelector';
-import {BottomSheetTextInput} from '@gorhom/bottom-sheet';
-import {Button} from '../base/Button';
+import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import { Button } from '../base/Button';
 import {
   useUpdateShoppingListItemMutation,
   useGetUnitsQuery,
@@ -25,7 +25,7 @@ export const ItemDetailBottomSheet: React.FC<ItemDetailProps> = ({
   const [name, setName] = useState(item.itemName || '');
   const [quantity, setQuantity] = useState(1);
   const [unit, setUnit] = useState('pcs');
-  const {data} = useGetUnitsQuery();
+  const { data } = useGetUnitsQuery();
 
   const [updateItem] = useUpdateShoppingListItemMutation();
 
@@ -72,7 +72,7 @@ export const ItemDetailBottomSheet: React.FC<ItemDetailProps> = ({
   );
 };
 
-const styles = StyleSheet.create(theme => ({
+const styles = StyleSheet.create(() => ({
   container: {
     flex: 1,
     flexDirection: 'column',

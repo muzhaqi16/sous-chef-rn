@@ -69,36 +69,30 @@ export const ImageCropScreen = () => {
   const handleImageLoad = useCallback(() => {
     setImageLoaded(true);
 
-    Image.getSize(
-      imageFile.uri,
-      (width, height) => {
-        const aspectRatio = width / height;
+    Image.getSize(imageFile.uri, (width, height) => {
+      const aspectRatio = width / height;
 
-        // Make sure the image fills the crop area
-        let displayWidth, displayHeight;
+      // Make sure the image fills the crop area
+      let displayWidth, displayHeight;
 
-        if (aspectRatio >= 1) {
-          // Image is wider or square - fit to crop size
-          displayHeight = CROP_SIZE * 1.2; // Slightly larger than crop area
-          displayWidth = displayHeight * aspectRatio;
-        } else {
-          // Image is taller - fit to crop size
-          displayWidth = CROP_SIZE * 1.2; // Slightly larger than crop area
-          displayHeight = displayWidth / aspectRatio;
-        }
+      if (aspectRatio >= 1) {
+        // Image is wider or square - fit to crop size
+        displayHeight = CROP_SIZE * 1.2; // Slightly larger than crop area
+        displayWidth = displayHeight * aspectRatio;
+      } else {
+        // Image is taller - fit to crop size
+        displayWidth = CROP_SIZE * 1.2; // Slightly larger than crop area
+        displayHeight = displayWidth / aspectRatio;
+      }
 
-        setImageSize({ width: displayWidth, height: displayHeight });
+      setImageSize({ width: displayWidth, height: displayHeight });
 
-        // Reset transforms
-        scale.value = 1;
-        startScale.value = 1;
-        offset.value = { x: 0, y: 0 };
-        startOffset.value = { x: 0, y: 0 };
-      },
-      error => {
-        Alert.alert('Error', 'Failed to load image dimensions');
-      },
-    );
+      // Reset transforms
+      scale.value = 1;
+      startScale.value = 1;
+      offset.value = { x: 0, y: 0 };
+      startOffset.value = { x: 0, y: 0 };
+    });
   }, [imageFile.uri, scale, startScale, offset, startOffset]);
 
   // Create pinch gesture
@@ -167,10 +161,6 @@ export const ImageCropScreen = () => {
           error => reject(error),
         );
       });
-
-      // Calculate the current display dimensions after scaling
-      const currentDisplayWidth = imageSize.width * scale.value;
-      const currentDisplayHeight = imageSize.height * scale.value;
 
       // Calculate the center position of the crop area relative to the image
       const cropCenterX = CROP_SIZE / 2;

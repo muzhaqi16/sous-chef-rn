@@ -24,7 +24,7 @@ export const SearchResultsScreen: React.FC<{
 }> = ({ route }) => {
   const { barcode, format, source, pantryId, shoppingListId } = route.params;
 
-  const { navigate, navigateTo, goBack, navigateToNested } = useAppNavigation();
+  const { navigate, navigateTo, navigateToNested } = useAppNavigation();
 
   const bottomSheetRef = useRef<BottomSheet>(null);
 

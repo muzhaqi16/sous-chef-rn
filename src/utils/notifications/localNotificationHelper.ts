@@ -12,7 +12,7 @@ export const showLocalNotification = async ({
   id,
   title,
   body,
-  priority = 'default',
+  priority: _priority = 'default',
 }: LocalNotificationParams) => {
   try {
     // Create channel for Android

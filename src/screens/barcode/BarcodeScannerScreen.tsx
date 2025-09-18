@@ -30,7 +30,7 @@ import BarcodeMask from '#components/organisms/BarcodeMask';
 import { Button } from '#components/base/Button';
 import { IconButton } from '#components/atoms/IconButton';
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+const { height: screenHeight } = Dimensions.get('window');
 
 export const BarcodeScannerScreen: React.FC<{
   route: { params?: BarcodeStackParamList['BarcodeScanner'] };
