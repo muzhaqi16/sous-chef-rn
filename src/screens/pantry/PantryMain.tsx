@@ -82,15 +82,13 @@ export const PantryMain: React.FC = () => {
     removeItem,
     refetch,
     loading,
-    hasLoadedCache,
-    cacheInfo,
   } = usePantryManagement(pantry?.id);
 
   // Transform pantry items to list items format
   const items = useMemo(() => {
     const transformedItems = pantryItems.map(item => {
       const isExpired = item.expiresAt && new Date(item.expiresAt) < new Date();
-      const isLowStock = item.currentQuantity <= (item.reservedQuantity || 0);
+      const isLowStock = item.autoReorderPoint && item.currentQuantity <= item.autoReorderPoint;
 
       return {
         id: item.id,
@@ -115,7 +113,7 @@ export const PantryMain: React.FC = () => {
 
 
     return transformedItems;
-  }, [pantryItems, pantry?.id, hasLoadedCache, loading, cacheInfo]);
+  }, [pantryItems]);
 
   const handleAddItem = () => {
     if (!selectedHomeId) {
@@ -218,8 +216,8 @@ export const PantryMain: React.FC = () => {
     );
   }
 
-  // Only show loading state if we have no cached data and are still loading
-  if ((loading || homesLoading) && !hasLoadedCache && items.length === 0) {
+  // Only show loading state if we are still loading and have no items
+  if ((loading || homesLoading) && items.length === 0) {
     return (
       <ListTemplate
         title="Pantry"
@@ -246,10 +244,7 @@ export const PantryMain: React.FC = () => {
   }
 
   // Debug info for development
-  const debugSubtitle =
-    __DEV__ && cacheInfo
-      ? `${pantry?.name || 'Your Pantry'} • ${cacheInfo.itemCount} cached (${Math.round(cacheInfo.age / 1000)}s ago)`
-      : pantry?.name || 'Your Pantry';
+  const debugSubtitle = pantry?.name || 'Your Pantry';
 
   return (
     <>

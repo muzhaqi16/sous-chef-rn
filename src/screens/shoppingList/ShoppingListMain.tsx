@@ -12,7 +12,7 @@ import { ItemSelectorWithActions } from '#components/organisms/ItemSelectorWithA
 import {
   useShoppingListSelector,
   useBottomSheetModal,
-  useShoppingList,
+  useShoppingListManagement,
 } from '#/hooks';
 import { useStore } from '#/store';
 import { Icon, type IconLibrary } from '#/utils/iconUtils';
@@ -44,7 +44,7 @@ export const ShoppingListMain: React.FC = () => {
   }, [selectedShoppingListId, defaultList?.id, setSelectedShoppingListId]);
 
   // Use the shopping list hook for both data and mutations to ensure consistency
-  const { items, query, setQuery, addItem, markItemPurchased } = useShoppingList(currentListId);
+  const { items, searchQuery, setSearchQuery, addItem, toggleItem } = useShoppingListManagement(currentListId);
 
   const selector = useShoppingListSelector({
     initialSelected: currentListId,
@@ -56,8 +56,8 @@ export const ShoppingListMain: React.FC = () => {
 
   // Transform shopping list items to list items format - separate purchased/unpurchased and move purchased to end
   const listItems = useMemo(() => {
-    const unpurchasedItems = items.filter((item: any) => !item.isPurchased);
-    const purchasedItems = items.filter((item: any) => item.isPurchased);
+    const unpurchasedItems = items.filter((item: any) => !item.purchasedBy);
+    const purchasedItems = items.filter((item: any) => !!item.purchasedBy);
 
     // Sort each group by createdAt date (newest first)
     const sortByDateDesc = (a: any, b: any) => {
@@ -78,9 +78,9 @@ export const ShoppingListMain: React.FC = () => {
       subtitle: `${item.quantity} ${item.unitName || ''}`.trim(),
       rightElement: (
         <TouchableOpacity
-          style={[styles.checkbox, item.isPurchased && styles.checkboxChecked]}
-          onPress={() => markItemPurchased(item.id, !item.isPurchased)}>
-          {item.isPurchased && <Icon name="check" size={16} color="white" />}
+          style={[styles.checkbox, item.purchasedBy && styles.checkboxChecked]}
+          onPress={() => toggleItem(item.id)}>
+          {item.purchasedBy && <Icon name="check" size={16} color="white" />}
         </TouchableOpacity>
       ),
       // show image on the left if available
@@ -90,9 +90,9 @@ export const ShoppingListMain: React.FC = () => {
         </View>
       ) : null,
       // Add visual styling for purchased items
-      style: item.isPurchased ? { opacity: 0.6 } : undefined,
+      style: item.purchasedBy ? { opacity: 0.6 } : undefined,
     }));
-  }, [items, markItemPurchased]);
+  }, [items, toggleItem]);
 
   const handleAddItem = () => {
     if (!currentListId) {
@@ -125,7 +125,7 @@ export const ShoppingListMain: React.FC = () => {
       });
 
       if (result) {
-        setQuery(''); // Clear search after adding
+        setSearchQuery(''); // Clear search after adding
       } else {
         Alert.alert('Error', 'Failed to add item');
       }
@@ -144,7 +144,7 @@ export const ShoppingListMain: React.FC = () => {
 
   // Search bar actions - conditionally show "Add" button when searching with no results
   const searchBarActions = useMemo(() => {
-    const hasSearchWithNoResults = query.trim() && listItems.length === 0;
+    const hasSearchWithNoResults = searchQuery.trim() && listItems.length === 0;
 
     const rightActions: SearchBarAction[] = [
       {
@@ -158,7 +158,7 @@ export const ShoppingListMain: React.FC = () => {
     if (hasSearchWithNoResults) {
       rightActions.unshift({
         icon: 'add',
-        onPress: () => handleAddItemFromSearch(query),
+        onPress: () => handleAddItemFromSearch(searchQuery),
         color: theme.colors.primary,
         backgroundColor: theme.colors.primaryLight,
       });
@@ -176,7 +176,7 @@ export const ShoppingListMain: React.FC = () => {
       left: [] as SearchBarAction[],
       right: rightActions,
     };
-  }, [handleAddItem, handleAddItemFromSearch, query, listItems.length]);
+  }, [handleAddItem, handleAddItemFromSearch, searchQuery, listItems.length]);
 
   const handleRefresh = async () => {
     await Promise.all([refetch()]);
@@ -212,8 +212,8 @@ export const ShoppingListMain: React.FC = () => {
         title={currentList?.name || 'Shopping List'}
         subtitle="Shopping List"
         items={listItems}
-        searchQuery={query}
-        onSearchChange={setQuery}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
         onItemPress={id =>
           navigate('EditItem', { listId: currentListId, itemId: id })
         }
@@ -231,7 +231,7 @@ export const ShoppingListMain: React.FC = () => {
         // Actions
         searchBarActions={searchBarActions}
         emptyState={
-          query.trim()
+          searchQuery.trim()
             ? undefined // No empty state during search - user can add via search bar button
             : {
               icon: 'add-shopping-cart',

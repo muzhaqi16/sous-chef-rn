@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  useRealTimeNotifications,
+  useNotifications,
   useNotificationSettings,
   useAuth,
 } from '#hooks';
@@ -23,7 +23,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
   const {settings} = useNotificationSettings();
 
   // Initialize real-time notifications with user settings
-  const {notificationCount, config} = useRealTimeNotifications({
+  const {config} = useNotifications({
     enablePantryNotifications: settings.pantryUpdates,
     enableShoppingListNotifications: settings.shoppingListUpdates,
     enableMembershipNotifications: settings.membershipChanges,

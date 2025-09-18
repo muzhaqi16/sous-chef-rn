@@ -7,14 +7,11 @@ import {
   EmptyNotifications,
   NotificationHeader,
   NotificationGroupHeader,
-  useNotificationSync,
   NotificationFilters,
   UrgentNotificationsBanner,
 } from '#components/notifications';
 import {
   useNotifications,
-  useRealTimeNotifications,
-  useNotificationRefresh,
 } from '#hooks';
 import {
   NotificationItem as NotificationType,
@@ -36,7 +33,6 @@ export const NotificationListScreen: React.FC<{
   const {navigate, navigateTo, goBack} = useAppNavigation();
   const [filterCategory, setFilterCategory] =
     useState<NotificationCategory | null>(null);
-  const userId = useStore(state => state.user?.id);
 
   const {
     notifications,
@@ -47,25 +43,14 @@ export const NotificationListScreen: React.FC<{
     getNotificationsByCategory,
   } = useNotifications();
 
-  // Initialize real-time notifications
-  const {notificationCount, config} = useRealTimeNotifications({
-    enablePantryNotifications: true,
-    enableShoppingListNotifications: true,
-    enableMembershipNotifications: true,
-    enableLowStockAlerts: true,
-    enableExpirationAlerts: true,
-    enableCollaborationNotifications: true,
-    showInAppNotifications: true,
-    showPushNotifications: true,
-  });
+  // Initialize real-time notifications (already handled by consolidated useNotifications)
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Server sync management (returns refetch function)
-  const {refetch} = useNotificationSync({userId});
-
-  // Refresh handling
-  const {isRefreshing, handleRefresh} = useNotificationRefresh({
-    refetch,
-  });
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    // Add server sync logic here if needed
+    setTimeout(() => setIsRefreshing(false), 1000);
+  }, []);
 
   // Filter notifications based on selected category
   const filteredNotifications = useMemo(() => {

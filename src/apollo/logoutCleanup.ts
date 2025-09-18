@@ -1,13 +1,9 @@
 import {client} from './client';
-import {pantryStorage} from '#/storage/pantryCache';
-import {shoppingListStorage} from '#/storage/shoppingListCache';
 import {useStore} from '#store';
 
 interface LogoutCleanupOptions {
   clearCache?: boolean;
   cancelSubscriptions?: boolean;
-  clearPantryCache?: boolean;
-  clearShoppingListCache?: boolean;
   suppressErrors?: boolean;
 }
 
@@ -51,8 +47,6 @@ export class LogoutCleanup {
     const {
       clearCache = true,
       cancelSubscriptions = true,
-      clearPantryCache = true,
-      clearShoppingListCache = true,
       suppressErrors = true,
     } = options;
 
@@ -68,19 +62,9 @@ export class LogoutCleanup {
       // 2. Stop all in-flight queries
       await LogoutCleanup.stopInFlightQueries();
 
-      // 3. Clear Apollo cache
+      // 3. Clear Apollo cache (only cache we need now)
       if (clearCache) {
         await LogoutCleanup.clearApolloCache();
-      }
-
-      // 4. Clear pantry-specific caches
-      if (clearPantryCache) {
-        LogoutCleanup.clearPantryCaches();
-      }
-
-      // 5. Clear shopping list caches
-      if (clearShoppingListCache) {
-        LogoutCleanup.clearShoppingListCaches();
       }
 
       console.log('✅ Apollo logout cleanup completed');
@@ -158,29 +142,6 @@ export class LogoutCleanup {
     }
   }
 
-  /**
-   * Clear pantry-specific caches
-   */
-  private static clearPantryCaches(): void {
-    try {
-      pantryStorage.clearAllPantryCaches();
-      console.log('🏪 Pantry caches cleared');
-    } catch (error) {
-      console.warn('Failed to clear pantry caches:', error);
-    }
-  }
-
-  /**
-   * Clear shopping list caches
-   */
-  private static clearShoppingListCaches(): void {
-    try {
-      shoppingListStorage.clearAllShoppingListCaches();
-      console.log('🛒 Shopping list caches cleared');
-    } catch (error) {
-      console.warn('Failed to clear shopping list caches:', error);
-    }
-  }
 
   /**
    * Utility to check if a GraphQL operation should be skipped during logout

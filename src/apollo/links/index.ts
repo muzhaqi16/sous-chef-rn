@@ -4,16 +4,17 @@ import { authLink } from './authLink';
 import { createConsoleLink } from './consoleLink';
 import { errorLink } from './errorLink';
 import { httpLink } from './httpLink';
+import { batchLink } from './batchLink';
 import { wsLink } from './wsLink';
 import { retryLink } from './retryLink';
 import { deduplicationLink } from './deduplicationLink';
 
-// HTTP transport with retry and batching
-const retriableHttp = retryLink.concat(httpLink);
+// HTTP transport with retry and batching (re-enabled for performance)
+const httpTransport = retryLink.concat(__DEV__ ? httpLink : batchLink);
 
 // Transport link routing:
 // • Subscriptions → WebSocket
-// • All other operations → HTTP with retry (temporarily disable batching to debug)
+// • All other operations → HTTP with retry + batching (production) or regular HTTP (dev)
 const transportLink = ApolloLink.split(
   ({ query }) => {
     const def = getMainDefinition(query);
@@ -22,39 +23,24 @@ const transportLink = ApolloLink.split(
     );
   },
   wsLink,
-  retriableHttp, // Use regular HTTP for all non-subscription operations (temporarily)
+  httpTransport,
 );
 
-// Default settings (recommended)
+// Single console link configuration (simplified)
 const consoleLink = createConsoleLink({
-  enabled: false,
-});
-
-// Production-optimized logging
-const consoleLinkOptimized = createConsoleLink({
-  enabled: __DEV__ && true, // Enable only in dev
-  logVariables: false, // Disable by default for performance
-  logQuery: false, // Disable by default for performance
-  logResponse: false, // Disable by default for performance
-  logTiming: true, // Keep timing for performance monitoring
-  slowQueryThreshold: 1000, // Standard threshold
-});
-
-// Debug logging (can be enabled when needed)
-const consoleLinkDebug = createConsoleLink({
-  enabled: __DEV__ && false, // Disabled by default, can be enabled for debugging
-  logVariables: true,
-  logQuery: true,
-  logResponse: true,
+  enabled: __DEV__,
+  logVariables: false,
+  logQuery: false,
+  logResponse: false,
   logTiming: true,
-  slowQueryThreshold: 300,
+  slowQueryThreshold: 1000,
 });
 
-// Combine links: errorLink comes first to catch errors from subsequent links
+// Simplified link chain
 export const link = ApolloLink.from([
-  deduplicationLink, // Deduplicate identical queries first
+  deduplicationLink,
   errorLink,
   authLink,
-  consoleLink, // Don't enable console link by default
+  consoleLink,
   transportLink,
 ]);

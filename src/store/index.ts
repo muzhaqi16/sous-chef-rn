@@ -19,6 +19,7 @@ import {
   createNotificationSlice,
   NotificationState,
 } from './slices/notificationSlice';
+import {createUISlice, UIState} from './slices/uiSlice';
 import {
   createResetManager,
   ResetOptions,
@@ -53,6 +54,7 @@ export type RootState = AuthState &
   NavigationState &
   NotificationState &
   BarcodeScannerState &
+  UIState &
   ResetManagerState &
   NavigationStateManagerState;
 
@@ -95,6 +97,7 @@ export const useStore = create<RootState>()(
             ...createNavigationSlice(set, get, store),
             ...createBarcodeScannerSlice(set, get, store),
             ...createNotificationSlice(set, get, store),
+            ...createUISlice(set, get, store),
             // Add reset manager methods to the store
             ...resetManager,
             // Add navigation state manager methods

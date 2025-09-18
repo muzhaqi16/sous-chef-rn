@@ -21,6 +21,4 @@ export const zustandStorage: StateStorage = {
   },
 };
 
-// Export cache utilities for easy access
-export {pantryStorage} from './pantryCache';
-export {shoppingListStorage} from './shoppingListCache';
+// Cache utilities removed - now using Apollo Client only for server data

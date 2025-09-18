@@ -95,12 +95,34 @@ export function makeCache(): InMemoryCache {
     storage.delete(CACHE_KEY);
   }
 
-  // Simple persistence - debounced
+  // Cache size management
+  const MAX_CACHE_SIZE = 50 * 1024 * 1024; // 50MB limit
+  let lastGcTime = Date.now();
+
+  const checkCacheSize = () => {
+    try {
+      const cacheData = JSON.stringify(cache.extract());
+      if (cacheData.length > MAX_CACHE_SIZE) {
+        console.log('🗑️ Cache size exceeded, running garbage collection');
+        cache.gc();
+        lastGcTime = Date.now();
+      }
+    } catch (e) {
+      console.warn('Cache size check failed:', e);
+    }
+  };
+
+  // Simple persistence - debounced with size check
   let persistTimeout: NodeJS.Timeout;
   const persist = () => {
     clearTimeout(persistTimeout);
     persistTimeout = setTimeout(() => {
       try {
+        // Run GC if it's been more than 5 minutes since last check
+        if (Date.now() - lastGcTime > 5 * 60 * 1000) {
+          checkCacheSize();
+        }
+
         storage.set(CACHE_KEY, JSON.stringify(cache.extract()));
       } catch (e) {
         console.warn('Cache persist failed:', e);

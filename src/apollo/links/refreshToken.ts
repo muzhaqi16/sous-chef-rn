@@ -1,20 +1,15 @@
-import { Observable, ApolloLink } from '@apollo/client';
+import { Observable } from '@apollo/client';
 import { useStore } from '#store';
 import { RefreshTokenDocument, RefreshTokenMutation } from '#generated';
 import { reconnectWebSocket, isWebSocketReconnecting } from './wsLink';
 import { client } from '../client';
-import { tokenRefreshStateManager } from '#storage/tokenRefreshStateManager';
 
 let isRefreshing = false;
-let refreshSubscribers: Array<(accessToken: string | null) => void> = [];
+let refreshQueue: Array<(token: string | null) => void> = [];
 
-const subscribeTokenRefresh = (cb: (accessToken: string | null) => void) => {
-  refreshSubscribers.push(cb);
-};
-
-const onTokenRefreshed = (accessToken: string | null) => {
-  refreshSubscribers.forEach(cb => cb(accessToken));
-  refreshSubscribers = [];
+const processQueue = (token: string | null) => {
+  refreshQueue.forEach(callback => callback(token));
+  refreshQueue = [];
 };
 
 const performTokenRefresh = async (): Promise<string | null> => {
@@ -26,14 +21,11 @@ const performTokenRefresh = async (): Promise<string | null> => {
     throw new Error('No refresh token available');
   }
 
-
   try {
     const response = await client.mutate({
       mutation: RefreshTokenDocument,
       variables: { token: refreshToken },
-      context: {
-        skipErrorLink: true,
-      },
+      context: { skipErrorLink: true },
     });
 
     const data = (response.data as RefreshTokenMutation)?.refresh;
@@ -42,50 +34,28 @@ const performTokenRefresh = async (): Promise<string | null> => {
     }
 
     const { accessToken: newToken, refreshToken: newRefreshToken } = data;
+    state.setTokens({ accessToken: newToken, refreshToken: newRefreshToken });
 
-    useStore.getState().setTokens({
-      accessToken: newToken,
-      refreshToken: newRefreshToken,
-    });
-
-
-    // Only reconnect WebSocket if it's not already reconnecting
     if (!isWebSocketReconnecting()) {
       reconnectWebSocket();
-    } else {
-      console.log('WebSocket reconnection already in progress, skipping...');
     }
 
     return newToken;
-  } catch (refreshError) {
-    useStore.getState().tokenRefreshFailed();
-    throw refreshError;
+  } catch (error) {
+    state.tokenRefreshFailed();
+    throw error;
   }
 };
 
-export const attemptTokenRefresh = (
-  operation: any,
-  forward: any,
-): Observable<ApolloLink.Result> => {
-  return new Observable<ApolloLink.Result>(observer => {
-    // If refresh is already in progress, queue this operation
+export const attemptTokenRefresh = (operation: any, forward: any): Observable<any> => {
+  return new Observable(observer => {
     if (isRefreshing) {
-      tokenRefreshStateManager.queueOperation(operation.operationName);
-
-      subscribeTokenRefresh((accessToken: string | null) => {
-        if (accessToken) {
+      refreshQueue.push((token: string | null) => {
+        if (token) {
           operation.setContext({
-            headers: {
-              ...operation.getContext().headers,
-              authorization: `Bearer ${accessToken}`,
-            },
+            headers: { ...operation.getContext().headers, authorization: `Bearer ${token}` },
           });
-
-          forward(operation).subscribe({
-            next: observer.next.bind(observer),
-            error: observer.error.bind(observer),
-            complete: observer.complete.bind(observer),
-          });
+          forward(operation).subscribe(observer);
         } else {
           observer.error(new Error('Token refresh failed'));
         }
@@ -93,44 +63,22 @@ export const attemptTokenRefresh = (
       return;
     }
 
-    // Start new refresh
     isRefreshing = true;
-    tokenRefreshStateManager.startRefresh();
-
     performTokenRefresh()
-      .then((newToken) => {
-        const success = !!newToken;
-        tokenRefreshStateManager.completeRefresh(success);
-        onTokenRefreshed(newToken);
-
+      .then(newToken => {
+        processQueue(newToken);
         if (newToken) {
           operation.setContext({
-            headers: {
-              ...operation.getContext().headers,
-              authorization: `Bearer ${newToken}`,
-            },
+            headers: { ...operation.getContext().headers, authorization: `Bearer ${newToken}` },
           });
-
-          forward(operation).subscribe({
-            next: observer.next.bind(observer),
-            error: (retryError: any) => {
-              console.log(`❌ Retry failed for ${operation.operationName}:`, retryError.message);
-              observer.error(retryError);
-            },
-            complete: observer.complete.bind(observer),
-          });
+          forward(operation).subscribe(observer);
         } else {
           observer.error(new Error('Token refresh failed'));
         }
-
-        return newToken;
       })
-      .catch((error) => {
-        console.log('❌ Token refresh failed:', error.message);
-        tokenRefreshStateManager.completeRefresh(false);
-        onTokenRefreshed(null);
+      .catch(error => {
+        processQueue(null);
         observer.error(error);
-        return null;
       })
       .finally(() => {
         isRefreshing = false;

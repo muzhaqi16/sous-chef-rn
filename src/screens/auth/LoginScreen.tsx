@@ -9,12 +9,10 @@ import { AuthFormTemplate, AuthWrapper } from '#components/templates';
 import { EmailInput, PasswordInput } from '#components/atoms';
 import { getLoginValidationSchema } from '#/utils';
 import { useStore } from '#store';
-import { useLoginMutation, type LoginInput } from '#generated';
+import { type LoginInput } from '#generated';
 import {
-  useAuthErrorHandler,
-  useCredentialManager,
+  useAuth,
   useAuthNavigation,
-  useAuthFlow,
 } from '#hooks';
 import { getEmailOnly } from '#/storage/keychain';
 import { RememberMeModal } from './RememberMeModal';
@@ -39,11 +37,15 @@ export function LoginScreen() {
   const [pendingAuthResponse, setPendingAuthResponse] = useState<any>(null);
   const [userHasTypedManually, setUserHasTypedManually] = useState(false);
 
-  const { loadStoredCredentials, isLoadingCredentials, storeCredentials } = useCredentialManager();
-  const { handleAuthError } = useAuthErrorHandler();
   const { navigateToForgotPassword, navigateToSignUp } = useAuthNavigation();
-  const { handleLogin, isLoading: isLoggingIn } = useAuthFlow();
-  const [loginMutation] = useLoginMutation();
+  const {
+    loadStoredCredentials,
+    isLoadingCredentials,
+    storeCredentials,
+    handleAuthError,
+    login,
+    isLoading: isLoggingIn
+  } = useAuth();
 
   const form = useForm<LoginInput>({
     resolver: yupResolver(getLoginValidationSchema()),
@@ -98,26 +100,17 @@ export function LoginScreen() {
       const credentials = await loadStoredCredentials();
       if (!credentials) return;
 
-      const result = await loginMutation({
-        variables: {
-          input: {
-            email: credentials.email,
-            password: credentials.password,
-          },
-        },
-      });
-
-      if (result.data?.login) {
-        // Use the auth flow hook to handle login
-        await handleLogin(result.data.login, true);
-      }
+      // Use the consolidated login function for biometric login
+      await login({
+        email: credentials.email,
+        password: credentials.password,
+      }, true); // rememberMe = true for biometric login
     } catch (error: any) {
       handleAuthError(error, 'Biometric authentication failed');
     }
   }, [
     loadStoredCredentials,
-    loginMutation,
-    handleLogin,
+    login,
     handleAuthError,
     isLoadingCredentials,
     userHasTypedManually,
@@ -127,7 +120,7 @@ export function LoginScreen() {
   const handleRememberChoice = async (remember: boolean) => {
     if (!pendingAuthResponse) return;
 
-    const { loginData, email, password } = pendingAuthResponse;
+    const { email, password } = pendingAuthResponse;
 
     // Close modal first
     setShowRememberModal(false);
@@ -146,8 +139,8 @@ export function LoginScreen() {
       console.log('Skipping credential save - credentials already exist in keychain');
     }
 
-    // Use the auth flow hook to handle login completion
-    await handleLogin(loginData, remember);
+    // Complete login with user's remember me choice
+    await login({ email: email, password: password }, remember);
     setPendingAuthResponse(null);
   };
 
@@ -165,29 +158,17 @@ export function LoginScreen() {
         hasStoredCredentials
       });
 
-      const response = await loginMutation({
-        variables: {
-          input: { ...input, email: actualEmail },
-        },
-      });
-
-      if (response.data?.login) {
-        const loginData = response.data.login;
-
-        // If rememberMe preference not set AND no stored credentials exist, show modal
-        // Skip modal if credentials already exist to prevent biometric prompts
-        if (rememberMe === undefined && !hasStoredCredentials) {
-          setPendingAuthResponse({
-            loginData,
-            email: actualEmail,
-            password: input.password,
-          });
-          setShowRememberModal(true);
-          // Don't call handleLogin here - wait for user choice in modal
-        } else {
-          // Direct login with existing preference
-          await handleLogin(loginData, rememberMe ?? false);
-        }
+      // Check if we need to show remember me modal
+      if (rememberMe === undefined && !hasStoredCredentials) {
+        // Show modal to get user preference
+        setPendingAuthResponse({
+          email: actualEmail,
+          password: input.password,
+        });
+        setShowRememberModal(true);
+      } else {
+        // Direct login with existing preference
+        await login({ ...input, email: actualEmail }, rememberMe ?? false);
       }
     } catch (err: any) {
       handleAuthError(err, 'Login failed. Please try again.');
