@@ -10,13 +10,7 @@ import {
   useShoppingListCollaboratorsChangedSubscription,
   useMyMembershipUpdatedSubscription,
   useMemberJoinedSubscription,
-  useGetHomeInvitesQuery,
-  useGetMyPendingInvitesQuery,
-  useMyShoppingListsUpdatedSubscription,
   NotificationType,
-  NotificationStatus,
-  MutationType,
-  MembershipMutationType,
 } from '#generated';
 import { useStore } from '#store';
 import { NotificationCategory as StoreNotificationCategory } from '#store/slices/notificationSlice';

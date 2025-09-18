@@ -9,7 +9,6 @@ export * from './useItemSelector';
 export * from './navigation';
 export {useSearchableList} from './useSearchableList';
 export {useToast} from './useToast';
-export {useSafeNavigation} from './useSafeNavigation';
 export {useBottomSheetModal} from './useBottomSheetModal';
 export {usePantryItems} from './pantry/usePantryItems';
 export {useSearchResults} from './useSearchResults';

@@ -3,7 +3,8 @@ import {View, Text, TouchableOpacity, Platform} from 'react-native';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import type {FieldValues, Control, FieldErrors} from 'react-hook-form';
 import {DynamicFormFields, FieldDef} from '../molecules/DynamicFormFields';
-import {Button, IconButton} from '../atoms';
+import {Button} from '../base';
+import {IconButton} from '../atoms';
 
 interface Props<T extends FieldValues> {
   title: string;

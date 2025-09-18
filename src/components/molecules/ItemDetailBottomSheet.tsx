@@ -3,7 +3,7 @@ import {View} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
 import QuantitySelector from '../organisms/QuantitySelector';
 import {BottomSheetTextInput} from '@gorhom/bottom-sheet';
-import {Button} from '../atoms/Button/Button';
+import {Button} from '../base/Button';
 import {
   useUpdateShoppingListItemMutation,
   useGetUnitsQuery,
@@ -67,7 +67,7 @@ export const ItemDetailBottomSheet: React.FC<ItemDetailProps> = ({
           units={data?.units as Unit[]}
         />
       </View>
-      <Button title="Save" onPress={handleSave} />
+      <Button onPress={handleSave}>Save</Button>
     </View>
   );
 };

@@ -1,7 +1,7 @@
 import React, {useState, useRef} from 'react';
 import {Text, StyleSheet} from 'react-native';
 import BottomSheet, {BottomSheetRef} from '../pages/BottomSheet';
-import {Button} from '../atoms/Button/Button';
+import {Button} from "../base/Button";
 import {BaseInput as Input} from '../atoms';
 import {useCreateShoppingListMutation} from '../../graphql/generated';
 
@@ -43,10 +43,10 @@ const CreateShoppingListBottomSheet: React.FC = ({}) => {
   return (
     <>
       <Button
-        title="Create Shopping List"
         onPress={handleShow}
-        style={{margin: 16}}
-      />
+        style={{margin: 16}}>
+        Create Shopping List
+      </Button>
       {renderBottomSheet && (
         <BottomSheet
           ref={bottomSheetRef}
@@ -57,7 +57,7 @@ const CreateShoppingListBottomSheet: React.FC = ({}) => {
             value={listName}
             onChangeText={setListName}
           />
-          <Button title="Create" onPress={handleCreateList} />
+          <Button onPress={handleCreateList}>Create</Button>
           {error && <Text style={styles.errorText}>Error: {error}</Text>}
         </BottomSheet>
       )}

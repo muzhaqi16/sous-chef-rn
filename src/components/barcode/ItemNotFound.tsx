@@ -2,7 +2,7 @@ import React from 'react';
 import {View, Text} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
 import {Icon} from '#utils';
-import {Button} from '#components/atoms/Button/Button';
+import {Button} from '#components/base/Button';
 
 interface ItemNotFoundProps {
   barcode: string;
@@ -24,12 +24,11 @@ export const ItemNotFound: React.FC<ItemNotFoundProps> = ({barcode, onAddItem}) 
       </Text>
       {onAddItem && (
         <Button
-          title="Add Item"
           onPress={onAddItem}
           variant="primary"
-          size="medium"
-          btnStyle={styles.addButton}
-        />
+          size="medium">
+          Add Item
+        </Button>
       )}
     </View>
   );
