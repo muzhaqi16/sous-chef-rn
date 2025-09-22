@@ -67,6 +67,7 @@ export const lightTheme = {
 
     // Overlay
     overlay: colors.overlay,
+    gap: (v: number) => v * 8,
   },
 } as const;
 
@@ -120,6 +121,7 @@ export const darkTheme = {
 
     // Overlay
     overlay: colors.overlay,
+    gap: (v: number) => v * 8,
   },
 } as const;
 

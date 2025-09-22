@@ -28,7 +28,7 @@ const transportLink = ApolloLink.split(
 
 // Single console link configuration (simplified)
 const consoleLink = createConsoleLink({
-  enabled: __DEV__,
+  enabled: false, // __DEV__,
   logVariables: false,
   logQuery: false,
   logResponse: false,

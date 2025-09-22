@@ -1,5 +1,4 @@
 // ============================================
-// store/slices/uiSlice.ts
 // Pure UI state management - no server data
 // ============================================
 
@@ -11,6 +10,14 @@ export interface UIState {
   isLoading: boolean;
   isError: boolean;
   isFetching: boolean;
+
+  // Global loading overlay state
+  globalLoading: {
+    isLoading: boolean;
+    message?: string;
+    context?: string;
+    cancelable?: boolean;
+  };
 
   // Bottom sheet states
   bottomSheetVisible: boolean;
@@ -32,6 +39,16 @@ export interface UIState {
   setLoading: (loading: boolean) => void;
   setError: (error: boolean) => void;
   setFetching: (fetching: boolean) => void;
+
+  // Global loading actions
+  setGlobalLoading: (state: {
+    isLoading: boolean;
+    message?: string;
+    context?: string;
+    cancelable?: boolean;
+  }) => void;
+  clearGlobalLoading: () => void;
+
   setBottomSheetVisible: (visible: boolean) => void;
   setBottomSheetIndex: (index: number) => void;
   setActiveForm: (formId: string | null, data?: any) => void;
@@ -51,6 +68,12 @@ const initialUIState = {
   isLoading: false,
   isError: false,
   isFetching: false,
+  globalLoading: {
+    isLoading: false,
+    message: undefined,
+    context: undefined,
+    cancelable: false,
+  },
   bottomSheetVisible: false,
   bottomSheetIndex: 0,
   activeFormId: null,
@@ -84,6 +107,23 @@ export const createUISlice: StateCreator<
   setFetching: fetching => {
     set(state => {
       state.isFetching = fetching;
+    });
+  },
+
+  setGlobalLoading: loadingState => {
+    set(state => {
+      state.globalLoading = loadingState;
+    });
+  },
+
+  clearGlobalLoading: () => {
+    set(state => {
+      state.globalLoading = {
+        isLoading: false,
+        message: undefined,
+        context: undefined,
+        cancelable: false,
+      };
     });
   },
 

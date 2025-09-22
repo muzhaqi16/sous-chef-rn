@@ -107,3 +107,26 @@ export const reconnectWebSocket = () => {
 
 // Export state checkers for other modules
 export const isWebSocketReconnecting = () => isReconnecting;
+
+// Export function to dispose WebSocket for logout cleanup
+export const disposeWebSocket = () => {
+  try {
+    if (wsClient) {
+      console.log('🔌 Disposing WebSocket client for logout');
+      wsClient.dispose();
+      isReconnecting = false;
+      lastReconnectTime = 0;
+    }
+  } catch (error) {
+    console.warn('Error disposing WebSocket:', error);
+  }
+};
+
+// Export function to get WebSocket connection state
+export const getWebSocketState = () => {
+  return {
+    isReconnecting,
+    lastReconnectTime,
+    hasClient: !!wsClient,
+  };
+};

@@ -1,23 +1,76 @@
 import {MMKV} from 'react-native-mmkv';
 import {StateStorage} from 'zustand/middleware';
+import {DeviceKeyManager} from '#/utils/security/deviceKey';
 
 export const STORAGE_KEY = 'sous-chef-storage';
 
+// Initialize storage with device-specific encryption key
+let secureStorageInstance: MMKV | null = null;
+
+/**
+ * Get the securely initialized MMKV storage instance
+ */
+export const getStorage = async (): Promise<MMKV> => {
+  if (secureStorageInstance) {
+    return secureStorageInstance;
+  }
+
+  try {
+    const encryptionKey = await DeviceKeyManager.getDeviceEncryptionKey();
+    secureStorageInstance = new MMKV({
+      id: STORAGE_KEY,
+      encryptionKey,
+    });
+    return secureStorageInstance;
+  } catch (error) {
+    console.error('Failed to initialize secure storage:', error);
+    // Fallback to unencrypted storage (logged for monitoring)
+    console.warn('WARNING: Using unencrypted storage as fallback');
+    secureStorageInstance = new MMKV({
+      id: STORAGE_KEY,
+    });
+    return secureStorageInstance;
+  }
+};
+
+// Legacy synchronous storage for immediate use (will be migrated)
 export const storage = new MMKV({
-  id: STORAGE_KEY,
-  encryptionKey: 'sous-chef-encryption-key', // In a real app, use a more secure key management strategy
+  id: STORAGE_KEY + '_temp',
+  // Note: This temporary instance will be migrated to secure storage
 });
 
 export const zustandStorage: StateStorage = {
-  setItem: (name, value) => {
-    return storage.set(name, value);
+  setItem: async (name, value) => {
+    try {
+      const secureStorage = await getStorage();
+      return secureStorage.set(name, value);
+    } catch (error) {
+      console.error('Failed to set item in secure storage:', error);
+      // Fallback to temporary storage
+      return storage.set(name, value);
+    }
   },
-  getItem: name => {
-    const value = storage.getString(name);
-    return value ?? null;
+  getItem: async name => {
+    try {
+      const secureStorage = await getStorage();
+      const value = secureStorage.getString(name);
+      return value ?? null;
+    } catch (error) {
+      console.error('Failed to get item from secure storage:', error);
+      // Fallback to temporary storage
+      const value = storage.getString(name);
+      return value ?? null;
+    }
   },
-  removeItem: name => {
-    return storage.delete(name);
+  removeItem: async name => {
+    try {
+      const secureStorage = await getStorage();
+      return secureStorage.delete(name);
+    } catch (error) {
+      console.error('Failed to remove item from secure storage:', error);
+      // Fallback to temporary storage
+      return storage.delete(name);
+    }
   },
 };
 

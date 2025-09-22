@@ -112,13 +112,23 @@ export class LogoutCleanup {
   }
 
   /**
-   * Stop all in-flight GraphQL queries
+   * Stop all in-flight GraphQL queries and clean up WebSocket
    */
   private static async stopInFlightQueries(): Promise<void> {
     try {
       // Stop all queries by stopping the network layer temporarily
       client.stop();
-      console.log('🛑 Stopped all in-flight queries');
+
+      // Clean up WebSocket connections
+      try {
+        const { disposeWebSocket } = await import('./links/wsLink');
+        disposeWebSocket();
+        console.log('🔌 WebSocket connection disposed');
+      } catch (wsError) {
+        console.warn('Failed to dispose WebSocket:', wsError);
+      }
+
+      console.log('🛑 Stopped all in-flight queries and connections');
     } catch (error) {
       console.warn('Failed to stop in-flight queries:', error);
     }
@@ -131,8 +141,22 @@ export class LogoutCleanup {
     try {
       await client.clearStore();
 
+      // Clear storage keys
       storage.delete('apollo-cache');
       storage.delete('navigation_state');
+      storage.delete('apollo-client-cache');
+      storage.delete('persisted-queries');
+
+      // Get secure storage and clear auth-related data
+      try {
+        const { getStorage } = await import('#/storage/mmkv');
+        const secureStorage = await getStorage();
+        secureStorage.delete('apollo-cache');
+        secureStorage.delete('navigation_state');
+        secureStorage.delete('apollo-client-cache');
+      } catch (storageError) {
+        console.warn('Failed to clear secure storage:', storageError);
+      }
 
       console.log('🗑️ Apollo cache and navigation state cleared');
     } catch (error) {

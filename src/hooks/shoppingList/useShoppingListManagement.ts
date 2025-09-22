@@ -10,6 +10,7 @@ import {
 } from '#generated';
 import { useSearchableList } from '../useSearchableList';
 import { useAuth } from '#hooks/auth/useAuth';
+import { useErrorHandler } from '#/utils/errorHandling';
 
 export interface ShoppingListItemInput {
   itemName: string;
@@ -30,6 +31,7 @@ export interface ShoppingListItemUpdate extends Partial<ShoppingListItemInput> {
  */
 export function useShoppingListManagement(listId: string | undefined) {
   const { isLoggedOut } = useAuth();
+  const { handleApolloError } = useErrorHandler();
   const shouldSkip = !listId || isLoggedOut;
 
   // Single source of truth: Apollo cache
@@ -41,15 +43,54 @@ export function useShoppingListManagement(listId: string | undefined) {
     errorPolicy: 'all',
   });
 
-  // Real-time updates via subscription
+  // Real-time updates via subscription with proper cache updates
   useShoppingListItemsChangedSubscription({
     variables: { listId: listId ?? '' },
     skip: shouldSkip,
-    onData: () => {
-      // Apollo cache automatically updated
+    onData: ({ data: subData, client }) => {
+      try {
+        const changePayload = subData?.data?.shoppingListItemsChanged;
+        const updatedItem = changePayload?.item;
+        if (!updatedItem || !listId) return;
+
+        // Manual cache update for consistency with other hooks
+        const cache = client.cache;
+
+        // Update the items list in cache
+        cache.modify({
+          fields: {
+            shoppingListItems: (existingItems = [], { readField }) => {
+              const exists = existingItems.some(
+                (itemRef: any) => readField('id', itemRef) === updatedItem.id
+              );
+
+              if (exists) {
+                // Update existing item
+                return existingItems.map((itemRef: any) =>
+                  readField('id', itemRef) === updatedItem.id
+                    ? updatedItem
+                    : itemRef
+                );
+              } else {
+                // Add new item
+                return [...existingItems, updatedItem];
+              }
+            },
+          },
+        });
+      } catch (error) {
+        const { message } = handleApolloError(error, {
+          operation: 'Shopping List Subscription Cache Update',
+        });
+        console.warn('Failed to update cache from subscription:', message);
+        refetch();
+      }
     },
     onError: error => {
-      console.warn('Shopping list subscription error:', error.message);
+      const { message } = handleApolloError(error, {
+        operation: 'Shopping List Subscription',
+      });
+      console.warn('Shopping list subscription error:', message);
       refetch();
     },
   });
@@ -90,32 +131,40 @@ export function useShoppingListManagement(listId: string | undefined) {
   const [addItemMutation] = useAddItemToShoppingListMutation({
     errorPolicy: 'all',
     onError: error => {
-      console.error('Add shopping list item error:', error);
-      Alert.alert('Error', 'Failed to add item');
+      const { message } = handleApolloError(error, {
+        operation: 'Add Shopping List Item',
+      });
+      Alert.alert('Error', message);
     },
   });
 
   const [updateItemMutation] = useUpdateShoppingListItemMutation({
     errorPolicy: 'all',
     onError: error => {
-      console.error('Update shopping list item error:', error);
-      Alert.alert('Error', 'Failed to update item');
+      const { message } = handleApolloError(error, {
+        operation: 'Update Shopping List Item',
+      });
+      Alert.alert('Error', message);
     },
   });
 
   const [removeItemMutation] = useRemoveItemFromShoppingListMutation({
     errorPolicy: 'all',
     onError: error => {
-      console.error('Remove shopping list item error:', error);
-      Alert.alert('Error', 'Failed to remove item');
+      const { message } = handleApolloError(error, {
+        operation: 'Remove Shopping List Item',
+      });
+      Alert.alert('Error', message);
     },
   });
 
   const [markPurchasedMutation] = useMarkItemPurchasedMutation({
     errorPolicy: 'all',
     onError: error => {
-      console.error('Mark shopping list item purchased error:', error);
-      Alert.alert('Error', 'Failed to mark item as purchased');
+      const { message } = handleApolloError(error, {
+        operation: 'Mark Item Purchased',
+      });
+      Alert.alert('Error', message);
     },
   });
 

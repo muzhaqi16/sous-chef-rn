@@ -12,6 +12,7 @@ import { Navigation } from '#/navigation';
 import { hasCredentials } from '#storage/keychain';
 import { SplashScreen } from '#screens';
 import { ToastProvider } from '#/components/atoms';
+import { AuthFlowProvider } from '#/components/providers/AuthFlowProvider';
 import { useTheme } from '#/hooks/useTheme';
 
 // Enable native screens for better performance
@@ -42,9 +43,11 @@ const App = () => {
           />
           <SafeAreaView style={styles.container}>
             <ToastProvider>
-              <BottomSheetModalProvider>
-                <Navigation />
-              </BottomSheetModalProvider>
+              <AuthFlowProvider>
+                <BottomSheetModalProvider>
+                  <Navigation />
+                </BottomSheetModalProvider>
+              </AuthFlowProvider>
             </ToastProvider>
           </SafeAreaView>
         </SafeAreaProvider>

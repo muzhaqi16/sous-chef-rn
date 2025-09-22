@@ -22,32 +22,40 @@ export async function saveCredentials(
   service: string = DEFAULT_SERVICE,
 ): Promise<void> {
   return queueOperation(async () => {
+    // Import biometric manager
+    const { BiometricManager } = await import('#/utils/security/biometricFallback');
+
     // First, clear any old, unprotected creds:
     await Keychain.resetGenericPassword({ service });
     await Keychain.resetGenericPassword({
       service: CREDENTIALS_INDICATOR_SERVICE,
     });
 
-    // Now save with a policy that forces a prompt on load
-    const success = await Keychain.setGenericPassword(username, password, {
+    // Try to save with biometric fallback strategy
+    const saveResult = await BiometricManager.saveCredentialsWithFallback(
       service,
-      // Allow either FaceID/TouchID (iOS) or any enrolled biometric (Android)
-      accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_ANY,
-      // On Android, insist on a hardware-backed keystore
-      securityLevel: Keychain.SECURITY_LEVEL.SECURE_HARDWARE,
-      // Only accessible when device is unlocked
-      accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
-    });
+      username,
+      password,
+      {
+        allowDevicePasscode: true,
+        fallbackToPassword: true,
+      }
+    );
 
-    if (!success) {
-      throw new Error("Keychain couldn't save credentials");
+    if (!saveResult.success) {
+      throw new Error(`Keychain couldn't save credentials: ${saveResult.error}`);
     }
+
+    console.log(`Credentials saved using ${saveResult.method} method`);
 
     // Save an unprotected indicator that credentials exist
     // This allows us to check if credentials exist without triggering biometric authentication
     const indicatorSuccess = await Keychain.setGenericPassword(
       'credentials_exist',
-      Date.now().toString(),
+      JSON.stringify({
+        timestamp: Date.now(),
+        method: saveResult.method,
+      }),
       {
         service: CREDENTIALS_INDICATOR_SERVICE,
         accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
@@ -77,22 +85,27 @@ export async function loadCredentials(
   service: string = DEFAULT_SERVICE,
 ): Promise<{ username: string; password: string } | null> {
   try {
-    // This call will now *always* trigger FaceID/TouchID (or device passcode)
-    const creds = await Keychain.getGenericPassword({
-      service,
-      authenticationPrompt: {
-        title: 'Unlock saved credentials',
-        cancel: 'Use manual login',
-      },
+    // Import biometric manager
+    const { BiometricManager } = await import('#/utils/security/biometricFallback');
+
+    // Use enhanced biometric loading with fallback
+    const loadResult = await BiometricManager.loadCredentialsWithFallback(service, {
+      allowDevicePasscode: true,
+      fallbackToPassword: true,
     });
-    if (!creds) {
-      // user hit "cancel" or failed the check
-      return null;
+
+    if (loadResult.success && loadResult.credentials) {
+      console.log(`Credentials loaded using ${loadResult.method} method`);
+      return loadResult.credentials;
     }
-    return { username: creds.username, password: creds.password };
-  } catch (err) {
-    // could also inspect err.code here if you want, but treating
-    // any error as "no creds" is simplest:
+
+    if (loadResult.error) {
+      console.warn('Failed to load credentials:', loadResult.error);
+    }
+
+    return null;
+  } catch (err: any) {
+    console.error('Error loading credentials:', err);
     return null;
   }
 }
