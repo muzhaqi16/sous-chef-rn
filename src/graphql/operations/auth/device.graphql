@@ -1,4 +1,130 @@
 # ============================================
+# QUERIES
+# ============================================
+
+query GetMyDevices($filters: DeviceFiltersInput) {
+  myDevices(filters: $filters) {
+    id
+    deviceId
+    deviceName
+    deviceType
+    platform
+    osName
+    osVersion
+    appVersion
+    userAgent
+    browserName
+    browserVersion
+    screenResolution
+    timezone
+    language
+    lastIpAddress
+    lastCountry
+    lastCity
+    isActive
+    isTrusted
+    isVerified
+    loginCount
+    lastLoginAt
+    lastSeenAt
+    createdAt
+    updatedAt
+  }
+}
+
+query GetDeviceByDeviceId($deviceId: String!) {
+  deviceByDeviceId(deviceId: $deviceId) {
+    id
+    deviceId
+    deviceName
+    deviceType
+    platform
+    isActive
+    isTrusted
+    isVerified
+    lastSeenAt
+    createdAt
+  }
+}
+
+# ============================================
+# MUTATIONS
+# ============================================
+
+mutation RegisterDevice($input: DeviceRegistrationInput!) {
+  registerDevice(input: $input) {
+    id
+    deviceId
+    deviceName
+    deviceType
+    platform
+    osName
+    osVersion
+    appVersion
+    userAgent
+    browserName
+    browserVersion
+    screenResolution
+    timezone
+    language
+    isActive
+    isTrusted
+    isVerified
+    createdAt
+    updatedAt
+  }
+}
+
+mutation UpdateDeviceLastSeen($id: ID!) {
+  updateDeviceLastSeen(id: $id) {
+    id
+    deviceId
+    lastSeenAt
+    updatedAt
+  }
+}
+
+mutation TrustDevice($id: ID!) {
+  trustDevice(id: $id) {
+    id
+    deviceId
+    deviceName
+    isTrusted
+    updatedAt
+  }
+}
+
+mutation UntrustDevice($id: ID!) {
+  untrustDevice(id: $id) {
+    id
+    deviceId
+    deviceName
+    isTrusted
+    updatedAt
+  }
+}
+
+mutation VerifyDevice($id: ID!) {
+  verifyDevice(id: $id) {
+    id
+    deviceId
+    deviceName
+    isVerified
+    verifiedAt
+  }
+}
+
+mutation DeactivateDevice($id: ID!) {
+  deactivateDevice(id: $id) {
+    id
+    deviceId
+    deviceName
+    isActive
+    updatedAt
+  }
+}
+
+# ============================================
 # SUBSCRIPTIONS
 # ============================================
 

@@ -15,6 +15,7 @@ import {
 } from '#/storage/keychain';
 import { logger } from '#/utils/environment';
 import { useErrorHandler } from '#/utils/errorHandling';
+import { useDeviceRegistration } from '#/hooks/useDeviceRegistration';
 
 interface Credentials {
   email: string;
@@ -47,6 +48,9 @@ export const useAuth = () => {
 
   // Error handling
   const { handleApolloError } = useErrorHandler();
+
+  // Device registration
+  const { registerDeviceInBackground } = useDeviceRegistration();
 
   // GraphQL mutations
   const [loginMutation] = useLoginMutation();
@@ -172,8 +176,11 @@ export const useAuth = () => {
 
       setAuth(user, accessToken, refreshToken);
       handleAuthSuccess('Login successful');
+
+      // Register device in background after successful login
+      registerDeviceInBackground();
     },
-    [setAuth, setRememberMe, setUserNavigationState, handleAuthSuccess],
+    [setAuth, setRememberMe, setUserNavigationState, handleAuthSuccess, registerDeviceInBackground],
   );
 
   const handleRegistration = useCallback(
@@ -196,8 +203,11 @@ export const useAuth = () => {
 
       setAuth(user, accessToken, refreshToken);
       handleAuthSuccess('Registration successful');
+
+      // Register device in background after successful registration
+      registerDeviceInBackground();
     },
-    [setAuth, setRememberMe, setUserNavigationState, handleAuthSuccess],
+    [setAuth, setRememberMe, setUserNavigationState, handleAuthSuccess, registerDeviceInBackground],
   );
 
   // Auth mutation that returns auth data without setting auth state

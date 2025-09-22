@@ -43,7 +43,7 @@ export function useHomeManagement() {
     if (remoteDefaultHomeId && remoteDefaultHomeId !== selectedHomeId) {
       setSelectedHomeId(remoteDefaultHomeId);
     }
-  }, [remoteDefaultHomeId, selectedHomeId]);
+  }, [remoteDefaultHomeId, selectedHomeId, setSelectedHomeId]);
 
   // If local store has a value but remote doesn't, sync to remote
   useEffect(() => {
@@ -76,11 +76,18 @@ export function useHomeManagement() {
     setDefaultHomeMutation,
     homes,
     refetchDefaultHome,
+    setSelectedHomeId,
   ]);
 
   // Auto-select first home if no default is set and we have homes (initialization for first-time users)
   useEffect(() => {
-    if (!selectedHomeId && !remoteDefaultHomeId && !loadingDefaultHome && homes && homes.length > 0) {
+    if (
+      !selectedHomeId &&
+      !remoteDefaultHomeId &&
+      !loadingDefaultHome &&
+      homes &&
+      homes.length > 0
+    ) {
       // If there's no default set anywhere, select the first home and set it as default
       const firstHome = homes[0];
       setSelectedHomeId(firstHome.id);
@@ -95,7 +102,15 @@ export function useHomeManagement() {
         console.warn('Failed to set first home as default:', message);
       });
     }
-  }, [selectedHomeId, remoteDefaultHomeId, loadingDefaultHome, homes, setDefaultHomeMutation, handleApolloError]);
+  }, [
+    selectedHomeId,
+    remoteDefaultHomeId,
+    loadingDefaultHome,
+    homes,
+    setDefaultHomeMutation,
+    handleApolloError,
+    setSelectedHomeId,
+  ]);
 
   // Search functionality for homes
   const { query, setQuery, filtered } = useSearchableList(
@@ -131,7 +146,10 @@ export function useHomeManagement() {
               const { message } = handleApolloError(error, {
                 operation: 'Set Default Home',
               });
-              console.warn('Failed to set newly created home as default:', message);
+              console.warn(
+                'Failed to set newly created home as default:',
+                message,
+              );
             });
           }
 
@@ -202,7 +220,7 @@ export function useHomeManagement() {
         try {
           // Remove the home from cache
           cache.evict({
-            id: cache.identify(data.deleteHome)
+            id: cache.identify(data.deleteHome),
           });
 
           // Also remove from homes list
@@ -210,7 +228,8 @@ export function useHomeManagement() {
             fields: {
               homes: (existingHomes = [], { readField }) => {
                 return existingHomes.filter(
-                  (homeRef: any) => readField('id', homeRef) !== data.deleteHome.id
+                  (homeRef: any) =>
+                    readField('id', homeRef) !== data.deleteHome.id,
                 );
               },
             },
@@ -222,9 +241,10 @@ export function useHomeManagement() {
               query: GetHomesDocument,
             });
 
-            const remainingHomes = existingHomes?.homes?.filter(
-              home => home.id !== data.deleteHome.id
-            ) || [];
+            const remainingHomes =
+              existingHomes?.homes?.filter(
+                home => home.id !== data.deleteHome.id,
+              ) || [];
 
             const newDefaultHome = remainingHomes[0];
             if (newDefaultHome) {
@@ -235,7 +255,10 @@ export function useHomeManagement() {
                 const { message } = handleApolloError(error, {
                   operation: 'Set Default Home After Delete',
                 });
-                console.warn('Failed to set new default home after delete:', message);
+                console.warn(
+                  'Failed to set new default home after delete:',
+                  message,
+                );
               });
             } else {
               setSelectedHomeId(null);

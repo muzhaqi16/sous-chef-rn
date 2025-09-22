@@ -32,7 +32,9 @@ export type Scalars = {
   Boolean: { input: boolean; output: boolean };
   Int: { input: number; output: number };
   Float: { input: number; output: number };
+  BigInt: { input: string; output: string };
   DateTime: { input: string; output: string };
+  IPv4: { input: string; output: string };
   JSON: { input: any; output: any };
   Upload: { input: File; output: File };
 };
@@ -389,25 +391,59 @@ export type CreateCurrencyInput = {
 };
 
 export type CreateDeviceInput = {
+  androidId?: InputMaybe<Scalars['String']['input']>;
+  apiLevel?: InputMaybe<Scalars['Int']['input']>;
   appVersion?: InputMaybe<Scalars['String']['input']>;
+  availableLocationProviders?: InputMaybe<Scalars['JSON']['input']>;
+  batteryLevel?: InputMaybe<Scalars['Float']['input']>;
+  brand?: InputMaybe<Scalars['String']['input']>;
   browserName?: InputMaybe<Scalars['String']['input']>;
   browserVersion?: InputMaybe<Scalars['String']['input']>;
+  buildNumber?: InputMaybe<Scalars['String']['input']>;
+  bundleId?: InputMaybe<Scalars['String']['input']>;
+  carrier?: InputMaybe<Scalars['String']['input']>;
   deviceId: Scalars['String']['input'];
   deviceName?: InputMaybe<Scalars['String']['input']>;
   deviceType?: InputMaybe<DeviceType>;
+  freeDiskStorage?: InputMaybe<Scalars['String']['input']>;
+  hasDynamicIsland?: InputMaybe<Scalars['Boolean']['input']>;
+  hasNotch?: InputMaybe<Scalars['Boolean']['input']>;
+  hostNames?: InputMaybe<Scalars['JSON']['input']>;
+  instanceId?: InputMaybe<Scalars['String']['input']>;
   isActive?: InputMaybe<Scalars['Boolean']['input']>;
+  isAirplaneMode?: InputMaybe<Scalars['Boolean']['input']>;
+  isBatteryCharging?: InputMaybe<Scalars['Boolean']['input']>;
+  isBluetoothHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
+  isEmulator?: InputMaybe<Scalars['Boolean']['input']>;
+  isHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
+  isKeyboardConnected?: InputMaybe<Scalars['Boolean']['input']>;
+  isLocationEnabled?: InputMaybe<Scalars['Boolean']['input']>;
+  isMouseConnected?: InputMaybe<Scalars['Boolean']['input']>;
+  isTablet?: InputMaybe<Scalars['Boolean']['input']>;
   isTrusted?: InputMaybe<Scalars['Boolean']['input']>;
   isVerified?: InputMaybe<Scalars['Boolean']['input']>;
+  isWiredHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
   language?: InputMaybe<Scalars['String']['input']>;
   lastCity?: InputMaybe<Scalars['String']['input']>;
   lastCountry?: InputMaybe<Scalars['String']['input']>;
   lastIpAddress?: InputMaybe<Scalars['String']['input']>;
+  manufacturer?: InputMaybe<Scalars['String']['input']>;
+  maxMemory?: InputMaybe<Scalars['String']['input']>;
+  model?: InputMaybe<Scalars['String']['input']>;
   osName?: InputMaybe<Scalars['String']['input']>;
   osVersion?: InputMaybe<Scalars['String']['input']>;
   platform?: InputMaybe<MobilePlatform>;
+  powerState?: InputMaybe<Scalars['JSON']['input']>;
   pushToken?: InputMaybe<Scalars['String']['input']>;
+  readableVersion?: InputMaybe<Scalars['String']['input']>;
   screenResolution?: InputMaybe<Scalars['String']['input']>;
+  supportedAbis?: InputMaybe<Scalars['JSON']['input']>;
+  supportedMediaTypes?: InputMaybe<Scalars['JSON']['input']>;
+  systemVersion?: InputMaybe<Scalars['String']['input']>;
   timezone?: InputMaybe<Scalars['String']['input']>;
+  totalDiskCapacity?: InputMaybe<Scalars['String']['input']>;
+  totalMemory?: InputMaybe<Scalars['String']['input']>;
+  usedMemory?: InputMaybe<Scalars['String']['input']>;
   userAgent?: InputMaybe<Scalars['String']['input']>;
   userId: Scalars['ID']['input'];
 };
@@ -698,18 +734,41 @@ export type DateRangeInput = {
 
 export type Device = {
   __typename?: 'Device';
+  androidId: Maybe<Scalars['String']['output']>;
+  apiLevel: Maybe<Scalars['Int']['output']>;
   appVersion: Maybe<Scalars['String']['output']>;
+  availableLocationProviders: Maybe<Scalars['JSON']['output']>;
+  batteryLevel: Maybe<Scalars['Float']['output']>;
+  brand: Maybe<Scalars['String']['output']>;
   browserName: Maybe<Scalars['String']['output']>;
   browserVersion: Maybe<Scalars['String']['output']>;
+  buildNumber: Maybe<Scalars['String']['output']>;
+  bundleId: Maybe<Scalars['String']['output']>;
+  carrier: Maybe<Scalars['String']['output']>;
   createdAt: Scalars['DateTime']['output'];
   deletedAt: Maybe<Scalars['DateTime']['output']>;
   deviceId: Scalars['String']['output'];
   deviceName: Maybe<Scalars['String']['output']>;
   deviceType: DeviceType;
+  freeDiskStorage: Maybe<Scalars['String']['output']>;
+  hasDynamicIsland: Maybe<Scalars['Boolean']['output']>;
+  hasNotch: Maybe<Scalars['Boolean']['output']>;
+  hostNames: Maybe<Scalars['JSON']['output']>;
   id: Scalars['ID']['output'];
+  instanceId: Maybe<Scalars['String']['output']>;
   isActive: Scalars['Boolean']['output'];
+  isAirplaneMode: Maybe<Scalars['Boolean']['output']>;
+  isBatteryCharging: Maybe<Scalars['Boolean']['output']>;
+  isBluetoothHeadphonesConnected: Maybe<Scalars['Boolean']['output']>;
+  isEmulator: Maybe<Scalars['Boolean']['output']>;
+  isHeadphonesConnected: Maybe<Scalars['Boolean']['output']>;
+  isKeyboardConnected: Maybe<Scalars['Boolean']['output']>;
+  isLocationEnabled: Maybe<Scalars['Boolean']['output']>;
+  isMouseConnected: Maybe<Scalars['Boolean']['output']>;
+  isTablet: Maybe<Scalars['Boolean']['output']>;
   isTrusted: Scalars['Boolean']['output'];
   isVerified: Scalars['Boolean']['output'];
+  isWiredHeadphonesConnected: Maybe<Scalars['Boolean']['output']>;
   language: Maybe<Scalars['String']['output']>;
   lastCity: Maybe<Scalars['String']['output']>;
   lastCountry: Maybe<Scalars['String']['output']>;
@@ -717,13 +776,24 @@ export type Device = {
   lastLoginAt: Maybe<Scalars['DateTime']['output']>;
   lastSeenAt: Scalars['DateTime']['output'];
   loginCount: Scalars['Int']['output'];
+  manufacturer: Maybe<Scalars['String']['output']>;
+  maxMemory: Maybe<Scalars['String']['output']>;
+  model: Maybe<Scalars['String']['output']>;
   osName: Maybe<Scalars['String']['output']>;
   osVersion: Maybe<Scalars['String']['output']>;
   platform: Maybe<MobilePlatform>;
+  powerState: Maybe<Scalars['JSON']['output']>;
   pushToken: Maybe<Scalars['String']['output']>;
+  readableVersion: Maybe<Scalars['String']['output']>;
   screenResolution: Maybe<Scalars['String']['output']>;
+  supportedAbis: Maybe<Scalars['JSON']['output']>;
+  supportedMediaTypes: Maybe<Scalars['JSON']['output']>;
+  systemVersion: Maybe<Scalars['String']['output']>;
   timezone: Maybe<Scalars['String']['output']>;
+  totalDiskCapacity: Maybe<Scalars['String']['output']>;
+  totalMemory: Maybe<Scalars['String']['output']>;
   updatedAt: Scalars['DateTime']['output'];
+  usedMemory: Maybe<Scalars['String']['output']>;
   user: Maybe<User>;
   userAgent: Maybe<Scalars['String']['output']>;
   userId: Scalars['ID']['output'];
@@ -760,6 +830,14 @@ export type DeviceFiltersInput = {
   verifiedOnly?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
+export type DeviceHardwareInfoInput = {
+  freeDiskStorage?: InputMaybe<Scalars['String']['input']>;
+  maxMemory?: InputMaybe<Scalars['String']['input']>;
+  totalDiskCapacity?: InputMaybe<Scalars['String']['input']>;
+  totalMemory?: InputMaybe<Scalars['String']['input']>;
+  usedMemory?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type DeviceLocation = {
   __typename?: 'DeviceLocation';
   city: Maybe<Scalars['String']['output']>;
@@ -774,22 +852,65 @@ export type DeviceLocationInput = {
   lastIpAddress?: InputMaybe<Scalars['String']['input']>;
 };
 
+export type DevicePeripheralsInput = {
+  isBluetoothHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
+  isHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
+  isKeyboardConnected?: InputMaybe<Scalars['Boolean']['input']>;
+  isMouseConnected?: InputMaybe<Scalars['Boolean']['input']>;
+  isWiredHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
 export type DeviceRegistrationInput = {
+  androidId?: InputMaybe<Scalars['String']['input']>;
+  apiLevel?: InputMaybe<Scalars['Int']['input']>;
   appVersion?: InputMaybe<Scalars['String']['input']>;
+  availableLocationProviders?: InputMaybe<Scalars['JSON']['input']>;
+  batteryLevel?: InputMaybe<Scalars['Float']['input']>;
+  brand?: InputMaybe<Scalars['String']['input']>;
   browserName?: InputMaybe<Scalars['String']['input']>;
   browserVersion?: InputMaybe<Scalars['String']['input']>;
+  buildNumber?: InputMaybe<Scalars['String']['input']>;
+  bundleId?: InputMaybe<Scalars['String']['input']>;
+  carrier?: InputMaybe<Scalars['String']['input']>;
   deviceId: Scalars['String']['input'];
   deviceName?: InputMaybe<Scalars['String']['input']>;
   deviceType?: InputMaybe<DeviceType>;
+  freeDiskStorage?: InputMaybe<Scalars['String']['input']>;
+  hasDynamicIsland?: InputMaybe<Scalars['Boolean']['input']>;
+  hasNotch?: InputMaybe<Scalars['Boolean']['input']>;
+  hostNames?: InputMaybe<Scalars['JSON']['input']>;
+  instanceId?: InputMaybe<Scalars['String']['input']>;
+  isAirplaneMode?: InputMaybe<Scalars['Boolean']['input']>;
+  isBatteryCharging?: InputMaybe<Scalars['Boolean']['input']>;
+  isBluetoothHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
+  isEmulator?: InputMaybe<Scalars['Boolean']['input']>;
+  isHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
+  isKeyboardConnected?: InputMaybe<Scalars['Boolean']['input']>;
+  isLocationEnabled?: InputMaybe<Scalars['Boolean']['input']>;
+  isMouseConnected?: InputMaybe<Scalars['Boolean']['input']>;
+  isTablet?: InputMaybe<Scalars['Boolean']['input']>;
+  isWiredHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
   language?: InputMaybe<Scalars['String']['input']>;
   lastCity?: InputMaybe<Scalars['String']['input']>;
   lastCountry?: InputMaybe<Scalars['String']['input']>;
   lastIpAddress?: InputMaybe<Scalars['String']['input']>;
+  manufacturer?: InputMaybe<Scalars['String']['input']>;
+  maxMemory?: InputMaybe<Scalars['String']['input']>;
+  model?: InputMaybe<Scalars['String']['input']>;
   osName?: InputMaybe<Scalars['String']['input']>;
   osVersion?: InputMaybe<Scalars['String']['input']>;
   platform?: InputMaybe<MobilePlatform>;
+  powerState?: InputMaybe<Scalars['JSON']['input']>;
+  pushToken?: InputMaybe<Scalars['String']['input']>;
+  readableVersion?: InputMaybe<Scalars['String']['input']>;
   screenResolution?: InputMaybe<Scalars['String']['input']>;
+  supportedAbis?: InputMaybe<Scalars['JSON']['input']>;
+  supportedMediaTypes?: InputMaybe<Scalars['JSON']['input']>;
+  systemVersion?: InputMaybe<Scalars['String']['input']>;
   timezone?: InputMaybe<Scalars['String']['input']>;
+  totalDiskCapacity?: InputMaybe<Scalars['String']['input']>;
+  totalMemory?: InputMaybe<Scalars['String']['input']>;
+  usedMemory?: InputMaybe<Scalars['String']['input']>;
   userAgent?: InputMaybe<Scalars['String']['input']>;
 };
 
@@ -1944,6 +2065,7 @@ export type Mutation = {
   deleteUnit: Scalars['Boolean']['output'];
   deleteUserAddress: UserAddress;
   exportItems: ExportResponse;
+  flagDeviceAsEmulator: Device;
   flagLoginAsRisky: LoginHistory;
   flagMultipleLoginsAsRisky: Array<LoginHistory>;
   /** Request a password reset email */
@@ -2021,8 +2143,11 @@ export type Mutation = {
   updateCategory: Category;
   updateCurrency: Currency;
   updateDevice: Device;
+  updateDeviceBatteryInfo: Device;
+  updateDeviceHardwareInfo: Device;
   updateDeviceLastSeen: Device;
   updateDeviceLocation: Device;
+  updateDevicePeripherals: Device;
   updateHome: Home;
   updateItem: Item;
   updateItemAllergens: Item;
@@ -2351,6 +2476,10 @@ export type MutationExportItemsArgs = {
   format: ExportFormat;
 };
 
+export type MutationFlagDeviceAsEmulatorArgs = {
+  id: Scalars['ID']['input'];
+};
+
 export type MutationFlagLoginAsRiskyArgs = {
   flaggedById: Scalars['ID']['input'];
   loginId: Scalars['ID']['input'];
@@ -2676,6 +2805,17 @@ export type MutationUpdateDeviceArgs = {
   input: UpdateDeviceInput;
 };
 
+export type MutationUpdateDeviceBatteryInfoArgs = {
+  batteryLevel: Scalars['Float']['input'];
+  id: Scalars['ID']['input'];
+  isBatteryCharging: Scalars['Boolean']['input'];
+};
+
+export type MutationUpdateDeviceHardwareInfoArgs = {
+  hardwareInfo: DeviceHardwareInfoInput;
+  id: Scalars['ID']['input'];
+};
+
 export type MutationUpdateDeviceLastSeenArgs = {
   id: Scalars['ID']['input'];
 };
@@ -2683,6 +2823,11 @@ export type MutationUpdateDeviceLastSeenArgs = {
 export type MutationUpdateDeviceLocationArgs = {
   id: Scalars['ID']['input'];
   input: DeviceLocationInput;
+};
+
+export type MutationUpdateDevicePeripheralsArgs = {
+  id: Scalars['ID']['input'];
+  peripherals: DevicePeripheralsInput;
 };
 
 export type MutationUpdateHomeArgs = {
@@ -3454,7 +3599,10 @@ export type Query = {
   deviceByDeviceId: Maybe<Device>;
   deviceCount: Scalars['Int']['output'];
   deviceStats: DeviceStats;
+  devicesByManufacturer: Array<Device>;
   devicesByPlatform: Array<Device>;
+  devicesWithPeripherals: Array<Device>;
+  emulatedDevices: Array<Device>;
   expiringItems: Array<PantryItem>;
   failedLoginAttempts: Array<LoginHistory>;
   getDefaultHome: Maybe<Home>;
@@ -3480,6 +3628,7 @@ export type Query = {
   loginHistoryByIP: Array<LoginHistory>;
   loginHistoryForUser: Array<LoginHistory>;
   loginHistoryStats: LoginHistoryStats;
+  lowBatteryDevices: Array<Device>;
   lowStockItems: Array<PantryItem>;
   me: Maybe<User>;
   mealPlan: Maybe<MealPlan>;
@@ -3551,8 +3700,10 @@ export type Query = {
   storeWithPurchases: Maybe<Store>;
   stores: Array<Store>;
   suggestedRecipes: Array<Recipe>;
+  suspiciousDevices: Array<Device>;
   suspiciousInviteActivity: Array<InviteLog>;
   suspiciousLoginActivity: SuspiciousActivity;
+  tabletDevices: Array<Device>;
   trendingItems: Maybe<Array<Item>>;
   trustedDevices: Array<Device>;
   unit: Maybe<Unit>;
@@ -3651,8 +3802,21 @@ export type QueryDeviceStatsArgs = {
   userId: Scalars['ID']['input'];
 };
 
+export type QueryDevicesByManufacturerArgs = {
+  manufacturer: Scalars['String']['input'];
+  userId: Scalars['ID']['input'];
+};
+
 export type QueryDevicesByPlatformArgs = {
   platform: MobilePlatform;
+  userId: Scalars['ID']['input'];
+};
+
+export type QueryDevicesWithPeripheralsArgs = {
+  userId: Scalars['ID']['input'];
+};
+
+export type QueryEmulatedDevicesArgs = {
   userId: Scalars['ID']['input'];
 };
 
@@ -3749,6 +3913,11 @@ export type QueryLoginHistoryForUserArgs = {
 
 export type QueryLoginHistoryStatsArgs = {
   days?: InputMaybe<Scalars['Int']['input']>;
+  userId: Scalars['ID']['input'];
+};
+
+export type QueryLowBatteryDevicesArgs = {
+  threshold?: InputMaybe<Scalars['Float']['input']>;
   userId: Scalars['ID']['input'];
 };
 
@@ -4000,12 +4169,20 @@ export type QueryStoreWithPurchasesArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
 };
 
+export type QuerySuspiciousDevicesArgs = {
+  userId: Scalars['ID']['input'];
+};
+
 export type QuerySuspiciousInviteActivityArgs = {
   timeWindowHours?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type QuerySuspiciousLoginActivityArgs = {
   hours?: InputMaybe<Scalars['Int']['input']>;
+  userId: Scalars['ID']['input'];
+};
+
+export type QueryTabletDevicesArgs = {
   userId: Scalars['ID']['input'];
 };
 
@@ -5005,24 +5182,58 @@ export type UpdateCurrencyInput = {
 };
 
 export type UpdateDeviceInput = {
+  androidId?: InputMaybe<Scalars['String']['input']>;
+  apiLevel?: InputMaybe<Scalars['Int']['input']>;
   appVersion?: InputMaybe<Scalars['String']['input']>;
+  availableLocationProviders?: InputMaybe<Scalars['JSON']['input']>;
+  batteryLevel?: InputMaybe<Scalars['Float']['input']>;
+  brand?: InputMaybe<Scalars['String']['input']>;
   browserName?: InputMaybe<Scalars['String']['input']>;
   browserVersion?: InputMaybe<Scalars['String']['input']>;
+  buildNumber?: InputMaybe<Scalars['String']['input']>;
+  bundleId?: InputMaybe<Scalars['String']['input']>;
+  carrier?: InputMaybe<Scalars['String']['input']>;
   deviceName?: InputMaybe<Scalars['String']['input']>;
   deviceType?: InputMaybe<DeviceType>;
+  freeDiskStorage?: InputMaybe<Scalars['String']['input']>;
+  hasDynamicIsland?: InputMaybe<Scalars['Boolean']['input']>;
+  hasNotch?: InputMaybe<Scalars['Boolean']['input']>;
+  hostNames?: InputMaybe<Scalars['JSON']['input']>;
+  instanceId?: InputMaybe<Scalars['String']['input']>;
   isActive?: InputMaybe<Scalars['Boolean']['input']>;
+  isAirplaneMode?: InputMaybe<Scalars['Boolean']['input']>;
+  isBatteryCharging?: InputMaybe<Scalars['Boolean']['input']>;
+  isBluetoothHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
+  isEmulator?: InputMaybe<Scalars['Boolean']['input']>;
+  isHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
+  isKeyboardConnected?: InputMaybe<Scalars['Boolean']['input']>;
+  isLocationEnabled?: InputMaybe<Scalars['Boolean']['input']>;
+  isMouseConnected?: InputMaybe<Scalars['Boolean']['input']>;
+  isTablet?: InputMaybe<Scalars['Boolean']['input']>;
   isTrusted?: InputMaybe<Scalars['Boolean']['input']>;
   isVerified?: InputMaybe<Scalars['Boolean']['input']>;
+  isWiredHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
   language?: InputMaybe<Scalars['String']['input']>;
   lastCity?: InputMaybe<Scalars['String']['input']>;
   lastCountry?: InputMaybe<Scalars['String']['input']>;
   lastIpAddress?: InputMaybe<Scalars['String']['input']>;
+  manufacturer?: InputMaybe<Scalars['String']['input']>;
+  maxMemory?: InputMaybe<Scalars['String']['input']>;
+  model?: InputMaybe<Scalars['String']['input']>;
   osName?: InputMaybe<Scalars['String']['input']>;
   osVersion?: InputMaybe<Scalars['String']['input']>;
   platform?: InputMaybe<MobilePlatform>;
+  powerState?: InputMaybe<Scalars['JSON']['input']>;
   pushToken?: InputMaybe<Scalars['String']['input']>;
+  readableVersion?: InputMaybe<Scalars['String']['input']>;
   screenResolution?: InputMaybe<Scalars['String']['input']>;
+  supportedAbis?: InputMaybe<Scalars['JSON']['input']>;
+  supportedMediaTypes?: InputMaybe<Scalars['JSON']['input']>;
+  systemVersion?: InputMaybe<Scalars['String']['input']>;
   timezone?: InputMaybe<Scalars['String']['input']>;
+  totalDiskCapacity?: InputMaybe<Scalars['String']['input']>;
+  totalMemory?: InputMaybe<Scalars['String']['input']>;
+  usedMemory?: InputMaybe<Scalars['String']['input']>;
   userAgent?: InputMaybe<Scalars['String']['input']>;
 };
 
@@ -5365,6 +5576,7 @@ export type User = {
   id: Scalars['ID']['output'];
   language: Maybe<Scalars['String']['output']>;
   lastActiveAt: Maybe<Scalars['DateTime']['output']>;
+  loginHistory: Array<LoginHistory>;
   moderation: Maybe<UserModeration>;
   onBoarded: Scalars['Boolean']['output'];
   preferredCurrency: Maybe<Scalars['String']['output']>;
@@ -5738,6 +5950,175 @@ export type ResendVerificationEmailMutationVariables = Exact<{
 export type ResendVerificationEmailMutation = {
   __typename?: 'Mutation';
   resendVerificationEmail: boolean;
+};
+
+export type GetMyDevicesQueryVariables = Exact<{
+  filters?: InputMaybe<DeviceFiltersInput>;
+}>;
+
+export type GetMyDevicesQuery = {
+  __typename?: 'Query';
+  myDevices: Array<{
+    __typename?: 'Device';
+    id: string;
+    deviceId: string;
+    deviceName: string | null | undefined;
+    deviceType: DeviceType;
+    platform: MobilePlatform | null | undefined;
+    osName: string | null | undefined;
+    osVersion: string | null | undefined;
+    appVersion: string | null | undefined;
+    userAgent: string | null | undefined;
+    browserName: string | null | undefined;
+    browserVersion: string | null | undefined;
+    screenResolution: string | null | undefined;
+    timezone: string | null | undefined;
+    language: string | null | undefined;
+    lastIpAddress: string | null | undefined;
+    lastCountry: string | null | undefined;
+    lastCity: string | null | undefined;
+    isActive: boolean;
+    isTrusted: boolean;
+    isVerified: boolean;
+    loginCount: number;
+    lastLoginAt: string | null | undefined;
+    lastSeenAt: string;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+};
+
+export type GetDeviceByDeviceIdQueryVariables = Exact<{
+  deviceId: Scalars['String']['input'];
+}>;
+
+export type GetDeviceByDeviceIdQuery = {
+  __typename?: 'Query';
+  deviceByDeviceId:
+    | {
+        __typename?: 'Device';
+        id: string;
+        deviceId: string;
+        deviceName: string | null | undefined;
+        deviceType: DeviceType;
+        platform: MobilePlatform | null | undefined;
+        isActive: boolean;
+        isTrusted: boolean;
+        isVerified: boolean;
+        lastSeenAt: string;
+        createdAt: string;
+      }
+    | null
+    | undefined;
+};
+
+export type RegisterDeviceMutationVariables = Exact<{
+  input: DeviceRegistrationInput;
+}>;
+
+export type RegisterDeviceMutation = {
+  __typename?: 'Mutation';
+  registerDevice: {
+    __typename?: 'Device';
+    id: string;
+    deviceId: string;
+    deviceName: string | null | undefined;
+    deviceType: DeviceType;
+    platform: MobilePlatform | null | undefined;
+    osName: string | null | undefined;
+    osVersion: string | null | undefined;
+    appVersion: string | null | undefined;
+    userAgent: string | null | undefined;
+    browserName: string | null | undefined;
+    browserVersion: string | null | undefined;
+    screenResolution: string | null | undefined;
+    timezone: string | null | undefined;
+    language: string | null | undefined;
+    isActive: boolean;
+    isTrusted: boolean;
+    isVerified: boolean;
+    createdAt: string;
+    updatedAt: string;
+  };
+};
+
+export type UpdateDeviceLastSeenMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type UpdateDeviceLastSeenMutation = {
+  __typename?: 'Mutation';
+  updateDeviceLastSeen: {
+    __typename?: 'Device';
+    id: string;
+    deviceId: string;
+    lastSeenAt: string;
+    updatedAt: string;
+  };
+};
+
+export type TrustDeviceMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type TrustDeviceMutation = {
+  __typename?: 'Mutation';
+  trustDevice: {
+    __typename?: 'Device';
+    id: string;
+    deviceId: string;
+    deviceName: string | null | undefined;
+    isTrusted: boolean;
+    updatedAt: string;
+  };
+};
+
+export type UntrustDeviceMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type UntrustDeviceMutation = {
+  __typename?: 'Mutation';
+  untrustDevice: {
+    __typename?: 'Device';
+    id: string;
+    deviceId: string;
+    deviceName: string | null | undefined;
+    isTrusted: boolean;
+    updatedAt: string;
+  };
+};
+
+export type VerifyDeviceMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type VerifyDeviceMutation = {
+  __typename?: 'Mutation';
+  verifyDevice: {
+    __typename?: 'Device';
+    id: string;
+    deviceId: string;
+    deviceName: string | null | undefined;
+    isVerified: boolean;
+    verifiedAt: string | null | undefined;
+  };
+};
+
+export type DeactivateDeviceMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type DeactivateDeviceMutation = {
+  __typename?: 'Mutation';
+  deactivateDevice: {
+    __typename?: 'Device';
+    id: string;
+    deviceId: string;
+    deviceName: string | null | undefined;
+    isActive: boolean;
+    updatedAt: string;
+  };
 };
 
 export type DeviceActivitySubscriptionVariables = Exact<{
@@ -13515,6 +13896,884 @@ export type ResendVerificationEmailMutationOptions =
   ApolloReactCommon.BaseMutationOptions<
     ResendVerificationEmailMutation,
     ResendVerificationEmailMutationVariables
+  >;
+export const GetMyDevicesDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'query',
+      name: { kind: 'Name', value: 'GetMyDevices' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'filters' },
+          },
+          type: {
+            kind: 'NamedType',
+            name: { kind: 'Name', value: 'DeviceFiltersInput' },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'myDevices' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'filters' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'filters' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'deviceId' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'deviceName' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'deviceType' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'platform' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'osName' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'osVersion' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'appVersion' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'userAgent' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'browserName' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'browserVersion' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'screenResolution' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'timezone' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'language' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'lastIpAddress' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'lastCountry' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lastCity' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'isActive' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'isTrusted' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'isVerified' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'loginCount' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lastLoginAt' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lastSeenAt' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+
+/**
+ * __useGetMyDevicesQuery__
+ *
+ * To run a query within a React component, call `useGetMyDevicesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetMyDevicesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetMyDevicesQuery({
+ *   variables: {
+ *      filters: // value for 'filters'
+ *   },
+ * });
+ */
+export function useGetMyDevicesQuery(
+  baseOptions?: ApolloReactHooks.QueryHookOptions<
+    GetMyDevicesQuery,
+    GetMyDevicesQueryVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useQuery<
+    GetMyDevicesQuery,
+    GetMyDevicesQueryVariables
+  >(GetMyDevicesDocument, options);
+}
+export function useGetMyDevicesLazyQuery(
+  baseOptions?: ApolloReactHooks.LazyQueryHookOptions<
+    GetMyDevicesQuery,
+    GetMyDevicesQueryVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useLazyQuery<
+    GetMyDevicesQuery,
+    GetMyDevicesQueryVariables
+  >(GetMyDevicesDocument, options);
+}
+export function useGetMyDevicesSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetMyDevicesQuery,
+        GetMyDevicesQueryVariables
+      >,
+) {
+  const options =
+    baseOptions === ApolloReactHooks.skipToken
+      ? baseOptions
+      : { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useSuspenseQuery<
+    GetMyDevicesQuery,
+    GetMyDevicesQueryVariables
+  >(GetMyDevicesDocument, options);
+}
+export type GetMyDevicesQueryHookResult = ReturnType<
+  typeof useGetMyDevicesQuery
+>;
+export type GetMyDevicesLazyQueryHookResult = ReturnType<
+  typeof useGetMyDevicesLazyQuery
+>;
+export type GetMyDevicesSuspenseQueryHookResult = ReturnType<
+  typeof useGetMyDevicesSuspenseQuery
+>;
+export type GetMyDevicesQueryResult = ApolloReactCommon.QueryResult<
+  GetMyDevicesQuery,
+  GetMyDevicesQueryVariables
+>;
+export function refetchGetMyDevicesQuery(
+  variables?: GetMyDevicesQueryVariables,
+) {
+  return { query: GetMyDevicesDocument, variables: variables };
+}
+export const GetDeviceByDeviceIdDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'query',
+      name: { kind: 'Name', value: 'GetDeviceByDeviceId' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'deviceId' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: {
+              kind: 'NamedType',
+              name: { kind: 'Name', value: 'String' },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'deviceByDeviceId' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'deviceId' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'deviceId' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'deviceId' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'deviceName' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'deviceType' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'platform' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'isActive' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'isTrusted' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'isVerified' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lastSeenAt' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+
+/**
+ * __useGetDeviceByDeviceIdQuery__
+ *
+ * To run a query within a React component, call `useGetDeviceByDeviceIdQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetDeviceByDeviceIdQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetDeviceByDeviceIdQuery({
+ *   variables: {
+ *      deviceId: // value for 'deviceId'
+ *   },
+ * });
+ */
+export function useGetDeviceByDeviceIdQuery(
+  baseOptions: ApolloReactHooks.QueryHookOptions<
+    GetDeviceByDeviceIdQuery,
+    GetDeviceByDeviceIdQueryVariables
+  > &
+    (
+      | { variables: GetDeviceByDeviceIdQueryVariables; skip?: boolean }
+      | { skip: boolean }
+    ),
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useQuery<
+    GetDeviceByDeviceIdQuery,
+    GetDeviceByDeviceIdQueryVariables
+  >(GetDeviceByDeviceIdDocument, options);
+}
+export function useGetDeviceByDeviceIdLazyQuery(
+  baseOptions?: ApolloReactHooks.LazyQueryHookOptions<
+    GetDeviceByDeviceIdQuery,
+    GetDeviceByDeviceIdQueryVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useLazyQuery<
+    GetDeviceByDeviceIdQuery,
+    GetDeviceByDeviceIdQueryVariables
+  >(GetDeviceByDeviceIdDocument, options);
+}
+export function useGetDeviceByDeviceIdSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetDeviceByDeviceIdQuery,
+        GetDeviceByDeviceIdQueryVariables
+      >,
+) {
+  const options =
+    baseOptions === ApolloReactHooks.skipToken
+      ? baseOptions
+      : { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useSuspenseQuery<
+    GetDeviceByDeviceIdQuery,
+    GetDeviceByDeviceIdQueryVariables
+  >(GetDeviceByDeviceIdDocument, options);
+}
+export type GetDeviceByDeviceIdQueryHookResult = ReturnType<
+  typeof useGetDeviceByDeviceIdQuery
+>;
+export type GetDeviceByDeviceIdLazyQueryHookResult = ReturnType<
+  typeof useGetDeviceByDeviceIdLazyQuery
+>;
+export type GetDeviceByDeviceIdSuspenseQueryHookResult = ReturnType<
+  typeof useGetDeviceByDeviceIdSuspenseQuery
+>;
+export type GetDeviceByDeviceIdQueryResult = ApolloReactCommon.QueryResult<
+  GetDeviceByDeviceIdQuery,
+  GetDeviceByDeviceIdQueryVariables
+>;
+export function refetchGetDeviceByDeviceIdQuery(
+  variables: GetDeviceByDeviceIdQueryVariables,
+) {
+  return { query: GetDeviceByDeviceIdDocument, variables: variables };
+}
+export const RegisterDeviceDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'RegisterDevice' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'input' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: {
+              kind: 'NamedType',
+              name: { kind: 'Name', value: 'DeviceRegistrationInput' },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'registerDevice' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'input' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'input' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'deviceId' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'deviceName' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'deviceType' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'platform' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'osName' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'osVersion' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'appVersion' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'userAgent' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'browserName' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'browserVersion' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'screenResolution' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'timezone' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'language' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'isActive' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'isTrusted' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'isVerified' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type RegisterDeviceMutationFn = ApolloReactCommon.MutationFunction<
+  RegisterDeviceMutation,
+  RegisterDeviceMutationVariables
+>;
+
+/**
+ * __useRegisterDeviceMutation__
+ *
+ * To run a mutation, you first call `useRegisterDeviceMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useRegisterDeviceMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [registerDeviceMutation, { data, loading, error }] = useRegisterDeviceMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useRegisterDeviceMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    RegisterDeviceMutation,
+    RegisterDeviceMutationVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useMutation<
+    RegisterDeviceMutation,
+    RegisterDeviceMutationVariables
+  >(RegisterDeviceDocument, options);
+}
+export type RegisterDeviceMutationHookResult = ReturnType<
+  typeof useRegisterDeviceMutation
+>;
+export type RegisterDeviceMutationResult =
+  ApolloReactCommon.MutationResult<RegisterDeviceMutation>;
+export type RegisterDeviceMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    RegisterDeviceMutation,
+    RegisterDeviceMutationVariables
+  >;
+export const UpdateDeviceLastSeenDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'UpdateDeviceLastSeen' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: { kind: 'Variable', name: { kind: 'Name', value: 'id' } },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'updateDeviceLastSeen' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'id' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'id' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'deviceId' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'lastSeenAt' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type UpdateDeviceLastSeenMutationFn = ApolloReactCommon.MutationFunction<
+  UpdateDeviceLastSeenMutation,
+  UpdateDeviceLastSeenMutationVariables
+>;
+
+/**
+ * __useUpdateDeviceLastSeenMutation__
+ *
+ * To run a mutation, you first call `useUpdateDeviceLastSeenMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateDeviceLastSeenMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateDeviceLastSeenMutation, { data, loading, error }] = useUpdateDeviceLastSeenMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useUpdateDeviceLastSeenMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    UpdateDeviceLastSeenMutation,
+    UpdateDeviceLastSeenMutationVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useMutation<
+    UpdateDeviceLastSeenMutation,
+    UpdateDeviceLastSeenMutationVariables
+  >(UpdateDeviceLastSeenDocument, options);
+}
+export type UpdateDeviceLastSeenMutationHookResult = ReturnType<
+  typeof useUpdateDeviceLastSeenMutation
+>;
+export type UpdateDeviceLastSeenMutationResult =
+  ApolloReactCommon.MutationResult<UpdateDeviceLastSeenMutation>;
+export type UpdateDeviceLastSeenMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    UpdateDeviceLastSeenMutation,
+    UpdateDeviceLastSeenMutationVariables
+  >;
+export const TrustDeviceDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'TrustDevice' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: { kind: 'Variable', name: { kind: 'Name', value: 'id' } },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'trustDevice' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'id' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'id' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'deviceId' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'deviceName' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'isTrusted' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type TrustDeviceMutationFn = ApolloReactCommon.MutationFunction<
+  TrustDeviceMutation,
+  TrustDeviceMutationVariables
+>;
+
+/**
+ * __useTrustDeviceMutation__
+ *
+ * To run a mutation, you first call `useTrustDeviceMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useTrustDeviceMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [trustDeviceMutation, { data, loading, error }] = useTrustDeviceMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useTrustDeviceMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    TrustDeviceMutation,
+    TrustDeviceMutationVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useMutation<
+    TrustDeviceMutation,
+    TrustDeviceMutationVariables
+  >(TrustDeviceDocument, options);
+}
+export type TrustDeviceMutationHookResult = ReturnType<
+  typeof useTrustDeviceMutation
+>;
+export type TrustDeviceMutationResult =
+  ApolloReactCommon.MutationResult<TrustDeviceMutation>;
+export type TrustDeviceMutationOptions = ApolloReactCommon.BaseMutationOptions<
+  TrustDeviceMutation,
+  TrustDeviceMutationVariables
+>;
+export const UntrustDeviceDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'UntrustDevice' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: { kind: 'Variable', name: { kind: 'Name', value: 'id' } },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'untrustDevice' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'id' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'id' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'deviceId' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'deviceName' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'isTrusted' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type UntrustDeviceMutationFn = ApolloReactCommon.MutationFunction<
+  UntrustDeviceMutation,
+  UntrustDeviceMutationVariables
+>;
+
+/**
+ * __useUntrustDeviceMutation__
+ *
+ * To run a mutation, you first call `useUntrustDeviceMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUntrustDeviceMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [untrustDeviceMutation, { data, loading, error }] = useUntrustDeviceMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useUntrustDeviceMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    UntrustDeviceMutation,
+    UntrustDeviceMutationVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useMutation<
+    UntrustDeviceMutation,
+    UntrustDeviceMutationVariables
+  >(UntrustDeviceDocument, options);
+}
+export type UntrustDeviceMutationHookResult = ReturnType<
+  typeof useUntrustDeviceMutation
+>;
+export type UntrustDeviceMutationResult =
+  ApolloReactCommon.MutationResult<UntrustDeviceMutation>;
+export type UntrustDeviceMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    UntrustDeviceMutation,
+    UntrustDeviceMutationVariables
+  >;
+export const VerifyDeviceDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'VerifyDevice' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: { kind: 'Variable', name: { kind: 'Name', value: 'id' } },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'verifyDevice' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'id' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'id' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'deviceId' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'deviceName' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'isVerified' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'verifiedAt' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type VerifyDeviceMutationFn = ApolloReactCommon.MutationFunction<
+  VerifyDeviceMutation,
+  VerifyDeviceMutationVariables
+>;
+
+/**
+ * __useVerifyDeviceMutation__
+ *
+ * To run a mutation, you first call `useVerifyDeviceMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useVerifyDeviceMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [verifyDeviceMutation, { data, loading, error }] = useVerifyDeviceMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useVerifyDeviceMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    VerifyDeviceMutation,
+    VerifyDeviceMutationVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useMutation<
+    VerifyDeviceMutation,
+    VerifyDeviceMutationVariables
+  >(VerifyDeviceDocument, options);
+}
+export type VerifyDeviceMutationHookResult = ReturnType<
+  typeof useVerifyDeviceMutation
+>;
+export type VerifyDeviceMutationResult =
+  ApolloReactCommon.MutationResult<VerifyDeviceMutation>;
+export type VerifyDeviceMutationOptions = ApolloReactCommon.BaseMutationOptions<
+  VerifyDeviceMutation,
+  VerifyDeviceMutationVariables
+>;
+export const DeactivateDeviceDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'DeactivateDevice' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: { kind: 'Variable', name: { kind: 'Name', value: 'id' } },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'deactivateDevice' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'id' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'id' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'deviceId' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'deviceName' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'isActive' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type DeactivateDeviceMutationFn = ApolloReactCommon.MutationFunction<
+  DeactivateDeviceMutation,
+  DeactivateDeviceMutationVariables
+>;
+
+/**
+ * __useDeactivateDeviceMutation__
+ *
+ * To run a mutation, you first call `useDeactivateDeviceMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeactivateDeviceMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deactivateDeviceMutation, { data, loading, error }] = useDeactivateDeviceMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeactivateDeviceMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    DeactivateDeviceMutation,
+    DeactivateDeviceMutationVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useMutation<
+    DeactivateDeviceMutation,
+    DeactivateDeviceMutationVariables
+  >(DeactivateDeviceDocument, options);
+}
+export type DeactivateDeviceMutationHookResult = ReturnType<
+  typeof useDeactivateDeviceMutation
+>;
+export type DeactivateDeviceMutationResult =
+  ApolloReactCommon.MutationResult<DeactivateDeviceMutation>;
+export type DeactivateDeviceMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    DeactivateDeviceMutation,
+    DeactivateDeviceMutationVariables
   >;
 export const DeviceActivityDocument = {
   kind: 'Document',
