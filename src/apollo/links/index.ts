@@ -5,17 +5,16 @@ import { createConsoleLink } from './consoleLink';
 import { createTelemetryLink } from './telemetryLink';
 import { errorLink } from './errorLink';
 import { httpLink } from './httpLink';
-import { batchLink } from './batchLink';
 import { wsLink } from './wsLink';
 import { retryLink } from './retryLink';
 import { deduplicationLink } from './deduplicationLink';
 
-// HTTP transport with retry and batching (re-enabled for performance)
-const httpTransport = retryLink.concat(__DEV__ ? httpLink : batchLink);
+// HTTP transport with retry (batching disabled until server supports it)
+const httpTransport = retryLink.concat(httpLink);
 
 // Transport link routing:
 // • Subscriptions → WebSocket
-// • All other operations → HTTP with retry + batching (production) or regular HTTP (dev)
+// • All other operations → HTTP with retry
 const transportLink = ApolloLink.split(
   ({ query }) => {
     const def = getMainDefinition(query);
