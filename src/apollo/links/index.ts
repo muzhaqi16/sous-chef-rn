@@ -2,6 +2,7 @@ import { ApolloLink } from '@apollo/client';
 import { getMainDefinition } from '@apollo/client/utilities';
 import { authLink } from './authLink';
 import { createConsoleLink } from './consoleLink';
+import { createTelemetryLink } from './telemetryLink';
 import { errorLink } from './errorLink';
 import { httpLink } from './httpLink';
 import { batchLink } from './batchLink';
@@ -36,9 +37,13 @@ const consoleLink = createConsoleLink({
   slowQueryThreshold: 1000,
 });
 
+// Telemetry link for tracking GraphQL operations
+const telemetryLink = createTelemetryLink();
+
 // Simplified link chain
 export const link = ApolloLink.from([
   deduplicationLink,
+  telemetryLink,
   errorLink,
   authLink,
   consoleLink,

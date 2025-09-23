@@ -1,6 +1,7 @@
 import React, { Component, ReactNode } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Telemetry } from '#/services/telemetry';
 
 interface ErrorBoundaryState {
   hasError: boolean;
@@ -89,8 +90,14 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   }
 
   private reportError = (error: Error, errorInfo: React.ErrorInfo) => {
-    // TODO: Integrate with error reporting service (Sentry, Bugsnag, etc.)
-    console.log('Would report error to service:', {
+    Telemetry.trackError(error, {
+      component_stack: errorInfo.componentStack,
+      error_boundary_context: this.props.context,
+      is_fatal: true,
+      error_source: 'react_error_boundary',
+    });
+
+    console.log('Error reported to telemetry:', {
       error: error.message,
       stack: error.stack,
       context: this.props.context,
@@ -132,7 +139,7 @@ export const NavigationErrorBoundary: React.FC<{ children: ReactNode }> = ({ chi
     context="Navigation"
     onError={(error, _errorInfo) => {
       console.error('Navigation error:', error);
-      // Could trigger navigation reset or fallback navigation
+      Telemetry.increment('navigation_errors_total', 1);
     }}
     fallback={(error, retry) => (
       <DefaultErrorFallback
@@ -151,7 +158,7 @@ export const AuthErrorBoundary: React.FC<{ children: ReactNode }> = ({ children 
     context="Authentication"
     onError={(error, _errorInfo) => {
       console.error('Auth error:', error);
-      // Could trigger logout or auth reset
+      Telemetry.increment('auth_errors_total', 1);
     }}
     fallback={(error, retry) => (
       <DefaultErrorFallback
@@ -170,7 +177,7 @@ export const AppErrorBoundary: React.FC<{ children: ReactNode }> = ({ children }
     context="Application"
     onError={(error, _errorInfo) => {
       console.error('App-level error:', error);
-      // Could trigger app restart or reset
+      Telemetry.increment('app_level_errors_total', 1);
     }}
   >
     {children}
@@ -182,12 +189,11 @@ export const useErrorHandler = () => {
   return React.useCallback((error: Error, context?: string) => {
     console.error(`Error in ${context || 'unknown context'}:`, error);
 
-    // In a real app, you might want to show a toast or modal
-    // For now, we'll just log it
-    if (!__DEV__) {
-      // Report to error service
-      console.log('Would report error:', { error: error.message, context });
-    }
+    Telemetry.trackError(error, {
+      error_handler_context: context,
+      error_source: 'use_error_handler',
+      is_fatal: false,
+    });
   }, []);
 };
 

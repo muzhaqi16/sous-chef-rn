@@ -30,6 +30,10 @@ import {
   createNavigationSlice,
   NavigationState,
 } from './slices/navigationSlice';
+import {
+  createTelemetrySlice,
+  TelemetryState,
+} from './slices/telemetrySlice';
 // import {logger} from './logger';
 import { zustandStorage, STORAGE_KEY } from '#/storage/mmkv';
 
@@ -58,6 +62,7 @@ export type RootState = AuthState &
   NotificationState &
   BarcodeScannerState &
   UIState &
+  TelemetryState &
   ResetManagerState &
   NavigationStateManagerState;
 
@@ -101,6 +106,7 @@ export const useStore = create<RootState>()(
             ...createBarcodeScannerSlice(set, get, store),
             ...createNotificationSlice(set, get, store),
             ...createUISlice(set, get, store),
+            ...createTelemetrySlice(set, get, store),
             // Add reset manager methods to the store
             ...resetManager,
             // Add navigation state manager methods
