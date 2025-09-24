@@ -156,6 +156,10 @@ const clearAuthFromStorage = async () => {
   try {
     console.log('Clearing auth tokens from storage');
 
+    // Note: We intentionally do NOT clear keychain credentials during logout
+    // This allows users to use biometric login after logging out
+    // Keychain credentials are only cleared during full reset or explicit user action
+
     // Clear individual auth-related keys
     storage.delete('accessToken');
     storage.delete('refreshToken');

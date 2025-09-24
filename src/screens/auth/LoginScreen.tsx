@@ -1,130 +1,76 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, TouchableOpacity, Text } from 'react-native';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
+import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { AuthFormTemplate, AuthWrapper } from '#components/templates';
 import { EmailInput, PasswordInput } from '#components/atoms';
 import { getLoginValidationSchema } from '#/utils';
-import { useStore } from '#store';
 import { type LoginInput } from '#generated';
 import { useAuth, useAuthNavigation } from '#hooks';
-import { useAuthFlowContext } from '#/components/providers/AuthFlowProvider';
-import { getEmailOnly } from '#/storage/keychain';
-
-const obscureEmail = (email: string): string => {
-  if (!email || !email.includes('@')) return email;
-  const [localPart, domain] = email.split('@');
-  const visibleChars = Math.min(2, Math.floor(localPart.length / 3));
-  const obscured =
-    localPart.substring(0, visibleChars) +
-    '***' +
-    localPart.substring(Math.max(localPart.length - 1, visibleChars));
-  return `${obscured}@${domain}`;
-};
 
 export function LoginScreen() {
-  const { theme } = useUnistyles();
-  const { hasStoredCredentials } = useStore();
-
-  const [savedEmail, setSavedEmail] = useState<string>('');
-  const [userHasTypedManually, setUserHasTypedManually] = useState(false);
-
   const { navigateToForgotPassword, navigateToSignUp } = useAuthNavigation();
-  const { loginFlow } = useAuthFlowContext();
   const {
-    loadStoredCredentials,
-    isLoadingCredentials,
-    handleAuthError,
     login,
+    handleAuthError,
     isLoading: isLoggingIn,
+    checkStoredCredentials,
+    loadStoredCredentials
   } = useAuth();
 
+  const [hasStoredCreds, setHasStoredCreds] = useState(false);
+  const [isBiometricLoading, setIsBiometricLoading] = useState(false);
+
+  // Check for stored credentials on mount
+  useEffect(() => {
+    const checkCreds = async () => {
+      try {
+        const hasCredentials = await checkStoredCredentials();
+        setHasStoredCreds(hasCredentials);
+      } catch (error) {
+        console.error('Error checking stored credentials:', error);
+        setHasStoredCreds(false);
+      }
+    };
+
+    checkCreds();
+  }, [checkStoredCredentials]);
 
   const form = useForm<LoginInput>({
     resolver: yupResolver(getLoginValidationSchema()),
     defaultValues: { email: '', password: '' },
   });
 
-  // Load saved email only when user explicitly requests biometric auth
-  // Removed automatic loading to prevent unwanted biometric prompts
-
-  // Detect manual typing to disable biometric authentication
-  useEffect(() => {
-    const subscription = form.watch(data => {
-      // If user changes email field from the obscured version, they're typing manually
-      if (
-        data.email &&
-        savedEmail &&
-        !data.email.includes('***') &&
-        data.email !== obscureEmail(savedEmail)
-      ) {
-        setUserHasTypedManually(true);
-      }
-      // If user types anything in password field, they're doing manual login
-      if (data.password && data.password.length > 0) {
-        setUserHasTypedManually(true);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [form, savedEmail]);
-
-  // Biometric authentication
-  const authenticateWithBiometric = useCallback(async () => {
-    if (isLoadingCredentials || userHasTypedManually) return;
-
-    try {
-      const credentials = await loadStoredCredentials();
-      if (!credentials) return;
-
-      // Load and display email for user confirmation before login
-      try {
-        const email = await getEmailOnly();
-        if (email) {
-          setSavedEmail(email);
-          form.setValue('email', obscureEmail(email));
-        }
-      } catch (emailError) {
-        // If email loading fails, continue with login using credentials
-        console.warn('Could not load saved email:', emailError);
-      }
-
-      // Use the consolidated login function for biometric login
-      await login(
-        {
-          email: credentials.email,
-          password: credentials.password,
-        },
-        true,
-      ); // rememberMe = true for biometric login
-    } catch (error: any) {
-      handleAuthError(error, 'Biometric authentication failed');
-    }
-  }, [
-    loadStoredCredentials,
-    login,
-    handleAuthError,
-    isLoadingCredentials,
-    userHasTypedManually,
-    form,
-  ]);
-
-
-  // Form submission
+  // Simple form submission - directly use login with default rememberMe=true
   const onSubmit = async (input: LoginInput) => {
     try {
-      // Determine if this is truly manual input (not using saved credentials)
-      const isUsingObscuredEmail = input.email.includes('***');
-      const actualEmail =
-        isUsingObscuredEmail && savedEmail ? savedEmail : input.email;
-
-      // Use centralized auth flow - handles auth + remember me modal automatically
-      await loginFlow({ ...input, email: actualEmail });
+      await login(input); // Uses default rememberMe=true
     } catch (err: any) {
       handleAuthError(err, 'Login failed. Please try again.');
+    }
+  };
+
+  // Biometric authentication handler
+  const handleBiometricLogin = async () => {
+    if (isBiometricLoading) return;
+
+    try {
+      setIsBiometricLoading(true);
+      const credentials = await loadStoredCredentials();
+
+      if (credentials) {
+        await login({
+          email: credentials.email,
+          password: credentials.password
+        });
+      }
+    } catch (error: any) {
+      handleAuthError(error, 'Biometric authentication failed');
+    } finally {
+      setIsBiometricLoading(false);
     }
   };
 
@@ -162,25 +108,25 @@ export function LoginScreen() {
         isLoading={isLoggingIn}
       />
 
-      {/* Biometric Authentication Bar */}
-      {hasStoredCredentials && !userHasTypedManually && (
-        <View style={styles.credentialBar}>
-          <View style={styles.credentialInfo}>
-            <Icon name="lock" size={20} color={theme.colors.textSecondary} />
-            <Text style={styles.credentialText}>
-              Tap to use saved credentials
-            </Text>
-          </View>
+      {/* Biometric Authentication Button */}
+      {hasStoredCreds && (
+        <View style={styles.biometricContainer}>
           <TouchableOpacity
-            style={styles.authButton}
-            onPress={authenticateWithBiometric}
-            disabled={isLoadingCredentials}
+            style={styles.biometricButton}
+            onPress={handleBiometricLogin}
+            disabled={isBiometricLoading || isLoggingIn}
           >
             <Icon
               name="fingerprint"
-              size={26}
-              color={theme.colors.textSecondary}
+              size={24}
+              color={isBiometricLoading ? '#999' : '#007AFF'}
             />
+            <Text style={[
+              styles.biometricText,
+              (isBiometricLoading || isLoggingIn) && styles.biometricTextDisabled
+            ]}>
+              {isBiometricLoading ? 'Authenticating...' : 'Use Biometric Login'}
+            </Text>
           </TouchableOpacity>
         </View>
       )}
@@ -189,55 +135,27 @@ export function LoginScreen() {
 }
 
 const styles = StyleSheet.create(theme => ({
-  credentialBar: {
+  biometricContainer: {
+    marginTop: theme.spacing.lg,
+    alignItems: 'center',
+  },
+  biometricButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
     backgroundColor: theme.colors.surface,
-    marginBottom: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: theme.spacing.sm,
     borderWidth: 1,
     borderColor: theme.colors.border,
+    gap: theme.spacing.sm,
   },
-  credentialBarPlaceholder: {
-    backgroundColor: 'transparent',
-    borderColor: 'transparent',
-    opacity: 0, // Make completely invisible while preserving layout
-  },
-  credentialInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  credentialText: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-    marginLeft: 8,
-  },
-  authButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: theme.colors.primary + '15',
-    borderRadius: 16,
-    gap: 4,
-  },
-  authButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
+  biometricText: {
+    fontSize: theme.fonts.size.md,
     color: theme.colors.primary,
+    fontWeight: '500',
   },
-  authButtonTextDisabled: {
+  biometricTextDisabled: {
     color: theme.colors.textSecondary,
-  },
-  credentialActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  clearButton: {
-    padding: 6,
   },
 }));

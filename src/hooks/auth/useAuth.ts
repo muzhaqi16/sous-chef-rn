@@ -28,6 +28,7 @@ export const useAuth = () => {
   const accessToken = useStore(state => state.accessToken);
   const refreshToken = useStore(state => state.refreshToken);
   const isLoggingOut = useStore(state => state.isLoggingOut);
+  const isAutoLoggingIn = useStore(state => state.isAutoLoggingIn);
   const setAuth = useStore(state => state.setAuth);
   const clearAuth = useStore(state => state.clearAuth);
   const setTokens = useStore(state => state.setTokens);
@@ -35,6 +36,7 @@ export const useAuth = () => {
   const setEmailVerified = useStore(state => state.setEmailVerified);
   const setOnboarded = useStore(state => state.setOnboarded);
   const setRememberMe = useStore(state => state.setRememberMe);
+  const setIsAutoLoggingIn = useStore(state => state.setIsAutoLoggingIn);
   const setUserNavigationState = useStore(
     state => state.setUserNavigationState,
   );
@@ -210,61 +212,79 @@ export const useAuth = () => {
     [setAuth, setRememberMe, setUserNavigationState, handleAuthSuccess, registerDeviceInBackground],
   );
 
-  // Auth mutation that returns auth data without setting auth state
-  const authenticateUser = useCallback(
-    async (input: LoginInput): Promise<any | null> => {
-      try {
-        setIsLoading(true);
-        const result = await loginMutation({ variables: { input } });
 
-        if (result.data?.login) {
-          return result.data.login;
-        }
+  // Auto-login functionality
+  const autoLogin = useCallback(async (): Promise<boolean> => {
+    try {
+      setIsAutoLoggingIn(true);
 
-        // Check for GraphQL errors in result
-        if (result.error) {
-          throw result.error;
-        }
-
-        return null;
-      } catch (error) {
-        throw error; // Let calling function handle error display
-      } finally {
-        setIsLoading(false);
+      // Check if we have stored credentials
+      const hasStoredCreds = await checkStoredCredentials();
+      if (!hasStoredCreds) {
+        logger.info('No stored credentials found for auto-login');
+        return false;
       }
-    },
-    [loginMutation],
-  );
 
-  // Register mutation that returns auth data without setting auth state
-  const registerUser = useCallback(
-    async (input: RegisterInput): Promise<any | null> => {
-      try {
-        setIsLoading(true);
-        const result = await registerMutation({ variables: { input } });
-
-        if (result.data?.register) {
-          return result.data.register;
-        }
-
-        // Check for GraphQL errors in result
-        if (result.error) {
-          throw result.error;
-        }
-
-        return null;
-      } catch (error) {
-        throw error; // Let calling function handle error display
-      } finally {
-        setIsLoading(false);
+      // Load stored credentials
+      const credentials = await loadStoredCredentials();
+      if (!credentials) {
+        logger.info('Failed to load stored credentials');
+        return false;
       }
-    },
-    [registerMutation],
-  );
+
+      // Attempt login with stored credentials
+      logger.info('Attempting auto-login with stored credentials');
+      const result = await loginMutation({
+        variables: {
+          input: {
+            email: credentials.email,
+            password: credentials.password
+          }
+        }
+      });
+
+      if (result.data?.login) {
+        await handleLogin(result.data.login, true); // Always remember for auto-login
+        logger.info('Auto-login successful');
+        return true;
+      }
+
+      // If login failed, clear bad credentials
+      if (result.error) {
+        logger.warn('Auto-login failed, clearing stored credentials');
+        await removeCredentials();
+        handleAuthError(result.error, 'Auto-login');
+      }
+
+      return false;
+    } catch (error) {
+      // Log but don't show error to user for auto-login
+      logger.error('Auto-login error:', error);
+
+      // Clear potentially corrupted credentials
+      try {
+        await removeCredentials();
+      } catch (cleanupError) {
+        logger.error('Failed to cleanup credentials after auto-login error:', cleanupError);
+      }
+
+      return false;
+    } finally {
+      setIsAutoLoggingIn(false);
+    }
+  }, [
+    setIsAutoLoggingIn,
+    checkStoredCredentials,
+    loadStoredCredentials,
+    loginMutation,
+    handleLogin,
+    handleAuthError,
+    removeCredentials,
+  ]);
 
   // Auth mutations
   const login = useCallback(
-    async (input: LoginInput, rememberMe = false): Promise<boolean> => {
+    async (input: LoginInput, rememberMe = true): Promise<boolean> => {
       try {
         setIsLoading(true);
         const result = await loginMutation({ variables: { input } });
@@ -297,7 +317,7 @@ export const useAuth = () => {
   );
 
   const register = useCallback(
-    async (input: RegisterInput, rememberMe = false): Promise<boolean> => {
+    async (input: RegisterInput, rememberMe = true): Promise<boolean> => {
       try {
         setIsLoading(true);
         const result = await registerMutation({ variables: { input } });
@@ -345,6 +365,7 @@ export const useAuth = () => {
     refreshToken,
     isAuthenticated,
     isLoggingOut,
+    isAutoLoggingIn,
     hasAnyToken,
     isLoggedOut,
     isTokenRefreshing,
@@ -356,12 +377,14 @@ export const useAuth = () => {
     login,
     register,
     logout,
+    autoLogin,
     setAuth,
     clearAuth,
     setTokens,
     updateUser,
     setEmailVerified,
     setOnboarded,
+    setIsAutoLoggingIn,
 
     // Credential management
     checkStoredCredentials,
@@ -375,8 +398,5 @@ export const useAuth = () => {
     handleAuthSuccess,
     handleAuthError,
 
-    // Auth without immediate state setting
-    authenticateUser,
-    registerUser,
   };
 };

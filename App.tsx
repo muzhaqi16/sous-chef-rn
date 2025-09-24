@@ -12,7 +12,6 @@ import { Navigation } from '#/navigation';
 import { hasCredentials } from '#storage/keychain';
 import { SplashScreen } from '#screens';
 import { ToastProvider } from '#/components/atoms';
-import { AuthFlowProvider } from '#/components/providers/AuthFlowProvider';
 import { useTheme } from '#/hooks/useTheme';
 import { Telemetry } from '#/services/telemetry';
 import { AppErrorBoundary } from '#/components/providers/ErrorBoundary';
@@ -27,6 +26,7 @@ const App = () => {
 
   useEffect(() => {
     if (isHydrated) {
+      // Check for stored credentials
       hasCredentials().then(setHasStoredCredentials);
 
       // Initialize telemetry service
@@ -72,11 +72,9 @@ const App = () => {
             />
             <SafeAreaView style={styles.container}>
               <ToastProvider>
-                <AuthFlowProvider>
-                  <BottomSheetModalProvider>
-                    <Navigation />
-                  </BottomSheetModalProvider>
-                </AuthFlowProvider>
+                <BottomSheetModalProvider>
+                  <Navigation />
+                </BottomSheetModalProvider>
               </ToastProvider>
             </SafeAreaView>
           </SafeAreaProvider>

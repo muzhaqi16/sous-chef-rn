@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useStore } from '#store';
 import { useAuthState } from '#hooks/navigation/useAuthState';
+import { useAuth } from '#hooks/auth/useAuth';
+import { SplashScreen } from '#screens';
 import {
   AuthStack,
   OnboardingStack,
@@ -37,12 +39,58 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function RootNavigator() {
-  const { isHydrated } = useStore();
+  const { isHydrated, isLoggingOut } = useStore();
   const authState = useAuthState();
+  const { autoLogin, isAutoLoggingIn, setIsAutoLoggingIn } = useAuth();
+
+  // Track when user was previously authenticated to detect logout
+  const wasAuthenticated = useRef(false);
+  const hasInitialized = useRef(false);
+  const autoLoginAttempted = useRef(false);
+
+  // Force reset broken auto-login state on component mount
+  useEffect(() => {
+    if (!hasInitialized.current && isHydrated && !authState.user && isAutoLoggingIn) {
+      console.log('🔧 Fixing broken auto-login state on mount');
+      setIsAutoLoggingIn(false);
+    }
+    hasInitialized.current = true;
+  }, [isHydrated, authState.user, isAutoLoggingIn, setIsAutoLoggingIn]);
+
+  // Auto-login effect - runs after store hydration, but not after logout
+  useEffect(() => {
+    if (authState.user) {
+      wasAuthenticated.current = true; // Mark that user was authenticated
+    }
+
+    if (isHydrated && !authState.user && !isAutoLoggingIn && hasInitialized.current && !autoLoginAttempted.current) {
+      if (!wasAuthenticated.current) {
+        // Fresh app load - attempt auto-login only once
+        console.log('🔄 Fresh app load - attempting auto-login');
+        autoLoginAttempted.current = true; // Prevent future attempts
+        autoLogin();
+      } else {
+        // User logged out - don't auto-login, just show auth screens
+        console.log('🚪 User logged out - showing auth screens');
+      }
+    }
+  }, [isHydrated, authState.user, autoLogin, isAutoLoggingIn, setIsAutoLoggingIn]);
+
+  // Debug: Log current state during logout scenarios
+  console.log('🔍 RootNavigator state:', {
+    isHydrated,
+    isAutoLoggingIn,
+    isLoggingOut,
+    hasUser: !!authState.user,
+    isUnauthenticated: authState.isUnauthenticated,
+    isFullyAuthenticated: authState.isFullyAuthenticated
+  });
 
   // Don't render navigation until store is hydrated
-  if (!isHydrated) {
-    return null;
+  // Only show splash during active auto-login attempt, not after it's done
+  if (!isHydrated || (isAutoLoggingIn && !wasAuthenticated.current && !autoLoginAttempted.current)) {
+    console.log('⏳ Showing splash - hydrated:', isHydrated, 'autoLogging:', isAutoLoggingIn, 'wasAuth:', wasAuthenticated.current, 'attempted:', autoLoginAttempted.current);
+    return <SplashScreen />;
   }
 
   return (

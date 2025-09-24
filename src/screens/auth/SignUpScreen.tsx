@@ -8,15 +8,12 @@ import { EmailInput, PasswordInput, BaseInput } from '#components/atoms';
 import { getSignUpValidationSchema } from '#/utils';
 import { type RegisterInput } from '#generated';
 import { useAuth, useAuthNavigation } from '#hooks';
-import { useAuthFlowContext } from '#/components/providers/AuthFlowProvider';
 
 type SignUpValues = RegisterInput & { confirmPassword: string; name: string };
 
 export const SignUpScreen = () => {
   const navigation = useNavigation();
-  const { handleAuthError, isLoading: isRegistering } = useAuth();
-
-  const { registerFlow } = useAuthFlowContext();
+  const { register, handleAuthError, isLoading: isRegistering } = useAuth();
   const { navigateToLogin } = useAuthNavigation();
 
   const form = useForm<SignUpValues>({
@@ -34,8 +31,7 @@ export const SignUpScreen = () => {
     const input: RegisterInput = { name, email, password };
 
     try {
-      // Use centralized auth flow - handles auth + remember me modal automatically
-      await registerFlow(input);
+      await register(input); // Uses default rememberMe=true
     } catch (err: any) {
       handleAuthError(err, 'Registration failed. Please try again.');
     }

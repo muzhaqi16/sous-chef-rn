@@ -22,31 +22,25 @@ export async function saveCredentials(
   service: string = DEFAULT_SERVICE,
 ): Promise<void> {
   return queueOperation(async () => {
-    // Import biometric manager
-    const { BiometricManager } = await import('#/utils/security/biometricFallback');
-
-    // First, clear any old, unprotected creds:
+    // Clear any old credentials first
     await Keychain.resetGenericPassword({ service });
     await Keychain.resetGenericPassword({
       service: CREDENTIALS_INDICATOR_SERVICE,
     });
 
-    // Try to save with biometric fallback strategy
-    const saveResult = await BiometricManager.saveCredentialsWithFallback(
+    // Save credentials with biometric access control - triggers biometric prompt ONLY on retrieval
+    const result = await Keychain.setGenericPassword(username, password, {
       service,
-      username,
-      password,
-      {
-        allowDevicePasscode: true,
-        fallbackToPassword: true,
-      }
-    );
+      accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED,
+      accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_CURRENT_SET_OR_DEVICE_PASSCODE,
+      storage: Keychain.STORAGE_TYPE.RSA, // Required for Android biometric support
+    });
 
-    if (!saveResult.success) {
-      throw new Error(`Keychain couldn't save credentials: ${saveResult.error}`);
+    if (!result) {
+      throw new Error('Failed to save credentials to keychain');
     }
 
-    console.log(`Credentials saved using ${saveResult.method} method`);
+    console.log('Credentials saved to keychain with biometric access control');
 
     // Save an unprotected indicator that credentials exist
     // This allows us to check if credentials exist without triggering biometric authentication
@@ -54,7 +48,7 @@ export async function saveCredentials(
       'credentials_exist',
       JSON.stringify({
         timestamp: Date.now(),
-        method: saveResult.method,
+        method: 'keychain_unlocked',
       }),
       {
         service: CREDENTIALS_INDICATOR_SERVICE,
@@ -85,22 +79,23 @@ export async function loadCredentials(
   service: string = DEFAULT_SERVICE,
 ): Promise<{ username: string; password: string } | null> {
   try {
-    // Import biometric manager
-    const { BiometricManager } = await import('#/utils/security/biometricFallback');
-
-    // Use enhanced biometric loading with fallback
-    const loadResult = await BiometricManager.loadCredentialsWithFallback(service, {
-      allowDevicePasscode: true,
-      fallbackToPassword: true,
+    // Load credentials with biometric authentication prompt
+    const result = await Keychain.getGenericPassword({
+      service,
+      authenticationPrompt: {
+        title: 'Authenticate to access your saved credentials',
+        subtitle: 'Use biometric authentication or device passcode',
+        description: 'This allows the app to access your saved login information',
+        cancel: 'Cancel',
+      },
     });
 
-    if (loadResult.success && loadResult.credentials) {
-      console.log(`Credentials loaded using ${loadResult.method} method`);
-      return loadResult.credentials;
-    }
-
-    if (loadResult.error) {
-      console.warn('Failed to load credentials:', loadResult.error);
+    if (result && result.username && result.password) {
+      console.log('Credentials loaded with biometric authentication');
+      return {
+        username: result.username,
+        password: result.password,
+      };
     }
 
     return null;
