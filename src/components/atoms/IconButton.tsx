@@ -43,7 +43,7 @@ export const IconButton: React.FC<IconButtonProps> = ({
   );
 };
 
-const styles = StyleSheet.create(theme => ({
+const styles = StyleSheet.create(_theme => ({
   button: {
     justifyContent: 'center',
     alignItems: 'center',

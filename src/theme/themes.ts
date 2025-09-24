@@ -57,6 +57,8 @@ export const lightTheme = {
 
     // Components specific
     white: colors.neutral[0],
+    black: colors.neutral[1000],
+    transparent: colors.transparent,
     chipBackground: colors.neutral[200],
     chipText: colors.neutral[700],
     chipSelectedBackground: colors.primary[500],
@@ -65,6 +67,7 @@ export const lightTheme = {
 
     // Overlay
     overlay: colors.overlay,
+    gap: (v: number) => v * 8,
   },
 } as const;
 
@@ -108,6 +111,8 @@ export const darkTheme = {
 
     // Components specific
     white: colors.neutral[0],
+    black: colors.neutral[1000],
+    transparent: colors.transparent,
     chipBackground: colors.neutral[700],
     chipText: colors.neutral[200],
     chipSelectedBackground: colors.primary[400],
@@ -116,6 +121,7 @@ export const darkTheme = {
 
     // Overlay
     overlay: colors.overlay,
+    gap: (v: number) => v * 8,
   },
 } as const;
 

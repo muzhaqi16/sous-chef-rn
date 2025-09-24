@@ -282,6 +282,7 @@ export const useConfigurableSettings = (profile: any) => {
       updateUserPreferences,
       userThemePreference,
       setTheme,
+      logout,
     ],
   );
 

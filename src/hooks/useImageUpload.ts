@@ -45,7 +45,7 @@ export const useImageUpload = () => {
     async (
       file: ImageFile,
       uploadData: PresignedUploadData,
-      onProgress?: (progress: number) => void,
+      _onProgress?: (progress: number) => void,
     ): Promise<void> => {
       const mimeType = file.type || getMimeTypeFromUri(file.uri);
 

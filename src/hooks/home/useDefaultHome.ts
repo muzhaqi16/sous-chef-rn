@@ -1,10 +1,10 @@
 import { useEffect } from 'react';
-import { useGetHomesQuery } from '#generated';
+import { useGetHomesQuery, useGetDefaultHomeQuery } from '#generated';
 import { useStore } from '#store';
 import { useAuth } from '#hooks/auth/useAuth';
 
 export const useDefaultHome = () => {
-  const { selectedHomeId, setSelectedHomeId } = useStore();
+  const { selectedHomeId } = useStore();
   const { user, accessToken, canAttemptQueries } = useAuth();
 
   // Don't skip if we can attempt queries (has tokens and not logging out)
@@ -22,6 +22,16 @@ export const useDefaultHome = () => {
     errorPolicy: 'all', // Allow partial data and cache on errors
   });
 
+  const {
+    data: defaultHomeData,
+    loading: loadingDefaultHome,
+  } = useGetDefaultHomeQuery({
+    fetchPolicy: 'cache-and-network',
+    skip: !canAttemptQueries,
+  });
+
+  const remoteDefaultHomeId = defaultHomeData?.getDefaultHome?.id;
+
 
   // Retry mechanism: retry when we can attempt queries but no homes data
   useEffect(() => {
@@ -37,15 +47,8 @@ export const useDefaultHome = () => {
     }
   }, [user, accessToken, homes?.homes, loading, refetch]);
 
-  useEffect(() => {
-    // Only proceed if we don't have a selected home and homes data is available
-    if (!selectedHomeId && homes?.homes && homes.homes.length > 0) {
-      // Select the first home as default
-      const defaultHome = homes.homes[0];
-
-      setSelectedHomeId(defaultHome.id);
-    }
-  }, [selectedHomeId, homes, setSelectedHomeId]);
+  // NOTE: All sync logic has been moved to useHomeManagement to prevent infinite loops
+  // This hook is now read-only and provides computed state only
 
   // Helper function to get the default pantry from a home
   const getDefaultPantry = (homeData: any) => {
@@ -63,12 +66,16 @@ export const useDefaultHome = () => {
     return homeData.home.pantries.length > 0 ? homeData.home.pantries[0] : null;
   };
 
+  // Provide the most appropriate home ID (prefer remote default, fallback to store value)
+  const currentHomeId = remoteDefaultHomeId || selectedHomeId;
+
   return {
-    selectedHomeId,
+    selectedHomeId: currentHomeId,
     homes: homes?.homes || [],
-    loading,
+    loading: loading || loadingDefaultHome,
     error,
-    hasDefaultHome: !!selectedHomeId,
+    hasDefaultHome: !!currentHomeId,
     getDefaultPantry,
+    remoteDefaultHomeId,
   };
 };

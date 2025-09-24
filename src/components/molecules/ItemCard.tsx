@@ -1,7 +1,7 @@
 import React from 'react';
-import {View, Text, Image, TouchableOpacity} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
-import {Counter} from './Counter';
+import { View, Text, Image, TouchableOpacity } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { Counter } from './Counter';
 
 type ItemCardProps = {
   item: any;
@@ -17,14 +17,13 @@ const ItemCard: React.FC<ItemCardProps> = ({
   onPress,
   onIncrement,
   onDecrement,
-  onMoreOptions,
 }) => {
   return (
     <TouchableOpacity key={item?.id} onPress={onPress} style={styles.card}>
       <Image
         alt={item?.name}
         resizeMode="contain"
-        source={{uri: item?.item?.imageUrl || undefined}}
+        source={{ uri: item?.item?.imageUrl || undefined }}
         style={styles.cardImg}
       />
       <View style={styles.cardBody}>

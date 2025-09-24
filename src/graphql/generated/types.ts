@@ -26,7 +26,9 @@ export type Scalars = {
   Boolean: { input: boolean; output: boolean };
   Int: { input: number; output: number };
   Float: { input: number; output: number };
+  BigInt: { input: string; output: string };
   DateTime: { input: string; output: string };
+  IPv4: { input: string; output: string };
   JSON: { input: any; output: any };
   Upload: { input: File; output: File };
 };
@@ -383,25 +385,59 @@ export type CreateCurrencyInput = {
 };
 
 export type CreateDeviceInput = {
+  androidId?: InputMaybe<Scalars['String']['input']>;
+  apiLevel?: InputMaybe<Scalars['Int']['input']>;
   appVersion?: InputMaybe<Scalars['String']['input']>;
+  availableLocationProviders?: InputMaybe<Scalars['JSON']['input']>;
+  batteryLevel?: InputMaybe<Scalars['Float']['input']>;
+  brand?: InputMaybe<Scalars['String']['input']>;
   browserName?: InputMaybe<Scalars['String']['input']>;
   browserVersion?: InputMaybe<Scalars['String']['input']>;
+  buildNumber?: InputMaybe<Scalars['String']['input']>;
+  bundleId?: InputMaybe<Scalars['String']['input']>;
+  carrier?: InputMaybe<Scalars['String']['input']>;
   deviceId: Scalars['String']['input'];
   deviceName?: InputMaybe<Scalars['String']['input']>;
   deviceType?: InputMaybe<DeviceType>;
+  freeDiskStorage?: InputMaybe<Scalars['String']['input']>;
+  hasDynamicIsland?: InputMaybe<Scalars['Boolean']['input']>;
+  hasNotch?: InputMaybe<Scalars['Boolean']['input']>;
+  hostNames?: InputMaybe<Scalars['JSON']['input']>;
+  instanceId?: InputMaybe<Scalars['String']['input']>;
   isActive?: InputMaybe<Scalars['Boolean']['input']>;
+  isAirplaneMode?: InputMaybe<Scalars['Boolean']['input']>;
+  isBatteryCharging?: InputMaybe<Scalars['Boolean']['input']>;
+  isBluetoothHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
+  isEmulator?: InputMaybe<Scalars['Boolean']['input']>;
+  isHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
+  isKeyboardConnected?: InputMaybe<Scalars['Boolean']['input']>;
+  isLocationEnabled?: InputMaybe<Scalars['Boolean']['input']>;
+  isMouseConnected?: InputMaybe<Scalars['Boolean']['input']>;
+  isTablet?: InputMaybe<Scalars['Boolean']['input']>;
   isTrusted?: InputMaybe<Scalars['Boolean']['input']>;
   isVerified?: InputMaybe<Scalars['Boolean']['input']>;
+  isWiredHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
   language?: InputMaybe<Scalars['String']['input']>;
   lastCity?: InputMaybe<Scalars['String']['input']>;
   lastCountry?: InputMaybe<Scalars['String']['input']>;
   lastIpAddress?: InputMaybe<Scalars['String']['input']>;
+  manufacturer?: InputMaybe<Scalars['String']['input']>;
+  maxMemory?: InputMaybe<Scalars['String']['input']>;
+  model?: InputMaybe<Scalars['String']['input']>;
   osName?: InputMaybe<Scalars['String']['input']>;
   osVersion?: InputMaybe<Scalars['String']['input']>;
   platform?: InputMaybe<MobilePlatform>;
+  powerState?: InputMaybe<Scalars['JSON']['input']>;
   pushToken?: InputMaybe<Scalars['String']['input']>;
+  readableVersion?: InputMaybe<Scalars['String']['input']>;
   screenResolution?: InputMaybe<Scalars['String']['input']>;
+  supportedAbis?: InputMaybe<Scalars['JSON']['input']>;
+  supportedMediaTypes?: InputMaybe<Scalars['JSON']['input']>;
+  systemVersion?: InputMaybe<Scalars['String']['input']>;
   timezone?: InputMaybe<Scalars['String']['input']>;
+  totalDiskCapacity?: InputMaybe<Scalars['String']['input']>;
+  totalMemory?: InputMaybe<Scalars['String']['input']>;
+  usedMemory?: InputMaybe<Scalars['String']['input']>;
   userAgent?: InputMaybe<Scalars['String']['input']>;
   userId: Scalars['ID']['input'];
 };
@@ -692,18 +728,41 @@ export type DateRangeInput = {
 
 export type Device = {
   __typename?: 'Device';
+  androidId?: Maybe<Scalars['String']['output']>;
+  apiLevel?: Maybe<Scalars['Int']['output']>;
   appVersion?: Maybe<Scalars['String']['output']>;
+  availableLocationProviders?: Maybe<Scalars['JSON']['output']>;
+  batteryLevel?: Maybe<Scalars['Float']['output']>;
+  brand?: Maybe<Scalars['String']['output']>;
   browserName?: Maybe<Scalars['String']['output']>;
   browserVersion?: Maybe<Scalars['String']['output']>;
+  buildNumber?: Maybe<Scalars['String']['output']>;
+  bundleId?: Maybe<Scalars['String']['output']>;
+  carrier?: Maybe<Scalars['String']['output']>;
   createdAt: Scalars['DateTime']['output'];
   deletedAt?: Maybe<Scalars['DateTime']['output']>;
   deviceId: Scalars['String']['output'];
   deviceName?: Maybe<Scalars['String']['output']>;
   deviceType: DeviceType;
+  freeDiskStorage?: Maybe<Scalars['String']['output']>;
+  hasDynamicIsland?: Maybe<Scalars['Boolean']['output']>;
+  hasNotch?: Maybe<Scalars['Boolean']['output']>;
+  hostNames?: Maybe<Scalars['JSON']['output']>;
   id: Scalars['ID']['output'];
+  instanceId?: Maybe<Scalars['String']['output']>;
   isActive: Scalars['Boolean']['output'];
+  isAirplaneMode?: Maybe<Scalars['Boolean']['output']>;
+  isBatteryCharging?: Maybe<Scalars['Boolean']['output']>;
+  isBluetoothHeadphonesConnected?: Maybe<Scalars['Boolean']['output']>;
+  isEmulator?: Maybe<Scalars['Boolean']['output']>;
+  isHeadphonesConnected?: Maybe<Scalars['Boolean']['output']>;
+  isKeyboardConnected?: Maybe<Scalars['Boolean']['output']>;
+  isLocationEnabled?: Maybe<Scalars['Boolean']['output']>;
+  isMouseConnected?: Maybe<Scalars['Boolean']['output']>;
+  isTablet?: Maybe<Scalars['Boolean']['output']>;
   isTrusted: Scalars['Boolean']['output'];
   isVerified: Scalars['Boolean']['output'];
+  isWiredHeadphonesConnected?: Maybe<Scalars['Boolean']['output']>;
   language?: Maybe<Scalars['String']['output']>;
   lastCity?: Maybe<Scalars['String']['output']>;
   lastCountry?: Maybe<Scalars['String']['output']>;
@@ -711,13 +770,24 @@ export type Device = {
   lastLoginAt?: Maybe<Scalars['DateTime']['output']>;
   lastSeenAt: Scalars['DateTime']['output'];
   loginCount: Scalars['Int']['output'];
+  manufacturer?: Maybe<Scalars['String']['output']>;
+  maxMemory?: Maybe<Scalars['String']['output']>;
+  model?: Maybe<Scalars['String']['output']>;
   osName?: Maybe<Scalars['String']['output']>;
   osVersion?: Maybe<Scalars['String']['output']>;
   platform?: Maybe<MobilePlatform>;
+  powerState?: Maybe<Scalars['JSON']['output']>;
   pushToken?: Maybe<Scalars['String']['output']>;
+  readableVersion?: Maybe<Scalars['String']['output']>;
   screenResolution?: Maybe<Scalars['String']['output']>;
+  supportedAbis?: Maybe<Scalars['JSON']['output']>;
+  supportedMediaTypes?: Maybe<Scalars['JSON']['output']>;
+  systemVersion?: Maybe<Scalars['String']['output']>;
   timezone?: Maybe<Scalars['String']['output']>;
+  totalDiskCapacity?: Maybe<Scalars['String']['output']>;
+  totalMemory?: Maybe<Scalars['String']['output']>;
   updatedAt: Scalars['DateTime']['output'];
+  usedMemory?: Maybe<Scalars['String']['output']>;
   user?: Maybe<User>;
   userAgent?: Maybe<Scalars['String']['output']>;
   userId: Scalars['ID']['output'];
@@ -754,6 +824,14 @@ export type DeviceFiltersInput = {
   verifiedOnly?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
+export type DeviceHardwareInfoInput = {
+  freeDiskStorage?: InputMaybe<Scalars['String']['input']>;
+  maxMemory?: InputMaybe<Scalars['String']['input']>;
+  totalDiskCapacity?: InputMaybe<Scalars['String']['input']>;
+  totalMemory?: InputMaybe<Scalars['String']['input']>;
+  usedMemory?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type DeviceLocation = {
   __typename?: 'DeviceLocation';
   city?: Maybe<Scalars['String']['output']>;
@@ -768,22 +846,65 @@ export type DeviceLocationInput = {
   lastIpAddress?: InputMaybe<Scalars['String']['input']>;
 };
 
+export type DevicePeripheralsInput = {
+  isBluetoothHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
+  isHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
+  isKeyboardConnected?: InputMaybe<Scalars['Boolean']['input']>;
+  isMouseConnected?: InputMaybe<Scalars['Boolean']['input']>;
+  isWiredHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
 export type DeviceRegistrationInput = {
+  androidId?: InputMaybe<Scalars['String']['input']>;
+  apiLevel?: InputMaybe<Scalars['Int']['input']>;
   appVersion?: InputMaybe<Scalars['String']['input']>;
+  availableLocationProviders?: InputMaybe<Scalars['JSON']['input']>;
+  batteryLevel?: InputMaybe<Scalars['Float']['input']>;
+  brand?: InputMaybe<Scalars['String']['input']>;
   browserName?: InputMaybe<Scalars['String']['input']>;
   browserVersion?: InputMaybe<Scalars['String']['input']>;
+  buildNumber?: InputMaybe<Scalars['String']['input']>;
+  bundleId?: InputMaybe<Scalars['String']['input']>;
+  carrier?: InputMaybe<Scalars['String']['input']>;
   deviceId: Scalars['String']['input'];
   deviceName?: InputMaybe<Scalars['String']['input']>;
   deviceType?: InputMaybe<DeviceType>;
+  freeDiskStorage?: InputMaybe<Scalars['String']['input']>;
+  hasDynamicIsland?: InputMaybe<Scalars['Boolean']['input']>;
+  hasNotch?: InputMaybe<Scalars['Boolean']['input']>;
+  hostNames?: InputMaybe<Scalars['JSON']['input']>;
+  instanceId?: InputMaybe<Scalars['String']['input']>;
+  isAirplaneMode?: InputMaybe<Scalars['Boolean']['input']>;
+  isBatteryCharging?: InputMaybe<Scalars['Boolean']['input']>;
+  isBluetoothHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
+  isEmulator?: InputMaybe<Scalars['Boolean']['input']>;
+  isHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
+  isKeyboardConnected?: InputMaybe<Scalars['Boolean']['input']>;
+  isLocationEnabled?: InputMaybe<Scalars['Boolean']['input']>;
+  isMouseConnected?: InputMaybe<Scalars['Boolean']['input']>;
+  isTablet?: InputMaybe<Scalars['Boolean']['input']>;
+  isWiredHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
   language?: InputMaybe<Scalars['String']['input']>;
   lastCity?: InputMaybe<Scalars['String']['input']>;
   lastCountry?: InputMaybe<Scalars['String']['input']>;
   lastIpAddress?: InputMaybe<Scalars['String']['input']>;
+  manufacturer?: InputMaybe<Scalars['String']['input']>;
+  maxMemory?: InputMaybe<Scalars['String']['input']>;
+  model?: InputMaybe<Scalars['String']['input']>;
   osName?: InputMaybe<Scalars['String']['input']>;
   osVersion?: InputMaybe<Scalars['String']['input']>;
   platform?: InputMaybe<MobilePlatform>;
+  powerState?: InputMaybe<Scalars['JSON']['input']>;
+  pushToken?: InputMaybe<Scalars['String']['input']>;
+  readableVersion?: InputMaybe<Scalars['String']['input']>;
   screenResolution?: InputMaybe<Scalars['String']['input']>;
+  supportedAbis?: InputMaybe<Scalars['JSON']['input']>;
+  supportedMediaTypes?: InputMaybe<Scalars['JSON']['input']>;
+  systemVersion?: InputMaybe<Scalars['String']['input']>;
   timezone?: InputMaybe<Scalars['String']['input']>;
+  totalDiskCapacity?: InputMaybe<Scalars['String']['input']>;
+  totalMemory?: InputMaybe<Scalars['String']['input']>;
+  usedMemory?: InputMaybe<Scalars['String']['input']>;
   userAgent?: InputMaybe<Scalars['String']['input']>;
 };
 
@@ -1938,6 +2059,7 @@ export type Mutation = {
   deleteUnit: Scalars['Boolean']['output'];
   deleteUserAddress: UserAddress;
   exportItems: ExportResponse;
+  flagDeviceAsEmulator: Device;
   flagLoginAsRisky: LoginHistory;
   flagMultipleLoginsAsRisky: Array<LoginHistory>;
   /** Request a password reset email */
@@ -2015,8 +2137,11 @@ export type Mutation = {
   updateCategory: Category;
   updateCurrency: Currency;
   updateDevice: Device;
+  updateDeviceBatteryInfo: Device;
+  updateDeviceHardwareInfo: Device;
   updateDeviceLastSeen: Device;
   updateDeviceLocation: Device;
+  updateDevicePeripherals: Device;
   updateHome: Home;
   updateItem: Item;
   updateItemAllergens: Item;
@@ -2345,6 +2470,10 @@ export type MutationExportItemsArgs = {
   format: ExportFormat;
 };
 
+export type MutationFlagDeviceAsEmulatorArgs = {
+  id: Scalars['ID']['input'];
+};
+
 export type MutationFlagLoginAsRiskyArgs = {
   flaggedById: Scalars['ID']['input'];
   loginId: Scalars['ID']['input'];
@@ -2670,6 +2799,17 @@ export type MutationUpdateDeviceArgs = {
   input: UpdateDeviceInput;
 };
 
+export type MutationUpdateDeviceBatteryInfoArgs = {
+  batteryLevel: Scalars['Float']['input'];
+  id: Scalars['ID']['input'];
+  isBatteryCharging: Scalars['Boolean']['input'];
+};
+
+export type MutationUpdateDeviceHardwareInfoArgs = {
+  hardwareInfo: DeviceHardwareInfoInput;
+  id: Scalars['ID']['input'];
+};
+
 export type MutationUpdateDeviceLastSeenArgs = {
   id: Scalars['ID']['input'];
 };
@@ -2677,6 +2817,11 @@ export type MutationUpdateDeviceLastSeenArgs = {
 export type MutationUpdateDeviceLocationArgs = {
   id: Scalars['ID']['input'];
   input: DeviceLocationInput;
+};
+
+export type MutationUpdateDevicePeripheralsArgs = {
+  id: Scalars['ID']['input'];
+  peripherals: DevicePeripheralsInput;
 };
 
 export type MutationUpdateHomeArgs = {
@@ -3201,7 +3346,7 @@ export type PantryItem = {
   unit?: Maybe<Unit>;
   unitId?: Maybe<Scalars['String']['output']>;
   unitName?: Maybe<Scalars['String']['output']>;
-  updatedAt: Scalars['DateTime']['output'];
+  updatedAt?: Maybe<Scalars['DateTime']['output']>;
   usageFrequency: UsageFrequency;
   usageRecords: Array<PantryItemUsage>;
   wasteAmount: Scalars['Float']['output'];
@@ -3448,7 +3593,10 @@ export type Query = {
   deviceByDeviceId?: Maybe<Device>;
   deviceCount: Scalars['Int']['output'];
   deviceStats: DeviceStats;
+  devicesByManufacturer: Array<Device>;
   devicesByPlatform: Array<Device>;
+  devicesWithPeripherals: Array<Device>;
+  emulatedDevices: Array<Device>;
   expiringItems: Array<PantryItem>;
   failedLoginAttempts: Array<LoginHistory>;
   getDefaultHome?: Maybe<Home>;
@@ -3474,6 +3622,7 @@ export type Query = {
   loginHistoryByIP: Array<LoginHistory>;
   loginHistoryForUser: Array<LoginHistory>;
   loginHistoryStats: LoginHistoryStats;
+  lowBatteryDevices: Array<Device>;
   lowStockItems: Array<PantryItem>;
   me?: Maybe<User>;
   mealPlan?: Maybe<MealPlan>;
@@ -3545,8 +3694,10 @@ export type Query = {
   storeWithPurchases?: Maybe<Store>;
   stores: Array<Store>;
   suggestedRecipes: Array<Recipe>;
+  suspiciousDevices: Array<Device>;
   suspiciousInviteActivity: Array<InviteLog>;
   suspiciousLoginActivity: SuspiciousActivity;
+  tabletDevices: Array<Device>;
   trendingItems?: Maybe<Array<Item>>;
   trustedDevices: Array<Device>;
   unit?: Maybe<Unit>;
@@ -3645,8 +3796,21 @@ export type QueryDeviceStatsArgs = {
   userId: Scalars['ID']['input'];
 };
 
+export type QueryDevicesByManufacturerArgs = {
+  manufacturer: Scalars['String']['input'];
+  userId: Scalars['ID']['input'];
+};
+
 export type QueryDevicesByPlatformArgs = {
   platform: MobilePlatform;
+  userId: Scalars['ID']['input'];
+};
+
+export type QueryDevicesWithPeripheralsArgs = {
+  userId: Scalars['ID']['input'];
+};
+
+export type QueryEmulatedDevicesArgs = {
   userId: Scalars['ID']['input'];
 };
 
@@ -3743,6 +3907,11 @@ export type QueryLoginHistoryForUserArgs = {
 
 export type QueryLoginHistoryStatsArgs = {
   days?: InputMaybe<Scalars['Int']['input']>;
+  userId: Scalars['ID']['input'];
+};
+
+export type QueryLowBatteryDevicesArgs = {
+  threshold?: InputMaybe<Scalars['Float']['input']>;
   userId: Scalars['ID']['input'];
 };
 
@@ -3994,12 +4163,20 @@ export type QueryStoreWithPurchasesArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
 };
 
+export type QuerySuspiciousDevicesArgs = {
+  userId: Scalars['ID']['input'];
+};
+
 export type QuerySuspiciousInviteActivityArgs = {
   timeWindowHours?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type QuerySuspiciousLoginActivityArgs = {
   hours?: InputMaybe<Scalars['Int']['input']>;
+  userId: Scalars['ID']['input'];
+};
+
+export type QueryTabletDevicesArgs = {
   userId: Scalars['ID']['input'];
 };
 
@@ -4999,24 +5176,58 @@ export type UpdateCurrencyInput = {
 };
 
 export type UpdateDeviceInput = {
+  androidId?: InputMaybe<Scalars['String']['input']>;
+  apiLevel?: InputMaybe<Scalars['Int']['input']>;
   appVersion?: InputMaybe<Scalars['String']['input']>;
+  availableLocationProviders?: InputMaybe<Scalars['JSON']['input']>;
+  batteryLevel?: InputMaybe<Scalars['Float']['input']>;
+  brand?: InputMaybe<Scalars['String']['input']>;
   browserName?: InputMaybe<Scalars['String']['input']>;
   browserVersion?: InputMaybe<Scalars['String']['input']>;
+  buildNumber?: InputMaybe<Scalars['String']['input']>;
+  bundleId?: InputMaybe<Scalars['String']['input']>;
+  carrier?: InputMaybe<Scalars['String']['input']>;
   deviceName?: InputMaybe<Scalars['String']['input']>;
   deviceType?: InputMaybe<DeviceType>;
+  freeDiskStorage?: InputMaybe<Scalars['String']['input']>;
+  hasDynamicIsland?: InputMaybe<Scalars['Boolean']['input']>;
+  hasNotch?: InputMaybe<Scalars['Boolean']['input']>;
+  hostNames?: InputMaybe<Scalars['JSON']['input']>;
+  instanceId?: InputMaybe<Scalars['String']['input']>;
   isActive?: InputMaybe<Scalars['Boolean']['input']>;
+  isAirplaneMode?: InputMaybe<Scalars['Boolean']['input']>;
+  isBatteryCharging?: InputMaybe<Scalars['Boolean']['input']>;
+  isBluetoothHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
+  isEmulator?: InputMaybe<Scalars['Boolean']['input']>;
+  isHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
+  isKeyboardConnected?: InputMaybe<Scalars['Boolean']['input']>;
+  isLocationEnabled?: InputMaybe<Scalars['Boolean']['input']>;
+  isMouseConnected?: InputMaybe<Scalars['Boolean']['input']>;
+  isTablet?: InputMaybe<Scalars['Boolean']['input']>;
   isTrusted?: InputMaybe<Scalars['Boolean']['input']>;
   isVerified?: InputMaybe<Scalars['Boolean']['input']>;
+  isWiredHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
   language?: InputMaybe<Scalars['String']['input']>;
   lastCity?: InputMaybe<Scalars['String']['input']>;
   lastCountry?: InputMaybe<Scalars['String']['input']>;
   lastIpAddress?: InputMaybe<Scalars['String']['input']>;
+  manufacturer?: InputMaybe<Scalars['String']['input']>;
+  maxMemory?: InputMaybe<Scalars['String']['input']>;
+  model?: InputMaybe<Scalars['String']['input']>;
   osName?: InputMaybe<Scalars['String']['input']>;
   osVersion?: InputMaybe<Scalars['String']['input']>;
   platform?: InputMaybe<MobilePlatform>;
+  powerState?: InputMaybe<Scalars['JSON']['input']>;
   pushToken?: InputMaybe<Scalars['String']['input']>;
+  readableVersion?: InputMaybe<Scalars['String']['input']>;
   screenResolution?: InputMaybe<Scalars['String']['input']>;
+  supportedAbis?: InputMaybe<Scalars['JSON']['input']>;
+  supportedMediaTypes?: InputMaybe<Scalars['JSON']['input']>;
+  systemVersion?: InputMaybe<Scalars['String']['input']>;
   timezone?: InputMaybe<Scalars['String']['input']>;
+  totalDiskCapacity?: InputMaybe<Scalars['String']['input']>;
+  totalMemory?: InputMaybe<Scalars['String']['input']>;
+  usedMemory?: InputMaybe<Scalars['String']['input']>;
   userAgent?: InputMaybe<Scalars['String']['input']>;
 };
 
@@ -5359,6 +5570,7 @@ export type User = {
   id: Scalars['ID']['output'];
   language?: Maybe<Scalars['String']['output']>;
   lastActiveAt?: Maybe<Scalars['DateTime']['output']>;
+  loginHistory: Array<LoginHistory>;
   moderation?: Maybe<UserModeration>;
   onBoarded: Scalars['Boolean']['output'];
   preferredCurrency?: Maybe<Scalars['String']['output']>;
@@ -5846,6 +6058,175 @@ export type ResendVerificationEmailMutationVariables = Exact<{
 export type ResendVerificationEmailMutation = {
   __typename?: 'Mutation';
   resendVerificationEmail: boolean;
+};
+
+export type GetMyDevicesQueryVariables = Exact<{
+  filters?: InputMaybe<DeviceFiltersInput>;
+}>;
+
+export type GetMyDevicesQuery = {
+  __typename?: 'Query';
+  myDevices: Array<{
+    __typename?: 'Device';
+    id: string;
+    deviceId: string;
+    deviceName?: string | null | undefined;
+    deviceType: DeviceType;
+    platform?: MobilePlatform | null | undefined;
+    osName?: string | null | undefined;
+    osVersion?: string | null | undefined;
+    appVersion?: string | null | undefined;
+    userAgent?: string | null | undefined;
+    browserName?: string | null | undefined;
+    browserVersion?: string | null | undefined;
+    screenResolution?: string | null | undefined;
+    timezone?: string | null | undefined;
+    language?: string | null | undefined;
+    lastIpAddress?: string | null | undefined;
+    lastCountry?: string | null | undefined;
+    lastCity?: string | null | undefined;
+    isActive: boolean;
+    isTrusted: boolean;
+    isVerified: boolean;
+    loginCount: number;
+    lastLoginAt?: string | null | undefined;
+    lastSeenAt: string;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+};
+
+export type GetDeviceByDeviceIdQueryVariables = Exact<{
+  deviceId: Scalars['String']['input'];
+}>;
+
+export type GetDeviceByDeviceIdQuery = {
+  __typename?: 'Query';
+  deviceByDeviceId?:
+    | {
+        __typename?: 'Device';
+        id: string;
+        deviceId: string;
+        deviceName?: string | null | undefined;
+        deviceType: DeviceType;
+        platform?: MobilePlatform | null | undefined;
+        isActive: boolean;
+        isTrusted: boolean;
+        isVerified: boolean;
+        lastSeenAt: string;
+        createdAt: string;
+      }
+    | null
+    | undefined;
+};
+
+export type RegisterDeviceMutationVariables = Exact<{
+  input: DeviceRegistrationInput;
+}>;
+
+export type RegisterDeviceMutation = {
+  __typename?: 'Mutation';
+  registerDevice: {
+    __typename?: 'Device';
+    id: string;
+    deviceId: string;
+    deviceName?: string | null | undefined;
+    deviceType: DeviceType;
+    platform?: MobilePlatform | null | undefined;
+    osName?: string | null | undefined;
+    osVersion?: string | null | undefined;
+    appVersion?: string | null | undefined;
+    userAgent?: string | null | undefined;
+    browserName?: string | null | undefined;
+    browserVersion?: string | null | undefined;
+    screenResolution?: string | null | undefined;
+    timezone?: string | null | undefined;
+    language?: string | null | undefined;
+    isActive: boolean;
+    isTrusted: boolean;
+    isVerified: boolean;
+    createdAt: string;
+    updatedAt: string;
+  };
+};
+
+export type UpdateDeviceLastSeenMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type UpdateDeviceLastSeenMutation = {
+  __typename?: 'Mutation';
+  updateDeviceLastSeen: {
+    __typename?: 'Device';
+    id: string;
+    deviceId: string;
+    lastSeenAt: string;
+    updatedAt: string;
+  };
+};
+
+export type TrustDeviceMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type TrustDeviceMutation = {
+  __typename?: 'Mutation';
+  trustDevice: {
+    __typename?: 'Device';
+    id: string;
+    deviceId: string;
+    deviceName?: string | null | undefined;
+    isTrusted: boolean;
+    updatedAt: string;
+  };
+};
+
+export type UntrustDeviceMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type UntrustDeviceMutation = {
+  __typename?: 'Mutation';
+  untrustDevice: {
+    __typename?: 'Device';
+    id: string;
+    deviceId: string;
+    deviceName?: string | null | undefined;
+    isTrusted: boolean;
+    updatedAt: string;
+  };
+};
+
+export type VerifyDeviceMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type VerifyDeviceMutation = {
+  __typename?: 'Mutation';
+  verifyDevice: {
+    __typename?: 'Device';
+    id: string;
+    deviceId: string;
+    deviceName?: string | null | undefined;
+    isVerified: boolean;
+    verifiedAt?: string | null | undefined;
+  };
+};
+
+export type DeactivateDeviceMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type DeactivateDeviceMutation = {
+  __typename?: 'Mutation';
+  deactivateDevice: {
+    __typename?: 'Device';
+    id: string;
+    deviceId: string;
+    deviceName?: string | null | undefined;
+    isActive: boolean;
+    updatedAt: string;
+  };
 };
 
 export type DeviceActivitySubscriptionVariables = Exact<{
@@ -6991,7 +7372,7 @@ export type PantryItemFragmentFragment = {
   isAutoReorder: boolean;
   customCategory?: string | null | undefined;
   createdAt: string;
-  updatedAt: string;
+  updatedAt?: string | null | undefined;
   tags: Array<string>;
   item: {
     __typename?: 'Item';
@@ -7281,7 +7662,7 @@ export type PantryFragmentFragment = {
         isAutoReorder: boolean;
         customCategory?: string | null | undefined;
         createdAt: string;
-        updatedAt: string;
+        updatedAt?: string | null | undefined;
         tags: Array<string>;
         item: {
           __typename?: 'Item';
@@ -7909,7 +8290,7 @@ export type HomeFragmentFragment = {
               isAutoReorder: boolean;
               customCategory?: string | null | undefined;
               createdAt: string;
-              updatedAt: string;
+              updatedAt?: string | null | undefined;
               tags: Array<string>;
               item: {
                 __typename?: 'Item';
@@ -8328,7 +8709,7 @@ export type GetHomeQuery = {
                     isAutoReorder: boolean;
                     customCategory?: string | null | undefined;
                     createdAt: string;
-                    updatedAt: string;
+                    updatedAt?: string | null | undefined;
                     tags: Array<string>;
                     item: {
                       __typename?: 'Item';
@@ -8903,53 +9284,14 @@ export type CreateHomeMutation = {
     __typename?: 'Home';
     id: string;
     name: string;
-    type: HomeType;
-    description?: string | null | undefined;
-    timezone?: string | null | undefined;
-    currency?: string | null | undefined;
-    isPublic: boolean;
-    joinCode?: string | null | undefined;
-    allowJoinCode: boolean;
-    maxMembers?: number | null | undefined;
-    tags: Array<string>;
-    metadata?: string | null | undefined;
-    version: number;
     createdAt: string;
     updatedAt: string;
-    invites?:
+    pantries?:
       | Array<{
-          __typename?: 'HomeInvite';
+          __typename?: 'Pantry';
           id: string;
-          email: string;
-          token: string;
-          homeId: string;
-          invitedUserId?: string | null | undefined;
-          recipientName?: string | null | undefined;
-          role: MembershipRole;
-          customPermissions?: string | null | undefined;
-          status: InviteStatus;
-          expiresAt: string;
-          sentAt: string;
-          lastReminderAt?: string | null | undefined;
-          reminderCount: number;
-          acceptedAt?: string | null | undefined;
-          declinedAt?: string | null | undefined;
-          revokedAt?: string | null | undefined;
-          message?: string | null | undefined;
-          createdAt: string;
-          home: { __typename?: 'Home'; id: string; name: string };
-          inviter: {
-            __typename?: 'User';
-            id: string;
-            email: string;
-            profile?:
-              | {
-                  __typename?: 'UserProfile';
-                  displayName?: string | null | undefined;
-                }
-              | null
-              | undefined;
-          };
+          name: string;
+          isDefault: boolean;
         }>
       | null
       | undefined;
@@ -8961,17 +9303,6 @@ export type CreateHomeMutation = {
       role: MembershipRole;
       status: MembershipStatus;
       displayName?: string | null | undefined;
-      canViewPantry: boolean;
-      canEditPantry: boolean;
-      canAddItems: boolean;
-      canRemoveItems: boolean;
-      canInviteOthers: boolean;
-      canManageHome: boolean;
-      lastActiveAt?: string | null | undefined;
-      joinedAt: string;
-      leftAt?: string | null | undefined;
-      createdAt: string;
-      updatedAt: string;
       user: {
         __typename?: 'User';
         id: string;
@@ -9016,8 +9347,6 @@ export type CreateHomeMutation = {
       | {
           __typename?: 'Membership';
           id: string;
-          homeId: string;
-          userId: string;
           role: MembershipRole;
           status: MembershipStatus;
           displayName?: string | null | undefined;
@@ -9027,89 +9356,7 @@ export type CreateHomeMutation = {
           canRemoveItems: boolean;
           canInviteOthers: boolean;
           canManageHome: boolean;
-          lastActiveAt?: string | null | undefined;
-          joinedAt: string;
-          leftAt?: string | null | undefined;
-          createdAt: string;
-          updatedAt: string;
-          user: {
-            __typename?: 'User';
-            id: string;
-            email: string;
-            emailVerified: boolean;
-            role: UserRole;
-            onBoarded: boolean;
-            timezone?: string | null | undefined;
-            preferredCurrency?: string | null | undefined;
-            language?: string | null | undefined;
-            defaultShoppingListId?: string | null | undefined;
-            defaultHomeId?: string | null | undefined;
-            createdAt: string;
-            updatedAt: string;
-            lastActiveAt?: string | null | undefined;
-            profile?:
-              | {
-                  __typename?: 'UserProfile';
-                  id: string;
-                  firstName?: string | null | undefined;
-                  lastName?: string | null | undefined;
-                  displayName?: string | null | undefined;
-                  bio?: string | null | undefined;
-                  avatar?: string | null | undefined;
-                  phone?: string | null | undefined;
-                }
-              | null
-              | undefined;
-            settings?:
-              | {
-                  __typename?: 'UserSettings';
-                  id: string;
-                  emailNotifications: boolean;
-                  pushNotifications: boolean;
-                  theme: AppTheme;
-                }
-              | null
-              | undefined;
-          };
         }
-      | null
-      | undefined;
-    membershipStats: {
-      __typename?: 'MembershipStats';
-      total: number;
-      active: number;
-      recentlyActive: number;
-      byRole: {
-        __typename?: 'MembershipRoleStats';
-        OWNER: number;
-        ADMIN: number;
-        MEMBER: number;
-        GUEST: number;
-      };
-      byStatus: {
-        __typename?: 'MembershipStatusStats';
-        ACTIVE: number;
-        SUSPENDED: number;
-        LEFT: number;
-        REMOVED: number;
-      };
-    };
-    pantries?:
-      | Array<{
-          __typename?: 'Pantry';
-          id: string;
-          homeId: string;
-          name: string;
-          description?: string | null | undefined;
-          isDefault: boolean;
-          location?: string | null | undefined;
-          temperature?: string | null | undefined;
-          tags: Array<string>;
-          metadata?: any | null | undefined;
-          version: number;
-          createdAt: string;
-          updatedAt?: string | null | undefined;
-        }>
       | null
       | undefined;
   };
@@ -9353,7 +9600,7 @@ export type UpdateHomeMutation = {
                 isAutoReorder: boolean;
                 customCategory?: string | null | undefined;
                 createdAt: string;
-                updatedAt: string;
+                updatedAt?: string | null | undefined;
                 tags: Array<string>;
                 item: {
                   __typename?: 'Item';
@@ -9760,7 +10007,7 @@ export type DeleteHomeMutation = {
                 isAutoReorder: boolean;
                 customCategory?: string | null | undefined;
                 createdAt: string;
-                updatedAt: string;
+                updatedAt?: string | null | undefined;
                 tags: Array<string>;
                 item: {
                   __typename?: 'Item';
@@ -10496,7 +10743,7 @@ export type GetDefaultHomeQuery = {
                     isAutoReorder: boolean;
                     customCategory?: string | null | undefined;
                     createdAt: string;
-                    updatedAt: string;
+                    updatedAt?: string | null | undefined;
                     tags: Array<string>;
                     item: {
                       __typename?: 'Item';
@@ -11490,7 +11737,7 @@ export type GetPantryItemsQuery = {
     isAutoReorder: boolean;
     customCategory?: string | null | undefined;
     createdAt: string;
-    updatedAt: string;
+    updatedAt?: string | null | undefined;
     tags: Array<string>;
     item: {
       __typename?: 'Item';
@@ -11680,7 +11927,7 @@ export type GetPantryItemQuery = {
     isAutoReorder: boolean;
     customCategory?: string | null | undefined;
     createdAt: string;
-    updatedAt: string;
+    updatedAt?: string | null | undefined;
     tags: Array<string>;
     item: {
       __typename?: 'Item';
@@ -11870,7 +12117,7 @@ export type AddItemToPantryMutation = {
     isAutoReorder: boolean;
     customCategory?: string | null | undefined;
     createdAt: string;
-    updatedAt: string;
+    updatedAt?: string | null | undefined;
     tags: Array<string>;
     item: {
       __typename?: 'Item';
@@ -12117,7 +12364,7 @@ export type UpdatePantryItemMutation = {
     isAutoReorder: boolean;
     customCategory?: string | null | undefined;
     createdAt: string;
-    updatedAt: string;
+    updatedAt?: string | null | undefined;
     tags: Array<string>;
     item: {
       __typename?: 'Item';
@@ -12307,7 +12554,7 @@ export type RemoveItemFromPantryMutation = {
     isAutoReorder: boolean;
     customCategory?: string | null | undefined;
     createdAt: string;
-    updatedAt: string;
+    updatedAt?: string | null | undefined;
     tags: Array<string>;
     item: {
       __typename?: 'Item';

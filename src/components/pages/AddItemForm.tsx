@@ -1,20 +1,20 @@
-import React, {useState} from 'react';
-import {View, Text, TouchableOpacity, ActivityIndicator} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
-import {useForm} from 'react-hook-form';
-import {yupResolver} from '@hookform/resolvers/yup';
-import {createItemSchema, CreateItemFormData} from '#utils/validation';
-import {StorageState, ItemType} from '#generated';
-import {FormInput} from '../molecules/FormInput';
-import {FormTextArea} from '../molecules/FormTextArea';
-import {FormNumberInput} from '../molecules/FormNumberInput';
-import {FormSelect} from '../molecules/FormSelect';
-import {FormCheckbox} from '../molecules/FormCheckbox';
-import {ImageFile} from '../molecules/ImagePicker';
-import {ProductImagePicker} from '../molecules/ProductImagePicker';
-import {UnitsAutocompleteInput} from '../molecules/UnitsAutocompleteInput';
-import {BrandAutocompleteInput} from '../molecules/BrandAutocompleteInput';
-import {DynamicFormFields, FieldDef} from '../molecules/DynamicFormFields';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import { createItemSchema, CreateItemFormData } from '#utils/validation';
+import { StorageState, ItemType } from '#generated';
+import { FormInput } from '../molecules/FormInput';
+import { FormTextArea } from '../molecules/FormTextArea';
+import { FormNumberInput } from '../molecules/FormNumberInput';
+import { FormSelect } from '../molecules/FormSelect';
+import { FormCheckbox } from '../molecules/FormCheckbox';
+import { ImageFile } from '../molecules/ImagePicker';
+import { ProductImagePicker } from '../molecules/ProductImagePicker';
+import { UnitsAutocompleteInput } from '../molecules/UnitsAutocompleteInput';
+import { BrandAutocompleteInput } from '../molecules/BrandAutocompleteInput';
+import { DynamicFormFields, FieldDef } from '../molecules/DynamicFormFields';
 
 interface AddItemFormProps {
   barcode?: string;
@@ -59,14 +59,14 @@ const getFormSections = (
         label: 'Item Name',
         placeholder: 'Enter item name',
         component: FormInput,
-        props: {autoCapitalize: 'words', required: true},
+        props: { autoCapitalize: 'words', required: true },
       },
       {
         name: 'description',
         label: 'Description',
         placeholder: 'Enter item description (optional)',
         component: FormTextArea,
-        props: {numberOfLines: 3},
+        props: { numberOfLines: 3 },
       },
       {
         name: 'sku',
@@ -79,7 +79,7 @@ const getFormSections = (
         label: 'UPC/Barcode',
         placeholder: 'Enter UPC/Barcode (optional)',
         component: FormInput,
-        props: {keyboardType: 'numeric'},
+        props: { keyboardType: 'numeric' },
       },
     ],
   },
@@ -90,22 +90,22 @@ const getFormSections = (
         name: 'type',
         label: 'Item Type',
         component: FormSelect,
-        props: {componentType: 'select'},
-        options: ITEM_TYPES.map(type => ({label: type, value: type})),
+        props: { componentType: 'select' },
+        options: ITEM_TYPES.map(type => ({ label: type, value: type })),
       },
       {
         name: 'storageState',
         label: 'Storage State',
         component: FormSelect,
-        props: {componentType: 'select'},
-        options: STORAGE_STATES.map(state => ({label: state, value: state})),
+        props: { componentType: 'select' },
+        options: STORAGE_STATES.map(state => ({ label: state, value: state })),
       },
       {
         name: 'shelfLifeDays',
         label: 'Shelf Life (Days)',
         placeholder: 'Enter shelf life in days',
         component: FormNumberInput,
-        props: {componentType: 'number', keyboardType: 'numeric'},
+        props: { componentType: 'number', keyboardType: 'numeric' },
       },
     ],
   },
@@ -133,7 +133,7 @@ const getFormSections = (
         label: 'Net Weight',
         placeholder: 'Enter net weight',
         component: FormNumberInput,
-        props: {componentType: 'number', keyboardType: 'decimal-pad'},
+        props: { componentType: 'number', keyboardType: 'decimal-pad' },
       },
       {
         name: 'displayUnitId',
@@ -155,7 +155,7 @@ const getFormSections = (
         label: 'Tags',
         placeholder: 'Comma-separated tags (e.g., organic, gluten-free)',
         component: FormTextArea,
-        props: {numberOfLines: 2},
+        props: { numberOfLines: 2 },
         renderValue: (value: any) => {
           if (Array.isArray(value)) {
             return value.join(', ');
@@ -180,13 +180,13 @@ const getFormSections = (
         name: 'isFoodStampItem',
         label: 'Food Stamp Eligible',
         component: FormCheckbox,
-        props: {componentType: 'checkbox'},
+        props: { componentType: 'checkbox' },
       },
       {
         name: 'isFsaEligible',
         label: 'FSA Eligible',
         component: FormCheckbox,
-        props: {componentType: 'checkbox'},
+        props: { componentType: 'checkbox' },
       },
     ],
   },
@@ -200,7 +200,6 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
   onClose,
   loading = false,
   title = 'Add New Item',
-  enableAutocomplete = false,
 }) => {
   // Track selected brand and unit IDs separately from the display names
   const [selectedBrandId, setSelectedBrandId] = useState<string | null>(null);
@@ -250,9 +249,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
   const {
     control,
     handleSubmit,
-    formState: {errors, isValid},
-    setValue,
-    watch,
+    formState: { errors, isValid },
   } = useForm<CreateItemFormData>({
     resolver: yupResolver(createItemSchema) as any,
     defaultValues: getInitialValues(),
@@ -412,7 +409,8 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
         <TouchableOpacity
           style={[styles.button, styles.primaryButton]}
           onPress={handleSubmit(handleFormSubmit)}
-          disabled={loading || !isValid}>
+          disabled={loading || !isValid}
+        >
           {loading ? (
             <ActivityIndicator color="white" size="small" />
           ) : (
@@ -423,7 +421,8 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
         <TouchableOpacity
           style={[styles.button, styles.secondaryButton]}
           onPress={onClose}
-          disabled={loading}>
+          disabled={loading}
+        >
           <Text style={styles.secondaryButtonText}>Cancel</Text>
         </TouchableOpacity>
       </View>
@@ -433,92 +432,92 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   header: {
-    marginBottom: 20,
+    marginBottom: theme.spacing.lg,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#212529',
-    marginBottom: 8,
+    fontSize: theme.fonts.size['2xl'],
+    fontWeight: theme.fonts.weight.bold,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.sm,
   },
   subtitle: {
-    fontSize: 14,
-    color: '#6c757d',
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textSecondary,
     lineHeight: 20,
   },
   barcodeInfo: {
-    backgroundColor: '#f8f9fa',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 24,
+    backgroundColor: theme.colors.background,
+    padding: theme.spacing.md,
+    borderRadius: theme.radii.md,
+    marginBottom: theme.spacing.lg,
   },
   barcodeLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#6c757d',
+    fontSize: theme.fonts.size.xs,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textSecondary,
     textTransform: 'uppercase',
-    marginBottom: 4,
+    marginBottom: theme.spacing.xs,
   },
   barcodeValue: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#212529',
+    fontSize: theme.fonts.size.md,
+    fontWeight: theme.fonts.weight.medium,
+    color: theme.colors.textPrimary,
     fontFamily: 'monospace',
-    marginBottom: 8,
+    marginBottom: theme.spacing.sm,
   },
   formatLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#6c757d',
+    fontSize: theme.fonts.size.xs,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textSecondary,
     textTransform: 'uppercase',
-    marginBottom: 4,
+    marginBottom: theme.spacing.xs,
   },
   formatValue: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#495057',
+    fontSize: theme.fonts.size.sm,
+    fontWeight: theme.fonts.weight.medium,
+    color: theme.colors.textOnSurfaceVariant,
   },
   form: {
-    marginBottom: 24,
+    marginBottom: theme.spacing.lg,
   },
   section: {
-    marginBottom: 32,
+    marginBottom: theme.spacing.xl,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#212529',
-    marginBottom: 16,
-    paddingBottom: 8,
+    fontSize: theme.fonts.size.lg,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.md,
+    paddingBottom: theme.spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: '#dee2e6',
+    borderBottomColor: theme.colors.borderLight,
   },
   buttonContainer: {
     gap: 12,
-    paddingBottom: 20,
+    paddingBottom: theme.spacing.lg,
   },
   button: {
-    paddingVertical: 16,
-    borderRadius: 8,
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.radii.md,
     alignItems: 'center',
   },
   primaryButton: {
     backgroundColor: '#62B1F6',
   },
   primaryButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
+    color: theme.colors.white,
+    fontSize: theme.fonts.size.md,
+    fontWeight: theme.fonts.weight.semibold,
   },
   secondaryButton: {
-    backgroundColor: 'transparent',
+    backgroundColor: theme.colors.transparent,
     borderWidth: 1,
-    borderColor: '#dee2e6',
+    borderColor: theme.colors.borderLight,
   },
   secondaryButtonText: {
-    color: '#6c757d',
-    fontSize: 16,
-    fontWeight: '500',
+    color: theme.colors.textSecondary,
+    fontSize: theme.fonts.size.md,
+    fontWeight: theme.fonts.weight.medium,
   },
 }));
 

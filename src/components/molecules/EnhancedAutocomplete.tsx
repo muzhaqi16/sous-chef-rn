@@ -2,7 +2,7 @@ import React, { useMemo, useEffect, useState } from 'react';
 import { Text, TouchableOpacity, View, Image } from 'react-native';
 import { BottomSheetFlatList, BottomSheetView } from '@gorhom/bottom-sheet';
 import { StyleSheet } from 'react-native-unistyles';
-import { useAutocompleteItemsLazyQuery, ItemSuggestion, AutocompleteItemsQuery } from '#generated';
+import { useAutocompleteItemsLazyQuery, ItemSuggestion } from '#generated';
 
 interface EnhancedAutocompleteProps {
   searchTerm: string;
@@ -64,7 +64,7 @@ const EnhancedAutocomplete: React.FC<EnhancedAutocompleteProps> = ({
 
   const renderItem = ({ item }: { item: ItemSuggestion }) => (
     <TouchableOpacity
-      onPress={() => onSelectItem(item )}
+      onPress={() => onSelectItem(item)}
       style={styles.item}
       activeOpacity={0.7}
     >
@@ -94,7 +94,9 @@ const EnhancedAutocomplete: React.FC<EnhancedAutocompleteProps> = ({
 
   const renderHeader = () => {
     const showingPreviousResults = loading && previousResults.length > 0;
-    const currentCount = showingPreviousResults ? previousResults.length : totalCount;
+    const currentCount = showingPreviousResults
+      ? previousResults.length
+      : totalCount;
 
     if (loading && previousResults.length === 0) {
       return (
@@ -144,7 +146,7 @@ const EnhancedAutocomplete: React.FC<EnhancedAutocompleteProps> = ({
     <BottomSheetFlatList
       style={[
         styles.flatList,
-        showingPreviousResults && styles.flatListLoading
+        showingPreviousResults && styles.flatListLoading,
       ]}
       contentContainerStyle={styles.flatListContent}
       data={suggestions}

@@ -70,6 +70,8 @@ const config: CodegenConfig = {
           Date: 'string', // or 'Date' to match server
           JSON: 'any',
           Upload: 'File',
+          BigInt: 'string', // Handle large integers as strings to avoid precision loss
+          IPv4: 'string', // IP addresses as strings
         },
 
         // Modern TypeScript
@@ -152,6 +154,8 @@ const config: CodegenConfig = {
           Date: 'string',
           JSON: 'any',
           Upload: 'File',
+          BigInt: 'string', // Handle large integers as strings to avoid precision loss
+          IPv4: 'string', // IP addresses as strings
         },
         maybeValue: 'T | null | undefined',
         inputMaybeValue: 'T | undefined',

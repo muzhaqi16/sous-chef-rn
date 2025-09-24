@@ -19,6 +19,7 @@ import {
 import { CodeVerificationScreen } from '#screens/auth';
 import { linkingConfig } from './linking';
 import { ImageFile } from '#components/molecules/ImagePicker';
+import { NavigationErrorBoundary, AuthErrorBoundary } from '#components/providers/ErrorBoundary';
 
 export type RootStackParamList = {
   Auth: undefined;
@@ -37,6 +38,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function RootNavigator() {
   const { isHydrated } = useStore();
+  const authState = useAuthState();
 
   // Don't render navigation until store is hydrated
   if (!isHydrated) {
@@ -44,48 +46,76 @@ function RootNavigator() {
   }
 
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {/* Auth Group */}
-      {useAuthState.isUnauthenticated() && (
-        <Stack.Screen name="Auth" component={AuthStack} />
-      )}
+    <NavigationErrorBoundary>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        {/* Auth Group */}
+        {authState.isUnauthenticated && (
+          <Stack.Screen name="Auth">
+            {() => (
+              <AuthErrorBoundary>
+                <AuthStack />
+              </AuthErrorBoundary>
+            )}
+          </Stack.Screen>
+        )}
 
-      {/* Verification Group */}
-      {useAuthState.needsVerification() && (
-        <Stack.Screen name="Verification" component={CodeVerificationScreen} />
-      )}
+        {/* Verification Group */}
+        {authState.needsVerification && (
+          <Stack.Screen name="Verification">
+            {() => (
+              <AuthErrorBoundary>
+                <CodeVerificationScreen />
+              </AuthErrorBoundary>
+            )}
+          </Stack.Screen>
+        )}
 
-      {/* Onboarding Group */}
-      {useAuthState.needsOnboarding() && (
-        <Stack.Screen name="Onboarding" component={OnboardingStack} />
-      )}
+        {/* Onboarding Group */}
+        {authState.needsOnboarding && (
+          <Stack.Screen name="Onboarding">
+            {() => (
+              <NavigationErrorBoundary>
+                <OnboardingStack />
+              </NavigationErrorBoundary>
+            )}
+          </Stack.Screen>
+        )}
 
-      {/* Main App Group */}
-      {useAuthState.isFullyAuthenticated() && (
-        <>
-          <Stack.Screen name="Home" component={HomeTabs} />
-          <Stack.Screen name="HomeManagement" component={HomeManagement} />
-          <Stack.Screen name="Barcode" component={BarcodeStack} />
-          <Stack.Screen name="Notifications" component={NotificationStack} />
-          <Stack.Screen
-            name="ProfilePhotoUpload"
-            component={ProfilePhotoUploadScreen}
-          />
-          <Stack.Screen name="ImageCrop" component={ImageCropScreen} />
-        </>
-      )}
+        {/* Main App Group */}
+        {authState.isFullyAuthenticated && (
+          <>
+            <Stack.Screen name="Home">
+              {() => (
+                <NavigationErrorBoundary>
+                  <HomeTabs />
+                </NavigationErrorBoundary>
+              )}
+            </Stack.Screen>
+            <Stack.Screen name="HomeManagement" component={HomeManagement} />
+            <Stack.Screen name="Barcode" component={BarcodeStack} />
+            <Stack.Screen name="Notifications" component={NotificationStack} />
+            <Stack.Screen
+              name="ProfilePhotoUpload"
+              component={ProfilePhotoUploadScreen}
+            />
+            <Stack.Screen name="ImageCrop" component={ImageCropScreen} />
+          </>
+        )}
 
-      {/* Always available */}
-      <Stack.Screen name="NotFound" component={NotFoundScreen} />
-    </Stack.Navigator>
+        {/* Always available */}
+        <Stack.Screen name="NotFound" component={NotFoundScreen} />
+      </Stack.Navigator>
+    </NavigationErrorBoundary>
   );
 }
 
 export function Navigation() {
   return (
-    <NavigationContainer linking={linkingConfig}>
-      <RootNavigator />
-    </NavigationContainer>
+    <NavigationErrorBoundary>
+      <NavigationContainer linking={linkingConfig}>
+        <RootNavigator />
+      </NavigationContainer>
+    </NavigationErrorBoundary>
   );
 }
 

@@ -1,154 +1,143 @@
-import {RootState} from './index';
-import {zustandStorage, STORAGE_KEY} from '#/storage/mmkv';
-import {storage} from '#/storage/mmkv';
+import { RootState } from './index';
+import { zustandStorage, STORAGE_KEY } from '#/storage/mmkv';
+import { storage } from '#/storage/mmkv';
 
-// Define what gets reset in different scenarios
+// Simplified reset options
 export interface ResetOptions {
   auth?: boolean;
+  ui?: boolean;
   preferences?: boolean;
-  notifications?: boolean;
-  scanner?: boolean;
-  storage?: boolean;
   clearApolloCache?: boolean;
-  resetOnboarding?: boolean;
 }
 
-// Predefined reset scenarios
+// Simple reset scenarios
 export const RESET_SCENARIOS = {
   LOGOUT: {
     auth: true,
-    preferences: false, // Keep user preferences like theme
-    notifications: true,
-    scanner: true,
-    storage: false, // Don't clear storage completely, just auth data
-    clearApolloCache: true, // Clear Apollo cache on logout
-    resetOnboarding: true, // Custom flag to reset onboarding state
-  },
-  FULL_RESET: {
-    auth: true,
-    preferences: true,
-    notifications: true,
-    scanner: true,
-    storage: true,
+    ui: true,
+    preferences: false,
     clearApolloCache: true,
-    resetOnboarding: true,
   },
   SESSION_EXPIRED: {
     auth: true,
+    ui: false,
     preferences: false,
-    notifications: false,
-    scanner: true,
-    storage: false,
     clearApolloCache: true,
-    resetOnboarding: false,
   },
-  TOKEN_REFRESH_FAILED: {
+  FULL_RESET: {
     auth: true,
-    preferences: false,
-    notifications: false,
-    scanner: false,
-    storage: false,
+    ui: true,
+    preferences: true,
     clearApolloCache: true,
-    resetOnboarding: false,
   },
   ONBOARDING_RESET: {
     auth: false,
-    preferences: true, // Reset onboarding state
-    notifications: false,
-    scanner: false,
-    storage: false,
+    ui: true,
+    preferences: true,
     clearApolloCache: false,
-    resetOnboarding: true,
   },
 } as const;
 
-// Central reset manager
+// Simplified reset manager
 export const createResetManager = (
   set: (state: Partial<RootState>) => void,
   get: () => RootState,
 ) => ({
-  // Master reset function
   resetStore: async (options: ResetOptions | keyof typeof RESET_SCENARIOS) => {
     const resetOptions =
       typeof options === 'string' ? RESET_SCENARIOS[options] : options;
-    const currentState = get();
 
-    // Build the new state based on reset options
     const newState: Partial<RootState> = {};
 
+    // Reset auth state
     if (resetOptions.auth) {
-      // Use special reset state for token refresh failures to preserve navigation context
-      if (typeof options === 'string' && options === 'TOKEN_REFRESH_FAILED') {
-        Object.assign(newState, getTokenRefreshFailedResetState());
-      } else {
-        Object.assign(newState, getAuthResetState());
-      }
-    }
-
-    if (resetOptions.preferences) {
-      Object.assign(newState, getPreferencesResetState(currentState));
-    }
-
-    if (resetOptions.notifications) {
-      Object.assign(newState, getNotificationsResetState());
-    }
-
-    if (resetOptions.scanner) {
-      Object.assign(newState, getScannerResetState());
-    }
-
-    // Handle selective onboarding reset (without affecting theme preferences)
-    if (resetOptions.resetOnboarding) {
       Object.assign(newState, {
-        onBoardingStep: null,
+        user: null,
+        accessToken: null,
+        refreshToken: null,
+        pendingEmail: undefined,
+        pendingPassword: undefined,
+        // Clear navigation selections when auth is reset
         selectedHomeId: null,
         selectedPantryId: null,
         selectedShoppingListId: null,
       });
     }
 
-    // Handle storage reset
-    if (resetOptions.storage) {
-      zustandStorage.removeItem(STORAGE_KEY);
-      storage.clearAll();
-    } else if (resetOptions.auth) {
-      // Only clear auth-related storage data
-      await clearAuthFromStorage();
+    // Reset UI state
+    if (resetOptions.ui) {
+      Object.assign(newState, {
+        isLoading: false,
+        isError: false,
+        isFetching: false,
+        bottomSheetVisible: false,
+        bottomSheetIndex: 0,
+        activeFormId: null,
+        formData: {},
+        globalSearchQuery: '',
+        activeFilters: {},
+        toastMessage: null,
+        toastType: null,
+      });
+    }
+
+    // Reset preferences (keep theme and language unless full reset)
+    if (resetOptions.preferences) {
+      Object.assign(newState, {
+        // Reset onboarding state
+        onBoardingStep: null,
+        // Reset notifications
+        notifications: [],
+        unreadCount: 0,
+        urgentCount: 0,
+        subscribedLists: [],
+        subscribedPantries: [],
+        // Reset scanner state
+        scannedBarcode: null,
+        isScanning: false,
+        searchResults: [],
+        searchError: null,
+        recentlyScanned: [],
+      });
     }
 
     // Clear Apollo cache if requested
     if (resetOptions.clearApolloCache) {
       try {
-        const {client} = await import('#/apollo/client');
+        const { client } = await import('#/apollo/client');
         await client.clearStore();
-        // Also clear persisted cache
-        storage.delete('apollo-cache');
+        storage.delete('apollo-cache-1.0');
       } catch (error) {
         console.error('Error clearing Apollo cache:', error);
       }
+    }
+
+    // Clear auth storage
+    if (resetOptions.auth) {
+      await clearAuthFromStorage();
     }
 
     // Apply the reset
     set(newState);
 
     // Ensure hydration flag remains true
-    set({isHydrated: true});
+    set({ isHydrated: true });
   },
 
-  // Convenience methods for common scenarios
+  // Convenience methods
   logout: async () => {
     const resetManager = createResetManager(set, get);
     await resetManager.resetStore('LOGOUT');
   },
 
-  fullReset: async () => {
-    const resetManager = createResetManager(set, get);
-    await resetManager.resetStore('FULL_RESET');
-  },
-
   sessionExpired: async () => {
     const resetManager = createResetManager(set, get);
     await resetManager.resetStore('SESSION_EXPIRED');
+  },
+
+  fullReset: async () => {
+    const resetManager = createResetManager(set, get);
+    await resetManager.resetStore('FULL_RESET');
   },
 
   resetOnboarding: async () => {
@@ -158,82 +147,11 @@ export const createResetManager = (
 
   tokenRefreshFailed: async () => {
     const resetManager = createResetManager(set, get);
-    await resetManager.resetStore('TOKEN_REFRESH_FAILED');
+    await resetManager.resetStore('SESSION_EXPIRED'); // Use SESSION_EXPIRED for token failures
   },
 });
 
-// Individual slice reset state getters
-const getAuthResetState = () => ({
-  user: null,
-  accessToken: null,
-  refreshToken: null,
-  pendingEmail: undefined,
-  pendingPassword: undefined,
-  authFlow: {
-    isNewUser: false,
-    requiresVerification: false,
-    loginMethod: null,
-    lastLoginTimestamp: null,
-  },
-  userStates: {}, // Clear all user navigation states when resetting auth
-  // Clear selected IDs that belong to the previous user
-  selectedHomeId: null,
-  selectedPantryId: null,
-  selectedShoppingListId: null,
-});
-
-// Auth reset state for token refresh failures (preserves navigation state)
-const getTokenRefreshFailedResetState = () => ({
-  user: null,
-  accessToken: null,
-  refreshToken: null,
-  pendingEmail: undefined,
-  pendingPassword: undefined,
-  authFlow: {
-    isNewUser: false,
-    requiresVerification: false,
-    loginMethod: null,
-    lastLoginTimestamp: null,
-  },
-  userStates: {}, // Clear all user navigation states when resetting auth
-  // Don't clear selected IDs - user is still working in the same context
-});
-
-const getPreferencesResetState = (currentState: RootState) => ({
-  // Reset onboarding state but keep user preferences like theme
-  onBoardingStep: null,
-  selectedHomeId: null,
-  selectedPantryId: null,
-  selectedShoppingListId: null,
-  // Keep theme and language preferences
-  theme: currentState.theme,
-  language: currentState.language,
-  emailNotifications: currentState.emailNotifications,
-  pushNotifications: currentState.pushNotifications,
-  rememberMe: currentState.rememberMe,
-});
-
-const getNotificationsResetState = () => ({
-  notifications: [],
-  unreadCount: 0,
-  urgentCount: 0,
-  lastFetchedAt: null,
-  subscribedLists: [],
-  subscribedPantries: [],
-});
-
-const getScannerResetState = () => ({
-  scannedBarcode: null,
-  isScanning: false,
-  searchResults: [],
-  isSearching: false,
-  searchError: null,
-  bottomSheetVisible: false,
-  bottomSheetIndex: 0,
-  recentlyScanned: [],
-});
-
-// Storage helpers
+// Simplified auth storage cleanup
 const clearAuthFromStorage = async () => {
   try {
     console.log('Clearing auth tokens from storage');
@@ -242,50 +160,26 @@ const clearAuthFromStorage = async () => {
     storage.delete('accessToken');
     storage.delete('refreshToken');
 
-    // Also update the persisted zustand data to remove auth info
+    // Update persisted zustand data
     const currentData = await zustandStorage.getItem(STORAGE_KEY);
     if (currentData) {
       const parsedData = JSON.parse(currentData);
       if (parsedData.state) {
-        // Clear auth-related fields from persisted state
+        // Clear auth-related fields only
         delete parsedData.state.user;
         delete parsedData.state.accessToken;
         delete parsedData.state.refreshToken;
         delete parsedData.state.pendingEmail;
         delete parsedData.state.pendingPassword;
-        delete parsedData.state.authFlow;
-        delete parsedData.state.userStates;
 
-        // Clear selected IDs that are tied to the user
+        // Clear selected IDs
         delete parsedData.state.selectedHomeId;
         delete parsedData.state.selectedPantryId;
         delete parsedData.state.selectedShoppingListId;
 
-        // Clear notifications and scanner state
-        delete parsedData.state.notifications;
-        delete parsedData.state.unreadCount;
-        delete parsedData.state.urgentCount;
-        delete parsedData.state.subscribedLists;
-        delete parsedData.state.subscribedPantries;
-        delete parsedData.state.scannedBarcode;
-        delete parsedData.state.searchResults;
-        delete parsedData.state.recentlyScanned;
-
         zustandStorage.setItem(STORAGE_KEY, JSON.stringify(parsedData));
       }
     }
-
-    // Clear navigation state to prevent restoring to authenticated screens
-    console.log('Clearing navigation state from storage');
-    storage.delete('navigation_state');
-
-    // Clear all user navigation states (keys like "user_nav_state_userId")
-    const allKeys = storage.getAllKeys();
-    allKeys.forEach(key => {
-      if (key.startsWith('user_nav_state_')) {
-        storage.delete(key);
-      }
-    });
   } catch (error) {
     console.error('Error clearing auth from storage:', error);
   }

@@ -3,6 +3,9 @@ import Config from 'react-native-config';
 
 export const batchLink = new BatchHttpLink({
   uri: Config.API_URL || 'http://localhost:4000/graphql',
+  headers: {
+    'Content-Type': 'application/json',
+  },
   batchMax: 10, // Maximum number of operations to batch
   batchInterval: 20, // Wait 20ms to collect operations for batching
   batchKey: (operation) => {

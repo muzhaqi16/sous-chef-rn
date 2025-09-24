@@ -9,7 +9,6 @@ import { useStore } from '../store';
 import { ScannedItem } from '../store/slices/barcodeScannerSlice';
 import { Alert } from 'react-native';
 import { useImageUpload } from './useImageUpload';
-import { useApolloClient } from '@apollo/client/react';
 import { storage } from '#/storage/mmkv';
 
 // Helper function to convert GraphQL Item to ScannedItem
@@ -45,11 +44,11 @@ export const useSearchResults = (barcode: string) => {
     setSearchError,
     showBottomSheet,
     setSearchResults,
-    selectedPantryId,
+    // selectedPantryId: _selectedPantryId, // TODO: Use for context-aware search
   } = useStore();
 
   const { uploadItemImage } = useImageUpload();
-  const client = useApolloClient();
+  // const _client = useApolloClient(); // TODO: Use for direct Apollo operations if needed
 
   const [addNewItem, { loading: addingItem }] = useCreateItemMutation({
     onCompleted: async (data: CreateItemMutation) => {
@@ -120,7 +119,14 @@ export const useSearchResults = (barcode: string) => {
       addToRecentlyScanned(item);
       hideBottomSheet();
     }
-  }, [upcData]);
+  }, [
+    upcData,
+    barcode,
+    setSearching,
+    setSearchResults,
+    addToRecentlyScanned,
+    hideBottomSheet,
+  ]);
 
   // Handle SKU query completion
   useEffect(() => {
@@ -143,7 +149,15 @@ export const useSearchResults = (barcode: string) => {
         showBottomSheet(1);
       }
     }
-  }, [skuData]);
+  }, [
+    skuData,
+    barcode,
+    setSearching,
+    setSearchResults,
+    addToRecentlyScanned,
+    hideBottomSheet,
+    showBottomSheet,
+  ]);
 
   // Handle errors from both queries
   useEffect(() => {
@@ -152,7 +166,7 @@ export const useSearchResults = (barcode: string) => {
       setSearchError(`Search failed: ${upcError.message}`);
       showBottomSheet(1);
     }
-  }, [upcError, skuError]);
+  }, [upcError, skuError, setSearching, setSearchError, showBottomSheet]);
 
   // Handle loading state from both queries
   useEffect(() => {

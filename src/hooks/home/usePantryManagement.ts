@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo } from 'react';
 import { Alert } from 'react-native';
 import {
   useGetPantryItemsQuery,
@@ -9,7 +9,6 @@ import {
   StorageState,
 } from '#generated';
 import { useSearchableList } from '../useSearchableList';
-import { pantryStorage } from '#/storage/pantryCache';
 import { useAuth } from '#hooks/auth/useAuth';
 
 export interface PantryItemInput {
@@ -18,7 +17,7 @@ export interface PantryItemInput {
   quantity: number;
   unit?: string;
   unitId: string;
-  minimumQuantity?: number;
+  autoReorderPoint?: number;
   storageState: StorageState;
   location?: string;
   expirationDate?: string;
@@ -32,74 +31,39 @@ export interface PantryItemUpdate extends Partial<PantryItemInput> {
   currentQuantity?: number;
 }
 
+/**
+ * Simplified pantry management hook using Apollo Client only
+ * No custom caches, no complex state management - just Apollo
+ */
 export function usePantryManagement(pantryId: string | undefined) {
-  // Get authentication state from useAuth hook
   const { isLoggedOut } = useAuth();
-  // Local state - MMKV is source of truth
-  const [items, setItems] = useState<any[]>([]);
-  const [hasLoadedCache, setHasLoadedCache] = useState(false);
-
-  // Load from MMKV immediately when pantryId changes
-  useEffect(() => {
-    if (pantryId && !isLoggedOut) {
-      const cached = pantryStorage.getPantryItems(pantryId);
-      if (cached !== null) {
-        // Cache exists (even if empty array), so we have loaded cache
-        setItems(cached);
-        setHasLoadedCache(true);
-      } else {
-        // No cache exists, start with empty state
-        setItems([]);
-        setHasLoadedCache(false);
-      }
-    } else {
-      setItems([]);
-      setHasLoadedCache(false);
-    }
-  }, [pantryId, isLoggedOut]);
-
-  // Use cache-first for initial load, then network updates via subscription
-  const fetchPolicy = hasLoadedCache ? 'cache-first' : 'cache-and-network';
   const shouldSkip = !pantryId || isLoggedOut;
 
-
-  const {
-    refetch: networkRefetch,
-    loading,
-    data: queryData,
-  } = useGetPantryItemsQuery({
+  // Single source of truth: Apollo cache with network-first for freshness
+  const { data, loading, error, refetch } = useGetPantryItemsQuery({
     variables: { pantryId: pantryId ?? '' },
     skip: shouldSkip,
-    fetchPolicy,
+    fetchPolicy: 'cache-and-network', // Always try network for fresh data
     notifyOnNetworkStatusChange: true,
+    errorPolicy: 'all',
   });
 
-  // Handle the completed logic with useEffect
-  useEffect(() => {
-    if (queryData?.pantryItems && pantryId) {
-      // Update MMKV (source of truth)
-      pantryStorage.setPantryItems(pantryId, queryData.pantryItems);
-      // Update local state
-      setItems(queryData.pantryItems);
-    }
-  }, [queryData, pantryId, hasLoadedCache, loading]);
-
-  // Simple subscription - just triggers refetch
+  // Real-time updates via subscription
   usePantryItemsChangedSubscription({
     variables: { pantryId: pantryId ?? '' },
-    skip: !pantryId || isLoggedOut,
-    onData: ({ data: subData }: any) => {
-      const changeData = subData?.data?.pantryItemsChanged;
-      if (!changeData) return;
-
-      // Don't try to merge - just refetch the full list
-      // This ensures we always have complete data
-      networkRefetch();
+    skip: shouldSkip,
+    onData: () => {
+      // Apollo cache is automatically updated by subscription
+      // No manual refetch needed - just let cache work
     },
-    onError: (error: any) => {
-      console.warn('Subscription error:', error.message);
+    onError: error => {
+      console.warn('Pantry subscription error:', error.message);
+      // Fallback: refetch on subscription error
+      refetch();
     },
   });
+
+  const items = useMemo(() => data?.pantryItems ?? [], [data?.pantryItems]);
 
   // Search functionality
   const {
@@ -114,7 +78,7 @@ export function usePantryManagement(pantryId: string | undefined) {
     );
   });
 
-  // Simple stats
+  // Simple stats calculation
   const stats = useMemo(() => {
     if (!items || items.length === 0) {
       return {
@@ -141,8 +105,8 @@ export function usePantryManagement(pantryId: string | undefined) {
     }).length;
 
     const lowStock = items.filter(item => {
-      if (!item.currentQuantity || !item.minimumQuantity) return false;
-      return item.currentQuantity <= item.minimumQuantity;
+      if (!item.currentQuantity || !item.autoReorderPoint) return false;
+      return item.currentQuantity <= item.autoReorderPoint;
     }).length;
 
     return {
@@ -153,36 +117,34 @@ export function usePantryManagement(pantryId: string | undefined) {
     };
   }, [items]);
 
-  // Mutations with optimistic updates
-  const [addItemMutation] = useAddItemToPantryMutation();
-  const [updateItemMutation] = useUpdatePantryItemMutation();
-  const [removeItemMutation] = useRemoveItemFromPantryMutation();
+  // Mutations with Apollo's optimistic updates
+  const [addItemMutation] = useAddItemToPantryMutation({
+    errorPolicy: 'all',
+    onError: error => {
+      console.error('Add item error:', error);
+      Alert.alert('Error', 'Failed to add item');
+    },
+  });
 
-  // Add item with optimistic update
+  const [updateItemMutation] = useUpdatePantryItemMutation({
+    errorPolicy: 'all',
+    onError: error => {
+      console.error('Update item error:', error);
+      Alert.alert('Error', 'Failed to update item');
+    },
+  });
+
+  const [removeItemMutation] = useRemoveItemFromPantryMutation({
+    errorPolicy: 'all',
+    onError: error => {
+      console.error('Remove item error:', error);
+      Alert.alert('Error', 'Failed to remove item');
+    },
+  });
+
+  // Simplified add item - let Apollo handle optimistic updates
   const addItem = async (input: PantryItemInput) => {
     if (!pantryId) return false;
-
-    // Optimistically update MMKV and UI
-    const optimisticItem = {
-      id: `temp-${Date.now()}`,
-      ...input,
-      pantryId,
-      currentQuantity: input.quantity,
-      initialQuantity: input.quantity,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      item: {
-        id: `temp-item-${Date.now()}`,
-        name: input.itemName,
-        __typename: 'Item',
-      },
-      __typename: 'PantryItem',
-    };
-
-    const currentItems = items;
-    const newItems = [...currentItems, optimisticItem];
-    pantryStorage.setPantryItems(pantryId, newItems);
-    setItems(newItems);
 
     try {
       const result = await addItemMutation({
@@ -201,35 +163,20 @@ export function usePantryManagement(pantryId: string | undefined) {
             ...(input.barcode && { itemUpc: input.barcode }),
           },
         },
+        // Apollo will handle cache updates automatically
+        refetchQueries: ['GetPantryItems'],
       });
 
-      if (result.data?.addItemToPantry) {
-        // Refetch to get complete data
-        await networkRefetch();
-        return result.data.addItemToPantry;
-      }
+      return result.data?.addItemToPantry ?? false;
     } catch (error) {
-      // Rollback on error
-      pantryStorage.setPantryItems(pantryId, currentItems);
-      setItems(currentItems);
       console.error('Add item error:', error);
-      Alert.alert('Error', 'Failed to add item');
+      return false;
     }
-
-    return false;
   };
 
-  // Update item
+  // Simplified update item
   const updateItem = async (itemId: string, updates: PantryItemUpdate) => {
     if (!pantryId) return false;
-
-    // Optimistic update
-    const currentItems = items;
-    const updatedItems = currentItems.map(item =>
-      item.id === itemId ? { ...item, ...updates } : item,
-    );
-    pantryStorage.setPantryItems(pantryId, updatedItems);
-    setItems(updatedItems);
 
     try {
       const result = await updateItemMutation({
@@ -237,70 +184,39 @@ export function usePantryManagement(pantryId: string | undefined) {
           id: itemId,
           input: updates,
         },
+        refetchQueries: ['GetPantryItems'],
       });
 
-      if (result.data?.updatePantryItem) {
-        // Refetch to get complete updated data
-        await networkRefetch();
-        return result.data.updatePantryItem;
-      }
+      return result.data?.updatePantryItem ?? false;
     } catch (error) {
-      // Rollback on error
-      pantryStorage.setPantryItems(pantryId, currentItems);
-      setItems(currentItems);
       console.error('Update item error:', error);
-      Alert.alert('Error', 'Failed to update item');
-    }
-
-    return false;
-  };
-
-  // Remove item
-  const removeItem = async (itemId: string) => {
-    if (!pantryId) return false;
-
-    // Optimistic update
-    const currentItems = items;
-    const filteredItems = currentItems.filter(item => item.id !== itemId);
-    pantryStorage.setPantryItems(pantryId, filteredItems);
-    setItems(filteredItems);
-
-    try {
-      await removeItemMutation({
-        variables: { id: itemId },
-      });
-
-      // Refetch to ensure consistency
-      await networkRefetch();
-      return true;
-    } catch (error) {
-      // Rollback on error
-      pantryStorage.setPantryItems(pantryId, currentItems);
-      setItems(currentItems);
-      console.error('Remove item error:', error);
-      Alert.alert('Error', 'Failed to remove item');
       return false;
     }
   };
 
-  // Enhanced refetch
-  const refetch = async () => {
+  // Simplified remove item
+  const removeItem = async (itemId: string) => {
+    if (!pantryId) return false;
+
     try {
-      const result = await networkRefetch();
-      return result;
+      await removeItemMutation({
+        variables: { id: itemId },
+        refetchQueries: ['GetPantryItems'],
+      });
+
+      return true;
     } catch (error) {
-      console.error('Refetch failed:', error);
-      throw error;
+      console.error('Remove item error:', error);
+      return false;
     }
   };
-
 
   return {
     // Data
     items: filteredItems,
     allItems: items,
     loading,
-    hasLoadedCache,
+    error,
     stats,
 
     // Search
@@ -312,9 +228,6 @@ export function usePantryManagement(pantryId: string | undefined) {
     updateItem,
     removeItem,
     refetch,
-
-    // Cache debugging
-    cacheInfo: pantryId ? pantryStorage.getCacheInfo(pantryId) : null,
 
     // Helper functions
     getItemById: (itemId: string) => items.find(item => item.id === itemId),
@@ -331,8 +244,8 @@ export function usePantryManagement(pantryId: string | undefined) {
     },
     getLowStockItems: () =>
       items.filter(item => {
-        if (!item.currentQuantity || !item.minimumQuantity) return false;
-        return item.currentQuantity <= item.minimumQuantity;
+        if (!item.currentQuantity || !item.autoReorderPoint) return false;
+        return item.currentQuantity <= item.autoReorderPoint;
       }),
     getExpiredItems: () => {
       const now = new Date();

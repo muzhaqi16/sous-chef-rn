@@ -428,6 +428,8 @@ input BanUserInput {
   userId: ID!
 }
 
+scalar BigInt
+
 type Brand {
   children: [Brand!]!
   createdAt: DateTime!
@@ -634,25 +636,59 @@ input CreateCurrencyInput {
 }
 
 input CreateDeviceInput {
+  androidId: String
+  apiLevel: Int
   appVersion: String
+  availableLocationProviders: JSON
+  batteryLevel: Float
+  brand: String
   browserName: String
   browserVersion: String
+  buildNumber: String
+  bundleId: String
+  carrier: String
   deviceId: String!
   deviceName: String
   deviceType: DeviceType = UNKNOWN
+  freeDiskStorage: String
+  hasDynamicIsland: Boolean
+  hasNotch: Boolean
+  hostNames: JSON
+  instanceId: String
   isActive: Boolean = true
+  isAirplaneMode: Boolean
+  isBatteryCharging: Boolean
+  isBluetoothHeadphonesConnected: Boolean
+  isEmulator: Boolean
+  isHeadphonesConnected: Boolean
+  isKeyboardConnected: Boolean
+  isLocationEnabled: Boolean
+  isMouseConnected: Boolean
+  isTablet: Boolean
   isTrusted: Boolean = false
   isVerified: Boolean = false
+  isWiredHeadphonesConnected: Boolean
   language: String
   lastCity: String
   lastCountry: String
   lastIpAddress: String
+  manufacturer: String
+  maxMemory: String
+  model: String
   osName: String
   osVersion: String
   platform: MobilePlatform
+  powerState: JSON
   pushToken: String
+  readableVersion: String
   screenResolution: String
+  supportedAbis: JSON
+  supportedMediaTypes: JSON
+  systemVersion: String
   timezone: String
+  totalDiskCapacity: String
+  totalMemory: String
+  usedMemory: String
   userAgent: String
   userId: ID!
 }
@@ -943,18 +979,41 @@ input DateRangeInput {
 scalar DateTime
 
 type Device {
+  androidId: String
+  apiLevel: Int
   appVersion: String
+  availableLocationProviders: JSON
+  batteryLevel: Float
+  brand: String
   browserName: String
   browserVersion: String
+  buildNumber: String
+  bundleId: String
+  carrier: String
   createdAt: DateTime!
   deletedAt: DateTime
   deviceId: String!
   deviceName: String
   deviceType: DeviceType!
+  freeDiskStorage: String
+  hasDynamicIsland: Boolean
+  hasNotch: Boolean
+  hostNames: JSON
   id: ID!
+  instanceId: String
   isActive: Boolean!
+  isAirplaneMode: Boolean
+  isBatteryCharging: Boolean
+  isBluetoothHeadphonesConnected: Boolean
+  isEmulator: Boolean
+  isHeadphonesConnected: Boolean
+  isKeyboardConnected: Boolean
+  isLocationEnabled: Boolean
+  isMouseConnected: Boolean
+  isTablet: Boolean
   isTrusted: Boolean!
   isVerified: Boolean!
+  isWiredHeadphonesConnected: Boolean
   language: String
   lastCity: String
   lastCountry: String
@@ -962,13 +1021,24 @@ type Device {
   lastLoginAt: DateTime
   lastSeenAt: DateTime!
   loginCount: Int!
+  manufacturer: String
+  maxMemory: String
+  model: String
   osName: String
   osVersion: String
   platform: MobilePlatform
+  powerState: JSON
   pushToken: String
+  readableVersion: String
   screenResolution: String
+  supportedAbis: JSON
+  supportedMediaTypes: JSON
+  systemVersion: String
   timezone: String
+  totalDiskCapacity: String
+  totalMemory: String
   updatedAt: DateTime!
+  usedMemory: String
   user: User
   userAgent: String
   userId: ID!
@@ -1003,6 +1073,14 @@ input DeviceFiltersInput {
   verifiedOnly: Boolean = false
 }
 
+input DeviceHardwareInfoInput {
+  freeDiskStorage: String
+  maxMemory: String
+  totalDiskCapacity: String
+  totalMemory: String
+  usedMemory: String
+}
+
 type DeviceLocation {
   city: String
   country: String
@@ -1016,22 +1094,65 @@ input DeviceLocationInput {
   lastIpAddress: String
 }
 
+input DevicePeripheralsInput {
+  isBluetoothHeadphonesConnected: Boolean
+  isHeadphonesConnected: Boolean
+  isKeyboardConnected: Boolean
+  isMouseConnected: Boolean
+  isWiredHeadphonesConnected: Boolean
+}
+
 input DeviceRegistrationInput {
+  androidId: String
+  apiLevel: Int
   appVersion: String
+  availableLocationProviders: JSON
+  batteryLevel: Float
+  brand: String
   browserName: String
   browserVersion: String
+  buildNumber: String
+  bundleId: String
+  carrier: String
   deviceId: String!
   deviceName: String
   deviceType: DeviceType = UNKNOWN
+  freeDiskStorage: String
+  hasDynamicIsland: Boolean
+  hasNotch: Boolean
+  hostNames: JSON
+  instanceId: String
+  isAirplaneMode: Boolean
+  isBatteryCharging: Boolean
+  isBluetoothHeadphonesConnected: Boolean
+  isEmulator: Boolean
+  isHeadphonesConnected: Boolean
+  isKeyboardConnected: Boolean
+  isLocationEnabled: Boolean
+  isMouseConnected: Boolean
+  isTablet: Boolean
+  isWiredHeadphonesConnected: Boolean
   language: String
   lastCity: String
   lastCountry: String
   lastIpAddress: String
+  manufacturer: String
+  maxMemory: String
+  model: String
   osName: String
   osVersion: String
   platform: MobilePlatform
+  powerState: JSON
+  pushToken: String
+  readableVersion: String
   screenResolution: String
+  supportedAbis: JSON
+  supportedMediaTypes: JSON
+  systemVersion: String
   timezone: String
+  totalDiskCapacity: String
+  totalMemory: String
+  usedMemory: String
   userAgent: String
 }
 
@@ -1228,6 +1349,8 @@ type IPStat {
   count: Int!
   ipAddress: String!
 }
+
+scalar IPv4
 
 input ImageInput {
   format: String
@@ -2153,6 +2276,7 @@ type Mutation {
   deleteUnit(id: ID!): Boolean!
   deleteUserAddress(id: ID!): UserAddress!
   exportItems(filters: ItemFilters, format: ExportFormat!): ExportResponse!
+  flagDeviceAsEmulator(id: ID!): Device!
   flagLoginAsRisky(
     flaggedById: ID!
     loginId: ID!
@@ -2269,8 +2393,21 @@ type Mutation {
   updateCategory(id: ID!, input: UpdateCategoryInput!): Category!
   updateCurrency(id: ID!, input: UpdateCurrencyInput!): Currency!
   updateDevice(id: ID!, input: UpdateDeviceInput!): Device!
+  updateDeviceBatteryInfo(
+    batteryLevel: Float!
+    id: ID!
+    isBatteryCharging: Boolean!
+  ): Device!
+  updateDeviceHardwareInfo(
+    hardwareInfo: DeviceHardwareInfoInput!
+    id: ID!
+  ): Device!
   updateDeviceLastSeen(id: ID!): Device!
   updateDeviceLocation(id: ID!, input: DeviceLocationInput!): Device!
+  updateDevicePeripherals(
+    id: ID!
+    peripherals: DevicePeripheralsInput!
+  ): Device!
   updateHome(id: ID!, input: UpdateHomeInput!): Home!
   updateItem(id: ID!, input: UpdateItemInput!): Item!
   updateItemAllergens(allergens: [AllergenInput!]!, id: ID!): Item!
@@ -2644,7 +2781,7 @@ type PantryItem {
   unit: Unit
   unitId: String
   unitName: String
-  updatedAt: DateTime!
+  updatedAt: DateTime
   usageFrequency: UsageFrequency!
   usageRecords: [PantryItemUsage!]!
   wasteAmount: Float!
@@ -2893,7 +3030,10 @@ type Query {
     verifiedOnly: Boolean = false
   ): Int!
   deviceStats(userId: ID!): DeviceStats!
+  devicesByManufacturer(manufacturer: String!, userId: ID!): [Device!]!
   devicesByPlatform(platform: MobilePlatform!, userId: ID!): [Device!]!
+  devicesWithPeripherals(userId: ID!): [Device!]!
+  emulatedDevices(userId: ID!): [Device!]!
   expiringItems(pantryId: ID!): [PantryItem!]!
   failedLoginAttempts(hours: Int = 24, userId: ID!): [LoginHistory!]!
   getDefaultHome: Home
@@ -2929,6 +3069,7 @@ type Query {
     userId: ID!
   ): [LoginHistory!]!
   loginHistoryStats(days: Int = 30, userId: ID!): LoginHistoryStats!
+  lowBatteryDevices(threshold: Float = 0.2, userId: ID!): [Device!]!
   lowStockItems(pantryId: ID!): [PantryItem!]!
   me: User
   mealPlan(id: ID!): MealPlan
@@ -3023,8 +3164,10 @@ type Query {
   storeWithPurchases(id: ID!, limit: Int): Store
   stores: [Store!]!
   suggestedRecipes: [Recipe!]!
+  suspiciousDevices(userId: ID!): [Device!]!
   suspiciousInviteActivity(timeWindowHours: Int): [InviteLog!]!
   suspiciousLoginActivity(hours: Int = 24, userId: ID!): SuspiciousActivity!
+  tabletDevices(userId: ID!): [Device!]!
   trendingItems(category: String, limit: Int): [Item!]
   trustedDevices(userId: ID!): [Device!]!
   unit(id: ID!): Unit
@@ -3792,24 +3935,58 @@ input UpdateCurrencyInput {
 }
 
 input UpdateDeviceInput {
+  androidId: String
+  apiLevel: Int
   appVersion: String
+  availableLocationProviders: JSON
+  batteryLevel: Float
+  brand: String
   browserName: String
   browserVersion: String
+  buildNumber: String
+  bundleId: String
+  carrier: String
   deviceName: String
   deviceType: DeviceType
+  freeDiskStorage: String
+  hasDynamicIsland: Boolean
+  hasNotch: Boolean
+  hostNames: JSON
+  instanceId: String
   isActive: Boolean
+  isAirplaneMode: Boolean
+  isBatteryCharging: Boolean
+  isBluetoothHeadphonesConnected: Boolean
+  isEmulator: Boolean
+  isHeadphonesConnected: Boolean
+  isKeyboardConnected: Boolean
+  isLocationEnabled: Boolean
+  isMouseConnected: Boolean
+  isTablet: Boolean
   isTrusted: Boolean
   isVerified: Boolean
+  isWiredHeadphonesConnected: Boolean
   language: String
   lastCity: String
   lastCountry: String
   lastIpAddress: String
+  manufacturer: String
+  maxMemory: String
+  model: String
   osName: String
   osVersion: String
   platform: MobilePlatform
+  powerState: JSON
   pushToken: String
+  readableVersion: String
   screenResolution: String
+  supportedAbis: JSON
+  supportedMediaTypes: JSON
+  systemVersion: String
   timezone: String
+  totalDiskCapacity: String
+  totalMemory: String
+  usedMemory: String
   userAgent: String
 }
 
@@ -4153,6 +4330,7 @@ type User {
   id: ID!
   language: String
   lastActiveAt: DateTime
+  loginHistory: [LoginHistory!]!
   moderation: UserModeration
   onBoarded: Boolean!
   preferredCurrency: String

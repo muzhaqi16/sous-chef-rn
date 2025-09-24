@@ -1,13 +1,10 @@
-import {client} from './client';
-import {pantryStorage} from '#/storage/pantryCache';
-import {shoppingListStorage} from '#/storage/shoppingListCache';
-import {useStore} from '#store';
+import { client } from './client';
+import { useStore } from '#store';
+import { storage } from '#/storage/mmkv';
 
 interface LogoutCleanupOptions {
   clearCache?: boolean;
   cancelSubscriptions?: boolean;
-  clearPantryCache?: boolean;
-  clearShoppingListCache?: boolean;
   suppressErrors?: boolean;
 }
 
@@ -51,8 +48,6 @@ export class LogoutCleanup {
     const {
       clearCache = true,
       cancelSubscriptions = true,
-      clearPantryCache = true,
-      clearShoppingListCache = true,
       suppressErrors = true,
     } = options;
 
@@ -68,19 +63,9 @@ export class LogoutCleanup {
       // 2. Stop all in-flight queries
       await LogoutCleanup.stopInFlightQueries();
 
-      // 3. Clear Apollo cache
+      // 3. Clear Apollo cache (only cache we need now)
       if (clearCache) {
         await LogoutCleanup.clearApolloCache();
-      }
-
-      // 4. Clear pantry-specific caches
-      if (clearPantryCache) {
-        LogoutCleanup.clearPantryCaches();
-      }
-
-      // 5. Clear shopping list caches
-      if (clearShoppingListCache) {
-        LogoutCleanup.clearShoppingListCaches();
       }
 
       console.log('✅ Apollo logout cleanup completed');
@@ -127,13 +112,23 @@ export class LogoutCleanup {
   }
 
   /**
-   * Stop all in-flight GraphQL queries
+   * Stop all in-flight GraphQL queries and clean up WebSocket
    */
   private static async stopInFlightQueries(): Promise<void> {
     try {
       // Stop all queries by stopping the network layer temporarily
-      await client.stop();
-      console.log('🛑 Stopped all in-flight queries');
+      client.stop();
+
+      // Clean up WebSocket connections
+      try {
+        const { disposeWebSocket } = await import('./links/wsLink');
+        disposeWebSocket();
+        console.log('🔌 WebSocket connection disposed');
+      } catch (wsError) {
+        console.warn('Failed to dispose WebSocket:', wsError);
+      }
+
+      console.log('🛑 Stopped all in-flight queries and connections');
     } catch (error) {
       console.warn('Failed to stop in-flight queries:', error);
     }
@@ -144,41 +139,28 @@ export class LogoutCleanup {
    */
   private static async clearApolloCache(): Promise<void> {
     try {
-      // Get client dynamically to avoid circular dependency
-      const {client} = await import('#/apollo/client');
       await client.clearStore();
 
-      const {storage} = await import('#/storage/mmkv');
+      // Clear storage keys
       storage.delete('apollo-cache');
       storage.delete('navigation_state');
+      storage.delete('apollo-client-cache');
+      storage.delete('persisted-queries');
+
+      // Get secure storage and clear auth-related data
+      try {
+        const { getStorage } = await import('#/storage/mmkv');
+        const secureStorage = await getStorage();
+        secureStorage.delete('apollo-cache');
+        secureStorage.delete('navigation_state');
+        secureStorage.delete('apollo-client-cache');
+      } catch (storageError) {
+        console.warn('Failed to clear secure storage:', storageError);
+      }
 
       console.log('🗑️ Apollo cache and navigation state cleared');
     } catch (error) {
       console.warn('Failed to clear Apollo cache:', error);
-    }
-  }
-
-  /**
-   * Clear pantry-specific caches
-   */
-  private static clearPantryCaches(): void {
-    try {
-      pantryStorage.clearAllPantryCaches();
-      console.log('🏪 Pantry caches cleared');
-    } catch (error) {
-      console.warn('Failed to clear pantry caches:', error);
-    }
-  }
-
-  /**
-   * Clear shopping list caches
-   */
-  private static clearShoppingListCaches(): void {
-    try {
-      shoppingListStorage.clearAllShoppingListCaches();
-      console.log('🛒 Shopping list caches cleared');
-    } catch (error) {
-      console.warn('Failed to clear shopping list caches:', error);
     }
   }
 

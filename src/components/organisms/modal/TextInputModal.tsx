@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Modal,
   View,
@@ -9,10 +9,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  TextInputProps,
 } from 'react-native';
 
-import {TextInputModalProps, ValidationRule} from './types';
+import { TextInputModalProps } from './types';
 
 export const TextInputModal: React.FC<TextInputModalProps> = ({
   visible,
@@ -94,10 +93,12 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
       visible={visible}
       onRequestClose={handleClose}
       statusBarTranslucent={true}
-      presentationStyle="overFullScreen">
+      presentationStyle="overFullScreen"
+    >
       <KeyboardAvoidingView
         style={styles.centeredView}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
         <View style={styles.modalView}>
           <Text style={styles.title}>{title}</Text>
 
@@ -105,7 +106,7 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
             style={[
               styles.input,
               multiline && styles.multilineInput,
-              error ? {borderColor: errorColor} : {},
+              error ? { borderColor: errorColor } : {},
             ]}
             placeholder={placeholder}
             placeholderTextColor="#999"
@@ -122,14 +123,17 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
           />
 
           {error ? (
-            <Text style={[styles.errorText, {color: errorColor}]}>{error}</Text>
+            <Text style={[styles.errorText, { color: errorColor }]}>
+              {error}
+            </Text>
           ) : null}
 
           <View style={styles.buttonContainer}>
             <TouchableOpacity
               style={[styles.button, styles.cancelButton]}
               onPress={handleClose}
-              disabled={isSubmitting}>
+              disabled={isSubmitting}
+            >
               <Text style={styles.cancelButtonText}>{cancelText}</Text>
             </TouchableOpacity>
 
@@ -137,11 +141,12 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
               style={[
                 styles.button,
                 styles.submitButton,
-                {backgroundColor: primaryColor},
+                { backgroundColor: primaryColor },
                 isSubmitting && styles.disabledButton,
               ]}
               onPress={handleSubmit}
-              disabled={isSubmitting || loading}>
+              disabled={isSubmitting || loading}
+            >
               {isSubmitting || loading ? (
                 <ActivityIndicator size="small" color="#FFF" />
               ) : (

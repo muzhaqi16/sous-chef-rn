@@ -4,124 +4,45 @@ import { isKnownServerError } from '#utils/subscriptionErrorHandler';
 import { LogoutCleanup } from '../logoutCleanup';
 import { attemptTokenRefresh } from './refreshToken';
 
-// Debouncing is now handled in the refreshToken link itself
+// Utility functions for error detection
+const isAuthError = (code: string, msg: string) =>
+  ['UNAUTHENTICATED', 'FORBIDDEN'].includes(code) ||
+  ['expired', 'unauthorized', 'invalid token', 'jwt'].some(term => msg.toLowerCase().includes(term));
 
+const isApiKeyError = (code: string, msg: string) =>
+  ['API_KEY_REQUIRED', 'INVALID_API_KEY', 'API_KEY_EXPIRED'].includes(code) ||
+  msg.toLowerCase().includes('api key');
+
+const isSubscription = (op: any) =>
+  op.query.definitions.some((def: any) => def.kind === 'OperationDefinition' && def.operation === 'subscription');
 
 export const errorLink = new ErrorLink(({ error, operation, forward }) => {
-  // Skip error handling for refresh token mutation
-  if (operation.getContext().skipErrorLink) {
-    return;
-  }
+  if (operation.getContext().skipErrorLink || LogoutCleanup.isInLogoutProcess()) return;
 
-  // Handle logout-related errors gracefully
-  if (LogoutCleanup.isInLogoutProcess()) {
-    console.log(`🔇 Suppressing error during logout: ${operation.operationName}`);
-    return; // Skip all error handling during logout
-  }
-
-  // Check if this is a known server subscription error
-  const isSubscription = operation.query.definitions.some(
-    (def: any) =>
-      def.kind === 'OperationDefinition' && def.operation === 'subscription',
-  );
-
-  // Handle GraphQL errors using v4 API
   if (CombinedGraphQLErrors.is(error)) {
-
-    // Also handle errors with our utility
-    const firstError = error.errors[0];
-    if (LogoutCleanup.handleLogoutError({ message: firstError?.message }, operation.operationName)) {
-      return; // Error was suppressed during logout
-    }
-
     for (const err of error.errors) {
-      const code = err.extensions?.code;
-      const msg = err.message || '';
+      const code = String(err.extensions?.code || '');
+      const message = String(err.message || '');
 
-
-      // Check for API key related errors
-      const isApiKeyError =
-        code === 'API_KEY_REQUIRED' ||
-        code === 'INVALID_API_KEY' ||
-        code === 'API_KEY_EXPIRED' ||
-        msg.toLowerCase().includes('api key') ||
-        msg.toLowerCase().includes('invalid key');
-
-      if (isApiKeyError) {
-        console.error('API Key error:', err.message);
+      if (isApiKeyError(code, message)) {
+        console.error('API Key error:', message);
         continue;
       }
 
-      // Check for various authentication error patterns
-      const isAuthError =
-        code === 'UNAUTHENTICATED' ||
-        code === 'FORBIDDEN' ||
-        msg.toLowerCase().includes('expired') ||
-        msg.toLowerCase().includes('unauthorized') ||
-        msg.toLowerCase().includes('invalid token') ||
-        msg.toLowerCase().includes('jwt');
-
-      if (isAuthError && operation.operationName !== 'RefreshToken') {
-        // Skip token refresh if we're in logout process
-        if (LogoutCleanup.isInLogoutProcess()) {
-          return;
-        }
-
-        // Always attempt token refresh - the refresh mechanism will handle queuing
-        // Don't debounce here, let the refreshToken link handle the coordination
+      if (isAuthError(code, message) && operation.operationName !== 'RefreshToken') {
         return attemptTokenRefresh(operation, forward);
       }
     }
-  }
-  // Handle Protocol errors using v4 API
-  else if (CombinedProtocolErrors.is(error)) {
-  }
-  // Handle Network errors
-  else {
-
-    // Also handle errors with our utility
-    if (LogoutCleanup.handleLogoutError({ message: error.message }, operation.operationName)) {
-      return; // Error was suppressed during logout
-    }
-
-    // Check for WebSocket authentication errors
-    if (isSubscription && error.message?.includes('Socket closed with event 4500')) {
+  } else if (!CombinedProtocolErrors.is(error)) {
+    if (isSubscription(operation) && error.message?.includes('Socket closed with event 4500')) {
       return attemptTokenRefresh(operation, forward);
     }
 
-    // Check if this is a known server subscription error
-    if (isSubscription && isKnownServerError({ message: error.message })) {
-      console.warn(
-        `Known server subscription error for ${operation.operationName}:`,
-        error.message,
-      );
+    if (isSubscription(operation) && isKnownServerError({ message: error.message })) {
+      console.warn(`Known server error for ${operation.operationName}:`, error.message);
       return;
     }
 
-    console.error(`[Network error]: ${error}`);
-
-    // Enhanced network error debugging
-    const errorAny = error as any;
-    if (errorAny.statusCode) {
-      console.error('[Network Error Details]', {
-        message: error.message,
-        statusCode: errorAny.statusCode,
-        // Log additional network error properties
-        ...errorAny,
-      });
-
-      // Handle rate limiting
-      if (errorAny.statusCode === 429) {
-        const headers = errorAny.response?.headers;
-        if (headers) {
-          const rateLimit = headers.get('X-RateLimit-Limit');
-          const rateRemaining = headers.get('X-RateLimit-Remaining');
-          const retryAfter = headers.get('Retry-After');
-          console.log(
-            `Rate limit exceeded. Headers: X-RateLimit-Limit=${rateLimit}, X-RateLimit-Remaining=${rateRemaining}, Retry-After=${retryAfter}`,
-          );
-        }
-      }
-    }
+    console.error(`Network error [${operation.operationName}]:`, error.message);
   }
 });

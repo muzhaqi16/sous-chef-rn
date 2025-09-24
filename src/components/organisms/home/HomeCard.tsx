@@ -1,9 +1,9 @@
 import React from 'react';
-import {View, Text} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
-import {useGetHomeInvitesQuery} from '#generated';
-import {HomeActions} from './HomeActions';
-import {MembersList} from './MembersList';
+import { View, Text } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { useGetHomeInvitesQuery } from '#generated';
+import { HomeActions } from './HomeActions';
+import { MembersList } from './MembersList';
 
 export type PartialHome = {
   id: string;
@@ -24,7 +24,7 @@ export type PartialHome = {
       };
     };
   }>;
-  pantries?: Array<{id: string}>;
+  pantries?: Array<{ id: string }>;
   myMembership?: {
     id: string;
     role: string;
@@ -49,8 +49,8 @@ export const HomeCard: React.FC<HomeCardProps> = ({
   onDelete,
 }) => {
   // Fetch invites for this specific home
-  const {data: invitesData, loading: invitesLoading} = useGetHomeInvitesQuery({
-    variables: {homeId: home.id},
+  const { data: invitesData } = useGetHomeInvitesQuery({
+    variables: { homeId: home.id },
     fetchPolicy: 'cache-and-network',
   });
 
@@ -109,12 +109,14 @@ export const HomeCard: React.FC<HomeCardProps> = ({
                   backgroundColor:
                     getRoleBadgeColor(home.myMembership.role) + '20',
                 },
-              ]}>
+              ]}
+            >
               <Text
                 style={[
                   styles.roleText,
-                  {color: getRoleBadgeColor(home.myMembership.role)},
-                ]}>
+                  { color: getRoleBadgeColor(home.myMembership.role) },
+                ]}
+              >
                 {formatRole(home.myMembership.role)}
               </Text>
             </View>
@@ -142,13 +144,13 @@ export const HomeCard: React.FC<HomeCardProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   homeCard: {
-    backgroundColor: 'white',
-    borderRadius: 8,
-    padding: 16,
-    marginHorizontal: 16,
+    backgroundColor: theme.colors.white,
+    borderRadius: theme.radii.md,
+    padding: theme.spacing.md,
+    marginHorizontal: theme.spacing.md,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
+    shadowColor: theme.colors.black,
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
@@ -163,14 +165,14 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   homeName: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: theme.fonts.size.lg,
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
   },
   homeDetails: {
-    fontSize: 14,
+    fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-    marginTop: 4,
+    marginTop: theme.spacing.xs,
   },
   badgeContainer: {
     flexDirection: 'row',
@@ -178,23 +180,23 @@ const styles = StyleSheet.create(theme => ({
     gap: 6,
   },
   roleBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
+    borderRadius: theme.radii.sm,
   },
   roleText: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
   defaultBadge: {
     backgroundColor: theme.colors.primary + '20',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
+    borderRadius: theme.radii.sm,
   },
   defaultText: {
-    fontSize: 12,
+    fontSize: theme.fonts.size.xs,
     color: theme.colors.primary,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
   },
 }));

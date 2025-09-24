@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -7,13 +7,12 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
-import {Icon} from '#utils';
+import { StyleSheet } from 'react-native-unistyles';
+import { Icon } from '#utils';
 import {
   useAcceptHomeInviteMutation,
   useAcceptShoppingListInviteMutation,
 } from '#generated';
-import {useStore} from '#store';
 
 export interface InvitationData {
   type: 'HOME_INVITE' | 'SHOPPING_LIST_INVITE';
@@ -36,10 +35,9 @@ interface InvitationAcceptanceModalProps {
 
 export const InvitationAcceptanceModal: React.FC<
   InvitationAcceptanceModalProps
-> = ({visible, invitation, onClose, onAccept, onReject}) => {
+> = ({ visible, invitation, onClose, onAccept, onReject }) => {
   const [accepting, setAccepting] = useState(false);
-  const [rejecting, setRejecting] = useState(false);
-  const user = useStore(state => state.user);
+  const [rejecting] = useState(false);
 
   const [acceptHomeInvite] = useAcceptHomeInviteMutation();
   const [acceptShoppingListInvite] = useAcceptShoppingListInviteMutation();
@@ -112,7 +110,7 @@ export const InvitationAcceptanceModal: React.FC<
       'Reject Invitation',
       `Are you sure you want to reject this invitation to ${invitation.entityName}?`,
       [
-        {text: 'Cancel', style: 'cancel'},
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Reject',
           style: 'destructive',
@@ -135,7 +133,8 @@ export const InvitationAcceptanceModal: React.FC<
       visible={visible}
       transparent
       animationType="slide"
-      onRequestClose={onClose}>
+      onRequestClose={onClose}
+    >
       <View style={styles.overlay}>
         <View style={styles.modal}>
           {/* Header */}
@@ -185,7 +184,8 @@ export const InvitationAcceptanceModal: React.FC<
             <TouchableOpacity
               style={[styles.button, styles.rejectButton]}
               onPress={handleReject}
-              disabled={accepting || rejecting}>
+              disabled={accepting || rejecting}
+            >
               {rejecting ? (
                 <ActivityIndicator color="#f44336" />
               ) : (
@@ -201,7 +201,8 @@ export const InvitationAcceptanceModal: React.FC<
             <TouchableOpacity
               style={[styles.button, styles.acceptButton]}
               onPress={handleAccept}
-              disabled={accepting || rejecting}>
+              disabled={accepting || rejecting}
+            >
               {accepting ? (
                 <ActivityIndicator color="#fff" />
               ) : (
@@ -230,13 +231,13 @@ const styles = StyleSheet.create(theme => ({
   },
   modal: {
     backgroundColor: theme.colors.background,
-    borderRadius: 12,
+    borderRadius: theme.radii.lg,
     width: '100%',
     maxWidth: 400,
     overflow: 'hidden',
     elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
+    shadowColor: theme.colors.black,
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
   },
@@ -250,16 +251,16 @@ const styles = StyleSheet.create(theme => ({
   iconContainer: {
     width: 48,
     height: 48,
-    borderRadius: 24,
-    backgroundColor: '#E8F5E8',
+    borderRadius: theme.radii.full,
+    backgroundColor: theme.colors.success + '20',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: theme.spacing.md,
   },
   title: {
     flex: 1,
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: theme.fonts.size.lg,
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
   },
   closeButton: {
@@ -269,7 +270,7 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.lg,
   },
   description: {
-    fontSize: 16,
+    fontSize: theme.fonts.size.md,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.md,
     lineHeight: 22,
@@ -280,7 +281,7 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.sm,
   },
   inviterText: {
-    fontSize: 14,
+    fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
     marginLeft: theme.spacing.xs,
   },
@@ -290,10 +291,10 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.md,
   },
   entityText: {
-    fontSize: 14,
+    fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
     marginLeft: theme.spacing.xs,
-    fontWeight: '500',
+    fontWeight: theme.fonts.weight.medium,
   },
   actions: {
     flexDirection: 'row',
@@ -308,25 +309,25 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     paddingVertical: theme.spacing.md,
     paddingHorizontal: theme.spacing.lg,
-    borderRadius: 8,
+    borderRadius: theme.radii.md,
     gap: theme.spacing.xs,
   },
   rejectButton: {
-    backgroundColor: '#ffebee',
+    backgroundColor: theme.colors.error + '10',
     borderWidth: 1,
-    borderColor: '#f44336',
+    borderColor: theme.colors.error,
   },
   acceptButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: theme.colors.success,
   },
   buttonText: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: theme.fonts.size.md,
+    fontWeight: theme.fonts.weight.semibold,
   },
   rejectText: {
-    color: '#f44336',
+    color: theme.colors.error,
   },
   acceptText: {
-    color: '#fff',
+    color: theme.colors.white,
   },
 }));

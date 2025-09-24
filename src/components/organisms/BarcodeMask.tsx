@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Dimensions } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import Svg, { Defs, Rect, Mask } from 'react-native-svg';
 import AnimatedScanLine from '../molecules/AnimatedScanLine';
 
@@ -23,8 +23,6 @@ const BarcodeMask: React.FC<BarcodeMaskProps> = ({
   showAnimatedLine = true,
   lineAnimationDuration = 2000,
 }) => {
-  const { theme } = useUnistyles();
-
   const maskId = 'mask';
   const centerX = screenWidth / 2;
   const centerY = screenHeight / 2;
@@ -125,7 +123,7 @@ const BarcodeMask: React.FC<BarcodeMaskProps> = ({
   );
 };
 
-const styles = StyleSheet.create(theme => ({
+const styles = StyleSheet.create(() => ({
   container: {
     ...StyleSheet.absoluteFillObject,
   },

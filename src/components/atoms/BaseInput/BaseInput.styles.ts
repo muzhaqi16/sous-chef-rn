@@ -1,6 +1,6 @@
 import {StyleSheet} from 'react-native-unistyles';
 
-export default StyleSheet.create((theme, rt) => ({
+export default StyleSheet.create((theme, _rt) => ({
   container: {
     gap: theme.spacing.xs,
     marginVertical: {

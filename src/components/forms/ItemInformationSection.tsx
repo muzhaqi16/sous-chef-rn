@@ -1,9 +1,12 @@
-import React from 'react';
-import {View, Text} from 'react-native';
-import {Control, FieldErrors} from 'react-hook-form';
-import {StyleSheet} from 'react-native-unistyles';
-import {DynamicFormFields, FieldDef} from '#components/molecules/DynamicFormFields';
-import {ItemSuggestion} from '#generated';
+import React, { useMemo } from 'react';
+import { View, Text } from 'react-native';
+import { Control, FieldErrors } from 'react-hook-form';
+import { StyleSheet } from 'react-native-unistyles';
+import {
+  DynamicFormFields,
+  FieldDef,
+} from '#components/molecules/DynamicFormFields';
+import { ItemSuggestion } from '#generated';
 
 interface ItemInformationSectionProps {
   control: Control<any>;
@@ -13,6 +16,15 @@ interface ItemInformationSectionProps {
   currentItemName?: string;
 }
 
+const createReadOnlyComponent = (itemName: string) => {
+  const Component: React.FC = () => (
+    <View style={styles.readOnlyField}>
+      <Text style={styles.readOnlyText}>{itemName}</Text>
+    </View>
+  );
+  Component.displayName = 'ReadOnlyItemNameBound';
+  return Component;
+};
 export const ItemInformationSection: React.FC<ItemInformationSectionProps> = ({
   control,
   errors,
@@ -20,6 +32,12 @@ export const ItemInformationSection: React.FC<ItemInformationSectionProps> = ({
   mode,
   currentItemName,
 }) => {
+  const readOnlyComponent = useMemo(
+    () =>
+      currentItemName ? createReadOnlyComponent(currentItemName) : () => null,
+    [currentItemName],
+  );
+
   const getFields = (): FieldDef<any>[] => {
     if (mode === 'add') {
       return [
@@ -28,7 +46,7 @@ export const ItemInformationSection: React.FC<ItemInformationSectionProps> = ({
           label: 'Item Name',
           placeholder: 'e.g., Rice, Pasta',
           component: 'itemAutocomplete',
-          props: {required: true},
+          props: { required: true },
           onSelectItem,
         },
         {
@@ -44,11 +62,7 @@ export const ItemInformationSection: React.FC<ItemInformationSectionProps> = ({
         {
           name: 'itemName',
           label: 'Item Name',
-          component: () => (
-            <View style={styles.readOnlyField}>
-              <Text style={styles.readOnlyText}>{currentItemName}</Text>
-            </View>
-          ),
+          component: readOnlyComponent,
         },
       ];
     }

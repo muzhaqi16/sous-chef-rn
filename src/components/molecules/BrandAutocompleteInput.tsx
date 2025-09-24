@@ -1,14 +1,14 @@
-import React, {useState, useEffect, useRef, useCallback} from 'react';
-import {View, Text, TouchableOpacity, FlatList} from 'react-native';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { View, Text, TouchableOpacity, FlatList } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetBackdrop,
   BottomSheetTextInput,
   BottomSheetView,
 } from '@gorhom/bottom-sheet';
-import {StyleSheet} from 'react-native-unistyles';
-import {Input} from '#components/base/Input';
-import {useSearchBrandsLazyQuery} from '#generated';
+import { StyleSheet } from 'react-native-unistyles';
+import { Input } from '#components/base/Input';
+import { useSearchBrandsLazyQuery } from '#generated';
 
 type BrandItem = {
   id: string;
@@ -38,8 +38,7 @@ export const BrandAutocompleteInput: React.FC<BrandAutocompleteInputProps> = ({
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [searchTerm, setSearchTerm] = useState(value || '');
 
-  const [searchBrands, {data: brandsData, loading: brandsLoading}] =
-    useSearchBrandsLazyQuery();
+  const [searchBrands, { data: brandsData }] = useSearchBrandsLazyQuery();
 
   // Sync searchTerm with external value changes
   useEffect(() => {
@@ -49,7 +48,7 @@ export const BrandAutocompleteInput: React.FC<BrandAutocompleteInputProps> = ({
   useEffect(() => {
     if (searchTerm.length >= 2) {
       searchBrands({
-        variables: {search: searchTerm, limit: 20},
+        variables: { search: searchTerm, limit: 20 },
       });
     }
   }, [searchTerm, searchBrands]);
@@ -103,11 +102,12 @@ export const BrandAutocompleteInput: React.FC<BrandAutocompleteInputProps> = ({
     [],
   );
 
-  const renderBrand = ({item}: {item: BrandItem}) => (
+  const renderBrand = ({ item }: { item: BrandItem }) => (
     <TouchableOpacity
       onPress={() => handleSelectBrand(item)}
       style={styles.brandItem}
-      activeOpacity={0.7}>
+      activeOpacity={0.7}
+    >
       <Text style={styles.brandName}>{item.name}</Text>
     </TouchableOpacity>
   );
@@ -133,7 +133,8 @@ export const BrandAutocompleteInput: React.FC<BrandAutocompleteInputProps> = ({
         keyboardBlurBehavior="none"
         android_keyboardInputMode="adjustResize"
         enablePanDownToClose={true}
-        enableContentPanningGesture={false}>
+        enableContentPanningGesture={false}
+      >
         <View style={styles.autocompleteContainer}>
           <Text style={styles.autocompleteTitle}>Select a brand</Text>
 

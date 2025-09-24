@@ -1,8 +1,7 @@
-import {useMemo, type FC} from 'react';
-import {View, StyleProp, ViewStyle, TextInputProps} from 'react-native';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
-import {BaseInput, ActionButton} from '#components';
-import {commonStyles} from '#/styles/commonStyles';
+import { useMemo, type FC } from 'react';
+import { View, StyleProp, ViewStyle, TextInputProps } from 'react-native';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { BaseInput, ActionButton } from '#components';
 
 export interface SearchBarAction {
   icon: string;
@@ -38,13 +37,12 @@ export const SearchBar: FC<SearchBarProps> = ({
   inputStyle,
   leftActions = [],
   rightActions = [],
-  listName = 'List',
   // Legacy props for backward compatibility
   onPressList,
   onPressAdd,
   ...textInputProps
 }) => {
-  const {theme} = useUnistyles();
+  const { theme } = useUnistyles();
   // Handle legacy props by converting them to action arrays
   const finalLeftActions = useMemo(() => {
     const actions = [...leftActions];
@@ -119,7 +117,7 @@ export const SearchBar: FC<SearchBarProps> = ({
   );
 };
 
-const styles = StyleSheet.create((theme, rt) => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flexDirection: 'row',
     alignItems: 'center',

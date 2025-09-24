@@ -1,7 +1,7 @@
 import React, {useState, useRef} from 'react';
 import {Text, StyleSheet} from 'react-native';
 import BottomSheet, {BottomSheetRef} from '../pages/BottomSheet';
-import {Button} from '../atoms/Button';
+import {Button} from "../base/Button";
 import {EmailInput} from '../atoms';
 import {useStore} from '../../store';
 import {
@@ -49,10 +49,10 @@ const ShareShoppingListBottomSheet: React.FC = () => {
   return (
     <>
       <Button
-        title="Share Shopping List"
         onPress={handleShow}
-        style={{margin: 16}}
-      />
+        style={{margin: 16}}>
+        Share Shopping List
+      </Button>
       {renderBottomSheet && (
         <BottomSheet
           ref={bottomSheetRef}
@@ -63,7 +63,7 @@ const ShareShoppingListBottomSheet: React.FC = () => {
             value={email}
             onChangeText={setEmail}
           />
-          <Button title="Share" onPress={handleShare} />
+          <Button onPress={handleShare}>Share</Button>
           {error && <Text style={styles.errorText}>Error: {error}</Text>}
         </BottomSheet>
       )}

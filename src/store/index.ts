@@ -1,11 +1,11 @@
-import {create} from 'zustand';
-import {immer} from 'zustand/middleware/immer';
+import { create } from 'zustand';
+import { immer } from 'zustand/middleware/immer';
 import {
   createJSONStorage,
   persist,
   subscribeWithSelector,
 } from 'zustand/middleware';
-import {createAuthSlice, AuthState} from './slices/authSlice';
+import { createAuthSlice, AuthState } from './slices/authSlice';
 import {
   createPreferencesSlice,
   PreferencesState,
@@ -14,20 +14,28 @@ import {
   BarcodeScannerState,
   createBarcodeScannerSlice,
 } from './slices/barcodeScannerSlice';
-import {createAppSlice, AppState} from './slices/appSlice';
+import { createAppSlice, AppState } from './slices/appSlice';
 import {
   createNotificationSlice,
   NotificationState,
 } from './slices/notificationSlice';
+import { createUISlice, UIState } from './slices/uiSlice';
 import {
   createResetManager,
   ResetOptions,
   RESET_SCENARIOS,
 } from './resetManager';
 
-import {createNavigationSlice, NavigationState} from './slices/navigationSlice';
+import {
+  createNavigationSlice,
+  NavigationState,
+} from './slices/navigationSlice';
+import {
+  createTelemetrySlice,
+  TelemetryState,
+} from './slices/telemetrySlice';
 // import {logger} from './logger';
-import {zustandStorage, STORAGE_KEY} from '#/storage/mmkv';
+import { zustandStorage, STORAGE_KEY } from '#/storage/mmkv';
 
 // Add reset manager interface to root state
 interface ResetManagerState {
@@ -53,6 +61,8 @@ export type RootState = AuthState &
   NavigationState &
   NotificationState &
   BarcodeScannerState &
+  UIState &
+  TelemetryState &
   ResetManagerState &
   NavigationStateManagerState;
 
@@ -95,6 +105,8 @@ export const useStore = create<RootState>()(
             ...createNavigationSlice(set, get, store),
             ...createBarcodeScannerSlice(set, get, store),
             ...createNotificationSlice(set, get, store),
+            ...createUISlice(set, get, store),
+            ...createTelemetrySlice(set, get, store),
             // Add reset manager methods to the store
             ...resetManager,
             // Add navigation state manager methods
@@ -107,7 +119,7 @@ export const useStore = create<RootState>()(
         name: STORAGE_KEY,
         version: 3,
         storage: createJSONStorage(() => zustandStorage),
-        onRehydrateStorage: state => {
+        onRehydrateStorage: () => {
           return (state, error) => {
             if (error) {
               console.log('An error happened during hydration', error);
@@ -118,8 +130,7 @@ export const useStore = create<RootState>()(
         },
         skipHydration: false,
         partialize: state => {
-          // exclude ephemeral UI flags if desired
-          const {isLoading, isError, isFetching, ...rest} = state;
+          const { ...rest } = state;
           return rest;
         },
       },

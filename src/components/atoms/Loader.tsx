@@ -15,7 +15,7 @@ const Loader: React.FC<LoaderProps> = ({size = 'small', color = '#000'}) => {
   );
 };
 
-const styles = StyleSheet.create(theme => ({
+const styles = StyleSheet.create(_theme => ({
   loaderContainer: {
     flex: 1,
     justifyContent: 'center',

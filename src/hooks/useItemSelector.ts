@@ -28,8 +28,11 @@ export const useItemSelector = ({
 
   // Sync with the initialSelected when it changes
   useEffect(() => {
+    if (__DEV__) {
+      console.log(`[useItemSelector:${type}] initialSelected changed: ${initialSelected}`);
+    }
     setSelectedId(initialSelected);
-  }, [initialSelected]);
+  }, [initialSelected, type]);
   const {selectedHomeId} = useDefaultHome();
   // Query data based on type
   const {data: shoppingListData, loading: shoppingListLoading} =
@@ -103,10 +106,13 @@ export const useItemSelector = ({
 
   const handleSelect = useCallback(
     (id: string, item: any) => {
+      if (__DEV__) {
+        console.log(`[useItemSelector:${type}] User selected: ${id}`, item?.name || item?.title || item);
+      }
       setSelectedId(id);
       onSelect?.(id, item);
     },
-    [onSelect],
+    [onSelect, type],
   );
 
   const reset = useCallback(() => {

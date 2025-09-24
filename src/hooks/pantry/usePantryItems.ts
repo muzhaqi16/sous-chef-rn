@@ -1,14 +1,15 @@
 import {
   useGetPantryItemsQuery,
   usePantryItemsChangedSubscription,
-  GetPantryItemsQuery,
-  GetPantryItemsDocument,
+  PantryItemFragment,
 } from '#generated';
 import { useSearchableList } from '../useSearchableList';
-import { ApolloClient } from '@apollo/client';
+import { useErrorHandler } from '#/utils/errorHandling';
 
 export function usePantryItems(pantryId: string | undefined) {
-  const { data, refetch, client } = useGetPantryItemsQuery({
+  const { handleApolloError } = useErrorHandler();
+
+  const { data, refetch } = useGetPantryItemsQuery({
     fetchPolicy: 'cache-and-network',
     skip: !pantryId,
     variables: { pantryId: pantryId ?? '' },
@@ -17,35 +18,42 @@ export function usePantryItems(pantryId: string | undefined) {
   usePantryItemsChangedSubscription({
     variables: { pantryId: pantryId ?? '' },
     skip: !pantryId,
-    onData: ({
-      data: subData,
-      client,
-    }: {
-      data: any;
-      client: ApolloClient;
-    }) => {
-      const updatedItem = subData?.data?.pantryItemUpdated;
-      if (!updatedItem) return;
+    onData: ({ data: subData, client }) => {
+      try {
+        const changePayload = subData?.data?.pantryItemsChanged;
+        const updatedItem = changePayload?.item;
+        if (!updatedItem || !pantryId) return;
 
-      const cache = client.readQuery<GetPantryItemsQuery>({
-        query: GetPantryItemsDocument,
-        variables: { pantryId },
-      });
+        // Use cache.modify for better consistency
+        const cache = client.cache;
+        cache.modify({
+          fields: {
+            pantryItems: (existingItems = [], { readField }) => {
+              const exists = existingItems.some(
+                (itemRef: any) => readField('id', itemRef) === updatedItem.id
+              );
 
-      if (!cache?.pantryItems) return;
-
-      const exists = cache.pantryItems.some(i => i.id === updatedItem.id);
-      const updated = exists
-        ? cache.pantryItems.map(i =>
-            i.id === updatedItem.id ? updatedItem : i,
-          )
-        : [...cache.pantryItems, updatedItem];
-
-      client.writeQuery<GetPantryItemsQuery>({
-        query: GetPantryItemsDocument,
-        variables: { pantryId },
-        data: { pantryItems: updated },
-      });
+              if (exists) {
+                // Update existing item
+                return existingItems.map((itemRef: any) =>
+                  readField('id', itemRef) === updatedItem.id
+                    ? updatedItem
+                    : itemRef
+                );
+              } else {
+                // Add new item
+                return [...existingItems, updatedItem];
+              }
+            },
+          },
+        });
+      } catch (error) {
+        const { message } = handleApolloError(error, {
+          operation: 'Pantry Subscription Cache Update',
+        });
+        console.warn('Failed to update cache from pantry subscription:', message);
+        refetch();
+      }
     },
   });
 
@@ -53,7 +61,7 @@ export function usePantryItems(pantryId: string | undefined) {
 
   const { query, setQuery, filtered } = useSearchableList(
     pantryItems,
-    (item: any, q: string) => item?.itemName?.toLowerCase().includes(q.toLowerCase()),
+    (item: PantryItemFragment, q: string) => item?.itemName?.toLowerCase().includes(q.toLowerCase()),
   );
 
   return { items: filtered, query, setQuery, refetch };

@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import {
   Modal,
   View,
@@ -6,8 +6,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
   ActivityIndicator,
 } from 'react-native';
 
@@ -100,13 +98,14 @@ export const EmailInputModal: React.FC<EmailInputModalProps> = ({
       visible={visible}
       onRequestClose={handleClose}
       statusBarTranslucent={true}
-      presentationStyle="overFullScreen">
+      presentationStyle="overFullScreen"
+    >
       <View style={styles.centeredView}>
         <View style={styles.modalView}>
           <Text style={styles.title}>{title}</Text>
 
           <TextInput
-            style={[styles.input, error ? {borderColor: errorColor} : {}]}
+            style={[styles.input, error ? { borderColor: errorColor } : {}]}
             placeholder={placeholder}
             placeholderTextColor="#999"
             value={email}
@@ -121,14 +120,17 @@ export const EmailInputModal: React.FC<EmailInputModalProps> = ({
           />
 
           {error ? (
-            <Text style={[styles.errorText, {color: errorColor}]}>{error}</Text>
+            <Text style={[styles.errorText, { color: errorColor }]}>
+              {error}
+            </Text>
           ) : null}
 
           <View style={styles.buttonContainer}>
             <TouchableOpacity
               style={[styles.button, styles.cancelButton]}
               onPress={handleClose}
-              disabled={isSubmitting}>
+              disabled={isSubmitting}
+            >
               <Text style={styles.cancelButtonText}>{cancelText}</Text>
             </TouchableOpacity>
 
@@ -136,11 +138,12 @@ export const EmailInputModal: React.FC<EmailInputModalProps> = ({
               style={[
                 styles.button,
                 styles.submitButton,
-                {backgroundColor: primaryColor},
+                { backgroundColor: primaryColor },
                 isSubmitting && styles.disabledButton,
               ]}
               onPress={handleSubmit}
-              disabled={isSubmitting || loading}>
+              disabled={isSubmitting || loading}
+            >
               {isSubmitting || loading ? (
                 <ActivityIndicator size="small" color="#FFF" />
               ) : (

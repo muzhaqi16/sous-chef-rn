@@ -71,64 +71,35 @@ mutation CreateHome($input: CreateHomeInput!) {
   createHome(input: $input) {
     id
     name
-    type
-    description
-    timezone
-    currency
-    isPublic
-    joinCode
-    allowJoinCode
-    maxMembers
-    tags
-    metadata
-    version
     createdAt
     updatedAt
-
-    invites {
-      ...HomeInviteFragment
-    }
-
-    members {
-      ...MemberShipFragment
-    }
-
-    myMembership {
-      ...MemberShipFragment
-    }
-
-    membershipStats {
-      total
-      active
-      byRole {
-        OWNER
-        ADMIN
-        MEMBER
-        GUEST
-      }
-      byStatus {
-        ACTIVE
-        SUSPENDED
-        LEFT
-        REMOVED
-      }
-      recentlyActive
-    }
-
-    # Use simplified pantry structure without items
     pantries {
       id
-      homeId
       name
-      description
       isDefault
-      location
-      temperature
-      tags
-      metadata
-      version
-      createdAt
-      updatedAt
+    }
+    members {
+      id
+      homeId
+      userId
+      role
+      status
+      displayName
+      user {
+        ...PartialUser
+      }
+    }
+    myMembership {
+      id
+      role
+      status
+      displayName
+      canViewPantry
+      canEditPantry
+      canAddItems
+      canRemoveItems
+      canInviteOthers
+      canManageHome
     }
   }
 }

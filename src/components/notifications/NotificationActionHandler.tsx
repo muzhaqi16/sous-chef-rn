@@ -1,11 +1,11 @@
-import React, {useState} from 'react';
-import {Alert} from 'react-native';
+import React, { useState } from 'react';
+import { Alert } from 'react-native';
 import {
   InvitationAcceptanceModal,
   InvitationData,
 } from './InvitationAcceptanceModal';
-import {NotificationItem} from '#store/slices/notificationSlice';
-import {useAppNavigation} from '#/hooks';
+import { NotificationItem } from '#store/slices/notificationSlice';
+import { useAppNavigation } from '#/hooks';
 
 interface NotificationActionHandlerProps {
   children: (props: {
@@ -16,11 +16,11 @@ interface NotificationActionHandlerProps {
 
 export const NotificationActionHandler: React.FC<
   NotificationActionHandlerProps
-> = ({children}) => {
+> = ({ children }) => {
   const [invitationModalVisible, setInvitationModalVisible] = useState(false);
   const [currentInvitation, setCurrentInvitation] =
     useState<InvitationData | null>(null);
-  const {navigateTo, navigate} = useAppNavigation();
+  const { navigateTo, navigate } = useAppNavigation();
   const showInvitationModal = (notification: NotificationItem) => {
     if (
       notification.actionType === 'ACCEPT_HOME_INVITE' ||
@@ -119,7 +119,7 @@ export const NotificationActionHandler: React.FC<
           'Action Required',
           `This notification requires action: ${notification.actionType}`,
           [
-            {text: 'OK'},
+            { text: 'OK' },
             {
               text: 'Go to Notifications',
               onPress: () => {
@@ -144,7 +144,7 @@ export const NotificationActionHandler: React.FC<
           text: 'Explore Home',
           onPress: () => navigateTo.pantryMain(),
         },
-        {text: 'OK'},
+        { text: 'OK' },
       ]);
     } else {
       // Shopping list invitation accepted
@@ -156,13 +156,13 @@ export const NotificationActionHandler: React.FC<
             text: 'View List',
             onPress: () => navigateTo.shoppingListMain,
           },
-          {text: 'OK'},
+          { text: 'OK' },
         ],
       );
     }
   };
 
-  const handleInvitationReject = (invitation: InvitationData) => {
+  const handleInvitationReject = () => {
     // Handle rejection
     Alert.alert('Invitation Rejected', 'The invitation has been declined.');
   };

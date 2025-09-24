@@ -1,27 +1,27 @@
 import React from 'react';
-import {View, Text, Alert} from 'react-native';
+import { View, Text, Alert } from 'react-native';
 import {
   useGetPantryItemQuery,
   useRemoveItemFromPantryMutation,
   useAddItemToShoppingListMutation,
 } from '#generated';
-import {DetailTemplate} from '#components/templates/DetailTemplate';
-import {useStore} from '#/store';
-import {commonStyles} from '#styles';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
-import {useAppNavigation} from '#hooks';
-import {PantryStackParamList} from '#navigation/stacks/PantryStack';
+import { DetailTemplate } from '#components/templates/DetailTemplate';
+import { useStore } from '#/store';
+import { commonStyles } from '#styles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { useAppNavigation } from '#hooks';
+import { PantryStackParamList } from '#navigation/stacks/PantryStack';
 
 export const PantryItemDetail: React.FC<{
-  route: {params: PantryStackParamList['PantryItemDetail']};
-}> = ({route}) => {
+  route: { params: PantryStackParamList['PantryItemDetail'] };
+}> = ({ route }) => {
   const itemId = route.params.itemId;
-  const {goBack, navigateTo} = useAppNavigation();
-  const {theme} = useUnistyles();
-  const {selectedShoppingListId} = useStore();
+  const { goBack, navigateTo } = useAppNavigation();
+  const { theme } = useUnistyles();
+  const { selectedShoppingListId } = useStore();
 
-  const {data, loading} = useGetPantryItemQuery({
-    variables: {id: itemId},
+  const { data } = useGetPantryItemQuery({
+    variables: { id: itemId },
   });
 
   const [deleteItem] = useRemoveItemFromPantryMutation();
@@ -29,7 +29,7 @@ export const PantryItemDetail: React.FC<{
 
   const handleDelete = () => {
     Alert.alert('Delete Item', 'Are you sure you want to delete this item?', [
-      {text: 'Cancel', style: 'cancel'},
+      { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
         style: 'destructive',
@@ -154,7 +154,7 @@ export const PantryItemDetail: React.FC<{
       headerActions={[
         {
           icon: 'edit',
-          onPress: () => navigateTo.pantryItem({itemId}),
+          onPress: () => navigateTo.pantryItem({ itemId }),
         },
         {
           icon: 'delete',

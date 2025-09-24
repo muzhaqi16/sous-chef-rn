@@ -1,7 +1,7 @@
 import React from 'react';
-import {TouchableOpacity} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
-import {commonStyles} from '#/styles/commonStyles';
+import { TouchableOpacity } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { commonStyles } from '#/styles/commonStyles';
 import Reanimated, {
   useAnimatedStyle,
   SharedValue,
@@ -36,19 +36,20 @@ export const SwipeableContent: React.FC<SwipeableContentProps> = ({
       <TouchableOpacity
         onPress={onPress}
         activeOpacity={0.7}
-        style={styles.touchable}>
+        style={styles.touchable}
+      >
         {children}
       </TouchableOpacity>
     </Reanimated.View>
   );
 };
 
-const styles = StyleSheet.create(theme => ({
+const styles = StyleSheet.create(() => ({
   itemContainer: {
     ...commonStyles.surface,
     elevation: 8, // Android shadow
     shadowColor: '#000000', // iOS shadow - box-shadow: 0px 4px 30px 0px #0000001A
-    shadowOffset: {width: 0, height: 4},
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1, // #0000001A = 26/255 ≈ 0.1
     shadowRadius: 15, // 30px blur converted to radius
     flex: 1,

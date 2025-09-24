@@ -1,13 +1,13 @@
-import React, {useRef, useCallback, ReactNode, Ref} from 'react';
-import {Keyboard} from 'react-native';
+import React, { useRef, ReactNode, Ref } from 'react';
+import { Keyboard } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetView,
   BottomSheetBackdrop,
 } from '@gorhom/bottom-sheet';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import {Title} from '../atoms';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Title } from '../atoms';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 interface BottomSheetActionProps {
   children: ReactNode;
@@ -23,13 +23,10 @@ export const BottomSheetAction: React.FC<BottomSheetActionProps> = ({
   snapPoints = ['25%', '50%', '90%'],
   sheetRef,
 }) => {
-  const {theme} = useUnistyles();
+  const { theme } = useUnistyles();
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
 
   const insets = useSafeAreaInsets();
-  const openSheet = useCallback(() => {
-    bottomSheetModalRef.current?.present();
-  }, []);
 
   return (
     <BottomSheetModal
@@ -44,8 +41,8 @@ export const BottomSheetAction: React.FC<BottomSheetActionProps> = ({
         // Optionally handle dismiss actions here
         Keyboard.dismiss();
       }}
-      backgroundStyle={{backgroundColor: theme.colors.background}}
-      handleIndicatorStyle={{backgroundColor: 'gray'}}
+      backgroundStyle={{ backgroundColor: theme.colors.background }}
+      handleIndicatorStyle={{ backgroundColor: 'gray' }}
       backdropComponent={props => (
         <BottomSheetBackdrop
           {...props}
@@ -53,8 +50,11 @@ export const BottomSheetAction: React.FC<BottomSheetActionProps> = ({
           appearsOnIndex={0}
           pressBehavior="close" // sheet closes when backdrop is pressed
         />
-      )}>
-      <BottomSheetView style={{padding: 16, flex: 1}}>
+      )}
+    >
+      <BottomSheetView
+        style={[styles.sheetView, { paddingBottom: insets.bottom }]}
+      >
         {sheetTitle && <Title style={styles.sheetTitle}>{sheetTitle}</Title>}
         {children}
       </BottomSheetView>
@@ -62,6 +62,7 @@ export const BottomSheetAction: React.FC<BottomSheetActionProps> = ({
   );
 };
 
-const styles = StyleSheet.create(theme => ({
+const styles = StyleSheet.create(() => ({
   sheetTitle: {},
+  sheetView: { padding: 16, flex: 1 },
 }));
