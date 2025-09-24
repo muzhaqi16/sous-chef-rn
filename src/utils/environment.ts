@@ -78,21 +78,6 @@ export class Environment {
   }
 
   /**
-   * Check if console logging should be enabled
-   */
-  static shouldEnableLogging(): boolean {
-    const config = Environment.getConfig();
-
-    // Enable logging in development and staging
-    if (config.isDevelopment || config.isStaging) {
-      return true;
-    }
-
-    // In production, only enable if explicitly configured
-    return !!getConfigValue('ENABLE_PRODUCTION_LOGS', false);
-  }
-
-  /**
    * Check if debug features should be enabled
    */
   static shouldEnableDebugFeatures(): boolean {
@@ -127,7 +112,7 @@ export class Environment {
     const config = Environment.getConfig();
 
     if (config.isDevelopment) {
-      return 'debug';
+      return getConfigValue('ENABLE_DEBUG_LOGS', false) ? 'debug' : 'none';
     }
 
     if (config.isStaging) {
@@ -191,22 +176,22 @@ export class Environment {
  */
 export const logger = {
   debug: (...args: any[]) => {
-    if (Environment.shouldEnableLogging() && Environment.getLogLevel() === 'debug') {
+    if (Environment.getLogLevel() === 'debug') {
       console.log('[DEBUG]', ...args);
     }
   },
   info: (...args: any[]) => {
-    if (Environment.shouldEnableLogging() && ['debug', 'info'].includes(Environment.getLogLevel())) {
+    if (['debug', 'info'].includes(Environment.getLogLevel())) {
       console.info('[INFO]', ...args);
     }
   },
   warn: (...args: any[]) => {
-    if (Environment.shouldEnableLogging() && ['debug', 'info', 'warn'].includes(Environment.getLogLevel())) {
+    if (['debug', 'info', 'warn'].includes(Environment.getLogLevel())) {
       console.warn('[WARN]', ...args);
     }
   },
   error: (...args: any[]) => {
-    if (Environment.shouldEnableLogging() && Environment.getLogLevel() !== 'none') {
+    if (Environment.getLogLevel() !== 'none') {
       console.error('[ERROR]', ...args);
     }
   },

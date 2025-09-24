@@ -13,8 +13,8 @@ const createTelemetryConfig = (): TelemetryConfig => {
     enabled: Environment.shouldEnableAnalytics() || Environment.isDevelopment(),
     enableMetrics:
       Environment.shouldEnableAnalytics() || Environment.isDevelopment(),
-    enableLogs: Environment.shouldEnableLogging(),
-    enableConsoleInDev: false, // Environment.shouldEnableLogging(),
+    enableLogs: false,
+    enableConsoleInDev: false, 
     appName: 'sous-chef-app',
     environment: env.isProduction
       ? 'production'
@@ -43,7 +43,7 @@ const createTelemetryConfig = (): TelemetryConfig => {
       http:
         (env.isDevelopment || env.isStaging || env.isProduction) &&
         !!(Config.PROMETHEUS_ENDPOINT || Config.LOKI_ENDPOINT),
-      console: Environment.shouldEnableLogging(),
+      console: false, 
     },
   };
 };

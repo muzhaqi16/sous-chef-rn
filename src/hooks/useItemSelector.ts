@@ -28,11 +28,8 @@ export const useItemSelector = ({
 
   // Sync with the initialSelected when it changes
   useEffect(() => {
-    if (__DEV__) {
-      console.log(`[useItemSelector:${type}] initialSelected changed: ${initialSelected}`);
-    }
     setSelectedId(initialSelected);
-  }, [initialSelected, type]);
+  }, [initialSelected]);
   const {selectedHomeId} = useDefaultHome();
   // Query data based on type
   const {data: shoppingListData, loading: shoppingListLoading} =

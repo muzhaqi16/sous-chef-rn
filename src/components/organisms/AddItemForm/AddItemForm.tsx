@@ -5,16 +5,7 @@ import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { createItemSchema, CreateItemFormData } from '#utils/validation';
 import { StorageState, ItemType } from '#generated';
-import { FormInput } from '../molecules/FormInput';
-import { FormTextArea } from '../molecules/FormTextArea';
-import { FormNumberInput } from '../molecules/FormNumberInput';
-import { FormSelect } from '../molecules/FormSelect';
-import { FormCheckbox } from '../molecules/FormCheckbox';
-import { ImageFile } from '../molecules/ImagePicker';
-import { ProductImagePicker } from '../molecules/ProductImagePicker';
-import { UnitsAutocompleteInput } from '../molecules/UnitsAutocompleteInput';
-import { BrandAutocompleteInput } from '../molecules/BrandAutocompleteInput';
-import { DynamicFormFields, FieldDef } from '../molecules/DynamicFormFields';
+import { FormInput, FormTextArea , FormNumberInput ,FormSelect ,FormCheckbox ,ImageFile ,ProductImagePicker ,UnitsAutocompleteInput ,BrandAutocompleteInput , DynamicFormFields, FieldDef } from '#/components/molecules';
 
 interface AddItemFormProps {
   barcode?: string;

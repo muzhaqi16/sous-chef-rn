@@ -14,7 +14,7 @@ import {
   ItemNotFound,
   SearchResults,
 } from '#components/barcode';
-import AddItemForm from '#components/pages/AddItemForm';
+import AddItemForm from '#components/organisms/AddItemForm';
 import { type BarcodeStackParamList } from '#navigation/stacks/BarcodeStack';
 import { useStore } from '#store';
 import { useSearchResults } from '#hooks';

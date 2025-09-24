@@ -22,8 +22,8 @@ export interface TelemetryState {
 export const initialTelemetryState = {
   isEnabled: Environment.shouldEnableAnalytics() || Environment.isDevelopment(),
   enableMetrics: Environment.shouldEnableAnalytics() || Environment.isDevelopment(),
-  enableLogs: Environment.shouldEnableLogging(),
-  enableConsoleInDev: Environment.shouldEnableLogging(),
+  enableLogs: false,
+  enableConsoleInDev: false,
   userConsent: null,
 };
 
