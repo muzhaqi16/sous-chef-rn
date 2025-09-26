@@ -33,7 +33,7 @@ export const SignUpScreen = () => {
     try {
       await register(input); // Uses default rememberMe=true
     } catch (err: any) {
-      handleAuthError(err, 'Registration failed. Please try again.');
+      handleAuthError(err, 'Registration');
     }
   };
 

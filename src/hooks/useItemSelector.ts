@@ -42,6 +42,8 @@ export const useItemSelector = ({
     variables: {homeId: selectedHomeId || ''},
     fetchPolicy: 'cache-and-network',
     skip: type !== 'pantry' || !selectedHomeId,
+    notifyOnNetworkStatusChange: true,
+    errorPolicy: 'all',
   });
 
   const {data: homeData, loading: homeLoading} = useGetHomesQuery({

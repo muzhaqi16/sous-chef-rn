@@ -17,7 +17,12 @@ import {
   ImageCropScreen,
   NotFoundScreen,
 } from '#screens';
-import { CodeVerificationScreen } from '#screens/auth';
+import {
+  CodeVerificationScreen,
+  EmailVerificationDeepLinkScreen,
+  ResetPasswordScreen,
+} from '#screens/auth';
+import { AcceptInvite } from '#screens/shoppingList/AcceptInvite';
 import { linkingConfig } from './linking';
 import { ImageFile } from '#components/molecules/ImagePicker';
 import {
@@ -25,6 +30,7 @@ import {
   AuthErrorBoundary,
 } from '#components/providers/ErrorBoundary';
 import { PostLoginBiometricPrompt } from '#components/organisms';
+import { useDeepLinkRouter } from '#hooks/deepLink/useDeepLinkRouter';
 
 export type RootStackParamList = {
   Auth: undefined;
@@ -36,6 +42,9 @@ export type RootStackParamList = {
   Notifications: undefined;
   ProfilePhotoUpload: undefined;
   ImageCrop: { imageFile: ImageFile };
+  EmailVerification: { token: string };
+  ResetPassword: { token: string };
+  AcceptInvitation: { token: string };
   NotFound: undefined;
 };
 
@@ -51,6 +60,9 @@ function RootNavigator() {
     user,
   } = useStore();
   const { handlePostLoginBiometricComplete } = useAuth();
+
+  // Initialize deep link router for handling URL-based navigation
+  useDeepLinkRouter();
 
   // Track initialization
   const hasInitialized = useRef(false);
@@ -94,7 +106,7 @@ function RootNavigator() {
         setNavigationState('auth');
       }
     }
-  }, [user?.emailVerified, user?.onBoarded, isHydrated, setNavigationState]);
+  }, [user, isHydrated, setNavigationState]);
 
   // Show splash while app is hydrating or determining navigation state
   if (!isHydrated || navigationState === 'loading') {
@@ -174,6 +186,21 @@ function RootNavigator() {
           )}
 
           {/* Always available */}
+          <Stack.Screen
+            name="EmailVerification"
+            component={EmailVerificationDeepLinkScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="ResetPassword"
+            component={ResetPasswordScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="AcceptInvitation"
+            component={AcceptInvite}
+            options={{ headerShown: false }}
+          />
           <Stack.Screen name="NotFound" component={NotFoundScreen} />
         </Stack.Navigator>
       </NavigationErrorBoundary>

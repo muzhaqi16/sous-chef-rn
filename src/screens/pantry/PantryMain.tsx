@@ -6,7 +6,7 @@ import {
   useDefaultHome,
   usePantryManagement,
   useBottomSheetModal,
-  usePantrySelector,
+  useItemSelector,
 } from '#hooks';
 import { useStore } from '#store';
 import { useGetHomeBasicQuery } from '#generated';
@@ -26,18 +26,14 @@ export const PantryMain: React.FC = () => {
   const setSelectedPantryId = useStore(state => state.setSelectedPantryId);
   const selectedPantryId = useStore(state => state.selectedPantryId);
 
-  const {
-    selectedHomeId,
-    homes,
-    getDefaultPantry,
-  } = useDefaultHome();
+  const { selectedHomeId, homes, getDefaultPantry } = useDefaultHome();
 
   // Try to get home data from homes list first to avoid extra query
-  const homeFromList = homes.find(home => home.id === selectedHomeId);
+  const homeFromList = homes.find((home: any) => home.id === selectedHomeId);
 
-  // Only skip the query if we have home data with pantries array
-  const hasCompletePantryData =
-    homeFromList?.pantries && Array.isArray(homeFromList.pantries);
+  // Only skip the query if we have recent, valid home data with pantries array
+  // Be more conservative about skipping to ensure fresh data after login
+  const hasCompletePantryData = false; // Always fetch fresh home data for now
 
   const { data: homeData } = useGetHomeBasicQuery({
     variables: { homeId: selectedHomeId ?? '' },
@@ -74,14 +70,6 @@ export const PantryMain: React.FC = () => {
     }
   }, [selectedPantryId, defaultPantry?.id, setSelectedPantryId]);
 
-  const selector = usePantrySelector({
-    initialSelected: pantry?.id,
-    onSelect: (id, _item) => {
-      // Update the global store with the selected pantry
-      setSelectedPantryId(id);
-      selectPantrySheet.close();
-    },
-  });
   const {
     items: pantryItems,
     allItems,
@@ -93,9 +81,24 @@ export const PantryMain: React.FC = () => {
     loading,
   } = usePantryManagement(pantry?.id);
 
+  // Extract pantries from working data source
+  const availablePantries = currentHomeData?.home?.pantries || [];
+
+  const selector = useItemSelector({
+    type: 'custom',
+    customData: availablePantries,
+    customLoading: loading,
+    initialSelected: pantry?.id,
+    onSelect: (id, _item) => {
+      // Update the global store with the selected pantry
+      setSelectedPantryId(id);
+      selectPantrySheet.close();
+    },
+  });
+
   // Transform pantry items to list items format
   const items = useMemo(() => {
-    const transformedItems = pantryItems.map(item => {
+    const transformedItems = pantryItems.map((item: any) => {
       const isExpired = item.expiresAt && new Date(item.expiresAt) < new Date();
       const isLowStock =
         item.autoReorderPoint && item.currentQuantity <= item.autoReorderPoint;
@@ -103,13 +106,14 @@ export const PantryMain: React.FC = () => {
       return {
         id: item.id,
         title: item.item?.name || '',
-        subtitle:
-          `${item.currentQuantity} ${item.unit?.symbol || ''} • ${item.storageState}`.trim(),
+        subtitle: `${item.currentQuantity} ${item.unit?.symbol || ''} • ${
+          item.storageState
+        }`.trim(),
         badge: isExpired
-          ? { text: 'Expired', variant: 'danger' as const }
+          ? { text: 'Expired', variant: 'danger' }
           : isLowStock
-            ? { text: 'Low Stock', variant: 'warning' as const }
-            : undefined,
+          ? { text: 'Low Stock', variant: 'warning' }
+          : undefined,
         leftElement: item.item?.imageUrl ? (
           <View style={styles.imageContainer}>
             <Image

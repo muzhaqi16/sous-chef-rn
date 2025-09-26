@@ -26,79 +26,84 @@ export interface ErrorHandlerConfig {
 export class ErrorHandler {
   private static readonly ERROR_MESSAGES: Record<string, string> = {
     // Authentication Errors
-    'AUTH_TOKEN_MISSING': 'Please sign in to continue',
-    'AUTH_TOKEN_INVALID': 'Your session is invalid. Please sign in again',
-    'AUTH_TOKEN_EXPIRED': 'Your session has expired. Please sign in again',
-    'AUTH_REFRESH_TOKEN_MISSING': 'Session expired. Please sign in again',
-    'AUTH_REFRESH_TOKEN_INVALID': 'Session expired. Please sign in again',
-    'AUTH_CREDENTIALS_INVALID': 'Invalid email or password',
-    'AUTH_ACCOUNT_LOCKED': 'Your account has been temporarily locked for security',
-    'AUTH_EMAIL_NOT_VERIFIED': 'Please verify your email before continuing',
+    AUTH_TOKEN_MISSING: 'Please sign in to continue',
+    AUTH_TOKEN_INVALID: 'Your session is invalid. Please sign in again',
+    AUTH_TOKEN_EXPIRED: 'Your session has expired. Please sign in again',
+    AUTH_REFRESH_TOKEN_MISSING: 'Session expired. Please sign in again',
+    AUTH_REFRESH_TOKEN_INVALID: 'Session expired. Please sign in again',
+    AUTH_CREDENTIALS_INVALID: 'Invalid email or password',
+    AUTH_ACCOUNT_LOCKED:
+      'Your account has been temporarily locked for security',
+    AUTH_EMAIL_NOT_VERIFIED: 'Please verify your email before continuing',
 
     // Authorization Errors
-    'AUTHZ_FORBIDDEN': 'You don\'t have permission to perform this action',
-    'AUTHZ_INSUFFICIENT_PERMISSIONS': 'You don\'t have sufficient permissions',
-    'AUTHZ_RESOURCE_ACCESS_DENIED': 'Access denied to this resource',
-    'AUTHZ_ADMIN_REQUIRED': 'Administrator privileges required',
-    'AUTHZ_MODERATOR_REQUIRED': 'Moderator privileges required',
+    AUTHZ_FORBIDDEN: "You don't have permission to perform this action",
+    AUTHZ_INSUFFICIENT_PERMISSIONS: "You don't have sufficient permissions",
+    AUTHZ_RESOURCE_ACCESS_DENIED: 'Access denied to this resource',
+    AUTHZ_ADMIN_REQUIRED: 'Administrator privileges required',
+    AUTHZ_MODERATOR_REQUIRED: 'Moderator privileges required',
 
     // API Key Errors
-    'API_KEY_MISSING': 'API key is missing. Please check your configuration',
-    'API_KEY_INVALID': 'Invalid API key. Please check your configuration',
-    'API_KEY_EXPIRED': 'API key has expired. Please contact support',
-    'API_KEY_REVOKED': 'API key has been revoked. Please contact support',
-    'API_KEY_RATE_LIMITED': 'API rate limit exceeded. Please try again later',
+    API_KEY_MISSING: 'API key is missing. Please check your configuration',
+    API_KEY_INVALID: 'Invalid API key. Please check your configuration',
+    API_KEY_EXPIRED: 'API key has expired. Please contact support',
+    API_KEY_REVOKED: 'API key has been revoked. Please contact support',
+    API_KEY_RATE_LIMITED: 'API rate limit exceeded. Please try again later',
 
     // Validation Errors
-    'VALIDATION_FAILED': 'Please check your input and try again',
-    'VALIDATION_FIELD_REQUIRED': 'Required field is missing',
-    'VALIDATION_FIELD_INVALID': 'Invalid field value',
-    'VALIDATION_FORMAT_INVALID': 'Invalid format',
-    'VALIDATION_LENGTH_INVALID': 'Input length is invalid',
-    'VALIDATION_RANGE_INVALID': 'Value is outside allowed range',
-    'VALIDATION_UNIQUE_CONSTRAINT': 'This value already exists',
+    VALIDATION_FAILED: 'Please check your input and try again',
+    VALIDATION_FIELD_REQUIRED: 'Required field is missing',
+    VALIDATION_FIELD_INVALID: 'Invalid field value',
+    VALIDATION_FORMAT_INVALID: 'Invalid format',
+    VALIDATION_LENGTH_INVALID: 'Input length is invalid',
+    VALIDATION_RANGE_INVALID: 'Value is outside allowed range',
+    VALIDATION_UNIQUE_CONSTRAINT: 'This value already exists',
 
     // Resource Errors
-    'RESOURCE_NOT_FOUND': 'The requested item was not found',
-    'RESOURCE_ALREADY_EXISTS': 'This item already exists',
-    'RESOURCE_CONFLICT': 'There\'s a conflict with this operation',
-    'RESOURCE_GONE': 'This item is no longer available',
-    'RESOURCE_LOCKED': 'This item is currently locked and cannot be modified',
+    RESOURCE_NOT_FOUND: 'The requested item was not found',
+    RESOURCE_ALREADY_EXISTS: 'This resource already exists',
+    RESOURCE_CONFLICT: "There's a conflict with this operation",
+    RESOURCE_GONE: 'This item is no longer available',
+    RESOURCE_LOCKED: 'This item is currently locked and cannot be modified',
 
     // Business Logic Errors
-    'BUSINESS_RULE_VIOLATION': 'This action violates business rules',
-    'BUSINESS_STATE_INVALID': 'Invalid state for this operation',
-    'BUSINESS_OPERATION_NOT_ALLOWED': 'This operation is not allowed',
-    'BUSINESS_QUOTA_EXCEEDED': 'You\'ve exceeded your quota limit',
-    'BUSINESS_FEATURE_DISABLED': 'This feature is currently disabled',
+    BUSINESS_RULE_VIOLATION: 'This action violates business rules',
+    BUSINESS_STATE_INVALID: 'Invalid state for this operation',
+    BUSINESS_OPERATION_NOT_ALLOWED: 'This operation is not allowed',
+    BUSINESS_QUOTA_EXCEEDED: "You've exceeded your quota limit",
+    BUSINESS_FEATURE_DISABLED: 'This feature is currently disabled',
 
     // Rate Limiting Errors
-    'RATE_LIMIT_EXCEEDED': 'Too many requests. Please try again later',
-    'RATE_LIMIT_IP_BLOCKED': 'Your IP has been rate limited',
-    'RATE_LIMIT_USER_BLOCKED': 'Your account has been rate limited',
-    'RATE_LIMIT_API_KEY_BLOCKED': 'API key rate limit exceeded',
+    RATE_LIMIT_EXCEEDED: 'Too many requests. Please try again later',
+    RATE_LIMIT_IP_BLOCKED: 'Your IP has been rate limited',
+    RATE_LIMIT_USER_BLOCKED: 'Your account has been rate limited',
+    RATE_LIMIT_API_KEY_BLOCKED: 'API key rate limit exceeded',
 
     // Service Errors
-    'SERVICE_UNAVAILABLE': 'Service is temporarily unavailable',
-    'SERVICE_TIMEOUT': 'Request timed out. Please try again',
-    'SERVICE_MAINTENANCE': 'Service is under maintenance',
-    'SERVICE_OVERLOADED': 'Service is overloaded. Please try again later',
+    SERVICE_UNAVAILABLE: 'Service is temporarily unavailable',
+    SERVICE_TIMEOUT: 'Request timed out. Please try again',
+    SERVICE_MAINTENANCE: 'Service is under maintenance',
+    SERVICE_OVERLOADED: 'Service is overloaded. Please try again later',
 
     // Circuit Breaker / Offline Errors
-    'CIRCUIT_OPEN': 'You\'re currently offline. Showing cached data when available.',
-    'CIRCUIT_HALF_OPEN': 'Reconnecting... You may see cached data.',
+    CIRCUIT_OPEN:
+      "You're currently offline. Showing cached data when available.",
+    CIRCUIT_HALF_OPEN: 'Reconnecting... You may see cached data.',
+
+    // Email Errors
+    EMAIL_ALREADY_EXISTS: 'An account with this email already exists.',
 
     // Application-Specific Errors
-    'SHOPPING_LIST_NOT_FOUND': 'Shopping list not found',
-    'SHOPPING_LIST_ACCESS_DENIED': 'You don\'t have access to this shopping list',
-    'SHOPPING_ITEM_NOT_FOUND': 'Shopping item not found',
-    'SHOPPING_ITEM_ALREADY_EXISTS': 'This item is already in your shopping list',
+    SHOPPING_LIST_NOT_FOUND: 'Shopping list not found',
+    SHOPPING_LIST_ACCESS_DENIED: "You don't have access to this shopping list",
+    SHOPPING_ITEM_NOT_FOUND: 'Shopping item not found',
+    SHOPPING_ITEM_ALREADY_EXISTS: 'This item is already in your shopping list',
 
-    'HOME_NOT_FOUND': 'Home not found',
-    'HOME_ACCESS_DENIED': 'You don\'t have access to this home',
-    'HOME_INVITE_INVALID': 'Invalid home invitation',
-    'HOME_INVITE_EXPIRED': 'Home invitation has expired',
-    'HOME_MEMBER_ALREADY_EXISTS': 'User is already a member of this home',
+    HOME_NOT_FOUND: 'Home not found',
+    HOME_ACCESS_DENIED: "You don't have access to this home",
+    HOME_INVITE_INVALID: 'Invalid home invitation',
+    HOME_INVITE_EXPIRED: 'Home invitation has expired',
+    HOME_MEMBER_ALREADY_EXISTS: 'User is already a member of this home',
   };
 
   private static readonly RETRYABLE_ERRORS = [
@@ -110,17 +115,18 @@ export class ErrorHandler {
   ];
 
   private static readonly ERROR_CATEGORIES: Record<string, string> = {
-    'AUTH_': 'Authentication',
-    'AUTHZ_': 'Authorization',
-    'API_': 'API Key',
-    'VALIDATION_': 'Validation',
-    'RESOURCE_': 'Resource',
-    'BUSINESS_': 'Business Logic',
-    'RATE_': 'Rate Limiting',
-    'SERVICE_': 'Service',
-    'CIRCUIT_': 'Circuit Breaker',
-    'SHOPPING_': 'Shopping',
-    'HOME_': 'Home Management',
+    AUTH_: 'Authentication',
+    AUTHZ_: 'Authorization',
+    API_: 'API Key',
+    VALIDATION_: 'Validation',
+    RESOURCE_: 'Resource',
+    BUSINESS_: 'Business Logic',
+    RATE_: 'Rate Limiting',
+    SERVICE_: 'Service',
+    CIRCUIT_: 'Circuit Breaker',
+    EMAIL_: 'Email',
+    SHOPPING_: 'Shopping',
+    HOME_: 'Home Management',
   };
 
   static getErrorCategory(errorCode: string): string {
@@ -140,13 +146,20 @@ export class ErrorHandler {
     return errorCode.startsWith('AUTH_') || errorCode.startsWith('AUTHZ_');
   }
 
-  static getUserFriendlyMessage(errorCode: string, fallbackMessage?: string): string {
-    return this.ERROR_MESSAGES[errorCode] || fallbackMessage || 'An unexpected error occurred';
+  static getUserFriendlyMessage(
+    errorCode: string,
+    fallbackMessage?: string,
+  ): string {
+    return (
+      this.ERROR_MESSAGES[errorCode] ||
+      fallbackMessage ||
+      'An unexpected error occurred'
+    );
   }
 
   static handleApolloError(
     error: unknown,
-    config: ErrorHandlerConfig = {}
+    config: ErrorHandlerConfig = {},
   ): {
     code: string;
     message: string;
@@ -162,19 +175,22 @@ export class ErrorHandler {
     let validationErrors: Record<string, string> | undefined;
 
     try {
-
       // Use Apollo's proper error type checking
       if (CombinedGraphQLErrors.is(error)) {
         // Handle GraphQL errors
         const graphQLError = error.errors[0];
         if (graphQLError) {
-          errorCode = graphQLError.extensions?.code as string || 'GRAPHQL_ERROR';
+          errorCode =
+            (graphQLError.extensions?.code as string) || 'GRAPHQL_ERROR';
           errorMessage = graphQLError.message;
 
-
           // Handle validation errors
-          if (errorCode === 'VALIDATION_FAILED' && graphQLError.extensions?.validationErrors) {
-            validationErrors = graphQLError.extensions.validationErrors as Record<string, string>;
+          if (
+            errorCode === 'VALIDATION_FAILED' &&
+            graphQLError.extensions?.validationErrors
+          ) {
+            validationErrors = graphQLError.extensions
+              .validationErrors as Record<string, string>;
           }
         }
       } else if (ServerError.is(error)) {
@@ -193,13 +209,17 @@ export class ErrorHandler {
         } else {
           errorCode = 'NETWORK_ERROR';
         }
-        errorMessage = error.message || `Unable to connect (${statusCode}). Using cached data when available.`;
+        errorMessage =
+          error.message ||
+          `Unable to connect (${statusCode}). Using cached data when available.`;
       } else if (ServerParseError.is(error)) {
         errorCode = 'SERVICE_UNAVAILABLE';
         errorMessage = 'Server response could not be parsed';
       } else if (CombinedProtocolErrors.is(error)) {
         errorCode = 'NETWORK_ERROR';
-        errorMessage = error.message || 'Unable to connect. Showing cached data when available.';
+        errorMessage =
+          error.message ||
+          'Unable to connect. Showing cached data when available.';
       } else {
         // Fallback for other error types
         if (error instanceof Error) {
@@ -209,7 +229,10 @@ export class ErrorHandler {
         }
       }
 
-      const userFriendlyMessage = ErrorHandler.getUserFriendlyMessage(errorCode, errorMessage);
+      const userFriendlyMessage = ErrorHandler.getUserFriendlyMessage(
+        errorCode,
+        errorMessage,
+      );
       const category = ErrorHandler.getErrorCategory(errorCode);
       const shouldRetry = ErrorHandler.shouldRetry(errorCode);
       const isAuthError = ErrorHandler.isAuthError(errorCode);
@@ -246,7 +269,7 @@ export class ErrorHandler {
 
   static handleGenericError(
     error: any,
-    config: ErrorHandlerConfig = {}
+    config: ErrorHandlerConfig = {},
   ): {
     code: string;
     message: string;

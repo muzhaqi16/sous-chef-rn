@@ -1,4 +1,4 @@
-package com.souschefrn
+package dev.souschef.app
 
 import android.app.Application
 import com.facebook.react.PackageList

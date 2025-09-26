@@ -78,7 +78,7 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace "com.souschefrn"
+    namespace "dev.souschef.app"
 
     //  Create an APK for each CPU architecture
     splits {
@@ -91,7 +91,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.souschefrn"
+        applicationId "dev.souschef.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
@@ -124,7 +124,7 @@ android {
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
-            resValue "string", "build_config_package", "com.souschefrn"
+            resValue "string", "build_config_package", "dev.souschef.app"
         }
         release {
             // Caution! In production, you need to generate your own keystore file.
@@ -132,12 +132,12 @@ android {
             signingConfig signingConfigs.release
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
-            resValue "string", "build_config_package", "com.souschefrn"
+            resValue "string", "build_config_package", "dev.souschef.app"
         }
         staging {
             initWith debug  // or release, depending on your needs
             signingConfig signingConfigs.debug
-            resValue "string", "build_config_package", "com.souschefrn"
+            resValue "string", "build_config_package", "dev.souschef.app"
             matchingFallbacks = ['debug']
         }
     }

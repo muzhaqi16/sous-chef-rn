@@ -395,13 +395,13 @@ export const ProfilePictureUploadScreen = () => {
 
       <Button
         title={isUploading ? 'Uploading...' : 'Upload & Continue'}
-        onPress={!croppedImage || !selectedImage ? handleUpload : () => {}}
+        onPress={croppedImage || selectedImage ? handleUpload : () => {}}
         btnStyle={[
           styles.nextButton,
           { backgroundColor: theme.colors.primary },
         ]}
         txtStyle={[styles.nextText, { color: theme.colors.white }]}
-        disabled={!selectedImage || isUploading}
+        disabled={!(selectedImage || croppedImage) || isUploading}
       />
     </OnBoardingWrapper>
   );

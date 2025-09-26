@@ -1,7 +1,7 @@
 import * as Keychain from 'react-native-keychain';
 
-const DEFAULT_SERVICE = 'com.souschefrn.credentials';
-const CREDENTIALS_INDICATOR_SERVICE = 'com.souschefrn.credentials.indicator';
+const DEFAULT_SERVICE = 'dev.souschef.app.credentials';
+const CREDENTIALS_INDICATOR_SERVICE = 'dev.souschef.app.credentials.indicator';
 
 export interface SaveOptions {
   /** namespace of this item */
@@ -232,17 +232,23 @@ export async function getEmailOnly(): Promise<string | null> {
 }
 
 // Legacy support functions for the existing codebase
-export async function hasCredentialsForAccount(_email: string): Promise<boolean> {
+export async function hasCredentialsForAccount(
+  _email: string,
+): Promise<boolean> {
   // For the new simplified implementation, we just check if any credentials exist
   return hasCredentials();
 }
 
-export async function loadCredentialsForAccount(_email: string): Promise<{ username: string; password: string } | null> {
+export async function loadCredentialsForAccount(
+  _email: string,
+): Promise<{ username: string; password: string } | null> {
   // For the new simplified implementation, we just load the default credentials
   return loadCredentials();
 }
 
-export async function getStoredAccounts(): Promise<Array<{ email: string; lastUsed: number; biometricMethod: string }>> {
+export async function getStoredAccounts(): Promise<
+  Array<{ email: string; lastUsed: number; biometricMethod: string }>
+> {
   // For the new simplified implementation, return empty array
   // This can be enhanced later if multi-account support is needed
   return [];

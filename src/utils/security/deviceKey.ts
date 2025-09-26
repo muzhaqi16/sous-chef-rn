@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 import * as Keychain from 'react-native-keychain';
 import { storage } from '#/storage/mmkv';
 
-const DEVICE_KEY_SERVICE = 'com.souschefrn.devicekey';
+const DEVICE_KEY_SERVICE = 'dev.souschef.app.devicekey';
 const DEVICE_KEY_STORAGE = 'device_encryption_key';
 
 interface DeviceKeyOptions {
@@ -19,7 +19,9 @@ export class DeviceKeyManager {
   /**
    * Get or generate a device-specific encryption key
    */
-  static async getDeviceEncryptionKey(options: DeviceKeyOptions = {}): Promise<string> {
+  static async getDeviceEncryptionKey(
+    options: DeviceKeyOptions = {},
+  ): Promise<string> {
     const { forceRegenerate = false } = options;
 
     // Return cached key if available and not forcing regeneration
@@ -42,7 +44,10 @@ export class DeviceKeyManager {
       DeviceKeyManager.cachedKey = newKey;
       return newKey;
     } catch (error) {
-      console.warn('Failed to get device encryption key, using fallback:', error);
+      console.warn(
+        'Failed to get device encryption key, using fallback:',
+        error,
+      );
       return DeviceKeyManager.getFallbackKey();
     }
   }
@@ -76,7 +81,7 @@ export class DeviceKeyManager {
     try {
       // Get device identifiers using React Native built-ins
       const deviceId = DeviceKeyManager.getReactNativeDeviceId();
-      const bundleId = 'com.souschefrn.app'; // Fallback bundle ID
+      const bundleId = 'dev.souschef.app.app'; // Fallback bundle ID
       const buildNumber = '1.0.0'; // Fallback build number
       const timestamp = Date.now().toString();
       const randomBytes = DeviceKeyManager.generateRandomString(32);
@@ -106,16 +111,26 @@ export class DeviceKeyManager {
       const biometricOptions = {
         service: DEVICE_KEY_SERVICE,
         accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_ANY_OR_DEVICE_PASSCODE,
-        securityLevel: Platform.OS === 'android' ? Keychain.SECURITY_LEVEL.SECURE_HARDWARE : undefined,
+        securityLevel:
+          Platform.OS === 'android'
+            ? Keychain.SECURITY_LEVEL.SECURE_HARDWARE
+            : undefined,
         accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
       };
 
       let success: boolean = false;
       try {
-        const result = await Keychain.setGenericPassword('device_key', key, biometricOptions);
+        const result = await Keychain.setGenericPassword(
+          'device_key',
+          key,
+          biometricOptions,
+        );
         success = !!result;
       } catch (biometricError) {
-        console.warn('Biometric storage failed, trying device passcode only:', biometricError);
+        console.warn(
+          'Biometric storage failed, trying device passcode only:',
+          biometricError,
+        );
       }
 
       // Fallback to device passcode only if biometric storage fails
@@ -123,10 +138,17 @@ export class DeviceKeyManager {
         const passcodeOptions = {
           service: DEVICE_KEY_SERVICE,
           accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
-          securityLevel: Platform.OS === 'android' ? Keychain.SECURITY_LEVEL.SECURE_SOFTWARE : undefined,
+          securityLevel:
+            Platform.OS === 'android'
+              ? Keychain.SECURITY_LEVEL.SECURE_SOFTWARE
+              : undefined,
         };
 
-        const result = await Keychain.setGenericPassword('device_key', key, passcodeOptions);
+        const result = await Keychain.setGenericPassword(
+          'device_key',
+          key,
+          passcodeOptions,
+        );
         success = !!result;
       }
 
@@ -147,10 +169,12 @@ export class DeviceKeyManager {
     try {
       // Try to get device-specific info for fallback
       const deviceId = DeviceKeyManager.getReactNativeDeviceId();
-      const bundleId = 'com.souschefrn.app';
+      const bundleId = 'dev.souschef.app.app';
 
       // Create deterministic but device-specific key
-      return DeviceKeyManager.simpleHash(`${deviceId}-${bundleId}-sous-chef-fallback`);
+      return DeviceKeyManager.simpleHash(
+        `${deviceId}-${bundleId}-sous-chef-fallback`,
+      );
     } catch (error) {
       console.warn('Using static fallback key - security reduced');
       // Last resort - still better than the original hardcoded key
@@ -165,7 +189,7 @@ export class DeviceKeyManager {
     let hash = 0;
     for (let i = 0; i < input.length; i++) {
       const char = input.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
+      hash = (hash << 5) - hash + char;
       hash = hash & hash; // Convert to 32-bit integer
     }
 
@@ -204,7 +228,8 @@ export class DeviceKeyManager {
    * Generate random string for key material
    */
   private static generateRandomString(length: number): string {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const chars =
+      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     let result = '';
     for (let i = 0; i < length; i++) {
       result += chars.charAt(Math.floor(Math.random() * chars.length));
