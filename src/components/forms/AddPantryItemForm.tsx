@@ -78,7 +78,7 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
   });
 
   const [unitQuery] = useGetUnitBySymbolLazyQuery({
-    fetchPolicy: 'network-only',
+    fetchPolicy: 'cache-first',
   });
 
   const pantry = getDefaultPantry(homeData);

@@ -30,10 +30,7 @@ import {
   createNavigationSlice,
   NavigationState,
 } from './slices/navigationSlice';
-import {
-  createTelemetrySlice,
-  TelemetryState,
-} from './slices/telemetrySlice';
+import { createTelemetrySlice, TelemetryState } from './slices/telemetrySlice';
 // import {logger} from './logger';
 import { zustandStorage, STORAGE_KEY } from '#/storage/mmkv';
 
@@ -124,12 +121,16 @@ export const useStore = create<RootState>()(
             if (error) {
               console.log('An error happened during hydration', error);
             } else {
+              console.log('🏪 Store hydrated successfully');
+              // Mark store as hydrated
               state?.setHydrated(true);
             }
           };
         },
         skipHydration: false,
         partialize: state => {
+          // Filter out non-persisted state slices here
+          // For example, do not persist UI state or navigation state
           const { ...rest } = state;
           return rest;
         },

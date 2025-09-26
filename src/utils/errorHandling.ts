@@ -84,6 +84,10 @@ export class ErrorHandler {
     'SERVICE_MAINTENANCE': 'Service is under maintenance',
     'SERVICE_OVERLOADED': 'Service is overloaded. Please try again later',
 
+    // Circuit Breaker / Offline Errors
+    'CIRCUIT_OPEN': 'You\'re currently offline. Showing cached data when available.',
+    'CIRCUIT_HALF_OPEN': 'Reconnecting... You may see cached data.',
+
     // Application-Specific Errors
     'SHOPPING_LIST_NOT_FOUND': 'Shopping list not found',
     'SHOPPING_LIST_ACCESS_DENIED': 'You don\'t have access to this shopping list',
@@ -114,6 +118,7 @@ export class ErrorHandler {
     'BUSINESS_': 'Business Logic',
     'RATE_': 'Rate Limiting',
     'SERVICE_': 'Service',
+    'CIRCUIT_': 'Circuit Breaker',
     'SHOPPING_': 'Shopping',
     'HOME_': 'Home Management',
   };
@@ -157,6 +162,7 @@ export class ErrorHandler {
     let validationErrors: Record<string, string> | undefined;
 
     try {
+
       // Use Apollo's proper error type checking
       if (CombinedGraphQLErrors.is(error)) {
         // Handle GraphQL errors
@@ -191,13 +197,13 @@ export class ErrorHandler {
         } else {
           errorCode = 'NETWORK_ERROR';
         }
-        errorMessage = error.message || `Network error (${statusCode})`;
+        errorMessage = error.message || `Unable to connect (${statusCode}). Using cached data when available.`;
       } else if (ServerParseError.is(error)) {
         errorCode = 'SERVICE_UNAVAILABLE';
         errorMessage = 'Server response could not be parsed';
       } else if (CombinedProtocolErrors.is(error)) {
         errorCode = 'NETWORK_ERROR';
-        errorMessage = error.message || 'Network communication error';
+        errorMessage = error.message || 'Unable to connect. Showing cached data when available.';
       } else {
         // Fallback for other error types
         if (error instanceof Error) {
@@ -287,6 +293,13 @@ export class ErrorHandler {
   }
 }
 
+// Utility function for getting error messages
+export const getErrorMessage = (error: any): string => {
+  // Use existing error handler
+  const result = ErrorHandler.handleApolloError(error, { logError: false });
+  return result.message;
+};
+
 // Hook for handling errors in components
 export const useErrorHandler = () => {
   return {
@@ -296,5 +309,6 @@ export const useErrorHandler = () => {
     getErrorCategory: ErrorHandler.getErrorCategory,
     shouldRetry: ErrorHandler.shouldRetry,
     isAuthError: ErrorHandler.isAuthError,
+    getErrorMessage,
   };
 };

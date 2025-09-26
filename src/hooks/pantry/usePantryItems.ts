@@ -9,7 +9,7 @@ import { useErrorHandler } from '#/utils/errorHandling';
 export function usePantryItems(pantryId: string | undefined) {
   const { handleApolloError } = useErrorHandler();
 
-  const { data, refetch } = useGetPantryItemsQuery({
+  const { data, loading, refetch } = useGetPantryItemsQuery({
     fetchPolicy: 'cache-and-network',
     skip: !pantryId,
     variables: { pantryId: pantryId ?? '' },
@@ -64,5 +64,5 @@ export function usePantryItems(pantryId: string | undefined) {
     (item: PantryItemFragment, q: string) => item?.itemName?.toLowerCase().includes(q.toLowerCase()),
   );
 
-  return { items: filtered, query, setQuery, refetch };
+  return { items: filtered, loading, query, setQuery, refetch };
 }

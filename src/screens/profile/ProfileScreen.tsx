@@ -12,7 +12,7 @@ import {
 export const ProfileScreen = () => {
   const { navigate, goBack } = useAppNavigation();
   const { profile, user, loading } = useProfileData();
-  const { sections } = useConfigurableSettings(profile);
+  const { sections, BiometricModal } = useConfigurableSettings(profile);
 
   const handleAvatarPress = () => {
     navigate('ProfilePhotoUpload');
@@ -62,6 +62,8 @@ export const ProfileScreen = () => {
           />
         ))}
       </ScrollView>
+
+      {BiometricModal}
     </SafeAreaView>
   );
 };

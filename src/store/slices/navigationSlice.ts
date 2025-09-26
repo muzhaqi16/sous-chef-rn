@@ -25,6 +25,17 @@ interface UserNavigationState {
   onboardingCompletedAt?: number;
   skippedOnboardingSteps?: string[];
   isNewUser?: boolean;
+  biometricSetupOffered?: boolean;
+  biometricEnabled?: boolean;
+  // Post-login biometric prompt tracking
+  postLoginBiometricPromptShown?: boolean;
+  postLoginBiometricPromptCount?: number;
+  lastBiometricPromptDeclined?: number;
+  biometricPromptRemindLater?: boolean;
+  // Enhanced authentication flow tracking
+  biometricDeclinedPermanently?: boolean;
+  credentialPromptDeclined?: boolean;
+  lastCredentialPromptShown?: number;
 }
 
 export interface NavigationState {

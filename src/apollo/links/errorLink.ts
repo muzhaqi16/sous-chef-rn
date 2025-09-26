@@ -43,6 +43,22 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
       return;
     }
 
-    console.error(`Network error [${operation.operationName}]:`, error.message);
+    // Minimal logging for network errors (Apollo handles retries + cache fallback)
+    const message = error.message?.toLowerCase() || '';
+    const isNetworkIssue = [
+      'network request failed',
+      'network error',
+      'connection refused',
+      'timeout',
+      'enotfound',
+      'econnrefused',
+      'econnreset',
+      'ehostunreach'
+    ].some(issue => message.includes(issue));
+
+    // Only log non-network errors as these are unexpected
+    if (!isNetworkIssue) {
+      console.error(`Unexpected network error [${operation.operationName}]:`, error.message);
+    }
   }
 });

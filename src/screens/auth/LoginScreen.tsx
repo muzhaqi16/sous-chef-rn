@@ -7,6 +7,7 @@ import { Icon } from '#utils';
 
 import { AuthFormTemplate, AuthWrapper } from '#components/templates';
 import { EmailInput, PasswordInput } from '#components/atoms';
+import { RememberMeModal } from '#components/organisms/RememberMeModal';
 import { getLoginValidationSchema } from '#/utils';
 import { type LoginInput } from '#generated';
 import { useAuth, useAuthNavigation } from '#hooks';
@@ -17,32 +18,54 @@ export function LoginScreen() {
     login,
     handleAuthError,
     isLoading: isLoggingIn,
+    loadStoredCredentials,
     checkStoredCredentials,
-    loadStoredCredentials
+    getBiometricInfo,
+    showRememberMeModal,
+    pendingCredentials,
+    handleRememberMeAccept,
+    handleRememberMeDecline,
   } = useAuth();
 
-  const [hasStoredCreds, setHasStoredCreds] = useState(false);
+  const [_hasStoredCreds, setHasStoredCreds] = useState(false);
+  const [shouldShowBiometricButton, setShouldShowBiometricButton] = useState(false);
   const [isBiometricLoading, setIsBiometricLoading] = useState(false);
-
-  // Check for stored credentials on mount
-  useEffect(() => {
-    const checkCreds = async () => {
-      try {
-        const hasCredentials = await checkStoredCredentials();
-        setHasStoredCreds(hasCredentials);
-      } catch (error) {
-        console.error('Error checking stored credentials:', error);
-        setHasStoredCreds(false);
-      }
-    };
-
-    checkCreds();
-  }, [checkStoredCredentials]);
+  const [biometricInfo, setBiometricInfo] = useState<{
+    isAvailable: boolean;
+    biometryType: string | null;
+  }>({ isAvailable: false, biometryType: null });
 
   const form = useForm<LoginInput>({
     resolver: yupResolver(getLoginValidationSchema()),
     defaultValues: { email: '', password: '' },
   });
+
+  // Load stored credentials and biometric info on mount
+  useEffect(() => {
+    const loadAuthInfo = async () => {
+      try {
+        const [hasCredentials, biometric] = await Promise.all([
+          checkStoredCredentials(),
+          getBiometricInfo(),
+        ]);
+
+        setBiometricInfo(biometric);
+        setHasStoredCreds(hasCredentials);
+
+        // Only show biometric button if:
+        // 1. Biometric is available on device
+        // 2. User has stored credentials (meaning they've previously enabled biometric)
+        const shouldShow = biometric.isAvailable && hasCredentials;
+        setShouldShowBiometricButton(shouldShow);
+      } catch (error) {
+        console.error('Error loading auth info:', error);
+        setHasStoredCreds(false);
+        setShouldShowBiometricButton(false);
+      }
+    };
+
+    loadAuthInfo();
+  }, [checkStoredCredentials, getBiometricInfo]);
 
   // Simple form submission - directly use login with default rememberMe=true
   const onSubmit = async (input: LoginInput) => {
@@ -62,16 +85,44 @@ export function LoginScreen() {
       const credentials = await loadStoredCredentials();
 
       if (credentials) {
+        // Use showRememberPrompt = false for biometric login since credentials are already saved
         await login({
           email: credentials.email,
-          password: credentials.password
-        });
+          password: credentials.password,
+        }, false);
       }
     } catch (error: any) {
       handleAuthError(error, 'Biometric authentication failed');
     } finally {
       setIsBiometricLoading(false);
     }
+  };
+
+  // Get appropriate biometric icon
+  const getBiometricIcon = () => {
+    if (!biometricInfo.isAvailable) return 'fingerprint';
+
+    switch (biometricInfo.biometryType) {
+      case 'Face ID':
+        return 'face-recognition';
+      case 'Touch ID':
+      case 'Fingerprint':
+        return 'fingerprint';
+      default:
+        return 'fingerprint';
+    }
+  };
+
+  // Get biometric button text
+  const getBiometricButtonText = () => {
+    if (isBiometricLoading) return 'Authenticating...';
+    if (isLoggingIn) return 'Logging in...';
+
+    if (biometricInfo.biometryType) {
+      return `Use ${biometricInfo.biometryType}`;
+    }
+
+    return 'Use Biometric Login';
   };
 
   return (
@@ -108,28 +159,41 @@ export function LoginScreen() {
         isLoading={isLoggingIn}
       />
 
-      {/* Biometric Authentication Button */}
-      {hasStoredCreds && (
+      {/* Biometric Authentication Section */}
+      {shouldShowBiometricButton && (
         <View style={styles.biometricContainer}>
+          {/* Main Biometric Login Button */}
           <TouchableOpacity
             style={styles.biometricButton}
-            onPress={handleBiometricLogin}
+            onPress={() => handleBiometricLogin()}
             disabled={isBiometricLoading || isLoggingIn}
           >
             <Icon
-              name="fingerprint"
+              name={getBiometricIcon()}
               size={24}
               color={isBiometricLoading ? '#999' : '#007AFF'}
             />
-            <Text style={[
-              styles.biometricText,
-              (isBiometricLoading || isLoggingIn) && styles.biometricTextDisabled
-            ]}>
-              {isBiometricLoading ? 'Authenticating...' : 'Use Biometric Login'}
+            <Text
+              style={[
+                styles.biometricText,
+                (isBiometricLoading || isLoggingIn) &&
+                  styles.biometricTextDisabled,
+              ]}
+            >
+              {getBiometricButtonText()}
             </Text>
           </TouchableOpacity>
+
         </View>
       )}
+
+      {/* RememberMe Modal */}
+      <RememberMeModal
+        visible={showRememberMeModal}
+        onAccept={handleRememberMeAccept}
+        onDecline={handleRememberMeDecline}
+        email={pendingCredentials?.email || ''}
+      />
     </AuthWrapper>
   );
 }

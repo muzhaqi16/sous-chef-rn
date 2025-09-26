@@ -99,6 +99,17 @@ export const PROFILE_SETTINGS_CONFIG = [
     ],
   },
   {
+    title: 'Security',
+    items: [
+      {
+        key: 'biometricAuthentication',
+        label: 'Biometric Authentication',
+        type: 'switch',
+        subtitle: 'Use fingerprint or face recognition to login',
+      },
+    ],
+  },
+  {
     title: '',
     items: [
       {

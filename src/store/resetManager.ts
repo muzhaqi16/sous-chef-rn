@@ -128,6 +128,10 @@ export const createResetManager = (
   logout: async () => {
     const resetManager = createResetManager(set, get);
     await resetManager.resetStore('LOGOUT');
+
+    // Reset navigation state to auth after logout
+    console.log('🚪 ResetManager logout: Resetting navigation state to auth');
+    set({ navigationState: 'auth' });
   },
 
   sessionExpired: async () => {

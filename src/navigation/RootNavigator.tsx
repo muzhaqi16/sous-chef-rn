@@ -2,7 +2,6 @@ import React, { useEffect, useRef } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useStore } from '#store';
-import { useAuthState } from '#hooks/navigation/useAuthState';
 import { useAuth } from '#hooks/auth/useAuth';
 import { SplashScreen } from '#screens';
 import {
@@ -21,7 +20,11 @@ import {
 import { CodeVerificationScreen } from '#screens/auth';
 import { linkingConfig } from './linking';
 import { ImageFile } from '#components/molecules/ImagePicker';
-import { NavigationErrorBoundary, AuthErrorBoundary } from '#components/providers/ErrorBoundary';
+import {
+  NavigationErrorBoundary,
+  AuthErrorBoundary,
+} from '#components/providers/ErrorBoundary';
+import { PostLoginBiometricPrompt } from '#components/organisms';
 
 export type RootStackParamList = {
   Auth: undefined;
@@ -39,121 +42,136 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function RootNavigator() {
-  const { isHydrated, isLoggingOut } = useStore();
-  const authState = useAuthState();
-  const { autoLogin, isAutoLoggingIn, setIsAutoLoggingIn } = useAuth();
+  const {
+    isHydrated,
+    navigationState,
+    showBiometricSetup,
+    postLoginCredentials,
+    setNavigationState,
+    user,
+  } = useStore();
+  const { handlePostLoginBiometricComplete } = useAuth();
 
-  // Track when user was previously authenticated to detect logout
-  const wasAuthenticated = useRef(false);
+  // Track initialization
   const hasInitialized = useRef(false);
-  const autoLoginAttempted = useRef(false);
 
-  // Force reset broken auto-login state on component mount
+  // Initialize navigation state after hydration
   useEffect(() => {
-    if (!hasInitialized.current && isHydrated && !authState.user && isAutoLoggingIn) {
-      console.log('🔧 Fixing broken auto-login state on mount');
-      setIsAutoLoggingIn(false);
-    }
-    hasInitialized.current = true;
-  }, [isHydrated, authState.user, isAutoLoggingIn, setIsAutoLoggingIn]);
+    if (isHydrated && !hasInitialized.current) {
+      hasInitialized.current = true;
 
-  // Auto-login effect - runs after store hydration, but not after logout
-  useEffect(() => {
-    if (authState.user) {
-      wasAuthenticated.current = true; // Mark that user was authenticated
-    }
-
-    if (isHydrated && !authState.user && !isAutoLoggingIn && hasInitialized.current && !autoLoginAttempted.current) {
-      if (!wasAuthenticated.current) {
-        // Fresh app load - attempt auto-login only once
-        console.log('🔄 Fresh app load - attempting auto-login');
-        autoLoginAttempted.current = true; // Prevent future attempts
-        autoLogin();
+      // Determine initial navigation state based on current store state
+      if (user) {
+        // User exists in store - determine their state
+        if (!user.emailVerified) {
+          setNavigationState('verification');
+        } else if (!user.onBoarded) {
+          setNavigationState('onboarding');
+        } else {
+          setNavigationState('main_app');
+        }
       } else {
-        // User logged out - don't auto-login, just show auth screens
-        console.log('🚪 User logged out - showing auth screens');
+        // No user - go directly to auth screen
+        setNavigationState('auth');
       }
     }
-  }, [isHydrated, authState.user, autoLogin, isAutoLoggingIn, setIsAutoLoggingIn]);
+  }, [isHydrated, user, setNavigationState]);
 
-  // Debug: Log current state during logout scenarios
-  console.log('🔍 RootNavigator state:', {
-    isHydrated,
-    isAutoLoggingIn,
-    isLoggingOut,
-    hasUser: !!authState.user,
-    isUnauthenticated: authState.isUnauthenticated,
-    isFullyAuthenticated: authState.isFullyAuthenticated
-  });
-
-  // Don't render navigation until store is hydrated
-  // Only show splash during active auto-login attempt, not after it's done
-  if (!isHydrated || (isAutoLoggingIn && !wasAuthenticated.current && !autoLoginAttempted.current)) {
-    console.log('⏳ Showing splash - hydrated:', isHydrated, 'autoLogging:', isAutoLoggingIn, 'wasAuth:', wasAuthenticated.current, 'attempted:', autoLoginAttempted.current);
+  // Show splash while app is hydrating
+  if (!isHydrated) {
     return <SplashScreen />;
   }
 
   return (
-    <NavigationErrorBoundary>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {/* Auth Group */}
-        {authState.isUnauthenticated && (
-          <Stack.Screen name="Auth">
-            {() => (
-              <AuthErrorBoundary>
-                <AuthStack />
-              </AuthErrorBoundary>
-            )}
-          </Stack.Screen>
-        )}
+    <>
+      <NavigationErrorBoundary>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          {/* Auth Group */}
+          {navigationState === 'auth' && (
+            <Stack.Screen name="Auth">
+              {() => (
+                <AuthErrorBoundary>
+                  <AuthStack />
+                </AuthErrorBoundary>
+              )}
+            </Stack.Screen>
+          )}
 
-        {/* Verification Group */}
-        {authState.needsVerification && (
-          <Stack.Screen name="Verification">
-            {() => (
-              <AuthErrorBoundary>
-                <CodeVerificationScreen />
-              </AuthErrorBoundary>
-            )}
-          </Stack.Screen>
-        )}
+          {/* Verification Group */}
+          {navigationState === 'verification' && (
+            <Stack.Screen name="Verification">
+              {() => (
+                <AuthErrorBoundary>
+                  <CodeVerificationScreen />
+                </AuthErrorBoundary>
+              )}
+            </Stack.Screen>
+          )}
 
-        {/* Onboarding Group */}
-        {authState.needsOnboarding && (
-          <Stack.Screen name="Onboarding">
-            {() => (
-              <NavigationErrorBoundary>
-                <OnboardingStack />
-              </NavigationErrorBoundary>
-            )}
-          </Stack.Screen>
-        )}
+          {/* Biometric Setup State - shows loading while biometric modal is active */}
+          {navigationState === 'biometric_setup' && (
+            <Stack.Screen name="Auth">
+              {() => (
+                <AuthErrorBoundary>
+                  <AuthStack />
+                </AuthErrorBoundary>
+              )}
+            </Stack.Screen>
+          )}
 
-        {/* Main App Group */}
-        {authState.isFullyAuthenticated && (
-          <>
-            <Stack.Screen name="Home">
+          {/* Onboarding Group */}
+          {navigationState === 'onboarding' && (
+            <Stack.Screen name="Onboarding">
               {() => (
                 <NavigationErrorBoundary>
-                  <HomeTabs />
+                  <OnboardingStack />
                 </NavigationErrorBoundary>
               )}
             </Stack.Screen>
-            <Stack.Screen name="HomeManagement" component={HomeManagement} />
-            <Stack.Screen name="Barcode" component={BarcodeStack} />
-            <Stack.Screen name="Notifications" component={NotificationStack} />
-            <Stack.Screen
-              name="ProfilePhotoUpload"
-              component={ProfilePhotoUploadScreen}
-            />
-            <Stack.Screen name="ImageCrop" component={ImageCropScreen} />
-          </>
-        )}
+          )}
 
-        {/* Always available */}
-        <Stack.Screen name="NotFound" component={NotFoundScreen} />
-      </Stack.Navigator>
-    </NavigationErrorBoundary>
+          {/* Main App Group */}
+          {navigationState === 'main_app' && (
+            <>
+              <Stack.Screen name="Home">
+                {() => (
+                  <NavigationErrorBoundary>
+                    <HomeTabs />
+                  </NavigationErrorBoundary>
+                )}
+              </Stack.Screen>
+              <Stack.Screen name="HomeManagement" component={HomeManagement} />
+              <Stack.Screen name="Barcode" component={BarcodeStack} />
+              <Stack.Screen
+                name="Notifications"
+                component={NotificationStack}
+              />
+              <Stack.Screen
+                name="ProfilePhotoUpload"
+                component={ProfilePhotoUploadScreen}
+              />
+              <Stack.Screen name="ImageCrop" component={ImageCropScreen} />
+            </>
+          )}
+
+          {/* Always available */}
+          <Stack.Screen name="NotFound" component={NotFoundScreen} />
+        </Stack.Navigator>
+      </NavigationErrorBoundary>
+
+      {/* Global Biometric Setup Modal - only shows during biometric_setup state */}
+      {navigationState === 'biometric_setup' &&
+        showBiometricSetup &&
+        user &&
+        postLoginCredentials && (
+          <PostLoginBiometricPrompt
+            visible={showBiometricSetup}
+            onComplete={handlePostLoginBiometricComplete}
+            userEmail={postLoginCredentials.email}
+            userPassword={postLoginCredentials.password}
+          />
+        )}
+    </>
   );
 }
 

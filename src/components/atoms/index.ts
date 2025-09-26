@@ -15,3 +15,4 @@ export {NameInput} from './NameInput.tsx';
 export {UrlInput} from './UrlInput.tsx';
 // Button moved to base components
 export * from './BaseInput';
+export {ApiStatusIndicator} from './ApiStatusIndicator';

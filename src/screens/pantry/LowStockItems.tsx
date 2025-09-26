@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
@@ -31,7 +32,7 @@ export const LowStockItems: React.FC = () => {
   });
 
   const pantry = getDefaultPantry(homeData);
-  const { items, refetch } = usePantryItems(pantry?.id);
+  const { items, loading, refetch } = usePantryItems(pantry?.id);
   const [addToShoppingList] = useAddItemToShoppingListMutation();
 
   const lowStockItems = useMemo(() => {
@@ -84,7 +85,11 @@ export const LowStockItems: React.FC = () => {
           />
         }
       >
-        {lowStockItems.length === 0 ? (
+        {loading || !items ? (
+          <View style={[commonStyles.center, styles.loadingContainer]}>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+          </View>
+        ) : lowStockItems.length === 0 ? (
           <View style={[commonStyles.center, styles.emptyState]}>
             <Icon name="inventory" size={64} color={theme.colors.success} />
             <Text style={[commonStyles.body, styles.emptyText]}>
@@ -151,6 +156,9 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.md,
     marginBottom: theme.spacing.lg,
     textAlign: 'center',
+  },
+  loadingContainer: {
+    padding: theme.spacing['2xl'],
   },
   itemCard: {
     ...commonStyles.rowSpaceBetween,

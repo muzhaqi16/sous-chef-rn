@@ -1,402 +1,184 @@
-import { useCallback, useState } from 'react';
-import { useStore } from '#store';
-import { useToast } from '#/hooks/useToast';
-import {
-  useLoginMutation,
-  useRegisterMutation,
-  LoginInput,
-  RegisterInput,
-} from '#generated';
-import {
-  loadCredentials,
-  saveCredentials,
-  hasCredentials,
-  clearCredentials,
-} from '#/storage/keychain';
-import { logger } from '#/utils/environment';
-import { useErrorHandler } from '#/utils/errorHandling';
-import { useDeviceRegistration } from '#/hooks/useDeviceRegistration';
+import { useCallback } from 'react';
+import { useAuthState } from './useAuthState';
+import { useCredentialStorage } from './useCredentialStorage';
+import { useRememberMe, type RememberMeCredentials } from './useRememberMe';
+import { useBiometricPrompting } from './useBiometricPrompting';
+import { useAuthOperations, type LoginCredentials } from './useAuthOperations';
+import { useUserPreferences } from '#/hooks/navigation/useUserPreferences';
 
-interface Credentials {
-  email: string;
-  password: string;
-}
-
+/**
+ * Main authentication hook that composes all auth-related functionality.
+ * This hook maintains backward compatibility while providing a clean,
+ * modular internal architecture based on event-driven communication.
+ */
 export const useAuth = () => {
-  // Auth state from store
-  const user = useStore(state => state.user);
-  const accessToken = useStore(state => state.accessToken);
-  const refreshToken = useStore(state => state.refreshToken);
-  const isLoggingOut = useStore(state => state.isLoggingOut);
-  const isAutoLoggingIn = useStore(state => state.isAutoLoggingIn);
-  const setAuth = useStore(state => state.setAuth);
-  const clearAuth = useStore(state => state.clearAuth);
-  const setTokens = useStore(state => state.setTokens);
-  const updateUser = useStore(state => state.updateUser);
-  const setEmailVerified = useStore(state => state.setEmailVerified);
-  const setOnboarded = useStore(state => state.setOnboarded);
-  const setRememberMe = useStore(state => state.setRememberMe);
-  const setIsAutoLoggingIn = useStore(state => state.setIsAutoLoggingIn);
-  const setUserNavigationState = useStore(
-    state => state.setUserNavigationState,
-  );
+  // Core auth state management
+  const authState = useAuthState();
 
-  // Local state for auth operations
-  const [isLoading, setIsLoading] = useState(false);
-  const [isLoadingCredentials, setIsLoadingCredentials] = useState(false);
+  // Credential storage operations
+  const credentialStorage = useCredentialStorage();
 
-  // Toast for user notifications
-  const toast = useToast();
+  // Biometric prompting logic
+  const { shouldShowPostLoginBiometricPrompt, recordBiometricPromptResponse } = useBiometricPrompting();
 
-  // Error handling
-  const { handleApolloError } = useErrorHandler();
+  // User preferences for biometric tracking
+  const { markBiometricDeclined, markBiometricEnabled } = useUserPreferences();
 
-  // Device registration
-  const { registerDeviceInBackground } = useDeviceRegistration();
+  // Event handlers for RememberMe flow
+  const handleRememberMeAccept = useCallback(async (credentials: RememberMeCredentials) => {
+    await credentialStorage.storeCredentials(credentials.email, credentials.password);
+  }, [credentialStorage]);
 
-  // GraphQL mutations
-  const [loginMutation] = useLoginMutation();
-  const [registerMutation] = useRegisterMutation();
-
-  // Computed properties
-  const isAuthenticated = !!(user && accessToken);
-  const hasAnyToken = !!(accessToken || refreshToken);
-  const isLoggedOut = !user && !accessToken && !refreshToken;
-  const isTokenRefreshing = !accessToken && !!refreshToken;
-  const canAttemptQueries = hasAnyToken && !isLoggingOut;
-
-  // Credential management
-  const checkStoredCredentials = useCallback(async (): Promise<boolean> => {
-    try {
-      return await hasCredentials();
-    } catch (error) {
-      logger.error('Error checking credentials:', error);
-      return false;
-    }
+  const handleRememberMeDecline = useCallback(() => {
+    // Just tracking - handled internally by useRememberMe
   }, []);
 
-  const loadStoredCredentials =
-    useCallback(async (): Promise<Credentials | null> => {
-      try {
-        setIsLoadingCredentials(true);
-        const hasCreds = await hasCredentials();
-        if (!hasCreds) return null;
+  // RememberMe modal logic with event handlers
+  const rememberMe = useRememberMe({
+    onAccept: handleRememberMeAccept,
+    onDecline: handleRememberMeDecline,
+  });
 
-        const credentials = await loadCredentials();
-        return credentials
-          ? {
-              email: credentials.username,
-              password: credentials.password,
-            }
-          : null;
-      } catch (error) {
-        logger.error('Error loading credentials:', error);
-        return null;
-      } finally {
-        setIsLoadingCredentials(false);
-      }
-    }, []);
+  // Event handlers for biometric setup completion
+  const handlePostLoginBiometricComplete = useCallback((enabled: boolean, declined?: boolean) => {
+    // Close biometric setup modal
+    authState.setShowBiometricSetup(false);
 
-  const storeCredentials = useCallback(
-    async (email: string, password: string): Promise<boolean> => {
-      try {
-        await saveCredentials(email, password);
-        return true;
-      } catch (error) {
-        logger.error('Error storing credentials:', error);
-        return false;
-      }
-    },
-    [],
-  );
+    // Record user's response
+    recordBiometricPromptResponse(enabled, declined);
 
-  const removeCredentials = useCallback(async (): Promise<boolean> => {
-    try {
-      await clearCredentials();
-      return true;
-    } catch (error) {
-      logger.error('Error removing credentials:', error);
-      return false;
+    if (enabled) {
+      markBiometricEnabled();
+    } else if (declined) {
+      markBiometricDeclined();
     }
-  }, []);
 
-  // Auth flow handlers
-  const handleAuthSuccess = useCallback((message: string) => {
-    logger.info('Auth success:', message);
-  }, []);
+    // Navigate to main app after biometric setup
+    authState.setNavigationState('main_app');
 
-  const handleAuthError = useCallback(
-    (error: any, operation: string = 'Authentication') => {
-      try {
-        const { message, code, isAuthError } = handleApolloError(error, {
-          operation,
-          logError: true,
-        });
-
-        // Show user-friendly error message
-        toast({
-          message,
-          type: 'error',
-        });
-
-        // Additional handling for specific auth errors
-        if (isAuthError && (code === 'AUTH_TOKEN_EXPIRED' || code === 'AUTH_REFRESH_TOKEN_INVALID')) {
-          // Clear auth state for expired tokens
-          clearAuth();
-        }
-
-        setIsLoading(false);
-      } catch (handlerError) {
-        // Fallback error handling - show generic message
-        toast({
-          message: 'Login failed. Please check your credentials and try again.',
-          type: 'error',
-        });
-
-        setIsLoading(false);
-      }
-    },
-    [toast, handleApolloError, clearAuth],
-  );
-
-  const handleLogin = useCallback(
-    async (loginResponse: any, rememberMe?: boolean) => {
-      if (!loginResponse?.user) return;
-
-      const { user, accessToken, refreshToken } = loginResponse;
-
-      if (rememberMe !== undefined) {
-        setRememberMe(rememberMe);
-      }
-
-      if (user.id) {
-        setUserNavigationState(user.id, {
-          lastLoginTimestamp: Date.now(),
-          rememberMeChoice: rememberMe,
-        });
-      }
-
-      setAuth(user, accessToken, refreshToken);
-      handleAuthSuccess('Login successful');
-
-      // Register device in background after successful login
-      registerDeviceInBackground();
-    },
-    [setAuth, setRememberMe, setUserNavigationState, handleAuthSuccess, registerDeviceInBackground],
-  );
-
-  const handleRegistration = useCallback(
-    async (registerResponse: any, rememberMe?: boolean) => {
-      if (!registerResponse?.user) return;
-
-      const { user, accessToken, refreshToken } = registerResponse;
-
-      if (rememberMe !== undefined) {
-        setRememberMe(rememberMe);
-      }
-
-      if (user.id) {
-        setUserNavigationState(user.id, {
-          lastLoginTimestamp: Date.now(),
-          rememberMeChoice: rememberMe,
-          isNewUser: true,
-        });
-      }
-
-      setAuth(user, accessToken, refreshToken);
-      handleAuthSuccess('Registration successful');
-
-      // Register device in background after successful registration
-      registerDeviceInBackground();
-    },
-    [setAuth, setRememberMe, setUserNavigationState, handleAuthSuccess, registerDeviceInBackground],
-  );
-
-
-  // Auto-login functionality
-  const autoLogin = useCallback(async (): Promise<boolean> => {
-    try {
-      setIsAutoLoggingIn(true);
-
-      // Check if we have stored credentials
-      const hasStoredCreds = await checkStoredCredentials();
-      if (!hasStoredCreds) {
-        logger.info('No stored credentials found for auto-login');
-        return false;
-      }
-
-      // Load stored credentials
-      const credentials = await loadStoredCredentials();
-      if (!credentials) {
-        logger.info('Failed to load stored credentials');
-        return false;
-      }
-
-      // Attempt login with stored credentials
-      logger.info('Attempting auto-login with stored credentials');
-      const result = await loginMutation({
-        variables: {
-          input: {
-            email: credentials.email,
-            password: credentials.password
-          }
-        }
-      });
-
-      if (result.data?.login) {
-        await handleLogin(result.data.login, true); // Always remember for auto-login
-        logger.info('Auto-login successful');
-        return true;
-      }
-
-      // If login failed, clear bad credentials
-      if (result.error) {
-        logger.warn('Auto-login failed, clearing stored credentials');
-        await removeCredentials();
-        handleAuthError(result.error, 'Auto-login');
-      }
-
-      return false;
-    } catch (error) {
-      // Log but don't show error to user for auto-login
-      logger.error('Auto-login error:', error);
-
-      // Clear potentially corrupted credentials
-      try {
-        await removeCredentials();
-      } catch (cleanupError) {
-        logger.error('Failed to cleanup credentials after auto-login error:', cleanupError);
-      }
-
-      return false;
-    } finally {
-      setIsAutoLoggingIn(false);
-    }
+    // Clean up credentials
+    authState.setPostLoginCredentials(null);
   }, [
-    setIsAutoLoggingIn,
-    checkStoredCredentials,
-    loadStoredCredentials,
-    loginMutation,
-    handleLogin,
-    handleAuthError,
-    removeCredentials,
+    authState,
+    recordBiometricPromptResponse,
+    markBiometricEnabled,
+    markBiometricDeclined,
   ]);
 
-  // Auth mutations
-  const login = useCallback(
-    async (input: LoginInput, rememberMe = true): Promise<boolean> => {
-      try {
-        setIsLoading(true);
-        const result = await loginMutation({ variables: { input } });
+  // Event handlers for auth operations
+  const handleShowRememberMe = useCallback((credentials: LoginCredentials) => {
+    rememberMe.showRememberMePrompt(credentials);
+  }, [rememberMe]);
 
-        if (result.data?.login) {
-          await handleLogin(result.data.login, rememberMe);
+  const handleShowBiometricSetup = useCallback((credentials: LoginCredentials) => {
+    authState.setPostLoginCredentials(credentials);
+    authState.setShowBiometricSetup(true);
+    authState.setNavigationState('biometric_setup');
+  }, [authState]);
 
-          if (rememberMe) {
-            await storeCredentials(input.email, input.password);
-          }
-
-          return true;
-        }
-
-        // Check for GraphQL errors in result
-        if (result.error) {
-          handleAuthError(result.error);
-          return false;
-        }
-
-        return false;
-      } catch (error) {
-        handleAuthError(error);
-        return false;
-      } finally {
-        setIsLoading(false);
-      }
+  // Convert credential storage functions to event interface
+  const credentialStorageEvents = {
+    onCredentialCheck: credentialStorage.checkStoredCredentials,
+    onCredentialLoad: async (email?: string): Promise<LoginCredentials | null> => {
+      const result = await credentialStorage.loadStoredCredentials(email);
+      return result ? { email: result.email, password: result.password } : null;
     },
-    [loginMutation, handleLogin, storeCredentials, handleAuthError],
-  );
+    onCredentialStore: credentialStorage.storeCredentials,
+    onCredentialRemove: credentialStorage.removeCredentials,
+  };
 
-  const register = useCallback(
-    async (input: RegisterInput, rememberMe = true): Promise<boolean> => {
-      try {
-        setIsLoading(true);
-        const result = await registerMutation({ variables: { input } });
-
-        if (result.data?.register) {
-          await handleRegistration(result.data.register, rememberMe);
-
-          if (rememberMe) {
-            await storeCredentials(input.email, input.password);
-          }
-
-          return true;
-        }
-
-        // Check for GraphQL errors in result
-        if (result.error) {
-          handleAuthError(result.error, 'Register');
-          return false;
-        }
-
-        return false;
-      } catch (error) {
-        handleAuthError(error, 'Register');
-        return false;
-      } finally {
-        setIsLoading(false);
-      }
+  // Auth operations with all event handlers
+  const authOperations = useAuthOperations({
+    credentialStorage: credentialStorageEvents,
+    rememberMe: {
+      onShowRememberMe: handleShowRememberMe,
     },
-    [registerMutation, handleRegistration, storeCredentials, handleAuthError],
-  );
+    biometricSetup: {
+      onShowBiometricSetup: handleShowBiometricSetup,
+    },
+    navigation: {
+      onNavigate: authState.setNavigationState,
+    },
+    authState: {
+      onSetAuth: authState.setAuth,
+      onClearAuth: authState.clearAuth,
+      onSetRememberMe: authState.setRememberMe,
+      onSetUserNavigationState: authState.setUserNavigationState,
+    },
+    // Pass biometric prompting logic directly
+    shouldShowPostLoginBiometricPrompt,
+  });
 
-  const logout = useCallback(async () => {
-    try {
-      clearAuth();
-      await removeCredentials();
-    } catch (error) {
-      logger.error('Logout error:', error);
-    }
-  }, [clearAuth, removeCredentials]);
+  // Logout wrapper that passes user info
+  const logout = (clearAllCredentials = false) => {
+    return authOperations.logout(authState.user, clearAllCredentials);
+  };
 
+  // Return the same interface as the original useAuth hook for backward compatibility
   return {
-    // State
-    user,
-    accessToken,
-    refreshToken,
-    isAuthenticated,
-    isLoggingOut,
-    isAutoLoggingIn,
-    hasAnyToken,
-    isLoggedOut,
-    isTokenRefreshing,
-    canAttemptQueries,
-    isLoading,
-    isLoadingCredentials,
+    // State from useAuthState
+    user: authState.user,
+    accessToken: authState.accessToken,
+    refreshToken: authState.refreshToken,
+    isAuthenticated: authState.isAuthenticated,
+    isLoggingOut: authState.isLoggingOut,
+    isAutoLoggingIn: authState.isAutoLoggingIn,
+    hasAnyToken: authState.hasAnyToken,
+    isLoggedOut: authState.isLoggedOut,
+    isTokenRefreshing: authState.isTokenRefreshing,
+    canAttemptQueries: authState.canAttemptQueries,
 
-    // Actions
-    login,
-    register,
+    // Loading states
+    isLoading: authOperations.isLoading,
+    isLoadingCredentials: credentialStorage.isLoadingCredentials,
+
+    // Actions from useAuthOperations
+    login: authOperations.login,
+    register: authOperations.register,
     logout,
-    autoLogin,
-    setAuth,
-    clearAuth,
-    setTokens,
-    updateUser,
-    setEmailVerified,
-    setOnboarded,
-    setIsAutoLoggingIn,
+    autoLogin: authOperations.autoLogin,
 
-    // Credential management
-    checkStoredCredentials,
-    loadStoredCredentials,
-    storeCredentials,
-    removeCredentials,
+    // Auth state actions
+    setAuth: authState.setAuth,
+    clearAuth: authState.clearAuth,
+    setTokens: authState.setTokens,
+    updateUser: authState.updateUser,
+    setEmailVerified: authState.setEmailVerified,
+    setOnboarded: authState.setOnboarded,
+    setIsAutoLoggingIn: authState.setIsAutoLoggingIn,
 
-    // Handlers
-    handleLogin,
-    handleRegistration,
-    handleAuthSuccess,
-    handleAuthError,
+    // Credential management from useCredentialStorage
+    checkStoredCredentials: credentialStorage.checkStoredCredentials,
+    loadStoredCredentials: credentialStorage.loadStoredCredentials,
+    storeCredentials: credentialStorage.storeCredentials,
+    removeCredentials: credentialStorage.removeCredentials,
+    getAvailableAccounts: credentialStorage.getAvailableAccounts,
+    getBiometricInfo: credentialStorage.getBiometricInfo,
 
+    // RememberMe modal from useRememberMe
+    showRememberMeModal: rememberMe.showRememberMeModal,
+    pendingCredentials: rememberMe.pendingCredentials,
+    handleRememberMeAccept: rememberMe.handleRememberMeAccept,
+    handleRememberMeDecline: rememberMe.handleRememberMeDecline,
+
+    // Navigation state machine (from useAuthState)
+    navigationState: authState.navigationState,
+    showBiometricSetup: authState.showBiometricSetup,
+    setNavigationState: authState.setNavigationState,
+    setShowBiometricSetup: authState.setShowBiometricSetup,
+
+    // Post-login biometric prompt (direct from useBiometricPrompting)
+    postLoginCredentials: authState.postLoginCredentials,
+    handlePostLoginBiometricComplete,
+
+    // Registration password for onboarding
+    registrationPassword: authOperations.registrationPassword,
+    clearRegistrationPassword: authOperations.clearRegistrationPassword,
+
+    // Handlers from useAuthOperations
+    handleLogin: authOperations.handleLogin,
+    handleRegistration: authOperations.handleRegistration,
+    handleAuthSuccess: authOperations.handleAuthSuccess,
+    handleAuthError: authOperations.handleAuthError,
   };
 };

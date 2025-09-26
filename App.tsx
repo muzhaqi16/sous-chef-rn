@@ -15,19 +15,21 @@ import { ToastProvider } from '#/components/atoms';
 import { useTheme } from '#/hooks/useTheme';
 import { Telemetry } from '#/services/telemetry';
 import { AppErrorBoundary } from '#/components/providers/ErrorBoundary';
-
 // Enable native screens for better performance
 enableScreens();
 
 const App = () => {
-  const { isHydrated, setHasStoredCredentials, getTelemetryConfig } = useStore();
+  const { isHydrated, setHasStoredCredentials, getTelemetryConfig } =
+    useStore();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
   useEffect(() => {
     if (isHydrated) {
       // Check for stored credentials
-      hasCredentials().then(setHasStoredCredentials);
+      hasCredentials().then(result => {
+        setHasStoredCredentials(result);
+      });
 
       // Initialize telemetry service
       Telemetry.updateConfig(getTelemetryConfig());
@@ -50,7 +52,10 @@ const App = () => {
       }
     };
 
-    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    const subscription = AppState.addEventListener(
+      'change',
+      handleAppStateChange,
+    );
 
     return () => {
       subscription?.remove();

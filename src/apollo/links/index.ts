@@ -6,11 +6,10 @@ import { createTelemetryLink } from './telemetryLink';
 import { errorLink } from './errorLink';
 import { httpLink } from './httpLink';
 import { wsLink } from './wsLink';
-import { retryLink } from './retryLink';
 import { deduplicationLink } from './deduplicationLink';
 
-// HTTP transport with retry (batching disabled until server supports it)
-const httpTransport = retryLink.concat(httpLink);
+// Simplified HTTP transport (let Apollo handle retries naturally)
+const httpTransport = httpLink;
 
 // Transport link routing:
 // • Subscriptions → WebSocket
@@ -39,12 +38,12 @@ const consoleLink = createConsoleLink({
 // Telemetry link for tracking GraphQL operations
 const telemetryLink = createTelemetryLink();
 
-// Simplified link chain
+// Simplified link chain - work WITH Apollo, not against it
 export const link = ApolloLink.from([
-  deduplicationLink,
-  telemetryLink,
-  errorLink,
-  authLink,
-  consoleLink,
-  transportLink,
+  deduplicationLink, // Prevent duplicate requests
+  telemetryLink,     // Track operations for monitoring
+  errorLink,         // Handle/log errors (simplified)
+  authLink,          // Authentication headers
+  consoleLink,       // Development logging
+  transportLink,     // HTTP/WebSocket transport
 ]);

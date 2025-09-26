@@ -3,6 +3,7 @@ import {View, Text, TouchableOpacity, Image} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
 import {useProfileData, useAppNavigation} from '#/hooks';
 import {Icon} from '#utils';
+import {ApiStatusIndicator} from '../atoms/ApiStatusIndicator';
 
 export const UserHeader: React.FC = () => {
   const {navigateTo} = useAppNavigation();
@@ -19,6 +20,7 @@ export const UserHeader: React.FC = () => {
       </Text>
 
       <View style={styles.headerActions}>
+        <ApiStatusIndicator size="small" />
         <TouchableOpacity
           onPress={() => {
             navigateTo.notificationList();
