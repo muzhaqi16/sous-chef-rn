@@ -17,6 +17,12 @@ export const useBiometricPrompting = () => {
     }
 
     try {
+      // Check if user is new and hasn't completed onboarding yet
+      const navState = getUserNavigationState(checkUser.id);
+      if (navState?.isNewUser && !navState?.hasCompletedOnboarding) {
+        return { shouldShow: false, reason: 'New user - biometric setup handled during onboarding' };
+      }
+
       // Check if biometric is available on device
       const biometricInfo = await getBiometricCapability();
       if (!biometricInfo.isAvailable) {
@@ -30,7 +36,6 @@ export const useBiometricPrompting = () => {
       }
 
       // Check if user permanently declined biometric authentication
-      const navState = getUserNavigationState(checkUser.id);
       if (navState?.biometricDeclinedPermanently) {
         return { shouldShow: false, reason: 'User permanently declined biometric authentication' };
       }

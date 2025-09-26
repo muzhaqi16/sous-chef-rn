@@ -1,6 +1,5 @@
 import React, { useMemo, useEffect, useCallback } from 'react';
 import { TouchableOpacity, Alert, Image, View } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
@@ -209,12 +208,6 @@ export const ShoppingListMain: React.FC = () => {
   const handleRefresh = async () => {
     await Promise.all([refetch()]);
   };
-  // Refetch data when screen comes into focus
-  useFocusEffect(
-    React.useCallback(() => {
-      refetch();
-    }, [refetch]),
-  );
 
   // If no lists exist at all
   if (lists.length === 0) {

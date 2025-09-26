@@ -29,7 +29,6 @@ export const PantryMain: React.FC = () => {
   const {
     selectedHomeId,
     homes,
-    loading: homesLoading,
     getDefaultPantry,
   } = useDefaultHome();
 
@@ -85,6 +84,7 @@ export const PantryMain: React.FC = () => {
   });
   const {
     items: pantryItems,
+    allItems,
     searchQuery,
     setSearchQuery,
     stats,
@@ -225,8 +225,8 @@ export const PantryMain: React.FC = () => {
     );
   }
 
-  // Only show loading state if we are still loading and have no items
-  if ((loading || homesLoading) && items.length === 0) {
+  // Only show loading state if we are still loading and have no cached data at all
+  if (loading && items.length === 0 && !allItems?.length) {
     return (
       <ListTemplate
         title="Pantry"

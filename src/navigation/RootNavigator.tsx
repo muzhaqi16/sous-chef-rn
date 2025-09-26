@@ -77,8 +77,27 @@ function RootNavigator() {
     }
   }, [isHydrated, user, setNavigationState]);
 
-  // Show splash while app is hydrating
-  if (!isHydrated) {
+  // React to user state changes after initialization
+  useEffect(() => {
+    if (isHydrated && hasInitialized.current) {
+      if (user) {
+        // Update navigation state when specific user properties change
+        if (!user.emailVerified) {
+          setNavigationState('verification');
+        } else if (!user.onBoarded) {
+          setNavigationState('onboarding');
+        } else {
+          setNavigationState('main_app');
+        }
+      } else {
+        // User logged out or cleared
+        setNavigationState('auth');
+      }
+    }
+  }, [user?.emailVerified, user?.onBoarded, isHydrated, setNavigationState]);
+
+  // Show splash while app is hydrating or determining navigation state
+  if (!isHydrated || navigationState === 'loading') {
     return <SplashScreen />;
   }
 

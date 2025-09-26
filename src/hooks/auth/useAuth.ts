@@ -5,6 +5,7 @@ import { useRememberMe, type RememberMeCredentials } from './useRememberMe';
 import { useBiometricPrompting } from './useBiometricPrompting';
 import { useAuthOperations, type LoginCredentials } from './useAuthOperations';
 import { useUserPreferences } from '#/hooks/navigation/useUserPreferences';
+import { useStore } from '#store';
 
 /**
  * Main authentication hook that composes all auth-related functionality.
@@ -14,6 +15,9 @@ import { useUserPreferences } from '#/hooks/navigation/useUserPreferences';
 export const useAuth = () => {
   // Core auth state management
   const authState = useAuthState();
+
+  // Store for registration password
+  const { registrationPassword, setRegistrationPassword, clearRegistrationPassword } = useStore();
 
   // Credential storage operations
   const credentialStorage = useCredentialStorage();
@@ -104,6 +108,8 @@ export const useAuth = () => {
       onClearAuth: authState.clearAuth,
       onSetRememberMe: authState.setRememberMe,
       onSetUserNavigationState: authState.setUserNavigationState,
+      onSetRegistrationPassword: setRegistrationPassword,
+      onClearRegistrationPassword: clearRegistrationPassword,
     },
     // Pass biometric prompting logic directly
     shouldShowPostLoginBiometricPrompt,
@@ -171,9 +177,10 @@ export const useAuth = () => {
     postLoginCredentials: authState.postLoginCredentials,
     handlePostLoginBiometricComplete,
 
-    // Registration password for onboarding
-    registrationPassword: authOperations.registrationPassword,
-    clearRegistrationPassword: authOperations.clearRegistrationPassword,
+    // Registration password for onboarding (from store)
+    registrationPassword,
+    setRegistrationPassword,
+    clearRegistrationPassword,
 
     // Handlers from useAuthOperations
     handleLogin: authOperations.handleLogin,

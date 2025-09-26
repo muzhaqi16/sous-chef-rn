@@ -86,7 +86,6 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'column',
     justifyContent: 'flex-start',
     paddingHorizontal: 24,
-    paddingTop: 16,
   },
 
   iconButton: {
@@ -128,7 +127,7 @@ const styles = StyleSheet.create(theme => ({
   },
   bottomNavigation: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 8,
   },

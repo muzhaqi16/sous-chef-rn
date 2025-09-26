@@ -2,22 +2,14 @@ import React, {useState} from 'react';
 import {Text, View, ActivityIndicator} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
 import {OnBoardingWrapper} from '#components/templates';
-import {BiometricSetupModal} from '#components/organisms/BiometricSetupModal';
 import {Button} from '#components';
 import {useStore} from '#store';
 import {useUpdateUserMutation} from '#generated';
-import {useOnboardingNavigation, useAuth} from '#hooks';
-import {useUserPreferences} from '#hooks/navigation/useUserPreferences';
 
 export const OnboardingCompleteScreen = () => {
-  const {completeOnboarding} = useOnboardingNavigation();
-  const {user, updateUser, setUserNavigationState} = useStore();
-  const {registrationPassword, clearRegistrationPassword} = useAuth();
-  const {markBiometricDeclined, markBiometricEnabled} = useUserPreferences();
+  const {user, updateUser} = useStore();
   const [isCompleting, setIsCompleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showBiometricSetup, setShowBiometricSetup] = useState(false);
-  const [pendingOnboardingComplete, setPendingOnboardingComplete] = useState(false);
 
   const [updateUserMutation] = useUpdateUserMutation({
     onCompleted: data => {
@@ -28,20 +20,13 @@ export const OnboardingCompleteScreen = () => {
 
       setIsCompleting(false);
 
-      // Check if we should show biometric setup before completing onboarding
-      if (pendingOnboardingComplete) {
-        setPendingOnboardingComplete(false);
-        setShowBiometricSetup(true);
-      } else {
-        // Reset onboarding step in store
-        completeOnboarding();
-      }
+      // Navigate to main app - biometric setup is now complete
+      // The RootNavigator will automatically navigate to main_app since user.onBoarded = true
     },
     onError: error => {
       console.error('Failed to update user onboarding status:', error);
       setError('Failed to complete onboarding. Please try again.');
       setIsCompleting(false);
-      setPendingOnboardingComplete(false);
     },
   });
 
@@ -53,7 +38,6 @@ export const OnboardingCompleteScreen = () => {
 
     setIsCompleting(true);
     setError(null);
-    setPendingOnboardingComplete(true);
 
     try {
       // Update user in database
@@ -67,43 +51,16 @@ export const OnboardingCompleteScreen = () => {
       // The rest is handled in the onCompleted callback
     } catch (err) {
       console.error('Error in handleComplete:', err);
-      setPendingOnboardingComplete(false);
     }
   };
 
-  const handleBiometricSetupComplete = (biometricEnabled: boolean) => {
-    setShowBiometricSetup(false);
-
-    // Clear registration password since onboarding is complete
-    clearRegistrationPassword();
-
-    // Track biometric decision using preference hooks
-    if (biometricEnabled) {
-      markBiometricEnabled();
-    } else {
-      // Mark as permanently declined during onboarding
-      markBiometricDeclined();
-    }
-
-    // Track onboarding completion
-    if (user?.id) {
-      setUserNavigationState(user.id, {
-        hasCompletedOnboarding: true,
-        onboardingCompletedAt: Date.now(),
-        biometricSetupOffered: true,
-      });
-    }
-
-    // Complete onboarding flow
-    completeOnboarding();
-  };
 
   return (
     <OnBoardingWrapper
       title="All set!"
       subtitle="Your home is ready to use"
-      step={6}
-      totalSteps={6}>
+      step={7}
+      totalSteps={7}>
       <View style={styles.container}>
         <View style={styles.successIcon}>
           <Text style={styles.checkmark}>✓</Text>
@@ -153,13 +110,6 @@ export const OnboardingCompleteScreen = () => {
         </View>
       )}
 
-      <BiometricSetupModal
-        visible={showBiometricSetup}
-        onComplete={handleBiometricSetupComplete}
-        userEmail={user?.email || ''}
-        userPassword={registrationPassword || ''}
-        mode="onboarding"
-      />
     </OnBoardingWrapper>
   );
 };

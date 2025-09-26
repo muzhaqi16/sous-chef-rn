@@ -38,60 +38,25 @@ export function useShoppingListManagement(listId: string | undefined) {
   const { data, loading, error, refetch } = useGetShoppingListItemsQuery({
     variables: { shoppingListId: listId ?? '' },
     skip: shouldSkip,
-    fetchPolicy: 'cache-and-network',
+    fetchPolicy: 'cache-first',
     notifyOnNetworkStatusChange: true,
     errorPolicy: 'all',
   });
 
-  // Real-time updates via subscription with proper cache updates
+  // Real-time updates via subscription - let Apollo handle cache automatically
   useShoppingListItemsChangedSubscription({
     variables: { listId: listId ?? '' },
     skip: shouldSkip,
-    onData: ({ data: subData, client }) => {
-      try {
-        const changePayload = subData?.data?.shoppingListItemsChanged;
-        const updatedItem = changePayload?.item;
-        if (!updatedItem || !listId) return;
-
-        // Manual cache update for consistency with other hooks
-        const cache = client.cache;
-
-        // Update the items list in cache
-        cache.modify({
-          fields: {
-            shoppingListItems: (existingItems = [], { readField }) => {
-              const exists = existingItems.some(
-                (itemRef: any) => readField('id', itemRef) === updatedItem.id
-              );
-
-              if (exists) {
-                // Update existing item
-                return existingItems.map((itemRef: any) =>
-                  readField('id', itemRef) === updatedItem.id
-                    ? updatedItem
-                    : itemRef
-                );
-              } else {
-                // Add new item
-                return [...existingItems, updatedItem];
-              }
-            },
-          },
-        });
-      } catch (error) {
-        const { message } = handleApolloError(error, {
-          operation: 'Shopping List Subscription Cache Update',
-        });
-        console.warn('Failed to update cache from subscription:', message);
-        refetch();
-      }
+    onData: () => {
+      // Apollo cache is automatically updated by subscription
+      // No manual cache manipulation needed - just let Apollo work
     },
     onError: error => {
       const { message } = handleApolloError(error, {
         operation: 'Shopping List Subscription',
       });
       console.warn('Shopping list subscription error:', message);
-      refetch();
+      // Don't refetch on subscription errors - let the query handle reconnection
     },
   });
 
@@ -185,7 +150,6 @@ export function useShoppingListManagement(listId: string | undefined) {
             ...(input.category && { category: input.category }),
           },
         },
-        refetchQueries: ['GetShoppingListItems'],
       });
 
       return result.data?.addItemToShoppingList ?? false;
@@ -208,7 +172,6 @@ export function useShoppingListManagement(listId: string | undefined) {
           id: itemId,
           input: updates,
         },
-        refetchQueries: ['GetShoppingListItems'],
       });
 
       return result.data?.updateShoppingListItem ?? false;
@@ -225,7 +188,6 @@ export function useShoppingListManagement(listId: string | undefined) {
     try {
       await removeItemMutation({
         variables: { id: itemId },
-        refetchQueries: ['GetShoppingListItems'],
       });
 
       return true;
@@ -252,7 +214,6 @@ export function useShoppingListManagement(listId: string | undefined) {
           id: itemId,
           status: newStatus,
         },
-        refetchQueries: ['GetShoppingListItems'],
       });
 
       return result.data?.markItemPurchased ?? false;

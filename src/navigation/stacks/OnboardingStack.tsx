@@ -6,6 +6,7 @@ import {
   ProfilePictureUploadScreen,
   InviteMembersScreen,
   OnboardingCompleteScreen,
+  BiometricSetupScreen,
 } from '#screens/onBoarding';
 import {ImageCropScreen} from '#screens/profile';
 import {ImageFile} from '#components/molecules/ImagePicker';
@@ -18,6 +19,7 @@ export type OnboardingStackParamList = {
   ImageCrop: { imageFile: ImageFile };
   InviteMembers: undefined;
   OnboardingComplete: undefined;
+  BiometricSetup: undefined;
 };
 
 const Stack = createNativeStackNavigator<OnboardingStackParamList>();
@@ -43,6 +45,10 @@ export const OnboardingStack = () => (
     <Stack.Screen
       name="OnboardingComplete"
       component={OnboardingCompleteScreen}
+    />
+    <Stack.Screen
+      name="BiometricSetup"
+      component={BiometricSetupScreen}
     />
   </Stack.Navigator>
 );

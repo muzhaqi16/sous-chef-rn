@@ -26,7 +26,7 @@ type InviteEntry = {
 };
 
 export const InviteMembersScreen = () => {
-  const { navigateToNextStep, skipToStep } = useOnboardingNavigation();
+  const { navigateToNextStep } = useOnboardingNavigation();
   const { user } = useAuth();
 
   const { selectedHomeId, selectedShoppingListId } = useStore();
@@ -122,7 +122,9 @@ export const InviteMembersScreen = () => {
                     homeId: selectedHomeId,
                     email: invite.email,
                     role: MembershipRole.Member,
-                    message: `${user?.email || 'A user'} has invited you to join their home for managing pantry and shopping lists together!`,
+                    message: `${
+                      user?.email || 'A user'
+                    } has invited you to join their home for managing pantry and shopping lists together!`,
                   },
                 },
               }),
@@ -185,8 +187,8 @@ export const InviteMembersScreen = () => {
       title="Invite family & friends"
       subtitle="Share your home and shopping lists with others (optional)"
       step={5}
-      totalSteps={6}
-      onSkip={() => skipToStep('OnboardingComplete')}
+      totalSteps={7}
+      onSkip={() => navigateToNextStep('InviteMembers')}
     >
       <View style={styles.container}>
         <View style={styles.inputContainer}>
@@ -264,14 +266,14 @@ export const InviteMembersScreen = () => {
         title={
           isInviting
             ? 'Sending Invites...'
-            : invites.length === 0
-              ? 'Skip'
-              : `Send ${invites.length} Invite${invites.length === 1 ? '' : 's'}`
+            : `Send ${invites.length > 0 ? invites.length : ''} Invite${
+                invites.length === 1 ? '' : 's'
+              }`
         }
         onPress={sendInvites}
         btnStyle={styles.nextButton}
         txtStyle={styles.nextText}
-        disabled={isInviting}
+        disabled={isInviting || invites.length === 0}
       />
     </OnBoardingWrapper>
   );

@@ -46,6 +46,8 @@ export interface AuthStateEvents {
   onClearAuth: () => void;
   onSetRememberMe: (flag: boolean) => void;
   onSetUserNavigationState: (userId: string, state: any) => void;
+  onSetRegistrationPassword: (password: string | null) => void;
+  onClearRegistrationPassword: () => void;
 }
 
 interface AuthOperationsProps {
@@ -72,7 +74,7 @@ export const useAuthOperations = ({
 }: AuthOperationsProps) => {
   // Local state for auth operations
   const [isLoading, setIsLoading] = useState(false);
-  const [registrationPassword, setRegistrationPassword] = useState<string | null>(null);
+  const [isInRegistrationFlow, setIsInRegistrationFlow] = useState(false);
 
   // Dependencies
   const toast = useToast();
@@ -169,7 +171,11 @@ export const useAuthOperations = ({
       }
 
       // User is fully authenticated - check biometric setup eligibility
-      if (loginCredentials) {
+      // BUT skip during registration flow, email verification, or onboarding to prevent unwanted biometric prompts
+      if (loginCredentials &&
+          !isInRegistrationFlow &&
+          user.emailVerified &&
+          user.onBoarded) {
         try {
           const result = await shouldShowPostLoginBiometricPrompt({
             id: user.id,
@@ -204,6 +210,9 @@ export const useAuthOperations = ({
 
       const { user, accessToken, refreshToken } = registerResponse;
 
+      // Set auth state first
+      authState.onSetAuth(user, accessToken, refreshToken);
+
       if (shouldRemember !== undefined) {
         authState.onSetRememberMe(shouldRemember);
       }
@@ -216,16 +225,29 @@ export const useAuthOperations = ({
         });
       }
 
-      authState.onSetAuth(user, accessToken, refreshToken);
       handleAuthSuccess('Registration successful');
-
-      // Register device in background after successful registration
       registerDeviceInBackground();
+
+      // **EXPLICIT NAVIGATION FLOW CONTROL FOR NEW USERS**
+      // Skip biometric setup during registration - let onboarding handle it
+      if (!user.emailVerified) {
+        navigation.onNavigate('verification');
+        return;
+      }
+
+      if (!user.onBoarded) {
+        navigation.onNavigate('onboarding');
+        return;
+      }
+
+      // If somehow user is already onboarded, go to main app
+      navigation.onNavigate('main_app');
     },
     [
       authState,
       handleAuthSuccess,
       registerDeviceInBackground,
+      navigation,
     ],
   );
 
@@ -349,24 +371,20 @@ export const useAuthOperations = ({
     async (input: RegisterInput, shouldRemember = true): Promise<boolean> => {
       try {
         setIsLoading(true);
+        setIsInRegistrationFlow(true); // Mark as registration flow to prevent biometric prompts
         const result = await registerMutation({ variables: { input } });
 
         if (result.data?.register) {
           // Store password temporarily for onboarding biometric setup
-          setRegistrationPassword(input.password);
+          authState.onSetRegistrationPassword(input.password);
 
-          await handleRegistration(result.data.register, shouldRemember);
-
-          // For new registrations, always store credentials if shouldRemember is true
-          // This automatically overwrites any existing credentials
-          if (shouldRemember) {
-            await credentialStorage.onCredentialStore(input.email, input.password);
-
-            // Clear any previous credential declination state since this is a new user
-            if (result.data.register.user?.id) {
-              clearRegistrationPreferences(result.data.register.user.id);
-            }
+          // Clear any previous credential declination state since this is a new user
+          if (result.data.register.user?.id) {
+            clearRegistrationPreferences(result.data.register.user.id);
           }
+
+          // Handle registration - credentials will be stored later during biometric setup if user chooses
+          await handleRegistration(result.data.register, shouldRemember);
 
           return true;
         }
@@ -383,9 +401,10 @@ export const useAuthOperations = ({
         return false;
       } finally {
         setIsLoading(false);
+        setIsInRegistrationFlow(false); // Clear registration flow flag
       }
     },
-    [registerMutation, handleRegistration, credentialStorage, handleAuthError, clearRegistrationPreferences],
+    [registerMutation, handleRegistration, handleAuthError, clearRegistrationPreferences, authState],
   );
 
   const logout = useCallback(
@@ -421,13 +440,12 @@ export const useAuthOperations = ({
   );
 
   const clearRegistrationPassword = useCallback(() => {
-    setRegistrationPassword(null);
-  }, []);
+    authState.onClearRegistrationPassword();
+  }, [authState]);
 
   return {
     // State
     isLoading,
-    registrationPassword,
 
     // Core operations
     login,

@@ -186,7 +186,7 @@ export const ProfilePictureUploadScreen = () => {
       title="Profile Picture"
       subtitle="Add a photo to personalize your profile"
       step={4}
-      totalSteps={6}
+      totalSteps={7}
       onBack={() => navigateToPreviousStep('ProfilePictureUpload')}
       onSkip={() => skipToStep('InviteMembers')}
     >
@@ -394,24 +394,14 @@ export const ProfilePictureUploadScreen = () => {
       </View>
 
       <Button
-        title={
-          isUploading
-            ? 'Uploading...'
-            : croppedImage || selectedImage
-              ? 'Upload & Continue'
-              : 'Skip for now'
-        }
-        onPress={
-          croppedImage || selectedImage
-            ? handleUpload
-            : () => skipToStep('InviteMembers')
-        }
+        title={isUploading ? 'Uploading...' : 'Upload & Continue'}
+        onPress={!croppedImage || !selectedImage ? handleUpload : () => {}}
         btnStyle={[
           styles.nextButton,
           { backgroundColor: theme.colors.primary },
         ]}
         txtStyle={[styles.nextText, { color: theme.colors.white }]}
-        disabled={isUploading}
+        disabled={!selectedImage || isUploading}
       />
     </OnBoardingWrapper>
   );
@@ -420,7 +410,6 @@ export const ProfilePictureUploadScreen = () => {
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-    marginTop: 20,
   },
   avatarPreview: {
     width: AVATAR_SIZE,

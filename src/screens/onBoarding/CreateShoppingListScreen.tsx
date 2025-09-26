@@ -127,7 +127,7 @@ export const CreateShoppingListScreen = () => {
         title="Shopping Lists"
         subtitle="Checking your existing lists..."
         step={2}
-        totalSteps={6}
+        totalSteps={7}
         onSkip={() => skipToStep('SelectPantryItems')}
       >
         <View style={styles.loadingContainer}>
@@ -152,7 +152,7 @@ export const CreateShoppingListScreen = () => {
           : 'You can add items to it later'
       }
       step={2}
-      totalSteps={6}
+      totalSteps={7}
       onSkip={() => skipToStep('SelectPantryItems')}
     >
       {existingList ? (

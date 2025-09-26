@@ -1,15 +1,11 @@
-import { useMemo } from 'react';
 import { Alert } from 'react-native';
 import {
-  useGetPantryItemsQuery,
-  usePantryItemsChangedSubscription,
   useAddItemToPantryMutation,
   useUpdatePantryItemMutation,
   useRemoveItemFromPantryMutation,
   StorageState,
 } from '#generated';
-import { useSearchableList } from '../useSearchableList';
-import { useAuth } from '#hooks/auth/useAuth';
+import { usePantryItems } from '#hooks/pantry/usePantryItems';
 
 export interface PantryItemInput {
   itemName: string;
@@ -32,90 +28,12 @@ export interface PantryItemUpdate extends Partial<PantryItemInput> {
 }
 
 /**
- * Simplified pantry management hook using Apollo Client only
- * No custom caches, no complex state management - just Apollo
+ * Simplified pantry management hook using consolidated usePantryItems
+ * Focuses on mutations while delegating data management to usePantryItems
  */
 export function usePantryManagement(pantryId: string | undefined) {
-  const { isLoggedOut } = useAuth();
-  const shouldSkip = !pantryId || isLoggedOut;
-
-  // Single source of truth: Apollo cache with network-first for freshness
-  const { data, loading, error, refetch } = useGetPantryItemsQuery({
-    variables: { pantryId: pantryId ?? '' },
-    skip: shouldSkip,
-    fetchPolicy: 'cache-and-network', // Always try network for fresh data
-    notifyOnNetworkStatusChange: true,
-    errorPolicy: 'all',
-  });
-
-  // Real-time updates via subscription
-  usePantryItemsChangedSubscription({
-    variables: { pantryId: pantryId ?? '' },
-    skip: shouldSkip,
-    onData: () => {
-      // Apollo cache is automatically updated by subscription
-      // No manual refetch needed - just let cache work
-    },
-    onError: error => {
-      console.warn('Pantry subscription error:', error.message);
-      // Fallback: refetch on subscription error
-      refetch();
-    },
-  });
-
-  const items = useMemo(() => data?.pantryItems ?? [], [data?.pantryItems]);
-
-  // Search functionality
-  const {
-    query: searchQuery,
-    setQuery: setSearchQuery,
-    filtered: filteredItems,
-  } = useSearchableList(items, (item, q) => {
-    const searchTerm = q.toLowerCase();
-    return (
-      item?.item?.name?.toLowerCase().includes(searchTerm) ||
-      item?.itemName?.toLowerCase().includes(searchTerm)
-    );
-  });
-
-  // Simple stats calculation
-  const stats = useMemo(() => {
-    if (!items || items.length === 0) {
-      return {
-        total: 0,
-        expired: 0,
-        expiringSoon: 0,
-        lowStock: 0,
-      };
-    }
-
-    const now = new Date();
-    const sevenDaysFromNow = new Date();
-    sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
-
-    const expired = items.filter(item => {
-      if (!item.expiresAt) return false;
-      return new Date(item.expiresAt) < now;
-    }).length;
-
-    const expiringSoon = items.filter(item => {
-      if (!item.expiresAt) return false;
-      const expirationDate = new Date(item.expiresAt);
-      return expirationDate >= now && expirationDate <= sevenDaysFromNow;
-    }).length;
-
-    const lowStock = items.filter(item => {
-      if (!item.currentQuantity || !item.autoReorderPoint) return false;
-      return item.currentQuantity <= item.autoReorderPoint;
-    }).length;
-
-    return {
-      total: items.length,
-      expired,
-      expiringSoon,
-      lowStock,
-    };
-  }, [items]);
+  // Use the consolidated pantry items hook for all data operations
+  const pantryData = usePantryItems(pantryId);
 
   // Mutations with Apollo's optimistic updates
   const [addItemMutation] = useAddItemToPantryMutation({
@@ -164,7 +82,6 @@ export function usePantryManagement(pantryId: string | undefined) {
           },
         },
         // Apollo will handle cache updates automatically
-        refetchQueries: ['GetPantryItems'],
       });
 
       return result.data?.addItemToPantry ?? false;
@@ -184,7 +101,6 @@ export function usePantryManagement(pantryId: string | undefined) {
           id: itemId,
           input: updates,
         },
-        refetchQueries: ['GetPantryItems'],
       });
 
       return result.data?.updatePantryItem ?? false;
@@ -201,7 +117,6 @@ export function usePantryManagement(pantryId: string | undefined) {
     try {
       await removeItemMutation({
         variables: { id: itemId },
-        refetchQueries: ['GetPantryItems'],
       });
 
       return true;
@@ -212,47 +127,12 @@ export function usePantryManagement(pantryId: string | undefined) {
   };
 
   return {
-    // Data
-    items: filteredItems,
-    allItems: items,
-    loading,
-    error,
-    stats,
+    // Data from consolidated pantry hook
+    ...pantryData,
 
-    // Search
-    searchQuery,
-    setSearchQuery,
-
-    // Actions
+    // Additional mutation actions
     addItem,
     updateItem,
     removeItem,
-    refetch,
-
-    // Helper functions
-    getItemById: (itemId: string) => items.find(item => item.id === itemId),
-    getItemsByStorageState: (storageState: StorageState) =>
-      items.filter(item => item.storageState === storageState),
-    getExpiringItems: (days: number = 7) => {
-      const futureDate = new Date();
-      futureDate.setDate(futureDate.getDate() + days);
-      return items.filter(item => {
-        if (!item.expiresAt) return false;
-        const expirationDate = new Date(item.expiresAt);
-        return expirationDate <= futureDate;
-      });
-    },
-    getLowStockItems: () =>
-      items.filter(item => {
-        if (!item.currentQuantity || !item.autoReorderPoint) return false;
-        return item.currentQuantity <= item.autoReorderPoint;
-      }),
-    getExpiredItems: () => {
-      const now = new Date();
-      return items.filter(item => {
-        if (!item.expiresAt) return false;
-        return new Date(item.expiresAt) < now;
-      });
-    },
   };
 }

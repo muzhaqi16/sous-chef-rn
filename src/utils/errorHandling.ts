@@ -171,10 +171,6 @@ export class ErrorHandler {
           errorCode = graphQLError.extensions?.code as string || 'GRAPHQL_ERROR';
           errorMessage = graphQLError.message;
 
-          // Fix error code mapping - server sends AUTH_TOKEN_MISSING for invalid credentials
-          if (errorCode === 'AUTH_TOKEN_MISSING' && errorMessage.toLowerCase().includes('invalid credentials')) {
-            errorCode = 'AUTH_CREDENTIALS_INVALID';
-          }
 
           // Handle validation errors
           if (errorCode === 'VALIDATION_FAILED' && graphQLError.extensions?.validationErrors) {

@@ -32,6 +32,9 @@ export interface AppState {
   // Post-login biometric credentials (temporary storage for biometric setup)
   postLoginCredentials: { email: string; password: string } | null;
 
+  // Registration password (temporary storage during onboarding for biometric setup)
+  registrationPassword: string | null;
+
   cachedUnits: Unit[];
 
   setHydrated: (flag: boolean) => void;
@@ -44,6 +47,10 @@ export interface AppState {
   setNavigationState: (state: NavigationState) => void;
   setShowBiometricSetup: (flag: boolean) => void;
   setPostLoginCredentials: (credentials: { email: string; password: string } | null) => void;
+
+  // Registration password actions
+  setRegistrationPassword: (password: string | null) => void;
+  clearRegistrationPassword: () => void;
 
   setCachedUnits: (units: Unit[]) => void;
   reset: () => void;
@@ -60,6 +67,7 @@ export const initialAppState = {
   navigationState: 'loading' as NavigationState,
   showBiometricSetup: false,
   postLoginCredentials: null,
+  registrationPassword: null,
 
   cachedUnits: [],
 };
@@ -89,6 +97,14 @@ export const createAppSlice: StateCreator<
     set({postLoginCredentials: credentials});
   },
 
+  // Registration password actions
+  setRegistrationPassword: password => {
+    set({registrationPassword: password});
+  },
+  clearRegistrationPassword: () => {
+    set({registrationPassword: null});
+  },
+
   setCachedUnits: units => set({cachedUnits: units}),
 
   reset: () => {
@@ -107,6 +123,7 @@ export const createAppSlice: StateCreator<
       refreshToken: null,
       navigationState: 'auth', // After reset, user needs to authenticate
       showBiometricSetup: false,
+      registrationPassword: null,
     } as unknown as Partial<RootState>);
     set({isHydrated: true});
   },

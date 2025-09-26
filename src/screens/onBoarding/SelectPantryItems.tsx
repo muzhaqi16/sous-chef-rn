@@ -45,7 +45,7 @@ export const SelectPantryItems = () => {
         title="Stock your pantry"
         subtitle="Select items you already have at home"
         step={3}
-        totalSteps={6}
+        totalSteps={7}
         onBack={() => navigateToPreviousStep('CreateShoppingList')}
         onSkip={() => navigateToNextStep('SelectPantryItems')}
       >
@@ -60,7 +60,7 @@ export const SelectPantryItems = () => {
         title="Stock your pantry"
         subtitle="Select items you already have at home"
         step={3}
-        totalSteps={6}
+        totalSteps={7}
         onBack={() => navigateToPreviousStep('CreateShoppingList')}
         onSkip={() => navigateToNextStep('SelectPantryItems')}
       >
@@ -126,7 +126,7 @@ export const SelectPantryItems = () => {
       title="Stock your pantry"
       subtitle="Select items you already have at home (optional)"
       step={3}
-      totalSteps={6}
+      totalSteps={7}
       onBack={() => navigateToPreviousStep('CreateShoppingList')}
       onSkip={() => navigateToNextStep('SelectPantryItems')}
     >
@@ -163,14 +163,14 @@ export const SelectPantryItems = () => {
         title={
           isAddingItems
             ? 'Adding Items...'
-            : selected.length === 0
-              ? 'Skip'
-              : `Add ${selected.length} Item${selected.length === 1 ? '' : 's'}`
+            : `Add ${selected.length > 0 ? selected.length : ''} Item${
+                selected.length === 1 ? '' : 's'
+              }`
         }
         onPress={onNext}
         btnStyle={styles.nextButton}
         txtStyle={styles.nextText}
-        disabled={isAddingItems}
+        disabled={isAddingItems || selected.length === 0}
       />
     </OnBoardingWrapper>
   );

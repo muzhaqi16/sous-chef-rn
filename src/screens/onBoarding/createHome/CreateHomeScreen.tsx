@@ -258,7 +258,7 @@ export const CreateHomeScreen = () => {
         title={getTitle()}
         subtitle={getSubtitle()}
         step={1}
-        totalSteps={6}
+        totalSteps={7}
         onSkip={() => skipToStep('CreateShoppingList')}
       >
         <View style={styles.existingResourcesContainer}>
@@ -299,7 +299,7 @@ export const CreateHomeScreen = () => {
       title={getTitle()}
       subtitle={getSubtitle()}
       step={1}
-      totalSteps={6}
+      totalSteps={7}
       onSkip={() => skipToStep('CreateShoppingList')}
     >
       {existingHome && (

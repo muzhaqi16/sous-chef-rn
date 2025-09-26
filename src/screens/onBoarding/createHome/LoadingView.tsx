@@ -8,7 +8,7 @@ export const LoadingView = ({onSkip}: {onSkip: () => void}) => (
     title="Welcome! Let's set up your home"
     subtitle="Checking your existing setup..."
     step={1}
-    totalSteps={6}
+    totalSteps={7}
     onSkip={onSkip}>
     <View style={styles.loadingContainer}>
       <ActivityIndicator size="large" color={styles.loadingIndicator.color} />

@@ -18,24 +18,33 @@ export const BiometricSetupModal = ({
   onComplete,
   userEmail,
   userPassword,
-  mode = 'onboarding'
+  mode = 'onboarding',
 }: BiometricSetupModalProps) => {
-  const { getBiometricInfo, storeCredentials, loadStoredCredentials, checkStoredCredentials } = useAuth();
+  const {
+    getBiometricInfo,
+    storeCredentials,
+    loadStoredCredentials,
+    checkStoredCredentials,
+  } = useAuth();
   const [biometricInfo, setBiometricInfo] = useState<{
     isAvailable: boolean;
-    biometryType: string | null
+    biometryType: string | null;
   }>({ isAvailable: false, biometryType: null });
   const [isEnabling, setIsEnabling] = useState(false);
   const [password, setPassword] = useState(userPassword || '');
   const [hasExistingCredentials, setHasExistingCredentials] = useState(false);
   const [hasCheckedBiometric, setHasCheckedBiometric] = useState(false);
-  const needsPassword = (mode === 'onboarding' && !userPassword) || (mode === 'settings' && !hasExistingCredentials);
+  const needsPassword =
+    (mode === 'onboarding' && !userPassword) ||
+    (mode === 'settings' && !hasExistingCredentials);
 
   const loadBiometricInfo = useCallback(async () => {
     try {
       const [info, credentialsExist] = await Promise.all([
         getBiometricInfo(),
-        mode === 'settings' ? checkStoredCredentials(userEmail) : Promise.resolve(false)
+        mode === 'settings'
+          ? checkStoredCredentials(userEmail)
+          : Promise.resolve(false),
       ]);
 
       setBiometricInfo(info);
@@ -84,7 +93,7 @@ export const BiometricSetupModal = ({
               Alert.alert(
                 'Authentication Required',
                 'Biometric authentication is required to enable this setting.',
-                [{ text: 'OK', onPress: () => onComplete(false) }]
+                [{ text: 'OK', onPress: () => onComplete(false) }],
               );
               return;
             }
@@ -93,7 +102,7 @@ export const BiometricSetupModal = ({
             Alert.alert(
               'Authentication Failed',
               'Could not authenticate using biometric authentication. Please try again.',
-              [{ text: 'OK', onPress: () => onComplete(false) }]
+              [{ text: 'OK', onPress: () => onComplete(false) }],
             );
             return;
           }
@@ -105,7 +114,7 @@ export const BiometricSetupModal = ({
               Alert.alert(
                 'Password Required',
                 'Enter your password to enable biometric authentication with your existing account.',
-                [{ text: 'OK' }]
+                [{ text: 'OK' }],
               );
             }
             return;
@@ -120,7 +129,7 @@ export const BiometricSetupModal = ({
             Alert.alert(
               'Setup Failed',
               'Failed to enable biometric authentication. Please verify your password and try again.',
-              [{ text: 'OK', onPress: () => onComplete(false) }]
+              [{ text: 'OK', onPress: () => onComplete(false) }],
             );
             return;
           }
@@ -129,7 +138,10 @@ export const BiometricSetupModal = ({
 
       // Onboarding mode - save credentials with biometric protection
       if (needsPassword && !password.trim()) {
-        Alert.alert('Password Required', 'Please enter your password to enable biometric authentication.');
+        Alert.alert(
+          'Password Required',
+          'Please enter your password to enable biometric authentication.',
+        );
         return;
       }
 
@@ -146,7 +158,7 @@ export const BiometricSetupModal = ({
         Alert.alert(
           'Setup Failed',
           'Biometric setup failed. You can enable it later in Settings.',
-          [{ text: 'OK', onPress: () => onComplete(false) }]
+          [{ text: 'OK', onPress: () => onComplete(false) }],
         );
       }
     } catch (error) {
@@ -155,7 +167,7 @@ export const BiometricSetupModal = ({
       Alert.alert(
         'Setup Failed',
         'Biometric setup failed. You can enable it later in Settings.',
-        [{ text: 'OK', onPress: () => onComplete(false) }]
+        [{ text: 'OK', onPress: () => onComplete(false) }],
       );
     } finally {
       setIsEnabling(false);
@@ -204,18 +216,12 @@ export const BiometricSetupModal = ({
         <View style={styles.container}>
           <View style={styles.iconContainer}>
             <View style={styles.iconBackground}>
-              <Icon
-                name={getBiometricIcon()}
-                size={48}
-                color="#007AFF"
-              />
+              <Icon name={getBiometricIcon()} size={48} color="#007AFF" />
             </View>
           </View>
 
           <Text style={styles.title}>{getBiometricTitle()}</Text>
-          <Text style={styles.description}>
-            {getBiometricDescription()}
-          </Text>
+          <Text style={styles.description}>{getBiometricDescription()}</Text>
 
           <View style={styles.benefits}>
             <View style={styles.benefitItem}>
@@ -385,10 +391,6 @@ const styles = StyleSheet.create(theme => ({
     textAlign: 'center',
   },
   passwordInput: {
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
     fontSize: theme.fonts.size.md,
     color: theme.colors.textPrimary,
