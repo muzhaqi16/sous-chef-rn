@@ -14,3 +14,5 @@ export * from './EmailInputModal';
 export * from './AddItemForm';
 export * from './BiometricSetupModal';
 export * from './PostLoginBiometricPrompt';
+export * from './AnimatedItemSelector';
+export * from './SortableShoppingList';

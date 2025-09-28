@@ -201,6 +201,7 @@ export const useAuthOperations = ({
       shouldShowPostLoginBiometricPrompt,
       navigation,
       biometricSetup,
+      isInRegistrationFlow,
     ],
   );
 

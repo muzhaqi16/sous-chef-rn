@@ -1,11 +1,10 @@
 import React from 'react';
-import {View} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
-import {UserHeader, SearchBar} from '#components';
-import {Header, HeaderAction} from '../molecules/Header';
-import {ItemList} from '../organisms/ItemList';
-import {FAB} from '../base/Fab';
-import {SearchBarAction} from '#components/molecules/SearchBar';
+import { View } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { UserHeader, SearchBar } from '#components';
+import { Header, HeaderAction } from '../molecules/Header';
+import { ItemList } from '../organisms/ItemList';
+import { SearchBarAction } from '#components/molecules/SearchBar';
 
 interface HeaderActions {
   left?: HeaderAction[];
@@ -34,12 +33,10 @@ interface ListTemplateProps {
   showUserHeader?: boolean;
   showHeader?: boolean;
   showSearchBar?: boolean;
-  showFAB?: boolean;
 
   // Actions
   headerActions?: HeaderActions;
   searchBarActions?: SearchBarActions;
-  onFabPress?: () => void; // For FAB
   onBack?: () => void; // For header back button
 
   // Search bar specific props
@@ -63,12 +60,10 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
   showUserHeader = true,
   showHeader = false,
   showSearchBar = false,
-  showFAB = true,
 
   // Actions
   headerActions,
   searchBarActions,
-  onFabPress,
   onBack,
 
   // Search specific
@@ -111,13 +106,6 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
         emptyState={emptyState}
       />
 
-      {showFAB && showFAB && (
-        <FAB
-          icon="qr-code-scanner"
-          onPress={onFabPress}
-          position={{bottom: 20, right: 20}}
-        />
-      )}
     </View>
   );
 };

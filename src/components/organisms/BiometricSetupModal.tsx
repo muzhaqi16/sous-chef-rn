@@ -1,5 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, Modal, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Modal,
+  Alert,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils';
 import { PasswordInput } from '#components/atoms';
@@ -212,89 +221,97 @@ export const BiometricSetupModal = ({
       animationType="slide"
       statusBarTranslucent
     >
-      <View style={styles.overlay}>
-        <View style={styles.container}>
-          <View style={styles.iconContainer}>
-            <View style={styles.iconBackground}>
-              <Icon name={getBiometricIcon()} size={48} color="#007AFF" />
+      <View style={styles.overlay} />
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.contentContainer}>
+            <View style={styles.container}>
+              <View style={styles.iconContainer}>
+                <View style={styles.iconBackground}>
+                  <Icon name={getBiometricIcon()} size={48} color="#007AFF" />
+                </View>
+              </View>
+
+              <Text style={styles.title}>{getBiometricTitle()}</Text>
+              <Text style={styles.description}>{getBiometricDescription()}</Text>
+
+              {needsPassword && (
+                <View style={styles.passwordSection}>
+                  <Text style={styles.passwordLabel}>
+                    {mode === 'settings'
+                      ? 'For security, please enter your current password to set up biometric login:'
+                      : 'Enter your password to enable biometric authentication:'}
+                  </Text>
+                  <PasswordInput
+                    value={password}
+                    onChangeText={setPassword}
+                    placeholder="Current password"
+                    showToggle={true}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    style={styles.passwordInput}
+                  />
+                </View>
+              )}
+
+              <View style={styles.buttons}>
+                <TouchableOpacity
+                  style={[styles.button, styles.primaryButton]}
+                  onPress={handleEnableBiometric}
+                  disabled={isEnabling}
+                >
+                  <Text style={[styles.buttonText, styles.primaryButtonText]}>
+                    {isEnabling ? 'Setting up...' : 'Enable Now'}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.button, styles.secondaryButton]}
+                  onPress={handleSkip}
+                  disabled={isEnabling}
+                >
+                  <Text style={[styles.buttonText, styles.secondaryButtonText]}>
+                    Set up later
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-
-          <Text style={styles.title}>{getBiometricTitle()}</Text>
-          <Text style={styles.description}>{getBiometricDescription()}</Text>
-
-          <View style={styles.benefits}>
-            <View style={styles.benefitItem}>
-              <Icon name="check-circle" size={20} color="#34D399" />
-              <Text style={styles.benefitText}>Quick and secure access</Text>
-            </View>
-            <View style={styles.benefitItem}>
-              <Icon name="check-circle" size={20} color="#34D399" />
-              <Text style={styles.benefitText}>No password required</Text>
-            </View>
-            <View style={styles.benefitItem}>
-              <Icon name="check-circle" size={20} color="#34D399" />
-              <Text style={styles.benefitText}>Enhanced security</Text>
-            </View>
-          </View>
-
-          {needsPassword && (
-            <View style={styles.passwordSection}>
-              <Text style={styles.passwordLabel}>
-                {mode === 'settings'
-                  ? 'For security, please enter your current password to set up biometric login:'
-                  : 'Enter your password to enable biometric authentication:'}
-              </Text>
-              <PasswordInput
-                value={password}
-                onChangeText={setPassword}
-                placeholder="Current password"
-                showToggle={true}
-                autoCapitalize="none"
-                autoCorrect={false}
-                style={styles.passwordInput}
-              />
-            </View>
-          )}
-
-          <View style={styles.buttons}>
-            <TouchableOpacity
-              style={[styles.button, styles.primaryButton]}
-              onPress={handleEnableBiometric}
-              disabled={isEnabling}
-            >
-              <Text style={[styles.buttonText, styles.primaryButtonText]}>
-                {isEnabling ? 'Setting up...' : 'Enable Now'}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.button, styles.secondaryButton]}
-              onPress={handleSkip}
-              disabled={isEnabling}
-            >
-              <Text style={[styles.buttonText, styles.secondaryButtonText]}>
-                Set up later
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          <Text style={styles.footer}>
-            You can always enable this later in Settings
-          </Text>
-        </View>
-      </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  overlay: {
+  keyboardAvoidingView: {
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  contentContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.xl,
   },
   container: {
     backgroundColor: theme.colors.background,

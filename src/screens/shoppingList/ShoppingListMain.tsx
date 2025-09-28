@@ -1,20 +1,33 @@
-import React, { useMemo, useEffect, useCallback } from 'react';
+import React, { useMemo, useEffect, useCallback, useRef } from 'react';
 import { TouchableOpacity, Alert, Image, View } from 'react-native';
 import { useAppNavigation } from '#hooks';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
   useGetShoppingListsQuery,
   useRemoveItemFromShoppingListMutation,
+  useReorderShoppingListItemsMutation,
 } from '#generated';
-import { ListTemplate, SearchBarAction, BottomSheetAction } from '#components';
-import { ItemSelectorWithActions } from '#components/organisms/ItemSelectorWithActions';
+import { useScanner } from '#context';
 import {
-  useShoppingListSelector,
-  useBottomSheetModal,
-  useShoppingListManagement,
-} from '#/hooks';
+  ListTemplate,
+  SearchBarAction,
+  AnimatedItemSelector,
+  SortableShoppingList,
+  SearchBar,
+  UserHeader,
+  EmptyState,
+} from '#components';
+import type {
+  SelectorConfig,
+  ItemSelectorRef,
+} from '#components/organisms/AnimatedItemSelector';
+import type {
+  SortableShoppingListItem,
+  SortOrderUpdate,
+} from '#components/organisms/SortableShoppingList';
+import { useShoppingListManagement } from '#/hooks';
 import { useStore } from '#/store';
-import { Icon, type IconLibrary } from '#/utils/iconUtils';
+import { Icon, IconLibrary } from '#/utils/iconUtils';
 
 export const ShoppingListMain: React.FC = () => {
   const { navigate, navigateTo } = useAppNavigation();
@@ -23,9 +36,11 @@ export const ShoppingListMain: React.FC = () => {
   } = useUnistyles();
   const { primary: primaryColor, primaryLight: primaryLightColor } = colors;
   // Step 2: Use the extracted variables INSIDE useMemo
-  const selectShoppingListSheet = useBottomSheetModal();
   const { selectedShoppingListId, setSelectedShoppingListId } = useStore();
+  const selectorRef = useRef<ItemSelectorRef>(null);
+  const { setScannerProps } = useScanner();
   const [deleteItem] = useRemoveItemFromShoppingListMutation();
+  const [reorderItems] = useReorderShoppingListItemsMutation();
 
   const { data, refetch } = useGetShoppingListsQuery({
     fetchPolicy: 'cache-and-network',
@@ -61,28 +76,74 @@ export const ShoppingListMain: React.FC = () => {
   const { items, searchQuery, setSearchQuery, addItem, toggleItem } =
     useShoppingListManagement(currentListId);
 
-  const selector = useShoppingListSelector({
-    initialSelected: currentListId,
-    onSelect: id => {
-      setSelectedShoppingListId(id);
-      selectShoppingListSheet.close();
-    },
-  });
+  // Create selector configuration for shopping lists
+  const listConfig: SelectorConfig<any> = useMemo(
+    () => ({
+      title: 'Select Shopping List',
+      data: lists,
+      selectedId: currentListId,
+      onSelect: (id: string) => {
+        setSelectedShoppingListId(id);
+        selectorRef.current?.close();
+      },
+      displayProperty: 'name',
+      loading: false,
+      emptyMessage: 'No shopping lists available',
+      actions: [
+        {
+          icon: 'add',
+          label: 'Create New List',
+          onPress: () => {
+            selectorRef.current?.close();
+            navigate('ListSettings');
+          },
+          iconLibrary: 'MaterialIcons' as IconLibrary,
+        },
+        ...(currentListId
+          ? [
+              {
+                icon: 'share',
+                label: 'Share Current List',
+                onPress: () => {
+                  selectorRef.current?.close();
+                  navigate('ShareList', { listId: currentListId });
+                },
+                iconLibrary: 'MaterialIcons' as IconLibrary,
+              },
+              {
+                icon: 'settings',
+                label: 'List Settings',
+                onPress: () => {
+                  selectorRef.current?.close();
+                  navigate('ListSettings', {
+                    listId: currentListId,
+                  });
+                },
+                iconLibrary: 'MaterialIcons' as IconLibrary,
+              },
+            ]
+          : []),
+      ],
+    }),
+    [lists, currentListId, setSelectedShoppingListId, navigate],
+  );
 
-  // Transform shopping list items to list items format - separate purchased/unpurchased and move purchased to end
+  // Transform shopping list items for display - simple like pantry
   const listItems = useMemo(() => {
-    const unpurchasedItems = items.filter((item: any) => !item.purchasedBy);
-    const purchasedItems = items.filter((item: any) => !!item.purchasedBy);
+    // Use isPurchased field as primary source of truth
+    const unpurchasedItems = items.filter((item: any) => !item.isPurchased);
+    const purchasedItems = items.filter((item: any) => item.isPurchased);
 
-    // Sort each group by createdAt date (newest first)
-    const sortByDateDesc = (a: any, b: any) => {
-      const dateA = new Date(a.createdAt).getTime();
-      const dateB = new Date(b.createdAt).getTime();
-      return dateB - dateA; // Newest first
+    // Sort each group by sortOrder (ascending - lowest sortOrder first)
+    const sortBySortOrder = (a: any, b: any) => {
+      // Handle missing sortOrder values defensively
+      const aOrder = a.sortOrder ?? 999999; // Default high value for items without sortOrder
+      const bOrder = b.sortOrder ?? 999999; // Default high value for items without sortOrder
+      return aOrder - bOrder;
     };
 
-    const sortedUnpurchasedItems = unpurchasedItems.sort(sortByDateDesc);
-    const sortedPurchasedItems = purchasedItems.sort(sortByDateDesc);
+    const sortedUnpurchasedItems = unpurchasedItems.sort(sortBySortOrder);
+    const sortedPurchasedItems = purchasedItems.sort(sortBySortOrder);
 
     // Combine unpurchased first, then purchased
     const sortedItems = [...sortedUnpurchasedItems, ...sortedPurchasedItems];
@@ -91,16 +152,19 @@ export const ShoppingListMain: React.FC = () => {
       id: item.id,
       title: item.itemName,
       subtitle: `${item.quantity} ${item.unitName || ''}`.trim(),
+      badge: item.isPurchased
+        ? { text: 'Purchased', variant: 'success' }
+        : undefined,
       rightElement: (
         <TouchableOpacity
-          style={[styles.checkbox, item.purchasedBy && styles.checkboxChecked]}
+          style={[styles.checkbox, item.isPurchased && styles.checkboxChecked]}
           onPress={() => toggleItem(item.id)}
         >
-          {item.purchasedBy && <Icon name="check" size={16} color="white" />}
+          {item.isPurchased && <Icon name="check" size={16} color="white" />}
         </TouchableOpacity>
       ),
       // show image on the left if available
-      leftElement: item.item.imageUrl ? (
+      leftElement: item.item?.imageUrl ? (
         <View style={styles.imageContainer}>
           <Image
             source={{ uri: item.item.imageUrl }}
@@ -108,8 +172,54 @@ export const ShoppingListMain: React.FC = () => {
           />
         </View>
       ) : null,
-      // Add visual styling for purchased items
-      style: item.purchasedBy ? { opacity: 0.6 } : undefined,
+    }));
+  }, [items, toggleItem]);
+
+  // Transform shopping list items for SortableShoppingList
+  const sortableItems = useMemo((): SortableShoppingListItem[] => {
+    // Use isPurchased field as primary source of truth
+    const unpurchasedItems = items.filter((item: any) => !item.isPurchased);
+    const purchasedItems = items.filter((item: any) => item.isPurchased);
+
+    // Sort each group by sortOrder (ascending - lowest sortOrder first)
+    const sortBySortOrder = (a: any, b: any) => {
+      // Handle missing sortOrder values defensively
+      const aOrder = a.sortOrder ?? 999999; // Default high value for items without sortOrder
+      const bOrder = b.sortOrder ?? 999999; // Default high value for items without sortOrder
+      return aOrder - bOrder;
+    };
+
+    const sortedUnpurchasedItems = unpurchasedItems.sort(sortBySortOrder);
+    const sortedPurchasedItems = purchasedItems.sort(sortBySortOrder);
+
+    // Combine unpurchased first, then purchased
+    const sortedItems = [...sortedUnpurchasedItems, ...sortedPurchasedItems];
+
+    return sortedItems.map((item: any) => ({
+      id: item.id,
+      title: item.itemName,
+      subtitle: `${item.quantity} ${item.unitName || ''}`.trim(),
+      sortOrder: item.sortOrder ?? 0,
+      isPurchased: item.isPurchased,
+      badge: item.isPurchased
+        ? { text: 'Purchased', variant: 'success' }
+        : undefined,
+      rightElement: (
+        <TouchableOpacity
+          style={[styles.checkbox, item.isPurchased && styles.checkboxChecked]}
+          onPress={() => toggleItem(item.id)}
+        >
+          {item.isPurchased && <Icon name="check" size={16} color="white" />}
+        </TouchableOpacity>
+      ),
+      leftElement: item.item?.imageUrl ? (
+        <View style={styles.imageContainer}>
+          <Image
+            source={{ uri: item.item.imageUrl }}
+            style={styles.leftImage}
+          />
+        </View>
+      ) : null,
     }));
   }, [items, toggleItem]);
 
@@ -164,6 +274,30 @@ export const ShoppingListMain: React.FC = () => {
     }
   };
 
+  const handleSortOrderUpdate = useCallback(
+    async (updates: SortOrderUpdate[]) => {
+      if (!currentListId) return;
+
+      try {
+        await reorderItems({
+          variables: {
+            input: {
+              shoppingListId: currentListId,
+              items: updates.map(update => ({
+                id: update.id,
+                sortOrder: update.sortOrder,
+              })),
+            },
+          },
+        });
+      } catch (error) {
+        console.error('Failed to update sort order:', error);
+        Alert.alert('Error', 'Failed to reorder items');
+      }
+    },
+    [currentListId, reorderItems],
+  );
+
   // Search bar actions - conditionally show "Add" button when searching with no results
 
   const searchBarActions = useMemo(() => {
@@ -172,7 +306,7 @@ export const ShoppingListMain: React.FC = () => {
       {
         icon: 'list',
         color: '#fff',
-        onPress: () => selectShoppingListSheet.open(),
+        onPress: () => selectorRef.current?.open(),
       },
     ];
 
@@ -201,13 +335,29 @@ export const ShoppingListMain: React.FC = () => {
     handleAddItemFromSearch,
     searchQuery,
     listItems.length,
-    selectShoppingListSheet,
     primaryColor, // ← Include extracted variable in deps
     primaryLightColor, // ← Include extracted variable in deps
   ]);
   const handleRefresh = async () => {
     await Promise.all([refetch()]);
   };
+
+  const handleScanPress = useCallback(() => {
+    navigateTo.barcode({
+      source: 'shoppingList',
+      shoppingListId: currentListId,
+    });
+  }, [navigateTo, currentListId]);
+
+  // Set up scanner button when component mounts
+  useEffect(() => {
+    setScannerProps(handleScanPress, true);
+
+    // Clean up on unmount
+    return () => {
+      setScannerProps(undefined, false);
+    };
+  }, [setScannerProps, handleScanPress]);
 
   // If no lists exist at all
   if (lists.length === 0) {
@@ -227,103 +377,82 @@ export const ShoppingListMain: React.FC = () => {
     );
   }
 
+  // Always render the same SearchBar to prevent TextInput remounting
   return (
-    <>
-      <ListTemplate
-        title={currentList?.name || 'Shopping List'}
-        subtitle="Shopping List"
-        items={listItems}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        onItemPress={id =>
-          navigate('EditItem', { listId: currentListId, itemId: id })
-        }
-        onItemEdit={id =>
-          navigate('EditItem', { listId: currentListId, itemId: id })
-        }
-        onItemDelete={handleDeleteItem}
-        onRefresh={handleRefresh}
-        // Display configuration
-        showSearchBar={true}
-        showFAB={true}
-        onFabPress={() =>
-          navigateTo.barcode({
-            source: 'shoppingList',
-            shoppingListId: currentListId,
-          })
-        }
-        // Actions
-        searchBarActions={searchBarActions}
-        emptyState={
-          searchQuery.trim()
-            ? undefined // No empty state during search - user can add via search bar button
-            : {
-                icon: 'add-shopping-cart',
-                title: 'No items in this list',
-                description: 'Add items to your shopping list',
-                action: {
-                  label: 'Add first item',
-                  onPress: handleAddItem,
-                },
-              }
-        }
+    <View style={styles.container}>
+      <UserHeader />
+
+      <SearchBar
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        placeholder="Search shopping list..."
+        leftActions={searchBarActions.left || []}
+        rightActions={searchBarActions.right || []}
+        listName={currentList?.name || 'Shopping List'}
+        itemCount={sortableItems.length}
+        completedCount={sortableItems.filter(item => item.isPurchased).length}
       />
 
-      <BottomSheetAction
-        key={'select-list'}
-        sheetRef={selectShoppingListSheet.ref}
-        sheetTitle={'Select Shopping List'}
-        snapPoints={['50%', '90%']}
-      >
-        <ItemSelectorWithActions
-          data={selector.data}
-          selectedId={selector.selectedId}
-          onSelect={selector.handleSelect}
-          displayProperty="name"
-          loading={selector.loading}
-          emptyMessage={selector.emptyMessage}
-          actions={[
-            {
-              icon: 'add',
-              label: 'Create New List',
-              onPress: () => {
-                selectShoppingListSheet.close();
-                navigate('ListSettings');
-              },
-              iconLibrary: 'MaterialIcons' as IconLibrary,
-            },
-            ...(currentListId
-              ? [
-                  {
-                    icon: 'share',
-                    label: 'Share Current List',
-                    onPress: () => {
-                      selectShoppingListSheet.close();
-                      navigate('ShareList', { listId: currentListId });
-                    },
-                    iconLibrary: 'MaterialIcons' as IconLibrary,
-                  },
-                  {
-                    icon: 'settings',
-                    label: 'List Settings',
-                    onPress: () => {
-                      selectShoppingListSheet.close();
-                      navigate('ListSettings', {
-                        listId: currentListId,
-                      });
-                    },
-                    iconLibrary: 'MaterialIcons' as IconLibrary,
-                  },
-                ]
-              : []),
-          ]}
+      {/* Conditional content based on search state */}
+      {searchQuery.trim() ? (
+        // Show search results using ListTemplate without search bar and user header
+        <ListTemplate
+          title={currentList?.name || 'Shopping List'}
+          subtitle="Shopping List"
+          items={listItems}
+          onItemPress={id =>
+            navigate('EditItem', { listId: currentListId, itemId: id })
+          }
+          onItemEdit={id =>
+            navigate('EditItem', { listId: currentListId, itemId: id })
+          }
+          onItemDelete={handleDeleteItem}
+          onRefresh={handleRefresh}
+          showSearchBar={false}  // Don't show search bar since we have one above
+          showUserHeader={false}  // Don't show user header since we have one above
         />
-      </BottomSheetAction>
-    </>
+      ) : listItems.length === 0 ? (
+        // Show empty state
+        <EmptyState
+          icon="add-shopping-cart"
+          title="No items in this list"
+          description="Add some items to get started"
+          action={{
+            label: 'Add Item',
+            onPress: handleAddItem,
+          }}
+        />
+      ) : (
+        // Show sortable list with drag-and-drop
+        <SortableShoppingList
+          items={sortableItems}
+          onItemPress={id =>
+            navigate('EditItem', { listId: currentListId, itemId: id })
+          }
+          onItemEdit={id =>
+            navigate('EditItem', { listId: currentListId, itemId: id })
+          }
+          onItemDelete={handleDeleteItem}
+          onSortOrderUpdate={handleSortOrderUpdate}
+          groupByPurchased={true}
+          showsVerticalScrollIndicator={true}
+        />
+      )}
+
+      <AnimatedItemSelector
+        ref={selectorRef}
+        config={listConfig}
+        maxHeight={600}
+      />
+    </View>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
   checkbox: {
     width: 24,
     height: 24,

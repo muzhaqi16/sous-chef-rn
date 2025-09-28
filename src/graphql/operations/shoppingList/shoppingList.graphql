@@ -326,8 +326,17 @@ mutation RemoveItemFromShoppingList($id: ID!) {
 mutation markItemPurchased($id: ID!, $status: Boolean!) {
   markItemPurchased(id: $id, status: $status) {
     id
-    itemName
     isPurchased
+    purchasedBy {
+      id
+      email
+    }
+  }
+}
+
+mutation ReorderShoppingListItems($input: ReorderShoppingListItemsInput!) {
+  reorderShoppingListItems(input: $input) {
+    ...ShoppingListItemFragment
   }
 }
 

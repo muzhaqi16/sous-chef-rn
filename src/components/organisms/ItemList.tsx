@@ -1,9 +1,12 @@
 import React from 'react';
-import {ScrollView, RefreshControl} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
-import {EmptyState} from '../molecules/EmptyState';
-import {ItemCard} from './ItemCard';
-import {IconName} from '#/utils/iconUtils';
+import { RefreshControl, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StyleSheet } from 'react-native-unistyles';
+import { EmptyState } from '../molecules/EmptyState';
+import { ItemCard } from './ItemCard';
+import { IconName } from '#/utils/iconUtils';
+import { useTabBarVisibility } from '#/context/TabBarVisibilityContext';
+import { TAB_BAR_HEIGHT } from '../navigation/AnimatedTabBar';
 interface Item {
   id: string;
   title: string;
@@ -42,6 +45,21 @@ export const ItemList: React.FC<ItemListProps> = ({
   emptyState,
 }) => {
   const [refreshing, setRefreshing] = React.useState(false);
+  const { updateScrollVisibility } = useTabBarVisibility();
+  const lastScrollY = React.useRef(0);
+  const { bottom: safeBottom } = useSafeAreaInsets();
+
+  // Dynamic content style with proper bottom padding for tab bar
+  const contentStyle = React.useMemo(() => ({
+    ...styles.content,
+    paddingBottom: TAB_BAR_HEIGHT + safeBottom + 16, // Tab bar height + safe area + extra padding
+  }), [safeBottom]);
+
+  const handleScroll = (event: any) => {
+    const currentY = event.nativeEvent.contentOffset.y;
+    updateScrollVisibility(currentY, lastScrollY.current);
+    lastScrollY.current = currentY;
+  };
 
   const handleRefresh = async () => {
     if (onRefresh) {
@@ -58,12 +76,15 @@ export const ItemList: React.FC<ItemListProps> = ({
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={contentStyle}
+      onScroll={handleScroll}
+      scrollEventThrottle={16}
       refreshControl={
         onRefresh ? (
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         ) : undefined
-      }>
+      }
+    >
       {items.map(item => (
         <ItemCard
           key={item.id}
@@ -88,6 +109,6 @@ const styles = StyleSheet.create(() => ({
   },
   content: {
     padding: 16,
-    paddingBottom: 28, // Extra space for larger shadow at bottom
+    // paddingBottom is calculated dynamically based on tab bar height + safe area
   },
 }));

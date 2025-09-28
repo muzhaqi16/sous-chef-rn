@@ -626,6 +626,7 @@ export type CreateShoppingListItemInput = {
   priority?: InputMaybe<Scalars['Int']['input']>;
   quantity?: InputMaybe<Scalars['Float']['input']>;
   shoppingListId: Scalars['ID']['input'];
+  sortOrder?: InputMaybe<Scalars['Int']['input']>;
   storeSection?: InputMaybe<Scalars['String']['input']>;
   unitId?: InputMaybe<Scalars['String']['input']>;
   unitName?: InputMaybe<Scalars['String']['input']>;
@@ -2105,6 +2106,7 @@ export type Mutation = {
   removePushToken: Device;
   removeRestrictions: UserModeration;
   removeShoppingListCollaborator: Scalars['Boolean']['output'];
+  reorderShoppingListItems: Array<ShoppingListItem>;
   resendVerificationEmail: Scalars['Boolean']['output'];
   /** Reset password using token from email */
   resetPassword: ResetPasswordResponse;
@@ -2658,6 +2660,10 @@ export type MutationRemoveRestrictionsArgs = {
 
 export type MutationRemoveShoppingListCollaboratorArgs = {
   id: Scalars['ID']['input'];
+};
+
+export type MutationReorderShoppingListItemsArgs = {
+  input: ReorderShoppingListItemsInput;
 };
 
 export type MutationResendVerificationEmailArgs = {
@@ -4405,6 +4411,11 @@ export type RemoveRestrictionsInput = {
   userId: Scalars['ID']['input'];
 };
 
+export type ReorderShoppingListItemsInput = {
+  items: Array<ShoppingListItemSortInput>;
+  shoppingListId: Scalars['ID']['input'];
+};
+
 export type ResetPasswordInput = {
   password: Scalars['String']['input'];
   token: Scalars['String']['input'];
@@ -4649,6 +4660,11 @@ export type ShoppingListItemPreviousValues = {
   notes?: Maybe<Scalars['String']['output']>;
   price?: Maybe<Scalars['Float']['output']>;
   quantity?: Maybe<Scalars['Int']['output']>;
+};
+
+export type ShoppingListItemSortInput = {
+  id: Scalars['ID']['input'];
+  sortOrder: Scalars['Int']['input'];
 };
 
 export type ShoppingListOwnership = {
@@ -5440,6 +5456,7 @@ export type UpdateShoppingListItemInput = {
   purchasedPrice?: InputMaybe<Scalars['Float']['input']>;
   purchasedQuantity?: InputMaybe<Scalars['Float']['input']>;
   quantity?: InputMaybe<Scalars['Float']['input']>;
+  sortOrder?: InputMaybe<Scalars['Int']['input']>;
   storeSection?: InputMaybe<Scalars['String']['input']>;
   unitId?: InputMaybe<Scalars['ID']['input']>;
   unitName?: InputMaybe<Scalars['String']['input']>;
@@ -14310,9 +14327,173 @@ export type MarkItemPurchasedMutation = {
   markItemPurchased: {
     __typename?: 'ShoppingListItem';
     id: string;
-    itemName?: string | null | undefined;
     isPurchased: boolean;
+    purchasedBy?:
+      | { __typename?: 'User'; id: string; email: string }
+      | null
+      | undefined;
   };
+};
+
+export type ReorderShoppingListItemsMutationVariables = Exact<{
+  input: ReorderShoppingListItemsInput;
+}>;
+
+export type ReorderShoppingListItemsMutation = {
+  __typename?: 'Mutation';
+  reorderShoppingListItems: Array<{
+    __typename?: 'ShoppingListItem';
+    id: string;
+    quantity?: number | null | undefined;
+    estimatedPrice?: number | null | undefined;
+    budgetPrice?: number | null | undefined;
+    lastKnownPrice?: number | null | undefined;
+    lowestPrice?: number | null | undefined;
+    highestPrice?: number | null | undefined;
+    priceLastUpdated?: string | null | undefined;
+    isPurchased: boolean;
+    purchasedQuantity?: number | null | undefined;
+    purchasedPrice?: number | null | undefined;
+    purchaseDate?: string | null | undefined;
+    aisle?: string | null | undefined;
+    storeSection?: string | null | undefined;
+    previouslyPurchased: boolean;
+    lastPurchaseDate?: string | null | undefined;
+    purchaseCount: number;
+    itemName?: string | null | undefined;
+    unitName?: string | null | undefined;
+    notes?: string | null | undefined;
+    priority: number;
+    category?: string | null | undefined;
+    sortOrder: number;
+    isAutoAdded: boolean;
+    autoAddReason?: string | null | undefined;
+    isFromMealPlan: boolean;
+    mealPlanReference?: string | null | undefined;
+    createdAt: string;
+    updatedAt: string;
+    deletedAt?: string | null | undefined;
+    version: number;
+    shoppingList: {
+      __typename?: 'ShoppingList';
+      id: string;
+      totalItems: number;
+      completedItems: number;
+      estimatedTotal: number;
+    };
+    item?:
+      | {
+          __typename?: 'Item';
+          id: string;
+          name: string;
+          description?: string | null | undefined;
+          imageUrl?: string | null | undefined;
+        }
+      | null
+      | undefined;
+    unit?:
+      | {
+          __typename?: 'Unit';
+          id: string;
+          name: string;
+          symbol: string;
+          type: UnitType;
+          isMetric: boolean;
+          baseUnitId?: string | null | undefined;
+          conversionFactor: number;
+          notes?: string | null | undefined;
+          isCommon: boolean;
+          sortOrder: number;
+          createdAt: string;
+          updatedAt: string;
+        }
+      | null
+      | undefined;
+    addedBy?:
+      | {
+          __typename?: 'User';
+          id: string;
+          email: string;
+          emailVerified: boolean;
+          role: UserRole;
+          onBoarded: boolean;
+          timezone?: string | null | undefined;
+          preferredCurrency?: string | null | undefined;
+          language?: string | null | undefined;
+          defaultShoppingListId?: string | null | undefined;
+          defaultHomeId?: string | null | undefined;
+          createdAt: string;
+          updatedAt: string;
+          lastActiveAt?: string | null | undefined;
+          profile?:
+            | {
+                __typename?: 'UserProfile';
+                id: string;
+                firstName?: string | null | undefined;
+                lastName?: string | null | undefined;
+                displayName?: string | null | undefined;
+                bio?: string | null | undefined;
+                avatar?: string | null | undefined;
+                phone?: string | null | undefined;
+              }
+            | null
+            | undefined;
+          settings?:
+            | {
+                __typename?: 'UserSettings';
+                id: string;
+                emailNotifications: boolean;
+                pushNotifications: boolean;
+                theme: AppTheme;
+              }
+            | null
+            | undefined;
+        }
+      | null
+      | undefined;
+    purchasedBy?:
+      | {
+          __typename?: 'User';
+          id: string;
+          email: string;
+          emailVerified: boolean;
+          role: UserRole;
+          onBoarded: boolean;
+          timezone?: string | null | undefined;
+          preferredCurrency?: string | null | undefined;
+          language?: string | null | undefined;
+          defaultShoppingListId?: string | null | undefined;
+          defaultHomeId?: string | null | undefined;
+          createdAt: string;
+          updatedAt: string;
+          lastActiveAt?: string | null | undefined;
+          profile?:
+            | {
+                __typename?: 'UserProfile';
+                id: string;
+                firstName?: string | null | undefined;
+                lastName?: string | null | undefined;
+                displayName?: string | null | undefined;
+                bio?: string | null | undefined;
+                avatar?: string | null | undefined;
+                phone?: string | null | undefined;
+              }
+            | null
+            | undefined;
+          settings?:
+            | {
+                __typename?: 'UserSettings';
+                id: string;
+                emailNotifications: boolean;
+                pushNotifications: boolean;
+                theme: AppTheme;
+              }
+            | null
+            | undefined;
+        }
+      | null
+      | undefined;
+  }>;
 };
 
 export type ShoppingListUpdatedSubscriptionVariables = Exact<{

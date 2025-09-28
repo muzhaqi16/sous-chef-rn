@@ -7,6 +7,7 @@ import {
   useUpdateShoppingListItemMutation,
   useRemoveItemFromShoppingListMutation,
   useMarkItemPurchasedMutation,
+  GetShoppingListItemsDocument,
 } from '#generated';
 import { useSearchableList } from '../useSearchableList';
 import { useAuth } from '#hooks/auth/useAuth';
@@ -81,7 +82,7 @@ export function useShoppingListManagement(listId: string | undefined) {
   // Simple stats calculation
   const stats = useMemo(() => {
     const total = items.length;
-    const completed = items.filter(item => !!item.purchasedBy).length;
+    const completed = items.filter(item => item.isPurchased).length;
     const pending = total - completed;
 
     return {
@@ -101,6 +102,13 @@ export function useShoppingListManagement(listId: string | undefined) {
       });
       Alert.alert('Error', message);
     },
+    refetchQueries: [
+      {
+        query: GetShoppingListItemsDocument,
+        variables: { shoppingListId: listId ?? '' },
+      },
+    ],
+    awaitRefetchQueries: false, // Don't wait for refetch to complete
   });
 
   const [updateItemMutation] = useUpdateShoppingListItemMutation({
@@ -131,6 +139,13 @@ export function useShoppingListManagement(listId: string | undefined) {
       });
       Alert.alert('Error', message);
     },
+    refetchQueries: [
+      {
+        query: GetShoppingListItemsDocument,
+        variables: { shoppingListId: listId ?? '' },
+      },
+    ],
+    awaitRefetchQueries: false, // Don't wait for refetch to complete
   });
 
   // Simplified add item
@@ -206,8 +221,8 @@ export function useShoppingListManagement(listId: string | undefined) {
       const currentItem = items.find(item => item.id === itemId);
       if (!currentItem) return false;
 
-      // Toggle the status - if it has purchasedBy, it's purchased
-      const newStatus = !currentItem.purchasedBy;
+      // Toggle the status - use isPurchased field as primary source
+      const newStatus = !currentItem.isPurchased;
 
       const result = await markPurchasedMutation({
         variables: {
@@ -244,8 +259,8 @@ export function useShoppingListManagement(listId: string | undefined) {
 
     // Helper functions
     getItemById: (itemId: string) => items.find(item => item.id === itemId),
-    getCompletedItems: () => items.filter(item => !!item.purchasedBy),
-    getPendingItems: () => items.filter(item => !item.purchasedBy),
+    getCompletedItems: () => items.filter(item => item.isPurchased),
+    getPendingItems: () => items.filter(item => !item.isPurchased),
     getItemsByCategory: (category: string) =>
       items.filter(item => item.category === category),
   };

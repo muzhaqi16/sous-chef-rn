@@ -877,6 +877,7 @@ input CreateShoppingListItemInput {
   priority: Int
   quantity: Float
   shoppingListId: ID!
+  sortOrder: Int
   storeSection: String
   unitId: String
   unitName: String
@@ -2359,6 +2360,9 @@ type Mutation {
   removePushToken(id: ID!): Device!
   removeRestrictions(input: RemoveRestrictionsInput!): UserModeration!
   removeShoppingListCollaborator(id: ID!): Boolean!
+  reorderShoppingListItems(
+    input: ReorderShoppingListItemsInput!
+  ): [ShoppingListItem!]!
   resendVerificationEmail(email: String!): Boolean!
   """
   Reset password using token from email
@@ -3348,6 +3352,11 @@ input RemoveRestrictionsInput {
   userId: ID!
 }
 
+input ReorderShoppingListItemsInput {
+  items: [ShoppingListItemSortInput!]!
+  shoppingListId: ID!
+}
+
 input ResetPasswordInput {
   password: String!
   token: String!
@@ -3582,6 +3591,11 @@ type ShoppingListItemPreviousValues {
   notes: String
   price: Float
   quantity: Int
+}
+
+input ShoppingListItemSortInput {
+  id: ID!
+  sortOrder: Int!
 }
 
 type ShoppingListOwnership {
@@ -4199,6 +4213,7 @@ input UpdateShoppingListItemInput {
   purchasedPrice: Float
   purchasedQuantity: Float
   quantity: Float
+  sortOrder: Int
   storeSection: String
   unitId: ID
   unitName: String

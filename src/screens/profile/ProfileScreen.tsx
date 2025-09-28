@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
+import { useTabBarVisibility } from '#context/TabBarVisibilityContext';
 import { ProfileHeader, SettingsSection } from '#components';
 import {
   useProfileData,
@@ -13,6 +14,8 @@ export const ProfileScreen = () => {
   const { navigate, goBack } = useAppNavigation();
   const { profile, user, loading } = useProfileData();
   const { sections, BiometricModal } = useConfigurableSettings(profile);
+  const { updateScrollVisibility } = useTabBarVisibility();
+  const lastScrollY = useRef(0);
 
   const handleAvatarPress = () => {
     navigate('ProfilePhotoUpload');
@@ -30,6 +33,14 @@ export const ProfileScreen = () => {
     }
   };
 
+  const handleScroll = (event: any) => {
+    const currentY = event.nativeEvent.contentOffset.y;
+    const prevY = lastScrollY.current;
+
+    updateScrollVisibility(currentY, prevY);
+    lastScrollY.current = currentY;
+  };
+
   if (loading) {
     return null; // or loading component
   }
@@ -44,7 +55,11 @@ export const ProfileScreen = () => {
         onAvatarPress={handleAvatarPress}
       />
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+      >
         {sections.map((section, index) => (
           <SettingsSection
             key={`section-${index}`}

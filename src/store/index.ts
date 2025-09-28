@@ -130,9 +130,24 @@ export const useStore = create<RootState>()(
         skipHydration: false,
         partialize: state => {
           // Filter out non-persisted state slices here
-          // For example, do not persist UI state or navigation state
-          const { ...rest } = state;
-          return rest;
+          // Do not persist UI state or navigation state
+
+          /* eslint-disable @typescript-eslint/no-unused-vars */
+          const {
+            // Exclude UI state that should not persist (intentionally unused)
+            isTabBarVisible,
+            tabBarHiddenReasons,
+            bottomSheetVisible,
+            bottomSheetIndex,
+            globalLoading,
+            isLoading,
+            isError,
+            isFetching,
+            ...persistedState
+          } = state;
+          /* eslint-enable @typescript-eslint/no-unused-vars */
+
+          return persistedState;
         },
       },
     ),

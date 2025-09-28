@@ -21,12 +21,10 @@ export const useConfigurableSettings = (profile: any) => {
   const client = useApolloClient();
   const { user, logout, getUserNavigationState } = useStore();
   const { userThemePreference, setTheme } = useTheme();
-  const {
-    checkStoredCredentials,
-    getBiometricInfo,
-    removeCredentials
-  } = useAuth();
-  const { resetBiometricDeclination, markBiometricEnabled } = useUserPreferences();
+  const { checkStoredCredentials, getBiometricInfo, removeCredentials } =
+    useAuth();
+  const { resetBiometricDeclination, markBiometricEnabled } =
+    useUserPreferences();
   const [updateProfileMutation] = useUpdateUserProfileMutation();
   const [updateSettingsMutation] = useUpdateUserPreferencesMutation();
 
@@ -41,7 +39,7 @@ export const useConfigurableSettings = (profile: any) => {
       try {
         const [biometricInfo, hasCredentials] = await Promise.all([
           getBiometricInfo(),
-          checkStoredCredentials(user?.email)
+          checkStoredCredentials(user?.email),
         ]);
 
         setBiometricAvailable(biometricInfo.isAvailable);
@@ -60,22 +58,29 @@ export const useConfigurableSettings = (profile: any) => {
   // BiometricSetupModal state
   const [showBiometricModal, setShowBiometricModal] = useState(false);
 
-  const handleBiometricModalComplete = useCallback(async (enabled: boolean) => {
-    setShowBiometricModal(false);
-    if (enabled) {
-      setBiometricEnabled(true);
+  const handleBiometricModalComplete = useCallback(
+    async (enabled: boolean) => {
+      setShowBiometricModal(false);
+      if (enabled) {
+        setBiometricEnabled(true);
 
-      // Reset biometric declination state since user manually enabled it
-      resetBiometricDeclination();
-      markBiometricEnabled();
-
-      Alert.alert('Success', `${biometricType || 'Biometric'} authentication has been enabled.`);
-    } else {
-      // Ensure the toggle reflects the current state if setup failed/cancelled
-      const hasCredentials = await checkStoredCredentials(user?.email);
-      setBiometricEnabled(hasCredentials && biometricAvailable);
-    }
-  }, [biometricType, checkStoredCredentials, user?.email, biometricAvailable, resetBiometricDeclination, markBiometricEnabled]);
+        // Reset biometric declination state since user manually enabled it
+        resetBiometricDeclination();
+        markBiometricEnabled();
+      } else {
+        // Ensure the toggle reflects the current state if setup failed/cancelled
+        const hasCredentials = await checkStoredCredentials(user?.email);
+        setBiometricEnabled(hasCredentials && biometricAvailable);
+      }
+    },
+    [
+      checkStoredCredentials,
+      user?.email,
+      biometricAvailable,
+      resetBiometricDeclination,
+      markBiometricEnabled,
+    ],
+  );
 
   const updateProfile = useCallback(
     async (input: Partial<Record<any, any>>) => {
@@ -326,9 +331,13 @@ export const useConfigurableSettings = (profile: any) => {
             if (!biometricAvailable) {
               baseItem.subtitle = 'Not available on this device';
             } else if (wasDeclined && !biometricEnabled) {
-              baseItem.subtitle = `Tap to enable ${biometricType || 'biometric'} login`;
+              baseItem.subtitle = `Tap to enable ${
+                biometricType || 'biometric'
+              } login`;
             } else {
-              baseItem.subtitle = `Use ${biometricType || 'biometric'} to login`;
+              baseItem.subtitle = `Use ${
+                biometricType || 'biometric'
+              } to login`;
             }
 
             baseItem.onPress = async () => {
@@ -353,14 +362,16 @@ export const useConfigurableSettings = (profile: any) => {
                             if (user?.email) {
                               await removeCredentials(user.email);
                               setBiometricEnabled(false);
-                              Alert.alert('Success', 'Biometric authentication has been disabled.');
                             }
                           } catch (error) {
-                            Alert.alert('Error', 'Failed to disable biometric authentication.');
+                            Alert.alert(
+                              'Error',
+                              'Failed to disable biometric authentication.',
+                            );
                           }
-                        }
-                      }
-                    ]
+                        },
+                      },
+                    ],
                   );
                 }
               } catch (error) {
@@ -372,7 +383,6 @@ export const useConfigurableSettings = (profile: any) => {
             };
           }
           break;
-
 
         // Action items
         case 'logout':
@@ -415,14 +425,17 @@ export const useConfigurableSettings = (profile: any) => {
     }));
   }, [createSettingItem]);
 
-  const BiometricModal = useMemo(() => (
-    <BiometricSetupModal
-      visible={showBiometricModal}
-      onComplete={handleBiometricModalComplete}
-      userEmail={user?.email || ''}
-      mode="settings"
-    />
-  ), [showBiometricModal, handleBiometricModalComplete, user?.email]);
+  const BiometricModal = useMemo(
+    () => (
+      <BiometricSetupModal
+        visible={showBiometricModal}
+        onComplete={handleBiometricModalComplete}
+        userEmail={user?.email || ''}
+        mode="settings"
+      />
+    ),
+    [showBiometricModal, handleBiometricModalComplete, user?.email],
+  );
 
   return {
     sections,

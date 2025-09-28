@@ -1,3 +1,4 @@
+// https://uicolors.app/generate/fb923b
 export const colors = {
   // Brand colors - using your existing palette
   primary: {

@@ -27,11 +27,13 @@ export const PostLoginBiometricPrompt = ({
   // Load biometric info when modal becomes visible
   useEffect(() => {
     if (visible) {
-      getBiometricInfo().then((info) => {
-        setBiometricInfo(info);
-      }).catch((error) => {
-        console.error('Error loading biometric info:', error);
-      });
+      getBiometricInfo()
+        .then(info => {
+          setBiometricInfo(info);
+        })
+        .catch(error => {
+          console.error('Error loading biometric info:', error);
+        });
     }
   }, [visible, getBiometricInfo]);
 
@@ -93,29 +95,12 @@ export const PostLoginBiometricPrompt = ({
         <View style={styles.container}>
           <View style={styles.iconContainer}>
             <View style={styles.iconBackground}>
-              <Icon
-                name={getBiometricIcon()}
-                size={40}
-                color="#007AFF"
-              />
+              <Icon name={getBiometricIcon()} size={40} color="#007AFF" />
             </View>
           </View>
 
           <Text style={styles.title}>{getBiometricTitle()}</Text>
-          <Text style={styles.description}>
-            {getBiometricDescription()}
-          </Text>
-
-          <View style={styles.benefits}>
-            <View style={styles.benefitItem}>
-              <Icon name="zap" size={16} color="#34D399" />
-              <Text style={styles.benefitText}>3x faster login</Text>
-            </View>
-            <View style={styles.benefitItem}>
-              <Icon name="shield" size={16} color="#34D399" />
-              <Text style={styles.benefitText}>Enhanced security</Text>
-            </View>
-          </View>
+          <Text style={styles.description}>{getBiometricDescription()}</Text>
 
           <View style={styles.buttons}>
             <TouchableOpacity

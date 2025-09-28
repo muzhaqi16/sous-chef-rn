@@ -26,6 +26,12 @@ export const lightTheme = {
     primaryDark: colors.primary[700],
     onPrimary: colors.neutral[0],
 
+    // Secondary
+    secondary: colors.secondary[400],
+    secondaryLight: colors.secondary[100],
+    secondaryDark: colors.secondary[950],
+    onSecondary: colors.neutral[900],
+
     // Background
     background: colors.neutral[50],
     backgroundSecondary: colors.secondary[100],
@@ -79,6 +85,12 @@ export const darkTheme = {
     primaryLight: colors.primary[200],
     primaryDark: colors.primary[600],
     onPrimary: colors.neutral[900],
+
+    // Secondary
+    secondary: colors.secondary[400],
+    secondaryLight: colors.secondary[200],
+    secondaryDark: colors.secondary[950],
+    onSecondary: colors.neutral[0],
 
     // Background
     background: colors.neutral[900],

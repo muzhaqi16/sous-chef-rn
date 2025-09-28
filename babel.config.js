@@ -19,6 +19,8 @@ module.exports = {
         ],
         alias: {
           '#': './src',
+          '#context': './src/context',
+          '#context/*': './src/context/*',
           '#generated': './src/graphql/generated',
           '#hooks': './src/hooks',
           '#hooks/*': './src/hooks/*',
@@ -32,6 +34,7 @@ module.exports = {
           '#utils': './src/utils',
           '#assets': './src/assets',
           '#components': './src/components',
+          '#contexts': './src/contexts',
           '#types': './src/types',
           '#config': './src/config',
           '#styles': './src/styles',

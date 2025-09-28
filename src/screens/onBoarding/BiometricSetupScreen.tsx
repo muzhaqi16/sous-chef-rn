@@ -11,11 +11,16 @@ import { useStore } from '#store';
 export const BiometricSetupScreen = () => {
   const { navigateToNextStep } = useOnboardingNavigation();
   const { user, setUserNavigationState } = useStore();
-  const { registrationPassword, clearRegistrationPassword, getBiometricInfo, storeCredentials } = useAuth();
+  const {
+    registrationPassword,
+    clearRegistrationPassword,
+    getBiometricInfo,
+    storeCredentials,
+  } = useAuth();
   const { markBiometricDeclined, markBiometricEnabled } = useUserPreferences();
   const [biometricInfo, setBiometricInfo] = useState<{
     isAvailable: boolean;
-    biometryType: string | null
+    biometryType: string | null;
   }>({ isAvailable: false, biometryType: null });
   const [isEnabling, setIsEnabling] = useState(false);
   const [hasCheckedBiometric, setHasCheckedBiometric] = useState(false);
@@ -37,30 +42,40 @@ export const BiometricSetupScreen = () => {
   }, [loadBiometricInfo]);
 
   // Handle completion with proper useCallback to prevent re-renders
-  const handleComplete = useCallback((biometricEnabled: boolean) => {
-    // Clear registration password since onboarding is complete
-    clearRegistrationPassword();
+  const handleComplete = useCallback(
+    (biometricEnabled: boolean) => {
+      // Clear registration password since onboarding is complete
+      clearRegistrationPassword();
 
-    // Track biometric decision using preference hooks
-    if (biometricEnabled) {
-      markBiometricEnabled();
-    } else {
-      markBiometricDeclined();
-    }
+      // Track biometric decision using preference hooks
+      if (biometricEnabled) {
+        markBiometricEnabled();
+      } else {
+        markBiometricDeclined();
+      }
 
-    // Track onboarding completion
-    if (user?.id) {
-      setUserNavigationState(user.id, {
-        hasCompletedOnboarding: true,
-        onboardingCompletedAt: Date.now(),
-        biometricSetupOffered: true,
-        isNewUser: false, // Clear new user flag after onboarding completion
-      });
-    }
+      // Track onboarding completion
+      if (user?.id) {
+        setUserNavigationState(user.id, {
+          hasCompletedOnboarding: true,
+          onboardingCompletedAt: Date.now(),
+          biometricSetupOffered: true,
+          isNewUser: false, // Clear new user flag after onboarding completion
+        });
+      }
 
-    // Navigate to OnboardingComplete screen
-    navigateToNextStep('BiometricSetup');
-  }, [clearRegistrationPassword, markBiometricEnabled, markBiometricDeclined, user?.id, setUserNavigationState, navigateToNextStep]);
+      // Navigate to OnboardingComplete screen
+      navigateToNextStep('BiometricSetup');
+    },
+    [
+      clearRegistrationPassword,
+      markBiometricEnabled,
+      markBiometricDeclined,
+      user?.id,
+      setUserNavigationState,
+      navigateToNextStep,
+    ],
+  );
 
   // Auto-skip if biometric is not available
   useEffect(() => {
@@ -84,7 +99,7 @@ export const BiometricSetupScreen = () => {
         Alert.alert(
           'Setup Failed',
           'Biometric setup failed. You can enable it later in Settings.',
-          [{ text: 'OK', onPress: () => handleComplete(false) }]
+          [{ text: 'OK', onPress: () => handleComplete(false) }],
         );
       }
     } catch (error) {
@@ -92,7 +107,7 @@ export const BiometricSetupScreen = () => {
       Alert.alert(
         'Setup Failed',
         'Biometric setup failed. You can enable it later in Settings.',
-        [{ text: 'OK', onPress: () => handleComplete(false) }]
+        [{ text: 'OK', onPress: () => handleComplete(false) }],
       );
     } finally {
       setIsEnabling(false);
@@ -103,7 +118,6 @@ export const BiometricSetupScreen = () => {
     handleComplete(false);
   };
 
-
   // Don't render anything while checking biometric availability
   if (!hasCheckedBiometric) {
     return (
@@ -111,9 +125,12 @@ export const BiometricSetupScreen = () => {
         title="Setting up security"
         subtitle="Checking device capabilities"
         step={7}
-        totalSteps={7}>
+        totalSteps={7}
+      >
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Checking biometric availability...</Text>
+          <Text style={styles.loadingText}>
+            Checking biometric availability...
+          </Text>
         </View>
       </OnBoardingWrapper>
     );
@@ -150,21 +167,16 @@ export const BiometricSetupScreen = () => {
       title={getBiometricTitle()}
       subtitle="Secure your account"
       step={7}
-      totalSteps={7}>
+      totalSteps={7}
+    >
       <View style={styles.container}>
         <View style={styles.iconContainer}>
           <View style={styles.iconBackground}>
-            <Icon
-              name={getBiometricIcon()}
-              size={48}
-              color="#007AFF"
-            />
+            <Icon name={getBiometricIcon()} size={48} color="#007AFF" />
           </View>
         </View>
 
-        <Text style={styles.description}>
-          {getBiometricDescription()}
-        </Text>
+        <Text style={styles.description}>{getBiometricDescription()}</Text>
 
         <View style={styles.benefits}>
           <View style={styles.benefitItem}>
