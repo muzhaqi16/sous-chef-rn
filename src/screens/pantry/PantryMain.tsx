@@ -31,14 +31,12 @@ export const PantryMain: React.FC = () => {
   // Try to get home data from homes list first to avoid extra query
   const homeFromList = homes.find((home: any) => home.id === selectedHomeId);
 
-  // Only skip the query if we have recent, valid home data with pantries array
-  // Be more conservative about skipping to ensure fresh data after login
-  const hasCompletePantryData = false; // Always fetch fresh home data for now
-
-  const { data: homeData } = useGetHomeBasicQuery({
+  const { data: homeData, refetch: refetchHome } = useGetHomeBasicQuery({
     variables: { homeId: selectedHomeId ?? '' },
-    fetchPolicy: 'cache-first',
-    skip: !selectedHomeId || !!hasCompletePantryData, // Only skip if we have complete pantry data
+    fetchPolicy: 'cache-and-network', // Always check network for fresh data after token refresh
+    skip: !selectedHomeId,
+    notifyOnNetworkStatusChange: true,
+    errorPolicy: 'all', // Allow partial data and cache on errors
   });
 
   // Use home data from either source
@@ -213,6 +211,10 @@ export const PantryMain: React.FC = () => {
     return await removeItem(itemId);
   };
 
+  const handleRefresh = async () => {
+    await Promise.all([refetch(), refetchHome()]);
+  };
+
   // Header actions
   const headerActions = useMemo(
     () => ({
@@ -305,9 +307,7 @@ export const PantryMain: React.FC = () => {
         showSearchBar={true}
         headerActions={headerActions}
         searchBarActions={searchBarActions}
-        onRefresh={async () => {
-          await refetch();
-        }}
+        onRefresh={handleRefresh}
         emptyState={{
           icon: 'inventory',
           title: 'Loading...',
@@ -321,7 +321,7 @@ export const PantryMain: React.FC = () => {
   const debugSubtitle = pantry?.name || 'Your Pantry';
 
   return (
-    <>
+    <View style={styles.container}>
       <ListTemplate
         title={currentHomeData?.home?.name || 'Pantry'}
         subtitle={debugSubtitle}
@@ -331,9 +331,7 @@ export const PantryMain: React.FC = () => {
         onItemPress={id => navigateTo.pantryItemDetail({ itemId: id })}
         onItemEdit={id => navigateTo.pantryItem({ itemId: id })}
         onItemDelete={handleDeleteItem}
-        onRefresh={async () => {
-          await refetch();
-        }}
+        onRefresh={handleRefresh}
         // Display configuration
         showHeader={true}
         showSearchBar={true}
@@ -355,11 +353,15 @@ export const PantryMain: React.FC = () => {
         config={pantryConfig}
         maxHeight={600}
       />
-    </>
+    </View>
   );
 };
 
-const styles = StyleSheet.create(_theme => ({
+const styles = StyleSheet.create(theme => ({
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
   imageContainer: {
     width: 60,
     height: 60,

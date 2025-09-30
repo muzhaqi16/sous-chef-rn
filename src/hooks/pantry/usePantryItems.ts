@@ -13,12 +13,12 @@ export function usePantryItems(pantryId: string | undefined) {
   const { isLoggedOut } = useAuth();
   const shouldSkip = !pantryId || isLoggedOut;
 
-  const { data, loading, refetch } = useGetPantryItemsQuery({
-    fetchPolicy: 'cache-first',
+  const { data, loading, error, refetch } = useGetPantryItemsQuery({
+    fetchPolicy: 'cache-and-network', // Always check network for fresh data after token refresh
     skip: shouldSkip,
     variables: { pantryId: pantryId ?? '' },
     notifyOnNetworkStatusChange: true,
-    errorPolicy: 'all',
+    errorPolicy: 'all', // Allow partial data and cache on errors
   });
 
   usePantryItemsChangedSubscription({
@@ -99,6 +99,7 @@ export function usePantryItems(pantryId: string | undefined) {
     items: filteredItems,
     allItems: pantryItems,
     loading,
+    error,
     stats,
 
     // Search

@@ -408,8 +408,8 @@ export const ShoppingListMain: React.FC = () => {
           }
           onItemDelete={handleDeleteItem}
           onRefresh={handleRefresh}
-          showSearchBar={false}  // Don't show search bar since we have one above
-          showUserHeader={false}  // Don't show user header since we have one above
+          showSearchBar={false} // Don't show search bar since we have one above
+          showUserHeader={false} // Don't show user header since we have one above
         />
       ) : listItems.length === 0 ? (
         // Show empty state
@@ -469,10 +469,10 @@ const styles = StyleSheet.create(theme => ({
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    marginTop: 8,
+    padding: theme.spacing.sm,
+    marginTop: theme.spacing.sm,
     backgroundColor: theme.colors.surface,
-    borderRadius: 8,
+    borderRadius: theme.radii.sm,
     borderWidth: 1,
     borderColor: theme.colors.border,
   },

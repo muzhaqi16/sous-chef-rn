@@ -77,7 +77,7 @@ export const useAuth = () => {
   const handleShowBiometricSetup = useCallback((credentials: LoginCredentials) => {
     authState.setPostLoginCredentials(credentials);
     authState.setShowBiometricSetup(true);
-    authState.setNavigationState('biometric_setup');
+    // Don't change navigation state - modal will overlay current screen
   }, [authState]);
 
   // Convert credential storage functions to event interface

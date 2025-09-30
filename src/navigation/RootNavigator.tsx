@@ -139,16 +139,6 @@ function RootNavigator() {
             </Stack.Screen>
           )}
 
-          {/* Biometric Setup State - shows loading while biometric modal is active */}
-          {navigationState === 'biometric_setup' && (
-            <Stack.Screen name="Auth">
-              {() => (
-                <AuthErrorBoundary>
-                  <AuthStack />
-                </AuthErrorBoundary>
-              )}
-            </Stack.Screen>
-          )}
 
           {/* Onboarding Group */}
           {navigationState === 'onboarding' && (
@@ -205,9 +195,8 @@ function RootNavigator() {
         </Stack.Navigator>
       </NavigationErrorBoundary>
 
-      {/* Global Biometric Setup Modal - only shows during biometric_setup state */}
-      {navigationState === 'biometric_setup' &&
-        showBiometricSetup &&
+      {/* Global Biometric Setup Modal - shows on auth screen when triggered */}
+      {showBiometricSetup &&
         user &&
         postLoginCredentials && (
           <PostLoginBiometricPrompt

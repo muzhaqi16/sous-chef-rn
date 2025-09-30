@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { RefreshControl, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
@@ -44,16 +44,18 @@ export const ItemList: React.FC<ItemListProps> = ({
   onRefresh,
   emptyState,
 }) => {
-  const [refreshing, setRefreshing] = React.useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const { updateScrollVisibility } = useTabBarVisibility();
-  const lastScrollY = React.useRef(0);
+  const lastScrollY = useRef(0);
   const { bottom: safeBottom } = useSafeAreaInsets();
 
   // Dynamic content style with proper bottom padding for tab bar
-  const contentStyle = React.useMemo(() => ({
-    ...styles.content,
-    paddingBottom: TAB_BAR_HEIGHT + safeBottom + 16, // Tab bar height + safe area + extra padding
-  }), [safeBottom]);
+  const contentStyle = useMemo(
+    () => ({
+      paddingBottom: TAB_BAR_HEIGHT + safeBottom + 16, // Tab bar height + safe area + extra padding
+    }),
+    [safeBottom],
+  );
 
   const handleScroll = (event: any) => {
     const currentY = event.nativeEvent.contentOffset.y;
@@ -103,12 +105,9 @@ export const ItemList: React.FC<ItemListProps> = ({
   );
 };
 
-const styles = StyleSheet.create(() => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-  },
-  content: {
-    padding: 16,
-    // paddingBottom is calculated dynamically based on tab bar height + safe area
+    paddingHorizontal: theme.spacing.sm,
   },
 }));

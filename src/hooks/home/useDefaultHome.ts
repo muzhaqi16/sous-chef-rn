@@ -16,7 +16,7 @@ export const useDefaultHome = () => {
     error,
     refetch,
   } = useGetHomesQuery({
-    fetchPolicy: 'cache-first',
+    fetchPolicy: 'cache-and-network', // Ensure fresh data after token refresh
     skip: shouldSkip,
     notifyOnNetworkStatusChange: true,
     errorPolicy: 'all', // Allow partial data and cache on errors
@@ -28,6 +28,8 @@ export const useDefaultHome = () => {
   } = useGetDefaultHomeQuery({
     fetchPolicy: 'cache-and-network',
     skip: !canAttemptQueries,
+    notifyOnNetworkStatusChange: true,
+    errorPolicy: 'all',
   });
 
   const remoteDefaultHomeId = defaultHomeData?.getDefaultHome?.id;
@@ -36,6 +38,7 @@ export const useDefaultHome = () => {
   // Retry mechanism: retry when we can attempt queries but no homes data
   useEffect(() => {
     if (canAttemptQueries && !homes?.homes && !loading && error) {
+      console.log('🔄 Retrying homes query after error...');
       refetch();
     }
   }, [canAttemptQueries, homes?.homes, loading, error, refetch]);
@@ -43,6 +46,7 @@ export const useDefaultHome = () => {
   // Additional retry when user becomes available after token refresh
   useEffect(() => {
     if (user && accessToken && !homes?.homes && !loading) {
+      console.log('🔄 Refetching homes after token refresh...');
       refetch();
     }
   }, [user, accessToken, homes?.homes, loading, refetch]);

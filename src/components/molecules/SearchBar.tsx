@@ -121,7 +121,7 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.sm,
     borderRadius: theme.radii.sm,
   },
   inputContainer: {
