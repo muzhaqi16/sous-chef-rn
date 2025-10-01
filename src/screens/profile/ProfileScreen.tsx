@@ -1,8 +1,7 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import { ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTabBarVisibility } from '#context/TabBarVisibilityContext';
 import { ProfileHeader, SettingsSection } from '#components';
 import {
   useProfileData,
@@ -10,12 +9,14 @@ import {
   useAppNavigation,
 } from '#hooks';
 
+// Tab bar height constant (65px from FloatingTabBar)
+const TAB_BAR_HEIGHT = 65;
+
 export const ProfileScreen = () => {
   const { navigate, goBack } = useAppNavigation();
   const { profile, user, loading } = useProfileData();
   const { sections, BiometricModal } = useConfigurableSettings(profile);
-  const { updateScrollVisibility } = useTabBarVisibility();
-  const lastScrollY = useRef(0);
+  const { bottom: safeBottom } = useSafeAreaInsets();
 
   const handleAvatarPress = () => {
     navigate('ProfilePhotoUpload');
@@ -33,14 +34,6 @@ export const ProfileScreen = () => {
     }
   };
 
-  const handleScroll = (event: any) => {
-    const currentY = event.nativeEvent.contentOffset.y;
-    const prevY = lastScrollY.current;
-
-    updateScrollVisibility(currentY, prevY);
-    lastScrollY.current = currentY;
-  };
-
   if (loading) {
     return null; // or loading component
   }
@@ -56,9 +49,10 @@ export const ProfileScreen = () => {
       />
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: TAB_BAR_HEIGHT + safeBottom + 16 },
+        ]}
       >
         {sections.map((section, index) => (
           <SettingsSection

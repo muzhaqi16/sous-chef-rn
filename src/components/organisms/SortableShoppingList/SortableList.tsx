@@ -13,6 +13,9 @@ import type {
 } from './types';
 import { SimpleDraggableItem } from './SortableItem';
 
+// Tab bar height constant (65px from FloatingTabBar)
+const TAB_BAR_HEIGHT = 65;
+
 export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
   items,
   onItemPress,
@@ -124,7 +127,7 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
           ) : undefined
         }
         contentContainerStyle={{
-          paddingBottom: Math.max(insets.bottom, 16) + 80,
+          paddingBottom: TAB_BAR_HEIGHT + insets.bottom + 16,
         }}
         activationDistance={disabled ? 999999 : 20}
       />

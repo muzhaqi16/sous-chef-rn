@@ -4,6 +4,7 @@ declare module 'react-native-config' {
     API_KEY: string;
     WEB_SOCKET_URL: string;
     NODE_ENV?: string;
+    WEB_APP_URL?: string;
     PROMETHEUS_ENDPOINT?: string;
     LOKI_ENDPOINT?: string;
     TELEMETRY_AUTH_USERNAME?: string;

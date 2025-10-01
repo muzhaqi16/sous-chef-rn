@@ -1,12 +1,13 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo } from 'react';
 import { RefreshControl, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
 import { EmptyState } from '../molecules/EmptyState';
 import { ItemCard } from './ItemCard';
 import { IconName } from '#/utils/iconUtils';
-import { useTabBarVisibility } from '#/context/TabBarVisibilityContext';
-import { TAB_BAR_HEIGHT } from '../navigation/AnimatedTabBar';
+
+// Tab bar height constant (65px from FloatingTabBar)
+const TAB_BAR_HEIGHT = 65;
 interface Item {
   id: string;
   title: string;
@@ -45,8 +46,6 @@ export const ItemList: React.FC<ItemListProps> = ({
   emptyState,
 }) => {
   const [refreshing, setRefreshing] = useState(false);
-  const { updateScrollVisibility } = useTabBarVisibility();
-  const lastScrollY = useRef(0);
   const { bottom: safeBottom } = useSafeAreaInsets();
 
   // Dynamic content style with proper bottom padding for tab bar
@@ -56,12 +55,6 @@ export const ItemList: React.FC<ItemListProps> = ({
     }),
     [safeBottom],
   );
-
-  const handleScroll = (event: any) => {
-    const currentY = event.nativeEvent.contentOffset.y;
-    updateScrollVisibility(currentY, lastScrollY.current);
-    lastScrollY.current = currentY;
-  };
 
   const handleRefresh = async () => {
     if (onRefresh) {
@@ -79,8 +72,6 @@ export const ItemList: React.FC<ItemListProps> = ({
     <ScrollView
       style={styles.container}
       contentContainerStyle={contentStyle}
-      onScroll={handleScroll}
-      scrollEventThrottle={16}
       refreshControl={
         onRefresh ? (
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />

@@ -23,10 +23,6 @@ export interface UIState {
   bottomSheetVisible: boolean;
   bottomSheetIndex: number;
 
-  // Tab bar visibility state
-  tabBarHiddenReasons: string[];
-  isTabBarVisible: boolean;
-
   // Form states
   activeFormId: string | null;
   formData: Record<string, any>;
@@ -56,10 +52,6 @@ export interface UIState {
   setBottomSheetVisible: (visible: boolean) => void;
   setBottomSheetIndex: (index: number) => void;
 
-  // Tab bar visibility actions
-  hideTabBar: (reason: string) => void;
-  showTabBar: (reason: string) => void;
-
   setActiveForm: (formId: string | null, data?: any) => void;
   updateFormData: (formId: string, data: any) => void;
   clearFormData: (formId: string) => void;
@@ -85,8 +77,6 @@ const initialUIState = {
   },
   bottomSheetVisible: false,
   bottomSheetIndex: 0,
-  tabBarHiddenReasons: [],
-  isTabBarVisible: true,
   activeFormId: null,
   formData: {},
   globalSearchQuery: '',
@@ -150,32 +140,6 @@ export const createUISlice: StateCreator<
     });
   },
 
-  hideTabBar: reason => {
-    set(state => {
-      // Defensive initialization - ensure tabBarHiddenReasons is always an array
-      if (!Array.isArray(state.tabBarHiddenReasons)) {
-        state.tabBarHiddenReasons = [];
-      }
-
-      if (!state.tabBarHiddenReasons.includes(reason)) {
-        state.tabBarHiddenReasons.push(reason);
-      }
-      state.isTabBarVisible = state.tabBarHiddenReasons.length === 0;
-    });
-  },
-
-  showTabBar: reason => {
-    set(state => {
-      // Defensive initialization - ensure tabBarHiddenReasons is always an array
-      if (!Array.isArray(state.tabBarHiddenReasons)) {
-        state.tabBarHiddenReasons = [];
-      }
-
-      state.tabBarHiddenReasons = state.tabBarHiddenReasons.filter(r => r !== reason);
-      state.isTabBarVisible = state.tabBarHiddenReasons.length === 0;
-    });
-  },
-
   setActiveForm: (formId, data = {}) => {
     set(state => {
       state.activeFormId = formId;
@@ -228,10 +192,7 @@ export const createUISlice: StateCreator<
 
   resetUI: () => {
     set(state => {
-      Object.assign(state, {
-        ...initialUIState,
-        tabBarHiddenReasons: [],
-      });
+      Object.assign(state, initialUIState);
     });
   },
 });

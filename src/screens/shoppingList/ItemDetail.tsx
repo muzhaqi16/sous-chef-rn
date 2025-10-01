@@ -1,11 +1,10 @@
-import React, {useEffect} from 'react';
+import React from 'react';
 import {View, Text, ScrollView, TouchableOpacity, Image} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
 import {useGetShoppingListItemQuery} from '#generated';
 import {useAppNavigation} from '#hooks';
 import {Icon} from '#utils';
 import {Header} from '#components/molecules/Header';
-import {useTabBarVisibility} from '#/context/TabBarVisibilityContext';
 
 type RouteParams = {
   listId: string;
@@ -17,7 +16,6 @@ export const ShoppingListItemDetail: React.FC<{
 }> = ({route}) => {
   const {navigate, goBack} = useAppNavigation();
   const {listId, itemId} = route.params;
-  const {hideTabBar, showTabBar} = useTabBarVisibility();
 
   const {data, loading} = useGetShoppingListItemQuery({
     variables: {id: itemId},
@@ -25,18 +23,6 @@ export const ShoppingListItemDetail: React.FC<{
   });
 
   const item = data?.shoppingListItem;
-
-  // Hide tab bar when component mounts
-  useEffect(() => {
-    hideTabBar('navigation');
-    hideTabBar('scroll');
-
-    // Show tab bar when component unmounts
-    return () => {
-      showTabBar('navigation');
-      showTabBar('scroll');
-    };
-  }, [hideTabBar, showTabBar]);
 
   const handleEdit = () => {
     navigate('EditItem', {listId, itemId});

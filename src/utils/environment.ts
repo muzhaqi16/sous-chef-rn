@@ -6,6 +6,14 @@ const getConfigValue = (key: string, fallback: any = undefined) => {
   return (Config as any)[key] ?? fallback;
 };
 
+/**
+ * Get web app URL for external links (privacy policy, terms, etc.)
+ */
+export const getWebAppUrl = (path: string = ''): string => {
+  const baseUrl = getConfigValue('WEB_APP_URL', 'https://souschef.dev');
+  return `${baseUrl}${path}`;
+};
+
 export interface EnvironmentConfig {
   isDevelopment: boolean;
   isProduction: boolean;

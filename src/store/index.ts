@@ -135,8 +135,6 @@ export const useStore = create<RootState>()(
           /* eslint-disable @typescript-eslint/no-unused-vars */
           const {
             // Exclude UI state that should not persist (intentionally unused)
-            isTabBarVisible,
-            tabBarHiddenReasons,
             bottomSheetVisible,
             bottomSheetIndex,
             globalLoading,

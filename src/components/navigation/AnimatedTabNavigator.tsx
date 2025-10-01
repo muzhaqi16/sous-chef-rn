@@ -5,7 +5,6 @@ import {
   BottomTabNavigationOptions,
 } from '@react-navigation/bottom-tabs';
 import { StyleSheet } from 'react-native-unistyles';
-import { TabBarVisibilityProvider } from '#/context/TabBarVisibilityContext';
 import { ScannerProvider } from '#/context/ScannerContext';
 import { FloatingTabBar } from './FloatingTabBar';
 
@@ -30,30 +29,28 @@ export function createAnimatedTabNavigator<
     initialRouteName,
   }) => {
     return (
-      <TabBarVisibilityProvider>
-        <ScannerProvider>
-          <View style={styles.container}>
-            <Tab.Navigator
-            initialRouteName={initialRouteName}
-            screenOptions={typeof screenOptions === 'function'
-              ? (props) => ({
-                  headerShown: false,
-                  tabBarHideOnKeyboard: true,
-                  ...screenOptions(props),
-                })
-              : {
-                  headerShown: false,
-                  tabBarHideOnKeyboard: true,
-                  ...screenOptions,
-                }
-            }
-            tabBar={props => <FloatingTabBar {...props} />}
-          >
-            {children}
-            </Tab.Navigator>
-          </View>
-        </ScannerProvider>
-      </TabBarVisibilityProvider>
+      <ScannerProvider>
+        <View style={styles.container}>
+          <Tab.Navigator
+          initialRouteName={initialRouteName}
+          screenOptions={typeof screenOptions === 'function'
+            ? (props) => ({
+                headerShown: false,
+                tabBarHideOnKeyboard: true,
+                ...screenOptions(props),
+              })
+            : {
+                headerShown: false,
+                tabBarHideOnKeyboard: true,
+                ...screenOptions,
+              }
+          }
+          tabBar={props => <FloatingTabBar {...props} />}
+        >
+          {children}
+          </Tab.Navigator>
+        </View>
+      </ScannerProvider>
     );
   };
 

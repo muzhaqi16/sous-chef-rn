@@ -1,8 +1,9 @@
 import React from 'react';
-import {View, Image, Text, TouchableOpacity} from 'react-native';
+import {View, Image, Text, TouchableOpacity, Linking} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
 import {AuthWrapper, Button} from '#components';
 import {useSafeNavigation} from '#hooks';
+import {getWebAppUrl} from '#utils/environment';
 
 export function LandingAuthScreen() {
   const {navigation} = useSafeNavigation();
@@ -39,7 +40,12 @@ export function LandingAuthScreen() {
           />
         </View>
 
-        <TouchableOpacity onPress={() => navigation.navigate('Terms')}>
+        <TouchableOpacity
+          onPress={() => {
+            Linking.openURL(getWebAppUrl('/privacy-policy')).catch(err =>
+              console.error('Failed to open URL:', err),
+            );
+          }}>
           <Text style={styles.footerText}>
             By continuing, you agree to our{'\n'}
             <Text style={styles.link}>Terms & Conditions</Text> and{' '}

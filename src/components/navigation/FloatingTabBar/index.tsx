@@ -1,23 +1,19 @@
 import React, { useEffect } from 'react';
-import { TouchableOpacity } from 'react-native';
+import { TouchableOpacity, View } from 'react-native';
 import { useWindowDimensions } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  withTiming,
-} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTabBarVisibility } from '#context/TabBarVisibilityContext';
 import { useScanner } from '#context/ScannerContext';
 import type { FloatingTabBarProps } from './types';
 import { AddButton } from './AddButton';
+
+export const TAB_BAR_HEIGHT = 65;
 
 export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
   state,
   descriptors,
   navigation,
 }) => {
-  const { isVisible } = useTabBarVisibility();
   const { onScanPress, showScannerButton, setActiveTab } = useScanner();
   const { bottom: safeBottom } = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
@@ -31,30 +27,14 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
     setActiveTab(activeRoute.name);
   }, [state.index, state.routes, setActiveTab]);
 
-  // Hide/show animation for tab bar
-  const animatedStyle = useAnimatedStyle(() => {
-    const translateY = isVisible.value ? 0 : 100 + safeBottom;
-
-    return {
-      transform: [
-        {
-          translateY: withTiming(translateY, {
-            duration: 300,
-          }),
-        },
-      ],
-    };
-  }, [safeBottom]);
-
   return (
-    <Animated.View
+    <View
       style={[
         {
           width: tabBarWidth,
           bottom: safeBottom,
         },
         styles.container,
-        animatedStyle,
       ]}
     >
       {/* Render tabs - following reference pattern */}
@@ -100,7 +80,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
       {showScannerButton && onScanPress && (
         <AddButton onPress={onScanPress} />
       )}
-    </Animated.View>
+    </View>
   );
 };
 

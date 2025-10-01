@@ -32,10 +32,6 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
     },
     ref
   ) => {
-    // Store methods for tab bar hiding
-    const hideTabBar = useStore(state => state.hideTabBar);
-    const showTabBar = useStore(state => state.showTabBar);
-
     const {
       translateY,
       active,
@@ -49,33 +45,6 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
       onClose,
       onOpen,
     });
-
-    // Watch active state changes with pure JavaScript polling
-    useEffect(() => {
-      let lastActive = active.value;
-
-      const checkActiveState = () => {
-        const currentActive = active.value;
-        if (currentActive !== lastActive) {
-          if (currentActive) {
-            // Action tray is opening - hide tab bar
-            hideTabBar('bottomSheet');
-          } else {
-            // Action tray is closing - show tab bar
-            showTabBar('bottomSheet');
-          }
-          lastActive = currentActive;
-        }
-      };
-
-      // Check immediately for initial state
-      checkActiveState();
-
-      // Set up polling to detect changes
-      const interval = setInterval(checkActiveState, 16); // ~60fps
-
-      return () => clearInterval(interval);
-    }, [active, hideTabBar, showTabBar]);
 
     useImperativeHandle(
       ref,

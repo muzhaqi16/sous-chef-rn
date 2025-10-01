@@ -1,14 +1,11 @@
 import React from 'react';
-import { TouchableOpacity } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  withSpring,
-} from 'react-native-reanimated';
+import { TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon, IconName, IconLibrary } from '#utils/iconUtils';
-import { useTabBarVisibility } from '#/context/TabBarVisibilityContext';
-import { TAB_BAR_HEIGHT } from '../navigation/AnimatedTabBar';
+
+// Tab bar height constant (65px from FloatingTabBar)
+const TAB_BAR_HEIGHT = 65;
 
 interface FABProps {
   onPress?: () => void;
@@ -23,7 +20,6 @@ export const FAB: React.FC<FABProps> = ({
   library = 'MaterialIcons',
   position = { bottom: 20, right: 20 },
 }) => {
-  const { isVisible } = useTabBarVisibility();
   const { bottom: safeBottom } = useSafeAreaInsets();
 
   // Calculate position above tab bar
@@ -32,26 +28,12 @@ export const FAB: React.FC<FABProps> = ({
     bottom: TAB_BAR_HEIGHT + safeBottom + (position.bottom || 20),
   }), [position, safeBottom]);
 
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [
-        {
-          scale: withSpring(isVisible.value ? 1 : 0, {
-            damping: 15,
-            stiffness: 150,
-            overshootClamping: true,
-          }),
-        },
-      ],
-    };
-  }, []);
-
   return (
-    <Animated.View style={[styles.fab, fabPosition, animatedStyle]}>
+    <View style={[styles.fab, fabPosition]}>
       <TouchableOpacity style={styles.fabButton} onPress={onPress}>
         <Icon name={icon} size={24} color="white" library={library} />
       </TouchableOpacity>
-    </Animated.View>
+    </View>
   );
 };
 
