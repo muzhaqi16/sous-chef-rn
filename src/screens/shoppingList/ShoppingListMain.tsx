@@ -1,4 +1,10 @@
-import React, { useMemo, useEffect, useCallback, useRef } from 'react';
+import React, {
+  useMemo,
+  useEffect,
+  useCallback,
+  useRef,
+  useState,
+} from 'react';
 import { TouchableOpacity, Alert, Image, View } from 'react-native';
 import { useAppNavigation } from '#hooks';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -9,7 +15,6 @@ import {
 } from '#generated';
 import { useScanner } from '#context';
 import {
-  ListTemplate,
   SearchBarAction,
   AnimatedItemSelector,
   SortableShoppingList,
@@ -41,6 +46,7 @@ export const ShoppingListMain: React.FC = () => {
   const { setScannerProps } = useScanner();
   const [deleteItem] = useRemoveItemFromShoppingListMutation();
   const [reorderItems] = useReorderShoppingListItemsMutation();
+  const [refreshing, setRefreshing] = useState(false);
 
   const { data, refetch } = useGetShoppingListsQuery({
     fetchPolicy: 'cache-and-network',
@@ -128,53 +134,6 @@ export const ShoppingListMain: React.FC = () => {
     [lists, currentListId, setSelectedShoppingListId, navigate],
   );
 
-  // Transform shopping list items for display - simple like pantry
-  const listItems = useMemo(() => {
-    // Use isPurchased field as primary source of truth
-    const unpurchasedItems = items.filter((item: any) => !item.isPurchased);
-    const purchasedItems = items.filter((item: any) => item.isPurchased);
-
-    // Sort each group by sortOrder (ascending - lowest sortOrder first)
-    const sortBySortOrder = (a: any, b: any) => {
-      // Handle missing sortOrder values defensively
-      const aOrder = a.sortOrder ?? 999999; // Default high value for items without sortOrder
-      const bOrder = b.sortOrder ?? 999999; // Default high value for items without sortOrder
-      return aOrder - bOrder;
-    };
-
-    const sortedUnpurchasedItems = unpurchasedItems.sort(sortBySortOrder);
-    const sortedPurchasedItems = purchasedItems.sort(sortBySortOrder);
-
-    // Combine unpurchased first, then purchased
-    const sortedItems = [...sortedUnpurchasedItems, ...sortedPurchasedItems];
-
-    return sortedItems.map((item: any) => ({
-      id: item.id,
-      title: item.itemName,
-      subtitle: `${item.quantity} ${item.unitName || ''}`.trim(),
-      badge: item.isPurchased
-        ? { text: 'Purchased', variant: 'success' }
-        : undefined,
-      rightElement: (
-        <TouchableOpacity
-          style={[styles.checkbox, item.isPurchased && styles.checkboxChecked]}
-          onPress={() => toggleItem(item.id)}
-        >
-          {item.isPurchased && <Icon name="check" size={16} color="white" />}
-        </TouchableOpacity>
-      ),
-      // show image on the left if available
-      leftElement: item.item?.imageUrl ? (
-        <View style={styles.imageContainer}>
-          <Image
-            source={{ uri: item.item.imageUrl }}
-            style={styles.leftImage}
-          />
-        </View>
-      ) : null,
-    }));
-  }, [items, toggleItem]);
-
   // Transform shopping list items for SortableShoppingList
   const sortableItems = useMemo((): SortableShoppingListItem[] => {
     // Use isPurchased field as primary source of truth
@@ -202,7 +161,7 @@ export const ShoppingListMain: React.FC = () => {
       sortOrder: item.sortOrder ?? 0,
       isPurchased: item.isPurchased,
       badge: item.isPurchased
-        ? { text: 'Purchased', variant: 'success' }
+        ? { text: 'Purchased', variant: 'success' as const }
         : undefined,
       rightElement: (
         <TouchableOpacity
@@ -301,7 +260,8 @@ export const ShoppingListMain: React.FC = () => {
   // Search bar actions - conditionally show "Add" button when searching with no results
 
   const searchBarActions = useMemo(() => {
-    const hasSearchWithNoResults = searchQuery.trim() && listItems.length === 0;
+    const hasSearchWithNoResults =
+      searchQuery.trim() && sortableItems.length === 0;
     const rightActions: SearchBarAction[] = [
       {
         icon: 'list',
@@ -334,13 +294,19 @@ export const ShoppingListMain: React.FC = () => {
     handleAddItem,
     handleAddItemFromSearch,
     searchQuery,
-    listItems.length,
+    sortableItems.length,
     primaryColor, // ← Include extracted variable in deps
     primaryLightColor, // ← Include extracted variable in deps
   ]);
-  const handleRefresh = async () => {
-    await Promise.all([refetch()]);
-  };
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetch]);
 
   const handleScanPress = useCallback(() => {
     navigateTo.barcode({
@@ -362,18 +328,18 @@ export const ShoppingListMain: React.FC = () => {
   // If no lists exist at all
   if (lists.length === 0) {
     return (
-      <ListTemplate
-        showHeader={true}
-        emptyState={{
-          icon: 'add-shopping-cart',
-          title: 'No shopping lists',
-          description: 'Create a shopping list to get started',
-          action: {
+      <View style={styles.container}>
+        <UserHeader />
+        <EmptyState
+          icon="add-shopping-cart"
+          title="No shopping lists"
+          description="Create a shopping list to get started"
+          action={{
             label: 'Create List',
             onPress: () => navigate('ListSettings'),
-          },
-        }}
-      />
+          }}
+        />
+      </View>
     );
   }
 
@@ -394,24 +360,7 @@ export const ShoppingListMain: React.FC = () => {
       />
 
       {/* Conditional content based on search state */}
-      {searchQuery.trim() ? (
-        // Show search results using ListTemplate without search bar and user header
-        <ListTemplate
-          title={currentList?.name || 'Shopping List'}
-          subtitle="Shopping List"
-          items={listItems}
-          onItemPress={id =>
-            navigate('EditItem', { listId: currentListId, itemId: id })
-          }
-          onItemEdit={id =>
-            navigate('EditItem', { listId: currentListId, itemId: id })
-          }
-          onItemDelete={handleDeleteItem}
-          onRefresh={handleRefresh}
-          showSearchBar={false} // Don't show search bar since we have one above
-          showUserHeader={false} // Don't show user header since we have one above
-        />
-      ) : listItems.length === 0 ? (
+      {sortableItems.length === 0 ? (
         // Show empty state
         <EmptyState
           icon="add-shopping-cart"
@@ -423,19 +372,24 @@ export const ShoppingListMain: React.FC = () => {
           }}
         />
       ) : (
-        // Show sortable list with drag-and-drop
+        // Show sortable list with drag-and-drop and swipeable actions
         <SortableShoppingList
           items={sortableItems}
           onItemPress={id =>
-            navigate('EditItem', { listId: currentListId, itemId: id })
+            navigate('ItemDetail', { listId: currentListId, itemId: id })
           }
           onItemEdit={id =>
             navigate('EditItem', { listId: currentListId, itemId: id })
           }
           onItemDelete={handleDeleteItem}
-          onSortOrderUpdate={handleSortOrderUpdate}
+          onSortOrderUpdate={
+            searchQuery.trim() ? undefined : handleSortOrderUpdate
+          }
+          onRefresh={handleRefresh}
+          refreshing={refreshing}
           groupByPurchased={true}
           showsVerticalScrollIndicator={true}
+          disabled={!!searchQuery.trim()} // Disable sorting when searching
         />
       )}
 
@@ -451,7 +405,6 @@ export const ShoppingListMain: React.FC = () => {
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
   },
   checkbox: {
     width: 24,

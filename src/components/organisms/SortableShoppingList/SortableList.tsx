@@ -1,9 +1,17 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { FlatList, View } from 'react-native';
+import { View, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { SortableShoppingListProps } from './types';
+import { StyleSheet } from 'react-native-unistyles';
+import DraggableFlatList, {
+  RenderItemParams,
+  ScaleDecorator,
+} from 'react-native-draggable-flatlist';
+import type {
+  SortableShoppingListProps,
+  SortOrderUpdate,
+  SortableShoppingListItem,
+} from './types';
 import { SimpleDraggableItem } from './SortableItem';
-import { useTabBarVisibility } from '#/context/TabBarVisibilityContext';
 
 export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
   items,
@@ -11,155 +19,87 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
   onItemEdit,
   onItemDelete,
   onSortOrderUpdate,
-  itemHeight = 100,
+  onRefresh,
+  refreshing = false,
   disabled = false,
-  groupByPurchased = false,
   ...flatListProps
 }) => {
-  // Track drag state only
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-  const [draggedItems, setDraggedItems] = useState<typeof items | null>(null);
-
-  // Tab bar visibility integration
-  const { updateScrollVisibility } = useTabBarVisibility();
-  const lastScrollY = useRef(0);
+  // Track local order for optimistic updates
+  const [localItems, setLocalItems] = useState(items);
+  // Track drag state to disable refresh
+  const [isDragging, setIsDragging] = useState(false);
+  // Track if we're currently updating the sort order
+  const isUpdatingRef = useRef(false);
 
   // Safe area insets for bottom padding
   const insets = useSafeAreaInsets();
 
-  // Handle drag start
-  const handleDragStart = useCallback(
-    (index: number) => {
-      if (disabled) return;
-      setDraggedIndex(index);
-      // Create a copy of items for drag operations
-      setDraggedItems([...items]);
-    },
-    [disabled, items],
-  );
+  // Update local items when props change, but not during our own updates
+  React.useEffect(() => {
+    if (!isUpdatingRef.current) {
+      setLocalItems(items);
+    }
+  }, [items]);
 
-  // Handle drag end with reordering
+  // Handle drag end - called when user releases item
   const handleDragEnd = useCallback(
-    async (fromIndex: number, toIndex: number) => {
-      if (disabled || fromIndex === toIndex || !draggedItems) {
-        setDraggedIndex(null);
-        setDraggedItems(null);
+    async (data: SortableShoppingListItem[]) => {
+      setIsDragging(false);
+
+      if (disabled || !onSortOrderUpdate) {
+        setLocalItems(data);
         return;
       }
 
-      // Create new ordered array from dragged items
-      const newItems = [...draggedItems];
-      const [movedItem] = newItems.splice(fromIndex, 1);
-      newItems.splice(toIndex, 0, movedItem);
+      // Update local state optimistically
+      setLocalItems(data);
+      isUpdatingRef.current = true;
 
-      // Apply group constraints if grouping is enabled
-      let finalItems = newItems;
-      if (groupByPurchased) {
-        // Separate purchased and unpurchased items
-        const unpurchased = finalItems.filter(item => !item.isPurchased);
-        const purchased = finalItems.filter(item => item.isPurchased);
+      try {
+        // Generate sort order updates
+        const updates: SortOrderUpdate[] = data.map((item, index) => ({
+          id: item.id,
+          sortOrder: index * 10,
+        }));
 
-        // Check if we're trying to move across groups
-        const originalItem = draggedItems[fromIndex];
-        const targetIsPurchasedSection = toIndex >= unpurchased.length;
-
-        if (originalItem.isPurchased !== targetIsPurchasedSection) {
-          // Revert - don't allow cross-group moves
-          setDraggedIndex(null);
-          setDraggedItems(null);
-          return;
-        }
-
-        // Maintain group separation
-        finalItems = [...unpurchased, ...purchased];
-      }
-
-      // Update drag state with new order for immediate visual feedback
-      setDraggedItems(finalItems);
-      setDraggedIndex(null);
-
-      // Calculate sort order updates for API
-      if (onSortOrderUpdate) {
-        try {
-          const updates = finalItems.map((item, index) => ({
-            id: item.id,
-            sortOrder: index * 10, // Simple sequential ordering
-          }));
-
-          await onSortOrderUpdate(updates);
-          // Clear drag state after successful API call
-          setDraggedItems(null);
-        } catch (error) {
-          console.error('Failed to update sort order:', error);
-          // Clear drag state on error - Apollo will maintain correct state
-          setDraggedItems(null);
-        }
-      } else {
-        // No API call needed, just clear drag state
-        setDraggedItems(null);
+        await onSortOrderUpdate(updates);
+      } catch (error) {
+        console.error('Failed to update sort order:', error);
+        // Revert to original order on error
+        setLocalItems(items);
+      } finally {
+        isUpdatingRef.current = false;
       }
     },
-    [draggedItems, disabled, groupByPurchased, onSortOrderUpdate],
+    [disabled, onSortOrderUpdate, items],
   );
 
-  // Handle hover during drag (for visual feedback)
-  const handleDragHover = useCallback((_index: number) => {
-    // Could add visual feedback here if needed
+  const handleDragBegin = useCallback(() => {
+    setIsDragging(true);
   }, []);
 
-  // Handle scroll for tab bar visibility
-  const handleScroll = useCallback(
-    (event: any) => {
-      const currentY = event.nativeEvent.contentOffset.y;
-      updateScrollVisibility(currentY, lastScrollY.current);
-      lastScrollY.current = currentY;
-    },
-    [updateScrollVisibility],
-  );
-
+  // Render item with ScaleDecorator for drag feedback
   const renderItem = useCallback(
-    ({ item, index }: { item: any; index: number }) => {
-      if (!item || !item.id) {
-        console.warn('SimpleDraggableList: invalid item at index', index, item);
-        return null;
-      }
-
+    ({ item, drag, isActive }: RenderItemParams<SortableShoppingListItem>) => {
       return (
-        <SimpleDraggableItem
-          key={item.id}
-          item={item}
-          index={index}
-          itemHeight={itemHeight}
-          onItemPress={onItemPress}
-          onItemEdit={onItemEdit}
-          onItemDelete={onItemDelete}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-          onDragHover={handleDragHover}
-          isDragged={draggedIndex === index}
-          disabled={disabled}
-        />
+        <ScaleDecorator>
+          <SimpleDraggableItem
+            item={item}
+            onItemPress={onItemPress}
+            onItemEdit={onItemEdit}
+            onItemDelete={onItemDelete}
+            drag={disabled ? undefined : drag}
+            isActive={isActive}
+          />
+        </ScaleDecorator>
       );
     },
-    [
-      itemHeight,
-      onItemPress,
-      onItemEdit,
-      onItemDelete,
-      handleDragStart,
-      handleDragEnd,
-      handleDragHover,
-      draggedIndex,
-      disabled,
-    ],
+    [onItemPress, onItemEdit, onItemDelete, disabled],
   );
-
-  // Use dragged items during drag operation, otherwise use props
-  const displayItems = draggedItems || items;
 
   // Early validation
   if (!items || !Array.isArray(items)) {
-    console.warn('SimpleDraggableList: items is not a valid array', items);
+    console.warn('SortableList: items is not a valid array', items);
     return null;
   }
 
@@ -168,30 +108,33 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
   }
 
   return (
-    <View style={{ flex: 1 }}>
-      <FlatList
-        {...flatListProps}
-        data={displayItems}
+    <View style={styles.container}>
+      <DraggableFlatList
+        data={localItems}
         renderItem={renderItem}
         keyExtractor={item => item.id}
-        getItemLayout={(_data, index) => ({
-          length: itemHeight,
-          offset: itemHeight * index,
-          index,
-        })}
-        scrollEnabled={draggedIndex === null} // Disable scroll during drag
+        onDragBegin={handleDragBegin}
+        onDragEnd={({ data }) => handleDragEnd(data)}
         showsVerticalScrollIndicator={
           flatListProps.showsVerticalScrollIndicator ?? true
         }
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
-        contentContainerStyle={[
-          {
-            paddingBottom: Math.max(insets.bottom, 16) + 80, // Safe area + tab bar + extra space
-          },
-          flatListProps.contentContainerStyle,
-        ]}
+        refreshControl={
+          onRefresh && !isDragging ? (
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          ) : undefined
+        }
+        contentContainerStyle={{
+          paddingBottom: Math.max(insets.bottom, 16) + 80,
+        }}
+        activationDistance={disabled ? 999999 : 20}
       />
     </View>
   );
 };
+
+const styles = StyleSheet.create(theme => ({
+  container: {
+    flex: 1,
+    paddingHorizontal: theme.spacing.sm,
+  },
+}));

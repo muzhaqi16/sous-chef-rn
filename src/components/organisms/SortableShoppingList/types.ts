@@ -1,8 +1,10 @@
 import type { ReactNode } from 'react';
-import type { FlatListProps } from 'react-native';
+import type { ScrollViewProps } from 'react-native';
+
+// Positions type for drag-and-drop animation
+export type Positions = Record<number, number>;
 
 // Legacy types (kept for utils compatibility)
-export type Positions = Record<number, number>;
 export interface GroupBoundary {
   startIndex: number;
   endIndex: number;
@@ -26,13 +28,15 @@ export interface SortableShoppingListItem {
 }
 
 // Props for the main sortable list component
-export interface SortableShoppingListProps extends Omit<FlatListProps<SortableShoppingListItem>, 'data' | 'renderItem' | 'keyExtractor'> {
+export interface SortableShoppingListProps extends Omit<ScrollViewProps, 'data' | 'renderItem' | 'keyExtractor'> {
   items: SortableShoppingListItem[];
   onItemPress: (id: string) => void;
   onItemEdit?: (id: string) => void;
   onItemDelete?: (id: string) => void;
   onDragEnd?: (reorderedItems: SortableShoppingListItem[]) => void;
   onSortOrderUpdate?: (updates: SortOrderUpdate[]) => Promise<void>;
+  onRefresh?: () => void;
+  refreshing?: boolean;
   itemHeight?: number;
   disabled?: boolean;
   groupByPurchased?: boolean;

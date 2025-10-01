@@ -1,18 +1,18 @@
 import React from 'react';
-import {View, Text, TouchableOpacity, Image} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
-import {useProfileData, useAppNavigation} from '#/hooks';
-import {Icon} from '#utils';
-import {ApiStatusIndicator} from '../atoms/ApiStatusIndicator';
+import { View, Text, TouchableOpacity, Image } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { useProfileData, useAppNavigation } from '#/hooks';
+import { Icon } from '#utils';
+import { ApiStatusIndicator } from '../atoms/ApiStatusIndicator';
 
 export const UserHeader: React.FC = () => {
-  const {navigateTo} = useAppNavigation();
-  const {profile} = useProfileData();
+  const { navigateTo } = useAppNavigation();
+  const { profile } = useProfileData();
   return (
     <View style={styles.header}>
       <Text style={styles.headerTitle}>
         Hello{' '}
-        <Text style={{fontWeight: 'bold'}}>
+        <Text style={{ fontWeight: 'bold' }}>
           {profile?.displayName
             ? profile.displayName.split(' ')[0]
             : profile?.firstName || 'User'}
@@ -24,12 +24,13 @@ export const UserHeader: React.FC = () => {
         <TouchableOpacity
           onPress={() => {
             navigateTo.notificationList();
-          }}>
+          }}
+        >
           <View style={styles.avatar}>
             {profile?.avatar ? (
               <Image
                 alt=""
-                source={{uri: profile.avatar}}
+                source={{ uri: profile.avatar }}
                 style={styles.avatarImg}
               />
             ) : (

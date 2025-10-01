@@ -4,6 +4,7 @@ import {
   ListSettings,
   ShareList,
   AddEditItem,
+  ShoppingListItemDetail,
 } from '#screens/shoppingList';
 
 export type ShoppingListStackParamList = {
@@ -12,6 +13,7 @@ export type ShoppingListStackParamList = {
   ShareList: {listId: string};
   AddItem: {listId: string};
   EditItem: {listId: string; itemId: string};
+  ItemDetail: {listId: string; itemId: string};
 };
 
 const Stack = createNativeStackNavigator<ShoppingListStackParamList>();
@@ -23,5 +25,6 @@ export const ShoppingListStack = () => (
     <Stack.Screen name="ShareList" component={ShareList} />
     <Stack.Screen name="AddItem" component={AddEditItem} />
     <Stack.Screen name="EditItem" component={AddEditItem} />
+    <Stack.Screen name="ItemDetail" component={ShoppingListItemDetail} />
   </Stack.Navigator>
 );
