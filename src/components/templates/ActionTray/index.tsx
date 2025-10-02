@@ -130,6 +130,8 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
 
 ActionTray.displayName = 'ActionTray';
 
+export type { ActionTrayRef, ActionTrayProps } from './types';
+
 const styles = UnistylesStyleSheet.create(theme => ({
   container: {
     backgroundColor: theme.colors.background,

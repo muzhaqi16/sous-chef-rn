@@ -271,7 +271,8 @@ export const PantryMain: React.FC = () => {
         {
           icon: 'add',
           onPress: handleAddItem,
-          color: '#fff',
+          color: theme.colors.primary,
+          backgroundColor: '#fff',
         },
         {
           icon: 'list',
@@ -280,7 +281,7 @@ export const PantryMain: React.FC = () => {
         },
       ] as SearchBarAction[],
     }),
-    [handleAddItem],
+    [handleAddItem, theme.colors.primary],
   );
 
   if (!selectedHomeId) {

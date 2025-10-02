@@ -23,6 +23,7 @@ import {
   ResetPasswordScreen,
 } from '#screens/auth';
 import { AcceptInvite } from '#screens/shoppingList/AcceptInvite';
+import { DeleteAccountScreen } from '#screens/profile';
 import { linkingConfig } from './linking';
 import { ImageFile } from '#components/molecules/ImagePicker';
 import {
@@ -45,6 +46,7 @@ export type RootStackParamList = {
   EmailVerification: { token: string };
   ResetPassword: { token: string };
   AcceptInvitation: { token: string };
+  DeleteAccount: undefined;
   NotFound: undefined;
 };
 
@@ -172,6 +174,7 @@ function RootNavigator() {
                 component={ProfilePhotoUploadScreen}
               />
               <Stack.Screen name="ImageCrop" component={ImageCropScreen} />
+              <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
             </>
           )}
 

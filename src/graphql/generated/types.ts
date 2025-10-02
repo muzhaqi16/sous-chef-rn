@@ -6713,6 +6713,13 @@ export type UpdateUserPreferencesMutation = {
   };
 };
 
+export type DeleteAccountMutationVariables = Exact<{ [key: string]: never }>;
+
+export type DeleteAccountMutation = {
+  __typename?: 'Mutation';
+  deleteAccount: boolean;
+};
+
 export type UserUpdatedSubscriptionVariables = Exact<{
   userId?: InputMaybe<Scalars['ID']['input']>;
 }>;

@@ -40,10 +40,12 @@ export const PantrySettings: React.FC<{
   const [isDefault, setIsDefault] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const { data: pantryData } = useGetPantryQuery({
+  const { data: pantryData, loading: loadingPantry } = useGetPantryQuery({
     variables: { id: pantryId ?? '' },
     skip: !pantryId,
     fetchPolicy: 'cache-and-network',
+    notifyOnNetworkStatusChange: true,
+    errorPolicy: 'all',
   });
 
   const pantry = pantryData?.pantry;
@@ -174,17 +176,28 @@ export const PantrySettings: React.FC<{
   });
 
   useEffect(() => {
+    console.log('🔧 PantrySettings useEffect:', {
+      pantryId,
+      hasPantryData: !!pantry,
+      pantryName: pantry?.name,
+      loading: loadingPantry
+    });
+
     if (pantry && pantryId) {
+      console.log('✅ Populating form with pantry data:', pantry.name);
       setName(pantry.name);
       setDescription(pantry.description || '');
       setIsDefault(pantry.isDefault);
     } else if (!pantryId) {
       // Set default values for new pantry
+      console.log('🆕 Setting defaults for new pantry');
       setName('');
       setDescription('');
       setIsDefault(false);
+    } else {
+      console.log('⏳ Waiting for pantry data...');
     }
-  }, [pantry, pantryId]);
+  }, [pantry, pantryId, loadingPantry]);
 
   const handleSave = async () => {
     if (!name.trim()) {

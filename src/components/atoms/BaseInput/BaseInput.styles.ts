@@ -34,10 +34,6 @@ export default StyleSheet.create((theme, _rt) => ({
         : theme.colors.border,
     borderRadius: theme.radii.md,
     backgroundColor: theme.colors.inputBackground,
-    paddingHorizontal: {
-      xs: theme.spacing.sm,
-      md: theme.spacing.md,
-    },
     minHeight: {
       xs: 44,
       sm: 48,
@@ -60,11 +56,15 @@ export default StyleSheet.create((theme, _rt) => ({
     color: theme.colors.textPrimary,
     backgroundColor: 'transparent',
     borderWidth: 0,
-    padding: 0,
-    // Responsive line height
+    paddingHorizontal: {
+      xs: theme.spacing.sm,
+      md: theme.spacing.md,
+    },
+    paddingVertical: 0,
+    // Natural line height for text/cursor
     lineHeight: {
-      xs: theme.fonts.size.sm * 1.6,
-      md: theme.fonts.size.md * 1.6,
+      xs: theme.fonts.size.sm * 1.5,
+      md: theme.fonts.size.md * 1.5,
     },
   },
 

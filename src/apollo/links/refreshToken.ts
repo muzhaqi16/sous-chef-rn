@@ -157,13 +157,7 @@ const performTokenRefresh = async (): Promise<string | null> => {
 
 export const attemptTokenRefresh = (operation: any, forward: any): Observable<any> => {
   return new Observable(observer => {
-    // Check if we can attempt refresh
-    if (!canAttemptRefresh()) {
-      observer.error(new Error('Token refresh not allowed: rate limited or max retries exceeded'));
-      return;
-    }
-
-    // If already refreshing, join the existing promise
+    // If already refreshing, join the existing promise (don't throttle these)
     if (refreshState.isRefreshing && refreshState.refreshPromise) {
       refreshQueue.push((token: string | null) => {
         if (token) {
@@ -175,6 +169,12 @@ export const attemptTokenRefresh = (operation: any, forward: any): Observable<an
           observer.error(new Error('Token refresh failed'));
         }
       });
+      return;
+    }
+
+    // Check if we can attempt a NEW refresh
+    if (!canAttemptRefresh()) {
+      observer.error(new Error('Token refresh not allowed: rate limited or max retries exceeded'));
       return;
     }
 

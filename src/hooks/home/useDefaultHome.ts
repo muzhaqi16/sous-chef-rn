@@ -36,20 +36,14 @@ export const useDefaultHome = () => {
 
 
   // Retry mechanism: retry when we can attempt queries but no homes data
+  // Note: Auth errors (token expiry) are automatically retried by errorLink after token refresh
+  // This handles other types of errors (network issues, etc.)
   useEffect(() => {
     if (canAttemptQueries && !homes?.homes && !loading && error) {
-      console.log('🔄 Retrying homes query after error...');
+      console.log('🔄 Retrying homes query after non-auth error...');
       refetch();
     }
   }, [canAttemptQueries, homes?.homes, loading, error, refetch]);
-
-  // Additional retry when user becomes available after token refresh
-  useEffect(() => {
-    if (user && accessToken && !homes?.homes && !loading) {
-      console.log('🔄 Refetching homes after token refresh...');
-      refetch();
-    }
-  }, [user, accessToken, homes?.homes, loading, refetch]);
 
   // NOTE: All sync logic has been moved to useHomeManagement to prevent infinite loops
   // This hook is now read-only and provides computed state only

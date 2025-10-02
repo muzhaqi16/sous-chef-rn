@@ -153,6 +153,10 @@ export const commonStyles = StyleSheet.create(theme => ({
       xs: theme.spacing.xs,
       md: theme.spacing.md,
     },
+    paddingBottom: {
+      xs: theme.spacing.xs,
+      md: theme.spacing.md,
+    },
     paddingHorizontal: {
       xs: theme.spacing.sm,
       md: theme.spacing.md,

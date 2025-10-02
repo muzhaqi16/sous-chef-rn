@@ -14,10 +14,8 @@ import { useNotifications } from '#hooks';
 import {
   NotificationItem as NotificationType,
   NotificationCategory,
-  NotificationPriority,
 } from '#store/slices/notificationSlice';
 import { NotificationStackParamList } from '#navigation/stacks/NotificationStack';
-import { useStore } from '#store';
 import { Header } from '#components/molecules/Header';
 import { NotificationActionHandler } from '#components/notifications/NotificationActionHandler';
 import {
@@ -130,23 +128,6 @@ export const NotificationListScreen: React.FC<{
     [handleMarkAsRead, navigate, navigateTo],
   );
 
-  // Test notification creation
-  const addNotification = useStore(state => state.addNotification);
-  const handleTestNotification = () => {
-    const testNotification = {
-      id: `test-${Date.now()}`,
-      type: 'HomeJoined' as any,
-      category: NotificationCategory.MEMBERSHIP,
-      priority: NotificationPriority.HIGH,
-      title: 'Test Notification',
-      message: 'This is a test notification to verify the system is working',
-      payload: { test: true },
-      sentAt: new Date().toISOString(),
-    };
-    console.log('Creating test notification:', testNotification);
-    addNotification(testNotification);
-  };
-
   // Prepare sections for SectionList using utility
   const sections = createSectionListData(filteredGroups);
 
@@ -158,10 +139,6 @@ export const NotificationListScreen: React.FC<{
       centerTitle={true}
       onBack={goBack}
       rightActions={[
-        {
-          icon: 'bug-report',
-          onPress: handleTestNotification,
-        },
         {
           icon: 'settings',
           onPress: () => navigate('NotificationSettings'),

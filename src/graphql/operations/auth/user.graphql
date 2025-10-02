@@ -137,6 +137,10 @@ mutation UpdateUserPreferences($input: UpdateUserSettingsInput!) {
   }
 }
 
+mutation DeleteAccount {
+  deleteAccount
+}
+
 # ============================================
 # SUBSCRIPTIONS
 # ============================================

@@ -4,10 +4,12 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useProfileData, useAppNavigation } from '#/hooks';
 import { Icon } from '#utils';
 import { ApiStatusIndicator } from '../atoms/ApiStatusIndicator';
+import { useStore } from '#store';
 
 export const UserHeader: React.FC = () => {
   const { navigateTo } = useAppNavigation();
   const { profile } = useProfileData();
+  const unreadCount = useStore(state => state.unreadCount);
   return (
     <View style={styles.header}>
       <Text style={styles.headerTitle}>
@@ -44,7 +46,7 @@ export const UserHeader: React.FC = () => {
               </View>
             )}
 
-            <View style={styles.avatarNotification} />
+            {unreadCount > 0 && <View style={styles.avatarNotification} />}
           </View>
         </TouchableOpacity>
       </View>

@@ -61,6 +61,7 @@ export const linkingConfig: LinkingOptions<RootStackParamList> = {
       },
       ProfilePhotoUpload: 'upload-photo',
       ImageCrop: 'crop-image',
+      DeleteAccount: 'delete-account',
       EmailVerification: 'verify-email/:token',
       ResetPassword: 'reset-password/:token',
       AcceptInvitation: 'accept-invitation/:token',

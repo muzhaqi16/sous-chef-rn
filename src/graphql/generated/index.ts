@@ -6561,6 +6561,13 @@ export type UpdateUserPreferencesMutation = {
   };
 };
 
+export type DeleteAccountMutationVariables = Exact<{ [key: string]: never }>;
+
+export type DeleteAccountMutation = {
+  __typename?: 'Mutation';
+  deleteAccount: boolean;
+};
+
 export type UserUpdatedSubscriptionVariables = Exact<{
   userId?: InputMaybe<Scalars['ID']['input']>;
 }>;
@@ -16761,6 +16768,65 @@ export type UpdateUserPreferencesMutationOptions =
   ApolloReactCommon.BaseMutationOptions<
     UpdateUserPreferencesMutation,
     UpdateUserPreferencesMutationVariables
+  >;
+export const DeleteAccountDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'DeleteAccount' },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'deleteAccount' } },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type DeleteAccountMutationFn = ApolloReactCommon.MutationFunction<
+  DeleteAccountMutation,
+  DeleteAccountMutationVariables
+>;
+
+/**
+ * __useDeleteAccountMutation__
+ *
+ * To run a mutation, you first call `useDeleteAccountMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteAccountMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteAccountMutation, { data, loading, error }] = useDeleteAccountMutation({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useDeleteAccountMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    DeleteAccountMutation,
+    DeleteAccountMutationVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useMutation<
+    DeleteAccountMutation,
+    DeleteAccountMutationVariables
+  >(DeleteAccountDocument, options);
+}
+export type DeleteAccountMutationHookResult = ReturnType<
+  typeof useDeleteAccountMutation
+>;
+export type DeleteAccountMutationResult =
+  ApolloReactCommon.MutationResult<DeleteAccountMutation>;
+export type DeleteAccountMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    DeleteAccountMutation,
+    DeleteAccountMutationVariables
   >;
 export const UserUpdatedDocument = {
   kind: 'Document',
