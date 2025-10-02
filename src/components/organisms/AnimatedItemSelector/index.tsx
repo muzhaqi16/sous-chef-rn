@@ -10,7 +10,7 @@ import type {
 export const AnimatedItemSelector = forwardRef<
   ItemSelectorRef,
   AnimatedItemSelectorProps<any>
->(({ config, onClose, maxHeight, enableGestures = true }, ref) => {
+>(({ config, onClose, onOpen, maxHeight, enableGestures = true }, ref) => {
   const trayRef = useRef<ActionTrayRef>(null);
 
   useImperativeHandle(
@@ -29,6 +29,7 @@ export const AnimatedItemSelector = forwardRef<
       ref={trayRef}
       title={config.title}
       onClose={onClose}
+      onOpen={onOpen}
       maxHeight={maxHeight}
       enableGestures={enableGestures}
       showCloseButton={true}

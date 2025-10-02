@@ -56,7 +56,7 @@ export const SimpleDraggableItem: React.FC<SimpleDraggableItemProps> = ({
         onPress={() => onItemPress(item.id)}
         onEdit={onItemEdit ? () => onItemEdit(item.id) : undefined}
         onDelete={onItemDelete ? () => onItemDelete(item.id) : undefined}
-        friction={2}
+        friction={1}
       >
         <ListItem
           title={item.title}

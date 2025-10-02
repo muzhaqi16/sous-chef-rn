@@ -36,6 +36,7 @@ export interface AnimatedItemSelectorProps<T extends SelectableItem> {
   config: SelectorConfig<T>;
   isVisible?: boolean;
   onClose?: () => void;
+  onOpen?: () => void;
   maxHeight?: number;
   enableGestures?: boolean;
 }

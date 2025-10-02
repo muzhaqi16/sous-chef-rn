@@ -13,7 +13,6 @@ export const useActionTray = ({
 
   const scrollTo = useCallback((destination: number) => {
     'worklet';
-    const wasActive = active.value;
     active.value = destination !== maxHeight;
 
     translateY.value = withSpring(destination, {
@@ -21,30 +20,27 @@ export const useActionTray = ({
       damping: 15,
       stiffness: 150,
     });
-
-    // Tab bar visibility is now handled in ActionTray component
-
-    // Handle user callbacks
-    if (!wasActive && active.value && onOpen) {
-      scheduleOnRN(onOpen);
-    } else if (wasActive && !active.value && onClose) {
-      scheduleOnRN(onClose);
-    }
-  }, [maxHeight, onClose, onOpen, active, translateY]);
+  }, [maxHeight]);
 
   const open = useCallback(() => {
     'worklet';
+    if (onOpen) {
+      scheduleOnRN(onOpen);
+    }
     scrollTo(0);
-  }, [scrollTo]);
+  }, [scrollTo, onOpen]);
 
   const close = useCallback(() => {
     'worklet';
+    if (onClose) {
+      scheduleOnRN(onClose);
+    }
     scrollTo(maxHeight);
-  }, [maxHeight, scrollTo]);
+  }, [maxHeight, scrollTo, onClose]);
 
   const isActive = useCallback(() => {
     return active.value;
-  }, [active]);
+  }, []);
 
   const toggle = useCallback(() => {
     'worklet';

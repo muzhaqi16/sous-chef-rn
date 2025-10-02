@@ -14,7 +14,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
   descriptors,
   navigation,
 }) => {
-  const { onScanPress, showScannerButton, setActiveTab } = useScanner();
+  const { onScanPress, showScannerButton, setActiveTab, isOverlayOpen } = useScanner();
   const { bottom: safeBottom } = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
 
@@ -26,6 +26,24 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
     const activeRoute = state.routes[state.index];
     setActiveTab(activeRoute.name);
   }, [state.index, state.routes, setActiveTab]);
+
+  // Hide tab bar when overlay is open
+  if (isOverlayOpen) {
+    return null;
+  }
+
+  // Check if the focused route has tabBarStyle: { display: 'none' }
+  const focusedRoute = state.routes[state.index];
+  const focusedOptions = descriptors[focusedRoute.key]?.options;
+  const shouldHideFromNavigation =
+    focusedOptions?.tabBarStyle &&
+    typeof focusedOptions.tabBarStyle === 'object' &&
+    'display' in focusedOptions.tabBarStyle &&
+    focusedOptions.tabBarStyle.display === 'none';
+
+  if (shouldHideFromNavigation) {
+    return null;
+  }
 
   return (
     <View

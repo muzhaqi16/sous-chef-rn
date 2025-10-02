@@ -1,5 +1,6 @@
 import React from 'react';
 import {useUnistyles} from 'react-native-unistyles';
+import {getFocusedRouteNameFromRoute} from '@react-navigation/native';
 import {Icon} from '#/utils';
 import {PantryStack} from './PantryStack';
 import {ShoppingListStack} from './ShoppingListStack';
@@ -49,12 +50,24 @@ export const HomeTabs = () => {
     <Screen
       name="Pantry"
       component={PantryStack}
-      options={{title: 'Pantry'}}
+      options={({route}) => {
+        const routeName = getFocusedRouteNameFromRoute(route) ?? 'PantryMain';
+        return {
+          title: 'Pantry',
+          tabBarStyle: routeName !== 'PantryMain' ? {display: 'none'} : undefined,
+        };
+      }}
     />
     <Screen
       name="ShoppingList"
       component={ShoppingListStack}
-      options={{title: 'Shopping List'}}
+      options={({route}) => {
+        const routeName = getFocusedRouteNameFromRoute(route) ?? 'ShoppingListMain';
+        return {
+          title: 'Shopping List',
+          tabBarStyle: routeName !== 'ShoppingListMain' ? {display: 'none'} : undefined,
+        };
+      }}
     />
     <Screen
       name="Profile"

@@ -76,11 +76,7 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
           .onEnd(event => {
             if (event.translationY > 100) {
               // Close the tray when user swipes down enough
-              if (onClose) {
-                scheduleOnRN(onClose);
-              } else {
-                close();
-              }
+              close();
             } else {
               // Restore to previous position if swipe is insufficient
               scrollTo(context.value.y);
@@ -104,19 +100,11 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
     }, [MAX_TRANSLATE_Y]);
 
     const handleBackdropTap = () => {
-      if (onClose) {
-        onClose();
-      } else {
-        close();
-      }
+      close();
     };
 
     const handleClose = () => {
-      if (onClose) {
-        onClose();
-      } else {
-        close();
-      }
+      close();
     };
 
     return (

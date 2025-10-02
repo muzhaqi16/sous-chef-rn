@@ -43,7 +43,7 @@ export const ShoppingListMain: React.FC = () => {
   // Step 2: Use the extracted variables INSIDE useMemo
   const { selectedShoppingListId, setSelectedShoppingListId } = useStore();
   const selectorRef = useRef<ItemSelectorRef>(null);
-  const { setScannerProps } = useScanner();
+  const { setScannerProps, setOverlayOpen } = useScanner();
   const [deleteItem] = useRemoveItemFromShoppingListMutation();
   const [reorderItems] = useReorderShoppingListItemsMutation();
   const [refreshing, setRefreshing] = useState(false);
@@ -308,6 +308,14 @@ export const ShoppingListMain: React.FC = () => {
     }
   }, [refetch]);
 
+  const handleOverlayOpen = useCallback(() => {
+    setOverlayOpen(true);
+  }, [setOverlayOpen]);
+
+  const handleOverlayClose = useCallback(() => {
+    setOverlayOpen(false);
+  }, [setOverlayOpen]);
+
   const handleScanPress = useCallback(() => {
     navigateTo.barcode({
       source: 'shoppingList',
@@ -397,6 +405,8 @@ export const ShoppingListMain: React.FC = () => {
         ref={selectorRef}
         config={listConfig}
         maxHeight={600}
+        onOpen={handleOverlayOpen}
+        onClose={handleOverlayClose}
       />
     </View>
   );

@@ -20,7 +20,7 @@ import type {
 export const PantryMain: React.FC = () => {
   const { navigate, navigateTo } = useAppNavigation();
   const { theme } = useUnistyles();
-  const { setScannerProps } = useScanner();
+  const { setScannerProps, setOverlayOpen } = useScanner();
 
   const setSelectedPantryId = useStore(state => state.setSelectedPantryId);
   const selectedPantryId = useStore(state => state.selectedPantryId);
@@ -215,6 +215,14 @@ export const PantryMain: React.FC = () => {
     await Promise.all([refetch(), refetchHome()]);
   };
 
+  const handleOverlayOpen = useCallback(() => {
+    setOverlayOpen(true);
+  }, [setOverlayOpen]);
+
+  const handleOverlayClose = useCallback(() => {
+    setOverlayOpen(false);
+  }, [setOverlayOpen]);
+
   // Header actions
   const headerActions = useMemo(
     () => ({
@@ -352,6 +360,8 @@ export const PantryMain: React.FC = () => {
         ref={selectorRef}
         config={pantryConfig}
         maxHeight={600}
+        onOpen={handleOverlayOpen}
+        onClose={handleOverlayClose}
       />
     </View>
   );
