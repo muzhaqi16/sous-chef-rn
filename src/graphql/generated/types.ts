@@ -2012,6 +2012,8 @@ export type Mutation = {
   categorizeItem: ItemCategory;
   cleanupDeletedDevices: Scalars['Int']['output'];
   cleanupStaleDevices: Scalars['Int']['output'];
+  /** Mark user onboarding as complete and send welcome email */
+  completeOnboarding: Scalars['Boolean']['output'];
   completeReview: UserModeration;
   confirmItemImageUpload: Scalars['String']['output'];
   confirmProfileImageUpload: Scalars['String']['output'];
@@ -6718,6 +6720,15 @@ export type DeleteAccountMutationVariables = Exact<{ [key: string]: never }>;
 export type DeleteAccountMutation = {
   __typename?: 'Mutation';
   deleteAccount: boolean;
+};
+
+export type CompleteOnboardingMutationVariables = Exact<{
+  [key: string]: never;
+}>;
+
+export type CompleteOnboardingMutation = {
+  __typename?: 'Mutation';
+  completeOnboarding: boolean;
 };
 
 export type UserUpdatedSubscriptionVariables = Exact<{

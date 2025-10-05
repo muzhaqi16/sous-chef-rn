@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, TouchableOpacity } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
 import { SwipeableItem } from '#/components/molecules/SwipeableItem';
 import { ListItem } from '#/components/molecules/ListItem';
 
@@ -71,12 +72,21 @@ export const SimpleDraggableItem: React.FC<SimpleDraggableItemProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create(theme => ({
   container: {
     opacity: 1,
+    marginBottom: 12, // Space for shadow and card separation
   },
   activeContainer: {
-    opacity: 0.7,
+    opacity: 0.98,
+    shadowColor: theme.colors.primary,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   rightContainer: {
     flexDirection: 'row',
@@ -97,4 +107,4 @@ const styles = StyleSheet.create({
     backgroundColor: '#999',
     borderRadius: 1,
   },
-});
+}));

@@ -18,6 +18,10 @@ export const sizes = {
     md: 24,
     lg: 32,
   },
+  listImage: {
+    width: 60,
+    height: 60,
+  },
   // Layout sizes
   container: {
     xs: 320,

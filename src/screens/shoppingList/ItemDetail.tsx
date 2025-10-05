@@ -1,10 +1,10 @@
 import React from 'react';
-import {View, Text, ScrollView, TouchableOpacity, Image} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
-import {useGetShoppingListItemQuery} from '#generated';
-import {useAppNavigation} from '#hooks';
-import {Icon} from '#utils';
-import {Header} from '#components/molecules/Header';
+import { View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { useGetShoppingListItemQuery } from '#generated';
+import { useAppNavigation } from '#hooks';
+import { Icon } from '#utils';
+import { Header } from '#components/molecules/Header';
 
 type RouteParams = {
   listId: string;
@@ -12,20 +12,20 @@ type RouteParams = {
 };
 
 export const ShoppingListItemDetail: React.FC<{
-  route: {params: RouteParams};
-}> = ({route}) => {
-  const {navigate, goBack} = useAppNavigation();
-  const {listId, itemId} = route.params;
+  route: { params: RouteParams };
+}> = ({ route }) => {
+  const { navigate, goBack } = useAppNavigation();
+  const { listId, itemId } = route.params;
 
-  const {data, loading} = useGetShoppingListItemQuery({
-    variables: {id: itemId},
+  const { data, loading } = useGetShoppingListItemQuery({
+    variables: { id: itemId },
     fetchPolicy: 'cache-and-network',
   });
 
   const item = data?.shoppingListItem;
 
   const handleEdit = () => {
-    navigate('EditItem', {listId, itemId});
+    navigate('EditItem', { listId, itemId });
   };
 
   if (loading && !item) {
@@ -73,6 +73,27 @@ export const ShoppingListItemDetail: React.FC<{
     return `$${price.toFixed(2)}`;
   };
 
+  // Helper function to check if value exists
+  const hasValue = (value: any): boolean => {
+    return value !== undefined && value !== null;
+  };
+
+  // Check if any price information exists
+  const hasPriceInfo =
+    hasValue(item.estimatedPrice) ||
+    hasValue(item.lastKnownPrice) ||
+    hasValue(item.lowestPrice) ||
+    hasValue(item.highestPrice) ||
+    hasValue(item.purchasedPrice);
+
+  // Check if any purchase history exists
+  const hasPurchaseHistory =
+    hasValue(item.purchaseDate) ||
+    hasValue(item.lastPurchaseDate) ||
+    hasValue(item.purchaseCount) ||
+    hasValue(item.purchasedBy) ||
+    hasValue(item.purchasedQuantity);
+
   return (
     <View style={styles.container}>
       <Header
@@ -91,7 +112,7 @@ export const ShoppingListItemDetail: React.FC<{
         <View style={styles.headerSection}>
           {item.item?.imageUrl ? (
             <Image
-              source={{uri: item.item.imageUrl}}
+              source={{ uri: item.item.imageUrl }}
               style={styles.itemImage}
             />
           ) : (
@@ -100,20 +121,20 @@ export const ShoppingListItemDetail: React.FC<{
             </View>
           )}
           <Text style={styles.itemName}>{item.itemName}</Text>
-          {(item.quantity || item.unitName) && (
+          {item.quantity || item.unitName ? (
             <Text style={styles.itemDescription}>
               {`${item.quantity || ''} ${item.unitName || ''}`.trim()}
             </Text>
-          )}
+          ) : null}
         </View>
 
         {/* Status Badge */}
-        {item.isPurchased && (
+        {item.isPurchased ? (
           <View style={styles.statusBadge}>
             <Icon name="check-circle" size={20} color="#4CAF50" />
             <Text style={styles.statusBadgeText}>Purchased</Text>
           </View>
-        )}
+        ) : null}
 
         {/* Basic Information */}
         <View style={styles.section}>
@@ -122,130 +143,122 @@ export const ShoppingListItemDetail: React.FC<{
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Quantity</Text>
             <Text style={styles.infoValue}>
-              {`${item.quantity || ''} ${item.unitName || ''}`.trim()}
+              {`${item.quantity || ''} ${item.unitName || ''}`.trim() || 'N/A'}
             </Text>
           </View>
 
-          {item.category && (
+          {item.category ? (
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Category</Text>
               <Text style={styles.infoValue}>{item.category}</Text>
             </View>
-          )}
+          ) : null}
 
-          {item.priority && (
+          {item.priority ? (
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Priority</Text>
               <Text style={styles.infoValue}>{item.priority}</Text>
             </View>
-          )}
+          ) : null}
 
-          {item.notes && (
+          {item.notes ? (
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Notes</Text>
               <Text style={styles.infoValue}>{item.notes}</Text>
             </View>
-          )}
+          ) : null}
 
-          {item.aisle && (
+          {item.aisle ? (
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Aisle</Text>
               <Text style={styles.infoValue}>{item.aisle}</Text>
             </View>
-          )}
+          ) : null}
         </View>
 
         {/* Price Information */}
-        {(item.estimatedPrice !== undefined && item.estimatedPrice !== null ||
-          item.lastKnownPrice !== undefined && item.lastKnownPrice !== null ||
-          item.lowestPrice !== undefined && item.lowestPrice !== null ||
-          item.highestPrice !== undefined && item.highestPrice !== null ||
-          item.purchasedPrice !== undefined && item.purchasedPrice !== null) && (
+        {hasPriceInfo ? (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Pricing</Text>
 
-            {item.estimatedPrice && (
+            {hasValue(item.estimatedPrice) ? (
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Estimated Price</Text>
                 <Text style={styles.infoValue}>
                   {formatPrice(item.estimatedPrice)}
                 </Text>
               </View>
-            )}
+            ) : null}
 
-            {item.lastKnownPrice && (
+            {hasValue(item.lastKnownPrice) ? (
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Last Known Price</Text>
                 <Text style={styles.infoValue}>
                   {formatPrice(item.lastKnownPrice)}
                 </Text>
               </View>
-            )}
+            ) : null}
 
-            {item.lowestPrice && (
+            {hasValue(item.lowestPrice) ? (
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Lowest Price</Text>
                 <Text style={styles.infoValue}>
                   {formatPrice(item.lowestPrice)}
                 </Text>
               </View>
-            )}
+            ) : null}
 
-            {item.highestPrice && (
+            {hasValue(item.highestPrice) ? (
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Highest Price</Text>
                 <Text style={styles.infoValue}>
                   {formatPrice(item.highestPrice)}
                 </Text>
               </View>
-            )}
+            ) : null}
 
-            {item.purchasedPrice && (
+            {hasValue(item.purchasedPrice) ? (
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Purchased Price</Text>
                 <Text style={styles.infoPriceValue}>
                   {formatPrice(item.purchasedPrice)}
                 </Text>
               </View>
-            )}
+            ) : null}
           </View>
-        )}
+        ) : null}
 
         {/* Purchase History */}
-        {(item.purchaseDate !== undefined && item.purchaseDate !== null ||
-          item.lastPurchaseDate !== undefined && item.lastPurchaseDate !== null ||
-          item.purchaseCount !== undefined && item.purchaseCount !== null ||
-          item.purchasedBy !== undefined && item.purchasedBy !== null ||
-          item.purchasedQuantity !== undefined && item.purchasedQuantity !== null) && (
+        {hasPurchaseHistory ? (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Purchase History</Text>
 
-            {item.purchaseDate && (
+            {item.purchaseDate ? (
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Last Purchase Date</Text>
                 <Text style={styles.infoValue}>
                   {formatDate(item.purchaseDate)}
                 </Text>
               </View>
-            )}
+            ) : null}
 
-            {item.lastPurchaseDate && (
+            {item.lastPurchaseDate ? (
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Previous Purchase</Text>
                 <Text style={styles.infoValue}>
                   {formatDate(item.lastPurchaseDate)}
                 </Text>
               </View>
-            )}
+            ) : null}
 
-            {(item.purchaseCount !== undefined && item.purchaseCount !== null) && (
+            {hasValue(item.purchaseCount) ? (
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Times Purchased</Text>
                 <Text style={styles.infoValue}>{item.purchaseCount}</Text>
               </View>
-            )}
+            ) : null}
 
-            {item.purchasedBy && (
+            {item.purchasedBy ? (
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Purchased By</Text>
                 <Text style={styles.infoValue}>
@@ -253,61 +266,61 @@ export const ShoppingListItemDetail: React.FC<{
                     item.purchasedBy.email}
                 </Text>
               </View>
-            )}
+            ) : null}
 
-            {item.purchasedQuantity && (
+            {hasValue(item.purchasedQuantity) ? (
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Purchased Quantity</Text>
                 <Text style={styles.infoValue}>
-                  {`${item.purchasedQuantity || ''} ${item.unitName || ''}`.trim()}
+                  {`${item.purchasedQuantity || ''} ${
+                    item.unitName || ''
+                  }`.trim()}
                 </Text>
               </View>
-            )}
+            ) : null}
           </View>
-        )}
+        ) : null}
 
         {/* Additional Information */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Additional Details</Text>
 
-          {item.addedBy && (
+          {item.addedBy ? (
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Added By</Text>
               <Text style={styles.infoValue}>
                 {item.addedBy.profile?.displayName || item.addedBy.email}
               </Text>
             </View>
-          )}
+          ) : null}
 
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Added On</Text>
             <Text style={styles.infoValue}>{formatDate(item.createdAt)}</Text>
           </View>
 
-          {item.updatedAt !== item.createdAt && (
+          {item.updatedAt !== item.createdAt ? (
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Last Updated</Text>
-              <Text style={styles.infoValue}>
-                {formatDate(item.updatedAt)}
-              </Text>
+              <Text style={styles.infoValue}>{formatDate(item.updatedAt)}</Text>
             </View>
-          )}
+          ) : null}
 
-          {item.isAutoAdded && (
+          {item.isAutoAdded ? (
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Auto-Added</Text>
               <Text style={styles.infoValue}>
                 {item.autoAddReason || 'Yes'}
               </Text>
             </View>
-          )}
+          ) : null}
 
-          {item.isFromMealPlan && (
+          {item.isFromMealPlan ? (
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>From Meal Plan</Text>
               <Text style={styles.infoValue}>Yes</Text>
             </View>
-          )}
+          ) : null}
         </View>
 
         {/* Edit Button */}

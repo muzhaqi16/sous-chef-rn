@@ -230,10 +230,18 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
         };
       }
 
-      await addItem({ variables: { input } });
-      onSuccess?.();
+      const result = await addItem({ variables: { input } });
+
+      // Only call onSuccess if the mutation actually succeeded
+      if (result.data?.addItemToPantry) {
+        onSuccess?.();
+      } else {
+        // Mutation completed but returned no data (likely an error)
+        Alert.alert('Error', 'Failed to add pantry item. Please try again.');
+      }
     } catch (error) {
-      Alert.alert('Error', 'Failed to add pantry item');
+      console.error('Error adding pantry item:', error);
+      Alert.alert('Error', 'Failed to add pantry item. Please try again.');
     } finally {
       setSaving(false);
     }

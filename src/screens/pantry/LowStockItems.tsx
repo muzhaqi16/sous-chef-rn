@@ -11,7 +11,7 @@ import {
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { Icon } from '#utils';
-import { SwipeableItem } from '#components';
+import { SwipeableItem, ScreenHeader } from '#components';
 import { usePantryItems, useDefaultHome, useAppNavigation } from '#hooks';
 import { useGetHomeQuery, useAddItemToShoppingListMutation } from '#generated';
 import { commonStyles } from '#styles';
@@ -63,15 +63,10 @@ export const LowStockItems: React.FC = () => {
 
   return (
     <View style={commonStyles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => goBack()}>
-          <Icon name="arrow-back" size={24} color={theme.colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={[commonStyles.title, styles.headerTitle]}>
-          Low Stock Items
-        </Text>
-        <View style={styles.placeholder} />
-      </View>
+      <ScreenHeader
+        title="Low Stock Items"
+        onBack={goBack}
+      />
 
       <ScrollView
         style={styles.scrollView}
@@ -130,19 +125,6 @@ export const LowStockItems: React.FC = () => {
 };
 
 const styles = StyleSheet.create(theme => ({
-  header: {
-    ...commonStyles.rowSpaceBetween,
-    padding: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  headerTitle: {
-    flex: 1,
-    textAlign: 'center',
-  },
-  placeholder: {
-    width: 24,
-  },
   scrollView: {
     flex: 1,
   },

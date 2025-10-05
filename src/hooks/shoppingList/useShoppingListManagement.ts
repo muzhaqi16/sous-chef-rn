@@ -129,6 +129,13 @@ export function useShoppingListManagement(listId: string | undefined) {
       });
       Alert.alert('Error', message);
     },
+    refetchQueries: [
+      {
+        query: GetShoppingListItemsDocument,
+        variables: { shoppingListId: listId ?? '' },
+      },
+    ],
+    awaitRefetchQueries: false, // Don't wait for refetch to complete
   });
 
   const [markPurchasedMutation] = useMarkItemPurchasedMutation({

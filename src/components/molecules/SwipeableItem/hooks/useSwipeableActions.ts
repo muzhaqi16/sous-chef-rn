@@ -11,6 +11,7 @@ interface UseSwipeableActionsProps {
 export const useSwipeableActions = ({
   onEdit,
   onDelete,
+  animateDelete,
 }: UseSwipeableActionsProps) => {
   const swipeableRef = useRef<ComponentRef<typeof ReanimatedSwipeable>>(null);
 
@@ -20,6 +21,8 @@ export const useSwipeableActions = ({
     if (action === 'edit') {
       onEdit?.();
     } else if (action === 'delete') {
+      // Start fade animation and trigger delete in parallel
+      animateDelete();
       onDelete?.();
     }
   };

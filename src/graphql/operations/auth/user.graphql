@@ -141,6 +141,10 @@ mutation DeleteAccount {
   deleteAccount
 }
 
+mutation CompleteOnboarding {
+  completeOnboarding
+}
+
 # ============================================
 # SUBSCRIPTIONS
 # ============================================

@@ -1,4 +1,4 @@
-import {StyleSheet} from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 
 export default StyleSheet.create((theme, _rt) => ({
   container: {
@@ -30,8 +30,8 @@ export default StyleSheet.create((theme, _rt) => ({
     borderColor: hasError
       ? theme.colors.error
       : isFocused
-        ? theme.colors.primary
-        : theme.colors.border,
+      ? theme.colors.primary
+      : theme.colors.border,
     borderRadius: theme.radii.md,
     backgroundColor: theme.colors.inputBackground,
     minHeight: {
@@ -73,6 +73,7 @@ export default StyleSheet.create((theme, _rt) => ({
       xs: theme.spacing.sm,
       md: theme.spacing.md,
     },
+    paddingRight: theme.spacing.md,
     justifyContent: 'center',
     alignItems: 'center',
   },

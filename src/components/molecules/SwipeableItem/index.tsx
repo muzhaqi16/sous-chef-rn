@@ -1,5 +1,5 @@
 import React from 'react';
-import {GestureHandlerRootView} from 'react-native-gesture-handler';
+import {View} from 'react-native';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import Reanimated, {
   useAnimatedStyle,
@@ -26,8 +26,8 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({
 }) => {
   const dragX = useSharedValue(0);
 
-  const {itemOpacity, itemHeight, animateDelete} =
-    useSwipeableAnimation(onDelete);
+  const {itemOpacity, animateDelete} =
+    useSwipeableAnimation();
 
   const {swipeableRef, handleActionPress, handleSwipeableOpen} =
     useSwipeableActions({
@@ -40,7 +40,6 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({
   const animatedStyle = useAnimatedStyle(() => {
     return {
       opacity: itemOpacity.value,
-      height: itemHeight.value,
     };
   });
 
@@ -75,7 +74,7 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({
   };
 
   return (
-    <GestureHandlerRootView style={styles.gestureContainer}>
+    <View style={styles.gestureContainer}>
       <Reanimated.View style={[styles.container, animatedStyle]}>
         <ReanimatedSwipeable
           ref={swipeableRef}
@@ -92,6 +91,6 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({
           </SwipeableContent>
         </ReanimatedSwipeable>
       </Reanimated.View>
-    </GestureHandlerRootView>
+    </View>
   );
 };

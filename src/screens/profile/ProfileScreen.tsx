@@ -125,14 +125,14 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.background,
   },
   scrollContent: {
-    padding: 24,
+    padding: theme.spacing.lg,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: theme.spacing.md,
     paddingHorizontal: theme.spacing.lg,
-    borderRadius: theme.spacing.md,
+    borderRadius: theme.radii.md,
     borderWidth: 1,
     borderColor: theme.colors.error,
     backgroundColor: 'transparent',

@@ -29,3 +29,4 @@ export * from './ImagePicker';
 export * from './ProductImagePicker';
 export * from './UnitsAutocompleteInput';
 export * from './BrandAutocompleteInput';
+export * from './ScreenHeader';

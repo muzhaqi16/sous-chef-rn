@@ -1,4 +1,4 @@
-import React, { forwardRef, useImperativeHandle, useMemo, useEffect } from 'react';
+import React, { forwardRef, useImperativeHandle, useMemo } from 'react';
 import { Dimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -8,8 +8,6 @@ import Animated, {
   useSharedValue,
 } from 'react-native-reanimated';
 import { StyleSheet as UnistylesStyleSheet } from 'react-native-unistyles';
-import { scheduleOnRN } from 'react-native-worklets';
-import { useStore } from '#/store';
 import { Backdrop } from './Backdrop';
 import { ActionTrayContent } from './ActionTrayContent';
 import { useActionTray } from './hooks/useActionTray';
@@ -30,21 +28,14 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
       enableBackdrop = true,
       enableGestures = true,
     },
-    ref
+    ref,
   ) => {
-    const {
-      translateY,
-      active,
-      scrollTo,
-      open,
-      close,
-      isActive,
-      toggle,
-    } = useActionTray({
-      maxHeight,
-      onClose,
-      onOpen,
-    });
+    const { translateY, active, scrollTo, open, close, isActive, toggle } =
+      useActionTray({
+        maxHeight,
+        onClose,
+        onOpen,
+      });
 
     useImperativeHandle(
       ref,
@@ -54,7 +45,7 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
         isActive,
         toggle,
       }),
-      [open, close, isActive, toggle]
+      [open, close, isActive, toggle],
     );
 
     const context = useSharedValue({ y: 0 });
@@ -82,7 +73,7 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
               scrollTo(context.value.y);
             }
           }),
-      [enableGestures, translateY, context, close, onClose, scrollTo]
+      [enableGestures, translateY, context, close, scrollTo],
     );
 
     const trayStyle = useAnimatedStyle(() => {
@@ -90,7 +81,7 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
         translateY.value,
         [MAX_TRANSLATE_Y + 50, MAX_TRANSLATE_Y],
         [25, 10],
-        Extrapolation.CLAMP
+        Extrapolation.CLAMP,
       );
 
       return {
@@ -125,7 +116,7 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
         </GestureDetector>
       </>
     );
-  }
+  },
 );
 
 ActionTray.displayName = 'ActionTray';

@@ -1,9 +1,8 @@
-import {StyleSheet} from 'react-native-unistyles';
-import {commonStyles} from '#/styles/commonStyles';
+import { StyleSheet } from 'react-native-unistyles';
+import { commonStyles } from '#/styles/commonStyles';
 
 export const styles = StyleSheet.create(theme => ({
   gestureContainer: {
-    marginBottom: 12, // Space for shadow and card separation
     overflow: 'visible', // Allow shadow to show
   },
 

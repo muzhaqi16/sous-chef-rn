@@ -4,10 +4,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils';
 import type { AddButtonProps } from './types';
 
-export const AddButton: React.FC<AddButtonProps> = ({
-  onPress,
-  isActive = false,
-}) => {
+export const AddButton: React.FC<AddButtonProps> = ({ onPress }) => {
   return (
     <TouchableOpacity
       onPress={onPress}

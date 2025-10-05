@@ -2018,6 +2018,8 @@ export type Mutation = {
   categorizeItem: ItemCategory;
   cleanupDeletedDevices: Scalars['Int']['output'];
   cleanupStaleDevices: Scalars['Int']['output'];
+  /** Mark user onboarding as complete and send welcome email */
+  completeOnboarding: Scalars['Boolean']['output'];
   completeReview: UserModeration;
   confirmItemImageUpload: Scalars['String']['output'];
   confirmProfileImageUpload: Scalars['String']['output'];
@@ -6566,6 +6568,15 @@ export type DeleteAccountMutationVariables = Exact<{ [key: string]: never }>;
 export type DeleteAccountMutation = {
   __typename?: 'Mutation';
   deleteAccount: boolean;
+};
+
+export type CompleteOnboardingMutationVariables = Exact<{
+  [key: string]: never;
+}>;
+
+export type CompleteOnboardingMutation = {
+  __typename?: 'Mutation';
+  completeOnboarding: boolean;
 };
 
 export type UserUpdatedSubscriptionVariables = Exact<{
@@ -16827,6 +16838,68 @@ export type DeleteAccountMutationOptions =
   ApolloReactCommon.BaseMutationOptions<
     DeleteAccountMutation,
     DeleteAccountMutationVariables
+  >;
+export const CompleteOnboardingDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'CompleteOnboarding' },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'completeOnboarding' },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type CompleteOnboardingMutationFn = ApolloReactCommon.MutationFunction<
+  CompleteOnboardingMutation,
+  CompleteOnboardingMutationVariables
+>;
+
+/**
+ * __useCompleteOnboardingMutation__
+ *
+ * To run a mutation, you first call `useCompleteOnboardingMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCompleteOnboardingMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [completeOnboardingMutation, { data, loading, error }] = useCompleteOnboardingMutation({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useCompleteOnboardingMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    CompleteOnboardingMutation,
+    CompleteOnboardingMutationVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useMutation<
+    CompleteOnboardingMutation,
+    CompleteOnboardingMutationVariables
+  >(CompleteOnboardingDocument, options);
+}
+export type CompleteOnboardingMutationHookResult = ReturnType<
+  typeof useCompleteOnboardingMutation
+>;
+export type CompleteOnboardingMutationResult =
+  ApolloReactCommon.MutationResult<CompleteOnboardingMutation>;
+export type CompleteOnboardingMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    CompleteOnboardingMutation,
+    CompleteOnboardingMutationVariables
   >;
 export const UserUpdatedDocument = {
   kind: 'Document',

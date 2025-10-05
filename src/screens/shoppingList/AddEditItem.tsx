@@ -165,8 +165,9 @@ export const AddEditItem: React.FC<{
         ...(selectedUnitId && {unitId: selectedUnitId}), // Include unit ID if selected from autocomplete
       };
 
+      let result;
       if (isEdit) {
-        await updateItem({
+        result = await updateItem({
           variables: {
             id: itemId,
             input: {
@@ -179,7 +180,7 @@ export const AddEditItem: React.FC<{
           },
         });
       } else {
-        await addItem({
+        result = await addItem({
           variables: {
             input: {
               shoppingListId: listId,
@@ -192,10 +193,24 @@ export const AddEditItem: React.FC<{
           },
         });
       }
-      navigation.goBack();
+
+      // Only navigate back if mutation succeeded
+      if (result.data) {
+        const mutationData = isEdit
+          ? ('updateShoppingListItem' in result.data ? result.data.updateShoppingListItem : null)
+          : ('addItemToShoppingList' in result.data ? result.data.addItemToShoppingList : null);
+
+        if (mutationData) {
+          navigation.goBack();
+        } else {
+          Alert.alert('Error', `Failed to ${isEdit ? 'update' : 'add'} item. Please try again.`);
+        }
+      } else {
+        Alert.alert('Error', `Failed to ${isEdit ? 'update' : 'add'} item. Please try again.`);
+      }
     } catch (error) {
       console.error('Save error:', error);
-      Alert.alert('Error', `Failed to ${isEdit ? 'update' : 'add'} item`);
+      Alert.alert('Error', `Failed to ${isEdit ? 'update' : 'add'} item. Please try again.`);
     } finally {
       setSaving(false);
     }

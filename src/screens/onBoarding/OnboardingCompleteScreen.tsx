@@ -4,27 +4,27 @@ import {StyleSheet} from 'react-native-unistyles';
 import {OnBoardingWrapper} from '#components/templates';
 import {Button} from '#components';
 import {useStore} from '#store';
-import {useUpdateUserMutation} from '#generated';
+import {useCompleteOnboardingMutation} from '#generated';
 
 export const OnboardingCompleteScreen = () => {
   const {user, updateUser} = useStore();
   const [isCompleting, setIsCompleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [updateUserMutation] = useUpdateUserMutation({
-    onCompleted: data => {
-      // Update the user in the store with the response from the server
-      if (data?.updateUser) {
-        updateUser(data.updateUser);
+  const [completeOnboardingMutation] = useCompleteOnboardingMutation({
+    onCompleted: () => {
+      // Update the user in the store
+      if (user) {
+        updateUser({...user, onBoarded: true});
       }
 
       setIsCompleting(false);
 
-      // Navigate to main app - biometric setup is now complete
+      // Navigate to main app - onboarding is now complete
       // The RootNavigator will automatically navigate to main_app since user.onBoarded = true
     },
     onError: error => {
-      console.error('Failed to update user onboarding status:', error);
+      console.error('Failed to complete onboarding:', error);
       setError('Failed to complete onboarding. Please try again.');
       setIsCompleting(false);
     },
@@ -40,15 +40,7 @@ export const OnboardingCompleteScreen = () => {
     setError(null);
 
     try {
-      // Update user in database
-      await updateUserMutation({
-        variables: {
-          id: user.id,
-          input: {onBoarded: true},
-        },
-      });
-
-      // The rest is handled in the onCompleted callback
+      await completeOnboardingMutation();
     } catch (err) {
       console.error('Error in handleComplete:', err);
     }

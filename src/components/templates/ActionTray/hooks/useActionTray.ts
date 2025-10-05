@@ -11,16 +11,19 @@ export const useActionTray = ({
   const translateY = useSharedValue(maxHeight);
   const active = useSharedValue(false);
 
-  const scrollTo = useCallback((destination: number) => {
-    'worklet';
-    active.value = destination !== maxHeight;
+  const scrollTo = useCallback(
+    (destination: number) => {
+      'worklet';
+      active.value = destination !== maxHeight;
 
-    translateY.value = withSpring(destination, {
-      mass: 0.4,
-      damping: 15,
-      stiffness: 150,
-    });
-  }, [maxHeight]);
+      translateY.value = withSpring(destination, {
+        mass: 0.4,
+        damping: 15,
+        stiffness: 150,
+      });
+    },
+    [maxHeight, active, translateY],
+  );
 
   const open = useCallback(() => {
     'worklet';
@@ -40,7 +43,7 @@ export const useActionTray = ({
 
   const isActive = useCallback(() => {
     return active.value;
-  }, []);
+  }, [active]);
 
   const toggle = useCallback(() => {
     'worklet';

@@ -2221,6 +2221,10 @@ type Mutation {
   ): ItemCategory!
   cleanupDeletedDevices(olderThanDays: Int = 30): Int!
   cleanupStaleDevices(daysInactive: Int = 365, userId: ID!): Int!
+  """
+  Mark user onboarding as complete and send welcome email
+  """
+  completeOnboarding: Boolean!
   completeReview(
     newStatus: ModerationStatus!
     reviewNotes: String

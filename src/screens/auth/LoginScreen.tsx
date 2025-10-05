@@ -209,7 +209,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.md,
     paddingHorizontal: theme.spacing.lg,
     backgroundColor: theme.colors.surface,
-    borderRadius: theme.spacing.sm,
+    borderRadius: theme.radii.md,
     borderWidth: 1,
     borderColor: theme.colors.border,
     gap: theme.spacing.sm,

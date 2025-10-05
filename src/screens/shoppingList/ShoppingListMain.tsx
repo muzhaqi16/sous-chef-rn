@@ -10,7 +10,6 @@ import { useAppNavigation } from '#hooks';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
   useGetShoppingListsQuery,
-  useRemoveItemFromShoppingListMutation,
   useReorderShoppingListItemsMutation,
 } from '#generated';
 import { useScanner } from '#context';
@@ -44,7 +43,6 @@ export const ShoppingListMain: React.FC = () => {
   const { selectedShoppingListId, setSelectedShoppingListId } = useStore();
   const selectorRef = useRef<ItemSelectorRef>(null);
   const { setScannerProps, setOverlayOpen } = useScanner();
-  const [deleteItem] = useRemoveItemFromShoppingListMutation();
   const [reorderItems] = useReorderShoppingListItemsMutation();
   const [refreshing, setRefreshing] = useState(false);
 
@@ -79,7 +77,7 @@ export const ShoppingListMain: React.FC = () => {
   ]);
 
   // Use the shopping list hook for both data and mutations to ensure consistency
-  const { items, searchQuery, setSearchQuery, addItem, toggleItem } =
+  const { items, searchQuery, setSearchQuery, addItem, toggleItem, removeItem } =
     useShoppingListManagement(currentListId);
 
   // Create selector configuration for shopping lists
@@ -227,7 +225,7 @@ export const ShoppingListMain: React.FC = () => {
 
   const handleDeleteItem = async (itemId: string) => {
     try {
-      await deleteItem({ variables: { id: itemId } });
+      await removeItem(itemId);
     } catch (error) {
       Alert.alert('Error', 'Failed to delete item');
     }
@@ -447,10 +445,10 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: '500',
   },
   imageContainer: {
-    width: 60,
-    height: 60,
-    marginRight: 16,
-    borderRadius: 8,
+    width: theme.sizes.listImage.width,
+    height: theme.sizes.listImage.height,
+    marginRight: theme.spacing.md,
+    borderRadius: theme.radii.md,
     overflow: 'hidden',
     alignContent: 'center',
     justifyContent: 'center',
@@ -459,9 +457,9 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.primary,
   },
   leftImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
+    width: theme.sizes.listImage.width,
+    height: theme.sizes.listImage.height,
+    borderRadius: theme.radii.md,
     resizeMode: 'cover',
     elevation: 2,
     shadowColor: theme.colors.primary,
