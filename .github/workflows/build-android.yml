@@ -129,9 +129,31 @@ jobs:
           ENV_SUFFIX="${{ env.BUILD_ENV }}"
           TAG_NAME="${{ github.ref_name }}"
 
+          # Rename universal APK
           if [ -f "./android/app/build/outputs/apk/release/app-universal-release.apk" ]; then
             mv "./android/app/build/outputs/apk/release/app-universal-release.apk" \
-               "./android/app/build/outputs/apk/release/sous-chef-${ENV_SUFFIX}-${TAG_NAME}.apk"
+              "./android/app/build/outputs/apk/release/sous-chef-${ENV_SUFFIX}-${TAG_NAME}-universal.apk"
+          fi
+
+          # Rename architecture-specific APKs
+          if [ -f "./android/app/build/outputs/apk/release/app-armeabi-v7a-release.apk" ]; then
+            mv "./android/app/build/outputs/apk/release/app-armeabi-v7a-release.apk" \
+              "./android/app/build/outputs/apk/release/sous-chef-${ENV_SUFFIX}-${TAG_NAME}-armeabi-v7a.apk"
+          fi
+
+          if [ -f "./android/app/build/outputs/apk/release/app-arm64-v8a-release.apk" ]; then
+            mv "./android/app/build/outputs/apk/release/app-arm64-v8a-release.apk" \
+              "./android/app/build/outputs/apk/release/sous-chef-${ENV_SUFFIX}-${TAG_NAME}-arm64-v8a.apk"
+          fi
+
+          if [ -f "./android/app/build/outputs/apk/release/app-x86-release.apk" ]; then
+            mv "./android/app/build/outputs/apk/release/app-x86-release.apk" \
+              "./android/app/build/outputs/apk/release/sous-chef-${ENV_SUFFIX}-${TAG_NAME}-x86.apk"
+          fi
+
+          if [ -f "./android/app/build/outputs/apk/release/app-x86_64-release.apk" ]; then
+            mv "./android/app/build/outputs/apk/release/app-x86_64-release.apk" \
+              "./android/app/build/outputs/apk/release/sous-chef-${ENV_SUFFIX}-${TAG_NAME}-x86_64.apk"
           fi
 
       - name: Create Release and Upload Files
