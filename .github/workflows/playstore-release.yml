@@ -20,6 +20,11 @@ jobs:
       JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
       GRADLE_OPTS: -Xmx4096m -Dorg.gradle.daemon=false -Dorg.gradle.parallel=true
       NODE_OPTIONS: --max-old-space-size=4096
+      # ADD THESE HERE - MOVE FROM STEP LEVEL TO JOB LEVEL
+      MYAPP_UPLOAD_STORE_FILE: "upload-key.keystore"
+      MYAPP_UPLOAD_STORE_PASSWORD: ${{ secrets.PLAYSTORE_KEYSTORE_PASSWORD }}
+      MYAPP_UPLOAD_KEY_ALIAS: ${{ secrets.PLAYSTORE_KEY_ALIAS }}
+      MYAPP_UPLOAD_KEY_PASSWORD: ${{ secrets.PLAYSTORE_KEY_PASSWORD }}
 
     steps:
       - name: Checkout repository
@@ -70,16 +75,10 @@ jobs:
 
       - name: Build AAB for Play Store
         run: |
-          echo -n "$PLAYSTORE_KEYSTORE_BASE64" | base64 --decode > ./android/app/upload-key.keystore
+          echo -n "${{ secrets.PLAYSTORE_KEYSTORE_BASE64 }}" | base64 --decode > ./android/app/upload-key.keystore
           cd android
           ./gradlew bundleRelease
-        env:
-          # Override the gradle.properties values with Play Store keystore
-          PLAYSTORE_KEYSTORE_BASE64: ${{ secrets.PLAYSTORE_KEYSTORE_BASE64 }}
-          MYAPP_UPLOAD_STORE_FILE: "upload-key.keystore"
-          MYAPP_UPLOAD_STORE_PASSWORD: ${{ secrets.PLAYSTORE_KEYSTORE_PASSWORD }}
-          MYAPP_UPLOAD_KEY_ALIAS: ${{ secrets.PLAYSTORE_KEY_ALIAS }}
-          MYAPP_UPLOAD_KEY_PASSWORD: ${{ secrets.PLAYSTORE_KEY_PASSWORD }}
+        # REMOVE the env: section from here since variables are now at job level
 
       - name: Upload AAB as artifact
         uses: actions/upload-artifact@v4
@@ -94,7 +93,6 @@ jobs:
           name: Play Store Release ${{ github.ref_name }}
           body: |
             Official Play Store release bundle.
-
             This AAB is signed with the Play Store upload certificate and ready for Google Play Console upload.
           files: android/app/build/outputs/bundle/release/app-release.aab
           prerelease: false
