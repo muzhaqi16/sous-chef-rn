@@ -40,7 +40,8 @@
     "tag:dev": "node -e \"const v=require('./package.json').version; const t='v'+v; require('child_process').execSync('git tag -a '+t+' -m \\\"Release '+t+'\\\"', {stdio:'inherit'}); require('child_process').execSync('git push origin '+t, {stdio:'inherit'})\"",
     "tag:prod": "node -e \"const v=require('./package.json').version; const t='prod-v'+v; require('child_process').execSync('git tag -a '+t+' -m \\\"Production release '+t+'\\\"', {stdio:'inherit'}); require('child_process').execSync('git push origin '+t, {stdio:'inherit'})\"",
     "tag:android": "node -e \"const v=require('./package.json').version; const t='android-v'+v; require('child_process').execSync('git tag -a '+t+' -m \\\"Android release '+t+'\\\"', {stdio:'inherit'}); require('child_process').execSync('git push origin '+t, {stdio:'inherit'})\"",
-    "tag:release": "node -e \"const v=require('./package.json').version; const t='release-v'+v; require('child_process').execSync('git tag -a '+t+' -m \\\"Release '+t+'\\\"', {stdio:'inherit'}); require('child_process').execSync('git push origin '+t, {stdio:'inherit'})\""
+    "tag:release": "node -e \"const v=require('./package.json').version; const t='release-v'+v; require('child_process').execSync('git tag -a '+t+' -m \\\"Release '+t+'\\\"', {stdio:'inherit'}); require('child_process').execSync('git push origin '+t, {stdio:'inherit'})\"",
+    "tag:playstore": "node -e \"const v=require('./package.json').version; const t='playstore-v'+v; require('child_process').execSync('git tag -a '+t+' -m \\\"Play Store release '+t+'\\\"', {stdio:'inherit'}); require('child_process').execSync('git push origin '+t, {stdio:'inherit'})\""
   },
   "dependencies": {
     "@apollo/client": "^4.0.5",

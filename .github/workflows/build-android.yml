@@ -6,16 +6,16 @@ permissions:
 on:
   push:
     tags:
-      - 'v*'
-      - 'prod-v*'
-      - 'android-v*'
-      - 'release-v*'
+      - "v*"
+      - "prod-v*"
+      - "android-v*"
+      - "release-v*"
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Environment to build'
+        description: "Environment to build"
         required: true
-        default: 'dev'
+        default: "dev"
         type: choice
         options:
           - dev
@@ -116,7 +116,7 @@ jobs:
           ./gradlew assembleRelease
         env:
           BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
-          MYAPP_UPLOAD_STORE_FILE: 'releases.keystore'
+          MYAPP_UPLOAD_STORE_FILE: "releases.keystore"
           MYAPP_UPLOAD_STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           MYAPP_UPLOAD_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           MYAPP_UPLOAD_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}

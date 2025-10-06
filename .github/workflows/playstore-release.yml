@@ -1,0 +1,108 @@
+name: Play Store Release
+run-name: 🏪 Play Store Release ${{ github.ref_name }}
+permissions:
+    contents: write
+
+on:
+    push:
+        tags:
+            - "playstore-v*"
+
+jobs:
+    build-playstore:
+        runs-on: self-hosted
+        timeout-minutes: 30
+        environment: prod
+
+        env:
+            ANDROID_HOME: /opt/android-sdk
+            ANDROID_SDK_ROOT: /opt/android-sdk
+            JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
+            GRADLE_OPTS: -Xmx4096m -Dorg.gradle.daemon=false -Dorg.gradle.parallel=true
+            NODE_OPTIONS: --max-old-space-size=4096
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+              with:
+                  clean: true
+
+            - name: Setup Android local.properties
+              run: |
+                  echo "sdk.dir=/opt/android-sdk" > android/local.properties
+
+            - name: Setup gradlew as executable
+              run: chmod +x ./android/gradlew
+
+            - name: Cache node_modules
+              uses: actions/cache@v3
+              with:
+                  path: node_modules
+                  key: ${{ runner.os }}-node-modules-${{ hashFiles('yarn.lock') }}
+                  restore-keys: |
+                      ${{ runner.os }}-node-modules-
+
+            - name: Cache Gradle
+              uses: actions/cache@v3
+              with:
+                  path: |
+                      ~/.gradle/caches
+                      ~/.gradle/wrapper
+                      android/.gradle
+                  key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+                  restore-keys: |
+                      ${{ runner.os }}-gradle-
+
+            - name: Run Yarn Install
+              run: yarn install --frozen-lockfile --network-timeout 100000
+
+            - name: Clean Android build
+              run: |
+                  cd android
+                  ./gradlew clean
+                  cd ..
+
+            - name: Generate production .env
+              run: |
+                  echo "API_URL=${{ vars.API_URL }}" > .env
+                  echo "API_KEY=${{ secrets.API_KEY }}" >> .env
+                  echo "WEB_SOCKET_URL=${{ vars.WEB_SOCKET_URL }}" >> .env
+
+            - name: Build AAB for Play Store
+              run: |
+                  echo -n "$PLAYSTORE_KEYSTORE_BASE64" | base64 --decode > ./android/app/upload-key.keystore
+                  cd android
+                  ./gradlew bundleRelease
+              env:
+                  # Override the gradle.properties values with Play Store keystore
+                  PLAYSTORE_KEYSTORE_BASE64: ${{ secrets.PLAYSTORE_KEYSTORE_BASE64 }}
+                  MYAPP_UPLOAD_STORE_FILE: "upload-key.keystore"
+                  MYAPP_UPLOAD_STORE_PASSWORD: ${{ secrets.PLAYSTORE_KEYSTORE_PASSWORD }}
+                  MYAPP_UPLOAD_KEY_ALIAS: ${{ secrets.PLAYSTORE_KEY_ALIAS }}
+                  MYAPP_UPLOAD_KEY_PASSWORD: ${{ secrets.PLAYSTORE_KEY_PASSWORD }}
+
+            - name: Upload AAB as artifact
+              uses: actions/upload-artifact@v3
+              with:
+                  name: playstore-bundle-${{ github.ref_name }}
+                  path: android/app/build/outputs/bundle/release/app-release.aab
+                  retention-days: 90
+
+            - name: Create GitHub Release
+              uses: softprops/action-gh-release@v2
+              with:
+                  name: Play Store Release ${{ github.ref_name }}
+                  body: |
+                      Official Play Store release bundle.
+
+                      This AAB is signed with the Play Store upload certificate and ready for Google Play Console upload.
+                  files: android/app/build/outputs/bundle/release/app-release.aab
+                  prerelease: false
+
+            - name: Cleanup
+              if: always()
+              run: |
+                  rm -f ./android/app/upload-key.keystore
+                  rm -f android/local.properties
+                  rm -f .env
+                  cd android && ./gradlew --stop || true
