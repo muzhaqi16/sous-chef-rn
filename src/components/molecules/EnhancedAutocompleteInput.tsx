@@ -4,7 +4,6 @@ import {
   BottomSheetModal,
   BottomSheetBackdrop,
   BottomSheetTextInput,
-  BottomSheetView,
 } from '@gorhom/bottom-sheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { Input } from '#components/base/Input';
@@ -106,7 +105,7 @@ export const EnhancedAutocompleteInput: React.FC<
 
       <BottomSheetModal
         ref={bottomSheetModalRef}
-        snapPoints={['75%', '100%']}
+        snapPoints={['75%']}
         onChange={handleSheetChanges}
         backdropComponent={renderBackdrop}
         keyboardBehavior="interactive"
@@ -116,30 +115,30 @@ export const EnhancedAutocompleteInput: React.FC<
         enablePanDownToClose={true}
         enableContentPanningGesture={false}
       >
-        <BottomSheetView style={styles.autocompleteContainer}>
-          <Text style={styles.autocompleteTitle}>Search for an item</Text>
+        <EnhancedAutocomplete
+          searchTerm={searchTerm}
+          onSelectItem={handleSelectItem}
+          headerContent={
+            <View style={styles.headerSection}>
+              <Text style={styles.autocompleteTitle}>Search for an item</Text>
 
-          <BottomSheetTextInput
-            style={styles.bottomSheetInput}
-            value={searchTerm}
-            onChangeText={handleBottomSheetTextChange}
-            placeholder="Type to search items..."
-            returnKeyType="search"
-          />
-
-          <EnhancedAutocomplete
-            searchTerm={searchTerm}
-            onSelectItem={handleSelectItem}
-          />
-        </BottomSheetView>
+              <BottomSheetTextInput
+                style={styles.bottomSheetInput}
+                value={searchTerm}
+                onChangeText={handleBottomSheetTextChange}
+                placeholder="Type to search items..."
+                returnKeyType="search"
+              />
+            </View>
+          }
+        />
       </BottomSheetModal>
     </View>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  autocompleteContainer: {
-    flex: 1,
+  headerSection: {
     paddingHorizontal: theme.spacing.md,
     paddingTop: theme.spacing.sm,
   },

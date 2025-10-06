@@ -1,5 +1,5 @@
 import React, { useMemo, useEffect, useState } from 'react';
-import { Text, TouchableOpacity, View, Image } from 'react-native';
+import { Text, TouchableOpacity, View, Image, useWindowDimensions } from 'react-native';
 import { BottomSheetFlatList, BottomSheetView } from '@gorhom/bottom-sheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { useAutocompleteItemsLazyQuery, ItemSuggestion } from '#generated';
@@ -7,12 +7,15 @@ import { useAutocompleteItemsLazyQuery, ItemSuggestion } from '#generated';
 interface EnhancedAutocompleteProps {
   searchTerm: string;
   onSelectItem: (item: ItemSuggestion) => void;
+  headerContent?: React.ReactNode;
 }
 
 const EnhancedAutocomplete: React.FC<EnhancedAutocompleteProps> = ({
   searchTerm,
   onSelectItem,
+  headerContent,
 }) => {
+  const { height } = useWindowDimensions();
   const [fetchItems, { data, loading, error }] = useAutocompleteItemsLazyQuery({
     fetchPolicy: 'cache-and-network',
   });
@@ -98,32 +101,41 @@ const EnhancedAutocomplete: React.FC<EnhancedAutocompleteProps> = ({
       ? previousResults.length
       : totalCount;
 
-    if (loading && previousResults.length === 0) {
-      return (
-        <View style={styles.headerContainer}>
-          <Text style={styles.headerText}>Searching...</Text>
-        </View>
-      );
-    }
+    const resultsHeader = () => {
+      if (loading && previousResults.length === 0) {
+        return (
+          <View style={styles.headerContainer}>
+            <Text style={styles.headerText}>Searching...</Text>
+          </View>
+        );
+      }
 
-    if (currentCount > 0) {
-      return (
-        <View style={styles.headerContainer}>
-          <Text style={styles.headerText}>
-            {currentCount} item{currentCount !== 1 ? 's' : ''} found
-            {showingPreviousResults && (
-              <Text style={styles.loadingIndicator}> • Updating...</Text>
-            )}
-          </Text>
-        </View>
-      );
-    }
+      if (currentCount > 0) {
+        return (
+          <View style={styles.headerContainer}>
+            <Text style={styles.headerText}>
+              {currentCount} item{currentCount !== 1 ? 's' : ''} found
+              {showingPreviousResults && (
+                <Text style={styles.loadingIndicator}> • Updating...</Text>
+              )}
+            </Text>
+          </View>
+        );
+      }
 
-    return null;
+      return null;
+    };
+
+    return (
+      <>
+        {headerContent}
+        {resultsHeader()}
+      </>
+    );
   };
 
   const renderEmpty = () => (
-    <BottomSheetView style={styles.messageContainer}>
+    <BottomSheetView style={[styles.messageContainer, { minHeight: height * 0.5 }]}>
       <Text style={styles.emptyText}>No items found</Text>
       <Text style={styles.emptySubtext}>
         Try a different search term or continue typing to add "{searchTerm}"
@@ -171,6 +183,7 @@ const styles = StyleSheet.create(theme => ({
   },
   flatListContent: {
     paddingBottom: theme.spacing.lg,
+    flexGrow: 1,
   },
   headerContainer: {
     paddingHorizontal: theme.spacing.md,
@@ -254,8 +267,10 @@ const styles = StyleSheet.create(theme => ({
     marginHorizontal: theme.spacing.md,
   },
   messageContainer: {
+    flex: 1,
     padding: theme.spacing.lg,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   emptyText: {
     fontSize: theme.typography.fontSize.base,

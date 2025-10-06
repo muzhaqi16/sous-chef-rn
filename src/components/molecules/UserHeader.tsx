@@ -3,7 +3,6 @@ import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useProfileData, useAppNavigation } from '#/hooks';
 import { Icon } from '#utils';
-import { ApiStatusIndicator } from '../atoms/ApiStatusIndicator';
 import { useStore } from '#store';
 
 export const UserHeader: React.FC = () => {
@@ -22,7 +21,6 @@ export const UserHeader: React.FC = () => {
       </Text>
 
       <View style={styles.headerActions}>
-        <ApiStatusIndicator size="small" />
         <TouchableOpacity
           onPress={() => {
             navigateTo.notificationList();
@@ -90,6 +88,8 @@ const styles = StyleSheet.create(theme => ({
     width: 48,
     height: 48,
     borderRadius: 9999,
+    borderWidth: 2,
+    borderColor: theme.colors.primary,
   },
   avatarPlaceholder: {
     width: 48,

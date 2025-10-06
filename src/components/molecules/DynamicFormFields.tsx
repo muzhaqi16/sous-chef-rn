@@ -271,7 +271,12 @@ export function DynamicFormFields<T extends FieldValues>({
                 return <></>;
               }}
             />
-            {errors[name] && props?.componentType !== 'checkbox' && (
+            {errors[name] &&
+             props?.componentType !== 'checkbox' &&
+             Input !== 'itemAutocomplete' &&
+             Input !== 'brandAutocomplete' &&
+             Input !== 'unitAutocomplete' &&
+             Input !== 'categoryAutocomplete' && (
               <Text style={styles.errorText}>
                 {errors[name]?.message?.toString()}
               </Text>
