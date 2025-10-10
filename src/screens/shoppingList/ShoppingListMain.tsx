@@ -5,7 +5,14 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { TouchableOpacity, Alert, Image, View } from 'react-native';
+import {
+  TouchableOpacity,
+  Alert,
+  Image,
+  View,
+  ScrollView,
+  RefreshControl,
+} from 'react-native';
 import { useAppNavigation } from '#hooks';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
@@ -367,16 +374,26 @@ export const ShoppingListMain: React.FC = () => {
 
       {/* Conditional content based on search state */}
       {sortableItems.length === 0 ? (
-        // Show empty state
-        <EmptyState
-          icon="add-shopping-cart"
-          title="No items in this list"
-          description="Add some items to get started"
-          action={{
-            label: 'Add Item',
-            onPress: handleAddItem,
-          }}
-        />
+        // Show empty state with pull-to-refresh
+        <ScrollView
+          contentContainerStyle={{ flex: 1 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+            />
+          }
+        >
+          <EmptyState
+            icon="add-shopping-cart"
+            title="No items in this list"
+            description="Add some items to get started"
+            action={{
+              label: 'Add Item',
+              onPress: handleAddItem,
+            }}
+          />
+        </ScrollView>
       ) : (
         // Show sortable list with drag-and-drop and swipeable actions
         <SortableShoppingList

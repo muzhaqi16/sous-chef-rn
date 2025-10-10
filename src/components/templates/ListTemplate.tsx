@@ -29,6 +29,10 @@ interface ListTemplateProps {
   onRefresh?: () => Promise<void>;
   emptyState?: any;
 
+  // State management
+  loading?: boolean; // Is data currently loading?
+  hasNoData?: boolean; // No baseline data exists (e.g., no home selected)
+
   // Display controls
   showUserHeader?: boolean;
   showHeader?: boolean;
@@ -56,6 +60,10 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
   onRefresh = async () => {},
   emptyState,
 
+  // State management
+  loading = false,
+  hasNoData = false,
+
   // Display controls
   showUserHeader = true,
   showHeader = false,
@@ -69,11 +77,26 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
   // Search specific
   searchPlaceholder,
 }) => {
+  // Determine the actual display state
+  const isLoading = loading && items.length === 0;
+  const shouldShowHeader = showHeader && !hasNoData;
+  const shouldShowSearchBar = showSearchBar && !hasNoData && !isLoading;
+
+  // Use appropriate empty state based on context
+  const effectiveEmptyState = hasNoData
+    ? emptyState
+    : isLoading
+    ? {
+        icon: emptyState?.icon || 'inventory',
+        title: 'Loading...',
+        description: emptyState?.loadingDescription || 'Loading your items',
+      }
+    : emptyState;
   return (
     <View style={styles.container}>
       {showUserHeader && <UserHeader />}
 
-      {showHeader && (
+      {shouldShowHeader && (
         <Header
           title={title}
           onBack={onBack}
@@ -82,7 +105,7 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
         />
       )}
 
-      {showSearchBar && (
+      {shouldShowSearchBar && (
         <SearchBar
           value={searchQuery || ''}
           onChangeText={onSearchChange}
@@ -99,18 +122,19 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
 
       <ItemList
         items={items || []}
-        onItemPress={onItemPress}
-        onItemEdit={onItemEdit}
-        onItemDelete={onItemDelete}
+        onItemPress={isLoading ? () => {} : onItemPress}
+        onItemEdit={isLoading ? () => {} : onItemEdit}
+        onItemDelete={isLoading ? () => {} : onItemDelete}
         onRefresh={onRefresh}
-        emptyState={emptyState}
+        emptyState={effectiveEmptyState}
       />
     </View>
   );
 };
 
-const styles = StyleSheet.create(() => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
+    backgroundColor: theme.colors.background,
   },
 }));

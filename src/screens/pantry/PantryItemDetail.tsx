@@ -4,6 +4,7 @@ import {
   useGetPantryItemQuery,
   useRemoveItemFromPantryMutation,
   useAddItemToShoppingListMutation,
+  GetShoppingListItemsDocument,
 } from '#generated';
 import { DetailTemplate } from '#components/templates/DetailTemplate';
 import { useStore } from '#/store';
@@ -25,7 +26,17 @@ export const PantryItemDetail: React.FC<{
   });
 
   const [deleteItem] = useRemoveItemFromPantryMutation();
-  const [addToShoppingList] = useAddItemToShoppingListMutation();
+  const [addToShoppingList] = useAddItemToShoppingListMutation({
+    refetchQueries: selectedShoppingListId
+      ? [
+          {
+            query: GetShoppingListItemsDocument,
+            variables: { shoppingListId: selectedShoppingListId },
+          },
+        ]
+      : [],
+    awaitRefetchQueries: false,
+  });
 
   const handleDelete = () => {
     Alert.alert('Delete Item', 'Are you sure you want to delete this item?', [
@@ -50,11 +61,27 @@ export const PantryItemDetail: React.FC<{
   };
 
   const handleAddToShoppingList = async () => {
+    // Validate that a shopping list is selected
+    if (!selectedShoppingListId) {
+      Alert.alert(
+        'No Shopping List Selected',
+        'Please select a shopping list first.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Go to Shopping Lists',
+            onPress: () => navigateTo.shoppingListMain(),
+          },
+        ],
+      );
+      return;
+    }
+
     try {
       await addToShoppingList({
         variables: {
           input: {
-            shoppingListId: selectedShoppingListId || '',
+            shoppingListId: selectedShoppingListId,
             itemId: data?.pantryItem?.item?.id || '',
             quantity: data?.pantryItem?.currentQuantity || 1,
             unitId: data?.pantryItem?.unit?.id || '',
@@ -62,12 +89,28 @@ export const PantryItemDetail: React.FC<{
           },
         },
       });
+
+      // Show success feedback
+      Alert.alert(
+        'Success',
+        `${data?.pantryItem?.item?.name} added to shopping list`,
+      );
     } catch (error) {
+      console.error('Failed to add to shopping list:', error);
       Alert.alert('Error', 'Failed to add to shopping list');
     }
   };
 
   const item = data?.pantryItem;
+
+  // Helper function to format item type
+  const formatItemType = (type?: string) => {
+    if (!type) return 'N/A';
+    return type
+      .split('_')
+      .map(word => word.charAt(0) + word.slice(1).toLowerCase())
+      .join(' ');
+  };
 
   const sections = [
     {
@@ -88,15 +131,31 @@ export const PantryItemDetail: React.FC<{
       ),
     },
     {
-      title: 'Details',
+      title: 'Quantity Details',
       content: (
         <View>
           <View style={styles.detailRow}>
             <Text style={[commonStyles.caption, styles.detailLabel]}>
-              Quantity
+              Current
             </Text>
             <Text style={styles.detailValue}>
               {item?.currentQuantity} {item?.unit?.symbol}
+            </Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={[commonStyles.caption, styles.detailLabel]}>
+              Initial
+            </Text>
+            <Text style={styles.detailValue}>
+              {item?.initialQuantity} {item?.unit?.symbol}
+            </Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={[commonStyles.caption, styles.detailLabel]}>
+              Consumed
+            </Text>
+            <Text style={styles.detailValue}>
+              {item?.consumedQuantity} {item?.unit?.symbol}
             </Text>
           </View>
           <View style={styles.detailRow}>
@@ -107,6 +166,23 @@ export const PantryItemDetail: React.FC<{
               {item?.reservedQuantity} {item?.unit?.symbol}
             </Text>
           </View>
+          {item?.item?.netWeight && item?.item?.displayUnit && (
+            <View style={styles.detailRow}>
+              <Text style={[commonStyles.caption, styles.detailLabel]}>
+                Package Size
+              </Text>
+              <Text style={styles.detailValue}>
+                {item.item.netWeight} {item.item.displayUnit.symbol} per item
+              </Text>
+            </View>
+          )}
+        </View>
+      ),
+    },
+    {
+      title: 'Storage & Status',
+      content: (
+        <View>
           <View style={styles.detailRow}>
             <Text style={[commonStyles.caption, styles.detailLabel]}>
               Storage
@@ -131,10 +207,73 @@ export const PantryItemDetail: React.FC<{
               </Text>
             </View>
           )}
+          <View style={styles.detailRow}>
+            <Text style={[commonStyles.caption, styles.detailLabel]}>
+              Added
+            </Text>
+            <Text style={styles.detailValue}>
+              {new Date(item?.createdAt || '').toLocaleDateString()}
+            </Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Text style={[commonStyles.caption, styles.detailLabel]}>
+              Item Type
+            </Text>
+            <Text style={styles.detailValue}>
+              {formatItemType(item?.item?.type)}
+            </Text>
+          </View>
+          {item?.isAutoReorder && (
+            <View style={styles.detailRow}>
+              <Text style={[commonStyles.caption, styles.detailLabel]}>
+                Auto-Reorder
+              </Text>
+              <Text style={styles.detailValue}>
+                Enabled (at {item.autoReorderPoint} {item?.unit?.symbol})
+              </Text>
+            </View>
+          )}
         </View>
       ),
     },
   ];
+
+  // Add Item Info section if description or categories exist
+  if (item?.item?.description || (item?.item?.categories && item.item.categories.length > 0)) {
+    sections.push({
+      title: 'Item Information',
+      content: (
+        <View>
+          {item?.item?.description && (
+            <View style={styles.descriptionContainer}>
+              <Text style={[commonStyles.caption, styles.detailLabel]}>
+                Description
+              </Text>
+              <Text style={[commonStyles.body, styles.descriptionText]}>
+                {item.item.description}
+              </Text>
+            </View>
+          )}
+          {item?.item?.categories && item.item.categories.length > 0 && (
+            <View style={styles.detailRow}>
+              <Text style={[commonStyles.caption, styles.detailLabel]}>
+                Categories
+              </Text>
+              <Text style={styles.detailValue}>
+                {item.item.categories
+                  .filter(cat => cat.isPrimary)
+                  .map(cat => cat?.category?.name)
+                  .join(', ') ||
+                  item.item.categories
+                    .map(cat => cat?.category?.name)
+                    .join(', ')}
+              </Text>
+            </View>
+          )}
+        </View>
+      ),
+    });
+  }
 
   if (item?.storageNotes) {
     sections.push({
@@ -197,5 +336,15 @@ const styles = StyleSheet.create(theme => ({
   },
   notes: {
     lineHeight: theme.fonts.size.base * theme.typography.lineHeight.relaxed,
+  },
+  descriptionContainer: {
+    paddingVertical: theme.spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  descriptionText: {
+    marginTop: theme.spacing.xs,
+    lineHeight: theme.fonts.size.base * theme.typography.lineHeight.relaxed,
+    color: theme.colors.textSecondary,
   },
 }));

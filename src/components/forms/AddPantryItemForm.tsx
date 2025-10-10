@@ -34,6 +34,7 @@ interface AddPantryItemFormData {
   selectedItemId?: string;
   brand: string;
   quantity: number;
+  itemWeight?: number; // Optional weight per item for packaged items
   unit: string;
   minimumQuantity: string;
   storageState: StorageState;
@@ -46,6 +47,13 @@ interface AddPantryItemFormData {
 const addItemSchema = yup.object({
   itemName: yup.string().required('Item name is required'),
   quantity: yup.number().min(1, 'Quantity must be at least 1').required(),
+  itemWeight: yup
+    .number()
+    .positive('Item weight must be positive')
+    .nullable()
+    .transform((value, originalValue) =>
+      originalValue === '' ? null : value,
+    ),
   unit: yup.string(),
   minimumQuantity: yup.string(),
   storageState: yup.string().oneOf(Object.values(StorageState)),
@@ -124,6 +132,7 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
       itemName: '',
       brand: '',
       quantity: 1,
+      itemWeight: undefined,
       unit: '',
       minimumQuantity: '',
       storageState: StorageState.Ambient,
@@ -221,12 +230,19 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
             ? { itemCategory: data.category.trim() } // Otherwise use the typed category name
             : {};
 
+        // Save package weight information (netWeight + displayUnit)
+        const weightInput =
+          data.itemWeight && unitId
+            ? { itemNetWeight: data.itemWeight, itemDisplayUnitId: unitId }
+            : {};
+
         input = {
           ...baseInput,
           itemName: data.itemName.trim(),
           itemDescription: data.notes.trim() || null,
           itemBrand: data.brand.trim() || null,
           ...categoryInput,
+          ...weightInput,
         };
       }
 
@@ -275,6 +291,7 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
             errors={errors}
             mode="add"
             quantity={watchedValues.quantity}
+            itemWeight={watchedValues.itemWeight}
             unit={watchedValues.unit}
             onIncrementQuantity={handleIncrementQuantity}
             onDecrementQuantity={handleDecrementQuantity}

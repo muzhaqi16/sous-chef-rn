@@ -63,8 +63,10 @@ export type AddPantryItemInput = {
   itemBrand?: InputMaybe<Scalars['String']['input']>;
   itemCategory?: InputMaybe<Scalars['String']['input']>;
   itemDescription?: InputMaybe<Scalars['String']['input']>;
+  itemDisplayUnitId?: InputMaybe<Scalars['String']['input']>;
   itemId?: InputMaybe<Scalars['String']['input']>;
   itemName?: InputMaybe<Scalars['String']['input']>;
+  itemNetWeight?: InputMaybe<Scalars['Float']['input']>;
   itemUpc?: InputMaybe<Scalars['String']['input']>;
   lastUsedAt?: InputMaybe<Scalars['DateTime']['input']>;
   lotNumber?: InputMaybe<Scalars['String']['input']>;
@@ -78,6 +80,8 @@ export type AddPantryItemInput = {
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
   totalCost?: InputMaybe<Scalars['Float']['input']>;
   unitId?: InputMaybe<Scalars['String']['input']>;
+  unitName?: InputMaybe<Scalars['String']['input']>;
+  unitSymbol?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type AddRestrictionsInput = {
@@ -2054,6 +2058,7 @@ export type Mutation = {
   deleteItem: Scalars['Boolean']['output'];
   deleteMealPlan: Scalars['Boolean']['output'];
   deleteMultipleDevices: Array<Device>;
+  deleteMultipleNotifications: Scalars['Int']['output'];
   deleteNotification: Scalars['Boolean']['output'];
   deletePantry: Scalars['Boolean']['output'];
   deletePurchase: Scalars['Boolean']['output'];
@@ -2085,6 +2090,7 @@ export type Mutation = {
   markLoginAsReviewed: LoginHistory;
   markMultipleLoginsAsReviewed: Array<LoginHistory>;
   markNotificationAsRead: Notification;
+  markNotificationUnread: Notification;
   mergeItems: Item;
   putUnderReview: UserModeration;
   reactivateDevice: Device;
@@ -2139,6 +2145,7 @@ export type Mutation = {
   untrustMultipleDevices: Array<Device>;
   updateBrand: Brand;
   updateCategory: Category;
+  updateCollaboratorRole: Scalars['Boolean']['output'];
   updateCurrency: Currency;
   updateDevice: Device;
   updateDeviceBatteryInfo: Device;
@@ -2441,6 +2448,10 @@ export type MutationDeleteMultipleDevicesArgs = {
   deviceIds: Array<Scalars['ID']['input']>;
 };
 
+export type MutationDeleteMultipleNotificationsArgs = {
+  ids: Array<Scalars['ID']['input']>;
+};
+
 export type MutationDeleteNotificationArgs = {
   id: Scalars['ID']['input'];
 };
@@ -2570,6 +2581,10 @@ export type MutationMarkMultipleLoginsAsReviewedArgs = {
 };
 
 export type MutationMarkNotificationAsReadArgs = {
+  id: Scalars['ID']['input'];
+};
+
+export type MutationMarkNotificationUnreadArgs = {
   id: Scalars['ID']['input'];
 };
 
@@ -2795,6 +2810,12 @@ export type MutationUpdateBrandArgs = {
 export type MutationUpdateCategoryArgs = {
   id: Scalars['ID']['input'];
   input: UpdateCategoryInput;
+};
+
+export type MutationUpdateCollaboratorRoleArgs = {
+  collaboratorId: Scalars['ID']['input'];
+  role: CollaboratorRole;
+  shoppingListId: Scalars['ID']['input'];
 };
 
 export type MutationUpdateCurrencyArgs = {
@@ -7261,6 +7282,11 @@ export type ItemFragmentFragment = {
   updatedAt: string;
   deletedAt?: string | null | undefined;
   version: number;
+  netWeight?: number | null | undefined;
+  displayUnit?:
+    | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+    | null
+    | undefined;
   units: Array<{
     __typename?: 'ItemUnit';
     id: string;
@@ -7435,6 +7461,11 @@ export type PantryItemFragmentFragment = {
     updatedAt: string;
     deletedAt?: string | null | undefined;
     version: number;
+    netWeight?: number | null | undefined;
+    displayUnit?:
+      | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+      | null
+      | undefined;
     units: Array<{
       __typename?: 'ItemUnit';
       id: string;
@@ -7725,6 +7756,11 @@ export type PantryFragmentFragment = {
           updatedAt: string;
           deletedAt?: string | null | undefined;
           version: number;
+          netWeight?: number | null | undefined;
+          displayUnit?:
+            | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+            | null
+            | undefined;
           units: Array<{
             __typename?: 'ItemUnit';
             id: string;
@@ -8353,6 +8389,16 @@ export type HomeFragmentFragment = {
                 updatedAt: string;
                 deletedAt?: string | null | undefined;
                 version: number;
+                netWeight?: number | null | undefined;
+                displayUnit?:
+                  | {
+                      __typename?: 'Unit';
+                      id: string;
+                      name: string;
+                      symbol: string;
+                    }
+                  | null
+                  | undefined;
                 units: Array<{
                   __typename?: 'ItemUnit';
                   id: string;
@@ -8772,6 +8818,16 @@ export type GetHomeQuery = {
                       updatedAt: string;
                       deletedAt?: string | null | undefined;
                       version: number;
+                      netWeight?: number | null | undefined;
+                      displayUnit?:
+                        | {
+                            __typename?: 'Unit';
+                            id: string;
+                            name: string;
+                            symbol: string;
+                          }
+                        | null
+                        | undefined;
                       units: Array<{
                         __typename?: 'ItemUnit';
                         id: string;
@@ -9663,6 +9719,16 @@ export type UpdateHomeMutation = {
                   updatedAt: string;
                   deletedAt?: string | null | undefined;
                   version: number;
+                  netWeight?: number | null | undefined;
+                  displayUnit?:
+                    | {
+                        __typename?: 'Unit';
+                        id: string;
+                        name: string;
+                        symbol: string;
+                      }
+                    | null
+                    | undefined;
                   units: Array<{
                     __typename?: 'ItemUnit';
                     id: string;
@@ -10070,6 +10136,16 @@ export type DeleteHomeMutation = {
                   updatedAt: string;
                   deletedAt?: string | null | undefined;
                   version: number;
+                  netWeight?: number | null | undefined;
+                  displayUnit?:
+                    | {
+                        __typename?: 'Unit';
+                        id: string;
+                        name: string;
+                        symbol: string;
+                      }
+                    | null
+                    | undefined;
                   units: Array<{
                     __typename?: 'ItemUnit';
                     id: string;
@@ -10806,6 +10882,16 @@ export type GetDefaultHomeQuery = {
                       updatedAt: string;
                       deletedAt?: string | null | undefined;
                       version: number;
+                      netWeight?: number | null | undefined;
+                      displayUnit?:
+                        | {
+                            __typename?: 'Unit';
+                            id: string;
+                            name: string;
+                            symbol: string;
+                          }
+                        | null
+                        | undefined;
                       units: Array<{
                         __typename?: 'ItemUnit';
                         id: string;
@@ -11800,6 +11886,11 @@ export type GetPantryItemsQuery = {
       updatedAt: string;
       deletedAt?: string | null | undefined;
       version: number;
+      netWeight?: number | null | undefined;
+      displayUnit?:
+        | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+        | null
+        | undefined;
       units: Array<{
         __typename?: 'ItemUnit';
         id: string;
@@ -11990,6 +12081,11 @@ export type GetPantryItemQuery = {
       updatedAt: string;
       deletedAt?: string | null | undefined;
       version: number;
+      netWeight?: number | null | undefined;
+      displayUnit?:
+        | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+        | null
+        | undefined;
       units: Array<{
         __typename?: 'ItemUnit';
         id: string;
@@ -12180,6 +12276,11 @@ export type AddItemToPantryMutation = {
       updatedAt: string;
       deletedAt?: string | null | undefined;
       version: number;
+      netWeight?: number | null | undefined;
+      displayUnit?:
+        | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+        | null
+        | undefined;
       units: Array<{
         __typename?: 'ItemUnit';
         id: string;
@@ -12427,6 +12528,11 @@ export type UpdatePantryItemMutation = {
       updatedAt: string;
       deletedAt?: string | null | undefined;
       version: number;
+      netWeight?: number | null | undefined;
+      displayUnit?:
+        | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+        | null
+        | undefined;
       units: Array<{
         __typename?: 'ItemUnit';
         id: string;
@@ -12617,6 +12723,11 @@ export type RemoveItemFromPantryMutation = {
       updatedAt: string;
       deletedAt?: string | null | undefined;
       version: number;
+      netWeight?: number | null | undefined;
+      displayUnit?:
+        | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+        | null
+        | undefined;
       units: Array<{
         __typename?: 'ItemUnit';
         id: string;

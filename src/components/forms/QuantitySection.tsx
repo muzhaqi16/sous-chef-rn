@@ -17,6 +17,7 @@ interface QuantitySectionProps {
   mode: 'add' | 'edit';
   quantity: number;
   unit: string;
+  itemWeight?: number;
   isAutoReorder?: boolean;
   onIncrementQuantity: () => void;
   onDecrementQuantity: () => void;
@@ -52,6 +53,13 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
               </View>
             </View>
           ),
+        },
+        {
+          name: 'itemWeight',
+          label: 'Weight',
+          placeholder: 'e.g., 2.2',
+          component: FormInput,
+          props: { keyboardType: 'decimal-pad' },
         },
         {
           name: 'unit',

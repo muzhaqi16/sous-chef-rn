@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { View, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
@@ -38,7 +38,7 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
   const insets = useSafeAreaInsets();
 
   // Update local items when props change, but not during our own updates
-  React.useEffect(() => {
+  useEffect(() => {
     if (!isUpdatingRef.current) {
       setLocalItems(items);
     }

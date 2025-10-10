@@ -34,10 +34,13 @@ export const DetailTemplate: React.FC<DetailTemplateProps> = ({
       <Header
         title={title}
         onBack={onBack}
-        leftActions={headerActions}
+        rightActions={headerActions}
         centerTitle
       />
-      <ScrollView style={styles.content}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={{ paddingBottom: 20 }}
+      >
         {sections.map((section, index) => (
           <View key={index} style={styles.section}>
             {section.title && (
@@ -64,12 +67,11 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     gap: theme.spacing.md,
-    paddingTop: theme.spacing.md,
     backgroundColor: theme.colors.background,
   },
   content: {
     flex: 1,
-    padding: 16,
+    paddingHorizontal: 16,
   },
   section: {
     backgroundColor: 'white',

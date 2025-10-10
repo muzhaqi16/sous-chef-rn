@@ -284,56 +284,36 @@ export const PantryMain: React.FC = () => {
     [handleAddItem, theme.colors.primary],
   );
 
-  if (!selectedHomeId) {
-    return (
-      <ListTemplate
-        showHeader={true}
-        emptyState={{
-          icon: 'home',
-          title: 'No Home Selected',
-          description:
-            'You need to create or be a member of a home to manage pantry items.',
-          action: {
-            label: 'Manage Homes',
-            onPress: () => navigate('HomeManagement'),
-          },
-        }}
-      />
-    );
-  }
+  // Determine loading state - only show loading if we have no data at all
+  const isLoadingInitial = loading && items.length === 0 && !allItems?.length;
 
-  // Only show loading state if we are still loading and have no cached data at all
-  if (loading && items.length === 0 && !allItems?.length) {
-    return (
-      <ListTemplate
-        title="Pantry"
-        subtitle="your pantry"
-        items={[]}
-        searchQuery=""
-        onSearchChange={() => {}}
-        onItemPress={() => {}}
-        showHeader={true}
-        showSearchBar={true}
-        headerActions={headerActions}
-        searchBarActions={searchBarActions}
-        onRefresh={handleRefresh}
-        emptyState={{
-          icon: 'inventory',
-          title: 'Loading...',
-          description: 'Loading your pantry items',
-        }}
-      />
-    );
-  }
-
-  // Debug info for development
-  const debugSubtitle = pantry?.name || 'Your Pantry';
+  // Compute empty state based on current context
+  const emptyStateConfig = !selectedHomeId
+    ? {
+        icon: 'home',
+        title: 'No Home Selected',
+        description:
+          'You need to create or be a member of a home to manage pantry items.',
+        action: {
+          label: 'Manage Homes',
+          onPress: () => navigate('HomeManagement'),
+        },
+      }
+    : {
+        icon: 'inventory',
+        title: 'No items in pantry',
+        description: 'Add items to track your pantry inventory',
+        action: {
+          label: 'Add first item',
+          onPress: handleAddItem,
+        },
+      };
 
   return (
     <View style={styles.container}>
       <ListTemplate
-        title={currentHomeData?.home?.name || 'Pantry'}
-        subtitle={debugSubtitle}
+        title={selectedHomeId ? currentHomeData?.home?.name || 'Pantry' : ''}
+        subtitle={selectedHomeId ? pantry?.name || 'Your Pantry' : ''}
         items={items}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
@@ -341,21 +321,13 @@ export const PantryMain: React.FC = () => {
         onItemEdit={id => navigateTo.pantryItem({ itemId: id })}
         onItemDelete={handleDeleteItem}
         onRefresh={handleRefresh}
-        // Display configuration
+        loading={isLoadingInitial}
+        hasNoData={!selectedHomeId}
         showHeader={true}
         showSearchBar={true}
-        // Actions
         headerActions={headerActions}
         searchBarActions={searchBarActions}
-        emptyState={{
-          icon: 'inventory',
-          title: 'No items in pantry',
-          description: 'Add items to track your pantry inventory',
-          action: {
-            label: 'Add first item',
-            onPress: handleAddItem,
-          },
-        }}
+        emptyState={emptyStateConfig}
       />
       <AnimatedItemSelector
         ref={selectorRef}
@@ -371,7 +343,6 @@ export const PantryMain: React.FC = () => {
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
   },
   imageContainer: {
     width: theme.sizes.listImage.width,

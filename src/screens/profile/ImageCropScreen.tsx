@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   TouchableOpacity,
@@ -44,26 +44,12 @@ export const ImageCropScreen = () => {
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   const [isCropping, setIsCropping] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
-  const [debugInfo, setDebugInfo] = useState({ scale: 1, x: 0, y: 0 });
 
   // Shared values for animations
   const scale = useSharedValue(1);
   const startScale = useSharedValue(1);
   const offset = useSharedValue({ x: 0, y: 0 });
   const startOffset = useSharedValue({ x: 0, y: 0 });
-
-  // Update debug info using shared values directly
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setDebugInfo({
-        scale: scale.value,
-        x: offset.value.x,
-        y: offset.value.y,
-      });
-    }, 100); // Update every 100ms
-
-    return () => clearInterval(interval);
-  }, [scale, offset]);
 
   // Get image dimensions when loaded
   const handleImageLoad = useCallback(() => {
@@ -260,7 +246,11 @@ export const ImageCropScreen = () => {
       if (croppedFileSize > MAX_PROFILE_SIZE) {
         Alert.alert(
           'Image Too Large',
-          `The cropped image is ${(croppedFileSize / 1024 / 1024).toFixed(1)}MB. Profile images must be under ${MAX_PROFILE_SIZE / 1024 / 1024}MB. Please try cropping a smaller area or use a lower quality image.`,
+          `The cropped image is ${(croppedFileSize / 1024 / 1024).toFixed(
+            1,
+          )}MB. Profile images must be under ${
+            MAX_PROFILE_SIZE / 1024 / 1024
+          }MB. Please try cropping a smaller area or use a lower quality image.`,
           [
             { text: 'Try Again', style: 'default' },
             {
@@ -333,12 +323,6 @@ export const ImageCropScreen = () => {
           >
             Crop Photo
           </Text>
-          <Text
-            style={[styles.debugText, { color: theme.colors.textSecondary }]}
-          >
-            Scale: {debugInfo.scale.toFixed(2)} | Pan: {debugInfo.x.toFixed(0)},
-            {debugInfo.y.toFixed(0)}
-          </Text>
         </View>
 
         <TouchableOpacity
@@ -361,7 +345,7 @@ export const ImageCropScreen = () => {
         >
           {!imageLoaded
             ? 'Loading image...'
-            : 'Pinch to zoom, drag to move. The square area will be your profile photo.'}
+            : 'Pinch to zoom, drag to move. The circular view area will be your profile photo.'}
         </Text>
 
         <View style={styles.cropContainer}>

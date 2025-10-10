@@ -289,6 +289,12 @@ fragment ItemFragment on Item {
   updatedAt
   deletedAt
   version
+  netWeight
+  displayUnit {
+    id
+    name
+    symbol
+  }
   units {
     ...UnitFragment
   }

@@ -179,7 +179,13 @@ export function BottomSheetAutocompleteInput<T>({
         <BottomSheetFlatList
           data={loading ? [] : data}
           keyExtractor={keyExtractor}
-          renderItem={({ item }) => renderItem(item)}
+          renderItem={({ item }: { item: T }) => {
+            const element = renderItem(item);
+            // Clone the element and override onPress to ensure bottom sheet closes
+            return React.cloneElement(element as React.ReactElement<any>, {
+              onPress: () => handleSelectItem(item),
+            });
+          }}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}

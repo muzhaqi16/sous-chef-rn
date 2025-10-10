@@ -325,8 +325,10 @@ input AddPantryItemInput {
   itemBrand: String
   itemCategory: String
   itemDescription: String
+  itemDisplayUnitId: String
   itemId: String
   itemName: String
+  itemNetWeight: Float
   itemUpc: String
   lastUsedAt: DateTime
   lotNumber: String
@@ -340,6 +342,8 @@ input AddPantryItemInput {
   tags: [String!]
   totalCost: Float
   unitId: String
+  unitName: String
+  unitSymbol: String
 }
 
 input AddRestrictionsInput {
@@ -2273,6 +2277,7 @@ type Mutation {
   deleteItem(id: ID!, permanent: Boolean): Boolean!
   deleteMealPlan(id: ID!): Boolean!
   deleteMultipleDevices(deviceIds: [ID!]!): [Device!]!
+  deleteMultipleNotifications(ids: [ID!]!): Int!
   deleteNotification(id: ID!): Boolean!
   deletePantry(id: ID!): Boolean!
   deletePurchase(id: ID!): Boolean!
@@ -2336,6 +2341,7 @@ type Mutation {
     reviewerId: ID!
   ): [LoginHistory!]!
   markNotificationAsRead(id: ID!): Notification!
+  markNotificationUnread(id: ID!): Notification!
   mergeItems(duplicateIds: [ID!]!, primaryId: ID!): Item!
   putUnderReview(input: PutUnderReviewInput!): UserModeration!
   reactivateDevice(id: ID!): Device!
@@ -2399,6 +2405,11 @@ type Mutation {
   untrustMultipleDevices(deviceIds: [ID!]!): [Device!]!
   updateBrand(input: UpdateBrandInput): Brand!
   updateCategory(id: ID!, input: UpdateCategoryInput!): Category!
+  updateCollaboratorRole(
+    collaboratorId: ID!
+    role: CollaboratorRole!
+    shoppingListId: ID!
+  ): Boolean!
   updateCurrency(id: ID!, input: UpdateCurrencyInput!): Currency!
   updateDevice(id: ID!, input: UpdateDeviceInput!): Device!
   updateDeviceBatteryInfo(

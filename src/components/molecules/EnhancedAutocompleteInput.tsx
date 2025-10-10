@@ -47,12 +47,12 @@ export const EnhancedAutocompleteInput: React.FC<
   const handleTextChange = (text: string) => {
     setSearchTerm(text);
 
-    if (text.length >= 2 && !showAutocomplete) {
+    if (text.length >= 3 && !showAutocomplete) {
       setShowAutocomplete(true);
       setTimeout(() => {
         bottomSheetModalRef.current?.present();
       }, 50);
-    } else if (text.length < 2 && showAutocomplete) {
+    } else if (text.length < 3 && showAutocomplete) {
       setShowAutocomplete(false);
       bottomSheetModalRef.current?.dismiss();
     }
@@ -63,6 +63,12 @@ export const EnhancedAutocompleteInput: React.FC<
   const handleBottomSheetTextChange = (text: string) => {
     setSearchTerm(text);
     onChangeText(text);
+
+    // Dismiss modal if search term is too short
+    if (text.length < 3 && showAutocomplete) {
+      setShowAutocomplete(false);
+      bottomSheetModalRef.current?.dismiss();
+    }
   };
 
   const handleSelectItem = (item: ItemSuggestion) => {

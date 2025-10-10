@@ -186,10 +186,6 @@ export const ProfilePhotoUploadScreen: React.FC<{
     }
   };
 
-  const handleSkip = () => {
-    goBack();
-  };
-
   const handleRetake = () => {
     setSelectedImage(null);
     setCroppedImage(null);
@@ -213,26 +209,15 @@ export const ProfilePhotoUploadScreen: React.FC<{
               library="Feather"
             />
           </TouchableOpacity>
-
-          <TouchableOpacity onPress={handleSkip} disabled={isUploading}>
-            <Text
-              style={[styles.headerSkip, { color: theme.colors.textPrimary }]}
-            >
-              Skip
-            </Text>
-          </TouchableOpacity>
+          <Text style={styles.title}>Upload Your Photo</Text>
         </View>
-
-        <Text style={[styles.title, { color: theme.colors.textPrimary }]}>
-          Upload Your Photo
-        </Text>
 
         <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
           {croppedImage
             ? 'Photo cropped and ready to upload!'
             : selectedImage
-              ? 'Tap "Crop & Center" to optimize your photo.'
-              : 'Choose a profile picture to personalize your account.'}
+            ? 'Tap "Crop & Center" to optimize your photo.'
+            : 'Choose a profile picture to personalize your account.'}
         </Text>
 
         <View style={styles.avatar}>
@@ -260,20 +245,6 @@ export const ProfilePhotoUploadScreen: React.FC<{
               />
             )}
           </View>
-
-          {/* Debug info - remove this in production */}
-          {__DEV__ && (
-            <Text
-              style={{
-                fontSize: 10,
-                marginTop: 8,
-                color: theme.colors.textSecondary,
-              }}
-            >
-              Selected: {selectedImage ? '✓' : '✗'} | Cropped:{' '}
-              {croppedImage ? '✓' : '✗'}
-            </Text>
-          )}
         </View>
 
         {selectedImage ? (
@@ -346,14 +317,7 @@ export const ProfilePhotoUploadScreen: React.FC<{
               ]}
               disabled={isUploading}
             >
-              <Text
-                style={[
-                  styles.btnSecondaryText,
-                  { color: theme.colors.primary },
-                ]}
-              >
-                Select Photo
-              </Text>
+              <Text style={styles.btnSecondaryText}>Select Photo</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -362,7 +326,7 @@ export const ProfilePhotoUploadScreen: React.FC<{
   );
 };
 
-const styles = StyleSheet.create(() => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
   },
@@ -377,10 +341,14 @@ const styles = StyleSheet.create(() => ({
     fontSize: 31,
     fontWeight: '700',
     marginBottom: 6,
+    textAlign: 'center',
+    flex: 1,
+    color: theme.colors.textPrimary,
   },
   subtitle: {
     fontSize: 15,
     fontWeight: '500',
+    textAlign: 'center',
   },
   header: {
     flexDirection: 'row',
@@ -394,10 +362,6 @@ const styles = StyleSheet.create(() => ({
     paddingTop: 0,
     position: 'relative',
     marginLeft: -16,
-  },
-  headerSkip: {
-    fontSize: 15,
-    fontWeight: '600',
   },
   avatar: {
     flexGrow: 1,
@@ -454,5 +418,6 @@ const styles = StyleSheet.create(() => ({
     fontSize: 18,
     lineHeight: 26,
     fontWeight: '600',
+    color: theme.colors.secondary,
   },
 }));
