@@ -131,8 +131,7 @@ const styles = StyleSheet.create(theme => ({
   },
   buttonText: {
     color: theme.colors.onPrimary,
-    fontSize: 16,
-    fontWeight: '600',
+    textTransform: 'uppercase',
   },
   footer: {
     marginTop: 'auto',

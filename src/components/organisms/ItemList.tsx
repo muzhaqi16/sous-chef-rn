@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { RefreshControl, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { StyleSheet } from 'react-native-unistyles';
 import { EmptyState } from '../molecules/EmptyState';
 import { ItemCard } from './ItemCard';
 import { IconName } from '#/utils/iconUtils';
@@ -70,7 +69,6 @@ export const ItemList: React.FC<ItemListProps> = ({
 
   return (
     <ScrollView
-      style={styles.container}
       contentContainerStyle={contentStyle}
       refreshControl={
         onRefresh ? (
@@ -95,10 +93,3 @@ export const ItemList: React.FC<ItemListProps> = ({
     </ScrollView>
   );
 };
-
-const styles = StyleSheet.create(theme => ({
-  container: {
-    flex: 1,
-    paddingHorizontal: theme.spacing.sm,
-  },
-}));

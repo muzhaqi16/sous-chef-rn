@@ -147,7 +147,6 @@ export const commonStyles = StyleSheet.create(theme => ({
     justifyContent: 'space-between',
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
-    backgroundColor: theme.colors.background,
     // Add safe area padding on tablets/desktop
     paddingTop: {
       xs: theme.spacing.xs,
@@ -435,14 +434,30 @@ export const commonStyles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
+    boxShadow: [
+      {
+        offsetX: 0,
+        offsetY: 4,
+        blurRadius: 6,
+        spreadDistance: 0,
+        color: '#0000004D',
+      },
+    ],
   },
 
   // ============= UTILITY =============
-
+  // Reusable shadow style
+  shadow: {
+    boxShadow: [
+      {
+        offsetX: 0,
+        offsetY: 4,
+        blurRadius: 15,
+        spreadDistance: 1,
+        color: '#0000001A',
+      },
+    ],
+  },
   absoluteFill: {
     position: 'absolute',
     top: 0,

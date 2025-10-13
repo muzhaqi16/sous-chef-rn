@@ -15,3 +15,5 @@ export { NameInput } from './NameInput.tsx';
 export { UrlInput } from './UrlInput.tsx';
 // Button moved to base components
 export * from './BaseInput';
+export { AnimatedChip } from './AnimatedChip';
+export { AnimatedCheckbox } from './AnimatedCheckbox';

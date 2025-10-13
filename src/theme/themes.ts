@@ -20,21 +20,22 @@ const commonTheme = {
 export const lightTheme = {
   ...commonTheme,
   colors: {
+    ...colors,
     // Primary
-    primary: colors.primary[400],
-    primaryLight: colors.primary[100],
-    primaryDark: colors.primary[700],
+    primary: colors.jaffa[400],
+    primaryLight: colors.jaffa[100],
+    primaryDark: colors.jaffa[700],
     onPrimary: colors.neutral[0],
 
     // Secondary
-    secondary: colors.secondary[400],
-    secondaryLight: colors.secondary[100],
-    secondaryDark: colors.secondary[950],
+    secondary: colors.charade[400],
+    secondaryLight: colors.charade[100],
+    secondaryDark: colors.charade[950],
     onSecondary: colors.neutral[900],
 
     // Background
-    background: colors.neutral[50],
-    backgroundSecondary: colors.secondary[100],
+    background: colors.neutral[0],
+    backgroundSecondary: colors.charade[100],
     surface: colors.neutral[0],
     surfaceVariant: colors.neutral[100],
 
@@ -67,9 +68,9 @@ export const lightTheme = {
     transparent: colors.transparent,
     chipBackground: colors.neutral[200],
     chipText: colors.neutral[700],
-    chipSelectedBackground: colors.primary[500],
+    chipSelectedBackground: colors.jaffa[500],
     chipSelectedText: colors.neutral[0],
-    iconPrimary: colors.primary[500],
+    iconPrimary: colors.jaffa[500],
 
     // Overlay
     overlay: colors.overlay,
@@ -80,21 +81,22 @@ export const lightTheme = {
 export const darkTheme = {
   ...commonTheme,
   colors: {
+    ...colors,
     // Primary
-    primary: colors.primary[400],
-    primaryLight: colors.primary[200],
-    primaryDark: colors.primary[600],
+    primary: colors.jaffa[400],
+    primaryLight: colors.jaffa[200],
+    primaryDark: colors.jaffa[600],
     onPrimary: colors.neutral[900],
 
     // Secondary
-    secondary: colors.secondary[400],
-    secondaryLight: colors.secondary[200],
-    secondaryDark: colors.secondary[950],
+    secondary: colors.charade[400],
+    secondaryLight: colors.charade[200],
+    secondaryDark: colors.charade[950],
     onSecondary: colors.neutral[0],
 
     // Background
     background: colors.neutral[900],
-    backgroundSecondary: colors.secondary[800],
+    backgroundSecondary: colors.charade[800],
     surface: colors.neutral[800],
     surfaceVariant: colors.neutral[700],
 
@@ -127,9 +129,9 @@ export const darkTheme = {
     transparent: colors.transparent,
     chipBackground: colors.neutral[700],
     chipText: colors.neutral[200],
-    chipSelectedBackground: colors.primary[400],
+    chipSelectedBackground: colors.jaffa[400],
     chipSelectedText: colors.neutral[900],
-    iconPrimary: colors.primary[400],
+    iconPrimary: colors.jaffa[400],
 
     // Overlay
     overlay: colors.overlay,

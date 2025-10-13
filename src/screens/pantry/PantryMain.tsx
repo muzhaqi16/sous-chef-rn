@@ -343,6 +343,7 @@ export const PantryMain: React.FC = () => {
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
+    backgroundColor: theme.colors.background,
   },
   imageContainer: {
     width: theme.sizes.listImage.width,

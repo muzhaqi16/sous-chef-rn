@@ -3,6 +3,7 @@ import { View, TouchableOpacity } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { SwipeableItem } from '#/components/molecules/SwipeableItem';
 import { ListItem } from '#/components/molecules/ListItem';
+import { commonStyles } from '#/styles';
 
 interface SimpleDraggableItemProps {
   item: {
@@ -74,11 +75,17 @@ export const SimpleDraggableItem: React.FC<SimpleDraggableItemProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   container: {
+    ...commonStyles.shadow,
     opacity: 1,
-    marginBottom: 12, // Space for shadow and card separation
+    // Horizontal margin for shadow visibility
+    marginHorizontal: theme.spacing.sm,
+    // Vertical margin for consistent spacing between items
+    marginVertical: theme.spacing.sm,
+    borderRadius: 12,
   },
   activeContainer: {
     opacity: 0.98,
+    // Enhanced shadow when dragging for visual feedback
     shadowColor: theme.colors.primary,
     shadowOffset: {
       width: 0,

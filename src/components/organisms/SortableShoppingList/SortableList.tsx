@@ -135,9 +135,8 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
   );
 };
 
-const styles = StyleSheet.create(theme => ({
+const styles = StyleSheet.create(() => ({
   container: {
     flex: 1,
-    paddingHorizontal: theme.spacing.sm,
   },
 }));

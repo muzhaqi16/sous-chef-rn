@@ -1,18 +1,17 @@
 import React from 'react';
-import {View} from 'react-native';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import Reanimated, {
   useAnimatedStyle,
   SharedValue,
   useSharedValue,
 } from 'react-native-reanimated';
-import {RightActions} from './RightActions';
-import {LeftActions} from './LeftActions';
-import {SwipeableContent} from './SwipeableContent';
-import {useSwipeableAnimation} from './hooks/useSwipeableAnimation';
-import {useSwipeableActions} from './hooks/useSwipeableActions';
-import {styles} from './styles';
-import {SwipeableItemProps} from './types';
+import { RightActions } from './RightActions';
+import { LeftActions } from './LeftActions';
+import { SwipeableContent } from './SwipeableContent';
+import { useSwipeableAnimation } from './hooks/useSwipeableAnimation';
+import { useSwipeableActions } from './hooks/useSwipeableActions';
+import { styles } from './styles';
+import { SwipeableItemProps } from './types';
 
 export const SwipeableItem: React.FC<SwipeableItemProps> = ({
   children,
@@ -26,10 +25,9 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({
 }) => {
   const dragX = useSharedValue(0);
 
-  const {itemOpacity, animateDelete} =
-    useSwipeableAnimation();
+  const { itemOpacity, animateDelete } = useSwipeableAnimation();
 
-  const {swipeableRef, handleActionPress, handleSwipeableOpen} =
+  const { swipeableRef, handleActionPress, handleSwipeableOpen } =
     useSwipeableActions({
       onEdit,
       onDelete,
@@ -74,23 +72,22 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({
   };
 
   return (
-    <View style={styles.gestureContainer}>
-      <Reanimated.View style={[styles.container, animatedStyle]}>
-        <ReanimatedSwipeable
-          ref={swipeableRef}
-          friction={friction}
-          leftThreshold={leftThreshold}
-          rightThreshold={rightThreshold}
-          renderLeftActions={renderLeftActions}
-          renderRightActions={renderRightActions}
-          onSwipeableOpen={handleSwipeableOpen}
-          overshootLeft={false}
-          overshootRight={false}>
-          <SwipeableContent onPress={onPress} dragX={dragX}>
-            {children}
-          </SwipeableContent>
-        </ReanimatedSwipeable>
-      </Reanimated.View>
-    </View>
+    <Reanimated.View style={[styles.gestureContainer, animatedStyle]}>
+      <ReanimatedSwipeable
+        ref={swipeableRef}
+        friction={friction}
+        leftThreshold={leftThreshold}
+        rightThreshold={rightThreshold}
+        renderLeftActions={renderLeftActions}
+        renderRightActions={renderRightActions}
+        onSwipeableOpen={handleSwipeableOpen}
+        overshootFriction={8}
+        containerStyle={{ overflow: 'visible' }}
+      >
+        <SwipeableContent onPress={onPress} dragX={dragX}>
+          {children}
+        </SwipeableContent>
+      </ReanimatedSwipeable>
+    </Reanimated.View>
   );
 };

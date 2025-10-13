@@ -6,7 +6,6 @@ import React, {
   useState,
 } from 'react';
 import {
-  TouchableOpacity,
   Alert,
   Image,
   View,
@@ -38,7 +37,8 @@ import type {
 } from '#components/organisms/SortableShoppingList';
 import { useShoppingListManagement } from '#/hooks';
 import { useStore } from '#/store';
-import { Icon, IconLibrary } from '#/utils/iconUtils';
+import { IconLibrary } from '#/utils/iconUtils';
+import { AnimatedCheckbox } from '#/components/atoms/AnimatedCheckbox';
 
 export const ShoppingListMain: React.FC = () => {
   const { navigate, navigateTo } = useAppNavigation();
@@ -84,8 +84,14 @@ export const ShoppingListMain: React.FC = () => {
   ]);
 
   // Use the shopping list hook for both data and mutations to ensure consistency
-  const { items, searchQuery, setSearchQuery, addItem, toggleItem, removeItem } =
-    useShoppingListManagement(currentListId);
+  const {
+    items,
+    searchQuery,
+    setSearchQuery,
+    addItem,
+    toggleItem,
+    removeItem,
+  } = useShoppingListManagement(currentListId);
 
   // Create selector configuration for shopping lists
   const listConfig: SelectorConfig<any> = useMemo(
@@ -141,23 +147,23 @@ export const ShoppingListMain: React.FC = () => {
 
   // Transform shopping list items for SortableShoppingList
   const sortableItems = useMemo((): SortableShoppingListItem[] => {
-    // Use isPurchased field as primary source of truth
-    const unpurchasedItems = items.filter((item: any) => !item.isPurchased);
-    const purchasedItems = items.filter((item: any) => item.isPurchased);
-
-    // Sort each group by sortOrder (ascending - lowest sortOrder first)
+    // Sort items by sortOrder within purchased/unpurchased groups
     const sortBySortOrder = (a: any, b: any) => {
-      // Handle missing sortOrder values defensively
-      const aOrder = a.sortOrder ?? 999999; // Default high value for items without sortOrder
-      const bOrder = b.sortOrder ?? 999999; // Default high value for items without sortOrder
+      const aOrder = a.sortOrder ?? 999999;
+      const bOrder = b.sortOrder ?? 999999;
       return aOrder - bOrder;
     };
 
-    const sortedUnpurchasedItems = unpurchasedItems.sort(sortBySortOrder);
-    const sortedPurchasedItems = purchasedItems.sort(sortBySortOrder);
+    // Group by purchased status
+    const unpurchasedItems = items
+      .filter((item: any) => !item.isPurchased)
+      .sort(sortBySortOrder);
+    const purchasedItems = items
+      .filter((item: any) => item.isPurchased)
+      .sort(sortBySortOrder);
 
-    // Combine unpurchased first, then purchased
-    const sortedItems = [...sortedUnpurchasedItems, ...sortedPurchasedItems];
+    // Combine: unpurchased first, then purchased
+    const sortedItems = [...unpurchasedItems, ...purchasedItems];
 
     return sortedItems.map((item: any) => ({
       id: item.id,
@@ -165,19 +171,21 @@ export const ShoppingListMain: React.FC = () => {
       subtitle: `${item.quantity} ${item.unitName || ''}`.trim(),
       sortOrder: item.sortOrder ?? 0,
       isPurchased: item.isPurchased,
-      badge: item.isPurchased
-        ? { text: 'Purchased', variant: 'success' as const }
-        : undefined,
+      badge: undefined,
       rightElement: (
-        <TouchableOpacity
-          style={[styles.checkbox, item.isPurchased && styles.checkboxChecked]}
+        <AnimatedCheckbox
+          checked={item.isPurchased}
           onPress={() => toggleItem(item.id)}
-        >
-          {item.isPurchased && <Icon name="check" size={16} color="white" />}
-        </TouchableOpacity>
+          size={24}
+        />
       ),
       leftElement: item.item?.imageUrl ? (
-        <View style={styles.imageContainer}>
+        <View
+          style={[
+            styles.imageContainer,
+            item.isPurchased && { opacity: 0.5 },
+          ]}
+        >
           <Image
             source={{ uri: item.item.imageUrl }}
             style={styles.leftImage}
@@ -378,10 +386,7 @@ export const ShoppingListMain: React.FC = () => {
         <ScrollView
           contentContainerStyle={{ flex: 1 }}
           refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-            />
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
           }
         >
           <EmptyState
@@ -472,16 +477,20 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: theme.colors.primary,
+    boxShadow: [
+      {
+        offsetX: 0,
+        offsetY: 1,
+        blurRadius: 1.41,
+        spreadDistance: 0,
+        color: '#00000024',
+      },
+    ],
   },
   leftImage: {
     width: theme.sizes.listImage.width,
     height: theme.sizes.listImage.height,
     borderRadius: theme.radii.md,
     resizeMode: 'cover',
-    elevation: 2,
-    shadowColor: theme.colors.primary,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 1.41,
   },
 }));

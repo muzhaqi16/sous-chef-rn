@@ -17,3 +17,4 @@ export { useDefaultHome } from './home/useDefaultHome';
 export { useStoreReset } from './useStoreReset';
 export { useTheme } from './useTheme';
 export { useImageUpload } from './useImageUpload';
+export { useSelectableItems } from './useSelectableItems';

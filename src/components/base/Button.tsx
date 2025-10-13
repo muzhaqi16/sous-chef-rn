@@ -1,7 +1,7 @@
 import React from 'react';
-import {TouchableOpacity, Text, ActivityIndicator} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
-import {Icon} from '#utils';
+import { TouchableOpacity, Text, ActivityIndicator } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { Icon } from '#utils';
 
 interface ButtonProps {
   onPress: () => void;
@@ -32,7 +32,6 @@ export const Button: React.FC<ButtonProps> = ({
   btnStyle,
   txtStyle,
 }) => {
-
   return (
     <TouchableOpacity
       style={[
@@ -45,11 +44,14 @@ export const Button: React.FC<ButtonProps> = ({
         btnStyle,
       ]}
       onPress={onPress}
-      disabled={disabled || loading}>
+      disabled={disabled || loading}
+    >
       {loading ? (
         <ActivityIndicator
           size="small"
-          color={variant === 'primary' || variant === 'danger' ? 'white' : undefined}
+          color={
+            variant === 'primary' || variant === 'danger' ? 'white' : undefined
+          }
         />
       ) : (
         <>
@@ -57,7 +59,13 @@ export const Button: React.FC<ButtonProps> = ({
             <Icon
               name={icon}
               size={size === 'small' ? 16 : size === 'large' ? 24 : 20}
-              color={variant === 'primary' || variant === 'danger' ? 'white' : variant === 'ghost' ? undefined : undefined}
+              color={
+                variant === 'primary' || variant === 'danger'
+                  ? 'white'
+                  : variant === 'ghost'
+                  ? undefined
+                  : undefined
+              }
             />
           )}
           <Text style={[styles.text, styles[`${variant}Text`], txtStyle]}>

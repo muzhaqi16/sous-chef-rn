@@ -132,9 +132,8 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
   );
 };
 
-const styles = StyleSheet.create(theme => ({
+const styles = StyleSheet.create(() => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
   },
 }));
