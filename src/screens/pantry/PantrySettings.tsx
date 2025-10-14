@@ -10,16 +10,13 @@ import {
 } from 'react-native';
 import { Icon } from '#/utils';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { ApolloCache } from '@apollo/client';
 import {
   useGetPantryQuery,
   useUpdatePantryMutation,
   useDeletePantryMutation,
   useCreatePantryMutation,
-  GetPantriesDocument,
-  GetPantriesQuery,
   GetHomesDocument,
-  GetHomesQuery,
+  GetHomeBasicDocument,
 } from '#generated';
 import { useStore } from '#store';
 import { useAppNavigation } from '#hooks';
@@ -50,120 +47,30 @@ export const PantrySettings: React.FC<{
 
   const pantry = pantryData?.pantry;
 
-  const [updatePantry] = useUpdatePantryMutation();
+  const [updatePantry] = useUpdatePantryMutation({
+    refetchQueries: [
+      { query: GetHomesDocument },
+      { query: GetHomeBasicDocument, variables: { homeId: selectedHomeId } },
+    ],
+    awaitRefetchQueries: true,
+  });
   const [deletePantry] = useDeletePantryMutation({
-    update: (cache: ApolloCache, { data }: any) => {
-      if (data?.deletePantry) {
-        try {
-          // Update GetHomes cache to remove the pantry
-          const existingHomesData = cache.readQuery<GetHomesQuery>({
-            query: GetHomesDocument,
-          });
-
-          if (existingHomesData?.homes) {
-            const updatedHomes = existingHomesData.homes.map((home: any) => {
-              if (home.pantries) {
-                return {
-                  ...home,
-                  pantries: home.pantries.filter(
-                    (p: any) => p.id !== data.deletePantry,
-                  ),
-                };
-              }
-              return home;
-            });
-
-            cache.writeQuery<GetHomesQuery>({
-              query: GetHomesDocument,
-              data: { homes: updatedHomes },
-            });
-          }
-        } catch (error) {
-          console.log('Cache update failed during delete:', error);
-        }
-      }
-    },
+    refetchQueries: [
+      { query: GetHomesDocument },
+      { query: GetHomeBasicDocument, variables: { homeId: selectedHomeId } },
+    ],
+    awaitRefetchQueries: true,
   });
 
   const [createPantry] = useCreatePantryMutation({
-    update: (cache: ApolloCache, { data }: any) => {
-      if (data?.createPantry) {
-        try {
-          // Update GetHomes cache to include the new pantry
-          const existingHomesData = cache.readQuery<GetHomesQuery>({
-            query: GetHomesDocument,
-          });
-
-          if (existingHomesData?.homes) {
-            const updatedHomes = existingHomesData.homes.map((home: any) => {
-              if (home.id === data.createPantry.homeId) {
-                const updatedHome = {
-                  ...home,
-                  pantries: [
-                    ...(home.pantries || []),
-                    {
-                      id: data.createPantry.id,
-                      name: data.createPantry.name,
-                      isDefault: data.createPantry.isDefault,
-                    },
-                  ],
-                };
-                return updatedHome;
-              }
-              return home;
-            });
-
-            cache.writeQuery<GetHomesQuery>({
-              query: GetHomesDocument,
-              data: { homes: updatedHomes },
-            });
-          } else {
-            console.log('No existing homes data found in cache');
-          }
-
-          // Also update GetPantries cache if it exists
-          try {
-            const existingPantriesData = cache.readQuery<GetPantriesQuery>({
-              query: GetPantriesDocument,
-              variables: { homeId: data.createPantry.homeId },
-            });
-
-            if (existingPantriesData?.pantries) {
-              cache.writeQuery<GetPantriesQuery>({
-                query: GetPantriesDocument,
-                variables: { homeId: data.createPantry.homeId },
-                data: {
-                  pantries: [
-                    ...existingPantriesData.pantries,
-                    data.createPantry,
-                  ],
-                },
-              });
-            }
-          } catch (pantryError) {
-            console.log(
-              'GetPantries cache not found or update failed:',
-              pantryError,
-            );
-          }
-        } catch (error) {
-          console.log('Cache update failed during create:', error);
-        }
-
-        // Force refresh of GetHomes query to ensure stats update
-        try {
-          cache.evict({
-            id: 'ROOT_QUERY',
-            fieldName: 'homes',
-          });
-        } catch (evictError) {
-          console.log('Failed to evict homes query:', evictError);
-        }
-      }
-    },
+    refetchQueries: [
+      { query: GetHomesDocument },
+      { query: GetHomeBasicDocument, variables: { homeId: selectedHomeId } },
+    ],
+    awaitRefetchQueries: true,
     onCompleted: data => {
       if (data?.createPantry) {
-        // Set the newly created pantry as selected if it's marked as default or if it's the first pantry
+        // Set the newly created pantry as selected if it's marked as default
         if (isDefault) {
           setSelectedPantryId(data.createPantry.id);
         }
@@ -180,7 +87,7 @@ export const PantrySettings: React.FC<{
       pantryId,
       hasPantryData: !!pantry,
       pantryName: pantry?.name,
-      loading: loadingPantry
+      loading: loadingPantry,
     });
 
     if (pantry && pantryId) {

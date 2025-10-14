@@ -7043,6 +7043,32 @@ export type ShoppingListItemFragmentFragment = {
       }
     | null
     | undefined;
+  purchases?:
+    | Array<{
+        __typename?: 'Purchase';
+        id: string;
+        purchaseDate: string;
+        quantity: number;
+        unitPrice: number;
+        totalPrice: number;
+        itemName: string;
+        unitSymbol: string;
+        user: {
+          __typename?: 'User';
+          id: string;
+          email: string;
+          profile?:
+            | {
+                __typename?: 'UserProfile';
+                id: string;
+                displayName?: string | null | undefined;
+              }
+            | null
+            | undefined;
+        };
+      }>
+    | null
+    | undefined;
 };
 
 export type BasicUserFragment = {
@@ -8550,6 +8576,30 @@ export type NotificationFragmentFragment = {
   sentAt: string;
   readAt?: string | null | undefined;
   createdAt: string;
+};
+
+export type PurchaseFragmentFragment = {
+  __typename?: 'Purchase';
+  id: string;
+  purchaseDate: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  itemName: string;
+  unitSymbol: string;
+  user: {
+    __typename?: 'User';
+    id: string;
+    email: string;
+    profile?:
+      | {
+          __typename?: 'UserProfile';
+          id: string;
+          displayName?: string | null | undefined;
+        }
+      | null
+      | undefined;
+  };
 };
 
 export type GetHomeQueryVariables = Exact<{
@@ -13743,6 +13793,32 @@ export type GetShoppingListItemsQuery = {
         }
       | null
       | undefined;
+    purchases?:
+      | Array<{
+          __typename?: 'Purchase';
+          id: string;
+          purchaseDate: string;
+          quantity: number;
+          unitPrice: number;
+          totalPrice: number;
+          itemName: string;
+          unitSymbol: string;
+          user: {
+            __typename?: 'User';
+            id: string;
+            email: string;
+            profile?:
+              | {
+                  __typename?: 'UserProfile';
+                  id: string;
+                  displayName?: string | null | undefined;
+                }
+              | null
+              | undefined;
+          };
+        }>
+      | null
+      | undefined;
   }>;
 };
 
@@ -13903,6 +13979,32 @@ export type GetShoppingListItemQuery = {
                 | null
                 | undefined;
             }
+          | null
+          | undefined;
+        purchases?:
+          | Array<{
+              __typename?: 'Purchase';
+              id: string;
+              purchaseDate: string;
+              quantity: number;
+              unitPrice: number;
+              totalPrice: number;
+              itemName: string;
+              unitSymbol: string;
+              user: {
+                __typename?: 'User';
+                id: string;
+                email: string;
+                profile?:
+                  | {
+                      __typename?: 'UserProfile';
+                      id: string;
+                      displayName?: string | null | undefined;
+                    }
+                  | null
+                  | undefined;
+              };
+            }>
           | null
           | undefined;
       }
@@ -14272,6 +14374,32 @@ export type AddItemToShoppingListMutation = {
         }
       | null
       | undefined;
+    purchases?:
+      | Array<{
+          __typename?: 'Purchase';
+          id: string;
+          purchaseDate: string;
+          quantity: number;
+          unitPrice: number;
+          totalPrice: number;
+          itemName: string;
+          unitSymbol: string;
+          user: {
+            __typename?: 'User';
+            id: string;
+            email: string;
+            profile?:
+              | {
+                  __typename?: 'UserProfile';
+                  id: string;
+                  displayName?: string | null | undefined;
+                }
+              | null
+              | undefined;
+          };
+        }>
+      | null
+      | undefined;
   };
 };
 
@@ -14432,6 +14560,32 @@ export type UpdateShoppingListItemMutation = {
             | null
             | undefined;
         }
+      | null
+      | undefined;
+    purchases?:
+      | Array<{
+          __typename?: 'Purchase';
+          id: string;
+          purchaseDate: string;
+          quantity: number;
+          unitPrice: number;
+          totalPrice: number;
+          itemName: string;
+          unitSymbol: string;
+          user: {
+            __typename?: 'User';
+            id: string;
+            email: string;
+            profile?:
+              | {
+                  __typename?: 'UserProfile';
+                  id: string;
+                  displayName?: string | null | undefined;
+                }
+              | null
+              | undefined;
+          };
+        }>
       | null
       | undefined;
   };
@@ -14620,6 +14774,32 @@ export type ReorderShoppingListItemsMutation = {
             | null
             | undefined;
         }
+      | null
+      | undefined;
+    purchases?:
+      | Array<{
+          __typename?: 'Purchase';
+          id: string;
+          purchaseDate: string;
+          quantity: number;
+          unitPrice: number;
+          totalPrice: number;
+          itemName: string;
+          unitSymbol: string;
+          user: {
+            __typename?: 'User';
+            id: string;
+            email: string;
+            profile?:
+              | {
+                  __typename?: 'UserProfile';
+                  id: string;
+                  displayName?: string | null | undefined;
+                }
+              | null
+              | undefined;
+          };
+        }>
       | null
       | undefined;
   }>;
@@ -14886,6 +15066,32 @@ export type ShoppingListItemsChangedSubscription = {
                   }
                 | null
                 | undefined;
+              purchases?:
+                | Array<{
+                    __typename?: 'Purchase';
+                    id: string;
+                    purchaseDate: string;
+                    quantity: number;
+                    unitPrice: number;
+                    totalPrice: number;
+                    itemName: string;
+                    unitSymbol: string;
+                    user: {
+                      __typename?: 'User';
+                      id: string;
+                      email: string;
+                      profile?:
+                        | {
+                            __typename?: 'UserProfile';
+                            id: string;
+                            displayName?: string | null | undefined;
+                          }
+                        | null
+                        | undefined;
+                    };
+                  }>
+                | null
+                | undefined;
             }
           | null
           | undefined;
@@ -15148,6 +15354,32 @@ export type ShoppingListItemAddedSubscription = {
         }
       | null
       | undefined;
+    purchases?:
+      | Array<{
+          __typename?: 'Purchase';
+          id: string;
+          purchaseDate: string;
+          quantity: number;
+          unitPrice: number;
+          totalPrice: number;
+          itemName: string;
+          unitSymbol: string;
+          user: {
+            __typename?: 'User';
+            id: string;
+            email: string;
+            profile?:
+              | {
+                  __typename?: 'UserProfile';
+                  id: string;
+                  displayName?: string | null | undefined;
+                }
+              | null
+              | undefined;
+          };
+        }>
+      | null
+      | undefined;
   };
 };
 
@@ -15307,6 +15539,32 @@ export type ShoppingListItemUpdatedSubscription = {
             | null
             | undefined;
         }
+      | null
+      | undefined;
+    purchases?:
+      | Array<{
+          __typename?: 'Purchase';
+          id: string;
+          purchaseDate: string;
+          quantity: number;
+          unitPrice: number;
+          totalPrice: number;
+          itemName: string;
+          unitSymbol: string;
+          user: {
+            __typename?: 'User';
+            id: string;
+            email: string;
+            profile?:
+              | {
+                  __typename?: 'UserProfile';
+                  id: string;
+                  displayName?: string | null | undefined;
+                }
+              | null
+              | undefined;
+          };
+        }>
       | null
       | undefined;
   };

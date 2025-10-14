@@ -149,11 +149,11 @@ export const commonStyles = StyleSheet.create(theme => ({
     borderBottomColor: theme.colors.border,
     // Add safe area padding on tablets/desktop
     paddingTop: {
-      xs: theme.spacing.xs,
+      xs: theme.spacing.sm,
       md: theme.spacing.md,
     },
     paddingBottom: {
-      xs: theme.spacing.xs,
+      xs: theme.spacing.sm,
       md: theme.spacing.md,
     },
     paddingHorizontal: {

@@ -58,31 +58,10 @@ export const ShoppingListItemDetail: React.FC<{
     });
   };
 
-  const formatPrice = (price?: number | null) => {
-    if (!price) return 'N/A';
-    return `$${price.toFixed(2)}`;
-  };
-
-  // Helper function to check if value exists
+  // Helper function to check if value exists (handles 0 as valid value)
   const hasValue = (value: any): boolean => {
-    return value !== undefined && value !== null;
+    return value !== undefined && value !== null && value !== '';
   };
-
-  // Check if any price information exists
-  const hasPriceInfo =
-    hasValue(item.estimatedPrice) ||
-    hasValue(item.lastKnownPrice) ||
-    hasValue(item.lowestPrice) ||
-    hasValue(item.highestPrice) ||
-    hasValue(item.purchasedPrice);
-
-  // Check if any purchase history exists
-  const hasPurchaseHistory =
-    hasValue(item.purchaseDate) ||
-    hasValue(item.lastPurchaseDate) ||
-    hasValue(item.purchaseCount) ||
-    hasValue(item.purchasedBy) ||
-    hasValue(item.purchasedQuantity);
 
   // Build sections array similar to PantryItemDetail
   const sections = [
@@ -158,150 +137,75 @@ export const ShoppingListItemDetail: React.FC<{
               <Text style={styles.detailValue}>{item.notes}</Text>
             </View>
           ) : null}
-
-          {item.aisle ? (
-            <View style={styles.detailRow}>
-              <Text style={[commonStyles.caption, styles.detailLabel]}>
-                Aisle
-              </Text>
-              <Text style={styles.detailValue}>{item.aisle}</Text>
-            </View>
-          ) : null}
         </View>
       ),
     },
   ];
 
-  // Price Information section
-  if (hasPriceInfo) {
-    sections.push({
-      title: 'Pricing',
-      content: (
-        <View>
-          {hasValue(item.estimatedPrice) ? (
-            <View style={styles.detailRow}>
-              <Text style={[commonStyles.caption, styles.detailLabel]}>
-                Estimated Price
-              </Text>
-              <Text style={styles.detailValue}>
-                {formatPrice(item.estimatedPrice)}
-              </Text>
-            </View>
-          ) : null}
+  // Purchase History section - Always show
+  const purchases = item.purchases || [];
+  const hasPurchases = purchases.length > 0;
 
-          {hasValue(item.lastKnownPrice) ? (
-            <View style={styles.detailRow}>
-              <Text style={[commonStyles.caption, styles.detailLabel]}>
-                Last Known Price
-              </Text>
-              <Text style={styles.detailValue}>
-                {formatPrice(item.lastKnownPrice)}
-              </Text>
-            </View>
-          ) : null}
-
-          {hasValue(item.lowestPrice) ? (
-            <View style={styles.detailRow}>
-              <Text style={[commonStyles.caption, styles.detailLabel]}>
-                Lowest Price
-              </Text>
-              <Text style={styles.detailValue}>
-                {formatPrice(item.lowestPrice)}
-              </Text>
-            </View>
-          ) : null}
-
-          {hasValue(item.highestPrice) ? (
-            <View style={styles.detailRow}>
-              <Text style={[commonStyles.caption, styles.detailLabel]}>
-                Highest Price
-              </Text>
-              <Text style={styles.detailValue}>
-                {formatPrice(item.highestPrice)}
-              </Text>
-            </View>
-          ) : null}
-
-          {hasValue(item.purchasedPrice) ? (
-            <View style={styles.detailRow}>
-              <Text style={[commonStyles.caption, styles.detailLabel]}>
-                Purchased Price
-              </Text>
-              <Text style={styles.detailValue}>
-                {formatPrice(item.purchasedPrice)}
-              </Text>
-            </View>
-          ) : null}
+  sections.push({
+    title: 'Purchase History',
+    content: (
+      <View>
+        {/* Total Purchases Count */}
+        <View style={styles.detailRow}>
+          <Text style={[commonStyles.caption, styles.detailLabel]}>
+            Times Purchased
+          </Text>
+          <Text style={styles.detailValue}>
+            {hasPurchases ? purchases.length : 'Never'}
+          </Text>
         </View>
-      ),
-    });
-  }
 
-  // Purchase History section
-  if (hasPurchaseHistory) {
-    sections.push({
-      title: 'Purchase History',
-      content: (
-        <View>
-          {item.purchaseDate ? (
+        {hasPurchases ? (
+          <>
+            {/* Most Recent Purchase */}
             <View style={styles.detailRow}>
               <Text style={[commonStyles.caption, styles.detailLabel]}>
-                Last Purchase Date
+                Most Recent Purchase
               </Text>
               <Text style={styles.detailValue}>
-                {formatDate(item.purchaseDate)}
+                {formatDate(purchases[0].purchaseDate)}
               </Text>
             </View>
-          ) : null}
 
-          {item.lastPurchaseDate ? (
-            <View style={styles.detailRow}>
-              <Text style={[commonStyles.caption, styles.detailLabel]}>
-                Previous Purchase
+            {/* Purchase History List */}
+            <View style={styles.purchaseHistoryContainer}>
+              <Text style={[commonStyles.caption, styles.purchaseHistoryTitle]}>
+                Complete History
               </Text>
-              <Text style={styles.detailValue}>
-                {formatDate(item.lastPurchaseDate)}
-              </Text>
+              {purchases.map((purchase, index) => (
+                <View key={purchase.id} style={styles.purchaseHistoryItem}>
+                  <View style={styles.purchaseHistoryHeader}>
+                    <Text style={styles.purchaseHistoryDate}>
+                      {formatDate(purchase.purchaseDate)}
+                    </Text>
+                    <Text style={styles.purchaseHistoryQuantity}>
+                      {purchase.quantity} {purchase.unitSymbol}
+                    </Text>
+                  </View>
+                  {purchase.user ? (
+                    <Text style={styles.purchaseHistoryUser}>
+                      By: {purchase.user.profile?.displayName || purchase.user.email}
+                    </Text>
+                  ) : null}
+                </View>
+              ))}
             </View>
-          ) : null}
-
-          {hasValue(item.purchaseCount) ? (
-            <View style={styles.detailRow}>
-              <Text style={[commonStyles.caption, styles.detailLabel]}>
-                Times Purchased
-              </Text>
-              <Text style={styles.detailValue}>{item.purchaseCount}</Text>
-            </View>
-          ) : null}
-
-          {item.purchasedBy ? (
-            <View style={styles.detailRow}>
-              <Text style={[commonStyles.caption, styles.detailLabel]}>
-                Purchased By
-              </Text>
-              <Text style={styles.detailValue}>
-                {item.purchasedBy.profile?.displayName ||
-                  item.purchasedBy.email}
-              </Text>
-            </View>
-          ) : null}
-
-          {hasValue(item.purchasedQuantity) ? (
-            <View style={styles.detailRow}>
-              <Text style={[commonStyles.caption, styles.detailLabel]}>
-                Purchased Quantity
-              </Text>
-              <Text style={styles.detailValue}>
-                {`${item.purchasedQuantity || ''} ${
-                  item.unitName || ''
-                }`.trim()}
-              </Text>
-            </View>
-          ) : null}
-        </View>
-      ),
-    });
-  }
+          </>
+        ) : (
+          <View style={styles.emptyHistoryContainer}>
+            <Text style={styles.emptyHistoryText}>
+              No purchase history available
+            </Text>
+          </View>
+        )}
+      </View>
+    ),
+  });
 
   // Additional Details section
   sections.push({
@@ -434,5 +338,54 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
+  },
+  purchaseHistoryContainer: {
+    marginTop: theme.spacing.md,
+    paddingTop: theme.spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+  },
+  purchaseHistoryTitle: {
+    fontSize: theme.fonts.size.sm,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.sm,
+  },
+  purchaseHistoryItem: {
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+    backgroundColor: theme.colors.background,
+    borderRadius: theme.radii.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  purchaseHistoryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing.xs,
+  },
+  purchaseHistoryDate: {
+    fontSize: theme.fonts.size.sm,
+    fontWeight: theme.fonts.weight.medium,
+    color: theme.colors.textPrimary,
+  },
+  purchaseHistoryQuantity: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textSecondary,
+  },
+  purchaseHistoryUser: {
+    fontSize: theme.fonts.size.xs,
+    color: theme.colors.textSecondary,
+  },
+  emptyHistoryContainer: {
+    paddingVertical: theme.spacing.lg,
+    alignItems: 'center',
+  },
+  emptyHistoryText: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textSecondary,
+    fontStyle: 'italic',
   },
 }));

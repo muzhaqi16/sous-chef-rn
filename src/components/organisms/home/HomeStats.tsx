@@ -1,6 +1,7 @@
 import React from 'react';
-import {View, Text} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
+import { View, Text } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { commonStyles } from '#/styles';
 
 interface HomeStatsProps {
   totalHomes: number;
@@ -49,11 +50,7 @@ const styles = StyleSheet.create(theme => ({
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    ...commonStyles.shadow,
   },
   statNumber: {
     fontSize: 24,

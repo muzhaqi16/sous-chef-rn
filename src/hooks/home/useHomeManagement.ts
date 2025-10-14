@@ -19,6 +19,9 @@ export function useHomeManagement() {
   const { selectedHomeId, setSelectedHomeId, setSelectedPantryId } = useStore();
   const { handleApolloError } = useErrorHandler();
 
+  // Ref to track if initial home auto-selection has been attempted
+  const hasInitializedDefaultHome = useRef(false);
+
   const { data, loading, error, refetch } = useGetHomesQuery({
     fetchPolicy: 'cache-and-network',
     notifyOnNetworkStatusChange: true,
@@ -36,58 +39,29 @@ export function useHomeManagement() {
   const homes = data?.homes;
   const remoteDefaultHomeId = defaultHomeData?.getDefaultHome?.id;
 
-  // Sync remote default home with local store on initial load and changes
+  // One-way sync: remote default home → local store (read-only, no mutations)
   useEffect(() => {
+    // Only update local when remote has a value and they differ
     if (remoteDefaultHomeId && remoteDefaultHomeId !== selectedHomeId) {
+      console.log('🔄 Syncing remote default to local:', remoteDefaultHomeId);
       setSelectedHomeId(remoteDefaultHomeId);
     }
   }, [remoteDefaultHomeId, selectedHomeId, setSelectedHomeId]);
 
-  // If local store has a value but remote doesn't, sync to remote
-  useEffect(() => {
-    const syncLocalToRemote = async () => {
-      if (selectedHomeId && !remoteDefaultHomeId && !loadingDefaultHome) {
-        // Verify the selectedHomeId still exists in the homes list
-        const homeExists = homes?.some((home: any) => home.id === selectedHomeId);
-        if (!homeExists) {
-          setSelectedHomeId(null);
-          return;
-        }
-
-        try {
-          await setDefaultHomeMutation({
-            variables: { homeId: selectedHomeId },
-          });
-          refetchDefaultHome();
-        } catch (error: any) {
-          console.error('Failed to sync local default to remote:', error);
-          // Don't show alert for background sync failures
-        }
-      }
-    };
-
-    syncLocalToRemote();
-  }, [
-    selectedHomeId,
-    remoteDefaultHomeId,
-    loadingDefaultHome,
-    setDefaultHomeMutation,
-    homes,
-    refetchDefaultHome,
-    setSelectedHomeId,
-  ]);
-
   // Auto-select first home if no default is set and we have homes (initialization for first-time users)
+  // This runs ONCE when the user has homes but no default home set anywhere
   useEffect(() => {
     if (
+      !hasInitializedDefaultHome.current &&
       !selectedHomeId &&
       !remoteDefaultHomeId &&
       !loadingDefaultHome &&
       homes &&
       homes.length > 0
     ) {
-      // If there's no default set anywhere, select the first home and set it as default
+      hasInitializedDefaultHome.current = true; // Mark as done
       const firstHome = homes[0];
+      console.log('🏠 Auto-selecting first home as default:', firstHome.id);
       setSelectedHomeId(firstHome.id);
 
       // Sync this choice to the backend
@@ -116,14 +90,22 @@ export function useHomeManagement() {
     (home: any, q: string) => home?.name?.toLowerCase().includes(q.toLowerCase()),
   );
 
-  const [createHomeMutation, { loading: creating }] = useCreateHomeMutation({
+  const [createHomeMutation, { loading: creating, client }] = useCreateHomeMutation({
     refetchQueries: [{ query: GetHomesDocument }],
-    onCompleted: (data) => {
+    onCompleted: async (data) => {
       if (data?.createHome) {
         const newHome = data.createHome;
 
-        // If this is the first home, set it as default
-        if (!homes?.length) {
+        // Wait for refetch to complete and get fresh homes data from cache
+        await refetch();
+
+        // Read fresh data from Apollo cache after refetch
+        const cachedData = client.cache.readQuery({ query: GetHomesDocument });
+        const freshHomes = cachedData?.homes || [];
+
+        // Only set as default if this is truly the first/only home
+        if (freshHomes.length === 1 && freshHomes[0].id === newHome.id) {
+          console.log('🏠 Setting newly created home as default (first home)');
           setSelectedHomeId(newHome.id);
           setDefaultHomeMutation({
             variables: { homeId: newHome.id },
@@ -171,18 +153,23 @@ export function useHomeManagement() {
     },
   });
 
-  const [deleteHomeMutation, { loading: deleting }] = useDeleteHomeMutation({
+  const [deleteHomeMutation, { loading: deleting, client: deleteClient }] = useDeleteHomeMutation({
     refetchQueries: [{ query: GetHomesDocument }],
-    onCompleted: (data) => {
+    onCompleted: async (data) => {
       if (data?.deleteHome) {
         // If deleted home was the default, clear it or set another
         if (data.deleteHome.id === selectedHomeId) {
-          const remainingHomes = homes?.filter(
-            (home: any) => home.id !== data.deleteHome.id,
-          ) || [];
+          // Wait for refetch to complete and get fresh homes data from cache
+          await refetch();
 
-          const newDefaultHome = remainingHomes[0];
-          if (newDefaultHome) {
+          // Read fresh data from Apollo cache after refetch
+          const cachedData = deleteClient.cache.readQuery({ query: GetHomesDocument });
+          const remainingHomes = cachedData?.homes || [];
+
+          if (remainingHomes.length > 0) {
+            // Set first remaining home as default
+            const newDefaultHome = remainingHomes[0];
+            console.log('🏠 Setting new default home after delete:', newDefaultHome.id);
             setSelectedHomeId(newDefaultHome.id);
             setDefaultHomeMutation({
               variables: { homeId: newDefaultHome.id },
@@ -196,6 +183,8 @@ export function useHomeManagement() {
               );
             });
           } else {
+            // No homes left, clear the selection
+            console.log('🏠 No homes remaining, clearing default');
             setSelectedHomeId(null);
           }
         }
@@ -297,6 +286,12 @@ export function useHomeManagement() {
   };
 
   const setDefaultHome = async (homeId: string) => {
+    // Prevent redundant calls if already set as default
+    if (homeId === selectedHomeId) {
+      console.log('🏠 Home is already set as default, skipping');
+      return true;
+    }
+
     // Validate homeId exists
     if (!homeId) {
       Alert.alert('Error', 'Invalid home ID');
@@ -314,14 +309,13 @@ export function useHomeManagement() {
       // Update local state immediately for responsive UI
       setSelectedHomeId(homeId);
 
-      // Sync to remote
+      // Sync to remote (Apollo cache will be updated automatically by the mutation)
       const result = await setDefaultHomeMutation({
         variables: { homeId },
       });
 
       if (result.data) {
-        // Refetch to ensure cache is updated
-        await refetchDefaultHome();
+        console.log('🏠 Default home set successfully:', homeId);
         return true;
       }
 

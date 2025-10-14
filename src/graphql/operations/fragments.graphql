@@ -67,6 +67,9 @@ fragment ShoppingListItemFragment on ShoppingListItem {
   purchasedBy {
     ...PartialUser
   }
+  purchases {
+    ...PurchaseFragment
+  }
 }
 fragment BasicUser on User {
   id
@@ -596,4 +599,22 @@ fragment NotificationFragment on Notification {
   sentAt
   readAt
   createdAt
+}
+
+fragment PurchaseFragment on Purchase {
+  id
+  purchaseDate
+  quantity
+  unitPrice
+  totalPrice
+  itemName
+  unitSymbol
+  user {
+    id
+    email
+    profile {
+      id
+      displayName
+    }
+  }
 }

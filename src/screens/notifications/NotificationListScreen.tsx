@@ -135,7 +135,7 @@ export const NotificationListScreen: React.FC<{
 
   const renderHeader = () => (
     <Header
-      title={'Notifications'}
+      title="Notifications"
       centerTitle={true}
       onBack={goBack}
       rightActions={[
@@ -207,7 +207,6 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-    paddingVertical: theme.spacing.md,
   },
   emptyContainer: {
     flex: 1,

@@ -4,6 +4,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useGetHomeInvitesQuery } from '#generated';
 import { HomeActions } from './HomeActions';
 import { MembersList } from './MembersList';
+import { commonStyles } from '#/styles';
 
 export type PartialHome = {
   id: string;
@@ -144,16 +145,11 @@ export const HomeCard: React.FC<HomeCardProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   homeCard: {
-    backgroundColor: theme.colors.white,
     borderRadius: theme.radii.md,
     padding: theme.spacing.md,
     marginHorizontal: theme.spacing.md,
-    marginBottom: 12,
-    shadowColor: theme.colors.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    marginVertical: theme.spacing.sm,
+    ...commonStyles.shadow,
   },
   homeHeader: {
     flexDirection: 'row',
