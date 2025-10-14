@@ -145,16 +145,39 @@ export const ShoppingListMain: React.FC = () => {
     [lists, currentListId, setSelectedShoppingListId, navigate],
   );
 
+  const handleSortOrderUpdate = useCallback(
+    async (updates: SortOrderUpdate[]) => {
+      if (!currentListId) return;
+
+      try {
+        await reorderItems({
+          variables: {
+            input: {
+              shoppingListId: currentListId,
+              items: updates.map(update => ({
+                id: update.id,
+                sortOrder: update.sortOrder,
+              })),
+            },
+          },
+        });
+      } catch (error) {
+        console.error('Failed to update sort order:', error);
+        Alert.alert('Error', 'Failed to reorder items');
+      }
+    },
+    [currentListId, reorderItems],
+  );
+
   // Transform shopping list items for SortableShoppingList
   const sortableItems = useMemo((): SortableShoppingListItem[] => {
-    // Sort items by sortOrder within purchased/unpurchased groups
+    // Group items by isPurchased status and sort within each group
     const sortBySortOrder = (a: any, b: any) => {
       const aOrder = a.sortOrder ?? 999999;
       const bOrder = b.sortOrder ?? 999999;
       return aOrder - bOrder;
     };
 
-    // Group by purchased status
     const unpurchasedItems = items
       .filter((item: any) => !item.isPurchased)
       .sort(sortBySortOrder);
@@ -162,7 +185,6 @@ export const ShoppingListMain: React.FC = () => {
       .filter((item: any) => item.isPurchased)
       .sort(sortBySortOrder);
 
-    // Combine: unpurchased first, then purchased
     const sortedItems = [...unpurchasedItems, ...purchasedItems];
 
     return sortedItems.map((item: any) => ({
@@ -245,30 +267,6 @@ export const ShoppingListMain: React.FC = () => {
       Alert.alert('Error', 'Failed to delete item');
     }
   };
-
-  const handleSortOrderUpdate = useCallback(
-    async (updates: SortOrderUpdate[]) => {
-      if (!currentListId) return;
-
-      try {
-        await reorderItems({
-          variables: {
-            input: {
-              shoppingListId: currentListId,
-              items: updates.map(update => ({
-                id: update.id,
-                sortOrder: update.sortOrder,
-              })),
-            },
-          },
-        });
-      } catch (error) {
-        console.error('Failed to update sort order:', error);
-        Alert.alert('Error', 'Failed to reorder items');
-      }
-    },
-    [currentListId, reorderItems],
-  );
 
   // Search bar actions - conditionally show "Add" button when searching with no results
 
@@ -415,7 +413,6 @@ export const ShoppingListMain: React.FC = () => {
           }
           onRefresh={handleRefresh}
           refreshing={refreshing}
-          groupByPurchased={true}
           showsVerticalScrollIndicator={true}
           disabled={!!searchQuery.trim()} // Disable sorting when searching
         />
