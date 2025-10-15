@@ -5,7 +5,7 @@ import { useAuth } from '#hooks/auth/useAuth';
 
 export const useDefaultHome = () => {
   const { selectedHomeId } = useStore();
-  const { user, accessToken, canAttemptQueries } = useAuth();
+  const { canAttemptQueries } = useAuth();
 
   // Don't skip if we can attempt queries (has tokens and not logging out)
   const shouldSkip = !!selectedHomeId || !canAttemptQueries;
@@ -22,18 +22,15 @@ export const useDefaultHome = () => {
     errorPolicy: 'all', // Allow partial data and cache on errors
   });
 
-  const {
-    data: defaultHomeData,
-    loading: loadingDefaultHome,
-  } = useGetDefaultHomeQuery({
-    fetchPolicy: 'cache-and-network',
-    skip: !canAttemptQueries,
-    notifyOnNetworkStatusChange: true,
-    errorPolicy: 'all',
-  });
+  const { data: defaultHomeData, loading: loadingDefaultHome } =
+    useGetDefaultHomeQuery({
+      fetchPolicy: 'cache-and-network',
+      skip: !canAttemptQueries,
+      notifyOnNetworkStatusChange: true,
+      errorPolicy: 'all',
+    });
 
   const remoteDefaultHomeId = defaultHomeData?.getDefaultHome?.id;
-
 
   // Retry mechanism: retry when we can attempt queries but no homes data
   // Note: Auth errors (token expiry) are automatically retried by errorLink after token refresh

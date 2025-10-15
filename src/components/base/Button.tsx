@@ -5,7 +5,7 @@ import { Icon } from '#utils';
 
 interface ButtonProps {
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline';
   size?: 'small' | 'medium' | 'large';
   disabled?: boolean;
   loading?: boolean;
@@ -101,6 +101,11 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 1,
     borderColor: 'transparent',
   },
+  outline: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+  },
   small: {
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
@@ -134,6 +139,9 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.white,
   },
   ghostText: {
+    color: theme.colors.primary,
+  },
+  outlineText: {
     color: theme.colors.primary,
   },
 }));

@@ -7,7 +7,6 @@ import {
   useUpdateShoppingListItemMutation,
   useRemoveItemFromShoppingListMutation,
   useMarkItemPurchasedMutation,
-  GetShoppingListItemsDocument,
 } from '#generated';
 import { useSearchableList } from '../useSearchableList';
 import { useAuth } from '#hooks/auth/useAuth';
@@ -48,15 +47,15 @@ export function useShoppingListManagement(listId: string | undefined) {
   useShoppingListItemsChangedSubscription({
     variables: { listId: listId ?? '' },
     skip: shouldSkip,
-    onData: () => {
-      // Apollo cache is automatically updated by subscription
-      // No manual cache manipulation needed - just let Apollo work
-    },
     onError: error => {
       const { message } = handleApolloError(error, {
         operation: 'Shopping List Subscription',
       });
-      console.warn('Shopping list subscription error:', message);
+      console.warn('❌ Shopping list subscription error:', {
+        listId,
+        error: message,
+        timestamp: new Date().toISOString(),
+      });
       // Don't refetch on subscription errors - let the query handle reconnection
     },
   });
@@ -102,13 +101,40 @@ export function useShoppingListManagement(listId: string | undefined) {
       });
       Alert.alert('Error', message);
     },
-    refetchQueries: [
-      {
-        query: GetShoppingListItemsDocument,
-        variables: { shoppingListId: listId ?? '' },
-      },
-    ],
-    awaitRefetchQueries: false, // Don't wait for refetch to complete
+    // Update Apollo cache directly instead of refetching
+    // Note: No optimisticResponse - the mutation returns 40+ fields from ShoppingListItemFragment
+    // The cache update provides instant UI feedback when server responds (~100-200ms)
+    update: (cache, { data }) => {
+      if (!data?.addItemToShoppingList || !listId) return;
+
+      try {
+        // Modify the shoppingListItems field in the cache
+        cache.modify({
+          fields: {
+            shoppingListItems(existingItems = [], { readField, toReference }) {
+              const newItemRef = toReference(data.addItemToShoppingList);
+
+              // Check if item already exists (avoid duplicates)
+              const exists = existingItems.some(
+                (itemRef: any) =>
+                  readField('id', itemRef) === data.addItemToShoppingList.id,
+              );
+
+              if (exists) {
+                return existingItems;
+              }
+
+              // Add new item to the list
+              return [...existingItems, newItemRef];
+            },
+          },
+        });
+      } catch (error) {
+        console.warn('Cache update failed for addItem, will refetch:', error);
+        // Fallback: refetch if cache update fails
+        refetch();
+      }
+    },
   });
 
   const [updateItemMutation] = useUpdateShoppingListItemMutation({
@@ -119,6 +145,9 @@ export function useShoppingListManagement(listId: string | undefined) {
       });
       Alert.alert('Error', message);
     },
+    // Cache update happens automatically via Apollo's normalization
+    // The mutation returns the full ShoppingListItemFragment, so Apollo merges it automatically
+    // No manual cache update needed!
   });
 
   const [removeItemMutation] = useRemoveItemFromShoppingListMutation({
@@ -129,30 +158,67 @@ export function useShoppingListManagement(listId: string | undefined) {
       });
       Alert.alert('Error', message);
     },
-    refetchQueries: [
-      {
-        query: GetShoppingListItemsDocument,
-        variables: { shoppingListId: listId ?? '' },
-      },
-    ],
-    awaitRefetchQueries: false, // Don't wait for refetch to complete
+    // Optimistic response for instant removal
+    optimisticResponse: _variables => ({
+      __typename: 'Mutation',
+      removeItemFromShoppingList: true,
+    }),
+    // Update cache to remove the item
+    update: (cache, { data }, { variables }) => {
+      if (!data?.removeItemFromShoppingList || !listId || !variables) return;
+
+      try {
+        const itemId = variables.id;
+
+        // Remove the item from the cache
+        cache.modify({
+          fields: {
+            shoppingListItems(existingItems = [], { readField }) {
+              return existingItems.filter(
+                (itemRef: any) => readField('id', itemRef) !== itemId,
+              );
+            },
+          },
+        });
+
+        // Evict the removed item from cache
+        cache.evict({
+          id: cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
+        });
+        cache.gc(); // Garbage collect orphaned data
+      } catch (error) {
+        console.warn(
+          'Cache update failed for removeItem, will refetch:',
+          error,
+        );
+        refetch();
+      }
+    },
   });
 
   const [markPurchasedMutation] = useMarkItemPurchasedMutation({
-    errorPolicy: 'all',
+    errorPolicy: 'all', // Allow offline mutations
     onError: error => {
       const { message } = handleApolloError(error, {
         operation: 'Mark Item Purchased',
       });
       Alert.alert('Error', message);
     },
-    refetchQueries: [
-      {
-        query: GetShoppingListItemsDocument,
-        variables: { shoppingListId: listId ?? '' },
+    // Optimistic response for instant toggle feedback
+    optimisticResponse: variables => ({
+      __typename: 'Mutation',
+      markItemPurchased: {
+        __typename: 'ShoppingListItem',
+        id: variables.id,
+        isPurchased: variables.status,
+        purchasedBy: variables.status
+          ? { __typename: 'User', id: '', email: '' } // Server will fill in actual user
+          : null,
       },
-    ],
-    awaitRefetchQueries: false, // Don't wait for refetch to complete
+    }),
+    // No manual cache update needed - Apollo automatically merges the mutation response
+    // with the existing cache entry via normalization. The optimistic response provides
+    // instant UI feedback, and the server response updates the cache automatically.
   });
 
   // Simplified add item

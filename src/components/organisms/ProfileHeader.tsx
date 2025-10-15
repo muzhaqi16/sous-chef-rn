@@ -74,7 +74,7 @@ const styles = StyleSheet.create(theme => ({
   avatar: {
     width: 80,
     height: 80,
-    borderRadius: theme.sizes.avatar,
+    borderRadius: theme.sizes.avatar.md,
     backgroundColor: theme.colors.surface,
     overflow: 'hidden',
   },

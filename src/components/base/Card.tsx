@@ -38,7 +38,7 @@ export interface CardProps {
   /** Badge props */
   badge?: {
     text: string;
-    variant?: 'success' | 'error' | 'warning' | 'info';
+    variant?: 'success' | 'danger' | 'warning' | 'default' | 'primary';
   };
 
   /** Price (for product cards) */
@@ -107,7 +107,9 @@ export const Card: React.FC<CardProps> = ({
         <Image
           source={imageSource}
           style={[
-            layout === 'horizontal' ? styles.imageHorizontal : styles.imageVertical,
+            layout === 'horizontal'
+              ? styles.imageHorizontal
+              : styles.imageVertical,
             imageStyle,
           ]}
           resizeMode={layout === 'horizontal' ? 'contain' : 'cover'}
@@ -133,7 +135,12 @@ export const Card: React.FC<CardProps> = ({
   };
 
   const renderContent = () => (
-    <View style={[styles.content, layout === 'horizontal' && styles.contentHorizontal]}>
+    <View
+      style={[
+        styles.content,
+        layout === 'horizontal' && styles.contentHorizontal,
+      ]}
+    >
       {badge && (
         <Badge variant={badge.variant} style={styles.badge}>
           {badge.text}
@@ -219,22 +226,32 @@ export const Card: React.FC<CardProps> = ({
         <>
           {leftElement || renderImage()}
           {renderContent()}
-          {rightElement && <View style={styles.rightSection}>{rightElement}</View>}
+          {rightElement && (
+            <View style={styles.rightSection}>{rightElement}</View>
+          )}
         </>
       ) : (
         <>
           {renderImage()}
           {renderContent()}
-          {rightElement && <View style={styles.rightSection}>{rightElement}</View>}
+          {rightElement && (
+            <View style={styles.rightSection}>{rightElement}</View>
+          )}
         </>
       )}
-      {bottomElement && <View style={styles.bottomSection}>{bottomElement}</View>}
+      {bottomElement && (
+        <View style={styles.bottomSection}>{bottomElement}</View>
+      )}
     </View>
   );
 
   if (onPress && !disabled) {
     return (
-      <TouchableOpacity onPress={onPress} activeOpacity={0.7} disabled={disabled}>
+      <TouchableOpacity
+        onPress={onPress}
+        activeOpacity={0.7}
+        disabled={disabled}
+      >
         {cardContent}
       </TouchableOpacity>
     );

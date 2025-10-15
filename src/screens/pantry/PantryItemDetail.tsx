@@ -121,10 +121,7 @@ export const PantryItemDetail: React.FC<{
           </Text>
           {item?.item?.brands && item.item.brands.length > 0 && (
             <Text style={[commonStyles.subtitle, styles.brandName]}>
-              {item.item.brands
-                .filter(brand => brand.isPrimary)
-                .map(brand => brand?.brand?.name)
-                .join(', ')}
+              {item.item.brands.map(brand => brand?.brand?.name).join(', ')}
             </Text>
           )}
         </View>
@@ -239,7 +236,10 @@ export const PantryItemDetail: React.FC<{
   ];
 
   // Add Item Info section if description or categories exist
-  if (item?.item?.description || (item?.item?.categories && item.item.categories.length > 0)) {
+  if (
+    item?.item?.description ||
+    (item?.item?.categories && item.item.categories.length > 0)
+  ) {
     sections.push({
       title: 'Item Information',
       content: (

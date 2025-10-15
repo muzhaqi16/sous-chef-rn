@@ -1,5 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks';
 import { Icon } from '#utils';
@@ -17,7 +23,7 @@ import {
   GetHomeDocument,
 } from '#generated';
 import { useStore } from '#store';
-import { MESSAGES } from '@/constants';
+import { MESSAGES } from '#constants';
 
 type RouteParams = {
   homeId: string;
@@ -41,31 +47,27 @@ export const HomeDetailScreen: React.FC<{
 
   const [updateHomeMutation, { loading: updating }] = useUpdateHomeMutation({
     refetchQueries: [{ query: GetHomesDocument }],
-    onCompleted: () => {
-      setEditingName(false);
-      Alert.alert('Success', MESSAGES.success.homeNameUpdated);
-    },
-    onError: (error) => {
-      Alert.alert('Error', error.message || MESSAGES.errors.updateHomeNameFailed);
+    onError: error => {
+      Alert.alert(
+        'Error',
+        error.message || MESSAGES.errors.updateHomeNameFailed,
+      );
     },
   });
 
   const [updateMembershipMutation] = useUpdateMembershipMutation({
     refetchQueries: [{ query: GetHomesDocument }],
-    onCompleted: () => {
-      Alert.alert('Success', MESSAGES.success.memberRoleUpdated);
-    },
-    onError: (error) => {
-      Alert.alert('Error', error.message || MESSAGES.errors.updateMemberRoleFailed);
+    onError: error => {
+      Alert.alert(
+        'Error',
+        error.message || MESSAGES.errors.updateMemberRoleFailed,
+      );
     },
   });
 
   const [removeMemberMutation] = useRemoveMemberMutation({
     refetchQueries: [{ query: GetHomesDocument }],
-    onCompleted: () => {
-      Alert.alert('Success', MESSAGES.success.memberRemoved);
-    },
-    onError: (error) => {
+    onError: error => {
       Alert.alert('Error', error.message || MESSAGES.errors.removeMemberFailed);
     },
   });
@@ -75,10 +77,7 @@ export const HomeDetailScreen: React.FC<{
       { query: GetHomesDocument },
       { query: GetHomeDocument, variables: { homeId } },
     ],
-    onCompleted: () => {
-      Alert.alert('Success', MESSAGES.success.invitationRevoked);
-    },
-    onError: (error) => {
+    onError: error => {
       Alert.alert('Error', error.message || MESSAGES.errors.revokeInviteFailed);
     },
   });
@@ -104,7 +103,11 @@ export const HomeDetailScreen: React.FC<{
     setHomeName(home?.name || '');
   };
 
-  const handleChangeRole = (membershipId: string, currentRole: string, memberName: string) => {
+  const handleChangeRole = (
+    membershipId: string,
+    currentRole: string,
+    memberName: string,
+  ) => {
     const roles = [
       { label: 'Owner', value: MembershipRole.Owner },
       { label: 'Admin', value: MembershipRole.Admin },
@@ -140,7 +143,11 @@ export const HomeDetailScreen: React.FC<{
 
     buttons.push({ text: 'Cancel', onPress: () => {}, style: 'cancel' } as any);
 
-    Alert.alert('Select Role', `Current role: ${formatRole(currentRole)}`, buttons);
+    Alert.alert(
+      'Select Role',
+      `Current role: ${formatRole(currentRole)}`,
+      buttons,
+    );
   };
 
   const handleRemoveMember = (membershipId: string, memberName: string) => {
@@ -196,7 +203,7 @@ export const HomeDetailScreen: React.FC<{
     }
   };
 
-  const getRoleBadgeColor = (role: string, theme: any): string => {
+  const getRoleBadgeColor = (role: string): string => {
     switch (role) {
       case 'OWNER':
         return theme.colors.roles.owner;
@@ -249,7 +256,7 @@ export const HomeDetailScreen: React.FC<{
     }
   };
 
-  const getInviteStatusColor = (status: string, theme: any): string => {
+  const getInviteStatusColor = (status: string): string => {
     switch (status) {
       case 'PENDING':
         return theme.colors.status.pending;
@@ -335,7 +342,7 @@ export const HomeDetailScreen: React.FC<{
                   setEditingName(true);
                 }}
               >
-                <Icon name="edit" size={20} uniProps={theme => ({ color: theme.colors.info })} />
+                <Icon name="edit" size={20} color={theme.colors.info} />
               </TouchableOpacity>
             </View>
           )}
@@ -351,7 +358,7 @@ export const HomeDetailScreen: React.FC<{
             home.members.map((member: any) => {
               const isCurrentUser = member.user?.id === currentUser?.id;
               const displayName = getMemberDisplayName(member);
-              const roleBadgeColor = getRoleBadgeColor(member.role, theme);
+              const roleBadgeColor = getRoleBadgeColor(member.role);
 
               return (
                 <View key={member.id} style={styles.memberCard}>
@@ -365,10 +372,7 @@ export const HomeDetailScreen: React.FC<{
                         ]}
                       >
                         <Text
-                          style={[
-                            styles.roleText,
-                            { color: roleBadgeColor },
-                          ]}
+                          style={[styles.roleText, { color: roleBadgeColor }]}
                         >
                           {formatRole(member.role)}
                         </Text>
@@ -386,21 +390,15 @@ export const HomeDetailScreen: React.FC<{
                       <TouchableOpacity
                         style={styles.actionButton}
                         onPress={() =>
-                          handleChangeRole(
-                            member.id,
-                            member.role,
-                            displayName,
-                          )
+                          handleChangeRole(member.id, member.role, displayName)
                         }
                       >
                         <Icon
                           name="swap-horizontal"
                           size={18}
-                          uniProps={theme => ({ color: theme.colors.info })}
+                          color={theme.colors.info}
                         />
-                        <Text style={styles.actionButtonText}>
-                          Change Role
-                        </Text>
+                        <Text style={styles.actionButtonText}>Change Role</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={[styles.actionButton, styles.removeButton]}
@@ -408,7 +406,11 @@ export const HomeDetailScreen: React.FC<{
                           handleRemoveMember(member.id, displayName)
                         }
                       >
-                        <Icon name="person-remove" size={18} uniProps={theme => ({ color: theme.colors.error })} />
+                        <Icon
+                          name="person-remove"
+                          size={18}
+                          color={theme.colors.error}
+                        />
                         <Text style={styles.removeButtonText}>Remove</Text>
                       </TouchableOpacity>
                     </View>
@@ -424,60 +426,68 @@ export const HomeDetailScreen: React.FC<{
           )}
 
           {/* Pending Invites */}
-          {home.invites && home.invites.filter((inv: any) => inv.status !== 'ACCEPTED').length > 0 && (
-            <View style={styles.invitesSection}>
-              <Text style={styles.invitesSectionTitle}>Pending Invitations</Text>
-              {home.invites
-                .filter((invite: any) => invite.status !== 'ACCEPTED')
-                .map((invite: any) => {
-                  const displayName = getInviteDisplayName(invite);
-                  const statusColor = getInviteStatusColor(invite.status, theme);
-                  const statusText = formatInviteStatus(invite.status);
+          {home.invites &&
+            home.invites.filter((inv: any) => inv.status !== 'ACCEPTED')
+              .length > 0 && (
+              <View style={styles.invitesSection}>
+                <Text style={styles.invitesSectionTitle}>
+                  Pending Invitations
+                </Text>
+                {home.invites
+                  .filter((invite: any) => invite.status !== 'ACCEPTED')
+                  .map((invite: any) => {
+                    const displayName = getInviteDisplayName(invite);
+                    const statusColor = getInviteStatusColor(invite.status);
+                    const statusText = formatInviteStatus(invite.status);
 
-                  return (
-                    <View
-                      key={invite.id}
-                      style={[
-                        styles.inviteCard,
-                        { borderColor: statusColor },
-                      ]}
-                    >
-                      <View style={styles.inviteInfo}>
-                        <Text style={styles.inviteName}>{displayName}</Text>
-                        <Text style={styles.inviteEmail}>{invite.email}</Text>
-                      </View>
-                      <View style={styles.inviteActions}>
-                        <View
-                          style={[
-                            styles.inviteStatusBadge,
-                            { backgroundColor: statusColor + '20' },
-                          ]}
-                        >
-                          <Text
+                    return (
+                      <View
+                        key={invite.id}
+                        style={[
+                          styles.inviteCard,
+                          { borderColor: statusColor },
+                        ]}
+                      >
+                        <View style={styles.inviteInfo}>
+                          <Text style={styles.inviteName}>{displayName}</Text>
+                          <Text style={styles.inviteEmail}>{invite.email}</Text>
+                        </View>
+                        <View style={styles.inviteActions}>
+                          <View
                             style={[
-                              styles.inviteStatusText,
-                              { color: statusColor },
+                              styles.inviteStatusBadge,
+                              { backgroundColor: statusColor + '20' },
                             ]}
                           >
-                            {statusText}
-                          </Text>
+                            <Text
+                              style={[
+                                styles.inviteStatusText,
+                                { color: statusColor },
+                              ]}
+                            >
+                              {statusText}
+                            </Text>
+                          </View>
+                          {invite.status === 'PENDING' && (
+                            <TouchableOpacity
+                              style={styles.revokeButton}
+                              onPress={() =>
+                                handleRevokeInvite(invite.id, invite.email)
+                              }
+                            >
+                              <Icon
+                                name="close"
+                                size={20}
+                                color={theme.colors.error}
+                              />
+                            </TouchableOpacity>
+                          )}
                         </View>
-                        {invite.status === 'PENDING' && (
-                          <TouchableOpacity
-                            style={styles.revokeButton}
-                            onPress={() =>
-                              handleRevokeInvite(invite.id, invite.email)
-                            }
-                          >
-                            <Icon name="close" size={20} uniProps={theme => ({ color: theme.colors.error })} />
-                          </TouchableOpacity>
-                        )}
                       </View>
-                    </View>
-                  );
-                })}
-            </View>
-          )}
+                    );
+                  })}
+              </View>
+            )}
         </View>
       ),
     },

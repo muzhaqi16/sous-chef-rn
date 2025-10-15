@@ -1,8 +1,9 @@
 import React from 'react';
-import { TouchableOpacity, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet, Vibration } from 'react-native';
 import { useUnistyles } from 'react-native-unistyles';
 import Animated, {
   useAnimatedStyle,
+  useSharedValue,
   withSpring,
   withTiming,
   Easing,
@@ -25,27 +26,33 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
   disabled = false,
 }) => {
   const { theme } = useUnistyles();
+  const isPressed = useSharedValue(false);
 
   // Animated style for the checkbox container
   const animatedContainerStyle = useAnimatedStyle(() => {
+    // Combine checked scale (1.05) with press scale (0.9)
+    const baseScale = checked ? 1.05 : 1;
+    const pressScale = isPressed.value ? 0.9 : 1;
+    const finalScale = baseScale * pressScale;
+
     return {
       backgroundColor: withTiming(
         checked ? theme.colors.primary : 'transparent',
         {
-          duration: 200,
+          duration: 120,
           easing: Easing.bezier(0.25, 0.1, 0.25, 1),
         },
       ),
       borderColor: withTiming(
         checked ? theme.colors.primary : theme.colors.border,
         {
-          duration: 200,
+          duration: 120,
           easing: Easing.bezier(0.25, 0.1, 0.25, 1),
         },
       ),
       transform: [
         {
-          scale: withSpring(checked ? 1.05 : 1, {
+          scale: withSpring(finalScale, {
             damping: 15,
             stiffness: 200,
           }),
@@ -54,11 +61,26 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
     };
   }, [checked, theme]);
 
+  const handlePressIn = () => {
+    if (!disabled) {
+      isPressed.value = true;
+      // Short vibration for tactile feedback
+      Vibration.vibrate(50);
+    }
+  };
+
+  const handlePressOut = () => {
+    if (!disabled) {
+      isPressed.value = false;
+    }
+  };
+
   return (
-    <TouchableOpacity
+    <Pressable
       onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
       disabled={disabled}
-      activeOpacity={0.7}
       style={{ opacity: disabled ? 0.5 : 1 }}
     >
       <Animated.View
@@ -70,12 +92,12 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
       >
         {checked && (
           <Animated.View
-            entering={FadeIn.duration(150)
+            entering={FadeIn.duration(80)
               .easing(Easing.bezier(0.25, 0.1, 0.25, 1).factory())
               .springify()
               .damping(15)
               .stiffness(200)}
-            exiting={FadeOut.duration(100).easing(
+            exiting={FadeOut.duration(60).easing(
               Easing.bezier(0.25, 0.1, 0.25, 1).factory(),
             )}
           >
@@ -83,7 +105,7 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
           </Animated.View>
         )}
       </Animated.View>
-    </TouchableOpacity>
+    </Pressable>
   );
 };
 

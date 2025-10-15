@@ -160,6 +160,35 @@ export const ShoppingListMain: React.FC = () => {
               })),
             },
           },
+          errorPolicy: 'all', // Allow offline mutations
+          // Update cache immediately to prevent flicker
+          update: (cache, { data }) => {
+            if (!data?.reorderShoppingListItems) return;
+
+            try {
+              // Update each item's sortOrder in the cache
+              data.reorderShoppingListItems.forEach(item => {
+                const itemCacheId = cache.identify({
+                  __typename: 'ShoppingListItem',
+                  id: item.id,
+                });
+
+                if (itemCacheId) {
+                  cache.modify({
+                    id: itemCacheId,
+                    fields: {
+                      sortOrder() {
+                        return item.sortOrder;
+                      },
+                    },
+                  });
+                }
+              });
+            } catch (cacheError) {
+              console.warn('Cache update failed for reorder:', cacheError);
+              // Don't throw - mutation succeeded, cache update is optional
+            }
+          },
         });
       } catch (error) {
         console.error('Failed to update sort order:', error);

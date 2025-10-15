@@ -38,6 +38,7 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
   const insets = useSafeAreaInsets();
 
   // Update local items when props change, but not during our own updates
+  // Use a timeout to ensure cache updates have propagated before syncing
   useEffect(() => {
     if (!isUpdatingRef.current) {
       setLocalItems(items);
@@ -66,11 +67,16 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
         }));
 
         await onSortOrderUpdate(updates);
+
+        // Keep isUpdatingRef true for a brief moment to ensure cache updates complete
+        // This prevents flickering when Apollo cache updates trigger a re-render
+        setTimeout(() => {
+          isUpdatingRef.current = false;
+        }, 100);
       } catch (error) {
         console.error('Failed to update sort order:', error);
         // Revert to original order on error
         setLocalItems(items);
-      } finally {
         isUpdatingRef.current = false;
       }
     },
