@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useGetHomeInvitesQuery } from '#generated';
+import { Icon } from '#utils';
 import { HomeActions } from './HomeActions';
 import { MembersList } from './MembersList';
 import { commonStyles } from '#/styles';
@@ -37,6 +38,7 @@ export type PartialHome = {
 interface HomeCardProps {
   home: PartialHome;
   isDefault: boolean;
+  onPress?: (homeId: string) => void;
   onSetDefault: (homeId: string) => void;
   onInvite: (homeId: string) => void;
   onDelete: (homeId: string, homeName: string) => void;
@@ -45,6 +47,7 @@ interface HomeCardProps {
 export const HomeCard: React.FC<HomeCardProps> = ({
   home,
   isDefault,
+  onPress,
   onSetDefault,
   onInvite,
   onDelete,
@@ -92,7 +95,11 @@ export const HomeCard: React.FC<HomeCardProps> = ({
   };
   return (
     <View style={styles.homeCard}>
-      <View style={styles.homeHeader}>
+      <TouchableOpacity
+        style={styles.homeHeader}
+        onPress={() => onPress?.(home.id)}
+        activeOpacity={onPress ? 0.7 : 1}
+      >
         <View style={styles.homeInfo}>
           <Text style={styles.homeName}>{home.name}</Text>
           <Text style={styles.homeDetails}>
@@ -128,7 +135,10 @@ export const HomeCard: React.FC<HomeCardProps> = ({
             </View>
           )}
         </View>
-      </View>
+        {onPress && (
+          <Icon name="chevron-forward" size={20} color="#999" library="Ionicons" />
+        )}
+      </TouchableOpacity>
 
       <HomeActions
         homeId={home.id}

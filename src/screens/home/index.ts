@@ -1,1 +1,2 @@
-export {HomeManagement} from './HomeManagement';
+export { HomeManagement } from './HomeManagement';
+export { HomeDetailScreen } from './HomeDetailScreen';

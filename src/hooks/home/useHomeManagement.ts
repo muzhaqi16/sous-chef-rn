@@ -7,6 +7,7 @@ import {
   useDeleteHomeMutation,
   useInviteToHomeMutation,
   GetHomesDocument,
+  GetHomeInvitesDocument,
   MembershipRole,
   useGetDefaultHomeQuery,
   useSetDefaultHomeMutation,
@@ -199,7 +200,17 @@ export function useHomeManagement() {
   });
 
   // Invite user to home mutation
-  const [inviteUserMutation, { loading: inviting }] = useInviteToHomeMutation();
+  const [inviteUserMutation, { loading: inviting }] = useInviteToHomeMutation({
+    onCompleted: () => {
+      Alert.alert('Success', 'Invitation sent successfully');
+    },
+    onError: (error: any) => {
+      const { message } = handleApolloError(error, {
+        operation: 'Invite User',
+      });
+      Alert.alert('Error', message);
+    },
+  });
 
   // Helper functions
   const createHome = async (
@@ -343,6 +354,10 @@ export function useHomeManagement() {
           role,
         },
       },
+      refetchQueries: [
+        { query: GetHomesDocument },
+        { query: GetHomeInvitesDocument, variables: { homeId } },
+      ],
     });
 
     return result.data;

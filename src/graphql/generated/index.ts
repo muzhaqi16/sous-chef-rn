@@ -7592,6 +7592,53 @@ export type DeclineHomeInviteMutation = {
   declineHomeInvite: boolean;
 };
 
+export type UpdateMembershipMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+  input: UpdateMembershipInput;
+}>;
+
+export type UpdateMembershipMutation = {
+  __typename?: 'Mutation';
+  updateMembership: {
+    __typename?: 'Membership';
+    id: string;
+    homeId: string;
+    userId: string;
+    role: MembershipRole;
+    status: MembershipStatus;
+    displayName: string | null | undefined;
+    canViewPantry: boolean;
+    canEditPantry: boolean;
+    canAddItems: boolean;
+    canRemoveItems: boolean;
+    canInviteOthers: boolean;
+    canManageHome: boolean;
+    lastActiveAt: string | null | undefined;
+    joinedAt: string;
+    leftAt: string | null | undefined;
+    createdAt: string;
+    updatedAt: string;
+  };
+};
+
+export type RemoveMemberMutationVariables = Exact<{
+  membershipId: Scalars['ID']['input'];
+}>;
+
+export type RemoveMemberMutation = {
+  __typename?: 'Mutation';
+  removeMember: boolean;
+};
+
+export type RevokeHomeInviteMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type RevokeHomeInviteMutation = {
+  __typename?: 'Mutation';
+  revokeHomeInvite: boolean;
+};
+
 export type MembershipUpdatedSubscriptionVariables = Exact<{
   homeId?: InputMaybe<Scalars['ID']['input']>;
 }>;
@@ -21986,6 +22033,320 @@ export type DeclineHomeInviteMutationOptions =
   ApolloReactCommon.BaseMutationOptions<
     DeclineHomeInviteMutation,
     DeclineHomeInviteMutationVariables
+  >;
+export const UpdateMembershipDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'UpdateMembership' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: { kind: 'Variable', name: { kind: 'Name', value: 'id' } },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'input' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: {
+              kind: 'NamedType',
+              name: { kind: 'Name', value: 'UpdateMembershipInput' },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'updateMembership' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'id' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'id' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'input' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'input' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'homeId' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'userId' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'role' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'status' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'displayName' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'canViewPantry' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'canEditPantry' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'canAddItems' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'canRemoveItems' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'canInviteOthers' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'canManageHome' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'lastActiveAt' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'joinedAt' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'leftAt' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type UpdateMembershipMutationFn = ApolloReactCommon.MutationFunction<
+  UpdateMembershipMutation,
+  UpdateMembershipMutationVariables
+>;
+
+/**
+ * __useUpdateMembershipMutation__
+ *
+ * To run a mutation, you first call `useUpdateMembershipMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateMembershipMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateMembershipMutation, { data, loading, error }] = useUpdateMembershipMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useUpdateMembershipMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    UpdateMembershipMutation,
+    UpdateMembershipMutationVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useMutation<
+    UpdateMembershipMutation,
+    UpdateMembershipMutationVariables
+  >(UpdateMembershipDocument, options);
+}
+export type UpdateMembershipMutationHookResult = ReturnType<
+  typeof useUpdateMembershipMutation
+>;
+export type UpdateMembershipMutationResult =
+  ApolloReactCommon.MutationResult<UpdateMembershipMutation>;
+export type UpdateMembershipMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    UpdateMembershipMutation,
+    UpdateMembershipMutationVariables
+  >;
+export const RemoveMemberDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'RemoveMember' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'membershipId' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'removeMember' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'membershipId' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'membershipId' },
+                },
+              },
+            ],
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type RemoveMemberMutationFn = ApolloReactCommon.MutationFunction<
+  RemoveMemberMutation,
+  RemoveMemberMutationVariables
+>;
+
+/**
+ * __useRemoveMemberMutation__
+ *
+ * To run a mutation, you first call `useRemoveMemberMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useRemoveMemberMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [removeMemberMutation, { data, loading, error }] = useRemoveMemberMutation({
+ *   variables: {
+ *      membershipId: // value for 'membershipId'
+ *   },
+ * });
+ */
+export function useRemoveMemberMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    RemoveMemberMutation,
+    RemoveMemberMutationVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useMutation<
+    RemoveMemberMutation,
+    RemoveMemberMutationVariables
+  >(RemoveMemberDocument, options);
+}
+export type RemoveMemberMutationHookResult = ReturnType<
+  typeof useRemoveMemberMutation
+>;
+export type RemoveMemberMutationResult =
+  ApolloReactCommon.MutationResult<RemoveMemberMutation>;
+export type RemoveMemberMutationOptions = ApolloReactCommon.BaseMutationOptions<
+  RemoveMemberMutation,
+  RemoveMemberMutationVariables
+>;
+export const RevokeHomeInviteDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'RevokeHomeInvite' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: { kind: 'Variable', name: { kind: 'Name', value: 'id' } },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'revokeHomeInvite' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'id' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'id' },
+                },
+              },
+            ],
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type RevokeHomeInviteMutationFn = ApolloReactCommon.MutationFunction<
+  RevokeHomeInviteMutation,
+  RevokeHomeInviteMutationVariables
+>;
+
+/**
+ * __useRevokeHomeInviteMutation__
+ *
+ * To run a mutation, you first call `useRevokeHomeInviteMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useRevokeHomeInviteMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [revokeHomeInviteMutation, { data, loading, error }] = useRevokeHomeInviteMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useRevokeHomeInviteMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    RevokeHomeInviteMutation,
+    RevokeHomeInviteMutationVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useMutation<
+    RevokeHomeInviteMutation,
+    RevokeHomeInviteMutationVariables
+  >(RevokeHomeInviteDocument, options);
+}
+export type RevokeHomeInviteMutationHookResult = ReturnType<
+  typeof useRevokeHomeInviteMutation
+>;
+export type RevokeHomeInviteMutationResult =
+  ApolloReactCommon.MutationResult<RevokeHomeInviteMutation>;
+export type RevokeHomeInviteMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    RevokeHomeInviteMutation,
+    RevokeHomeInviteMutationVariables
   >;
 export const MembershipUpdatedDocument = {
   kind: 'Document',

@@ -5,6 +5,7 @@ import { useGetShoppingListItemQuery } from '#generated';
 import { useAppNavigation } from '#hooks';
 import { Icon } from '#utils';
 import { DetailTemplate } from '#components/templates/DetailTemplate';
+import { ClickableInfoPanel } from '#components/molecules/ClickableInfoPanel';
 import { commonStyles } from '#styles';
 
 type RouteParams = {
@@ -58,12 +59,6 @@ export const ShoppingListItemDetail: React.FC<{
     });
   };
 
-  // Helper function to check if value exists (handles 0 as valid value)
-  const hasValue = (value: any): boolean => {
-    return value !== undefined && value !== null && value !== '';
-  };
-
-  // Build sections array similar to PantryItemDetail
   const sections = [
     {
       content: (
@@ -142,68 +137,39 @@ export const ShoppingListItemDetail: React.FC<{
     },
   ];
 
-  // Purchase History section - Always show
+  // Purchase History section - Clickable panel
   const purchases = item.purchases || [];
   const hasPurchases = purchases.length > 0;
 
+  const handleViewHistory = () => {
+    navigate('PurchaseHistory', {
+      itemId: item.id,
+      itemName: item.itemName,
+      purchases: purchases,
+    });
+  };
+
+  const purchaseHistoryItems = hasPurchases
+    ? [
+        {
+          label: 'Times Purchased',
+          value: purchases.length,
+        },
+        {
+          label: 'Most Recent Purchase',
+          value: formatDate(purchases[0].purchaseDate),
+        },
+      ]
+    : [];
+
   sections.push({
-    title: 'Purchase History',
     content: (
-      <View>
-        {/* Total Purchases Count */}
-        <View style={styles.detailRow}>
-          <Text style={[commonStyles.caption, styles.detailLabel]}>
-            Times Purchased
-          </Text>
-          <Text style={styles.detailValue}>
-            {hasPurchases ? purchases.length : 'Never'}
-          </Text>
-        </View>
-
-        {hasPurchases ? (
-          <>
-            {/* Most Recent Purchase */}
-            <View style={styles.detailRow}>
-              <Text style={[commonStyles.caption, styles.detailLabel]}>
-                Most Recent Purchase
-              </Text>
-              <Text style={styles.detailValue}>
-                {formatDate(purchases[0].purchaseDate)}
-              </Text>
-            </View>
-
-            {/* Purchase History List */}
-            <View style={styles.purchaseHistoryContainer}>
-              <Text style={[commonStyles.caption, styles.purchaseHistoryTitle]}>
-                Complete History
-              </Text>
-              {purchases.map((purchase, index) => (
-                <View key={purchase.id} style={styles.purchaseHistoryItem}>
-                  <View style={styles.purchaseHistoryHeader}>
-                    <Text style={styles.purchaseHistoryDate}>
-                      {formatDate(purchase.purchaseDate)}
-                    </Text>
-                    <Text style={styles.purchaseHistoryQuantity}>
-                      {purchase.quantity} {purchase.unitSymbol}
-                    </Text>
-                  </View>
-                  {purchase.user ? (
-                    <Text style={styles.purchaseHistoryUser}>
-                      By: {purchase.user.profile?.displayName || purchase.user.email}
-                    </Text>
-                  ) : null}
-                </View>
-              ))}
-            </View>
-          </>
-        ) : (
-          <View style={styles.emptyHistoryContainer}>
-            <Text style={styles.emptyHistoryText}>
-              No purchase history available
-            </Text>
-          </View>
-        )}
-      </View>
+      <ClickableInfoPanel
+        title="Purchase History"
+        items={purchaseHistoryItems}
+        onPress={handleViewHistory}
+        emptyMessage="No purchase history available"
+      />
     ),
   });
 
@@ -338,54 +304,5 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.sm,
     fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
-  },
-  purchaseHistoryContainer: {
-    marginTop: theme.spacing.md,
-    paddingTop: theme.spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-  },
-  purchaseHistoryTitle: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.sm,
-  },
-  purchaseHistoryItem: {
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.radii.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  purchaseHistoryHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: theme.spacing.xs,
-  },
-  purchaseHistoryDate: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
-  },
-  purchaseHistoryQuantity: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-  },
-  purchaseHistoryUser: {
-    fontSize: theme.fonts.size.xs,
-    color: theme.colors.textSecondary,
-  },
-  emptyHistoryContainer: {
-    paddingVertical: theme.spacing.lg,
-    alignItems: 'center',
-  },
-  emptyHistoryText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-    fontStyle: 'italic',
   },
 }));

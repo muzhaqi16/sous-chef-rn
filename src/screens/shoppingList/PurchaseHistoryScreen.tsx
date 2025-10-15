@@ -1,0 +1,257 @@
+import React from 'react';
+import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { useAppNavigation } from '#hooks';
+import { Icon } from '#utils';
+import { commonStyles } from '#styles';
+
+type RouteParams = {
+  itemId: string;
+  itemName: string;
+  purchases: Array<{
+    id: string;
+    purchaseDate: string;
+    quantity: number;
+    unitSymbol: string;
+    user?: {
+      id: string;
+      email: string;
+      profile?: {
+        displayName?: string;
+      };
+    };
+  }>;
+};
+
+export const PurchaseHistoryScreen: React.FC<{
+  route: { params: RouteParams };
+}> = ({ route }) => {
+  const { goBack } = useAppNavigation();
+  const { itemName, purchases } = route.params;
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  };
+
+  return (
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={goBack} style={styles.backButton}>
+          <Icon name="arrow-back" size={24} color="#000" />
+        </TouchableOpacity>
+        <View style={styles.headerContent}>
+          <Text style={styles.headerTitle}>Purchase History</Text>
+          <Text style={styles.headerSubtitle}>{itemName}</Text>
+        </View>
+        <View style={styles.headerSpacer} />
+      </View>
+
+      {/* Purchase List */}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.content}
+      >
+        {purchases.length > 0 ? (
+          <>
+            <View style={styles.statsContainer}>
+              <Text style={styles.statsText}>
+                Total Purchases:{' '}
+                <Text style={styles.statsValue}>{purchases.length}</Text>
+              </Text>
+            </View>
+
+            {purchases.map((purchase, index) => (
+              <View key={purchase.id} style={styles.purchaseCard}>
+                <View style={styles.purchaseHeader}>
+                  <View style={styles.purchaseNumber}>
+                    <Text style={styles.purchaseNumberText}>
+                      #{purchases.length - index}
+                    </Text>
+                  </View>
+                  <Text style={styles.purchaseDate}>
+                    {formatDate(purchase.purchaseDate)}
+                  </Text>
+                </View>
+
+                <View style={styles.purchaseDetails}>
+                  <View style={styles.purchaseDetailRow}>
+                    <Icon
+                      name="cube-outline"
+                      size={18}
+                      library="Ionicons"
+                      color="#666"
+                    />
+                    <Text style={styles.purchaseDetailLabel}>Quantity:</Text>
+                    <Text style={styles.purchaseDetailValue}>
+                      {purchase.quantity} {purchase.unitSymbol}
+                    </Text>
+                  </View>
+
+                  {purchase.user && (
+                    <View style={styles.purchaseDetailRow}>
+                      <Icon name="person-outline" size={18} color="#666" />
+                      <Text style={styles.purchaseDetailLabel}>
+                        Purchased by:
+                      </Text>
+                      <Text style={styles.purchaseDetailValue}>
+                        {purchase.user.profile?.displayName ||
+                          purchase.user.email}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+            ))}
+          </>
+        ) : (
+          <View style={styles.emptyContainer}>
+            <Icon name="receipt-outline" size={64} color="#ccc" />
+            <Text style={styles.emptyText}>No purchase history</Text>
+            <Text style={styles.emptySubtext}>
+              Mark this item as purchased to start tracking history
+            </Text>
+          </View>
+        )}
+      </ScrollView>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create(theme => ({
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+    backgroundColor: '#fff',
+  },
+  backButton: {
+    padding: theme.spacing.xs,
+  },
+  headerContent: {
+    flex: 1,
+    marginLeft: theme.spacing.sm,
+  },
+  headerTitle: {
+    fontSize: theme.fonts.size.lg,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textPrimary,
+  },
+  headerSubtitle: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
+  },
+  headerSpacer: {
+    width: 40, // Balance the back button
+  },
+  scrollView: {
+    flex: 1,
+  },
+  content: {
+    padding: theme.spacing.md,
+  },
+  statsContainer: {
+    backgroundColor: '#F0F9FF',
+    padding: theme.spacing.md,
+    borderRadius: theme.radii.md,
+    marginBottom: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+  statsText: {
+    fontSize: theme.fonts.size.md,
+    color: theme.colors.textPrimary,
+  },
+  statsValue: {
+    fontWeight: theme.fonts.weight.bold,
+    color: '#0284C7',
+  },
+  purchaseCard: {
+    borderRadius: theme.radii.md,
+    padding: theme.spacing.md,
+    borderWidth: 1,
+    marginVertical: theme.spacing.sm,
+    borderColor: theme.colors.border,
+    ...commonStyles.shadow,
+  },
+  purchaseHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing.sm,
+    paddingBottom: theme.spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  purchaseNumber: {
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 4,
+    borderRadius: theme.radii.sm,
+    marginRight: theme.spacing.sm,
+  },
+  purchaseNumberText: {
+    color: '#fff',
+    fontSize: theme.fonts.size.xs,
+    fontWeight: theme.fonts.weight.bold,
+  },
+  purchaseDate: {
+    fontSize: theme.fonts.size.sm,
+    fontWeight: theme.fonts.weight.medium,
+    color: theme.colors.textPrimary,
+    flex: 1,
+  },
+  purchaseDetails: {
+    gap: theme.spacing.xs,
+  },
+  purchaseDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: theme.spacing.xs,
+  },
+  purchaseDetailLabel: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textSecondary,
+    marginLeft: theme.spacing.xs,
+    marginRight: theme.spacing.xs,
+  },
+  purchaseDetailValue: {
+    fontSize: theme.fonts.size.sm,
+    fontWeight: theme.fonts.weight.medium,
+    color: theme.colors.textPrimary,
+    flex: 1,
+  },
+  emptyContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: theme.spacing.xl * 2,
+  },
+  emptyText: {
+    fontSize: theme.fonts.size.lg,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textPrimary,
+    marginTop: theme.spacing.md,
+  },
+  emptySubtext: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textSecondary,
+    marginTop: theme.spacing.xs,
+    textAlign: 'center',
+    paddingHorizontal: theme.spacing.xl,
+  },
+}));

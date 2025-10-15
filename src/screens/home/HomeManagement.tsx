@@ -21,7 +21,7 @@ import {
 } from '#/components/organisms/home';
 
 export const HomeManagement: React.FC = () => {
-  const { goBack } = useAppNavigation();
+  const { goBack, navigate } = useAppNavigation();
 
   const { theme } = useUnistyles();
 
@@ -89,6 +89,10 @@ export const HomeManagement: React.FC = () => {
     inviteUserPrompt(homeId);
   };
 
+  const handleViewHomeDetail = (homeId: string) => {
+    navigate('HomeDetail', { homeId });
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -150,6 +154,7 @@ export const HomeManagement: React.FC = () => {
                 key={home.id}
                 home={home as PartialHome}
                 isDefault={home.id === defaultHomeId}
+                onPress={handleViewHomeDetail}
                 onSetDefault={handleSetDefault}
                 onInvite={handleInviteMember}
                 onDelete={handleDeleteHome}

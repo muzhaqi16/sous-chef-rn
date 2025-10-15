@@ -10417,6 +10417,53 @@ export type DeclineHomeInviteMutation = {
   declineHomeInvite: boolean;
 };
 
+export type UpdateMembershipMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+  input: UpdateMembershipInput;
+}>;
+
+export type UpdateMembershipMutation = {
+  __typename?: 'Mutation';
+  updateMembership: {
+    __typename?: 'Membership';
+    id: string;
+    homeId: string;
+    userId: string;
+    role: MembershipRole;
+    status: MembershipStatus;
+    displayName?: string | null | undefined;
+    canViewPantry: boolean;
+    canEditPantry: boolean;
+    canAddItems: boolean;
+    canRemoveItems: boolean;
+    canInviteOthers: boolean;
+    canManageHome: boolean;
+    lastActiveAt?: string | null | undefined;
+    joinedAt: string;
+    leftAt?: string | null | undefined;
+    createdAt: string;
+    updatedAt: string;
+  };
+};
+
+export type RemoveMemberMutationVariables = Exact<{
+  membershipId: Scalars['ID']['input'];
+}>;
+
+export type RemoveMemberMutation = {
+  __typename?: 'Mutation';
+  removeMember: boolean;
+};
+
+export type RevokeHomeInviteMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type RevokeHomeInviteMutation = {
+  __typename?: 'Mutation';
+  revokeHomeInvite: boolean;
+};
+
 export type MembershipUpdatedSubscriptionVariables = Exact<{
   homeId?: InputMaybe<Scalars['ID']['input']>;
 }>;

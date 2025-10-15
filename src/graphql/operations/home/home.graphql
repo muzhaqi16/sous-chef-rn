@@ -147,3 +147,33 @@ mutation AcceptHomeInvite($token: String!) {
 mutation DeclineHomeInvite($token: String!) {
   declineHomeInvite(token: $token)
 }
+
+mutation UpdateMembership($id: ID!, $input: UpdateMembershipInput!) {
+  updateMembership(id: $id, input: $input) {
+    id
+    homeId
+    userId
+    role
+    status
+    displayName
+    canViewPantry
+    canEditPantry
+    canAddItems
+    canRemoveItems
+    canInviteOthers
+    canManageHome
+    lastActiveAt
+    joinedAt
+    leftAt
+    createdAt
+    updatedAt
+  }
+}
+
+mutation RemoveMember($membershipId: ID!) {
+  removeMember(membershipId: $membershipId)
+}
+
+mutation RevokeHomeInvite($id: ID!) {
+  revokeHomeInvite(id: $id)
+}

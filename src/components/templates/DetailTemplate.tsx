@@ -71,7 +71,6 @@ const styles = StyleSheet.create(theme => ({
   },
   content: {
     flex: 1,
-    paddingHorizontal: 16,
   },
   section: {
     backgroundColor: 'white',
