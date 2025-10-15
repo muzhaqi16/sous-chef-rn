@@ -1,8 +1,8 @@
-import { type FC } from 'react';
-import { View, StyleProp, ViewStyle, TextInputProps } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { BaseInput, ActionButton } from '#components';
-import { commonStyles } from '#/styles';
+import {useMemo, type FC} from 'react';
+import {View, StyleProp, ViewStyle, TextInputProps} from 'react-native';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
+import {BaseInput, ActionButton} from '#components';
+import {commonStyles} from '#/styles/commonStyles';
 
 export interface SearchBarAction {
   icon: string;
@@ -25,6 +25,9 @@ type SearchBarProps = Omit<TextInputProps, 'style'> & {
   completedCount?: number;
   leftActions?: SearchBarAction[];
   rightActions?: SearchBarAction[];
+  // Keep legacy props for backward compatibility
+  onPressList?: () => void;
+  onPressAdd?: () => void;
 };
 
 export const SearchBar: FC<SearchBarProps> = ({
@@ -35,10 +38,39 @@ export const SearchBar: FC<SearchBarProps> = ({
   inputStyle,
   leftActions = [],
   rightActions = [],
+  listName = 'List',
+  // Legacy props for backward compatibility
+  onPressList,
+  onPressAdd,
   ...textInputProps
 }) => {
-  const { theme } = useUnistyles();
+  const {theme} = useUnistyles();
   // Handle legacy props by converting them to action arrays
+  const finalLeftActions = useMemo(() => {
+    const actions = [...leftActions];
+    if (onPressList && !leftActions.some(action => action.icon === 'list')) {
+      actions.push({
+        icon: 'list',
+        onPress: onPressList,
+        backgroundColor: theme.colors.primary,
+        color: '#fff',
+      });
+    }
+    return actions;
+  }, [leftActions, onPressList, theme.colors.primary]);
+
+  const finalRightActions = useMemo(() => {
+    const actions = [...rightActions];
+    if (onPressAdd && !rightActions.some(action => action.icon === 'add')) {
+      actions.push({
+        icon: 'add',
+        onPress: onPressAdd,
+        backgroundColor: theme.colors.white,
+        color: theme.colors.primary,
+      });
+    }
+    return actions;
+  }, [rightActions, onPressAdd, theme.colors.primary, theme.colors.white]);
 
   const renderActionButtons = (
     actions: SearchBarAction[],
@@ -56,7 +88,6 @@ export const SearchBar: FC<SearchBarProps> = ({
             style={[
               {
                 backgroundColor: action.backgroundColor || theme.colors.primary,
-                ...commonStyles.shadow,
               },
               action.style,
             ]}
@@ -70,7 +101,7 @@ export const SearchBar: FC<SearchBarProps> = ({
 
   return (
     <View style={[styles.container, containerStyle]}>
-      {renderActionButtons(leftActions, 'left')}
+      {renderActionButtons(finalLeftActions, 'left')}
 
       <BaseInput
         value={value}
@@ -83,21 +114,20 @@ export const SearchBar: FC<SearchBarProps> = ({
         {...textInputProps}
       />
 
-      {renderActionButtons(rightActions, 'right')}
+      {renderActionButtons(finalRightActions, 'right')}
     </View>
   );
 };
 
-const styles = StyleSheet.create(theme => ({
+const styles = StyleSheet.create((theme, rt) => ({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: theme.spacing.sm,
+    padding: theme.spacing.sm,
+    borderRadius: theme.radii.sm,
   },
   inputContainer: {
     flex: 1,
-    borderRadius: theme.radii.md,
-    ...commonStyles.shadow,
   },
   actionsContainer: {
     flexDirection: 'row',

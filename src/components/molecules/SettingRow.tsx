@@ -1,25 +1,25 @@
-import React, { useState } from 'react';
+import React, {useState} from 'react';
 import {
   View,
   TouchableOpacity,
   Text,
   Switch,
   Modal,
+  SafeAreaView,
   ScrollView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@react-native-vector-icons/ionicons';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Controller, useForm } from 'react-hook-form';
-import { yupResolver } from '@hookform/resolvers/yup';
-import { ValueText } from '../atoms/ValueText';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
+import {Controller, useForm} from 'react-hook-form';
+import {yupResolver} from '@hookform/resolvers/yup';
+import {ValueText} from '../atoms/ValueText';
 import {
   getInputComponentForField,
   getInputLabelForField,
   getPlaceholderForField,
 } from '#utils/inputMapping';
-import { getValidationSchemaForField } from '#/utils/validation/profile';
-import { Icon } from '#/utils';
+import {getValidationSchemaForField} from '#/utils/validation/profile';
+import {Icon} from '#/utils';
 
 export interface SettingRowProps {
   item: any;
@@ -32,7 +32,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
   isFirst,
   isLast,
 }) => {
-  const { theme } = useUnistyles();
+  const {theme} = useUnistyles();
 
   const [modalVisible, setModalVisible] = useState(false);
   const [textEditModalVisible, setTextEditModalVisible] = useState(false);
@@ -101,8 +101,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
           styles.rowWrapper,
           isFirst && styles.rowFirst,
           isLast && styles.rowLast,
-        ]}
-      >
+        ]}>
         <View style={styles.row}>
           {item.icon}
           <Text style={styles.rowLabel}>{item.label}</Text>
@@ -173,21 +172,18 @@ export const SettingRow: React.FC<SettingRowProps> = ({
       <Modal
         visible={textEditModalVisible}
         animationType="slide"
-        presentationStyle="pageSheet"
-      >
+        presentationStyle="pageSheet">
         <SafeAreaView style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <TouchableOpacity
               onPress={handleTextCancel}
-              style={styles.modalCloseButton}
-            >
+              style={styles.modalCloseButton}>
               <Text style={styles.modalCancelText}>Cancel</Text>
             </TouchableOpacity>
             <Text style={styles.modalTitle}>{inputLabel}</Text>
             <TouchableOpacity
               onPress={form.handleSubmit(handleTextSave)}
-              style={styles.modalSaveButton}
-            >
+              style={styles.modalSaveButton}>
               <Text style={styles.modalSaveText}>Save</Text>
             </TouchableOpacity>
           </View>
@@ -196,7 +192,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
             <Controller
               control={form.control}
               name={item.key}
-              render={({ field, fieldState }) => (
+              render={({field, fieldState}) => (
                 <InputComponent
                   label={inputLabel}
                   placeholder={placeholder}
@@ -219,8 +215,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
             <View style={styles.modalHeader}>
               <TouchableOpacity
                 onPress={() => setModalVisible(false)}
-                style={styles.modalCloseButton}
-              >
+                style={styles.modalCloseButton}>
                 <Icon
                   library="Feather"
                   name="x"
@@ -237,8 +232,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
                 <TouchableOpacity
                   key={opt.value}
                   style={styles.modalOption}
-                  onPress={handleModalOptionPress(opt.value)}
-                >
+                  onPress={handleModalOptionPress(opt.value)}>
                   <Text style={styles.modalOptionText}>{opt.label}</Text>
                   {item.value === opt.value && (
                     <Icon
@@ -265,15 +259,15 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.divider,
     backgroundColor: theme.colors.surface,
   },
-  rowFirst: { borderTopLeftRadius: 12, borderTopRightRadius: 12 },
+  rowFirst: {borderTopLeftRadius: 12, borderTopRightRadius: 12},
   rowLast: {
     borderBottomLeftRadius: theme.radii.lg,
     borderBottomRightRadius: theme.radii.lg,
     borderBottomWidth: 0,
   },
-  row: { flexDirection: 'row', alignItems: 'center' },
-  rowLabel: { marginLeft: 8, fontSize: 16, color: theme.colors.textPrimary },
-  rowSpacer: { flex: 1 },
+  row: {flexDirection: 'row', alignItems: 'center'},
+  rowLabel: {marginLeft: 8, fontSize: 16, color: theme.colors.textPrimary},
+  rowSpacer: {flex: 1},
   modalValueContainer: {
     flexDirection: 'row',
     alignItems: 'center',

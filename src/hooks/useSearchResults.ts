@@ -1,15 +1,17 @@
-import { useEffect } from 'react';
+import {useEffect} from 'react';
 import {
   useItemByUpcQuery,
-  useItemBySkuQuery,
   useCreateItemMutation,
-  CreateItemMutation,
+  Item,
+  GetPantryItemsDocument,
+  GetPantryItemsQuery,
 } from '#generated';
-import { useStore } from '../store';
-import { ScannedItem } from '../store/slices/barcodeScannerSlice';
-import { Alert } from 'react-native';
-import { useImageUpload } from './useImageUpload';
-import { storage } from '#/storage/mmkv';
+import {useStore} from '../store';
+import {ScannedItem} from '../store/slices/barcodeScannerSlice';
+import {Alert} from 'react-native';
+import {useImageUpload} from './useImageUpload';
+import {useApolloClient} from '@apollo/client';
+import {storage} from '#/storage/mmkv';
 
 // Helper function to convert GraphQL Item to ScannedItem
 const convertToScannedItem = (
@@ -44,14 +46,14 @@ export const useSearchResults = (barcode: string) => {
     setSearchError,
     showBottomSheet,
     setSearchResults,
-    // selectedPantryId: _selectedPantryId, // TODO: Use for context-aware search
+    selectedPantryId,
   } = useStore();
 
-  const { uploadItemImage } = useImageUpload();
-  // const _client = useApolloClient(); // TODO: Use for direct Apollo operations if needed
+  const {uploadItemImage} = useImageUpload();
+  const client = useApolloClient();
 
-  const [addNewItem, { loading: addingItem }] = useCreateItemMutation({
-    onCompleted: async (data: CreateItemMutation) => {
+  const [addNewItem, {loading: addingItem}] = useCreateItemMutation({
+    onCompleted: async data => {
       if (data.createItem) {
         const createdItem = data.createItem;
         let finalItem = createdItem;
@@ -67,7 +69,7 @@ export const useSearchResults = (barcode: string) => {
             const imageUrl = await uploadItemImage(imageFile, createdItem.id);
             if (imageUrl) {
               // Update the finalItem with the new image URL for display
-              finalItem = { ...createdItem, imageUrl };
+              finalItem = {...createdItem, imageUrl};
             }
           }
         } catch (error) {
@@ -88,96 +90,38 @@ export const useSearchResults = (barcode: string) => {
     onError: error => {
       // Clean up pending image upload on error
       storage.delete('temp_pending_item_image');
-
       Alert.alert('Error', `Failed to add item: ${error.message}`);
     },
   });
 
-  const {
-    data: upcData,
-    loading: upcLoading,
-    error: upcError,
-  } = useItemByUpcQuery({
-    variables: { upc: barcode },
-  });
-
-  const {
-    data: skuData,
-    loading: skuLoading,
-    error: skuError,
-  } = useItemBySkuQuery({
-    variables: { sku: barcode, storeId: undefined },
-    skip: !!upcData?.itemByUpc, // Skip SKU search if UPC search found a result
-  });
-
-  // Handle UPC query completion
-  useEffect(() => {
-    if (upcData && upcData?.itemByUpc) {
+  const {data, loading, error} = useItemByUpcQuery({
+    variables: {upc: barcode},
+    onCompleted: data => {
       setSearching(false);
-      const item = convertToScannedItem(upcData.itemByUpc, barcode);
-      setSearchResults([item]);
-      addToRecentlyScanned(item);
-      hideBottomSheet();
-    }
-  }, [
-    upcData,
-    barcode,
-    setSearching,
-    setSearchResults,
-    addToRecentlyScanned,
-    hideBottomSheet,
-  ]);
-
-  // Handle SKU query completion
-  useEffect(() => {
-    if (skuData) {
-      console.log('SKU search completed:', {
-        barcode,
-        foundItem: !!skuData.itemBySku,
-        itemData: skuData.itemBySku,
-      });
-
-      setSearching(false);
-      if (skuData.itemBySku) {
-        const item = convertToScannedItem(skuData.itemBySku, barcode);
+      if (data.itemByUpc) {
+        // itemByUpc returns a single item, not an array
+        const item = convertToScannedItem(data.itemByUpc, barcode);
         setSearchResults([item]);
         addToRecentlyScanned(item);
+        // Make sure bottom sheet is hidden when item is found
         hideBottomSheet();
       } else {
-        // Neither UPC nor SKU found anything
         setSearchResults([]);
         showBottomSheet(1);
       }
-    }
-  }, [
-    skuData,
-    barcode,
-    setSearching,
-    setSearchResults,
-    addToRecentlyScanned,
-    hideBottomSheet,
-    showBottomSheet,
-  ]);
-
-  // Handle errors from both queries
-  useEffect(() => {
-    if (upcError && skuError) {
+    },
+    onError: (error: any) => {
       setSearching(false);
-      setSearchError(`Search failed: ${upcError.message}`);
+      setSearchError(error.message);
       showBottomSheet(1);
-    }
-  }, [upcError, skuError, setSearching, setSearchError, showBottomSheet]);
+    },
+  });
 
-  // Handle loading state from both queries
   useEffect(() => {
-    if (upcLoading || skuLoading) {
+    if (loading) {
       setSearching(true);
-    } else if (!upcLoading && !skuLoading) {
-      // Both queries are done, ensure searching is false
-      // This handles the case where queries complete but don't find results
-      setSearching(false);
     }
-  }, [upcLoading, skuLoading, setSearching]);
+  }, [loading, setSearching]);
 
   const handleAddItem = async (formData: any) => {
     try {
@@ -264,8 +208,8 @@ export const useSearchResults = (barcode: string) => {
 
   return {
     searchResults,
-    loading: upcLoading || skuLoading,
-    error: upcError || skuError,
+    loading,
+    error,
     addingItem,
     handleAddItem,
     handleRetry,

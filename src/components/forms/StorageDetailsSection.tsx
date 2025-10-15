@@ -25,7 +25,6 @@ interface StorageDetailsSectionProps {
   onStorageStateChange: (state: StorageState) => void;
   onDatePickerToggle: () => void;
   onDateChange: (date?: Date) => void;
-  onCategorySelected?: (categoryId: string | null) => void;
 }
 
 export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
@@ -38,7 +37,6 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
   onStorageStateChange,
   onDatePickerToggle,
   onDateChange,
-  onCategorySelected,
 }) => {
   const {theme} = useUnistyles();
 
@@ -107,8 +105,7 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
       name: 'category',
       label: 'Category',
       placeholder: 'e.g., Grains, Dairy',
-      component: 'categoryAutocomplete',
-      onCategorySelected,
+      component: FormInput,
     },
     {
       name: 'notes',

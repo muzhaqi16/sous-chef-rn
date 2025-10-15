@@ -187,25 +187,9 @@ mutation CreateShoppingList($input: CreateShoppingListInput!) {
     isDefault
     isPublic
     tags
-    totalItems
-    completedItems
-    estimatedTotal
-    currency
-    status
-    isCompleted
-    priority
     metadata
     createdAt
     updatedAt
-    items {
-      id
-      isPurchased
-    }
-    collaborators {
-      id
-      email
-      role
-    }
     ownerships {
       id
       user {
@@ -226,27 +210,15 @@ mutation UpdateShoppingList($id: ID!, $input: UpdateShoppingListInput!) {
     id
     name
     description
-    isDefault
-    isPublic
     tags
-    totalItems
-    completedItems
-    estimatedTotal
+    budgetAmount
     currency
+    category
+    priority
     status
     isCompleted
-    priority
-    createdAt
+    isDefault
     updatedAt
-    items {
-      id
-      isPurchased
-    }
-    collaborators {
-      id
-      email
-      role
-    }
   }
 }
 
@@ -326,17 +298,8 @@ mutation RemoveItemFromShoppingList($id: ID!) {
 mutation markItemPurchased($id: ID!, $status: Boolean!) {
   markItemPurchased(id: $id, status: $status) {
     id
+    itemName
     isPurchased
-    purchasedBy {
-      id
-      email
-    }
-  }
-}
-
-mutation ReorderShoppingListItems($input: ReorderShoppingListItemsInput!) {
-  reorderShoppingListItems(input: $input) {
-    ...ShoppingListItemFragment
   }
 }
 

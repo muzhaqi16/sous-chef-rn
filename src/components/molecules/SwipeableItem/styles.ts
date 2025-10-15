@@ -1,15 +1,21 @@
-import { StyleSheet } from 'react-native-unistyles';
-import { commonStyles } from '#/styles/commonStyles';
+import {StyleSheet} from 'react-native-unistyles';
+import {commonStyles} from '#/styles/commonStyles';
 
 export const styles = StyleSheet.create(theme => ({
   gestureContainer: {
-    overflow: 'visible', // Allow shadow to show and actions to extend
+    marginBottom: 12, // Space for shadow and card separation
+    overflow: 'visible', // Allow shadow to show
+  },
+
+  container: {
+    borderRadius: 12, // Match card radius
+    overflow: 'hidden', // Prevent actions from going off screen
   },
 
   actionsContainer: {
     ...commonStyles.row,
     height: '100%',
-    backgroundColor: theme.colors.charade['950'],
+    backgroundColor: '#2C2B3B', // Correct background color from prototype
     justifyContent: 'center',
     alignItems: 'center',
     width: 160, // Fixed width for consistent spacing
@@ -18,10 +24,11 @@ export const styles = StyleSheet.create(theme => ({
     borderTopRightRadius: 12, // Round the outer edge
     borderBottomRightRadius: 12, // Round the outer edge
   },
+
   leftActionsContainer: {
     ...commonStyles.row,
     height: '100%',
-    backgroundColor: theme.colors.charade['950'],
+    backgroundColor: '#2C2B3B', // Correct background color from prototype
     justifyContent: 'center',
     alignItems: 'center',
     width: 120, // Fixed width for consistent spacing

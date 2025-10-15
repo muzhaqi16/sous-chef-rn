@@ -1,46 +1,35 @@
 import React from 'react';
-import { View, Text, Alert } from 'react-native';
+import {View, Text, Alert} from 'react-native';
 import {
   useGetPantryItemQuery,
   useRemoveItemFromPantryMutation,
   useAddItemToShoppingListMutation,
-  GetShoppingListItemsDocument,
 } from '#generated';
-import { DetailTemplate } from '#components/templates/DetailTemplate';
-import { useStore } from '#/store';
-import { commonStyles } from '#styles';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { useAppNavigation } from '#hooks';
-import { PantryStackParamList } from '#navigation/stacks/PantryStack';
+import {DetailTemplate} from '#components/templates/DetailTemplate';
+import {useStore} from '#/store';
+import {commonStyles} from '#styles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
+import {useAppNavigation} from '#hooks';
+import {PantryStackParamList} from '#navigation/stacks/PantryStack';
 
 export const PantryItemDetail: React.FC<{
-  route: { params: PantryStackParamList['PantryItemDetail'] };
-}> = ({ route }) => {
+  route: {params: PantryStackParamList['PantryItemDetail']};
+}> = ({route}) => {
   const itemId = route.params.itemId;
-  const { goBack, navigateTo } = useAppNavigation();
-  const { theme } = useUnistyles();
-  const { selectedShoppingListId } = useStore();
+  const {goBack, navigateTo} = useAppNavigation();
+  const {theme} = useUnistyles();
+  const {selectedShoppingListId} = useStore();
 
-  const { data } = useGetPantryItemQuery({
-    variables: { id: itemId },
+  const {data, loading} = useGetPantryItemQuery({
+    variables: {id: itemId},
   });
 
   const [deleteItem] = useRemoveItemFromPantryMutation();
-  const [addToShoppingList] = useAddItemToShoppingListMutation({
-    refetchQueries: selectedShoppingListId
-      ? [
-          {
-            query: GetShoppingListItemsDocument,
-            variables: { shoppingListId: selectedShoppingListId },
-          },
-        ]
-      : [],
-    awaitRefetchQueries: false,
-  });
+  const [addToShoppingList] = useAddItemToShoppingListMutation();
 
   const handleDelete = () => {
     Alert.alert('Delete Item', 'Are you sure you want to delete this item?', [
-      { text: 'Cancel', style: 'cancel' },
+      {text: 'Cancel', style: 'cancel'},
       {
         text: 'Delete',
         style: 'destructive',
@@ -61,27 +50,11 @@ export const PantryItemDetail: React.FC<{
   };
 
   const handleAddToShoppingList = async () => {
-    // Validate that a shopping list is selected
-    if (!selectedShoppingListId) {
-      Alert.alert(
-        'No Shopping List Selected',
-        'Please select a shopping list first.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Go to Shopping Lists',
-            onPress: () => navigateTo.shoppingListMain(),
-          },
-        ],
-      );
-      return;
-    }
-
     try {
       await addToShoppingList({
         variables: {
           input: {
-            shoppingListId: selectedShoppingListId,
+            shoppingListId: selectedShoppingListId || '',
             itemId: data?.pantryItem?.item?.id || '',
             quantity: data?.pantryItem?.currentQuantity || 1,
             unitId: data?.pantryItem?.unit?.id || '',
@@ -89,28 +62,12 @@ export const PantryItemDetail: React.FC<{
           },
         },
       });
-
-      // Show success feedback
-      Alert.alert(
-        'Success',
-        `${data?.pantryItem?.item?.name} added to shopping list`,
-      );
     } catch (error) {
-      console.error('Failed to add to shopping list:', error);
       Alert.alert('Error', 'Failed to add to shopping list');
     }
   };
 
   const item = data?.pantryItem;
-
-  // Helper function to format item type
-  const formatItemType = (type?: string) => {
-    if (!type) return 'N/A';
-    return type
-      .split('_')
-      .map(word => word.charAt(0) + word.slice(1).toLowerCase())
-      .join(' ');
-  };
 
   const sections = [
     {
@@ -121,38 +78,25 @@ export const PantryItemDetail: React.FC<{
           </Text>
           {item?.item?.brands && item.item.brands.length > 0 && (
             <Text style={[commonStyles.subtitle, styles.brandName]}>
-              {item.item.brands.map(brand => brand?.brand?.name).join(', ')}
+              {item.item.brands
+                .filter(brand => brand.isPrimary)
+                .map(brand => brand?.brand?.name)
+                .join(', ')}
             </Text>
           )}
         </View>
       ),
     },
     {
-      title: 'Quantity Details',
+      title: 'Details',
       content: (
         <View>
           <View style={styles.detailRow}>
             <Text style={[commonStyles.caption, styles.detailLabel]}>
-              Current
+              Quantity
             </Text>
             <Text style={styles.detailValue}>
               {item?.currentQuantity} {item?.unit?.symbol}
-            </Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={[commonStyles.caption, styles.detailLabel]}>
-              Initial
-            </Text>
-            <Text style={styles.detailValue}>
-              {item?.initialQuantity} {item?.unit?.symbol}
-            </Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={[commonStyles.caption, styles.detailLabel]}>
-              Consumed
-            </Text>
-            <Text style={styles.detailValue}>
-              {item?.consumedQuantity} {item?.unit?.symbol}
             </Text>
           </View>
           <View style={styles.detailRow}>
@@ -163,23 +107,6 @@ export const PantryItemDetail: React.FC<{
               {item?.reservedQuantity} {item?.unit?.symbol}
             </Text>
           </View>
-          {item?.item?.netWeight && item?.item?.displayUnit && (
-            <View style={styles.detailRow}>
-              <Text style={[commonStyles.caption, styles.detailLabel]}>
-                Package Size
-              </Text>
-              <Text style={styles.detailValue}>
-                {item.item.netWeight} {item.item.displayUnit.symbol} per item
-              </Text>
-            </View>
-          )}
-        </View>
-      ),
-    },
-    {
-      title: 'Storage & Status',
-      content: (
-        <View>
           <View style={styles.detailRow}>
             <Text style={[commonStyles.caption, styles.detailLabel]}>
               Storage
@@ -204,76 +131,10 @@ export const PantryItemDetail: React.FC<{
               </Text>
             </View>
           )}
-          <View style={styles.detailRow}>
-            <Text style={[commonStyles.caption, styles.detailLabel]}>
-              Added
-            </Text>
-            <Text style={styles.detailValue}>
-              {new Date(item?.createdAt || '').toLocaleDateString()}
-            </Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={[commonStyles.caption, styles.detailLabel]}>
-              Item Type
-            </Text>
-            <Text style={styles.detailValue}>
-              {formatItemType(item?.item?.type)}
-            </Text>
-          </View>
-          {item?.isAutoReorder && (
-            <View style={styles.detailRow}>
-              <Text style={[commonStyles.caption, styles.detailLabel]}>
-                Auto-Reorder
-              </Text>
-              <Text style={styles.detailValue}>
-                Enabled (at {item.autoReorderPoint} {item?.unit?.symbol})
-              </Text>
-            </View>
-          )}
         </View>
       ),
     },
   ];
-
-  // Add Item Info section if description or categories exist
-  if (
-    item?.item?.description ||
-    (item?.item?.categories && item.item.categories.length > 0)
-  ) {
-    sections.push({
-      title: 'Item Information',
-      content: (
-        <View>
-          {item?.item?.description && (
-            <View style={styles.descriptionContainer}>
-              <Text style={[commonStyles.caption, styles.detailLabel]}>
-                Description
-              </Text>
-              <Text style={[commonStyles.body, styles.descriptionText]}>
-                {item.item.description}
-              </Text>
-            </View>
-          )}
-          {item?.item?.categories && item.item.categories.length > 0 && (
-            <View style={styles.detailRow}>
-              <Text style={[commonStyles.caption, styles.detailLabel]}>
-                Categories
-              </Text>
-              <Text style={styles.detailValue}>
-                {item.item.categories
-                  .filter(cat => cat.isPrimary)
-                  .map(cat => cat?.category?.name)
-                  .join(', ') ||
-                  item.item.categories
-                    .map(cat => cat?.category?.name)
-                    .join(', ')}
-              </Text>
-            </View>
-          )}
-        </View>
-      ),
-    });
-  }
 
   if (item?.storageNotes) {
     sections.push({
@@ -293,7 +154,7 @@ export const PantryItemDetail: React.FC<{
       headerActions={[
         {
           icon: 'edit',
-          onPress: () => navigateTo.pantryItem({ itemId }),
+          onPress: () => navigateTo.pantryItem({itemId}),
         },
         {
           icon: 'delete',
@@ -336,15 +197,5 @@ const styles = StyleSheet.create(theme => ({
   },
   notes: {
     lineHeight: theme.fonts.size.base * theme.typography.lineHeight.relaxed,
-  },
-  descriptionContainer: {
-    paddingVertical: theme.spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  descriptionText: {
-    marginTop: theme.spacing.xs,
-    lineHeight: theme.fonts.size.base * theme.typography.lineHeight.relaxed,
-    color: theme.colors.textSecondary,
   },
 }));

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, {useState} from 'react';
 import {
   Modal,
   View,
@@ -6,9 +6,10 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
   ActivityIndicator,
 } from 'react-native';
-import { useUnistyles } from 'react-native-unistyles';
 
 interface EmailInputModalProps {
   visible: boolean;
@@ -18,6 +19,8 @@ interface EmailInputModalProps {
   placeholder?: string;
   submitText?: string;
   cancelText?: string;
+  primaryColor?: string;
+  errorColor?: string;
   loading?: boolean;
 }
 
@@ -29,13 +32,13 @@ export const EmailInputModal: React.FC<EmailInputModalProps> = ({
   placeholder = 'Enter email address',
   submitText = 'Send Invite',
   cancelText = 'Cancel',
+  primaryColor = '#007AFF',
+  errorColor = '#FF3B30',
   loading = false,
 }) => {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const { theme } = useUnistyles();
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -97,17 +100,13 @@ export const EmailInputModal: React.FC<EmailInputModalProps> = ({
       visible={visible}
       onRequestClose={handleClose}
       statusBarTranslucent={true}
-      presentationStyle="overFullScreen"
-    >
+      presentationStyle="overFullScreen">
       <View style={styles.centeredView}>
         <View style={styles.modalView}>
           <Text style={styles.title}>{title}</Text>
 
           <TextInput
-            style={[
-              styles.input,
-              error ? { borderColor: theme.colors.error } : {},
-            ]}
+            style={[styles.input, error ? {borderColor: errorColor} : {}]}
             placeholder={placeholder}
             placeholderTextColor="#999"
             value={email}
@@ -122,17 +121,14 @@ export const EmailInputModal: React.FC<EmailInputModalProps> = ({
           />
 
           {error ? (
-            <Text style={[styles.errorText, { color: theme.colors.error }]}>
-              {error}
-            </Text>
+            <Text style={[styles.errorText, {color: errorColor}]}>{error}</Text>
           ) : null}
 
           <View style={styles.buttonContainer}>
             <TouchableOpacity
               style={[styles.button, styles.cancelButton]}
               onPress={handleClose}
-              disabled={isSubmitting}
-            >
+              disabled={isSubmitting}>
               <Text style={styles.cancelButtonText}>{cancelText}</Text>
             </TouchableOpacity>
 
@@ -140,12 +136,11 @@ export const EmailInputModal: React.FC<EmailInputModalProps> = ({
               style={[
                 styles.button,
                 styles.submitButton,
-                { backgroundColor: theme.colors.primary },
+                {backgroundColor: primaryColor},
                 isSubmitting && styles.disabledButton,
               ]}
               onPress={handleSubmit}
-              disabled={isSubmitting || loading}
-            >
+              disabled={isSubmitting || loading}>
               {isSubmitting || loading ? (
                 <ActivityIndicator size="small" color="#FFF" />
               ) : (

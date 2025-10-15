@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
-import { useStore } from '#store';
-import { useGetMyNotificationsQuery } from '#generated';
+import {useEffect} from 'react';
+import {useStore} from '#store';
+import {useGetMyNotificationsQuery} from '#generated';
 import {
   NotificationCategory,
   NotificationPriority,
@@ -10,7 +10,7 @@ interface UseNotificationSyncProps {
   userId?: string;
 }
 
-export const useNotificationSync = ({ userId }: UseNotificationSyncProps) => {
+export const useNotificationSync = ({userId}: UseNotificationSyncProps) => {
   const syncNotificationsFromServer = useStore(
     state => state.syncNotificationsFromServer,
   );
@@ -24,7 +24,7 @@ export const useNotificationSync = ({ userId }: UseNotificationSyncProps) => {
   );
 
   // Fetch notifications from server
-  const { data: serverNotifications, refetch } = useGetMyNotificationsQuery({
+  const {data: serverNotifications, refetch} = useGetMyNotificationsQuery({
     skip: !userId,
   });
 
@@ -39,7 +39,7 @@ export const useNotificationSync = ({ userId }: UseNotificationSyncProps) => {
             type: node.type,
             category: getCategoryFromNotificationType(node.type),
             priority: NotificationPriority.MEDIUM,
-            title: getNotificationTitle(node.type),
+            title: getNotificationTitle(node.type, node.payload),
             message: getNotificationMessage(node.type, node.payload),
             payload: node.payload,
             sentAt: node.sentAt,
@@ -86,7 +86,7 @@ export const useNotificationSync = ({ userId }: UseNotificationSyncProps) => {
     }
   };
 
-  const getNotificationTitle = (type: string): string => {
+  const getNotificationTitle = (type: string, payload: any): string => {
     switch (type) {
       case 'HOME_INVITATION':
         return 'Home Invitation';
@@ -113,5 +113,5 @@ export const useNotificationSync = ({ userId }: UseNotificationSyncProps) => {
   };
 
   // Return refetch function for parent components
-  return { refetch };
+  return {refetch};
 };

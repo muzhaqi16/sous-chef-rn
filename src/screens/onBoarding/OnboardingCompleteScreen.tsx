@@ -4,27 +4,28 @@ import {StyleSheet} from 'react-native-unistyles';
 import {OnBoardingWrapper} from '#components/templates';
 import {Button} from '#components';
 import {useStore} from '#store';
-import {useCompleteOnboardingMutation} from '#generated';
+import {useUpdateUserMutation} from '#generated';
+import {useOnboardingNavigation} from '#hooks';
 
 export const OnboardingCompleteScreen = () => {
-  const {user, updateUser} = useStore();
+  const {completeOnboarding} = useOnboardingNavigation();
+  const {user, updateUser, setUserNavigationState} = useStore();
   const [isCompleting, setIsCompleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [completeOnboardingMutation] = useCompleteOnboardingMutation({
-    onCompleted: () => {
-      // Update the user in the store
-      if (user) {
-        updateUser({...user, onBoarded: true});
+  const [updateUserMutation] = useUpdateUserMutation({
+    onCompleted: data => {
+      // Update the user in the store with the response from the server
+      if (data?.updateUser) {
+        updateUser(data.updateUser);
       }
+      // Reset onboarding step in store
+      completeOnboarding();
 
       setIsCompleting(false);
-
-      // Navigate to main app - onboarding is now complete
-      // The RootNavigator will automatically navigate to main_app since user.onBoarded = true
     },
     onError: error => {
-      console.error('Failed to complete onboarding:', error);
+      console.error('Failed to update user onboarding status:', error);
       setError('Failed to complete onboarding. Please try again.');
       setIsCompleting(false);
     },
@@ -40,19 +41,35 @@ export const OnboardingCompleteScreen = () => {
     setError(null);
 
     try {
-      await completeOnboardingMutation();
+      // Update user in database
+      await updateUserMutation({
+        variables: {
+          id: user.id,
+          input: {onBoarded: true},
+        },
+      });
+
+      // Mark onboarding as complete
+      if (completeOnboarding()) {
+        // Track completion
+        setUserNavigationState(user.id, {
+          hasCompletedOnboarding: true,
+          onboardingCompletedAt: Date.now(),
+        });
+
+        completeOnboarding();
+      }
     } catch (err) {
       console.error('Error in handleComplete:', err);
     }
   };
 
-
   return (
     <OnBoardingWrapper
       title="All set!"
       subtitle="Your home is ready to use"
-      step={7}
-      totalSteps={7}>
+      step={6}
+      totalSteps={6}>
       <View style={styles.container}>
         <View style={styles.successIcon}>
           <Text style={styles.checkmark}>✓</Text>
@@ -101,7 +118,6 @@ export const OnboardingCompleteScreen = () => {
           <Text style={styles.loadingText}>Finalizing your setup...</Text>
         </View>
       )}
-
     </OnBoardingWrapper>
   );
 };

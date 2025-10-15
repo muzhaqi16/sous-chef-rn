@@ -1,4 +1,4 @@
-import {useMemo, useState, useCallback, useEffect} from 'react';
+import {useMemo, useState, useCallback} from 'react';
 
 export interface SearchableListOptions {
   /** Debounce delay in milliseconds (default: 0) */
@@ -27,7 +27,7 @@ export function useSearchableList<T>(
   const [debouncedQuery, setDebouncedQuery] = useState('');
 
   // Debounce the query if debounceMs is provided
-  useEffect(() => {
+  useMemo(() => {
     if (debounceMs > 0) {
       const timer = setTimeout(() => {
         setDebouncedQuery(query);

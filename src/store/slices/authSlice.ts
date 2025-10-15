@@ -3,8 +3,9 @@
 // Updated to work with your existing store structure
 // ============================================
 
-import { StateCreator } from 'zustand';
-import { RootState } from '../index';
+import {StateCreator} from 'zustand';
+import {RootState} from '../index';
+import {storage} from '#/storage/mmkv';
 
 export interface User {
   id: string;
@@ -27,8 +28,9 @@ export interface AuthState {
   rememberMe: boolean | undefined;
   hasStoredCredentials: boolean | null;
 
-  // Auto-login state
-  isAutoLoggingIn: boolean;
+  // Pending credentials for verification flow
+  pendingEmail?: string;
+  pendingPassword?: string;
 
   // Computed property
   getIsAuthenticated: () => boolean;
@@ -36,22 +38,24 @@ export interface AuthState {
   // Actions
   setAuth: (user: User, accessToken: string, refreshToken: string) => void;
   updateUser: (updates: Partial<User>) => void;
-  setTokens: (tokens: { accessToken?: string; refreshToken?: string }) => void;
+  setTokens: (tokens: {accessToken?: string; refreshToken?: string}) => void;
   setEmailVerified: (verified: boolean) => void;
   setOnboarded: (onboarded: boolean) => void;
   clearAuth: () => void;
   setRememberMe: (remember: boolean) => void;
   setHasStoredCredentials: (has: boolean | null) => void;
-  setIsAutoLoggingIn: (loading: boolean) => void;
+  setPendingCredentials: (email: string, password: string) => void;
+  clearPendingCredentials: () => void;
 }
 
 const initialAuthState = {
   user: null,
   accessToken: null,
   refreshToken: null,
-  rememberMe: true, // Default to true for simplified flow
+  rememberMe: undefined,
   hasStoredCredentials: null,
-  isAutoLoggingIn: false,
+  pendingEmail: undefined,
+  pendingPassword: undefined,
 };
 
 export const createAuthSlice: StateCreator<
@@ -72,7 +76,10 @@ export const createAuthSlice: StateCreator<
       state.user = user;
       state.accessToken = accessToken;
       state.refreshToken = refreshToken;
-      state.isAutoLoggingIn = false; // Clear auto-login state on success
+
+      // Clear pending credentials when auth succeeds
+      state.pendingEmail = undefined;
+      state.pendingPassword = undefined;
     });
   },
 
@@ -84,7 +91,7 @@ export const createAuthSlice: StateCreator<
     });
   },
 
-  setTokens: ({ accessToken, refreshToken }) => {
+  setTokens: ({accessToken, refreshToken}) => {
     set(state => {
       if (accessToken !== undefined) state.accessToken = accessToken;
       if (refreshToken !== undefined) state.refreshToken = refreshToken;
@@ -112,7 +119,8 @@ export const createAuthSlice: StateCreator<
       state.user = null;
       state.accessToken = null;
       state.refreshToken = null;
-      state.isAutoLoggingIn = false;
+      state.pendingEmail = undefined;
+      state.pendingPassword = undefined;
       // Keep rememberMe preference
     });
   },
@@ -129,9 +137,17 @@ export const createAuthSlice: StateCreator<
     });
   },
 
-  setIsAutoLoggingIn: loading => {
+  setPendingCredentials: (email, password) => {
     set(state => {
-      state.isAutoLoggingIn = loading;
+      state.pendingEmail = email;
+      state.pendingPassword = password;
+    });
+  },
+
+  clearPendingCredentials: () => {
+    set(state => {
+      state.pendingEmail = undefined;
+      state.pendingPassword = undefined;
     });
   },
 });

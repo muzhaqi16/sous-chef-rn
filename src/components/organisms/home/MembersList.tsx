@@ -1,8 +1,8 @@
 import React from 'react';
-import { View, Text } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
-import { useStore } from '#store';
-import { HomeInviteFragment } from '#generated';
+import {View, Text} from 'react-native';
+import {StyleSheet} from 'react-native-unistyles';
+import {useStore} from '#store';
+import {HomeInviteFragment} from '#generated';
 
 interface Member {
   id: string;
@@ -21,46 +21,59 @@ interface Member {
   };
 }
 
+interface Invite {
+  id: string;
+  email: string;
+  recipientName?: string;
+  role: string;
+  status: string;
+  sentAt?: string;
+  acceptedAt?: string;
+  declinedAt?: string;
+  revokedAt?: string;
+  expiresAt?: string;
+  inviter?: {
+    id: string;
+    email?: string;
+    profile?: {
+      displayName?: string;
+    };
+  };
+}
+
 interface MembersListProps {
   members: Member[];
   invites?: HomeInviteFragment[];
 }
 
-export const MembersList: React.FC<MembersListProps> = ({
-  members,
-  invites = [],
-}) => {
+export const MembersList: React.FC<MembersListProps> = ({members, invites = []}) => {
   const currentUser = useStore(state => state.user);
-
+  
   // Filter out accepted invites since they are now members
   const pendingInvites = invites.filter(invite => invite.status !== 'ACCEPTED');
-
-  if (
-    (!members || members.length === 0) &&
-    (!pendingInvites || pendingInvites.length === 0)
-  )
-    return null;
+  
+  if ((!members || members.length === 0) && (!pendingInvites || pendingInvites.length === 0)) return null;
 
   const getMemberDisplayName = (member: Member): string => {
     // Check if this member is the current user
     const isCurrentUser = member.user?.id === currentUser?.id;
-
+    
     if (isCurrentUser) {
       return 'You';
     }
-
+    
     // Try to get display name in order of preference
-    const displayName =
+    const displayName = 
       member.displayName ||
       member.user?.profile?.displayName ||
       member.user?.profile?.firstName ||
-      (member.user?.profile?.firstName && member.user?.profile?.lastName
-        ? `${member.user.profile.firstName} ${member.user.profile.lastName}`
+      (member.user?.profile?.firstName && member.user?.profile?.lastName 
+        ? `${member.user.profile.firstName} ${member.user.profile.lastName}` 
         : null) ||
       member.user?.email?.split('@')[0] || // Use email username part
       member.user?.email ||
       'Unknown Member';
-
+    
     return displayName;
   };
 
@@ -124,46 +137,55 @@ export const MembersList: React.FC<MembersListProps> = ({
         {members.map(member => {
           const displayName = getMemberDisplayName(member);
           const isCurrentUser = member.user?.id === currentUser?.id;
-
+          
           return (
-            <View
-              key={member.id}
+            <View 
+              key={member.id} 
               style={[
                 styles.memberChip,
-                isCurrentUser && styles.currentUserChip,
+                isCurrentUser && styles.currentUserChip
               ]}
             >
-              <Text
+              <Text style={[
+                styles.memberChipText,
+                isCurrentUser && styles.currentUserText
+              ]}>
+                {displayName}
+              </Text>
+              <Text style={styles.memberRole}>
+                {formatRole(member.role)}
+              </Text>
+            </View>
+          );
+        })}
+        
+        {pendingInvites.map(invite => {
+            const displayName = getInviteDisplayName(invite);
+            const statusColor = getInviteStatusColor(invite.status);
+            
+            return (
+              <View 
+                key={invite.id} 
                 style={[
-                  styles.memberChipText,
-                  isCurrentUser && styles.currentUserText,
+                  styles.inviteChip,
+                  { borderColor: statusColor }
                 ]}
               >
-                {displayName}
-              </Text>
-              <Text style={styles.memberRole}>{formatRole(member.role)}</Text>
-            </View>
-          );
-        })}
-
-        {pendingInvites.map(invite => {
-          const displayName = getInviteDisplayName(invite);
-          const statusColor = getInviteStatusColor(invite.status);
-
-          return (
-            <View
-              key={invite.id}
-              style={[styles.inviteChip, { borderColor: statusColor }]}
-            >
-              <Text style={[styles.inviteChipText, { color: statusColor }]}>
-                {displayName}
-              </Text>
-              <Text style={[styles.inviteStatus, { color: statusColor }]}>
-                {formatInviteStatus(invite.status)}
-              </Text>
-            </View>
-          );
-        })}
+                <Text style={[
+                  styles.inviteChipText,
+                  { color: statusColor }
+                ]}>
+                  {displayName}
+                </Text>
+                <Text style={[
+                  styles.inviteStatus,
+                  { color: statusColor }
+                ]}>
+                  {formatInviteStatus(invite.status)}
+                </Text>
+              </View>
+            );
+          })}
       </View>
     </View>
   );

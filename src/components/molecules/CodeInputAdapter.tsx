@@ -1,6 +1,6 @@
 import React from 'react';
-import type { FC } from 'react';
-import { CodeInput } from '../atoms/CodeInput'; // wherever your original lives
+import type {FC} from 'react';
+import {CodeInput} from '../atoms/CodeInput'; // wherever your original lives
 
 type AdapterProps = {
   label: string; // will be ignored
@@ -10,7 +10,11 @@ type AdapterProps = {
   placeholder?: string; // ignored too
 };
 
-export const CodeInputAdapter: FC<AdapterProps> = ({ value, onChangeText }) => (
+export const CodeInputAdapter: FC<AdapterProps> = ({
+  value,
+  onChangeText,
+  onBlur,
+}) => (
   <CodeInput
     value={value}
     onChange={onChangeText}

@@ -1,7 +1,7 @@
 import * as Keychain from 'react-native-keychain';
 
-const DEFAULT_SERVICE = 'dev.souschef.app.credentials';
-const CREDENTIALS_INDICATOR_SERVICE = 'dev.souschef.app.credentials.indicator';
+const DEFAULT_SERVICE = 'com.souschefrn.credentials';
+const CREDENTIALS_INDICATOR_SERVICE = 'com.souschefrn.credentials.indicator';
 
 export interface SaveOptions {
   /** namespace of this item */
@@ -12,6 +12,95 @@ export interface SaveOptions {
   securityLevel?: Keychain.SECURITY_LEVEL;
 }
 
+/**
+ * Store username & password in the native keystore/keychain
+ * under a policy that requires biometry to retrieve.
+ */
+export async function saveCredentials(
+  username: string,
+  password: string,
+  service: string = DEFAULT_SERVICE,
+): Promise<void> {
+  return queueOperation(async () => {
+    // First, clear any old, unprotected creds:
+    await Keychain.resetGenericPassword({service});
+    await Keychain.resetGenericPassword({
+      service: CREDENTIALS_INDICATOR_SERVICE,
+    });
+
+    // Now save with a policy that forces a prompt on load
+    const success = await Keychain.setGenericPassword(username, password, {
+      service,
+      // Allow either FaceID/TouchID (iOS) or any enrolled biometric (Android)
+      accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_ANY,
+      // On Android, insist on a hardware-backed keystore
+      securityLevel: Keychain.SECURITY_LEVEL.SECURE_HARDWARE,
+      // Only accessible when device is unlocked
+      accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+    });
+
+    if (!success) {
+      throw new Error("Keychain couldn't save credentials");
+    }
+
+    // Save an unprotected indicator that credentials exist
+    // This allows us to check if credentials exist without triggering biometric authentication
+    const indicatorSuccess = await Keychain.setGenericPassword(
+      'credentials_exist',
+      Date.now().toString(),
+      {
+        service: CREDENTIALS_INDICATOR_SERVICE,
+        accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+        // No access control - this can be read without biometric authentication
+      },
+    );
+
+    if (!indicatorSuccess) {
+      // If we can't save the indicator, clean up the credentials we just saved
+      await Keychain.resetGenericPassword({service});
+      throw new Error("Keychain couldn't save credentials indicator");
+    }
+  });
+}
+
+export interface LoadOptions {
+  service?: string;
+  /** custom title & cancel button for the biometric prompt */
+  authenticationPrompt?: Keychain.AuthenticationPrompt;
+}
+
+/**
+ * Retrieve stored credentials, prompting the user
+ * to authenticate with biometrics / passcode.
+ */
+export async function loadCredentials(
+  service: string = DEFAULT_SERVICE,
+): Promise<{username: string; password: string} | null> {
+  try {
+    // This call will now *always* trigger FaceID/TouchID (or device passcode)
+    const creds = await Keychain.getGenericPassword({
+      service,
+      authenticationPrompt: {
+        title: 'Unlock saved credentials',
+        cancel: 'Use manual login',
+      },
+    });
+    if (!creds) {
+      // user hit "cancel" or failed the check
+      return null;
+    }
+    return {username: creds.username, password: creds.password};
+  } catch (err) {
+    // could also inspect err.code here if you want, but treating
+    // any error as "no creds" is simplest:
+    return null;
+  }
+}
+
+/**
+ * Check if credentials exist without triggering biometric authentication.
+ * This checks the unprotected indicator, not the actual credentials.
+ */
 // Simple queue to prevent concurrent keychain access on Android
 let isOperationInProgress = false;
 const operationQueue: Array<() => Promise<any>> = [];
@@ -56,105 +145,16 @@ const processQueue = async () => {
   }
 };
 
-/**
- * Store username & password in the native keystore/keychain
- * under a policy that requires biometry to retrieve.
- */
-export async function saveCredentials(
-  username: string,
-  password: string,
+export async function hasCredentials(
   service: string = DEFAULT_SERVICE,
-): Promise<void> {
-  return queueOperation(async () => {
-    // First, clear any old, unprotected creds:
-    await Keychain.resetGenericPassword({ service });
-    await Keychain.resetGenericPassword({
-      service: CREDENTIALS_INDICATOR_SERVICE,
-    });
-
-    // Now save with a policy that forces a prompt on load
-    const success = await Keychain.setGenericPassword(username, password, {
-      service,
-      // Allow either FaceID/TouchID (iOS) or any enrolled biometric (Android)
-      accessControl: Keychain.ACCESS_CONTROL.BIOMETRY_ANY,
-      // On Android, insist on a hardware-backed keystore
-      securityLevel: Keychain.SECURITY_LEVEL.SECURE_HARDWARE,
-      // Only accessible when device is unlocked
-      accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
-    });
-
-    if (!success) {
-      throw new Error("Keychain couldn't save credentials");
-    }
-
-    // Save an unprotected indicator that credentials exist
-    // This allows us to check if credentials exist without triggering biometric authentication
-    const indicatorSuccess = await Keychain.setGenericPassword(
-      'credentials_exist',
-      Date.now().toString(),
-      {
-        service: CREDENTIALS_INDICATOR_SERVICE,
-        accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
-        // No access control - this can be read without biometric authentication
-      },
-    );
-
-    if (!indicatorSuccess) {
-      // If we can't save the indicator, clean up the credentials we just saved
-      await Keychain.resetGenericPassword({ service });
-      throw new Error("Keychain couldn't save credentials indicator");
-    }
-  });
-}
-
-export interface LoadOptions {
-  service?: string;
-  /** custom title & cancel button for the biometric prompt */
-  authenticationPrompt?: Keychain.AuthenticationPrompt;
-}
-
-/**
- * Retrieve stored credentials, prompting the user
- * to authenticate with biometrics / passcode.
- */
-export async function loadCredentials(
-  service: string = DEFAULT_SERVICE,
-): Promise<{ username: string; password: string } | null> {
-  try {
-    // This call will now *always* trigger FaceID/TouchID (or device passcode)
-    const creds = await Keychain.getGenericPassword({
-      service,
-      authenticationPrompt: {
-        title: 'Unlock saved credentials',
-        cancel: 'Use manual login',
-      },
-    });
-    if (!creds) {
-      // user hit "cancel" or failed the check
-      return null;
-    }
-    const result = { username: creds.username, password: creds.password };
-    return result;
-  } catch (err) {
-    // could also inspect err.code here if you want, but treating
-    // any error as "no creds" is simplest:
-    return null;
-  }
-}
-
-/**
- * Check if credentials exist without triggering biometric authentication.
- * This checks the unprotected indicator, not the actual credentials.
- */
-export async function hasCredentials(): Promise<boolean> {
+): Promise<boolean> {
   return queueOperation(async () => {
     try {
       // Check the unprotected indicator instead of the protected credentials
       const indicator = await Keychain.getGenericPassword({
         service: CREDENTIALS_INDICATOR_SERVICE,
       });
-      const result = !!indicator;
-      return result;
+      return !!indicator;
     } catch (err: any) {
       // Handle Android DataStore concurrency issue
       if (err?.message?.includes('multiple DataStores active')) {
@@ -164,8 +164,7 @@ export async function hasCredentials(): Promise<boolean> {
           const indicator = await Keychain.getGenericPassword({
             service: CREDENTIALS_INDICATOR_SERVICE,
           });
-          const result = !!indicator;
-          return result;
+          return !!indicator;
         } catch (retryErr) {
           return false;
         }
@@ -182,32 +181,13 @@ export async function clearCredentials(
   service: string = DEFAULT_SERVICE,
 ): Promise<void> {
   try {
-    await Keychain.resetGenericPassword({ service });
+    await Keychain.resetGenericPassword({service});
     await Keychain.resetGenericPassword({
       service: CREDENTIALS_INDICATOR_SERVICE,
     });
   } catch (err) {
-    console.error('Failed to clear credentials:', err);
+    console.error('clearCredentials error:', err);
     throw err;
-  }
-}
-
-/**
- * Get available biometric authentication capabilities
- */
-export async function getBiometricCapability(): Promise<{
-  isAvailable: boolean;
-  biometryType: string | null;
-}> {
-  try {
-    const biometryType = await Keychain.getSupportedBiometryType();
-    return {
-      isAvailable: biometryType !== null,
-      biometryType: biometryType,
-    };
-  } catch (error) {
-    console.error('Failed to get biometric capability:', error);
-    return { isAvailable: false, biometryType: null };
   }
 }
 
@@ -229,27 +209,4 @@ export async function getEmailOnly(): Promise<string | null> {
     console.error('Failed to get email:', error);
     return null;
   }
-}
-
-// Legacy support functions for the existing codebase
-export async function hasCredentialsForAccount(
-  _email: string,
-): Promise<boolean> {
-  // For the new simplified implementation, we just check if any credentials exist
-  return hasCredentials();
-}
-
-export async function loadCredentialsForAccount(
-  _email: string,
-): Promise<{ username: string; password: string } | null> {
-  // For the new simplified implementation, we just load the default credentials
-  return loadCredentials();
-}
-
-export async function getStoredAccounts(): Promise<
-  Array<{ email: string; lastUsed: number; biometricMethod: string }>
-> {
-  // For the new simplified implementation, return empty array
-  // This can be enhanced later if multi-account support is needed
-  return [];
 }

@@ -88,7 +88,7 @@ const styles = StyleSheet.create(theme => ({
   iconContainer: {
     width: 40,
     height: 40,
-    borderRadius: theme.radii.full,
+    borderRadius: 20,
     backgroundColor: theme.colors.background,
     justifyContent: 'center',
     alignItems: 'center',
@@ -102,22 +102,22 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   title: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.medium,
+    fontSize: 16,
+    fontWeight: '500',
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.xs,
   },
   unreadTitle: {
-    fontWeight: theme.fonts.weight.bold,
+    fontWeight: 'bold',
   },
   message: {
-    fontSize: theme.fonts.size.sm,
+    fontSize: 14,
     color: theme.colors.textSecondary,
     marginBottom: theme.spacing.xs,
     lineHeight: 20,
   },
   timestamp: {
-    fontSize: theme.fonts.size.xs,
+    fontSize: 12,
     color: theme.colors.textTertiary || '#999',
   },
   dismissButton: {

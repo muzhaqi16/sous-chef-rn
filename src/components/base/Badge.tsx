@@ -1,22 +1,20 @@
 import React from 'react';
-import { View, Text } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import {View, Text} from 'react-native';
+import {StyleSheet} from 'react-native-unistyles';
 
 interface BadgeProps {
   children: React.ReactNode;
   variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger';
   size?: 'small' | 'medium';
-  style?: any;
 }
 
 export const Badge: React.FC<BadgeProps> = ({
   children,
   variant = 'default',
   size = 'small',
-  style,
 }) => {
   return (
-    <View style={[styles.badge, styles[variant], styles[size], style]}>
+    <View style={[styles.badge, styles[variant], styles[size]]}>
       <Text style={[styles.text, styles[`${variant}Text`]]}>{children}</Text>
     </View>
   );

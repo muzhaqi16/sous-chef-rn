@@ -42,8 +42,6 @@ export const useItemSelector = ({
     variables: {homeId: selectedHomeId || ''},
     fetchPolicy: 'cache-and-network',
     skip: type !== 'pantry' || !selectedHomeId,
-    notifyOnNetworkStatusChange: true,
-    errorPolicy: 'all',
   });
 
   const {data: homeData, loading: homeLoading} = useGetHomesQuery({
@@ -105,13 +103,10 @@ export const useItemSelector = ({
 
   const handleSelect = useCallback(
     (id: string, item: any) => {
-      if (__DEV__) {
-        console.log(`[useItemSelector:${type}] User selected: ${id}`, item?.name || item?.title || item);
-      }
       setSelectedId(id);
       onSelect?.(id, item);
     },
-    [onSelect, type],
+    [onSelect],
   );
 
   const reset = useCallback(() => {

@@ -1,5 +1,9 @@
 import React from 'react';
-import { useNotifications, useNotificationSettings, useAuth } from '#hooks';
+import {
+  useRealTimeNotifications,
+  useNotificationSettings,
+  useAuth,
+} from '#hooks';
 
 interface NotificationProviderProps {
   children: React.ReactNode;
@@ -13,13 +17,13 @@ interface NotificationProviderProps {
 export const NotificationProvider: React.FC<NotificationProviderProps> = ({
   children,
 }) => {
-  const { user, isAuthenticated } = useAuth();
+  const {user, isAuthenticated} = useAuth();
 
   // Get notification settings to configure the real-time system
-  const { settings } = useNotificationSettings();
+  const {settings} = useNotificationSettings();
 
   // Initialize real-time notifications with user settings
-  useNotifications({
+  const {notificationCount, config} = useRealTimeNotifications({
     enablePantryNotifications: settings.pantryUpdates,
     enableShoppingListNotifications: settings.shoppingListUpdates,
     enableMembershipNotifications: settings.membershipChanges,

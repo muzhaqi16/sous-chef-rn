@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { View, TextInput, TouchableOpacity, Keyboard } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Icon } from '#/utils/iconUtils';
+import React, {useState} from 'react';
+import {View, TextInput, TouchableOpacity, Text, Keyboard} from 'react-native';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
+import {Icon} from '#/utils/iconUtils';
 
 interface QuickAddBarProps {
   onAddItem: (name: string, quantity: number) => void;
@@ -12,7 +12,7 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
   onAddItem,
   visible = true,
 }) => {
-  const { theme } = useUnistyles();
+  const {theme} = useUnistyles();
   const [itemName, setItemName] = useState('');
   const [quantity, setQuantity] = useState('1');
 
@@ -50,8 +50,7 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
         <TouchableOpacity
           style={styles.addButton}
           onPress={handleAdd}
-          disabled={!itemName.trim()}
-        >
+          disabled={!itemName.trim()}>
           <Icon name="add" size={24} color="white" />
         </TouchableOpacity>
       </View>
@@ -67,7 +66,7 @@ const styles = StyleSheet.create(theme => ({
     borderBottomColor: theme.colors.border,
     elevation: 2,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.1,
     shadowRadius: 2,
   },

@@ -45,10 +45,8 @@ const styles = StyleSheet.create(theme => ({
   formInputControl: {
     height: 60,
     color: 'transparent',
-    backgroundColor: 'transparent',
     paddingHorizontal: 16,
     zIndex: 2,
-    opacity: 0,
   },
   formInputOverflow: {
     zIndex: 1,

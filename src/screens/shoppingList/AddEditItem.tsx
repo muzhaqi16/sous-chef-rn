@@ -1,6 +1,5 @@
 import React, {useState, useEffect} from 'react';
 import {Alert} from 'react-native';
-import {ApolloCache} from '@apollo/client';
 import {
   useAddItemToShoppingListMutation,
   useUpdateShoppingListItemMutation,
@@ -8,14 +7,12 @@ import {
   GetShoppingListItemsDocument,
   ItemSuggestion,
   ShoppingListItemFragment,
-  CategoryType,
 } from '#generated';
 import {FormModal} from '#components/organisms/FormModal';
 import {Input} from '#components/base/Input';
 import {FormGroup} from '#components/molecules/FormGroup';
 import {AutocompleteInput} from '#components/molecules/AutoCompleteInput';
 import {UnitsAutocompleteInput} from '#components/molecules/UnitsAutocompleteInput';
-import {CategoryAutocompleteInput} from '#components/molecules/CategoryAutocompleteInput';
 import {useAppNavigation} from '#hooks';
 import {ShoppingListStackParamList} from '#navigation/stacks/ShoppingListStack';
 
@@ -37,7 +34,6 @@ export const AddEditItem: React.FC<{
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
   const [category, setCategory] = useState('');
-  const [_selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   // GraphQL hooks
@@ -48,7 +44,7 @@ export const AddEditItem: React.FC<{
 
   const [addItem] = useAddItemToShoppingListMutation({
     // Update cache immediately for optimistic UI
-    update: (cache: ApolloCache, {data: mutationData}: any) => {
+    update: (cache, {data: mutationData}) => {
       if (!mutationData?.addItemToShoppingList) return;
 
       const newItem = mutationData.addItemToShoppingList;
@@ -84,7 +80,7 @@ export const AddEditItem: React.FC<{
 
   const [updateItem] = useUpdateShoppingListItemMutation({
     // Update cache immediately for optimistic UI
-    update: (cache: ApolloCache, {data: mutationData}: any) => {
+    update: (cache, {data: mutationData}) => {
       if (!mutationData?.updateShoppingListItem) return;
 
       const updatedItem = mutationData.updateShoppingListItem;
@@ -165,9 +161,8 @@ export const AddEditItem: React.FC<{
         ...(selectedUnitId && {unitId: selectedUnitId}), // Include unit ID if selected from autocomplete
       };
 
-      let result;
       if (isEdit) {
-        result = await updateItem({
+        await updateItem({
           variables: {
             id: itemId,
             input: {
@@ -180,7 +175,7 @@ export const AddEditItem: React.FC<{
           },
         });
       } else {
-        result = await addItem({
+        await addItem({
           variables: {
             input: {
               shoppingListId: listId,
@@ -193,24 +188,10 @@ export const AddEditItem: React.FC<{
           },
         });
       }
-
-      // Only navigate back if mutation succeeded
-      if (result.data) {
-        const mutationData = isEdit
-          ? ('updateShoppingListItem' in result.data ? result.data.updateShoppingListItem : null)
-          : ('addItemToShoppingList' in result.data ? result.data.addItemToShoppingList : null);
-
-        if (mutationData) {
-          navigation.goBack();
-        } else {
-          Alert.alert('Error', `Failed to ${isEdit ? 'update' : 'add'} item. Please try again.`);
-        }
-      } else {
-        Alert.alert('Error', `Failed to ${isEdit ? 'update' : 'add'} item. Please try again.`);
-      }
+      navigation.goBack();
     } catch (error) {
       console.error('Save error:', error);
-      Alert.alert('Error', `Failed to ${isEdit ? 'update' : 'add'} item. Please try again.`);
+      Alert.alert('Error', `Failed to ${isEdit ? 'update' : 'add'} item`);
     } finally {
       setSaving(false);
     }
@@ -263,13 +244,11 @@ export const AddEditItem: React.FC<{
       </FormGroup>
 
       {/* Category Field */}
-      <CategoryAutocompleteInput
+      <Input
         label="Category"
         value={category}
         onChangeText={setCategory}
-        onCategorySelected={setSelectedCategoryId}
         placeholder="e.g., Dairy, Produce"
-        categoryType={CategoryType.General}
       />
 
       {/* Notes Field */}

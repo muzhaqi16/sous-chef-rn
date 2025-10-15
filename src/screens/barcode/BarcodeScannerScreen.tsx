@@ -1,56 +1,46 @@
-import React, {
-  useState,
-  useRef,
-  useEffect,
-  useCallback,
-  useMemo,
-} from 'react';
+import React, {useState, useRef, useEffect, useCallback, useMemo} from 'react';
 import {
   View,
   Text,
+  StyleSheet,
   Alert,
+  TouchableOpacity,
   StatusBar,
   Dimensions,
   Platform,
-  Vibration,
 } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
   Camera,
   useCameraDevices,
   useCodeScanner,
   useCameraPermission,
 } from 'react-native-vision-camera';
-import { useFocusEffect } from '@react-navigation/native';
-import { useAppNavigation } from '#hooks';
-import { type BarcodeStackParamList } from '#navigation/stacks/BarcodeStack';
+import {useFocusEffect} from '@react-navigation/native';
+import {useAppNavigation} from '#hooks';
+import {type BarcodeStackParamList} from '#navigation/stacks/BarcodeStack';
 
-import { useBarcodeScanner } from '#hooks';
+import {useBarcodeScanner} from '#hooks';
 import BarcodeMask from '#components/organisms/BarcodeMask';
-import { Button } from '#components/base/Button';
-import { IconButton } from '#components/atoms/IconButton';
 
-const { height: screenHeight } = Dimensions.get('window');
+const {width: screenWidth, height: screenHeight} = Dimensions.get('window');
 
 export const BarcodeScannerScreen: React.FC<{
-  route: { params?: BarcodeStackParamList['BarcodeScanner'] };
-}> = ({ route }) => {
-  const { navigate, goBack } = useAppNavigation();
-  const { source, pantryId, shoppingListId } = route?.params || {};
+  route: {params?: BarcodeStackParamList['BarcodeScanner']};
+}> = ({route}) => {
+  const {navigate, goBack} = useAppNavigation();
+  const {source, pantryId, shoppingListId} = route?.params || {};
   const devices = useCameraDevices();
   const device = useMemo(
     () => devices.find(d => d.position === 'back'),
     [devices],
   );
 
-  const { theme } = useUnistyles();
-
   // **NEW** permission hook
-  const { hasPermission, requestPermission } = useCameraPermission();
+  const {hasPermission, requestPermission} = useCameraPermission();
 
   // barcode state/hooks
   const hasNavigatedRef = useRef(false);
-  const { setScannedBarcode, setScanning, resetScanner, isScanning } =
+  const {setScannedBarcode, setScanning, resetScanner, isScanning} =
     useBarcodeScanner();
 
   // local UI state
@@ -60,21 +50,12 @@ export const BarcodeScannerScreen: React.FC<{
 
   // 1) On mount, ask for camera permission if we don't have it yet
   useEffect(() => {
-    // Hide status bar for immersive camera experience
-    StatusBar.setHidden(true, 'slide');
-
     if (!hasPermission) {
       requestPermission().catch(err => {
         console.error('requestPermission error', err);
         Alert.alert('Permission Error', 'Could not request camera permission.');
       });
     }
-
-    // Cleanup on unmount
-    return () => {
-      StatusBar.setHidden(false, 'slide');
-      StatusBar.setBarStyle('dark-content', true);
-    };
   }, [hasPermission, requestPermission]);
 
   // 2) When screen focuses *and* permission granted, turn scanner on;
@@ -82,7 +63,7 @@ export const BarcodeScannerScreen: React.FC<{
   useFocusEffect(
     useCallback(() => {
       if (!hasPermission) {
-        // we'll show the "grant permission" UI instead
+        // we’ll show the “grant permission” UI instead
         return () => {};
       }
       hasNavigatedRef.current = false;
@@ -90,15 +71,9 @@ export const BarcodeScannerScreen: React.FC<{
       setIsActive(true);
       setScanning(true);
 
-      // Hide status bar for immersive camera interface
-      StatusBar.setHidden(true, 'slide');
-
       return () => {
         setIsActive(false);
         setScanning(false);
-        // Show status bar when leaving
-        StatusBar.setHidden(false, 'slide');
-        StatusBar.setBarStyle('dark-content', true);
       };
     }, [hasPermission, setScanning]),
   );
@@ -121,7 +96,7 @@ export const BarcodeScannerScreen: React.FC<{
     onCodeScanned: codes => {
       if (!isActive || hasNavigatedRef.current || !codes.length) return;
 
-      const { value, type } = codes[0];
+      const {value, type} = codes[0];
       if (value) {
         hasNavigatedRef.current = true;
         setHasScanned(true);
@@ -129,7 +104,8 @@ export const BarcodeScannerScreen: React.FC<{
         setScanning(false);
 
         if (Platform.OS === 'ios') {
-          Vibration.vibrate(100);
+          const {HapticFeedback} = require('react-native');
+          HapticFeedback?.impact?.(HapticFeedback.ImpactFeedbackStyle.Medium);
         }
 
         navigate('SearchResults', {
@@ -160,12 +136,12 @@ export const BarcodeScannerScreen: React.FC<{
         <Text style={styles.messageText}>
           Camera access is required to scan barcodes.
         </Text>
-        <Button onPress={requestPermission} variant="primary" size="medium">
-          Grant Permission
-        </Button>
-        <Button onPress={() => goBack()} variant="ghost" size="medium">
-          Cancel
-        </Button>
+        <TouchableOpacity style={styles.button} onPress={requestPermission}>
+          <Text style={styles.buttonText}>Grant Permission</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.linkButton} onPress={() => goBack()}>
+          <Text style={styles.linkButtonText}>Cancel</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -175,9 +151,9 @@ export const BarcodeScannerScreen: React.FC<{
     return (
       <View style={styles.centeredContainer}>
         <Text style={styles.messageText}>No camera device found</Text>
-        <Button onPress={() => goBack()} variant="primary" size="medium">
-          Go Back
-        </Button>
+        <TouchableOpacity style={styles.button} onPress={() => goBack()}>
+          <Text style={styles.buttonText}>Go Back</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -185,6 +161,8 @@ export const BarcodeScannerScreen: React.FC<{
   // C) Permission granted & device ready → show scanner
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="black" />
+
       <Camera
         style={styles.camera}
         device={device}
@@ -197,26 +175,22 @@ export const BarcodeScannerScreen: React.FC<{
       <BarcodeMask
         width={280}
         height={200}
-        edgeColor={theme.colors.primary}
-        backgroundColor={theme.colors.overlay}
+        edgeColor="#62B1F6"
+        backgroundColor="rgba(0, 0, 0, 0.6)"
         showAnimatedLine={isScanning && !hasScanned}
         lineAnimationDuration={2000}
       />
 
       <View style={styles.header}>
-        <IconButton
-          name="close"
-          onPress={() => goBack()}
-          size={24}
-          style={styles.headerButton}
-        />
+        <TouchableOpacity style={styles.headerButton} onPress={() => goBack()}>
+          <Text style={styles.headerButtonText}>✕</Text>
+        </TouchableOpacity>
         <Text style={styles.headerTitle}>Scan Barcode</Text>
-        <IconButton
-          name={flashEnabled ? 'flash-on' : 'flash-off'}
-          onPress={toggleFlash}
-          size={24}
-          style={styles.headerButton}
-        />
+        <TouchableOpacity style={styles.headerButton} onPress={toggleFlash}>
+          <Text style={styles.headerButtonText}>
+            {flashEnabled ? '🔦' : '💡'}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.instructionsContainer}>
@@ -234,9 +208,9 @@ export const BarcodeScannerScreen: React.FC<{
 
       <View style={styles.bottomControls}>
         {hasScanned ? (
-          <Button onPress={resetScan} variant="primary" size="medium">
-            Scan Another
-          </Button>
+          <TouchableOpacity style={styles.button} onPress={resetScan}>
+            <Text style={styles.buttonText}>Scan Another</Text>
+          </TouchableOpacity>
         ) : (
           <View style={styles.scanIndicator}>
             <View
@@ -252,33 +226,36 @@ export const BarcodeScannerScreen: React.FC<{
   );
 };
 
-const styles = StyleSheet.create(theme => ({
-  container: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'black',
-  },
-  camera: { flex: 1 },
+const styles = StyleSheet.create({
+  container: {flex: 1, backgroundColor: 'black'},
+  camera: {flex: 1},
   centeredContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'black',
-    paddingHorizontal: theme.spacing.lg,
-    gap: theme.spacing.md,
+    paddingHorizontal: 20,
   },
   messageText: {
-    color: theme.colors.white,
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
+    color: 'white',
+    fontSize: 18,
+    fontWeight: '600',
     textAlign: 'center',
+    marginBottom: 16,
+  },
+  button: {
+    backgroundColor: '#62B1F6',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  buttonText: {color: 'white', fontSize: 16, fontWeight: '600'},
+  linkButton: {paddingHorizontal: 24, paddingVertical: 12},
+  linkButtonText: {
+    color: '#62B1F6',
+    fontSize: 16,
+    fontWeight: '500',
   },
   header: {
     position: 'absolute',
@@ -288,7 +265,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: theme.spacing.lg,
+    paddingHorizontal: 20,
     zIndex: 1,
   },
   headerButton: {
@@ -299,51 +276,48 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  headerTitle: {
-    color: theme.colors.white,
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.semibold,
-  },
+  headerButtonText: {color: 'white', fontSize: 18, fontWeight: 'bold'},
+  headerTitle: {color: 'white', fontSize: 18, fontWeight: '600'},
   instructionsContainer: {
     position: 'absolute',
     top: screenHeight * 0.25,
-    left: theme.spacing.lg,
-    right: theme.spacing.lg,
+    left: 20,
+    right: 20,
     alignItems: 'center',
     zIndex: 1,
   },
   instructionsText: {
-    color: theme.colors.white,
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold,
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
     textAlign: 'center',
-    marginBottom: theme.spacing.sm,
+    marginBottom: 8,
   },
   subInstructionsText: {
     color: 'rgba(255, 255, 255, 0.7)',
-    fontSize: theme.fonts.size.sm,
+    fontSize: 14,
     textAlign: 'center',
   },
   bottomControls: {
     position: 'absolute',
     bottom: Platform.OS === 'ios' ? 50 : 30,
-    left: theme.spacing.lg,
-    right: theme.spacing.lg,
+    left: 20,
+    right: 20,
     alignItems: 'center',
     zIndex: 1,
   },
-  scanIndicator: { alignItems: 'center' },
+  scanIndicator: {alignItems: 'center'},
   scanDot: {
     width: 12,
     height: 12,
     borderRadius: 6,
     backgroundColor: 'rgba(255, 255, 255, 0.5)',
-    marginBottom: theme.spacing.sm,
+    marginBottom: 8,
   },
-  scanDotActive: { backgroundColor: theme.colors.primary },
+  scanDotActive: {backgroundColor: '#62B1F6'},
   scanStatusText: {
-    color: theme.colors.white,
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.medium,
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '500',
   },
-}));
+});

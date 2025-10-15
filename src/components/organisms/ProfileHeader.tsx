@@ -1,8 +1,8 @@
 import React from 'react';
-import { View, Image, TouchableOpacity } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { IconButton } from '../atoms/IconButton';
-import { Icon } from '#/utils';
+import {View, Text, Image, TouchableOpacity} from 'react-native';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
+import {IconButton} from '../atoms/IconButton';
+import {Icon} from '#/utils';
 
 export interface ProfileHeaderProps {
   avatarUrl?: string | null;
@@ -15,11 +15,13 @@ export interface ProfileHeaderProps {
 
 export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   avatarUrl,
+  name,
+  subtitle,
   onBack,
   onMore,
   onAvatarPress,
 }) => {
-  const { theme } = useUnistyles();
+  const {theme} = useUnistyles();
   return (
     <View style={styles.header}>
       <IconButton
@@ -30,7 +32,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
       <TouchableOpacity onPress={onAvatarPress} style={styles.avatarContainer}>
         {avatarUrl ? (
           <Image
-            source={{ uri: avatarUrl }}
+            source={{uri: avatarUrl}}
             style={styles.avatar}
             resizeMode="cover"
             onError={() =>
@@ -74,7 +76,7 @@ const styles = StyleSheet.create(theme => ({
   avatar: {
     width: 80,
     height: 80,
-    borderRadius: theme.sizes.avatar.md,
+    borderRadius: theme.sizes.avatar,
     backgroundColor: theme.colors.surface,
     overflow: 'hidden',
   },

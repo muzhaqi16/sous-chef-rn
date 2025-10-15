@@ -1,8 +1,8 @@
-import { GraphQLWsLink } from '@apollo/client/link/subscriptions';
-import { createClient, Client } from 'graphql-ws';
-import { Platform } from 'react-native';
+import {GraphQLWsLink} from '@apollo/client/link/subscriptions';
+import {createClient, Client} from 'graphql-ws';
+import {Platform} from 'react-native';
 import Config from 'react-native-config';
-import { useStore } from '#store';
+import {useStore} from '#store';
 
 // pick the right WebSocket constructor
 const webSocketImpl =
@@ -29,9 +29,6 @@ const WS_URL = getWebSocketUrl();
 
 // Store the client instance so we can reconnect it
 let wsClient: Client;
-let isReconnecting = false;
-let lastReconnectTime = 0;
-const RECONNECT_DEBOUNCE_MS = 2000; // 2 seconds debounce for reconnections
 
 const createWsClient = () => {
   return createClient({
@@ -41,7 +38,7 @@ const createWsClient = () => {
     keepAlive: 12_000, // send ping every 12s to keep alive
     connectionParams: () => {
       const token = useStore.getState().accessToken;
-      const apiKey = Config.API_KEY;
+      const apiKey = process.env.API_KEY;
 
       const params: Record<string, string> = {};
 
@@ -55,54 +52,13 @@ const createWsClient = () => {
         params.authorization = `Bearer ${token}`;
       }
 
+      console.log('[WS] connectionParams called with token:', token ? 'present' : 'missing');
       return params;
     },
     on: {
-      connected: () => {
-        isReconnecting = false;
-        if (__DEV__) {
-          console.log('🔌 WebSocket connected:', {
-            url: WS_URL,
-            timestamp: new Date().toISOString(),
-          });
-        }
-      },
-      closed: (event: any) => {
-        isReconnecting = false;
-        if (__DEV__) {
-          console.log('🔌 WebSocket closed:', {
-            code: event?.code,
-            reason: event?.reason,
-            wasClean: event?.wasClean,
-            timestamp: new Date().toISOString(),
-          });
-        }
-      },
-      error: (error: any) => {
-        isReconnecting = false;
-        console.warn('❌ WebSocket error:', {
-          error: error?.message || 'Unknown error',
-          timestamp: new Date().toISOString(),
-        });
-      },
-      connecting: () => {
-        if (__DEV__) {
-          console.log('🔌 WebSocket connecting...', {
-            url: WS_URL,
-            timestamp: new Date().toISOString(),
-          });
-        }
-      },
-      ping: () => {
-        if (__DEV__) {
-          // console.log('🏓 WebSocket ping sent');
-        }
-      },
-      pong: () => {
-        if (__DEV__) {
-          // console.log('🏓 WebSocket pong received');
-        }
-      },
+      connected: () => console.log('[WS] connected'),
+      closed: () => console.log('[WS] closed'),
+      error: err => console.warn('[WS] error', err),
     },
   });
 };
@@ -114,54 +70,18 @@ export const wsLink = new GraphQLWsLink(wsClient);
 
 // Function to reconnect WebSocket with new token
 export const reconnectWebSocket = () => {
-  const now = Date.now();
+  console.log('[WS] Reconnecting with new token...');
 
-  // Debounce reconnection attempts
-  if (isReconnecting || now - lastReconnectTime < RECONNECT_DEBOUNCE_MS) {
-    return;
-  }
+  // Dispose the old client
+  wsClient.dispose();
 
-  isReconnecting = true;
-  lastReconnectTime = now;
+  // Create a new client (this will call connectionParams with the new token)
+  wsClient = createWsClient();
 
-  try {
-    // Dispose the old client
-    wsClient.dispose();
+  // Update the wsLink to use the new client
+  // Note: GraphQLWsLink doesn't have a public method to update the client,
+  // so we need to access the private property
+  (wsLink as any).client = wsClient;
 
-    // Create a new client (this will call connectionParams with the new token)
-    wsClient = createWsClient();
-
-    // Update the wsLink to use the new client
-    // Note: GraphQLWsLink doesn't have a public method to update the client,
-    // so we need to access the private property
-    (wsLink as any).client = wsClient;
-  } catch (error) {
-    isReconnecting = false;
-  }
-};
-
-// Export state checkers for other modules
-export const isWebSocketReconnecting = () => isReconnecting;
-
-// Export function to dispose WebSocket for logout cleanup
-export const disposeWebSocket = () => {
-  try {
-    if (wsClient) {
-      console.log('🔌 Disposing WebSocket client for logout');
-      wsClient.dispose();
-      isReconnecting = false;
-      lastReconnectTime = 0;
-    }
-  } catch (error) {
-    console.warn('Error disposing WebSocket:', error);
-  }
-};
-
-// Export function to get WebSocket connection state
-export const getWebSocketState = () => {
-  return {
-    isReconnecting,
-    lastReconnectTime,
-    hasClient: !!wsClient,
-  };
+  console.log('[WS] WebSocket reconnection initiated');
 };

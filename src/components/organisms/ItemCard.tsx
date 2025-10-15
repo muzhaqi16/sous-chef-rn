@@ -1,9 +1,6 @@
 import React from 'react';
-import { View } from 'react-native';
-import { SwipeableItem } from '#components';
-import { ListItem } from '../molecules/ListItem';
-import { StyleSheet } from 'react-native-unistyles';
-import { commonStyles } from '#/styles';
+import {SwipeableItem} from '#components';
+import {ListItem} from '../molecules/ListItem';
 
 interface ItemCardProps {
   id: string;
@@ -30,8 +27,8 @@ export const ItemCard: React.FC<ItemCardProps> = ({
   rightElement,
   leftElement,
 }) => {
-  const innerContent =
-    onEdit || onDelete ? (
+  if (onEdit || onDelete) {
+    return (
       <SwipeableItem onPress={onPress} onEdit={onEdit} onDelete={onDelete}>
         <ListItem
           title={title}
@@ -41,28 +38,16 @@ export const ItemCard: React.FC<ItemCardProps> = ({
           leftElement={leftElement}
         />
       </SwipeableItem>
-    ) : (
-      <ListItem
-        title={title}
-        subtitle={subtitle}
-        onPress={onPress}
-        badge={badge}
-        rightElement={rightElement}
-        leftElement={leftElement}
-      />
     );
+  }
 
-  return <View style={styles.container}>{innerContent}</View>;
+  return (
+    <ListItem
+      title={title}
+      subtitle={subtitle}
+      onPress={onPress}
+      badge={badge}
+      rightElement={rightElement}
+    />
+  );
 };
-
-const styles = StyleSheet.create(theme => ({
-  container: {
-    ...commonStyles.shadow,
-    // Horizontal margin for shadow visibility
-    marginHorizontal: theme.spacing.sm,
-    // Half vertical margin so stacked items merge to full spacing (md/2 + md/2 = md)
-    marginVertical: theme.spacing.sm,
-    borderRadius: 12,
-    boxSizing: 'border-box',
-  },
-}));

@@ -1,7 +1,6 @@
 import React from 'react';
-import { View, Dimensions } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
-import Svg, { Defs, Rect, Mask } from 'react-native-svg';
+import {View, StyleSheet, Dimensions} from 'react-native';
+import Svg, {Defs, Rect, Mask} from 'react-native-svg';
 import AnimatedScanLine from '../molecules/AnimatedScanLine';
 
 interface BarcodeMaskProps {
@@ -13,7 +12,7 @@ interface BarcodeMaskProps {
   lineAnimationDuration?: number;
 }
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+const {width: screenWidth, height: screenHeight} = Dimensions.get('window');
 
 const BarcodeMask: React.FC<BarcodeMaskProps> = ({
   width = 280,
@@ -29,13 +28,13 @@ const BarcodeMask: React.FC<BarcodeMaskProps> = ({
   const left = centerX - width / 2;
   const top = centerY - height / 2;
 
-  const cornerOffset = 4; // Consistent offset for corners
-  const cornerSize = 40; // Larger corner size for better visibility
-
   return (
-    <View style={styles.container}>
+    <View style={StyleSheet.absoluteFillObject}>
       {/* SVG Overlay with cutout */}
-      <Svg width={screenWidth} height={screenHeight} style={styles.svgOverlay}>
+      <Svg
+        width={screenWidth}
+        height={screenHeight}
+        style={StyleSheet.absoluteFillObject}>
         <Defs>
           <Mask id={maskId}>
             <Rect width="100%" height="100%" fill="white" />
@@ -58,14 +57,13 @@ const BarcodeMask: React.FC<BarcodeMaskProps> = ({
         />
       </Svg>
 
-      {/* Corner brackets - properly aligned */}
-      {/* Left */}
+      {/* Corner brackets */}
       <View
         style={[
           styles.corner,
           {
-            left: left - cornerOffset,
-            top: top - cornerOffset,
+            left: left - 2,
+            top: top - 2,
             borderLeftColor: edgeColor,
             borderTopColor: edgeColor,
           },
@@ -75,32 +73,30 @@ const BarcodeMask: React.FC<BarcodeMaskProps> = ({
         style={[
           styles.corner,
           {
-            right: screenWidth - left - width - cornerOffset,
-            top: top - cornerOffset,
+            right: screenWidth - left - width - 2,
+            top: top - 2,
             borderRightColor: edgeColor,
             borderTopColor: edgeColor,
           },
         ]}
       />
-      {/* Bottom Left */}
       <View
         style={[
           styles.corner,
           {
-            left: left - cornerOffset,
-            bottom: screenHeight - top - height - cornerOffset - cornerSize,
+            left: left - 2,
+            bottom: screenHeight - top - height - 2,
             borderLeftColor: edgeColor,
             borderBottomColor: edgeColor,
           },
         ]}
       />
-      {/* Bottom Right */}
       <View
         style={[
           styles.corner,
           {
-            right: screenWidth - left - width - cornerOffset,
-            bottom: screenHeight - top - height - cornerOffset - cornerSize,
+            right: screenWidth - left - width - 2,
+            bottom: screenHeight - top - height - 2,
             borderRightColor: edgeColor,
             borderBottomColor: edgeColor,
           },
@@ -116,27 +112,20 @@ const BarcodeMask: React.FC<BarcodeMaskProps> = ({
           height={height}
           color={edgeColor}
           duration={lineAnimationDuration}
-          cornerOffset={cornerOffset}
         />
       )}
     </View>
   );
 };
 
-const styles = StyleSheet.create(() => ({
-  container: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  svgOverlay: {
-    ...StyleSheet.absoluteFillObject,
-  },
+const styles = StyleSheet.create({
   corner: {
     position: 'absolute',
-    width: 24,
-    height: 24,
+    width: 20,
+    height: 20,
     borderWidth: 3,
     borderColor: 'transparent',
   },
-}));
+});
 
 export default BarcodeMask;

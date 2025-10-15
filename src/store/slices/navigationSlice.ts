@@ -6,12 +6,6 @@
 import {StateCreator} from 'zustand';
 import {RootState} from '../index';
 
-export interface DeepLinkAction {
-  type: 'email_verification' | 'password_reset' | 'accept_invitation';
-  token: string;
-  timestamp: number;
-}
-
 export enum OnBoardingSteps {
   createHome = 'createHome',
   createShoppingList = 'createShoppingList',
@@ -31,17 +25,6 @@ interface UserNavigationState {
   onboardingCompletedAt?: number;
   skippedOnboardingSteps?: string[];
   isNewUser?: boolean;
-  biometricSetupOffered?: boolean;
-  biometricEnabled?: boolean;
-  // Post-login biometric prompt tracking
-  postLoginBiometricPromptShown?: boolean;
-  postLoginBiometricPromptCount?: number;
-  lastBiometricPromptDeclined?: number;
-  biometricPromptRemindLater?: boolean;
-  // Enhanced authentication flow tracking
-  biometricDeclinedPermanently?: boolean;
-  credentialPromptDeclined?: boolean;
-  lastCredentialPromptShown?: number;
 }
 
 export interface NavigationState {
@@ -56,9 +39,6 @@ export interface NavigationState {
   // User-specific navigation states
   userNavigationStates: Record<string, UserNavigationState>;
 
-  // Deep link state
-  pendingDeepLinkAction: DeepLinkAction | null;
-
   // Actions
   setOnBoardingStep: (step: OnBoardingSteps | null) => void;
   setSelectedHomeId: (id: string | null) => void;
@@ -70,8 +50,6 @@ export interface NavigationState {
   ) => void;
   getUserNavigationState: (userId: string) => UserNavigationState | null;
   clearUserNavigationState: (userId: string) => void;
-  setPendingDeepLinkAction: (action: DeepLinkAction | null) => void;
-  clearPendingDeepLinkAction: () => void;
 }
 
 const initialNavigationState = {
@@ -80,7 +58,6 @@ const initialNavigationState = {
   selectedPantryId: null,
   selectedShoppingListId: null,
   userNavigationStates: {},
-  pendingDeepLinkAction: null,
 };
 
 export const createNavigationSlice: StateCreator<
@@ -132,18 +109,6 @@ export const createNavigationSlice: StateCreator<
   clearUserNavigationState: userId => {
     set(state => {
       delete state.userNavigationStates[userId];
-    });
-  },
-
-  setPendingDeepLinkAction: action => {
-    set(state => {
-      state.pendingDeepLinkAction = action;
-    });
-  },
-
-  clearPendingDeepLinkAction: () => {
-    set(state => {
-      state.pendingDeepLinkAction = null;
     });
   },
 });

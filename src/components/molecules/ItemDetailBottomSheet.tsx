@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { View } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import React, {useState} from 'react';
+import {View} from 'react-native';
+import {StyleSheet} from 'react-native-unistyles';
 import QuantitySelector from '../organisms/QuantitySelector';
-import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
-import { Button } from '../base/Button';
+import {BottomSheetTextInput} from '@gorhom/bottom-sheet';
+import {Button} from '../atoms/Button/Button';
 import {
   useUpdateShoppingListItemMutation,
   useGetUnitsQuery,
@@ -25,25 +25,23 @@ export const ItemDetailBottomSheet: React.FC<ItemDetailProps> = ({
   const [name, setName] = useState(item.itemName || '');
   const [quantity, setQuantity] = useState(1);
   const [unit, setUnit] = useState('pcs');
-  const { data } = useGetUnitsQuery();
+  const {data} = useGetUnitsQuery();
 
-  const [updateItem] = useUpdateShoppingListItemMutation();
+  const [updateItem] = useUpdateShoppingListItemMutation({
+    onCompleted: () => onClose(),
+    onError: e => console.error('Update error', e),
+  });
 
-  const handleSave = async () => {
-    try {
-      await updateItem({
-        variables: {
-          id: item.id,
-          input: {
-            itemName: item.itemName || undefined,
-            quantity,
-          },
+  const handleSave = () => {
+    updateItem({
+      variables: {
+        id: item.id,
+        input: {
+          itemName: item.itemName,
+          quantity,
         },
-      });
-      onClose();
-    } catch (e) {
-      console.error('Update error', e);
-    }
+      },
+    });
   };
   return (
     <View style={styles.container}>
@@ -67,12 +65,12 @@ export const ItemDetailBottomSheet: React.FC<ItemDetailProps> = ({
           units={data?.units as Unit[]}
         />
       </View>
-      <Button onPress={handleSave}>Save</Button>
+      <Button title="Save" onPress={handleSave} />
     </View>
   );
 };
 
-const styles = StyleSheet.create(() => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     flexDirection: 'column',

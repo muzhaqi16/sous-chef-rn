@@ -1,8 +1,6 @@
 import React from 'react';
-import { View, Text, ActivityIndicator } from 'react-native';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
-
-const UniActivityIndicator = withUnistyles(ActivityIndicator);
+import {View, Text, ActivityIndicator} from 'react-native';
+import {StyleSheet} from 'react-native-unistyles';
 
 interface LoadingStateProps {
   message: string;
@@ -15,10 +13,7 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
 }) => {
   return (
     <View style={styles.container}>
-      <UniActivityIndicator
-        size="large"
-        uniProps={theme => ({ color: theme.colors.primary })}
-      />
+      <ActivityIndicator size="large" color="#62B1F6" />
       <Text style={styles.loadingText}>{message}</Text>
       {barcode && <Text style={styles.barcodeText}>Barcode: {barcode}</Text>}
     </View>
@@ -30,19 +25,18 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: theme.spacing.lg,
+    paddingHorizontal: 20,
   },
   loadingText: {
-    fontSize: theme.fonts.size.lg,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
-    marginTop: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
-    textAlign: 'center',
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#495057',
+    marginTop: 16,
+    marginBottom: 8,
   },
   barcodeText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
+    fontSize: 14,
+    color: '#6c757d',
     fontFamily: 'monospace',
   },
 }));

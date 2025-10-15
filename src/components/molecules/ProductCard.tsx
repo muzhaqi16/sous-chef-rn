@@ -1,6 +1,6 @@
 import React from 'react';
 import {View, Text} from 'react-native';
-import {Button} from "../base/Button";
+import {Button} from '../atoms/Button/Button';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 
 interface ProductCardProps {
@@ -26,7 +26,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
       <Text style={styles.text}>
         {name} - ${price}
       </Text>
-      <Button onPress={onAddToCart}>Add to Cart</Button>
+      <Button title="Add to Cart" onPress={onAddToCart} />
     </View>
   );
 };

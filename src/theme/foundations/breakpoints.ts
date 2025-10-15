@@ -7,3 +7,9 @@ export const breakpoints = {
   superLarge: 2000,
   tvLike: 4000,
 } as const;
+
+export type AppBreakpoints = typeof breakpoints;
+
+declare module 'react-native-unistyles' {
+  export interface UnistylesBreakpoints extends AppBreakpoints {}
+}

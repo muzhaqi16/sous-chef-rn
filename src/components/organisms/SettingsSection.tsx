@@ -30,16 +30,16 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
-  section: {marginBottom: theme.spacing.xl},
+  section: {marginBottom: 32},
   sectionTitle: {
-    fontSize: theme.fonts.size.xs,
-    fontWeight: theme.fonts.weight.semibold,
+    fontSize: 12,
+    fontWeight: '600',
     color: theme.colors.textPrimary,
     textTransform: 'uppercase',
-    marginBottom: theme.spacing.sm,
+    marginBottom: 8,
   },
   sectionBody: {
-    borderRadius: theme.radii.lg,
+    borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: theme.colors.surface,
   },

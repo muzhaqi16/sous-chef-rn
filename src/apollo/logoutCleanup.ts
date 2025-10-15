@@ -1,10 +1,13 @@
-import { client } from './client';
-import { useStore } from '#store';
-import { storage } from '#/storage/mmkv';
+import {client} from './client';
+import {pantryStorage} from '#/storage/pantryCache';
+import {shoppingListStorage} from '#/storage/shoppingListCache';
+import {useStore} from '#store';
 
 interface LogoutCleanupOptions {
   clearCache?: boolean;
   cancelSubscriptions?: boolean;
+  clearPantryCache?: boolean;
+  clearShoppingListCache?: boolean;
   suppressErrors?: boolean;
 }
 
@@ -42,12 +45,12 @@ export class LogoutCleanup {
   /**
    * Perform comprehensive logout cleanup
    */
-  static async performLogoutCleanup(
-    options: LogoutCleanupOptions = {},
-  ): Promise<void> {
+  static async performLogoutCleanup(options: LogoutCleanupOptions = {}): Promise<void> {
     const {
       clearCache = true,
       cancelSubscriptions = true,
+      clearPantryCache = true,
+      clearShoppingListCache = true,
       suppressErrors = true,
     } = options;
 
@@ -63,9 +66,19 @@ export class LogoutCleanup {
       // 2. Stop all in-flight queries
       await LogoutCleanup.stopInFlightQueries();
 
-      // 3. Clear Apollo cache (only cache we need now)
+      // 3. Clear Apollo cache
       if (clearCache) {
         await LogoutCleanup.clearApolloCache();
+      }
+
+      // 4. Clear pantry-specific caches
+      if (clearPantryCache) {
+        LogoutCleanup.clearPantryCaches();
+      }
+
+      // 5. Clear shopping list caches
+      if (clearShoppingListCache) {
+        LogoutCleanup.clearShoppingListCaches();
       }
 
       console.log('✅ Apollo logout cleanup completed');
@@ -92,10 +105,8 @@ export class LogoutCleanup {
    * Cancel all active subscriptions
    */
   private static cancelAllSubscriptions(): void {
-    console.log(
-      `🔌 Cancelling ${LogoutCleanup.activeSubscriptions.size} active subscriptions`,
-    );
-
+    console.log(`🔌 Cancelling ${LogoutCleanup.activeSubscriptions.size} active subscriptions`);
+    
     LogoutCleanup.activeSubscriptions.forEach(subscription => {
       try {
         if (subscription && typeof subscription.unsubscribe === 'function') {
@@ -112,23 +123,13 @@ export class LogoutCleanup {
   }
 
   /**
-   * Stop all in-flight GraphQL queries and clean up WebSocket
+   * Stop all in-flight GraphQL queries
    */
   private static async stopInFlightQueries(): Promise<void> {
     try {
       // Stop all queries by stopping the network layer temporarily
-      client.stop();
-
-      // Clean up WebSocket connections
-      try {
-        const { disposeWebSocket } = await import('./links/wsLink');
-        disposeWebSocket();
-        console.log('🔌 WebSocket connection disposed');
-      } catch (wsError) {
-        console.warn('Failed to dispose WebSocket:', wsError);
-      }
-
-      console.log('🛑 Stopped all in-flight queries and connections');
+      await client.stop();
+      console.log('🛑 Stopped all in-flight queries');
     } catch (error) {
       console.warn('Failed to stop in-flight queries:', error);
     }
@@ -139,28 +140,41 @@ export class LogoutCleanup {
    */
   private static async clearApolloCache(): Promise<void> {
     try {
+      // Clear Apollo cache completely
       await client.clearStore();
-
-      // Clear storage keys
+      
+      // Also clear persisted cache and navigation state from MMKV
+      const {storage} = await import('#/storage/mmkv');
       storage.delete('apollo-cache');
       storage.delete('navigation_state');
-      storage.delete('apollo-client-cache');
-      storage.delete('persisted-queries');
-
-      // Get secure storage and clear auth-related data
-      try {
-        const { getStorage } = await import('#/storage/mmkv');
-        const secureStorage = await getStorage();
-        secureStorage.delete('apollo-cache');
-        secureStorage.delete('navigation_state');
-        secureStorage.delete('apollo-client-cache');
-      } catch (storageError) {
-        console.warn('Failed to clear secure storage:', storageError);
-      }
-
+      
       console.log('🗑️ Apollo cache and navigation state cleared');
     } catch (error) {
       console.warn('Failed to clear Apollo cache:', error);
+    }
+  }
+
+  /**
+   * Clear pantry-specific caches
+   */
+  private static clearPantryCaches(): void {
+    try {
+      pantryStorage.clearAllPantryCaches();
+      console.log('🏪 Pantry caches cleared');
+    } catch (error) {
+      console.warn('Failed to clear pantry caches:', error);
+    }
+  }
+
+  /**
+   * Clear shopping list caches
+   */
+  private static clearShoppingListCaches(): void {
+    try {
+      shoppingListStorage.clearAllShoppingListCaches();
+      console.log('🛒 Shopping list caches cleared');
+    } catch (error) {
+      console.warn('Failed to clear shopping list caches:', error);
     }
   }
 
@@ -172,7 +186,7 @@ export class LogoutCleanup {
 
     // Allow certain operations during logout
     const allowedOperations = ['RefreshToken', 'Logout'];
-
+    
     return operationName ? !allowedOperations.includes(operationName) : true;
   }
 
@@ -191,14 +205,12 @@ export class LogoutCleanup {
     ];
 
     const errorMessage = error.message || error.toString();
-    const shouldSuppress = suppressibleErrors.some(msg =>
-      errorMessage.includes(msg),
+    const shouldSuppress = suppressibleErrors.some(msg => 
+      errorMessage.includes(msg)
     );
 
     if (shouldSuppress) {
-      console.log(
-        `🔇 Suppressed logout error for ${operationName}: ${errorMessage}`,
-      );
+      console.log(`🔇 Suppressed logout error for ${operationName}: ${errorMessage}`);
       return true;
     }
 

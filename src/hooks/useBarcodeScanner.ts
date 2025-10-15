@@ -1,4 +1,5 @@
 import {useStore} from '../store';
+import {useMemo} from 'react';
 
 export const useBarcodeScanner = () => {
   const scannedBarcode = useStore(s => s.scannedBarcode);
@@ -7,11 +8,14 @@ export const useBarcodeScanner = () => {
   const setScanning = useStore(s => s.setScanning);
   const resetScanner = useStore(s => s.resetScanner);
 
-  return {
-    scannedBarcode,
-    isScanning,
-    setScannedBarcode,
-    setScanning,
-    resetScanner,
-  };
+  return useMemo(
+    () => ({
+      scannedBarcode,
+      isScanning,
+      setScannedBarcode,
+      setScanning,
+      resetScanner,
+    }),
+    [scannedBarcode, isScanning, setScannedBarcode, setScanning, resetScanner],
+  );
 };

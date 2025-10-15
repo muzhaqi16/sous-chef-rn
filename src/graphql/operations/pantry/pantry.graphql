@@ -209,7 +209,6 @@ subscription PantryItemsChanged($pantryId: ID!) {
     item {
       id
       unit {
-        id
         name
       }
       itemName

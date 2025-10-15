@@ -3,7 +3,7 @@ import {
   CommonActions,
   StackActions,
 } from '@react-navigation/native';
-import type { RootStackParamList } from '#/navigation/RootNavigator';
+import type {RootStackParamList} from '#/navigation/RootNavigator';
 
 export const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
@@ -62,6 +62,14 @@ class NavigationServiceClass {
     if (navigationRef.isReady()) {
       navigationRef.dispatch(CommonActions.preload(name as string));
     }
+  }
+
+  setIsReady(ready: boolean) {
+    // This is handled automatically by the Navigation component
+  }
+
+  setNavigator(ref: any) {
+    // This is handled automatically by the Navigation component
   }
 }
 

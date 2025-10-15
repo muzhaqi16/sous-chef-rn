@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, Alert } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
-import { SettingSwitch, SettingSection } from '#components/settings';
-import { useNotificationSettings } from '#hooks';
+import React, {useState} from 'react';
+import {View, Text, ScrollView, Alert} from 'react-native';
+import {StyleSheet} from 'react-native-unistyles';
+import {SettingSwitch, SettingSection} from '#components/settings';
+import {useNotificationSettings} from '#hooks';
+import {useStore} from '#/store';
 
 export const NotificationSettingsScreen: React.FC = () => {
+  const user = useStore(state => state.user);
   const [updating, setUpdating] = useState<string | null>(null);
 
   const {
@@ -32,7 +34,7 @@ export const NotificationSettingsScreen: React.FC = () => {
       'Reset to Defaults',
       'Are you sure you want to reset all notification settings to their default values?',
       [
-        { text: 'Cancel', style: 'cancel' },
+        {text: 'Cancel', style: 'cancel'},
         {
           text: 'Reset',
           style: 'destructive',

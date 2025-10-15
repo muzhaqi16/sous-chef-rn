@@ -38,7 +38,7 @@ export const NotificationBanner: React.FC<NotificationBannerProps> = ({
     }, duration);
 
     return () => clearTimeout(timer);
-  }, [duration, onClose, slide]);
+  }, []);
 
   if (!show) return null;
 
@@ -66,7 +66,7 @@ export const NotificationBanner: React.FC<NotificationBannerProps> = ({
   );
 };
 
-const styles = StyleSheet.create(_theme => ({
+const styles = StyleSheet.create(theme => ({
   bannerContainer: {
     position: 'absolute',
     top: 0,

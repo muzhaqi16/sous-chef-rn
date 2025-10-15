@@ -1,12 +1,12 @@
-name: "Build iOS app"
+name: 'Build iOS app'
 
 on:
   push:
     # branches:
     #   - main
     tags:
-      - "v*"
-      - "ios-v*"
+      - 'v*'
+      - 'ios-v*'
 
 jobs:
   build_with_signing:
@@ -57,8 +57,8 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
-          cache: "yarn"
+          node-version: '20'
+          cache: 'yarn'
 
       - name: Clean workspace
         run: |
@@ -101,7 +101,7 @@ jobs:
           xcodebuild -exportArchive -archivePath $RUNNER_TEMP/your_app.xcarchive -exportOptionsPlist $EXPORT_OPTS_PATH -exportPath $RUNNER_TEMP/build
 
       - name: Upload application
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: app
           path: ${{ runner.temp }}/build

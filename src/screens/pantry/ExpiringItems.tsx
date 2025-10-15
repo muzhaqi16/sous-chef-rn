@@ -1,37 +1,37 @@
-import React, { useMemo, useState } from 'react';
+import React, {useMemo, useState} from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  ActivityIndicator,
 } from 'react-native';
-import { Icon } from '#utils';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import {Icon} from '#utils';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 
-import { SwipeableItem } from '#components';
-import { usePantryItems, useDefaultHome, useAppNavigation } from '#hooks';
-import { useGetHomeQuery } from '#generated';
-import { commonStyles } from '#styles';
+import {SwipeableItem} from '#components';
+import {usePantryItems, useDefaultHome, useAppNavigation} from '#hooks';
+import {useGetHomeQuery} from '#generated';
+import {commonStyles} from '#styles';
 
 export const ExpiringItems: React.FC = () => {
-  const { goBack, navigateTo } = useAppNavigation();
+  const {goBack, navigateTo} = useAppNavigation();
   const [refreshing, setRefreshing] = useState(false);
-  const { theme } = useUnistyles();
+  const {theme} = useUnistyles();
 
-  const { selectedHomeId, getDefaultPantry } = useDefaultHome();
-  const { data: homeData } = useGetHomeQuery({
-    variables: { homeId: selectedHomeId ?? '' },
+  const {selectedHomeId, getDefaultPantry} = useDefaultHome();
+  const {data: homeData} = useGetHomeQuery({
+    variables: {homeId: selectedHomeId ?? ''},
     skip: !selectedHomeId,
   });
 
   const pantry = getDefaultPantry(homeData);
-  const { items, loading, refetch } = usePantryItems(pantry?.id);
+  const {items, refetch} = usePantryItems(pantry.id);
 
   const expiringItems = useMemo(() => {
     if (!items) return [];
 
+    const now = new Date();
     const thirtyDaysFromNow = new Date();
     thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
 
@@ -84,13 +84,8 @@ export const ExpiringItems: React.FC = () => {
             colors={[theme.colors.primary]}
             tintColor={theme.colors.primary}
           />
-        }
-      >
-        {loading || !items ? (
-          <View style={[commonStyles.center, styles.loadingContainer]}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
-          </View>
-        ) : expiringItems.length === 0 ? (
+        }>
+        {expiringItems.length === 0 ? (
           <View style={[commonStyles.center, styles.emptyState]}>
             <Icon name="check-circle" size={64} color={theme.colors.success} />
             <Text style={[commonStyles.body, styles.emptyText]}>
@@ -114,8 +109,7 @@ export const ExpiringItems: React.FC = () => {
                   navigateTo.pantryItemDetail({
                     itemId: item.id,
                   })
-                }
-              >
+                }>
                 <View style={[commonStyles.card, styles.itemCard]}>
                   <View style={styles.itemInfo}>
                     <Text style={styles.itemName}>{item.item?.name}</Text>
@@ -123,7 +117,7 @@ export const ExpiringItems: React.FC = () => {
                       {item.currentQuantity} {item.unit?.symbol} •{' '}
                       {item.storageState}
                     </Text>
-                    <Text style={[styles.statusText, { color: statusColor }]}>
+                    <Text style={[styles.statusText, {color: statusColor}]}>
                       {daysUntil < 0
                         ? `Expired ${Math.abs(daysUntil)} days ago`
                         : daysUntil === 0
@@ -168,9 +162,6 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.md,
     marginBottom: theme.spacing.lg,
     textAlign: 'center',
-  },
-  loadingContainer: {
-    padding: theme.spacing['2xl'],
   },
   itemCard: {
     marginBottom: theme.spacing.sm,

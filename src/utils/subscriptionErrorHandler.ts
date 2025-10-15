@@ -1,8 +1,4 @@
-// Define a simple error interface instead of importing ApolloError
-interface SubscriptionError {
-  message?: string;
-  networkError?: any;
-}
+import {ApolloError} from '@apollo/client';
 
 interface RetryState {
   count: number;
@@ -17,14 +13,15 @@ const MAX_BACKOFF_MS = 30000;
 
 export const handleSubscriptionError = (
   operationName: string,
-  error: SubscriptionError,
+  error: ApolloError,
   onRetry?: () => void,
 ): boolean => {
   const errorMessage = error.message || '';
   
   // Check if this is a server-side resolver issue
-  const isServerResolverError =
-    errorMessage.includes('Subscription field must return Async Iterable');
+  const isServerResolverError = 
+    errorMessage.includes('Subscription field must return Async Iterable') ||
+    errorMessage.includes('Socket closed with event 4500');
 
   if (!isServerResolverError) {
     // For non-resolver errors, don't retry
@@ -83,10 +80,11 @@ export const clearAllRetryStates = (): void => {
 };
 
 // Helper to check if error is a known server issue
-export const isKnownServerError = (error: SubscriptionError): boolean => {
+export const isKnownServerError = (error: ApolloError): boolean => {
   const errorMessage = error.message || '';
   return (
     errorMessage.includes('Subscription field must return Async Iterable') ||
+    errorMessage.includes('Socket closed with event 4500') ||
     errorMessage.includes('Server-side resolver returned undefined')
   );
 };

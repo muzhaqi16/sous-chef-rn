@@ -1,5 +1,5 @@
-import { StateCreator } from 'zustand';
-import { RootState } from '../index';
+import {StateCreator} from 'zustand';
+import {RootState} from '../index';
 
 // Types for your barcode scanner feature
 export interface ScannedItem {
@@ -57,7 +57,7 @@ export const createBarcodeScannerSlice: StateCreator<
   [['zustand/immer', never]],
   [],
   BarcodeScannerState
-> = set => ({
+> = (set, get) => ({
   ...initialBarcodeScannerState,
 
   setScannedBarcode: barcode =>

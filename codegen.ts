@@ -1,4 +1,4 @@
-import type { CodegenConfig } from '@graphql-codegen/cli';
+import type {CodegenConfig} from '@graphql-codegen/cli';
 
 const getEndpoint = () => {
   return process.env.API_URL || 'http://localhost:4000/graphql';
@@ -6,11 +6,12 @@ const getEndpoint = () => {
 const endpoint = getEndpoint();
 
 const config: CodegenConfig = {
-  overwrite: true, // Add this for v6
+  // Remote introspection with headers for API key and optional auth
   schema: [
     {
       [endpoint]: {
         headers: {
+          // API Key is always required for schema introspection
           'x-api-key':
             process.env.API_KEY || 'mobile_ck_your_secure_random_key_here',
           'Content-Type': 'application/json',
@@ -19,16 +20,21 @@ const config: CodegenConfig = {
     },
   ],
 
+  // Include GraphQL documents from your mobile app
   documents: [
-    'src/graphql/operations/fragments.graphql',
+    'src/graphql/operations/fragments.graphql', // Load fragments first
+    // Standalone GraphQL files
     'src/graphql/operations/**/*.{graphql,gql}',
+    // Exclude generated files
     '!src/graphql/generated/**/*.{ts,tsx}',
+    // Exclude node_modules and other irrelevant paths
     '!src/**/node_modules/**',
   ],
 
   ignoreNoDocuments: true,
 
   generates: {
+    // Main generated types and hooks
     'src/graphql/generated/index.ts': {
       plugins: [
         {
@@ -49,73 +55,66 @@ const config: CodegenConfig = {
         withHooks: true,
         withComponent: false,
         withHOC: false,
+        withSubscriptionHooks: true, // Enable subscription hooks
+        withRefetchFn: true, // Enable refetch functions
+        withMutationFn: true, // Enable mutation functions
 
-        // Apollo Client v4 configuration - React hooks from separate export
-        apolloReactHooksImportFrom: '@apollo/client/react',
+        // Apollo Client configuration
         apolloReactCommonImportFrom: '@apollo/client',
+        apolloReactHooksImportFrom: '@apollo/client',
 
-        // Document mode
+        // Document mode - important for subscriptions
         documentMode: 'documentNode',
 
         // Type safety improvements
         avoidOptionals: {
-          field: true, // Changed to match server
+          field: false,
           inputValue: false,
           object: false,
         },
 
-        // Scalars - match your server config
+        // Scalars for mobile (dates as strings)
         scalars: {
-          DateTime: 'string', // or 'Date' to match server
-          Date: 'string', // or 'Date' to match server
+          DateTime: 'string',
+          Date: 'string',
           JSON: 'any',
           Upload: 'File',
-          BigInt: 'string', // Handle large integers as strings to avoid precision loss
-          IPv4: 'string', // IP addresses as strings
         },
 
-        // Modern TypeScript
+        // Code style preferences
         useTypeImports: true,
-
-        // Nullable handling - match server style
         maybeValue: 'T | null | undefined',
-        inputMaybeValue: 'T | undefined', // Match server
+        inputMaybeValue: 'T | null | undefined',
 
         // Error handling
         errorType: 'ApolloError',
 
-        // Deduplication
+        // Deduplication and naming
         dedupeOperationSuffix: true,
         skipTypename: false,
+        flattenGeneratedTypes: false,
 
-        // Fragment handling
-        inlineFragmentTypes: 'combine',
-        nonOptionalTypename: false,
+        // Fragment types
+        inlineFragmentTypes: 'combine', // Better fragment handling
+        nonOptionalTypename: false, // Don't include __typename
 
-        // Immutable types
-        immutableTypes: false,
+        // Immutable types for better type safety
+        immutableTypes: false, // Set to true if you want readonly types
 
         // Enum handling
-        enumsAsTypes: false,
-
-        // Subscription hooks
-        withRefetchFn: true,
-        withMutationFn: true,
-
-        // NEW for v6 - strict scalars
-        strictScalars: true,
+        enumsAsTypes: false, // Set to true if you prefer union types over enums
       },
     },
 
-    // Fragment matcher - update version
+    // Generate fragment matcher for Apollo Client (for unions/interfaces)
     'src/graphql/generated/fragmentMatcher.json': {
       plugins: ['fragment-matcher'],
       config: {
-        apolloClientVersion: 4,
+        apolloClientVersion: 3,
       },
     },
 
-    // Introspection
+    // Generate introspection result for offline schema
     'src/graphql/generated/introspection.json': {
       plugins: ['introspection'],
       config: {
@@ -123,17 +122,17 @@ const config: CodegenConfig = {
       },
     },
 
-    // Schema file
+    // Generate a local schema file for development/debugging
     'src/graphql/generated/schema.graphql': {
       plugins: ['schema-ast'],
       config: {
         includeDirectives: true,
-        includeIntrospectionTypes: true,
-        // Remove 'sort' if causing issues
+        includeIntrospectionTypes: true, // Include subscription types
+        sort: true,
       },
     },
 
-    // Types only file
+    // Generate TypeScript types only (no hooks) for shared types
     'src/graphql/generated/types.ts': {
       plugins: [
         {
@@ -148,34 +147,36 @@ const config: CodegenConfig = {
         onlyOperationTypes: false,
         skipTypename: false,
         useTypeImports: true,
-        strictScalars: true, // Add for v6
         scalars: {
           DateTime: 'string',
           Date: 'string',
           JSON: 'any',
-          Upload: 'File',
-          BigInt: 'string', // Handle large integers as strings to avoid precision loss
-          IPv4: 'string', // IP addresses as strings
         },
-        maybeValue: 'T | null | undefined',
-        inputMaybeValue: 'T | undefined',
       },
     },
   },
 
-  // Updated config structure for v6
+  // Global configuration
   config: {
+    // Validation
     skipDocumentsValidation: false,
+
+    // Performance
     silent: false,
     errorsOnly: false,
+
+    // Watch mode for development
+    watch: process.env.NODE_ENV === 'development',
   },
 
-  // Watch mode - moved outside config in v6
-  watch: process.env.NODE_ENV === 'development',
-
-  // Hooks
+  // Hooks for post-processing
   hooks: {
-    afterOneFileWrite: ['prettier --write'],
+    afterOneFileWrite: [
+      // Format generated files
+      'prettier --write',
+      // Optional: Run ESLint fix
+      // 'eslint --fix',
+    ],
     afterAllFileWrite: [
       'echo "✅ Mobile GraphQL types generated successfully!"',
     ],

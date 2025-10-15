@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -8,9 +8,9 @@ import {
   Alert,
   TextInput,
 } from 'react-native';
-import { Icon } from '#utils';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { useShoppingListDetails, useAppNavigation } from '#/hooks';
+import {Icon} from '#utils';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
+import {useShoppingListDetails, useAppNavigation} from '#/hooks';
 import {
   useUpdateShoppingListMutation,
   useDeleteShoppingListMutation,
@@ -18,37 +18,37 @@ import {
   GetShoppingListsDocument,
   ShoppingList,
 } from '#generated';
-import { useStore } from '#store';
+import {useStore} from '#store';
 
-import { ShoppingListStackParamList } from '#navigation/stacks/ShoppingListStack';
+import {ShoppingListStackParamList} from '#navigation/stacks/ShoppingListStack';
 
 export const ListSettings: React.FC<{
-  route: { params?: ShoppingListStackParamList['ListSettings'] };
-}> = ({ route }) => {
-  const { theme } = useUnistyles();
+  route: {params?: ShoppingListStackParamList['ListSettings']};
+}> = ({route}) => {
+  const {theme} = useUnistyles();
   const listId = route.params?.listId;
-  const { navigate, goBack, navigateTo } = useAppNavigation();
-  const { setSelectedShoppingListId } = useStore();
+  const {navigate, goBack, navigateTo} = useAppNavigation();
+  const {setSelectedShoppingListId} = useStore();
 
   const [name, setName] = useState('');
   const [isDefault, setIsDefault] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const { shoppingList, isShared } = useShoppingListDetails(listId);
+  const {shoppingList, isShared} = useShoppingListDetails(listId);
 
   const [updateList] = useUpdateShoppingListMutation();
   const [deleteList] = useDeleteShoppingListMutation();
   const [createList] = useCreateShoppingListMutation({
     // Update the cache when a new list is created
-    update(cache, { data }) {
+    update(cache, {data}) {
       if (data?.createShoppingList) {
         try {
           // Read the existing query from cache
-          const existingData = cache.readQuery<{
-            shoppingLists: ShoppingList[];
-          }>({
-            query: GetShoppingListsDocument,
-          });
+          const existingData = cache.readQuery<{shoppingLists: ShoppingList[]}>(
+            {
+              query: GetShoppingListsDocument,
+            },
+          );
 
           if (existingData) {
             // Write the updated data back to cache
@@ -78,7 +78,7 @@ export const ListSettings: React.FC<{
         goBack();
       }
     },
-    onError: () => {
+    onError: error => {
       Alert.alert('Error', 'Failed to create list');
     },
   });
@@ -119,7 +119,7 @@ export const ListSettings: React.FC<{
         await updateList({
           variables: {
             id: listId!,
-            input: { name: name.trim(), isDefault },
+            input: {name: name.trim(), isDefault},
           },
         });
       }
@@ -139,15 +139,13 @@ export const ListSettings: React.FC<{
       'Delete List',
       'Are you sure you want to delete this list? This action cannot be undone.',
       [
-        { text: 'Cancel', style: 'cancel' },
+        {text: 'Cancel', style: 'cancel'},
         {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
             try {
-              await deleteList({ variables: { id: listId! } });
-              // Clear the selected shopping list ID if we just deleted it
-              setSelectedShoppingListId(null);
+              await deleteList({variables: {id: listId!}});
               navigateTo.shoppingListMain();
             } catch (error) {
               Alert.alert('Error', 'Failed to delete list');
@@ -199,7 +197,7 @@ export const ListSettings: React.FC<{
             <Switch
               value={isDefault}
               onValueChange={setIsDefault}
-              trackColor={{ true: theme.colors.primary }}
+              trackColor={{true: theme.colors.primary}}
             />
           </View>
         </View>
@@ -211,8 +209,7 @@ export const ListSettings: React.FC<{
 
             <TouchableOpacity
               style={styles.actionRow}
-              onPress={() => navigate('ShareList', { listId: listId! })}
-            >
+              onPress={() => navigate('ShareList', {listId: listId!})}>
               <Icon name="person-add" size={20} color={theme.colors.primary} />
               <Text style={styles.actionText}>Manage Members</Text>
               <Icon
@@ -238,8 +235,7 @@ export const ListSettings: React.FC<{
 
             <TouchableOpacity
               style={styles.deleteButton}
-              onPress={handleDelete}
-            >
+              onPress={handleDelete}>
               <Icon name="delete" size={20} color={theme.colors.error} />
               <Text style={styles.deleteButtonText}>Delete List</Text>
             </TouchableOpacity>

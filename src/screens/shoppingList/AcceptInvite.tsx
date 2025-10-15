@@ -13,12 +13,7 @@ import {
   useMyShoppingListInvitesQuery,
   useAcceptShoppingListInviteMutation,
   useDeclineShoppingListInviteMutation,
-  useGetMyPendingInvitesQuery,
-  useAcceptHomeInviteMutation,
-  useDeclineHomeInviteMutation,
 } from '#generated';
-
-type InvitationType = 'shopping_list' | 'home' | 'unknown';
 
 export const AcceptInvite: React.FC = () => {
   const navigation = useNavigation();
@@ -27,73 +22,31 @@ export const AcceptInvite: React.FC = () => {
   const {theme} = useUnistyles();
 
   const [processing, setProcessing] = useState(false);
-  const [invitationType, setInvitationType] = useState<InvitationType>('unknown');
 
-  // Get shopping list invites
-  const {data: shoppingListData, loading: shoppingListLoading} = useMyShoppingListInvitesQuery();
+  // Get user's invites to find the specific invite
+  const {data, loading} = useMyShoppingListInvitesQuery();
 
-  // Get home invites
-  const {data: homeInviteData, loading: homeInviteLoading} = useGetMyPendingInvitesQuery();
+  const [acceptInvite] = useAcceptShoppingListInviteMutation();
+  const [declineInvite] = useDeclineShoppingListInviteMutation();
 
-  // Mutations for shopping list invites
-  const [acceptShoppingListInvite] = useAcceptShoppingListInviteMutation();
-  const [declineShoppingListInvite] = useDeclineShoppingListInviteMutation();
-
-  // Mutations for home invites
-  const [acceptHomeInvite] = useAcceptHomeInviteMutation();
-  const [declineHomeInvite] = useDeclineHomeInviteMutation();
-
-  const loading = shoppingListLoading || homeInviteLoading;
-
-  // Find the specific invite and determine type
-  const shoppingListInvite = shoppingListData?.myShoppingListInvites?.find(inv =>
+  // Find the specific invite
+  const invite = data?.myShoppingListInvites?.find(inv =>
     token ? inv.inviteToken === token : inv.id === inviteId,
   );
 
-  const homeInvite = homeInviteData?.myPendingInvites?.find(inv =>
-    token ? inv.token === token : inv.id === inviteId,
-  );
-
-  // Determine invitation type
-  React.useEffect(() => {
-    if (shoppingListInvite) {
-      setInvitationType('shopping_list');
-    } else if (homeInvite) {
-      setInvitationType('home');
-    } else if (!loading) {
-      setInvitationType('unknown');
-    }
-  }, [shoppingListInvite, homeInvite, loading]);
-
   const handleAccept = async () => {
-    let inviteToken: string | undefined;
-
-    if (invitationType === 'shopping_list' && shoppingListInvite) {
-      inviteToken = token || shoppingListInvite.inviteToken || undefined;
-    } else if (invitationType === 'home' && homeInvite) {
-      inviteToken = token || homeInvite.token || undefined;
-    }
-
-    if (!inviteToken) {
+    if (!token && !invite?.inviteToken) {
       Alert.alert('Error', 'Invalid invite token');
       return;
     }
 
     setProcessing(true);
     try {
-      if (invitationType === 'shopping_list') {
-        await acceptShoppingListInvite({variables: {token: inviteToken}});
-        Alert.alert('Success', 'Shopping list invitation accepted!', [
-          {text: 'OK', onPress: () => navigation.goBack()},
-        ]);
-      } else if (invitationType === 'home') {
-        await acceptHomeInvite({variables: {token: inviteToken}});
-        Alert.alert('Success', 'Home invitation accepted!', [
-          {text: 'OK', onPress: () => navigation.goBack()},
-        ]);
-      } else {
-        Alert.alert('Error', 'Unknown invitation type');
-      }
+      const inviteToken = token || invite?.inviteToken;
+      await acceptInvite({variables: {token: inviteToken!}});
+      Alert.alert('Success', 'Invitation accepted!', [
+        {text: 'OK', onPress: () => navigation.goBack()},
+      ]);
     } catch (error) {
       Alert.alert('Error', 'Failed to accept invitation');
     } finally {
@@ -102,15 +55,7 @@ export const AcceptInvite: React.FC = () => {
   };
 
   const handleDecline = async () => {
-    let inviteToken: string | undefined;
-
-    if (invitationType === 'shopping_list' && shoppingListInvite) {
-      inviteToken = token || shoppingListInvite.inviteToken || undefined;
-    } else if (invitationType === 'home' && homeInvite) {
-      inviteToken = token || homeInvite.token || undefined;
-    }
-
-    if (!inviteToken) {
+    if (!token && !invite?.inviteToken) {
       Alert.alert('Error', 'Invalid invite token');
       return;
     }
@@ -126,12 +71,8 @@ export const AcceptInvite: React.FC = () => {
           onPress: async () => {
             setProcessing(true);
             try {
-              if (invitationType === 'shopping_list') {
-                await declineShoppingListInvite({variables: {token: inviteToken!}});
-              } else if (invitationType === 'home') {
-                await declineHomeInvite({variables: {token: inviteToken!}});
-              }
-
+              const inviteToken = token || invite?.inviteToken;
+              await declineInvite({variables: {token: inviteToken!}});
               navigation.goBack();
             } catch (error) {
               Alert.alert('Error', 'Failed to decline invitation');
@@ -152,14 +93,11 @@ export const AcceptInvite: React.FC = () => {
     );
   }
 
-  if (!shoppingListInvite && !homeInvite) {
+  if (!invite) {
     return (
       <View style={styles.loadingContainer}>
         <Text style={[styles.inviteText, {color: theme.colors.error}]}>
-          {invitationType === 'unknown'
-            ? 'Invitation not found or expired'
-            : 'Loading invitation details...'
-          }
+          Invitation not found or expired
         </Text>
         <TouchableOpacity
           style={[styles.button, styles.declineButton]}
@@ -180,50 +118,29 @@ export const AcceptInvite: React.FC = () => {
 
       <View style={styles.content}>
         <View style={styles.iconContainer}>
-          <Icon
-          name={invitationType === 'home' ? 'home' : 'shopping-cart'}
-          size={64}
-          color={theme.colors.primary}
-        />
+          <Icon name="shopping-cart" size={64} color={theme.colors.primary} />
         </View>
 
         <Text style={styles.title}>You've been invited!</Text>
 
         <Text style={styles.inviteText}>
-          {invitationType === 'home'
-            ? (homeInvite as any)?.invitedBy?.profile?.displayName ||
-              (homeInvite as any)?.invitedBy?.email ||
-              'Someone'
-            : (shoppingListInvite as any)?.invitedBy?.profile?.displayName ||
-              (shoppingListInvite as any)?.invitedBy?.email ||
-              'Someone'}{' '}
-          has invited you to {invitationType === 'home' ? 'join' : 'collaborate on'}
+          {invite?.invitedBy?.profile?.displayName ||
+            invite?.invitedBy?.email ||
+            'Someone'}{' '}
+          has invited you to collaborate on
         </Text>
 
         <View style={styles.inviteDetails}>
-          <Text style={styles.inviteName}>
-            {invitationType === 'home'
-              ? (homeInvite as any)?.home?.name || 'Home'
-              : shoppingListInvite?.shoppingList?.name || 'Shopping List'
-            }
-          </Text>
-          <Text style={styles.inviteType}>
-            {invitationType === 'home' ? 'Home' : 'Shopping List'}
-          </Text>
-          <Text style={styles.inviteRole}>
-            Role: {invitationType === 'home' ? homeInvite?.role : shoppingListInvite?.role}
-          </Text>
+          <Text style={styles.inviteName}>{invite?.shoppingList?.name}</Text>
+          <Text style={styles.inviteType}>Shopping List</Text>
+          <Text style={styles.inviteRole}>Role: {invite?.role}</Text>
         </View>
 
-        {((invitationType === 'shopping_list' && (shoppingListInvite as any)?.shoppingList?.description) ||
-          (invitationType === 'home' && (homeInvite as any)?.home?.description)) && (
+        {invite?.shoppingList?.description && (
           <View style={styles.messageContainer}>
             <Text style={styles.messageLabel}>Description:</Text>
             <Text style={styles.message}>
-              {invitationType === 'home'
-                ? (homeInvite as any)?.home?.description
-                : (shoppingListInvite as any)?.shoppingList?.description
-              }
+              {invite.shoppingList.description}
             </Text>
           </View>
         )}

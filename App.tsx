@@ -1,108 +1,64 @@
-import React, { useEffect } from 'react';
-import { StatusBar, AppState, Platform } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
-import { ApolloProvider } from '@apollo/client/react';
-import { enableScreens } from 'react-native-screens';
-import { useStore } from '#store';
-import { client } from './src/apollo/client';
-import { Navigation } from '#/navigation';
-import { hasCredentials } from '#storage/keychain';
-import { SplashScreen } from '#screens';
-import { ToastProvider } from '#/components/atoms';
-import { useTheme } from '#/hooks/useTheme';
-import { Telemetry } from '#/services/telemetry';
-import { AppErrorBoundary } from '#/components/providers/ErrorBoundary';
+import React, {useEffect} from 'react';
+import {StatusBar} from 'react-native';
+import {StyleSheet} from 'react-native-unistyles';
+import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
+import {GestureHandlerRootView} from 'react-native-gesture-handler';
+import {BottomSheetModalProvider} from '@gorhom/bottom-sheet';
+import {ApolloProvider} from '@apollo/client';
+import {enableScreens} from 'react-native-screens';
+import {useStore} from '#store';
+import {client} from './src/apollo/client';
+import {Navigation} from '#/navigation';
+import {hasCredentials} from '#storage/keychain';
+import {SplashScreen} from '#screens';
+import {ToastProvider} from '#/components/atoms';
+import {useTheme} from '#/hooks/useTheme';
+
 // Enable native screens for better performance
 enableScreens();
 
 const App = () => {
-  const { isHydrated, setHasStoredCredentials, getTelemetryConfig } =
-    useStore();
-  const { theme } = useTheme();
-  const { theme: themeStyles } = useUnistyles();
+  const {isHydrated, setHasStoredCredentials} = useStore();
+  const {theme} = useTheme();
   const isDark = theme === 'dark';
 
   useEffect(() => {
     if (isHydrated) {
-      // Check for stored credentials
-      hasCredentials().then(result => {
-        setHasStoredCredentials(result);
-      });
-
-      // Initialize telemetry service
-      Telemetry.updateConfig(getTelemetryConfig());
-      Telemetry.initialize();
-
-      // Track app launch
-      Telemetry.trackEvent('app_launched', {
-        theme,
-        timestamp: new Date().toISOString(),
-      });
+      hasCredentials().then(setHasStoredCredentials);
     }
-  }, [isHydrated, setHasStoredCredentials, getTelemetryConfig, theme]);
+  }, [isHydrated, setHasStoredCredentials]);
 
-  useEffect(() => {
-    const handleAppStateChange = (nextAppState: string) => {
-      Telemetry.trackEvent('app_state_change', { state: nextAppState });
-
-      if (nextAppState === 'background') {
-        Telemetry.flush();
-      }
-    };
-
-    const subscription = AppState.addEventListener(
-      'change',
-      handleAppStateChange,
-    );
-
-    return () => {
-      subscription?.remove();
-    };
-  }, []);
-
-  if (!isHydrated) {
+  // Early return for loading state
+  if (!isHydrated || !client) {
+    console.error('App is not hydrated or Apollo client is not initialized');
     return <SplashScreen />;
   }
 
   return (
-    <AppErrorBoundary>
-      <GestureHandlerRootView style={styles.container}>
-        <ApolloProvider client={client}>
-          <SafeAreaProvider>
-            <StatusBar
-              //  translucent on android
-              {...Platform.select({
-                android: {
-                  translucent: true,
-                  backgroundColor: themeStyles.colors.background,
-                },
-                ios: {},
-              })}
-              backgroundColor={'red'}
-              hidden={false}
-              animated={true}
-              barStyle={isDark ? 'light-content' : 'dark-content'}
-            />
-            <SafeAreaView style={styles.container}>
-              <ToastProvider>
-                <BottomSheetModalProvider>
-                  <Navigation />
-                </BottomSheetModalProvider>
-              </ToastProvider>
-            </SafeAreaView>
-          </SafeAreaProvider>
-        </ApolloProvider>
-      </GestureHandlerRootView>
-    </AppErrorBoundary>
+    <GestureHandlerRootView style={styles.container}>
+      <ApolloProvider client={client}>
+        <SafeAreaProvider>
+          <StatusBar
+            barStyle={isDark ? 'light-content' : 'dark-content'}
+            backgroundColor={isDark ? '#212121' : '#FAFAFA'}
+          />
+          <SafeAreaView style={styles.container}>
+            <ToastProvider>
+              <BottomSheetModalProvider>
+                <Navigation />
+              </BottomSheetModalProvider>
+            </ToastProvider>
+          </SafeAreaView>
+        </SafeAreaProvider>
+      </ApolloProvider>
+    </GestureHandlerRootView>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
+    backgroundColor: theme.colors.background,
   },
   text: {
     color: theme.colors.textPrimary,

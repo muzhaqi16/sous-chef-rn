@@ -1,12 +1,9 @@
-import React, { useState, useMemo } from 'react';
-import { RefreshControl, ScrollView } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { EmptyState } from '../molecules/EmptyState';
-import { ItemCard } from './ItemCard';
-import { IconName } from '#/utils/iconUtils';
-
-// Tab bar height constant (65px from FloatingTabBar)
-const TAB_BAR_HEIGHT = 65;
+import React from 'react';
+import {ScrollView, RefreshControl} from 'react-native';
+import {StyleSheet} from 'react-native-unistyles';
+import {EmptyState} from '../molecules/EmptyState';
+import {ItemCard} from './ItemCard';
+import {IconName} from '#/utils/iconUtils';
 interface Item {
   id: string;
   title: string;
@@ -44,16 +41,7 @@ export const ItemList: React.FC<ItemListProps> = ({
   onRefresh,
   emptyState,
 }) => {
-  const [refreshing, setRefreshing] = useState(false);
-  const { bottom: safeBottom } = useSafeAreaInsets();
-
-  // Dynamic content style with proper bottom padding for tab bar
-  const contentStyle = useMemo(
-    () => ({
-      paddingBottom: TAB_BAR_HEIGHT + safeBottom + 16, // Tab bar height + safe area + extra padding
-    }),
-    [safeBottom],
-  );
+  const [refreshing, setRefreshing] = React.useState(false);
 
   const handleRefresh = async () => {
     if (onRefresh) {
@@ -69,13 +57,13 @@ export const ItemList: React.FC<ItemListProps> = ({
 
   return (
     <ScrollView
-      contentContainerStyle={contentStyle}
+      style={styles.container}
+      contentContainerStyle={styles.content}
       refreshControl={
         onRefresh ? (
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         ) : undefined
-      }
-    >
+      }>
       {items.map(item => (
         <ItemCard
           key={item.id}
@@ -93,3 +81,13 @@ export const ItemList: React.FC<ItemListProps> = ({
     </ScrollView>
   );
 };
+
+const styles = StyleSheet.create(() => ({
+  container: {
+    flex: 1,
+  },
+  content: {
+    padding: 16,
+    paddingBottom: 28, // Extra space for larger shadow at bottom
+  },
+}));

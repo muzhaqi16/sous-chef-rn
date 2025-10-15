@@ -14,15 +14,16 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
 }) => {
   const {theme} = useUnistyles();
 
-  const buttonStyle = circular
-    ? styles.circularActionButton
-    : styles.actionButton;
+  const buttonStyle = circular ? styles.circularActionButton : styles.actionButton;
   const iconColor = circular ? theme.colors.white : theme.colors.white;
   const iconSize = circular ? 24 : 20;
 
   return (
     <TouchableOpacity
-      style={[buttonStyle, circular ? {} : {backgroundColor: backgroundColor}]}
+      style={[
+        buttonStyle, 
+        circular ? {} : {backgroundColor: backgroundColor}
+      ]}
       onPress={onPress}>
       <Icon name={icon} size={iconSize} color={iconColor} />
       {label && <Text style={styles.deleteText}>{label}</Text>}

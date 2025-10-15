@@ -2,14 +2,12 @@ import React from 'react';
 import {View, Text} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
 import {Icon} from '#utils';
-import {Button} from '#components/base/Button';
 
 interface ItemNotFoundProps {
   barcode: string;
-  onAddItem?: () => void;
 }
 
-export const ItemNotFound: React.FC<ItemNotFoundProps> = ({barcode, onAddItem}) => {
+export const ItemNotFound: React.FC<ItemNotFoundProps> = ({barcode}) => {
   return (
     <View style={styles.container}>
       <Text style={styles.notFoundIcon}>
@@ -20,16 +18,8 @@ export const ItemNotFound: React.FC<ItemNotFoundProps> = ({barcode, onAddItem}) 
         No item found with barcode: {barcode}
       </Text>
       <Text style={styles.addItemHint}>
-        You can add this item to the database by tapping the button below.
+        You can add this item to the database using the form below.
       </Text>
-      {onAddItem && (
-        <Button
-          onPress={onAddItem}
-          variant="primary"
-          size="medium">
-          Add Item
-        </Button>
-      )}
     </View>
   );
 };
@@ -39,33 +29,29 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     justifyContent: 'flex-start',
     alignItems: 'center',
-    padding: theme.spacing.lg,
-    gap: theme.spacing.sm,
+    padding: 20,
   },
   notFoundIcon: {
     fontSize: 48,
+    marginBottom: 16,
   },
   notFoundText: {
-    fontSize: theme.fonts.size.xl,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-    textAlign: 'center',
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#495057',
+    marginBottom: 8,
   },
   notFoundMessage: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
+    fontSize: 14,
+    color: '#6c757d',
     textAlign: 'center',
+    marginBottom: 16,
     fontFamily: 'monospace',
   },
   addItemHint: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.primary,
+    fontSize: 14,
+    color: '#62B1F6',
     textAlign: 'center',
     fontStyle: 'italic',
-    marginTop: theme.spacing.sm,
-  },
-  addButton: {
-    marginTop: theme.spacing.lg,
-    paddingHorizontal: theme.spacing.xl,
   },
 }));

@@ -1,14 +1,16 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { View, Text } from 'react-native';
+import React, {useState, useRef, useCallback, useEffect} from 'react';
+import {View, Text} from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetBackdrop,
   BottomSheetTextInput,
+  BottomSheetView,
+  useBottomSheetModal,
 } from '@gorhom/bottom-sheet';
-import { StyleSheet } from 'react-native-unistyles';
-import { Input } from '#components/base/Input';
+import {StyleSheet} from 'react-native-unistyles';
+import {Input} from '#components/base/Input';
 import EnhancedAutocomplete from '#components/molecules/EnhancedAutocomplete';
-import { ItemSuggestion } from '#generated';
+import {ItemSuggestion} from '#generated';
 
 interface EnhancedAutocompleteInputProps {
   label?: string;
@@ -33,26 +35,25 @@ export const EnhancedAutocompleteInput: React.FC<
   onSelectItem,
   error,
 }) => {
+  const {dismiss, dismissAll} = useBottomSheetModal();
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [searchTerm, setSearchTerm] = useState(value || '');
 
-  // Sync searchTerm with external value changes (only when different from current searchTerm)
+  // Sync searchTerm with external value changes
   useEffect(() => {
-    if (value !== searchTerm) {
-      setSearchTerm(value || '');
-    }
-  }, [value, searchTerm]);
+    setSearchTerm(value || '');
+  }, [value]);
 
   const handleTextChange = (text: string) => {
     setSearchTerm(text);
 
-    if (text.length >= 3 && !showAutocomplete) {
+    if (text.length >= 2 && !showAutocomplete) {
       setShowAutocomplete(true);
       setTimeout(() => {
         bottomSheetModalRef.current?.present();
       }, 50);
-    } else if (text.length < 3 && showAutocomplete) {
+    } else if (text.length < 2 && showAutocomplete) {
       setShowAutocomplete(false);
       bottomSheetModalRef.current?.dismiss();
     }
@@ -63,12 +64,6 @@ export const EnhancedAutocompleteInput: React.FC<
   const handleBottomSheetTextChange = (text: string) => {
     setSearchTerm(text);
     onChangeText(text);
-
-    // Dismiss modal if search term is too short
-    if (text.length < 3 && showAutocomplete) {
-      setShowAutocomplete(false);
-      bottomSheetModalRef.current?.dismiss();
-    }
   };
 
   const handleSelectItem = (item: ItemSuggestion) => {
@@ -111,7 +106,7 @@ export const EnhancedAutocompleteInput: React.FC<
 
       <BottomSheetModal
         ref={bottomSheetModalRef}
-        snapPoints={['75%']}
+        snapPoints={['75%', '100%']}
         onChange={handleSheetChanges}
         backdropComponent={renderBackdrop}
         keyboardBehavior="interactive"
@@ -119,32 +114,31 @@ export const EnhancedAutocompleteInput: React.FC<
         keyboardBlurBehavior="restore"
         android_keyboardInputMode="adjustResize"
         enablePanDownToClose={true}
-        enableContentPanningGesture={false}
-      >
-        <EnhancedAutocomplete
-          searchTerm={searchTerm}
-          onSelectItem={handleSelectItem}
-          headerContent={
-            <View style={styles.headerSection}>
-              <Text style={styles.autocompleteTitle}>Search for an item</Text>
+        enableContentPanningGesture={false}>
+        <BottomSheetView style={styles.autocompleteContainer}>
+          <Text style={styles.autocompleteTitle}>Search for an item</Text>
 
-              <BottomSheetTextInput
-                style={styles.bottomSheetInput}
-                value={searchTerm}
-                onChangeText={handleBottomSheetTextChange}
-                placeholder="Type to search items..."
-                returnKeyType="search"
-              />
-            </View>
-          }
-        />
+          <BottomSheetTextInput
+            style={styles.bottomSheetInput}
+            value={searchTerm}
+            onChangeText={handleBottomSheetTextChange}
+            placeholder="Type to search items..."
+            returnKeyType="search"
+          />
+
+          <EnhancedAutocomplete
+            searchTerm={searchTerm}
+            onSelectItem={handleSelectItem}
+          />
+        </BottomSheetView>
       </BottomSheetModal>
     </View>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  headerSection: {
+  autocompleteContainer: {
+    flex: 1,
     paddingHorizontal: theme.spacing.md,
     paddingTop: theme.spacing.sm,
   },

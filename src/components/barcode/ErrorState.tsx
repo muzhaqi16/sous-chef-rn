@@ -1,7 +1,6 @@
 import React from 'react';
-import {View, Text} from 'react-native';
+import {View, Text, TouchableOpacity} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
-import {Button} from '#components/base/Button';
 
 interface ErrorStateProps {
   title: string;
@@ -22,9 +21,9 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
       <Text style={styles.errorText}>{title}</Text>
       <Text style={styles.errorMessage}>{message}</Text>
       {onRetry && (
-        <Button onPress={onRetry} variant="primary" size="medium">
-          Try Again
-        </Button>
+        <TouchableOpacity style={styles.button} onPress={onRetry}>
+          <Text style={styles.buttonText}>Try Again</Text>
+        </TouchableOpacity>
       )}
     </View>
   );
@@ -35,23 +34,34 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     justifyContent: 'flex-start',
     alignItems: 'center',
-    paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.xl,
-    gap: theme.spacing.md,
+    paddingHorizontal: 20,
+  },
+  buttonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   errorIcon: {
     fontSize: 48,
+    marginBottom: 16,
   },
   errorText: {
-    fontSize: theme.fonts.size.xl,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.error,
-    textAlign: 'center',
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#dc3545',
+    marginBottom: 8,
   },
   errorMessage: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
+    fontSize: 14,
+    color: '#6c757d',
     textAlign: 'center',
-    marginBottom: theme.spacing.lg,
+    marginBottom: 24,
+  },
+  button: {
+    backgroundColor: '#62B1F6',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
   },
 }));

@@ -1,56 +1,33 @@
-import React, { useMemo, useEffect, useState } from 'react';
-import { Text, TouchableOpacity, View, Image, useWindowDimensions } from 'react-native';
-import { BottomSheetFlatList, BottomSheetView } from '@gorhom/bottom-sheet';
-import { StyleSheet } from 'react-native-unistyles';
-import { useAutocompleteItemsLazyQuery, ItemSuggestion } from '#generated';
+import React, {useMemo, useEffect} from 'react';
+import {Text, TouchableOpacity, View, Image} from 'react-native';
+import {BottomSheetFlatList, BottomSheetView} from '@gorhom/bottom-sheet';
+import {StyleSheet} from 'react-native-unistyles';
+import {useAutocompleteItemsLazyQuery, ItemSuggestion} from '#generated';
 
 interface EnhancedAutocompleteProps {
   searchTerm: string;
   onSelectItem: (item: ItemSuggestion) => void;
-  headerContent?: React.ReactNode;
 }
 
 const EnhancedAutocomplete: React.FC<EnhancedAutocompleteProps> = ({
   searchTerm,
   onSelectItem,
-  headerContent,
 }) => {
-  const { height } = useWindowDimensions();
-  const [fetchItems, { data, loading, error }] = useAutocompleteItemsLazyQuery({
+  const [fetchItems, {data, loading, error}] = useAutocompleteItemsLazyQuery({
+    variables: {input: {query: searchTerm}},
     fetchPolicy: 'cache-and-network',
   });
 
-  // Keep track of previous results to show during loading
-  // Use the exact type from the GraphQL query to avoid type mismatches
-  const [previousResults, setPreviousResults] = useState<ItemSuggestion[]>([]);
-
   useEffect(() => {
     if (searchTerm.length >= 2) {
-      fetchItems({ variables: { input: { query: searchTerm } } });
+      fetchItems({variables: {input: {query: searchTerm}}});
     }
   }, [searchTerm, fetchItems]);
 
-  // Update previous results when we get new data
-  useEffect(() => {
-    const newSuggestions = data?.autocompleteItems?.suggestions || [];
-    if (newSuggestions.length > 0 || !loading) {
-      setPreviousResults(newSuggestions);
-    }
-  }, [data, loading]);
-
   const suggestions = useMemo(() => {
     if (searchTerm.length < 2) return [];
-
-    const newSuggestions = data?.autocompleteItems?.suggestions || [];
-
-    // If we have new data or not loading, return new suggestions
-    if (newSuggestions.length > 0 || !loading) {
-      return newSuggestions;
-    }
-
-    // If loading and no new data yet, show previous results
-    return previousResults;
-  }, [data, searchTerm, loading, previousResults]);
+    return data?.autocompleteItems?.suggestions || [];
+  }, [data, searchTerm]);
 
   const totalCount = data?.autocompleteItems?.totalCount || 0;
 
@@ -65,16 +42,15 @@ const EnhancedAutocomplete: React.FC<EnhancedAutocompleteProps> = ({
 
   if (searchTerm.length < 2) return null;
 
-  const renderItem = ({ item }: { item: ItemSuggestion }) => (
+  const renderItem = ({item}: {item: ItemSuggestion}) => (
     <TouchableOpacity
       onPress={() => onSelectItem(item)}
       style={styles.item}
-      activeOpacity={0.7}
-    >
+      activeOpacity={0.7}>
       <View style={styles.itemContent}>
         {item.imageUrl ? (
           <Image
-            source={{ uri: item.imageUrl }}
+            source={{uri: item.imageUrl}}
             style={styles.itemImage}
             defaultSource={{
               uri: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==',
@@ -96,46 +72,29 @@ const EnhancedAutocomplete: React.FC<EnhancedAutocompleteProps> = ({
   );
 
   const renderHeader = () => {
-    const showingPreviousResults = loading && previousResults.length > 0;
-    const currentCount = showingPreviousResults
-      ? previousResults.length
-      : totalCount;
+    if (loading) {
+      return (
+        <View style={styles.headerContainer}>
+          <Text style={styles.headerText}>Searching...</Text>
+        </View>
+      );
+    }
 
-    const resultsHeader = () => {
-      if (loading && previousResults.length === 0) {
-        return (
-          <View style={styles.headerContainer}>
-            <Text style={styles.headerText}>Searching...</Text>
-          </View>
-        );
-      }
+    if (totalCount > 0) {
+      return (
+        <View style={styles.headerContainer}>
+          <Text style={styles.headerText}>
+            {totalCount} item{totalCount !== 1 ? 's' : ''} found
+          </Text>
+        </View>
+      );
+    }
 
-      if (currentCount > 0) {
-        return (
-          <View style={styles.headerContainer}>
-            <Text style={styles.headerText}>
-              {currentCount} item{currentCount !== 1 ? 's' : ''} found
-              {showingPreviousResults && (
-                <Text style={styles.loadingIndicator}> • Updating...</Text>
-              )}
-            </Text>
-          </View>
-        );
-      }
-
-      return null;
-    };
-
-    return (
-      <>
-        {headerContent}
-        {resultsHeader()}
-      </>
-    );
+    return null;
   };
 
   const renderEmpty = () => (
-    <BottomSheetView style={[styles.messageContainer, { minHeight: height * 0.5 }]}>
+    <BottomSheetView style={styles.messageContainer}>
       <Text style={styles.emptyText}>No items found</Text>
       <Text style={styles.emptySubtext}>
         Try a different search term or continue typing to add "{searchTerm}"
@@ -152,14 +111,9 @@ const EnhancedAutocomplete: React.FC<EnhancedAutocompleteProps> = ({
     );
   };
 
-  const showingPreviousResults = loading && previousResults.length > 0;
-
   return (
     <BottomSheetFlatList
-      style={[
-        styles.flatList,
-        showingPreviousResults && styles.flatListLoading,
-      ]}
+      style={styles.flatList}
       contentContainerStyle={styles.flatListContent}
       data={suggestions}
       keyExtractor={(item: ItemSuggestion) => item.id}
@@ -178,12 +132,8 @@ const styles = StyleSheet.create(theme => ({
   flatList: {
     flex: 1,
   },
-  flatListLoading: {
-    opacity: 0.8,
-  },
   flatListContent: {
     paddingBottom: theme.spacing.lg,
-    flexGrow: 1,
   },
   headerContainer: {
     paddingHorizontal: theme.spacing.md,
@@ -197,12 +147,6 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: '600',
     color: theme.colors.textSecondary,
     textAlign: 'center',
-  },
-  loadingIndicator: {
-    fontSize: theme.typography.fontSize.sm,
-    fontWeight: '400',
-    color: theme.colors.primary,
-    opacity: 0.8,
   },
   item: {
     paddingVertical: theme.spacing.sm,
@@ -267,10 +211,8 @@ const styles = StyleSheet.create(theme => ({
     marginHorizontal: theme.spacing.md,
   },
   messageContainer: {
-    flex: 1,
     padding: theme.spacing.lg,
     alignItems: 'center',
-    justifyContent: 'center',
   },
   emptyText: {
     fontSize: theme.typography.fontSize.base,

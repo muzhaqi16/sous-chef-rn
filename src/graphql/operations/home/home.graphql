@@ -8,12 +8,6 @@ query GetHome($homeId: ID!) {
   }
 }
 
-query GetHomeBasic($homeId: ID!) {
-  home(id: $homeId) {
-    ...HomeWithPantriesFragment
-  }
-}
-
 query GetHomes {
   homes {
     id
@@ -71,35 +65,64 @@ mutation CreateHome($input: CreateHomeInput!) {
   createHome(input: $input) {
     id
     name
+    type
+    description
+    timezone
+    currency
+    isPublic
+    joinCode
+    allowJoinCode
+    maxMembers
+    tags
+    metadata
+    version
     createdAt
     updatedAt
+
+    invites {
+      ...HomeInviteFragment
+    }
+
+    members {
+      ...MemberShipFragment
+    }
+
+    myMembership {
+      ...MemberShipFragment
+    }
+
+    membershipStats {
+      total
+      active
+      byRole {
+        OWNER
+        ADMIN
+        MEMBER
+        GUEST
+      }
+      byStatus {
+        ACTIVE
+        SUSPENDED
+        LEFT
+        REMOVED
+      }
+      recentlyActive
+    }
+
+    # Use simplified pantry structure without items
     pantries {
       id
-      name
-      isDefault
-    }
-    members {
-      id
       homeId
-      userId
-      role
-      status
-      displayName
-      user {
-        ...PartialUser
-      }
-    }
-    myMembership {
-      id
-      role
-      status
-      displayName
-      canViewPantry
-      canEditPantry
-      canAddItems
-      canRemoveItems
-      canInviteOthers
-      canManageHome
+      name
+      description
+      isDefault
+      location
+      temperature
+      tags
+      metadata
+      version
+      createdAt
+      updatedAt
     }
   }
 }
@@ -146,34 +169,4 @@ mutation AcceptHomeInvite($token: String!) {
 
 mutation DeclineHomeInvite($token: String!) {
   declineHomeInvite(token: $token)
-}
-
-mutation UpdateMembership($id: ID!, $input: UpdateMembershipInput!) {
-  updateMembership(id: $id, input: $input) {
-    id
-    homeId
-    userId
-    role
-    status
-    displayName
-    canViewPantry
-    canEditPantry
-    canAddItems
-    canRemoveItems
-    canInviteOthers
-    canManageHome
-    lastActiveAt
-    joinedAt
-    leftAt
-    createdAt
-    updatedAt
-  }
-}
-
-mutation RemoveMember($membershipId: ID!) {
-  removeMember(membershipId: $membershipId)
-}
-
-mutation RevokeHomeInvite($id: ID!) {
-  revokeHomeInvite(id: $id)
 }

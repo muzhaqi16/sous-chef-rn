@@ -76,7 +76,7 @@ export const ToastProvider: React.FC<{children: ReactNode}> = ({children}) => {
   );
 };
 
-const styles = StyleSheet.create(_theme => ({
+const styles = StyleSheet.create(theme => ({
   toastContainer: {
     position: 'absolute',
     bottom: 80,

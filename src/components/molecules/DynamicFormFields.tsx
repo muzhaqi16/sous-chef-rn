@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react';
-import { View, Text } from 'react-native';
+// DynamicFormFields.tsx
+import React, {useMemo} from 'react';
+import {View, Text} from 'react-native';
 import {
   type FieldValues,
   Control,
@@ -8,19 +9,17 @@ import {
   Path,
 } from 'react-hook-form';
 
-import { StyleSheet } from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 
 // Import your autocomplete components
-import { EnhancedAutocompleteInput } from './EnhancedAutocompleteInput';
-import { BrandAutocompleteInput } from './BrandAutocompleteInput';
-import { UnitsAutocompleteInput } from './UnitsAutocompleteInput';
-import { CategoryAutocompleteInput } from './CategoryAutocompleteInput';
+import {EnhancedAutocompleteInput} from './EnhancedAutocompleteInput';
+import {BrandAutocompleteInput} from './BrandAutocompleteInput';
+import {UnitsAutocompleteInput} from './UnitsAutocompleteInput';
 
 // Create memoized versions to prevent re-renders
 const MemoizedEnhancedAutocomplete = React.memo(EnhancedAutocompleteInput);
 const MemoizedBrandAutocomplete = React.memo(BrandAutocompleteInput);
 const MemoizedUnitsAutocomplete = React.memo(UnitsAutocompleteInput);
-const MemoizedCategoryAutocomplete = React.memo(CategoryAutocompleteInput);
 
 export type FieldDef<T extends FieldValues> = {
   name: Path<T>;
@@ -30,11 +29,10 @@ export type FieldDef<T extends FieldValues> = {
     | React.ComponentType<any>
     | 'itemAutocomplete'
     | 'brandAutocomplete'
-    | 'unitAutocomplete'
-    | 'categoryAutocomplete';
+    | 'unitAutocomplete';
   props?: Record<string, any>;
   // For select fields
-  options?: Array<{ label: string; value: string }>;
+  options?: Array<{label: string; value: string}>;
   // For checkbox fields
   onValueChange?: (value: any) => void;
   // For custom rendering logic
@@ -46,7 +44,6 @@ export type FieldDef<T extends FieldValues> = {
   // Autocomplete specific props
   onSelectItem?: (item: any) => void;
   onUnitSelected?: (unitId: string | null) => void;
-  onCategorySelected?: (categoryId: string | null) => void;
 };
 
 interface DynamicFormFieldsProps<T extends FieldValues> {
@@ -77,7 +74,6 @@ export function DynamicFormFields<T extends FieldValues>({
           transformOnBlur,
           onSelectItem,
           onUnitSelected,
-          onCategorySelected,
         },
         idx,
       ) => ({
@@ -93,7 +89,6 @@ export function DynamicFormFields<T extends FieldValues>({
         transformOnBlur,
         onSelectItem,
         onUnitSelected,
-        onCategorySelected,
         key: `${String(name)}-${idx}`,
       }),
     );
@@ -109,19 +104,19 @@ export function DynamicFormFields<T extends FieldValues>({
           Input,
           props,
           options,
+          onValueChange,
           renderValue,
           transformValue,
           transformOnBlur,
           onSelectItem,
           onUnitSelected,
-          onCategorySelected,
           key,
         }) => (
           <React.Fragment key={key}>
             <Controller
               control={control}
               name={name}
-              render={({ field: { onChange, onBlur, value } }) => {
+              render={({field: {onChange, onBlur, value}}) => {
                 // Custom onChange handler that transforms value if needed
                 const handleChange = (newValue: any) => {
                   const transformedValue =
@@ -186,21 +181,6 @@ export function DynamicFormFields<T extends FieldValues>({
                   );
                 }
 
-                if (Input === 'categoryAutocomplete') {
-                  return (
-                    <MemoizedCategoryAutocomplete
-                      label={label}
-                      value={displayValue || ''}
-                      onChangeText={handleChange}
-                      placeholder={placeholder}
-                      required={props?.required}
-                      error={errors[name]?.message?.toString()}
-                      onCategorySelected={onCategorySelected}
-                      {...props}
-                    />
-                  );
-                }
-
                 // Handle regular components
                 if (Input && typeof Input !== 'string') {
                   // Check if it's a component that takes no props (render function)
@@ -217,7 +197,7 @@ export function DynamicFormFields<T extends FieldValues>({
                   // Handle different input types and their specific props
                   const inputProps: any = {
                     label,
-                    ...(placeholder && { placeholder }),
+                    ...(placeholder && {placeholder}),
                     ...props,
                   };
 
@@ -271,12 +251,7 @@ export function DynamicFormFields<T extends FieldValues>({
                 return <></>;
               }}
             />
-            {errors[name] &&
-             props?.componentType !== 'checkbox' &&
-             Input !== 'itemAutocomplete' &&
-             Input !== 'brandAutocomplete' &&
-             Input !== 'unitAutocomplete' &&
-             Input !== 'categoryAutocomplete' && (
+            {errors[name] && props?.componentType !== 'checkbox' && (
               <Text style={styles.errorText}>
                 {errors[name]?.message?.toString()}
               </Text>

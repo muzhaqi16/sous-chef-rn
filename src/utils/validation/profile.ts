@@ -1,5 +1,5 @@
 import * as yup from 'yup';
-import { nameRule } from './common';
+import {nameRule} from './common';
 
 // display name rule
 const displayNameRule = yup
@@ -17,7 +17,7 @@ const bioRule = yup.string().max(500, 'Bio must be less than 500 characters');
 // phone rule
 const phoneRule = yup
   .string()
-  .matches(/^[+]?[1-9][\d]{0,15}$/, 'Please enter a valid phone number');
+  .matches(/^[\+]?[1-9][\d]{0,15}$/, 'Please enter a valid phone number');
 
 // website/URL rule
 const urlRule = yup
@@ -77,17 +77,17 @@ const profileVisibilityRule = yup
 
 // Individual field schemas for profile editing
 export const profileFieldSchemas = {
-  firstName: yup.object({ firstName: nameRule }),
-  lastName: yup.object({ lastName: nameRule }),
-  displayName: yup.object({ displayName: displayNameRule }),
-  bio: yup.object({ bio: bioRule }),
-  phone: yup.object({ phone: phoneRule }),
-  website: yup.object({ website: urlRule }),
-  dateOfBirth: yup.object({ dateOfBirth: dateOfBirthRule }),
-  avatar: yup.object({ avatar: urlRule }),
-  coverImage: yup.object({ coverImage: urlRule }),
-  gender: yup.object({ gender: genderRule }),
-  profileVisibility: yup.object({ profileVisibility: profileVisibilityRule }),
+  firstName: yup.object({firstName: nameRule}),
+  lastName: yup.object({lastName: nameRule}),
+  displayName: yup.object({displayName: displayNameRule}),
+  bio: yup.object({bio: bioRule}),
+  phone: yup.object({phone: phoneRule}),
+  website: yup.object({website: urlRule}),
+  dateOfBirth: yup.object({dateOfBirth: dateOfBirthRule}),
+  avatar: yup.object({avatar: urlRule}),
+  coverImage: yup.object({coverImage: urlRule}),
+  gender: yup.object({gender: genderRule}),
+  profileVisibility: yup.object({profileVisibility: profileVisibilityRule}),
 };
 
 // Function to get validation schema for a specific field (matches your pattern)

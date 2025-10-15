@@ -1,8 +1,8 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
-import { Icon, IconName, IconLibrary } from '#utils/iconUtils';
-import { commonStyles } from '#/styles/commonStyles';
+import {View, Text, TouchableOpacity} from 'react-native';
+import {StyleSheet, mq, Display, Hide} from 'react-native-unistyles';
+import {Icon, IconName, IconLibrary} from '#utils/iconUtils';
+import {commonStyles} from '#/styles/commonStyles';
 
 export interface HeaderAction {
   icon: IconName;
@@ -41,8 +41,7 @@ export const Header: React.FC<HeaderProps> = ({
           <TouchableOpacity
             key={index}
             style={styles.action}
-            onPress={action.onPress}
-          >
+            onPress={action.onPress}>
             <Icon
               name={action.icon}
               size={action.size || 24}
@@ -69,8 +68,7 @@ export const Header: React.FC<HeaderProps> = ({
           <TouchableOpacity
             key={index}
             style={styles.action}
-            onPress={action.onPress}
-          >
+            onPress={action.onPress}>
             <Icon
               name={action.icon}
               size={24}
@@ -88,7 +86,7 @@ export const Header: React.FC<HeaderProps> = ({
   );
 };
 
-const styles = StyleSheet.create(theme => ({
+const styles = StyleSheet.create((theme, rt) => ({
   title: {
     ...commonStyles.headerTitle,
     flex: 1,

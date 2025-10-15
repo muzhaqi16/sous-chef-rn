@@ -137,14 +137,6 @@ mutation UpdateUserPreferences($input: UpdateUserSettingsInput!) {
   }
 }
 
-mutation DeleteAccount {
-  deleteAccount
-}
-
-mutation CompleteOnboarding {
-  completeOnboarding
-}
-
 # ============================================
 # SUBSCRIPTIONS
 # ============================================

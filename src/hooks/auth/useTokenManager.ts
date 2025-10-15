@@ -1,3 +1,8 @@
+// ============================================
+// hooks/auth/useTokenManager.ts
+// Consolidated token refresh logic
+// ============================================
+
 import {useEffect, useRef, useCallback, useState} from 'react';
 import {AppState, AppStateStatus} from 'react-native';
 import {useStore} from '#store';

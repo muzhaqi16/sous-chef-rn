@@ -1,4 +1,4 @@
-import { StateCreator, StoreMutatorIdentifier } from 'zustand';
+import {StateCreator, StoreMutatorIdentifier} from 'zustand';
 
 type Logger = <
   T,
@@ -14,7 +14,7 @@ type LoggerImpl = <T>(
   name?: string,
 ) => StateCreator<T, [], []>;
 
-const loggerImpl: LoggerImpl = f => (set, get, store) => {
+const loggerImpl: LoggerImpl = (f, name) => (set, get, store) => {
   const loggedSet: typeof set = (...a) => {
     set(...(a as Parameters<typeof set>));
   };

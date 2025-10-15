@@ -1,14 +1,14 @@
 import React from 'react';
-import { View, FlatList, Text } from 'react-native';
+import {View, FlatList, Text} from 'react-native';
 import ProductCard from '../molecules/ProductCard';
-import { useStore } from '../../store';
-import { StyleSheet } from 'react-native-unistyles';
-import { useGetShoppingListItemsQuery } from '../../graphql/generated';
+import {useStore} from '../../store';
+import {StyleSheet} from 'react-native-unistyles';
+import {useGetShoppingListItemsQuery} from '../../graphql/generated';
 
 const ShoppingList = () => {
-  const { selectedShoppingListId } = useStore();
-  const { data } = useGetShoppingListItemsQuery({
-    variables: { shoppingListId: selectedShoppingListId || '' },
+  const {selectedShoppingListId} = useStore();
+  const {data, loading, error} = useGetShoppingListItemsQuery({
+    variables: {shoppingListId: selectedShoppingListId || ''},
   });
 
   const items = data?.shoppingListItems || [];
@@ -19,7 +19,7 @@ const ShoppingList = () => {
       <FlatList
         data={items}
         keyExtractor={item => item.id}
-        renderItem={({ item }) => (
+        renderItem={({item}) => (
           <ProductCard
             name={item?.item?.name || 'Unknown Item'}
             price={0}
