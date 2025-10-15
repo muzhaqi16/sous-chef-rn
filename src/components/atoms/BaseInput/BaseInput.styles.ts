@@ -1,6 +1,6 @@
-import {StyleSheet} from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 
-export default StyleSheet.create((theme, rt) => ({
+export default StyleSheet.create((theme, _rt) => ({
   container: {
     gap: theme.spacing.xs,
     marginVertical: {
@@ -30,14 +30,10 @@ export default StyleSheet.create((theme, rt) => ({
     borderColor: hasError
       ? theme.colors.error
       : isFocused
-        ? theme.colors.primary
-        : theme.colors.border,
+      ? theme.colors.primary
+      : theme.colors.border,
     borderRadius: theme.radii.md,
     backgroundColor: theme.colors.inputBackground,
-    paddingHorizontal: {
-      xs: theme.spacing.sm,
-      md: theme.spacing.md,
-    },
     minHeight: {
       xs: 44,
       sm: 48,
@@ -60,11 +56,15 @@ export default StyleSheet.create((theme, rt) => ({
     color: theme.colors.textPrimary,
     backgroundColor: 'transparent',
     borderWidth: 0,
-    padding: 0,
-    // Responsive line height
+    paddingHorizontal: {
+      xs: theme.spacing.sm,
+      md: theme.spacing.md,
+    },
+    paddingVertical: 0,
+    // Natural line height for text/cursor
     lineHeight: {
-      xs: theme.fonts.size.sm * 1.6,
-      md: theme.fonts.size.md * 1.6,
+      xs: theme.fonts.size.sm * 1.5,
+      md: theme.fonts.size.md * 1.5,
     },
   },
 
@@ -73,6 +73,7 @@ export default StyleSheet.create((theme, rt) => ({
       xs: theme.spacing.sm,
       md: theme.spacing.md,
     },
+    paddingRight: theme.spacing.md,
     justifyContent: 'center',
     alignItems: 'center',
   },

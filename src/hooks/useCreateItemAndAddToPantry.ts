@@ -1,19 +1,16 @@
 import {useState} from 'react';
 import {Alert} from 'react-native';
+import type {ApolloCache} from '@apollo/client';
 import {
   useCreateItemMutation,
   useAddItemToPantryMutation,
   StorageState,
   ItemType,
-  DataSource,
-  ItemStatus,
-  Visibility,
-  GetPantryItemsDocument,
-  PantryItemFragment,
   useGetHomeQuery,
 } from '#generated';
 import {useDefaultHome} from './home/useDefaultHome';
 import {CreateItemFormData as FormData} from '#utils/validation';
+import { useErrorHandler } from '#/utils/errorHandling';
 
 interface CreateItemAndAddToPantryInput {
   // Item creation data
@@ -31,7 +28,8 @@ interface CreateItemAndAddToPantryInput {
 
 export const useCreateItemAndAddToPantry = () => {
   const [loading, setLoading] = useState(false);
-  
+  const { handleApolloError } = useErrorHandler();
+
   const {selectedHomeId, getDefaultPantry} = useDefaultHome();
   
   const {data: homeData} = useGetHomeQuery({
@@ -39,47 +37,38 @@ export const useCreateItemAndAddToPantry = () => {
     skip: !selectedHomeId,
   });
   
-  const [createItem] = useCreateItemMutation({
-    onError: (error) => {
-      console.error('Create item error:', error);
-      Alert.alert('Error', `Failed to create item: ${error.message}`);
-    },
-  });
+  const [createItem] = useCreateItemMutation();
   
   const [addToPantry] = useAddItemToPantryMutation({
-    // Update cache immediately for optimistic UI
-    update: (cache, {data: mutationData}, {variables}) => {
+    // Update cache using cache.modify for consistency
+    update: (cache: ApolloCache, {data: mutationData}, {variables}) => {
       if (!mutationData?.addItemToPantry || !variables?.input.pantryId) return;
 
       const newItem = mutationData.addItemToPantry;
 
       try {
-        // Read the current pantry items from cache
-        const existingData = cache.readQuery<{
-          pantryItems: PantryItemFragment[];
-        }>({
-          query: GetPantryItemsDocument,
-          variables: {pantryId: variables.input.pantryId},
-        });
-
-        if (existingData?.pantryItems) {
-          // Add the new item to the pantry items list
-          cache.writeQuery({
-            query: GetPantryItemsDocument,
-            variables: {pantryId: variables.input.pantryId},
-            data: {
-              pantryItems: [...existingData.pantryItems, newItem],
+        // Use cache.modify for better performance and consistency
+        cache.modify({
+          fields: {
+            pantryItems: (existingItems = []) => {
+              // Add the new item to the list
+              return [...existingItems, newItem];
             },
-          });
-        }
+          },
+        });
       } catch (error) {
-        console.warn('Cache update failed:', error);
+        const { message } = handleApolloError(error, {
+          operation: 'Add Item to Pantry Cache Update',
+        });
+        console.warn('Cache update failed:', message);
         // Cache update failed, but mutation still succeeded
       }
     },
     onError: (error) => {
-      console.error('Add to pantry error:', error);
-      Alert.alert('Error', `Failed to add item to pantry: ${error.message}`);
+      const { message } = handleApolloError(error, {
+        operation: 'Add Item to Pantry',
+      });
+      Alert.alert('Error', message);
     },
   });
 
@@ -150,9 +139,9 @@ export const useCreateItemAndAddToPantry = () => {
         itemId: newItem.id,
         initialQuantity: input.quantity,
         storageState: input.storageState || StorageState.Ambient,
-        expiresAt: input.expiresAt || null,
-        storageLocation: input.storageLocation || null,
-        storageNotes: input.storageNotes || null,
+        expiresAt: input.expiresAt || undefined,
+        storageLocation: input.storageLocation || undefined,
+        storageNotes: input.storageNotes || undefined,
         unitId: '', // We'll need to resolve this from the unit symbol
       };
 
@@ -179,11 +168,10 @@ export const useCreateItemAndAddToPantry = () => {
       }
       
     } catch (error) {
-      console.error('Error in createItemAndAddToPantry:', error);
-      Alert.alert(
-        'Error', 
-        'Failed to create item and add to pantry. Please try again.'
-      );
+      const { message } = handleApolloError(error, {
+        operation: 'Create Item and Add to Pantry',
+      });
+      Alert.alert('Error', message);
     } finally {
       setLoading(false);
     }

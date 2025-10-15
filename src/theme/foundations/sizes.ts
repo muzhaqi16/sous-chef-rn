@@ -11,12 +11,38 @@ export const sizes = {
     md: 40,
     lg: 48,
     xl: 64,
+    '2xl': 80,
   },
   icon: {
     xs: 16,
     sm: 20,
     md: 24,
     lg: 32,
+    xl: 48,
+    '2xl': 64,
+  },
+  listImage: {
+    width: 60,
+    height: 60,
+  },
+  // Touch target sizes (minimum 44x44 for accessibility)
+  touchTarget: {
+    min: 44, // Minimum recommended touch target size
+    sm: 40,
+    md: 44,
+    lg: 56,
+  },
+  // FAB (Floating Action Button)
+  fab: {
+    sm: 48,
+    md: 56,
+    lg: 64,
+  },
+  // Modal and container widths
+  modal: {
+    sm: 280,
+    md: 400,
+    lg: 600,
   },
   // Layout sizes
   container: {
@@ -25,5 +51,11 @@ export const sizes = {
     md: 768,
     lg: 992,
     xl: 1200,
+  },
+  // Input heights
+  input: {
+    sm: 36,
+    md: 44,
+    lg: 52,
   },
 } as const;

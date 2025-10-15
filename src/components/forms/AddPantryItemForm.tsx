@@ -1,12 +1,19 @@
-import React, {useState, useCallback} from 'react';
-import {View, ScrollView, Alert, KeyboardAvoidingView, Platform} from 'react-native';
-import {useForm} from 'react-hook-form';
-import {yupResolver} from '@hookform/resolvers/yup';
+import React, { useState, useCallback } from 'react';
+import {
+  View,
+  ScrollView,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
+import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import {StyleSheet} from 'react-native-unistyles';
+import { ApolloCache } from '@apollo/client';
 
-import {commonStyles} from '#/styles/commonStyles';
-import {useDefaultHome} from '#hooks';
+import { commonStyles } from '#/styles/commonStyles';
+import { useDefaultHome } from '#hooks';
+import { useStore } from '#store';
 import {
   StorageState,
   useAddItemToPantryMutation,
@@ -17,16 +24,17 @@ import {
   PantryItemFragment,
 } from '#generated';
 
-import {PantryItemFormHeader} from './PantryItemFormHeader';
-import {ItemInformationSection} from './ItemInformationSection';
-import {QuantitySection} from './QuantitySection';
-import {StorageDetailsSection} from './StorageDetailsSection';
+import { PantryItemFormHeader } from './PantryItemFormHeader';
+import { ItemInformationSection } from './ItemInformationSection';
+import { QuantitySection } from './QuantitySection';
+import { StorageDetailsSection } from './StorageDetailsSection';
 
 interface AddPantryItemFormData {
   itemName: string;
   selectedItemId?: string;
   brand: string;
   quantity: number;
+  itemWeight?: number; // Optional weight per item for packaged items
   unit: string;
   minimumQuantity: string;
   storageState: StorageState;
@@ -39,6 +47,13 @@ interface AddPantryItemFormData {
 const addItemSchema = yup.object({
   itemName: yup.string().required('Item name is required'),
   quantity: yup.number().min(1, 'Quantity must be at least 1').required(),
+  itemWeight: yup
+    .number()
+    .positive('Item weight must be positive')
+    .nullable()
+    .transform((value, originalValue) =>
+      originalValue === '' ? null : value,
+    ),
   unit: yup.string(),
   minimumQuantity: yup.string(),
   storageState: yup.string().oneOf(Object.values(StorageState)),
@@ -58,38 +73,42 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [saving, setSaving] = useState(false);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
+    null,
+  );
 
-  const {
-    selectedHomeId,
-    getDefaultPantry,
-  } = useDefaultHome();
+  const { selectedPantryId } = useStore();
+  const { selectedHomeId, getDefaultPantry } = useDefaultHome();
 
-  const {data: homeData} = useGetHomeQuery({
-    variables: {homeId: selectedHomeId ?? ''},
+  const { data: homeData } = useGetHomeQuery({
+    variables: { homeId: selectedHomeId ?? '' },
     skip: !selectedHomeId,
   });
 
   const [unitQuery] = useGetUnitBySymbolLazyQuery({
-    fetchPolicy: 'network-only',
+    fetchPolicy: 'cache-first',
   });
 
   const pantry = getDefaultPantry(homeData);
 
+  // Use selectedPantryId from store as primary source, fallback to pantry from home data
+  const currentPantryId = selectedPantryId || pantry?.id;
+
   const [addItem] = useAddItemToPantryMutation({
-    update: (cache, {data: mutationData}) => {
-      if (!mutationData?.addItemToPantry || !pantry?.id) return;
+    update: (cache: ApolloCache, { data: mutationData }: any) => {
+      if (!mutationData?.addItemToPantry || !currentPantryId) return;
       const newItem = mutationData.addItemToPantry;
       try {
         const existingData = cache.readQuery<{
           pantryItems: PantryItemFragment[];
         }>({
           query: GetPantryItemsDocument,
-          variables: {pantryId: pantry.id},
+          variables: { pantryId: currentPantryId },
         });
         if (existingData?.pantryItems) {
           cache.writeQuery({
             query: GetPantryItemsDocument,
-            variables: {pantryId: pantry.id},
+            variables: { pantryId: currentPantryId },
             data: {
               pantryItems: [newItem, ...existingData.pantryItems],
             },
@@ -104,7 +123,7 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
   const {
     control,
     handleSubmit,
-    formState: {errors},
+    formState: { errors },
     setValue,
     watch,
   } = useForm<AddPantryItemFormData>({
@@ -113,6 +132,7 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
       itemName: '',
       brand: '',
       quantity: 1,
+      itemWeight: undefined,
       unit: '',
       minimumQuantity: '',
       storageState: StorageState.Ambient,
@@ -134,6 +154,8 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
       }
       if (item.category?.name) {
         setValue('category', item.category.name);
+        // Clear category selection since this comes from item selection
+        setSelectedCategoryId(null);
       }
       if (item.defaultUnit?.symbol) {
         setValue('unit', item.defaultUnit.symbol);
@@ -141,6 +163,10 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
     },
     [setValue],
   );
+
+  const handleCategorySelect = useCallback((categoryId: string | null) => {
+    setSelectedCategoryId(categoryId);
+  }, []);
 
   const handleIncrementQuantity = useCallback(() => {
     const current = watchedValues.quantity || 0;
@@ -163,16 +189,25 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
       return;
     }
 
+    if (!currentPantryId) {
+      Alert.alert('Error', 'No pantry selected. Please select a pantry first.');
+      return;
+    }
+
     setSaving(true);
     try {
-      const unitData = await unitQuery({
-        variables: {symbol: data.unit.trim()},
-      });
-      const unitId = unitData.data?.unitBySymbol?.id || '';
+      // Use selectedUnitId if available (from autocomplete), otherwise query by symbol
+      let unitId = selectedUnitId;
+      if (!unitId && data.unit.trim()) {
+        const unitData = await unitQuery({
+          variables: { symbol: data.unit.trim() },
+        });
+        unitId = unitData.data?.unitBySymbol?.id || '';
+      }
 
       const baseInput = {
-        pantryId: pantry?.id || '',
-        unitId: unitId,
+        pantryId: currentPantryId, // Already validated above, so we know it exists
+        unitId: unitId || '',
         initialQuantity: data.quantity,
         storageState: data.storageState as StorageState,
         expiresAt: data.expirationDate?.toISOString() || null,
@@ -188,19 +223,41 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
           itemId: data.selectedItemId,
         };
       } else {
+        // Use selectedCategoryId if available, otherwise use category name
+        const categoryInput = selectedCategoryId
+          ? { customCategory: selectedCategoryId } // If we have a selected category ID, use it
+          : data.category.trim()
+            ? { itemCategory: data.category.trim() } // Otherwise use the typed category name
+            : {};
+
+        // Save package weight information (netWeight + displayUnit)
+        const weightInput =
+          data.itemWeight && unitId
+            ? { itemNetWeight: data.itemWeight, itemDisplayUnitId: unitId }
+            : {};
+
         input = {
           ...baseInput,
           itemName: data.itemName.trim(),
           itemDescription: data.notes.trim() || null,
           itemBrand: data.brand.trim() || null,
-          itemCategory: data.category.trim() || null,
+          ...categoryInput,
+          ...weightInput,
         };
       }
 
-      await addItem({variables: {input}});
-      onSuccess?.();
+      const result = await addItem({ variables: { input } });
+
+      // Only call onSuccess if the mutation actually succeeded
+      if (result.data?.addItemToPantry) {
+        onSuccess?.();
+      } else {
+        // Mutation completed but returned no data (likely an error)
+        Alert.alert('Error', 'Failed to add pantry item. Please try again.');
+      }
     } catch (error) {
-      Alert.alert('Error', 'Failed to add pantry item');
+      console.error('Error adding pantry item:', error);
+      Alert.alert('Error', 'Failed to add pantry item. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -209,7 +266,8 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
   return (
     <KeyboardAvoidingView
       style={commonStyles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
       <PantryItemFormHeader
         title="Add Pantry Item"
         onSave={handleSubmit(handleSave)}
@@ -218,7 +276,8 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
 
       <ScrollView
         style={commonStyles.scrollContent}
-        showsVerticalScrollIndicator={false}>
+        showsVerticalScrollIndicator={false}
+      >
         <View style={commonStyles.padding}>
           <ItemInformationSection
             control={control}
@@ -232,11 +291,16 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
             errors={errors}
             mode="add"
             quantity={watchedValues.quantity}
+            itemWeight={watchedValues.itemWeight}
             unit={watchedValues.unit}
             onIncrementQuantity={handleIncrementQuantity}
             onDecrementQuantity={handleDecrementQuantity}
             onUnitSelected={setSelectedUnitId}
-            onUnitChange={(unit) => setValue('unit', unit)}
+            onUnitChange={unit => {
+              setValue('unit', unit);
+              // Clear selected unit ID when user types manually
+              setSelectedUnitId(null);
+            }}
           />
 
           <StorageDetailsSection
@@ -246,12 +310,13 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
             storageState={watchedValues.storageState}
             expirationDate={watchedValues.expirationDate}
             showDatePicker={showDatePicker}
-            onStorageStateChange={(state) => setValue('storageState', state)}
+            onStorageStateChange={state => setValue('storageState', state)}
             onDatePickerToggle={() => setShowDatePicker(!showDatePicker)}
-            onDateChange={(date) => {
+            onDateChange={date => {
               setShowDatePicker(Platform.OS === 'ios');
               if (date) setValue('expirationDate', date);
             }}
+            onCategorySelected={handleCategorySelect}
           />
         </View>
       </ScrollView>

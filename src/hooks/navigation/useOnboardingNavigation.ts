@@ -9,6 +9,7 @@ const ONBOARDING_STEPS = [
   'SelectPantryItems',
   'ProfilePictureUpload',
   'InviteMembers',
+  'BiometricSetup',
   'OnboardingComplete',
 ] as const;
 
@@ -18,6 +19,7 @@ const STEP_TO_ENUM: Record<string, OnBoardingSteps> = {
   SelectPantryItems: OnBoardingSteps.selectPantryItems,
   ProfilePictureUpload: OnBoardingSteps.profilePictureUpload,
   InviteMembers: OnBoardingSteps.inviteMembers,
+  BiometricSetup: OnBoardingSteps.complete, // Temporarily using complete enum
   OnboardingComplete: OnBoardingSteps.complete,
 };
 

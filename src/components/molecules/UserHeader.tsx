@@ -1,17 +1,19 @@
 import React from 'react';
-import {View, Text, TouchableOpacity, Image} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
-import {useProfileData, useAppNavigation} from '#/hooks';
-import {Icon} from '#utils';
+import { View, Text, TouchableOpacity, Image } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { useProfileData, useAppNavigation } from '#/hooks';
+import { Icon } from '#utils';
+import { useStore } from '#store';
 
 export const UserHeader: React.FC = () => {
-  const {navigateTo} = useAppNavigation();
-  const {profile} = useProfileData();
+  const { navigateTo } = useAppNavigation();
+  const { profile } = useProfileData();
+  const unreadCount = useStore(state => state.unreadCount);
   return (
     <View style={styles.header}>
       <Text style={styles.headerTitle}>
         Hello{' '}
-        <Text style={{fontWeight: 'bold'}}>
+        <Text style={{ fontWeight: 'bold' }}>
           {profile?.displayName
             ? profile.displayName.split(' ')[0]
             : profile?.firstName || 'User'}
@@ -22,12 +24,13 @@ export const UserHeader: React.FC = () => {
         <TouchableOpacity
           onPress={() => {
             navigateTo.notificationList();
-          }}>
+          }}
+        >
           <View style={styles.avatar}>
             {profile?.avatar ? (
               <Image
                 alt=""
-                source={{uri: profile.avatar}}
+                source={{ uri: profile.avatar }}
                 style={styles.avatarImg}
               />
             ) : (
@@ -41,7 +44,7 @@ export const UserHeader: React.FC = () => {
               </View>
             )}
 
-            <View style={styles.avatarNotification} />
+            {unreadCount > 0 && <View style={styles.avatarNotification} />}
           </View>
         </TouchableOpacity>
       </View>
@@ -55,12 +58,13 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    margin: theme.spacing.md,
+    marginHorizontal: theme.spacing.sm,
+    marginTop: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
   },
   headerTitle: {
     fontSize: 28,
     fontWeight: '400',
-    color: '#222',
   },
   headerActions: {
     flexDirection: 'row',
@@ -85,6 +89,8 @@ const styles = StyleSheet.create(theme => ({
     width: 48,
     height: 48,
     borderRadius: 9999,
+    borderWidth: 2,
+    borderColor: theme.colors.primary,
   },
   avatarPlaceholder: {
     width: 48,

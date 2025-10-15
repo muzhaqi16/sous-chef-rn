@@ -1,16 +1,17 @@
-import React, {useState, useEffect, useCallback, useRef} from 'react';
-import {useForm} from 'react-hook-form';
-import {yupResolver} from '@hookform/resolvers/yup';
-import {View, Text} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import { View, Text } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { ApolloCache } from '@apollo/client';
 
 // Components
-import {FormContent, type FormValues} from './FormContent';
-import {LoadingView} from './LoadingView';
-import {OnBoardingWrapper} from '#components/templates';
-import {SubmitButton} from './SubmitButton';
-import {ErrorMessage} from './ErrorMessage';
-import {Button} from '#components';
+import { FormContent, type FormValues } from './FormContent';
+import { LoadingView } from './LoadingView';
+import { OnBoardingWrapper } from '#components/templates';
+import { SubmitButton } from './SubmitButton';
+import { ErrorMessage } from './ErrorMessage';
+import { Button } from '#components';
 
 // GraphQL
 import {
@@ -24,18 +25,18 @@ import {
 } from '#generated';
 
 // Store & Navigation
-import {useStore} from '#store';
-import {useOnboardingNavigation} from '#hooks';
+import { useStore } from '#store';
+import { useOnboardingNavigation } from '#hooks';
 
 // Validation & Helpers
-import {getCreateHomeSchema} from '#/utils';
-import {createPantryForHome, showPantryCreationError} from './helpers';
+import { getCreateHomeSchema } from '#/utils';
+import { createPantryForHome, showPantryCreationError } from './helpers';
 
 export const CreateHomeScreen = () => {
-  const {navigateToNextStep, setUserNavigationState, skipToStep} =
+  const { navigateToNextStep, setUserNavigationState, skipToStep } =
     useOnboardingNavigation();
 
-  const {user, selectedHomeId, setSelectedHomeId, setSelectedPantryId} =
+  const { user, selectedHomeId, setSelectedHomeId, setSelectedPantryId } =
     useStore();
 
   // State
@@ -56,13 +57,13 @@ export const CreateHomeScreen = () => {
   }, [user?.id, setUserNavigationState]);
 
   // GraphQL Queries
-  const {data: homesData, loading: homesLoading} = useGetHomesQuery({
+  const { data: homesData, loading: homesLoading } = useGetHomesQuery({
     skip: !user?.id,
     fetchPolicy: 'cache-and-network',
   });
 
-  const {data: pantriesData, loading: pantriesLoading} = useGetPantriesQuery({
-    variables: {homeId: selectedHomeId || ''},
+  const { data: pantriesData, loading: pantriesLoading } = useGetPantriesQuery({
+    variables: { homeId: selectedHomeId || '' },
     skip: !selectedHomeId,
     fetchPolicy: 'cache-and-network',
   });
@@ -77,7 +78,7 @@ export const CreateHomeScreen = () => {
   // GraphQL Mutations
   const [createHome] = useCreateHomeMutation();
   const [createPantry] = useCreatePantryMutation({
-    update: (cache, {data}) => {
+    update: (cache: ApolloCache, { data }: any) => {
       if (data?.createPantry) {
         try {
           const existingHomesData = cache.readQuery<GetHomesQuery>({
@@ -104,7 +105,7 @@ export const CreateHomeScreen = () => {
 
             cache.writeQuery<GetHomesQuery>({
               query: GetHomesDocument,
-              data: {homes: updatedHomes},
+              data: { homes: updatedHomes },
             });
           }
         } catch (error) {
@@ -227,6 +228,8 @@ export const CreateHomeScreen = () => {
       createPantry,
       setSelectedHomeId,
       setSelectedPantryId,
+      navigateToNextStep,
+      skipToStep,
     ],
   );
 
@@ -255,8 +258,9 @@ export const CreateHomeScreen = () => {
         title={getTitle()}
         subtitle={getSubtitle()}
         step={1}
-        totalSteps={6}
-        onSkip={() => skipToStep('CreateShoppingList')}>
+        totalSteps={7}
+        onSkip={() => skipToStep('CreateShoppingList')}
+      >
         <View style={styles.existingResourcesContainer}>
           <View style={styles.resourceCard}>
             <Text style={styles.resourceLabel}>Home</Text>
@@ -295,8 +299,9 @@ export const CreateHomeScreen = () => {
       title={getTitle()}
       subtitle={getSubtitle()}
       step={1}
-      totalSteps={6}
-      onSkip={() => skipToStep('CreateShoppingList')}>
+      totalSteps={7}
+      onSkip={() => skipToStep('CreateShoppingList')}
+    >
       {existingHome && (
         <View style={styles.existingResourcesContainer}>
           <View style={styles.resourceCard}>
@@ -325,61 +330,61 @@ export const CreateHomeScreen = () => {
 
 const styles = StyleSheet.create(theme => ({
   existingResourcesContainer: {
-    marginVertical: 20,
+    marginVertical: theme.spacing.lg,
   },
   resourceCard: {
     backgroundColor: theme.colors.surface,
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: theme.radii.md,
+    padding: theme.spacing.md,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    marginBottom: 12,
+    marginBottom: theme.spacing.sm,
   },
   resourceLabel: {
-    fontSize: 12,
+    fontSize: theme.fonts.size.xs,
     color: theme.colors.textSecondary,
-    marginBottom: 4,
+    marginBottom: theme.spacing.xs,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   resourceName: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: theme.fonts.size.lg,
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
   },
   defaultBadge: {
     backgroundColor: theme.colors.surface,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
+    borderRadius: theme.radii.sm,
     alignSelf: 'flex-start',
-    marginTop: 8,
+    marginTop: theme.spacing.sm,
     borderWidth: 1,
     borderColor: theme.colors.primary,
   },
   defaultBadgeText: {
-    fontSize: 11,
+    fontSize: theme.fonts.size.xs,
     color: theme.colors.primary,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
     textTransform: 'uppercase',
   },
   infoText: {
-    fontSize: 14,
+    fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
     textAlign: 'center',
-    marginTop: 16,
+    marginTop: theme.spacing.md,
     lineHeight: 20,
   },
   continueButton: {
     backgroundColor: theme.colors.primary,
-    padding: 16,
-    borderRadius: 8,
+    padding: theme.spacing.md,
+    borderRadius: theme.radii.md,
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: theme.spacing.lg,
   },
   continueText: {
     color: theme.colors.white,
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: theme.fonts.size.md,
+    fontWeight: theme.fonts.weight.bold,
   },
 }));

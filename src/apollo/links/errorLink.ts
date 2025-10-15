@@ -1,175 +1,64 @@
-import {onError} from '@apollo/client/link/error';
-import {fromPromise} from '@apollo/client';
-import {attemptTokenRefresh} from './refreshToken';
-import {isKnownServerError} from '#utils/subscriptionErrorHandler';
-import {LogoutCleanup} from '../logoutCleanup';
+import { ErrorLink } from '@apollo/client/link/error';
+import { CombinedGraphQLErrors, CombinedProtocolErrors } from '@apollo/client/errors';
+import { isKnownServerError } from '#utils/subscriptionErrorHandler';
+import { LogoutCleanup } from '../logoutCleanup';
+import { attemptTokenRefresh } from './refreshToken';
 
-export const errorLink = onError(
-  ({graphQLErrors, networkError, operation, forward}) => {
-    // Skip error handling for refresh token mutation
-    if (operation.getContext().skipErrorLink) {
+// Utility functions for error detection
+const isAuthError = (code: string, msg: string) =>
+  ['UNAUTHENTICATED', 'FORBIDDEN'].includes(code) ||
+  ['expired', 'unauthorized', 'invalid token', 'jwt'].some(term => msg.toLowerCase().includes(term));
+
+const isApiKeyError = (code: string, msg: string) =>
+  ['API_KEY_REQUIRED', 'INVALID_API_KEY', 'API_KEY_EXPIRED'].includes(code) ||
+  msg.toLowerCase().includes('api key');
+
+const isSubscription = (op: any) =>
+  op.query.definitions.some((def: any) => def.kind === 'OperationDefinition' && def.operation === 'subscription');
+
+export const errorLink = new ErrorLink(({ error, operation, forward }) => {
+  if (operation.getContext().skipErrorLink || LogoutCleanup.isInLogoutProcess()) return;
+
+  if (CombinedGraphQLErrors.is(error)) {
+    for (const err of error.errors) {
+      const code = String(err.extensions?.code || '');
+      const message = String(err.message || '');
+
+      if (isApiKeyError(code, message)) {
+        console.error('API Key error:', message);
+        continue;
+      }
+
+      if (isAuthError(code, message) && operation.operationName !== 'RefreshToken') {
+        return attemptTokenRefresh(operation, forward);
+      }
+    }
+  } else if (!CombinedProtocolErrors.is(error)) {
+    if (isSubscription(operation) && error.message?.includes('Socket closed with event 4500')) {
+      return attemptTokenRefresh(operation, forward);
+    }
+
+    if (isSubscription(operation) && isKnownServerError({ message: error.message })) {
+      console.warn(`Known server error for ${operation.operationName}:`, error.message);
       return;
     }
 
-    // Handle logout-related errors gracefully
-    if (LogoutCleanup.isInLogoutProcess()) {
-      console.log(`🔇 Suppressing error during logout: ${operation.operationName}`);
-      return; // Skip all error handling during logout
+    // Minimal logging for network errors (Apollo handles retries + cache fallback)
+    const message = error.message?.toLowerCase() || '';
+    const isNetworkIssue = [
+      'network request failed',
+      'network error',
+      'connection refused',
+      'timeout',
+      'enotfound',
+      'econnrefused',
+      'econnreset',
+      'ehostunreach'
+    ].some(issue => message.includes(issue));
+
+    // Only log non-network errors as these are unexpected
+    if (!isNetworkIssue) {
+      console.error(`Unexpected network error [${operation.operationName}]:`, error.message);
     }
-
-    // Also handle errors with our utility
-    if (LogoutCleanup.handleLogoutError({message: networkError?.message || graphQLErrors?.[0]?.message}, operation.operationName)) {
-      return; // Error was suppressed during logout
-    }
-
-    // Check if this is a known server subscription error
-    const isSubscription = operation.query.definitions.some(
-      def =>
-        def.kind === 'OperationDefinition' && def.operation === 'subscription',
-    );
-
-    if (
-      isSubscription &&
-      networkError &&
-      isKnownServerError({networkError} as any)
-    ) {
-      console.warn(
-        `Known server subscription error for ${operation.operationName}:`,
-        networkError.message,
-      );
-      // Don't propagate these errors further, they're handled by the subscription hooks
-      return;
-    }
-
-    console.log('Error link triggered:', {
-      uri: operation.getContext().uri,
-      graphQLErrors,
-      networkError,
-      operationName: operation.operationName,
-      isSubscription,
-    });
-
-    // Enhanced network error debugging
-    if (networkError) {
-      console.error('[Network Error Details]', {
-        message: networkError.message,
-        name: networkError.name,
-        statusCode: (networkError as any).statusCode,
-        stack: networkError.stack,
-        // Log additional network error properties
-        ...(networkError as any),
-      });
-    }
-
-    // 1) Handle GraphQL errors
-    if (graphQLErrors) {
-      for (const err of graphQLErrors) {
-        const code = err.extensions?.code;
-        const msg = err.message || '';
-
-        // Check for API key related errors
-        const isApiKeyError =
-          code === 'API_KEY_REQUIRED' ||
-          code === 'INVALID_API_KEY' ||
-          code === 'API_KEY_EXPIRED' ||
-          msg.toLowerCase().includes('api key') ||
-          msg.toLowerCase().includes('invalid key');
-
-        if (isApiKeyError) {
-          console.error('API Key error:', err.message);
-          // Handle API key errors - maybe show a specific error message
-          // Don't attempt token refresh for API key issues
-          continue;
-        }
-
-        // Check for various authentication error patterns
-        const isAuthError =
-          code === 'UNAUTHENTICATED' ||
-          code === 'FORBIDDEN' ||
-          msg.toLowerCase().includes('expired') ||
-          msg.toLowerCase().includes('unauthorized') ||
-          msg.toLowerCase().includes('invalid token') ||
-          msg.toLowerCase().includes('jwt');
-
-        if (isAuthError && operation.operationName !== 'RefreshToken') {
-          // Skip token refresh if we're in logout process
-          if (LogoutCleanup.isInLogoutProcess()) {
-            console.log('Skipping token refresh during logout process');
-            return;
-          }
-
-          console.log(
-            'Received authentication error, attempting token refresh…',
-          );
-          // Return the refresh observable
-          return fromPromise(
-            new Promise<any>((resolve, reject) => {
-              attemptTokenRefresh(operation, forward).subscribe({
-                next: resolve,
-                error: reject,
-              });
-            }),
-          );
-        }
-      }
-    }
-
-    // 2) Handle network errors
-    if (networkError) {
-      const errorAny = networkError as any;
-
-      // Check for 401 Unauthorized (could be auth or API key issue)
-      if (
-        errorAny.statusCode === 401 &&
-        operation.operationName !== 'RefreshToken'
-      ) {
-        // Try to determine if it's an API key issue vs auth issue
-        const responseText = errorAny.bodyText || '';
-        const isApiKeyIssue = responseText.toLowerCase().includes('api key');
-
-        if (isApiKeyIssue) {
-          console.error('API Key authentication failed');
-          // Don't attempt token refresh for API key issues
-          return;
-        }
-
-        // Skip token refresh if we're in logout process
-        if (LogoutCleanup.isInLogoutProcess()) {
-          console.log('Skipping token refresh for 401 during logout process');
-          return;
-        }
-
-        console.log('Received 401, attempting token refresh…');
-        return fromPromise(
-          new Promise<any>((resolve, reject) => {
-            attemptTokenRefresh(operation, forward).subscribe({
-              next: resolve,
-              error: reject,
-            });
-          }),
-        );
-      }
-
-      // Check for 403 Forbidden (likely API key related)
-      if (errorAny.statusCode === 403) {
-        console.error('Access forbidden - check API key permissions');
-        // Don't attempt retry for 403 errors
-        return;
-      }
-
-      if (errorAny.statusCode === 429) {
-        const headers = errorAny.response?.headers;
-        if (headers) {
-          const rateLimit = headers.get('X-RateLimit-Limit');
-          const rateRemaining = headers.get('X-RateLimit-Remaining');
-          const retryAfter = headers.get('Retry-After');
-          console.log(
-            `Rate limit exceeded. Headers: X-RateLimit-Limit=${rateLimit}, X-RateLimit-Remaining=${rateRemaining}, Retry-After=${retryAfter}`,
-          );
-        }
-      } else {
-        console.log(`[Network error]: ${networkError}`);
-      }
-    }
-  },
-);
+  }
+});

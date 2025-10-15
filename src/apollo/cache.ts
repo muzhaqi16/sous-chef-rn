@@ -1,93 +1,218 @@
-// src/apollo/cache.ts
-import {InMemoryCache, NormalizedCacheObject} from '@apollo/client';
-import {storage} from '../storage/mmkv';
+import { InMemoryCache } from '@apollo/client';
+import { storage } from '#storage/mmkv';
 
-const CACHE_KEY = 'apollo-cache';
+const CACHE_VERSION = '1.0';
+const CACHE_KEY = `apollo-cache-${CACHE_VERSION}`;
 
-export async function makeCache(): Promise<InMemoryCache> {
+/**
+ * Intelligent merge function that preserves optimistic updates
+ * Merges arrays of objects by ID, keeping optimistic items until server confirms
+ */
+function mergeArrayByIdIntelligent<T extends { id: string; __ref?: string }>(
+  existing: T[] = [],
+  incoming: T[] = [],
+  { readField }: { readField: (field: string, ref: any) => any },
+): T[] {
+  // If no existing data, just return incoming
+  if (!existing || existing.length === 0) {
+    return incoming;
+  }
+
+  // If no incoming data, keep existing (might be optimistic)
+  if (!incoming || incoming.length === 0) {
+    return existing;
+  }
+
+  // Create a map of existing items by ID
+  const existingMap = new Map<string, T>();
+  existing.forEach(item => {
+    const id = readField('id', item) as string;
+    if (id) {
+      existingMap.set(id, item);
+    }
+  });
+
+  // Create a map of incoming items by ID
+  const incomingMap = new Map<string, T>();
+  incoming.forEach(item => {
+    const id = readField('id', item) as string;
+    if (id) {
+      incomingMap.set(id, item);
+    }
+  });
+
+  // Merge: Keep all incoming items (server truth)
+  // Add any existing items that are optimistic (temporary IDs starting with 'temp-')
+  const merged = [...incoming];
+
+  existingMap.forEach((item, id) => {
+    // If item exists in incoming, it's already in merged array
+    if (incomingMap.has(id)) {
+      return;
+    }
+
+    // If item has temporary ID (optimistic), keep it until server confirms
+    if (id.startsWith('temp-')) {
+      merged.push(item);
+    }
+    // Otherwise, it was removed from server, don't include it
+  });
+
+  return merged;
+}
+
+export function makeCache(): InMemoryCache {
   const cache = new InMemoryCache({
     typePolicies: {
       Query: {
         fields: {
-          shoppingListItems: {
-            keyArgs: ['shoppingListId'], // Required for proper normalization
-            merge(existing = [], incoming: any[]) {
-              // Merge and deduplicate by ID
-              const map = new Map();
-              [...existing, ...incoming].forEach(item => {
-                if (item?.id) map.set(item.id, item);
+          homes: {
+            // Intelligent merge to preserve optimistic home additions
+            merge(existing = [], incoming = [], { readField }) {
+              return mergeArrayByIdIntelligent(existing, incoming, {
+                readField,
               });
-              return Array.from(map.values());
             },
           },
           pantryItems: {
             keyArgs: ['pantryId'],
-            merge(existing = [], incoming: any[]) {
-              const map = new Map();
-              [...existing, ...incoming].forEach(item => {
-                if (item?.id) map.set(item.id, item);
+            // Intelligent merge to preserve optimistic pantry item changes
+            merge(existing, incoming, { readField }) {
+              return mergeArrayByIdIntelligent(existing, incoming, {
+                readField,
               });
-              return Array.from(map.values());
+            },
+          },
+          shoppingListItems: {
+            keyArgs: ['shoppingListId'],
+            // Intelligent merge to preserve optimistic shopping list changes
+            merge(existing, incoming, { readField }) {
+              return mergeArrayByIdIntelligent(existing, incoming, {
+                readField,
+              });
+            },
+          },
+          shoppingLists: {
+            // Intelligent merge to preserve optimistic list additions
+            merge(existing = [], incoming = [], { readField }) {
+              return mergeArrayByIdIntelligent(existing, incoming, {
+                readField,
+              });
             },
           },
         },
       },
+      PantryItem: {
+        keyFields: ['id'],
+      },
+      ShoppingListItem: {
+        keyFields: ['id'],
+      },
+      Item: {
+        keyFields: ['id'],
+      },
+      User: {
+        keyFields: ['id'],
+        fields: {
+          // Merge user updates instead of replacing
+          profile: {
+            merge(existing, incoming) {
+              return { ...existing, ...incoming };
+            },
+          },
+        },
+      },
+      Home: {
+        keyFields: ['id'],
+        fields: {
+          members: {
+            // Intelligent merge to preserve optimistic member additions/updates
+            merge(existing = [], incoming = [], { readField }) {
+              return mergeArrayByIdIntelligent(existing, incoming, {
+                readField,
+              });
+            },
+          },
+          pantries: {
+            // Intelligent merge to preserve optimistic pantry additions
+            merge(existing = [], incoming = [], { readField }) {
+              return mergeArrayByIdIntelligent(existing, incoming, {
+                readField,
+              });
+            },
+          },
+          shoppingLists: {
+            // Intelligent merge to preserve optimistic list additions
+            merge(existing = [], incoming = [], { readField }) {
+              return mergeArrayByIdIntelligent(existing, incoming, {
+                readField,
+              });
+            },
+          },
+        },
+      },
+      Unit: {
+        keyFields: ['id'],
+      },
+      ShoppingList: {
+        keyFields: ['id'],
+      },
+      Pantry: {
+        keyFields: ['id'],
+      },
     },
   });
 
-  // 1) Try to restore from MMKV
-  const saved = storage.getString(CACHE_KEY);
-  if (saved) {
-    try {
-      cache.restore(JSON.parse(saved) as NormalizedCacheObject);
-    } catch (err) {
-      console.warn(
-        'Failed to restore Apollo cache from MMKV, starting fresh:',
-        err,
-      );
-      storage.delete(CACHE_KEY);
+  // Simple restoration
+  try {
+    const saved = storage.getString(CACHE_KEY);
+    if (saved) {
+      cache.restore(JSON.parse(saved));
     }
+  } catch (e) {
+    storage.delete(CACHE_KEY);
   }
 
-  // 2) Helper to persist the full cache
-  const persist = () => {
+  // Cache size management
+  const MAX_CACHE_SIZE = 50 * 1024 * 1024; // 50MB limit
+  let lastGcTime = Date.now();
+
+  const checkCacheSize = () => {
     try {
-      const data = cache.extract();
-      storage.set(CACHE_KEY, JSON.stringify(data));
-    } catch (err) {
-      console.warn('Failed to persist Apollo cache to MMKV:', err);
+      const cacheData = JSON.stringify(cache.extract());
+      if (cacheData.length > MAX_CACHE_SIZE) {
+        console.log('🗑️ Cache size exceeded, running garbage collection');
+        cache.gc();
+        lastGcTime = Date.now();
+      }
+    } catch (e) {
+      console.warn('Cache size check failed:', e);
     }
   };
 
-  // 3) Monkey-patch writeQuery
-  const _writeQuery = cache.writeQuery.bind(cache);
-  cache.writeQuery = options => {
-    const result = _writeQuery(options);
-    persist();
-    return result;
+  // Simple persistence - debounced with size check
+  let persistTimeout: NodeJS.Timeout;
+  const persist = () => {
+    clearTimeout(persistTimeout);
+    persistTimeout = setTimeout(() => {
+      try {
+        // Run GC if it's been more than 5 minutes since last check
+        if (Date.now() - lastGcTime > 5 * 60 * 1000) {
+          checkCacheSize();
+        }
+
+        storage.set(CACHE_KEY, JSON.stringify(cache.extract()));
+      } catch (e) {
+        console.warn('Cache persist failed:', e);
+      }
+    }, 500); // Debounce for 500ms
   };
 
-  // 4) Monkey-patch writeFragment
-  const _writeFragment = cache.writeFragment.bind(cache);
-  cache.writeFragment = options => {
-    const result = _writeFragment(options);
+  // Only persist on writes
+  const originalWrite = cache.write;
+  cache.write = function (...args) {
+    const result = originalWrite.apply(this, args);
     persist();
-    return result;
-  };
-
-  // 5) Monkey-patch evict (for example, on cache.clear or cache.evict calls)
-  const _evict = cache.evict.bind(cache);
-  cache.evict = options => {
-    const result = _evict(options);
-    persist();
-    return result;
-  };
-
-  // 6) Optionally also patch cache.reset / clearAll
-  const _reset = cache.reset.bind(cache);
-  cache.reset = async () => {
-    const result = await _reset();
-    storage.delete(CACHE_KEY);
     return result;
   };
 

@@ -3,9 +3,8 @@
 // Updated to work with your existing store structure
 // ============================================
 
-import {StateCreator} from 'zustand';
-import {RootState} from '../index';
-import {storage} from '#/storage/mmkv';
+import { StateCreator } from 'zustand';
+import { RootState } from '../index';
 
 export interface User {
   id: string;
@@ -28,9 +27,8 @@ export interface AuthState {
   rememberMe: boolean | undefined;
   hasStoredCredentials: boolean | null;
 
-  // Pending credentials for verification flow
-  pendingEmail?: string;
-  pendingPassword?: string;
+  // Auto-login state
+  isAutoLoggingIn: boolean;
 
   // Computed property
   getIsAuthenticated: () => boolean;
@@ -38,24 +36,22 @@ export interface AuthState {
   // Actions
   setAuth: (user: User, accessToken: string, refreshToken: string) => void;
   updateUser: (updates: Partial<User>) => void;
-  setTokens: (tokens: {accessToken?: string; refreshToken?: string}) => void;
+  setTokens: (tokens: { accessToken?: string; refreshToken?: string }) => void;
   setEmailVerified: (verified: boolean) => void;
   setOnboarded: (onboarded: boolean) => void;
   clearAuth: () => void;
   setRememberMe: (remember: boolean) => void;
   setHasStoredCredentials: (has: boolean | null) => void;
-  setPendingCredentials: (email: string, password: string) => void;
-  clearPendingCredentials: () => void;
+  setIsAutoLoggingIn: (loading: boolean) => void;
 }
 
 const initialAuthState = {
   user: null,
   accessToken: null,
   refreshToken: null,
-  rememberMe: undefined,
+  rememberMe: true, // Default to true for simplified flow
   hasStoredCredentials: null,
-  pendingEmail: undefined,
-  pendingPassword: undefined,
+  isAutoLoggingIn: false,
 };
 
 export const createAuthSlice: StateCreator<
@@ -76,10 +72,7 @@ export const createAuthSlice: StateCreator<
       state.user = user;
       state.accessToken = accessToken;
       state.refreshToken = refreshToken;
-
-      // Clear pending credentials when auth succeeds
-      state.pendingEmail = undefined;
-      state.pendingPassword = undefined;
+      state.isAutoLoggingIn = false; // Clear auto-login state on success
     });
   },
 
@@ -91,7 +84,7 @@ export const createAuthSlice: StateCreator<
     });
   },
 
-  setTokens: ({accessToken, refreshToken}) => {
+  setTokens: ({ accessToken, refreshToken }) => {
     set(state => {
       if (accessToken !== undefined) state.accessToken = accessToken;
       if (refreshToken !== undefined) state.refreshToken = refreshToken;
@@ -119,8 +112,7 @@ export const createAuthSlice: StateCreator<
       state.user = null;
       state.accessToken = null;
       state.refreshToken = null;
-      state.pendingEmail = undefined;
-      state.pendingPassword = undefined;
+      state.isAutoLoggingIn = false;
       // Keep rememberMe preference
     });
   },
@@ -137,17 +129,9 @@ export const createAuthSlice: StateCreator<
     });
   },
 
-  setPendingCredentials: (email, password) => {
+  setIsAutoLoggingIn: loading => {
     set(state => {
-      state.pendingEmail = email;
-      state.pendingPassword = password;
-    });
-  },
-
-  clearPendingCredentials: () => {
-    set(state => {
-      state.pendingEmail = undefined;
-      state.pendingPassword = undefined;
+      state.isAutoLoggingIn = loading;
     });
   },
 });

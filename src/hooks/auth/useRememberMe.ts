@@ -1,0 +1,76 @@
+import { useCallback, useState } from 'react';
+import { useToast } from '#/hooks/useToast';
+import { useUserPreferences } from '#/hooks/navigation/useUserPreferences';
+
+export interface RememberMeCredentials {
+  email: string;
+  password: string;
+}
+
+export interface RememberMeEvents {
+  onAccept: (credentials: RememberMeCredentials) => Promise<void>;
+  onDecline: () => void;
+}
+
+/**
+ * Hook for managing RememberMe modal state and logic.
+ * This hook only handles modal state and user interactions - it doesn't know
+ * HOW credentials are stored, just WHAT the user wants to do with them.
+ */
+export const useRememberMe = ({ onAccept, onDecline }: RememberMeEvents) => {
+  // RememberMe modal state
+  const [showRememberMeModal, setShowRememberMeModal] = useState(false);
+  const [pendingCredentials, setPendingCredentials] = useState<RememberMeCredentials | null>(null);
+
+  // Dependencies
+  const toast = useToast();
+  const { markCredentialPromptDeclined } = useUserPreferences();
+
+  const handleRememberMeAccept = useCallback(async () => {
+    if (pendingCredentials) {
+      try {
+        await onAccept(pendingCredentials);
+        console.log('Credentials accepted by user');
+      } catch (error) {
+        console.error('Failed to process credential acceptance:', error);
+        toast({
+          message: 'Failed to save login information',
+          type: 'error',
+        });
+      }
+    }
+    setShowRememberMeModal(false);
+    setPendingCredentials(null);
+  }, [pendingCredentials, onAccept, toast]);
+
+  const handleRememberMeDecline = useCallback(() => {
+    setShowRememberMeModal(false);
+
+    // Track credential prompt declination to avoid showing it again
+    markCredentialPromptDeclined();
+
+    setPendingCredentials(null);
+    onDecline();
+  }, [markCredentialPromptDeclined, onDecline]);
+
+  // Helper function to show the RememberMe modal
+  const showRememberMePrompt = useCallback((credentials: RememberMeCredentials) => {
+    setPendingCredentials(credentials);
+    setShowRememberMeModal(true);
+  }, []);
+
+  return {
+    // State
+    showRememberMeModal,
+    pendingCredentials,
+
+    // Actions
+    handleRememberMeAccept,
+    handleRememberMeDecline,
+    showRememberMePrompt,
+
+    // Internal state management
+    setShowRememberMeModal,
+    setPendingCredentials,
+  };
+};

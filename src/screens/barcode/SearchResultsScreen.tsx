@@ -1,11 +1,11 @@
-import React, {useRef, useEffect} from 'react';
-import {SafeAreaView, StatusBar} from 'react-native';
-import {useAppNavigation} from '#hooks';
+import React, { useRef, useEffect, useCallback } from 'react';
+import { StatusBar, View, Dimensions, Platform } from 'react-native';
+import { useAppNavigation } from '#hooks';
 import BottomSheet, {
   BottomSheetBackdrop,
   BottomSheetScrollView,
 } from '@gorhom/bottom-sheet';
-import {StyleSheet} from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 
 import {
   Header,
@@ -14,17 +14,17 @@ import {
   ItemNotFound,
   SearchResults,
 } from '#components/barcode';
-import AddItemForm from '#components/pages/AddItemForm';
-import {type BarcodeStackParamList} from '#navigation/stacks/BarcodeStack';
-import {useStore} from '#store';
-import {useSearchResults} from '#hooks';
+import AddItemForm from '#components/organisms/AddItemForm';
+import { type BarcodeStackParamList } from '#navigation/stacks/BarcodeStack';
+import { useStore } from '#store';
+import { useSearchResults } from '#hooks';
 
 export const SearchResultsScreen: React.FC<{
-  route: {params: BarcodeStackParamList['SearchResults']};
-}> = ({route}) => {
-  const {barcode, format, source, pantryId, shoppingListId} = route.params;
+  route: { params: BarcodeStackParamList['SearchResults'] };
+}> = ({ route }) => {
+  const { barcode, format, source, pantryId, shoppingListId } = route.params;
 
-  const {navigate, navigateTo} = useAppNavigation();
+  const { navigate, navigateTo, navigateToNested } = useAppNavigation();
 
   const bottomSheetRef = useRef<BottomSheet>(null);
 
@@ -34,6 +34,7 @@ export const SearchResultsScreen: React.FC<{
     bottomSheetIndex,
     isSearching,
     hideBottomSheet,
+    showBottomSheet,
   } = useStore();
 
   const {
@@ -54,14 +55,55 @@ export const SearchResultsScreen: React.FC<{
     }
   }, [bottomSheetVisible, bottomSheetIndex]);
 
-  // Handle status bar styling based on backdrop visibility
+  // Replace your current status bar effect with this improved version
   useEffect(() => {
     if (bottomSheetVisible) {
-      StatusBar.setBarStyle('dark-content', true);
-    } else {
+      // When bottom sheet is open: dark status bar with light content
       StatusBar.setBarStyle('light-content', true);
+
+      // Platform-specific handling
+      if (Platform.OS === 'android') {
+        StatusBar.setBackgroundColor('rgba(0, 0, 0, 0.7)', true); // Semi-transparent black
+        StatusBar.setTranslucent(true); // Keep translucent for better appearance
+      } else {
+        // iOS doesn't support backgroundColor, but respects bar style
+        StatusBar.setBarStyle('light-content', true);
+      }
+    } else {
+      // When bottom sheet is closed: restore to default
+      StatusBar.setBarStyle('dark-content', true); // Or 'light-content' based on your app theme
+
+      if (Platform.OS === 'android') {
+        StatusBar.setBackgroundColor('transparent', true);
+        StatusBar.setTranslucent(true);
+      }
     }
+
+    // Cleanup function to restore status bar when component unmounts
+    return () => {
+      StatusBar.setBarStyle('dark-content', true);
+      if (Platform.OS === 'android') {
+        StatusBar.setBackgroundColor('transparent', true);
+        StatusBar.setTranslucent(true);
+      }
+    };
   }, [bottomSheetVisible]);
+
+  const handleSheetChanges = useCallback((index: number) => {
+    if (index >= 0) {
+      // Sheet is opening or open
+      StatusBar.setBarStyle('light-content', true);
+      if (Platform.OS === 'android') {
+        StatusBar.setBackgroundColor('rgba(0, 0, 0, 0.7)', true);
+      }
+    } else {
+      // Sheet is closed
+      StatusBar.setBarStyle('dark-content', true);
+      if (Platform.OS === 'android') {
+        StatusBar.setBackgroundColor('transparent', true);
+      }
+    }
+  }, []);
 
   const handleScanAnother = () => {
     clearSearch();
@@ -73,15 +115,20 @@ export const SearchResultsScreen: React.FC<{
   };
 
   const handleBackPress = () => {
+    console.log('Back pressed, source:', source);
     // Navigate back to the appropriate screen based on source
     if (source === 'pantry') {
-      navigateTo.pantryMain();
+      navigateToNested('Home', 'Pantry');
     } else if (source === 'shoppingList') {
-      navigateTo.shoppingListMain();
+      navigateToNested('Home', 'ShoppingList');
     } else {
       // Fallback to normal back navigation
-      navigate('BarcodeScanner');
+      navigateTo.barcodeScanner();
     }
+  };
+
+  const handleShowAddItemForm = () => {
+    showBottomSheet(1);
   };
 
   const renderBackdrop = (props: any) => (
@@ -90,6 +137,7 @@ export const SearchResultsScreen: React.FC<{
       appearsOnIndex={0}
       disappearsOnIndex={-1}
       opacity={0.3}
+      statusBarTranslucent={true}
     />
   );
 
@@ -121,11 +169,11 @@ export const SearchResultsScreen: React.FC<{
       );
     }
 
-    return <ItemNotFound barcode={barcode} />;
+    return <ItemNotFound barcode={barcode} onAddItem={handleShowAddItemForm} />;
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <Header
         title="Search Results"
         onBackPress={handleBackPress}
@@ -136,13 +184,16 @@ export const SearchResultsScreen: React.FC<{
       {bottomSheetVisible && (
         <BottomSheet
           ref={bottomSheetRef}
-          snapPoints={['50%', '65%', '90%']}
+          snapPoints={['50%', '65%', '85%']}
+          maxDynamicContentSize={Dimensions.get('window').height * 0.85}
           enablePanDownToClose
           animateOnMount={true}
+          onChange={handleSheetChanges} // Add this line
           onClose={hideBottomSheet}
           backgroundStyle={styles.bottomSheetBackground}
           handleIndicatorStyle={styles.bottomSheetHandle}
-          backdropComponent={renderBackdrop}>
+          backdropComponent={renderBackdrop}
+        >
           <BottomSheetScrollView style={styles.bottomSheetContent}>
             <AddItemForm
               barcode={barcode}
@@ -154,23 +205,23 @@ export const SearchResultsScreen: React.FC<{
           </BottomSheetScrollView>
         </BottomSheet>
       )}
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: theme.colors.background,
   },
   bottomSheetBackground: {
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.surface,
   },
   bottomSheetHandle: {
-    backgroundColor: '#dee2e6',
+    backgroundColor: theme.colors.border,
   },
   bottomSheetContent: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: theme.spacing.lg,
   },
 }));

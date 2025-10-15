@@ -1,8 +1,8 @@
-import React, {useState, useEffect, useCallback} from 'react';
-import {Text, ActivityIndicator, View} from 'react-native';
-import {useForm} from 'react-hook-form';
-import {yupResolver} from '@hookform/resolvers/yup';
-import {StyleSheet} from 'react-native-unistyles';
+import React, { useState, useEffect } from 'react';
+import { Text, ActivityIndicator, View } from 'react-native';
+import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import { StyleSheet } from 'react-native-unistyles';
 
 import {
   OnBoardingWrapper,
@@ -14,18 +14,18 @@ import {
   useCreateShoppingListMutation,
   useGetShoppingListsQuery,
 } from '#generated';
-import {useStore} from '#store';
-import {useOnboardingNavigation} from '#hooks';
-import {createShoppingListSchema} from '#utils';
+import { useStore } from '#store';
+import { useOnboardingNavigation } from '#hooks';
+import { createShoppingListSchema } from '#utils';
 
 type FormValues = {
   shoppingListName: string;
 };
 
 export const CreateShoppingListScreen = () => {
-  const {navigateToNextStep, skipToStep} = useOnboardingNavigation();
+  const { navigateToNextStep, skipToStep } = useOnboardingNavigation();
 
-  const {setSelectedShoppingListId, user} = useStore();
+  const { setSelectedShoppingListId, user } = useStore();
 
   // State management
   const [graphqlError, setGraphqlError] = useState<string | null>(null);
@@ -33,7 +33,7 @@ export const CreateShoppingListScreen = () => {
   const [checkingExisting, setCheckingExisting] = useState(true);
 
   // GraphQL query
-  const {data: listsData, loading: listsLoading} = useGetShoppingListsQuery({
+  const { data: listsData, loading: listsLoading } = useGetShoppingListsQuery({
     skip: !user?.id,
     fetchPolicy: 'cache-and-network',
   });
@@ -127,8 +127,9 @@ export const CreateShoppingListScreen = () => {
         title="Shopping Lists"
         subtitle="Checking your existing lists..."
         step={2}
-        totalSteps={6}
-        onSkip={() => skipToStep('SelectPantryItems')}>
+        totalSteps={7}
+        onSkip={() => skipToStep('SelectPantryItems')}
+      >
         <View style={styles.loadingContainer}>
           <ActivityIndicator
             size="large"
@@ -151,8 +152,9 @@ export const CreateShoppingListScreen = () => {
           : 'You can add items to it later'
       }
       step={2}
-      totalSteps={6}
-      onSkip={() => skipToStep('SelectPantryItems')}>
+      totalSteps={7}
+      onSkip={() => skipToStep('SelectPantryItems')}
+    >
       {existingList ? (
         <>
           {/* Show existing list info */}

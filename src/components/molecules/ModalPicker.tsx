@@ -1,19 +1,13 @@
 import React from 'react';
-import {
-  Modal,
-  SafeAreaView,
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-} from 'react-native';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
-import {Icon} from '#/utils';
+import { Modal, View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Icon } from '#/utils';
 
 export interface ModalPickerProps {
   label: string;
   visible: boolean;
-  options: {label: string; value: string}[];
+  options: { label: string; value: string }[];
   selected: string;
   onSelect: (value: string) => void;
   onCancel: () => void;
@@ -27,7 +21,7 @@ export const ModalPicker: React.FC<ModalPickerProps> = ({
   onSelect,
   onCancel,
 }) => {
-  const {theme} = useUnistyles();
+  const { theme } = useUnistyles();
 
   return (
     <Modal visible={visible} animationType="slide">
@@ -48,7 +42,8 @@ export const ModalPicker: React.FC<ModalPickerProps> = ({
             <TouchableOpacity
               key={opt.value}
               style={styles.option}
-              onPress={() => onSelect(opt.value)}>
+              onPress={() => onSelect(opt.value)}
+            >
               <Text style={styles.optionText}>{opt.label}</Text>
               {selected === opt.value && (
                 <Icon
@@ -67,14 +62,14 @@ export const ModalPicker: React.FC<ModalPickerProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
-  container: {flex: 1, backgroundColor: theme.colors.background, padding: 16},
+  container: { flex: 1, backgroundColor: theme.colors.background, padding: 16 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
   },
-  title: {fontSize: 18, fontWeight: '600', color: theme.colors.textPrimary},
+  title: { fontSize: 18, fontWeight: '600', color: theme.colors.textPrimary },
   option: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -82,5 +77,5 @@ const styles = StyleSheet.create(theme => ({
     borderBottomWidth: 1,
     borderColor: theme.colors.divider,
   },
-  optionText: {flex: 1, fontSize: 16, color: theme.colors.textPrimary},
+  optionText: { flex: 1, fontSize: 16, color: theme.colors.textPrimary },
 }));

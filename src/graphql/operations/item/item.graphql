@@ -69,6 +69,22 @@ query ItemByUpc($upc: String!) {
   }
 }
 
+query ItemBySku($sku: String!, $storeId: String) {
+  itemBySku(sku: $sku, storeId: $storeId) {
+    id
+    imageUrl
+    name
+    netWeight
+    upc
+    sku
+    description
+    units {
+      isDefault
+      unitId
+    }
+  }
+}
+
 query GetOnboardingItems {
   onboardingItems {
     units {
@@ -108,6 +124,9 @@ query AutocompleteItems($input: AutocompleteInput!) {
         name
         type
         isPrimary
+        color
+        icon
+        slug
       }
     }
     totalCount
@@ -118,6 +137,18 @@ query SearchBrands($search: String!, $limit: Int) {
   brands(search: $search, take: $limit, isActive: true) {
     id
     name
+  }
+}
+
+query AutocompleteCategories($input: AutocompleteCategoryInput!) {
+  autocompleteCategories(input: $input) {
+    suggestions {
+      id
+      name
+      type
+      icon
+    }
+    totalCount
   }
 }
 
@@ -141,6 +172,7 @@ mutation CreateItem($input: CreateItemInput!) {
     convertedNetWeight {
       value
       unit {
+        id
         name
         symbol
       }

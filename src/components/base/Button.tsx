@@ -1,17 +1,21 @@
 import React from 'react';
-import {TouchableOpacity, Text, ActivityIndicator} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
-import {Icon} from '#utils';
+import { TouchableOpacity, Text, ActivityIndicator } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { Icon } from '#utils';
 
 interface ButtonProps {
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline';
   size?: 'small' | 'medium' | 'large';
   disabled?: boolean;
   loading?: boolean;
   icon?: React.ComponentProps<typeof Icon>['name'];
-  children: React.ReactNode;
+  children?: React.ReactNode;
   fullWidth?: boolean;
+  title?: string; // For backwards compatibility with atoms/Button
+  style?: any; // For custom styling
+  btnStyle?: any; // For backwards compatibility
+  txtStyle?: any; // For backwards compatibility
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -22,40 +26,51 @@ export const Button: React.FC<ButtonProps> = ({
   loading = false,
   icon,
   children,
+  title,
   fullWidth = false,
+  style,
+  btnStyle,
+  txtStyle,
 }) => {
   return (
     <TouchableOpacity
       style={[
-        styles.base,
+        styles.button,
         styles[variant],
         styles[size],
         fullWidth && styles.fullWidth,
         disabled && styles.disabled,
+        style,
+        btnStyle,
       ]}
       onPress={onPress}
-      disabled={disabled || loading}>
+      disabled={disabled || loading}
+    >
       {loading ? (
         <ActivityIndicator
           size="small"
-          color={variant === 'primary' ? 'white' : undefined}
+          color={
+            variant === 'primary' || variant === 'danger' ? 'white' : undefined
+          }
         />
       ) : (
         <>
           {icon && (
             <Icon
               name={icon}
-              size={20}
-              color={variant === 'primary' ? 'white' : undefined}
+              size={size === 'small' ? 16 : size === 'large' ? 24 : 20}
+              color={
+                variant === 'primary' || variant === 'danger'
+                  ? 'white'
+                  : variant === 'ghost'
+                  ? undefined
+                  : undefined
+              }
             />
           )}
-          {typeof children === 'string' ? (
-            <Text style={[styles.text, styles[`${variant}Text`]]}>
-              {children}
-            </Text>
-          ) : (
-            children
-          )}
+          <Text style={[styles.text, styles[`${variant}Text`], txtStyle]}>
+            {title || children}
+          </Text>
         </>
       )}
     </TouchableOpacity>
@@ -63,12 +78,12 @@ export const Button: React.FC<ButtonProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
-  base: {
+  button: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 8,
-    gap: 8,
+    borderRadius: theme.radii.md,
+    gap: theme.spacing.xs,
   },
   primary: {
     backgroundColor: theme.colors.primary,
@@ -83,18 +98,25 @@ const styles = StyleSheet.create(theme => ({
   },
   ghost: {
     backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  outline: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
   },
   small: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
   },
   medium: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
   },
   large: {
-    paddingHorizontal: 24,
-    paddingVertical: 14,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
   },
   fullWidth: {
     width: '100%',
@@ -103,19 +125,23 @@ const styles = StyleSheet.create(theme => ({
     opacity: 0.5,
   },
   text: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontWeight: theme.fonts.weight.semibold,
+    textAlign: 'center',
+    fontSize: theme.fonts.size.md,
   },
   primaryText: {
-    color: 'white',
+    color: theme.colors.white,
   },
   secondaryText: {
     color: theme.colors.textPrimary,
   },
   dangerText: {
-    color: 'white',
+    color: theme.colors.white,
   },
   ghostText: {
+    color: theme.colors.primary,
+  },
+  outlineText: {
     color: theme.colors.primary,
   },
 }));

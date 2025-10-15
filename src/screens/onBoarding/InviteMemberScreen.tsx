@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import {
   Text,
   View,
@@ -7,18 +7,17 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
-import {useNavigation} from '@react-navigation/native';
-import {OnBoardingWrapper} from '#components/templates';
-import {Button} from '#components';
-import {StyleSheet} from 'react-native-unistyles';
+import { OnBoardingWrapper } from '#components/templates';
+import { Button } from '#components';
+import { StyleSheet } from 'react-native-unistyles';
 import {
   useInviteToHomeMutation,
   useAddCollaboratorMutation,
   CollaboratorRole,
   MembershipRole,
 } from '#generated';
-import {useStore} from '#store';
-import {useOnboardingNavigation, useAuth} from '#hooks';
+import { useStore } from '#store';
+import { useOnboardingNavigation, useAuth } from '#hooks';
 
 type InviteEntry = {
   id: string;
@@ -27,15 +26,10 @@ type InviteEntry = {
 };
 
 export const InviteMembersScreen = () => {
-  const {
-    navigateToNextStep,
-    setUserNavigationState,
-    getUserNavigationState,
-    skipToStep,
-  } = useOnboardingNavigation();
-  const {user} = useAuth();
+  const { navigateToNextStep } = useOnboardingNavigation();
+  const { user } = useAuth();
 
-  const {selectedHomeId, selectedShoppingListId} = useStore();
+  const { selectedHomeId, selectedShoppingListId } = useStore();
 
   const [invites, setInvites] = useState<InviteEntry[]>([]);
   const [currentEmail, setCurrentEmail] = useState('');
@@ -101,7 +95,7 @@ export const InviteMembersScreen = () => {
           else if (invite.type === 'home') newType = 'shopping';
           else newType = 'both';
 
-          return {...invite, type: newType};
+          return { ...invite, type: newType };
         }
         return invite;
       }),
@@ -128,7 +122,9 @@ export const InviteMembersScreen = () => {
                     homeId: selectedHomeId,
                     email: invite.email,
                     role: MembershipRole.Member,
-                    message: `${user?.email || 'A user'} has invited you to join their home for managing pantry and shopping lists together!`,
+                    message: `${
+                      user?.email || 'A user'
+                    } has invited you to join their home for managing pantry and shopping lists together!`,
                   },
                 },
               }),
@@ -191,8 +187,9 @@ export const InviteMembersScreen = () => {
       title="Invite family & friends"
       subtitle="Share your home and shopping lists with others (optional)"
       step={5}
-      totalSteps={6}
-      onSkip={() => skipToStep('OnboardingComplete')}>
+      totalSteps={7}
+      onSkip={() => navigateToNextStep('InviteMembers')}
+    >
       <View style={styles.container}>
         <View style={styles.inputContainer}>
           <TextInput
@@ -208,14 +205,16 @@ export const InviteMembersScreen = () => {
           <TouchableOpacity
             style={styles.addButton}
             onPress={addInvite}
-            disabled={!currentEmail.trim()}>
+            disabled={!currentEmail.trim()}
+          >
             <Text style={styles.addButtonText}>Add</Text>
           </TouchableOpacity>
         </View>
 
         <ScrollView
           style={styles.invitesList}
-          showsVerticalScrollIndicator={false}>
+          showsVerticalScrollIndicator={false}
+        >
           {invites.length === 0 ? (
             <View style={styles.emptyState}>
               <Text style={styles.emptyStateText}>
@@ -237,7 +236,8 @@ export const InviteMembersScreen = () => {
                     <Text style={styles.inviteEmail}>{invite.email}</Text>
                     <TouchableOpacity
                       onPress={() => toggleInviteType(invite.id)}
-                      style={styles.typeButton}>
+                      style={styles.typeButton}
+                    >
                       <Text style={styles.typeText}>
                         {getInviteTypeLabel(invite.type)}
                       </Text>
@@ -245,7 +245,8 @@ export const InviteMembersScreen = () => {
                   </View>
                   <TouchableOpacity
                     onPress={() => removeInvite(invite.id)}
-                    style={styles.removeButton}>
+                    style={styles.removeButton}
+                  >
                     <Text style={styles.removeButtonText}>✕</Text>
                   </TouchableOpacity>
                 </View>
@@ -265,14 +266,14 @@ export const InviteMembersScreen = () => {
         title={
           isInviting
             ? 'Sending Invites...'
-            : invites.length === 0
-              ? 'Skip'
-              : `Send ${invites.length} Invite${invites.length === 1 ? '' : 's'}`
+            : `Send ${invites.length > 0 ? invites.length : ''} Invite${
+                invites.length === 1 ? '' : 's'
+              }`
         }
         onPress={sendInvites}
         btnStyle={styles.nextButton}
         txtStyle={styles.nextText}
-        disabled={isInviting}
+        disabled={isInviting || invites.length === 0}
       />
     </OnBoardingWrapper>
   );

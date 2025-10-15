@@ -1,49 +1,65 @@
-import React, {useMemo, useEffect} from 'react';
-import {Alert, View, Image} from 'react-native';
-import {useAppNavigation} from '#hooks';
-import {useUnistyles, StyleSheet} from 'react-native-unistyles';
-import {
-  useDefaultHome,
-  usePantryManagement,
-  useBottomSheetModal,
-  usePantrySelector,
-} from '#hooks';
-import {useStore} from '#store';
-import {useGetHomeQuery} from '#generated';
+import React, { useMemo, useEffect, useCallback, useRef } from 'react';
+import { Alert, View, Image } from 'react-native';
+import { useAppNavigation } from '#hooks';
+import { useUnistyles, StyleSheet } from 'react-native-unistyles';
+import { useDefaultHome, usePantryManagement } from '#hooks';
+import { useStore } from '#store';
+import { useGetHomeBasicQuery } from '#generated';
+import { useScanner } from '#context';
 import {
   ListTemplate,
   SearchBarAction,
-  BottomSheetAction,
   HeaderAction,
+  AnimatedItemSelector,
 } from '#components';
-import {ItemSelectorWithActions} from '#components/organisms/ItemSelectorWithActions';
+import type {
+  SelectorConfig,
+  ItemSelectorRef,
+} from '#components/organisms/AnimatedItemSelector';
 
 export const PantryMain: React.FC = () => {
-  const {navigate, navigateTo} = useAppNavigation();
-  const {theme} = useUnistyles();
+  const { navigate, navigateTo } = useAppNavigation();
+  const { theme } = useUnistyles();
+  const { setScannerProps, setOverlayOpen } = useScanner();
 
-  const selectPantrySheet = useBottomSheetModal();
   const setSelectedPantryId = useStore(state => state.setSelectedPantryId);
   const selectedPantryId = useStore(state => state.selectedPantryId);
+  const selectorRef = useRef<ItemSelectorRef>(null);
 
-  const {
-    selectedHomeId,
-    loading: homesLoading,
-    getDefaultPantry,
-  } = useDefaultHome();
+  const { selectedHomeId, homes, getDefaultPantry } = useDefaultHome();
 
-  const {data: homeData} = useGetHomeQuery({
-    variables: {homeId: selectedHomeId ?? ''},
-    fetchPolicy: 'cache-first', // Use cache-first for immediate display
+  // Try to get home data from homes list first to avoid extra query
+  const homeFromList = homes.find((home: any) => home.id === selectedHomeId);
+
+  const { data: homeData, refetch: refetchHome } = useGetHomeBasicQuery({
+    variables: { homeId: selectedHomeId ?? '' },
+    fetchPolicy: 'cache-and-network', // Always check network for fresh data after token refresh
     skip: !selectedHomeId,
+    notifyOnNetworkStatusChange: true,
+    errorPolicy: 'all', // Allow partial data and cache on errors
   });
 
+  // Use home data from either source
+  const currentHomeData = useMemo(() => {
+    return homeFromList ? { home: homeFromList } : homeData;
+  }, [homeFromList, homeData]);
+
   // Use selected pantry from store or fall back to default pantry
-  const defaultPantry = useMemo(() => getDefaultPantry(homeData), [homeData]);
-  const pantry = selectedPantryId
-    ? homeData?.home?.pantries?.find((p: any) => p.id === selectedPantryId) ||
-      defaultPantry
-    : defaultPantry;
+  const defaultPantry = useMemo(
+    () => getDefaultPantry(currentHomeData),
+    [currentHomeData, getDefaultPantry],
+  );
+
+  const pantry = useMemo(() => {
+    if (selectedPantryId) {
+      return (
+        currentHomeData?.home?.pantries?.find(
+          (p: any) => p.id === selectedPantryId,
+        ) || defaultPantry
+      );
+    }
+    return defaultPantry;
+  }, [selectedPantryId, currentHomeData, defaultPantry]);
 
   // Auto-select the default pantry if none is selected
   useEffect(() => {
@@ -52,61 +68,133 @@ export const PantryMain: React.FC = () => {
     }
   }, [selectedPantryId, defaultPantry?.id, setSelectedPantryId]);
 
-  const selector = usePantrySelector({
-    initialSelected: pantry?.id,
-    onSelect: (id, item) => {
-      // Update the global store with the selected pantry
-      setSelectedPantryId(id);
-      selectPantrySheet.close();
-    },
-  });
+  const handleScanPress = useCallback(() => {
+    if (!selectedHomeId) {
+      Alert.alert(
+        'No Home Selected',
+        'You need to be a member of a home to scan items.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Manage Homes',
+            onPress: () => navigate('HomeManagement'),
+            style: 'default',
+          },
+        ],
+      );
+      return;
+    }
+    navigateTo.barcode({ source: 'pantry', pantryId: pantry?.id });
+  }, [selectedHomeId, navigate, navigateTo, pantry?.id]);
+
+  // Set up scanner button when component mounts
+  useEffect(() => {
+    setScannerProps(handleScanPress, true);
+
+    // Clean up on unmount
+    return () => {
+      setScannerProps(undefined, false);
+    };
+  }, [setScannerProps, handleScanPress]);
+
   const {
     items: pantryItems,
+    allItems,
     searchQuery,
     setSearchQuery,
     stats,
     removeItem,
     refetch,
     loading,
-    hasLoadedCache,
-    cacheInfo,
   } = usePantryManagement(pantry?.id);
+
+  // Create selector configuration for pantries
+  const pantryConfig: SelectorConfig<any> = useMemo(() => {
+    // Extract pantries from working data source inside useMemo
+    const availablePantries = currentHomeData?.home?.pantries || [];
+
+    return {
+      title: 'Select Pantry',
+      data: availablePantries,
+      selectedId: pantry?.id,
+      onSelect: (id: string) => {
+        setSelectedPantryId(id);
+        selectorRef.current?.close();
+      },
+      displayProperty: 'name',
+      loading,
+      emptyMessage: 'No pantries available',
+      actions: [
+        {
+          icon: 'add',
+          label: 'Create New Pantry',
+          onPress: () => {
+            selectorRef.current?.close();
+            navigate('PantrySettings', { pantryId: undefined });
+          },
+          iconLibrary: 'MaterialIcons' as const,
+        },
+        {
+          icon: 'settings',
+          label: 'Edit Current Pantry',
+          onPress: () => {
+            selectorRef.current?.close();
+            if (pantry?.id) {
+              navigate('PantrySettings', { pantryId: pantry.id });
+            }
+          },
+          iconLibrary: 'MaterialIcons' as const,
+          disabled: !pantry?.id,
+        },
+      ],
+    };
+  }, [
+    currentHomeData?.home?.pantries,
+    pantry?.id,
+    loading,
+    setSelectedPantryId,
+    navigate,
+  ]);
 
   // Transform pantry items to list items format
   const items = useMemo(() => {
-    return pantryItems.map(item => {
+    const transformedItems = pantryItems.map((item: any) => {
       const isExpired = item.expiresAt && new Date(item.expiresAt) < new Date();
-      const isLowStock = item.currentQuantity <= (item.reservedQuantity || 0);
+      const isLowStock =
+        item.autoReorderPoint && item.currentQuantity <= item.autoReorderPoint;
 
       return {
         id: item.id,
         title: item.item?.name || '',
-        subtitle:
-          `${item.currentQuantity} ${item.unit?.symbol || ''} • ${item.storageState}`.trim(),
+        subtitle: `${item.currentQuantity} ${item.unit?.symbol || ''} • ${
+          item.storageState
+        }`.trim(),
         badge: isExpired
-          ? {text: 'Expired', variant: 'danger' as const}
+          ? { text: 'Expired', variant: 'danger' }
           : isLowStock
-            ? {text: 'Low Stock', variant: 'warning' as const}
-            : undefined,
+          ? { text: 'Low Stock', variant: 'warning' }
+          : undefined,
         leftElement: item.item?.imageUrl ? (
           <View style={styles.imageContainer}>
             <Image
-              source={{uri: item.item.imageUrl}}
+              source={{ uri: item.item.imageUrl }}
               style={styles.leftImage}
             />
           </View>
         ) : undefined,
       };
     });
+
+    return transformedItems;
   }, [pantryItems]);
 
-  const handleAddItem = () => {
+  const handleAddItem = useCallback(() => {
     if (!selectedHomeId) {
       Alert.alert(
         'No Home Selected',
         'You need to be a member of a home to add pantry items.',
         [
-          {text: 'Cancel', style: 'cancel'},
+          { text: 'Cancel', style: 'cancel' },
           {
             text: 'Manage Homes',
             onPress: () => navigate('HomeManagement'),
@@ -117,11 +205,23 @@ export const PantryMain: React.FC = () => {
       return;
     }
     navigateTo.pantryItem({});
-  };
+  }, [selectedHomeId, navigate, navigateTo]);
 
   const handleDeleteItem = async (itemId: string) => {
     return await removeItem(itemId);
   };
+
+  const handleRefresh = async () => {
+    await Promise.all([refetch(), refetchHome()]);
+  };
+
+  const handleOverlayOpen = useCallback(() => {
+    setOverlayOpen(true);
+  }, [setOverlayOpen]);
+
+  const handleOverlayClose = useCallback(() => {
+    setOverlayOpen(false);
+  }, [setOverlayOpen]);
 
   // Header actions
   const headerActions = useMemo(
@@ -129,7 +229,7 @@ export const PantryMain: React.FC = () => {
       left: [
         {
           icon: 'home-switch-outline',
-          onPress: () => navigate('HomeManagement', {homeId: selectedHomeId}),
+          onPress: () => navigate('HomeManagement', { homeId: selectedHomeId }),
           size: 34,
           color: theme.colors.primary,
           library: 'MaterialDesignIcons',
@@ -169,157 +269,93 @@ export const PantryMain: React.FC = () => {
       left: [] as SearchBarAction[],
       right: [
         {
-          icon: 'list',
-          color: '#fff',
-          onPress: () => selectPantrySheet.open(),
-        },
-        {
           icon: 'add',
           onPress: handleAddItem,
+          color: theme.colors.primary,
+          backgroundColor: '#fff',
+        },
+        {
+          icon: 'list',
           color: '#fff',
+          onPress: () => selectorRef.current?.open(),
         },
       ] as SearchBarAction[],
     }),
-    [handleAddItem],
+    [handleAddItem, theme.colors.primary],
   );
 
-  if (!selectedHomeId) {
-    return (
-      <ListTemplate
-        showHeader={true}
-        emptyState={{
-          icon: 'home',
-          title: 'No Home Selected',
-          description:
-            'You need to create or be a member of a home to manage pantry items.',
-          action: {
-            label: 'Manage Homes',
-            onPress: () => navigate('HomeManagement'),
-          },
-        }}
-      />
-    );
-  }
+  // Determine loading state - only show loading if we have no data at all
+  const isLoadingInitial = loading && items.length === 0 && !allItems?.length;
 
-  // Only show loading state if we have no cached data and are still loading
-  if ((loading || homesLoading) && !hasLoadedCache && items.length === 0) {
-    return (
-      <ListTemplate
-        title="Pantry"
-        subtitle="your pantry"
-        items={[]}
-        searchQuery=""
-        onSearchChange={() => {}}
-        onItemPress={() => {}}
-        showHeader={true}
-        showSearchBar={true}
-        showFAB={false}
-        headerActions={headerActions}
-        searchBarActions={searchBarActions}
-        onRefresh={async () => {
-          await refetch();
-        }}
-        emptyState={{
-          icon: 'inventory',
-          title: 'Loading...',
-          description: 'Loading your pantry items',
-        }}
-      />
-    );
-  }
-
-  // Debug info for development
-  const debugSubtitle =
-    __DEV__ && cacheInfo
-      ? `${pantry?.name || 'Your Pantry'} • ${cacheInfo.itemCount} cached (${Math.round(cacheInfo.age / 1000)}s ago)`
-      : pantry?.name || 'Your Pantry';
+  // Compute empty state based on current context
+  const emptyStateConfig = !selectedHomeId
+    ? {
+        icon: 'home',
+        title: 'No Home Selected',
+        description:
+          'You need to create or be a member of a home to manage pantry items.',
+        action: {
+          label: 'Manage Homes',
+          onPress: () => navigate('HomeManagement'),
+        },
+      }
+    : {
+        icon: 'inventory',
+        title: 'No items in pantry',
+        description: 'Add items to track your pantry inventory',
+        action: {
+          label: 'Add first item',
+          onPress: handleAddItem,
+        },
+      };
 
   return (
-    <>
+    <View style={styles.container}>
       <ListTemplate
-        title={homeData?.home?.name || 'Pantry'}
-        subtitle={debugSubtitle}
+        title={selectedHomeId ? currentHomeData?.home?.name || 'Pantry' : ''}
+        subtitle={selectedHomeId ? pantry?.name || 'Your Pantry' : ''}
         items={items}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
-        onItemPress={id => navigateTo.pantryItemDetail({itemId: id})}
-        onItemEdit={id => navigateTo.pantryItem({itemId: id})}
+        onItemPress={id => navigateTo.pantryItemDetail({ itemId: id })}
+        onItemEdit={id => navigateTo.pantryItem({ itemId: id })}
         onItemDelete={handleDeleteItem}
-        onRefresh={async () => {
-          await refetch();
-        }}
-        // Display configuration
+        onRefresh={handleRefresh}
+        loading={isLoadingInitial}
+        hasNoData={!selectedHomeId}
         showHeader={true}
         showSearchBar={true}
-        showFAB={true} // Don't show FAB since we have add in search bar
-        onFabPress={() =>
-          navigateTo.barcode({mode: 'pantry', pantryId: pantry?.id})
-        }
-        // Actions
         headerActions={headerActions}
         searchBarActions={searchBarActions}
-        emptyState={{
-          icon: 'inventory',
-          title: 'No items in pantry',
-          description: 'Add items to track your pantry inventory',
-          action: {
-            label: 'Add first item',
-            onPress: handleAddItem,
-          },
-        }}
+        emptyState={emptyStateConfig}
       />
-      <BottomSheetAction
-        key={'select'}
-        sheetRef={selectPantrySheet.ref}
-        sheetTitle={'Select Pantry'}
-        snapPoints={['60%', '90%']}>
-        <ItemSelectorWithActions
-          data={selector.data}
-          selectedId={selector.selectedId}
-          onSelect={selector.handleSelect}
-          displayProperty="name"
-          loading={selector.loading}
-          emptyMessage={selector.emptyMessage}
-          actions={[
-            {
-              icon: 'add',
-              label: 'Create New Pantry',
-              onPress: () => {
-                selectPantrySheet.close();
-                navigate('PantrySettings', {pantryId: undefined});
-              },
-              iconLibrary: 'MaterialIcons',
-            },
-            {
-              icon: 'settings',
-              label: 'Edit Current Pantry',
-              onPress: () => {
-                selectPantrySheet.close();
-                if (pantry?.id) {
-                  navigate('PantrySettings', {pantryId: pantry.id});
-                }
-              },
-              iconLibrary: 'MaterialIcons',
-            },
-          ]}
-        />
-      </BottomSheetAction>
-    </>
+      <AnimatedItemSelector
+        ref={selectorRef}
+        config={pantryConfig}
+        maxHeight={600}
+        onOpen={handleOverlayOpen}
+        onClose={handleOverlayClose}
+      />
+    </View>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
   imageContainer: {
-    width: 60,
-    height: 60,
-    marginRight: 16,
-    borderRadius: 8,
+    width: theme.sizes.listImage.width,
+    height: theme.sizes.listImage.height,
+    marginRight: theme.spacing.md,
+    borderRadius: theme.radii.md,
     overflow: 'hidden',
   },
   leftImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
+    width: theme.sizes.listImage.width,
+    height: theme.sizes.listImage.height,
+    borderRadius: theme.radii.md,
     resizeMode: 'cover',
     elevation: 2,
   },

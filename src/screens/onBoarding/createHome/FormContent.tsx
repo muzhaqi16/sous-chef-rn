@@ -1,8 +1,8 @@
 import React from 'react';
-import {Text, View} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
-import {BaseInput} from '#components';
-import {DynamicFormFields} from '#components/molecules/DynamicFormFields';
+import { Text, View } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { BaseInput } from '#components';
+import { DynamicFormFields } from '#components/molecules/DynamicFormFields';
 
 export type FormValues = {
   homeName: string;
@@ -41,7 +41,6 @@ export const FormContent = ({
       control={form.control}
       errors={form.formState.errors}
     />
-
     {!needsHome && existingHomeName && (
       <View style={styles.infoBox}>
         <Text style={styles.infoText}>

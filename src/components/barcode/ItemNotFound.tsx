@@ -2,12 +2,14 @@ import React from 'react';
 import {View, Text} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
 import {Icon} from '#utils';
+import {Button} from '#components/base/Button';
 
 interface ItemNotFoundProps {
   barcode: string;
+  onAddItem?: () => void;
 }
 
-export const ItemNotFound: React.FC<ItemNotFoundProps> = ({barcode}) => {
+export const ItemNotFound: React.FC<ItemNotFoundProps> = ({barcode, onAddItem}) => {
   return (
     <View style={styles.container}>
       <Text style={styles.notFoundIcon}>
@@ -18,8 +20,16 @@ export const ItemNotFound: React.FC<ItemNotFoundProps> = ({barcode}) => {
         No item found with barcode: {barcode}
       </Text>
       <Text style={styles.addItemHint}>
-        You can add this item to the database using the form below.
+        You can add this item to the database by tapping the button below.
       </Text>
+      {onAddItem && (
+        <Button
+          onPress={onAddItem}
+          variant="primary"
+          size="medium">
+          Add Item
+        </Button>
+      )}
     </View>
   );
 };
@@ -29,29 +39,33 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     justifyContent: 'flex-start',
     alignItems: 'center',
-    padding: 20,
+    padding: theme.spacing.lg,
+    gap: theme.spacing.sm,
   },
   notFoundIcon: {
     fontSize: 48,
-    marginBottom: 16,
   },
   notFoundText: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#495057',
-    marginBottom: 8,
+    fontSize: theme.fonts.size.xl,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textPrimary,
+    textAlign: 'center',
   },
   notFoundMessage: {
-    fontSize: 14,
-    color: '#6c757d',
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textSecondary,
     textAlign: 'center',
-    marginBottom: 16,
     fontFamily: 'monospace',
   },
   addItemHint: {
-    fontSize: 14,
-    color: '#62B1F6',
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.primary,
     textAlign: 'center',
     fontStyle: 'italic',
+    marginTop: theme.spacing.sm,
+  },
+  addButton: {
+    marginTop: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.xl,
   },
 }));

@@ -1,7 +1,6 @@
-import {Icon} from '#/utils';
-import React, {ReactNode} from 'react';
+import { Icon } from '#/utils';
+import React, { ReactNode } from 'react';
 import {
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -9,16 +8,28 @@ import {
   TouchableOpacity,
   Text,
 } from 'react-native';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { OnboardingSteps } from '#components/navigation/OnboardingSteps';
+import { OnboardingNavigation } from '#components/navigation/OnboardingNavigation';
+import { useOnboardingContextSafe } from '#context';
+import type { NavigationAction } from '#components/navigation/OnboardingNavigation/types';
 
 interface OnboardingWrapperProps {
   children: ReactNode;
   title?: string;
   subtitle?: string;
-  step?: number; // current step index (1-based)
+  // Legacy props - deprecated but kept for backward compatibility
+  step?: number;
   totalSteps?: number;
   onBack?: () => void;
   onSkip?: () => void;
+  // New props for enhanced navigation
+  showSteps?: boolean;
+  showNavigation?: boolean;
+  continueAction?: NavigationAction;
+  skipAction?: NavigationAction;
+  allowStepNavigation?: boolean;
 }
 
 export const OnBoardingWrapper = ({
@@ -29,9 +40,21 @@ export const OnBoardingWrapper = ({
   totalSteps,
   onBack,
   onSkip,
+  showSteps = true,
+  showNavigation = true,
+  continueAction,
+  skipAction,
+  allowStepNavigation = false,
 }: OnboardingWrapperProps) => {
-  const {theme} = useUnistyles();
+  const { theme } = useUnistyles();
   const progress = step && totalSteps ? (step / totalSteps) * 100 : 0;
+
+  // Always call the hook, but handle if context is not provided
+  const onboardingContext = useOnboardingContextSafe();
+
+  const isLegacyMode = !onboardingContext;
+  const displayTitle = title || onboardingContext?.currentStep?.title;
+  const displaySubtitle = subtitle || onboardingContext?.currentStep?.subtitle;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -48,29 +71,67 @@ export const OnBoardingWrapper = ({
         )}
       </View>
 
+      {/* Animated Step Indicator */}
+      {showSteps && !isLegacyMode && onboardingContext && (
+        <View style={styles.stepsContainer}>
+          <OnboardingSteps
+            steps={onboardingContext.steps}
+            activeIndex={onboardingContext.activeStepIndex}
+            stepSize={12}
+            onStepPress={allowStepNavigation ? onboardingContext.goToStep : undefined}
+            allowStepNavigation={allowStepNavigation}
+          />
+        </View>
+      )}
+
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <ScrollView
           contentContainerStyle={styles.scrollContainer}
-          keyboardShouldPersistTaps="handled">
-          {title && <Text style={styles.title}>{title}</Text>}
-          {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+          keyboardShouldPersistTaps="handled"
+        >
+          {displayTitle && <Text style={styles.title}>{displayTitle}</Text>}
+          {displaySubtitle && <Text style={styles.subtitle}>{displaySubtitle}</Text>}
           <View style={styles.content}>{children}</View>
         </ScrollView>
       </KeyboardAvoidingView>
-      <View style={styles.bottomNavigation}>
-        {onSkip && (
-          <TouchableOpacity onPress={onSkip} style={styles.skipButton}>
-            <Text style={styles.skipText}>Skip</Text>
-          </TouchableOpacity>
-        )}
-        {step != null && totalSteps != null && (
-          <View style={styles.progressBarBackground}>
-            <View style={[styles.progressBarFill, {width: `${progress}%`}]} />
-          </View>
-        )}
-      </View>
+      {/* Enhanced Navigation or Legacy Bottom Navigation */}
+      {showNavigation && !isLegacyMode && onboardingContext ? (
+        <OnboardingNavigation
+          showBackButton={onboardingContext.canGoBack}
+          showContinueButton={onboardingContext.canGoNext || onboardingContext.isLastStep}
+          showSkipButton={!!skipAction}
+          backAction={{
+            label: 'Back',
+            onPress: onboardingContext.goToPreviousStep,
+            backgroundColor: theme.colors.surface,
+            labelColor: theme.colors.textPrimary,
+          }}
+          continueAction={continueAction || {
+            label: 'Continue',
+            onPress: onboardingContext.goToNextStep,
+            backgroundColor: theme.colors.primary,
+            labelColor: theme.colors.background,
+          }}
+          skipAction={skipAction}
+          isLastStep={onboardingContext.isLastStep}
+        />
+      ) : (
+        <View style={styles.bottomNavigation}>
+          {onSkip && (
+            <TouchableOpacity onPress={onSkip} style={styles.skipButton}>
+              <Text style={styles.skipText}>Skip</Text>
+            </TouchableOpacity>
+          )}
+          {step != null && totalSteps != null && (
+            <View style={styles.progressBarBackground}>
+              <View style={[styles.progressBarFill, { width: `${progress}%` }]} />
+            </View>
+          )}
+        </View>
+      )}
     </SafeAreaView>
   );
 };
@@ -84,7 +145,11 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'column',
     justifyContent: 'flex-start',
     paddingHorizontal: 24,
-    paddingTop: 16,
+  },
+  stepsContainer: {
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    alignItems: 'center',
   },
 
   iconButton: {
@@ -126,7 +191,7 @@ const styles = StyleSheet.create(theme => ({
   },
   bottomNavigation: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 8,
   },

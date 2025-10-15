@@ -1,14 +1,8 @@
-import React, {useState, useEffect, useRef, useCallback} from 'react';
-import {View, Text, TouchableOpacity, FlatList} from 'react-native';
-import {
-  BottomSheetModal,
-  BottomSheetBackdrop,
-  BottomSheetTextInput,
-  BottomSheetView,
-} from '@gorhom/bottom-sheet';
-import {StyleSheet} from 'react-native-unistyles';
-import {Input} from '#components/base/Input';
-import {useSearchBrandsLazyQuery} from '#generated';
+import React, { useState, useEffect } from 'react';
+import { Text, TouchableOpacity } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { useSearchBrandsLazyQuery } from '#generated';
+import { BottomSheetAutocompleteInput } from './BottomSheetAutocompleteInput';
 
 type BrandItem = {
   id: string;
@@ -34,22 +28,13 @@ export const BrandAutocompleteInput: React.FC<BrandAutocompleteInputProps> = ({
   error,
   onBrandSelected,
 }) => {
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
-  const [showAutocomplete, setShowAutocomplete] = useState(false);
-  const [searchTerm, setSearchTerm] = useState(value || '');
-
-  const [searchBrands, {data: brandsData, loading: brandsLoading}] =
-    useSearchBrandsLazyQuery();
-
-  // Sync searchTerm with external value changes
-  useEffect(() => {
-    setSearchTerm(value || '');
-  }, [value]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchBrands, { data: brandsData }] = useSearchBrandsLazyQuery();
 
   useEffect(() => {
     if (searchTerm.length >= 2) {
       searchBrands({
-        variables: {search: searchTerm, limit: 20},
+        variables: { search: searchTerm, limit: 20 },
       });
     }
   }, [searchTerm, searchBrands]);
@@ -61,137 +46,45 @@ export const BrandAutocompleteInput: React.FC<BrandAutocompleteInputProps> = ({
     setSearchTerm(text);
     // Clear brand selection when user types manually
     onBrandSelected?.(null);
-
-    if (text.length >= 2 && !showAutocomplete) {
-      setShowAutocomplete(true);
-      bottomSheetRef.current?.present();
-    } else if (text.length < 2 && showAutocomplete) {
-      setShowAutocomplete(false);
-      bottomSheetRef.current?.dismiss();
-    }
-  };
-
-  const handleBottomSheetTextChange = (text: string) => {
-    setSearchTerm(text);
-    onChangeText(text);
-    // Clear brand selection when user types manually in bottom sheet
-    onBrandSelected?.(null);
   };
 
   const handleSelectBrand = (brand: BrandItem) => {
     onChangeText(brand.name);
     onBrandSelected?.(brand.id);
-    setShowAutocomplete(false);
-    bottomSheetRef.current?.dismiss();
   };
 
-  const handleDismiss = useCallback(() => {
-    setShowAutocomplete(false);
-  }, []);
-
-  const renderBackdrop = useCallback(
-    (props: any) => (
-      <BottomSheetBackdrop
-        {...props}
-        disappearsOnIndex={-1}
-        appearsOnIndex={0}
-        opacity={0.5}
-        enableTouchThrough={false}
-        onPress={() => bottomSheetRef.current?.dismiss()}
-      />
-    ),
-    [],
-  );
-
-  const renderBrand = ({item}: {item: BrandItem}) => (
+  const renderBrandItem = (brand: BrandItem) => (
     <TouchableOpacity
-      onPress={() => handleSelectBrand(item)}
+      onPress={() => handleSelectBrand(brand)}
       style={styles.brandItem}
-      activeOpacity={0.7}>
-      <Text style={styles.brandName}>{item.name}</Text>
+      activeOpacity={0.7}
+    >
+      <Text style={styles.brandName}>{brand.name}</Text>
     </TouchableOpacity>
   );
 
   return (
-    <View>
-      <Input
-        label={label}
-        value={value}
-        onChangeText={handleTextChange}
-        placeholder={placeholder}
-        required={required}
-        error={error}
-      />
-
-      <BottomSheetModal
-        ref={bottomSheetRef}
-        snapPoints={['65%', '75%']}
-        onDismiss={handleDismiss}
-        backdropComponent={renderBackdrop}
-        keyboardBehavior="extend"
-        enableDynamicSizing={false}
-        keyboardBlurBehavior="none"
-        android_keyboardInputMode="adjustResize"
-        enablePanDownToClose={true}
-        enableContentPanningGesture={false}>
-        <View style={styles.autocompleteContainer}>
-          <Text style={styles.autocompleteTitle}>Select a brand</Text>
-
-          <BottomSheetTextInput
-            style={styles.bottomSheetInput}
-            value={searchTerm}
-            onChangeText={handleBottomSheetTextChange}
-            placeholder="Type to search brands..."
-            autoFocus={showAutocomplete}
-            returnKeyType="search"
-          />
-
-          <FlatList
-            data={brands || []}
-            keyExtractor={item => item.id}
-            renderItem={renderBrand}
-            ItemSeparatorComponent={() => <View style={styles.separator} />}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-            ListEmptyComponent={
-              <BottomSheetView style={styles.messageContainer}>
-                <Text style={styles.emptyText}>No brands found</Text>
-                <Text style={styles.emptySubtext}>
-                  Continue typing to add "{searchTerm}" as a custom brand
-                </Text>
-              </BottomSheetView>
-            }
-          />
-        </View>
-      </BottomSheetModal>
-    </View>
+    <BottomSheetAutocompleteInput
+      label={label}
+      value={value}
+      onChangeText={handleTextChange}
+      placeholder={placeholder}
+      required={required}
+      error={error}
+      title="Select a brand"
+      searchPlaceholder="Type to search brands..."
+      data={brands}
+      renderItem={renderBrandItem}
+      keyExtractor={(item: BrandItem) => item.id}
+      onSelectItem={handleSelectBrand}
+      emptyText="No brands found"
+      emptySubtext={`Continue typing to add "${searchTerm}" as a custom brand`}
+      onSearchChange={setSearchTerm}
+    />
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  autocompleteContainer: {
-    flex: 1,
-    paddingHorizontal: theme.spacing.md,
-    paddingTop: theme.spacing.sm,
-  },
-  autocompleteTitle: {
-    fontSize: theme.typography.fontSize.base,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.sm,
-    textAlign: 'center',
-  },
-  bottomSheetInput: {
-    marginBottom: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    fontSize: theme.typography.fontSize.base,
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.sm,
-    backgroundColor: theme.colors.inputBackground,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    color: theme.colors.inputText,
-  },
   brandItem: {
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
@@ -200,25 +93,5 @@ const styles = StyleSheet.create(theme => ({
   brandName: {
     fontSize: theme.typography.fontSize.base,
     color: theme.colors.textPrimary,
-  },
-  separator: {
-    height: 1,
-    backgroundColor: theme.colors.borderLight,
-    marginHorizontal: theme.spacing.md,
-  },
-  messageContainer: {
-    padding: theme.spacing.lg,
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: theme.typography.fontSize.base,
-    fontWeight: '600',
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.sm,
-  },
-  emptySubtext: {
-    fontSize: theme.typography.fontSize.sm,
-    color: theme.colors.textSecondary,
-    textAlign: 'center',
   },
 }));

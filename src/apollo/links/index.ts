@@ -1,54 +1,49 @@
-import {ApolloLink, split} from '@apollo/client';
-import {getMainDefinition} from '@apollo/client/utilities';
-import {authLink} from './authLink';
-import {createConsoleLink} from './consoleLink';
-import {errorLink} from './errorLink';
-import {httpLink} from './httpLink';
-import {persistLink} from './persistLink';
-import {wsLink} from './wsLink';
-import {retryLink} from './retryLink';
+import { ApolloLink } from '@apollo/client';
+import { getMainDefinition } from '@apollo/client/utilities';
+import { authLink } from './authLink';
+import { createConsoleLink } from './consoleLink';
+import { createTelemetryLink } from './telemetryLink';
+import { errorLink } from './errorLink';
+import { httpLink } from './httpLink';
+import { wsLink } from './wsLink';
+import { deduplicationLink } from './deduplicationLink';
 
-const retriableHttp = retryLink.concat(httpLink);
+// Simplified HTTP transport (let Apollo handle retries naturally)
+const httpTransport = httpLink;
 
-// create a link that sends •subscriptions• to wsLink, and •queries/mutations• to httpLink
-const transportLink = split(
-  ({query}) => {
+// Transport link routing:
+// • Subscriptions → WebSocket
+// • All other operations → HTTP with retry
+const transportLink = ApolloLink.split(
+  ({ query }) => {
     const def = getMainDefinition(query);
     return (
       def.kind === 'OperationDefinition' && def.operation === 'subscription'
     );
   },
   wsLink,
-  retriableHttp,
+  httpTransport,
 );
 
-// Default settings (recommended)
+// Single console link configuration (simplified)
 const consoleLink = createConsoleLink({
-  enabled: false,
-});
-
-// Custom settings
-const consoleLinkCustom = createConsoleLink({
-  enabled: __DEV__ && true, // Enable only in dev
-  logVariables: true, // Log request variables
-  logQuery: false, // Don't log full query (can be verbose)
-  logResponse: true, // Log response data
-  logTiming: true, // Log execution time
-  slowQueryThreshold: 500, // Warn if query takes longer than 500ms
-});
-
-// Minimal logging
-const consoleLinkMinimal = createConsoleLink({
+  enabled: false, // __DEV__,
   logVariables: false,
   logQuery: false,
   logResponse: false,
-  logTiming: true, // Only log timing
+  logTiming: true,
+  slowQueryThreshold: 1000,
 });
-// Combine links: errorLink comes first to catch errors from subsequent links
+
+// Telemetry link for tracking GraphQL operations
+const telemetryLink = createTelemetryLink();
+
+// Simplified link chain - work WITH Apollo, not against it
 export const link = ApolloLink.from([
-  persistLink,
-  errorLink,
-  authLink,
-  consoleLink,
-  transportLink,
+  deduplicationLink, // Prevent duplicate requests
+  telemetryLink,     // Track operations for monitoring
+  errorLink,         // Handle/log errors (simplified)
+  authLink,          // Authentication headers
+  consoleLink,       // Development logging
+  transportLink,     // HTTP/WebSocket transport
 ]);

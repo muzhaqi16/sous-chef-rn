@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,30 +8,28 @@ import {
   Alert,
   TextInput,
 } from 'react-native';
-import {Icon} from '#/utils';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
+import { Icon } from '#/utils';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
   useGetPantryQuery,
   useUpdatePantryMutation,
   useDeletePantryMutation,
   useCreatePantryMutation,
-  GetPantriesDocument,
-  GetPantriesQuery,
   GetHomesDocument,
-  GetHomesQuery,
+  GetHomeBasicDocument,
 } from '#generated';
-import {useStore} from '#store';
-import {useAppNavigation} from '#hooks';
-import {PantryStackParamList} from '#navigation/stacks/PantryStack';
+import { useStore } from '#store';
+import { useAppNavigation } from '#hooks';
+import { PantryStackParamList } from '#navigation/stacks/PantryStack';
 
 export const PantrySettings: React.FC<{
-  route: {params?: PantryStackParamList['PantrySettings']};
-}> = ({route}) => {
-  const {navigate, goBack} = useAppNavigation();
-  const {theme} = useUnistyles();
+  route: { params?: PantryStackParamList['PantrySettings'] };
+}> = ({ route }) => {
+  const { goBack } = useAppNavigation();
+  const { theme } = useUnistyles();
   const pantryId = route.params?.pantryId;
 
-  const {selectedHomeId} = useStore();
+  const { selectedHomeId } = useStore();
   const setSelectedPantryId = useStore(state => state.setSelectedPantryId);
 
   const [name, setName] = useState('');
@@ -39,151 +37,74 @@ export const PantrySettings: React.FC<{
   const [isDefault, setIsDefault] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const {data: pantryData} = useGetPantryQuery({
-    variables: {id: pantryId ?? ''},
+  const { data: pantryData, loading: loadingPantry } = useGetPantryQuery({
+    variables: { id: pantryId ?? '' },
     skip: !pantryId,
     fetchPolicy: 'cache-and-network',
+    notifyOnNetworkStatusChange: true,
+    errorPolicy: 'all',
   });
 
   const pantry = pantryData?.pantry;
 
-  const [updatePantry] = useUpdatePantryMutation();
+  const [updatePantry] = useUpdatePantryMutation({
+    refetchQueries: [
+      { query: GetHomesDocument },
+      { query: GetHomeBasicDocument, variables: { homeId: selectedHomeId } },
+    ],
+    awaitRefetchQueries: true,
+  });
   const [deletePantry] = useDeletePantryMutation({
-    update: (cache, {data}) => {
-      if (data?.deletePantry) {
-        try {
-          // Update GetHomes cache to remove the pantry
-          const existingHomesData = cache.readQuery<GetHomesQuery>({
-            query: GetHomesDocument,
-          });
-
-          if (existingHomesData?.homes) {
-            const updatedHomes = existingHomesData.homes.map((home: any) => {
-              if (home.pantries) {
-                return {
-                  ...home,
-                  pantries: home.pantries.filter(
-                    (p: any) => p.id !== data.deletePantry,
-                  ),
-                };
-              }
-              return home;
-            });
-
-            cache.writeQuery<GetHomesQuery>({
-              query: GetHomesDocument,
-              data: {homes: updatedHomes},
-            });
-          }
-        } catch (error) {
-          console.log('Cache update failed during delete:', error);
-        }
-      }
-    },
+    refetchQueries: [
+      { query: GetHomesDocument },
+      { query: GetHomeBasicDocument, variables: { homeId: selectedHomeId } },
+    ],
+    awaitRefetchQueries: true,
   });
 
   const [createPantry] = useCreatePantryMutation({
-    update: (cache, {data}) => {
-      if (data?.createPantry) {
-        try {
-          // Update GetHomes cache to include the new pantry
-          const existingHomesData = cache.readQuery<GetHomesQuery>({
-            query: GetHomesDocument,
-          });
-
-          if (existingHomesData?.homes) {
-            const updatedHomes = existingHomesData.homes.map((home: any) => {
-              if (home.id === data.createPantry.homeId) {
-                const updatedHome = {
-                  ...home,
-                  pantries: [
-                    ...(home.pantries || []),
-                    {
-                      id: data.createPantry.id,
-                      name: data.createPantry.name,
-                      isDefault: data.createPantry.isDefault,
-                    },
-                  ],
-                };
-                return updatedHome;
-              }
-              return home;
-            });
-
-            cache.writeQuery<GetHomesQuery>({
-              query: GetHomesDocument,
-              data: {homes: updatedHomes},
-            });
-          } else {
-            console.log('No existing homes data found in cache');
-          }
-
-          // Also update GetPantries cache if it exists
-          try {
-            const existingPantriesData = cache.readQuery<GetPantriesQuery>({
-              query: GetPantriesDocument,
-              variables: {homeId: data.createPantry.homeId},
-            });
-
-            if (existingPantriesData?.pantries) {
-              cache.writeQuery<GetPantriesQuery>({
-                query: GetPantriesDocument,
-                variables: {homeId: data.createPantry.homeId},
-                data: {
-                  pantries: [
-                    ...existingPantriesData.pantries,
-                    data.createPantry,
-                  ],
-                },
-              });
-            }
-          } catch (pantryError) {
-            console.log(
-              'GetPantries cache not found or update failed:',
-              pantryError,
-            );
-          }
-        } catch (error) {
-          console.log('Cache update failed during create:', error);
-        }
-
-        // Force refresh of GetHomes query to ensure stats update
-        try {
-          cache.evict({
-            id: 'ROOT_QUERY',
-            fieldName: 'homes',
-          });
-        } catch (evictError) {
-          console.log('Failed to evict homes query:', evictError);
-        }
-      }
-    },
+    refetchQueries: [
+      { query: GetHomesDocument },
+      { query: GetHomeBasicDocument, variables: { homeId: selectedHomeId } },
+    ],
+    awaitRefetchQueries: true,
     onCompleted: data => {
       if (data?.createPantry) {
-        // Set the newly created pantry as selected if it's marked as default or if it's the first pantry
+        // Set the newly created pantry as selected if it's marked as default
         if (isDefault) {
           setSelectedPantryId(data.createPantry.id);
         }
       }
       goBack();
     },
-    onError: error => {
+    onError: () => {
       Alert.alert('Error', 'Failed to create pantry');
     },
   });
 
   useEffect(() => {
+    console.log('🔧 PantrySettings useEffect:', {
+      pantryId,
+      hasPantryData: !!pantry,
+      pantryName: pantry?.name,
+      loading: loadingPantry,
+    });
+
     if (pantry && pantryId) {
+      console.log('✅ Populating form with pantry data:', pantry.name);
       setName(pantry.name);
       setDescription(pantry.description || '');
       setIsDefault(pantry.isDefault);
     } else if (!pantryId) {
       // Set default values for new pantry
+      console.log('🆕 Setting defaults for new pantry');
       setName('');
       setDescription('');
       setIsDefault(false);
+    } else {
+      console.log('⏳ Waiting for pantry data...');
     }
-  }, [pantry, pantryId]);
+  }, [pantry, pantryId, loadingPantry]);
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -240,13 +161,13 @@ export const PantrySettings: React.FC<{
       'Delete Pantry',
       'Are you sure you want to delete this pantry? This action cannot be undone and will remove all items in this pantry.',
       [
-        {text: 'Cancel', style: 'cancel'},
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
             try {
-              await deletePantry({variables: {id: pantryId}});
+              await deletePantry({ variables: { id: pantryId } });
               goBack();
             } catch (error) {
               Alert.alert('Error', 'Failed to delete pantry');
@@ -311,7 +232,7 @@ export const PantrySettings: React.FC<{
             <Switch
               value={isDefault}
               onValueChange={setIsDefault}
-              trackColor={{true: theme.colors.primary}}
+              trackColor={{ true: theme.colors.primary }}
             />
           </View>
         </View>
@@ -343,7 +264,8 @@ export const PantrySettings: React.FC<{
 
             <TouchableOpacity
               style={styles.deleteButton}
-              onPress={handleDelete}>
+              onPress={handleDelete}
+            >
               <Icon name="delete" size={20} color={theme.colors.error} />
               <Text style={styles.deleteButtonText}>Delete Pantry</Text>
             </TouchableOpacity>

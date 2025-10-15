@@ -67,6 +67,9 @@ fragment ShoppingListItemFragment on ShoppingListItem {
   purchasedBy {
     ...PartialUser
   }
+  purchases {
+    ...PurchaseFragment
+  }
 }
 fragment BasicUser on User {
   id
@@ -241,8 +244,6 @@ fragment BrandFragment on ItemBrand {
     deletedAt
     version
   }
-  isPrimary
-  createdAt
 }
 fragment CategoryFragment on Category {
   id
@@ -289,6 +290,12 @@ fragment ItemFragment on Item {
   updatedAt
   deletedAt
   version
+  netWeight
+  displayUnit {
+    id
+    name
+    symbol
+  }
   units {
     ...UnitFragment
   }
@@ -462,6 +469,73 @@ fragment PantryFragment on Pantry {
   }
 }
 
+fragment BasicPantryFragment on Pantry {
+  id
+  homeId
+  name
+  description
+  isDefault
+  location
+  temperature
+  tags
+  metadata
+  version
+  createdAt
+  updatedAt
+}
+
+fragment HomeWithPantriesFragment on Home {
+  id
+  name
+  type
+  description
+  timezone
+  currency
+  isPublic
+  joinCode
+  allowJoinCode
+  maxMembers
+  tags
+  metadata
+  version
+  createdAt
+  updatedAt
+
+  invites {
+    ...HomeInviteFragment
+  }
+
+  members {
+    ...MemberShipFragment
+  }
+
+  myMembership {
+    ...MemberShipFragment
+  }
+
+  membershipStats {
+    total
+    active
+    byRole {
+      OWNER
+      ADMIN
+      MEMBER
+      GUEST
+    }
+    byStatus {
+      ACTIVE
+      SUSPENDED
+      LEFT
+      REMOVED
+    }
+    recentlyActive
+  }
+
+  pantries {
+    ...BasicPantryFragment
+  }
+}
+
 fragment HomeFragment on Home {
   id
   name
@@ -523,4 +597,22 @@ fragment NotificationFragment on Notification {
   sentAt
   readAt
   createdAt
+}
+
+fragment PurchaseFragment on Purchase {
+  id
+  purchaseDate
+  quantity
+  unitPrice
+  totalPrice
+  itemName
+  unitSymbol
+  user {
+    id
+    email
+    profile {
+      id
+      displayName
+    }
+  }
 }

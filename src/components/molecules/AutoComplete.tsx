@@ -1,8 +1,8 @@
-import React, {useMemo, useEffect} from 'react';
-import {Text, TouchableOpacity, View, Image} from 'react-native';
-import {BottomSheetFlatList, BottomSheetView} from '@gorhom/bottom-sheet';
-import {StyleSheet} from 'react-native-unistyles';
-import {useAutocompleteItemsLazyQuery, ItemSuggestion} from '#generated';
+import React, { useMemo, useEffect } from 'react';
+import { Text, TouchableOpacity, View, Image } from 'react-native';
+import { BottomSheetFlatList, BottomSheetView } from '@gorhom/bottom-sheet';
+import { StyleSheet } from 'react-native-unistyles';
+import { useAutocompleteItemsLazyQuery, ItemSuggestion } from '#generated';
 
 interface AutocompleteProps {
   searchTerm: string;
@@ -13,14 +13,13 @@ const Autocomplete: React.FC<AutocompleteProps> = ({
   searchTerm,
   onSelectItem,
 }) => {
-  const [fetchItems, {data, loading, error}] = useAutocompleteItemsLazyQuery({
-    variables: {input: {query: searchTerm}},
+  const [fetchItems, { data, loading, error }] = useAutocompleteItemsLazyQuery({
     fetchPolicy: 'cache-and-network',
   });
 
   useEffect(() => {
     if (searchTerm.length >= 2) {
-      fetchItems({variables: {input: {query: searchTerm}}});
+      fetchItems({ variables: { input: { query: searchTerm } } });
     }
   }, [searchTerm, fetchItems]);
 
@@ -42,15 +41,16 @@ const Autocomplete: React.FC<AutocompleteProps> = ({
 
   if (searchTerm.length < 2) return null;
 
-  const renderItem = ({item}: {item: ItemSuggestion}) => (
+  const renderItem = ({ item }: { item: ItemSuggestion }) => (
     <TouchableOpacity
       onPress={() => onSelectItem(item)}
       style={styles.item}
-      activeOpacity={0.7}>
+      activeOpacity={0.7}
+    >
       <View style={styles.itemContent}>
         {item.imageUrl ? (
           <Image
-            source={{uri: item.imageUrl}}
+            source={{ uri: item.imageUrl }}
             style={styles.itemImage}
             defaultSource={{
               uri: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==',

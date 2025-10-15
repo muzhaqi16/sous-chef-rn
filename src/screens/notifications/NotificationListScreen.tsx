@@ -1,42 +1,34 @@
-import React, {useState, useCallback, useMemo} from 'react';
-import {View, SectionList, RefreshControl} from 'react-native';
-import {useAppNavigation} from '#hooks';
-import {StyleSheet} from 'react-native-unistyles';
+import React, { useState, useCallback, useMemo } from 'react';
+import { View, SectionList, RefreshControl } from 'react-native';
+import { useAppNavigation } from '#hooks';
+import { StyleSheet } from 'react-native-unistyles';
 import {
   NotificationItem,
   EmptyNotifications,
   NotificationHeader,
   NotificationGroupHeader,
-  useNotificationSync,
   NotificationFilters,
   UrgentNotificationsBanner,
 } from '#components/notifications';
-import {
-  useNotifications,
-  useRealTimeNotifications,
-  useNotificationRefresh,
-} from '#hooks';
+import { useNotifications } from '#hooks';
 import {
   NotificationItem as NotificationType,
   NotificationCategory,
-  NotificationPriority,
 } from '#store/slices/notificationSlice';
-import {NotificationStackParamList} from '#navigation/stacks/NotificationStack';
-import {useStore} from '#store';
-import {Header} from '#components/molecules/Header';
-import {NotificationActionHandler} from '#components/notifications/NotificationActionHandler';
+import { NotificationStackParamList } from '#navigation/stacks/NotificationStack';
+import { Header } from '#components/molecules/Header';
+import { NotificationActionHandler } from '#components/notifications/NotificationActionHandler';
 import {
   groupNotificationsByDate,
   createSectionListData,
 } from '#utils/notificationGrouping';
 
 export const NotificationListScreen: React.FC<{
-  route: {params?: NotificationStackParamList['NotificationList']};
+  route: { params?: NotificationStackParamList['NotificationList'] };
 }> = () => {
-  const {navigate, navigateTo, goBack} = useAppNavigation();
+  const { navigate, navigateTo, goBack } = useAppNavigation();
   const [filterCategory, setFilterCategory] =
     useState<NotificationCategory | null>(null);
-  const userId = useStore(state => state.user?.id);
 
   const {
     notifications,
@@ -47,25 +39,14 @@ export const NotificationListScreen: React.FC<{
     getNotificationsByCategory,
   } = useNotifications();
 
-  // Initialize real-time notifications
-  const {notificationCount, config} = useRealTimeNotifications({
-    enablePantryNotifications: true,
-    enableShoppingListNotifications: true,
-    enableMembershipNotifications: true,
-    enableLowStockAlerts: true,
-    enableExpirationAlerts: true,
-    enableCollaborationNotifications: true,
-    showInAppNotifications: true,
-    showPushNotifications: true,
-  });
+  // Initialize real-time notifications (already handled by consolidated useNotifications)
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Server sync management (returns refetch function)
-  const {refetch} = useNotificationSync({userId});
-
-  // Refresh handling
-  const {isRefreshing, handleRefresh} = useNotificationRefresh({
-    refetch,
-  });
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    // Add server sync logic here if needed
+    setTimeout(() => setIsRefreshing(false), 1000);
+  }, []);
 
   // Filter notifications based on selected category
   const filteredNotifications = useMemo(() => {
@@ -144,25 +125,8 @@ export const NotificationListScreen: React.FC<{
         }
       }
     },
-    [handleMarkAsRead, navigate],
+    [handleMarkAsRead, navigate, navigateTo],
   );
-
-  // Test notification creation
-  const addNotification = useStore(state => state.addNotification);
-  const handleTestNotification = () => {
-    const testNotification = {
-      id: `test-${Date.now()}`,
-      type: 'HomeJoined' as any,
-      category: NotificationCategory.MEMBERSHIP,
-      priority: NotificationPriority.HIGH,
-      title: 'Test Notification',
-      message: 'This is a test notification to verify the system is working',
-      payload: {test: true},
-      sentAt: new Date().toISOString(),
-    };
-    console.log('Creating test notification:', testNotification);
-    addNotification(testNotification);
-  };
 
   // Prepare sections for SectionList using utility
   const sections = createSectionListData(filteredGroups);
@@ -171,14 +135,10 @@ export const NotificationListScreen: React.FC<{
 
   const renderHeader = () => (
     <Header
-      title={'Notifications'}
+      title="Notifications"
       centerTitle={true}
       onBack={goBack}
       rightActions={[
-        {
-          icon: 'bug-report',
-          onPress: handleTestNotification,
-        },
         {
           icon: 'settings',
           onPress: () => navigate('NotificationSettings'),
@@ -189,7 +149,7 @@ export const NotificationListScreen: React.FC<{
 
   return (
     <NotificationActionHandler>
-      {({handleNotificationAction}) => (
+      {({ handleNotificationAction }) => (
         <View style={styles.container}>
           <UrgentNotificationsBanner
             urgentNotifications={filteredGroups.urgent}
@@ -211,7 +171,7 @@ export const NotificationListScreen: React.FC<{
           <SectionList
             sections={sections}
             keyExtractor={item => item.id}
-            renderItem={({item}) => (
+            renderItem={({ item }) => (
               <NotificationItem
                 notification={item}
                 onPress={notification =>
@@ -223,7 +183,7 @@ export const NotificationListScreen: React.FC<{
                 onDismiss={handleRemoveNotification}
               />
             )}
-            renderSectionHeader={({section}) => (
+            renderSectionHeader={({ section }) => (
               <NotificationGroupHeader title={section.title} />
             )}
             ListEmptyComponent={<EmptyNotifications />}
@@ -247,7 +207,6 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-    paddingVertical: theme.spacing.md,
   },
   emptyContainer: {
     flex: 1,

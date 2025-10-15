@@ -18,7 +18,7 @@ export const CategoryManagement: React.FC = () => {
   });
 
   const pantry = getDefaultPantry(homeData);
-  const {items} = usePantryItems(pantry.id);
+  const {items} = usePantryItems(pantry?.id);
 
   const categorizedItems = useMemo(() => {
     if (!items) return {};

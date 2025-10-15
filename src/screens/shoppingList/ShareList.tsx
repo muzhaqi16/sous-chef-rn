@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -8,27 +8,26 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import {Icon} from '#utils';
-import {useNavigation, useRoute} from '@react-navigation/native';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
+import { Icon } from '#utils';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
   useRemoveCollaboratorMutation,
   useAddCollaboratorMutation,
   CollaboratorRole,
 } from '#generated';
-import {useShoppingListDetails} from '#/hooks';
+import { useShoppingListDetails } from '#/hooks';
 
 export const ShareList: React.FC = () => {
-  const {theme} = useUnistyles();
+  const { theme } = useUnistyles();
   const navigation = useNavigation();
   const route = useRoute();
-  const {listId} = route.params as {listId: string};
+  const { listId } = route.params as { listId: string };
 
   const [email, setEmail] = useState('');
   const [sharing, setSharing] = useState(false);
 
-  const {shoppingList, loading, collaborators, refetch} =
-    useShoppingListDetails(listId);
+  const { loading, collaborators, refetch } = useShoppingListDetails(listId);
 
   const [shareList] = useAddCollaboratorMutation();
   const [removeMember] = useRemoveCollaboratorMutation();
@@ -64,7 +63,7 @@ export const ShareList: React.FC = () => {
       'Remove Member',
       'Are you sure you want to remove this member?',
       [
-        {text: 'Cancel', style: 'cancel'},
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Remove',
           style: 'destructive',
@@ -72,7 +71,7 @@ export const ShareList: React.FC = () => {
             try {
               await removeMember({
                 variables: {
-                  data: {shoppingListId: listId, email},
+                  data: { shoppingListId: listId, email },
                 },
               });
               refetch();
@@ -117,7 +116,8 @@ export const ShareList: React.FC = () => {
           <TouchableOpacity
             style={styles.sendButton}
             onPress={handleShare}
-            disabled={sharing}>
+            disabled={sharing}
+          >
             {sharing ? (
               <ActivityIndicator size="small" color="white" />
             ) : (
@@ -188,8 +188,11 @@ export const ShareList: React.FC = () => {
                             backgroundColor: statusColor + '20',
                             borderColor: statusColor,
                           },
-                        ]}>
-                        <Text style={[styles.statusText, {color: statusColor}]}>
+                        ]}
+                      >
+                        <Text
+                          style={[styles.statusText, { color: statusColor }]}
+                        >
                           {statusText}
                         </Text>
                       </View>
@@ -203,7 +206,8 @@ export const ShareList: React.FC = () => {
                   </View>
                 </View>
                 <TouchableOpacity
-                  onPress={() => handleRemoveMember(member.email)}>
+                  onPress={() => handleRemoveMember(member.email)}
+                >
                   <Icon name="close" size={20} color={theme.colors.error} />
                 </TouchableOpacity>
               </View>

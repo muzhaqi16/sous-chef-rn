@@ -12,5 +12,6 @@ const styles = StyleSheet.create(theme => ({
   text: {
     fontSize: 16,
     color: theme.colors.textSecondary,
+    marginRight: 8,
   },
 }));

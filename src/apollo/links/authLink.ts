@@ -1,12 +1,11 @@
-import {setContext} from '@apollo/client/link/context';
-import {useStore} from '#store';
+import { SetContextLink } from '@apollo/client/link/context';
+import { useStore } from '#store';
 import Config from 'react-native-config';
-import {LogoutCleanup} from '../logoutCleanup';
+import { LogoutCleanup } from '../logoutCleanup';
 
-export const authLink = setContext(async (operation, {headers}) => {
+export const authLink = new SetContextLink(async ({ headers }, operation) => {
   // Skip operations during logout to prevent unnecessary auth errors
   if (LogoutCleanup.shouldSkipOperation(operation.operationName)) {
-    console.log(`[AuthLink] Skipping operation during logout: ${operation.operationName}`);
     throw new Error('Operation cancelled due to logout process');
   }
 
@@ -19,7 +18,7 @@ export const authLink = setContext(async (operation, {headers}) => {
   // Operations that don't need authentication
   const publicOperations = ['RefreshToken', 'Login', 'Register', 'SignUp'];
 
-  // Skip auth header for refresh token mutation but keep API key
+  // Skip auth header for public operations but keep API key
   if (
     operation.operationName &&
     publicOperations.includes(operation.operationName)
@@ -27,7 +26,7 @@ export const authLink = setContext(async (operation, {headers}) => {
     return {
       headers: {
         ...headers,
-        ...(apiKey && {'x-api-key': apiKey}),
+        ...(apiKey && { 'x-api-key': apiKey }),
       },
     };
   }
@@ -36,6 +35,8 @@ export const authLink = setContext(async (operation, {headers}) => {
     console.log(
       '[AuthLink] No access token available for operation:',
       operation.operationName,
+      'isPublic:',
+      operation.operationName && publicOperations.includes(operation.operationName)
     );
   }
 
@@ -43,9 +44,9 @@ export const authLink = setContext(async (operation, {headers}) => {
     headers: {
       ...headers,
       // Always include API key
-      ...(apiKey && {'x-api-key': apiKey}),
+      ...(apiKey && { 'x-api-key': apiKey }),
       // Include authorization header only when token is available
-      ...(token && {authorization: `Bearer ${token}`}),
+      ...(token && { authorization: `Bearer ${token}` }),
     },
   };
 });

@@ -1,8 +1,8 @@
 import React from 'react';
-import {View, Text, TouchableOpacity} from 'react-native';
-import {Icon} from '#utils';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
-import {Badge} from '../base/Badge';
+import { View, Text, TouchableOpacity } from 'react-native';
+import { Icon } from '#utils';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Badge } from '../base/Badge';
 
 interface ListItemProps {
   title: string;
@@ -28,7 +28,8 @@ export const ListItem: React.FC<ListItemProps> = ({
   rightElement,
   leftElement,
 }) => {
-  const {theme} = useUnistyles();
+  const { theme } = useUnistyles();
+
   const content = (
     <>
       {/* Optional left element for image or icon */}
@@ -39,7 +40,9 @@ export const ListItem: React.FC<ListItemProps> = ({
         </View>
       )}
       <View style={styles.content}>
-        <Text style={styles.title}>{title}</Text>
+        <Text style={styles.title} numberOfLines={2} ellipsizeMode="tail">
+          {title}
+        </Text>
         {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
       </View>
       {badge && <Badge variant={badge.variant}>{badge.text}</Badge>}
@@ -52,23 +55,32 @@ export const ListItem: React.FC<ListItemProps> = ({
 
   if (onPress) {
     return (
-      <TouchableOpacity style={styles.container} onPress={onPress}>
-        {content}
-      </TouchableOpacity>
+      <View style={styles.container}>
+        <TouchableOpacity style={styles.contentContainer} onPress={onPress}>
+          {content}
+        </TouchableOpacity>
+      </View>
     );
   }
 
-  return <View style={styles.container}>{content}</View>;
+  return (
+    <View style={styles.container}>
+      <View style={styles.contentContainer}>{content}</View>
+    </View>
+  );
 };
 
 const styles = StyleSheet.create(theme => ({
   container: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: 'white',
+  },
+  contentContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'white',
     padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
+    minHeight: 87,
   },
   leftIcon: {
     marginRight: 12,

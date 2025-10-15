@@ -1,8 +1,9 @@
-import React from 'react';
-import {NavigationContainer} from '@react-navigation/native';
-import {createNativeStackNavigator} from '@react-navigation/native-stack';
-import {useStore} from '#store';
-import {useAuthState} from '#hooks/navigation/useAuthState';
+import React, { useEffect, useRef } from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useStore } from '#store';
+import { useAuth } from '#hooks/auth/useAuth';
+import { SplashScreen } from '#screens';
 import {
   AuthStack,
   OnboardingStack,
@@ -16,75 +17,212 @@ import {
   ImageCropScreen,
   NotFoundScreen,
 } from '#screens';
-import {CodeVerificationScreen} from '#screens/auth';
-import {linkingConfig} from './linking';
+import { HomeDetailScreen } from '#screens/home';
+import {
+  CodeVerificationScreen,
+  EmailVerificationDeepLinkScreen,
+  ResetPasswordScreen,
+} from '#screens/auth';
+import { AcceptInvite } from '#screens/shoppingList/AcceptInvite';
+import { DeleteAccountScreen } from '#screens/profile';
+import { linkingConfig } from './linking';
+import { ImageFile } from '#components/molecules/ImagePicker';
+import {
+  NavigationErrorBoundary,
+  AuthErrorBoundary,
+} from '#components/providers/ErrorBoundary';
+import { PostLoginBiometricPrompt } from '#components/organisms';
+import { useDeepLinkRouter } from '#hooks/deepLink/useDeepLinkRouter';
 
 export type RootStackParamList = {
   Auth: undefined;
   Verification: undefined;
   Onboarding: undefined;
   Home: undefined;
-  HomeManagement: {selectedHomeId?: string};
+  HomeManagement: { selectedHomeId?: string };
+  HomeDetail: { homeId: string };
   Barcode: undefined;
   Notifications: undefined;
   ProfilePhotoUpload: undefined;
-  ImageCrop: {imageFile: any};
+  ImageCrop: { imageFile: ImageFile };
+  EmailVerification: { token: string };
+  ResetPassword: { token: string };
+  AcceptInvitation: { token: string };
+  DeleteAccount: undefined;
   NotFound: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function RootNavigator() {
-  const {isHydrated} = useStore();
+  const {
+    isHydrated,
+    navigationState,
+    showBiometricSetup,
+    postLoginCredentials,
+    setNavigationState,
+    user,
+  } = useStore();
+  const { handlePostLoginBiometricComplete } = useAuth();
 
-  // Don't render navigation until store is hydrated
-  if (!isHydrated) {
-    return null;
+  // Initialize deep link router for handling URL-based navigation
+  useDeepLinkRouter();
+
+  // Track initialization
+  const hasInitialized = useRef(false);
+
+  // Initialize navigation state after hydration
+  useEffect(() => {
+    if (isHydrated && !hasInitialized.current) {
+      hasInitialized.current = true;
+
+      // Determine initial navigation state based on current store state
+      if (user) {
+        // User exists in store - determine their state
+        if (!user.emailVerified) {
+          setNavigationState('verification');
+        } else if (!user.onBoarded) {
+          setNavigationState('onboarding');
+        } else {
+          setNavigationState('main_app');
+        }
+      } else {
+        // No user - go directly to auth screen
+        setNavigationState('auth');
+      }
+    }
+  }, [isHydrated, user, setNavigationState]);
+
+  // React to user state changes after initialization
+  useEffect(() => {
+    if (isHydrated && hasInitialized.current) {
+      if (user) {
+        // Update navigation state when specific user properties change
+        if (!user.emailVerified) {
+          setNavigationState('verification');
+        } else if (!user.onBoarded) {
+          setNavigationState('onboarding');
+        } else {
+          setNavigationState('main_app');
+        }
+      } else {
+        // User logged out or cleared
+        setNavigationState('auth');
+      }
+    }
+  }, [user, isHydrated, setNavigationState]);
+
+  // Show splash while app is hydrating or determining navigation state
+  if (!isHydrated || navigationState === 'loading') {
+    return <SplashScreen />;
   }
 
   return (
-    <Stack.Navigator screenOptions={{headerShown: false}}>
-      {/* Auth Group */}
-      {useAuthState.isUnauthenticated() && (
-        <Stack.Screen name="Auth" component={AuthStack} />
-      )}
+    <>
+      <NavigationErrorBoundary>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          {/* Auth Group */}
+          {navigationState === 'auth' && (
+            <Stack.Screen name="Auth">
+              {() => (
+                <AuthErrorBoundary>
+                  <AuthStack />
+                </AuthErrorBoundary>
+              )}
+            </Stack.Screen>
+          )}
 
-      {/* Verification Group */}
-      {useAuthState.needsVerification() && (
-        <Stack.Screen name="Verification" component={CodeVerificationScreen} />
-      )}
+          {/* Verification Group */}
+          {navigationState === 'verification' && (
+            <Stack.Screen name="Verification">
+              {() => (
+                <AuthErrorBoundary>
+                  <CodeVerificationScreen />
+                </AuthErrorBoundary>
+              )}
+            </Stack.Screen>
+          )}
 
-      {/* Onboarding Group */}
-      {useAuthState.needsOnboarding() && (
-        <Stack.Screen name="Onboarding" component={OnboardingStack} />
-      )}
 
-      {/* Main App Group */}
-      {useAuthState.isFullyAuthenticated() && (
-        <>
-          <Stack.Screen name="Home" component={HomeTabs} />
-          <Stack.Screen name="HomeManagement" component={HomeManagement} />
-          <Stack.Screen name="Barcode" component={BarcodeStack} />
-          <Stack.Screen name="Notifications" component={NotificationStack} />
+          {/* Onboarding Group */}
+          {navigationState === 'onboarding' && (
+            <Stack.Screen name="Onboarding">
+              {() => (
+                <NavigationErrorBoundary>
+                  <OnboardingStack />
+                </NavigationErrorBoundary>
+              )}
+            </Stack.Screen>
+          )}
+
+          {/* Main App Group */}
+          {navigationState === 'main_app' && (
+            <>
+              <Stack.Screen name="Home">
+                {() => (
+                  <NavigationErrorBoundary>
+                    <HomeTabs />
+                  </NavigationErrorBoundary>
+                )}
+              </Stack.Screen>
+              <Stack.Screen name="HomeManagement" component={HomeManagement} />
+              <Stack.Screen name="HomeDetail" component={HomeDetailScreen} />
+              <Stack.Screen name="Barcode" component={BarcodeStack} />
+              <Stack.Screen
+                name="Notifications"
+                component={NotificationStack}
+              />
+              <Stack.Screen
+                name="ProfilePhotoUpload"
+                component={ProfilePhotoUploadScreen}
+              />
+              <Stack.Screen name="ImageCrop" component={ImageCropScreen} />
+              <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
+            </>
+          )}
+
+          {/* Always available */}
           <Stack.Screen
-            name="ProfilePhotoUpload"
-            component={ProfilePhotoUploadScreen}
+            name="EmailVerification"
+            component={EmailVerificationDeepLinkScreen}
+            options={{ headerShown: false }}
           />
-          <Stack.Screen name="ImageCrop" component={ImageCropScreen} />
-        </>
-      )}
+          <Stack.Screen
+            name="ResetPassword"
+            component={ResetPasswordScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="AcceptInvitation"
+            component={AcceptInvite}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen name="NotFound" component={NotFoundScreen} />
+        </Stack.Navigator>
+      </NavigationErrorBoundary>
 
-      {/* Always available */}
-      <Stack.Screen name="NotFound" component={NotFoundScreen} />
-    </Stack.Navigator>
+      {/* Global Biometric Setup Modal - shows on auth screen when triggered */}
+      {showBiometricSetup &&
+        user &&
+        postLoginCredentials && (
+          <PostLoginBiometricPrompt
+            visible={showBiometricSetup}
+            onComplete={handlePostLoginBiometricComplete}
+            userEmail={postLoginCredentials.email}
+            userPassword={postLoginCredentials.password}
+          />
+        )}
+    </>
   );
 }
 
 export function Navigation() {
   return (
-    <NavigationContainer linking={linkingConfig}>
-      <RootNavigator />
-    </NavigationContainer>
+    <NavigationErrorBoundary>
+      <NavigationContainer linking={linkingConfig}>
+        <RootNavigator />
+      </NavigationContainer>
+    </NavigationErrorBoundary>
   );
 }
 

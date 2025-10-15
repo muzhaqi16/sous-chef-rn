@@ -1,15 +1,15 @@
 import React from 'react';
-import {View, Text} from 'react-native';
-import {Control, FieldErrors} from 'react-hook-form';
-import {StyleSheet} from 'react-native-unistyles';
+import { View, Text } from 'react-native';
+import { Control, FieldErrors } from 'react-hook-form';
+import { StyleSheet } from 'react-native-unistyles';
 import {
   DynamicFormFields,
   FieldDef,
 } from '#components/molecules/DynamicFormFields';
-import {Counter} from '#components/molecules/Counter';
-import {FormInput} from '#components/molecules/FormInput';
-import {FormCheckbox} from '#components/molecules/FormCheckbox';
-import {commonStyles} from '#/styles/commonStyles';
+import { Counter } from '#components/molecules/Counter';
+import { FormInput } from '#components/molecules/FormInput';
+import { FormCheckbox } from '#components/molecules/FormCheckbox';
+import { commonStyles } from '#/styles/commonStyles';
 
 interface QuantitySectionProps {
   control: Control<any>;
@@ -17,6 +17,7 @@ interface QuantitySectionProps {
   mode: 'add' | 'edit';
   quantity: number;
   unit: string;
+  itemWeight?: number;
   isAutoReorder?: boolean;
   onIncrementQuantity: () => void;
   onDecrementQuantity: () => void;
@@ -54,6 +55,13 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
           ),
         },
         {
+          name: 'itemWeight',
+          label: 'Weight',
+          placeholder: 'e.g., 2.2',
+          component: FormInput,
+          props: { keyboardType: 'decimal-pad' },
+        },
+        {
           name: 'unit',
           label: 'Unit',
           placeholder: 'kg, lbs, pcs',
@@ -65,7 +73,7 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
           label: 'Minimum Quantity',
           placeholder: 'Alert when below this quantity',
           component: FormInput,
-          props: {keyboardType: 'numeric'},
+          props: { keyboardType: 'numeric' },
         },
       ];
     } else {
@@ -76,20 +84,20 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
           label: 'Current Quantity',
           placeholder: '1',
           component: FormInput,
-          props: {keyboardType: 'numeric'},
+          props: { keyboardType: 'numeric' },
         },
         {
           name: 'reservedQuantity',
           label: 'Minimum Stock Level',
           placeholder: 'Alert when below this quantity',
           component: FormInput,
-          props: {keyboardType: 'numeric'},
+          props: { keyboardType: 'numeric' },
         },
         {
           name: 'isAutoReorder',
           label: 'Auto Reorder',
           component: FormCheckbox,
-          props: {componentType: 'checkbox'},
+          props: { componentType: 'checkbox' },
         },
       ];
 
@@ -99,7 +107,7 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
           label: 'Reorder Point',
           placeholder: 'Reorder when quantity reaches...',
           component: FormInput,
-          props: {keyboardType: 'numeric'},
+          props: { keyboardType: 'numeric' },
         });
       }
 

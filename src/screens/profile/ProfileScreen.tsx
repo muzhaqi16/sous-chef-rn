@@ -1,17 +1,31 @@
-import React from 'react';
-import {SafeAreaView, ScrollView} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
-import {ProfileHeader, SettingsSection} from '#components';
+import React, { useRef, useCallback } from 'react';
+import { ScrollView, TouchableOpacity, Text } from 'react-native';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { ProfileHeader, SettingsSection } from '#components';
 import {
   useProfileData,
   useConfigurableSettings,
   useAppNavigation,
 } from '#hooks';
+import { ActionTray, ActionTrayRef } from '#/components/templates/ActionTray';
+import { useScanner } from '#/context/ScannerContext';
+import { Icon } from '#/utils';
+
+// Tab bar height constant (65px from FloatingTabBar)
+const TAB_BAR_HEIGHT = 65;
 
 export const ProfileScreen = () => {
-  const {navigate, navigateTo, goBack} = useAppNavigation();
-  const {profile, user, loading} = useProfileData();
-  const {sections} = useConfigurableSettings(profile);
+  const { navigate, goBack } = useAppNavigation();
+  const { profile, user, loading } = useProfileData();
+  const { sections, BiometricModal } = useConfigurableSettings(profile);
+  const { bottom: safeBottom } = useSafeAreaInsets();
+  const { setOverlayOpen } = useScanner();
+  const { theme } = useUnistyles();
+  const actionTrayRef = useRef<ActionTrayRef>(null);
 
   const handleAvatarPress = () => {
     navigate('ProfilePhotoUpload');
@@ -26,11 +40,30 @@ export const ProfileScreen = () => {
 
     if (logoutItem?.onPress) {
       logoutItem.onPress();
-      navigateTo.login();
     }
   };
 
-  if (loading) {
+  const handleMorePress = useCallback(() => {
+    actionTrayRef.current?.open();
+  }, []);
+
+  const handleDeleteAccount = useCallback(() => {
+    actionTrayRef.current?.close();
+    navigate('DeleteAccount');
+  }, [navigate]);
+
+  const handleOverlayOpen = useCallback(() => {
+    setOverlayOpen(true);
+  }, [setOverlayOpen]);
+
+  const handleOverlayClose = useCallback(() => {
+    setOverlayOpen(false);
+  }, [setOverlayOpen]);
+
+  // ✅ OPTIMIZED: Don't block render on loading
+  // Show cached profile data immediately while loading fresh data in background
+  // Only show loading state if we have NO data at all
+  if (loading && !profile) {
     return null; // or loading component
   }
   return (
@@ -40,11 +73,16 @@ export const ProfileScreen = () => {
         name={`${profile?.firstName || ''} ${profile?.lastName || ''}`.trim()}
         subtitle={user?.email || ''}
         onBack={() => goBack()}
-        onMore={() => {}}
+        onMore={handleMorePress}
         onAvatarPress={handleAvatarPress}
       />
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: TAB_BAR_HEIGHT + safeBottom + 16 },
+        ]}
+      >
         {sections.map((section, index) => (
           <SettingsSection
             key={`section-${index}`}
@@ -62,6 +100,24 @@ export const ProfileScreen = () => {
           />
         ))}
       </ScrollView>
+
+      {BiometricModal}
+
+      <ActionTray
+        ref={actionTrayRef}
+        onOpen={handleOverlayOpen}
+        onClose={handleOverlayClose}
+      >
+        <TouchableOpacity style={styles.menuItem} onPress={handleDeleteAccount}>
+          <Icon
+            library="Feather"
+            name="trash-2"
+            size={20}
+            color={theme.colors.error}
+          />
+          <Text style={styles.menuItemTextDestructive}>Delete Account</Text>
+        </TouchableOpacity>
+      </ActionTray>
     </SafeAreaView>
   );
 };
@@ -72,6 +128,22 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.background,
   },
   scrollContent: {
-    padding: 24,
+    padding: theme.spacing.lg,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
+    borderRadius: theme.radii.md,
+    borderWidth: 1,
+    borderColor: theme.colors.error,
+    backgroundColor: 'transparent',
+  },
+  menuItemTextDestructive: {
+    marginLeft: theme.spacing.md,
+    fontSize: theme.fonts.size.md,
+    fontWeight: '600',
+    color: theme.colors.error,
   },
 }));

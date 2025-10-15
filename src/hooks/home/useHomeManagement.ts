@@ -1,24 +1,28 @@
-import {useMemo, useEffect, useCallback, useRef} from 'react';
-import {Alert} from 'react-native';
+import { useMemo, useEffect, useCallback, useRef } from 'react';
+import { Alert } from 'react-native';
 import {
   useGetHomesQuery,
   useCreateHomeMutation,
   useUpdateHomeMutation,
   useDeleteHomeMutation,
   useInviteToHomeMutation,
-  GetHomesQuery,
   GetHomesDocument,
   MembershipRole,
   useGetDefaultHomeQuery,
   useSetDefaultHomeMutation,
 } from '#generated';
-import {useSearchableList} from '../useSearchableList';
-import {useStore} from '#store';
+import { useSearchableList } from '../useSearchableList';
+import { useStore } from '#store';
+import { useErrorHandler } from '#/utils/errorHandling';
 
 export function useHomeManagement() {
-  const {selectedHomeId, setSelectedHomeId, setSelectedPantryId} = useStore();
+  const { selectedHomeId, setSelectedHomeId, setSelectedPantryId } = useStore();
+  const { handleApolloError } = useErrorHandler();
 
-  const {data, loading, error, refetch} = useGetHomesQuery({
+  // Ref to track if initial home auto-selection has been attempted
+  const hasInitializedDefaultHome = useRef(false);
+
+  const { data, loading, error, refetch } = useGetHomesQuery({
     fetchPolicy: 'cache-and-network',
     notifyOnNetworkStatusChange: true,
   });
@@ -32,179 +36,277 @@ export function useHomeManagement() {
   });
 
   const [setDefaultHomeMutation] = useSetDefaultHomeMutation();
-  const homes = data?.homes || [];
+  const homes = data?.homes;
   const remoteDefaultHomeId = defaultHomeData?.getDefaultHome?.id;
 
-  // Sync remote default home with local store on initial load and changes
+  // One-way sync: remote default home → local store (read-only, no mutations)
   useEffect(() => {
+    // Only update local when remote has a value and they differ
     if (remoteDefaultHomeId && remoteDefaultHomeId !== selectedHomeId) {
+      console.log('🔄 Syncing remote default to local:', remoteDefaultHomeId);
       setSelectedHomeId(remoteDefaultHomeId);
     }
-  }, [remoteDefaultHomeId, setSelectedHomeId]);
+  }, [remoteDefaultHomeId, selectedHomeId, setSelectedHomeId]);
 
-  // If local store has a value but remote doesn't, sync to remote
+  // Auto-select first home if no default is set and we have homes (initialization for first-time users)
+  // This runs ONCE when the user has homes but no default home set anywhere
   useEffect(() => {
-    const syncLocalToRemote = async () => {
-      if (selectedHomeId && !remoteDefaultHomeId && !loadingDefaultHome) {
-        // Verify the selectedHomeId still exists in the homes list
-        const homeExists = homes.some(home => home.id === selectedHomeId);
-        if (!homeExists) {
-          setSelectedHomeId(null);
-          return;
-        }
+    if (
+      !hasInitializedDefaultHome.current &&
+      !selectedHomeId &&
+      !remoteDefaultHomeId &&
+      !loadingDefaultHome &&
+      homes &&
+      homes.length > 0
+    ) {
+      hasInitializedDefaultHome.current = true; // Mark as done
+      const firstHome = homes[0];
+      console.log('🏠 Auto-selecting first home as default:', firstHome.id);
+      setSelectedHomeId(firstHome.id);
 
-        try {
-          await setDefaultHomeMutation({
-            variables: {homeId: selectedHomeId},
-          });
-          refetchDefaultHome();
-        } catch (error) {
-          console.error('Failed to sync local default to remote:', error);
-          // Don't show alert for background sync failures
-        }
-      }
-    };
-
-    syncLocalToRemote();
+      // Sync this choice to the backend
+      setDefaultHomeMutation({
+        variables: { homeId: firstHome.id },
+      }).catch((error: any) => {
+        const { message } = handleApolloError(error, {
+          operation: 'Set First Home as Default',
+        });
+        console.warn('Failed to set first home as default:', message);
+      });
+    }
   }, [
     selectedHomeId,
     remoteDefaultHomeId,
     loadingDefaultHome,
-    setDefaultHomeMutation,
-    refetchDefaultHome,
     homes,
+    setDefaultHomeMutation,
+    handleApolloError,
+    setSelectedHomeId,
   ]);
 
   // Search functionality for homes
-  const {query, setQuery, filtered} = useSearchableList(homes, (home, q) =>
-    home?.name?.toLowerCase().includes(q.toLowerCase()),
+  const { query, setQuery, filtered } = useSearchableList(
+    homes,
+    (home: any, q: string) =>
+      home?.name?.toLowerCase().includes(q.toLowerCase()),
   );
 
-  // Add debugging to createHomeMutation
-  const [createHomeMutation, {loading: creating}] = useCreateHomeMutation({
-    update: (cache, {data}) => {
-      if (data?.createHome) {
-        const existingHomes = cache.readQuery<GetHomesQuery>({
-          query: GetHomesDocument,
-        });
+  const [createHomeMutation, { loading: creating, client }] =
+    useCreateHomeMutation({
+      // Note: No optimisticResponse - the mutation returns complex nested types
+      // (members, myMembership with 15+ fields, pantries, membershipStats, etc.)
+      // Cache update provides instant UI feedback when server responds (~100-200ms)
+      // Update cache directly instead of refetching
+      update: (cache, { data }) => {
+        if (!data?.createHome) return;
 
-        if (existingHomes?.homes) {
-          // Now we can safely add the new home since it has compatible structure
-          const newHomesArray = [...existingHomes.homes, data.createHome];
+        try {
+          const newHome = data.createHome;
 
-          cache.writeQuery<GetHomesQuery>({
-            query: GetHomesDocument,
-            data: {
-              homes: newHomesArray,
+          // Add new home to the homes list in cache
+          cache.modify({
+            fields: {
+              homes(existingHomes = [], { toReference }) {
+                const newHomeRef = toReference(newHome);
+
+                // Check if home already exists (avoid duplicates)
+                const exists = existingHomes.some((homeRef: any) => {
+                  const id = cache.identify(homeRef);
+                  return id === cache.identify(newHome);
+                });
+
+                if (exists) {
+                  return existingHomes;
+                }
+
+                return [...existingHomes, newHomeRef];
+              },
             },
           });
+        } catch (error) {
+          console.warn('Cache update failed for createHome:', error);
+          // Fallback: refetch if cache update fails
+          refetch();
         }
+      },
+      onCompleted: async data => {
+        if (data?.createHome) {
+          const newHome = data.createHome;
 
-        // If this is the first home, set it as default
-        if (!existingHomes?.homes?.length) {
-          setSelectedHomeId(data.createHome.id);
-          // Set as default home, but don't block the UI if this fails
-          setDefaultHomeMutation({
-            variables: {homeId: data.createHome.id},
-          }).catch(error => {
-            console.warn('Failed to set newly created home as default:', error);
-            // Don't show alert here since the home was created successfully
-          });
-        }
+          // Read fresh data from Apollo cache (no refetch needed!)
+          const cachedData = client.cache.readQuery({
+            query: GetHomesDocument,
+          }) as { homes: any[] } | null;
+          const freshHomes = cachedData?.homes ?? [];
 
-        // If a default pantry was created, set it as selected
-        const newHome = data.createHome;
-        if (newHome.pantries && newHome.pantries.length > 0) {
-          const defaultPantry = newHome.pantries.find(
-            pantry => pantry.isDefault,
-          );
-          if (defaultPantry) {
-            console.log('Setting default pantry:', defaultPantry.id);
-            setSelectedPantryId(defaultPantry.id);
+          // Only set as default if this is truly the first/only home
+          if (freshHomes.length === 1 && freshHomes[0].id === newHome.id) {
+            console.log(
+              '🏠 Setting newly created home as default (first home)',
+            );
+            setSelectedHomeId(newHome.id);
+            setDefaultHomeMutation({
+              variables: { homeId: newHome.id },
+            }).catch((error: any) => {
+              const { message } = handleApolloError(error, {
+                operation: 'Set Default Home',
+              });
+              console.warn(
+                'Failed to set newly created home as default:',
+                message,
+              );
+            });
+          }
+
+          // If a default pantry was created, set it as selected
+          if (newHome.pantries && newHome.pantries.length > 0) {
+            const defaultPantry = newHome.pantries.find(
+              (pantry: any) => pantry.isDefault,
+            );
+            if (defaultPantry) {
+              setSelectedPantryId(defaultPantry.id);
+            }
           }
         }
-      }
-    },
-    onError: error => {
-      Alert.alert('Error', 'Failed to create home');
-      console.error('Create home error:', error);
-    },
-  });
+      },
+      onError: (error: any) => {
+        const { message } = handleApolloError(error, {
+          operation: 'Create Home',
+        });
+        Alert.alert('Error', message);
+      },
+    });
 
-  // Add debugging to updateHomeMutation
-  const [updateHomeMutation, {loading: updating}] = useUpdateHomeMutation({
-    update: (cache, {data}) => {
+  const [updateHomeMutation, { loading: updating }] = useUpdateHomeMutation({
+    onCompleted: data => {
       if (data?.updateHome) {
-        const existingHomes = cache.readQuery<GetHomesQuery>({
-          query: GetHomesDocument,
-        });
-
-        if (existingHomes?.homes) {
-          const updatedHomes = existingHomes.homes.map(home => {
-            if (home.id === data.updateHome.id) {
-              return data.updateHome;
-            }
-            return home;
-          });
-
-          cache.writeQuery<GetHomesQuery>({
-            query: GetHomesDocument,
-            data: {
-              homes: updatedHomes,
-            },
-          });
-        }
+        Alert.alert('Success', 'Home updated successfully');
       }
     },
-    onError: error => {
-      Alert.alert('Error', 'Failed to update home');
-      console.error('Update home error:', error);
+    onError: (error: any) => {
+      const { message } = handleApolloError(error, {
+        operation: 'Update Home',
+      });
+      Alert.alert('Error', message);
     },
   });
 
-  // Add debugging to deleteHomeMutation
-  const [deleteHomeMutation, {loading: deleting}] = useDeleteHomeMutation({
-    update: (cache, {data}) => {
-      if (data?.deleteHome) {
-        const existingHomes = cache.readQuery<GetHomesQuery>({
-          query: GetHomesDocument,
-        });
+  const [deleteHomeMutation, { loading: deleting, client: deleteClient }] =
+    useDeleteHomeMutation({
+      // Note: No optimisticResponse - the mutation returns full HomeFragment (20+ fields)
+      // Cache update provides instant UI feedback when server responds (~100-200ms)
+      // Update cache to remove the home
+      update: (cache, { data }, { variables }) => {
+        if (!data?.deleteHome || !variables) return;
 
-        if (existingHomes?.homes) {
-          const filteredHomes = existingHomes.homes.filter(
-            home => home.id !== data.deleteHome.id,
-          );
+        try {
+          const deletedHomeId = variables.id;
 
-          cache.writeQuery<GetHomesQuery>({
-            query: GetHomesDocument,
-            data: {
-              homes: filteredHomes,
+          // Remove the home from the homes list in cache
+          cache.modify({
+            fields: {
+              homes(existingHomes = [], { readField }) {
+                return existingHomes.filter(
+                  (homeRef: any) => readField('id', homeRef) !== deletedHomeId,
+                );
+              },
             },
           });
 
+          // Evict the removed home from cache
+          cache.evict({
+            id: cache.identify({ __typename: 'Home', id: deletedHomeId }),
+          });
+          cache.gc(); // Garbage collect orphaned data
+        } catch (error) {
+          console.warn('Cache update failed for deleteHome:', error);
+          refetch();
+        }
+      },
+      onCompleted: async data => {
+        if (data?.deleteHome) {
           // If deleted home was the default, clear it or set another
           if (data.deleteHome.id === selectedHomeId) {
-            const newDefaultHome = filteredHomes[0];
-            if (newDefaultHome) {
+            // Read fresh data from Apollo cache (no refetch needed!)
+            const cachedData = deleteClient.cache.readQuery({
+              query: GetHomesDocument,
+            }) as { homes: any[] } | null;
+            const remainingHomes = cachedData?.homes ?? [];
+
+            if (remainingHomes.length > 0) {
+              // Set first remaining home as default
+              const newDefaultHome = remainingHomes[0];
+              console.log(
+                '🏠 Setting new default home after delete:',
+                newDefaultHome.id,
+              );
               setSelectedHomeId(newDefaultHome.id);
               setDefaultHomeMutation({
-                variables: {homeId: newDefaultHome.id},
+                variables: { homeId: newDefaultHome.id },
+              }).catch((error: any) => {
+                const { message } = handleApolloError(error, {
+                  operation: 'Set Default Home After Delete',
+                });
+                console.warn(
+                  'Failed to set new default home after delete:',
+                  message,
+                );
               });
             } else {
+              // No homes left, clear the selection
+              console.log('🏠 No homes remaining, clearing default');
               setSelectedHomeId(null);
             }
           }
         }
-      }
-    },
-    onError: error => {
-      Alert.alert('Error', 'Failed to delete home');
-      console.error('Delete home error:', error);
-    },
-  });
+      },
+      onError: (error: any) => {
+        const { message } = handleApolloError(error, {
+          operation: 'Delete Home',
+        });
+        Alert.alert('Error', message);
+      },
+    });
 
   // Invite user to home mutation
-  const [inviteUserMutation, {loading: inviting}] = useInviteToHomeMutation();
+  const [inviteUserMutation, { loading: inviting }] = useInviteToHomeMutation({
+    // Cache update to add the new invite/member
+    update: (cache, { data }, { variables }) => {
+      if (!data?.inviteToHome || !variables) return;
+
+      try {
+        const homeId = variables.input.homeId;
+
+        // Update the home's members list if the invite data includes member info
+        if (data.inviteToHome) {
+          cache.modify({
+            id: cache.identify({ __typename: 'Home', id: homeId }),
+            fields: {
+              members(existingMembers = [], { toReference: _toReference }) {
+                // Note: The invite might not immediately add a member until accepted
+                // This depends on your backend implementation
+                // For now, we'll just let the subscription handle the update
+                return existingMembers;
+              },
+            },
+          });
+        }
+
+        // Note: We don't need to manually update homeInvites query
+        // because the subscription should handle that automatically
+      } catch (error) {
+        console.warn('Cache update failed for inviteUser:', error);
+        // No need to refetch - subscription will update
+      }
+    },
+
+    onError: (error: any) => {
+      const { message } = handleApolloError(error, {
+        operation: 'Invite User',
+      });
+      Alert.alert('Error', message);
+    },
+  });
 
   // Helper functions
   const createHome = async (
@@ -226,34 +328,15 @@ export function useHomeManagement() {
         },
       });
 
-      if (result.data?.createHome) {
-        const newHome = result.data.createHome;
-
-        // If a default pantry was created, set it as selected in the store
-        if (newHome.pantries && newHome.pantries.length > 0) {
-          const defaultPantry = newHome.pantries.find(
-            pantry => pantry.isDefault,
-          );
-          if (defaultPantry) {
-            console.log(
-              'Setting default pantry after home creation:',
-              defaultPantry.id,
-            );
-            setSelectedPantryId(defaultPantry.id);
-          }
-        }
-
-        return newHome;
-      }
-      return false;
-    } catch (error) {
+      return result.data?.createHome || false;
+    } catch (error: any) {
       return false;
     }
   };
 
   const updateHome = async (
     homeId: string,
-    updates: {name?: string; isDefault?: boolean},
+    updates: { name?: string; isDefault?: boolean },
   ) => {
     try {
       // Handle default home update separately if needed
@@ -270,14 +353,11 @@ export function useHomeManagement() {
           },
         });
 
-        if (result.data?.updateHome) {
-          Alert.alert('Success', 'Home updated successfully');
-          return result.data.updateHome;
-        }
+        return result.data?.updateHome || false;
       }
 
       return true;
-    } catch (error) {
+    } catch (error: any) {
       return false;
     }
   };
@@ -299,10 +379,10 @@ export function useHomeManagement() {
             onPress: async () => {
               try {
                 await deleteHomeMutation({
-                  variables: {id: homeId},
+                  variables: { id: homeId },
                 });
                 resolve(true);
-              } catch (error) {
+              } catch (error: any) {
                 resolve(false);
               }
             },
@@ -313,6 +393,12 @@ export function useHomeManagement() {
   };
 
   const setDefaultHome = async (homeId: string) => {
+    // Prevent redundant calls if already set as default
+    if (homeId === selectedHomeId) {
+      console.log('🏠 Home is already set as default, skipping');
+      return true;
+    }
+
     // Validate homeId exists
     if (!homeId) {
       Alert.alert('Error', 'Invalid home ID');
@@ -320,7 +406,7 @@ export function useHomeManagement() {
     }
 
     // Check if home exists
-    const homeExists = homes.some(home => home.id === homeId);
+    const homeExists = homes?.some((home: any) => home.id === homeId);
     if (!homeExists) {
       Alert.alert('Error', 'Home not found');
       return false;
@@ -330,21 +416,20 @@ export function useHomeManagement() {
       // Update local state immediately for responsive UI
       setSelectedHomeId(homeId);
 
-      // Sync to remote
+      // Sync to remote (Apollo cache will be updated automatically by the mutation)
       const result = await setDefaultHomeMutation({
-        variables: {homeId},
+        variables: { homeId },
       });
 
       if (result.data) {
-        // Refetch to ensure cache is updated
-        await refetchDefaultHome();
+        console.log('🏠 Default home set successfully:', homeId);
         return true;
       }
 
       // Rollback on failure
       setSelectedHomeId(remoteDefaultHomeId || null);
       return false;
-    } catch (error) {
+    } catch (error: any) {
       // Rollback on error
       setSelectedHomeId(remoteDefaultHomeId || null);
       Alert.alert('Error', 'Failed to set default home');
@@ -365,6 +450,7 @@ export function useHomeManagement() {
           role,
         },
       },
+      // No refetchQueries needed - cache updates handled in mutation's update function
     });
 
     return result.data;
@@ -377,22 +463,16 @@ export function useHomeManagement() {
   const stats = useMemo(() => {
     const validHomes = Array.isArray(homes) ? homes.filter(Boolean) : [];
 
-    validHomes.forEach((home, index) => {
-      const pantriesCount = Array.isArray(home?.pantries)
-        ? home.pantries.length
-        : home.pantries === null
-          ? 'loading'
-          : 0;
-    });
-
     // Check if all homes have loaded their pantries data
-    const allHomesLoaded = validHomes.every(home => home.pantries !== null);
+    const allHomesLoaded = validHomes.every(
+      (home: any) => home.pantries !== null,
+    );
 
     let totalPantries: number;
 
     if (allHomesLoaded) {
       // All data is loaded, calculate the actual count
-      totalPantries = validHomes.reduce((acc, home) => {
+      totalPantries = validHomes.reduce((acc, home: any) => {
         const count = Array.isArray(home?.pantries) ? home.pantries.length : 0;
         return acc + count;
       }, 0);
@@ -405,7 +485,7 @@ export function useHomeManagement() {
 
     const result = {
       totalHomes: validHomes.length,
-      totalMembers: validHomes.reduce((acc, home) => {
+      totalMembers: validHomes.reduce((acc, home: any) => {
         const count = Array.isArray(home?.members) ? home.members.length : 0;
         return acc + count;
       }, 0),
@@ -416,7 +496,7 @@ export function useHomeManagement() {
   }, [homes]);
   // Computed value for current default home
   const defaultHome = useMemo(() => {
-    return homes.find(home => home.id === selectedHomeId) || null;
+    return homes?.find((home: any) => home.id === selectedHomeId) || null;
   }, [homes, selectedHomeId]);
 
   const isSynced = selectedHomeId === remoteDefaultHomeId;

@@ -1,4 +1,4 @@
-import React, {useMemo} from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -6,32 +6,33 @@ import {
   TouchableOpacity,
   RefreshControl,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import {Icon} from '#utils';
-import {SwipeableItem} from '#components';
-import {usePantryItems, useDefaultHome, useAppNavigation} from '#hooks';
-import {useGetHomeQuery, useAddItemToShoppingListMutation} from '#generated';
-import {commonStyles} from '#styles';
-import {useStore} from '#store';
+import { Icon } from '#utils';
+import { SwipeableItem, ScreenHeader } from '#components';
+import { usePantryItems, useDefaultHome, useAppNavigation } from '#hooks';
+import { useGetHomeQuery, useAddItemToShoppingListMutation } from '#generated';
+import { commonStyles } from '#styles';
+import { useStore } from '#store';
 
 export const LowStockItems: React.FC = () => {
-  const {theme} = useUnistyles();
+  const { theme } = useUnistyles();
 
-  const {navigate, goBack, navigateTo} = useAppNavigation();
+  const { goBack, navigateTo } = useAppNavigation();
 
   const [refreshing, setRefreshing] = React.useState(false);
 
-  const {selectedHomeId, getDefaultPantry} = useDefaultHome();
+  const { selectedHomeId, getDefaultPantry } = useDefaultHome();
   const isLoggingOut = useStore(state => state.isLoggingOut);
-  const {data: homeData} = useGetHomeQuery({
-    variables: {homeId: selectedHomeId ?? ''},
+  const { data: homeData } = useGetHomeQuery({
+    variables: { homeId: selectedHomeId ?? '' },
     skip: !selectedHomeId || isLoggingOut,
   });
 
   const pantry = getDefaultPantry(homeData);
-  const {items, refetch} = usePantryItems(pantry?.id);
+  const { items, loading, refetch } = usePantryItems(pantry?.id);
   const [addToShoppingList] = useAddItemToShoppingListMutation();
 
   const lowStockItems = useMemo(() => {
@@ -52,7 +53,7 @@ export const LowStockItems: React.FC = () => {
   const handleAddToList = async (itemId: string) => {
     try {
       await addToShoppingList({
-        variables: {input: {shoppingListId: '', itemId}},
+        variables: { input: { shoppingListId: '', itemId } },
       });
       Alert.alert('Success', 'Item added to shopping list');
     } catch (error) {
@@ -62,15 +63,10 @@ export const LowStockItems: React.FC = () => {
 
   return (
     <View style={commonStyles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => goBack()}>
-          <Icon name="arrow-back" size={24} color={theme.colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={[commonStyles.title, styles.headerTitle]}>
-          Low Stock Items
-        </Text>
-        <View style={styles.placeholder} />
-      </View>
+      <ScreenHeader
+        title="Low Stock Items"
+        onBack={goBack}
+      />
 
       <ScrollView
         style={styles.scrollView}
@@ -82,8 +78,13 @@ export const LowStockItems: React.FC = () => {
             colors={[theme.colors.primary]}
             tintColor={theme.colors.primary}
           />
-        }>
-        {lowStockItems.length === 0 ? (
+        }
+      >
+        {loading || !items ? (
+          <View style={[commonStyles.center, styles.loadingContainer]}>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+          </View>
+        ) : lowStockItems.length === 0 ? (
           <View style={[commonStyles.center, styles.emptyState]}>
             <Icon name="inventory" size={64} color={theme.colors.success} />
             <Text style={[commonStyles.body, styles.emptyText]}>
@@ -94,7 +95,8 @@ export const LowStockItems: React.FC = () => {
           lowStockItems.map(item => (
             <SwipeableItem
               key={item.id}
-              onPress={() => navigateTo.pantryItemDetail({itemId: item.id})}>
+              onPress={() => navigateTo.pantryItemDetail({ itemId: item.id })}
+            >
               <View style={[commonStyles.card, styles.itemCard]}>
                 <View style={styles.itemInfo}>
                   <Text style={styles.itemName}>{item.item?.name}</Text>
@@ -105,7 +107,8 @@ export const LowStockItems: React.FC = () => {
                 </View>
                 <TouchableOpacity
                   onPress={() => handleAddToList(item.id)}
-                  style={styles.actionButton}>
+                  style={styles.actionButton}
+                >
                   <Icon
                     name="add-shopping-cart"
                     size={20}
@@ -122,19 +125,6 @@ export const LowStockItems: React.FC = () => {
 };
 
 const styles = StyleSheet.create(theme => ({
-  header: {
-    ...commonStyles.rowSpaceBetween,
-    padding: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  headerTitle: {
-    flex: 1,
-    textAlign: 'center',
-  },
-  placeholder: {
-    width: 24,
-  },
   scrollView: {
     flex: 1,
   },
@@ -148,6 +138,9 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.md,
     marginBottom: theme.spacing.lg,
     textAlign: 'center',
+  },
+  loadingContainer: {
+    padding: theme.spacing['2xl'],
   },
   itemCard: {
     ...commonStyles.rowSpaceBetween,

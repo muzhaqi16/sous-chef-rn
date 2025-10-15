@@ -1,16 +1,16 @@
-import {useState, useCallback} from 'react';
-import {Alert} from 'react-native';
-import {useMutation} from '@apollo/client';
-import {validateImageFile, getMimeTypeFromUri} from '#utils/imageValidation';
+import { useState, useCallback } from 'react';
+import { Alert } from 'react-native';
+import { validateImageFile, getMimeTypeFromUri } from '#utils/imageValidation';
 import {
-  CreateImageUploadUrlDocument,
-  ConfirmProfileImageUploadDocument,
-  ConfirmItemImageUploadDocument,
-  UpdateProfileAvatarDocument,
-  UpdateProfileCoverDocument,
-  UpdateItemImageDocument,
+  useCreateImageUploadUrlMutation,
+  useConfirmProfileImageUploadMutation,
+  useConfirmItemImageUploadMutation,
+  useUpdateProfileAvatarMutation,
+  useUpdateProfileCoverMutation,
+  useUpdateItemImageMutation,
+  ImageUploadPurpose,
 } from '#generated';
-import {MAX_PROFILE_SIZE} from '#utils/imageValidation';
+import { MAX_PROFILE_SIZE } from '#utils/imageValidation';
 
 export interface ImageFile {
   uri: string;
@@ -34,18 +34,18 @@ export const useImageUpload = () => {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  const [createUploadUrl] = useMutation(CreateImageUploadUrlDocument);
-  const [confirmProfileUpload] = useMutation(ConfirmProfileImageUploadDocument);
-  const [confirmItemUpload] = useMutation(ConfirmItemImageUploadDocument);
-  const [updateProfileAvatar] = useMutation(UpdateProfileAvatarDocument);
-  const [updateProfileCover] = useMutation(UpdateProfileCoverDocument);
-  const [updateItemImage] = useMutation(UpdateItemImageDocument);
+  const [createUploadUrl] = useCreateImageUploadUrlMutation();
+  const [confirmProfileUpload] = useConfirmProfileImageUploadMutation();
+  const [confirmItemUpload] = useConfirmItemImageUploadMutation();
+  const [updateProfileAvatar] = useUpdateProfileAvatarMutation();
+  const [updateProfileCover] = useUpdateProfileCoverMutation();
+  const [updateItemImage] = useUpdateItemImageMutation();
 
   const uploadToMinIO = useCallback(
     async (
       file: ImageFile,
       uploadData: PresignedUploadData,
-      onProgress?: (progress: number) => void,
+      _onProgress?: (progress: number) => void,
     ): Promise<void> => {
       const mimeType = file.type || getMimeTypeFromUri(file.uri);
 
@@ -73,17 +73,17 @@ export const useImageUpload = () => {
   const uploadProfileImage = useCallback(
     async (
       file: ImageFile,
-      purpose: 'PROFILE_AVATAR' | 'PROFILE_COVER',
+      purpose: ImageUploadPurpose = ImageUploadPurpose.ProfileAvatar,
       options: ImageUploadOptions = {},
     ): Promise<string | null> => {
-      const {onProgress, onSuccess, onError} = options;
+      const { onProgress, onSuccess, onError } = options;
 
       try {
         setUploading(true);
         setProgress(0);
 
         // Ensure we have file size - critical for validation
-        let fileToUpload = {...file};
+        let fileToUpload = { ...file };
         if (!fileToUpload.fileSize) {
           console.warn('File size missing, attempting to determine it...');
           try {
@@ -103,42 +103,38 @@ export const useImageUpload = () => {
         // Step 1: Get presigned URL
         const mimeType =
           fileToUpload.type || getMimeTypeFromUri(fileToUpload.uri);
-        const {data: uploadData} = await createUploadUrl({
+        const { data: uploadData } = await createUploadUrl({
           variables: {
             mime: mimeType,
             purpose: purpose,
           },
         });
 
-        if (!uploadData?.createImageUploadUrl) {
+        const uploadResult = uploadData?.createImageUploadUrl;
+        if (!uploadResult) {
           throw new Error('Failed to get upload URL');
         }
 
         onProgress?.(30);
 
         // Step 2: Upload to MinIO
-        await uploadToMinIO(
-          fileToUpload,
-          uploadData.createImageUploadUrl,
-          uploadProgress => {
-            onProgress?.(30 + uploadProgress * 0.5);
-          },
-        );
+        await uploadToMinIO(fileToUpload, uploadResult, uploadProgress => {
+          onProgress?.(30 + uploadProgress * 0.5);
+        });
 
         onProgress?.(80);
 
         // Step 3: Confirm upload
-        const {data: confirmData} = await confirmProfileUpload({
+        const { data: confirmData } = await confirmProfileUpload({
           variables: {
-            key: uploadData.createImageUploadUrl.key,
+            key: uploadResult.key,
           },
         });
 
-        if (!confirmData?.confirmProfileImageUpload) {
+        const finalImageUrl = confirmData?.confirmProfileImageUpload;
+        if (!finalImageUrl) {
           throw new Error('Failed to confirm upload');
         }
-
-        const finalImageUrl = confirmData.confirmProfileImageUpload;
 
         onProgress?.(100);
         onSuccess?.(finalImageUrl);
@@ -176,7 +172,7 @@ export const useImageUpload = () => {
       itemId: string,
       options: ImageUploadOptions = {},
     ): Promise<string | null> => {
-      const {onProgress, onSuccess, onError} = options;
+      const { onProgress, onSuccess, onError } = options;
 
       try {
         setUploading(true);
@@ -190,44 +186,40 @@ export const useImageUpload = () => {
         // Step 1: Get presigned URL
         const mimeType = file.type || getMimeTypeFromUri(file.uri);
 
-        const {data: uploadData} = await createUploadUrl({
+        const { data: uploadData } = await createUploadUrl({
           variables: {
             mime: mimeType,
-            purpose: 'ITEM_IMAGE',
+            purpose: ImageUploadPurpose.ItemImage,
             itemId: itemId,
           },
         });
 
-        if (!uploadData?.createImageUploadUrl) {
+        const uploadResult = uploadData?.createImageUploadUrl;
+        if (!uploadResult) {
           throw new Error('Failed to get upload URL');
         }
 
         onProgress?.(30);
 
         // Step 2: Upload to MinIO
-        await uploadToMinIO(
-          file,
-          uploadData.createImageUploadUrl,
-          uploadProgress => {
-            onProgress?.(30 + uploadProgress * 0.5);
-          },
-        );
+        await uploadToMinIO(file, uploadResult, uploadProgress => {
+          onProgress?.(30 + uploadProgress * 0.5);
+        });
 
         onProgress?.(80);
 
         // Step 3: Confirm upload
-        const {data: confirmData} = await confirmItemUpload({
+        const { data: confirmData } = await confirmItemUpload({
           variables: {
             itemId: itemId,
-            key: uploadData.createImageUploadUrl.key,
+            key: uploadResult.key,
           },
         });
 
-        if (!confirmData?.confirmItemImageUpload) {
+        const finalImageUrl = confirmData?.confirmItemImageUpload;
+        if (!finalImageUrl) {
           throw new Error('Failed to confirm upload');
         }
-
-        const finalImageUrl = confirmData.confirmItemImageUpload;
         onProgress?.(100);
         onSuccess?.(finalImageUrl);
 
@@ -250,10 +242,11 @@ export const useImageUpload = () => {
   const updateProfileAvatarUrl = useCallback(
     async (avatarUrl: string) => {
       try {
-        const {data} = await updateProfileAvatar({
-          variables: {avatarUrl},
+        const { data } = await updateProfileAvatar({
+          variables: { avatarUrl },
         });
-        return data?.updateProfileAvatar;
+        const result = data?.updateProfileAvatar;
+        return result || null;
       } catch (error) {
         console.error('Update profile avatar failed:', error);
         Alert.alert('Update Failed', 'Failed to update profile avatar');
@@ -266,10 +259,11 @@ export const useImageUpload = () => {
   const updateProfileCoverUrl = useCallback(
     async (coverImageUrl: string) => {
       try {
-        const {data} = await updateProfileCover({
-          variables: {coverImageUrl},
+        const { data } = await updateProfileCover({
+          variables: { coverImageUrl },
         });
-        return data?.updateProfileCover;
+        const result = data?.updateProfileCover;
+        return result || null;
       } catch (error) {
         console.error('Update profile cover failed:', error);
         Alert.alert('Update Failed', 'Failed to update profile cover');
@@ -282,13 +276,14 @@ export const useImageUpload = () => {
   const updateItemImageUrl = useCallback(
     async (itemId: string, imageUrl: string) => {
       try {
-        const {data} = await updateItemImage({
+        const { data } = await updateItemImage({
           variables: {
             id: itemId,
             imageUrl,
           },
         });
-        return data?.updateItemImage;
+        const result = data?.updateItemImage;
+        return result || null;
       } catch (error) {
         console.error('Update item image failed:', error);
         Alert.alert('Update Failed', 'Failed to update item image');

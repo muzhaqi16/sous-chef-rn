@@ -6,7 +6,7 @@ import {
   TextInputProps,
   StyleSheet,
 } from 'react-native';
-import {useUnistyles} from 'react-native-unistyles';
+import { useUnistyles } from 'react-native-unistyles';
 
 interface FormInputProps extends Omit<TextInputProps, 'style'> {
   label: string;
@@ -24,8 +24,8 @@ export const FormInput: React.FC<FormInputProps> = ({
   inputStyle,
   ...textInputProps
 }) => {
-  const {theme} = useUnistyles();
-  
+  const { theme } = useUnistyles();
+
   const styles = StyleSheet.create({
     container: {
       marginBottom: 16,

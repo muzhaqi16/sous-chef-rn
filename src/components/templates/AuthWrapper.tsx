@@ -1,29 +1,27 @@
-import React, {ReactNode} from 'react';
-import {
-  SafeAreaView,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  View,
-} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
+import React, { ReactNode } from 'react';
+import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { StyleSheet } from 'react-native-unistyles';
 
 interface AuthWrapperProps {
   children: ReactNode;
 }
 
-export const AuthWrapper = ({children}: AuthWrapperProps) => {
-  const keyboardVerticalOffset = Platform.select({ios: 64, android: 0});
+export const AuthWrapper = ({ children }: AuthWrapperProps) => {
+  const keyboardVerticalOffset = Platform.select({ ios: 64, android: 0 });
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={keyboardVerticalOffset}>
+        keyboardVerticalOffset={keyboardVerticalOffset}
+      >
         <ScrollView
           contentContainerStyle={styles.scrollContainer}
-          keyboardShouldPersistTaps="handled">
+          keyboardShouldPersistTaps="handled"
+        >
           <View style={styles.inner}>{children}</View>
         </ScrollView>
       </KeyboardAvoidingView>
