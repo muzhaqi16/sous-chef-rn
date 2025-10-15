@@ -335,10 +335,23 @@ export enum CollaboratorStatus {
   Suspended = 'SUSPENDED',
 }
 
+export type CompleteShoppingListInput = {
+  completedShopDate?: InputMaybe<Scalars['DateTime']['input']>;
+  totalCost?: InputMaybe<Scalars['Float']['input']>;
+};
+
 export type Connection = {
   edges: Array<Edge>;
   pageInfo: PageInfo;
   totalCount: Scalars['Int']['output'];
+};
+
+export type ConvertedUnitValue = {
+  __typename?: 'ConvertedUnitValue';
+  conversionFactor: Scalars['Float']['output'];
+  fromUnit: Unit;
+  toUnit: Unit;
+  value: Scalars['Float']['output'];
 };
 
 export type ConvertedValue = {
@@ -364,6 +377,15 @@ export type CookingLog = {
   wouldMakeAgain?: Maybe<Scalars['Boolean']['output']>;
 };
 
+export type CookingStats = {
+  __typename?: 'CookingStats';
+  averageRating?: Maybe<Scalars['Float']['output']>;
+  favoriteRecipes: Array<Recipe>;
+  recentCookingLogs: Array<CookingLog>;
+  totalCookingSessions: Scalars['Int']['output'];
+  totalRecipesCooked: Scalars['Int']['output'];
+};
+
 export type CreateBrandInput = {
   description?: InputMaybe<Scalars['String']['input']>;
   name: Scalars['String']['input'];
@@ -379,6 +401,19 @@ export type CreateCategoryInput = {
   slug?: InputMaybe<Scalars['String']['input']>;
   type?: InputMaybe<CategoryType>;
   visibility?: InputMaybe<Visibility>;
+};
+
+export type CreateCookingLogInput = {
+  actualCookTime?: InputMaybe<Scalars['Int']['input']>;
+  actualPrepTime?: InputMaybe<Scalars['Int']['input']>;
+  cookedAt?: InputMaybe<Scalars['DateTime']['input']>;
+  difficulty?: InputMaybe<Difficulty>;
+  imageUrl?: InputMaybe<Scalars['String']['input']>;
+  notes?: InputMaybe<Scalars['String']['input']>;
+  rating?: InputMaybe<Scalars['Int']['input']>;
+  recipeId: Scalars['ID']['input'];
+  servingsMade?: InputMaybe<Scalars['Int']['input']>;
+  wouldMakeAgain?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
 export type CreateCurrencyInput = {
@@ -444,6 +479,13 @@ export type CreateDeviceInput = {
   usedMemory?: InputMaybe<Scalars['String']['input']>;
   userAgent?: InputMaybe<Scalars['String']['input']>;
   userId: Scalars['ID']['input'];
+};
+
+export type CreateFromTemplateInput = {
+  name?: InputMaybe<Scalars['String']['input']>;
+  plannedShopDate?: InputMaybe<Scalars['DateTime']['input']>;
+  targetStoreId?: InputMaybe<Scalars['String']['input']>;
+  templateId: Scalars['ID']['input'];
 };
 
 export type CreateHomeInput = {
@@ -1329,9 +1371,7 @@ export type ItemAvailability = {
 export type ItemBrand = {
   __typename?: 'ItemBrand';
   brand?: Maybe<Brand>;
-  createdAt?: Maybe<Scalars['DateTime']['output']>;
   id: Scalars['ID']['output'];
-  isPrimary?: Maybe<Scalars['Boolean']['output']>;
   item?: Maybe<Item>;
   sku?: Maybe<Scalars['String']['output']>;
 };
@@ -1778,6 +1818,11 @@ export type LoginMethodStat = {
   method: LoginMethod;
 };
 
+export type MarkAsTemplateInput = {
+  saveItems?: InputMaybe<Scalars['Boolean']['input']>;
+  templateName: Scalars['String']['input'];
+};
+
 export enum MatchType {
   Category = 'CATEGORY',
   Exact = 'EXACT',
@@ -2009,16 +2054,20 @@ export type Mutation = {
   addUserAddress: UserAddress;
   addWarning: UserModeration;
   adminDeleteUser: Scalars['Boolean']['output'];
+  archiveShoppingList: ShoppingList;
   banUser: UserModeration;
   bulkCreateItems: BulkCreateItemsResponse;
   bulkDeleteItems: BulkOperationSummary;
   bulkUpdateItems: BulkOperationSummary;
+  cancelRecurring: ShoppingList;
   categorizeItem: ItemCategory;
   cleanupDeletedDevices: Scalars['Int']['output'];
   cleanupStaleDevices: Scalars['Int']['output'];
+  clearReminder: ShoppingList;
   /** Mark user onboarding as complete and send welcome email */
   completeOnboarding: Scalars['Boolean']['output'];
   completeReview: UserModeration;
+  completeShoppingList: ShoppingList;
   confirmItemImageUpload: Scalars['String']['output'];
   confirmProfileImageUpload: Scalars['String']['output'];
   createBrand: Brand;
@@ -2027,6 +2076,7 @@ export type Mutation = {
   createCategory: Category;
   createCurrency: Currency;
   createDevice: Device;
+  createFromTemplate: ShoppingList;
   createHome: Home;
   createImageUploadUrl: PresignPayload;
   createItem: Item;
@@ -2051,6 +2101,7 @@ export type Mutation = {
   deleteBrand: Brand;
   deleteBulkPurchases: Scalars['Boolean']['output'];
   deleteCategory: Scalars['Boolean']['output'];
+  deleteCookingLog: Scalars['Boolean']['output'];
   deleteCurrency: Scalars['Boolean']['output'];
   deleteDevice: Device;
   deleteExpiredNotifications: Scalars['Int']['output'];
@@ -2072,6 +2123,7 @@ export type Mutation = {
   flagMultipleLoginsAsRisky: Array<LoginHistory>;
   /** Request a password reset email */
   forgotPassword: ForgotPasswordResponse;
+  generateNextRecurringList: ShoppingList;
   generateShoppingListShareCode: ShoppingList;
   hardDeleteDevice: Scalars['Boolean']['output'];
   importItemsFromCSV: ImportItemsResponse;
@@ -2083,8 +2135,10 @@ export type Mutation = {
   joinHomeByCode: Membership;
   joinShoppingListByShareCode: ShoppingList;
   leaveHome: Scalars['Boolean']['output'];
+  logCooking: CookingLog;
   login: AuthPayload;
   markAllNotificationsAsRead: Array<Notification>;
+  markAsTemplate: ShoppingList;
   markItemAsWaste: PantryItem;
   markItemPurchased: ShoppingListItem;
   markLoginAsReviewed: LoginHistory;
@@ -2114,6 +2168,7 @@ export type Mutation = {
   removePushToken: Device;
   removeRestrictions: UserModeration;
   removeShoppingListCollaborator: Scalars['Boolean']['output'];
+  removeUnitConversion: Unit;
   reorderShoppingListItems: Array<ShoppingListItem>;
   resendVerificationEmail: Scalars['Boolean']['output'];
   /** Reset password using token from email */
@@ -2128,6 +2183,9 @@ export type Mutation = {
   setDefaultShoppingList: ShoppingList;
   setItemBrand: Item;
   setItemCategories: Item;
+  setReminder: ShoppingList;
+  setupRecurring: ShoppingList;
+  setupUnitConversion: Unit;
   shareShoppingList: ShoppingList;
   submitAppeal: UserModeration;
   suspendUser: UserModeration;
@@ -2140,12 +2198,14 @@ export type Mutation = {
   trustMultipleDevices: Array<Device>;
   unbanUser: UserModeration;
   uncategorizeItem: Scalars['Boolean']['output'];
+  uncompleteShoppingList: ShoppingList;
   unsuspendUser: UserModeration;
   untrustDevice: Device;
   untrustMultipleDevices: Array<Device>;
   updateBrand: Brand;
   updateCategory: Category;
   updateCollaboratorRole: Scalars['Boolean']['output'];
+  updateCookingLog: CookingLog;
   updateCurrency: Currency;
   updateDevice: Device;
   updateDeviceBatteryInfo: Device;
@@ -2260,6 +2320,10 @@ export type MutationAdminDeleteUserArgs = {
   id: Scalars['ID']['input'];
 };
 
+export type MutationArchiveShoppingListArgs = {
+  id: Scalars['ID']['input'];
+};
+
 export type MutationBanUserArgs = {
   input: BanUserInput;
 };
@@ -2278,6 +2342,10 @@ export type MutationBulkUpdateItemsArgs = {
   input: UpdateItemInput;
 };
 
+export type MutationCancelRecurringArgs = {
+  id: Scalars['ID']['input'];
+};
+
 export type MutationCategorizeItemArgs = {
   categoryId: Scalars['ID']['input'];
   isPrimary?: InputMaybe<Scalars['Boolean']['input']>;
@@ -2293,10 +2361,19 @@ export type MutationCleanupStaleDevicesArgs = {
   userId: Scalars['ID']['input'];
 };
 
+export type MutationClearReminderArgs = {
+  id: Scalars['ID']['input'];
+};
+
 export type MutationCompleteReviewArgs = {
   newStatus: ModerationStatus;
   reviewNotes?: InputMaybe<Scalars['String']['input']>;
   userId: Scalars['ID']['input'];
+};
+
+export type MutationCompleteShoppingListArgs = {
+  id: Scalars['ID']['input'];
+  input: CompleteShoppingListInput;
 };
 
 export type MutationConfirmItemImageUploadArgs = {
@@ -2330,6 +2407,10 @@ export type MutationCreateCurrencyArgs = {
 
 export type MutationCreateDeviceArgs = {
   input: CreateDeviceInput;
+};
+
+export type MutationCreateFromTemplateArgs = {
+  input: CreateFromTemplateInput;
 };
 
 export type MutationCreateHomeArgs = {
@@ -2423,6 +2504,10 @@ export type MutationDeleteCategoryArgs = {
   id: Scalars['ID']['input'];
 };
 
+export type MutationDeleteCookingLogArgs = {
+  id: Scalars['ID']['input'];
+};
+
 export type MutationDeleteCurrencyArgs = {
   id: Scalars['ID']['input'];
 };
@@ -2505,6 +2590,10 @@ export type MutationForgotPasswordArgs = {
   email: Scalars['String']['input'];
 };
 
+export type MutationGenerateNextRecurringListArgs = {
+  id: Scalars['ID']['input'];
+};
+
 export type MutationGenerateShoppingListShareCodeArgs = {
   id: Scalars['ID']['input'];
 };
@@ -2551,8 +2640,17 @@ export type MutationLeaveHomeArgs = {
   homeId: Scalars['ID']['input'];
 };
 
+export type MutationLogCookingArgs = {
+  input: CreateCookingLogInput;
+};
+
 export type MutationLoginArgs = {
   input: LoginInput;
+};
+
+export type MutationMarkAsTemplateArgs = {
+  id: Scalars['ID']['input'];
+  input: MarkAsTemplateInput;
 };
 
 export type MutationMarkItemAsWasteArgs = {
@@ -2679,6 +2777,10 @@ export type MutationRemoveShoppingListCollaboratorArgs = {
   id: Scalars['ID']['input'];
 };
 
+export type MutationRemoveUnitConversionArgs = {
+  unitId: Scalars['ID']['input'];
+};
+
 export type MutationReorderShoppingListItemsArgs = {
   input: ReorderShoppingListItemsInput;
 };
@@ -2736,6 +2838,22 @@ export type MutationSetItemCategoriesArgs = {
   itemId: Scalars['ID']['input'];
 };
 
+export type MutationSetReminderArgs = {
+  id: Scalars['ID']['input'];
+  input: SetReminderInput;
+};
+
+export type MutationSetupRecurringArgs = {
+  id: Scalars['ID']['input'];
+  input: SetupRecurringInput;
+};
+
+export type MutationSetupUnitConversionArgs = {
+  baseUnitId: Scalars['ID']['input'];
+  conversionFactor: Scalars['Float']['input'];
+  unitId: Scalars['ID']['input'];
+};
+
 export type MutationShareShoppingListArgs = {
   id: Scalars['ID']['input'];
   input: ShareShoppingListInput;
@@ -2791,6 +2909,10 @@ export type MutationUncategorizeItemArgs = {
   itemId: Scalars['ID']['input'];
 };
 
+export type MutationUncompleteShoppingListArgs = {
+  id: Scalars['ID']['input'];
+};
+
 export type MutationUnsuspendUserArgs = {
   userId: Scalars['ID']['input'];
 };
@@ -2816,6 +2938,11 @@ export type MutationUpdateCollaboratorRoleArgs = {
   collaboratorId: Scalars['ID']['input'];
   role: CollaboratorRole;
   shoppingListId: Scalars['ID']['input'];
+};
+
+export type MutationUpdateCookingLogArgs = {
+  id: Scalars['ID']['input'];
+  input: UpdateCookingLogInput;
 };
 
 export type MutationUpdateCurrencyArgs = {
@@ -3605,6 +3732,7 @@ export type Query = {
   _empty?: Maybe<Scalars['String']['output']>;
   activeDevices: Array<Device>;
   activeModerations: Array<UserModeration>;
+  archivedShoppingLists: Array<ShoppingList>;
   autocompleteCategories: AutocompleteCategoryResponse;
   autocompleteItems?: Maybe<AutocompleteResponse>;
   brand?: Maybe<Brand>;
@@ -3614,6 +3742,9 @@ export type Query = {
   categoryBySlug?: Maybe<Category>;
   checkItemAvailability?: Maybe<Array<ItemAvailability>>;
   compareItemPrices?: Maybe<Array<StorePriceComparison>>;
+  completedShoppingLists: Array<ShoppingList>;
+  convertUnit?: Maybe<ConvertedUnitValue>;
+  cookingLog?: Maybe<CookingLog>;
   currencies: Array<Currency>;
   currency?: Maybe<Currency>;
   currencyByCode?: Maybe<Currency>;
@@ -3628,6 +3759,8 @@ export type Query = {
   emulatedDevices: Array<Device>;
   expiringItems: Array<PantryItem>;
   failedLoginAttempts: Array<LoginHistory>;
+  frequentlyBoughtItems: Array<ShoppingListItem>;
+  getConvertibleUnits: Array<Unit>;
   getDefaultHome?: Maybe<Home>;
   hasUrgentNotifications: Scalars['Boolean']['output'];
   home?: Maybe<Home>;
@@ -3660,6 +3793,8 @@ export type Query = {
   membershipStats: MembershipStats;
   mobileDevices: Array<Device>;
   myCollaboratedShoppingLists: Array<ShoppingList>;
+  myCookingLogs: Array<CookingLog>;
+  myCookingStats?: Maybe<CookingStats>;
   myDevices: Array<Device>;
   myHomes?: Maybe<Array<Home>>;
   myInviteLogs: Array<InviteLog>;
@@ -3697,8 +3832,10 @@ export type Query = {
   purchasesByStore: Array<Purchase>;
   recentItems?: Maybe<Array<Item>>;
   recentNotifications: Array<Notification>;
+  recipeCookingLogs: Array<CookingLog>;
   recommendedItems?: Maybe<Array<ItemSuggestion>>;
   recommendedStores: Array<Store>;
+  recurringShoppingLists: Array<ShoppingList>;
   relatedItems?: Maybe<RelatedItemsResponse>;
   rootBrands: Array<Brand>;
   rootCategories: Array<Category>;
@@ -3714,6 +3851,7 @@ export type Query = {
   shoppingListCollaborators: Array<ShoppingListCollaborator>;
   shoppingListItem?: Maybe<ShoppingListItem>;
   shoppingListItems: Array<ShoppingListItem>;
+  shoppingListTemplates: Array<ShoppingList>;
   shoppingLists: Array<ShoppingList>;
   staleDevices: Array<Device>;
   store?: Maybe<Store>;
@@ -3722,6 +3860,7 @@ export type Query = {
   storeWithPriceHistory?: Maybe<Store>;
   storeWithPurchases?: Maybe<Store>;
   stores: Array<Store>;
+  suggestedItemsForList: Array<ItemSuggestion>;
   suggestedRecipes: Array<Recipe>;
   suspiciousDevices: Array<Device>;
   suspiciousInviteActivity: Array<InviteLog>;
@@ -3792,6 +3931,16 @@ export type QueryCompareItemPricesArgs = {
   storeIds?: InputMaybe<Array<Scalars['String']['input']>>;
 };
 
+export type QueryConvertUnitArgs = {
+  fromUnitId: Scalars['ID']['input'];
+  toUnitId: Scalars['ID']['input'];
+  value: Scalars['Float']['input'];
+};
+
+export type QueryCookingLogArgs = {
+  id: Scalars['ID']['input'];
+};
+
 export type QueryCurrenciesArgs = {
   isActive?: InputMaybe<Scalars['Boolean']['input']>;
 };
@@ -3850,6 +3999,14 @@ export type QueryExpiringItemsArgs = {
 export type QueryFailedLoginAttemptsArgs = {
   hours?: InputMaybe<Scalars['Int']['input']>;
   userId: Scalars['ID']['input'];
+};
+
+export type QueryFrequentlyBoughtItemsArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type QueryGetConvertibleUnitsArgs = {
+  unitId: Scalars['ID']['input'];
 };
 
 export type QueryHomeArgs = {
@@ -3969,6 +4126,11 @@ export type QueryMembershipStatsArgs = {
 
 export type QueryMobileDevicesArgs = {
   userId: Scalars['ID']['input'];
+};
+
+export type QueryMyCookingLogsArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type QueryMyDevicesArgs = {
@@ -4103,6 +4265,12 @@ export type QueryRecentNotificationsArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
 };
 
+export type QueryRecipeCookingLogsArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
+  recipeId: Scalars['ID']['input'];
+};
+
 export type QueryRecommendedItemsArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
   userId?: InputMaybe<Scalars['String']['input']>;
@@ -4190,6 +4358,10 @@ export type QueryStoreWithPriceHistoryArgs = {
 export type QueryStoreWithPurchasesArgs = {
   id: Scalars['ID']['input'];
   limit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type QuerySuggestedItemsForListArgs = {
+  shoppingListId: Scalars['ID']['input'];
 };
 
 export type QuerySuspiciousDevicesArgs = {
@@ -4495,6 +4667,17 @@ export type SearchItemsInput = {
   pagination?: InputMaybe<PaginationInput>;
   query: Scalars['String']['input'];
   sort?: InputMaybe<ItemSortInput>;
+};
+
+export type SetReminderInput = {
+  reminderDate: Scalars['DateTime']['input'];
+  reminderEnabled?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+export type SetupRecurringInput = {
+  nextRecurringDate?: InputMaybe<Scalars['DateTime']['input']>;
+  recurringInterval: Scalars['Int']['input'];
+  recurringPattern: RecurringPattern;
 };
 
 export type ShareShoppingListInput = {
@@ -5204,6 +5387,17 @@ export type UpdateCategoryInput = {
   slug?: InputMaybe<Scalars['String']['input']>;
   sortOrder?: InputMaybe<Scalars['Int']['input']>;
   visibility?: InputMaybe<Visibility>;
+};
+
+export type UpdateCookingLogInput = {
+  actualCookTime?: InputMaybe<Scalars['Int']['input']>;
+  actualPrepTime?: InputMaybe<Scalars['Int']['input']>;
+  difficulty?: InputMaybe<Difficulty>;
+  imageUrl?: InputMaybe<Scalars['String']['input']>;
+  notes?: InputMaybe<Scalars['String']['input']>;
+  rating?: InputMaybe<Scalars['Int']['input']>;
+  servingsMade?: InputMaybe<Scalars['Int']['input']>;
+  wouldMakeAgain?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
 export type UpdateCurrencyInput = {
@@ -7241,8 +7435,6 @@ export type UnitFragmentFragment = {
 export type BrandFragmentFragment = {
   __typename?: 'ItemBrand';
   id: string;
-  isPrimary?: boolean | null | undefined;
-  createdAt?: string | null | undefined;
   brand?:
     | {
         __typename?: 'Brand';
@@ -7349,8 +7541,6 @@ export type ItemFragmentFragment = {
   brands: Array<{
     __typename?: 'ItemBrand';
     id: string;
-    isPrimary?: boolean | null | undefined;
-    createdAt?: string | null | undefined;
     brand?:
       | {
           __typename?: 'Brand';
@@ -7528,8 +7718,6 @@ export type PantryItemFragmentFragment = {
     brands: Array<{
       __typename?: 'ItemBrand';
       id: string;
-      isPrimary?: boolean | null | undefined;
-      createdAt?: string | null | undefined;
       brand?:
         | {
             __typename?: 'Brand';
@@ -7823,8 +8011,6 @@ export type PantryFragmentFragment = {
           brands: Array<{
             __typename?: 'ItemBrand';
             id: string;
-            isPrimary?: boolean | null | undefined;
-            createdAt?: string | null | undefined;
             brand?:
               | {
                   __typename?: 'Brand';
@@ -8461,8 +8647,6 @@ export type HomeFragmentFragment = {
                 brands: Array<{
                   __typename?: 'ItemBrand';
                   id: string;
-                  isPrimary?: boolean | null | undefined;
-                  createdAt?: string | null | undefined;
                   brand?:
                     | {
                         __typename?: 'Brand';
@@ -8914,8 +9098,6 @@ export type GetHomeQuery = {
                       brands: Array<{
                         __typename?: 'ItemBrand';
                         id: string;
-                        isPrimary?: boolean | null | undefined;
-                        createdAt?: string | null | undefined;
                         brand?:
                           | {
                               __typename?: 'Brand';
@@ -9815,8 +9997,6 @@ export type UpdateHomeMutation = {
                   brands: Array<{
                     __typename?: 'ItemBrand';
                     id: string;
-                    isPrimary?: boolean | null | undefined;
-                    createdAt?: string | null | undefined;
                     brand?:
                       | {
                           __typename?: 'Brand';
@@ -10232,8 +10412,6 @@ export type DeleteHomeMutation = {
                   brands: Array<{
                     __typename?: 'ItemBrand';
                     id: string;
-                    isPrimary?: boolean | null | undefined;
-                    createdAt?: string | null | undefined;
                     brand?:
                       | {
                           __typename?: 'Brand';
@@ -11025,8 +11203,6 @@ export type GetDefaultHomeQuery = {
                       brands: Array<{
                         __typename?: 'ItemBrand';
                         id: string;
-                        isPrimary?: boolean | null | undefined;
-                        createdAt?: string | null | undefined;
                         brand?:
                           | {
                               __typename?: 'Brand';
@@ -12024,8 +12200,6 @@ export type GetPantryItemsQuery = {
       brands: Array<{
         __typename?: 'ItemBrand';
         id: string;
-        isPrimary?: boolean | null | undefined;
-        createdAt?: string | null | undefined;
         brand?:
           | {
               __typename?: 'Brand';
@@ -12219,8 +12393,6 @@ export type GetPantryItemQuery = {
       brands: Array<{
         __typename?: 'ItemBrand';
         id: string;
-        isPrimary?: boolean | null | undefined;
-        createdAt?: string | null | undefined;
         brand?:
           | {
               __typename?: 'Brand';
@@ -12414,8 +12586,6 @@ export type AddItemToPantryMutation = {
       brands: Array<{
         __typename?: 'ItemBrand';
         id: string;
-        isPrimary?: boolean | null | undefined;
-        createdAt?: string | null | undefined;
         brand?:
           | {
               __typename?: 'Brand';
@@ -12666,8 +12836,6 @@ export type UpdatePantryItemMutation = {
       brands: Array<{
         __typename?: 'ItemBrand';
         id: string;
-        isPrimary?: boolean | null | undefined;
-        createdAt?: string | null | undefined;
         brand?:
           | {
               __typename?: 'Brand';
@@ -12861,8 +13029,6 @@ export type RemoveItemFromPantryMutation = {
       brands: Array<{
         __typename?: 'ItemBrand';
         id: string;
-        isPrimary?: boolean | null | undefined;
-        createdAt?: string | null | undefined;
         brand?:
           | {
               __typename?: 'Brand';

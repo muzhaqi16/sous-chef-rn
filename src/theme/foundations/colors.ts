@@ -50,7 +50,45 @@ export const colors = {
   error: '#F44336',
   info: '#2196F3',
 
+  // Status colors - for invite states, task states, etc.
+  status: {
+    pending: '#FFA500',
+    accepted: '#4CAF50',
+    declined: '#F44336',
+    expired: '#9E9E9E',
+    active: '#2196F3',
+    inactive: '#BDBDBD',
+  },
+
+  // Role-based colors - for user roles, permissions
+  roles: {
+    owner: '#FF6B35',
+    admin: '#4CAF50',
+    member: '#2196F3',
+    guest: '#9E9E9E',
+  },
+
+  // Validation colors - for form inputs, error states
+  validation: {
+    error: '#F44336',
+    errorText: '#D32F2F',
+    errorBg: '#FFEBEE',
+    errorBorder: '#EF5350',
+    success: '#4CAF50',
+    successBg: '#E8F5E9',
+    warning: '#FF9800',
+    warningBg: '#FFF3E0',
+  },
+
+  // Overlay variations - for modals, backdrops
+  overlays: {
+    light: 'rgba(0, 0, 0, 0.3)',
+    medium: 'rgba(0, 0, 0, 0.5)',
+    dark: 'rgba(0, 0, 0, 0.6)',
+    heavy: 'rgba(0, 0, 0, 0.8)',
+  },
+
   // Special colors
   transparent: 'transparent',
-  overlay: 'rgba(0, 0, 0, 0.6)',
+  overlay: 'rgba(0, 0, 0, 0.6)', // Default overlay - kept for backwards compatibility
 } as const;
