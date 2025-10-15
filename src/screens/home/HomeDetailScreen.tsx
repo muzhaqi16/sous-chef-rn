@@ -1,6 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks';
 import { Icon } from '#utils';
 import { commonStyles } from '#styles';
@@ -17,6 +23,7 @@ import {
   GetHomeDocument,
 } from '#generated';
 import { useStore } from '#store';
+import { MESSAGES } from '#constants';
 
 type RouteParams = {
   homeId: string;
@@ -28,6 +35,7 @@ export const HomeDetailScreen: React.FC<{
   const { goBack } = useAppNavigation();
   const { homeId } = route.params;
   const currentUser = useStore(state => state.user);
+  const { theme } = useUnistyles();
 
   const [editingName, setEditingName] = useState(false);
   const [homeName, setHomeName] = useState('');
@@ -39,32 +47,28 @@ export const HomeDetailScreen: React.FC<{
 
   const [updateHomeMutation, { loading: updating }] = useUpdateHomeMutation({
     refetchQueries: [{ query: GetHomesDocument }],
-    onCompleted: () => {
-      setEditingName(false);
-      Alert.alert('Success', 'Home name updated successfully');
-    },
-    onError: (error) => {
-      Alert.alert('Error', error.message || 'Failed to update home name');
+    onError: error => {
+      Alert.alert(
+        'Error',
+        error.message || MESSAGES.errors.updateHomeNameFailed,
+      );
     },
   });
 
   const [updateMembershipMutation] = useUpdateMembershipMutation({
     refetchQueries: [{ query: GetHomesDocument }],
-    onCompleted: () => {
-      Alert.alert('Success', 'Member role updated successfully');
-    },
-    onError: (error) => {
-      Alert.alert('Error', error.message || 'Failed to update member role');
+    onError: error => {
+      Alert.alert(
+        'Error',
+        error.message || MESSAGES.errors.updateMemberRoleFailed,
+      );
     },
   });
 
   const [removeMemberMutation] = useRemoveMemberMutation({
     refetchQueries: [{ query: GetHomesDocument }],
-    onCompleted: () => {
-      Alert.alert('Success', 'Member removed successfully');
-    },
-    onError: (error) => {
-      Alert.alert('Error', error.message || 'Failed to remove member');
+    onError: error => {
+      Alert.alert('Error', error.message || MESSAGES.errors.removeMemberFailed);
     },
   });
 
@@ -73,11 +77,8 @@ export const HomeDetailScreen: React.FC<{
       { query: GetHomesDocument },
       { query: GetHomeDocument, variables: { homeId } },
     ],
-    onCompleted: () => {
-      Alert.alert('Success', 'Invitation revoked successfully');
-    },
-    onError: (error) => {
-      Alert.alert('Error', error.message || 'Failed to revoke invitation');
+    onError: error => {
+      Alert.alert('Error', error.message || MESSAGES.errors.revokeInviteFailed);
     },
   });
 
@@ -102,7 +103,11 @@ export const HomeDetailScreen: React.FC<{
     setHomeName(home?.name || '');
   };
 
-  const handleChangeRole = (membershipId: string, currentRole: string, memberName: string) => {
+  const handleChangeRole = (
+    membershipId: string,
+    currentRole: string,
+    memberName: string,
+  ) => {
     const roles = [
       { label: 'Owner', value: MembershipRole.Owner },
       { label: 'Admin', value: MembershipRole.Admin },
@@ -138,7 +143,11 @@ export const HomeDetailScreen: React.FC<{
 
     buttons.push({ text: 'Cancel', onPress: () => {}, style: 'cancel' } as any);
 
-    Alert.alert('Select Role', `Current role: ${formatRole(currentRole)}`, buttons);
+    Alert.alert(
+      'Select Role',
+      `Current role: ${formatRole(currentRole)}`,
+      buttons,
+    );
   };
 
   const handleRemoveMember = (membershipId: string, memberName: string) => {
@@ -197,15 +206,15 @@ export const HomeDetailScreen: React.FC<{
   const getRoleBadgeColor = (role: string): string => {
     switch (role) {
       case 'OWNER':
-        return '#FF6B35';
+        return theme.colors.roles.owner;
       case 'ADMIN':
-        return '#4CAF50';
+        return theme.colors.roles.admin;
       case 'MEMBER':
-        return '#2196F3';
+        return theme.colors.roles.member;
       case 'GUEST':
-        return '#9E9E9E';
+        return theme.colors.roles.guest;
       default:
-        return '#9E9E9E';
+        return theme.colors.roles.guest;
     }
   };
 
@@ -250,16 +259,16 @@ export const HomeDetailScreen: React.FC<{
   const getInviteStatusColor = (status: string): string => {
     switch (status) {
       case 'PENDING':
-        return '#FFA500'; // Orange
+        return theme.colors.status.pending;
       case 'ACCEPTED':
-        return '#4CAF50'; // Green
+        return theme.colors.status.accepted;
       case 'DECLINED':
-        return '#F44336'; // Red
+        return theme.colors.status.declined;
       case 'EXPIRED':
       case 'REVOKED':
-        return '#9E9E9E'; // Gray
+        return theme.colors.status.expired;
       default:
-        return '#9E9E9E';
+        return theme.colors.status.expired;
     }
   };
 
@@ -333,7 +342,7 @@ export const HomeDetailScreen: React.FC<{
                   setEditingName(true);
                 }}
               >
-                <Icon name="edit" size={20} color="#2196F3" />
+                <Icon name="edit" size={20} color={theme.colors.info} />
               </TouchableOpacity>
             </View>
           )}
@@ -363,10 +372,7 @@ export const HomeDetailScreen: React.FC<{
                         ]}
                       >
                         <Text
-                          style={[
-                            styles.roleText,
-                            { color: roleBadgeColor },
-                          ]}
+                          style={[styles.roleText, { color: roleBadgeColor }]}
                         >
                           {formatRole(member.role)}
                         </Text>
@@ -384,21 +390,15 @@ export const HomeDetailScreen: React.FC<{
                       <TouchableOpacity
                         style={styles.actionButton}
                         onPress={() =>
-                          handleChangeRole(
-                            member.id,
-                            member.role,
-                            displayName,
-                          )
+                          handleChangeRole(member.id, member.role, displayName)
                         }
                       >
                         <Icon
                           name="swap-horizontal"
                           size={18}
-                          color="#2196F3"
+                          color={theme.colors.info}
                         />
-                        <Text style={styles.actionButtonText}>
-                          Change Role
-                        </Text>
+                        <Text style={styles.actionButtonText}>Change Role</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={[styles.actionButton, styles.removeButton]}
@@ -406,7 +406,11 @@ export const HomeDetailScreen: React.FC<{
                           handleRemoveMember(member.id, displayName)
                         }
                       >
-                        <Icon name="person-remove" size={18} color="#F44336" />
+                        <Icon
+                          name="person-remove"
+                          size={18}
+                          color={theme.colors.error}
+                        />
                         <Text style={styles.removeButtonText}>Remove</Text>
                       </TouchableOpacity>
                     </View>
@@ -422,60 +426,68 @@ export const HomeDetailScreen: React.FC<{
           )}
 
           {/* Pending Invites */}
-          {home.invites && home.invites.filter((inv: any) => inv.status !== 'ACCEPTED').length > 0 && (
-            <View style={styles.invitesSection}>
-              <Text style={styles.invitesSectionTitle}>Pending Invitations</Text>
-              {home.invites
-                .filter((invite: any) => invite.status !== 'ACCEPTED')
-                .map((invite: any) => {
-                  const displayName = getInviteDisplayName(invite);
-                  const statusColor = getInviteStatusColor(invite.status);
-                  const statusText = formatInviteStatus(invite.status);
+          {home.invites &&
+            home.invites.filter((inv: any) => inv.status !== 'ACCEPTED')
+              .length > 0 && (
+              <View style={styles.invitesSection}>
+                <Text style={styles.invitesSectionTitle}>
+                  Pending Invitations
+                </Text>
+                {home.invites
+                  .filter((invite: any) => invite.status !== 'ACCEPTED')
+                  .map((invite: any) => {
+                    const displayName = getInviteDisplayName(invite);
+                    const statusColor = getInviteStatusColor(invite.status);
+                    const statusText = formatInviteStatus(invite.status);
 
-                  return (
-                    <View
-                      key={invite.id}
-                      style={[
-                        styles.inviteCard,
-                        { borderColor: statusColor },
-                      ]}
-                    >
-                      <View style={styles.inviteInfo}>
-                        <Text style={styles.inviteName}>{displayName}</Text>
-                        <Text style={styles.inviteEmail}>{invite.email}</Text>
-                      </View>
-                      <View style={styles.inviteActions}>
-                        <View
-                          style={[
-                            styles.inviteStatusBadge,
-                            { backgroundColor: statusColor + '20' },
-                          ]}
-                        >
-                          <Text
+                    return (
+                      <View
+                        key={invite.id}
+                        style={[
+                          styles.inviteCard,
+                          { borderColor: statusColor },
+                        ]}
+                      >
+                        <View style={styles.inviteInfo}>
+                          <Text style={styles.inviteName}>{displayName}</Text>
+                          <Text style={styles.inviteEmail}>{invite.email}</Text>
+                        </View>
+                        <View style={styles.inviteActions}>
+                          <View
                             style={[
-                              styles.inviteStatusText,
-                              { color: statusColor },
+                              styles.inviteStatusBadge,
+                              { backgroundColor: statusColor + '20' },
                             ]}
                           >
-                            {statusText}
-                          </Text>
+                            <Text
+                              style={[
+                                styles.inviteStatusText,
+                                { color: statusColor },
+                              ]}
+                            >
+                              {statusText}
+                            </Text>
+                          </View>
+                          {invite.status === 'PENDING' && (
+                            <TouchableOpacity
+                              style={styles.revokeButton}
+                              onPress={() =>
+                                handleRevokeInvite(invite.id, invite.email)
+                              }
+                            >
+                              <Icon
+                                name="close"
+                                size={20}
+                                color={theme.colors.error}
+                              />
+                            </TouchableOpacity>
+                          )}
                         </View>
-                        {invite.status === 'PENDING' && (
-                          <TouchableOpacity
-                            style={styles.revokeButton}
-                            onPress={() =>
-                              handleRevokeInvite(invite.id, invite.email)
-                            }
-                          >
-                            <Icon name="close" size={20} color="#F44336" />
-                          </TouchableOpacity>
-                        )}
                       </View>
-                    </View>
-                  );
-                })}
-            </View>
-          )}
+                    );
+                  })}
+              </View>
+            )}
         </View>
       ),
     },
@@ -545,7 +557,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.primary,
   },
   saveButtonText: {
-    color: '#fff',
+    color: theme.colors.neutral[0],
     fontWeight: theme.fonts.weight.semibold,
   },
   memberCard: {
@@ -604,15 +616,15 @@ const styles = StyleSheet.create(theme => ({
   },
   actionButtonText: {
     fontSize: theme.fonts.size.sm,
-    color: '#2196F3',
+    color: theme.colors.info,
     fontWeight: theme.fonts.weight.medium,
   },
   removeButton: {
-    backgroundColor: '#FFEBEE',
+    backgroundColor: theme.colors.validation.errorBg,
   },
   removeButtonText: {
     fontSize: theme.fonts.size.sm,
-    color: '#F44336',
+    color: theme.colors.error,
     fontWeight: theme.fonts.weight.medium,
   },
   emptyContainer: {
@@ -680,6 +692,6 @@ const styles = StyleSheet.create(theme => ({
   revokeButton: {
     padding: theme.spacing.xs,
     borderRadius: theme.radii.sm,
-    backgroundColor: '#FFEBEE',
+    backgroundColor: theme.colors.validation.errorBg,
   },
 }));

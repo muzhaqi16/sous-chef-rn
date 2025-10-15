@@ -24,15 +24,31 @@ export function usePantryItems(pantryId: string | undefined) {
   usePantryItemsChangedSubscription({
     variables: { pantryId: pantryId ?? '' },
     skip: shouldSkip,
-    onData: () => {
+    onData: ({ data }) => {
       // Apollo cache is automatically updated by subscription
-      // No manual cache manipulation needed - just let Apollo work
+      // Log subscription updates for debugging
+      if (__DEV__) {
+        console.log('🔔 Pantry subscription update received:', {
+          pantryId,
+          changeType: data.data?.pantryItemsChanged?.__typename,
+          timestamp: new Date().toISOString(),
+        });
+      }
+    },
+    onComplete: () => {
+      if (__DEV__) {
+        console.log('✅ Pantry subscription connected:', pantryId);
+      }
     },
     onError: error => {
       const { message } = handleApolloError(error, {
         operation: 'Pantry Subscription',
       });
-      console.warn('Pantry subscription error:', message);
+      console.warn('❌ Pantry subscription error:', {
+        pantryId,
+        error: message,
+        timestamp: new Date().toISOString(),
+      });
       // Don't refetch on subscription errors - let the query handle reconnection
     },
   });

@@ -4,33 +4,100 @@ import { storage } from '#storage/mmkv';
 const CACHE_VERSION = '1.0';
 const CACHE_KEY = `apollo-cache-${CACHE_VERSION}`;
 
+/**
+ * Intelligent merge function that preserves optimistic updates
+ * Merges arrays of objects by ID, keeping optimistic items until server confirms
+ */
+function mergeArrayByIdIntelligent<T extends { id: string; __ref?: string }>(
+  existing: T[] = [],
+  incoming: T[] = [],
+  { readField }: { readField: (field: string, ref: any) => any },
+): T[] {
+  // If no existing data, just return incoming
+  if (!existing || existing.length === 0) {
+    return incoming;
+  }
+
+  // If no incoming data, keep existing (might be optimistic)
+  if (!incoming || incoming.length === 0) {
+    return existing;
+  }
+
+  // Create a map of existing items by ID
+  const existingMap = new Map<string, T>();
+  existing.forEach(item => {
+    const id = readField('id', item) as string;
+    if (id) {
+      existingMap.set(id, item);
+    }
+  });
+
+  // Create a map of incoming items by ID
+  const incomingMap = new Map<string, T>();
+  incoming.forEach(item => {
+    const id = readField('id', item) as string;
+    if (id) {
+      incomingMap.set(id, item);
+    }
+  });
+
+  // Merge: Keep all incoming items (server truth)
+  // Add any existing items that are optimistic (temporary IDs starting with 'temp-')
+  const merged = [...incoming];
+
+  existingMap.forEach((item, id) => {
+    // If item exists in incoming, it's already in merged array
+    if (incomingMap.has(id)) {
+      return;
+    }
+
+    // If item has temporary ID (optimistic), keep it until server confirms
+    if (id.startsWith('temp-')) {
+      merged.push(item);
+    }
+    // Otherwise, it was removed from server, don't include it
+  });
+
+  return merged;
+}
+
 export function makeCache(): InMemoryCache {
   const cache = new InMemoryCache({
     typePolicies: {
       Query: {
         fields: {
           homes: {
-            // Cache homes list for 5 minutes to reduce refetching
-            merge(_existing = [], incoming = []) {
-              return incoming;
+            // Intelligent merge to preserve optimistic home additions
+            merge(existing = [], incoming = [], { readField }) {
+              return mergeArrayByIdIntelligent(existing, incoming, {
+                readField,
+              });
             },
           },
           pantryItems: {
             keyArgs: ['pantryId'],
-            // Just replace with incoming data - no complex merging
-            merge(_, incoming) {
-              return incoming;
+            // Intelligent merge to preserve optimistic pantry item changes
+            merge(existing, incoming, { readField }) {
+              return mergeArrayByIdIntelligent(existing, incoming, {
+                readField,
+              });
             },
           },
           shoppingListItems: {
             keyArgs: ['shoppingListId'],
-            merge(_, incoming) {
-              return incoming;
+            // Intelligent merge to preserve optimistic shopping list changes
+            merge(existing, incoming, { readField }) {
+              return mergeArrayByIdIntelligent(existing, incoming, {
+                readField,
+              });
             },
           },
           shoppingLists: {
-            merge(_existing = [], incoming = []) {
-              return incoming;
+            // Intelligent merge to preserve optimistic list additions
+            merge(existing = [], incoming = [], { readField }) {
+              return mergeArrayByIdIntelligent(existing, incoming, {
+                readField,
+              });
             },
           },
         },
@@ -59,21 +126,27 @@ export function makeCache(): InMemoryCache {
         keyFields: ['id'],
         fields: {
           members: {
-            merge(_existing = [], incoming = []) {
-              // Simple replacement for home members
-              return incoming;
+            // Intelligent merge to preserve optimistic member additions/updates
+            merge(existing = [], incoming = [], { readField }) {
+              return mergeArrayByIdIntelligent(existing, incoming, {
+                readField,
+              });
             },
           },
           pantries: {
-            merge(_existing = [], incoming = []) {
-              // Simple replacement for pantries list
-              return incoming;
+            // Intelligent merge to preserve optimistic pantry additions
+            merge(existing = [], incoming = [], { readField }) {
+              return mergeArrayByIdIntelligent(existing, incoming, {
+                readField,
+              });
             },
           },
           shoppingLists: {
-            merge(_existing = [], incoming = []) {
-              // Simple replacement for shopping lists
-              return incoming;
+            // Intelligent merge to preserve optimistic list additions
+            merge(existing = [], incoming = [], { readField }) {
+              return mergeArrayByIdIntelligent(existing, incoming, {
+                readField,
+              });
             },
           },
         },

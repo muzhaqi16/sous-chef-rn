@@ -22,7 +22,7 @@ export const RESET_SCENARIOS = {
     auth: true,
     ui: false,
     preferences: false,
-    clearApolloCache: true,
+    clearApolloCache: false, // Preserve cache by default to support offline usage
   },
   FULL_RESET: {
     auth: true,
@@ -149,9 +149,22 @@ export const createResetManager = (
     await resetManager.resetStore('ONBOARDING_RESET');
   },
 
-  tokenRefreshFailed: async () => {
+  tokenRefreshFailed: async (clearCache: boolean = false) => {
     const resetManager = createResetManager(set, get);
-    await resetManager.resetStore('SESSION_EXPIRED'); // Use SESSION_EXPIRED for token failures
+
+    // If cache clearing is requested (e.g., for actual token expiration),
+    // use a custom reset config that clears the cache
+    if (clearCache) {
+      await resetManager.resetStore({
+        auth: true,
+        ui: false,
+        preferences: false,
+        clearApolloCache: true,
+      });
+    } else {
+      // Otherwise, preserve cache for offline usage
+      await resetManager.resetStore('SESSION_EXPIRED');
+    }
   },
 });
 

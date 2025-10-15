@@ -74,13 +74,32 @@ const calculateRetryDelay = (retryCount: number): number => {
   return REFRESH_CONFIG.RETRY_DELAY_BASE * Math.pow(REFRESH_CONFIG.BACKOFF_MULTIPLIER, retryCount);
 };
 
+// Helper to detect if error is network-related (vs auth-related)
+const isNetworkError = (error: any): boolean => {
+  // Check error message for common network error patterns
+  const message = (error?.message || error?.networkError?.message || '').toLowerCase();
+  const networkPatterns = [
+    'network request failed',
+    'network error',
+    'connection refused',
+    'timeout',
+    'enotfound',
+    'econnrefused',
+    'econnreset',
+    'ehostunreach',
+    'fetch failed',
+  ];
+
+  return networkPatterns.some(pattern => message.includes(pattern));
+};
+
 const performTokenRefresh = async (): Promise<string | null> => {
   const state = useStore.getState();
   const refreshToken = state.refreshToken;
 
   if (!refreshToken) {
     console.error('Token refresh failed: No refresh token available');
-    state.tokenRefreshFailed();
+    state.tokenRefreshFailed(false); // No refresh token = don't clear cache (might be temporary state)
     throw new Error('No refresh token available');
   }
 
@@ -125,7 +144,7 @@ const performTokenRefresh = async (): Promise<string | null> => {
   } catch (error: any) {
     console.error(`Token refresh failed (attempt ${refreshState.retryCount}):`, error);
 
-    // Check if this is a fatal error (refresh token expired)
+    // Check if this is a fatal error (refresh token expired/invalid)
     const isTokenExpiredError =
       error?.networkError?.statusCode === 401 ||
       error?.graphQLErrors?.some((e: any) =>
@@ -134,12 +153,15 @@ const performTokenRefresh = async (): Promise<string | null> => {
       );
 
     if (isTokenExpiredError) {
-      console.log('Refresh token expired, triggering logout');
-      state.tokenRefreshFailed();
+      console.log('Refresh token expired, triggering logout with cache clear');
+      state.tokenRefreshFailed(true); // Clear cache for auth failures
       throw new Error('Refresh token expired');
     }
 
-    // For other errors, we might retry
+    // Check if this is a network error (offline, timeout, etc.)
+    const isNetworkFailure = isNetworkError(error);
+
+    // For network errors, we retry but DON'T trigger logout after max retries
     if (refreshState.retryCount < REFRESH_CONFIG.MAX_RETRIES) {
       const delay = calculateRetryDelay(refreshState.retryCount - 1);
       console.log(`Will retry token refresh in ${delay}ms`);
@@ -149,9 +171,16 @@ const performTokenRefresh = async (): Promise<string | null> => {
     }
 
     // Max retries exceeded
-    console.error('Max token refresh retries exceeded, triggering logout');
-    state.tokenRefreshFailed();
-    throw error;
+    if (isNetworkFailure) {
+      // Network error after max retries - preserve cache, don't logout
+      console.warn('Token refresh failed due to network error, preserving cache for offline usage');
+      throw error; // Just fail the operation, don't trigger session expiry
+    } else {
+      // Unknown error after max retries - trigger logout without clearing cache
+      console.error('Max token refresh retries exceeded for unknown error, triggering session expiry');
+      state.tokenRefreshFailed(false); // Don't clear cache for unknown errors
+      throw error;
+    }
   }
 };
 

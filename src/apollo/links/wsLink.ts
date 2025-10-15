@@ -60,12 +60,48 @@ const createWsClient = () => {
     on: {
       connected: () => {
         isReconnecting = false;
+        if (__DEV__) {
+          console.log('🔌 WebSocket connected:', {
+            url: WS_URL,
+            timestamp: new Date().toISOString(),
+          });
+        }
       },
-      closed: () => {
+      closed: (event: any) => {
         isReconnecting = false;
+        if (__DEV__) {
+          console.log('🔌 WebSocket closed:', {
+            code: event?.code,
+            reason: event?.reason,
+            wasClean: event?.wasClean,
+            timestamp: new Date().toISOString(),
+          });
+        }
       },
-      error: () => {
+      error: (error: any) => {
         isReconnecting = false;
+        console.warn('❌ WebSocket error:', {
+          error: error?.message || 'Unknown error',
+          timestamp: new Date().toISOString(),
+        });
+      },
+      connecting: () => {
+        if (__DEV__) {
+          console.log('🔌 WebSocket connecting...', {
+            url: WS_URL,
+            timestamp: new Date().toISOString(),
+          });
+        }
+      },
+      ping: () => {
+        if (__DEV__) {
+          // console.log('🏓 WebSocket ping sent');
+        }
+      },
+      pong: () => {
+        if (__DEV__) {
+          // console.log('🏓 WebSocket pong received');
+        }
       },
     },
   });
@@ -81,7 +117,7 @@ export const reconnectWebSocket = () => {
   const now = Date.now();
 
   // Debounce reconnection attempts
-  if (isReconnecting || (now - lastReconnectTime) < RECONNECT_DEBOUNCE_MS) {
+  if (isReconnecting || now - lastReconnectTime < RECONNECT_DEBOUNCE_MS) {
     return;
   }
 
@@ -99,7 +135,6 @@ export const reconnectWebSocket = () => {
     // Note: GraphQLWsLink doesn't have a public method to update the client,
     // so we need to access the private property
     (wsLink as any).client = wsClient;
-
   } catch (error) {
     isReconnecting = false;
   }

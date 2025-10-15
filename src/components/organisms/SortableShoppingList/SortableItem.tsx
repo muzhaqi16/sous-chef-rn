@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, TouchableOpacity } from 'react-native';
+import { View, TouchableOpacity, Vibration, Platform } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { SwipeableItem } from '#/components/molecules/SwipeableItem';
 import { ListItem } from '#/components/molecules/ListItem';
@@ -32,13 +32,27 @@ export const SimpleDraggableItem: React.FC<SimpleDraggableItemProps> = ({
   drag,
   isActive,
 }) => {
+  // Handle drag activation with haptic feedback
+  const handleDragStart = () => {
+    if (drag) {
+      // Provide haptic feedback when drag activates
+      if (Platform.OS === 'ios') {
+        Vibration.vibrate(100);
+      } else {
+        // Android allows pattern vibration
+        Vibration.vibrate(100);
+      }
+      drag();
+    }
+  };
+
   // Combine the original rightElement with the drag handle
   const rightElement = (
     <View style={styles.rightContainer}>
       {item.rightElement}
       {drag && (
         <TouchableOpacity
-          onLongPress={drag}
+          onLongPress={handleDragStart}
           delayLongPress={150}
           style={styles.dragHandle}
         >

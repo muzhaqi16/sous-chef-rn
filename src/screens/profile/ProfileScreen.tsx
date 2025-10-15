@@ -60,7 +60,10 @@ export const ProfileScreen = () => {
     setOverlayOpen(false);
   }, [setOverlayOpen]);
 
-  if (loading) {
+  // ✅ OPTIMIZED: Don't block render on loading
+  // Show cached profile data immediately while loading fresh data in background
+  // Only show loading state if we have NO data at all
+  if (loading && !profile) {
     return null; // or loading component
   }
   return (

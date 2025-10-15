@@ -244,8 +244,6 @@ fragment BrandFragment on ItemBrand {
     deletedAt
     version
   }
-  isPrimary
-  createdAt
 }
 fragment CategoryFragment on Category {
   id

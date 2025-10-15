@@ -10,15 +10,10 @@ import {
   StorageState,
   ItemCondition,
   AcquisitionMethod,
-  GetOnboardingItemsQuery,
 } from '#generated';
 import { useStore } from '#store';
 import { Button } from '#components';
 import { AnimatedChip } from '#components/atoms/AnimatedChip';
-
-type OnboardingItemType = NonNullable<
-  GetOnboardingItemsQuery['onboardingItems']
->[number];
 
 export const SelectPantryItems = () => {
   const { navigateToNextStep, navigateToPreviousStep } =
@@ -50,11 +45,12 @@ export const SelectPantryItems = () => {
   );
 
   // Use the custom hook for managing selection state
-  const { items, selectedItems, toggleItem, isMaxReached } =
-    useSelectableItems({
+  const { items, selectedItems, toggleItem, isMaxReached } = useSelectableItems(
+    {
       initialItems: selectableItems,
       maxSelection: 5,
-    });
+    },
+  );
 
   if (loading) {
     return (
@@ -154,9 +150,9 @@ export const SelectPantryItems = () => {
         title={
           isAddingItems
             ? 'Adding Items...'
-            : `Add ${selectedItems.length > 0 ? selectedItems.length : ''} Item${
-                selectedItems.length === 1 ? '' : 's'
-              }`
+            : `Add ${
+                selectedItems.length > 0 ? selectedItems.length : ''
+              } Item${selectedItems.length === 1 ? '' : 's'}`
         }
         onPress={onNext}
         btnStyle={styles.nextButton}
