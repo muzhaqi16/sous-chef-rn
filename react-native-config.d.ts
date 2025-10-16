@@ -6,6 +6,7 @@ declare module 'react-native-config' {
     NODE_ENV?: string;
     WEB_APP_URL?: string;
     PROMETHEUS_ENDPOINT?: string;
+    SPOONACULAR_API_KEY?: string;
     LOKI_ENDPOINT?: string;
     TELEMETRY_AUTH_USERNAME?: string;
     TELEMETRY_AUTH_PASSWORD?: string;

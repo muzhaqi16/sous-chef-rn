@@ -108,6 +108,21 @@ export const PantryMain: React.FC = () => {
     loading,
   } = usePantryManagement(pantry?.id);
 
+  // Refetch pantry items when switching between pantries
+  const prevPantryIdRef = useRef<string | undefined>(pantry?.id);
+  useEffect(() => {
+    const currentPantryId = pantry?.id;
+    const prevPantryId = prevPantryIdRef.current;
+
+    // Only refetch if pantry actually changed (skip initial mount)
+    if (prevPantryId && currentPantryId && prevPantryId !== currentPantryId) {
+      refetch();
+    }
+
+    // Update ref for next comparison
+    prevPantryIdRef.current = currentPantryId;
+  }, [pantry?.id, refetch]);
+
   // Create selector configuration for pantries
   const pantryConfig: SelectorConfig<any> = useMemo(() => {
     // Extract pantries from working data source inside useMemo
@@ -224,8 +239,44 @@ export const PantryMain: React.FC = () => {
   }, [setOverlayOpen]);
 
   // Header actions
-  const headerActions = useMemo(
-    () => ({
+  const headerActions = useMemo(() => {
+    const rightActions: HeaderAction[] = [];
+
+    // Only show right actions if there are items
+    if (items.length > 0) {
+      // Show expired items action only if there are expired items
+      if (stats.expired > 0) {
+        rightActions.push({
+          icon: 'schedule',
+          onPress: () => navigate('ExpiringItems'),
+          badge: stats.expired,
+          color: '#FF6B6B',
+        });
+      }
+
+      // Show low stock action only if there are low stock items
+      if (stats.lowStock > 0) {
+        rightActions.push({
+          icon: 'warning',
+          onPress: () => navigate('LowStockItems'),
+          badge: stats.lowStock,
+          color: '#FFB84D',
+        });
+      }
+
+      // Show category management only if items have categories
+      const hasCategories = pantryItems.some(
+        (item: any) => item.item?.category?.id,
+      );
+      if (hasCategories) {
+        rightActions.push({
+          icon: 'category',
+          onPress: () => navigate('CategoryManagement'),
+        });
+      }
+    }
+
+    return {
       left: [
         {
           icon: 'home-switch-outline',
@@ -235,33 +286,17 @@ export const PantryMain: React.FC = () => {
           library: 'MaterialDesignIcons',
         },
       ] as HeaderAction[],
-      right: [
-        {
-          icon: 'schedule',
-          onPress: () => navigate('ExpiringItems'),
-          badge: stats.expired,
-          color: '#FF6B6B',
-        },
-        {
-          icon: 'warning',
-          onPress: () => navigate('LowStockItems'),
-          badge: stats.lowStock,
-          color: '#FFB84D',
-        },
-        {
-          icon: 'category',
-          onPress: () => navigate('CategoryManagement'),
-        },
-      ] as HeaderAction[],
-    }),
-    [
-      navigate,
-      selectedHomeId,
-      theme.colors.primary,
-      stats.expired,
-      stats.lowStock,
-    ],
-  );
+      right: rightActions,
+    };
+  }, [
+    navigate,
+    selectedHomeId,
+    theme.colors.primary,
+    stats.expired,
+    stats.lowStock,
+    items.length,
+    pantryItems,
+  ]);
 
   // Search bar actions
   const searchBarActions = useMemo(

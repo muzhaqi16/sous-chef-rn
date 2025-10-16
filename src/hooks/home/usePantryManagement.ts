@@ -38,6 +38,8 @@ export function usePantryManagement(pantryId: string | undefined) {
   // Mutations with Apollo's optimistic updates
   const [addItemMutation] = useAddItemToPantryMutation({
     errorPolicy: 'all',
+    refetchQueries: ['GetPantryItems'],
+    awaitRefetchQueries: true,
     onError: error => {
       console.error('Add item error:', error);
       Alert.alert('Error', 'Failed to add item');
@@ -46,6 +48,7 @@ export function usePantryManagement(pantryId: string | undefined) {
 
   const [updateItemMutation] = useUpdatePantryItemMutation({
     errorPolicy: 'all',
+    refetchQueries: ['GetPantryItems'],
     onError: error => {
       console.error('Update item error:', error);
       Alert.alert('Error', 'Failed to update item');
@@ -54,6 +57,8 @@ export function usePantryManagement(pantryId: string | undefined) {
 
   const [removeItemMutation] = useRemoveItemFromPantryMutation({
     errorPolicy: 'all',
+    refetchQueries: ['GetPantryItems'],
+    awaitRefetchQueries: true,
     onError: error => {
       console.error('Remove item error:', error);
       Alert.alert('Error', 'Failed to remove item');

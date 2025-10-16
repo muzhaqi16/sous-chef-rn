@@ -1,0 +1,150 @@
+# ============================================
+# QUERIES
+# ============================================
+
+query SearchRecipes($query: String!) {
+  searchRecipes(query: $query) {
+    ...BasicRecipeFragment
+  }
+}
+
+query SuggestedRecipes {
+  suggestedRecipes {
+    ...BasicRecipeFragment
+  }
+}
+
+query MyRecipes(
+  $skip: Int
+  $take: Int
+  $category: RecipeCategory
+  $difficulty: Difficulty
+) {
+  myRecipes(
+    skip: $skip
+    take: $take
+    category: $category
+    difficulty: $difficulty
+  ) {
+    recipes {
+      ...BasicRecipeFragment
+      cuisine
+    }
+    totalCount
+  }
+}
+
+query GetRecipe($id: ID!) {
+  recipe(id: $id) {
+    ...RecipeFragment
+  }
+}
+
+# ============================================
+# MUTATIONS
+# ============================================
+
+mutation AddRecipe(
+  $name: String!
+  $ingredients: [String!]!
+  $instructions: JSON!
+  $category: RecipeCategory
+  $difficulty: Difficulty
+  $prepTimeMinutes: Int
+  $cookTimeMinutes: Int
+  $servings: Int
+) {
+  addRecipe(
+    name: $name
+    ingredients: $ingredients
+    instructions: $instructions
+    category: $category
+    difficulty: $difficulty
+    prepTimeMinutes: $prepTimeMinutes
+    cookTimeMinutes: $cookTimeMinutes
+    servings: $servings
+  ) {
+    ...RecipeFragment
+  }
+}
+
+mutation SaveRecipe($input: SaveRecipeInput!) {
+  saveRecipe(input: $input) {
+    ...RecipeFragment
+  }
+}
+
+mutation DeleteRecipe($id: ID!) {
+  deleteRecipe(id: $id)
+}
+
+mutation AddRecipeToShoppingList(
+  $recipeId: ID!
+  $shoppingListId: ID!
+  $servings: Int
+) {
+  addRecipeToShoppingList(
+    recipeId: $recipeId
+    shoppingListId: $shoppingListId
+    servings: $servings
+  ) {
+    addedItems {
+      id
+      itemName
+      quantity
+      unit {
+        id
+        name
+        symbol
+      }
+      aisle
+      isPurchased
+    }
+    updatedItems {
+      id
+      itemName
+      quantity
+      unit {
+        id
+        name
+        symbol
+      }
+      isPurchased
+    }
+    skippedItems {
+      id
+      name
+      quantity
+    }
+    totalAdded
+    totalUpdated
+    totalSkipped
+  }
+}
+
+mutation AddRecipeIngredientToShoppingList(
+  $recipeIngredientId: ID!
+  $shoppingListId: ID!
+  $quantityOverride: Float
+) {
+  addRecipeIngredientToShoppingList(
+    recipeIngredientId: $recipeIngredientId
+    shoppingListId: $shoppingListId
+    quantityOverride: $quantityOverride
+  ) {
+    shoppingListItem {
+      id
+      itemName
+      quantity
+      unit {
+        id
+        name
+        symbol
+      }
+    }
+    previousQuantity
+    quantityAdded
+    wasUpdated
+    unitConversionApplied
+  }
+}

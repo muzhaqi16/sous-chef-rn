@@ -311,6 +311,14 @@ input AddCollaboratorInput {
   shoppingListId: ID!
 }
 
+type AddIngredientResult {
+  previousQuantity: Float
+  quantityAdded: Float!
+  shoppingListItem: ShoppingListItem!
+  unitConversionApplied: Boolean!
+  wasUpdated: Boolean!
+}
+
 input AddPantryItemInput {
   acquisitionMethod: AcquisitionMethod
   autoReorderPoint: Float
@@ -344,6 +352,15 @@ input AddPantryItemInput {
   unitId: String
   unitName: String
   unitSymbol: String
+}
+
+type AddRecipeToShoppingListResult {
+  addedItems: [ShoppingListItem!]!
+  skippedItems: [RecipeIngredient!]!
+  totalAdded: Int!
+  totalSkipped: Int!
+  totalUpdated: Int!
+  updatedItems: [ShoppingListItem!]!
 }
 
 input AddRestrictionsInput {
@@ -760,6 +777,11 @@ input CreateItemInput {
   description: String
   displayUnitId: String
   displayUnitName: String
+  externalSource: ExternalSource
+  externalSourceData: JSON
+  externalSourceId: String
+  externalSourceType: String
+  externalSources: [ExternalSourceMappingInput!]
   healthBenefits: JSON
   imageUrl: String
   ingredients: JSON
@@ -899,6 +921,36 @@ input CreatePurchaseInput {
   transactionId: String
   unitId: ID!
   unitPrice: Float!
+}
+
+input CreateRecipeInput {
+  caloriesPerServing: Float
+  category: RecipeCategory
+  cookTimeMinutes: Int
+  cuisine: String
+  description: String
+  dietaryTags: [DietaryTag!]
+  difficulty: Difficulty
+  externalSourceData: JSON
+  externalSourceId: String
+  externalSourceUrl: String
+  imageUrl: String
+  instructions: JSON!
+  isPublished: Boolean
+  name: String!
+  notes: String
+  nutritionData: JSON
+  originalAuthor: String
+  prepTimeMinutes: Int
+  servings: Int
+  source: String
+  sourceUrl: String
+  status: RecipeStatus
+  tags: [String!]
+  tips: String
+  totalTimeMinutes: Int
+  videoUrl: String
+  visibility: Visibility
 }
 
 input CreateShoppingListInput {
@@ -1276,6 +1328,40 @@ type ExportResponse {
   url: String!
 }
 
+enum ExternalSource {
+  ALLRECIPES
+  BARCODE_LOOKUP
+  EDAMAM
+  KROGER
+  OPENFOODFACTS
+  SPOONACULAR
+  TASTY
+  USDA
+  USER_CREATED
+}
+
+type ExternalSourceMapping {
+  createdAt: DateTime!
+  data: JSON
+  externalId: String!
+  externalType: String
+  id: ID!
+  isPrimary: Boolean!
+  item: Item!
+  lastSyncedAt: DateTime!
+  metadata: JSON
+  source: ExternalSource!
+  updatedAt: DateTime!
+}
+
+input ExternalSourceMappingInput {
+  data: JSON
+  externalId: String!
+  externalType: String
+  isPrimary: Boolean
+  source: ExternalSource!
+}
+
 type FacetValue {
   count: Int!
   label: String!
@@ -1551,11 +1637,12 @@ type Item {
   description: String
   displayUnit: Unit
   edits: [ItemEdit!]!
-  fdcId: String
+  externalSources: [ExternalSourceMapping!]!
   healthBenefits: JSON
   id: ID!
   imageUrl: String
   ingredients: JSON
+  krogerId: String
   metadata: JSON
   name: String!
   netWeight: Float
@@ -1569,6 +1656,8 @@ type Item {
   shoppingListItems: [ShoppingListItem!]!
   showInOnboarding: Boolean!
   sku: String
+  spoonacularId: Int
+  spoonacularType: String
   status: ItemStatus!
   storageState: StorageState!
   storeSkus: [ItemStoreSku!]!
@@ -1577,6 +1666,7 @@ type Item {
   units: [ItemUnit!]!
   upc: String
   updatedAt: DateTime!
+  usdaFdcId: String
   version: Int!
   visibility: Visibility!
 }
@@ -1738,6 +1828,7 @@ enum ItemType {
   OTHER
   PERSONAL_CARE
   PET
+  PRODUCT
   SUPPLEMENT
 }
 
@@ -2253,6 +2344,16 @@ type Mutation {
     prepTimeMinutes: Int
     servings: Int
   ): Recipe!
+  addRecipeIngredientToShoppingList(
+    quantityOverride: Float
+    recipeIngredientId: ID!
+    shoppingListId: ID!
+  ): AddIngredientResult!
+  addRecipeToShoppingList(
+    recipeId: ID!
+    servings: Int
+    shoppingListId: ID!
+  ): AddRecipeToShoppingListResult!
   addRestrictions(input: AddRestrictionsInput!): UserModeration!
   addUserAddress(input: CreateUserAddressInput!): UserAddress!
   addWarning(input: AddWarningInput!): UserModeration!
@@ -2333,6 +2434,7 @@ type Mutation {
   deleteNotification(id: ID!): Boolean!
   deletePantry(id: ID!): Boolean!
   deletePurchase(id: ID!): Boolean!
+  deleteRecipe(id: ID!): Boolean!
   deleteShoppingList(id: ID!): Boolean!
   deleteStore(id: ID!): Boolean!
   deleteUnit(id: ID!): Boolean!
@@ -2353,6 +2455,7 @@ type Mutation {
   Request a password reset email
   """
   forgotPassword(email: String!): ForgotPasswordResponse!
+  forkRecipe(id: ID!): Recipe!
   generateNextRecurringList(id: ID!): ShoppingList!
   generateShoppingListShareCode(id: ID!): ShoppingList!
   hardDeleteDevice(id: ID!): Boolean!
@@ -2373,6 +2476,14 @@ type Mutation {
   joinHomeByCode(joinCode: String!): Membership!
   joinShoppingListByShareCode(shareCode: String!): ShoppingList!
   leaveHome(homeId: ID!): Boolean!
+  linkItemToExternalSource(
+    data: JSON
+    externalId: String!
+    externalType: String
+    isPrimary: Boolean
+    itemId: ID!
+    source: ExternalSource!
+  ): ExternalSourceMapping!
   logCooking(input: CreateCookingLogInput!): CookingLog!
   login(input: LoginInput!): AuthPayload!
   markAllNotificationsAsRead: [Notification!]!
@@ -2437,6 +2548,7 @@ type Mutation {
   restoreItem(id: ID!): Item!
   reviewAppeal(input: ReviewAppealInput!): UserModeration!
   revokeHomeInvite(id: ID!): Boolean!
+  saveRecipe(input: SaveRecipeInput!): Recipe!
   sendBulkNotifications(input: BulkNotificationInput!): BulkNotificationResult!
   sendTestNotification(type: NotificationType!): Notification!
   setDefaultHome(homeId: ID!): UserSettings!
@@ -2531,6 +2643,7 @@ type Mutation {
   updateProfileCover(coverImageUrl: String!): UserProfile!
   updatePurchase(id: ID!, input: UpdatePurchaseInput!): Purchase!
   updatePushToken(id: ID!, pushToken: String!): Device!
+  updateRecipe(id: ID!, input: UpdateRecipeInput!): Recipe!
   updateRiskScore(riskScore: Float!, userId: ID!): UserModeration!
   updateSettings(input: UpdateUserSettingsInput!): UserSettings!
   updateShoppingList(id: ID!, input: UpdateShoppingListInput!): ShoppingList!
@@ -2554,6 +2667,13 @@ type Mutation {
   updateUnit(id: ID!, input: UpdateUnitInput!): Unit!
   updateUser(id: ID!, input: UpdateUserInput!): User!
   updateUserAddress(input: UpdateUserAddressInput!): UserAddress!
+  upsertItemByExternalSource(
+    externalId: String!
+    externalType: String
+    itemData: CreateItemInput!
+    source: ExternalSource!
+    sourceData: JSON
+  ): UpsertItemResult!
   validateItem(deep: Boolean, id: ID!): ValidationResult!
   """
   Validate if a password reset token is still valid
@@ -3141,6 +3261,7 @@ type Query {
   invitesSentByMe: [HomeInvite!]!
   item(id: ID!): Item
   itemByExternalId(externalId: String!, provider: ProviderType!): Item
+  itemByExternalSource(externalId: String!, source: ExternalSource!): Item
   itemBySku(sku: String!, storeId: String): Item
   itemByUpc(upc: String!): Item
   itemPriceHistory(days: Int, itemId: ID!, storeId: String): [ItemPriceHistory!]
@@ -3149,6 +3270,7 @@ type Query {
     pagination: PaginationInput
     sort: ItemSortInput
   ): ItemsResponse!
+  itemsBySource(limit: Int, offset: Int, source: ExternalSource!): [Item!]!
   loginHistory(id: ID!): LoginHistory
   loginHistoryByIP(
     filters: LoginHistoryByIPFiltersInput
@@ -3192,6 +3314,13 @@ type Query {
   myPendingCollaborationInvites: [ShoppingListCollaborator!]!
   myPendingInvites: [HomeInvite!]!
   myPurchases: [Purchase!]!
+  myRecipes(
+    category: RecipeCategory
+    difficulty: Difficulty
+    includeDeleted: Boolean
+    skip: Int
+    take: Int
+  ): RecipesResponse!
   myShoppingListInvites: [ShoppingListCollaborator!]!
   nearbyStores(lat: Float!, lng: Float!, radius: Float): [Store!]!
   notification(id: ID!): Notification
@@ -3227,6 +3356,7 @@ type Query {
   purchasesByStore(storeId: ID!, userId: ID): [Purchase!]!
   recentItems(limit: Int, userId: String): [Item!]
   recentNotifications(limit: Int = 10): [Notification!]!
+  recipe(id: ID!): Recipe
   recipeCookingLogs(limit: Int, offset: Int, recipeId: ID!): [CookingLog!]!
   recommendedItems(limit: Int, userId: String): [ItemSuggestion!]
   recommendedStores: [Store!]!
@@ -3304,7 +3434,7 @@ type RapidAttempt {
 
 type Recipe {
   averageRating: Float
-  caloriesPerServing: Int
+  caloriesPerServing: Float
   category: RecipeCategory!
   cookTimeMinutes: Int
   cookingLogs: [CookingLog!]!
@@ -3315,10 +3445,18 @@ type Recipe {
   description: String
   dietaryTags: [DietaryTag!]!
   difficulty: Difficulty!
+  externalData: JSON
+  externalId: String
+  externalSource: ExternalSource
+  externalUrl: String
+  forkedFrom: Recipe
+  forkedFromId: ID
+  forks: [Recipe!]!
   id: ID!
   imageUrl: String
   ingredients: [RecipeIngredient!]!
   instructions: JSON!
+  isExternal: Boolean!
   isPublished: Boolean!
   matchPercentage: Float
   mealPlanItems: [MealPlanItem!]!
@@ -3327,6 +3465,7 @@ type Recipe {
   nutritionData: JSON
   originalAuthor: String
   prepTimeMinutes: Int
+  primarySource: String
   publishedAt: DateTime
   rating1Count: Int!
   rating2Count: Int!
@@ -3336,6 +3475,7 @@ type Recipe {
   reviews: [RecipeReview!]!
   servings: Int!
   source: String
+  sourceMapping: RecipeSourceMapping
   sourceUrl: String
   status: RecipeStatus!
   tags: [String!]!
@@ -3365,18 +3505,50 @@ enum RecipeCategory {
 }
 
 type RecipeIngredient {
+  aisle: String
   availablePantryItemIds: [String!]!
+  consistency: String
   id: ID!
+  image: String
   isOptional: Boolean!
   item: Item
+  meta: [String!]!
+  metricAmount: Float
+  metricUnit: String
   name: String!
   notes: String
+  originalString: String
   preparation: String
   quantity: Float!
   recipe: Recipe!
   section: String
   sortOrder: Int!
+  spoonacularIngredientId: Int
   unit: Unit
+  usAmount: Float
+  usUnit: String
+}
+
+input RecipeIngredientInput {
+  aisle: String
+  consistency: String
+  image: String
+  isOptional: Boolean
+  itemId: String
+  meta: [String!]
+  metricAmount: Float
+  metricUnit: String
+  name: String!
+  notes: String
+  originalString: String
+  preparation: String
+  quantity: Float!
+  section: String
+  sortOrder: Int
+  spoonacularIngredientId: Int
+  unitId: String
+  usAmount: Float
+  usUnit: String
 }
 
 type RecipeReview {
@@ -3392,11 +3564,29 @@ type RecipeReview {
   verified: Boolean!
 }
 
+type RecipeSourceMapping {
+  createdAt: DateTime!
+  data: JSON
+  externalId: String!
+  externalType: String
+  id: ID!
+  isPrimary: Boolean!
+  lastSyncedAt: DateTime
+  metadata: JSON
+  source: ExternalSource!
+  updatedAt: DateTime!
+}
+
 enum RecipeStatus {
   ARCHIVED
   DRAFT
   PRIVATE
   PUBLISHED
+}
+
+type RecipesResponse {
+  recipes: [Recipe!]!
+  totalCount: Int!
 }
 
 input RecordPantryItemUsageInput {
@@ -3485,6 +3675,27 @@ enum RiskFactor {
   TOR_DETECTED
   UNUSUAL_TIME
   VPN_DETECTED
+}
+
+input SaveRecipeInput {
+  caloriesPerServing: Float
+  category: RecipeCategory
+  cookTimeMinutes: Int
+  cuisine: String
+  description: String
+  dietaryTags: [DietaryTag!]
+  difficulty: Difficulty
+  externalSourceData: JSON
+  externalSourceId: String
+  externalSourceUrl: String
+  imageUrl: String
+  ingredients: [RecipeIngredientInput!]!
+  instructions: JSON!
+  name: String!
+  nutritionData: JSON
+  prepTimeMinutes: Int
+  servings: Int
+  source: String
 }
 
 type SearchFacets {
@@ -4144,7 +4355,6 @@ input UpdateItemInput {
   displayUnitId: String
   displayUnitName: String
   editReason: String
-  fdcId: String
   healthBenefits: JSON
   imageUrl: String
   ingredients: JSON
@@ -4294,6 +4504,38 @@ input UpdatePurchaseInput {
   unitPrice: Float
 }
 
+input UpdateRecipeInput {
+  addTags: [String!]
+  caloriesPerServing: Float
+  category: RecipeCategory
+  cookTimeMinutes: Int
+  cuisine: String
+  description: String
+  dietaryTags: [DietaryTag!]
+  difficulty: Difficulty
+  externalSourceData: JSON
+  externalSourceId: String
+  externalSourceUrl: String
+  imageUrl: String
+  instructions: JSON
+  isPublished: Boolean
+  name: String
+  notes: String
+  nutritionData: JSON
+  originalAuthor: String
+  prepTimeMinutes: Int
+  removeTags: [String!]
+  servings: Int
+  source: String
+  sourceUrl: String
+  status: RecipeStatus
+  tags: [String!]
+  tips: String
+  totalTimeMinutes: Int
+  videoUrl: String
+  visibility: Visibility
+}
+
 input UpdateShoppingListInput {
   autoAddSuggestions: Boolean
   budgetAmount: Float
@@ -4428,6 +4670,12 @@ input UpdateUserSettingsInput {
 
 scalar Upload
 
+type UpsertItemResult {
+  created: Boolean!
+  item: Item!
+  mapping: ExternalSourceMapping!
+}
+
 enum UsageFrequency {
   DAILY
   MONTHLY
@@ -4450,6 +4698,7 @@ enum UsagePurpose {
 type User {
   addresses: [UserAddress!]!
   createdAt: DateTime!
+  defaultHome: Home
   defaultHomeId: String
   defaultShoppingListId: String
   devices: [Device!]!

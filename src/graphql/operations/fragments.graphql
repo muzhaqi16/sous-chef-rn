@@ -270,7 +270,6 @@ fragment ItemFragment on Item {
   name
   description
   upc
-  fdcId
   dataSource
   type
   storageState
@@ -615,4 +614,112 @@ fragment PurchaseFragment on Purchase {
       displayName
     }
   }
+}
+
+fragment RecipeIngredientFragment on RecipeIngredient {
+  id
+  name
+  quantity
+  spoonacularIngredientId
+  item {
+    id
+    name
+    imageUrl
+  }
+  unit {
+    id
+    name
+    symbol
+  }
+  aisle
+  consistency
+  originalString
+  metricAmount
+  metricUnit
+  usAmount
+  usUnit
+  meta
+  image
+  isOptional
+  notes
+  preparation
+  sortOrder
+  section
+}
+
+fragment BasicRecipeFragment on Recipe {
+  id
+  name
+  description
+  imageUrl
+  servings
+  prepTimeMinutes
+  cookTimeMinutes
+  totalTimeMinutes
+  difficulty
+  category
+  status
+  isExternal
+  externalSource
+  externalId
+  primarySource
+  caloriesPerServing
+  createdAt
+  updatedAt
+}
+
+fragment RecipeFragment on Recipe {
+  id
+  name
+  description
+  imageUrl
+  servings
+  prepTimeMinutes
+  cookTimeMinutes
+  totalTimeMinutes
+  difficulty
+  category
+  status
+  cuisine
+  instructions
+  notes
+  tips
+  videoUrl
+  sourceUrl
+  source
+  originalAuthor
+
+  # External source tracking
+  isExternal
+  externalSource
+  externalId
+  externalUrl
+  externalData
+  primarySource
+
+  # Nutrition
+  caloriesPerServing
+  nutritionData
+
+  # Tags and metadata
+  dietaryTags
+  tags
+  visibility
+  isPublished
+  publishedAt
+  averageRating
+  matchPercentage
+
+  # Relations
+  createdBy {
+    ...BasicUser
+  }
+
+  ingredients {
+    ...RecipeIngredientFragment
+  }
+
+  createdAt
+  updatedAt
+  deletedAt
 }

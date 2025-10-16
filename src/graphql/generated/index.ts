@@ -55,6 +55,15 @@ export type AddCollaboratorInput = {
   shoppingListId: Scalars['ID']['input'];
 };
 
+export type AddIngredientResult = {
+  __typename?: 'AddIngredientResult';
+  previousQuantity: Maybe<Scalars['Float']['output']>;
+  quantityAdded: Scalars['Float']['output'];
+  shoppingListItem: ShoppingListItem;
+  unitConversionApplied: Scalars['Boolean']['output'];
+  wasUpdated: Scalars['Boolean']['output'];
+};
+
 export type AddPantryItemInput = {
   acquisitionMethod?: InputMaybe<AcquisitionMethod>;
   autoReorderPoint?: InputMaybe<Scalars['Float']['input']>;
@@ -88,6 +97,16 @@ export type AddPantryItemInput = {
   unitId?: InputMaybe<Scalars['String']['input']>;
   unitName?: InputMaybe<Scalars['String']['input']>;
   unitSymbol?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type AddRecipeToShoppingListResult = {
+  __typename?: 'AddRecipeToShoppingListResult';
+  addedItems: Array<ShoppingListItem>;
+  skippedItems: Array<RecipeIngredient>;
+  totalAdded: Scalars['Int']['output'];
+  totalSkipped: Scalars['Int']['output'];
+  totalUpdated: Scalars['Int']['output'];
+  updatedItems: Array<ShoppingListItem>;
 };
 
 export type AddRestrictionsInput = {
@@ -517,6 +536,11 @@ export type CreateItemInput = {
   description?: InputMaybe<Scalars['String']['input']>;
   displayUnitId?: InputMaybe<Scalars['String']['input']>;
   displayUnitName?: InputMaybe<Scalars['String']['input']>;
+  externalSource?: InputMaybe<ExternalSource>;
+  externalSourceData?: InputMaybe<Scalars['JSON']['input']>;
+  externalSourceId?: InputMaybe<Scalars['String']['input']>;
+  externalSourceType?: InputMaybe<Scalars['String']['input']>;
+  externalSources?: InputMaybe<Array<ExternalSourceMappingInput>>;
   healthBenefits?: InputMaybe<Scalars['JSON']['input']>;
   imageUrl?: InputMaybe<Scalars['String']['input']>;
   ingredients?: InputMaybe<Scalars['JSON']['input']>;
@@ -656,6 +680,36 @@ export type CreatePurchaseInput = {
   transactionId?: InputMaybe<Scalars['String']['input']>;
   unitId: Scalars['ID']['input'];
   unitPrice: Scalars['Float']['input'];
+};
+
+export type CreateRecipeInput = {
+  caloriesPerServing?: InputMaybe<Scalars['Float']['input']>;
+  category?: InputMaybe<RecipeCategory>;
+  cookTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
+  cuisine?: InputMaybe<Scalars['String']['input']>;
+  description?: InputMaybe<Scalars['String']['input']>;
+  dietaryTags?: InputMaybe<Array<DietaryTag>>;
+  difficulty?: InputMaybe<Difficulty>;
+  externalSourceData?: InputMaybe<Scalars['JSON']['input']>;
+  externalSourceId?: InputMaybe<Scalars['String']['input']>;
+  externalSourceUrl?: InputMaybe<Scalars['String']['input']>;
+  imageUrl?: InputMaybe<Scalars['String']['input']>;
+  instructions: Scalars['JSON']['input'];
+  isPublished?: InputMaybe<Scalars['Boolean']['input']>;
+  name: Scalars['String']['input'];
+  notes?: InputMaybe<Scalars['String']['input']>;
+  nutritionData?: InputMaybe<Scalars['JSON']['input']>;
+  originalAuthor?: InputMaybe<Scalars['String']['input']>;
+  prepTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
+  servings?: InputMaybe<Scalars['Int']['input']>;
+  source?: InputMaybe<Scalars['String']['input']>;
+  sourceUrl?: InputMaybe<Scalars['String']['input']>;
+  status?: InputMaybe<RecipeStatus>;
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
+  tips?: InputMaybe<Scalars['String']['input']>;
+  totalTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
+  videoUrl?: InputMaybe<Scalars['String']['input']>;
+  visibility?: InputMaybe<Visibility>;
 };
 
 export type CreateShoppingListInput = {
@@ -1041,6 +1095,41 @@ export type ExportResponse = {
   url: Scalars['String']['output'];
 };
 
+export enum ExternalSource {
+  Allrecipes = 'ALLRECIPES',
+  BarcodeLookup = 'BARCODE_LOOKUP',
+  Edamam = 'EDAMAM',
+  Kroger = 'KROGER',
+  Openfoodfacts = 'OPENFOODFACTS',
+  Spoonacular = 'SPOONACULAR',
+  Tasty = 'TASTY',
+  Usda = 'USDA',
+  UserCreated = 'USER_CREATED',
+}
+
+export type ExternalSourceMapping = {
+  __typename?: 'ExternalSourceMapping';
+  createdAt: Scalars['DateTime']['output'];
+  data: Maybe<Scalars['JSON']['output']>;
+  externalId: Scalars['String']['output'];
+  externalType: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  isPrimary: Scalars['Boolean']['output'];
+  item: Item;
+  lastSyncedAt: Scalars['DateTime']['output'];
+  metadata: Maybe<Scalars['JSON']['output']>;
+  source: ExternalSource;
+  updatedAt: Scalars['DateTime']['output'];
+};
+
+export type ExternalSourceMappingInput = {
+  data?: InputMaybe<Scalars['JSON']['input']>;
+  externalId: Scalars['String']['input'];
+  externalType?: InputMaybe<Scalars['String']['input']>;
+  isPrimary?: InputMaybe<Scalars['Boolean']['input']>;
+  source: ExternalSource;
+};
+
 export type FacetValue = {
   __typename?: 'FacetValue';
   count: Scalars['Int']['output'];
@@ -1334,11 +1423,12 @@ export type Item = {
   description: Maybe<Scalars['String']['output']>;
   displayUnit: Maybe<Unit>;
   edits: Array<ItemEdit>;
-  fdcId: Maybe<Scalars['String']['output']>;
+  externalSources: Array<ExternalSourceMapping>;
   healthBenefits: Maybe<Scalars['JSON']['output']>;
   id: Scalars['ID']['output'];
   imageUrl: Maybe<Scalars['String']['output']>;
   ingredients: Maybe<Scalars['JSON']['output']>;
+  krogerId: Maybe<Scalars['String']['output']>;
   metadata: Maybe<Scalars['JSON']['output']>;
   name: Scalars['String']['output'];
   netWeight: Maybe<Scalars['Float']['output']>;
@@ -1352,6 +1442,8 @@ export type Item = {
   shoppingListItems: Array<ShoppingListItem>;
   showInOnboarding: Scalars['Boolean']['output'];
   sku: Maybe<Scalars['String']['output']>;
+  spoonacularId: Maybe<Scalars['Int']['output']>;
+  spoonacularType: Maybe<Scalars['String']['output']>;
   status: ItemStatus;
   storageState: StorageState;
   storeSkus: Array<ItemStoreSku>;
@@ -1360,6 +1452,7 @@ export type Item = {
   units: Array<ItemUnit>;
   upc: Maybe<Scalars['String']['output']>;
   updatedAt: Scalars['DateTime']['output'];
+  usdaFdcId: Maybe<Scalars['String']['output']>;
   version: Scalars['Int']['output'];
   visibility: Visibility;
 };
@@ -1530,6 +1623,7 @@ export enum ItemType {
   Other = 'OTHER',
   PersonalCare = 'PERSONAL_CARE',
   Pet = 'PET',
+  Product = 'PRODUCT',
   Supplement = 'SUPPLEMENT',
 }
 
@@ -2056,6 +2150,8 @@ export type Mutation = {
   addItemToShoppingList: ShoppingListItem;
   addItemUnit: ItemUnit;
   addRecipe: Recipe;
+  addRecipeIngredientToShoppingList: AddIngredientResult;
+  addRecipeToShoppingList: AddRecipeToShoppingListResult;
   addRestrictions: UserModeration;
   addUserAddress: UserAddress;
   addWarning: UserModeration;
@@ -2119,6 +2215,7 @@ export type Mutation = {
   deleteNotification: Scalars['Boolean']['output'];
   deletePantry: Scalars['Boolean']['output'];
   deletePurchase: Scalars['Boolean']['output'];
+  deleteRecipe: Scalars['Boolean']['output'];
   deleteShoppingList: Scalars['Boolean']['output'];
   deleteStore: Scalars['Boolean']['output'];
   deleteUnit: Scalars['Boolean']['output'];
@@ -2129,6 +2226,7 @@ export type Mutation = {
   flagMultipleLoginsAsRisky: Array<LoginHistory>;
   /** Request a password reset email */
   forgotPassword: ForgotPasswordResponse;
+  forkRecipe: Recipe;
   generateNextRecurringList: ShoppingList;
   generateShoppingListShareCode: ShoppingList;
   hardDeleteDevice: Scalars['Boolean']['output'];
@@ -2141,6 +2239,7 @@ export type Mutation = {
   joinHomeByCode: Membership;
   joinShoppingListByShareCode: ShoppingList;
   leaveHome: Scalars['Boolean']['output'];
+  linkItemToExternalSource: ExternalSourceMapping;
   logCooking: CookingLog;
   login: AuthPayload;
   markAllNotificationsAsRead: Array<Notification>;
@@ -2182,6 +2281,7 @@ export type Mutation = {
   restoreItem: Item;
   reviewAppeal: UserModeration;
   revokeHomeInvite: Scalars['Boolean']['output'];
+  saveRecipe: Recipe;
   sendBulkNotifications: BulkNotificationResult;
   sendTestNotification: Notification;
   setDefaultHome: UserSettings;
@@ -2242,6 +2342,7 @@ export type Mutation = {
   updateProfileCover: UserProfile;
   updatePurchase: Purchase;
   updatePushToken: Device;
+  updateRecipe: Recipe;
   updateRiskScore: UserModeration;
   updateSettings: UserSettings;
   updateShoppingList: ShoppingList;
@@ -2254,6 +2355,7 @@ export type Mutation = {
   updateUnit: Unit;
   updateUser: User;
   updateUserAddress: UserAddress;
+  upsertItemByExternalSource: UpsertItemResult;
   validateItem: ValidationResult;
   /** Validate if a password reset token is still valid */
   validatePasswordResetToken: ValidateTokenResponse;
@@ -2308,6 +2410,18 @@ export type MutationAddRecipeArgs = {
   name: Scalars['String']['input'];
   prepTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
   servings?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type MutationAddRecipeIngredientToShoppingListArgs = {
+  quantityOverride?: InputMaybe<Scalars['Float']['input']>;
+  recipeIngredientId: Scalars['ID']['input'];
+  shoppingListId: Scalars['ID']['input'];
+};
+
+export type MutationAddRecipeToShoppingListArgs = {
+  recipeId: Scalars['ID']['input'];
+  servings?: InputMaybe<Scalars['Int']['input']>;
+  shoppingListId: Scalars['ID']['input'];
 };
 
 export type MutationAddRestrictionsArgs = {
@@ -2555,6 +2669,10 @@ export type MutationDeletePurchaseArgs = {
   id: Scalars['ID']['input'];
 };
 
+export type MutationDeleteRecipeArgs = {
+  id: Scalars['ID']['input'];
+};
+
 export type MutationDeleteShoppingListArgs = {
   id: Scalars['ID']['input'];
 };
@@ -2594,6 +2712,10 @@ export type MutationFlagMultipleLoginsAsRiskyArgs = {
 
 export type MutationForgotPasswordArgs = {
   email: Scalars['String']['input'];
+};
+
+export type MutationForkRecipeArgs = {
+  id: Scalars['ID']['input'];
 };
 
 export type MutationGenerateNextRecurringListArgs = {
@@ -2644,6 +2766,15 @@ export type MutationJoinShoppingListByShareCodeArgs = {
 
 export type MutationLeaveHomeArgs = {
   homeId: Scalars['ID']['input'];
+};
+
+export type MutationLinkItemToExternalSourceArgs = {
+  data?: InputMaybe<Scalars['JSON']['input']>;
+  externalId: Scalars['String']['input'];
+  externalType?: InputMaybe<Scalars['String']['input']>;
+  isPrimary?: InputMaybe<Scalars['Boolean']['input']>;
+  itemId: Scalars['ID']['input'];
+  source: ExternalSource;
 };
 
 export type MutationLogCookingArgs = {
@@ -2810,6 +2941,10 @@ export type MutationReviewAppealArgs = {
 
 export type MutationRevokeHomeInviteArgs = {
   id: Scalars['ID']['input'];
+};
+
+export type MutationSaveRecipeArgs = {
+  input: SaveRecipeInput;
 };
 
 export type MutationSendBulkNotificationsArgs = {
@@ -3103,6 +3238,11 @@ export type MutationUpdatePushTokenArgs = {
   pushToken: Scalars['String']['input'];
 };
 
+export type MutationUpdateRecipeArgs = {
+  id: Scalars['ID']['input'];
+  input: UpdateRecipeInput;
+};
+
 export type MutationUpdateRiskScoreArgs = {
   riskScore: Scalars['Float']['input'];
   userId: Scalars['ID']['input'];
@@ -3164,6 +3304,14 @@ export type MutationUpdateUserArgs = {
 
 export type MutationUpdateUserAddressArgs = {
   input: UpdateUserAddressInput;
+};
+
+export type MutationUpsertItemByExternalSourceArgs = {
+  externalId: Scalars['String']['input'];
+  externalType?: InputMaybe<Scalars['String']['input']>;
+  itemData: CreateItemInput;
+  source: ExternalSource;
+  sourceData?: InputMaybe<Scalars['JSON']['input']>;
 };
 
 export type MutationValidateItemArgs = {
@@ -3782,10 +3930,12 @@ export type Query = {
   invitesSentByMe: Array<HomeInvite>;
   item: Maybe<Item>;
   itemByExternalId: Maybe<Item>;
+  itemByExternalSource: Maybe<Item>;
   itemBySku: Maybe<Item>;
   itemByUpc: Maybe<Item>;
   itemPriceHistory: Maybe<Array<ItemPriceHistory>>;
   items: ItemsResponse;
+  itemsBySource: Array<Item>;
   loginHistory: Maybe<LoginHistory>;
   loginHistoryByIP: Array<LoginHistory>;
   loginHistoryForUser: Array<LoginHistory>;
@@ -3811,6 +3961,7 @@ export type Query = {
   myPendingCollaborationInvites: Array<ShoppingListCollaborator>;
   myPendingInvites: Array<HomeInvite>;
   myPurchases: Array<Purchase>;
+  myRecipes: RecipesResponse;
   myShoppingListInvites: Array<ShoppingListCollaborator>;
   nearbyStores: Array<Store>;
   notification: Maybe<Notification>;
@@ -3838,6 +3989,7 @@ export type Query = {
   purchasesByStore: Array<Purchase>;
   recentItems: Maybe<Array<Item>>;
   recentNotifications: Array<Notification>;
+  recipe: Maybe<Recipe>;
   recipeCookingLogs: Array<CookingLog>;
   recommendedItems: Maybe<Array<ItemSuggestion>>;
   recommendedStores: Array<Store>;
@@ -4062,6 +4214,11 @@ export type QueryItemByExternalIdArgs = {
   provider: ProviderType;
 };
 
+export type QueryItemByExternalSourceArgs = {
+  externalId: Scalars['String']['input'];
+  source: ExternalSource;
+};
+
 export type QueryItemBySkuArgs = {
   sku: Scalars['String']['input'];
   storeId?: InputMaybe<Scalars['String']['input']>;
@@ -4081,6 +4238,12 @@ export type QueryItemsArgs = {
   filters?: InputMaybe<ItemFilters>;
   pagination?: InputMaybe<PaginationInput>;
   sort?: InputMaybe<ItemSortInput>;
+};
+
+export type QueryItemsBySourceArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
+  source: ExternalSource;
 };
 
 export type QueryLoginHistoryArgs = {
@@ -4158,6 +4321,14 @@ export type QueryMyNotificationsArgs = {
   first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
   orderBy?: InputMaybe<NotificationOrderBy>;
+};
+
+export type QueryMyRecipesArgs = {
+  category?: InputMaybe<RecipeCategory>;
+  difficulty?: InputMaybe<Difficulty>;
+  includeDeleted?: InputMaybe<Scalars['Boolean']['input']>;
+  skip?: InputMaybe<Scalars['Int']['input']>;
+  take?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type QueryNearbyStoresArgs = {
@@ -4269,6 +4440,10 @@ export type QueryRecentItemsArgs = {
 
 export type QueryRecentNotificationsArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type QueryRecipeArgs = {
+  id: Scalars['ID']['input'];
 };
 
 export type QueryRecipeCookingLogsArgs = {
@@ -4468,7 +4643,7 @@ export type RapidAttempt = {
 export type Recipe = {
   __typename?: 'Recipe';
   averageRating: Maybe<Scalars['Float']['output']>;
-  caloriesPerServing: Maybe<Scalars['Int']['output']>;
+  caloriesPerServing: Maybe<Scalars['Float']['output']>;
   category: RecipeCategory;
   cookTimeMinutes: Maybe<Scalars['Int']['output']>;
   cookingLogs: Array<CookingLog>;
@@ -4479,10 +4654,18 @@ export type Recipe = {
   description: Maybe<Scalars['String']['output']>;
   dietaryTags: Array<DietaryTag>;
   difficulty: Difficulty;
+  externalData: Maybe<Scalars['JSON']['output']>;
+  externalId: Maybe<Scalars['String']['output']>;
+  externalSource: Maybe<ExternalSource>;
+  externalUrl: Maybe<Scalars['String']['output']>;
+  forkedFrom: Maybe<Recipe>;
+  forkedFromId: Maybe<Scalars['ID']['output']>;
+  forks: Array<Recipe>;
   id: Scalars['ID']['output'];
   imageUrl: Maybe<Scalars['String']['output']>;
   ingredients: Array<RecipeIngredient>;
   instructions: Scalars['JSON']['output'];
+  isExternal: Scalars['Boolean']['output'];
   isPublished: Scalars['Boolean']['output'];
   matchPercentage: Maybe<Scalars['Float']['output']>;
   mealPlanItems: Array<MealPlanItem>;
@@ -4491,6 +4674,7 @@ export type Recipe = {
   nutritionData: Maybe<Scalars['JSON']['output']>;
   originalAuthor: Maybe<Scalars['String']['output']>;
   prepTimeMinutes: Maybe<Scalars['Int']['output']>;
+  primarySource: Maybe<Scalars['String']['output']>;
   publishedAt: Maybe<Scalars['DateTime']['output']>;
   rating1Count: Scalars['Int']['output'];
   rating2Count: Scalars['Int']['output'];
@@ -4500,6 +4684,7 @@ export type Recipe = {
   reviews: Array<RecipeReview>;
   servings: Scalars['Int']['output'];
   source: Maybe<Scalars['String']['output']>;
+  sourceMapping: Maybe<RecipeSourceMapping>;
   sourceUrl: Maybe<Scalars['String']['output']>;
   status: RecipeStatus;
   tags: Array<Scalars['String']['output']>;
@@ -4530,18 +4715,50 @@ export enum RecipeCategory {
 
 export type RecipeIngredient = {
   __typename?: 'RecipeIngredient';
+  aisle: Maybe<Scalars['String']['output']>;
   availablePantryItemIds: Array<Scalars['String']['output']>;
+  consistency: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
+  image: Maybe<Scalars['String']['output']>;
   isOptional: Scalars['Boolean']['output'];
   item: Maybe<Item>;
+  meta: Array<Scalars['String']['output']>;
+  metricAmount: Maybe<Scalars['Float']['output']>;
+  metricUnit: Maybe<Scalars['String']['output']>;
   name: Scalars['String']['output'];
   notes: Maybe<Scalars['String']['output']>;
+  originalString: Maybe<Scalars['String']['output']>;
   preparation: Maybe<Scalars['String']['output']>;
   quantity: Scalars['Float']['output'];
   recipe: Recipe;
   section: Maybe<Scalars['String']['output']>;
   sortOrder: Scalars['Int']['output'];
+  spoonacularIngredientId: Maybe<Scalars['Int']['output']>;
   unit: Maybe<Unit>;
+  usAmount: Maybe<Scalars['Float']['output']>;
+  usUnit: Maybe<Scalars['String']['output']>;
+};
+
+export type RecipeIngredientInput = {
+  aisle?: InputMaybe<Scalars['String']['input']>;
+  consistency?: InputMaybe<Scalars['String']['input']>;
+  image?: InputMaybe<Scalars['String']['input']>;
+  isOptional?: InputMaybe<Scalars['Boolean']['input']>;
+  itemId?: InputMaybe<Scalars['String']['input']>;
+  meta?: InputMaybe<Array<Scalars['String']['input']>>;
+  metricAmount?: InputMaybe<Scalars['Float']['input']>;
+  metricUnit?: InputMaybe<Scalars['String']['input']>;
+  name: Scalars['String']['input'];
+  notes?: InputMaybe<Scalars['String']['input']>;
+  originalString?: InputMaybe<Scalars['String']['input']>;
+  preparation?: InputMaybe<Scalars['String']['input']>;
+  quantity: Scalars['Float']['input'];
+  section?: InputMaybe<Scalars['String']['input']>;
+  sortOrder?: InputMaybe<Scalars['Int']['input']>;
+  spoonacularIngredientId?: InputMaybe<Scalars['Int']['input']>;
+  unitId?: InputMaybe<Scalars['String']['input']>;
+  usAmount?: InputMaybe<Scalars['Float']['input']>;
+  usUnit?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type RecipeReview = {
@@ -4558,12 +4775,32 @@ export type RecipeReview = {
   verified: Scalars['Boolean']['output'];
 };
 
+export type RecipeSourceMapping = {
+  __typename?: 'RecipeSourceMapping';
+  createdAt: Scalars['DateTime']['output'];
+  data: Maybe<Scalars['JSON']['output']>;
+  externalId: Scalars['String']['output'];
+  externalType: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  isPrimary: Scalars['Boolean']['output'];
+  lastSyncedAt: Maybe<Scalars['DateTime']['output']>;
+  metadata: Maybe<Scalars['JSON']['output']>;
+  source: ExternalSource;
+  updatedAt: Scalars['DateTime']['output'];
+};
+
 export enum RecipeStatus {
   Archived = 'ARCHIVED',
   Draft = 'DRAFT',
   Private = 'PRIVATE',
   Published = 'PUBLISHED',
 }
+
+export type RecipesResponse = {
+  __typename?: 'RecipesResponse';
+  recipes: Array<Recipe>;
+  totalCount: Scalars['Int']['output'];
+};
 
 export type RecordPantryItemUsageInput = {
   cookingLogId?: InputMaybe<Scalars['String']['input']>;
@@ -4656,6 +4893,27 @@ export enum RiskFactor {
   UnusualTime = 'UNUSUAL_TIME',
   VpnDetected = 'VPN_DETECTED',
 }
+
+export type SaveRecipeInput = {
+  caloriesPerServing?: InputMaybe<Scalars['Float']['input']>;
+  category?: InputMaybe<RecipeCategory>;
+  cookTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
+  cuisine?: InputMaybe<Scalars['String']['input']>;
+  description?: InputMaybe<Scalars['String']['input']>;
+  dietaryTags?: InputMaybe<Array<DietaryTag>>;
+  difficulty?: InputMaybe<Difficulty>;
+  externalSourceData?: InputMaybe<Scalars['JSON']['input']>;
+  externalSourceId?: InputMaybe<Scalars['String']['input']>;
+  externalSourceUrl?: InputMaybe<Scalars['String']['input']>;
+  imageUrl?: InputMaybe<Scalars['String']['input']>;
+  ingredients: Array<RecipeIngredientInput>;
+  instructions: Scalars['JSON']['input'];
+  name: Scalars['String']['input'];
+  nutritionData?: InputMaybe<Scalars['JSON']['input']>;
+  prepTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
+  servings?: InputMaybe<Scalars['Int']['input']>;
+  source?: InputMaybe<Scalars['String']['input']>;
+};
 
 export type SearchFacets = {
   __typename?: 'SearchFacets';
@@ -5496,7 +5754,6 @@ export type UpdateItemInput = {
   displayUnitId?: InputMaybe<Scalars['String']['input']>;
   displayUnitName?: InputMaybe<Scalars['String']['input']>;
   editReason?: InputMaybe<Scalars['String']['input']>;
-  fdcId?: InputMaybe<Scalars['String']['input']>;
   healthBenefits?: InputMaybe<Scalars['JSON']['input']>;
   imageUrl?: InputMaybe<Scalars['String']['input']>;
   ingredients?: InputMaybe<Scalars['JSON']['input']>;
@@ -5646,6 +5903,38 @@ export type UpdatePurchaseInput = {
   unitPrice?: InputMaybe<Scalars['Float']['input']>;
 };
 
+export type UpdateRecipeInput = {
+  addTags?: InputMaybe<Array<Scalars['String']['input']>>;
+  caloriesPerServing?: InputMaybe<Scalars['Float']['input']>;
+  category?: InputMaybe<RecipeCategory>;
+  cookTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
+  cuisine?: InputMaybe<Scalars['String']['input']>;
+  description?: InputMaybe<Scalars['String']['input']>;
+  dietaryTags?: InputMaybe<Array<DietaryTag>>;
+  difficulty?: InputMaybe<Difficulty>;
+  externalSourceData?: InputMaybe<Scalars['JSON']['input']>;
+  externalSourceId?: InputMaybe<Scalars['String']['input']>;
+  externalSourceUrl?: InputMaybe<Scalars['String']['input']>;
+  imageUrl?: InputMaybe<Scalars['String']['input']>;
+  instructions?: InputMaybe<Scalars['JSON']['input']>;
+  isPublished?: InputMaybe<Scalars['Boolean']['input']>;
+  name?: InputMaybe<Scalars['String']['input']>;
+  notes?: InputMaybe<Scalars['String']['input']>;
+  nutritionData?: InputMaybe<Scalars['JSON']['input']>;
+  originalAuthor?: InputMaybe<Scalars['String']['input']>;
+  prepTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
+  removeTags?: InputMaybe<Array<Scalars['String']['input']>>;
+  servings?: InputMaybe<Scalars['Int']['input']>;
+  source?: InputMaybe<Scalars['String']['input']>;
+  sourceUrl?: InputMaybe<Scalars['String']['input']>;
+  status?: InputMaybe<RecipeStatus>;
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
+  tips?: InputMaybe<Scalars['String']['input']>;
+  totalTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
+  videoUrl?: InputMaybe<Scalars['String']['input']>;
+  visibility?: InputMaybe<Visibility>;
+};
+
 export type UpdateShoppingListInput = {
   autoAddSuggestions?: InputMaybe<Scalars['Boolean']['input']>;
   budgetAmount?: InputMaybe<Scalars['Float']['input']>;
@@ -5778,6 +6067,13 @@ export type UpdateUserSettingsInput = {
   weeklyDigest?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
+export type UpsertItemResult = {
+  __typename?: 'UpsertItemResult';
+  created: Scalars['Boolean']['output'];
+  item: Item;
+  mapping: ExternalSourceMapping;
+};
+
 export enum UsageFrequency {
   Daily = 'DAILY',
   Monthly = 'MONTHLY',
@@ -5801,6 +6097,7 @@ export type User = {
   __typename?: 'User';
   addresses: Array<UserAddress>;
   createdAt: Scalars['DateTime']['output'];
+  defaultHome: Maybe<Home>;
   defaultHomeId: Maybe<Scalars['String']['output']>;
   defaultShoppingListId: Maybe<Scalars['String']['output']>;
   devices: Array<Device>;
@@ -7227,7 +7524,6 @@ export type ItemFragment = {
   name: string;
   description: string | null | undefined;
   upc: string | null | undefined;
-  fdcId: string | null | undefined;
   dataSource: DataSource;
   type: ItemType;
   storageState: StorageState;
@@ -7585,6 +7881,108 @@ export type PurchaseFragment = {
       | null
       | undefined;
   };
+};
+
+export type RecipeIngredientFragment = {
+  __typename?: 'RecipeIngredient';
+  id: string;
+  name: string;
+  quantity: number;
+  spoonacularIngredientId: number | null | undefined;
+  aisle: string | null | undefined;
+  consistency: string | null | undefined;
+  originalString: string | null | undefined;
+  metricAmount: number | null | undefined;
+  metricUnit: string | null | undefined;
+  usAmount: number | null | undefined;
+  usUnit: string | null | undefined;
+  meta: Array<string>;
+  image: string | null | undefined;
+  isOptional: boolean;
+  notes: string | null | undefined;
+  preparation: string | null | undefined;
+  sortOrder: number;
+  section: string | null | undefined;
+  item:
+    | {
+        __typename?: 'Item';
+        id: string;
+        name: string;
+        imageUrl: string | null | undefined;
+      }
+    | null
+    | undefined;
+  unit:
+    | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+    | null
+    | undefined;
+};
+
+export type BasicRecipeFragment = {
+  __typename?: 'Recipe';
+  id: string;
+  name: string;
+  description: string | null | undefined;
+  imageUrl: string | null | undefined;
+  servings: number;
+  prepTimeMinutes: number | null | undefined;
+  cookTimeMinutes: number | null | undefined;
+  totalTimeMinutes: number | null | undefined;
+  difficulty: Difficulty;
+  category: RecipeCategory;
+  status: RecipeStatus;
+  isExternal: boolean;
+  externalSource: ExternalSource | null | undefined;
+  externalId: string | null | undefined;
+  primarySource: string | null | undefined;
+  caloriesPerServing: number | null | undefined;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RecipeFragment = {
+  __typename?: 'Recipe';
+  id: string;
+  name: string;
+  description: string | null | undefined;
+  imageUrl: string | null | undefined;
+  servings: number;
+  prepTimeMinutes: number | null | undefined;
+  cookTimeMinutes: number | null | undefined;
+  totalTimeMinutes: number | null | undefined;
+  difficulty: Difficulty;
+  category: RecipeCategory;
+  status: RecipeStatus;
+  cuisine: string | null | undefined;
+  instructions: any;
+  notes: string | null | undefined;
+  tips: string | null | undefined;
+  videoUrl: string | null | undefined;
+  sourceUrl: string | null | undefined;
+  source: string | null | undefined;
+  originalAuthor: string | null | undefined;
+  isExternal: boolean;
+  externalSource: ExternalSource | null | undefined;
+  externalId: string | null | undefined;
+  externalUrl: string | null | undefined;
+  externalData: any | null | undefined;
+  primarySource: string | null | undefined;
+  caloriesPerServing: number | null | undefined;
+  nutritionData: any | null | undefined;
+  dietaryTags: Array<DietaryTag>;
+  tags: Array<string>;
+  visibility: Visibility;
+  isPublished: boolean;
+  publishedAt: string | null | undefined;
+  averageRating: number | null | undefined;
+  matchPercentage: number | null | undefined;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null | undefined;
+  createdBy: { __typename?: 'User' } & BasicUserFragment;
+  ingredients: Array<
+    { __typename?: 'RecipeIngredient' } & RecipeIngredientFragment
+  >;
 };
 
 export type GetHomeQueryVariables = Exact<{
@@ -9094,6 +9492,158 @@ export type PantryWasteAlertSubscription = {
         name: string;
         imageUrl: string | null | undefined;
       };
+    };
+  };
+};
+
+export type SearchRecipesQueryVariables = Exact<{
+  query: Scalars['String']['input'];
+}>;
+
+export type SearchRecipesQuery = {
+  __typename?: 'Query';
+  searchRecipes: Array<{ __typename?: 'Recipe' } & BasicRecipeFragment>;
+};
+
+export type SuggestedRecipesQueryVariables = Exact<{ [key: string]: never }>;
+
+export type SuggestedRecipesQuery = {
+  __typename?: 'Query';
+  suggestedRecipes: Array<{ __typename?: 'Recipe' } & BasicRecipeFragment>;
+};
+
+export type MyRecipesQueryVariables = Exact<{
+  skip?: InputMaybe<Scalars['Int']['input']>;
+  take?: InputMaybe<Scalars['Int']['input']>;
+  category?: InputMaybe<RecipeCategory>;
+  difficulty?: InputMaybe<Difficulty>;
+}>;
+
+export type MyRecipesQuery = {
+  __typename?: 'Query';
+  myRecipes: {
+    __typename?: 'RecipesResponse';
+    totalCount: number;
+    recipes: Array<
+      {
+        __typename?: 'Recipe';
+        cuisine: string | null | undefined;
+      } & BasicRecipeFragment
+    >;
+  };
+};
+
+export type GetRecipeQueryVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type GetRecipeQuery = {
+  __typename?: 'Query';
+  recipe: ({ __typename?: 'Recipe' } & RecipeFragment) | null | undefined;
+};
+
+export type AddRecipeMutationVariables = Exact<{
+  name: Scalars['String']['input'];
+  ingredients: Array<Scalars['String']['input']> | Scalars['String']['input'];
+  instructions: Scalars['JSON']['input'];
+  category?: InputMaybe<RecipeCategory>;
+  difficulty?: InputMaybe<Difficulty>;
+  prepTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
+  cookTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
+  servings?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+export type AddRecipeMutation = {
+  __typename?: 'Mutation';
+  addRecipe: { __typename?: 'Recipe' } & RecipeFragment;
+};
+
+export type SaveRecipeMutationVariables = Exact<{
+  input: SaveRecipeInput;
+}>;
+
+export type SaveRecipeMutation = {
+  __typename?: 'Mutation';
+  saveRecipe: { __typename?: 'Recipe' } & RecipeFragment;
+};
+
+export type DeleteRecipeMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type DeleteRecipeMutation = {
+  __typename?: 'Mutation';
+  deleteRecipe: boolean;
+};
+
+export type AddRecipeToShoppingListMutationVariables = Exact<{
+  recipeId: Scalars['ID']['input'];
+  shoppingListId: Scalars['ID']['input'];
+  servings?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+export type AddRecipeToShoppingListMutation = {
+  __typename?: 'Mutation';
+  addRecipeToShoppingList: {
+    __typename?: 'AddRecipeToShoppingListResult';
+    totalAdded: number;
+    totalUpdated: number;
+    totalSkipped: number;
+    addedItems: Array<{
+      __typename?: 'ShoppingListItem';
+      id: string;
+      itemName: string | null | undefined;
+      quantity: number | null | undefined;
+      aisle: string | null | undefined;
+      isPurchased: boolean;
+      unit:
+        | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+        | null
+        | undefined;
+    }>;
+    updatedItems: Array<{
+      __typename?: 'ShoppingListItem';
+      id: string;
+      itemName: string | null | undefined;
+      quantity: number | null | undefined;
+      isPurchased: boolean;
+      unit:
+        | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+        | null
+        | undefined;
+    }>;
+    skippedItems: Array<{
+      __typename?: 'RecipeIngredient';
+      id: string;
+      name: string;
+      quantity: number;
+    }>;
+  };
+};
+
+export type AddRecipeIngredientToShoppingListMutationVariables = Exact<{
+  recipeIngredientId: Scalars['ID']['input'];
+  shoppingListId: Scalars['ID']['input'];
+  quantityOverride?: InputMaybe<Scalars['Float']['input']>;
+}>;
+
+export type AddRecipeIngredientToShoppingListMutation = {
+  __typename?: 'Mutation';
+  addRecipeIngredientToShoppingList: {
+    __typename?: 'AddIngredientResult';
+    previousQuantity: number | null | undefined;
+    quantityAdded: number;
+    wasUpdated: boolean;
+    unitConversionApplied: boolean;
+    shoppingListItem: {
+      __typename?: 'ShoppingListItem';
+      id: string;
+      itemName: string | null | undefined;
+      quantity: number | null | undefined;
+      unit:
+        | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+        | null
+        | undefined;
     };
   };
 };
@@ -11513,7 +12063,6 @@ export const ItemFragmentDoc = {
           { kind: 'Field', name: { kind: 'Name', value: 'name' } },
           { kind: 'Field', name: { kind: 'Name', value: 'description' } },
           { kind: 'Field', name: { kind: 'Name', value: 'upc' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'fdcId' } },
           { kind: 'Field', name: { kind: 'Name', value: 'dataSource' } },
           { kind: 'Field', name: { kind: 'Name', value: 'type' } },
           { kind: 'Field', name: { kind: 'Name', value: 'storageState' } },
@@ -11985,7 +12534,6 @@ export const PantryItemFragmentDoc = {
           { kind: 'Field', name: { kind: 'Name', value: 'name' } },
           { kind: 'Field', name: { kind: 'Name', value: 'description' } },
           { kind: 'Field', name: { kind: 'Name', value: 'upc' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'fdcId' } },
           { kind: 'Field', name: { kind: 'Name', value: 'dataSource' } },
           { kind: 'Field', name: { kind: 'Name', value: 'type' } },
           { kind: 'Field', name: { kind: 'Name', value: 'storageState' } },
@@ -12276,7 +12824,6 @@ export const PantryFragmentDoc = {
           { kind: 'Field', name: { kind: 'Name', value: 'name' } },
           { kind: 'Field', name: { kind: 'Name', value: 'description' } },
           { kind: 'Field', name: { kind: 'Name', value: 'upc' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'fdcId' } },
           { kind: 'Field', name: { kind: 'Name', value: 'dataSource' } },
           { kind: 'Field', name: { kind: 'Name', value: 'type' } },
           { kind: 'Field', name: { kind: 'Name', value: 'storageState' } },
@@ -12848,7 +13395,6 @@ export const HomeFragmentDoc = {
           { kind: 'Field', name: { kind: 'Name', value: 'name' } },
           { kind: 'Field', name: { kind: 'Name', value: 'description' } },
           { kind: 'Field', name: { kind: 'Name', value: 'upc' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'fdcId' } },
           { kind: 'Field', name: { kind: 'Name', value: 'dataSource' } },
           { kind: 'Field', name: { kind: 'Name', value: 'type' } },
           { kind: 'Field', name: { kind: 'Name', value: 'storageState' } },
@@ -13249,6 +13795,265 @@ export const NotificationFragmentDoc = {
           { kind: 'Field', name: { kind: 'Name', value: 'sentAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'readAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const BasicRecipeFragmentDoc = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'BasicRecipeFragment' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'Recipe' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'description' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'servings' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'prepTimeMinutes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'cookTimeMinutes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalTimeMinutes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'difficulty' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'category' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'status' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'isExternal' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'externalSource' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'externalId' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'primarySource' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'caloriesPerServing' },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const RecipeIngredientFragmentDoc = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'RecipeIngredientFragment' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'RecipeIngredient' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'spoonacularIngredientId' },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'item' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'unit' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'aisle' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'consistency' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'originalString' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'metricAmount' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'metricUnit' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'usAmount' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'usUnit' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'meta' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'image' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'isOptional' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'preparation' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'section' } },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export const RecipeFragmentDoc = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'RecipeFragment' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'Recipe' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'description' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'servings' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'prepTimeMinutes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'cookTimeMinutes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalTimeMinutes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'difficulty' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'category' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'status' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'cuisine' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'instructions' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'tips' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'videoUrl' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'sourceUrl' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'source' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'originalAuthor' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'isExternal' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'externalSource' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'externalId' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'externalUrl' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'externalData' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'primarySource' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'caloriesPerServing' },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'nutritionData' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'dietaryTags' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'tags' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'visibility' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'isPublished' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'publishedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'averageRating' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'matchPercentage' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'createdBy' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'FragmentSpread',
+                  name: { kind: 'Name', value: 'BasicUser' },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'ingredients' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'FragmentSpread',
+                  name: { kind: 'Name', value: 'RecipeIngredientFragment' },
+                },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'deletedAt' } },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'BasicUser' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'User' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'email' } },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'RecipeIngredientFragment' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'RecipeIngredient' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'spoonacularIngredientId' },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'item' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'unit' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'aisle' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'consistency' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'originalString' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'metricAmount' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'metricUnit' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'usAmount' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'usUnit' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'meta' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'image' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'isOptional' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'preparation' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'section' } },
         ],
       },
     },
@@ -18192,7 +18997,6 @@ export const GetHomeDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'name' } },
           { kind: 'Field', name: { kind: 'Name', value: 'description' } },
           { kind: 'Field', name: { kind: 'Name', value: 'upc' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'fdcId' } },
           { kind: 'Field', name: { kind: 'Name', value: 'dataSource' } },
           { kind: 'Field', name: { kind: 'Name', value: 'type' } },
           { kind: 'Field', name: { kind: 'Name', value: 'storageState' } },
@@ -20448,7 +21252,6 @@ export const UpdateHomeDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'name' } },
           { kind: 'Field', name: { kind: 'Name', value: 'description' } },
           { kind: 'Field', name: { kind: 'Name', value: 'upc' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'fdcId' } },
           { kind: 'Field', name: { kind: 'Name', value: 'dataSource' } },
           { kind: 'Field', name: { kind: 'Name', value: 'type' } },
           { kind: 'Field', name: { kind: 'Name', value: 'storageState' } },
@@ -21256,7 +22059,6 @@ export const DeleteHomeDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'name' } },
           { kind: 'Field', name: { kind: 'Name', value: 'description' } },
           { kind: 'Field', name: { kind: 'Name', value: 'upc' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'fdcId' } },
           { kind: 'Field', name: { kind: 'Name', value: 'dataSource' } },
           { kind: 'Field', name: { kind: 'Name', value: 'type' } },
           { kind: 'Field', name: { kind: 'Name', value: 'storageState' } },
@@ -23668,7 +24470,6 @@ export const GetDefaultHomeDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'name' } },
           { kind: 'Field', name: { kind: 'Name', value: 'description' } },
           { kind: 'Field', name: { kind: 'Name', value: 'upc' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'fdcId' } },
           { kind: 'Field', name: { kind: 'Name', value: 'dataSource' } },
           { kind: 'Field', name: { kind: 'Name', value: 'type' } },
           { kind: 'Field', name: { kind: 'Name', value: 'storageState' } },
@@ -29072,7 +29873,6 @@ export const GetPantryItemsDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'name' } },
           { kind: 'Field', name: { kind: 'Name', value: 'description' } },
           { kind: 'Field', name: { kind: 'Name', value: 'upc' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'fdcId' } },
           { kind: 'Field', name: { kind: 'Name', value: 'dataSource' } },
           { kind: 'Field', name: { kind: 'Name', value: 'type' } },
           { kind: 'Field', name: { kind: 'Name', value: 'storageState' } },
@@ -29555,7 +30355,6 @@ export const GetPantryItemDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'name' } },
           { kind: 'Field', name: { kind: 'Name', value: 'description' } },
           { kind: 'Field', name: { kind: 'Name', value: 'upc' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'fdcId' } },
           { kind: 'Field', name: { kind: 'Name', value: 'dataSource' } },
           { kind: 'Field', name: { kind: 'Name', value: 'type' } },
           { kind: 'Field', name: { kind: 'Name', value: 'storageState' } },
@@ -30044,7 +30843,6 @@ export const AddItemToPantryDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'name' } },
           { kind: 'Field', name: { kind: 'Name', value: 'description' } },
           { kind: 'Field', name: { kind: 'Name', value: 'upc' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'fdcId' } },
           { kind: 'Field', name: { kind: 'Name', value: 'dataSource' } },
           { kind: 'Field', name: { kind: 'Name', value: 'type' } },
           { kind: 'Field', name: { kind: 'Name', value: 'storageState' } },
@@ -30822,7 +31620,6 @@ export const UpdatePantryItemDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'name' } },
           { kind: 'Field', name: { kind: 'Name', value: 'description' } },
           { kind: 'Field', name: { kind: 'Name', value: 'upc' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'fdcId' } },
           { kind: 'Field', name: { kind: 'Name', value: 'dataSource' } },
           { kind: 'Field', name: { kind: 'Name', value: 'type' } },
           { kind: 'Field', name: { kind: 'Name', value: 'storageState' } },
@@ -31270,7 +32067,6 @@ export const RemoveItemFromPantryDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'name' } },
           { kind: 'Field', name: { kind: 'Name', value: 'description' } },
           { kind: 'Field', name: { kind: 'Name', value: 'upc' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'fdcId' } },
           { kind: 'Field', name: { kind: 'Name', value: 'dataSource' } },
           { kind: 'Field', name: { kind: 'Name', value: 'type' } },
           { kind: 'Field', name: { kind: 'Name', value: 'storageState' } },
@@ -32416,6 +33212,1944 @@ export type PantryWasteAlertSubscriptionHookResult = ReturnType<
 >;
 export type PantryWasteAlertSubscriptionResult =
   ApolloReactCommon.SubscriptionResult<PantryWasteAlertSubscription>;
+export const SearchRecipesDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'query',
+      name: { kind: 'Name', value: 'SearchRecipes' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'query' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: {
+              kind: 'NamedType',
+              name: { kind: 'Name', value: 'String' },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'searchRecipes' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'query' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'query' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'FragmentSpread',
+                  name: { kind: 'Name', value: 'BasicRecipeFragment' },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'BasicRecipeFragment' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'Recipe' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'description' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'servings' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'prepTimeMinutes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'cookTimeMinutes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalTimeMinutes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'difficulty' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'category' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'status' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'isExternal' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'externalSource' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'externalId' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'primarySource' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'caloriesPerServing' },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+
+/**
+ * __useSearchRecipesQuery__
+ *
+ * To run a query within a React component, call `useSearchRecipesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useSearchRecipesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useSearchRecipesQuery({
+ *   variables: {
+ *      query: // value for 'query'
+ *   },
+ * });
+ */
+export function useSearchRecipesQuery(
+  baseOptions: ApolloReactHooks.QueryHookOptions<
+    SearchRecipesQuery,
+    SearchRecipesQueryVariables
+  > &
+    (
+      | { variables: SearchRecipesQueryVariables; skip?: boolean }
+      | { skip: boolean }
+    ),
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useQuery<
+    SearchRecipesQuery,
+    SearchRecipesQueryVariables
+  >(SearchRecipesDocument, options);
+}
+export function useSearchRecipesLazyQuery(
+  baseOptions?: ApolloReactHooks.LazyQueryHookOptions<
+    SearchRecipesQuery,
+    SearchRecipesQueryVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useLazyQuery<
+    SearchRecipesQuery,
+    SearchRecipesQueryVariables
+  >(SearchRecipesDocument, options);
+}
+export function useSearchRecipesSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        SearchRecipesQuery,
+        SearchRecipesQueryVariables
+      >,
+) {
+  const options =
+    baseOptions === ApolloReactHooks.skipToken
+      ? baseOptions
+      : { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useSuspenseQuery<
+    SearchRecipesQuery,
+    SearchRecipesQueryVariables
+  >(SearchRecipesDocument, options);
+}
+export type SearchRecipesQueryHookResult = ReturnType<
+  typeof useSearchRecipesQuery
+>;
+export type SearchRecipesLazyQueryHookResult = ReturnType<
+  typeof useSearchRecipesLazyQuery
+>;
+export type SearchRecipesSuspenseQueryHookResult = ReturnType<
+  typeof useSearchRecipesSuspenseQuery
+>;
+export type SearchRecipesQueryResult = ApolloReactCommon.QueryResult<
+  SearchRecipesQuery,
+  SearchRecipesQueryVariables
+>;
+export function refetchSearchRecipesQuery(
+  variables: SearchRecipesQueryVariables,
+) {
+  return { query: SearchRecipesDocument, variables: variables };
+}
+export const SuggestedRecipesDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'query',
+      name: { kind: 'Name', value: 'SuggestedRecipes' },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'suggestedRecipes' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'FragmentSpread',
+                  name: { kind: 'Name', value: 'BasicRecipeFragment' },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'BasicRecipeFragment' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'Recipe' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'description' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'servings' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'prepTimeMinutes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'cookTimeMinutes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalTimeMinutes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'difficulty' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'category' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'status' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'isExternal' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'externalSource' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'externalId' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'primarySource' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'caloriesPerServing' },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+
+/**
+ * __useSuggestedRecipesQuery__
+ *
+ * To run a query within a React component, call `useSuggestedRecipesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useSuggestedRecipesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useSuggestedRecipesQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useSuggestedRecipesQuery(
+  baseOptions?: ApolloReactHooks.QueryHookOptions<
+    SuggestedRecipesQuery,
+    SuggestedRecipesQueryVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useQuery<
+    SuggestedRecipesQuery,
+    SuggestedRecipesQueryVariables
+  >(SuggestedRecipesDocument, options);
+}
+export function useSuggestedRecipesLazyQuery(
+  baseOptions?: ApolloReactHooks.LazyQueryHookOptions<
+    SuggestedRecipesQuery,
+    SuggestedRecipesQueryVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useLazyQuery<
+    SuggestedRecipesQuery,
+    SuggestedRecipesQueryVariables
+  >(SuggestedRecipesDocument, options);
+}
+export function useSuggestedRecipesSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        SuggestedRecipesQuery,
+        SuggestedRecipesQueryVariables
+      >,
+) {
+  const options =
+    baseOptions === ApolloReactHooks.skipToken
+      ? baseOptions
+      : { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useSuspenseQuery<
+    SuggestedRecipesQuery,
+    SuggestedRecipesQueryVariables
+  >(SuggestedRecipesDocument, options);
+}
+export type SuggestedRecipesQueryHookResult = ReturnType<
+  typeof useSuggestedRecipesQuery
+>;
+export type SuggestedRecipesLazyQueryHookResult = ReturnType<
+  typeof useSuggestedRecipesLazyQuery
+>;
+export type SuggestedRecipesSuspenseQueryHookResult = ReturnType<
+  typeof useSuggestedRecipesSuspenseQuery
+>;
+export type SuggestedRecipesQueryResult = ApolloReactCommon.QueryResult<
+  SuggestedRecipesQuery,
+  SuggestedRecipesQueryVariables
+>;
+export function refetchSuggestedRecipesQuery(
+  variables?: SuggestedRecipesQueryVariables,
+) {
+  return { query: SuggestedRecipesDocument, variables: variables };
+}
+export const MyRecipesDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'query',
+      name: { kind: 'Name', value: 'MyRecipes' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: { kind: 'Variable', name: { kind: 'Name', value: 'skip' } },
+          type: { kind: 'NamedType', name: { kind: 'Name', value: 'Int' } },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: { kind: 'Variable', name: { kind: 'Name', value: 'take' } },
+          type: { kind: 'NamedType', name: { kind: 'Name', value: 'Int' } },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'category' },
+          },
+          type: {
+            kind: 'NamedType',
+            name: { kind: 'Name', value: 'RecipeCategory' },
+          },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'difficulty' },
+          },
+          type: {
+            kind: 'NamedType',
+            name: { kind: 'Name', value: 'Difficulty' },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'myRecipes' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'skip' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'skip' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'take' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'take' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'category' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'category' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'difficulty' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'difficulty' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'recipes' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'FragmentSpread',
+                        name: { kind: 'Name', value: 'BasicRecipeFragment' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'cuisine' },
+                      },
+                    ],
+                  },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalCount' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'BasicRecipeFragment' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'Recipe' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'description' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'servings' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'prepTimeMinutes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'cookTimeMinutes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalTimeMinutes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'difficulty' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'category' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'status' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'isExternal' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'externalSource' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'externalId' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'primarySource' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'caloriesPerServing' },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+
+/**
+ * __useMyRecipesQuery__
+ *
+ * To run a query within a React component, call `useMyRecipesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useMyRecipesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useMyRecipesQuery({
+ *   variables: {
+ *      skip: // value for 'skip'
+ *      take: // value for 'take'
+ *      category: // value for 'category'
+ *      difficulty: // value for 'difficulty'
+ *   },
+ * });
+ */
+export function useMyRecipesQuery(
+  baseOptions?: ApolloReactHooks.QueryHookOptions<
+    MyRecipesQuery,
+    MyRecipesQueryVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useQuery<MyRecipesQuery, MyRecipesQueryVariables>(
+    MyRecipesDocument,
+    options,
+  );
+}
+export function useMyRecipesLazyQuery(
+  baseOptions?: ApolloReactHooks.LazyQueryHookOptions<
+    MyRecipesQuery,
+    MyRecipesQueryVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useLazyQuery<MyRecipesQuery, MyRecipesQueryVariables>(
+    MyRecipesDocument,
+    options,
+  );
+}
+export function useMyRecipesSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        MyRecipesQuery,
+        MyRecipesQueryVariables
+      >,
+) {
+  const options =
+    baseOptions === ApolloReactHooks.skipToken
+      ? baseOptions
+      : { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useSuspenseQuery<
+    MyRecipesQuery,
+    MyRecipesQueryVariables
+  >(MyRecipesDocument, options);
+}
+export type MyRecipesQueryHookResult = ReturnType<typeof useMyRecipesQuery>;
+export type MyRecipesLazyQueryHookResult = ReturnType<
+  typeof useMyRecipesLazyQuery
+>;
+export type MyRecipesSuspenseQueryHookResult = ReturnType<
+  typeof useMyRecipesSuspenseQuery
+>;
+export type MyRecipesQueryResult = ApolloReactCommon.QueryResult<
+  MyRecipesQuery,
+  MyRecipesQueryVariables
+>;
+export function refetchMyRecipesQuery(variables?: MyRecipesQueryVariables) {
+  return { query: MyRecipesDocument, variables: variables };
+}
+export const GetRecipeDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'query',
+      name: { kind: 'Name', value: 'GetRecipe' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: { kind: 'Variable', name: { kind: 'Name', value: 'id' } },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'recipe' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'id' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'id' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'FragmentSpread',
+                  name: { kind: 'Name', value: 'RecipeFragment' },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'BasicUser' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'User' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'email' } },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'RecipeIngredientFragment' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'RecipeIngredient' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'spoonacularIngredientId' },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'item' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'unit' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'aisle' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'consistency' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'originalString' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'metricAmount' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'metricUnit' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'usAmount' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'usUnit' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'meta' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'image' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'isOptional' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'preparation' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'section' } },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'RecipeFragment' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'Recipe' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'description' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'servings' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'prepTimeMinutes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'cookTimeMinutes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalTimeMinutes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'difficulty' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'category' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'status' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'cuisine' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'instructions' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'tips' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'videoUrl' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'sourceUrl' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'source' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'originalAuthor' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'isExternal' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'externalSource' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'externalId' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'externalUrl' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'externalData' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'primarySource' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'caloriesPerServing' },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'nutritionData' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'dietaryTags' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'tags' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'visibility' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'isPublished' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'publishedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'averageRating' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'matchPercentage' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'createdBy' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'FragmentSpread',
+                  name: { kind: 'Name', value: 'BasicUser' },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'ingredients' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'FragmentSpread',
+                  name: { kind: 'Name', value: 'RecipeIngredientFragment' },
+                },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'deletedAt' } },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+
+/**
+ * __useGetRecipeQuery__
+ *
+ * To run a query within a React component, call `useGetRecipeQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetRecipeQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetRecipeQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useGetRecipeQuery(
+  baseOptions: ApolloReactHooks.QueryHookOptions<
+    GetRecipeQuery,
+    GetRecipeQueryVariables
+  > &
+    (
+      | { variables: GetRecipeQueryVariables; skip?: boolean }
+      | { skip: boolean }
+    ),
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useQuery<GetRecipeQuery, GetRecipeQueryVariables>(
+    GetRecipeDocument,
+    options,
+  );
+}
+export function useGetRecipeLazyQuery(
+  baseOptions?: ApolloReactHooks.LazyQueryHookOptions<
+    GetRecipeQuery,
+    GetRecipeQueryVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useLazyQuery<GetRecipeQuery, GetRecipeQueryVariables>(
+    GetRecipeDocument,
+    options,
+  );
+}
+export function useGetRecipeSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetRecipeQuery,
+        GetRecipeQueryVariables
+      >,
+) {
+  const options =
+    baseOptions === ApolloReactHooks.skipToken
+      ? baseOptions
+      : { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useSuspenseQuery<
+    GetRecipeQuery,
+    GetRecipeQueryVariables
+  >(GetRecipeDocument, options);
+}
+export type GetRecipeQueryHookResult = ReturnType<typeof useGetRecipeQuery>;
+export type GetRecipeLazyQueryHookResult = ReturnType<
+  typeof useGetRecipeLazyQuery
+>;
+export type GetRecipeSuspenseQueryHookResult = ReturnType<
+  typeof useGetRecipeSuspenseQuery
+>;
+export type GetRecipeQueryResult = ApolloReactCommon.QueryResult<
+  GetRecipeQuery,
+  GetRecipeQueryVariables
+>;
+export function refetchGetRecipeQuery(variables: GetRecipeQueryVariables) {
+  return { query: GetRecipeDocument, variables: variables };
+}
+export const AddRecipeDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'AddRecipe' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: { kind: 'Variable', name: { kind: 'Name', value: 'name' } },
+          type: {
+            kind: 'NonNullType',
+            type: {
+              kind: 'NamedType',
+              name: { kind: 'Name', value: 'String' },
+            },
+          },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'ingredients' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: {
+              kind: 'ListType',
+              type: {
+                kind: 'NonNullType',
+                type: {
+                  kind: 'NamedType',
+                  name: { kind: 'Name', value: 'String' },
+                },
+              },
+            },
+          },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'instructions' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'JSON' } },
+          },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'category' },
+          },
+          type: {
+            kind: 'NamedType',
+            name: { kind: 'Name', value: 'RecipeCategory' },
+          },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'difficulty' },
+          },
+          type: {
+            kind: 'NamedType',
+            name: { kind: 'Name', value: 'Difficulty' },
+          },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'prepTimeMinutes' },
+          },
+          type: { kind: 'NamedType', name: { kind: 'Name', value: 'Int' } },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'cookTimeMinutes' },
+          },
+          type: { kind: 'NamedType', name: { kind: 'Name', value: 'Int' } },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'servings' },
+          },
+          type: { kind: 'NamedType', name: { kind: 'Name', value: 'Int' } },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'addRecipe' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'name' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'name' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'ingredients' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'ingredients' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'instructions' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'instructions' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'category' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'category' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'difficulty' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'difficulty' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'prepTimeMinutes' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'prepTimeMinutes' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'cookTimeMinutes' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'cookTimeMinutes' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'servings' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'servings' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'FragmentSpread',
+                  name: { kind: 'Name', value: 'RecipeFragment' },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'BasicUser' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'User' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'email' } },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'RecipeIngredientFragment' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'RecipeIngredient' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'spoonacularIngredientId' },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'item' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'unit' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'aisle' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'consistency' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'originalString' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'metricAmount' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'metricUnit' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'usAmount' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'usUnit' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'meta' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'image' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'isOptional' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'preparation' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'section' } },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'RecipeFragment' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'Recipe' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'description' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'servings' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'prepTimeMinutes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'cookTimeMinutes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalTimeMinutes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'difficulty' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'category' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'status' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'cuisine' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'instructions' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'tips' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'videoUrl' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'sourceUrl' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'source' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'originalAuthor' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'isExternal' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'externalSource' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'externalId' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'externalUrl' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'externalData' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'primarySource' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'caloriesPerServing' },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'nutritionData' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'dietaryTags' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'tags' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'visibility' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'isPublished' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'publishedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'averageRating' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'matchPercentage' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'createdBy' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'FragmentSpread',
+                  name: { kind: 'Name', value: 'BasicUser' },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'ingredients' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'FragmentSpread',
+                  name: { kind: 'Name', value: 'RecipeIngredientFragment' },
+                },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'deletedAt' } },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type AddRecipeMutationFn = ApolloReactCommon.MutationFunction<
+  AddRecipeMutation,
+  AddRecipeMutationVariables
+>;
+
+/**
+ * __useAddRecipeMutation__
+ *
+ * To run a mutation, you first call `useAddRecipeMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useAddRecipeMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [addRecipeMutation, { data, loading, error }] = useAddRecipeMutation({
+ *   variables: {
+ *      name: // value for 'name'
+ *      ingredients: // value for 'ingredients'
+ *      instructions: // value for 'instructions'
+ *      category: // value for 'category'
+ *      difficulty: // value for 'difficulty'
+ *      prepTimeMinutes: // value for 'prepTimeMinutes'
+ *      cookTimeMinutes: // value for 'cookTimeMinutes'
+ *      servings: // value for 'servings'
+ *   },
+ * });
+ */
+export function useAddRecipeMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    AddRecipeMutation,
+    AddRecipeMutationVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useMutation<
+    AddRecipeMutation,
+    AddRecipeMutationVariables
+  >(AddRecipeDocument, options);
+}
+export type AddRecipeMutationHookResult = ReturnType<
+  typeof useAddRecipeMutation
+>;
+export type AddRecipeMutationResult =
+  ApolloReactCommon.MutationResult<AddRecipeMutation>;
+export type AddRecipeMutationOptions = ApolloReactCommon.BaseMutationOptions<
+  AddRecipeMutation,
+  AddRecipeMutationVariables
+>;
+export const SaveRecipeDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'SaveRecipe' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'input' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: {
+              kind: 'NamedType',
+              name: { kind: 'Name', value: 'SaveRecipeInput' },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'saveRecipe' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'input' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'input' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'FragmentSpread',
+                  name: { kind: 'Name', value: 'RecipeFragment' },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'BasicUser' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'User' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'email' } },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'RecipeIngredientFragment' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'RecipeIngredient' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'spoonacularIngredientId' },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'item' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'unit' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'aisle' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'consistency' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'originalString' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'metricAmount' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'metricUnit' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'usAmount' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'usUnit' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'meta' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'image' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'isOptional' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'preparation' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'section' } },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'RecipeFragment' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'Recipe' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'description' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'servings' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'prepTimeMinutes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'cookTimeMinutes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalTimeMinutes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'difficulty' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'category' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'status' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'cuisine' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'instructions' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'tips' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'videoUrl' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'sourceUrl' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'source' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'originalAuthor' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'isExternal' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'externalSource' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'externalId' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'externalUrl' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'externalData' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'primarySource' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'caloriesPerServing' },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'nutritionData' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'dietaryTags' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'tags' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'visibility' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'isPublished' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'publishedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'averageRating' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'matchPercentage' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'createdBy' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'FragmentSpread',
+                  name: { kind: 'Name', value: 'BasicUser' },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'ingredients' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'FragmentSpread',
+                  name: { kind: 'Name', value: 'RecipeIngredientFragment' },
+                },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'deletedAt' } },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type SaveRecipeMutationFn = ApolloReactCommon.MutationFunction<
+  SaveRecipeMutation,
+  SaveRecipeMutationVariables
+>;
+
+/**
+ * __useSaveRecipeMutation__
+ *
+ * To run a mutation, you first call `useSaveRecipeMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useSaveRecipeMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [saveRecipeMutation, { data, loading, error }] = useSaveRecipeMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useSaveRecipeMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    SaveRecipeMutation,
+    SaveRecipeMutationVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useMutation<
+    SaveRecipeMutation,
+    SaveRecipeMutationVariables
+  >(SaveRecipeDocument, options);
+}
+export type SaveRecipeMutationHookResult = ReturnType<
+  typeof useSaveRecipeMutation
+>;
+export type SaveRecipeMutationResult =
+  ApolloReactCommon.MutationResult<SaveRecipeMutation>;
+export type SaveRecipeMutationOptions = ApolloReactCommon.BaseMutationOptions<
+  SaveRecipeMutation,
+  SaveRecipeMutationVariables
+>;
+export const DeleteRecipeDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'DeleteRecipe' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: { kind: 'Variable', name: { kind: 'Name', value: 'id' } },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'deleteRecipe' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'id' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'id' },
+                },
+              },
+            ],
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type DeleteRecipeMutationFn = ApolloReactCommon.MutationFunction<
+  DeleteRecipeMutation,
+  DeleteRecipeMutationVariables
+>;
+
+/**
+ * __useDeleteRecipeMutation__
+ *
+ * To run a mutation, you first call `useDeleteRecipeMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteRecipeMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteRecipeMutation, { data, loading, error }] = useDeleteRecipeMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeleteRecipeMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    DeleteRecipeMutation,
+    DeleteRecipeMutationVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useMutation<
+    DeleteRecipeMutation,
+    DeleteRecipeMutationVariables
+  >(DeleteRecipeDocument, options);
+}
+export type DeleteRecipeMutationHookResult = ReturnType<
+  typeof useDeleteRecipeMutation
+>;
+export type DeleteRecipeMutationResult =
+  ApolloReactCommon.MutationResult<DeleteRecipeMutation>;
+export type DeleteRecipeMutationOptions = ApolloReactCommon.BaseMutationOptions<
+  DeleteRecipeMutation,
+  DeleteRecipeMutationVariables
+>;
+export const AddRecipeToShoppingListDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'AddRecipeToShoppingList' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'recipeId' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'shoppingListId' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'servings' },
+          },
+          type: { kind: 'NamedType', name: { kind: 'Name', value: 'Int' } },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'addRecipeToShoppingList' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'recipeId' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'recipeId' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'shoppingListId' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'shoppingListId' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'servings' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'servings' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'addedItems' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'itemName' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'quantity' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'unit' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'id' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'name' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'symbol' },
+                            },
+                          ],
+                        },
+                      },
+                      { kind: 'Field', name: { kind: 'Name', value: 'aisle' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'isPurchased' },
+                      },
+                    ],
+                  },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'updatedItems' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'itemName' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'quantity' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'unit' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'id' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'name' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'symbol' },
+                            },
+                          ],
+                        },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'isPurchased' },
+                      },
+                    ],
+                  },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'skippedItems' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'quantity' },
+                      },
+                    ],
+                  },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalAdded' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'totalUpdated' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'totalSkipped' },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type AddRecipeToShoppingListMutationFn =
+  ApolloReactCommon.MutationFunction<
+    AddRecipeToShoppingListMutation,
+    AddRecipeToShoppingListMutationVariables
+  >;
+
+/**
+ * __useAddRecipeToShoppingListMutation__
+ *
+ * To run a mutation, you first call `useAddRecipeToShoppingListMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useAddRecipeToShoppingListMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [addRecipeToShoppingListMutation, { data, loading, error }] = useAddRecipeToShoppingListMutation({
+ *   variables: {
+ *      recipeId: // value for 'recipeId'
+ *      shoppingListId: // value for 'shoppingListId'
+ *      servings: // value for 'servings'
+ *   },
+ * });
+ */
+export function useAddRecipeToShoppingListMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    AddRecipeToShoppingListMutation,
+    AddRecipeToShoppingListMutationVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useMutation<
+    AddRecipeToShoppingListMutation,
+    AddRecipeToShoppingListMutationVariables
+  >(AddRecipeToShoppingListDocument, options);
+}
+export type AddRecipeToShoppingListMutationHookResult = ReturnType<
+  typeof useAddRecipeToShoppingListMutation
+>;
+export type AddRecipeToShoppingListMutationResult =
+  ApolloReactCommon.MutationResult<AddRecipeToShoppingListMutation>;
+export type AddRecipeToShoppingListMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    AddRecipeToShoppingListMutation,
+    AddRecipeToShoppingListMutationVariables
+  >;
+export const AddRecipeIngredientToShoppingListDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'AddRecipeIngredientToShoppingList' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'recipeIngredientId' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'shoppingListId' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'quantityOverride' },
+          },
+          type: { kind: 'NamedType', name: { kind: 'Name', value: 'Float' } },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'addRecipeIngredientToShoppingList' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'recipeIngredientId' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'recipeIngredientId' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'shoppingListId' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'shoppingListId' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'quantityOverride' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'quantityOverride' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'shoppingListItem' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'itemName' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'quantity' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'unit' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'id' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'name' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'symbol' },
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'previousQuantity' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'quantityAdded' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'wasUpdated' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'unitConversionApplied' },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type AddRecipeIngredientToShoppingListMutationFn =
+  ApolloReactCommon.MutationFunction<
+    AddRecipeIngredientToShoppingListMutation,
+    AddRecipeIngredientToShoppingListMutationVariables
+  >;
+
+/**
+ * __useAddRecipeIngredientToShoppingListMutation__
+ *
+ * To run a mutation, you first call `useAddRecipeIngredientToShoppingListMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useAddRecipeIngredientToShoppingListMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [addRecipeIngredientToShoppingListMutation, { data, loading, error }] = useAddRecipeIngredientToShoppingListMutation({
+ *   variables: {
+ *      recipeIngredientId: // value for 'recipeIngredientId'
+ *      shoppingListId: // value for 'shoppingListId'
+ *      quantityOverride: // value for 'quantityOverride'
+ *   },
+ * });
+ */
+export function useAddRecipeIngredientToShoppingListMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    AddRecipeIngredientToShoppingListMutation,
+    AddRecipeIngredientToShoppingListMutationVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useMutation<
+    AddRecipeIngredientToShoppingListMutation,
+    AddRecipeIngredientToShoppingListMutationVariables
+  >(AddRecipeIngredientToShoppingListDocument, options);
+}
+export type AddRecipeIngredientToShoppingListMutationHookResult = ReturnType<
+  typeof useAddRecipeIngredientToShoppingListMutation
+>;
+export type AddRecipeIngredientToShoppingListMutationResult =
+  ApolloReactCommon.MutationResult<AddRecipeIngredientToShoppingListMutation>;
+export type AddRecipeIngredientToShoppingListMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    AddRecipeIngredientToShoppingListMutation,
+    AddRecipeIngredientToShoppingListMutationVariables
+  >;
 export const MyShoppingListInvitesDocument = {
   kind: 'Document',
   definitions: [

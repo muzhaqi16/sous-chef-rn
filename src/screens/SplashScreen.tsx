@@ -1,6 +1,6 @@
 import React from 'react';
-import {View, Text, Image} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
+import { View, Text, Image } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
 import Loader from '../components/atoms/Loader';
 
 export const SplashScreen = () => {

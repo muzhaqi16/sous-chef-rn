@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { UserHeader, SearchBar } from '#components';
 import { Header, HeaderAction } from '../molecules/Header';
 import { ItemList } from '../organisms/ItemList';
@@ -45,6 +45,13 @@ interface ListTemplateProps {
 
   // Search bar specific props
   searchPlaceholder?: string;
+  showTopSeparator?: boolean;
+  listName?: string; // Override for SearchBar listName (defaults to title)
+  completedCount?: number; // Override for SearchBar completedCount
+
+  // Custom list component
+  customListComponent?: React.ComponentType<any>;
+  customListProps?: any;
 }
 
 export const ListTemplate: React.FC<ListTemplateProps> = ({
@@ -76,11 +83,17 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
 
   // Search specific
   searchPlaceholder,
+  showTopSeparator = false,
+  listName,
+  completedCount,
+
+  // Custom list component
+  customListComponent: CustomListComponent,
+  customListProps = {},
 }) => {
+  const { theme } = useUnistyles();
   // Determine the actual display state
   const isLoading = loading && items.length === 0;
-  const shouldShowHeader = showHeader && !hasNoData;
-  const shouldShowSearchBar = showSearchBar && !hasNoData && !isLoading;
 
   // Use appropriate empty state based on context
   const effectiveEmptyState = hasNoData
@@ -96,7 +109,18 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
     <View style={styles.container}>
       {showUserHeader && <UserHeader />}
 
-      {shouldShowHeader && (
+      {showTopSeparator && (
+        <View
+          style={{
+            borderBottomWidth: 1,
+            borderBottomColor: theme.colors.border,
+            paddingVertical: theme.spacing.sm,
+            marginBottom: theme.spacing.sm,
+          }}
+        />
+      )}
+
+      {showHeader && (
         <Header
           title={title}
           onBack={onBack}
@@ -105,7 +129,7 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
         />
       )}
 
-      {shouldShowSearchBar && (
+      {showSearchBar && (
         <SearchBar
           value={searchQuery || ''}
           onChangeText={onSearchChange}
@@ -114,20 +138,36 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
           }
           leftActions={searchBarActions?.left || []}
           rightActions={searchBarActions?.right || []}
-          listName={title}
+          listName={listName || title}
           itemCount={items?.length || 0}
-          completedCount={items?.filter(item => item.completed).length}
+          completedCount={
+            completedCount !== undefined
+              ? completedCount
+              : items?.filter(item => item.completed).length
+          }
         />
       )}
 
-      <ItemList
-        items={items || []}
-        onItemPress={isLoading ? () => {} : onItemPress}
-        onItemEdit={isLoading ? () => {} : onItemEdit}
-        onItemDelete={isLoading ? () => {} : onItemDelete}
-        onRefresh={onRefresh}
-        emptyState={effectiveEmptyState}
-      />
+      {CustomListComponent ? (
+        <CustomListComponent
+          items={items || []}
+          onItemPress={isLoading ? () => {} : onItemPress}
+          onItemEdit={isLoading ? () => {} : onItemEdit}
+          onItemDelete={isLoading ? () => {} : onItemDelete}
+          onRefresh={onRefresh}
+          emptyState={effectiveEmptyState}
+          {...customListProps}
+        />
+      ) : (
+        <ItemList
+          items={items || []}
+          onItemPress={isLoading ? () => {} : onItemPress}
+          onItemEdit={isLoading ? () => {} : onItemEdit}
+          onItemDelete={isLoading ? () => {} : onItemDelete}
+          onRefresh={onRefresh}
+          emptyState={effectiveEmptyState}
+        />
+      )}
     </View>
   );
 };
