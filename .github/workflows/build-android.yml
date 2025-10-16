@@ -95,10 +95,12 @@ jobs:
             echo "API_URL=${{ vars.API_URL }}" > .env.production
             echo "API_KEY=${{ secrets.API_KEY }}" >> .env.production
             echo "WEB_SOCKET_URL=${{ vars.WEB_SOCKET_URL }}" >> .env.production
+            echo "SPOONACULAR_API_KEY=${{ vars.SPOONACULAR_API_KEY }}" >> .env.production
           else
             echo "API_URL=${{ vars.API_URL }}" > .env.dev
             echo "API_KEY=${{ secrets.API_KEY }}" >> .env.dev
             echo "WEB_SOCKET_URL=${{ vars.WEB_SOCKET_URL }}" >> .env.dev
+            echo "SPOONACULAR_API_KEY=${{ vars.SPOONACULAR_API_KEY }}" >> .env.dev
           fi
 
       - name: Prepare .env for react-native-config
@@ -173,3 +175,4 @@ jobs:
           rm -f android/local.properties
           rm -f .env.production .env.prod .env.dev .env
           cd android && ./gradlew --stop || true
+
