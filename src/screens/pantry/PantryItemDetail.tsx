@@ -7,6 +7,7 @@ import {
   GetShoppingListItemsDocument,
 } from '#generated';
 import { DetailTemplate } from '#components/templates/DetailTemplate';
+import { FormattedItemSubtitle } from '#components';
 import { useStore } from '#/store';
 import { commonStyles } from '#styles';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -89,12 +90,6 @@ export const PantryItemDetail: React.FC<{
           },
         },
       });
-
-      // Show success feedback
-      Alert.alert(
-        'Success',
-        `${data?.pantryItem?.item?.name} added to shopping list`,
-      );
     } catch (error) {
       console.error('Failed to add to shopping list:', error);
       Alert.alert('Error', 'Failed to add to shopping list');
@@ -124,6 +119,16 @@ export const PantryItemDetail: React.FC<{
               {item.item.brands.map(brand => brand?.brand?.name).join(', ')}
             </Text>
           )}
+          {item?.currentQuantity && (
+            <View style={styles.quantityDescription}>
+              <FormattedItemSubtitle
+                quantity={item.currentQuantity}
+                netWeight={item.item?.netWeight}
+                unitSymbol={item.item?.displayUnit?.symbol || item.unit?.symbol}
+                additionalInfo={item.storageState}
+              />
+            </View>
+          )}
         </View>
       ),
     },
@@ -135,17 +140,25 @@ export const PantryItemDetail: React.FC<{
             <Text style={[commonStyles.caption, styles.detailLabel]}>
               Current
             </Text>
-            <Text style={styles.detailValue}>
-              {item?.currentQuantity} {item?.unit?.symbol}
-            </Text>
+            <View>
+              <FormattedItemSubtitle
+                quantity={item?.currentQuantity}
+                netWeight={item?.item?.netWeight}
+                unitSymbol={item?.item?.displayUnit?.symbol || item?.unit?.symbol}
+              />
+            </View>
           </View>
           <View style={styles.detailRow}>
             <Text style={[commonStyles.caption, styles.detailLabel]}>
               Initial
             </Text>
-            <Text style={styles.detailValue}>
-              {item?.initialQuantity} {item?.unit?.symbol}
-            </Text>
+            <View>
+              <FormattedItemSubtitle
+                quantity={item?.initialQuantity}
+                netWeight={item?.item?.netWeight}
+                unitSymbol={item?.item?.displayUnit?.symbol || item?.unit?.symbol}
+              />
+            </View>
           </View>
           <View style={styles.detailRow}>
             <Text style={[commonStyles.caption, styles.detailLabel]}>
@@ -317,6 +330,11 @@ const styles = StyleSheet.create(theme => ({
   },
   brandName: {
     marginTop: theme.spacing.xs,
+  },
+  quantityDescription: {
+    marginTop: theme.spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   detailRow: {
     flexDirection: 'row',

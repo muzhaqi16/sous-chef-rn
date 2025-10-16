@@ -6,7 +6,7 @@ import { Badge } from '../base/Badge';
 
 interface ListItemProps {
   title: string;
-  subtitle?: string;
+  subtitle?: string | React.ReactNode;
   onPress?: () => void;
   leftIcon?: React.ComponentProps<typeof Icon>['name'];
   rightIcon?: React.ComponentProps<typeof Icon>['name'];
@@ -43,7 +43,13 @@ export const ListItem: React.FC<ListItemProps> = ({
         <Text style={styles.title} numberOfLines={2} ellipsizeMode="tail">
           {title}
         </Text>
-        {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+        {subtitle && (
+          typeof subtitle === 'string' ? (
+            <Text style={styles.subtitle}>{subtitle}</Text>
+          ) : (
+            <View style={styles.subtitleContainer}>{subtitle}</View>
+          )
+        )}
       </View>
       {badge && <Badge variant={badge.variant}>{badge.text}</Badge>}
       {rightElement}
@@ -96,6 +102,9 @@ const styles = StyleSheet.create(theme => ({
   subtitle: {
     fontSize: 14,
     color: theme.colors.textSecondary,
+    marginTop: 4,
+  },
+  subtitleContainer: {
     marginTop: 4,
   },
 }));

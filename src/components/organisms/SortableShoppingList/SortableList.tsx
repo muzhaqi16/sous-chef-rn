@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { View, RefreshControl } from 'react-native';
+import { View, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
 import DraggableFlatList, {
@@ -22,15 +22,13 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
   onItemEdit,
   onItemDelete,
   onSortOrderUpdate,
-  onRefresh,
-  refreshing = false,
   disabled = false,
   ...flatListProps
 }) => {
   // Track local order for optimistic updates
   const [localItems, setLocalItems] = useState(items);
-  // Track drag state to disable refresh
-  const [isDragging, setIsDragging] = useState(false);
+  // Track drag state
+  const [_isDragging, setIsDragging] = useState(false);
   // Track if we're currently updating the sort order
   const isUpdatingRef = useRef(false);
 
@@ -127,15 +125,12 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
         showsVerticalScrollIndicator={
           flatListProps.showsVerticalScrollIndicator ?? true
         }
-        refreshControl={
-          onRefresh && !isDragging ? (
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          ) : undefined
-        }
         contentContainerStyle={{
           paddingBottom: TAB_BAR_HEIGHT + insets.bottom + 16,
         }}
-        activationDistance={disabled ? 999999 : 20}
+        activationDistance={
+          disabled ? 999999 : Platform.OS === 'android' ? 10 : 5
+        }
       />
     </View>
   );
