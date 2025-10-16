@@ -196,18 +196,14 @@ export type Brand = {
   __typename?: 'Brand';
   children: Array<Brand>;
   createdAt: Scalars['DateTime']['output'];
-  deletedAt?: Maybe<Scalars['DateTime']['output']>;
   description?: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
   itemCount: Scalars['Int']['output'];
   items?: Maybe<Array<ItemBrand>>;
-  logo?: Maybe<Scalars['String']['output']>;
-  metadata?: Maybe<Scalars['JSON']['output']>;
   name: Scalars['String']['output'];
   parent?: Maybe<Brand>;
   updatedAt: Scalars['DateTime']['output'];
   version: Scalars['Int']['output'];
-  website?: Maybe<Scalars['String']['output']>;
 };
 
 export type BrandInput = {
@@ -537,17 +533,16 @@ export type CreateItemInput = {
   externalSources?: InputMaybe<Array<ExternalSourceMappingInput>>;
   healthBenefits?: InputMaybe<Scalars['JSON']['input']>;
   imageUrl?: InputMaybe<Scalars['String']['input']>;
+  images?: InputMaybe<Scalars['JSON']['input']>;
   ingredients?: InputMaybe<Scalars['JSON']['input']>;
   metadata?: InputMaybe<Scalars['JSON']['input']>;
   name: Scalars['String']['input'];
   netWeight?: InputMaybe<Scalars['Float']['input']>;
   shelfLifeDays?: InputMaybe<Scalars['Int']['input']>;
-  sku?: InputMaybe<Scalars['String']['input']>;
   storageState?: InputMaybe<StorageState>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
   type?: InputMaybe<ItemType>;
   units?: InputMaybe<Array<ItemUnitInput>>;
-  upc?: InputMaybe<Scalars['String']['input']>;
   vendor?: InputMaybe<Scalars['String']['input']>;
 };
 
@@ -807,6 +802,7 @@ export enum DataSource {
   Import = 'IMPORT',
   Kroger = 'KROGER',
   Manual = 'MANUAL',
+  Spoonacular = 'SPOONACULAR',
   Usda = 'USDA',
 }
 
@@ -1103,25 +1099,60 @@ export enum ExternalSource {
 
 export type ExternalSourceMapping = {
   __typename?: 'ExternalSourceMapping';
+  allergens?: Maybe<Scalars['JSON']['output']>;
+  availability?: Maybe<Scalars['JSON']['output']>;
+  brandInfo?: Maybe<Scalars['JSON']['output']>;
+  categories?: Maybe<Scalars['JSON']['output']>;
+  confidence?: Maybe<Scalars['Float']['output']>;
   createdAt: Scalars['DateTime']['output'];
   data?: Maybe<Scalars['JSON']['output']>;
+  externalDescription?: Maybe<Scalars['String']['output']>;
   externalId: Scalars['String']['output'];
+  externalName?: Maybe<Scalars['String']['output']>;
   externalType?: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
+  identifiers?: Maybe<Scalars['JSON']['output']>;
+  images?: Maybe<Scalars['JSON']['output']>;
   isPrimary: Scalars['Boolean']['output'];
   item: Item;
   lastSyncedAt: Scalars['DateTime']['output'];
+  location?: Maybe<Scalars['JSON']['output']>;
   metadata?: Maybe<Scalars['JSON']['output']>;
+  netWeight?: Maybe<Scalars['Float']['output']>;
+  netWeightUnit?: Maybe<Scalars['String']['output']>;
+  nutritionData?: Maybe<Scalars['JSON']['output']>;
+  packageSize?: Maybe<Scalars['String']['output']>;
+  pricing?: Maybe<Scalars['JSON']['output']>;
+  retailInfo?: Maybe<Scalars['JSON']['output']>;
   source: ExternalSource;
+  storage?: Maybe<Scalars['JSON']['output']>;
   updatedAt: Scalars['DateTime']['output'];
 };
 
 export type ExternalSourceMappingInput = {
+  allergens?: InputMaybe<Scalars['JSON']['input']>;
+  availability?: InputMaybe<Scalars['JSON']['input']>;
+  brandInfo?: InputMaybe<Scalars['JSON']['input']>;
+  categories?: InputMaybe<Scalars['JSON']['input']>;
+  confidence?: InputMaybe<Scalars['Float']['input']>;
   data?: InputMaybe<Scalars['JSON']['input']>;
+  externalDescription?: InputMaybe<Scalars['String']['input']>;
   externalId: Scalars['String']['input'];
+  externalName?: InputMaybe<Scalars['String']['input']>;
   externalType?: InputMaybe<Scalars['String']['input']>;
+  identifiers?: InputMaybe<Scalars['JSON']['input']>;
+  images?: InputMaybe<Scalars['JSON']['input']>;
   isPrimary?: InputMaybe<Scalars['Boolean']['input']>;
+  location?: InputMaybe<Scalars['JSON']['input']>;
+  metadata?: InputMaybe<Scalars['JSON']['input']>;
+  netWeight?: InputMaybe<Scalars['Float']['input']>;
+  netWeightUnit?: InputMaybe<Scalars['String']['input']>;
+  nutritionData?: InputMaybe<Scalars['JSON']['input']>;
+  packageSize?: InputMaybe<Scalars['String']['input']>;
+  pricing?: InputMaybe<Scalars['JSON']['input']>;
+  retailInfo?: InputMaybe<Scalars['JSON']['input']>;
   source: ExternalSource;
+  storage?: InputMaybe<Scalars['JSON']['input']>;
 };
 
 export type FacetValue = {
@@ -1173,7 +1204,7 @@ export type Home = {
   maxMembers?: Maybe<Scalars['Int']['output']>;
   members: Array<Membership>;
   membershipStats: MembershipStats;
-  metadata?: Maybe<Scalars['String']['output']>;
+  metadata?: Maybe<Scalars['JSON']['output']>;
   myMembership?: Maybe<Membership>;
   name: Scalars['String']['output'];
   pantries?: Maybe<Array<Pantry>>;
@@ -1188,7 +1219,7 @@ export type HomeInvite = {
   __typename?: 'HomeInvite';
   acceptedAt?: Maybe<Scalars['String']['output']>;
   createdAt: Scalars['DateTime']['output'];
-  customPermissions?: Maybe<Scalars['String']['output']>;
+  customPermissions?: Maybe<Scalars['JSON']['output']>;
   declinedAt?: Maybe<Scalars['String']['output']>;
   email: Scalars['String']['output'];
   expiresAt: Scalars['String']['output'];
@@ -1208,6 +1239,8 @@ export type HomeInvite = {
   sentAt: Scalars['String']['output'];
   status: InviteStatus;
   token: Scalars['String']['output'];
+  updatedAt: Scalars['DateTime']['output'];
+  version: Scalars['Int']['output'];
 };
 
 export type HomeInviteLogsArgs = {
@@ -1421,8 +1454,8 @@ export type Item = {
   healthBenefits?: Maybe<Scalars['JSON']['output']>;
   id: Scalars['ID']['output'];
   imageUrl?: Maybe<Scalars['String']['output']>;
+  images?: Maybe<Scalars['JSON']['output']>;
   ingredients?: Maybe<Scalars['JSON']['output']>;
-  krogerId?: Maybe<Scalars['String']['output']>;
   metadata?: Maybe<Scalars['JSON']['output']>;
   name: Scalars['String']['output'];
   netWeight?: Maybe<Scalars['Float']['output']>;
@@ -1435,18 +1468,13 @@ export type Item = {
   shelfLifeDays?: Maybe<Scalars['Int']['output']>;
   shoppingListItems: Array<ShoppingListItem>;
   showInOnboarding: Scalars['Boolean']['output'];
-  sku?: Maybe<Scalars['String']['output']>;
-  spoonacularId?: Maybe<Scalars['Int']['output']>;
-  spoonacularType?: Maybe<Scalars['String']['output']>;
   status: ItemStatus;
   storageState: StorageState;
   storeSkus: Array<ItemStoreSku>;
   tags: Array<Scalars['String']['output']>;
   type: ItemType;
   units: Array<ItemUnit>;
-  upc?: Maybe<Scalars['String']['output']>;
   updatedAt: Scalars['DateTime']['output'];
-  usdaFdcId?: Maybe<Scalars['String']['output']>;
   version: Scalars['Int']['output'];
   visibility: Visibility;
 };
@@ -1581,7 +1609,8 @@ export type ItemSortInput = {
 
 export enum ItemStatus {
   Active = 'ACTIVE',
-  Inactive = 'INACTIVE',
+  Archived = 'ARCHIVED',
+  Deprecated = 'DEPRECATED',
   Pending = 'PENDING',
 }
 
@@ -1998,6 +2027,7 @@ export type Membership = {
   updatedAt: Scalars['DateTime']['output'];
   user: User;
   userId: Scalars['String']['output'];
+  version: Scalars['Int']['output'];
 };
 
 export enum MembershipJoinMethod {
@@ -3577,7 +3607,7 @@ export type PantryActivity = {
   description: Scalars['String']['output'];
   id: Scalars['ID']['output'];
   itemName?: Maybe<Scalars['String']['output']>;
-  metadata?: Maybe<Scalars['String']['output']>;
+  metadata?: Maybe<Scalars['JSON']['output']>;
   newValue?: Maybe<Scalars['String']['output']>;
   oldValue?: Maybe<Scalars['String']['output']>;
   pantry: Pantry;
@@ -3623,9 +3653,9 @@ export type PantryItem = {
   isComposted: Scalars['Boolean']['output'];
   isRecycled: Scalars['Boolean']['output'];
   item: Item;
+  itemBarcode?: Maybe<Scalars['String']['output']>;
   itemId: Scalars['String']['output'];
   itemName: Scalars['String']['output'];
-  itemUpc?: Maybe<Scalars['String']['output']>;
   lastModifiedBy?: Maybe<User>;
   lastReorderDate?: Maybe<Scalars['DateTime']['output']>;
   lastUsedAt?: Maybe<Scalars['DateTime']['output']>;
@@ -3653,6 +3683,7 @@ export type PantryItem = {
   updatedAt?: Maybe<Scalars['DateTime']['output']>;
   usageFrequency: UsageFrequency;
   usageRecords: Array<PantryItemUsage>;
+  version: Scalars['Int']['output'];
   wasteAmount: Scalars['Float']['output'];
   wasteDate?: Maybe<Scalars['DateTime']['output']>;
   wasteReason?: Maybe<WasteReason>;
@@ -3721,7 +3752,7 @@ export type PantryUpdatedPayload = {
   homeId: Scalars['String']['output'];
   id: Scalars['ID']['output'];
   location?: Maybe<Scalars['String']['output']>;
-  metadata?: Maybe<Scalars['String']['output']>;
+  metadata?: Maybe<Scalars['JSON']['output']>;
   name: Scalars['String']['output'];
   tags: Array<Scalars['String']['output']>;
   temperature?: Maybe<Scalars['String']['output']>;
@@ -3846,9 +3877,9 @@ export type Purchase = {
   shoppingListId?: Maybe<Scalars['String']['output']>;
   shoppingListItem?: Maybe<ShoppingListItem>;
   shoppingListItemId?: Maybe<Scalars['String']['output']>;
-  store: Store;
-  storeId: Scalars['String']['output'];
-  storeName: Scalars['String']['output'];
+  store?: Maybe<Store>;
+  storeId?: Maybe<Scalars['String']['output']>;
+  storeName?: Maybe<Scalars['String']['output']>;
   totalPrice: Scalars['Float']['output'];
   transactionId?: Maybe<Scalars['String']['output']>;
   unit: Unit;
@@ -4956,7 +4987,6 @@ export type ShoppingList = {
   completedShopDate?: Maybe<Scalars['DateTime']['output']>;
   createdAt: Scalars['DateTime']['output'];
   currency?: Maybe<Scalars['String']['output']>;
-  deletedAt?: Maybe<Scalars['DateTime']['output']>;
   description?: Maybe<Scalars['String']['output']>;
   estimatedTotal: Scalars['Float']['output'];
   generatedFromMealPlan: Scalars['Boolean']['output'];
@@ -4996,6 +5026,7 @@ export type ShoppingList = {
   totalCost: Scalars['Float']['output'];
   totalItems: Scalars['Int']['output'];
   updatedAt: Scalars['DateTime']['output'];
+  version: Scalars['Int']['output'];
   viewCount: Scalars['Int']['output'];
 };
 
@@ -5007,7 +5038,7 @@ export type ShoppingListActivity = {
   id: Scalars['ID']['output'];
   ipAddress?: Maybe<Scalars['String']['output']>;
   itemName?: Maybe<Scalars['String']['output']>;
-  metadata?: Maybe<Scalars['String']['output']>;
+  metadata?: Maybe<Scalars['JSON']['output']>;
   newValue?: Maybe<Scalars['String']['output']>;
   oldValue?: Maybe<Scalars['String']['output']>;
   shoppingList: ShoppingList;
@@ -5750,6 +5781,7 @@ export type UpdateItemInput = {
   editReason?: InputMaybe<Scalars['String']['input']>;
   healthBenefits?: InputMaybe<Scalars['JSON']['input']>;
   imageUrl?: InputMaybe<Scalars['String']['input']>;
+  images?: InputMaybe<Scalars['JSON']['input']>;
   ingredients?: InputMaybe<Scalars['JSON']['input']>;
   metadata?: InputMaybe<Scalars['JSON']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
@@ -5761,14 +5793,12 @@ export type UpdateItemInput = {
   removeUnitIds?: InputMaybe<Array<Scalars['String']['input']>>;
   shelfLifeDays?: InputMaybe<Scalars['Int']['input']>;
   showInOnboarding?: InputMaybe<Scalars['Boolean']['input']>;
-  sku?: InputMaybe<Scalars['String']['input']>;
   status?: InputMaybe<ItemStatus>;
   storageState?: InputMaybe<StorageState>;
   storeSkus?: InputMaybe<Array<StoreSkuInput>>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
   type?: InputMaybe<ItemType>;
   units?: InputMaybe<Array<ItemUnitInput>>;
-  upc?: InputMaybe<Scalars['String']['input']>;
   vendor?: InputMaybe<Scalars['String']['input']>;
   visibility?: InputMaybe<Visibility>;
 };
@@ -7429,6 +7459,11 @@ export type ShoppingListItemFragmentFragment = {
         name: string;
         description?: string | null | undefined;
         imageUrl?: string | null | undefined;
+        netWeight?: number | null | undefined;
+        displayUnit?:
+          | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+          | null
+          | undefined;
       }
     | null
     | undefined;
@@ -7725,7 +7760,6 @@ export type UnitFragmentFragment = {
   verifiedAt?: string | null | undefined;
   createdAt: string;
   updatedAt: string;
-  deletedAt?: string | null | undefined;
   version: number;
 };
 
@@ -7737,13 +7771,9 @@ export type BrandFragmentFragment = {
         __typename?: 'Brand';
         id: string;
         name: string;
-        logo?: string | null | undefined;
-        website?: string | null | undefined;
         description?: string | null | undefined;
-        metadata?: any | null | undefined;
         createdAt: string;
         updatedAt: string;
-        deletedAt?: string | null | undefined;
         version: number;
       }
     | null
@@ -7776,7 +7806,6 @@ export type ItemFragmentFragment = {
   id: string;
   name: string;
   description?: string | null | undefined;
-  upc?: string | null | undefined;
   dataSource: DataSource;
   type: ItemType;
   storageState: StorageState;
@@ -7831,7 +7860,6 @@ export type ItemFragmentFragment = {
     verifiedAt?: string | null | undefined;
     createdAt: string;
     updatedAt: string;
-    deletedAt?: string | null | undefined;
     version: number;
   }>;
   brands: Array<{
@@ -7842,13 +7870,9 @@ export type ItemFragmentFragment = {
           __typename?: 'Brand';
           id: string;
           name: string;
-          logo?: string | null | undefined;
-          website?: string | null | undefined;
           description?: string | null | undefined;
-          metadata?: any | null | undefined;
           createdAt: string;
           updatedAt: string;
-          deletedAt?: string | null | undefined;
           version: number;
         }
       | null
@@ -7946,13 +7970,13 @@ export type PantryItemFragmentFragment = {
   customCategory?: string | null | undefined;
   createdAt: string;
   updatedAt?: string | null | undefined;
+  version: number;
   tags: Array<string>;
   item: {
     __typename?: 'Item';
     id: string;
     name: string;
     description?: string | null | undefined;
-    upc?: string | null | undefined;
     dataSource: DataSource;
     type: ItemType;
     storageState: StorageState;
@@ -8007,7 +8031,6 @@ export type PantryItemFragmentFragment = {
       verifiedAt?: string | null | undefined;
       createdAt: string;
       updatedAt: string;
-      deletedAt?: string | null | undefined;
       version: number;
     }>;
     brands: Array<{
@@ -8018,13 +8041,9 @@ export type PantryItemFragmentFragment = {
             __typename?: 'Brand';
             id: string;
             name: string;
-            logo?: string | null | undefined;
-            website?: string | null | undefined;
             description?: string | null | undefined;
-            metadata?: any | null | undefined;
             createdAt: string;
             updatedAt: string;
-            deletedAt?: string | null | undefined;
             version: number;
           }
         | null
@@ -8119,7 +8138,7 @@ export type HomeInviteFragmentFragment = {
   invitedUserId?: string | null | undefined;
   recipientName?: string | null | undefined;
   role: MembershipRole;
-  customPermissions?: string | null | undefined;
+  customPermissions?: any | null | undefined;
   status: InviteStatus;
   expiresAt: string;
   sentAt: string;
@@ -8238,13 +8257,13 @@ export type PantryFragmentFragment = {
         customCategory?: string | null | undefined;
         createdAt: string;
         updatedAt?: string | null | undefined;
+        version: number;
         tags: Array<string>;
         item: {
           __typename?: 'Item';
           id: string;
           name: string;
           description?: string | null | undefined;
-          upc?: string | null | undefined;
           dataSource: DataSource;
           type: ItemType;
           storageState: StorageState;
@@ -8299,7 +8318,6 @@ export type PantryFragmentFragment = {
             verifiedAt?: string | null | undefined;
             createdAt: string;
             updatedAt: string;
-            deletedAt?: string | null | undefined;
             version: number;
           }>;
           brands: Array<{
@@ -8310,13 +8328,9 @@ export type PantryFragmentFragment = {
                   __typename?: 'Brand';
                   id: string;
                   name: string;
-                  logo?: string | null | undefined;
-                  website?: string | null | undefined;
                   description?: string | null | undefined;
-                  metadata?: any | null | undefined;
                   createdAt: string;
                   updatedAt: string;
-                  deletedAt?: string | null | undefined;
                   version: number;
                 }
               | null
@@ -8434,7 +8448,7 @@ export type HomeWithPantriesFragmentFragment = {
   allowJoinCode: boolean;
   maxMembers?: number | null | undefined;
   tags: Array<string>;
-  metadata?: string | null | undefined;
+  metadata?: any | null | undefined;
   version: number;
   createdAt: string;
   updatedAt: string;
@@ -8448,7 +8462,7 @@ export type HomeWithPantriesFragmentFragment = {
         invitedUserId?: string | null | undefined;
         recipientName?: string | null | undefined;
         role: MembershipRole;
-        customPermissions?: string | null | undefined;
+        customPermissions?: any | null | undefined;
         status: InviteStatus;
         expiresAt: string;
         sentAt: string;
@@ -8649,7 +8663,7 @@ export type HomeFragmentFragment = {
   allowJoinCode: boolean;
   maxMembers?: number | null | undefined;
   tags: Array<string>;
-  metadata?: string | null | undefined;
+  metadata?: any | null | undefined;
   version: number;
   createdAt: string;
   updatedAt: string;
@@ -8663,7 +8677,7 @@ export type HomeFragmentFragment = {
         invitedUserId?: string | null | undefined;
         recipientName?: string | null | undefined;
         role: MembershipRole;
-        customPermissions?: string | null | undefined;
+        customPermissions?: any | null | undefined;
         status: InviteStatus;
         expiresAt: string;
         sentAt: string;
@@ -8868,13 +8882,13 @@ export type HomeFragmentFragment = {
               customCategory?: string | null | undefined;
               createdAt: string;
               updatedAt?: string | null | undefined;
+              version: number;
               tags: Array<string>;
               item: {
                 __typename?: 'Item';
                 id: string;
                 name: string;
                 description?: string | null | undefined;
-                upc?: string | null | undefined;
                 dataSource: DataSource;
                 type: ItemType;
                 storageState: StorageState;
@@ -8934,7 +8948,6 @@ export type HomeFragmentFragment = {
                   verifiedAt?: string | null | undefined;
                   createdAt: string;
                   updatedAt: string;
-                  deletedAt?: string | null | undefined;
                   version: number;
                 }>;
                 brands: Array<{
@@ -8945,13 +8958,9 @@ export type HomeFragmentFragment = {
                         __typename?: 'Brand';
                         id: string;
                         name: string;
-                        logo?: string | null | undefined;
-                        website?: string | null | undefined;
                         description?: string | null | undefined;
-                        metadata?: any | null | undefined;
                         createdAt: string;
                         updatedAt: string;
-                        deletedAt?: string | null | undefined;
                         version: number;
                       }
                     | null
@@ -9232,7 +9241,7 @@ export type GetHomeQuery = {
         allowJoinCode: boolean;
         maxMembers?: number | null | undefined;
         tags: Array<string>;
-        metadata?: string | null | undefined;
+        metadata?: any | null | undefined;
         version: number;
         createdAt: string;
         updatedAt: string;
@@ -9246,7 +9255,7 @@ export type GetHomeQuery = {
               invitedUserId?: string | null | undefined;
               recipientName?: string | null | undefined;
               role: MembershipRole;
-              customPermissions?: string | null | undefined;
+              customPermissions?: any | null | undefined;
               status: InviteStatus;
               expiresAt: string;
               sentAt: string;
@@ -9451,13 +9460,13 @@ export type GetHomeQuery = {
                     customCategory?: string | null | undefined;
                     createdAt: string;
                     updatedAt?: string | null | undefined;
+                    version: number;
                     tags: Array<string>;
                     item: {
                       __typename?: 'Item';
                       id: string;
                       name: string;
                       description?: string | null | undefined;
-                      upc?: string | null | undefined;
                       dataSource: DataSource;
                       type: ItemType;
                       storageState: StorageState;
@@ -9517,7 +9526,6 @@ export type GetHomeQuery = {
                         verifiedAt?: string | null | undefined;
                         createdAt: string;
                         updatedAt: string;
-                        deletedAt?: string | null | undefined;
                         version: number;
                       }>;
                       brands: Array<{
@@ -9528,13 +9536,9 @@ export type GetHomeQuery = {
                               __typename?: 'Brand';
                               id: string;
                               name: string;
-                              logo?: string | null | undefined;
-                              website?: string | null | undefined;
                               description?: string | null | undefined;
-                              metadata?: any | null | undefined;
                               createdAt: string;
                               updatedAt: string;
-                              deletedAt?: string | null | undefined;
                               version: number;
                             }
                           | null
@@ -9649,7 +9653,7 @@ export type GetHomeBasicQuery = {
         allowJoinCode: boolean;
         maxMembers?: number | null | undefined;
         tags: Array<string>;
-        metadata?: string | null | undefined;
+        metadata?: any | null | undefined;
         version: number;
         createdAt: string;
         updatedAt: string;
@@ -9663,7 +9667,7 @@ export type GetHomeBasicQuery = {
               invitedUserId?: string | null | undefined;
               recipientName?: string | null | undefined;
               role: MembershipRole;
-              customPermissions?: string | null | undefined;
+              customPermissions?: any | null | undefined;
               status: InviteStatus;
               expiresAt: string;
               sentAt: string;
@@ -9955,7 +9959,7 @@ export type GetHomeInvitesQuery = {
     invitedUserId?: string | null | undefined;
     recipientName?: string | null | undefined;
     role: MembershipRole;
-    customPermissions?: string | null | undefined;
+    customPermissions?: any | null | undefined;
     status: InviteStatus;
     expiresAt: string;
     sentAt: string;
@@ -9995,7 +9999,7 @@ export type GetMyPendingInvitesQuery = {
     invitedUserId?: string | null | undefined;
     recipientName?: string | null | undefined;
     role: MembershipRole;
-    customPermissions?: string | null | undefined;
+    customPermissions?: any | null | undefined;
     status: InviteStatus;
     expiresAt: string;
     sentAt: string;
@@ -10130,7 +10134,7 @@ export type UpdateHomeMutation = {
     allowJoinCode: boolean;
     maxMembers?: number | null | undefined;
     tags: Array<string>;
-    metadata?: string | null | undefined;
+    metadata?: any | null | undefined;
     version: number;
     createdAt: string;
     updatedAt: string;
@@ -10144,7 +10148,7 @@ export type UpdateHomeMutation = {
           invitedUserId?: string | null | undefined;
           recipientName?: string | null | undefined;
           role: MembershipRole;
-          customPermissions?: string | null | undefined;
+          customPermissions?: any | null | undefined;
           status: InviteStatus;
           expiresAt: string;
           sentAt: string;
@@ -10349,13 +10353,13 @@ export type UpdateHomeMutation = {
                 customCategory?: string | null | undefined;
                 createdAt: string;
                 updatedAt?: string | null | undefined;
+                version: number;
                 tags: Array<string>;
                 item: {
                   __typename?: 'Item';
                   id: string;
                   name: string;
                   description?: string | null | undefined;
-                  upc?: string | null | undefined;
                   dataSource: DataSource;
                   type: ItemType;
                   storageState: StorageState;
@@ -10415,7 +10419,6 @@ export type UpdateHomeMutation = {
                     verifiedAt?: string | null | undefined;
                     createdAt: string;
                     updatedAt: string;
-                    deletedAt?: string | null | undefined;
                     version: number;
                   }>;
                   brands: Array<{
@@ -10426,13 +10429,9 @@ export type UpdateHomeMutation = {
                           __typename?: 'Brand';
                           id: string;
                           name: string;
-                          logo?: string | null | undefined;
-                          website?: string | null | undefined;
                           description?: string | null | undefined;
-                          metadata?: any | null | undefined;
                           createdAt: string;
                           updatedAt: string;
-                          deletedAt?: string | null | undefined;
                           version: number;
                         }
                       | null
@@ -10544,7 +10543,7 @@ export type DeleteHomeMutation = {
     allowJoinCode: boolean;
     maxMembers?: number | null | undefined;
     tags: Array<string>;
-    metadata?: string | null | undefined;
+    metadata?: any | null | undefined;
     version: number;
     createdAt: string;
     updatedAt: string;
@@ -10558,7 +10557,7 @@ export type DeleteHomeMutation = {
           invitedUserId?: string | null | undefined;
           recipientName?: string | null | undefined;
           role: MembershipRole;
-          customPermissions?: string | null | undefined;
+          customPermissions?: any | null | undefined;
           status: InviteStatus;
           expiresAt: string;
           sentAt: string;
@@ -10763,13 +10762,13 @@ export type DeleteHomeMutation = {
                 customCategory?: string | null | undefined;
                 createdAt: string;
                 updatedAt?: string | null | undefined;
+                version: number;
                 tags: Array<string>;
                 item: {
                   __typename?: 'Item';
                   id: string;
                   name: string;
                   description?: string | null | undefined;
-                  upc?: string | null | undefined;
                   dataSource: DataSource;
                   type: ItemType;
                   storageState: StorageState;
@@ -10829,7 +10828,6 @@ export type DeleteHomeMutation = {
                     verifiedAt?: string | null | undefined;
                     createdAt: string;
                     updatedAt: string;
-                    deletedAt?: string | null | undefined;
                     version: number;
                   }>;
                   brands: Array<{
@@ -10840,13 +10838,9 @@ export type DeleteHomeMutation = {
                           __typename?: 'Brand';
                           id: string;
                           name: string;
-                          logo?: string | null | undefined;
-                          website?: string | null | undefined;
                           description?: string | null | undefined;
-                          metadata?: any | null | undefined;
                           createdAt: string;
                           updatedAt: string;
-                          deletedAt?: string | null | undefined;
                           version: number;
                         }
                       | null
@@ -10954,7 +10948,7 @@ export type InviteToHomeMutation = {
     invitedUserId?: string | null | undefined;
     recipientName?: string | null | undefined;
     role: MembershipRole;
-    customPermissions?: string | null | undefined;
+    customPermissions?: any | null | undefined;
     status: InviteStatus;
     expiresAt: string;
     sentAt: string;
@@ -11334,7 +11328,7 @@ export type GetDefaultHomeQuery = {
         allowJoinCode: boolean;
         maxMembers?: number | null | undefined;
         tags: Array<string>;
-        metadata?: string | null | undefined;
+        metadata?: any | null | undefined;
         version: number;
         createdAt: string;
         updatedAt: string;
@@ -11348,7 +11342,7 @@ export type GetDefaultHomeQuery = {
               invitedUserId?: string | null | undefined;
               recipientName?: string | null | undefined;
               role: MembershipRole;
-              customPermissions?: string | null | undefined;
+              customPermissions?: any | null | undefined;
               status: InviteStatus;
               expiresAt: string;
               sentAt: string;
@@ -11553,13 +11547,13 @@ export type GetDefaultHomeQuery = {
                     customCategory?: string | null | undefined;
                     createdAt: string;
                     updatedAt?: string | null | undefined;
+                    version: number;
                     tags: Array<string>;
                     item: {
                       __typename?: 'Item';
                       id: string;
                       name: string;
                       description?: string | null | undefined;
-                      upc?: string | null | undefined;
                       dataSource: DataSource;
                       type: ItemType;
                       storageState: StorageState;
@@ -11619,7 +11613,6 @@ export type GetDefaultHomeQuery = {
                         verifiedAt?: string | null | undefined;
                         createdAt: string;
                         updatedAt: string;
-                        deletedAt?: string | null | undefined;
                         version: number;
                       }>;
                       brands: Array<{
@@ -11630,13 +11623,9 @@ export type GetDefaultHomeQuery = {
                               __typename?: 'Brand';
                               id: string;
                               name: string;
-                              logo?: string | null | undefined;
-                              website?: string | null | undefined;
                               description?: string | null | undefined;
-                              metadata?: any | null | undefined;
                               createdAt: string;
                               updatedAt: string;
-                              deletedAt?: string | null | undefined;
                               version: number;
                             }
                           | null
@@ -11878,7 +11867,6 @@ export type GetItemsQuery = {
           name: string;
           description?: string | null | undefined;
           type: ItemType;
-          upc?: string | null | undefined;
           storageState: StorageState;
           imageUrl?: string | null | undefined;
           shelfLifeDays?: number | null | undefined;
@@ -11942,8 +11930,6 @@ export type ItemByUpcQuery = {
         imageUrl?: string | null | undefined;
         name: string;
         netWeight?: number | null | undefined;
-        upc?: string | null | undefined;
-        description?: string | null | undefined;
         units: Array<{
           __typename?: 'ItemUnit';
           isDefault?: boolean | null | undefined;
@@ -11968,8 +11954,6 @@ export type ItemBySkuQuery = {
         imageUrl?: string | null | undefined;
         name: string;
         netWeight?: number | null | undefined;
-        upc?: string | null | undefined;
-        sku?: string | null | undefined;
         description?: string | null | undefined;
         units: Array<{
           __typename?: 'ItemUnit';
@@ -12091,8 +12075,6 @@ export type CreateItemMutation = {
     id: string;
     name: string;
     description?: string | null | undefined;
-    upc?: string | null | undefined;
-    sku?: string | null | undefined;
     netWeight?: number | null | undefined;
     type: ItemType;
     storageState: StorageState;
@@ -12554,13 +12536,13 @@ export type GetPantryItemsQuery = {
     customCategory?: string | null | undefined;
     createdAt: string;
     updatedAt?: string | null | undefined;
+    version: number;
     tags: Array<string>;
     item: {
       __typename?: 'Item';
       id: string;
       name: string;
       description?: string | null | undefined;
-      upc?: string | null | undefined;
       dataSource: DataSource;
       type: ItemType;
       storageState: StorageState;
@@ -12615,7 +12597,6 @@ export type GetPantryItemsQuery = {
         verifiedAt?: string | null | undefined;
         createdAt: string;
         updatedAt: string;
-        deletedAt?: string | null | undefined;
         version: number;
       }>;
       brands: Array<{
@@ -12626,13 +12607,9 @@ export type GetPantryItemsQuery = {
               __typename?: 'Brand';
               id: string;
               name: string;
-              logo?: string | null | undefined;
-              website?: string | null | undefined;
               description?: string | null | undefined;
-              metadata?: any | null | undefined;
               createdAt: string;
               updatedAt: string;
-              deletedAt?: string | null | undefined;
               version: number;
             }
           | null
@@ -12746,13 +12723,13 @@ export type GetPantryItemQuery = {
     customCategory?: string | null | undefined;
     createdAt: string;
     updatedAt?: string | null | undefined;
+    version: number;
     tags: Array<string>;
     item: {
       __typename?: 'Item';
       id: string;
       name: string;
       description?: string | null | undefined;
-      upc?: string | null | undefined;
       dataSource: DataSource;
       type: ItemType;
       storageState: StorageState;
@@ -12807,7 +12784,6 @@ export type GetPantryItemQuery = {
         verifiedAt?: string | null | undefined;
         createdAt: string;
         updatedAt: string;
-        deletedAt?: string | null | undefined;
         version: number;
       }>;
       brands: Array<{
@@ -12818,13 +12794,9 @@ export type GetPantryItemQuery = {
               __typename?: 'Brand';
               id: string;
               name: string;
-              logo?: string | null | undefined;
-              website?: string | null | undefined;
               description?: string | null | undefined;
-              metadata?: any | null | undefined;
               createdAt: string;
               updatedAt: string;
-              deletedAt?: string | null | undefined;
               version: number;
             }
           | null
@@ -12938,13 +12910,13 @@ export type AddItemToPantryMutation = {
     customCategory?: string | null | undefined;
     createdAt: string;
     updatedAt?: string | null | undefined;
+    version: number;
     tags: Array<string>;
     item: {
       __typename?: 'Item';
       id: string;
       name: string;
       description?: string | null | undefined;
-      upc?: string | null | undefined;
       dataSource: DataSource;
       type: ItemType;
       storageState: StorageState;
@@ -12999,7 +12971,6 @@ export type AddItemToPantryMutation = {
         verifiedAt?: string | null | undefined;
         createdAt: string;
         updatedAt: string;
-        deletedAt?: string | null | undefined;
         version: number;
       }>;
       brands: Array<{
@@ -13010,13 +12981,9 @@ export type AddItemToPantryMutation = {
               __typename?: 'Brand';
               id: string;
               name: string;
-              logo?: string | null | undefined;
-              website?: string | null | undefined;
               description?: string | null | undefined;
-              metadata?: any | null | undefined;
               createdAt: string;
               updatedAt: string;
-              deletedAt?: string | null | undefined;
               version: number;
             }
           | null
@@ -13187,13 +13154,13 @@ export type UpdatePantryItemMutation = {
     customCategory?: string | null | undefined;
     createdAt: string;
     updatedAt?: string | null | undefined;
+    version: number;
     tags: Array<string>;
     item: {
       __typename?: 'Item';
       id: string;
       name: string;
       description?: string | null | undefined;
-      upc?: string | null | undefined;
       dataSource: DataSource;
       type: ItemType;
       storageState: StorageState;
@@ -13248,7 +13215,6 @@ export type UpdatePantryItemMutation = {
         verifiedAt?: string | null | undefined;
         createdAt: string;
         updatedAt: string;
-        deletedAt?: string | null | undefined;
         version: number;
       }>;
       brands: Array<{
@@ -13259,13 +13225,9 @@ export type UpdatePantryItemMutation = {
               __typename?: 'Brand';
               id: string;
               name: string;
-              logo?: string | null | undefined;
-              website?: string | null | undefined;
               description?: string | null | undefined;
-              metadata?: any | null | undefined;
               createdAt: string;
               updatedAt: string;
-              deletedAt?: string | null | undefined;
               version: number;
             }
           | null
@@ -13379,13 +13341,13 @@ export type RemoveItemFromPantryMutation = {
     customCategory?: string | null | undefined;
     createdAt: string;
     updatedAt?: string | null | undefined;
+    version: number;
     tags: Array<string>;
     item: {
       __typename?: 'Item';
       id: string;
       name: string;
       description?: string | null | undefined;
-      upc?: string | null | undefined;
       dataSource: DataSource;
       type: ItemType;
       storageState: StorageState;
@@ -13440,7 +13402,6 @@ export type RemoveItemFromPantryMutation = {
         verifiedAt?: string | null | undefined;
         createdAt: string;
         updatedAt: string;
-        deletedAt?: string | null | undefined;
         version: number;
       }>;
       brands: Array<{
@@ -13451,13 +13412,9 @@ export type RemoveItemFromPantryMutation = {
               __typename?: 'Brand';
               id: string;
               name: string;
-              logo?: string | null | undefined;
-              website?: string | null | undefined;
               description?: string | null | undefined;
-              metadata?: any | null | undefined;
               createdAt: string;
               updatedAt: string;
-              deletedAt?: string | null | undefined;
               version: number;
             }
           | null
@@ -13559,7 +13516,7 @@ export type PantryUpdatedSubscription = {
     location?: string | null | undefined;
     temperature?: string | null | undefined;
     tags: Array<string>;
-    metadata?: string | null | undefined;
+    metadata?: any | null | undefined;
     version: number;
     updatedAt: string;
     home: { __typename?: 'Home'; id: string; name: string };
@@ -13583,7 +13540,7 @@ export type PantryActivityAddedSubscription = {
     quantity?: number | null | undefined;
     oldValue?: string | null | undefined;
     newValue?: string | null | undefined;
-    metadata?: string | null | undefined;
+    metadata?: any | null | undefined;
     createdAt: string;
     user: {
       __typename?: 'User';
@@ -14449,13 +14406,13 @@ export type PurchaseCreatedSubscription = {
     id: string;
     userId: string;
     itemId: string;
-    storeId: string;
+    storeId?: string | null | undefined;
     quantity: number;
     unitPrice: number;
     totalPrice: number;
     purchaseDate: string;
     itemName: string;
-    storeName: string;
+    storeName?: string | null | undefined;
     unitSymbol: string;
     currencySymbol: string;
     user: { __typename?: 'User'; id: string; email: string };
@@ -14465,12 +14422,15 @@ export type PurchaseCreatedSubscription = {
       name: string;
       imageUrl?: string | null | undefined;
     };
-    store: {
-      __typename?: 'Store';
-      id: string;
-      name: string;
-      address?: string | null | undefined;
-    };
+    store?:
+      | {
+          __typename?: 'Store';
+          id: string;
+          name: string;
+          address?: string | null | undefined;
+        }
+      | null
+      | undefined;
   };
 };
 
@@ -14563,7 +14523,6 @@ export type GetShoppingListQuery = {
                 id: string;
                 name: string;
                 description?: string | null | undefined;
-                upc?: string | null | undefined;
                 imageUrl?: string | null | undefined;
                 type: ItemType;
                 storageState: StorageState;
@@ -14751,6 +14710,11 @@ export type GetShoppingListItemsQuery = {
           name: string;
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
+          netWeight?: number | null | undefined;
+          displayUnit?:
+            | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+            | null
+            | undefined;
         }
       | null
       | undefined;
@@ -14939,6 +14903,16 @@ export type GetShoppingListItemQuery = {
               name: string;
               description?: string | null | undefined;
               imageUrl?: string | null | undefined;
+              netWeight?: number | null | undefined;
+              displayUnit?:
+                | {
+                    __typename?: 'Unit';
+                    id: string;
+                    name: string;
+                    symbol: string;
+                  }
+                | null
+                | undefined;
             }
           | null
           | undefined;
@@ -15332,6 +15306,11 @@ export type AddItemToShoppingListMutation = {
           name: string;
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
+          netWeight?: number | null | undefined;
+          displayUnit?:
+            | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+            | null
+            | undefined;
         }
       | null
       | undefined;
@@ -15520,6 +15499,11 @@ export type UpdateShoppingListItemMutation = {
           name: string;
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
+          netWeight?: number | null | undefined;
+          displayUnit?:
+            | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+            | null
+            | undefined;
         }
       | null
       | undefined;
@@ -15673,9 +15657,184 @@ export type MarkItemPurchasedMutation = {
   markItemPurchased: {
     __typename?: 'ShoppingListItem';
     id: string;
+    quantity?: number | null | undefined;
+    estimatedPrice?: number | null | undefined;
+    budgetPrice?: number | null | undefined;
+    lastKnownPrice?: number | null | undefined;
+    lowestPrice?: number | null | undefined;
+    highestPrice?: number | null | undefined;
+    priceLastUpdated?: string | null | undefined;
     isPurchased: boolean;
+    purchasedQuantity?: number | null | undefined;
+    purchasedPrice?: number | null | undefined;
+    purchaseDate?: string | null | undefined;
+    aisle?: string | null | undefined;
+    storeSection?: string | null | undefined;
+    previouslyPurchased: boolean;
+    lastPurchaseDate?: string | null | undefined;
+    purchaseCount: number;
+    itemName?: string | null | undefined;
+    unitName?: string | null | undefined;
+    notes?: string | null | undefined;
+    priority: number;
+    category?: string | null | undefined;
+    sortOrder: number;
+    isAutoAdded: boolean;
+    autoAddReason?: string | null | undefined;
+    isFromMealPlan: boolean;
+    mealPlanReference?: string | null | undefined;
+    createdAt: string;
+    updatedAt: string;
+    deletedAt?: string | null | undefined;
+    version: number;
+    shoppingList: {
+      __typename?: 'ShoppingList';
+      id: string;
+      totalItems: number;
+      completedItems: number;
+      estimatedTotal: number;
+    };
+    item?:
+      | {
+          __typename?: 'Item';
+          id: string;
+          name: string;
+          description?: string | null | undefined;
+          imageUrl?: string | null | undefined;
+          netWeight?: number | null | undefined;
+          displayUnit?:
+            | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+            | null
+            | undefined;
+        }
+      | null
+      | undefined;
+    unit?:
+      | {
+          __typename?: 'Unit';
+          id: string;
+          name: string;
+          symbol: string;
+          type: UnitType;
+          isMetric: boolean;
+          baseUnitId?: string | null | undefined;
+          conversionFactor: number;
+          notes?: string | null | undefined;
+          isCommon: boolean;
+          sortOrder: number;
+          createdAt: string;
+          updatedAt: string;
+        }
+      | null
+      | undefined;
+    addedBy?:
+      | {
+          __typename?: 'User';
+          id: string;
+          email: string;
+          emailVerified: boolean;
+          role: UserRole;
+          onBoarded: boolean;
+          timezone?: string | null | undefined;
+          preferredCurrency?: string | null | undefined;
+          language?: string | null | undefined;
+          defaultShoppingListId?: string | null | undefined;
+          defaultHomeId?: string | null | undefined;
+          createdAt: string;
+          updatedAt: string;
+          lastActiveAt?: string | null | undefined;
+          profile?:
+            | {
+                __typename?: 'UserProfile';
+                id: string;
+                firstName?: string | null | undefined;
+                lastName?: string | null | undefined;
+                displayName?: string | null | undefined;
+                bio?: string | null | undefined;
+                avatar?: string | null | undefined;
+                phone?: string | null | undefined;
+              }
+            | null
+            | undefined;
+          settings?:
+            | {
+                __typename?: 'UserSettings';
+                id: string;
+                emailNotifications: boolean;
+                pushNotifications: boolean;
+                theme: AppTheme;
+              }
+            | null
+            | undefined;
+        }
+      | null
+      | undefined;
     purchasedBy?:
-      | { __typename?: 'User'; id: string; email: string }
+      | {
+          __typename?: 'User';
+          id: string;
+          email: string;
+          emailVerified: boolean;
+          role: UserRole;
+          onBoarded: boolean;
+          timezone?: string | null | undefined;
+          preferredCurrency?: string | null | undefined;
+          language?: string | null | undefined;
+          defaultShoppingListId?: string | null | undefined;
+          defaultHomeId?: string | null | undefined;
+          createdAt: string;
+          updatedAt: string;
+          lastActiveAt?: string | null | undefined;
+          profile?:
+            | {
+                __typename?: 'UserProfile';
+                id: string;
+                firstName?: string | null | undefined;
+                lastName?: string | null | undefined;
+                displayName?: string | null | undefined;
+                bio?: string | null | undefined;
+                avatar?: string | null | undefined;
+                phone?: string | null | undefined;
+              }
+            | null
+            | undefined;
+          settings?:
+            | {
+                __typename?: 'UserSettings';
+                id: string;
+                emailNotifications: boolean;
+                pushNotifications: boolean;
+                theme: AppTheme;
+              }
+            | null
+            | undefined;
+        }
+      | null
+      | undefined;
+    purchases?:
+      | Array<{
+          __typename?: 'Purchase';
+          id: string;
+          purchaseDate: string;
+          quantity: number;
+          unitPrice: number;
+          totalPrice: number;
+          itemName: string;
+          unitSymbol: string;
+          user: {
+            __typename?: 'User';
+            id: string;
+            email: string;
+            profile?:
+              | {
+                  __typename?: 'UserProfile';
+                  id: string;
+                  displayName?: string | null | undefined;
+                }
+              | null
+              | undefined;
+          };
+        }>
       | null
       | undefined;
   };
@@ -15734,6 +15893,11 @@ export type ReorderShoppingListItemsMutation = {
           name: string;
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
+          netWeight?: number | null | undefined;
+          displayUnit?:
+            | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+            | null
+            | undefined;
         }
       | null
       | undefined;
@@ -16024,6 +16188,16 @@ export type ShoppingListItemsChangedSubscription = {
                     name: string;
                     description?: string | null | undefined;
                     imageUrl?: string | null | undefined;
+                    netWeight?: number | null | undefined;
+                    displayUnit?:
+                      | {
+                          __typename?: 'Unit';
+                          id: string;
+                          name: string;
+                          symbol: string;
+                        }
+                      | null
+                      | undefined;
                   }
                 | null
                 | undefined;
@@ -16312,6 +16486,11 @@ export type ShoppingListItemAddedSubscription = {
           name: string;
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
+          netWeight?: number | null | undefined;
+          displayUnit?:
+            | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+            | null
+            | undefined;
         }
       | null
       | undefined;
@@ -16499,6 +16678,11 @@ export type ShoppingListItemUpdatedSubscription = {
           name: string;
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
+          netWeight?: number | null | undefined;
+          displayUnit?:
+            | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+            | null
+            | undefined;
         }
       | null
       | undefined;

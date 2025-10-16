@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import {
   View,
   Image,
@@ -7,7 +7,8 @@ import {
   Text,
   TouchableOpacity,
 } from 'react-native';
-import { useAppNavigation, useDefaultHome, usePantryItems } from '#hooks';
+import { useRoute, RouteProp } from '@react-navigation/native';
+import { useAppNavigation, useDefaultHome, usePantryManagement } from '#hooks';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
 import {
   ListTemplate,
@@ -24,10 +25,14 @@ import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { useGetHomeQuery } from '#generated';
 
+type RecipeSearchRouteProp = RouteProp<{ RecipeSearch: { initialQuery?: string } }, 'RecipeSearch'>;
+
 export const RecipeSearch: React.FC = () => {
   const { navigate } = useAppNavigation();
   const { theme } = useUnistyles();
   const { selectedHomeId, getDefaultPantry } = useDefaultHome();
+  const route = useRoute<RecipeSearchRouteProp>();
+  const initialQuery = route.params?.initialQuery || '';
 
   // Fetch home data to get pantries
   const { data: homeData } = useGetHomeQuery({
@@ -37,9 +42,9 @@ export const RecipeSearch: React.FC = () => {
 
   // Get pantry for ingredient selection
   const defaultPantry = getDefaultPantry(homeData);
-  const { allItems: pantryItems } = usePantryItems(defaultPantry?.id);
+  const { allItems: pantryItems } = usePantryManagement(defaultPantry?.id);
 
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [loading, setLoading] = useState(false);
   const [searchResults, setSearchResults] = useState<
     (SearchRecipesResult | RecipeSearchResult)[]
@@ -50,6 +55,7 @@ export const RecipeSearch: React.FC = () => {
   );
 
   const ingredientSheetRef = useRef<BottomSheetModal>(null);
+  const hasAutoSearchedRef = useRef(false);
 
   // Text-based search
   const handleTextSearch = useCallback(async () => {
@@ -65,6 +71,7 @@ export const RecipeSearch: React.FC = () => {
       const data = await spoonacularService.searchRecipes({
         query: searchQuery,
         number: 10,
+        addRecipeInformation: true, // Get additional recipe metadata
       });
 
       setSearchResults(data.results || []);
@@ -91,6 +98,14 @@ export const RecipeSearch: React.FC = () => {
       setLoading(false);
     }
   }, [searchQuery]);
+
+  // Auto-trigger search if initialQuery is provided
+  useEffect(() => {
+    if (initialQuery && initialQuery.trim() && !hasAutoSearchedRef.current) {
+      hasAutoSearchedRef.current = true;
+      handleTextSearch();
+    }
+  }, [initialQuery, handleTextSearch]);
 
   // Ingredient-based search
   const handleIngredientSearch = useCallback(async () => {
@@ -165,33 +180,48 @@ export const RecipeSearch: React.FC = () => {
     });
   }, []);
 
-  // Transform results to list items
+  // Transform results to list items with unified display
   const items = useMemo(() => {
     return searchResults.map(recipe => {
-      // Check if this is a RecipeSearchResult (ingredient-based) with matching data
+      // Check if this is an ingredient-based search result
       const hasIngredientData = 'usedIngredientCount' in recipe;
+      const recipeWithIngredients = hasIngredientData ? (recipe as RecipeSearchResult) : null;
 
-      // Build subtitle based on available data
-      let subtitle = '';
+      // Build subtitle parts
+      const subtitleParts: string[] = [];
+
+      // Ingredient match info (ingredient search only)
+      if (recipeWithIngredients) {
+        subtitleParts.push(
+          `✅ ${recipeWithIngredients.usedIngredientCount} ingredients • ❌ ${recipeWithIngredients.missedIngredientCount} missing`
+        );
+      }
+
+      // Cook time (both search types)
+      const textSearchRecipe = recipe as SearchRecipesResult;
+      if (textSearchRecipe.readyInMinutes) {
+        subtitleParts.push(`⏱ ${textSearchRecipe.readyInMinutes} min`);
+      }
+
+      // Servings (both search types)
+      if (textSearchRecipe.servings) {
+        subtitleParts.push(`${textSearchRecipe.servings} servings`);
+      }
+
+      // Build likes badge (both search types)
       let badge;
-
-      if (hasIngredientData) {
-        const recipeWithIngredients = recipe as RecipeSearchResult;
-        subtitle = `✅ ${recipeWithIngredients.usedIngredientCount} ingredients • ❌ ${recipeWithIngredients.missedIngredientCount} missing`;
-
-        // Add likes badge if available
-        if (recipeWithIngredients.likes > 0) {
-          badge = {
-            text: `❤️ ${recipeWithIngredients.likes}`,
-            variant: 'info' as const,
-          };
-        }
+      const likes = recipeWithIngredients?.likes ?? textSearchRecipe.aggregateLikes;
+      if (likes && likes > 0) {
+        badge = {
+          text: `❤️ ${likes}`,
+          variant: 'info' as const,
+        };
       }
 
       return {
         id: `spoonacular-${recipe.id}`,
         title: recipe.title,
-        subtitle: subtitle || 'From Spoonacular',
+        subtitle: subtitleParts.join(' • ') || 'From Spoonacular',
         badge,
         leftElement: recipe.image ? (
           <View style={styles.imageContainer}>
@@ -280,7 +310,7 @@ export const RecipeSearch: React.FC = () => {
     <View style={styles.container}>
       <ListTemplate
         title="Search Recipes"
-        subtitle="Find recipes from Spoonacular"
+        subtitle="Find recipes"
         items={items}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}

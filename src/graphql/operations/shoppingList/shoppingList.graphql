@@ -47,7 +47,6 @@ query GetShoppingList($id: ID!) {
         id
         name
         description
-        upc
         imageUrl
         type
         storageState
@@ -325,12 +324,7 @@ mutation RemoveItemFromShoppingList($id: ID!) {
 
 mutation markItemPurchased($id: ID!, $status: Boolean!) {
   markItemPurchased(id: $id, status: $status) {
-    id
-    isPurchased
-    purchasedBy {
-      id
-      email
-    }
+    ...ShoppingListItemFragment
   }
 }
 

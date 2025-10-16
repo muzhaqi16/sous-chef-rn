@@ -13,7 +13,6 @@ query GetItems(
       name
       description
       type
-      upc
       storageState
       imageUrl
       shelfLifeDays
@@ -60,8 +59,6 @@ query ItemByUpc($upc: String!) {
     imageUrl
     name
     netWeight
-    upc
-    description
     units {
       isDefault
       unitId
@@ -75,8 +72,6 @@ query ItemBySku($sku: String!, $storeId: String) {
     imageUrl
     name
     netWeight
-    upc
-    sku
     description
     units {
       isDefault
@@ -161,8 +156,6 @@ mutation CreateItem($input: CreateItemInput!) {
     id
     name
     description
-    upc
-    sku
     netWeight
     displayUnit {
       id

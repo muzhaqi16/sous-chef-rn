@@ -9,7 +9,7 @@ interface SimpleDraggableItemProps {
   item: {
     id: string;
     title: string;
-    subtitle: string;
+    subtitle: string | React.ReactNode;
     badge?: {
       text: string;
       variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger';

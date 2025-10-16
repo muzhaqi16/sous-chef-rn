@@ -196,6 +196,17 @@ export interface SearchRecipesResult {
   title: string;
   image: string;
   imageType: string;
+  // Additional fields when addRecipeInformation: true
+  servings?: number;
+  readyInMinutes?: number;
+  aggregateLikes?: number;
+  healthScore?: number;
+  pricePerServing?: number;
+  cheap?: boolean;
+  vegan?: boolean;
+  vegetarian?: boolean;
+  glutenFree?: boolean;
+  dairyFree?: boolean;
 }
 
 export interface SearchRecipesResponse {

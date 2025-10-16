@@ -11,6 +11,8 @@ import {
 import { useSearchableList } from '../useSearchableList';
 import { useAuth } from '#hooks/auth/useAuth';
 import { useErrorHandler } from '#/utils/errorHandling';
+import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
+import { useSubscriptionDeduplication } from '#/hooks/utils/useSubscriptionDeduplication';
 
 export interface ShoppingListItemInput {
   itemName: string;
@@ -30,9 +32,12 @@ export interface ShoppingListItemUpdate extends Partial<ShoppingListItemInput> {
  * No custom caches, no complex state management - just Apollo
  */
 export function useShoppingListManagement(listId: string | undefined) {
-  const { isLoggedOut } = useAuth();
+  const { isLoggedOut, user } = useAuth();
   const { handleApolloError } = useErrorHandler();
   const shouldSkip = !listId || isLoggedOut;
+
+  // Subscription deduplication filter
+  const shouldProcessUpdate = useSubscriptionDeduplication(user?.id);
 
   // Single source of truth: Apollo cache
   const { data, loading, error, refetch } = useGetShoppingListItemsQuery({
@@ -43,10 +48,26 @@ export function useShoppingListManagement(listId: string | undefined) {
     errorPolicy: 'all',
   });
 
-  // Real-time updates via subscription - let Apollo handle cache automatically
+  // Real-time updates via subscription with deduplication
   useShoppingListItemsChangedSubscription({
     variables: { listId: listId ?? '' },
     skip: shouldSkip,
+    onData: ({ data }) => {
+      const payload = data.data?.shoppingListItemsChanged;
+
+      // Filter out self-echo and duplicate updates
+      if (!shouldProcessUpdate(payload)) {
+        return;
+      }
+
+      // Apollo Client automatically updates cache via normalization
+      // No manual cache update needed - the subscription data is merged automatically
+      console.log('✅ Processing subscription update from other user:', {
+        userId: payload?.userId,
+        mutation: payload?.mutation,
+        itemId: payload?.item?.id,
+      });
+    },
     onError: error => {
       const { message } = handleApolloError(error, {
         operation: 'Shopping List Subscription',
@@ -204,18 +225,41 @@ export function useShoppingListManagement(listId: string | undefined) {
       });
       Alert.alert('Error', message);
     },
-    // Optimistic response for instant toggle feedback
-    optimisticResponse: variables => ({
-      __typename: 'Mutation',
-      markItemPurchased: {
-        __typename: 'ShoppingListItem',
-        id: variables.id,
+    // Enhanced optimistic response with version management
+    optimisticResponse: variables => {
+      // Find the current item to preserve its fields
+      const currentItem = items.find(item => item.id === variables.id);
+
+      if (!currentItem) {
+        // Fallback for edge case where item not in cache
+        return {
+          __typename: 'Mutation',
+          markItemPurchased: {
+            __typename: 'ShoppingListItem',
+            id: variables.id,
+            isPurchased: variables.status,
+            version: 1,
+            updatedAt: new Date().toISOString(),
+            purchasedBy: variables.status
+              ? { __typename: 'User', id: '', email: '' }
+              : null,
+          } as any,
+        };
+      }
+
+      // Use version-aware helper to create optimistic response
+      // This automatically increments version and updates timestamp
+      const optimisticUpdate = enhanceWithVersion(currentItem, {
         isPurchased: variables.status,
-        purchasedBy: variables.status
-          ? { __typename: 'User', id: '', email: '' } // Server will fill in actual user
-          : null,
-      },
-    }),
+        // Cast purchasedBy to match GraphQL type - server will fill in full user data
+        purchasedBy: variables.status ? ({...currentItem.purchasedBy} as any) : null,
+      });
+
+      return {
+        __typename: 'Mutation',
+        markItemPurchased: optimisticUpdate as any,
+      };
+    },
     // No manual cache update needed - Apollo automatically merges the mutation response
     // with the existing cache entry via normalization. The optimistic response provides
     // instant UI feedback, and the server response updates the cache automatically.

@@ -16,7 +16,7 @@ export interface GroupBoundary {
 export interface SortableShoppingListItem {
   id: string;
   title: string;
-  subtitle: string;
+  subtitle: string | ReactNode;
   sortOrder: number;
   isPurchased?: boolean;
   badge?: {

@@ -454,18 +454,14 @@ scalar BigInt
 type Brand {
   children: [Brand!]!
   createdAt: DateTime!
-  deletedAt: DateTime
   description: String
   id: ID!
   itemCount: Int!
   items: [ItemBrand!]
-  logo: String
-  metadata: JSON
   name: String!
   parent: Brand
   updatedAt: DateTime!
   version: Int!
-  website: String
 }
 
 input BrandInput {
@@ -784,17 +780,16 @@ input CreateItemInput {
   externalSources: [ExternalSourceMappingInput!]
   healthBenefits: JSON
   imageUrl: String
+  images: JSON
   ingredients: JSON
   metadata: JSON
   name: String!
   netWeight: Float
   shelfLifeDays: Int
-  sku: String
   storageState: StorageState
   tags: [String!]
   type: ItemType
   units: [ItemUnitInput!]
-  upc: String
   vendor: String
 }
 
@@ -1053,6 +1048,7 @@ enum DataSource {
   IMPORT
   KROGER
   MANUAL
+  SPOONACULAR
   USDA
 }
 
@@ -1341,25 +1337,60 @@ enum ExternalSource {
 }
 
 type ExternalSourceMapping {
+  allergens: JSON
+  availability: JSON
+  brandInfo: JSON
+  categories: JSON
+  confidence: Float
   createdAt: DateTime!
   data: JSON
+  externalDescription: String
   externalId: String!
+  externalName: String
   externalType: String
   id: ID!
+  identifiers: JSON
+  images: JSON
   isPrimary: Boolean!
   item: Item!
   lastSyncedAt: DateTime!
+  location: JSON
   metadata: JSON
+  netWeight: Float
+  netWeightUnit: String
+  nutritionData: JSON
+  packageSize: String
+  pricing: JSON
+  retailInfo: JSON
   source: ExternalSource!
+  storage: JSON
   updatedAt: DateTime!
 }
 
 input ExternalSourceMappingInput {
+  allergens: JSON
+  availability: JSON
+  brandInfo: JSON
+  categories: JSON
+  confidence: Float
   data: JSON
+  externalDescription: String
   externalId: String!
+  externalName: String
   externalType: String
+  identifiers: JSON
+  images: JSON
   isPrimary: Boolean
+  location: JSON
+  metadata: JSON
+  netWeight: Float
+  netWeightUnit: String
+  nutritionData: JSON
+  packageSize: String
+  pricing: JSON
+  retailInfo: JSON
   source: ExternalSource!
+  storage: JSON
 }
 
 type FacetValue {
@@ -1407,7 +1438,7 @@ type Home {
   maxMembers: Int
   members: [Membership!]!
   membershipStats: MembershipStats!
-  metadata: String
+  metadata: JSON
   myMembership: Membership
   name: String!
   pantries: [Pantry!]
@@ -1421,7 +1452,7 @@ type Home {
 type HomeInvite {
   acceptedAt: String
   createdAt: DateTime!
-  customPermissions: String
+  customPermissions: JSON
   declinedAt: String
   email: String!
   expiresAt: String!
@@ -1441,6 +1472,8 @@ type HomeInvite {
   sentAt: String!
   status: InviteStatus!
   token: String!
+  updatedAt: DateTime!
+  version: Int!
 }
 
 type HomeInviteStatsGroup {
@@ -1641,8 +1674,8 @@ type Item {
   healthBenefits: JSON
   id: ID!
   imageUrl: String
+  images: JSON
   ingredients: JSON
-  krogerId: String
   metadata: JSON
   name: String!
   netWeight: Float
@@ -1655,18 +1688,13 @@ type Item {
   shelfLifeDays: Int
   shoppingListItems: [ShoppingListItem!]!
   showInOnboarding: Boolean!
-  sku: String
-  spoonacularId: Int
-  spoonacularType: String
   status: ItemStatus!
   storageState: StorageState!
   storeSkus: [ItemStoreSku!]!
   tags: [String!]!
   type: ItemType!
   units: [ItemUnit!]!
-  upc: String
   updatedAt: DateTime!
-  usdaFdcId: String
   version: Int!
   visibility: Visibility!
 }
@@ -1794,7 +1822,8 @@ input ItemSortInput {
 
 enum ItemStatus {
   ACTIVE
-  INACTIVE
+  ARCHIVED
+  DEPRECATED
   PENDING
 }
 
@@ -2197,6 +2226,7 @@ type Membership {
   updatedAt: DateTime!
   user: User!
   userId: String!
+  version: Int!
 }
 
 enum MembershipJoinMethod {
@@ -2913,7 +2943,7 @@ type PantryActivity {
   description: String!
   id: ID!
   itemName: String
-  metadata: String
+  metadata: JSON
   newValue: String
   oldValue: String
   pantry: Pantry!
@@ -2958,9 +2988,9 @@ type PantryItem {
   isComposted: Boolean!
   isRecycled: Boolean!
   item: Item!
+  itemBarcode: String
   itemId: String!
   itemName: String!
-  itemUpc: String
   lastModifiedBy: User
   lastReorderDate: DateTime
   lastUsedAt: DateTime
@@ -2988,6 +3018,7 @@ type PantryItem {
   updatedAt: DateTime
   usageFrequency: UsageFrequency!
   usageRecords: [PantryItemUsage!]!
+  version: Int!
   wasteAmount: Float!
   wasteDate: DateTime
   wasteReason: WasteReason
@@ -3050,7 +3081,7 @@ type PantryUpdatedPayload {
   homeId: String!
   id: ID!
   location: String
-  metadata: String
+  metadata: JSON
   name: String!
   tags: [String!]!
   temperature: String
@@ -3169,9 +3200,9 @@ type Purchase {
   shoppingListId: String
   shoppingListItem: ShoppingListItem
   shoppingListItemId: String
-  store: Store!
-  storeId: String!
-  storeName: String!
+  store: Store
+  storeId: String
+  storeName: String
   totalPrice: Float!
   transactionId: String
   unit: Unit!
@@ -3743,7 +3774,6 @@ type ShoppingList {
   completedShopDate: DateTime
   createdAt: DateTime!
   currency: String
-  deletedAt: DateTime
   description: String
   estimatedTotal: Float!
   generatedFromMealPlan: Boolean!
@@ -3783,6 +3813,7 @@ type ShoppingList {
   totalCost: Float!
   totalItems: Int!
   updatedAt: DateTime!
+  version: Int!
   viewCount: Int!
 }
 
@@ -3793,7 +3824,7 @@ type ShoppingListActivity {
   id: ID!
   ipAddress: String
   itemName: String
-  metadata: String
+  metadata: JSON
   newValue: String
   oldValue: String
   shoppingList: ShoppingList!
@@ -4357,6 +4388,7 @@ input UpdateItemInput {
   editReason: String
   healthBenefits: JSON
   imageUrl: String
+  images: JSON
   ingredients: JSON
   metadata: JSON
   name: String
@@ -4368,14 +4400,12 @@ input UpdateItemInput {
   removeUnitIds: [String!]
   shelfLifeDays: Int
   showInOnboarding: Boolean
-  sku: String
   status: ItemStatus
   storageState: StorageState
   storeSkus: [StoreSkuInput!]
   tags: [String!]
   type: ItemType
   units: [ItemUnitInput!]
-  upc: String
   vendor: String
   visibility: Visibility
 }

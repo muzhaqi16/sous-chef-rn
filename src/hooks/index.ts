@@ -10,7 +10,6 @@ export * from './navigation';
 export { useSearchableList } from './useSearchableList';
 export { useToast } from './useToast';
 export { useBottomSheetModal } from './useBottomSheetModal';
-export { usePantryItems } from './pantry/usePantryItems';
 export { useSearchResults } from './useSearchResults';
 export { useBarcodeScanner } from './useBarcodeScanner';
 export { useDefaultHome } from './home/useDefaultHome';

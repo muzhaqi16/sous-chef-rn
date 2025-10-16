@@ -1261,14 +1261,6 @@
             "deprecationReason": null
           },
           {
-            "name": "deletedAt",
-            "description": null,
-            "args": [],
-            "type": { "kind": "SCALAR", "name": "DateTime", "ofType": null },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
             "name": "description",
             "description": null,
             "args": [],
@@ -1321,22 +1313,6 @@
             "deprecationReason": null
           },
           {
-            "name": "logo",
-            "description": null,
-            "args": [],
-            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "metadata",
-            "description": null,
-            "args": [],
-            "type": { "kind": "SCALAR", "name": "JSON", "ofType": null },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
             "name": "name",
             "description": null,
             "args": [],
@@ -1377,14 +1353,6 @@
               "name": null,
               "ofType": { "kind": "SCALAR", "name": "Int", "ofType": null }
             },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "website",
-            "description": null,
-            "args": [],
-            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
             "isDeprecated": false,
             "deprecationReason": null
           }
@@ -4042,6 +4010,14 @@
             "deprecationReason": null
           },
           {
+            "name": "images",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "JSON", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "ingredients",
             "description": null,
             "type": { "kind": "SCALAR", "name": "JSON", "ofType": null },
@@ -4081,14 +4057,6 @@
             "name": "shelfLifeDays",
             "description": null,
             "type": { "kind": "SCALAR", "name": "Int", "ofType": null },
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "sku",
-            "description": null,
-            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
             "defaultValue": null,
             "isDeprecated": false,
             "deprecationReason": null
@@ -4141,14 +4109,6 @@
                 }
               }
             },
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "upc",
-            "description": null,
-            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
             "defaultValue": null,
             "isDeprecated": false,
             "deprecationReason": null
@@ -6293,6 +6253,12 @@
           },
           {
             "name": "MANUAL",
+            "description": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "SPOONACULAR",
             "description": null,
             "isDeprecated": false,
             "deprecationReason": null
@@ -8502,6 +8468,46 @@
         "isOneOf": null,
         "fields": [
           {
+            "name": "allergens",
+            "description": null,
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "JSON", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "availability",
+            "description": null,
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "JSON", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "brandInfo",
+            "description": null,
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "JSON", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "categories",
+            "description": null,
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "JSON", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "confidence",
+            "description": null,
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "createdAt",
             "description": null,
             "args": [],
@@ -8522,6 +8528,14 @@
             "deprecationReason": null
           },
           {
+            "name": "externalDescription",
+            "description": null,
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "externalId",
             "description": null,
             "args": [],
@@ -8530,6 +8544,14 @@
               "name": null,
               "ofType": { "kind": "SCALAR", "name": "String", "ofType": null }
             },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "externalName",
+            "description": null,
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
             "isDeprecated": false,
             "deprecationReason": null
           },
@@ -8550,6 +8572,22 @@
               "name": null,
               "ofType": { "kind": "SCALAR", "name": "ID", "ofType": null }
             },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "identifiers",
+            "description": null,
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "JSON", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "images",
+            "description": null,
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "JSON", "ofType": null },
             "isDeprecated": false,
             "deprecationReason": null
           },
@@ -8590,7 +8628,63 @@
             "deprecationReason": null
           },
           {
+            "name": "location",
+            "description": null,
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "JSON", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "metadata",
+            "description": null,
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "JSON", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "netWeight",
+            "description": null,
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "netWeightUnit",
+            "description": null,
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "nutritionData",
+            "description": null,
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "JSON", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "packageSize",
+            "description": null,
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "pricing",
+            "description": null,
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "JSON", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "retailInfo",
             "description": null,
             "args": [],
             "type": { "kind": "SCALAR", "name": "JSON", "ofType": null },
@@ -8610,6 +8704,14 @@
                 "ofType": null
               }
             },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "storage",
+            "description": null,
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "JSON", "ofType": null },
             "isDeprecated": false,
             "deprecationReason": null
           },
@@ -8639,9 +8741,57 @@
         "fields": null,
         "inputFields": [
           {
+            "name": "allergens",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "JSON", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "availability",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "JSON", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "brandInfo",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "JSON", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "categories",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "JSON", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "confidence",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "data",
             "description": null,
             "type": { "kind": "SCALAR", "name": "JSON", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "externalDescription",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
             "defaultValue": null,
             "isDeprecated": false,
             "deprecationReason": null
@@ -8659,6 +8809,14 @@
             "deprecationReason": null
           },
           {
+            "name": "externalName",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "externalType",
             "description": null,
             "type": { "kind": "SCALAR", "name": "String", "ofType": null },
@@ -8667,9 +8825,89 @@
             "deprecationReason": null
           },
           {
+            "name": "identifiers",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "JSON", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "images",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "JSON", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "isPrimary",
             "description": null,
             "type": { "kind": "SCALAR", "name": "Boolean", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "location",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "JSON", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "metadata",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "JSON", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "netWeight",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "netWeightUnit",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "nutritionData",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "JSON", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "packageSize",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "pricing",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "JSON", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "retailInfo",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "JSON", "ofType": null },
             "defaultValue": null,
             "isDeprecated": false,
             "deprecationReason": null
@@ -8686,6 +8924,14 @@
                 "ofType": null
               }
             },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "storage",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "JSON", "ofType": null },
             "defaultValue": null,
             "isDeprecated": false,
             "deprecationReason": null
@@ -9082,7 +9328,7 @@
             "name": "metadata",
             "description": null,
             "args": [],
-            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "type": { "kind": "SCALAR", "name": "JSON", "ofType": null },
             "isDeprecated": false,
             "deprecationReason": null
           },
@@ -9226,7 +9472,7 @@
             "name": "customPermissions",
             "description": null,
             "args": [],
-            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "type": { "kind": "SCALAR", "name": "JSON", "ofType": null },
             "isDeprecated": false,
             "deprecationReason": null
           },
@@ -9455,6 +9701,30 @@
               "kind": "NON_NULL",
               "name": null,
               "ofType": { "kind": "SCALAR", "name": "String", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "updatedAt",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "DateTime", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "version",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Int", "ofType": null }
             },
             "isDeprecated": false,
             "deprecationReason": null
@@ -11103,7 +11373,7 @@
             "deprecationReason": null
           },
           {
-            "name": "ingredients",
+            "name": "images",
             "description": null,
             "args": [],
             "type": { "kind": "SCALAR", "name": "JSON", "ofType": null },
@@ -11111,10 +11381,10 @@
             "deprecationReason": null
           },
           {
-            "name": "krogerId",
+            "name": "ingredients",
             "description": null,
             "args": [],
-            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "type": { "kind": "SCALAR", "name": "JSON", "ofType": null },
             "isDeprecated": false,
             "deprecationReason": null
           },
@@ -11307,30 +11577,6 @@
             "deprecationReason": null
           },
           {
-            "name": "sku",
-            "description": null,
-            "args": [],
-            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "spoonacularId",
-            "description": null,
-            "args": [],
-            "type": { "kind": "SCALAR", "name": "Int", "ofType": null },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "spoonacularType",
-            "description": null,
-            "args": [],
-            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
             "name": "status",
             "description": null,
             "args": [],
@@ -11443,14 +11689,6 @@
             "deprecationReason": null
           },
           {
-            "name": "upc",
-            "description": null,
-            "args": [],
-            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
             "name": "updatedAt",
             "description": null,
             "args": [],
@@ -11459,14 +11697,6 @@
               "name": null,
               "ofType": { "kind": "SCALAR", "name": "DateTime", "ofType": null }
             },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "usdaFdcId",
-            "description": null,
-            "args": [],
-            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
             "isDeprecated": false,
             "deprecationReason": null
           },
@@ -12552,7 +12782,13 @@
             "deprecationReason": null
           },
           {
-            "name": "INACTIVE",
+            "name": "ARCHIVED",
+            "description": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "DEPRECATED",
             "description": null,
             "isDeprecated": false,
             "deprecationReason": null
@@ -15945,6 +16181,18 @@
               "kind": "NON_NULL",
               "name": null,
               "ofType": { "kind": "SCALAR", "name": "String", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "version",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Int", "ofType": null }
             },
             "isDeprecated": false,
             "deprecationReason": null
@@ -26825,7 +27073,7 @@
             "name": "metadata",
             "description": null,
             "args": [],
-            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "type": { "kind": "SCALAR", "name": "JSON", "ofType": null },
             "isDeprecated": false,
             "deprecationReason": null
           },
@@ -27216,6 +27464,14 @@
             "deprecationReason": null
           },
           {
+            "name": "itemBarcode",
+            "description": null,
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "itemId",
             "description": null,
             "args": [],
@@ -27236,14 +27492,6 @@
               "name": null,
               "ofType": { "kind": "SCALAR", "name": "String", "ofType": null }
             },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "itemUpc",
-            "description": null,
-            "args": [],
-            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
             "isDeprecated": false,
             "deprecationReason": null
           },
@@ -27543,6 +27791,18 @@
                   }
                 }
               }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "version",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Int", "ofType": null }
             },
             "isDeprecated": false,
             "deprecationReason": null
@@ -28155,7 +28415,7 @@
             "name": "metadata",
             "description": null,
             "args": [],
-            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "type": { "kind": "SCALAR", "name": "JSON", "ofType": null },
             "isDeprecated": false,
             "deprecationReason": null
           },
@@ -29077,11 +29337,7 @@
             "name": "store",
             "description": null,
             "args": [],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": { "kind": "OBJECT", "name": "Store", "ofType": null }
-            },
+            "type": { "kind": "OBJECT", "name": "Store", "ofType": null },
             "isDeprecated": false,
             "deprecationReason": null
           },
@@ -29089,11 +29345,7 @@
             "name": "storeId",
             "description": null,
             "args": [],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": { "kind": "SCALAR", "name": "String", "ofType": null }
-            },
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
             "isDeprecated": false,
             "deprecationReason": null
           },
@@ -29101,11 +29353,7 @@
             "name": "storeName",
             "description": null,
             "args": [],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": { "kind": "SCALAR", "name": "String", "ofType": null }
-            },
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
             "isDeprecated": false,
             "deprecationReason": null
           },
@@ -37574,14 +37822,6 @@
             "deprecationReason": null
           },
           {
-            "name": "deletedAt",
-            "description": null,
-            "args": [],
-            "type": { "kind": "SCALAR", "name": "DateTime", "ofType": null },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
             "name": "description",
             "description": null,
             "args": [],
@@ -38046,6 +38286,18 @@
             "deprecationReason": null
           },
           {
+            "name": "version",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Int", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "viewCount",
             "description": null,
             "args": [],
@@ -38141,7 +38393,7 @@
             "name": "metadata",
             "description": null,
             "args": [],
-            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "type": { "kind": "SCALAR", "name": "JSON", "ofType": null },
             "isDeprecated": false,
             "deprecationReason": null
           },
@@ -43796,6 +44048,14 @@
             "deprecationReason": null
           },
           {
+            "name": "images",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "JSON", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "ingredients",
             "description": null,
             "type": { "kind": "SCALAR", "name": "JSON", "ofType": null },
@@ -43916,14 +44176,6 @@
             "deprecationReason": null
           },
           {
-            "name": "sku",
-            "description": null,
-            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
             "name": "status",
             "description": null,
             "type": { "kind": "ENUM", "name": "ItemStatus", "ofType": null },
@@ -43999,14 +44251,6 @@
                 }
               }
             },
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "upc",
-            "description": null,
-            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
             "defaultValue": null,
             "isDeprecated": false,
             "deprecationReason": null

@@ -17,3 +17,4 @@ export { UrlInput } from './UrlInput.tsx';
 export * from './BaseInput';
 export { AnimatedChip } from './AnimatedChip';
 export { AnimatedCheckbox } from './AnimatedCheckbox';
+export { FormattedItemSubtitle } from './FormattedItemSubtitle';

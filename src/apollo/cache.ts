@@ -5,8 +5,15 @@ const CACHE_VERSION = '1.0';
 const CACHE_KEY = `apollo-cache-${CACHE_VERSION}`;
 
 /**
- * Intelligent merge function that preserves optimistic updates
- * Merges arrays of objects by ID, keeping optimistic items until server confirms
+ * Version-aware merge function that handles optimistic updates and conflict resolution
+ *
+ * Features:
+ * - Preserves optimistic items (temp- IDs) until server confirms
+ * - Resolves conflicts using version field (higher version wins)
+ * - Falls back to updatedAt timestamp if versions are equal
+ * - Works with any entity type that has id, version, and updatedAt
+ *
+ * @template T - Entity type with id, version, updatedAt fields
  */
 function mergeArrayByIdIntelligent<T extends { id: string; __ref?: string }>(
   existing: T[] = [],
@@ -23,32 +30,66 @@ function mergeArrayByIdIntelligent<T extends { id: string; __ref?: string }>(
     return existing;
   }
 
-  // Create a map of existing items by ID
-  const existingMap = new Map<string, T>();
+  // Create a map of existing items by ID with version metadata
+  const existingMap = new Map<string, { item: T; version: number; updatedAt: string }>();
   existing.forEach(item => {
     const id = readField('id', item) as string;
     if (id) {
-      existingMap.set(id, item);
+      existingMap.set(id, {
+        item,
+        version: (readField('version', item) as number) || 0,
+        updatedAt: (readField('updatedAt', item) as string) || '',
+      });
     }
   });
 
-  // Create a map of incoming items by ID
-  const incomingMap = new Map<string, T>();
+  // Create a map of incoming items by ID with version metadata
+  const incomingMap = new Map<string, { item: T; version: number; updatedAt: string }>();
   incoming.forEach(item => {
     const id = readField('id', item) as string;
     if (id) {
-      incomingMap.set(id, item);
+      incomingMap.set(id, {
+        item,
+        version: (readField('version', item) as number) || 0,
+        updatedAt: (readField('updatedAt', item) as string) || '',
+      });
     }
   });
 
-  // Merge: Keep all incoming items (server truth)
-  // Add any existing items that are optimistic (temporary IDs starting with 'temp-')
-  const merged = [...incoming];
+  // Merge with version-based conflict resolution
+  const merged: T[] = [];
 
-  existingMap.forEach((item, id) => {
-    // If item exists in incoming, it's already in merged array
-    if (incomingMap.has(id)) {
+  // Process all incoming items
+  incomingMap.forEach(({ item: incomingItem, version: incomingVersion, updatedAt: incomingUpdatedAt }, id) => {
+    const existingData = existingMap.get(id);
+
+    if (!existingData) {
+      // New item from server, add it
+      merged.push(incomingItem);
       return;
+    }
+
+    // Both exist - resolve conflict using version
+    if (incomingVersion > existingData.version) {
+      // Incoming has higher version, use it
+      merged.push(incomingItem);
+    } else if (incomingVersion < existingData.version) {
+      // Existing has higher version (optimistic update ahead of server), keep existing
+      merged.push(existingData.item);
+    } else {
+      // Same version - use timestamp as tiebreaker
+      if (incomingUpdatedAt >= existingData.updatedAt) {
+        merged.push(incomingItem);
+      } else {
+        merged.push(existingData.item);
+      }
+    }
+  });
+
+  // Add any optimistic items not yet confirmed by server
+  existingMap.forEach(({ item }, id) => {
+    if (incomingMap.has(id)) {
+      return; // Already processed above
     }
 
     // If item has temporary ID (optimistic), keep it until server confirms

@@ -11,6 +11,7 @@ import {
   SearchBarAction,
   HeaderAction,
   AnimatedItemSelector,
+  FormattedItemSubtitle,
 } from '#components';
 import type {
   SelectorConfig,
@@ -181,9 +182,14 @@ export const PantryMain: React.FC = () => {
       return {
         id: item.id,
         title: item.item?.name || '',
-        subtitle: `${item.currentQuantity} ${item.unit?.symbol || ''} • ${
-          item.storageState
-        }`.trim(),
+        subtitle: (
+          <FormattedItemSubtitle
+            quantity={item.currentQuantity}
+            netWeight={item.item?.netWeight}
+            unitSymbol={item.item?.displayUnit?.symbol || item.unit?.symbol}
+            additionalInfo={item.storageState}
+          />
+        ),
         badge: isExpired
           ? { text: 'Expired', variant: 'danger' }
           : isLowStock

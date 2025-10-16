@@ -2,7 +2,7 @@ import React, {useMemo} from 'react';
 import {View, Text, ScrollView, TouchableOpacity} from 'react-native';
 import {Icon} from '#utils';
 import {useNavigation} from '@react-navigation/native';
-import {usePantryItems, useDefaultHome} from '#hooks';
+import {usePantryManagement, useDefaultHome} from '#hooks';
 import {useGetHomeQuery} from '#generated';
 import {commonStyles} from '#styles';
 import {StyleSheet, useUnistyles} from 'react-native-unistyles';
@@ -18,7 +18,7 @@ export const CategoryManagement: React.FC = () => {
   });
 
   const pantry = getDefaultPantry(homeData);
-  const {items} = usePantryItems(pantry?.id);
+  const {items} = usePantryManagement(pantry?.id);
 
   const categorizedItems = useMemo(() => {
     if (!items) return {};

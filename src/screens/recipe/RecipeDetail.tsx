@@ -56,7 +56,7 @@ export const RecipeDetail: React.FC = () => {
     return shoppingLists[0];
   }, [shoppingLists]);
 
-  // State for external recipes (from SPOONACULAR, EDAMAM, TASTY, etc.)
+  // State for external recipes
   const [loading, setLoading] = useState(true);
   const [externalRecipe, setExternalRecipe] =
     useState<RecipeInformation | null>(null);

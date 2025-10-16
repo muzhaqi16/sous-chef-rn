@@ -20,6 +20,7 @@ import {
   SortableShoppingList,
   EmptyState,
   ListTemplate,
+  FormattedItemSubtitle,
 } from '#components';
 import type {
   SelectorConfig,
@@ -269,7 +270,13 @@ export const ShoppingListMain: React.FC = () => {
     return sortedItems.map((item: any) => ({
       id: item.id,
       title: item.itemName,
-      subtitle: `${item.quantity} ${item.unitName || ''}`.trim(),
+      subtitle: (
+        <FormattedItemSubtitle
+          quantity={item.quantity}
+          netWeight={item.item?.netWeight}
+          unitSymbol={item.item?.displayUnit?.symbol || item.unitName}
+        />
+      ),
       sortOrder: item.sortOrder ?? 0,
       isPurchased: item.isPurchased,
       badge: undefined,

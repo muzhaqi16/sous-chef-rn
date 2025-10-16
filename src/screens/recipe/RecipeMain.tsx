@@ -16,15 +16,27 @@ export const RecipeMain: React.FC = () => {
   });
   const recipes = useMemo(() => data?.myRecipes?.recipes || [], [data]);
 
+  // Filter recipes based on search query
+  const filteredRecipes = useMemo(() => {
+    if (!searchQuery.trim()) return recipes;
+
+    const query = searchQuery.toLowerCase();
+    return recipes.filter((recipe: any) => {
+      const name = recipe.name?.toLowerCase() || '';
+      const description = recipe.description?.toLowerCase() || '';
+      return name.includes(query) || description.includes(query);
+    });
+  }, [recipes, searchQuery]);
+
   // Delete recipe mutation
   const [deleteRecipeMutation] = useDeleteRecipeMutation({
     refetchQueries: ['MyRecipes'],
     awaitRefetchQueries: true,
   });
 
-  // Transform recipes to list items format
+  // Transform filtered recipes to list items format
   const items = useMemo(() => {
-    return recipes.map((recipe: any) => ({
+    return filteredRecipes.map((recipe: any) => ({
       id: recipe.id,
       title: recipe.name,
       subtitle: `${recipe.servings} servings • ${
@@ -37,11 +49,11 @@ export const RecipeMain: React.FC = () => {
         </View>
       ) : undefined,
     }));
-  }, [recipes]);
+  }, [filteredRecipes]);
 
   const handleSearchRecipes = useCallback(() => {
-    navigate('RecipeSearch', {});
-  }, [navigate]);
+    navigate('RecipeSearch', { initialQuery: searchQuery });
+  }, [navigate, searchQuery]);
 
   const handleRefresh = async () => {
     await refetch();
