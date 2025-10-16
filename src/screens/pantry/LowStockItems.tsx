@@ -12,7 +12,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { Icon } from '#utils';
 import { SwipeableItem, ScreenHeader } from '#components';
-import { usePantryItems, useDefaultHome, useAppNavigation } from '#hooks';
+import { usePantryManagement, useDefaultHome, useAppNavigation } from '#hooks';
 import { useGetHomeQuery, useAddItemToShoppingListMutation } from '#generated';
 import { commonStyles } from '#styles';
 import { useStore } from '#store';
@@ -32,7 +32,7 @@ export const LowStockItems: React.FC = () => {
   });
 
   const pantry = getDefaultPantry(homeData);
-  const { items, loading, refetch } = usePantryItems(pantry?.id);
+  const { items, loading, refetch } = usePantryManagement(pantry?.id);
   const [addToShoppingList] = useAddItemToShoppingListMutation();
 
   const lowStockItems = useMemo(() => {
@@ -55,7 +55,6 @@ export const LowStockItems: React.FC = () => {
       await addToShoppingList({
         variables: { input: { shoppingListId: '', itemId } },
       });
-      Alert.alert('Success', 'Item added to shopping list');
     } catch (error) {
       Alert.alert('Error', 'Failed to add to shopping list');
     }
@@ -63,10 +62,7 @@ export const LowStockItems: React.FC = () => {
 
   return (
     <View style={commonStyles.container}>
-      <ScreenHeader
-        title="Low Stock Items"
-        onBack={goBack}
-      />
+      <ScreenHeader title="Low Stock Items" onBack={goBack} />
 
       <ScrollView
         style={styles.scrollView}

@@ -28,7 +28,8 @@ export function LoginScreen() {
   } = useAuth();
 
   const [_hasStoredCreds, setHasStoredCreds] = useState(false);
-  const [shouldShowBiometricButton, setShouldShowBiometricButton] = useState(false);
+  const [shouldShowBiometricButton, setShouldShowBiometricButton] =
+    useState(false);
   const [isBiometricLoading, setIsBiometricLoading] = useState(false);
   const [biometricInfo, setBiometricInfo] = useState<{
     isAvailable: boolean;
@@ -86,10 +87,13 @@ export function LoginScreen() {
 
       if (credentials) {
         // Use showRememberPrompt = false for biometric login since credentials are already saved
-        await login({
-          email: credentials.email,
-          password: credentials.password,
-        }, false);
+        await login(
+          {
+            email: credentials.email,
+            password: credentials.password,
+          },
+          false,
+        );
       }
     } catch (error: any) {
       handleAuthError(error, 'Biometric authentication failed');
@@ -128,7 +132,7 @@ export function LoginScreen() {
   return (
     <AuthWrapper>
       <AuthFormTemplate<LoginInput>
-        title="Sign in to Sous Chef App"
+        title="Sign in to Sous Chef"
         subtitle="Access your pantry and more"
         fields={[
           {
@@ -183,7 +187,6 @@ export function LoginScreen() {
               {getBiometricButtonText()}
             </Text>
           </TouchableOpacity>
-
         </View>
       )}
 

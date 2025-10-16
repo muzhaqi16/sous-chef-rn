@@ -6,5 +6,6 @@ export * from './pantry';
 export * from './shoppingList';
 export * from './home';
 export * from './barcode';
+export * from './recipe';
 export {NotFoundScreen} from './NotFoundScreen';
 export {SplashScreen} from './SplashScreen';

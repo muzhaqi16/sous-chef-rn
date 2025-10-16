@@ -9,7 +9,6 @@ export * from './ProductCard';
 export * from './QuantitySelector';
 export * from './SearchBar';
 export * from './SettingRow';
-export * from './ShoppingListHeader';
 export * from './ActionButton';
 export * from './ItemDetailBottomSheet';
 export * from './SwipeableItem';

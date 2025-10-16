@@ -11,7 +11,7 @@ import { Icon } from '#utils';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { SwipeableItem } from '#components';
-import { usePantryItems, useDefaultHome, useAppNavigation } from '#hooks';
+import { usePantryManagement, useDefaultHome, useAppNavigation } from '#hooks';
 import { useGetHomeQuery } from '#generated';
 import { commonStyles } from '#styles';
 
@@ -27,7 +27,7 @@ export const ExpiringItems: React.FC = () => {
   });
 
   const pantry = getDefaultPantry(homeData);
-  const { items, loading, refetch } = usePantryItems(pantry?.id);
+  const { items, loading, refetch } = usePantryManagement(pantry?.id);
 
   const expiringItems = useMemo(() => {
     if (!items) return [];

@@ -5,13 +5,8 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import {
-  Alert,
-  Image,
-  View,
-  ScrollView,
-  RefreshControl,
-} from 'react-native';
+import { Alert, Image, View } from 'react-native';
+import { ScrollView, RefreshControl } from 'react-native-gesture-handler';
 import { useAppNavigation } from '#hooks';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
@@ -23,9 +18,9 @@ import {
   SearchBarAction,
   AnimatedItemSelector,
   SortableShoppingList,
-  SearchBar,
-  UserHeader,
   EmptyState,
+  ListTemplate,
+  FormattedItemSubtitle,
 } from '#components';
 import type {
   SelectorConfig,
@@ -40,6 +35,61 @@ import { useStore } from '#/store';
 import { IconLibrary } from '#/utils/iconUtils';
 import { AnimatedCheckbox } from '#/components/atoms/AnimatedCheckbox';
 
+// Wrapper component that conditionally renders EmptyState or SortableShoppingList
+const ShoppingListContent: React.FC<{
+  items: SortableShoppingListItem[];
+  onItemPress: (id: string) => void;
+  onItemEdit?: (id: string) => void;
+  onItemDelete?: (id: string) => void;
+  onSortOrderUpdate?: (updates: SortOrderUpdate[]) => Promise<void>;
+  onRefresh?: () => void | Promise<void>;
+  refreshing?: boolean;
+  disabled?: boolean;
+  emptyState?: any;
+}> = ({
+  items,
+  onItemPress,
+  onItemEdit,
+  onItemDelete,
+  onSortOrderUpdate,
+  onRefresh,
+  refreshing,
+  disabled,
+  emptyState,
+}) => {
+  if (items.length === 0 && emptyState) {
+    return (
+      <ScrollView
+        contentContainerStyle={{ flex: 1 }}
+        refreshControl={
+          onRefresh ? (
+            <RefreshControl
+              refreshing={refreshing || false}
+              onRefresh={onRefresh}
+            />
+          ) : undefined
+        }
+      >
+        <EmptyState {...emptyState} />
+      </ScrollView>
+    );
+  }
+
+  return (
+    <View style={{ flex: 1 }}>
+      <SortableShoppingList
+        items={items}
+        onItemPress={onItemPress}
+        onItemEdit={onItemEdit}
+        onItemDelete={onItemDelete}
+        onSortOrderUpdate={onSortOrderUpdate}
+        disabled={disabled}
+        showsVerticalScrollIndicator={true}
+      />
+    </View>
+  );
+};
+
 export const ShoppingListMain: React.FC = () => {
   const { navigate, navigateTo } = useAppNavigation();
   const {
@@ -53,7 +103,7 @@ export const ShoppingListMain: React.FC = () => {
   const [reorderItems] = useReorderShoppingListItemsMutation();
   const [refreshing, setRefreshing] = useState(false);
 
-  const { data, refetch } = useGetShoppingListsQuery({
+  const { data } = useGetShoppingListsQuery({
     fetchPolicy: 'cache-and-network',
   });
 
@@ -91,6 +141,7 @@ export const ShoppingListMain: React.FC = () => {
     addItem,
     toggleItem,
     removeItem,
+    refetch: refetchItems,
   } = useShoppingListManagement(currentListId);
 
   // Create selector configuration for shopping lists
@@ -219,7 +270,13 @@ export const ShoppingListMain: React.FC = () => {
     return sortedItems.map((item: any) => ({
       id: item.id,
       title: item.itemName,
-      subtitle: `${item.quantity} ${item.unitName || ''}`.trim(),
+      subtitle: (
+        <FormattedItemSubtitle
+          quantity={item.quantity}
+          netWeight={item.item?.netWeight}
+          unitSymbol={item.item?.displayUnit?.symbol || item.unitName}
+        />
+      ),
       sortOrder: item.sortOrder ?? 0,
       isPurchased: item.isPurchased,
       badge: undefined,
@@ -232,10 +289,7 @@ export const ShoppingListMain: React.FC = () => {
       ),
       leftElement: item.item?.imageUrl ? (
         <View
-          style={[
-            styles.imageContainer,
-            item.isPurchased && { opacity: 0.5 },
-          ]}
+          style={[styles.imageContainer, item.isPurchased && { opacity: 0.5 }]}
         >
           <Image
             source={{ uri: item.item.imageUrl }}
@@ -292,10 +346,21 @@ export const ShoppingListMain: React.FC = () => {
   const handleDeleteItem = async (itemId: string) => {
     try {
       await removeItem(itemId);
+      // Refetch to ensure UI is in sync after deletion
+      await refetchItems();
     } catch (error) {
       Alert.alert('Error', 'Failed to delete item');
     }
   };
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refetchItems();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetchItems]);
 
   // Search bar actions - conditionally show "Add" button when searching with no results
 
@@ -303,6 +368,11 @@ export const ShoppingListMain: React.FC = () => {
     const hasSearchWithNoResults =
       searchQuery.trim() && sortableItems.length === 0;
     const rightActions: SearchBarAction[] = [
+      {
+        icon: 'refresh',
+        color: '#fff',
+        onPress: handleRefresh,
+      },
       {
         icon: 'list',
         color: '#fff',
@@ -333,20 +403,12 @@ export const ShoppingListMain: React.FC = () => {
   }, [
     handleAddItem,
     handleAddItemFromSearch,
+    handleRefresh,
     searchQuery,
     sortableItems.length,
     primaryColor, // ← Include extracted variable in deps
     primaryLightColor, // ← Include extracted variable in deps
   ]);
-
-  const handleRefresh = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      await refetch();
-    } finally {
-      setRefreshing(false);
-    }
-  }, [refetch]);
 
   const handleOverlayOpen = useCallback(() => {
     setOverlayOpen(true);
@@ -375,77 +437,70 @@ export const ShoppingListMain: React.FC = () => {
 
   // If no lists exist at all
   if (lists.length === 0) {
+    const noListsEmptyState = {
+      icon: 'add-shopping-cart' as const,
+      title: 'No shopping lists',
+      description: 'Create a shopping list to get started',
+      action: {
+        label: 'Create List',
+        onPress: () => navigate('ListSettings'),
+      },
+    };
+
     return (
       <View style={styles.container}>
-        <UserHeader />
-        <EmptyState
-          icon="add-shopping-cart"
-          title="No shopping lists"
-          description="Create a shopping list to get started"
-          action={{
-            label: 'Create List',
-            onPress: () => navigate('ListSettings'),
-          }}
+        <ListTemplate
+          items={[]}
+          showUserHeader={true}
+          showSearchBar={false}
+          emptyState={noListsEmptyState}
+          hasNoData={true}
         />
       </View>
     );
   }
 
-  // Always render the same SearchBar to prevent TextInput remounting
+  const emptyStateConfig = {
+    icon: 'add-shopping-cart' as const,
+    title: 'No items in this list',
+    description: 'Add some items to get started',
+    action: {
+      label: 'Add Item',
+      onPress: handleAddItem,
+    },
+  };
+
   return (
     <View style={styles.container}>
-      <UserHeader />
-
-      <SearchBar
-        value={searchQuery}
-        onChangeText={setSearchQuery}
-        placeholder="Search shopping list..."
-        leftActions={searchBarActions.left || []}
-        rightActions={searchBarActions.right || []}
+      <ListTemplate
+        items={sortableItems}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        onItemPress={id =>
+          navigate('ItemDetail', { listId: currentListId, itemId: id })
+        }
+        onItemEdit={id =>
+          navigate('EditItem', { listId: currentListId, itemId: id })
+        }
+        onItemDelete={handleDeleteItem}
+        onRefresh={handleRefresh}
+        searchPlaceholder="Search shopping list..."
         listName={currentList?.name || 'Shopping List'}
-        itemCount={sortableItems.length}
         completedCount={sortableItems.filter(item => item.isPurchased).length}
+        showUserHeader={true}
+        showSearchBar={true}
+        searchBarActions={searchBarActions}
+        emptyState={emptyStateConfig}
+        customListComponent={ShoppingListContent}
+        customListProps={{
+          onSortOrderUpdate: searchQuery.trim()
+            ? undefined
+            : handleSortOrderUpdate,
+          onRefresh: handleRefresh,
+          refreshing,
+          disabled: !!searchQuery.trim(),
+        }}
       />
-
-      {/* Conditional content based on search state */}
-      {sortableItems.length === 0 ? (
-        // Show empty state with pull-to-refresh
-        <ScrollView
-          contentContainerStyle={{ flex: 1 }}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-          }
-        >
-          <EmptyState
-            icon="add-shopping-cart"
-            title="No items in this list"
-            description="Add some items to get started"
-            action={{
-              label: 'Add Item',
-              onPress: handleAddItem,
-            }}
-          />
-        </ScrollView>
-      ) : (
-        // Show sortable list with drag-and-drop and swipeable actions
-        <SortableShoppingList
-          items={sortableItems}
-          onItemPress={id =>
-            navigate('ItemDetail', { listId: currentListId, itemId: id })
-          }
-          onItemEdit={id =>
-            navigate('EditItem', { listId: currentListId, itemId: id })
-          }
-          onItemDelete={handleDeleteItem}
-          onSortOrderUpdate={
-            searchQuery.trim() ? undefined : handleSortOrderUpdate
-          }
-          onRefresh={handleRefresh}
-          refreshing={refreshing}
-          showsVerticalScrollIndicator={true}
-          disabled={!!searchQuery.trim()} // Disable sorting when searching
-        />
-      )}
 
       <AnimatedItemSelector
         ref={selectorRef}
@@ -462,35 +517,6 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: theme.colors.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkboxChecked: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: theme.spacing.sm,
-    marginTop: theme.spacing.sm,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  actionButtonText: {
-    marginLeft: 12,
-    fontSize: 16,
-    color: theme.colors.primary,
-    fontWeight: '500',
   },
   imageContainer: {
     width: theme.sizes.listImage.width,

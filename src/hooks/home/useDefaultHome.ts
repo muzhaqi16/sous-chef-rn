@@ -4,11 +4,11 @@ import { useStore } from '#store';
 import { useAuth } from '#hooks/auth/useAuth';
 
 export const useDefaultHome = () => {
-  const { selectedHomeId } = useStore();
+  const { selectedHomeId, setSelectedHomeId } = useStore();
   const { canAttemptQueries } = useAuth();
 
-  // Don't skip if we can attempt queries (has tokens and not logging out)
-  const shouldSkip = !!selectedHomeId || !canAttemptQueries;
+  // Always fetch homes when authenticated (needed for UI and getDefaultPantry)
+  const shouldSkip = !canAttemptQueries;
 
   const {
     data: homes,
@@ -42,8 +42,14 @@ export const useDefaultHome = () => {
     }
   }, [canAttemptQueries, homes?.homes, loading, error, refetch]);
 
-  // NOTE: All sync logic has been moved to useHomeManagement to prevent infinite loops
-  // This hook is now read-only and provides computed state only
+  // Sync remote default home to local store when available and different
+  // This ensures backend's default home is auto-selected on new device login
+  useEffect(() => {
+    if (remoteDefaultHomeId && remoteDefaultHomeId !== selectedHomeId) {
+      console.log('🏠 Syncing remote default home to local store:', remoteDefaultHomeId);
+      setSelectedHomeId(remoteDefaultHomeId);
+    }
+  }, [remoteDefaultHomeId, selectedHomeId, setSelectedHomeId]);
 
   // Helper function to get the default pantry from a home
   const getDefaultPantry = (homeData: any) => {

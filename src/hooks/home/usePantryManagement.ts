@@ -1,11 +1,18 @@
+import { useMemo } from 'react';
 import { Alert } from 'react-native';
 import {
+  useGetPantryItemsQuery,
+  usePantryItemsChangedSubscription,
   useAddItemToPantryMutation,
   useUpdatePantryItemMutation,
   useRemoveItemFromPantryMutation,
   StorageState,
 } from '#generated';
-import { usePantryItems } from '#hooks/pantry/usePantryItems';
+import { useSearchableList } from '../useSearchableList';
+import { useAuth } from '#hooks/auth/useAuth';
+import { useErrorHandler } from '#/utils/errorHandling';
+import { useSubscriptionDeduplication } from '#/hooks/utils/useSubscriptionDeduplication';
+import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
 
 export interface PantryItemInput {
   itemName: string;
@@ -28,39 +35,261 @@ export interface PantryItemUpdate extends Partial<PantryItemInput> {
 }
 
 /**
- * Simplified pantry management hook using consolidated usePantryItems
- * Focuses on mutations while delegating data management to usePantryItems
+ * Consolidated pantry management hook with optimistic UI updates
+ * Uses Apollo Client with subscription deduplication and version-based conflict resolution
  */
 export function usePantryManagement(pantryId: string | undefined) {
-  // Use the consolidated pantry items hook for all data operations
-  const pantryData = usePantryItems(pantryId);
+  const { isLoggedOut, user } = useAuth();
+  const { handleApolloError } = useErrorHandler();
+  const shouldSkip = !pantryId || isLoggedOut;
 
-  // Mutations with Apollo's optimistic updates
+  // Subscription deduplication filter
+  const shouldProcessUpdate = useSubscriptionDeduplication(user?.id);
+
+  // Single source of truth: Apollo cache
+  const { data, loading, error, refetch } = useGetPantryItemsQuery({
+    variables: { pantryId: pantryId ?? '' },
+    skip: shouldSkip,
+    fetchPolicy: 'cache-first', // Optimized: use cache first, then network
+    notifyOnNetworkStatusChange: true,
+    errorPolicy: 'all',
+  });
+
+  // Real-time updates via subscription with deduplication
+  usePantryItemsChangedSubscription({
+    variables: { pantryId: pantryId ?? '' },
+    skip: shouldSkip,
+    onData: ({ data }) => {
+      const payload = data.data?.pantryItemsChanged;
+
+      // Filter out self-echo and duplicate updates
+      if (!shouldProcessUpdate(payload)) {
+        return;
+      }
+
+      // Apollo Client automatically updates cache via normalization
+      // No manual cache update needed - the subscription data is merged automatically
+      console.log('✅ Processing pantry subscription update from other user:', {
+        userId: payload?.userId,
+        mutation: payload?.mutation,
+        itemId: payload?.item?.id,
+      });
+    },
+    onError: error => {
+      const { message } = handleApolloError(error, {
+        operation: 'Pantry Subscription',
+      });
+      console.warn('❌ Pantry subscription error:', {
+        pantryId,
+        error: message,
+        timestamp: new Date().toISOString(),
+      });
+      // Don't refetch on subscription errors - let the query handle reconnection
+    },
+  });
+
+  const pantryItems = useMemo(
+    () => data?.pantryItems ?? [],
+    [data?.pantryItems],
+  );
+
+  // Search functionality
+  const {
+    query: searchQuery,
+    setQuery: setSearchQuery,
+    filtered: filteredItems,
+  } = useSearchableList(pantryItems, (item, q) => {
+    const searchTerm = q.toLowerCase();
+    return (
+      item?.item?.name?.toLowerCase().includes(searchTerm) ||
+      item?.itemName?.toLowerCase().includes(searchTerm)
+    );
+  });
+
+  // Simple stats calculation
+  const stats = useMemo(() => {
+    if (!pantryItems || pantryItems.length === 0) {
+      return {
+        total: 0,
+        expired: 0,
+        expiringSoon: 0,
+        lowStock: 0,
+      };
+    }
+
+    const now = new Date();
+    const sevenDaysFromNow = new Date();
+    sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+
+    const expired = pantryItems.filter(item => {
+      if (!item.expiresAt) return false;
+      return new Date(item.expiresAt) < now;
+    }).length;
+
+    const expiringSoon = pantryItems.filter(item => {
+      if (!item.expiresAt) return false;
+      const expirationDate = new Date(item.expiresAt);
+      return expirationDate >= now && expirationDate <= sevenDaysFromNow;
+    }).length;
+
+    const lowStock = pantryItems.filter(item => {
+      if (!item.currentQuantity || !item.autoReorderPoint) return false;
+      return item.currentQuantity <= item.autoReorderPoint;
+    }).length;
+
+    return {
+      total: pantryItems.length,
+      expired,
+      expiringSoon,
+      lowStock,
+    };
+  }, [pantryItems]);
+
+  // Mutations with optimistic updates
   const [addItemMutation] = useAddItemToPantryMutation({
     errorPolicy: 'all',
     onError: error => {
-      console.error('Add item error:', error);
-      Alert.alert('Error', 'Failed to add item');
+      const { message } = handleApolloError(error, {
+        operation: 'Add Pantry Item',
+      });
+      Alert.alert('Error', message);
+    },
+    // Update Apollo cache directly instead of refetching
+    // Note: No optimisticResponse - the mutation returns 40+ fields from PantryItemFragment
+    // The cache update provides instant UI feedback when server responds (~100-200ms)
+    update: (cache, { data }) => {
+      if (!data?.addItemToPantry || !pantryId) return;
+
+      try {
+        // Modify the pantryItems field in the cache
+        cache.modify({
+          fields: {
+            pantryItems(existingItems = [], { readField, toReference }) {
+              const newItemRef = toReference(data.addItemToPantry);
+
+              // Check if item already exists (avoid duplicates)
+              const exists = existingItems.some(
+                (itemRef: any) =>
+                  readField('id', itemRef) === data.addItemToPantry.id,
+              );
+
+              if (exists) {
+                return existingItems;
+              }
+
+              // Add new item to the list
+              return [...existingItems, newItemRef];
+            },
+          },
+        });
+      } catch (error) {
+        console.warn('Cache update failed for addItem, will refetch:', error);
+        // Fallback: refetch if cache update fails
+        refetch();
+      }
     },
   });
 
   const [updateItemMutation] = useUpdatePantryItemMutation({
     errorPolicy: 'all',
     onError: error => {
-      console.error('Update item error:', error);
-      Alert.alert('Error', 'Failed to update item');
+      const { message } = handleApolloError(error, {
+        operation: 'Update Pantry Item',
+      });
+      Alert.alert('Error', message);
     },
+    // Enhanced optimistic response with version management
+    optimisticResponse: variables => {
+      // Find the current item to preserve its fields
+      const currentItem = pantryItems.find(item => item.id === variables.id);
+
+      if (!currentItem) {
+        // Fallback for edge case where item not in cache
+        return {
+          __typename: 'Mutation',
+          updatePantryItem: {
+            __typename: 'PantryItem',
+            id: variables.id,
+            version: 1,
+            updatedAt: new Date().toISOString(),
+            ...variables.input,
+          } as any,
+        };
+      }
+
+      // Use version-aware helper to create optimistic response
+      // This automatically increments version and updates timestamp
+      const optimisticUpdate = enhanceWithVersion(
+        {
+          ...currentItem,
+          updatedAt: currentItem.updatedAt ?? new Date().toISOString(),
+        } as any,
+        {
+          ...variables.input,
+        },
+      );
+
+      return {
+        __typename: 'Mutation',
+        updatePantryItem: optimisticUpdate as any,
+      };
+    },
+    // Cache update happens automatically via Apollo's normalization
+    // The mutation returns the full PantryItemFragment, so Apollo merges it automatically
+    // The optimistic response provides instant UI feedback
   });
 
   const [removeItemMutation] = useRemoveItemFromPantryMutation({
     errorPolicy: 'all',
     onError: error => {
-      console.error('Remove item error:', error);
-      Alert.alert('Error', 'Failed to remove item');
+      const { message } = handleApolloError(error, {
+        operation: 'Remove Pantry Item',
+      });
+      Alert.alert('Error', message);
+    },
+    // Optimistic response for instant removal
+    optimisticResponse: _variables => ({
+      __typename: 'Mutation',
+      removeItemFromPantry: {
+        __typename: 'PantryItem',
+        // The mutation returns full PantryItemFragment, but we just need enough for removal
+        id: _variables?.id ?? '',
+      } as any,
+    }),
+    // Update cache to remove the item
+    update: (cache, { data }, { variables }) => {
+      if (!data?.removeItemFromPantry || !pantryId || !variables) return;
+
+      try {
+        const itemId = variables.id;
+
+        // Remove the item from the cache
+        cache.modify({
+          fields: {
+            pantryItems(existingItems = [], { readField }) {
+              return existingItems.filter(
+                (itemRef: any) => readField('id', itemRef) !== itemId,
+              );
+            },
+          },
+        });
+
+        // Evict the removed item from cache
+        cache.evict({
+          id: cache.identify({ __typename: 'PantryItem', id: itemId }),
+        });
+        cache.gc(); // Garbage collect orphaned data
+      } catch (error) {
+        console.warn(
+          'Cache update failed for removeItem, will refetch:',
+          error,
+        );
+        refetch();
+      }
     },
   });
 
-  // Simplified add item - let Apollo handle optimistic updates
+  // Simplified add item
   const addItem = async (input: PantryItemInput) => {
     if (!pantryId) return false;
 
@@ -81,12 +310,11 @@ export function usePantryManagement(pantryId: string | undefined) {
             ...(input.barcode && { itemUpc: input.barcode }),
           },
         },
-        // Apollo will handle cache updates automatically
       });
 
       return result.data?.addItemToPantry ?? false;
     } catch (error) {
-      console.error('Add item error:', error);
+      console.error('Add pantry item error:', error);
       return false;
     }
   };
@@ -105,7 +333,7 @@ export function usePantryManagement(pantryId: string | undefined) {
 
       return result.data?.updatePantryItem ?? false;
     } catch (error) {
-      console.error('Update item error:', error);
+      console.error('Update pantry item error:', error);
       return false;
     }
   };
@@ -121,18 +349,54 @@ export function usePantryManagement(pantryId: string | undefined) {
 
       return true;
     } catch (error) {
-      console.error('Remove item error:', error);
+      console.error('Remove pantry item error:', error);
       return false;
     }
   };
 
   return {
-    // Data from consolidated pantry hook
-    ...pantryData,
+    // Data
+    items: filteredItems,
+    allItems: pantryItems,
+    loading,
+    error,
+    stats,
 
-    // Additional mutation actions
+    // Search
+    searchQuery,
+    setSearchQuery,
+
+    // Actions
     addItem,
     updateItem,
     removeItem,
+    refetch,
+
+    // Helper functions
+    getItemById: (itemId: string) =>
+      pantryItems.find(item => item.id === itemId),
+    getItemsByStorageState: (storageState: StorageState) =>
+      pantryItems.filter(item => item.storageState === storageState),
+    getExpiringItems: (days: number = 7) => {
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + days);
+      return pantryItems.filter(item => {
+        if (!item.expiresAt) return false;
+        const expirationDate = new Date(item.expiresAt);
+        return expirationDate <= futureDate;
+      });
+    },
+    getLowStockItems: () =>
+      pantryItems.filter(item => {
+        if (!item.currentQuantity || !item.autoReorderPoint) return false;
+        return item.currentQuantity <= item.autoReorderPoint;
+      }),
+    getExpiredItems: () => {
+      const now = new Date();
+      return pantryItems.filter(item => {
+        if (!item.expiresAt) return false;
+        return new Date(item.expiresAt) < now;
+      });
+    },
   };
 }

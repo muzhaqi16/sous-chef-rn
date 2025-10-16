@@ -19,7 +19,7 @@ type AnimatedCheckboxProps = {
   disabled?: boolean;
 };
 
-export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
+export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = React.memo(({
   checked,
   onPress,
   size = 24,
@@ -107,7 +107,7 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
       </Animated.View>
     </Pressable>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {

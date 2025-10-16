@@ -6,6 +6,7 @@ import { useAppNavigation } from '#hooks';
 import { Icon } from '#utils';
 import { DetailTemplate } from '#components/templates/DetailTemplate';
 import { ClickableInfoPanel } from '#components/molecules/ClickableInfoPanel';
+import { FormattedItemSubtitle } from '#components';
 import { commonStyles } from '#styles';
 
 type RouteParams = {
@@ -78,11 +79,15 @@ export const ShoppingListItemDetail: React.FC<{
           <Text style={[commonStyles.title, styles.itemName]}>
             {item.itemName}
           </Text>
-          {item.quantity || item.unitName ? (
-            <Text style={[commonStyles.subtitle, styles.itemDescription]}>
-              {`${item.quantity || ''} ${item.unitName || ''}`.trim()}
-            </Text>
-          ) : null}
+          {item.quantity && (
+            <View style={styles.itemDescription}>
+              <FormattedItemSubtitle
+                quantity={item.quantity}
+                netWeight={item.item?.netWeight}
+                unitSymbol={item.item?.displayUnit?.symbol || item.unitName}
+              />
+            </View>
+          )}
           {/* Status Badge */}
           {item.isPurchased ? (
             <View style={styles.statusBadge}>
@@ -101,9 +106,13 @@ export const ShoppingListItemDetail: React.FC<{
             <Text style={[commonStyles.caption, styles.detailLabel]}>
               Quantity
             </Text>
-            <Text style={styles.detailValue}>
-              {`${item.quantity || ''} ${item.unitName || ''}`.trim() || 'N/A'}
-            </Text>
+            <View>
+              <FormattedItemSubtitle
+                quantity={item.quantity}
+                netWeight={item.item?.netWeight}
+                unitSymbol={item.item?.displayUnit?.symbol || item.unitName}
+              />
+            </View>
           </View>
 
           {item.category ? (
@@ -271,7 +280,8 @@ const styles = StyleSheet.create(theme => ({
   },
   itemDescription: {
     marginTop: theme.spacing.xs,
-    textAlign: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   statusBadge: {
     flexDirection: 'row',

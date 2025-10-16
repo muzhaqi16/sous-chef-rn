@@ -4,12 +4,14 @@ import {getFocusedRouteNameFromRoute} from '@react-navigation/native';
 import {Icon} from '#/utils';
 import {PantryStack} from './PantryStack';
 import {ShoppingListStack} from './ShoppingListStack';
+import {RecipeStack} from './RecipeStack';
 import {ProfileScreen} from '#screens/profile';
 import {createAnimatedTabNavigator} from '#components/navigation/AnimatedTabNavigator';
 
 export type HomeTabParamList = {
   Pantry: undefined;
   ShoppingList: undefined;
+  Recipe: undefined;
   Profile: undefined;
 };
 
@@ -29,6 +31,7 @@ export const HomeTabs = () => {
           const iconMap: Record<string, [string, string]> = {
             Pantry: ['home', 'home-outline'],
             ShoppingList: ['list', 'list-outline'],
+            Recipe: ['book', 'book-outline'],
             Profile: ['person', 'person-outline'],
           };
 
@@ -66,6 +69,17 @@ export const HomeTabs = () => {
         return {
           title: 'Shopping List',
           tabBarStyle: routeName !== 'ShoppingListMain' ? {display: 'none'} : undefined,
+        };
+      }}
+    />
+    <Screen
+      name="Recipe"
+      component={RecipeStack}
+      options={({route}) => {
+        const routeName = getFocusedRouteNameFromRoute(route) ?? 'RecipeMain';
+        return {
+          title: 'Recipes',
+          tabBarStyle: routeName !== 'RecipeMain' ? {display: 'none'} : undefined,
         };
       }}
     />
