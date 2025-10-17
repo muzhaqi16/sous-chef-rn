@@ -25,12 +25,12 @@ const transportLink = ApolloLink.split(
   httpTransport,
 );
 
-// Single console link configuration (simplified)
+// Console link configuration - only verbose in development
 const consoleLink = createConsoleLink({
-  enabled: false, // __DEV__,
-  logVariables: false,
-  logQuery: false,
-  logResponse: false,
+  enabled: __DEV__,
+  logVariables: __DEV__,
+  logQuery: false, // Too verbose, disable even in dev
+  logResponse: false, // Too verbose, disable even in dev
   logTiming: true,
   slowQueryThreshold: 1000,
 });

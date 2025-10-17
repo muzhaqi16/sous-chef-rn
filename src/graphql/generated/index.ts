@@ -3689,7 +3689,7 @@ export type PantryItem = {
   updatedAt: Maybe<Scalars['DateTime']['output']>;
   usageFrequency: UsageFrequency;
   usageRecords: Array<PantryItemUsage>;
-  version: Scalars['Int']['output'];
+  version: Maybe<Scalars['Int']['output']>;
   wasteAmount: Scalars['Float']['output'];
   wasteDate: Maybe<Scalars['DateTime']['output']>;
   wasteReason: Maybe<WasteReason>;
@@ -5890,6 +5890,7 @@ export type UpdateNotificationInput = {
 
 export type UpdatePantryInput = {
   description?: InputMaybe<Scalars['String']['input']>;
+  isDefault?: InputMaybe<Scalars['Boolean']['input']>;
   location?: InputMaybe<Scalars['String']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
@@ -7652,7 +7653,7 @@ export type PantryItemFragment = {
   customCategory: string | null | undefined;
   createdAt: string;
   updatedAt: string | null | undefined;
-  version: number;
+  version: number | null | undefined;
   tags: Array<string>;
   item: { __typename?: 'Item' } & ItemFragment;
   unit:
@@ -8768,17 +8769,14 @@ export type GetOnboardingItemsQuery = {
   __typename?: 'Query';
   onboardingItems: Array<{
     __typename?: 'Item';
-    imageUrl: string | null | undefined;
     id: string;
     name: string;
+    imageUrl: string | null | undefined;
     storageState: StorageState;
-    units: Array<{
-      __typename?: 'ItemUnit';
-      unit:
-        | { __typename?: 'Unit'; id: string; name: string; isCommon: boolean }
-        | null
-        | undefined;
-    }>;
+    displayUnit:
+      | { __typename?: 'Unit'; id: string; name: string }
+      | null
+      | undefined;
   }>;
 };
 
@@ -26742,42 +26740,23 @@ export const GetOnboardingItemsDocument = {
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'units' },
-                  selectionSet: {
-                    kind: 'SelectionSet',
-                    selections: [
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'unit' },
-                        selectionSet: {
-                          kind: 'SelectionSet',
-                          selections: [
-                            {
-                              kind: 'Field',
-                              name: { kind: 'Name', value: 'id' },
-                            },
-                            {
-                              kind: 'Field',
-                              name: { kind: 'Name', value: 'name' },
-                            },
-                            {
-                              kind: 'Field',
-                              name: { kind: 'Name', value: 'isCommon' },
-                            },
-                          ],
-                        },
-                      },
-                    ],
-                  },
-                },
-                { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'id' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
                 {
                   kind: 'Field',
                   name: { kind: 'Name', value: 'storageState' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'displayUnit' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                    ],
+                  },
                 },
               ],
             },

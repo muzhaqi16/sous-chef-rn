@@ -152,7 +152,7 @@ export const PantryMain: React.FC = () => {
         },
         {
           icon: 'settings',
-          label: 'Edit Current Pantry',
+          label: 'Edit Selected Pantry',
           onPress: () => {
             selectorRef.current?.close();
             if (pantry?.id) {

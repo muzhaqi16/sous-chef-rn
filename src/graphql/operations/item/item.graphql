@@ -82,17 +82,14 @@ query ItemBySku($sku: String!, $storeId: String) {
 
 query GetOnboardingItems {
   onboardingItems {
-    units {
-      unit {
-        id
-        name
-        isCommon
-      }
-    }
-    imageUrl
     id
     name
+    imageUrl
     storageState
+    displayUnit {
+      id
+      name
+    }
   }
 }
 

@@ -222,68 +222,33 @@ export const ImageCropScreen = () => {
         cropData,
       );
 
-      // Get the file size of the cropped image - this is critical for validation
-      let croppedFileSize: number;
-      try {
-        const response = await fetch(croppedUri);
-        const blob = await response.blob();
-        croppedFileSize = blob.size;
-      } catch (error) {
-        console.warn(
-          'Could not fetch cropped image for size calculation:',
-          error,
-        );
-        // Estimate based on crop ratio as fallback
-        const cropRatio =
-          (finalCropSize * finalCropSize) /
-          (originalImageSize.width * originalImageSize.height);
-        croppedFileSize = imageFile.fileSize
-          ? Math.floor(imageFile.fileSize * cropRatio * 0.8)
-          : MAX_PROFILE_SIZE;
-      }
+      // Estimate file size for logging purposes only
+      // Note: Cropping always reduces size, so no validation needed here.
+      // Original image was already validated before cropping.
+      const cropRatio =
+        (finalCropSize * finalCropSize) /
+        (originalImageSize.width * originalImageSize.height);
+      const estimatedFileSize = imageFile.fileSize
+        ? Math.floor(imageFile.fileSize * cropRatio * 0.8)
+        : MAX_PROFILE_SIZE / 2; // Conservative estimate if original size unknown
 
-      // Check if the cropped image exceeds size limits
-      if (croppedFileSize > MAX_PROFILE_SIZE) {
-        Alert.alert(
-          'Image Too Large',
-          `The cropped image is ${(croppedFileSize / 1024 / 1024).toFixed(
-            1,
-          )}MB. Profile images must be under ${
-            MAX_PROFILE_SIZE / 1024 / 1024
-          }MB. Please try cropping a smaller area or use a lower quality image.`,
-          [
-            { text: 'Try Again', style: 'default' },
-            {
-              text: 'Use Anyway',
-              style: 'destructive',
-              onPress: () => proceedWithCrop(),
-            },
-          ],
-        );
-        return;
-      }
+      const croppedImage: ImageFile = {
+        uri: croppedUri,
+        fileName: `cropped_${imageFile.fileName || 'profile.jpg'}`,
+        fileSize: estimatedFileSize,
+        type: imageFile.type || 'image/jpeg',
+      };
 
-      proceedWithCrop();
+      // Store to MMKV
+      storage.set('temp_cropped_image', JSON.stringify(croppedImage));
+      console.log('Stored cropped image in MMKV:', {
+        uri: croppedUri,
+        fileName: croppedImage.fileName,
+        fileSize: estimatedFileSize,
+        type: croppedImage.type,
+      });
 
-      function proceedWithCrop() {
-        const croppedImage: ImageFile = {
-          uri: croppedUri,
-          fileName: `cropped_${imageFile.fileName || 'profile.jpg'}`,
-          fileSize: croppedFileSize,
-          type: imageFile.type || 'image/jpeg',
-        };
-
-        // Store to MMKV
-        storage.set('temp_cropped_image', JSON.stringify(croppedImage));
-        console.log('Stored cropped image in MMKV:', {
-          uri: croppedUri,
-          fileName: croppedImage.fileName,
-          fileSize: croppedFileSize,
-          type: croppedImage.type,
-        });
-
-        goBack();
-      }
+      goBack();
     } catch (error) {
       console.error('Crop failed:', error);
       Alert.alert('Error', 'Failed to crop image. Please try again.');

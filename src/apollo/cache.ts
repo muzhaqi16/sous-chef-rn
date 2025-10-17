@@ -107,6 +107,20 @@ export function makeCache(): InMemoryCache {
     typePolicies: {
       Query: {
         fields: {
+          pantry: {
+            // Read normalized Pantry reference from cache
+            read(existing, { args, toReference }) {
+              // If we have the data directly, return it
+              if (existing) return existing;
+
+              // Otherwise, try to read from normalized cache using the ID
+              if (args?.id) {
+                return toReference({ __typename: 'Pantry', id: args.id });
+              }
+
+              return existing;
+            },
+          },
           homes: {
             // Intelligent merge to preserve optimistic home additions
             merge(existing = [], incoming = [], { readField }) {

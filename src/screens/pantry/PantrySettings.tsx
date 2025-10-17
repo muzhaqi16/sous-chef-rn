@@ -37,12 +37,14 @@ export const PantrySettings: React.FC<{
   const [isDefault, setIsDefault] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const { data: pantryData, loading: loadingPantry } = useGetPantryQuery({
+  // Simplified query configuration - let Apollo handle caching naturally
+  const {
+    data: pantryData,
+    loading: loadingPantry,
+    error: pantryError,
+  } = useGetPantryQuery({
     variables: { id: pantryId ?? '' },
     skip: !pantryId,
-    fetchPolicy: 'cache-and-network',
-    notifyOnNetworkStatusChange: true,
-    errorPolicy: 'all',
   });
 
   const pantry = pantryData?.pantry;
@@ -83,28 +85,27 @@ export const PantrySettings: React.FC<{
   });
 
   useEffect(() => {
-    console.log('🔧 PantrySettings useEffect:', {
-      pantryId,
-      hasPantryData: !!pantry,
-      pantryName: pantry?.name,
-      loading: loadingPantry,
-    });
+    // Handle error case
+    if (pantryError && pantryId) {
+      console.error('❌ Error loading pantry:', pantryError);
+      Alert.alert(
+        'Error Loading Pantry',
+        'Failed to load pantry data. Please try again.',
+      );
+      return;
+    }
 
     if (pantry && pantryId) {
-      console.log('✅ Populating form with pantry data:', pantry.name);
-      setName(pantry.name);
+      setName(pantry.name || '');
       setDescription(pantry.description || '');
-      setIsDefault(pantry.isDefault);
+      setIsDefault(pantry.isDefault || false);
     } else if (!pantryId) {
       // Set default values for new pantry
-      console.log('🆕 Setting defaults for new pantry');
       setName('');
       setDescription('');
       setIsDefault(false);
-    } else {
-      console.log('⏳ Waiting for pantry data...');
     }
-  }, [pantry, pantryId, loadingPantry]);
+  }, [pantry, pantryId, pantryError]);
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -140,6 +141,7 @@ export const PantrySettings: React.FC<{
             input: {
               name: name.trim(),
               description: description.trim(),
+              isDefault,
             },
           },
         });
@@ -177,6 +179,33 @@ export const PantrySettings: React.FC<{
       ],
     );
   };
+
+  // Show loading state while fetching pantry data
+  if (pantryId && loadingPantry && !pantry) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => goBack()}>
+            <Icon
+              name="arrow-back"
+              size={24}
+              color={theme.colors.textPrimary}
+            />
+          </TouchableOpacity>
+          <Text style={styles.title}>Loading...</Text>
+          <View style={{ width: 50 }} />
+        </View>
+        <View
+          style={[
+            styles.content,
+            { justifyContent: 'center', alignItems: 'center' },
+          ]}
+        >
+          <Text style={styles.label}>Loading pantry data...</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>

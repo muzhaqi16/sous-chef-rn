@@ -92,16 +92,12 @@ export const SelectPantryItems = () => {
         // Add all selected items to pantry
         await Promise.all(
           selectedItems.map(item => {
-            // Find the default unit or use the first available unit
-            const defaultUnit = item.units?.find(u => u?.unit?.isCommon);
-            const unitToUse = defaultUnit || item.units?.[0];
-
             return addItemToPantry({
               variables: {
                 input: {
                   pantryId: selectedPantryId,
                   itemId: item.id,
-                  unitId: unitToUse?.unit?.id || '',
+                  unitId: item.displayUnit?.id || '',
                   initialQuantity: 1,
                   storageState: StorageState.Ambient,
                   condition: ItemCondition.Good,
