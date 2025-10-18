@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { useAutocompleteCategoriesLazyQuery, CategorySuggestion, CategoryType } from '#generated';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetAutocompleteInput } from './BottomSheetAutocompleteInput';
+import { useStore } from '#store';
 
 interface CategoryAutocompleteInputProps {
   label?: string;
@@ -28,11 +29,15 @@ export const CategoryAutocompleteInput: React.FC<CategoryAutocompleteInputProps>
   const [searchTerm, setSearchTerm] = useState('');
   const [categories, setCategories] = useState<CategorySuggestion[]>([]);
 
+  // Check online status to prevent queries when offline
+  const isOnline = useStore(state => state.isOnline);
+
   const [searchCategories, { data: categoriesData, loading: categoriesLoading }] =
     useAutocompleteCategoriesLazyQuery();
 
   useEffect(() => {
-    if (searchTerm.length >= 2) {
+    // Only query when online and search term is long enough
+    if (searchTerm.length >= 2 && isOnline) {
       searchCategories({
         variables: {
           input: {
@@ -43,7 +48,7 @@ export const CategoryAutocompleteInput: React.FC<CategoryAutocompleteInputProps>
         }
       });
     }
-  }, [searchTerm, searchCategories, categoryType]);
+  }, [searchTerm, searchCategories, categoryType, isOnline]);
 
   // Update categories when data changes
   useEffect(() => {

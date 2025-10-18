@@ -47,6 +47,9 @@ export const HomeDetailScreen: React.FC<{
 
   const [updateHomeMutation, { loading: updating }] = useUpdateHomeMutation({
     refetchQueries: [{ query: GetHomesDocument }],
+    onCompleted: () => {
+      setEditingName(false);
+    },
     onError: error => {
       Alert.alert(
         'Error',

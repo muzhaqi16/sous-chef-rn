@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Alert } from 'react-native';
+import { v4 as uuid } from 'uuid';
 import {
   useGetPantryItemsQuery,
   usePantryItemsChangedSubscription,
@@ -12,7 +13,10 @@ import { useSearchableList } from '../useSearchableList';
 import { useAuth } from '#hooks/auth/useAuth';
 import { useErrorHandler } from '#/utils/errorHandling';
 import { useSubscriptionDeduplication } from '#/hooks/utils/useSubscriptionDeduplication';
-import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
+import {
+  enhanceWithVersion,
+  createOptimisticEntity,
+} from '#/apollo/utils/createOptimisticResponse';
 
 export interface PantryItemInput {
   itemName: string;
@@ -154,9 +158,36 @@ export function usePantryManagement(pantryId: string | undefined) {
       });
       Alert.alert('Error', message);
     },
+    // Optimistic response for instant UI feedback (especially important offline)
+    optimisticResponse: variables => {
+      const tempId = `temp-${uuid()}`;
+      return {
+        __typename: 'Mutation',
+        addItemToPantry: {
+          ...createOptimisticEntity('PantryItem', tempId, {
+            itemName: variables.input.itemName,
+            currentQuantity: variables.input.initialQuantity,
+            storageState: variables.input.storageState,
+            storageLocation: variables.input.storageLocation || null,
+            storageNotes: variables.input.storageNotes || null,
+            expiresAt: variables.input.expiresAt || null,
+            autoReorderPoint: variables.input.autoReorderPoint || null,
+            pantry: {
+              __typename: 'Pantry',
+              id: pantryId || '',
+            },
+            unit: variables.input.unitId
+              ? {
+                  __typename: 'Unit',
+                  id: variables.input.unitId,
+                }
+              : null,
+          }),
+          __typename: 'PantryItem',
+        } as any, // Optimistic response - will be replaced by server response
+      };
+    },
     // Update Apollo cache directly instead of refetching
-    // Note: No optimisticResponse - the mutation returns 40+ fields from PantryItemFragment
-    // The cache update provides instant UI feedback when server responds (~100-200ms)
     update: (cache, { data }) => {
       if (!data?.addItemToPantry || !pantryId) return;
 

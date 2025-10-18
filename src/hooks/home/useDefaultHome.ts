@@ -14,7 +14,6 @@ export const useDefaultHome = () => {
     data: homes,
     loading,
     error,
-    refetch,
   } = useGetHomesQuery({
     fetchPolicy: 'cache-and-network', // Ensure fresh data after token refresh
     skip: shouldSkip,
@@ -31,16 +30,6 @@ export const useDefaultHome = () => {
     });
 
   const remoteDefaultHomeId = defaultHomeData?.getDefaultHome?.id;
-
-  // Retry mechanism: retry when we can attempt queries but no homes data
-  // Note: Auth errors (token expiry) are automatically retried by errorLink after token refresh
-  // This handles other types of errors (network issues, etc.)
-  useEffect(() => {
-    if (canAttemptQueries && !homes?.homes && !loading && error) {
-      console.log('🔄 Retrying homes query after non-auth error...');
-      refetch();
-    }
-  }, [canAttemptQueries, homes?.homes, loading, error, refetch]);
 
   // Sync remote default home to local store when available and different
   // This ensures backend's default home is auto-selected on new device login

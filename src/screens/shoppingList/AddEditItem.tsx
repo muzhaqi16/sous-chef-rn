@@ -1,6 +1,7 @@
 import React, {useState, useEffect} from 'react';
-import {Alert} from 'react-native';
+import {Alert, View, Text} from 'react-native';
 import {ApolloCache} from '@apollo/client';
+import {StyleSheet} from 'react-native-unistyles';
 import {
   useAddItemToShoppingListMutation,
   useUpdateShoppingListItemMutation,
@@ -12,10 +13,10 @@ import {
 } from '#generated';
 import {FormModal} from '#components/organisms/FormModal';
 import {Input} from '#components/base/Input';
-import {FormGroup} from '#components/molecules/FormGroup';
 import {AutocompleteInput} from '#components/molecules/AutoCompleteInput';
 import {UnitsAutocompleteInput} from '#components/molecules/UnitsAutocompleteInput';
 import {CategoryAutocompleteInput} from '#components/molecules/CategoryAutocompleteInput';
+import {Counter} from '#components/molecules/Counter';
 import {useAppNavigation} from '#hooks';
 import {ShoppingListStackParamList} from '#navigation/stacks/ShoppingListStack';
 
@@ -32,7 +33,7 @@ export const AddEditItem: React.FC<{
 
   // Form state
   const [itemName, setItemName] = useState('');
-  const [quantity, setQuantity] = useState('1');
+  const [quantity, setQuantity] = useState<number>(1);
   const [unit, setUnit] = useState('');
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
@@ -130,7 +131,7 @@ export const AddEditItem: React.FC<{
     if (data?.shoppingListItem) {
       const item = data.shoppingListItem;
       setItemName(item.itemName || '');
-      setQuantity(item.quantity?.toString() || '1');
+      setQuantity(item.quantity || 1);
       setUnit(item.unitName || '');
       setNotes(item.notes || '');
       setCategory(item.category || '');
@@ -148,6 +149,15 @@ export const AddEditItem: React.FC<{
   // Handle unit selection from autocomplete
   const handleUnitSelect = (unitId: string | null) => {
     setSelectedUnitId(unitId);
+  };
+
+  // Handle quantity increment/decrement
+  const handleIncrementQuantity = () => {
+    setQuantity(prev => prev + 1);
+  };
+
+  const handleDecrementQuantity = () => {
+    setQuantity(prev => Math.max(1, prev - 1));
   };
 
   // Handle form submission
@@ -172,7 +182,7 @@ export const AddEditItem: React.FC<{
             id: itemId,
             input: {
               itemName,
-              quantity: parseFloat(quantity) || 1,
+              quantity,
               ...unitData,
               notes,
               category,
@@ -185,7 +195,7 @@ export const AddEditItem: React.FC<{
             input: {
               shoppingListId: listId,
               itemName,
-              quantity: parseFloat(quantity) || 1,
+              quantity,
               ...unitData,
               notes,
               category,
@@ -244,23 +254,26 @@ export const AddEditItem: React.FC<{
         />
       )}
 
-      {/* Quantity and Unit Row */}
-      <FormGroup row>
-        <Input
-          label="Quantity"
-          value={quantity}
-          onChangeText={setQuantity}
-          placeholder="1"
-          keyboardType="numeric"
-        />
-        <UnitsAutocompleteInput
-          label="Unit"
-          value={unit}
-          onChangeText={setUnit}
-          onUnitSelected={handleUnitSelect}
-          placeholder="kg, lbs, pcs, etc."
-        />
-      </FormGroup>
+      {/* Quantity */}
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Quantity *</Text>
+        <View style={styles.quantityContainer}>
+          <Counter
+            count={quantity}
+            onIncrement={handleIncrementQuantity}
+            onDecrement={handleDecrementQuantity}
+          />
+        </View>
+      </View>
+
+      {/* Unit */}
+      <UnitsAutocompleteInput
+        label="Unit"
+        value={unit}
+        onChangeText={setUnit}
+        onUnitSelected={handleUnitSelect}
+        placeholder="kg, lbs, pcs, etc."
+      />
 
       {/* Category Field */}
       <CategoryAutocompleteInput
@@ -284,3 +297,20 @@ export const AddEditItem: React.FC<{
     </FormModal>
   );
 };
+
+const styles = StyleSheet.create(theme => ({
+  inputGroup: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.colors.textSecondary,
+    marginBottom: 8,
+  },
+  quantityContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingVertical: 8,
+  },
+}));

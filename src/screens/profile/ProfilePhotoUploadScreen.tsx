@@ -216,7 +216,7 @@ export const ProfilePhotoUploadScreen: React.FC<{
           {croppedImage
             ? 'Photo cropped and ready to upload!'
             : selectedImage
-            ? 'Tap "Crop & Center" to optimize your photo.'
+            ? 'Tap the crop icon below to adjust your photo.'
             : 'Choose a profile picture to personalize your account.'}
         </Text>
 
@@ -245,37 +245,40 @@ export const ProfilePhotoUploadScreen: React.FC<{
               />
             )}
           </View>
+
+          {/* Show crop icon below image if not cropped yet */}
+          {selectedImage && !croppedImage && (
+            <TouchableOpacity
+              onPress={handleCropImage}
+              style={[
+                styles.cropIconButton,
+                { backgroundColor: theme.colors.primary },
+              ]}
+              disabled={isUploading}
+            >
+              <Icon
+                color={theme.colors.background}
+                name="crop"
+                size={20}
+                library="Feather"
+              />
+            </TouchableOpacity>
+          )}
         </View>
 
         {selectedImage ? (
           <View style={styles.buttonContainer}>
-            {!croppedImage ? (
-              // Show crop button when image is selected but not cropped yet
-              <TouchableOpacity
-                onPress={handleCropImage}
-                style={[styles.btn, { backgroundColor: theme.colors.primary }]}
-                disabled={false}
+            <TouchableOpacity
+              onPress={handleUpload}
+              style={[styles.btn, { backgroundColor: theme.colors.primary }]}
+              disabled={isUploading}
+            >
+              <Text
+                style={[styles.btnText, { color: theme.colors.background }]}
               >
-                <Text
-                  style={[styles.btnText, { color: theme.colors.background }]}
-                >
-                  Crop & Center
-                </Text>
-              </TouchableOpacity>
-            ) : (
-              // Show upload button when image is cropped and ready
-              <TouchableOpacity
-                onPress={handleUpload}
-                style={[styles.btn, { backgroundColor: theme.colors.primary }]}
-                disabled={isUploading}
-              >
-                <Text
-                  style={[styles.btnText, { color: theme.colors.background }]}
-                >
-                  {isUploading ? 'Uploading...' : 'Upload Photo'}
-                </Text>
-              </TouchableOpacity>
-            )}
+                {isUploading ? 'Uploading...' : 'Upload Photo'}
+              </Text>
+            </TouchableOpacity>
 
             <TouchableOpacity
               onPress={handleRetake}
@@ -386,6 +389,22 @@ const styles = StyleSheet.create(theme => ({
     width: '100%',
     height: '100%',
     borderRadius: AVATAR_SIZE / 2,
+  },
+  cropIconButton: {
+    marginTop: 16,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   buttonContainer: {
     gap: 12,

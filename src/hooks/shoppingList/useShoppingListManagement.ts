@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Alert } from 'react-native';
+import { v4 as uuid } from 'uuid';
 import {
   useGetShoppingListItemsQuery,
   useShoppingListItemsChangedSubscription,
@@ -11,7 +12,7 @@ import {
 import { useSearchableList } from '../useSearchableList';
 import { useAuth } from '#hooks/auth/useAuth';
 import { useErrorHandler } from '#/utils/errorHandling';
-import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
+import { enhanceWithVersion, createOptimisticEntity } from '#/apollo/utils/createOptimisticResponse';
 import { useSubscriptionDeduplication } from '#/hooks/utils/useSubscriptionDeduplication';
 
 export interface ShoppingListItemInput {
@@ -122,9 +123,34 @@ export function useShoppingListManagement(listId: string | undefined) {
       });
       Alert.alert('Error', message);
     },
+    // Optimistic response for instant UI feedback (especially important offline)
+    optimisticResponse: variables => {
+      const tempId = `temp-${uuid()}`;
+      return {
+        __typename: 'Mutation' as const,
+        addItemToShoppingList: {
+          ...createOptimisticEntity(
+            'ShoppingListItem',
+            tempId,
+            {
+              itemName: variables.input.itemName,
+              quantity: variables.input.quantity || 1,
+              unitName: variables.input.unitName || null,
+              notes: variables.input.notes || null,
+              category: variables.input.category || null,
+              isPurchased: false,
+              purchasedBy: null,
+              shoppingList: {
+                __typename: 'ShoppingList' as const,
+                id: listId || '',
+              },
+            }
+          ),
+          __typename: 'ShoppingListItem' as const,
+        } as any, // Optimistic response - will be replaced by server response
+      };
+    },
     // Update Apollo cache directly instead of refetching
-    // Note: No optimisticResponse - the mutation returns 40+ fields from ShoppingListItemFragment
-    // The cache update provides instant UI feedback when server responds (~100-200ms)
     update: (cache, { data }) => {
       if (!data?.addItemToShoppingList || !listId) return;
 

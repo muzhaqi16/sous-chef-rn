@@ -60,6 +60,8 @@ export type AddIngredientResult = {
 
 export type AddPantryItemInput = {
   acquisitionMethod?: InputMaybe<AcquisitionMethod>;
+  actualNetWeight?: InputMaybe<Scalars['Float']['input']>;
+  actualNetWeightUnitId?: InputMaybe<Scalars['String']['input']>;
   autoReorderPoint?: InputMaybe<Scalars['Float']['input']>;
   batchNumber?: InputMaybe<Scalars['String']['input']>;
   bestByDate?: InputMaybe<Scalars['String']['input']>;
@@ -1635,6 +1637,7 @@ export type ItemSuggestion = {
   defaultUnit?: Maybe<ItemUnitSuggestion>;
   id: Scalars['ID']['output'];
   imageUrl?: Maybe<Scalars['String']['output']>;
+  images?: Maybe<Scalars['JSON']['output']>;
   name: Scalars['String']['output'];
 };
 
@@ -3632,6 +3635,9 @@ export enum PantryActivityType {
 export type PantryItem = {
   __typename?: 'PantryItem';
   acquisitionMethod: AcquisitionMethod;
+  actualNetWeight?: Maybe<Scalars['Float']['output']>;
+  actualNetWeightUnit?: Maybe<Unit>;
+  actualNetWeightUnitId?: Maybe<Scalars['String']['output']>;
   addedAt: Scalars['DateTime']['output'];
   addedBy?: Maybe<User>;
   alertSentAt?: Maybe<Scalars['DateTime']['output']>;
@@ -5892,6 +5898,8 @@ export type UpdatePantryInput = {
 };
 
 export type UpdatePantryItemInput = {
+  actualNetWeight?: InputMaybe<Scalars['Float']['input']>;
+  actualNetWeightUnitId?: InputMaybe<Scalars['String']['input']>;
   autoReorderPoint?: InputMaybe<Scalars['Float']['input']>;
   bestByDate?: InputMaybe<Scalars['String']['input']>;
   condition?: InputMaybe<ItemCondition>;
@@ -7460,6 +7468,7 @@ export type ShoppingListItemFragmentFragment = {
         name: string;
         description?: string | null | undefined;
         imageUrl?: string | null | undefined;
+        images?: any | null | undefined;
         netWeight?: number | null | undefined;
         displayUnit?:
           | { __typename?: 'Unit'; id: string; name: string; symbol: string }
@@ -7816,6 +7825,7 @@ export type ItemFragmentFragment = {
   status: ItemStatus;
   visibility: Visibility;
   imageUrl?: string | null | undefined;
+  images?: any | null | undefined;
   tags: Array<string>;
   healthBenefits?: any | null | undefined;
   allergens?: any | null | undefined;
@@ -7987,6 +7997,7 @@ export type PantryItemFragmentFragment = {
     status: ItemStatus;
     visibility: Visibility;
     imageUrl?: string | null | undefined;
+    images?: any | null | undefined;
     tags: Array<string>;
     healthBenefits?: any | null | undefined;
     allergens?: any | null | undefined;
@@ -8274,6 +8285,7 @@ export type PantryFragmentFragment = {
           status: ItemStatus;
           visibility: Visibility;
           imageUrl?: string | null | undefined;
+          images?: any | null | undefined;
           tags: Array<string>;
           healthBenefits?: any | null | undefined;
           allergens?: any | null | undefined;
@@ -8899,6 +8911,7 @@ export type HomeFragmentFragment = {
                 status: ItemStatus;
                 visibility: Visibility;
                 imageUrl?: string | null | undefined;
+                images?: any | null | undefined;
                 tags: Array<string>;
                 healthBenefits?: any | null | undefined;
                 allergens?: any | null | undefined;
@@ -9477,6 +9490,7 @@ export type GetHomeQuery = {
                       status: ItemStatus;
                       visibility: Visibility;
                       imageUrl?: string | null | undefined;
+                      images?: any | null | undefined;
                       tags: Array<string>;
                       healthBenefits?: any | null | undefined;
                       allergens?: any | null | undefined;
@@ -10370,6 +10384,7 @@ export type UpdateHomeMutation = {
                   status: ItemStatus;
                   visibility: Visibility;
                   imageUrl?: string | null | undefined;
+                  images?: any | null | undefined;
                   tags: Array<string>;
                   healthBenefits?: any | null | undefined;
                   allergens?: any | null | undefined;
@@ -10779,6 +10794,7 @@ export type DeleteHomeMutation = {
                   status: ItemStatus;
                   visibility: Visibility;
                   imageUrl?: string | null | undefined;
+                  images?: any | null | undefined;
                   tags: Array<string>;
                   healthBenefits?: any | null | undefined;
                   allergens?: any | null | undefined;
@@ -11564,6 +11580,7 @@ export type GetDefaultHomeQuery = {
                       status: ItemStatus;
                       visibility: Visibility;
                       imageUrl?: string | null | undefined;
+                      images?: any | null | undefined;
                       tags: Array<string>;
                       healthBenefits?: any | null | undefined;
                       allergens?: any | null | undefined;
@@ -11998,6 +12015,7 @@ export type AutocompleteItemsQuery = {
           id: string;
           name: string;
           imageUrl?: string | null | undefined;
+          images?: any | null | undefined;
           defaultUnit?:
             | {
                 __typename?: 'ItemUnitSuggestion';
@@ -12550,6 +12568,7 @@ export type GetPantryItemsQuery = {
       status: ItemStatus;
       visibility: Visibility;
       imageUrl?: string | null | undefined;
+      images?: any | null | undefined;
       tags: Array<string>;
       healthBenefits?: any | null | undefined;
       allergens?: any | null | undefined;
@@ -12737,6 +12756,7 @@ export type GetPantryItemQuery = {
       status: ItemStatus;
       visibility: Visibility;
       imageUrl?: string | null | undefined;
+      images?: any | null | undefined;
       tags: Array<string>;
       healthBenefits?: any | null | undefined;
       allergens?: any | null | undefined;
@@ -12924,6 +12944,7 @@ export type AddItemToPantryMutation = {
       status: ItemStatus;
       visibility: Visibility;
       imageUrl?: string | null | undefined;
+      images?: any | null | undefined;
       tags: Array<string>;
       healthBenefits?: any | null | undefined;
       allergens?: any | null | undefined;
@@ -13168,6 +13189,7 @@ export type UpdatePantryItemMutation = {
       status: ItemStatus;
       visibility: Visibility;
       imageUrl?: string | null | undefined;
+      images?: any | null | undefined;
       tags: Array<string>;
       healthBenefits?: any | null | undefined;
       allergens?: any | null | undefined;
@@ -13355,6 +13377,7 @@ export type RemoveItemFromPantryMutation = {
       status: ItemStatus;
       visibility: Visibility;
       imageUrl?: string | null | undefined;
+      images?: any | null | undefined;
       tags: Array<string>;
       healthBenefits?: any | null | undefined;
       allergens?: any | null | undefined;
@@ -14708,6 +14731,7 @@ export type GetShoppingListItemsQuery = {
           name: string;
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
+          images?: any | null | undefined;
           netWeight?: number | null | undefined;
           displayUnit?:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
@@ -14901,6 +14925,7 @@ export type GetShoppingListItemQuery = {
               name: string;
               description?: string | null | undefined;
               imageUrl?: string | null | undefined;
+              images?: any | null | undefined;
               netWeight?: number | null | undefined;
               displayUnit?:
                 | {
@@ -15304,6 +15329,7 @@ export type AddItemToShoppingListMutation = {
           name: string;
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
+          images?: any | null | undefined;
           netWeight?: number | null | undefined;
           displayUnit?:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
@@ -15497,6 +15523,7 @@ export type UpdateShoppingListItemMutation = {
           name: string;
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
+          images?: any | null | undefined;
           netWeight?: number | null | undefined;
           displayUnit?:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
@@ -15699,6 +15726,7 @@ export type MarkItemPurchasedMutation = {
           name: string;
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
+          images?: any | null | undefined;
           netWeight?: number | null | undefined;
           displayUnit?:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
@@ -15891,6 +15919,7 @@ export type ReorderShoppingListItemsMutation = {
           name: string;
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
+          images?: any | null | undefined;
           netWeight?: number | null | undefined;
           displayUnit?:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
@@ -16186,6 +16215,7 @@ export type ShoppingListItemsChangedSubscription = {
                     name: string;
                     description?: string | null | undefined;
                     imageUrl?: string | null | undefined;
+                    images?: any | null | undefined;
                     netWeight?: number | null | undefined;
                     displayUnit?:
                       | {
@@ -16484,6 +16514,7 @@ export type ShoppingListItemAddedSubscription = {
           name: string;
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
+          images?: any | null | undefined;
           netWeight?: number | null | undefined;
           displayUnit?:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
@@ -16676,6 +16707,7 @@ export type ShoppingListItemUpdatedSubscription = {
           name: string;
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
+          images?: any | null | undefined;
           netWeight?: number | null | undefined;
           displayUnit?:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }

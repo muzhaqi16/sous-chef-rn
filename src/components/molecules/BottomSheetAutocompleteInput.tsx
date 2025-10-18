@@ -9,6 +9,7 @@ import {
 } from '@gorhom/bottom-sheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { Input } from '#components/base/Input';
+import { useStore } from '#store';
 
 interface BottomSheetAutocompleteInputProps<T> {
   // Input field props
@@ -82,6 +83,9 @@ export function BottomSheetAutocompleteInput<T>({
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [searchTerm, setSearchTerm] = useState(value || '');
 
+  // Check online status to prevent autocomplete when offline
+  const isOnline = useStore(state => state.isOnline);
+
   // Sync searchTerm with external value changes
   useEffect(() => {
     if (value !== searchTerm) {
@@ -93,7 +97,8 @@ export function BottomSheetAutocompleteInput<T>({
     onChangeText(text);
     setSearchTerm(text);
 
-    if (text.length >= minSearchLength && !showAutocomplete) {
+    // Only show autocomplete if online and text is long enough
+    if (text.length >= minSearchLength && !showAutocomplete && isOnline) {
       setShowAutocomplete(true);
       setTimeout(() => {
         bottomSheetRef.current?.present();

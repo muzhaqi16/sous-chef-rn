@@ -99,6 +99,7 @@ query AutocompleteItems($input: AutocompleteInput!) {
       id
       name
       imageUrl
+      images
       defaultUnit {
         id
         name

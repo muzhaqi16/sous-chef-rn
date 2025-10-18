@@ -15,6 +15,7 @@ fragment ShoppingListItemFragment on ShoppingListItem {
     name
     description
     imageUrl
+    images
     netWeight
     displayUnit {
       id
@@ -279,6 +280,7 @@ fragment ItemFragment on Item {
   status
   visibility
   imageUrl
+  images
   tags
   healthBenefits
   allergens

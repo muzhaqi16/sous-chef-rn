@@ -11,6 +11,7 @@ import {
   ImageUploadPurpose,
 } from '#generated';
 import { MAX_PROFILE_SIZE } from '#utils/imageValidation';
+import { useStore } from '#store';
 
 export interface ImageFile {
   uri: string;
@@ -106,7 +107,21 @@ export const useImageUpload = () => {
       confirmUploadFn: (key: string) => Promise<string | null>,
       options: ImageUploadOptions = {},
     ): Promise<string | null> => {
-      const { onProgress, onSuccess } = options;
+      const { onProgress, onSuccess, onError } = options;
+
+      // Check if online before attempting upload
+      const state = useStore.getState();
+      if (!state.isOnline) {
+        const offlineError = new Error(
+          "You're offline. Image upload requires an internet connection."
+        );
+        onError?.(offlineError);
+        Alert.alert(
+          'No Internet Connection',
+          "Image upload requires an internet connection. Please try again when you're online."
+        );
+        return null;
+      }
 
       try {
         setUploading(true);

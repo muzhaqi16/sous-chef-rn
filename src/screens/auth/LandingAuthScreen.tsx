@@ -1,12 +1,12 @@
 import React from 'react';
-import {View, Image, Text, TouchableOpacity, Linking} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
-import {AuthWrapper, Button} from '#components';
-import {useSafeNavigation} from '#hooks';
-import {getWebAppUrl} from '#utils/environment';
+import { View, Image, Text, TouchableOpacity, Linking } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { AuthWrapper, Button } from '#components';
+import { useSafeNavigation } from '#hooks';
+import { getWebAppUrl } from '#utils/environment';
 
 export function LandingAuthScreen() {
-  const {navigation} = useSafeNavigation();
+  const { navigation } = useSafeNavigation();
 
   return (
     <AuthWrapper>
@@ -36,6 +36,7 @@ export function LandingAuthScreen() {
             title="I already have an account"
             onPress={() => navigation.navigate('Login')}
             btnStyle={styles.secondaryBtn}
+            variant="secondary"
             txtStyle={styles.secondaryBtnText}
           />
         </View>
@@ -45,7 +46,8 @@ export function LandingAuthScreen() {
             Linking.openURL(getWebAppUrl('/privacy-policy')).catch(err =>
               console.error('Failed to open URL:', err),
             );
-          }}>
+          }}
+        >
           <Text style={styles.footerText}>
             By continuing, you agree to our{'\n'}
             <Text style={styles.link}>Terms & Conditions</Text> and{' '}
@@ -94,12 +96,13 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.xl,
   },
   primaryBtn: {
+    alignSelf: 'center',
     paddingVertical: theme.spacing.md,
     marginBottom: theme.spacing.md,
   },
 
   secondaryBtn: {
-    backgroundColor: theme.colors.surface,
+    alignSelf: 'center',
     paddingVertical: theme.spacing.md,
   },
   secondaryBtnText: {

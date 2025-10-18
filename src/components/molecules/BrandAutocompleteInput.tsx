@@ -3,6 +3,7 @@ import { Text, TouchableOpacity } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useSearchBrandsLazyQuery } from '#generated';
 import { BottomSheetAutocompleteInput } from './BottomSheetAutocompleteInput';
+import { useStore } from '#store';
 
 type BrandItem = {
   id: string;
@@ -29,15 +30,20 @@ export const BrandAutocompleteInput: React.FC<BrandAutocompleteInputProps> = ({
   onBrandSelected,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Check online status to prevent queries when offline
+  const isOnline = useStore(state => state.isOnline);
+
   const [searchBrands, { data: brandsData }] = useSearchBrandsLazyQuery();
 
   useEffect(() => {
-    if (searchTerm.length >= 2) {
+    // Only query when online and search term is long enough
+    if (searchTerm.length >= 2 && isOnline) {
       searchBrands({
         variables: { search: searchTerm, limit: 20 },
       });
     }
-  }, [searchTerm, searchBrands]);
+  }, [searchTerm, searchBrands, isOnline]);
 
   const brands = brandsData?.brands || [];
 

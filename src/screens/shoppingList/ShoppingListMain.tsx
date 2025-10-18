@@ -22,6 +22,7 @@ import {
   ListTemplate,
   FormattedItemSubtitle,
 } from '#components';
+import { getItemImageUrl } from '#utils/imageUtils';
 import type {
   SelectorConfig,
   ItemSelectorRef,
@@ -34,6 +35,7 @@ import { useShoppingListManagement } from '#/hooks';
 import { useStore } from '#/store';
 import { IconLibrary } from '#/utils/iconUtils';
 import { AnimatedCheckbox } from '#/components/atoms/AnimatedCheckbox';
+import { commonStyles } from '#/styles';
 
 // Wrapper component that conditionally renders EmptyState or SortableShoppingList
 const ShoppingListContent: React.FC<{
@@ -287,16 +289,22 @@ export const ShoppingListMain: React.FC = () => {
           size={24}
         />
       ),
-      leftElement: item.item?.imageUrl ? (
-        <View
-          style={[styles.imageContainer, item.isPurchased && { opacity: 0.5 }]}
-        >
-          <Image
-            source={{ uri: item.item.imageUrl }}
-            style={styles.leftImage}
-          />
-        </View>
-      ) : null,
+      leftElement: (() => {
+        const imageUrl = getItemImageUrl(item.item, 'small');
+        return imageUrl ? (
+          <View
+            style={[
+              commonStyles.listItemImageContainer,
+              item.isPurchased && { opacity: 0.5 },
+            ]}
+          >
+            <Image
+              source={{ uri: imageUrl }}
+              style={commonStyles.listItemImage}
+            />
+          </View>
+        ) : null;
+      })(),
     }));
   }, [items, toggleItem]);
 
@@ -517,32 +525,5 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-  },
-  imageContainer: {
-    width: theme.sizes.listImage.width,
-    height: theme.sizes.listImage.height,
-    marginRight: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    overflow: 'hidden',
-    alignContent: 'center',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: theme.colors.primary,
-    boxShadow: [
-      {
-        offsetX: 0,
-        offsetY: 1,
-        blurRadius: 1.41,
-        spreadDistance: 0,
-        color: '#00000024',
-      },
-    ],
-  },
-  leftImage: {
-    width: theme.sizes.listImage.width,
-    height: theme.sizes.listImage.height,
-    borderRadius: theme.radii.md,
-    resizeMode: 'cover',
   },
 }));

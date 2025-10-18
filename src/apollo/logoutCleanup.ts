@@ -146,6 +146,8 @@ export class LogoutCleanup {
       storage.delete('navigation_state');
       storage.delete('apollo-client-cache');
       storage.delete('persisted-queries');
+      storage.delete('apollo-mutation-queue'); // Clear offline mutation queue
+      storage.delete('apollo-queue-current-user'); // Clear queue user ID
 
       // Get secure storage and clear auth-related data
       try {
@@ -154,11 +156,13 @@ export class LogoutCleanup {
         secureStorage.delete('apollo-cache');
         secureStorage.delete('navigation_state');
         secureStorage.delete('apollo-client-cache');
+        secureStorage.delete('apollo-mutation-queue');
+        secureStorage.delete('apollo-queue-current-user');
       } catch (storageError) {
         console.warn('Failed to clear secure storage:', storageError);
       }
 
-      console.log('🗑️ Apollo cache and navigation state cleared');
+      console.log('🗑️ Apollo cache, navigation state, and mutation queue cleared');
     } catch (error) {
       console.warn('Failed to clear Apollo cache:', error);
     }

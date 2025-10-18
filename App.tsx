@@ -15,15 +15,30 @@ import { ToastProvider } from '#/components/atoms';
 import { useTheme } from '#/hooks/useTheme';
 import { Telemetry } from '#/services/telemetry';
 import { AppErrorBoundary } from '#/components/providers/ErrorBoundary';
+import { useNetworkStatus } from '#/hooks/useNetworkStatus';
+import { queueManager } from '#/apollo/offlineQueue';
+
 // Enable native screens for better performance
 enableScreens();
 
 const App = () => {
-  const { isHydrated, setHasStoredCredentials, getTelemetryConfig } =
+  const { isHydrated, isOnline, setHasStoredCredentials, getTelemetryConfig } =
     useStore();
   const { theme } = useTheme();
   const { theme: themeStyles } = useUnistyles();
   const isDark = theme === 'dark';
+
+  // Initialize network monitoring
+  useNetworkStatus();
+
+  // Handle network status changes - trigger queue processing when online
+  useEffect(() => {
+    if (isOnline) {
+      queueManager.onOnline();
+    } else {
+      queueManager.onOffline();
+    }
+  }, [isOnline]);
 
   useEffect(() => {
     if (isHydrated) {

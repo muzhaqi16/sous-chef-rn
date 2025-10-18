@@ -3,6 +3,7 @@ import { Text, TouchableOpacity, View, Image } from 'react-native';
 import { BottomSheetFlatList, BottomSheetView } from '@gorhom/bottom-sheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { useAutocompleteItemsLazyQuery, ItemSuggestion } from '#generated';
+import { getItemImageUrl } from '#utils/imageUtils';
 
 interface AutocompleteProps {
   searchTerm: string;
@@ -41,30 +42,34 @@ const Autocomplete: React.FC<AutocompleteProps> = ({
 
   if (searchTerm.length < 2) return null;
 
-  const renderItem = ({ item }: { item: ItemSuggestion }) => (
-    <TouchableOpacity
-      onPress={() => onSelectItem(item)}
-      style={styles.item}
-      activeOpacity={0.7}
-    >
-      <View style={styles.itemContent}>
-        {item.imageUrl ? (
-          <Image
-            source={{ uri: item.imageUrl }}
-            style={styles.itemImage}
-            defaultSource={{
-              uri: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==',
-            }}
-          />
-        ) : (
-          <View style={styles.itemImagePlaceholder}>
-            <Text style={styles.itemImagePlaceholderText}>📦</Text>
-          </View>
-        )}
-        <Text style={styles.itemName}>{item.name}</Text>
-      </View>
-    </TouchableOpacity>
-  );
+  const renderItem = ({ item }: { item: ItemSuggestion }) => {
+    const imageUrl = getItemImageUrl(item, 'small');
+
+    return (
+      <TouchableOpacity
+        onPress={() => onSelectItem(item)}
+        style={styles.item}
+        activeOpacity={0.7}
+      >
+        <View style={styles.itemContent}>
+          {imageUrl ? (
+            <Image
+              source={{ uri: imageUrl }}
+              style={styles.itemImage}
+              defaultSource={{
+                uri: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==',
+              }}
+            />
+          ) : (
+            <View style={styles.itemImagePlaceholder}>
+              <Text style={styles.itemImagePlaceholderText}>📦</Text>
+            </View>
+          )}
+          <Text style={styles.itemName}>{item.name}</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   const renderHeader = () => {
     if (loading) {

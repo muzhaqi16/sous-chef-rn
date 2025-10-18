@@ -6,6 +6,8 @@ import { useDefaultHome, usePantryManagement } from '#hooks';
 import { useStore } from '#store';
 import { useGetHomeBasicQuery } from '#generated';
 import { useScanner } from '#context';
+import { commonStyles } from '#/styles';
+
 import {
   ListTemplate,
   SearchBarAction,
@@ -13,6 +15,7 @@ import {
   AnimatedItemSelector,
   FormattedItemSubtitle,
 } from '#components';
+import { getItemImageUrl } from '#utils/imageUtils';
 import type {
   SelectorConfig,
   ItemSelectorRef,
@@ -195,14 +198,22 @@ export const PantryMain: React.FC = () => {
           : isLowStock
           ? { text: 'Low Stock', variant: 'warning' }
           : undefined,
-        leftElement: item.item?.imageUrl ? (
-          <View style={styles.imageContainer}>
-            <Image
-              source={{ uri: item.item.imageUrl }}
-              style={styles.leftImage}
-            />
-          </View>
-        ) : undefined,
+        leftElement: (() => {
+          const imageUrl = getItemImageUrl(item.item, 'small');
+          return imageUrl ? (
+            <View
+              style={[
+                commonStyles.listItemImageContainer,
+                { backgroundColor: '#fff' },
+              ]}
+            >
+              <Image
+                source={{ uri: imageUrl }}
+                style={[commonStyles.listItemImage, { resizeMode: 'contain' }]}
+              />
+            </View>
+          ) : undefined;
+        })(),
       };
     });
 
@@ -385,19 +396,5 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-  },
-  imageContainer: {
-    width: theme.sizes.listImage.width,
-    height: theme.sizes.listImage.height,
-    marginRight: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    overflow: 'hidden',
-  },
-  leftImage: {
-    width: theme.sizes.listImage.width,
-    height: theme.sizes.listImage.height,
-    borderRadius: theme.radii.md,
-    resizeMode: 'cover',
-    elevation: 2,
   },
 }));

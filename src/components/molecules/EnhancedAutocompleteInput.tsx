@@ -9,6 +9,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Input } from '#components/base/Input';
 import EnhancedAutocomplete from '#components/molecules/EnhancedAutocomplete';
 import { ItemSuggestion } from '#generated';
+import { useStore } from '#store';
 
 interface EnhancedAutocompleteInputProps {
   label?: string;
@@ -37,6 +38,9 @@ export const EnhancedAutocompleteInput: React.FC<
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [searchTerm, setSearchTerm] = useState(value || '');
 
+  // Check online status to prevent autocomplete when offline
+  const isOnline = useStore(state => state.isOnline);
+
   // Sync searchTerm with external value changes (only when different from current searchTerm)
   useEffect(() => {
     if (value !== searchTerm) {
@@ -47,7 +51,8 @@ export const EnhancedAutocompleteInput: React.FC<
   const handleTextChange = (text: string) => {
     setSearchTerm(text);
 
-    if (text.length >= 3 && !showAutocomplete) {
+    // Only show autocomplete if online and text is long enough
+    if (text.length >= 3 && !showAutocomplete && isOnline) {
       setShowAutocomplete(true);
       setTimeout(() => {
         bottomSheetModalRef.current?.present();

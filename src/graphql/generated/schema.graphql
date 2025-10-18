@@ -321,6 +321,8 @@ type AddIngredientResult {
 
 input AddPantryItemInput {
   acquisitionMethod: AcquisitionMethod
+  actualNetWeight: Float
+  actualNetWeightUnitId: String
   autoReorderPoint: Float
   batchNumber: String
   bestByDate: String
@@ -1846,6 +1848,7 @@ type ItemSuggestion {
   defaultUnit: ItemUnitSuggestion
   id: ID!
   imageUrl: String
+  images: JSON
   name: String!
 }
 
@@ -2967,6 +2970,9 @@ enum PantryActivityType {
 
 type PantryItem {
   acquisitionMethod: AcquisitionMethod!
+  actualNetWeight: Float
+  actualNetWeightUnit: Unit
+  actualNetWeightUnitId: String
   addedAt: DateTime!
   addedBy: User
   alertSentAt: DateTime
@@ -4499,6 +4505,8 @@ input UpdatePantryInput {
 }
 
 input UpdatePantryItemInput {
+  actualNetWeight: Float
+  actualNetWeightUnitId: String
   autoReorderPoint: Float
   bestByDate: String
   condition: ItemCondition
