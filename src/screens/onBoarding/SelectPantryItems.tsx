@@ -6,7 +6,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useOnboardingNavigation, useSelectableItems } from '#hooks';
 import {
   useGetOnboardingItemsQuery,
-  useAddItemToPantryMutation,
+  useCreatePantryItemMutation,
   StorageState,
   ItemCondition,
   AcquisitionMethod,
@@ -28,8 +28,8 @@ export const SelectPantryItems = () => {
   } = useGetOnboardingItemsQuery({
     fetchPolicy: 'cache-and-network',
   });
-  const [addItemToPantry] = useAddItemToPantryMutation({
-    onError: e => console.error(e),
+  const [addItemToPantry] = useCreatePantryItemMutation({
+    onError: (e: any) => console.error(e),
   });
 
   const [isAddingItems, setIsAddingItems] = useState(false);
@@ -37,11 +37,11 @@ export const SelectPantryItems = () => {
   // Transform onboarding items into selectable items with id and selected properties
   const selectableItems = useMemo(
     () =>
-      (data?.onboardingItems || []).map(item => ({
+      (data?.items?.items || []).map((item: any) => ({
         ...item,
         selected: false,
       })),
-    [data?.onboardingItems],
+    [data?.items],
   );
 
   // Use the custom hook for managing selection state
@@ -97,7 +97,7 @@ export const SelectPantryItems = () => {
                 input: {
                   pantryId: selectedPantryId,
                   itemId: item.id,
-                  unitId: item.displayUnit?.id || '',
+                  unitId: item.defaultUnit?.id || '',
                   initialQuantity: 1,
                   storageState: StorageState.Ambient,
                   condition: ItemCondition.Good,

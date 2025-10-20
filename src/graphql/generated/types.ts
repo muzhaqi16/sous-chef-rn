@@ -58,43 +58,6 @@ export type AddIngredientResult = {
   wasUpdated: Scalars['Boolean']['output'];
 };
 
-export type AddPantryItemInput = {
-  acquisitionMethod?: InputMaybe<AcquisitionMethod>;
-  actualNetWeight?: InputMaybe<Scalars['Float']['input']>;
-  actualNetWeightUnitId?: InputMaybe<Scalars['String']['input']>;
-  autoReorderPoint?: InputMaybe<Scalars['Float']['input']>;
-  batchNumber?: InputMaybe<Scalars['String']['input']>;
-  bestByDate?: InputMaybe<Scalars['String']['input']>;
-  condition?: InputMaybe<ItemCondition>;
-  costPerUnit?: InputMaybe<Scalars['Float']['input']>;
-  customCategory?: InputMaybe<Scalars['String']['input']>;
-  expiresAt?: InputMaybe<Scalars['String']['input']>;
-  initialQuantity: Scalars['Float']['input'];
-  isAutoReorder?: InputMaybe<Scalars['Boolean']['input']>;
-  itemBrand?: InputMaybe<Scalars['String']['input']>;
-  itemCategory?: InputMaybe<Scalars['String']['input']>;
-  itemDescription?: InputMaybe<Scalars['String']['input']>;
-  itemDisplayUnitId?: InputMaybe<Scalars['String']['input']>;
-  itemId?: InputMaybe<Scalars['String']['input']>;
-  itemName?: InputMaybe<Scalars['String']['input']>;
-  itemNetWeight?: InputMaybe<Scalars['Float']['input']>;
-  itemUpc?: InputMaybe<Scalars['String']['input']>;
-  lastUsedAt?: InputMaybe<Scalars['DateTime']['input']>;
-  lotNumber?: InputMaybe<Scalars['String']['input']>;
-  pantryId: Scalars['ID']['input'];
-  priority?: InputMaybe<Scalars['Int']['input']>;
-  purchaseId?: InputMaybe<Scalars['String']['input']>;
-  storageLocation?: InputMaybe<Scalars['String']['input']>;
-  storageNotes?: InputMaybe<Scalars['String']['input']>;
-  storageState?: InputMaybe<StorageState>;
-  storeId?: InputMaybe<Scalars['String']['input']>;
-  tags?: InputMaybe<Array<Scalars['String']['input']>>;
-  totalCost?: InputMaybe<Scalars['Float']['input']>;
-  unitId?: InputMaybe<Scalars['String']['input']>;
-  unitName?: InputMaybe<Scalars['String']['input']>;
-  unitSymbol?: InputMaybe<Scalars['String']['input']>;
-};
-
 export type AddRecipeToShoppingListResult = {
   __typename?: 'AddRecipeToShoppingListResult';
   addedItems: Array<ShoppingListItem>;
@@ -103,6 +66,13 @@ export type AddRecipeToShoppingListResult = {
   totalSkipped: Scalars['Int']['output'];
   totalUpdated: Scalars['Int']['output'];
   updatedItems: Array<ShoppingListItem>;
+};
+
+export type AddRestrictionInput = {
+  appliesToHomeId?: InputMaybe<Scalars['String']['input']>;
+  notes?: InputMaybe<Scalars['String']['input']>;
+  severity: RestrictionSeverity;
+  type: DietaryTag;
 };
 
 export type AddRestrictionsInput = {
@@ -520,6 +490,7 @@ export type CreateHomeInput = {
 
 export type CreateItemInput = {
   allergens?: InputMaybe<Scalars['JSON']['input']>;
+  alternateUpcs?: InputMaybe<Array<Scalars['String']['input']>>;
   brandId?: InputMaybe<Scalars['String']['input']>;
   brandName?: InputMaybe<Scalars['String']['input']>;
   categories?: InputMaybe<Array<CategoryInput>>;
@@ -540,6 +511,7 @@ export type CreateItemInput = {
   metadata?: InputMaybe<Scalars['JSON']['input']>;
   name: Scalars['String']['input'];
   netWeight?: InputMaybe<Scalars['Float']['input']>;
+  primaryUpc?: InputMaybe<Scalars['String']['input']>;
   shelfLifeDays?: InputMaybe<Scalars['Int']['input']>;
   storageState?: InputMaybe<StorageState>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
@@ -655,6 +627,43 @@ export type CreatePantryInput = {
   temperature?: InputMaybe<Scalars['String']['input']>;
 };
 
+export type CreatePantryItemInput = {
+  acquisitionMethod?: InputMaybe<AcquisitionMethod>;
+  actualNetWeight?: InputMaybe<Scalars['Float']['input']>;
+  actualNetWeightUnitId?: InputMaybe<Scalars['String']['input']>;
+  autoReorderPoint?: InputMaybe<Scalars['Float']['input']>;
+  batchNumber?: InputMaybe<Scalars['String']['input']>;
+  bestByDate?: InputMaybe<Scalars['String']['input']>;
+  condition?: InputMaybe<ItemCondition>;
+  costPerUnit?: InputMaybe<Scalars['Float']['input']>;
+  customCategory?: InputMaybe<Scalars['String']['input']>;
+  expiresAt?: InputMaybe<Scalars['String']['input']>;
+  initialQuantity: Scalars['Float']['input'];
+  isAutoReorder?: InputMaybe<Scalars['Boolean']['input']>;
+  itemBrand?: InputMaybe<Scalars['String']['input']>;
+  itemCategory?: InputMaybe<Scalars['String']['input']>;
+  itemDescription?: InputMaybe<Scalars['String']['input']>;
+  itemDisplayUnitId?: InputMaybe<Scalars['String']['input']>;
+  itemId?: InputMaybe<Scalars['String']['input']>;
+  itemName?: InputMaybe<Scalars['String']['input']>;
+  itemNetWeight?: InputMaybe<Scalars['Float']['input']>;
+  itemUpc?: InputMaybe<Scalars['String']['input']>;
+  lastUsedAt?: InputMaybe<Scalars['DateTime']['input']>;
+  lotNumber?: InputMaybe<Scalars['String']['input']>;
+  pantryId: Scalars['ID']['input'];
+  priority?: InputMaybe<Scalars['Int']['input']>;
+  purchaseId?: InputMaybe<Scalars['String']['input']>;
+  storageLocation?: InputMaybe<Scalars['String']['input']>;
+  storageNotes?: InputMaybe<Scalars['String']['input']>;
+  storageState?: InputMaybe<StorageState>;
+  storeId?: InputMaybe<Scalars['String']['input']>;
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
+  totalCost?: InputMaybe<Scalars['Float']['input']>;
+  unitId?: InputMaybe<Scalars['String']['input']>;
+  unitName?: InputMaybe<Scalars['String']['input']>;
+  unitSymbol?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type CreatePurchaseInput = {
   currencyId: Scalars['ID']['input'];
   discountAmount?: InputMaybe<Scalars['Float']['input']>;
@@ -685,6 +694,7 @@ export type CreateRecipeInput = {
   externalSourceId?: InputMaybe<Scalars['String']['input']>;
   externalSourceUrl?: InputMaybe<Scalars['String']['input']>;
   imageUrl?: InputMaybe<Scalars['String']['input']>;
+  ingredients: Array<RecipeIngredientInput>;
   instructions: Scalars['JSON']['input'];
   isPublished?: InputMaybe<Scalars['Boolean']['input']>;
   name: Scalars['String']['input'];
@@ -712,6 +722,7 @@ export type CreateShoppingListInput = {
 };
 
 export type CreateShoppingListItemInput = {
+  addedContext?: InputMaybe<Scalars['String']['input']>;
   aisle?: InputMaybe<Scalars['String']['input']>;
   budgetPrice?: InputMaybe<Scalars['Float']['input']>;
   category?: InputMaybe<Scalars['String']['input']>;
@@ -722,11 +733,29 @@ export type CreateShoppingListItemInput = {
   preferredStoreId?: InputMaybe<Scalars['String']['input']>;
   priority?: InputMaybe<Scalars['Int']['input']>;
   quantity?: InputMaybe<Scalars['Float']['input']>;
+  recipeId?: InputMaybe<Scalars['ID']['input']>;
+  recipeIngredientId?: InputMaybe<Scalars['ID']['input']>;
   shoppingListId: Scalars['ID']['input'];
   sortOrder?: InputMaybe<Scalars['Int']['input']>;
   storeSection?: InputMaybe<Scalars['String']['input']>;
   unitId?: InputMaybe<Scalars['String']['input']>;
   unitName?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type CreateStorageLocationInput = {
+  capacity?: InputMaybe<Scalars['Float']['input']>;
+  capacityUnit?: InputMaybe<Scalars['String']['input']>;
+  color?: InputMaybe<Scalars['String']['input']>;
+  description?: InputMaybe<Scalars['String']['input']>;
+  homeId: Scalars['ID']['input'];
+  icon?: InputMaybe<Scalars['String']['input']>;
+  isClimateControlled?: InputMaybe<Scalars['Boolean']['input']>;
+  isDefault?: InputMaybe<Scalars['Boolean']['input']>;
+  name: Scalars['String']['input'];
+  parentLocationId?: InputMaybe<Scalars['ID']['input']>;
+  sortOrder?: InputMaybe<Scalars['Int']['input']>;
+  temperature?: InputMaybe<StorageState>;
+  type: StorageType;
 };
 
 export type CreateStoreInput = {
@@ -1045,16 +1074,58 @@ export type DeviceTypeStat = {
   deviceType: DeviceType;
 };
 
+export type DietaryProfile = {
+  __typename?: 'DietaryProfile';
+  budgetPerMeal?: Maybe<Scalars['Float']['output']>;
+  calorieTarget?: Maybe<Scalars['Int']['output']>;
+  carbsTarget?: Maybe<Scalars['Int']['output']>;
+  cookingSkillLevel?: Maybe<Scalars['String']['output']>;
+  createdAt: Scalars['DateTime']['output'];
+  dislikedIngredients: Array<Scalars['String']['output']>;
+  fatTarget?: Maybe<Scalars['Int']['output']>;
+  favoriteIngredients: Array<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  maxCookTimeMinutes?: Maybe<Scalars['Int']['output']>;
+  maxPrepTimeMinutes?: Maybe<Scalars['Int']['output']>;
+  mealsPerDay: Scalars['Int']['output'];
+  preferredCuisines: Array<Scalars['String']['output']>;
+  proteinTarget?: Maybe<Scalars['Int']['output']>;
+  restrictions: Array<DietaryRestriction>;
+  snacksPerDay: Scalars['Int']['output'];
+  updatedAt: Scalars['DateTime']['output'];
+  user: User;
+  userId: Scalars['String']['output'];
+};
+
+export type DietaryRestriction = {
+  __typename?: 'DietaryRestriction';
+  appliesToHomeId?: Maybe<Scalars['String']['output']>;
+  createdAt: Scalars['DateTime']['output'];
+  dietaryProfile: DietaryProfile;
+  dietaryProfileId: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  notes?: Maybe<Scalars['String']['output']>;
+  severity: RestrictionSeverity;
+  type: DietaryTag;
+  updatedAt: Scalars['DateTime']['output'];
+};
+
 export enum DietaryTag {
   DairyFree = 'DAIRY_FREE',
+  DiabeticFriendly = 'DIABETIC_FRIENDLY',
+  EggFree = 'EGG_FREE',
+  FishFree = 'FISH_FREE',
   GlutenFree = 'GLUTEN_FREE',
   Halal = 'HALAL',
+  HeartHealthy = 'HEART_HEALTHY',
   Keto = 'KETO',
   Kosher = 'KOSHER',
   LowCarb = 'LOW_CARB',
   LowSodium = 'LOW_SODIUM',
   NutFree = 'NUT_FREE',
   Paleo = 'PALEO',
+  ShellfishFree = 'SHELLFISH_FREE',
+  SoyFree = 'SOY_FREE',
   SugarFree = 'SUGAR_FREE',
   Vegan = 'VEGAN',
   Vegetarian = 'VEGETARIAN',
@@ -1068,10 +1139,64 @@ export enum Difficulty {
   VeryEasy = 'VERY_EASY',
 }
 
+export type DismissNotificationInput = {
+  notificationId: Scalars['ID']['input'];
+};
+
 export type Edge = {
   cursor: Scalars['String']['output'];
   node: Node;
 };
+
+export enum ExpirationAction {
+  Consumed = 'CONSUMED',
+  Cooked = 'COOKED',
+  Extended = 'EXTENDED',
+  NoAction = 'NO_ACTION',
+  Shared = 'SHARED',
+  Waste = 'WASTE',
+}
+
+export enum ExpirationFrequency {
+  DailyEvening = 'DAILY_EVENING',
+  DailyMorning = 'DAILY_MORNING',
+  Never = 'NEVER',
+  RealTime = 'REAL_TIME',
+  WeeklyDigest = 'WEEKLY_DIGEST',
+}
+
+export type ExpirationNotification = {
+  __typename?: 'ExpirationNotification';
+  actionAt?: Maybe<Scalars['DateTime']['output']>;
+  actionTaken?: Maybe<ExpirationAction>;
+  batchId?: Maybe<Scalars['String']['output']>;
+  createdAt: Scalars['DateTime']['output'];
+  daysUntilExpiry: Scalars['Int']['output'];
+  dismissedAt?: Maybe<Scalars['DateTime']['output']>;
+  expiresAt: Scalars['DateTime']['output'];
+  genericNotification?: Maybe<Notification>;
+  genericNotificationId?: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  isBatched: Scalars['Boolean']['output'];
+  notificationType: ExpirationNotificationType;
+  pantryItem: PantryItem;
+  pantryItemId: Scalars['String']['output'];
+  readAt?: Maybe<Scalars['DateTime']['output']>;
+  sentAt?: Maybe<Scalars['DateTime']['output']>;
+  status: NotificationDeliveryStatus;
+  updatedAt: Scalars['DateTime']['output'];
+  user: User;
+  userId: Scalars['String']['output'];
+};
+
+export enum ExpirationNotificationType {
+  ExpiredReminder = 'EXPIRED_REMINDER',
+  ExpiresIn_3Days = 'EXPIRES_IN_3_DAYS',
+  ExpiresIn_7Days = 'EXPIRES_IN_7_DAYS',
+  ExpiresToday = 'EXPIRES_TODAY',
+  ExpiresTomorrow = 'EXPIRES_TOMORROW',
+  WeeklyDigest = 'WEEKLY_DIGEST',
+}
 
 export enum ExportFormat {
   Csv = 'CSV',
@@ -1171,10 +1296,24 @@ export type FailedIpStat = {
   ipAddress?: Maybe<Scalars['String']['output']>;
 };
 
+export type FavoriteRecipeInput = {
+  folder?: InputMaybe<Scalars['String']['input']>;
+  notes?: InputMaybe<Scalars['String']['input']>;
+  recipeId: Scalars['ID']['input'];
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
+};
+
 export type ForgotPasswordResponse = {
   __typename?: 'ForgotPasswordResponse';
   message: Scalars['String']['output'];
   success: Scalars['Boolean']['output'];
+};
+
+export type GetExpirationNotificationsInput = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
+  pantryItemId?: InputMaybe<Scalars['ID']['input']>;
+  status?: InputMaybe<NotificationDeliveryStatus>;
 };
 
 export enum HealthBenefitCategory {
@@ -1442,6 +1581,9 @@ export type InviteToShoppingListInput = {
 export type Item = {
   __typename?: 'Item';
   allergens?: Maybe<Scalars['JSON']['output']>;
+  alternateUpcs: Array<Scalars['String']['output']>;
+  approvedAt?: Maybe<Scalars['DateTime']['output']>;
+  approvedBy?: Maybe<User>;
   brands: Array<ItemBrand>;
   categories?: Maybe<Array<ItemCategory>>;
   convertedNetWeight?: Maybe<ConvertedValue>;
@@ -1458,13 +1600,16 @@ export type Item = {
   imageUrl?: Maybe<Scalars['String']['output']>;
   images?: Maybe<Scalars['JSON']['output']>;
   ingredients?: Maybe<Scalars['JSON']['output']>;
+  isUserCreated: Scalars['Boolean']['output'];
   metadata?: Maybe<Scalars['JSON']['output']>;
   name: Scalars['String']['output'];
+  needsApproval: Scalars['Boolean']['output'];
   netWeight?: Maybe<Scalars['Float']['output']>;
   nutritions?: Maybe<Scalars['JSON']['output']>;
   pantryItems: Array<PantryItem>;
   popularity: Scalars['Int']['output'];
   priceHistory: Array<ItemPriceHistory>;
+  primaryUpc?: Maybe<Scalars['String']['output']>;
   purchases: Array<Purchase>;
   recipeIngredients: Array<RecipeIngredient>;
   shelfLifeDays?: Maybe<Scalars['Int']['output']>;
@@ -1568,8 +1713,13 @@ export type ItemFilters = {
   isDairyFree?: InputMaybe<Scalars['Boolean']['input']>;
   isGlutenFree?: InputMaybe<Scalars['Boolean']['input']>;
   isOrganic?: InputMaybe<Scalars['Boolean']['input']>;
+  isPopular?: InputMaybe<Scalars['Boolean']['input']>;
+  isRecent?: InputMaybe<Scalars['Boolean']['input']>;
+  isTrending?: InputMaybe<Scalars['Boolean']['input']>;
   isVegan?: InputMaybe<Scalars['Boolean']['input']>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
   priceRange?: InputMaybe<PriceRangeInput>;
+  showInOnboarding?: InputMaybe<Scalars['Boolean']['input']>;
   status?: InputMaybe<ItemStatus>;
   statuses?: InputMaybe<Array<ItemStatus>>;
   storageState?: InputMaybe<StorageState>;
@@ -1577,6 +1727,7 @@ export type ItemFilters = {
   storeId?: InputMaybe<Scalars['String']['input']>;
   storeIds?: InputMaybe<Array<Scalars['String']['input']>>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
+  timeRange?: InputMaybe<DateRange>;
   type?: InputMaybe<ItemType>;
   types?: InputMaybe<Array<ItemType>>;
   updatedAfter?: InputMaybe<Scalars['DateTime']['input']>;
@@ -1944,6 +2095,11 @@ export type LoginMethodStat = {
   method: LoginMethod;
 };
 
+export type MarkActionInput = {
+  action: ExpirationAction;
+  notificationId: Scalars['ID']['input'];
+};
+
 export type MarkAsTemplateInput = {
   saveItems?: InputMaybe<Scalars['Boolean']['input']>;
   templateName: Scalars['String']['input'];
@@ -2173,16 +2329,14 @@ export type Mutation = {
   addCollaborator: ShoppingListCollaborator;
   addItemTags: Item;
   addItemToCategory: Item;
-  addItemToPantry: PantryItem;
   addItemToShoppingList: ShoppingListItem;
   addItemUnit: ItemUnit;
-  addRecipe: Recipe;
-  addRecipeIngredientToShoppingList: AddIngredientResult;
-  addRecipeToShoppingList: AddRecipeToShoppingListResult;
+  addRestriction: DietaryRestriction;
   addRestrictions: UserModeration;
   addUserAddress: UserAddress;
   addWarning: UserModeration;
   adminDeleteUser: Scalars['Boolean']['output'];
+  approveItem: Item;
   archiveShoppingList: ShoppingList;
   banUser: UserModeration;
   bulkCreateItems: BulkCreateItemsResponse;
@@ -2215,9 +2369,15 @@ export type Mutation = {
   createModerationRecord: UserModeration;
   createNotification: Notification;
   createPantry: Pantry;
+  createPantryItem: PantryItem;
+  createPantryItemUsage: PantryItemUsage;
   createProfile: UserProfile;
   createPurchase: Purchase;
+  createRecipe: Recipe;
   createShoppingList: ShoppingList;
+  createShoppingListItemFromRecipeIngredient: AddIngredientResult;
+  createShoppingListItemsFromRecipe: AddRecipeToShoppingListResult;
+  createStorageLocation: StorageLocation;
   createStore: Store;
   createUnit: Unit;
   createUploadUrl: PresignPayload;
@@ -2241,14 +2401,19 @@ export type Mutation = {
   deleteMultipleNotifications: Scalars['Int']['output'];
   deleteNotification: Scalars['Boolean']['output'];
   deletePantry: Scalars['Boolean']['output'];
+  deletePantryItem: PantryItem;
   deletePurchase: Scalars['Boolean']['output'];
   deleteRecipe: Scalars['Boolean']['output'];
   deleteShoppingList: Scalars['Boolean']['output'];
+  deleteStorageLocation: Scalars['Boolean']['output'];
   deleteStore: Scalars['Boolean']['output'];
   deleteUnit: Scalars['Boolean']['output'];
   deleteUserAddress: UserAddress;
+  dismissExpirationNotification: ExpirationNotification;
   exportItems: ExportResponse;
+  favoriteRecipe: SavedRecipe;
   flagDeviceAsEmulator: Device;
+  flagItemForReview: Item;
   flagLoginAsRisky: LoginHistory;
   flagMultipleLoginsAsRisky: Array<LoginHistory>;
   /** Request a password reset email */
@@ -2261,6 +2426,7 @@ export type Mutation = {
   importItemsFromProvider: ImportItemsResponse;
   incrementDeviceLoginCount: Device;
   incrementItemPopularity: Item;
+  incrementRecipeCookedCount: SavedRecipe;
   inviteToHome: HomeInvite;
   inviteToShoppingList: ShoppingListCollaborator;
   joinHomeByCode: Membership;
@@ -2271,7 +2437,8 @@ export type Mutation = {
   login: AuthPayload;
   markAllNotificationsAsRead: Array<Notification>;
   markAsTemplate: ShoppingList;
-  markItemAsWaste: PantryItem;
+  markExpirationAction: ExpirationNotification;
+  markExpirationNotificationAsRead: ExpirationNotification;
   markItemPurchased: ShoppingListItem;
   markLoginAsReviewed: LoginHistory;
   markMultipleLoginsAsReviewed: Array<LoginHistory>;
@@ -2281,15 +2448,15 @@ export type Mutation = {
   putUnderReview: UserModeration;
   reactivateDevice: Device;
   recordLoginAttempt: LoginHistory;
-  recordPantryItemUsage: PantryItemUsage;
+  recordPantryItemWaste: PantryItem;
   recordPriceObservation: ItemPriceHistory;
   refresh: RefreshTokenPayload;
   register: AuthPayload;
   registerDevice: Device;
+  rejectItem: Scalars['Boolean']['output'];
   removeCollaborator: Scalars['Boolean']['output'];
   removeItemBrand: Item;
   removeItemFromCategory: Item;
-  removeItemFromPantry: PantryItem;
   removeItemFromShoppingList: Scalars['Boolean']['output'];
   removeItemImage: Item;
   removeItemTags: Item;
@@ -2298,6 +2465,7 @@ export type Mutation = {
   removeProfileAvatar: UserProfile;
   removeProfileCover: UserProfile;
   removePushToken: Device;
+  removeRestriction: Scalars['Boolean']['output'];
   removeRestrictions: UserModeration;
   removeShoppingListCollaborator: Scalars['Boolean']['output'];
   removeUnitConversion: Unit;
@@ -2308,7 +2476,6 @@ export type Mutation = {
   restoreItem: Item;
   reviewAppeal: UserModeration;
   revokeHomeInvite: Scalars['Boolean']['output'];
-  saveRecipe: Recipe;
   sendBulkNotifications: BulkNotificationResult;
   sendTestNotification: Notification;
   setDefaultHome: UserSettings;
@@ -2332,6 +2499,7 @@ export type Mutation = {
   unbanUser: UserModeration;
   uncategorizeItem: Scalars['Boolean']['output'];
   uncompleteShoppingList: ShoppingList;
+  unfavoriteRecipe: Scalars['Boolean']['output'];
   unsuspendUser: UserModeration;
   untrustDevice: Device;
   untrustMultipleDevices: Array<Device>;
@@ -2346,6 +2514,8 @@ export type Mutation = {
   updateDeviceLastSeen: Device;
   updateDeviceLocation: Device;
   updateDevicePeripherals: Device;
+  updateDietaryProfile: DietaryProfile;
+  updateFavoriteRecipe: SavedRecipe;
   updateHome: Home;
   updateItem: Item;
   updateItemAllergens: Item;
@@ -2370,10 +2540,12 @@ export type Mutation = {
   updatePurchase: Purchase;
   updatePushToken: Device;
   updateRecipe: Recipe;
+  updateRestriction: DietaryRestriction;
   updateRiskScore: UserModeration;
   updateSettings: UserSettings;
   updateShoppingList: ShoppingList;
   updateShoppingListItem: ShoppingListItem;
+  updateStorageLocation: StorageLocation;
   updateStore: Store;
   updateStoreInfo: StoreInfo;
   updateStorePriceAccuracy: Store;
@@ -2415,10 +2587,6 @@ export type MutationAddItemToCategoryArgs = {
   itemId: Scalars['ID']['input'];
 };
 
-export type MutationAddItemToPantryArgs = {
-  input: AddPantryItemInput;
-};
-
 export type MutationAddItemToShoppingListArgs = {
   input: CreateShoppingListItemInput;
 };
@@ -2428,27 +2596,8 @@ export type MutationAddItemUnitArgs = {
   itemId: Scalars['ID']['input'];
 };
 
-export type MutationAddRecipeArgs = {
-  category?: InputMaybe<RecipeCategory>;
-  cookTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
-  difficulty?: InputMaybe<Difficulty>;
-  ingredients: Array<Scalars['String']['input']>;
-  instructions: Scalars['JSON']['input'];
-  name: Scalars['String']['input'];
-  prepTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
-  servings?: InputMaybe<Scalars['Int']['input']>;
-};
-
-export type MutationAddRecipeIngredientToShoppingListArgs = {
-  quantityOverride?: InputMaybe<Scalars['Float']['input']>;
-  recipeIngredientId: Scalars['ID']['input'];
-  shoppingListId: Scalars['ID']['input'];
-};
-
-export type MutationAddRecipeToShoppingListArgs = {
-  recipeId: Scalars['ID']['input'];
-  servings?: InputMaybe<Scalars['Int']['input']>;
-  shoppingListId: Scalars['ID']['input'];
+export type MutationAddRestrictionArgs = {
+  input: AddRestrictionInput;
 };
 
 export type MutationAddRestrictionsArgs = {
@@ -2465,6 +2614,10 @@ export type MutationAddWarningArgs = {
 
 export type MutationAdminDeleteUserArgs = {
   id: Scalars['ID']['input'];
+};
+
+export type MutationApproveItemArgs = {
+  itemId: Scalars['ID']['input'];
 };
 
 export type MutationArchiveShoppingListArgs = {
@@ -2598,6 +2751,14 @@ export type MutationCreatePantryArgs = {
   input: CreatePantryInput;
 };
 
+export type MutationCreatePantryItemArgs = {
+  input: CreatePantryItemInput;
+};
+
+export type MutationCreatePantryItemUsageArgs = {
+  input: RecordPantryItemUsageInput;
+};
+
 export type MutationCreateProfileArgs = {
   input: CreateUserProfileInput;
 };
@@ -2606,8 +2767,28 @@ export type MutationCreatePurchaseArgs = {
   input: CreatePurchaseInput;
 };
 
+export type MutationCreateRecipeArgs = {
+  input: CreateRecipeInput;
+};
+
 export type MutationCreateShoppingListArgs = {
   input: CreateShoppingListInput;
+};
+
+export type MutationCreateShoppingListItemFromRecipeIngredientArgs = {
+  quantityOverride?: InputMaybe<Scalars['Float']['input']>;
+  recipeIngredientId: Scalars['ID']['input'];
+  shoppingListId: Scalars['ID']['input'];
+};
+
+export type MutationCreateShoppingListItemsFromRecipeArgs = {
+  recipeId: Scalars['ID']['input'];
+  servings?: InputMaybe<Scalars['Int']['input']>;
+  shoppingListId: Scalars['ID']['input'];
+};
+
+export type MutationCreateStorageLocationArgs = {
+  input: CreateStorageLocationInput;
 };
 
 export type MutationCreateStoreArgs = {
@@ -2692,6 +2873,10 @@ export type MutationDeletePantryArgs = {
   id: Scalars['ID']['input'];
 };
 
+export type MutationDeletePantryItemArgs = {
+  id: Scalars['ID']['input'];
+};
+
 export type MutationDeletePurchaseArgs = {
   id: Scalars['ID']['input'];
 };
@@ -2701,6 +2886,10 @@ export type MutationDeleteRecipeArgs = {
 };
 
 export type MutationDeleteShoppingListArgs = {
+  id: Scalars['ID']['input'];
+};
+
+export type MutationDeleteStorageLocationArgs = {
   id: Scalars['ID']['input'];
 };
 
@@ -2716,13 +2905,26 @@ export type MutationDeleteUserAddressArgs = {
   id: Scalars['ID']['input'];
 };
 
+export type MutationDismissExpirationNotificationArgs = {
+  input: DismissNotificationInput;
+};
+
 export type MutationExportItemsArgs = {
   filters?: InputMaybe<ItemFilters>;
   format: ExportFormat;
 };
 
+export type MutationFavoriteRecipeArgs = {
+  input: FavoriteRecipeInput;
+};
+
 export type MutationFlagDeviceAsEmulatorArgs = {
   id: Scalars['ID']['input'];
+};
+
+export type MutationFlagItemForReviewArgs = {
+  itemId: Scalars['ID']['input'];
+  reason?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type MutationFlagLoginAsRiskyArgs = {
@@ -2775,6 +2977,10 @@ export type MutationIncrementItemPopularityArgs = {
   id: Scalars['ID']['input'];
 };
 
+export type MutationIncrementRecipeCookedCountArgs = {
+  recipeId: Scalars['ID']['input'];
+};
+
 export type MutationInviteToHomeArgs = {
   input: InviteToHomeInput;
 };
@@ -2817,12 +3023,12 @@ export type MutationMarkAsTemplateArgs = {
   input: MarkAsTemplateInput;
 };
 
-export type MutationMarkItemAsWasteArgs = {
-  id: Scalars['ID']['input'];
-  isComposted?: InputMaybe<Scalars['Boolean']['input']>;
-  isRecycled?: InputMaybe<Scalars['Boolean']['input']>;
-  wasteAmount: Scalars['Float']['input'];
-  wasteReason: WasteReason;
+export type MutationMarkExpirationActionArgs = {
+  input: MarkActionInput;
+};
+
+export type MutationMarkExpirationNotificationAsReadArgs = {
+  notificationId: Scalars['ID']['input'];
 };
 
 export type MutationMarkItemPurchasedArgs = {
@@ -2867,8 +3073,12 @@ export type MutationRecordLoginAttemptArgs = {
   input: LoginAttemptInput;
 };
 
-export type MutationRecordPantryItemUsageArgs = {
-  input: RecordPantryItemUsageInput;
+export type MutationRecordPantryItemWasteArgs = {
+  id: Scalars['ID']['input'];
+  isComposted?: InputMaybe<Scalars['Boolean']['input']>;
+  isRecycled?: InputMaybe<Scalars['Boolean']['input']>;
+  wasteAmount: Scalars['Float']['input'];
+  wasteReason: WasteReason;
 };
 
 export type MutationRecordPriceObservationArgs = {
@@ -2890,6 +3100,10 @@ export type MutationRegisterDeviceArgs = {
   input: DeviceRegistrationInput;
 };
 
+export type MutationRejectItemArgs = {
+  input: RejectItemInput;
+};
+
 export type MutationRemoveCollaboratorArgs = {
   data: RemoveCollaboratorInput;
 };
@@ -2902,10 +3116,6 @@ export type MutationRemoveItemBrandArgs = {
 export type MutationRemoveItemFromCategoryArgs = {
   categoryId: Scalars['ID']['input'];
   itemId: Scalars['ID']['input'];
-};
-
-export type MutationRemoveItemFromPantryArgs = {
-  id: Scalars['ID']['input'];
 };
 
 export type MutationRemoveItemFromShoppingListArgs = {
@@ -2931,6 +3141,10 @@ export type MutationRemoveMemberArgs = {
 
 export type MutationRemovePushTokenArgs = {
   id: Scalars['ID']['input'];
+};
+
+export type MutationRemoveRestrictionArgs = {
+  input: RemoveRestrictionInput;
 };
 
 export type MutationRemoveRestrictionsArgs = {
@@ -2968,10 +3182,6 @@ export type MutationReviewAppealArgs = {
 
 export type MutationRevokeHomeInviteArgs = {
   id: Scalars['ID']['input'];
-};
-
-export type MutationSaveRecipeArgs = {
-  input: SaveRecipeInput;
 };
 
 export type MutationSendBulkNotificationsArgs = {
@@ -3081,6 +3291,10 @@ export type MutationUncompleteShoppingListArgs = {
   id: Scalars['ID']['input'];
 };
 
+export type MutationUnfavoriteRecipeArgs = {
+  recipeId: Scalars['ID']['input'];
+};
+
 export type MutationUnsuspendUserArgs = {
   userId: Scalars['ID']['input'];
 };
@@ -3146,6 +3360,15 @@ export type MutationUpdateDeviceLocationArgs = {
 export type MutationUpdateDevicePeripheralsArgs = {
   id: Scalars['ID']['input'];
   peripherals: DevicePeripheralsInput;
+};
+
+export type MutationUpdateDietaryProfileArgs = {
+  input: UpdateDietaryProfileInput;
+};
+
+export type MutationUpdateFavoriteRecipeArgs = {
+  input: UpdateFavoriteRecipeInput;
+  recipeId: Scalars['ID']['input'];
 };
 
 export type MutationUpdateHomeArgs = {
@@ -3230,7 +3453,7 @@ export type MutationUpdateNotificationArgs = {
 };
 
 export type MutationUpdateNotificationPreferencesArgs = {
-  input: NotificationPreferencesInput;
+  input: UpdateNotificationPreferencesInput;
 };
 
 export type MutationUpdatePantryArgs = {
@@ -3270,6 +3493,10 @@ export type MutationUpdateRecipeArgs = {
   input: UpdateRecipeInput;
 };
 
+export type MutationUpdateRestrictionArgs = {
+  input: UpdateRestrictionInput;
+};
+
 export type MutationUpdateRiskScoreArgs = {
   riskScore: Scalars['Float']['input'];
   userId: Scalars['ID']['input'];
@@ -3287,6 +3514,11 @@ export type MutationUpdateShoppingListArgs = {
 export type MutationUpdateShoppingListItemArgs = {
   id: Scalars['ID']['input'];
   input: UpdateShoppingListItemInput;
+};
+
+export type MutationUpdateStorageLocationArgs = {
+  id: Scalars['ID']['input'];
+  input: UpdateStorageLocationInput;
 };
 
 export type MutationUpdateStoreArgs = {
@@ -3413,6 +3645,15 @@ export type NotificationConnection = Connection & {
   unreadCount: Scalars['Int']['output'];
 };
 
+export enum NotificationDeliveryStatus {
+  Cancelled = 'CANCELLED',
+  Dismissed = 'DISMISSED',
+  Failed = 'FAILED',
+  Pending = 'PENDING',
+  Read = 'READ',
+  Sent = 'SENT',
+}
+
 export type NotificationEdge = Edge & {
   __typename?: 'NotificationEdge';
   cursor: Scalars['String']['output'];
@@ -3454,13 +3695,38 @@ export type NotificationPayload = {
 export type NotificationPreferences = {
   __typename?: 'NotificationPreferences';
   categories: Array<Scalars['String']['output']>;
+  collaborationInvites: Scalars['Boolean']['output'];
+  cookingReminders: Scalars['Boolean']['output'];
+  createdAt: Scalars['DateTime']['output'];
   email: Scalars['Boolean']['output'];
+  emailEnabled: Scalars['Boolean']['output'];
+  expirationDaysThreshold: Scalars['Int']['output'];
+  expirationNotificationFrequency: ExpirationFrequency;
+  expirationNotifications: Scalars['Boolean']['output'];
+  homeInvites: Scalars['Boolean']['output'];
+  id: Scalars['ID']['output'];
   inApp: Scalars['Boolean']['output'];
+  lowStockAlerts: Scalars['Boolean']['output'];
+  mealPlanReminders: Scalars['Boolean']['output'];
+  monthlyReport: Scalars['Boolean']['output'];
+  pantryChanges: Scalars['Boolean']['output'];
   push: Scalars['Boolean']['output'];
+  pushEnabled: Scalars['Boolean']['output'];
   quietHours?: Maybe<QuietHours>;
+  quietHoursEnabled: Scalars['Boolean']['output'];
+  quietHoursEnd?: Maybe<Scalars['String']['output']>;
+  quietHoursStart?: Maybe<Scalars['String']['output']>;
+  quietHoursTimezone?: Maybe<Scalars['String']['output']>;
+  recipeRecommendations: Scalars['Boolean']['output'];
+  sharedListUpdates: Scalars['Boolean']['output'];
+  shoppingListUpdates: Scalars['Boolean']['output'];
   sms: Scalars['Boolean']['output'];
+  smsEnabled: Scalars['Boolean']['output'];
   types: Array<NotificationType>;
+  updatedAt: Scalars['DateTime']['output'];
+  user: User;
   userId: Scalars['String']['output'];
+  weeklyDigest: Scalars['Boolean']['output'];
 };
 
 export type NotificationPreferencesInput = {
@@ -3676,7 +3942,7 @@ export type PantryItem = {
   purchaseId?: Maybe<Scalars['String']['output']>;
   remainingValue?: Maybe<Scalars['Float']['output']>;
   reservedQuantity: Scalars['Float']['output'];
-  storageLocation?: Maybe<Scalars['String']['output']>;
+  storageLocation?: Maybe<StorageLocation>;
   storageNotes?: Maybe<Scalars['String']['output']>;
   storageState: StorageState;
   store?: Maybe<Store>;
@@ -3704,6 +3970,17 @@ export type PantryItemChangedPayload = {
   timestamp: Scalars['DateTime']['output'];
   updatedFields: Array<Scalars['String']['output']>;
   userId: Scalars['String']['output'];
+};
+
+export type PantryItemFilters = {
+  condition?: InputMaybe<ItemCondition>;
+  expirationDays?: InputMaybe<Scalars['Int']['input']>;
+  expiringSoon?: InputMaybe<Scalars['Boolean']['input']>;
+  itemId?: InputMaybe<Scalars['String']['input']>;
+  lowStock?: InputMaybe<Scalars['Boolean']['input']>;
+  search?: InputMaybe<Scalars['String']['input']>;
+  storageState?: InputMaybe<StorageState>;
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
 };
 
 export type PantryItemPhoto = {
@@ -3917,7 +4194,6 @@ export type Query = {
   _empty?: Maybe<Scalars['String']['output']>;
   activeDevices: Array<Device>;
   activeModerations: Array<UserModeration>;
-  archivedShoppingLists: Array<ShoppingList>;
   autocompleteCategories: AutocompleteCategoryResponse;
   autocompleteItems?: Maybe<AutocompleteResponse>;
   brand?: Maybe<Brand>;
@@ -3927,7 +4203,6 @@ export type Query = {
   categoryBySlug?: Maybe<Category>;
   checkItemAvailability?: Maybe<Array<ItemAvailability>>;
   compareItemPrices?: Maybe<Array<StorePriceComparison>>;
-  completedShoppingLists: Array<ShoppingList>;
   convertUnit?: Maybe<ConvertedUnitValue>;
   cookingLog?: Maybe<CookingLog>;
   currencies: Array<Currency>;
@@ -3941,8 +4216,9 @@ export type Query = {
   devicesByManufacturer: Array<Device>;
   devicesByPlatform: Array<Device>;
   devicesWithPeripherals: Array<Device>;
+  dietaryProfile?: Maybe<DietaryProfile>;
   emulatedDevices: Array<Device>;
-  expiringItems: Array<PantryItem>;
+  expirationNotification?: Maybe<ExpirationNotification>;
   failedLoginAttempts: Array<LoginHistory>;
   frequentlyBoughtItems: Array<ShoppingListItem>;
   getConvertibleUnits: Array<Unit>;
@@ -3972,7 +4248,6 @@ export type Query = {
   loginHistoryForUser: Array<LoginHistory>;
   loginHistoryStats: LoginHistoryStats;
   lowBatteryDevices: Array<Device>;
-  lowStockItems: Array<PantryItem>;
   me?: Maybe<User>;
   mealPlan?: Maybe<MealPlan>;
   mealPlans: Array<MealPlan>;
@@ -3983,16 +4258,19 @@ export type Query = {
   myCookingLogs: Array<CookingLog>;
   myCookingStats?: Maybe<CookingStats>;
   myDevices: Array<Device>;
+  myDietaryProfile?: Maybe<DietaryProfile>;
+  myExpirationNotifications: Array<ExpirationNotification>;
   myHomes?: Maybe<Array<Home>>;
   myInviteLogs: Array<InviteLog>;
   myMembershipInHome?: Maybe<Membership>;
   myMemberships?: Maybe<Array<Membership>>;
   myModeration?: Maybe<UserModeration>;
+  myNotificationPreferences?: Maybe<NotificationPreferences>;
   myNotifications: NotificationConnection;
   myPendingCollaborationInvites: Array<ShoppingListCollaborator>;
   myPendingInvites: Array<HomeInvite>;
   myPurchases: Array<Purchase>;
-  myRecipes: RecipesResponse;
+  mySavedRecipes: Array<SavedRecipe>;
   myShoppingListInvites: Array<ShoppingListCollaborator>;
   nearbyStores: Array<Store>;
   notification?: Maybe<Notification>;
@@ -4000,17 +4278,14 @@ export type Query = {
   notificationStats: NotificationStats;
   notificationsByCategory: NotificationConnection;
   notificationsByType: NotificationConnection;
-  onboardingItems: Array<Item>;
   pantries: Array<Pantry>;
   pantry?: Maybe<Pantry>;
   pantryItem: PantryItem;
   pantryItemUsage: Array<PantryItemUsage>;
   pantryItems: Array<PantryItem>;
-  pantryItemsByItemId: Array<PantryItem>;
   pantryStats: PantryStats;
   popularBrands: Array<Brand>;
   popularCategories: Array<Category>;
-  popularItems?: Maybe<Array<Item>>;
   popularStores: Array<Store>;
   purchase?: Maybe<Purchase>;
   purchaseStats: PurchaseStats;
@@ -4018,16 +4293,18 @@ export type Query = {
   purchasesByItem: Array<Purchase>;
   purchasesByShoppingListItem: Array<Purchase>;
   purchasesByStore: Array<Purchase>;
-  recentItems?: Maybe<Array<Item>>;
   recentNotifications: Array<Notification>;
   recipe?: Maybe<Recipe>;
   recipeCookingLogs: Array<CookingLog>;
+  recipeSuggestions: Array<Recipe>;
+  recipes: RecipesResponse;
   recommendedItems?: Maybe<Array<ItemSuggestion>>;
   recommendedStores: Array<Store>;
-  recurringShoppingLists: Array<ShoppingList>;
   relatedItems?: Maybe<RelatedItemsResponse>;
   rootBrands: Array<Brand>;
   rootCategories: Array<Category>;
+  savedRecipe?: Maybe<SavedRecipe>;
+  savedRecipeFolders: Array<Scalars['String']['output']>;
   searchDevicesByUserAgent: Array<Device>;
   searchItems?: Maybe<ItemsResponse>;
   searchLoginHistory: Array<LoginHistory>;
@@ -4040,9 +4317,11 @@ export type Query = {
   shoppingListCollaborators: Array<ShoppingListCollaborator>;
   shoppingListItem?: Maybe<ShoppingListItem>;
   shoppingListItems: Array<ShoppingListItem>;
-  shoppingListTemplates: Array<ShoppingList>;
   shoppingLists: Array<ShoppingList>;
   staleDevices: Array<Device>;
+  storageLocation?: Maybe<StorageLocation>;
+  storageLocationTree: Array<StorageLocation>;
+  storageLocations: Array<StorageLocation>;
   store?: Maybe<Store>;
   storeByName?: Maybe<Store>;
   storeStats?: Maybe<StoreStats>;
@@ -4050,12 +4329,10 @@ export type Query = {
   storeWithPurchases?: Maybe<Store>;
   stores: Array<Store>;
   suggestedItemsForList: Array<ItemSuggestion>;
-  suggestedRecipes: Array<Recipe>;
   suspiciousDevices: Array<Device>;
   suspiciousInviteActivity: Array<InviteLog>;
   suspiciousLoginActivity: SuspiciousActivity;
   tabletDevices: Array<Device>;
-  trendingItems?: Maybe<Array<Item>>;
   trustedDevices: Array<Device>;
   unit?: Maybe<Unit>;
   unitBySymbol?: Maybe<Unit>;
@@ -4177,12 +4454,16 @@ export type QueryDevicesWithPeripheralsArgs = {
   userId: Scalars['ID']['input'];
 };
 
+export type QueryDietaryProfileArgs = {
+  userId: Scalars['ID']['input'];
+};
+
 export type QueryEmulatedDevicesArgs = {
   userId: Scalars['ID']['input'];
 };
 
-export type QueryExpiringItemsArgs = {
-  pantryId: Scalars['ID']['input'];
+export type QueryExpirationNotificationArgs = {
+  id: Scalars['ID']['input'];
 };
 
 export type QueryFailedLoginAttemptsArgs = {
@@ -4301,10 +4582,6 @@ export type QueryLowBatteryDevicesArgs = {
   userId: Scalars['ID']['input'];
 };
 
-export type QueryLowStockItemsArgs = {
-  pantryId: Scalars['ID']['input'];
-};
-
 export type QueryMealPlanArgs = {
   id: Scalars['ID']['input'];
 };
@@ -4337,6 +4614,10 @@ export type QueryMyDevicesArgs = {
   filters?: InputMaybe<DeviceFiltersInput>;
 };
 
+export type QueryMyExpirationNotificationsArgs = {
+  input?: InputMaybe<GetExpirationNotificationsInput>;
+};
+
 export type QueryMyInviteLogsArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
 };
@@ -4354,12 +4635,8 @@ export type QueryMyNotificationsArgs = {
   orderBy?: InputMaybe<NotificationOrderBy>;
 };
 
-export type QueryMyRecipesArgs = {
-  category?: InputMaybe<RecipeCategory>;
-  difficulty?: InputMaybe<Difficulty>;
-  includeDeleted?: InputMaybe<Scalars['Boolean']['input']>;
-  skip?: InputMaybe<Scalars['Int']['input']>;
-  take?: InputMaybe<Scalars['Int']['input']>;
+export type QueryMySavedRecipesArgs = {
+  folder?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type QueryNearbyStoresArgs = {
@@ -4370,6 +4647,10 @@ export type QueryNearbyStoresArgs = {
 
 export type QueryNotificationArgs = {
   id: Scalars['ID']['input'];
+};
+
+export type QueryNotificationPreferencesArgs = {
+  userId: Scalars['ID']['input'];
 };
 
 export type QueryNotificationStatsArgs = {
@@ -4405,12 +4686,8 @@ export type QueryPantryItemUsageArgs = {
 };
 
 export type QueryPantryItemsArgs = {
-  filter?: InputMaybe<Scalars['String']['input']>;
+  filters?: InputMaybe<PantryItemFilters>;
   pantryId: Scalars['ID']['input'];
-};
-
-export type QueryPantryItemsByItemIdArgs = {
-  itemId: Scalars['String']['input'];
 };
 
 export type QueryPantryStatsArgs = {
@@ -4424,12 +4701,6 @@ export type QueryPopularBrandsArgs = {
 export type QueryPopularCategoriesArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
   type?: InputMaybe<CategoryType>;
-};
-
-export type QueryPopularItemsArgs = {
-  category?: InputMaybe<Scalars['String']['input']>;
-  limit?: InputMaybe<Scalars['Int']['input']>;
-  timeRange?: InputMaybe<DateRange>;
 };
 
 export type QueryPopularStoresArgs = {
@@ -4464,11 +4735,6 @@ export type QueryPurchasesByStoreArgs = {
   userId?: InputMaybe<Scalars['ID']['input']>;
 };
 
-export type QueryRecentItemsArgs = {
-  limit?: InputMaybe<Scalars['Int']['input']>;
-  userId?: InputMaybe<Scalars['String']['input']>;
-};
-
 export type QueryRecentNotificationsArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
 };
@@ -4483,6 +4749,14 @@ export type QueryRecipeCookingLogsArgs = {
   recipeId: Scalars['ID']['input'];
 };
 
+export type QueryRecipesArgs = {
+  category?: InputMaybe<RecipeCategory>;
+  difficulty?: InputMaybe<Difficulty>;
+  includeDeleted?: InputMaybe<Scalars['Boolean']['input']>;
+  skip?: InputMaybe<Scalars['Int']['input']>;
+  take?: InputMaybe<Scalars['Int']['input']>;
+};
+
 export type QueryRecommendedItemsArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
   userId?: InputMaybe<Scalars['String']['input']>;
@@ -4494,6 +4768,10 @@ export type QueryRelatedItemsArgs = {
 
 export type QueryRootCategoriesArgs = {
   type?: InputMaybe<CategoryType>;
+};
+
+export type QuerySavedRecipeArgs = {
+  recipeId: Scalars['ID']['input'];
 };
 
 export type QuerySearchDevicesByUserAgentArgs = {
@@ -4546,9 +4824,25 @@ export type QueryShoppingListItemsArgs = {
   shoppingListId: Scalars['ID']['input'];
 };
 
+export type QueryShoppingListsArgs = {
+  filters?: InputMaybe<ShoppingListFilters>;
+};
+
 export type QueryStaleDevicesArgs = {
   daysInactive?: InputMaybe<Scalars['Int']['input']>;
   userId: Scalars['ID']['input'];
+};
+
+export type QueryStorageLocationArgs = {
+  id: Scalars['ID']['input'];
+};
+
+export type QueryStorageLocationTreeArgs = {
+  homeId: Scalars['ID']['input'];
+};
+
+export type QueryStorageLocationsArgs = {
+  homeId: Scalars['ID']['input'];
 };
 
 export type QueryStoreArgs = {
@@ -4591,11 +4885,6 @@ export type QuerySuspiciousLoginActivityArgs = {
 
 export type QueryTabletDevicesArgs = {
   userId: Scalars['ID']['input'];
-};
-
-export type QueryTrendingItemsArgs = {
-  category?: InputMaybe<Scalars['String']['input']>;
-  limit?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type QueryTrustedDevicesArgs = {
@@ -4698,6 +4987,7 @@ export type Recipe = {
   instructions: Scalars['JSON']['output'];
   isExternal: Scalars['Boolean']['output'];
   isPublished: Scalars['Boolean']['output'];
+  isSaved: Scalars['Boolean']['output'];
   matchPercentage?: Maybe<Scalars['Float']['output']>;
   mealPlanItems: Array<MealPlanItem>;
   name: Scalars['String']['output'];
@@ -4713,6 +5003,7 @@ export type Recipe = {
   rating4Count: Scalars['Int']['output'];
   rating5Count: Scalars['Int']['output'];
   reviews: Array<RecipeReview>;
+  savedDetails?: Maybe<SavedRecipe>;
   servings: Scalars['Int']['output'];
   source?: Maybe<Scalars['String']['output']>;
   sourceMapping?: Maybe<RecipeSourceMapping>;
@@ -4722,6 +5013,7 @@ export type Recipe = {
   tips?: Maybe<Scalars['String']['output']>;
   totalCookingLogs: Scalars['Int']['output'];
   totalReviews: Scalars['Int']['output'];
+  totalSaves: Scalars['Int']['output'];
   totalTimeMinutes?: Maybe<Scalars['Int']['output']>;
   updatedAt: Scalars['DateTime']['output'];
   version: Scalars['Int']['output'];
@@ -4746,50 +5038,66 @@ export enum RecipeCategory {
 
 export type RecipeIngredient = {
   __typename?: 'RecipeIngredient';
-  aisle?: Maybe<Scalars['String']['output']>;
   availablePantryItemIds: Array<Scalars['String']['output']>;
-  consistency?: Maybe<Scalars['String']['output']>;
+  externalSources: Array<RecipeIngredientSourceMapping>;
   id: Scalars['ID']['output'];
   image?: Maybe<Scalars['String']['output']>;
   isOptional: Scalars['Boolean']['output'];
   item?: Maybe<Item>;
-  meta: Array<Scalars['String']['output']>;
-  metricAmount?: Maybe<Scalars['Float']['output']>;
-  metricUnit?: Maybe<Scalars['String']['output']>;
   name: Scalars['String']['output'];
   notes?: Maybe<Scalars['String']['output']>;
-  originalString?: Maybe<Scalars['String']['output']>;
   preparation?: Maybe<Scalars['String']['output']>;
   quantity: Scalars['Float']['output'];
   recipe: Recipe;
   section?: Maybe<Scalars['String']['output']>;
   sortOrder: Scalars['Int']['output'];
-  spoonacularIngredientId?: Maybe<Scalars['Int']['output']>;
   unit?: Maybe<Unit>;
-  usAmount?: Maybe<Scalars['Float']['output']>;
-  usUnit?: Maybe<Scalars['String']['output']>;
 };
 
 export type RecipeIngredientInput = {
-  aisle?: InputMaybe<Scalars['String']['input']>;
-  consistency?: InputMaybe<Scalars['String']['input']>;
+  externalSources?: InputMaybe<Array<RecipeIngredientSourceInput>>;
   image?: InputMaybe<Scalars['String']['input']>;
   isOptional?: InputMaybe<Scalars['Boolean']['input']>;
   itemId?: InputMaybe<Scalars['String']['input']>;
-  meta?: InputMaybe<Array<Scalars['String']['input']>>;
-  metricAmount?: InputMaybe<Scalars['Float']['input']>;
-  metricUnit?: InputMaybe<Scalars['String']['input']>;
   name: Scalars['String']['input'];
   notes?: InputMaybe<Scalars['String']['input']>;
-  originalString?: InputMaybe<Scalars['String']['input']>;
   preparation?: InputMaybe<Scalars['String']['input']>;
   quantity: Scalars['Float']['input'];
   section?: InputMaybe<Scalars['String']['input']>;
   sortOrder?: InputMaybe<Scalars['Int']['input']>;
-  spoonacularIngredientId?: InputMaybe<Scalars['Int']['input']>;
   unitId?: InputMaybe<Scalars['String']['input']>;
-  usAmount?: InputMaybe<Scalars['Float']['input']>;
-  usUnit?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type RecipeIngredientSourceInput = {
+  aisle?: InputMaybe<Scalars['String']['input']>;
+  consistency?: InputMaybe<Scalars['String']['input']>;
+  data?: InputMaybe<Scalars['JSON']['input']>;
+  externalId: Scalars['String']['input'];
+  imageUrl?: InputMaybe<Scalars['String']['input']>;
+  isPrimary?: InputMaybe<Scalars['Boolean']['input']>;
+  metadata?: InputMaybe<Scalars['JSON']['input']>;
+  originalName?: InputMaybe<Scalars['String']['input']>;
+  originalString?: InputMaybe<Scalars['String']['input']>;
+  source: ExternalSource;
+};
+
+export type RecipeIngredientSourceMapping = {
+  __typename?: 'RecipeIngredientSourceMapping';
+  aisle?: Maybe<Scalars['String']['output']>;
+  consistency?: Maybe<Scalars['String']['output']>;
+  createdAt: Scalars['DateTime']['output'];
+  data?: Maybe<Scalars['JSON']['output']>;
+  externalId: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  imageUrl?: Maybe<Scalars['String']['output']>;
+  isPrimary: Scalars['Boolean']['output'];
+  lastSyncedAt: Scalars['DateTime']['output'];
+  metadata?: Maybe<Scalars['JSON']['output']>;
+  originalName?: Maybe<Scalars['String']['output']>;
+  originalString?: Maybe<Scalars['String']['output']>;
+  recipeIngredient: RecipeIngredient;
+  source: ExternalSource;
+  updatedAt: Scalars['DateTime']['output'];
 };
 
 export type RecipeReview = {
@@ -4863,6 +5171,12 @@ export type RegisterInput = {
   password: Scalars['String']['input'];
 };
 
+export type RejectItemInput = {
+  itemId: Scalars['ID']['input'];
+  notifyUser?: InputMaybe<Scalars['Boolean']['input']>;
+  reason: Scalars['String']['input'];
+};
+
 export type RelatedItemsResponse = {
   __typename?: 'RelatedItemsResponse';
   complementaryItems: Array<ItemSuggestion>;
@@ -4873,6 +5187,10 @@ export type RelatedItemsResponse = {
 export type RemoveCollaboratorInput = {
   email?: InputMaybe<Scalars['String']['input']>;
   shoppingListId: Scalars['ID']['input'];
+};
+
+export type RemoveRestrictionInput = {
+  id: Scalars['ID']['input'];
 };
 
 export type RemoveRestrictionsInput = {
@@ -4895,6 +5213,13 @@ export type ResetPasswordResponse = {
   message: Scalars['String']['output'];
   success: Scalars['Boolean']['output'];
 };
+
+export enum RestrictionSeverity {
+  Allergy = 'ALLERGY',
+  Goal = 'GOAL',
+  Intolerance = 'INTOLERANCE',
+  Preference = 'PREFERENCE',
+}
 
 export type ReviewAppealInput = {
   approved: Scalars['Boolean']['input'];
@@ -4925,25 +5250,21 @@ export enum RiskFactor {
   VpnDetected = 'VPN_DETECTED',
 }
 
-export type SaveRecipeInput = {
-  caloriesPerServing?: InputMaybe<Scalars['Float']['input']>;
-  category?: InputMaybe<RecipeCategory>;
-  cookTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
-  cuisine?: InputMaybe<Scalars['String']['input']>;
-  description?: InputMaybe<Scalars['String']['input']>;
-  dietaryTags?: InputMaybe<Array<DietaryTag>>;
-  difficulty?: InputMaybe<Difficulty>;
-  externalSourceData?: InputMaybe<Scalars['JSON']['input']>;
-  externalSourceId?: InputMaybe<Scalars['String']['input']>;
-  externalSourceUrl?: InputMaybe<Scalars['String']['input']>;
-  imageUrl?: InputMaybe<Scalars['String']['input']>;
-  ingredients: Array<RecipeIngredientInput>;
-  instructions: Scalars['JSON']['input'];
-  name: Scalars['String']['input'];
-  nutritionData?: InputMaybe<Scalars['JSON']['input']>;
-  prepTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
-  servings?: InputMaybe<Scalars['Int']['input']>;
-  source?: InputMaybe<Scalars['String']['input']>;
+export type SavedRecipe = {
+  __typename?: 'SavedRecipe';
+  cookedCount: Scalars['Int']['output'];
+  createdAt: Scalars['DateTime']['output'];
+  folder?: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  lastCookedAt?: Maybe<Scalars['DateTime']['output']>;
+  notes?: Maybe<Scalars['String']['output']>;
+  personalRating?: Maybe<Scalars['Int']['output']>;
+  recipe: Recipe;
+  recipeId: Scalars['String']['output'];
+  tags: Array<Scalars['String']['output']>;
+  updatedAt: Scalars['DateTime']['output'];
+  user: User;
+  userId: Scalars['String']['output'];
 };
 
 export type SearchFacets = {
@@ -5095,10 +5416,22 @@ export type ShoppingListCollaboratorChangedPayload = {
   userId: Scalars['ID']['output'];
 };
 
+export type ShoppingListFilters = {
+  isArchived?: InputMaybe<Scalars['Boolean']['input']>;
+  isCompleted?: InputMaybe<Scalars['Boolean']['input']>;
+  isDefault?: InputMaybe<Scalars['Boolean']['input']>;
+  isRecurring?: InputMaybe<Scalars['Boolean']['input']>;
+  isTemplate?: InputMaybe<Scalars['Boolean']['input']>;
+  search?: InputMaybe<Scalars['String']['input']>;
+  status?: InputMaybe<ListStatus>;
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
+};
+
 export type ShoppingListItem = {
   __typename?: 'ShoppingListItem';
   addedBy?: Maybe<User>;
   addedById?: Maybe<Scalars['String']['output']>;
+  addedContext?: Maybe<Scalars['String']['output']>;
   aisle?: Maybe<Scalars['String']['output']>;
   autoAddReason?: Maybe<Scalars['String']['output']>;
   averagePrice?: Maybe<Scalars['Float']['output']>;
@@ -5134,6 +5467,8 @@ export type ShoppingListItem = {
   purchasedQuantity?: Maybe<Scalars['Float']['output']>;
   purchases?: Maybe<Array<Purchase>>;
   quantity?: Maybe<Scalars['Float']['output']>;
+  recipe?: Maybe<Recipe>;
+  recipeIngredient?: Maybe<RecipeIngredient>;
   shoppingList: ShoppingList;
   sortOrder: Scalars['Int']['output'];
   storeSection?: Maybe<Scalars['String']['output']>;
@@ -5222,11 +5557,54 @@ export enum SortOrder {
   Desc = 'DESC',
 }
 
+export type StorageLocation = {
+  __typename?: 'StorageLocation';
+  capacity?: Maybe<Scalars['Float']['output']>;
+  capacityUnit?: Maybe<Scalars['String']['output']>;
+  childLocations: Array<StorageLocation>;
+  color?: Maybe<Scalars['String']['output']>;
+  createdAt: Scalars['DateTime']['output'];
+  currentItemCount: Scalars['Int']['output'];
+  deletedAt?: Maybe<Scalars['DateTime']['output']>;
+  description?: Maybe<Scalars['String']['output']>;
+  home: Home;
+  homeId: Scalars['String']['output'];
+  icon?: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  isActive: Scalars['Boolean']['output'];
+  isClimateControlled: Scalars['Boolean']['output'];
+  isDefault: Scalars['Boolean']['output'];
+  name: Scalars['String']['output'];
+  pantryItems: Array<PantryItem>;
+  parentLocation?: Maybe<StorageLocation>;
+  parentLocationId?: Maybe<Scalars['String']['output']>;
+  sortOrder: Scalars['Int']['output'];
+  temperature?: Maybe<StorageState>;
+  type: StorageType;
+  updatedAt: Scalars['DateTime']['output'];
+};
+
 export enum StorageState {
   Ambient = 'AMBIENT',
   Frozen = 'FROZEN',
   None = 'NONE',
   Refrigerated = 'REFRIGERATED',
+}
+
+export enum StorageType {
+  Basement = 'BASEMENT',
+  BoatStorage = 'BOAT_STORAGE',
+  Cabinet = 'CABINET',
+  Closet = 'CLOSET',
+  Counter = 'COUNTER',
+  Custom = 'CUSTOM',
+  Drawer = 'DRAWER',
+  Freezer = 'FREEZER',
+  Garage = 'GARAGE',
+  Outdoor = 'OUTDOOR',
+  PantryShelf = 'PANTRY_SHELF',
+  Refrigerator = 'REFRIGERATOR',
+  RvStorage = 'RV_STORAGE',
 }
 
 export type Store = {
@@ -5331,6 +5709,8 @@ export type Subscription = {
   deviceStatusChanged: Device;
   deviceTrustChanged: Device;
   deviceVerified: Device;
+  expirationNotificationCreated: ExpirationNotification;
+  expirationNotificationUpdated: ExpirationNotification;
   failedLoginAttempts: LoginHistory;
   loginAttempts: LoginHistory;
   memberJoined: MembershipUpdatePayload;
@@ -5759,6 +6139,29 @@ export type UpdateDeviceInput = {
   userAgent?: InputMaybe<Scalars['String']['input']>;
 };
 
+export type UpdateDietaryProfileInput = {
+  budgetPerMeal?: InputMaybe<Scalars['Float']['input']>;
+  calorieTarget?: InputMaybe<Scalars['Int']['input']>;
+  carbsTarget?: InputMaybe<Scalars['Int']['input']>;
+  cookingSkillLevel?: InputMaybe<Scalars['String']['input']>;
+  dislikedIngredients?: InputMaybe<Array<Scalars['String']['input']>>;
+  fatTarget?: InputMaybe<Scalars['Int']['input']>;
+  favoriteIngredients?: InputMaybe<Array<Scalars['String']['input']>>;
+  maxCookTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
+  maxPrepTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
+  mealsPerDay?: InputMaybe<Scalars['Int']['input']>;
+  preferredCuisines?: InputMaybe<Array<Scalars['String']['input']>>;
+  proteinTarget?: InputMaybe<Scalars['Int']['input']>;
+  snacksPerDay?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type UpdateFavoriteRecipeInput = {
+  folder?: InputMaybe<Scalars['String']['input']>;
+  notes?: InputMaybe<Scalars['String']['input']>;
+  personalRating?: InputMaybe<Scalars['Int']['input']>;
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
+};
+
 export type UpdateHomeInput = {
   allowJoinCode?: InputMaybe<Scalars['Boolean']['input']>;
   currency?: InputMaybe<Scalars['String']['input']>;
@@ -5776,6 +6179,7 @@ export type UpdateItemInput = {
   addTags?: InputMaybe<Array<Scalars['String']['input']>>;
   addUnits?: InputMaybe<Array<ItemUnitInput>>;
   allergens?: InputMaybe<Scalars['JSON']['input']>;
+  alternateUpcs?: InputMaybe<Array<Scalars['String']['input']>>;
   brandId?: InputMaybe<Scalars['String']['input']>;
   brandName?: InputMaybe<Scalars['String']['input']>;
   categories?: InputMaybe<Array<CategoryInput>>;
@@ -5793,6 +6197,7 @@ export type UpdateItemInput = {
   name?: InputMaybe<Scalars['String']['input']>;
   netWeight?: InputMaybe<Scalars['Float']['input']>;
   popularity?: InputMaybe<Scalars['Int']['input']>;
+  primaryUpc?: InputMaybe<Scalars['String']['input']>;
   removeCategoryIds?: InputMaybe<Array<Scalars['String']['input']>>;
   removeStoreSkuIds?: InputMaybe<Array<Scalars['String']['input']>>;
   removeTags?: InputMaybe<Array<Scalars['String']['input']>>;
@@ -5888,6 +6293,30 @@ export type UpdateNotificationInput = {
   type?: InputMaybe<NotificationType>;
 };
 
+export type UpdateNotificationPreferencesInput = {
+  collaborationInvites?: InputMaybe<Scalars['Boolean']['input']>;
+  cookingReminders?: InputMaybe<Scalars['Boolean']['input']>;
+  emailEnabled?: InputMaybe<Scalars['Boolean']['input']>;
+  expirationDaysThreshold?: InputMaybe<Scalars['Int']['input']>;
+  expirationNotificationFrequency?: InputMaybe<ExpirationFrequency>;
+  expirationNotifications?: InputMaybe<Scalars['Boolean']['input']>;
+  homeInvites?: InputMaybe<Scalars['Boolean']['input']>;
+  lowStockAlerts?: InputMaybe<Scalars['Boolean']['input']>;
+  mealPlanReminders?: InputMaybe<Scalars['Boolean']['input']>;
+  monthlyReport?: InputMaybe<Scalars['Boolean']['input']>;
+  pantryChanges?: InputMaybe<Scalars['Boolean']['input']>;
+  pushEnabled?: InputMaybe<Scalars['Boolean']['input']>;
+  quietHoursEnabled?: InputMaybe<Scalars['Boolean']['input']>;
+  quietHoursEnd?: InputMaybe<Scalars['String']['input']>;
+  quietHoursStart?: InputMaybe<Scalars['String']['input']>;
+  quietHoursTimezone?: InputMaybe<Scalars['String']['input']>;
+  recipeRecommendations?: InputMaybe<Scalars['Boolean']['input']>;
+  sharedListUpdates?: InputMaybe<Scalars['Boolean']['input']>;
+  shoppingListUpdates?: InputMaybe<Scalars['Boolean']['input']>;
+  smsEnabled?: InputMaybe<Scalars['Boolean']['input']>;
+  weeklyDigest?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
 export type UpdatePantryInput = {
   description?: InputMaybe<Scalars['String']['input']>;
   isDefault?: InputMaybe<Scalars['Boolean']['input']>;
@@ -5968,6 +6397,12 @@ export type UpdateRecipeInput = {
   visibility?: InputMaybe<Visibility>;
 };
 
+export type UpdateRestrictionInput = {
+  id: Scalars['ID']['input'];
+  notes?: InputMaybe<Scalars['String']['input']>;
+  severity?: InputMaybe<RestrictionSeverity>;
+};
+
 export type UpdateShoppingListInput = {
   autoAddSuggestions?: InputMaybe<Scalars['Boolean']['input']>;
   budgetAmount?: InputMaybe<Scalars['Float']['input']>;
@@ -6005,6 +6440,22 @@ export type UpdateShoppingListItemInput = {
   storeSection?: InputMaybe<Scalars['String']['input']>;
   unitId?: InputMaybe<Scalars['ID']['input']>;
   unitName?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type UpdateStorageLocationInput = {
+  capacity?: InputMaybe<Scalars['Float']['input']>;
+  capacityUnit?: InputMaybe<Scalars['String']['input']>;
+  color?: InputMaybe<Scalars['String']['input']>;
+  description?: InputMaybe<Scalars['String']['input']>;
+  icon?: InputMaybe<Scalars['String']['input']>;
+  isActive?: InputMaybe<Scalars['Boolean']['input']>;
+  isClimateControlled?: InputMaybe<Scalars['Boolean']['input']>;
+  isDefault?: InputMaybe<Scalars['Boolean']['input']>;
+  name?: InputMaybe<Scalars['String']['input']>;
+  parentLocationId?: InputMaybe<Scalars['ID']['input']>;
+  sortOrder?: InputMaybe<Scalars['Int']['input']>;
+  temperature?: InputMaybe<StorageState>;
+  type?: InputMaybe<StorageType>;
 };
 
 export type UpdateStoreInput = {
@@ -6134,6 +6585,7 @@ export type User = {
   defaultHomeId?: Maybe<Scalars['String']['output']>;
   defaultShoppingListId?: Maybe<Scalars['String']['output']>;
   devices: Array<Device>;
+  dietaryProfile?: Maybe<DietaryProfile>;
   email: Scalars['String']['output'];
   emailVerified: Scalars['Boolean']['output'];
   homeOwnerships: Array<HomeOwnership>;
@@ -6142,6 +6594,7 @@ export type User = {
   lastActiveAt?: Maybe<Scalars['DateTime']['output']>;
   loginHistory: Array<LoginHistory>;
   moderation?: Maybe<UserModeration>;
+  notificationPreferences?: Maybe<NotificationPreferences>;
   onBoarded: Scalars['Boolean']['output'];
   preferredCurrency?: Maybe<Scalars['String']['output']>;
   profile?: Maybe<UserProfile>;
@@ -7137,6 +7590,7 @@ export type GetUserSettingsQuery = {
         shareUsageData: boolean;
         shareWithPartners: boolean;
         personalizedAds: boolean;
+        preferredUnitSystem: UnitSystem;
         enabledFeatures: Array<string>;
         betaFeatures: Array<string>;
         createdAt: string;
@@ -7969,7 +8423,6 @@ export type PantryItemFragmentFragment = {
   unitName?: string | null | undefined;
   unitId?: string | null | undefined;
   expiresAt?: string | null | undefined;
-  storageLocation?: string | null | undefined;
   storageState: StorageState;
   storageNotes?: string | null | undefined;
   initialQuantity: number;
@@ -8125,6 +8578,15 @@ export type PantryItemFragmentFragment = {
       }
     | null
     | undefined;
+  storageLocation?:
+    | {
+        __typename?: 'StorageLocation';
+        id: string;
+        name: string;
+        type: StorageType;
+      }
+    | null
+    | undefined;
   usageRecords: Array<{
     __typename?: 'PantryItemUsage';
     id: string;
@@ -8257,7 +8719,6 @@ export type PantryFragmentFragment = {
         unitName?: string | null | undefined;
         unitId?: string | null | undefined;
         expiresAt?: string | null | undefined;
-        storageLocation?: string | null | undefined;
         storageState: StorageState;
         storageNotes?: string | null | undefined;
         initialQuantity: number;
@@ -8410,6 +8871,15 @@ export type PantryFragmentFragment = {
               baseUnitId?: string | null | undefined;
               conversionFactor: number;
               isCommon: boolean;
+            }
+          | null
+          | undefined;
+        storageLocation?:
+          | {
+              __typename?: 'StorageLocation';
+              id: string;
+              name: string;
+              type: StorageType;
             }
           | null
           | undefined;
@@ -8883,7 +9353,6 @@ export type HomeFragmentFragment = {
               unitName?: string | null | undefined;
               unitId?: string | null | undefined;
               expiresAt?: string | null | undefined;
-              storageLocation?: string | null | undefined;
               storageState: StorageState;
               storageNotes?: string | null | undefined;
               initialQuantity: number;
@@ -9044,6 +9513,15 @@ export type HomeFragmentFragment = {
                   }
                 | null
                 | undefined;
+              storageLocation?:
+                | {
+                    __typename?: 'StorageLocation';
+                    id: string;
+                    name: string;
+                    type: StorageType;
+                  }
+                | null
+                | undefined;
               usageRecords: Array<{
                 __typename?: 'PantryItemUsage';
                 id: string;
@@ -9107,15 +9585,6 @@ export type RecipeIngredientFragmentFragment = {
   id: string;
   name: string;
   quantity: number;
-  spoonacularIngredientId?: number | null | undefined;
-  aisle?: string | null | undefined;
-  consistency?: string | null | undefined;
-  originalString?: string | null | undefined;
-  metricAmount?: number | null | undefined;
-  metricUnit?: string | null | undefined;
-  usAmount?: number | null | undefined;
-  usUnit?: string | null | undefined;
-  meta: Array<string>;
   image?: string | null | undefined;
   isOptional: boolean;
   notes?: string | null | undefined;
@@ -9204,15 +9673,6 @@ export type RecipeFragmentFragment = {
     id: string;
     name: string;
     quantity: number;
-    spoonacularIngredientId?: number | null | undefined;
-    aisle?: string | null | undefined;
-    consistency?: string | null | undefined;
-    originalString?: string | null | undefined;
-    metricAmount?: number | null | undefined;
-    metricUnit?: string | null | undefined;
-    usAmount?: number | null | undefined;
-    usUnit?: string | null | undefined;
-    meta: Array<string>;
     image?: string | null | undefined;
     isOptional: boolean;
     notes?: string | null | undefined;
@@ -9462,7 +9922,6 @@ export type GetHomeQuery = {
                     unitName?: string | null | undefined;
                     unitId?: string | null | undefined;
                     expiresAt?: string | null | undefined;
-                    storageLocation?: string | null | undefined;
                     storageState: StorageState;
                     storageNotes?: string | null | undefined;
                     initialQuantity: number;
@@ -9620,6 +10079,15 @@ export type GetHomeQuery = {
                           baseUnitId?: string | null | undefined;
                           conversionFactor: number;
                           isCommon: boolean;
+                        }
+                      | null
+                      | undefined;
+                    storageLocation?:
+                      | {
+                          __typename?: 'StorageLocation';
+                          id: string;
+                          name: string;
+                          type: StorageType;
                         }
                       | null
                       | undefined;
@@ -10356,7 +10824,6 @@ export type UpdateHomeMutation = {
                 unitName?: string | null | undefined;
                 unitId?: string | null | undefined;
                 expiresAt?: string | null | undefined;
-                storageLocation?: string | null | undefined;
                 storageState: StorageState;
                 storageNotes?: string | null | undefined;
                 initialQuantity: number;
@@ -10514,6 +10981,15 @@ export type UpdateHomeMutation = {
                       baseUnitId?: string | null | undefined;
                       conversionFactor: number;
                       isCommon: boolean;
+                    }
+                  | null
+                  | undefined;
+                storageLocation?:
+                  | {
+                      __typename?: 'StorageLocation';
+                      id: string;
+                      name: string;
+                      type: StorageType;
                     }
                   | null
                   | undefined;
@@ -10766,7 +11242,6 @@ export type DeleteHomeMutation = {
                 unitName?: string | null | undefined;
                 unitId?: string | null | undefined;
                 expiresAt?: string | null | undefined;
-                storageLocation?: string | null | undefined;
                 storageState: StorageState;
                 storageNotes?: string | null | undefined;
                 initialQuantity: number;
@@ -10924,6 +11399,15 @@ export type DeleteHomeMutation = {
                       baseUnitId?: string | null | undefined;
                       conversionFactor: number;
                       isCommon: boolean;
+                    }
+                  | null
+                  | undefined;
+                storageLocation?:
+                  | {
+                      __typename?: 'StorageLocation';
+                      id: string;
+                      name: string;
+                      type: StorageType;
                     }
                   | null
                   | undefined;
@@ -11552,7 +12036,6 @@ export type GetDefaultHomeQuery = {
                     unitName?: string | null | undefined;
                     unitId?: string | null | undefined;
                     expiresAt?: string | null | undefined;
-                    storageLocation?: string | null | undefined;
                     storageState: StorageState;
                     storageNotes?: string | null | undefined;
                     initialQuantity: number;
@@ -11710,6 +12193,15 @@ export type GetDefaultHomeQuery = {
                           baseUnitId?: string | null | undefined;
                           conversionFactor: number;
                           isCommon: boolean;
+                        }
+                      | null
+                      | undefined;
+                    storageLocation?:
+                      | {
+                          __typename?: 'StorageLocation';
+                          id: string;
+                          name: string;
+                          type: StorageType;
                         }
                       | null
                       | undefined;
@@ -11987,17 +12479,23 @@ export type GetOnboardingItemsQueryVariables = Exact<{ [key: string]: never }>;
 
 export type GetOnboardingItemsQuery = {
   __typename?: 'Query';
-  onboardingItems: Array<{
-    __typename?: 'Item';
-    id: string;
-    name: string;
-    imageUrl?: string | null | undefined;
-    storageState: StorageState;
-    displayUnit?:
-      | { __typename?: 'Unit'; id: string; name: string }
+  items: {
+    __typename?: 'ItemsResponse';
+    items?:
+      | Array<{
+          __typename?: 'Item';
+          id: string;
+          name: string;
+          imageUrl?: string | null | undefined;
+          storageState: StorageState;
+          displayUnit?:
+            | { __typename?: 'Unit'; id: string; name: string }
+            | null
+            | undefined;
+        }>
       | null
       | undefined;
-  }>;
+  };
 };
 
 export type AutocompleteItemsQueryVariables = Exact<{
@@ -12540,7 +13038,6 @@ export type GetPantryItemsQuery = {
     unitName?: string | null | undefined;
     unitId?: string | null | undefined;
     expiresAt?: string | null | undefined;
-    storageLocation?: string | null | undefined;
     storageState: StorageState;
     storageNotes?: string | null | undefined;
     initialQuantity: number;
@@ -12693,6 +13190,15 @@ export type GetPantryItemsQuery = {
           baseUnitId?: string | null | undefined;
           conversionFactor: number;
           isCommon: boolean;
+        }
+      | null
+      | undefined;
+    storageLocation?:
+      | {
+          __typename?: 'StorageLocation';
+          id: string;
+          name: string;
+          type: StorageType;
         }
       | null
       | undefined;
@@ -12728,7 +13234,6 @@ export type GetPantryItemQuery = {
     unitName?: string | null | undefined;
     unitId?: string | null | undefined;
     expiresAt?: string | null | undefined;
-    storageLocation?: string | null | undefined;
     storageState: StorageState;
     storageNotes?: string | null | undefined;
     initialQuantity: number;
@@ -12884,191 +13389,12 @@ export type GetPantryItemQuery = {
         }
       | null
       | undefined;
-    usageRecords: Array<{
-      __typename?: 'PantryItemUsage';
-      id: string;
-      pantryItemId: string;
-      quantityUsed: number;
-      usedById: string;
-      usedAt: string;
-      purpose: UsagePurpose;
-      notes?: string | null | undefined;
-      cookingLogId?: string | null | undefined;
-      mealPlanItemId?: string | null | undefined;
-      recipeId?: string | null | undefined;
-      usedBy: { __typename?: 'User'; id: string };
-    }>;
-  };
-};
-
-export type AddItemToPantryMutationVariables = Exact<{
-  input: AddPantryItemInput;
-}>;
-
-export type AddItemToPantryMutation = {
-  __typename?: 'Mutation';
-  addItemToPantry: {
-    __typename?: 'PantryItem';
-    id: string;
-    pantryId: string;
-    itemId: string;
-    itemName: string;
-    unitName?: string | null | undefined;
-    unitId?: string | null | undefined;
-    expiresAt?: string | null | undefined;
-    storageLocation?: string | null | undefined;
-    storageState: StorageState;
-    storageNotes?: string | null | undefined;
-    initialQuantity: number;
-    currentQuantity: number;
-    consumedQuantity: number;
-    reservedQuantity: number;
-    autoReorderPoint?: number | null | undefined;
-    isAutoReorder: boolean;
-    customCategory?: string | null | undefined;
-    createdAt: string;
-    updatedAt?: string | null | undefined;
-    version?: number | null | undefined;
-    tags: Array<string>;
-    item: {
-      __typename?: 'Item';
-      id: string;
-      name: string;
-      description?: string | null | undefined;
-      dataSource: DataSource;
-      type: ItemType;
-      storageState: StorageState;
-      showInOnboarding: boolean;
-      shelfLifeDays?: number | null | undefined;
-      popularity: number;
-      status: ItemStatus;
-      visibility: Visibility;
-      imageUrl?: string | null | undefined;
-      images?: any | null | undefined;
-      tags: Array<string>;
-      healthBenefits?: any | null | undefined;
-      allergens?: any | null | undefined;
-      nutritions?: any | null | undefined;
-      metadata?: any | null | undefined;
-      ingredients?: any | null | undefined;
-      createdAt: string;
-      updatedAt: string;
-      deletedAt?: string | null | undefined;
-      version: number;
-      netWeight?: number | null | undefined;
-      displayUnit?:
-        | { __typename?: 'Unit'; id: string; name: string; symbol: string }
-        | null
-        | undefined;
-      units: Array<{
-        __typename?: 'ItemUnit';
-        id: string;
-        itemId: string;
-        unitId: string;
-        isDefault?: boolean | null | undefined;
-        isPreferred: boolean;
-        isCommon: boolean;
-        conversionRatio?: number | null | undefined;
-        conversionNote?: string | null | undefined;
-        packageSize?: number | null | undefined;
-        packageDescription?: string | null | undefined;
-        retailUnit: boolean;
-        usageContext: Array<UnitUsageContext>;
-        recommendedFor: Array<UnitRecommendation>;
-        minQuantity?: number | null | undefined;
-        maxQuantity?: number | null | undefined;
-        quantityStep?: number | null | undefined;
-        averagePricePerUnit?: number | null | undefined;
-        lastPriceUpdate?: string | null | undefined;
-        priceSource?: string | null | undefined;
-        usageCount: number;
-        lastUsedAt?: string | null | undefined;
-        popularityScore: number;
-        source: UnitSource;
-        confidence?: number | null | undefined;
-        isVerified: boolean;
-        verifiedAt?: string | null | undefined;
-        createdAt: string;
-        updatedAt: string;
-        version: number;
-      }>;
-      brands: Array<{
-        __typename?: 'ItemBrand';
-        id: string;
-        brand?:
-          | {
-              __typename?: 'Brand';
-              id: string;
-              name: string;
-              description?: string | null | undefined;
-              createdAt: string;
-              updatedAt: string;
-              version: number;
-            }
-          | null
-          | undefined;
-      }>;
-      categories?:
-        | Array<{
-            __typename?: 'ItemCategory';
-            id: string;
-            source: CategorySource;
-            confidence: number;
-            isPrimary: boolean;
-            createdAt: string;
-            assignedAt?: string | null | undefined;
-            category: {
-              __typename?: 'Category';
-              id: string;
-              name: string;
-              slug?: string | null | undefined;
-              description?: string | null | undefined;
-              icon?: string | null | undefined;
-              color?: string | null | undefined;
-              sortOrder: number;
-              type: CategoryType;
-              isActive: boolean;
-              isSystem: boolean;
-              visibility: Visibility;
-              itemCount: number;
-              usageCount: number;
-              createdAt: string;
-              updatedAt?: string | null | undefined;
-              deletedAt?: string | null | undefined;
-              version: number;
-            };
-          }>
-        | null
-        | undefined;
-      creations: Array<{
-        __typename?: 'ItemCreation';
-        id: string;
-        source: DataSource;
-        reason?: string | null | undefined;
-        metadata?: any | null | undefined;
-        createdAt: string;
-      }>;
-      edits: Array<{
-        __typename?: 'ItemEdit';
-        id: string;
-        fieldsChanged: Array<string>;
-        oldValues?: any | null | undefined;
-        newValues?: any | null | undefined;
-        editReason?: string | null | undefined;
-        createdAt: string;
-      }>;
-    };
-    unit?:
+    storageLocation?:
       | {
-          __typename?: 'Unit';
+          __typename?: 'StorageLocation';
           id: string;
           name: string;
-          symbol: string;
-          type: UnitType;
-          isMetric: boolean;
-          baseUnitId?: string | null | undefined;
-          conversionFactor: number;
-          isCommon: boolean;
+          type: StorageType;
         }
       | null
       | undefined;
@@ -13145,14 +13471,13 @@ export type DeletePantryMutation = {
   deletePantry: boolean;
 };
 
-export type UpdatePantryItemMutationVariables = Exact<{
-  id: Scalars['ID']['input'];
-  input: UpdatePantryItemInput;
+export type CreatePantryItemMutationVariables = Exact<{
+  input: CreatePantryItemInput;
 }>;
 
-export type UpdatePantryItemMutation = {
+export type CreatePantryItemMutation = {
   __typename?: 'Mutation';
-  updatePantryItem: {
+  createPantryItem: {
     __typename?: 'PantryItem';
     id: string;
     pantryId: string;
@@ -13161,7 +13486,6 @@ export type UpdatePantryItemMutation = {
     unitName?: string | null | undefined;
     unitId?: string | null | undefined;
     expiresAt?: string | null | undefined;
-    storageLocation?: string | null | undefined;
     storageState: StorageState;
     storageNotes?: string | null | undefined;
     initialQuantity: number;
@@ -13317,6 +13641,15 @@ export type UpdatePantryItemMutation = {
         }
       | null
       | undefined;
+    storageLocation?:
+      | {
+          __typename?: 'StorageLocation';
+          id: string;
+          name: string;
+          type: StorageType;
+        }
+      | null
+      | undefined;
     usageRecords: Array<{
       __typename?: 'PantryItemUsage';
       id: string;
@@ -13334,13 +13667,14 @@ export type UpdatePantryItemMutation = {
   };
 };
 
-export type RemoveItemFromPantryMutationVariables = Exact<{
+export type UpdatePantryItemMutationVariables = Exact<{
   id: Scalars['ID']['input'];
+  input: UpdatePantryItemInput;
 }>;
 
-export type RemoveItemFromPantryMutation = {
+export type UpdatePantryItemMutation = {
   __typename?: 'Mutation';
-  removeItemFromPantry: {
+  updatePantryItem: {
     __typename?: 'PantryItem';
     id: string;
     pantryId: string;
@@ -13349,7 +13683,6 @@ export type RemoveItemFromPantryMutation = {
     unitName?: string | null | undefined;
     unitId?: string | null | undefined;
     expiresAt?: string | null | undefined;
-    storageLocation?: string | null | undefined;
     storageState: StorageState;
     storageNotes?: string | null | undefined;
     initialQuantity: number;
@@ -13502,6 +13835,211 @@ export type RemoveItemFromPantryMutation = {
           baseUnitId?: string | null | undefined;
           conversionFactor: number;
           isCommon: boolean;
+        }
+      | null
+      | undefined;
+    storageLocation?:
+      | {
+          __typename?: 'StorageLocation';
+          id: string;
+          name: string;
+          type: StorageType;
+        }
+      | null
+      | undefined;
+    usageRecords: Array<{
+      __typename?: 'PantryItemUsage';
+      id: string;
+      pantryItemId: string;
+      quantityUsed: number;
+      usedById: string;
+      usedAt: string;
+      purpose: UsagePurpose;
+      notes?: string | null | undefined;
+      cookingLogId?: string | null | undefined;
+      mealPlanItemId?: string | null | undefined;
+      recipeId?: string | null | undefined;
+      usedBy: { __typename?: 'User'; id: string };
+    }>;
+  };
+};
+
+export type DeletePantryItemMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type DeletePantryItemMutation = {
+  __typename?: 'Mutation';
+  deletePantryItem: {
+    __typename?: 'PantryItem';
+    id: string;
+    pantryId: string;
+    itemId: string;
+    itemName: string;
+    unitName?: string | null | undefined;
+    unitId?: string | null | undefined;
+    expiresAt?: string | null | undefined;
+    storageState: StorageState;
+    storageNotes?: string | null | undefined;
+    initialQuantity: number;
+    currentQuantity: number;
+    consumedQuantity: number;
+    reservedQuantity: number;
+    autoReorderPoint?: number | null | undefined;
+    isAutoReorder: boolean;
+    customCategory?: string | null | undefined;
+    createdAt: string;
+    updatedAt?: string | null | undefined;
+    version?: number | null | undefined;
+    tags: Array<string>;
+    item: {
+      __typename?: 'Item';
+      id: string;
+      name: string;
+      description?: string | null | undefined;
+      dataSource: DataSource;
+      type: ItemType;
+      storageState: StorageState;
+      showInOnboarding: boolean;
+      shelfLifeDays?: number | null | undefined;
+      popularity: number;
+      status: ItemStatus;
+      visibility: Visibility;
+      imageUrl?: string | null | undefined;
+      images?: any | null | undefined;
+      tags: Array<string>;
+      healthBenefits?: any | null | undefined;
+      allergens?: any | null | undefined;
+      nutritions?: any | null | undefined;
+      metadata?: any | null | undefined;
+      ingredients?: any | null | undefined;
+      createdAt: string;
+      updatedAt: string;
+      deletedAt?: string | null | undefined;
+      version: number;
+      netWeight?: number | null | undefined;
+      displayUnit?:
+        | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+        | null
+        | undefined;
+      units: Array<{
+        __typename?: 'ItemUnit';
+        id: string;
+        itemId: string;
+        unitId: string;
+        isDefault?: boolean | null | undefined;
+        isPreferred: boolean;
+        isCommon: boolean;
+        conversionRatio?: number | null | undefined;
+        conversionNote?: string | null | undefined;
+        packageSize?: number | null | undefined;
+        packageDescription?: string | null | undefined;
+        retailUnit: boolean;
+        usageContext: Array<UnitUsageContext>;
+        recommendedFor: Array<UnitRecommendation>;
+        minQuantity?: number | null | undefined;
+        maxQuantity?: number | null | undefined;
+        quantityStep?: number | null | undefined;
+        averagePricePerUnit?: number | null | undefined;
+        lastPriceUpdate?: string | null | undefined;
+        priceSource?: string | null | undefined;
+        usageCount: number;
+        lastUsedAt?: string | null | undefined;
+        popularityScore: number;
+        source: UnitSource;
+        confidence?: number | null | undefined;
+        isVerified: boolean;
+        verifiedAt?: string | null | undefined;
+        createdAt: string;
+        updatedAt: string;
+        version: number;
+      }>;
+      brands: Array<{
+        __typename?: 'ItemBrand';
+        id: string;
+        brand?:
+          | {
+              __typename?: 'Brand';
+              id: string;
+              name: string;
+              description?: string | null | undefined;
+              createdAt: string;
+              updatedAt: string;
+              version: number;
+            }
+          | null
+          | undefined;
+      }>;
+      categories?:
+        | Array<{
+            __typename?: 'ItemCategory';
+            id: string;
+            source: CategorySource;
+            confidence: number;
+            isPrimary: boolean;
+            createdAt: string;
+            assignedAt?: string | null | undefined;
+            category: {
+              __typename?: 'Category';
+              id: string;
+              name: string;
+              slug?: string | null | undefined;
+              description?: string | null | undefined;
+              icon?: string | null | undefined;
+              color?: string | null | undefined;
+              sortOrder: number;
+              type: CategoryType;
+              isActive: boolean;
+              isSystem: boolean;
+              visibility: Visibility;
+              itemCount: number;
+              usageCount: number;
+              createdAt: string;
+              updatedAt?: string | null | undefined;
+              deletedAt?: string | null | undefined;
+              version: number;
+            };
+          }>
+        | null
+        | undefined;
+      creations: Array<{
+        __typename?: 'ItemCreation';
+        id: string;
+        source: DataSource;
+        reason?: string | null | undefined;
+        metadata?: any | null | undefined;
+        createdAt: string;
+      }>;
+      edits: Array<{
+        __typename?: 'ItemEdit';
+        id: string;
+        fieldsChanged: Array<string>;
+        oldValues?: any | null | undefined;
+        newValues?: any | null | undefined;
+        editReason?: string | null | undefined;
+        createdAt: string;
+      }>;
+    };
+    unit?:
+      | {
+          __typename?: 'Unit';
+          id: string;
+          name: string;
+          symbol: string;
+          type: UnitType;
+          isMetric: boolean;
+          baseUnitId?: string | null | undefined;
+          conversionFactor: number;
+          isCommon: boolean;
+        }
+      | null
+      | undefined;
+    storageLocation?:
+      | {
+          __typename?: 'StorageLocation';
+          id: string;
+          name: string;
+          type: StorageType;
         }
       | null
       | undefined;
@@ -13751,7 +14289,7 @@ export type SuggestedRecipesQueryVariables = Exact<{ [key: string]: never }>;
 
 export type SuggestedRecipesQuery = {
   __typename?: 'Query';
-  suggestedRecipes: Array<{
+  recipeSuggestions: Array<{
     __typename?: 'Recipe';
     id: string;
     name: string;
@@ -13783,7 +14321,7 @@ export type MyRecipesQueryVariables = Exact<{
 
 export type MyRecipesQuery = {
   __typename?: 'Query';
-  myRecipes: {
+  recipes: {
     __typename?: 'RecipesResponse';
     totalCount: number;
     recipes: Array<{
@@ -13863,15 +14401,6 @@ export type GetRecipeQuery = {
           id: string;
           name: string;
           quantity: number;
-          spoonacularIngredientId?: number | null | undefined;
-          aisle?: string | null | undefined;
-          consistency?: string | null | undefined;
-          originalString?: string | null | undefined;
-          metricAmount?: number | null | undefined;
-          metricUnit?: string | null | undefined;
-          usAmount?: number | null | undefined;
-          usUnit?: string | null | undefined;
-          meta: Array<string>;
           image?: string | null | undefined;
           isOptional: boolean;
           notes?: string | null | undefined;
@@ -13897,20 +14426,13 @@ export type GetRecipeQuery = {
     | undefined;
 };
 
-export type AddRecipeMutationVariables = Exact<{
-  name: Scalars['String']['input'];
-  ingredients: Array<Scalars['String']['input']> | Scalars['String']['input'];
-  instructions: Scalars['JSON']['input'];
-  category?: InputMaybe<RecipeCategory>;
-  difficulty?: InputMaybe<Difficulty>;
-  prepTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
-  cookTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
-  servings?: InputMaybe<Scalars['Int']['input']>;
+export type CreateRecipeMutationVariables = Exact<{
+  input: CreateRecipeInput;
 }>;
 
-export type AddRecipeMutation = {
+export type CreateRecipeMutation = {
   __typename?: 'Mutation';
-  addRecipe: {
+  createRecipe: {
     __typename?: 'Recipe';
     id: string;
     name: string;
@@ -13955,15 +14477,6 @@ export type AddRecipeMutation = {
       id: string;
       name: string;
       quantity: number;
-      spoonacularIngredientId?: number | null | undefined;
-      aisle?: string | null | undefined;
-      consistency?: string | null | undefined;
-      originalString?: string | null | undefined;
-      metricAmount?: number | null | undefined;
-      metricUnit?: string | null | undefined;
-      usAmount?: number | null | undefined;
-      usUnit?: string | null | undefined;
-      meta: Array<string>;
       image?: string | null | undefined;
       isOptional: boolean;
       notes?: string | null | undefined;
@@ -13987,13 +14500,14 @@ export type AddRecipeMutation = {
   };
 };
 
-export type SaveRecipeMutationVariables = Exact<{
-  input: SaveRecipeInput;
+export type UpdateRecipeMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+  input: UpdateRecipeInput;
 }>;
 
-export type SaveRecipeMutation = {
+export type UpdateRecipeMutation = {
   __typename?: 'Mutation';
-  saveRecipe: {
+  updateRecipe: {
     __typename?: 'Recipe';
     id: string;
     name: string;
@@ -14038,15 +14552,6 @@ export type SaveRecipeMutation = {
       id: string;
       name: string;
       quantity: number;
-      spoonacularIngredientId?: number | null | undefined;
-      aisle?: string | null | undefined;
-      consistency?: string | null | undefined;
-      originalString?: string | null | undefined;
-      metricAmount?: number | null | undefined;
-      metricUnit?: string | null | undefined;
-      usAmount?: number | null | undefined;
-      usUnit?: string | null | undefined;
-      meta: Array<string>;
       image?: string | null | undefined;
       isOptional: boolean;
       notes?: string | null | undefined;
@@ -14079,15 +14584,34 @@ export type DeleteRecipeMutation = {
   deleteRecipe: boolean;
 };
 
-export type AddRecipeToShoppingListMutationVariables = Exact<{
+export type FavoriteRecipeMutationVariables = Exact<{
+  input: FavoriteRecipeInput;
+}>;
+
+export type FavoriteRecipeMutation = {
+  __typename?: 'Mutation';
+  favoriteRecipe: {
+    __typename?: 'SavedRecipe';
+    id: string;
+    recipeId: string;
+    userId: string;
+    folder?: string | null | undefined;
+    tags: Array<string>;
+    notes?: string | null | undefined;
+    createdAt: string;
+    updatedAt: string;
+  };
+};
+
+export type CreateShoppingListItemsFromRecipeMutationVariables = Exact<{
   recipeId: Scalars['ID']['input'];
   shoppingListId: Scalars['ID']['input'];
   servings?: InputMaybe<Scalars['Int']['input']>;
 }>;
 
-export type AddRecipeToShoppingListMutation = {
+export type CreateShoppingListItemsFromRecipeMutation = {
   __typename?: 'Mutation';
-  addRecipeToShoppingList: {
+  createShoppingListItemsFromRecipe: {
     __typename?: 'AddRecipeToShoppingListResult';
     totalAdded: number;
     totalUpdated: number;
@@ -14124,15 +14648,16 @@ export type AddRecipeToShoppingListMutation = {
   };
 };
 
-export type AddRecipeIngredientToShoppingListMutationVariables = Exact<{
-  recipeIngredientId: Scalars['ID']['input'];
-  shoppingListId: Scalars['ID']['input'];
-  quantityOverride?: InputMaybe<Scalars['Float']['input']>;
-}>;
+export type CreateShoppingListItemFromRecipeIngredientMutationVariables =
+  Exact<{
+    recipeIngredientId: Scalars['ID']['input'];
+    shoppingListId: Scalars['ID']['input'];
+    quantityOverride?: InputMaybe<Scalars['Float']['input']>;
+  }>;
 
-export type AddRecipeIngredientToShoppingListMutation = {
+export type CreateShoppingListItemFromRecipeIngredientMutation = {
   __typename?: 'Mutation';
-  addRecipeIngredientToShoppingList: {
+  createShoppingListItemFromRecipeIngredient: {
     __typename?: 'AddIngredientResult';
     previousQuantity?: number | null | undefined;
     quantityAdded: number;
@@ -16858,4 +17383,199 @@ export type ShoppingListItemRemovedSubscription = {
     id: string;
     itemName?: string | null | undefined;
   };
+};
+
+export type GetNotificationPreferencesQueryVariables = Exact<{
+  [key: string]: never;
+}>;
+
+export type GetNotificationPreferencesQuery = {
+  __typename?: 'Query';
+  myNotificationPreferences?:
+    | {
+        __typename?: 'NotificationPreferences';
+        id: string;
+        userId: string;
+        emailEnabled: boolean;
+        pushEnabled: boolean;
+        smsEnabled: boolean;
+        expirationNotifications: boolean;
+        expirationNotificationFrequency: ExpirationFrequency;
+        expirationDaysThreshold: number;
+        lowStockAlerts: boolean;
+        shoppingListUpdates: boolean;
+        pantryChanges: boolean;
+        recipeRecommendations: boolean;
+        mealPlanReminders: boolean;
+        cookingReminders: boolean;
+        collaborationInvites: boolean;
+        homeInvites: boolean;
+        sharedListUpdates: boolean;
+        weeklyDigest: boolean;
+        monthlyReport: boolean;
+        quietHoursEnabled: boolean;
+        quietHoursStart?: string | null | undefined;
+        quietHoursEnd?: string | null | undefined;
+        quietHoursTimezone?: string | null | undefined;
+      }
+    | null
+    | undefined;
+};
+
+export type GetDietaryProfileQueryVariables = Exact<{ [key: string]: never }>;
+
+export type GetDietaryProfileQuery = {
+  __typename?: 'Query';
+  myDietaryProfile?:
+    | {
+        __typename?: 'DietaryProfile';
+        id: string;
+        userId: string;
+        preferredCuisines: Array<string>;
+        dislikedIngredients: Array<string>;
+        favoriteIngredients: Array<string>;
+        calorieTarget?: number | null | undefined;
+        proteinTarget?: number | null | undefined;
+        carbsTarget?: number | null | undefined;
+        fatTarget?: number | null | undefined;
+        mealsPerDay: number;
+        snacksPerDay: number;
+        cookingSkillLevel?: string | null | undefined;
+        maxPrepTimeMinutes?: number | null | undefined;
+        maxCookTimeMinutes?: number | null | undefined;
+        budgetPerMeal?: number | null | undefined;
+        createdAt: string;
+        updatedAt: string;
+        restrictions: Array<{
+          __typename?: 'DietaryRestriction';
+          id: string;
+          type: DietaryTag;
+          severity: RestrictionSeverity;
+          notes?: string | null | undefined;
+          appliesToHomeId?: string | null | undefined;
+          createdAt: string;
+          updatedAt: string;
+        }>;
+      }
+    | null
+    | undefined;
+};
+
+export type UpdateNotificationPreferencesMutationVariables = Exact<{
+  input: UpdateNotificationPreferencesInput;
+}>;
+
+export type UpdateNotificationPreferencesMutation = {
+  __typename?: 'Mutation';
+  updateNotificationPreferences: {
+    __typename?: 'NotificationPreferences';
+    id: string;
+    userId: string;
+    emailEnabled: boolean;
+    pushEnabled: boolean;
+    smsEnabled: boolean;
+    expirationNotifications: boolean;
+    expirationNotificationFrequency: ExpirationFrequency;
+    expirationDaysThreshold: number;
+    lowStockAlerts: boolean;
+    shoppingListUpdates: boolean;
+    pantryChanges: boolean;
+    recipeRecommendations: boolean;
+    mealPlanReminders: boolean;
+    cookingReminders: boolean;
+    collaborationInvites: boolean;
+    homeInvites: boolean;
+    sharedListUpdates: boolean;
+    weeklyDigest: boolean;
+    monthlyReport: boolean;
+    quietHoursEnabled: boolean;
+    quietHoursStart?: string | null | undefined;
+    quietHoursEnd?: string | null | undefined;
+    quietHoursTimezone?: string | null | undefined;
+  };
+};
+
+export type UpdateDietaryProfileMutationVariables = Exact<{
+  input: UpdateDietaryProfileInput;
+}>;
+
+export type UpdateDietaryProfileMutation = {
+  __typename?: 'Mutation';
+  updateDietaryProfile: {
+    __typename?: 'DietaryProfile';
+    id: string;
+    userId: string;
+    preferredCuisines: Array<string>;
+    dislikedIngredients: Array<string>;
+    favoriteIngredients: Array<string>;
+    calorieTarget?: number | null | undefined;
+    proteinTarget?: number | null | undefined;
+    carbsTarget?: number | null | undefined;
+    fatTarget?: number | null | undefined;
+    mealsPerDay: number;
+    snacksPerDay: number;
+    cookingSkillLevel?: string | null | undefined;
+    maxPrepTimeMinutes?: number | null | undefined;
+    maxCookTimeMinutes?: number | null | undefined;
+    budgetPerMeal?: number | null | undefined;
+    createdAt: string;
+    updatedAt: string;
+    restrictions: Array<{
+      __typename?: 'DietaryRestriction';
+      id: string;
+      type: DietaryTag;
+      severity: RestrictionSeverity;
+      notes?: string | null | undefined;
+      appliesToHomeId?: string | null | undefined;
+      createdAt: string;
+      updatedAt: string;
+    }>;
+  };
+};
+
+export type AddDietaryRestrictionMutationVariables = Exact<{
+  input: AddRestrictionInput;
+}>;
+
+export type AddDietaryRestrictionMutation = {
+  __typename?: 'Mutation';
+  addRestriction: {
+    __typename?: 'DietaryRestriction';
+    id: string;
+    dietaryProfileId: string;
+    type: DietaryTag;
+    severity: RestrictionSeverity;
+    notes?: string | null | undefined;
+    appliesToHomeId?: string | null | undefined;
+    createdAt: string;
+    updatedAt: string;
+  };
+};
+
+export type UpdateDietaryRestrictionMutationVariables = Exact<{
+  input: UpdateRestrictionInput;
+}>;
+
+export type UpdateDietaryRestrictionMutation = {
+  __typename?: 'Mutation';
+  updateRestriction: {
+    __typename?: 'DietaryRestriction';
+    id: string;
+    dietaryProfileId: string;
+    type: DietaryTag;
+    severity: RestrictionSeverity;
+    notes?: string | null | undefined;
+    appliesToHomeId?: string | null | undefined;
+    createdAt: string;
+    updatedAt: string;
+  };
+};
+
+export type RemoveDietaryRestrictionMutationVariables = Exact<{
+  input: RemoveRestrictionInput;
+}>;
+
+export type RemoveDietaryRestrictionMutation = {
+  __typename?: 'Mutation';
+  removeRestriction: boolean;
 };

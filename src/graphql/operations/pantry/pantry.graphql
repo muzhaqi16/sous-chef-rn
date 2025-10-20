@@ -62,12 +62,6 @@ query GetPantryItem($id: ID!) {
 # MUTATIONS
 # ============================================
 
-mutation AddItemToPantry($input: AddPantryItemInput!) {
-  addItemToPantry(input: $input) {
-    ...PantryItemFragment
-  }
-}
-
 mutation CreatePantry($input: CreatePantryInput!) {
   createPantry(input: $input) {
     id
@@ -106,8 +100,8 @@ mutation DeletePantry($id: ID!) {
   deletePantry(id: $id)
 }
 
-mutation AddItemToPantry($input: AddPantryItemInput!) {
-  addItemToPantry(input: $input) {
+mutation CreatePantryItem($input: CreatePantryItemInput!) {
+  createPantryItem(input: $input) {
     ...PantryItemFragment
   }
 }
@@ -118,8 +112,8 @@ mutation UpdatePantryItem($id: ID!, $input: UpdatePantryItemInput!) {
   }
 }
 
-mutation RemoveItemFromPantry($id: ID!) {
-  removeItemFromPantry(id: $id) {
+mutation DeletePantryItem($id: ID!) {
+  deletePantryItem(id: $id) {
     ...PantryItemFragment
   }
 }

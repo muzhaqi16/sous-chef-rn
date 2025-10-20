@@ -384,6 +384,18 @@ export const useConfigurableSettings = (profile: any) => {
           }
           break;
 
+        // Navigation items
+        case 'notifications':
+        case 'dietaryProfile':
+        case 'appSettings':
+          if (config.type === 'navigation') {
+            baseItem.onPress = () => {
+              // Navigation will be handled in ProfileScreen
+              // by checking the type and calling navigate
+            };
+          }
+          break;
+
         // Action items
         case 'logout':
           baseItem.onPress = () => {

@@ -64,43 +64,6 @@ export type AddIngredientResult = {
   wasUpdated: Scalars['Boolean']['output'];
 };
 
-export type AddPantryItemInput = {
-  acquisitionMethod?: InputMaybe<AcquisitionMethod>;
-  actualNetWeight?: InputMaybe<Scalars['Float']['input']>;
-  actualNetWeightUnitId?: InputMaybe<Scalars['String']['input']>;
-  autoReorderPoint?: InputMaybe<Scalars['Float']['input']>;
-  batchNumber?: InputMaybe<Scalars['String']['input']>;
-  bestByDate?: InputMaybe<Scalars['String']['input']>;
-  condition?: InputMaybe<ItemCondition>;
-  costPerUnit?: InputMaybe<Scalars['Float']['input']>;
-  customCategory?: InputMaybe<Scalars['String']['input']>;
-  expiresAt?: InputMaybe<Scalars['String']['input']>;
-  initialQuantity: Scalars['Float']['input'];
-  isAutoReorder?: InputMaybe<Scalars['Boolean']['input']>;
-  itemBrand?: InputMaybe<Scalars['String']['input']>;
-  itemCategory?: InputMaybe<Scalars['String']['input']>;
-  itemDescription?: InputMaybe<Scalars['String']['input']>;
-  itemDisplayUnitId?: InputMaybe<Scalars['String']['input']>;
-  itemId?: InputMaybe<Scalars['String']['input']>;
-  itemName?: InputMaybe<Scalars['String']['input']>;
-  itemNetWeight?: InputMaybe<Scalars['Float']['input']>;
-  itemUpc?: InputMaybe<Scalars['String']['input']>;
-  lastUsedAt?: InputMaybe<Scalars['DateTime']['input']>;
-  lotNumber?: InputMaybe<Scalars['String']['input']>;
-  pantryId: Scalars['ID']['input'];
-  priority?: InputMaybe<Scalars['Int']['input']>;
-  purchaseId?: InputMaybe<Scalars['String']['input']>;
-  storageLocation?: InputMaybe<Scalars['String']['input']>;
-  storageNotes?: InputMaybe<Scalars['String']['input']>;
-  storageState?: InputMaybe<StorageState>;
-  storeId?: InputMaybe<Scalars['String']['input']>;
-  tags?: InputMaybe<Array<Scalars['String']['input']>>;
-  totalCost?: InputMaybe<Scalars['Float']['input']>;
-  unitId?: InputMaybe<Scalars['String']['input']>;
-  unitName?: InputMaybe<Scalars['String']['input']>;
-  unitSymbol?: InputMaybe<Scalars['String']['input']>;
-};
-
 export type AddRecipeToShoppingListResult = {
   __typename?: 'AddRecipeToShoppingListResult';
   addedItems: Array<ShoppingListItem>;
@@ -109,6 +72,13 @@ export type AddRecipeToShoppingListResult = {
   totalSkipped: Scalars['Int']['output'];
   totalUpdated: Scalars['Int']['output'];
   updatedItems: Array<ShoppingListItem>;
+};
+
+export type AddRestrictionInput = {
+  appliesToHomeId?: InputMaybe<Scalars['String']['input']>;
+  notes?: InputMaybe<Scalars['String']['input']>;
+  severity: RestrictionSeverity;
+  type: DietaryTag;
 };
 
 export type AddRestrictionsInput = {
@@ -526,6 +496,7 @@ export type CreateHomeInput = {
 
 export type CreateItemInput = {
   allergens?: InputMaybe<Scalars['JSON']['input']>;
+  alternateUpcs?: InputMaybe<Array<Scalars['String']['input']>>;
   brandId?: InputMaybe<Scalars['String']['input']>;
   brandName?: InputMaybe<Scalars['String']['input']>;
   categories?: InputMaybe<Array<CategoryInput>>;
@@ -546,6 +517,7 @@ export type CreateItemInput = {
   metadata?: InputMaybe<Scalars['JSON']['input']>;
   name: Scalars['String']['input'];
   netWeight?: InputMaybe<Scalars['Float']['input']>;
+  primaryUpc?: InputMaybe<Scalars['String']['input']>;
   shelfLifeDays?: InputMaybe<Scalars['Int']['input']>;
   storageState?: InputMaybe<StorageState>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
@@ -661,6 +633,43 @@ export type CreatePantryInput = {
   temperature?: InputMaybe<Scalars['String']['input']>;
 };
 
+export type CreatePantryItemInput = {
+  acquisitionMethod?: InputMaybe<AcquisitionMethod>;
+  actualNetWeight?: InputMaybe<Scalars['Float']['input']>;
+  actualNetWeightUnitId?: InputMaybe<Scalars['String']['input']>;
+  autoReorderPoint?: InputMaybe<Scalars['Float']['input']>;
+  batchNumber?: InputMaybe<Scalars['String']['input']>;
+  bestByDate?: InputMaybe<Scalars['String']['input']>;
+  condition?: InputMaybe<ItemCondition>;
+  costPerUnit?: InputMaybe<Scalars['Float']['input']>;
+  customCategory?: InputMaybe<Scalars['String']['input']>;
+  expiresAt?: InputMaybe<Scalars['String']['input']>;
+  initialQuantity: Scalars['Float']['input'];
+  isAutoReorder?: InputMaybe<Scalars['Boolean']['input']>;
+  itemBrand?: InputMaybe<Scalars['String']['input']>;
+  itemCategory?: InputMaybe<Scalars['String']['input']>;
+  itemDescription?: InputMaybe<Scalars['String']['input']>;
+  itemDisplayUnitId?: InputMaybe<Scalars['String']['input']>;
+  itemId?: InputMaybe<Scalars['String']['input']>;
+  itemName?: InputMaybe<Scalars['String']['input']>;
+  itemNetWeight?: InputMaybe<Scalars['Float']['input']>;
+  itemUpc?: InputMaybe<Scalars['String']['input']>;
+  lastUsedAt?: InputMaybe<Scalars['DateTime']['input']>;
+  lotNumber?: InputMaybe<Scalars['String']['input']>;
+  pantryId: Scalars['ID']['input'];
+  priority?: InputMaybe<Scalars['Int']['input']>;
+  purchaseId?: InputMaybe<Scalars['String']['input']>;
+  storageLocation?: InputMaybe<Scalars['String']['input']>;
+  storageNotes?: InputMaybe<Scalars['String']['input']>;
+  storageState?: InputMaybe<StorageState>;
+  storeId?: InputMaybe<Scalars['String']['input']>;
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
+  totalCost?: InputMaybe<Scalars['Float']['input']>;
+  unitId?: InputMaybe<Scalars['String']['input']>;
+  unitName?: InputMaybe<Scalars['String']['input']>;
+  unitSymbol?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type CreatePurchaseInput = {
   currencyId: Scalars['ID']['input'];
   discountAmount?: InputMaybe<Scalars['Float']['input']>;
@@ -691,6 +700,7 @@ export type CreateRecipeInput = {
   externalSourceId?: InputMaybe<Scalars['String']['input']>;
   externalSourceUrl?: InputMaybe<Scalars['String']['input']>;
   imageUrl?: InputMaybe<Scalars['String']['input']>;
+  ingredients: Array<RecipeIngredientInput>;
   instructions: Scalars['JSON']['input'];
   isPublished?: InputMaybe<Scalars['Boolean']['input']>;
   name: Scalars['String']['input'];
@@ -718,6 +728,7 @@ export type CreateShoppingListInput = {
 };
 
 export type CreateShoppingListItemInput = {
+  addedContext?: InputMaybe<Scalars['String']['input']>;
   aisle?: InputMaybe<Scalars['String']['input']>;
   budgetPrice?: InputMaybe<Scalars['Float']['input']>;
   category?: InputMaybe<Scalars['String']['input']>;
@@ -728,11 +739,29 @@ export type CreateShoppingListItemInput = {
   preferredStoreId?: InputMaybe<Scalars['String']['input']>;
   priority?: InputMaybe<Scalars['Int']['input']>;
   quantity?: InputMaybe<Scalars['Float']['input']>;
+  recipeId?: InputMaybe<Scalars['ID']['input']>;
+  recipeIngredientId?: InputMaybe<Scalars['ID']['input']>;
   shoppingListId: Scalars['ID']['input'];
   sortOrder?: InputMaybe<Scalars['Int']['input']>;
   storeSection?: InputMaybe<Scalars['String']['input']>;
   unitId?: InputMaybe<Scalars['String']['input']>;
   unitName?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type CreateStorageLocationInput = {
+  capacity?: InputMaybe<Scalars['Float']['input']>;
+  capacityUnit?: InputMaybe<Scalars['String']['input']>;
+  color?: InputMaybe<Scalars['String']['input']>;
+  description?: InputMaybe<Scalars['String']['input']>;
+  homeId: Scalars['ID']['input'];
+  icon?: InputMaybe<Scalars['String']['input']>;
+  isClimateControlled?: InputMaybe<Scalars['Boolean']['input']>;
+  isDefault?: InputMaybe<Scalars['Boolean']['input']>;
+  name: Scalars['String']['input'];
+  parentLocationId?: InputMaybe<Scalars['ID']['input']>;
+  sortOrder?: InputMaybe<Scalars['Int']['input']>;
+  temperature?: InputMaybe<StorageState>;
+  type: StorageType;
 };
 
 export type CreateStoreInput = {
@@ -1051,16 +1080,58 @@ export type DeviceTypeStat = {
   deviceType: DeviceType;
 };
 
+export type DietaryProfile = {
+  __typename?: 'DietaryProfile';
+  budgetPerMeal: Maybe<Scalars['Float']['output']>;
+  calorieTarget: Maybe<Scalars['Int']['output']>;
+  carbsTarget: Maybe<Scalars['Int']['output']>;
+  cookingSkillLevel: Maybe<Scalars['String']['output']>;
+  createdAt: Scalars['DateTime']['output'];
+  dislikedIngredients: Array<Scalars['String']['output']>;
+  fatTarget: Maybe<Scalars['Int']['output']>;
+  favoriteIngredients: Array<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  maxCookTimeMinutes: Maybe<Scalars['Int']['output']>;
+  maxPrepTimeMinutes: Maybe<Scalars['Int']['output']>;
+  mealsPerDay: Scalars['Int']['output'];
+  preferredCuisines: Array<Scalars['String']['output']>;
+  proteinTarget: Maybe<Scalars['Int']['output']>;
+  restrictions: Array<DietaryRestriction>;
+  snacksPerDay: Scalars['Int']['output'];
+  updatedAt: Scalars['DateTime']['output'];
+  user: User;
+  userId: Scalars['String']['output'];
+};
+
+export type DietaryRestriction = {
+  __typename?: 'DietaryRestriction';
+  appliesToHomeId: Maybe<Scalars['String']['output']>;
+  createdAt: Scalars['DateTime']['output'];
+  dietaryProfile: DietaryProfile;
+  dietaryProfileId: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  notes: Maybe<Scalars['String']['output']>;
+  severity: RestrictionSeverity;
+  type: DietaryTag;
+  updatedAt: Scalars['DateTime']['output'];
+};
+
 export enum DietaryTag {
   DairyFree = 'DAIRY_FREE',
+  DiabeticFriendly = 'DIABETIC_FRIENDLY',
+  EggFree = 'EGG_FREE',
+  FishFree = 'FISH_FREE',
   GlutenFree = 'GLUTEN_FREE',
   Halal = 'HALAL',
+  HeartHealthy = 'HEART_HEALTHY',
   Keto = 'KETO',
   Kosher = 'KOSHER',
   LowCarb = 'LOW_CARB',
   LowSodium = 'LOW_SODIUM',
   NutFree = 'NUT_FREE',
   Paleo = 'PALEO',
+  ShellfishFree = 'SHELLFISH_FREE',
+  SoyFree = 'SOY_FREE',
   SugarFree = 'SUGAR_FREE',
   Vegan = 'VEGAN',
   Vegetarian = 'VEGETARIAN',
@@ -1074,10 +1145,64 @@ export enum Difficulty {
   VeryEasy = 'VERY_EASY',
 }
 
+export type DismissNotificationInput = {
+  notificationId: Scalars['ID']['input'];
+};
+
 export type Edge = {
   cursor: Scalars['String']['output'];
   node: Node;
 };
+
+export enum ExpirationAction {
+  Consumed = 'CONSUMED',
+  Cooked = 'COOKED',
+  Extended = 'EXTENDED',
+  NoAction = 'NO_ACTION',
+  Shared = 'SHARED',
+  Waste = 'WASTE',
+}
+
+export enum ExpirationFrequency {
+  DailyEvening = 'DAILY_EVENING',
+  DailyMorning = 'DAILY_MORNING',
+  Never = 'NEVER',
+  RealTime = 'REAL_TIME',
+  WeeklyDigest = 'WEEKLY_DIGEST',
+}
+
+export type ExpirationNotification = {
+  __typename?: 'ExpirationNotification';
+  actionAt: Maybe<Scalars['DateTime']['output']>;
+  actionTaken: Maybe<ExpirationAction>;
+  batchId: Maybe<Scalars['String']['output']>;
+  createdAt: Scalars['DateTime']['output'];
+  daysUntilExpiry: Scalars['Int']['output'];
+  dismissedAt: Maybe<Scalars['DateTime']['output']>;
+  expiresAt: Scalars['DateTime']['output'];
+  genericNotification: Maybe<Notification>;
+  genericNotificationId: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  isBatched: Scalars['Boolean']['output'];
+  notificationType: ExpirationNotificationType;
+  pantryItem: PantryItem;
+  pantryItemId: Scalars['String']['output'];
+  readAt: Maybe<Scalars['DateTime']['output']>;
+  sentAt: Maybe<Scalars['DateTime']['output']>;
+  status: NotificationDeliveryStatus;
+  updatedAt: Scalars['DateTime']['output'];
+  user: User;
+  userId: Scalars['String']['output'];
+};
+
+export enum ExpirationNotificationType {
+  ExpiredReminder = 'EXPIRED_REMINDER',
+  ExpiresIn_3Days = 'EXPIRES_IN_3_DAYS',
+  ExpiresIn_7Days = 'EXPIRES_IN_7_DAYS',
+  ExpiresToday = 'EXPIRES_TODAY',
+  ExpiresTomorrow = 'EXPIRES_TOMORROW',
+  WeeklyDigest = 'WEEKLY_DIGEST',
+}
 
 export enum ExportFormat {
   Csv = 'CSV',
@@ -1177,10 +1302,24 @@ export type FailedIpStat = {
   ipAddress: Maybe<Scalars['String']['output']>;
 };
 
+export type FavoriteRecipeInput = {
+  folder?: InputMaybe<Scalars['String']['input']>;
+  notes?: InputMaybe<Scalars['String']['input']>;
+  recipeId: Scalars['ID']['input'];
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
+};
+
 export type ForgotPasswordResponse = {
   __typename?: 'ForgotPasswordResponse';
   message: Scalars['String']['output'];
   success: Scalars['Boolean']['output'];
+};
+
+export type GetExpirationNotificationsInput = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
+  pantryItemId?: InputMaybe<Scalars['ID']['input']>;
+  status?: InputMaybe<NotificationDeliveryStatus>;
 };
 
 export enum HealthBenefitCategory {
@@ -1448,6 +1587,9 @@ export type InviteToShoppingListInput = {
 export type Item = {
   __typename?: 'Item';
   allergens: Maybe<Scalars['JSON']['output']>;
+  alternateUpcs: Array<Scalars['String']['output']>;
+  approvedAt: Maybe<Scalars['DateTime']['output']>;
+  approvedBy: Maybe<User>;
   brands: Array<ItemBrand>;
   categories: Maybe<Array<ItemCategory>>;
   convertedNetWeight: Maybe<ConvertedValue>;
@@ -1464,13 +1606,16 @@ export type Item = {
   imageUrl: Maybe<Scalars['String']['output']>;
   images: Maybe<Scalars['JSON']['output']>;
   ingredients: Maybe<Scalars['JSON']['output']>;
+  isUserCreated: Scalars['Boolean']['output'];
   metadata: Maybe<Scalars['JSON']['output']>;
   name: Scalars['String']['output'];
+  needsApproval: Scalars['Boolean']['output'];
   netWeight: Maybe<Scalars['Float']['output']>;
   nutritions: Maybe<Scalars['JSON']['output']>;
   pantryItems: Array<PantryItem>;
   popularity: Scalars['Int']['output'];
   priceHistory: Array<ItemPriceHistory>;
+  primaryUpc: Maybe<Scalars['String']['output']>;
   purchases: Array<Purchase>;
   recipeIngredients: Array<RecipeIngredient>;
   shelfLifeDays: Maybe<Scalars['Int']['output']>;
@@ -1574,8 +1719,13 @@ export type ItemFilters = {
   isDairyFree?: InputMaybe<Scalars['Boolean']['input']>;
   isGlutenFree?: InputMaybe<Scalars['Boolean']['input']>;
   isOrganic?: InputMaybe<Scalars['Boolean']['input']>;
+  isPopular?: InputMaybe<Scalars['Boolean']['input']>;
+  isRecent?: InputMaybe<Scalars['Boolean']['input']>;
+  isTrending?: InputMaybe<Scalars['Boolean']['input']>;
   isVegan?: InputMaybe<Scalars['Boolean']['input']>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
   priceRange?: InputMaybe<PriceRangeInput>;
+  showInOnboarding?: InputMaybe<Scalars['Boolean']['input']>;
   status?: InputMaybe<ItemStatus>;
   statuses?: InputMaybe<Array<ItemStatus>>;
   storageState?: InputMaybe<StorageState>;
@@ -1583,6 +1733,7 @@ export type ItemFilters = {
   storeId?: InputMaybe<Scalars['String']['input']>;
   storeIds?: InputMaybe<Array<Scalars['String']['input']>>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
+  timeRange?: InputMaybe<DateRange>;
   type?: InputMaybe<ItemType>;
   types?: InputMaybe<Array<ItemType>>;
   updatedAfter?: InputMaybe<Scalars['DateTime']['input']>;
@@ -1950,6 +2101,11 @@ export type LoginMethodStat = {
   method: LoginMethod;
 };
 
+export type MarkActionInput = {
+  action: ExpirationAction;
+  notificationId: Scalars['ID']['input'];
+};
+
 export type MarkAsTemplateInput = {
   saveItems?: InputMaybe<Scalars['Boolean']['input']>;
   templateName: Scalars['String']['input'];
@@ -2179,16 +2335,14 @@ export type Mutation = {
   addCollaborator: ShoppingListCollaborator;
   addItemTags: Item;
   addItemToCategory: Item;
-  addItemToPantry: PantryItem;
   addItemToShoppingList: ShoppingListItem;
   addItemUnit: ItemUnit;
-  addRecipe: Recipe;
-  addRecipeIngredientToShoppingList: AddIngredientResult;
-  addRecipeToShoppingList: AddRecipeToShoppingListResult;
+  addRestriction: DietaryRestriction;
   addRestrictions: UserModeration;
   addUserAddress: UserAddress;
   addWarning: UserModeration;
   adminDeleteUser: Scalars['Boolean']['output'];
+  approveItem: Item;
   archiveShoppingList: ShoppingList;
   banUser: UserModeration;
   bulkCreateItems: BulkCreateItemsResponse;
@@ -2221,9 +2375,15 @@ export type Mutation = {
   createModerationRecord: UserModeration;
   createNotification: Notification;
   createPantry: Pantry;
+  createPantryItem: PantryItem;
+  createPantryItemUsage: PantryItemUsage;
   createProfile: UserProfile;
   createPurchase: Purchase;
+  createRecipe: Recipe;
   createShoppingList: ShoppingList;
+  createShoppingListItemFromRecipeIngredient: AddIngredientResult;
+  createShoppingListItemsFromRecipe: AddRecipeToShoppingListResult;
+  createStorageLocation: StorageLocation;
   createStore: Store;
   createUnit: Unit;
   createUploadUrl: PresignPayload;
@@ -2247,14 +2407,19 @@ export type Mutation = {
   deleteMultipleNotifications: Scalars['Int']['output'];
   deleteNotification: Scalars['Boolean']['output'];
   deletePantry: Scalars['Boolean']['output'];
+  deletePantryItem: PantryItem;
   deletePurchase: Scalars['Boolean']['output'];
   deleteRecipe: Scalars['Boolean']['output'];
   deleteShoppingList: Scalars['Boolean']['output'];
+  deleteStorageLocation: Scalars['Boolean']['output'];
   deleteStore: Scalars['Boolean']['output'];
   deleteUnit: Scalars['Boolean']['output'];
   deleteUserAddress: UserAddress;
+  dismissExpirationNotification: ExpirationNotification;
   exportItems: ExportResponse;
+  favoriteRecipe: SavedRecipe;
   flagDeviceAsEmulator: Device;
+  flagItemForReview: Item;
   flagLoginAsRisky: LoginHistory;
   flagMultipleLoginsAsRisky: Array<LoginHistory>;
   /** Request a password reset email */
@@ -2267,6 +2432,7 @@ export type Mutation = {
   importItemsFromProvider: ImportItemsResponse;
   incrementDeviceLoginCount: Device;
   incrementItemPopularity: Item;
+  incrementRecipeCookedCount: SavedRecipe;
   inviteToHome: HomeInvite;
   inviteToShoppingList: ShoppingListCollaborator;
   joinHomeByCode: Membership;
@@ -2277,7 +2443,8 @@ export type Mutation = {
   login: AuthPayload;
   markAllNotificationsAsRead: Array<Notification>;
   markAsTemplate: ShoppingList;
-  markItemAsWaste: PantryItem;
+  markExpirationAction: ExpirationNotification;
+  markExpirationNotificationAsRead: ExpirationNotification;
   markItemPurchased: ShoppingListItem;
   markLoginAsReviewed: LoginHistory;
   markMultipleLoginsAsReviewed: Array<LoginHistory>;
@@ -2287,15 +2454,15 @@ export type Mutation = {
   putUnderReview: UserModeration;
   reactivateDevice: Device;
   recordLoginAttempt: LoginHistory;
-  recordPantryItemUsage: PantryItemUsage;
+  recordPantryItemWaste: PantryItem;
   recordPriceObservation: ItemPriceHistory;
   refresh: RefreshTokenPayload;
   register: AuthPayload;
   registerDevice: Device;
+  rejectItem: Scalars['Boolean']['output'];
   removeCollaborator: Scalars['Boolean']['output'];
   removeItemBrand: Item;
   removeItemFromCategory: Item;
-  removeItemFromPantry: PantryItem;
   removeItemFromShoppingList: Scalars['Boolean']['output'];
   removeItemImage: Item;
   removeItemTags: Item;
@@ -2304,6 +2471,7 @@ export type Mutation = {
   removeProfileAvatar: UserProfile;
   removeProfileCover: UserProfile;
   removePushToken: Device;
+  removeRestriction: Scalars['Boolean']['output'];
   removeRestrictions: UserModeration;
   removeShoppingListCollaborator: Scalars['Boolean']['output'];
   removeUnitConversion: Unit;
@@ -2314,7 +2482,6 @@ export type Mutation = {
   restoreItem: Item;
   reviewAppeal: UserModeration;
   revokeHomeInvite: Scalars['Boolean']['output'];
-  saveRecipe: Recipe;
   sendBulkNotifications: BulkNotificationResult;
   sendTestNotification: Notification;
   setDefaultHome: UserSettings;
@@ -2338,6 +2505,7 @@ export type Mutation = {
   unbanUser: UserModeration;
   uncategorizeItem: Scalars['Boolean']['output'];
   uncompleteShoppingList: ShoppingList;
+  unfavoriteRecipe: Scalars['Boolean']['output'];
   unsuspendUser: UserModeration;
   untrustDevice: Device;
   untrustMultipleDevices: Array<Device>;
@@ -2352,6 +2520,8 @@ export type Mutation = {
   updateDeviceLastSeen: Device;
   updateDeviceLocation: Device;
   updateDevicePeripherals: Device;
+  updateDietaryProfile: DietaryProfile;
+  updateFavoriteRecipe: SavedRecipe;
   updateHome: Home;
   updateItem: Item;
   updateItemAllergens: Item;
@@ -2376,10 +2546,12 @@ export type Mutation = {
   updatePurchase: Purchase;
   updatePushToken: Device;
   updateRecipe: Recipe;
+  updateRestriction: DietaryRestriction;
   updateRiskScore: UserModeration;
   updateSettings: UserSettings;
   updateShoppingList: ShoppingList;
   updateShoppingListItem: ShoppingListItem;
+  updateStorageLocation: StorageLocation;
   updateStore: Store;
   updateStoreInfo: StoreInfo;
   updateStorePriceAccuracy: Store;
@@ -2421,10 +2593,6 @@ export type MutationAddItemToCategoryArgs = {
   itemId: Scalars['ID']['input'];
 };
 
-export type MutationAddItemToPantryArgs = {
-  input: AddPantryItemInput;
-};
-
 export type MutationAddItemToShoppingListArgs = {
   input: CreateShoppingListItemInput;
 };
@@ -2434,27 +2602,8 @@ export type MutationAddItemUnitArgs = {
   itemId: Scalars['ID']['input'];
 };
 
-export type MutationAddRecipeArgs = {
-  category?: InputMaybe<RecipeCategory>;
-  cookTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
-  difficulty?: InputMaybe<Difficulty>;
-  ingredients: Array<Scalars['String']['input']>;
-  instructions: Scalars['JSON']['input'];
-  name: Scalars['String']['input'];
-  prepTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
-  servings?: InputMaybe<Scalars['Int']['input']>;
-};
-
-export type MutationAddRecipeIngredientToShoppingListArgs = {
-  quantityOverride?: InputMaybe<Scalars['Float']['input']>;
-  recipeIngredientId: Scalars['ID']['input'];
-  shoppingListId: Scalars['ID']['input'];
-};
-
-export type MutationAddRecipeToShoppingListArgs = {
-  recipeId: Scalars['ID']['input'];
-  servings?: InputMaybe<Scalars['Int']['input']>;
-  shoppingListId: Scalars['ID']['input'];
+export type MutationAddRestrictionArgs = {
+  input: AddRestrictionInput;
 };
 
 export type MutationAddRestrictionsArgs = {
@@ -2471,6 +2620,10 @@ export type MutationAddWarningArgs = {
 
 export type MutationAdminDeleteUserArgs = {
   id: Scalars['ID']['input'];
+};
+
+export type MutationApproveItemArgs = {
+  itemId: Scalars['ID']['input'];
 };
 
 export type MutationArchiveShoppingListArgs = {
@@ -2604,6 +2757,14 @@ export type MutationCreatePantryArgs = {
   input: CreatePantryInput;
 };
 
+export type MutationCreatePantryItemArgs = {
+  input: CreatePantryItemInput;
+};
+
+export type MutationCreatePantryItemUsageArgs = {
+  input: RecordPantryItemUsageInput;
+};
+
 export type MutationCreateProfileArgs = {
   input: CreateUserProfileInput;
 };
@@ -2612,8 +2773,28 @@ export type MutationCreatePurchaseArgs = {
   input: CreatePurchaseInput;
 };
 
+export type MutationCreateRecipeArgs = {
+  input: CreateRecipeInput;
+};
+
 export type MutationCreateShoppingListArgs = {
   input: CreateShoppingListInput;
+};
+
+export type MutationCreateShoppingListItemFromRecipeIngredientArgs = {
+  quantityOverride?: InputMaybe<Scalars['Float']['input']>;
+  recipeIngredientId: Scalars['ID']['input'];
+  shoppingListId: Scalars['ID']['input'];
+};
+
+export type MutationCreateShoppingListItemsFromRecipeArgs = {
+  recipeId: Scalars['ID']['input'];
+  servings?: InputMaybe<Scalars['Int']['input']>;
+  shoppingListId: Scalars['ID']['input'];
+};
+
+export type MutationCreateStorageLocationArgs = {
+  input: CreateStorageLocationInput;
 };
 
 export type MutationCreateStoreArgs = {
@@ -2698,6 +2879,10 @@ export type MutationDeletePantryArgs = {
   id: Scalars['ID']['input'];
 };
 
+export type MutationDeletePantryItemArgs = {
+  id: Scalars['ID']['input'];
+};
+
 export type MutationDeletePurchaseArgs = {
   id: Scalars['ID']['input'];
 };
@@ -2707,6 +2892,10 @@ export type MutationDeleteRecipeArgs = {
 };
 
 export type MutationDeleteShoppingListArgs = {
+  id: Scalars['ID']['input'];
+};
+
+export type MutationDeleteStorageLocationArgs = {
   id: Scalars['ID']['input'];
 };
 
@@ -2722,13 +2911,26 @@ export type MutationDeleteUserAddressArgs = {
   id: Scalars['ID']['input'];
 };
 
+export type MutationDismissExpirationNotificationArgs = {
+  input: DismissNotificationInput;
+};
+
 export type MutationExportItemsArgs = {
   filters?: InputMaybe<ItemFilters>;
   format: ExportFormat;
 };
 
+export type MutationFavoriteRecipeArgs = {
+  input: FavoriteRecipeInput;
+};
+
 export type MutationFlagDeviceAsEmulatorArgs = {
   id: Scalars['ID']['input'];
+};
+
+export type MutationFlagItemForReviewArgs = {
+  itemId: Scalars['ID']['input'];
+  reason?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type MutationFlagLoginAsRiskyArgs = {
@@ -2781,6 +2983,10 @@ export type MutationIncrementItemPopularityArgs = {
   id: Scalars['ID']['input'];
 };
 
+export type MutationIncrementRecipeCookedCountArgs = {
+  recipeId: Scalars['ID']['input'];
+};
+
 export type MutationInviteToHomeArgs = {
   input: InviteToHomeInput;
 };
@@ -2823,12 +3029,12 @@ export type MutationMarkAsTemplateArgs = {
   input: MarkAsTemplateInput;
 };
 
-export type MutationMarkItemAsWasteArgs = {
-  id: Scalars['ID']['input'];
-  isComposted?: InputMaybe<Scalars['Boolean']['input']>;
-  isRecycled?: InputMaybe<Scalars['Boolean']['input']>;
-  wasteAmount: Scalars['Float']['input'];
-  wasteReason: WasteReason;
+export type MutationMarkExpirationActionArgs = {
+  input: MarkActionInput;
+};
+
+export type MutationMarkExpirationNotificationAsReadArgs = {
+  notificationId: Scalars['ID']['input'];
 };
 
 export type MutationMarkItemPurchasedArgs = {
@@ -2873,8 +3079,12 @@ export type MutationRecordLoginAttemptArgs = {
   input: LoginAttemptInput;
 };
 
-export type MutationRecordPantryItemUsageArgs = {
-  input: RecordPantryItemUsageInput;
+export type MutationRecordPantryItemWasteArgs = {
+  id: Scalars['ID']['input'];
+  isComposted?: InputMaybe<Scalars['Boolean']['input']>;
+  isRecycled?: InputMaybe<Scalars['Boolean']['input']>;
+  wasteAmount: Scalars['Float']['input'];
+  wasteReason: WasteReason;
 };
 
 export type MutationRecordPriceObservationArgs = {
@@ -2896,6 +3106,10 @@ export type MutationRegisterDeviceArgs = {
   input: DeviceRegistrationInput;
 };
 
+export type MutationRejectItemArgs = {
+  input: RejectItemInput;
+};
+
 export type MutationRemoveCollaboratorArgs = {
   data: RemoveCollaboratorInput;
 };
@@ -2908,10 +3122,6 @@ export type MutationRemoveItemBrandArgs = {
 export type MutationRemoveItemFromCategoryArgs = {
   categoryId: Scalars['ID']['input'];
   itemId: Scalars['ID']['input'];
-};
-
-export type MutationRemoveItemFromPantryArgs = {
-  id: Scalars['ID']['input'];
 };
 
 export type MutationRemoveItemFromShoppingListArgs = {
@@ -2937,6 +3147,10 @@ export type MutationRemoveMemberArgs = {
 
 export type MutationRemovePushTokenArgs = {
   id: Scalars['ID']['input'];
+};
+
+export type MutationRemoveRestrictionArgs = {
+  input: RemoveRestrictionInput;
 };
 
 export type MutationRemoveRestrictionsArgs = {
@@ -2974,10 +3188,6 @@ export type MutationReviewAppealArgs = {
 
 export type MutationRevokeHomeInviteArgs = {
   id: Scalars['ID']['input'];
-};
-
-export type MutationSaveRecipeArgs = {
-  input: SaveRecipeInput;
 };
 
 export type MutationSendBulkNotificationsArgs = {
@@ -3087,6 +3297,10 @@ export type MutationUncompleteShoppingListArgs = {
   id: Scalars['ID']['input'];
 };
 
+export type MutationUnfavoriteRecipeArgs = {
+  recipeId: Scalars['ID']['input'];
+};
+
 export type MutationUnsuspendUserArgs = {
   userId: Scalars['ID']['input'];
 };
@@ -3152,6 +3366,15 @@ export type MutationUpdateDeviceLocationArgs = {
 export type MutationUpdateDevicePeripheralsArgs = {
   id: Scalars['ID']['input'];
   peripherals: DevicePeripheralsInput;
+};
+
+export type MutationUpdateDietaryProfileArgs = {
+  input: UpdateDietaryProfileInput;
+};
+
+export type MutationUpdateFavoriteRecipeArgs = {
+  input: UpdateFavoriteRecipeInput;
+  recipeId: Scalars['ID']['input'];
 };
 
 export type MutationUpdateHomeArgs = {
@@ -3236,7 +3459,7 @@ export type MutationUpdateNotificationArgs = {
 };
 
 export type MutationUpdateNotificationPreferencesArgs = {
-  input: NotificationPreferencesInput;
+  input: UpdateNotificationPreferencesInput;
 };
 
 export type MutationUpdatePantryArgs = {
@@ -3276,6 +3499,10 @@ export type MutationUpdateRecipeArgs = {
   input: UpdateRecipeInput;
 };
 
+export type MutationUpdateRestrictionArgs = {
+  input: UpdateRestrictionInput;
+};
+
 export type MutationUpdateRiskScoreArgs = {
   riskScore: Scalars['Float']['input'];
   userId: Scalars['ID']['input'];
@@ -3293,6 +3520,11 @@ export type MutationUpdateShoppingListArgs = {
 export type MutationUpdateShoppingListItemArgs = {
   id: Scalars['ID']['input'];
   input: UpdateShoppingListItemInput;
+};
+
+export type MutationUpdateStorageLocationArgs = {
+  id: Scalars['ID']['input'];
+  input: UpdateStorageLocationInput;
 };
 
 export type MutationUpdateStoreArgs = {
@@ -3419,6 +3651,15 @@ export type NotificationConnection = Connection & {
   unreadCount: Scalars['Int']['output'];
 };
 
+export enum NotificationDeliveryStatus {
+  Cancelled = 'CANCELLED',
+  Dismissed = 'DISMISSED',
+  Failed = 'FAILED',
+  Pending = 'PENDING',
+  Read = 'READ',
+  Sent = 'SENT',
+}
+
 export type NotificationEdge = Edge & {
   __typename?: 'NotificationEdge';
   cursor: Scalars['String']['output'];
@@ -3460,13 +3701,38 @@ export type NotificationPayload = {
 export type NotificationPreferences = {
   __typename?: 'NotificationPreferences';
   categories: Array<Scalars['String']['output']>;
+  collaborationInvites: Scalars['Boolean']['output'];
+  cookingReminders: Scalars['Boolean']['output'];
+  createdAt: Scalars['DateTime']['output'];
   email: Scalars['Boolean']['output'];
+  emailEnabled: Scalars['Boolean']['output'];
+  expirationDaysThreshold: Scalars['Int']['output'];
+  expirationNotificationFrequency: ExpirationFrequency;
+  expirationNotifications: Scalars['Boolean']['output'];
+  homeInvites: Scalars['Boolean']['output'];
+  id: Scalars['ID']['output'];
   inApp: Scalars['Boolean']['output'];
+  lowStockAlerts: Scalars['Boolean']['output'];
+  mealPlanReminders: Scalars['Boolean']['output'];
+  monthlyReport: Scalars['Boolean']['output'];
+  pantryChanges: Scalars['Boolean']['output'];
   push: Scalars['Boolean']['output'];
+  pushEnabled: Scalars['Boolean']['output'];
   quietHours: Maybe<QuietHours>;
+  quietHoursEnabled: Scalars['Boolean']['output'];
+  quietHoursEnd: Maybe<Scalars['String']['output']>;
+  quietHoursStart: Maybe<Scalars['String']['output']>;
+  quietHoursTimezone: Maybe<Scalars['String']['output']>;
+  recipeRecommendations: Scalars['Boolean']['output'];
+  sharedListUpdates: Scalars['Boolean']['output'];
+  shoppingListUpdates: Scalars['Boolean']['output'];
   sms: Scalars['Boolean']['output'];
+  smsEnabled: Scalars['Boolean']['output'];
   types: Array<NotificationType>;
+  updatedAt: Scalars['DateTime']['output'];
+  user: User;
   userId: Scalars['String']['output'];
+  weeklyDigest: Scalars['Boolean']['output'];
 };
 
 export type NotificationPreferencesInput = {
@@ -3682,7 +3948,7 @@ export type PantryItem = {
   purchaseId: Maybe<Scalars['String']['output']>;
   remainingValue: Maybe<Scalars['Float']['output']>;
   reservedQuantity: Scalars['Float']['output'];
-  storageLocation: Maybe<Scalars['String']['output']>;
+  storageLocation: Maybe<StorageLocation>;
   storageNotes: Maybe<Scalars['String']['output']>;
   storageState: StorageState;
   store: Maybe<Store>;
@@ -3710,6 +3976,17 @@ export type PantryItemChangedPayload = {
   timestamp: Scalars['DateTime']['output'];
   updatedFields: Array<Scalars['String']['output']>;
   userId: Scalars['String']['output'];
+};
+
+export type PantryItemFilters = {
+  condition?: InputMaybe<ItemCondition>;
+  expirationDays?: InputMaybe<Scalars['Int']['input']>;
+  expiringSoon?: InputMaybe<Scalars['Boolean']['input']>;
+  itemId?: InputMaybe<Scalars['String']['input']>;
+  lowStock?: InputMaybe<Scalars['Boolean']['input']>;
+  search?: InputMaybe<Scalars['String']['input']>;
+  storageState?: InputMaybe<StorageState>;
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
 };
 
 export type PantryItemPhoto = {
@@ -3923,7 +4200,6 @@ export type Query = {
   _empty: Maybe<Scalars['String']['output']>;
   activeDevices: Array<Device>;
   activeModerations: Array<UserModeration>;
-  archivedShoppingLists: Array<ShoppingList>;
   autocompleteCategories: AutocompleteCategoryResponse;
   autocompleteItems: Maybe<AutocompleteResponse>;
   brand: Maybe<Brand>;
@@ -3933,7 +4209,6 @@ export type Query = {
   categoryBySlug: Maybe<Category>;
   checkItemAvailability: Maybe<Array<ItemAvailability>>;
   compareItemPrices: Maybe<Array<StorePriceComparison>>;
-  completedShoppingLists: Array<ShoppingList>;
   convertUnit: Maybe<ConvertedUnitValue>;
   cookingLog: Maybe<CookingLog>;
   currencies: Array<Currency>;
@@ -3947,8 +4222,9 @@ export type Query = {
   devicesByManufacturer: Array<Device>;
   devicesByPlatform: Array<Device>;
   devicesWithPeripherals: Array<Device>;
+  dietaryProfile: Maybe<DietaryProfile>;
   emulatedDevices: Array<Device>;
-  expiringItems: Array<PantryItem>;
+  expirationNotification: Maybe<ExpirationNotification>;
   failedLoginAttempts: Array<LoginHistory>;
   frequentlyBoughtItems: Array<ShoppingListItem>;
   getConvertibleUnits: Array<Unit>;
@@ -3978,7 +4254,6 @@ export type Query = {
   loginHistoryForUser: Array<LoginHistory>;
   loginHistoryStats: LoginHistoryStats;
   lowBatteryDevices: Array<Device>;
-  lowStockItems: Array<PantryItem>;
   me: Maybe<User>;
   mealPlan: Maybe<MealPlan>;
   mealPlans: Array<MealPlan>;
@@ -3989,16 +4264,19 @@ export type Query = {
   myCookingLogs: Array<CookingLog>;
   myCookingStats: Maybe<CookingStats>;
   myDevices: Array<Device>;
+  myDietaryProfile: Maybe<DietaryProfile>;
+  myExpirationNotifications: Array<ExpirationNotification>;
   myHomes: Maybe<Array<Home>>;
   myInviteLogs: Array<InviteLog>;
   myMembershipInHome: Maybe<Membership>;
   myMemberships: Maybe<Array<Membership>>;
   myModeration: Maybe<UserModeration>;
+  myNotificationPreferences: Maybe<NotificationPreferences>;
   myNotifications: NotificationConnection;
   myPendingCollaborationInvites: Array<ShoppingListCollaborator>;
   myPendingInvites: Array<HomeInvite>;
   myPurchases: Array<Purchase>;
-  myRecipes: RecipesResponse;
+  mySavedRecipes: Array<SavedRecipe>;
   myShoppingListInvites: Array<ShoppingListCollaborator>;
   nearbyStores: Array<Store>;
   notification: Maybe<Notification>;
@@ -4006,17 +4284,14 @@ export type Query = {
   notificationStats: NotificationStats;
   notificationsByCategory: NotificationConnection;
   notificationsByType: NotificationConnection;
-  onboardingItems: Array<Item>;
   pantries: Array<Pantry>;
   pantry: Maybe<Pantry>;
   pantryItem: PantryItem;
   pantryItemUsage: Array<PantryItemUsage>;
   pantryItems: Array<PantryItem>;
-  pantryItemsByItemId: Array<PantryItem>;
   pantryStats: PantryStats;
   popularBrands: Array<Brand>;
   popularCategories: Array<Category>;
-  popularItems: Maybe<Array<Item>>;
   popularStores: Array<Store>;
   purchase: Maybe<Purchase>;
   purchaseStats: PurchaseStats;
@@ -4024,16 +4299,18 @@ export type Query = {
   purchasesByItem: Array<Purchase>;
   purchasesByShoppingListItem: Array<Purchase>;
   purchasesByStore: Array<Purchase>;
-  recentItems: Maybe<Array<Item>>;
   recentNotifications: Array<Notification>;
   recipe: Maybe<Recipe>;
   recipeCookingLogs: Array<CookingLog>;
+  recipeSuggestions: Array<Recipe>;
+  recipes: RecipesResponse;
   recommendedItems: Maybe<Array<ItemSuggestion>>;
   recommendedStores: Array<Store>;
-  recurringShoppingLists: Array<ShoppingList>;
   relatedItems: Maybe<RelatedItemsResponse>;
   rootBrands: Array<Brand>;
   rootCategories: Array<Category>;
+  savedRecipe: Maybe<SavedRecipe>;
+  savedRecipeFolders: Array<Scalars['String']['output']>;
   searchDevicesByUserAgent: Array<Device>;
   searchItems: Maybe<ItemsResponse>;
   searchLoginHistory: Array<LoginHistory>;
@@ -4046,9 +4323,11 @@ export type Query = {
   shoppingListCollaborators: Array<ShoppingListCollaborator>;
   shoppingListItem: Maybe<ShoppingListItem>;
   shoppingListItems: Array<ShoppingListItem>;
-  shoppingListTemplates: Array<ShoppingList>;
   shoppingLists: Array<ShoppingList>;
   staleDevices: Array<Device>;
+  storageLocation: Maybe<StorageLocation>;
+  storageLocationTree: Array<StorageLocation>;
+  storageLocations: Array<StorageLocation>;
   store: Maybe<Store>;
   storeByName: Maybe<Store>;
   storeStats: Maybe<StoreStats>;
@@ -4056,12 +4335,10 @@ export type Query = {
   storeWithPurchases: Maybe<Store>;
   stores: Array<Store>;
   suggestedItemsForList: Array<ItemSuggestion>;
-  suggestedRecipes: Array<Recipe>;
   suspiciousDevices: Array<Device>;
   suspiciousInviteActivity: Array<InviteLog>;
   suspiciousLoginActivity: SuspiciousActivity;
   tabletDevices: Array<Device>;
-  trendingItems: Maybe<Array<Item>>;
   trustedDevices: Array<Device>;
   unit: Maybe<Unit>;
   unitBySymbol: Maybe<Unit>;
@@ -4183,12 +4460,16 @@ export type QueryDevicesWithPeripheralsArgs = {
   userId: Scalars['ID']['input'];
 };
 
+export type QueryDietaryProfileArgs = {
+  userId: Scalars['ID']['input'];
+};
+
 export type QueryEmulatedDevicesArgs = {
   userId: Scalars['ID']['input'];
 };
 
-export type QueryExpiringItemsArgs = {
-  pantryId: Scalars['ID']['input'];
+export type QueryExpirationNotificationArgs = {
+  id: Scalars['ID']['input'];
 };
 
 export type QueryFailedLoginAttemptsArgs = {
@@ -4307,10 +4588,6 @@ export type QueryLowBatteryDevicesArgs = {
   userId: Scalars['ID']['input'];
 };
 
-export type QueryLowStockItemsArgs = {
-  pantryId: Scalars['ID']['input'];
-};
-
 export type QueryMealPlanArgs = {
   id: Scalars['ID']['input'];
 };
@@ -4343,6 +4620,10 @@ export type QueryMyDevicesArgs = {
   filters?: InputMaybe<DeviceFiltersInput>;
 };
 
+export type QueryMyExpirationNotificationsArgs = {
+  input?: InputMaybe<GetExpirationNotificationsInput>;
+};
+
 export type QueryMyInviteLogsArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
 };
@@ -4360,12 +4641,8 @@ export type QueryMyNotificationsArgs = {
   orderBy?: InputMaybe<NotificationOrderBy>;
 };
 
-export type QueryMyRecipesArgs = {
-  category?: InputMaybe<RecipeCategory>;
-  difficulty?: InputMaybe<Difficulty>;
-  includeDeleted?: InputMaybe<Scalars['Boolean']['input']>;
-  skip?: InputMaybe<Scalars['Int']['input']>;
-  take?: InputMaybe<Scalars['Int']['input']>;
+export type QueryMySavedRecipesArgs = {
+  folder?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type QueryNearbyStoresArgs = {
@@ -4376,6 +4653,10 @@ export type QueryNearbyStoresArgs = {
 
 export type QueryNotificationArgs = {
   id: Scalars['ID']['input'];
+};
+
+export type QueryNotificationPreferencesArgs = {
+  userId: Scalars['ID']['input'];
 };
 
 export type QueryNotificationStatsArgs = {
@@ -4411,12 +4692,8 @@ export type QueryPantryItemUsageArgs = {
 };
 
 export type QueryPantryItemsArgs = {
-  filter?: InputMaybe<Scalars['String']['input']>;
+  filters?: InputMaybe<PantryItemFilters>;
   pantryId: Scalars['ID']['input'];
-};
-
-export type QueryPantryItemsByItemIdArgs = {
-  itemId: Scalars['String']['input'];
 };
 
 export type QueryPantryStatsArgs = {
@@ -4430,12 +4707,6 @@ export type QueryPopularBrandsArgs = {
 export type QueryPopularCategoriesArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
   type?: InputMaybe<CategoryType>;
-};
-
-export type QueryPopularItemsArgs = {
-  category?: InputMaybe<Scalars['String']['input']>;
-  limit?: InputMaybe<Scalars['Int']['input']>;
-  timeRange?: InputMaybe<DateRange>;
 };
 
 export type QueryPopularStoresArgs = {
@@ -4470,11 +4741,6 @@ export type QueryPurchasesByStoreArgs = {
   userId?: InputMaybe<Scalars['ID']['input']>;
 };
 
-export type QueryRecentItemsArgs = {
-  limit?: InputMaybe<Scalars['Int']['input']>;
-  userId?: InputMaybe<Scalars['String']['input']>;
-};
-
 export type QueryRecentNotificationsArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
 };
@@ -4489,6 +4755,14 @@ export type QueryRecipeCookingLogsArgs = {
   recipeId: Scalars['ID']['input'];
 };
 
+export type QueryRecipesArgs = {
+  category?: InputMaybe<RecipeCategory>;
+  difficulty?: InputMaybe<Difficulty>;
+  includeDeleted?: InputMaybe<Scalars['Boolean']['input']>;
+  skip?: InputMaybe<Scalars['Int']['input']>;
+  take?: InputMaybe<Scalars['Int']['input']>;
+};
+
 export type QueryRecommendedItemsArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
   userId?: InputMaybe<Scalars['String']['input']>;
@@ -4500,6 +4774,10 @@ export type QueryRelatedItemsArgs = {
 
 export type QueryRootCategoriesArgs = {
   type?: InputMaybe<CategoryType>;
+};
+
+export type QuerySavedRecipeArgs = {
+  recipeId: Scalars['ID']['input'];
 };
 
 export type QuerySearchDevicesByUserAgentArgs = {
@@ -4552,9 +4830,25 @@ export type QueryShoppingListItemsArgs = {
   shoppingListId: Scalars['ID']['input'];
 };
 
+export type QueryShoppingListsArgs = {
+  filters?: InputMaybe<ShoppingListFilters>;
+};
+
 export type QueryStaleDevicesArgs = {
   daysInactive?: InputMaybe<Scalars['Int']['input']>;
   userId: Scalars['ID']['input'];
+};
+
+export type QueryStorageLocationArgs = {
+  id: Scalars['ID']['input'];
+};
+
+export type QueryStorageLocationTreeArgs = {
+  homeId: Scalars['ID']['input'];
+};
+
+export type QueryStorageLocationsArgs = {
+  homeId: Scalars['ID']['input'];
 };
 
 export type QueryStoreArgs = {
@@ -4597,11 +4891,6 @@ export type QuerySuspiciousLoginActivityArgs = {
 
 export type QueryTabletDevicesArgs = {
   userId: Scalars['ID']['input'];
-};
-
-export type QueryTrendingItemsArgs = {
-  category?: InputMaybe<Scalars['String']['input']>;
-  limit?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type QueryTrustedDevicesArgs = {
@@ -4704,6 +4993,7 @@ export type Recipe = {
   instructions: Scalars['JSON']['output'];
   isExternal: Scalars['Boolean']['output'];
   isPublished: Scalars['Boolean']['output'];
+  isSaved: Scalars['Boolean']['output'];
   matchPercentage: Maybe<Scalars['Float']['output']>;
   mealPlanItems: Array<MealPlanItem>;
   name: Scalars['String']['output'];
@@ -4719,6 +5009,7 @@ export type Recipe = {
   rating4Count: Scalars['Int']['output'];
   rating5Count: Scalars['Int']['output'];
   reviews: Array<RecipeReview>;
+  savedDetails: Maybe<SavedRecipe>;
   servings: Scalars['Int']['output'];
   source: Maybe<Scalars['String']['output']>;
   sourceMapping: Maybe<RecipeSourceMapping>;
@@ -4728,6 +5019,7 @@ export type Recipe = {
   tips: Maybe<Scalars['String']['output']>;
   totalCookingLogs: Scalars['Int']['output'];
   totalReviews: Scalars['Int']['output'];
+  totalSaves: Scalars['Int']['output'];
   totalTimeMinutes: Maybe<Scalars['Int']['output']>;
   updatedAt: Scalars['DateTime']['output'];
   version: Scalars['Int']['output'];
@@ -4752,50 +5044,66 @@ export enum RecipeCategory {
 
 export type RecipeIngredient = {
   __typename?: 'RecipeIngredient';
-  aisle: Maybe<Scalars['String']['output']>;
   availablePantryItemIds: Array<Scalars['String']['output']>;
-  consistency: Maybe<Scalars['String']['output']>;
+  externalSources: Array<RecipeIngredientSourceMapping>;
   id: Scalars['ID']['output'];
   image: Maybe<Scalars['String']['output']>;
   isOptional: Scalars['Boolean']['output'];
   item: Maybe<Item>;
-  meta: Array<Scalars['String']['output']>;
-  metricAmount: Maybe<Scalars['Float']['output']>;
-  metricUnit: Maybe<Scalars['String']['output']>;
   name: Scalars['String']['output'];
   notes: Maybe<Scalars['String']['output']>;
-  originalString: Maybe<Scalars['String']['output']>;
   preparation: Maybe<Scalars['String']['output']>;
   quantity: Scalars['Float']['output'];
   recipe: Recipe;
   section: Maybe<Scalars['String']['output']>;
   sortOrder: Scalars['Int']['output'];
-  spoonacularIngredientId: Maybe<Scalars['Int']['output']>;
   unit: Maybe<Unit>;
-  usAmount: Maybe<Scalars['Float']['output']>;
-  usUnit: Maybe<Scalars['String']['output']>;
 };
 
 export type RecipeIngredientInput = {
-  aisle?: InputMaybe<Scalars['String']['input']>;
-  consistency?: InputMaybe<Scalars['String']['input']>;
+  externalSources?: InputMaybe<Array<RecipeIngredientSourceInput>>;
   image?: InputMaybe<Scalars['String']['input']>;
   isOptional?: InputMaybe<Scalars['Boolean']['input']>;
   itemId?: InputMaybe<Scalars['String']['input']>;
-  meta?: InputMaybe<Array<Scalars['String']['input']>>;
-  metricAmount?: InputMaybe<Scalars['Float']['input']>;
-  metricUnit?: InputMaybe<Scalars['String']['input']>;
   name: Scalars['String']['input'];
   notes?: InputMaybe<Scalars['String']['input']>;
-  originalString?: InputMaybe<Scalars['String']['input']>;
   preparation?: InputMaybe<Scalars['String']['input']>;
   quantity: Scalars['Float']['input'];
   section?: InputMaybe<Scalars['String']['input']>;
   sortOrder?: InputMaybe<Scalars['Int']['input']>;
-  spoonacularIngredientId?: InputMaybe<Scalars['Int']['input']>;
   unitId?: InputMaybe<Scalars['String']['input']>;
-  usAmount?: InputMaybe<Scalars['Float']['input']>;
-  usUnit?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type RecipeIngredientSourceInput = {
+  aisle?: InputMaybe<Scalars['String']['input']>;
+  consistency?: InputMaybe<Scalars['String']['input']>;
+  data?: InputMaybe<Scalars['JSON']['input']>;
+  externalId: Scalars['String']['input'];
+  imageUrl?: InputMaybe<Scalars['String']['input']>;
+  isPrimary?: InputMaybe<Scalars['Boolean']['input']>;
+  metadata?: InputMaybe<Scalars['JSON']['input']>;
+  originalName?: InputMaybe<Scalars['String']['input']>;
+  originalString?: InputMaybe<Scalars['String']['input']>;
+  source: ExternalSource;
+};
+
+export type RecipeIngredientSourceMapping = {
+  __typename?: 'RecipeIngredientSourceMapping';
+  aisle: Maybe<Scalars['String']['output']>;
+  consistency: Maybe<Scalars['String']['output']>;
+  createdAt: Scalars['DateTime']['output'];
+  data: Maybe<Scalars['JSON']['output']>;
+  externalId: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  imageUrl: Maybe<Scalars['String']['output']>;
+  isPrimary: Scalars['Boolean']['output'];
+  lastSyncedAt: Scalars['DateTime']['output'];
+  metadata: Maybe<Scalars['JSON']['output']>;
+  originalName: Maybe<Scalars['String']['output']>;
+  originalString: Maybe<Scalars['String']['output']>;
+  recipeIngredient: RecipeIngredient;
+  source: ExternalSource;
+  updatedAt: Scalars['DateTime']['output'];
 };
 
 export type RecipeReview = {
@@ -4869,6 +5177,12 @@ export type RegisterInput = {
   password: Scalars['String']['input'];
 };
 
+export type RejectItemInput = {
+  itemId: Scalars['ID']['input'];
+  notifyUser?: InputMaybe<Scalars['Boolean']['input']>;
+  reason: Scalars['String']['input'];
+};
+
 export type RelatedItemsResponse = {
   __typename?: 'RelatedItemsResponse';
   complementaryItems: Array<ItemSuggestion>;
@@ -4879,6 +5193,10 @@ export type RelatedItemsResponse = {
 export type RemoveCollaboratorInput = {
   email?: InputMaybe<Scalars['String']['input']>;
   shoppingListId: Scalars['ID']['input'];
+};
+
+export type RemoveRestrictionInput = {
+  id: Scalars['ID']['input'];
 };
 
 export type RemoveRestrictionsInput = {
@@ -4901,6 +5219,13 @@ export type ResetPasswordResponse = {
   message: Scalars['String']['output'];
   success: Scalars['Boolean']['output'];
 };
+
+export enum RestrictionSeverity {
+  Allergy = 'ALLERGY',
+  Goal = 'GOAL',
+  Intolerance = 'INTOLERANCE',
+  Preference = 'PREFERENCE',
+}
 
 export type ReviewAppealInput = {
   approved: Scalars['Boolean']['input'];
@@ -4931,25 +5256,21 @@ export enum RiskFactor {
   VpnDetected = 'VPN_DETECTED',
 }
 
-export type SaveRecipeInput = {
-  caloriesPerServing?: InputMaybe<Scalars['Float']['input']>;
-  category?: InputMaybe<RecipeCategory>;
-  cookTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
-  cuisine?: InputMaybe<Scalars['String']['input']>;
-  description?: InputMaybe<Scalars['String']['input']>;
-  dietaryTags?: InputMaybe<Array<DietaryTag>>;
-  difficulty?: InputMaybe<Difficulty>;
-  externalSourceData?: InputMaybe<Scalars['JSON']['input']>;
-  externalSourceId?: InputMaybe<Scalars['String']['input']>;
-  externalSourceUrl?: InputMaybe<Scalars['String']['input']>;
-  imageUrl?: InputMaybe<Scalars['String']['input']>;
-  ingredients: Array<RecipeIngredientInput>;
-  instructions: Scalars['JSON']['input'];
-  name: Scalars['String']['input'];
-  nutritionData?: InputMaybe<Scalars['JSON']['input']>;
-  prepTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
-  servings?: InputMaybe<Scalars['Int']['input']>;
-  source?: InputMaybe<Scalars['String']['input']>;
+export type SavedRecipe = {
+  __typename?: 'SavedRecipe';
+  cookedCount: Scalars['Int']['output'];
+  createdAt: Scalars['DateTime']['output'];
+  folder: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  lastCookedAt: Maybe<Scalars['DateTime']['output']>;
+  notes: Maybe<Scalars['String']['output']>;
+  personalRating: Maybe<Scalars['Int']['output']>;
+  recipe: Recipe;
+  recipeId: Scalars['String']['output'];
+  tags: Array<Scalars['String']['output']>;
+  updatedAt: Scalars['DateTime']['output'];
+  user: User;
+  userId: Scalars['String']['output'];
 };
 
 export type SearchFacets = {
@@ -5101,10 +5422,22 @@ export type ShoppingListCollaboratorChangedPayload = {
   userId: Scalars['ID']['output'];
 };
 
+export type ShoppingListFilters = {
+  isArchived?: InputMaybe<Scalars['Boolean']['input']>;
+  isCompleted?: InputMaybe<Scalars['Boolean']['input']>;
+  isDefault?: InputMaybe<Scalars['Boolean']['input']>;
+  isRecurring?: InputMaybe<Scalars['Boolean']['input']>;
+  isTemplate?: InputMaybe<Scalars['Boolean']['input']>;
+  search?: InputMaybe<Scalars['String']['input']>;
+  status?: InputMaybe<ListStatus>;
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
+};
+
 export type ShoppingListItem = {
   __typename?: 'ShoppingListItem';
   addedBy: Maybe<User>;
   addedById: Maybe<Scalars['String']['output']>;
+  addedContext: Maybe<Scalars['String']['output']>;
   aisle: Maybe<Scalars['String']['output']>;
   autoAddReason: Maybe<Scalars['String']['output']>;
   averagePrice: Maybe<Scalars['Float']['output']>;
@@ -5140,6 +5473,8 @@ export type ShoppingListItem = {
   purchasedQuantity: Maybe<Scalars['Float']['output']>;
   purchases: Maybe<Array<Purchase>>;
   quantity: Maybe<Scalars['Float']['output']>;
+  recipe: Maybe<Recipe>;
+  recipeIngredient: Maybe<RecipeIngredient>;
   shoppingList: ShoppingList;
   sortOrder: Scalars['Int']['output'];
   storeSection: Maybe<Scalars['String']['output']>;
@@ -5228,11 +5563,54 @@ export enum SortOrder {
   Desc = 'DESC',
 }
 
+export type StorageLocation = {
+  __typename?: 'StorageLocation';
+  capacity: Maybe<Scalars['Float']['output']>;
+  capacityUnit: Maybe<Scalars['String']['output']>;
+  childLocations: Array<StorageLocation>;
+  color: Maybe<Scalars['String']['output']>;
+  createdAt: Scalars['DateTime']['output'];
+  currentItemCount: Scalars['Int']['output'];
+  deletedAt: Maybe<Scalars['DateTime']['output']>;
+  description: Maybe<Scalars['String']['output']>;
+  home: Home;
+  homeId: Scalars['String']['output'];
+  icon: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  isActive: Scalars['Boolean']['output'];
+  isClimateControlled: Scalars['Boolean']['output'];
+  isDefault: Scalars['Boolean']['output'];
+  name: Scalars['String']['output'];
+  pantryItems: Array<PantryItem>;
+  parentLocation: Maybe<StorageLocation>;
+  parentLocationId: Maybe<Scalars['String']['output']>;
+  sortOrder: Scalars['Int']['output'];
+  temperature: Maybe<StorageState>;
+  type: StorageType;
+  updatedAt: Scalars['DateTime']['output'];
+};
+
 export enum StorageState {
   Ambient = 'AMBIENT',
   Frozen = 'FROZEN',
   None = 'NONE',
   Refrigerated = 'REFRIGERATED',
+}
+
+export enum StorageType {
+  Basement = 'BASEMENT',
+  BoatStorage = 'BOAT_STORAGE',
+  Cabinet = 'CABINET',
+  Closet = 'CLOSET',
+  Counter = 'COUNTER',
+  Custom = 'CUSTOM',
+  Drawer = 'DRAWER',
+  Freezer = 'FREEZER',
+  Garage = 'GARAGE',
+  Outdoor = 'OUTDOOR',
+  PantryShelf = 'PANTRY_SHELF',
+  Refrigerator = 'REFRIGERATOR',
+  RvStorage = 'RV_STORAGE',
 }
 
 export type Store = {
@@ -5337,6 +5715,8 @@ export type Subscription = {
   deviceStatusChanged: Device;
   deviceTrustChanged: Device;
   deviceVerified: Device;
+  expirationNotificationCreated: ExpirationNotification;
+  expirationNotificationUpdated: ExpirationNotification;
   failedLoginAttempts: LoginHistory;
   loginAttempts: LoginHistory;
   memberJoined: MembershipUpdatePayload;
@@ -5765,6 +6145,29 @@ export type UpdateDeviceInput = {
   userAgent?: InputMaybe<Scalars['String']['input']>;
 };
 
+export type UpdateDietaryProfileInput = {
+  budgetPerMeal?: InputMaybe<Scalars['Float']['input']>;
+  calorieTarget?: InputMaybe<Scalars['Int']['input']>;
+  carbsTarget?: InputMaybe<Scalars['Int']['input']>;
+  cookingSkillLevel?: InputMaybe<Scalars['String']['input']>;
+  dislikedIngredients?: InputMaybe<Array<Scalars['String']['input']>>;
+  fatTarget?: InputMaybe<Scalars['Int']['input']>;
+  favoriteIngredients?: InputMaybe<Array<Scalars['String']['input']>>;
+  maxCookTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
+  maxPrepTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
+  mealsPerDay?: InputMaybe<Scalars['Int']['input']>;
+  preferredCuisines?: InputMaybe<Array<Scalars['String']['input']>>;
+  proteinTarget?: InputMaybe<Scalars['Int']['input']>;
+  snacksPerDay?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type UpdateFavoriteRecipeInput = {
+  folder?: InputMaybe<Scalars['String']['input']>;
+  notes?: InputMaybe<Scalars['String']['input']>;
+  personalRating?: InputMaybe<Scalars['Int']['input']>;
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
+};
+
 export type UpdateHomeInput = {
   allowJoinCode?: InputMaybe<Scalars['Boolean']['input']>;
   currency?: InputMaybe<Scalars['String']['input']>;
@@ -5782,6 +6185,7 @@ export type UpdateItemInput = {
   addTags?: InputMaybe<Array<Scalars['String']['input']>>;
   addUnits?: InputMaybe<Array<ItemUnitInput>>;
   allergens?: InputMaybe<Scalars['JSON']['input']>;
+  alternateUpcs?: InputMaybe<Array<Scalars['String']['input']>>;
   brandId?: InputMaybe<Scalars['String']['input']>;
   brandName?: InputMaybe<Scalars['String']['input']>;
   categories?: InputMaybe<Array<CategoryInput>>;
@@ -5799,6 +6203,7 @@ export type UpdateItemInput = {
   name?: InputMaybe<Scalars['String']['input']>;
   netWeight?: InputMaybe<Scalars['Float']['input']>;
   popularity?: InputMaybe<Scalars['Int']['input']>;
+  primaryUpc?: InputMaybe<Scalars['String']['input']>;
   removeCategoryIds?: InputMaybe<Array<Scalars['String']['input']>>;
   removeStoreSkuIds?: InputMaybe<Array<Scalars['String']['input']>>;
   removeTags?: InputMaybe<Array<Scalars['String']['input']>>;
@@ -5894,6 +6299,30 @@ export type UpdateNotificationInput = {
   type?: InputMaybe<NotificationType>;
 };
 
+export type UpdateNotificationPreferencesInput = {
+  collaborationInvites?: InputMaybe<Scalars['Boolean']['input']>;
+  cookingReminders?: InputMaybe<Scalars['Boolean']['input']>;
+  emailEnabled?: InputMaybe<Scalars['Boolean']['input']>;
+  expirationDaysThreshold?: InputMaybe<Scalars['Int']['input']>;
+  expirationNotificationFrequency?: InputMaybe<ExpirationFrequency>;
+  expirationNotifications?: InputMaybe<Scalars['Boolean']['input']>;
+  homeInvites?: InputMaybe<Scalars['Boolean']['input']>;
+  lowStockAlerts?: InputMaybe<Scalars['Boolean']['input']>;
+  mealPlanReminders?: InputMaybe<Scalars['Boolean']['input']>;
+  monthlyReport?: InputMaybe<Scalars['Boolean']['input']>;
+  pantryChanges?: InputMaybe<Scalars['Boolean']['input']>;
+  pushEnabled?: InputMaybe<Scalars['Boolean']['input']>;
+  quietHoursEnabled?: InputMaybe<Scalars['Boolean']['input']>;
+  quietHoursEnd?: InputMaybe<Scalars['String']['input']>;
+  quietHoursStart?: InputMaybe<Scalars['String']['input']>;
+  quietHoursTimezone?: InputMaybe<Scalars['String']['input']>;
+  recipeRecommendations?: InputMaybe<Scalars['Boolean']['input']>;
+  sharedListUpdates?: InputMaybe<Scalars['Boolean']['input']>;
+  shoppingListUpdates?: InputMaybe<Scalars['Boolean']['input']>;
+  smsEnabled?: InputMaybe<Scalars['Boolean']['input']>;
+  weeklyDigest?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
 export type UpdatePantryInput = {
   description?: InputMaybe<Scalars['String']['input']>;
   isDefault?: InputMaybe<Scalars['Boolean']['input']>;
@@ -5974,6 +6403,12 @@ export type UpdateRecipeInput = {
   visibility?: InputMaybe<Visibility>;
 };
 
+export type UpdateRestrictionInput = {
+  id: Scalars['ID']['input'];
+  notes?: InputMaybe<Scalars['String']['input']>;
+  severity?: InputMaybe<RestrictionSeverity>;
+};
+
 export type UpdateShoppingListInput = {
   autoAddSuggestions?: InputMaybe<Scalars['Boolean']['input']>;
   budgetAmount?: InputMaybe<Scalars['Float']['input']>;
@@ -6011,6 +6446,22 @@ export type UpdateShoppingListItemInput = {
   storeSection?: InputMaybe<Scalars['String']['input']>;
   unitId?: InputMaybe<Scalars['ID']['input']>;
   unitName?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type UpdateStorageLocationInput = {
+  capacity?: InputMaybe<Scalars['Float']['input']>;
+  capacityUnit?: InputMaybe<Scalars['String']['input']>;
+  color?: InputMaybe<Scalars['String']['input']>;
+  description?: InputMaybe<Scalars['String']['input']>;
+  icon?: InputMaybe<Scalars['String']['input']>;
+  isActive?: InputMaybe<Scalars['Boolean']['input']>;
+  isClimateControlled?: InputMaybe<Scalars['Boolean']['input']>;
+  isDefault?: InputMaybe<Scalars['Boolean']['input']>;
+  name?: InputMaybe<Scalars['String']['input']>;
+  parentLocationId?: InputMaybe<Scalars['ID']['input']>;
+  sortOrder?: InputMaybe<Scalars['Int']['input']>;
+  temperature?: InputMaybe<StorageState>;
+  type?: InputMaybe<StorageType>;
 };
 
 export type UpdateStoreInput = {
@@ -6140,6 +6591,7 @@ export type User = {
   defaultHomeId: Maybe<Scalars['String']['output']>;
   defaultShoppingListId: Maybe<Scalars['String']['output']>;
   devices: Array<Device>;
+  dietaryProfile: Maybe<DietaryProfile>;
   email: Scalars['String']['output'];
   emailVerified: Scalars['Boolean']['output'];
   homeOwnerships: Array<HomeOwnership>;
@@ -6148,6 +6600,7 @@ export type User = {
   lastActiveAt: Maybe<Scalars['DateTime']['output']>;
   loginHistory: Array<LoginHistory>;
   moderation: Maybe<UserModeration>;
+  notificationPreferences: Maybe<NotificationPreferences>;
   onBoarded: Scalars['Boolean']['output'];
   preferredCurrency: Maybe<Scalars['String']['output']>;
   profile: Maybe<UserProfile>;
@@ -6985,6 +7438,7 @@ export type GetUserSettingsQuery = {
         shareUsageData: boolean;
         shareWithPartners: boolean;
         personalizedAds: boolean;
+        preferredUnitSystem: UnitSystem;
         enabledFeatures: Array<string>;
         betaFeatures: Array<string>;
         createdAt: string;
@@ -7651,7 +8105,6 @@ export type PantryItemFragment = {
   unitName: string | null | undefined;
   unitId: string | null | undefined;
   expiresAt: string | null | undefined;
-  storageLocation: string | null | undefined;
   storageState: StorageState;
   storageNotes: string | null | undefined;
   initialQuantity: number;
@@ -7677,6 +8130,15 @@ export type PantryItemFragment = {
         baseUnitId: string | null | undefined;
         conversionFactor: number;
         isCommon: boolean;
+      }
+    | null
+    | undefined;
+  storageLocation:
+    | {
+        __typename?: 'StorageLocation';
+        id: string;
+        name: string;
+        type: StorageType;
       }
     | null
     | undefined;
@@ -7929,15 +8391,6 @@ export type RecipeIngredientFragment = {
   id: string;
   name: string;
   quantity: number;
-  spoonacularIngredientId: number | null | undefined;
-  aisle: string | null | undefined;
-  consistency: string | null | undefined;
-  originalString: string | null | undefined;
-  metricAmount: number | null | undefined;
-  metricUnit: string | null | undefined;
-  usAmount: number | null | undefined;
-  usUnit: string | null | undefined;
-  meta: Array<string>;
   image: string | null | undefined;
   isOptional: boolean;
   notes: string | null | undefined;
@@ -8777,17 +9230,23 @@ export type GetOnboardingItemsQueryVariables = Exact<{ [key: string]: never }>;
 
 export type GetOnboardingItemsQuery = {
   __typename?: 'Query';
-  onboardingItems: Array<{
-    __typename?: 'Item';
-    id: string;
-    name: string;
-    imageUrl: string | null | undefined;
-    storageState: StorageState;
-    displayUnit:
-      | { __typename?: 'Unit'; id: string; name: string }
+  items: {
+    __typename?: 'ItemsResponse';
+    items:
+      | Array<{
+          __typename?: 'Item';
+          id: string;
+          name: string;
+          imageUrl: string | null | undefined;
+          storageState: StorageState;
+          displayUnit:
+            | { __typename?: 'Unit'; id: string; name: string }
+            | null
+            | undefined;
+        }>
       | null
       | undefined;
-  }>;
+  };
 };
 
 export type AutocompleteItemsQueryVariables = Exact<{
@@ -9251,15 +9710,6 @@ export type GetPantryItemQuery = {
   pantryItem: { __typename?: 'PantryItem' } & PantryItemFragment;
 };
 
-export type AddItemToPantryMutationVariables = Exact<{
-  input: AddPantryItemInput;
-}>;
-
-export type AddItemToPantryMutation = {
-  __typename?: 'Mutation';
-  addItemToPantry: { __typename?: 'PantryItem' } & PantryItemFragment;
-};
-
 export type CreatePantryMutationVariables = Exact<{
   input: CreatePantryInput;
 }>;
@@ -9316,6 +9766,15 @@ export type DeletePantryMutation = {
   deletePantry: boolean;
 };
 
+export type CreatePantryItemMutationVariables = Exact<{
+  input: CreatePantryItemInput;
+}>;
+
+export type CreatePantryItemMutation = {
+  __typename?: 'Mutation';
+  createPantryItem: { __typename?: 'PantryItem' } & PantryItemFragment;
+};
+
 export type UpdatePantryItemMutationVariables = Exact<{
   id: Scalars['ID']['input'];
   input: UpdatePantryItemInput;
@@ -9326,13 +9785,13 @@ export type UpdatePantryItemMutation = {
   updatePantryItem: { __typename?: 'PantryItem' } & PantryItemFragment;
 };
 
-export type RemoveItemFromPantryMutationVariables = Exact<{
+export type DeletePantryItemMutationVariables = Exact<{
   id: Scalars['ID']['input'];
 }>;
 
-export type RemoveItemFromPantryMutation = {
+export type DeletePantryItemMutation = {
   __typename?: 'Mutation';
-  removeItemFromPantry: { __typename?: 'PantryItem' } & PantryItemFragment;
+  deletePantryItem: { __typename?: 'PantryItem' } & PantryItemFragment;
 };
 
 export type PantryUpdatedSubscriptionVariables = Exact<{
@@ -9541,7 +10000,7 @@ export type SuggestedRecipesQueryVariables = Exact<{ [key: string]: never }>;
 
 export type SuggestedRecipesQuery = {
   __typename?: 'Query';
-  suggestedRecipes: Array<{ __typename?: 'Recipe' } & BasicRecipeFragment>;
+  recipeSuggestions: Array<{ __typename?: 'Recipe' } & BasicRecipeFragment>;
 };
 
 export type MyRecipesQueryVariables = Exact<{
@@ -9553,7 +10012,7 @@ export type MyRecipesQueryVariables = Exact<{
 
 export type MyRecipesQuery = {
   __typename?: 'Query';
-  myRecipes: {
+  recipes: {
     __typename?: 'RecipesResponse';
     totalCount: number;
     recipes: Array<
@@ -9574,29 +10033,23 @@ export type GetRecipeQuery = {
   recipe: ({ __typename?: 'Recipe' } & RecipeFragment) | null | undefined;
 };
 
-export type AddRecipeMutationVariables = Exact<{
-  name: Scalars['String']['input'];
-  ingredients: Array<Scalars['String']['input']> | Scalars['String']['input'];
-  instructions: Scalars['JSON']['input'];
-  category?: InputMaybe<RecipeCategory>;
-  difficulty?: InputMaybe<Difficulty>;
-  prepTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
-  cookTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
-  servings?: InputMaybe<Scalars['Int']['input']>;
+export type CreateRecipeMutationVariables = Exact<{
+  input: CreateRecipeInput;
 }>;
 
-export type AddRecipeMutation = {
+export type CreateRecipeMutation = {
   __typename?: 'Mutation';
-  addRecipe: { __typename?: 'Recipe' } & RecipeFragment;
+  createRecipe: { __typename?: 'Recipe' } & RecipeFragment;
 };
 
-export type SaveRecipeMutationVariables = Exact<{
-  input: SaveRecipeInput;
+export type UpdateRecipeMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+  input: UpdateRecipeInput;
 }>;
 
-export type SaveRecipeMutation = {
+export type UpdateRecipeMutation = {
   __typename?: 'Mutation';
-  saveRecipe: { __typename?: 'Recipe' } & RecipeFragment;
+  updateRecipe: { __typename?: 'Recipe' } & RecipeFragment;
 };
 
 export type DeleteRecipeMutationVariables = Exact<{
@@ -9608,15 +10061,34 @@ export type DeleteRecipeMutation = {
   deleteRecipe: boolean;
 };
 
-export type AddRecipeToShoppingListMutationVariables = Exact<{
+export type FavoriteRecipeMutationVariables = Exact<{
+  input: FavoriteRecipeInput;
+}>;
+
+export type FavoriteRecipeMutation = {
+  __typename?: 'Mutation';
+  favoriteRecipe: {
+    __typename?: 'SavedRecipe';
+    id: string;
+    recipeId: string;
+    userId: string;
+    folder: string | null | undefined;
+    tags: Array<string>;
+    notes: string | null | undefined;
+    createdAt: string;
+    updatedAt: string;
+  };
+};
+
+export type CreateShoppingListItemsFromRecipeMutationVariables = Exact<{
   recipeId: Scalars['ID']['input'];
   shoppingListId: Scalars['ID']['input'];
   servings?: InputMaybe<Scalars['Int']['input']>;
 }>;
 
-export type AddRecipeToShoppingListMutation = {
+export type CreateShoppingListItemsFromRecipeMutation = {
   __typename?: 'Mutation';
-  addRecipeToShoppingList: {
+  createShoppingListItemsFromRecipe: {
     __typename?: 'AddRecipeToShoppingListResult';
     totalAdded: number;
     totalUpdated: number;
@@ -9653,15 +10125,16 @@ export type AddRecipeToShoppingListMutation = {
   };
 };
 
-export type AddRecipeIngredientToShoppingListMutationVariables = Exact<{
-  recipeIngredientId: Scalars['ID']['input'];
-  shoppingListId: Scalars['ID']['input'];
-  quantityOverride?: InputMaybe<Scalars['Float']['input']>;
-}>;
+export type CreateShoppingListItemFromRecipeIngredientMutationVariables =
+  Exact<{
+    recipeIngredientId: Scalars['ID']['input'];
+    shoppingListId: Scalars['ID']['input'];
+    quantityOverride?: InputMaybe<Scalars['Float']['input']>;
+  }>;
 
-export type AddRecipeIngredientToShoppingListMutation = {
+export type CreateShoppingListItemFromRecipeIngredientMutation = {
   __typename?: 'Mutation';
-  addRecipeIngredientToShoppingList: {
+  createShoppingListItemFromRecipeIngredient: {
     __typename?: 'AddIngredientResult';
     previousQuantity: number | null | undefined;
     quantityAdded: number;
@@ -10735,6 +11208,201 @@ export type ShoppingListItemRemovedSubscription = {
     id: string;
     itemName: string | null | undefined;
   };
+};
+
+export type GetNotificationPreferencesQueryVariables = Exact<{
+  [key: string]: never;
+}>;
+
+export type GetNotificationPreferencesQuery = {
+  __typename?: 'Query';
+  myNotificationPreferences:
+    | {
+        __typename?: 'NotificationPreferences';
+        id: string;
+        userId: string;
+        emailEnabled: boolean;
+        pushEnabled: boolean;
+        smsEnabled: boolean;
+        expirationNotifications: boolean;
+        expirationNotificationFrequency: ExpirationFrequency;
+        expirationDaysThreshold: number;
+        lowStockAlerts: boolean;
+        shoppingListUpdates: boolean;
+        pantryChanges: boolean;
+        recipeRecommendations: boolean;
+        mealPlanReminders: boolean;
+        cookingReminders: boolean;
+        collaborationInvites: boolean;
+        homeInvites: boolean;
+        sharedListUpdates: boolean;
+        weeklyDigest: boolean;
+        monthlyReport: boolean;
+        quietHoursEnabled: boolean;
+        quietHoursStart: string | null | undefined;
+        quietHoursEnd: string | null | undefined;
+        quietHoursTimezone: string | null | undefined;
+      }
+    | null
+    | undefined;
+};
+
+export type GetDietaryProfileQueryVariables = Exact<{ [key: string]: never }>;
+
+export type GetDietaryProfileQuery = {
+  __typename?: 'Query';
+  myDietaryProfile:
+    | {
+        __typename?: 'DietaryProfile';
+        id: string;
+        userId: string;
+        preferredCuisines: Array<string>;
+        dislikedIngredients: Array<string>;
+        favoriteIngredients: Array<string>;
+        calorieTarget: number | null | undefined;
+        proteinTarget: number | null | undefined;
+        carbsTarget: number | null | undefined;
+        fatTarget: number | null | undefined;
+        mealsPerDay: number;
+        snacksPerDay: number;
+        cookingSkillLevel: string | null | undefined;
+        maxPrepTimeMinutes: number | null | undefined;
+        maxCookTimeMinutes: number | null | undefined;
+        budgetPerMeal: number | null | undefined;
+        createdAt: string;
+        updatedAt: string;
+        restrictions: Array<{
+          __typename?: 'DietaryRestriction';
+          id: string;
+          type: DietaryTag;
+          severity: RestrictionSeverity;
+          notes: string | null | undefined;
+          appliesToHomeId: string | null | undefined;
+          createdAt: string;
+          updatedAt: string;
+        }>;
+      }
+    | null
+    | undefined;
+};
+
+export type UpdateNotificationPreferencesMutationVariables = Exact<{
+  input: UpdateNotificationPreferencesInput;
+}>;
+
+export type UpdateNotificationPreferencesMutation = {
+  __typename?: 'Mutation';
+  updateNotificationPreferences: {
+    __typename?: 'NotificationPreferences';
+    id: string;
+    userId: string;
+    emailEnabled: boolean;
+    pushEnabled: boolean;
+    smsEnabled: boolean;
+    expirationNotifications: boolean;
+    expirationNotificationFrequency: ExpirationFrequency;
+    expirationDaysThreshold: number;
+    lowStockAlerts: boolean;
+    shoppingListUpdates: boolean;
+    pantryChanges: boolean;
+    recipeRecommendations: boolean;
+    mealPlanReminders: boolean;
+    cookingReminders: boolean;
+    collaborationInvites: boolean;
+    homeInvites: boolean;
+    sharedListUpdates: boolean;
+    weeklyDigest: boolean;
+    monthlyReport: boolean;
+    quietHoursEnabled: boolean;
+    quietHoursStart: string | null | undefined;
+    quietHoursEnd: string | null | undefined;
+    quietHoursTimezone: string | null | undefined;
+  };
+};
+
+export type UpdateDietaryProfileMutationVariables = Exact<{
+  input: UpdateDietaryProfileInput;
+}>;
+
+export type UpdateDietaryProfileMutation = {
+  __typename?: 'Mutation';
+  updateDietaryProfile: {
+    __typename?: 'DietaryProfile';
+    id: string;
+    userId: string;
+    preferredCuisines: Array<string>;
+    dislikedIngredients: Array<string>;
+    favoriteIngredients: Array<string>;
+    calorieTarget: number | null | undefined;
+    proteinTarget: number | null | undefined;
+    carbsTarget: number | null | undefined;
+    fatTarget: number | null | undefined;
+    mealsPerDay: number;
+    snacksPerDay: number;
+    cookingSkillLevel: string | null | undefined;
+    maxPrepTimeMinutes: number | null | undefined;
+    maxCookTimeMinutes: number | null | undefined;
+    budgetPerMeal: number | null | undefined;
+    createdAt: string;
+    updatedAt: string;
+    restrictions: Array<{
+      __typename?: 'DietaryRestriction';
+      id: string;
+      type: DietaryTag;
+      severity: RestrictionSeverity;
+      notes: string | null | undefined;
+      appliesToHomeId: string | null | undefined;
+      createdAt: string;
+      updatedAt: string;
+    }>;
+  };
+};
+
+export type AddDietaryRestrictionMutationVariables = Exact<{
+  input: AddRestrictionInput;
+}>;
+
+export type AddDietaryRestrictionMutation = {
+  __typename?: 'Mutation';
+  addRestriction: {
+    __typename?: 'DietaryRestriction';
+    id: string;
+    dietaryProfileId: string;
+    type: DietaryTag;
+    severity: RestrictionSeverity;
+    notes: string | null | undefined;
+    appliesToHomeId: string | null | undefined;
+    createdAt: string;
+    updatedAt: string;
+  };
+};
+
+export type UpdateDietaryRestrictionMutationVariables = Exact<{
+  input: UpdateRestrictionInput;
+}>;
+
+export type UpdateDietaryRestrictionMutation = {
+  __typename?: 'Mutation';
+  updateRestriction: {
+    __typename?: 'DietaryRestriction';
+    id: string;
+    dietaryProfileId: string;
+    type: DietaryTag;
+    severity: RestrictionSeverity;
+    notes: string | null | undefined;
+    appliesToHomeId: string | null | undefined;
+    createdAt: string;
+    updatedAt: string;
+  };
+};
+
+export type RemoveDietaryRestrictionMutationVariables = Exact<{
+  input: RemoveRestrictionInput;
+}>;
+
+export type RemoveDietaryRestrictionMutation = {
+  __typename?: 'Mutation';
+  removeRestriction: boolean;
 };
 
 export const PartialUserFragmentDoc = {
@@ -12386,7 +13054,18 @@ export const PantryItemFragmentDoc = {
             },
           },
           { kind: 'Field', name: { kind: 'Name', value: 'expiresAt' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'storageLocation' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'storageLocation' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'type' } },
+              ],
+            },
+          },
           { kind: 'Field', name: { kind: 'Name', value: 'storageState' } },
           { kind: 'Field', name: { kind: 'Name', value: 'storageNotes' } },
           { kind: 'Field', name: { kind: 'Name', value: 'initialQuantity' } },
@@ -13021,7 +13700,18 @@ export const PantryFragmentDoc = {
             },
           },
           { kind: 'Field', name: { kind: 'Name', value: 'expiresAt' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'storageLocation' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'storageLocation' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'type' } },
+              ],
+            },
+          },
           { kind: 'Field', name: { kind: 'Name', value: 'storageState' } },
           { kind: 'Field', name: { kind: 'Name', value: 'storageNotes' } },
           { kind: 'Field', name: { kind: 'Name', value: 'initialQuantity' } },
@@ -13588,7 +14278,18 @@ export const HomeFragmentDoc = {
             },
           },
           { kind: 'Field', name: { kind: 'Name', value: 'expiresAt' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'storageLocation' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'storageLocation' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'type' } },
+              ],
+            },
+          },
           { kind: 'Field', name: { kind: 'Name', value: 'storageState' } },
           { kind: 'Field', name: { kind: 'Name', value: 'storageNotes' } },
           { kind: 'Field', name: { kind: 'Name', value: 'initialQuantity' } },
@@ -13880,10 +14581,6 @@ export const RecipeIngredientFragmentDoc = {
           { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'spoonacularIngredientId' },
-          },
-          {
-            kind: 'Field',
             name: { kind: 'Name', value: 'item' },
             selectionSet: {
               kind: 'SelectionSet',
@@ -13906,14 +14603,6 @@ export const RecipeIngredientFragmentDoc = {
               ],
             },
           },
-          { kind: 'Field', name: { kind: 'Name', value: 'aisle' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'consistency' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'originalString' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'metricAmount' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'metricUnit' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'usAmount' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'usUnit' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'meta' } },
           { kind: 'Field', name: { kind: 'Name', value: 'image' } },
           { kind: 'Field', name: { kind: 'Name', value: 'isOptional' } },
           { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
@@ -14037,10 +14726,6 @@ export const RecipeFragmentDoc = {
           { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'spoonacularIngredientId' },
-          },
-          {
-            kind: 'Field',
             name: { kind: 'Name', value: 'item' },
             selectionSet: {
               kind: 'SelectionSet',
@@ -14063,14 +14748,6 @@ export const RecipeFragmentDoc = {
               ],
             },
           },
-          { kind: 'Field', name: { kind: 'Name', value: 'aisle' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'consistency' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'originalString' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'metricAmount' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'metricUnit' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'usAmount' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'usUnit' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'meta' } },
           { kind: 'Field', name: { kind: 'Name', value: 'image' } },
           { kind: 'Field', name: { kind: 'Name', value: 'isOptional' } },
           { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
@@ -17409,6 +18086,10 @@ export const GetUserSettingsDocument = {
                 },
                 {
                   kind: 'Field',
+                  name: { kind: 'Name', value: 'preferredUnitSystem' },
+                },
+                {
+                  kind: 'Field',
                   name: { kind: 'Name', value: 'enabledFeatures' },
                 },
                 {
@@ -19186,7 +19867,18 @@ export const GetHomeDocument = {
             },
           },
           { kind: 'Field', name: { kind: 'Name', value: 'expiresAt' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'storageLocation' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'storageLocation' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'type' } },
+              ],
+            },
+          },
           { kind: 'Field', name: { kind: 'Name', value: 'storageState' } },
           { kind: 'Field', name: { kind: 'Name', value: 'storageNotes' } },
           { kind: 'Field', name: { kind: 'Name', value: 'initialQuantity' } },
@@ -21437,7 +22129,18 @@ export const UpdateHomeDocument = {
             },
           },
           { kind: 'Field', name: { kind: 'Name', value: 'expiresAt' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'storageLocation' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'storageLocation' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'type' } },
+              ],
+            },
+          },
           { kind: 'Field', name: { kind: 'Name', value: 'storageState' } },
           { kind: 'Field', name: { kind: 'Name', value: 'storageNotes' } },
           { kind: 'Field', name: { kind: 'Name', value: 'initialQuantity' } },
@@ -22240,7 +22943,18 @@ export const DeleteHomeDocument = {
             },
           },
           { kind: 'Field', name: { kind: 'Name', value: 'expiresAt' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'storageLocation' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'storageLocation' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'type' } },
+              ],
+            },
+          },
           { kind: 'Field', name: { kind: 'Name', value: 'storageState' } },
           { kind: 'Field', name: { kind: 'Name', value: 'storageNotes' } },
           { kind: 'Field', name: { kind: 'Name', value: 'initialQuantity' } },
@@ -24647,7 +25361,18 @@ export const GetDefaultHomeDocument = {
             },
           },
           { kind: 'Field', name: { kind: 'Name', value: 'expiresAt' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'storageLocation' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'storageLocation' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'type' } },
+              ],
+            },
+          },
           { kind: 'Field', name: { kind: 'Name', value: 'storageState' } },
           { kind: 'Field', name: { kind: 'Name', value: 'storageNotes' } },
           { kind: 'Field', name: { kind: 'Name', value: 'initialQuantity' } },
@@ -26756,25 +27481,59 @@ export const GetOnboardingItemsDocument = {
         selections: [
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'onboardingItems' },
+            name: { kind: 'Name', value: 'items' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'filters' },
+                value: {
+                  kind: 'ObjectValue',
+                  fields: [
+                    {
+                      kind: 'ObjectField',
+                      name: { kind: 'Name', value: 'showInOnboarding' },
+                      value: { kind: 'BooleanValue', value: true },
+                    },
+                  ],
+                },
+              },
+            ],
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
                 {
                   kind: 'Field',
-                  name: { kind: 'Name', value: 'storageState' },
-                },
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'displayUnit' },
+                  name: { kind: 'Name', value: 'items' },
                   selectionSet: {
                     kind: 'SelectionSet',
                     selections: [
                       { kind: 'Field', name: { kind: 'Name', value: 'id' } },
                       { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'imageUrl' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'storageState' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'displayUnit' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'id' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'name' },
+                            },
+                          ],
+                        },
+                      },
                     ],
                   },
                 },
@@ -30024,7 +30783,18 @@ export const GetPantryItemsDocument = {
             },
           },
           { kind: 'Field', name: { kind: 'Name', value: 'expiresAt' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'storageLocation' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'storageLocation' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'type' } },
+              ],
+            },
+          },
           { kind: 'Field', name: { kind: 'Name', value: 'storageState' } },
           { kind: 'Field', name: { kind: 'Name', value: 'storageNotes' } },
           { kind: 'Field', name: { kind: 'Name', value: 'initialQuantity' } },
@@ -30502,7 +31272,18 @@ export const GetPantryItemDocument = {
             },
           },
           { kind: 'Field', name: { kind: 'Name', value: 'expiresAt' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'storageLocation' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'storageLocation' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'type' } },
+              ],
+            },
+          },
           { kind: 'Field', name: { kind: 'Name', value: 'storageState' } },
           { kind: 'Field', name: { kind: 'Name', value: 'storageNotes' } },
           { kind: 'Field', name: { kind: 'Name', value: 'initialQuantity' } },
@@ -30642,13 +31423,13 @@ export function refetchGetPantryItemQuery(
 ) {
   return { query: GetPantryItemDocument, variables: variables };
 }
-export const AddItemToPantryDocument = {
+export const CreatePantryDocument = {
   kind: 'Document',
   definitions: [
     {
       kind: 'OperationDefinition',
       operation: 'mutation',
-      name: { kind: 'Name', value: 'AddItemToPantry' },
+      name: { kind: 'Name', value: 'CreatePantry' },
       variableDefinitions: [
         {
           kind: 'VariableDefinition',
@@ -30660,7 +31441,7 @@ export const AddItemToPantryDocument = {
             kind: 'NonNullType',
             type: {
               kind: 'NamedType',
-              name: { kind: 'Name', value: 'AddPantryItemInput' },
+              name: { kind: 'Name', value: 'CreatePantryInput' },
             },
           },
         },
@@ -30670,7 +31451,316 @@ export const AddItemToPantryDocument = {
         selections: [
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'addItemToPantry' },
+            name: { kind: 'Name', value: 'createPantry' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'input' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'input' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'homeId' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'description' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'isDefault' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'location' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'temperature' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'tags' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'metadata' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'version' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type CreatePantryMutationFn = ApolloReactCommon.MutationFunction<
+  CreatePantryMutation,
+  CreatePantryMutationVariables
+>;
+
+/**
+ * __useCreatePantryMutation__
+ *
+ * To run a mutation, you first call `useCreatePantryMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreatePantryMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createPantryMutation, { data, loading, error }] = useCreatePantryMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useCreatePantryMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    CreatePantryMutation,
+    CreatePantryMutationVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useMutation<
+    CreatePantryMutation,
+    CreatePantryMutationVariables
+  >(CreatePantryDocument, options);
+}
+export type CreatePantryMutationHookResult = ReturnType<
+  typeof useCreatePantryMutation
+>;
+export type CreatePantryMutationResult =
+  ApolloReactCommon.MutationResult<CreatePantryMutation>;
+export type CreatePantryMutationOptions = ApolloReactCommon.BaseMutationOptions<
+  CreatePantryMutation,
+  CreatePantryMutationVariables
+>;
+export const UpdatePantryDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'UpdatePantry' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: { kind: 'Variable', name: { kind: 'Name', value: 'id' } },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'input' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: {
+              kind: 'NamedType',
+              name: { kind: 'Name', value: 'UpdatePantryInput' },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'updatePantry' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'id' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'id' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'input' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'input' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'homeId' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'description' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'isDefault' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'location' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'temperature' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'tags' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'metadata' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'version' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type UpdatePantryMutationFn = ApolloReactCommon.MutationFunction<
+  UpdatePantryMutation,
+  UpdatePantryMutationVariables
+>;
+
+/**
+ * __useUpdatePantryMutation__
+ *
+ * To run a mutation, you first call `useUpdatePantryMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdatePantryMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updatePantryMutation, { data, loading, error }] = useUpdatePantryMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useUpdatePantryMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    UpdatePantryMutation,
+    UpdatePantryMutationVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useMutation<
+    UpdatePantryMutation,
+    UpdatePantryMutationVariables
+  >(UpdatePantryDocument, options);
+}
+export type UpdatePantryMutationHookResult = ReturnType<
+  typeof useUpdatePantryMutation
+>;
+export type UpdatePantryMutationResult =
+  ApolloReactCommon.MutationResult<UpdatePantryMutation>;
+export type UpdatePantryMutationOptions = ApolloReactCommon.BaseMutationOptions<
+  UpdatePantryMutation,
+  UpdatePantryMutationVariables
+>;
+export const DeletePantryDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'DeletePantry' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: { kind: 'Variable', name: { kind: 'Name', value: 'id' } },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'deletePantry' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'id' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'id' },
+                },
+              },
+            ],
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type DeletePantryMutationFn = ApolloReactCommon.MutationFunction<
+  DeletePantryMutation,
+  DeletePantryMutationVariables
+>;
+
+/**
+ * __useDeletePantryMutation__
+ *
+ * To run a mutation, you first call `useDeletePantryMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeletePantryMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deletePantryMutation, { data, loading, error }] = useDeletePantryMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeletePantryMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    DeletePantryMutation,
+    DeletePantryMutationVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useMutation<
+    DeletePantryMutation,
+    DeletePantryMutationVariables
+  >(DeletePantryDocument, options);
+}
+export type DeletePantryMutationHookResult = ReturnType<
+  typeof useDeletePantryMutation
+>;
+export type DeletePantryMutationResult =
+  ApolloReactCommon.MutationResult<DeletePantryMutation>;
+export type DeletePantryMutationOptions = ApolloReactCommon.BaseMutationOptions<
+  DeletePantryMutation,
+  DeletePantryMutationVariables
+>;
+export const CreatePantryItemDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'CreatePantryItem' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'input' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: {
+              kind: 'NamedType',
+              name: { kind: 'Name', value: 'CreatePantryItemInput' },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'createPantryItem' },
             arguments: [
               {
                 kind: 'Argument',
@@ -30986,7 +32076,18 @@ export const AddItemToPantryDocument = {
             },
           },
           { kind: 'Field', name: { kind: 'Name', value: 'expiresAt' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'storageLocation' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'storageLocation' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'type' } },
+              ],
+            },
+          },
           { kind: 'Field', name: { kind: 'Name', value: 'storageState' } },
           { kind: 'Field', name: { kind: 'Name', value: 'storageNotes' } },
           { kind: 'Field', name: { kind: 'Name', value: 'initialQuantity' } },
@@ -31046,359 +32147,50 @@ export const AddItemToPantryDocument = {
     },
   ],
 } as unknown as DocumentNode;
-export type AddItemToPantryMutationFn = ApolloReactCommon.MutationFunction<
-  AddItemToPantryMutation,
-  AddItemToPantryMutationVariables
+export type CreatePantryItemMutationFn = ApolloReactCommon.MutationFunction<
+  CreatePantryItemMutation,
+  CreatePantryItemMutationVariables
 >;
 
 /**
- * __useAddItemToPantryMutation__
+ * __useCreatePantryItemMutation__
  *
- * To run a mutation, you first call `useAddItemToPantryMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useAddItemToPantryMutation` returns a tuple that includes:
+ * To run a mutation, you first call `useCreatePantryItemMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreatePantryItemMutation` returns a tuple that includes:
  * - A mutate function that you can call at any time to execute the mutation
  * - An object with fields that represent the current status of the mutation's execution
  *
  * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
  *
  * @example
- * const [addItemToPantryMutation, { data, loading, error }] = useAddItemToPantryMutation({
+ * const [createPantryItemMutation, { data, loading, error }] = useCreatePantryItemMutation({
  *   variables: {
  *      input: // value for 'input'
  *   },
  * });
  */
-export function useAddItemToPantryMutation(
+export function useCreatePantryItemMutation(
   baseOptions?: ApolloReactHooks.MutationHookOptions<
-    AddItemToPantryMutation,
-    AddItemToPantryMutationVariables
+    CreatePantryItemMutation,
+    CreatePantryItemMutationVariables
   >,
 ) {
   const options = { ...defaultOptions, ...baseOptions };
   return ApolloReactHooks.useMutation<
-    AddItemToPantryMutation,
-    AddItemToPantryMutationVariables
-  >(AddItemToPantryDocument, options);
+    CreatePantryItemMutation,
+    CreatePantryItemMutationVariables
+  >(CreatePantryItemDocument, options);
 }
-export type AddItemToPantryMutationHookResult = ReturnType<
-  typeof useAddItemToPantryMutation
+export type CreatePantryItemMutationHookResult = ReturnType<
+  typeof useCreatePantryItemMutation
 >;
-export type AddItemToPantryMutationResult =
-  ApolloReactCommon.MutationResult<AddItemToPantryMutation>;
-export type AddItemToPantryMutationOptions =
+export type CreatePantryItemMutationResult =
+  ApolloReactCommon.MutationResult<CreatePantryItemMutation>;
+export type CreatePantryItemMutationOptions =
   ApolloReactCommon.BaseMutationOptions<
-    AddItemToPantryMutation,
-    AddItemToPantryMutationVariables
+    CreatePantryItemMutation,
+    CreatePantryItemMutationVariables
   >;
-export const CreatePantryDocument = {
-  kind: 'Document',
-  definitions: [
-    {
-      kind: 'OperationDefinition',
-      operation: 'mutation',
-      name: { kind: 'Name', value: 'CreatePantry' },
-      variableDefinitions: [
-        {
-          kind: 'VariableDefinition',
-          variable: {
-            kind: 'Variable',
-            name: { kind: 'Name', value: 'input' },
-          },
-          type: {
-            kind: 'NonNullType',
-            type: {
-              kind: 'NamedType',
-              name: { kind: 'Name', value: 'CreatePantryInput' },
-            },
-          },
-        },
-      ],
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'createPantry' },
-            arguments: [
-              {
-                kind: 'Argument',
-                name: { kind: 'Name', value: 'input' },
-                value: {
-                  kind: 'Variable',
-                  name: { kind: 'Name', value: 'input' },
-                },
-              },
-            ],
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'homeId' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'description' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'isDefault' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'location' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'temperature' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'tags' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'metadata' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'version' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
-export type CreatePantryMutationFn = ApolloReactCommon.MutationFunction<
-  CreatePantryMutation,
-  CreatePantryMutationVariables
->;
-
-/**
- * __useCreatePantryMutation__
- *
- * To run a mutation, you first call `useCreatePantryMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useCreatePantryMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [createPantryMutation, { data, loading, error }] = useCreatePantryMutation({
- *   variables: {
- *      input: // value for 'input'
- *   },
- * });
- */
-export function useCreatePantryMutation(
-  baseOptions?: ApolloReactHooks.MutationHookOptions<
-    CreatePantryMutation,
-    CreatePantryMutationVariables
-  >,
-) {
-  const options = { ...defaultOptions, ...baseOptions };
-  return ApolloReactHooks.useMutation<
-    CreatePantryMutation,
-    CreatePantryMutationVariables
-  >(CreatePantryDocument, options);
-}
-export type CreatePantryMutationHookResult = ReturnType<
-  typeof useCreatePantryMutation
->;
-export type CreatePantryMutationResult =
-  ApolloReactCommon.MutationResult<CreatePantryMutation>;
-export type CreatePantryMutationOptions = ApolloReactCommon.BaseMutationOptions<
-  CreatePantryMutation,
-  CreatePantryMutationVariables
->;
-export const UpdatePantryDocument = {
-  kind: 'Document',
-  definitions: [
-    {
-      kind: 'OperationDefinition',
-      operation: 'mutation',
-      name: { kind: 'Name', value: 'UpdatePantry' },
-      variableDefinitions: [
-        {
-          kind: 'VariableDefinition',
-          variable: { kind: 'Variable', name: { kind: 'Name', value: 'id' } },
-          type: {
-            kind: 'NonNullType',
-            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
-          },
-        },
-        {
-          kind: 'VariableDefinition',
-          variable: {
-            kind: 'Variable',
-            name: { kind: 'Name', value: 'input' },
-          },
-          type: {
-            kind: 'NonNullType',
-            type: {
-              kind: 'NamedType',
-              name: { kind: 'Name', value: 'UpdatePantryInput' },
-            },
-          },
-        },
-      ],
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'updatePantry' },
-            arguments: [
-              {
-                kind: 'Argument',
-                name: { kind: 'Name', value: 'id' },
-                value: {
-                  kind: 'Variable',
-                  name: { kind: 'Name', value: 'id' },
-                },
-              },
-              {
-                kind: 'Argument',
-                name: { kind: 'Name', value: 'input' },
-                value: {
-                  kind: 'Variable',
-                  name: { kind: 'Name', value: 'input' },
-                },
-              },
-            ],
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'homeId' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'description' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'isDefault' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'location' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'temperature' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'tags' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'metadata' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'version' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
-export type UpdatePantryMutationFn = ApolloReactCommon.MutationFunction<
-  UpdatePantryMutation,
-  UpdatePantryMutationVariables
->;
-
-/**
- * __useUpdatePantryMutation__
- *
- * To run a mutation, you first call `useUpdatePantryMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdatePantryMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updatePantryMutation, { data, loading, error }] = useUpdatePantryMutation({
- *   variables: {
- *      id: // value for 'id'
- *      input: // value for 'input'
- *   },
- * });
- */
-export function useUpdatePantryMutation(
-  baseOptions?: ApolloReactHooks.MutationHookOptions<
-    UpdatePantryMutation,
-    UpdatePantryMutationVariables
-  >,
-) {
-  const options = { ...defaultOptions, ...baseOptions };
-  return ApolloReactHooks.useMutation<
-    UpdatePantryMutation,
-    UpdatePantryMutationVariables
-  >(UpdatePantryDocument, options);
-}
-export type UpdatePantryMutationHookResult = ReturnType<
-  typeof useUpdatePantryMutation
->;
-export type UpdatePantryMutationResult =
-  ApolloReactCommon.MutationResult<UpdatePantryMutation>;
-export type UpdatePantryMutationOptions = ApolloReactCommon.BaseMutationOptions<
-  UpdatePantryMutation,
-  UpdatePantryMutationVariables
->;
-export const DeletePantryDocument = {
-  kind: 'Document',
-  definitions: [
-    {
-      kind: 'OperationDefinition',
-      operation: 'mutation',
-      name: { kind: 'Name', value: 'DeletePantry' },
-      variableDefinitions: [
-        {
-          kind: 'VariableDefinition',
-          variable: { kind: 'Variable', name: { kind: 'Name', value: 'id' } },
-          type: {
-            kind: 'NonNullType',
-            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
-          },
-        },
-      ],
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'deletePantry' },
-            arguments: [
-              {
-                kind: 'Argument',
-                name: { kind: 'Name', value: 'id' },
-                value: {
-                  kind: 'Variable',
-                  name: { kind: 'Name', value: 'id' },
-                },
-              },
-            ],
-          },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
-export type DeletePantryMutationFn = ApolloReactCommon.MutationFunction<
-  DeletePantryMutation,
-  DeletePantryMutationVariables
->;
-
-/**
- * __useDeletePantryMutation__
- *
- * To run a mutation, you first call `useDeletePantryMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useDeletePantryMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [deletePantryMutation, { data, loading, error }] = useDeletePantryMutation({
- *   variables: {
- *      id: // value for 'id'
- *   },
- * });
- */
-export function useDeletePantryMutation(
-  baseOptions?: ApolloReactHooks.MutationHookOptions<
-    DeletePantryMutation,
-    DeletePantryMutationVariables
-  >,
-) {
-  const options = { ...defaultOptions, ...baseOptions };
-  return ApolloReactHooks.useMutation<
-    DeletePantryMutation,
-    DeletePantryMutationVariables
-  >(DeletePantryDocument, options);
-}
-export type DeletePantryMutationHookResult = ReturnType<
-  typeof useDeletePantryMutation
->;
-export type DeletePantryMutationResult =
-  ApolloReactCommon.MutationResult<DeletePantryMutation>;
-export type DeletePantryMutationOptions = ApolloReactCommon.BaseMutationOptions<
-  DeletePantryMutation,
-  DeletePantryMutationVariables
->;
 export const UpdatePantryItemDocument = {
   kind: 'Document',
   definitions: [
@@ -31759,7 +32551,18 @@ export const UpdatePantryItemDocument = {
             },
           },
           { kind: 'Field', name: { kind: 'Name', value: 'expiresAt' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'storageLocation' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'storageLocation' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'type' } },
+              ],
+            },
+          },
           { kind: 'Field', name: { kind: 'Name', value: 'storageState' } },
           { kind: 'Field', name: { kind: 'Name', value: 'storageNotes' } },
           { kind: 'Field', name: { kind: 'Name', value: 'initialQuantity' } },
@@ -31864,13 +32667,13 @@ export type UpdatePantryItemMutationOptions =
     UpdatePantryItemMutation,
     UpdatePantryItemMutationVariables
   >;
-export const RemoveItemFromPantryDocument = {
+export const DeletePantryItemDocument = {
   kind: 'Document',
   definitions: [
     {
       kind: 'OperationDefinition',
       operation: 'mutation',
-      name: { kind: 'Name', value: 'RemoveItemFromPantry' },
+      name: { kind: 'Name', value: 'DeletePantryItem' },
       variableDefinitions: [
         {
           kind: 'VariableDefinition',
@@ -31886,7 +32689,7 @@ export const RemoveItemFromPantryDocument = {
         selections: [
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'removeItemFromPantry' },
+            name: { kind: 'Name', value: 'deletePantryItem' },
             arguments: [
               {
                 kind: 'Argument',
@@ -32202,7 +33005,18 @@ export const RemoveItemFromPantryDocument = {
             },
           },
           { kind: 'Field', name: { kind: 'Name', value: 'expiresAt' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'storageLocation' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'storageLocation' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'type' } },
+              ],
+            },
+          },
           { kind: 'Field', name: { kind: 'Name', value: 'storageState' } },
           { kind: 'Field', name: { kind: 'Name', value: 'storageNotes' } },
           { kind: 'Field', name: { kind: 'Name', value: 'initialQuantity' } },
@@ -32262,49 +33076,49 @@ export const RemoveItemFromPantryDocument = {
     },
   ],
 } as unknown as DocumentNode;
-export type RemoveItemFromPantryMutationFn = ApolloReactCommon.MutationFunction<
-  RemoveItemFromPantryMutation,
-  RemoveItemFromPantryMutationVariables
+export type DeletePantryItemMutationFn = ApolloReactCommon.MutationFunction<
+  DeletePantryItemMutation,
+  DeletePantryItemMutationVariables
 >;
 
 /**
- * __useRemoveItemFromPantryMutation__
+ * __useDeletePantryItemMutation__
  *
- * To run a mutation, you first call `useRemoveItemFromPantryMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useRemoveItemFromPantryMutation` returns a tuple that includes:
+ * To run a mutation, you first call `useDeletePantryItemMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeletePantryItemMutation` returns a tuple that includes:
  * - A mutate function that you can call at any time to execute the mutation
  * - An object with fields that represent the current status of the mutation's execution
  *
  * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
  *
  * @example
- * const [removeItemFromPantryMutation, { data, loading, error }] = useRemoveItemFromPantryMutation({
+ * const [deletePantryItemMutation, { data, loading, error }] = useDeletePantryItemMutation({
  *   variables: {
  *      id: // value for 'id'
  *   },
  * });
  */
-export function useRemoveItemFromPantryMutation(
+export function useDeletePantryItemMutation(
   baseOptions?: ApolloReactHooks.MutationHookOptions<
-    RemoveItemFromPantryMutation,
-    RemoveItemFromPantryMutationVariables
+    DeletePantryItemMutation,
+    DeletePantryItemMutationVariables
   >,
 ) {
   const options = { ...defaultOptions, ...baseOptions };
   return ApolloReactHooks.useMutation<
-    RemoveItemFromPantryMutation,
-    RemoveItemFromPantryMutationVariables
-  >(RemoveItemFromPantryDocument, options);
+    DeletePantryItemMutation,
+    DeletePantryItemMutationVariables
+  >(DeletePantryItemDocument, options);
 }
-export type RemoveItemFromPantryMutationHookResult = ReturnType<
-  typeof useRemoveItemFromPantryMutation
+export type DeletePantryItemMutationHookResult = ReturnType<
+  typeof useDeletePantryItemMutation
 >;
-export type RemoveItemFromPantryMutationResult =
-  ApolloReactCommon.MutationResult<RemoveItemFromPantryMutation>;
-export type RemoveItemFromPantryMutationOptions =
+export type DeletePantryItemMutationResult =
+  ApolloReactCommon.MutationResult<DeletePantryItemMutation>;
+export type DeletePantryItemMutationOptions =
   ApolloReactCommon.BaseMutationOptions<
-    RemoveItemFromPantryMutation,
-    RemoveItemFromPantryMutationVariables
+    DeletePantryItemMutation,
+    DeletePantryItemMutationVariables
   >;
 export const PantryUpdatedDocument = {
   kind: 'Document',
@@ -33357,7 +34171,7 @@ export const SuggestedRecipesDocument = {
         selections: [
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'suggestedRecipes' },
+            name: { kind: 'Name', value: 'recipeSuggestions' },
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
@@ -33528,7 +34342,7 @@ export const MyRecipesDocument = {
         selections: [
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'myRecipes' },
+            name: { kind: 'Name', value: 'recipes' },
             arguments: [
               {
                 kind: 'Argument',
@@ -33777,10 +34591,6 @@ export const GetRecipeDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'spoonacularIngredientId' },
-          },
-          {
-            kind: 'Field',
             name: { kind: 'Name', value: 'item' },
             selectionSet: {
               kind: 'SelectionSet',
@@ -33803,14 +34613,6 @@ export const GetRecipeDocument = {
               ],
             },
           },
-          { kind: 'Field', name: { kind: 'Name', value: 'aisle' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'consistency' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'originalString' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'metricAmount' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'metricUnit' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'usAmount' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'usUnit' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'meta' } },
           { kind: 'Field', name: { kind: 'Name', value: 'image' } },
           { kind: 'Field', name: { kind: 'Name', value: 'isOptional' } },
           { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
@@ -33977,399 +34779,13 @@ export type GetRecipeQueryResult = ApolloReactCommon.QueryResult<
 export function refetchGetRecipeQuery(variables: GetRecipeQueryVariables) {
   return { query: GetRecipeDocument, variables: variables };
 }
-export const AddRecipeDocument = {
+export const CreateRecipeDocument = {
   kind: 'Document',
   definitions: [
     {
       kind: 'OperationDefinition',
       operation: 'mutation',
-      name: { kind: 'Name', value: 'AddRecipe' },
-      variableDefinitions: [
-        {
-          kind: 'VariableDefinition',
-          variable: { kind: 'Variable', name: { kind: 'Name', value: 'name' } },
-          type: {
-            kind: 'NonNullType',
-            type: {
-              kind: 'NamedType',
-              name: { kind: 'Name', value: 'String' },
-            },
-          },
-        },
-        {
-          kind: 'VariableDefinition',
-          variable: {
-            kind: 'Variable',
-            name: { kind: 'Name', value: 'ingredients' },
-          },
-          type: {
-            kind: 'NonNullType',
-            type: {
-              kind: 'ListType',
-              type: {
-                kind: 'NonNullType',
-                type: {
-                  kind: 'NamedType',
-                  name: { kind: 'Name', value: 'String' },
-                },
-              },
-            },
-          },
-        },
-        {
-          kind: 'VariableDefinition',
-          variable: {
-            kind: 'Variable',
-            name: { kind: 'Name', value: 'instructions' },
-          },
-          type: {
-            kind: 'NonNullType',
-            type: { kind: 'NamedType', name: { kind: 'Name', value: 'JSON' } },
-          },
-        },
-        {
-          kind: 'VariableDefinition',
-          variable: {
-            kind: 'Variable',
-            name: { kind: 'Name', value: 'category' },
-          },
-          type: {
-            kind: 'NamedType',
-            name: { kind: 'Name', value: 'RecipeCategory' },
-          },
-        },
-        {
-          kind: 'VariableDefinition',
-          variable: {
-            kind: 'Variable',
-            name: { kind: 'Name', value: 'difficulty' },
-          },
-          type: {
-            kind: 'NamedType',
-            name: { kind: 'Name', value: 'Difficulty' },
-          },
-        },
-        {
-          kind: 'VariableDefinition',
-          variable: {
-            kind: 'Variable',
-            name: { kind: 'Name', value: 'prepTimeMinutes' },
-          },
-          type: { kind: 'NamedType', name: { kind: 'Name', value: 'Int' } },
-        },
-        {
-          kind: 'VariableDefinition',
-          variable: {
-            kind: 'Variable',
-            name: { kind: 'Name', value: 'cookTimeMinutes' },
-          },
-          type: { kind: 'NamedType', name: { kind: 'Name', value: 'Int' } },
-        },
-        {
-          kind: 'VariableDefinition',
-          variable: {
-            kind: 'Variable',
-            name: { kind: 'Name', value: 'servings' },
-          },
-          type: { kind: 'NamedType', name: { kind: 'Name', value: 'Int' } },
-        },
-      ],
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'addRecipe' },
-            arguments: [
-              {
-                kind: 'Argument',
-                name: { kind: 'Name', value: 'name' },
-                value: {
-                  kind: 'Variable',
-                  name: { kind: 'Name', value: 'name' },
-                },
-              },
-              {
-                kind: 'Argument',
-                name: { kind: 'Name', value: 'ingredients' },
-                value: {
-                  kind: 'Variable',
-                  name: { kind: 'Name', value: 'ingredients' },
-                },
-              },
-              {
-                kind: 'Argument',
-                name: { kind: 'Name', value: 'instructions' },
-                value: {
-                  kind: 'Variable',
-                  name: { kind: 'Name', value: 'instructions' },
-                },
-              },
-              {
-                kind: 'Argument',
-                name: { kind: 'Name', value: 'category' },
-                value: {
-                  kind: 'Variable',
-                  name: { kind: 'Name', value: 'category' },
-                },
-              },
-              {
-                kind: 'Argument',
-                name: { kind: 'Name', value: 'difficulty' },
-                value: {
-                  kind: 'Variable',
-                  name: { kind: 'Name', value: 'difficulty' },
-                },
-              },
-              {
-                kind: 'Argument',
-                name: { kind: 'Name', value: 'prepTimeMinutes' },
-                value: {
-                  kind: 'Variable',
-                  name: { kind: 'Name', value: 'prepTimeMinutes' },
-                },
-              },
-              {
-                kind: 'Argument',
-                name: { kind: 'Name', value: 'cookTimeMinutes' },
-                value: {
-                  kind: 'Variable',
-                  name: { kind: 'Name', value: 'cookTimeMinutes' },
-                },
-              },
-              {
-                kind: 'Argument',
-                name: { kind: 'Name', value: 'servings' },
-                value: {
-                  kind: 'Variable',
-                  name: { kind: 'Name', value: 'servings' },
-                },
-              },
-            ],
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                {
-                  kind: 'FragmentSpread',
-                  name: { kind: 'Name', value: 'RecipeFragment' },
-                },
-              ],
-            },
-          },
-        ],
-      },
-    },
-    {
-      kind: 'FragmentDefinition',
-      name: { kind: 'Name', value: 'BasicUser' },
-      typeCondition: {
-        kind: 'NamedType',
-        name: { kind: 'Name', value: 'User' },
-      },
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'email' } },
-        ],
-      },
-    },
-    {
-      kind: 'FragmentDefinition',
-      name: { kind: 'Name', value: 'RecipeIngredientFragment' },
-      typeCondition: {
-        kind: 'NamedType',
-        name: { kind: 'Name', value: 'RecipeIngredient' },
-      },
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'spoonacularIngredientId' },
-          },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'item' },
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
-              ],
-            },
-          },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'unit' },
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
-              ],
-            },
-          },
-          { kind: 'Field', name: { kind: 'Name', value: 'aisle' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'consistency' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'originalString' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'metricAmount' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'metricUnit' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'usAmount' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'usUnit' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'meta' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'image' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isOptional' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'preparation' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'section' } },
-        ],
-      },
-    },
-    {
-      kind: 'FragmentDefinition',
-      name: { kind: 'Name', value: 'RecipeFragment' },
-      typeCondition: {
-        kind: 'NamedType',
-        name: { kind: 'Name', value: 'Recipe' },
-      },
-      selectionSet: {
-        kind: 'SelectionSet',
-        selections: [
-          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'description' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'servings' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'prepTimeMinutes' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'cookTimeMinutes' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'totalTimeMinutes' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'difficulty' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'category' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'status' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'cuisine' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'instructions' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'tips' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'videoUrl' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'sourceUrl' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'source' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'originalAuthor' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isExternal' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'externalSource' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'externalId' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'externalUrl' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'externalData' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'primarySource' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'caloriesPerServing' },
-          },
-          { kind: 'Field', name: { kind: 'Name', value: 'nutritionData' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'dietaryTags' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'tags' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'visibility' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isPublished' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'publishedAt' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'averageRating' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'matchPercentage' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'createdBy' },
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                {
-                  kind: 'FragmentSpread',
-                  name: { kind: 'Name', value: 'BasicUser' },
-                },
-              ],
-            },
-          },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'ingredients' },
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                {
-                  kind: 'FragmentSpread',
-                  name: { kind: 'Name', value: 'RecipeIngredientFragment' },
-                },
-              ],
-            },
-          },
-          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'deletedAt' } },
-        ],
-      },
-    },
-  ],
-} as unknown as DocumentNode;
-export type AddRecipeMutationFn = ApolloReactCommon.MutationFunction<
-  AddRecipeMutation,
-  AddRecipeMutationVariables
->;
-
-/**
- * __useAddRecipeMutation__
- *
- * To run a mutation, you first call `useAddRecipeMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useAddRecipeMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [addRecipeMutation, { data, loading, error }] = useAddRecipeMutation({
- *   variables: {
- *      name: // value for 'name'
- *      ingredients: // value for 'ingredients'
- *      instructions: // value for 'instructions'
- *      category: // value for 'category'
- *      difficulty: // value for 'difficulty'
- *      prepTimeMinutes: // value for 'prepTimeMinutes'
- *      cookTimeMinutes: // value for 'cookTimeMinutes'
- *      servings: // value for 'servings'
- *   },
- * });
- */
-export function useAddRecipeMutation(
-  baseOptions?: ApolloReactHooks.MutationHookOptions<
-    AddRecipeMutation,
-    AddRecipeMutationVariables
-  >,
-) {
-  const options = { ...defaultOptions, ...baseOptions };
-  return ApolloReactHooks.useMutation<
-    AddRecipeMutation,
-    AddRecipeMutationVariables
-  >(AddRecipeDocument, options);
-}
-export type AddRecipeMutationHookResult = ReturnType<
-  typeof useAddRecipeMutation
->;
-export type AddRecipeMutationResult =
-  ApolloReactCommon.MutationResult<AddRecipeMutation>;
-export type AddRecipeMutationOptions = ApolloReactCommon.BaseMutationOptions<
-  AddRecipeMutation,
-  AddRecipeMutationVariables
->;
-export const SaveRecipeDocument = {
-  kind: 'Document',
-  definitions: [
-    {
-      kind: 'OperationDefinition',
-      operation: 'mutation',
-      name: { kind: 'Name', value: 'SaveRecipe' },
+      name: { kind: 'Name', value: 'CreateRecipe' },
       variableDefinitions: [
         {
           kind: 'VariableDefinition',
@@ -34381,7 +34797,7 @@ export const SaveRecipeDocument = {
             kind: 'NonNullType',
             type: {
               kind: 'NamedType',
-              name: { kind: 'Name', value: 'SaveRecipeInput' },
+              name: { kind: 'Name', value: 'CreateRecipeInput' },
             },
           },
         },
@@ -34391,7 +34807,7 @@ export const SaveRecipeDocument = {
         selections: [
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'saveRecipe' },
+            name: { kind: 'Name', value: 'createRecipe' },
             arguments: [
               {
                 kind: 'Argument',
@@ -34445,10 +34861,6 @@ export const SaveRecipeDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'spoonacularIngredientId' },
-          },
-          {
-            kind: 'Field',
             name: { kind: 'Name', value: 'item' },
             selectionSet: {
               kind: 'SelectionSet',
@@ -34471,14 +34883,6 @@ export const SaveRecipeDocument = {
               ],
             },
           },
-          { kind: 'Field', name: { kind: 'Name', value: 'aisle' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'consistency' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'originalString' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'metricAmount' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'metricUnit' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'usAmount' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'usUnit' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'meta' } },
           { kind: 'Field', name: { kind: 'Name', value: 'image' } },
           { kind: 'Field', name: { kind: 'Name', value: 'isOptional' } },
           { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
@@ -34569,48 +34973,302 @@ export const SaveRecipeDocument = {
     },
   ],
 } as unknown as DocumentNode;
-export type SaveRecipeMutationFn = ApolloReactCommon.MutationFunction<
-  SaveRecipeMutation,
-  SaveRecipeMutationVariables
+export type CreateRecipeMutationFn = ApolloReactCommon.MutationFunction<
+  CreateRecipeMutation,
+  CreateRecipeMutationVariables
 >;
 
 /**
- * __useSaveRecipeMutation__
+ * __useCreateRecipeMutation__
  *
- * To run a mutation, you first call `useSaveRecipeMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useSaveRecipeMutation` returns a tuple that includes:
+ * To run a mutation, you first call `useCreateRecipeMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateRecipeMutation` returns a tuple that includes:
  * - A mutate function that you can call at any time to execute the mutation
  * - An object with fields that represent the current status of the mutation's execution
  *
  * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
  *
  * @example
- * const [saveRecipeMutation, { data, loading, error }] = useSaveRecipeMutation({
+ * const [createRecipeMutation, { data, loading, error }] = useCreateRecipeMutation({
  *   variables: {
  *      input: // value for 'input'
  *   },
  * });
  */
-export function useSaveRecipeMutation(
+export function useCreateRecipeMutation(
   baseOptions?: ApolloReactHooks.MutationHookOptions<
-    SaveRecipeMutation,
-    SaveRecipeMutationVariables
+    CreateRecipeMutation,
+    CreateRecipeMutationVariables
   >,
 ) {
   const options = { ...defaultOptions, ...baseOptions };
   return ApolloReactHooks.useMutation<
-    SaveRecipeMutation,
-    SaveRecipeMutationVariables
-  >(SaveRecipeDocument, options);
+    CreateRecipeMutation,
+    CreateRecipeMutationVariables
+  >(CreateRecipeDocument, options);
 }
-export type SaveRecipeMutationHookResult = ReturnType<
-  typeof useSaveRecipeMutation
+export type CreateRecipeMutationHookResult = ReturnType<
+  typeof useCreateRecipeMutation
 >;
-export type SaveRecipeMutationResult =
-  ApolloReactCommon.MutationResult<SaveRecipeMutation>;
-export type SaveRecipeMutationOptions = ApolloReactCommon.BaseMutationOptions<
-  SaveRecipeMutation,
-  SaveRecipeMutationVariables
+export type CreateRecipeMutationResult =
+  ApolloReactCommon.MutationResult<CreateRecipeMutation>;
+export type CreateRecipeMutationOptions = ApolloReactCommon.BaseMutationOptions<
+  CreateRecipeMutation,
+  CreateRecipeMutationVariables
+>;
+export const UpdateRecipeDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'UpdateRecipe' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: { kind: 'Variable', name: { kind: 'Name', value: 'id' } },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'input' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: {
+              kind: 'NamedType',
+              name: { kind: 'Name', value: 'UpdateRecipeInput' },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'updateRecipe' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'id' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'id' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'input' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'input' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'FragmentSpread',
+                  name: { kind: 'Name', value: 'RecipeFragment' },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'BasicUser' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'User' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'email' } },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'RecipeIngredientFragment' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'RecipeIngredient' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'quantity' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'item' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'unit' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'image' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'isOptional' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'preparation' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'section' } },
+        ],
+      },
+    },
+    {
+      kind: 'FragmentDefinition',
+      name: { kind: 'Name', value: 'RecipeFragment' },
+      typeCondition: {
+        kind: 'NamedType',
+        name: { kind: 'Name', value: 'Recipe' },
+      },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'description' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'servings' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'prepTimeMinutes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'cookTimeMinutes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'totalTimeMinutes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'difficulty' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'category' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'status' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'cuisine' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'instructions' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'tips' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'videoUrl' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'sourceUrl' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'source' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'originalAuthor' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'isExternal' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'externalSource' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'externalId' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'externalUrl' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'externalData' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'primarySource' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'caloriesPerServing' },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'nutritionData' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'dietaryTags' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'tags' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'visibility' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'isPublished' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'publishedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'averageRating' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'matchPercentage' } },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'createdBy' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'FragmentSpread',
+                  name: { kind: 'Name', value: 'BasicUser' },
+                },
+              ],
+            },
+          },
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'ingredients' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'FragmentSpread',
+                  name: { kind: 'Name', value: 'RecipeIngredientFragment' },
+                },
+              ],
+            },
+          },
+          { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'deletedAt' } },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type UpdateRecipeMutationFn = ApolloReactCommon.MutationFunction<
+  UpdateRecipeMutation,
+  UpdateRecipeMutationVariables
+>;
+
+/**
+ * __useUpdateRecipeMutation__
+ *
+ * To run a mutation, you first call `useUpdateRecipeMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateRecipeMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateRecipeMutation, { data, loading, error }] = useUpdateRecipeMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useUpdateRecipeMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    UpdateRecipeMutation,
+    UpdateRecipeMutationVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useMutation<
+    UpdateRecipeMutation,
+    UpdateRecipeMutationVariables
+  >(UpdateRecipeDocument, options);
+}
+export type UpdateRecipeMutationHookResult = ReturnType<
+  typeof useUpdateRecipeMutation
+>;
+export type UpdateRecipeMutationResult =
+  ApolloReactCommon.MutationResult<UpdateRecipeMutation>;
+export type UpdateRecipeMutationOptions = ApolloReactCommon.BaseMutationOptions<
+  UpdateRecipeMutation,
+  UpdateRecipeMutationVariables
 >;
 export const DeleteRecipeDocument = {
   kind: 'Document',
@@ -34694,13 +35352,115 @@ export type DeleteRecipeMutationOptions = ApolloReactCommon.BaseMutationOptions<
   DeleteRecipeMutation,
   DeleteRecipeMutationVariables
 >;
-export const AddRecipeToShoppingListDocument = {
+export const FavoriteRecipeDocument = {
   kind: 'Document',
   definitions: [
     {
       kind: 'OperationDefinition',
       operation: 'mutation',
-      name: { kind: 'Name', value: 'AddRecipeToShoppingList' },
+      name: { kind: 'Name', value: 'FavoriteRecipe' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'input' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: {
+              kind: 'NamedType',
+              name: { kind: 'Name', value: 'FavoriteRecipeInput' },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'favoriteRecipe' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'input' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'input' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'recipeId' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'userId' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'folder' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'tags' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type FavoriteRecipeMutationFn = ApolloReactCommon.MutationFunction<
+  FavoriteRecipeMutation,
+  FavoriteRecipeMutationVariables
+>;
+
+/**
+ * __useFavoriteRecipeMutation__
+ *
+ * To run a mutation, you first call `useFavoriteRecipeMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useFavoriteRecipeMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [favoriteRecipeMutation, { data, loading, error }] = useFavoriteRecipeMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useFavoriteRecipeMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    FavoriteRecipeMutation,
+    FavoriteRecipeMutationVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useMutation<
+    FavoriteRecipeMutation,
+    FavoriteRecipeMutationVariables
+  >(FavoriteRecipeDocument, options);
+}
+export type FavoriteRecipeMutationHookResult = ReturnType<
+  typeof useFavoriteRecipeMutation
+>;
+export type FavoriteRecipeMutationResult =
+  ApolloReactCommon.MutationResult<FavoriteRecipeMutation>;
+export type FavoriteRecipeMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    FavoriteRecipeMutation,
+    FavoriteRecipeMutationVariables
+  >;
+export const CreateShoppingListItemsFromRecipeDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'CreateShoppingListItemsFromRecipe' },
       variableDefinitions: [
         {
           kind: 'VariableDefinition',
@@ -34738,7 +35498,7 @@ export const AddRecipeToShoppingListDocument = {
         selections: [
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'addRecipeToShoppingList' },
+            name: { kind: 'Name', value: 'createShoppingListItemsFromRecipe' },
             arguments: [
               {
                 kind: 'Argument',
@@ -34887,24 +35647,24 @@ export const AddRecipeToShoppingListDocument = {
     },
   ],
 } as unknown as DocumentNode;
-export type AddRecipeToShoppingListMutationFn =
+export type CreateShoppingListItemsFromRecipeMutationFn =
   ApolloReactCommon.MutationFunction<
-    AddRecipeToShoppingListMutation,
-    AddRecipeToShoppingListMutationVariables
+    CreateShoppingListItemsFromRecipeMutation,
+    CreateShoppingListItemsFromRecipeMutationVariables
   >;
 
 /**
- * __useAddRecipeToShoppingListMutation__
+ * __useCreateShoppingListItemsFromRecipeMutation__
  *
- * To run a mutation, you first call `useAddRecipeToShoppingListMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useAddRecipeToShoppingListMutation` returns a tuple that includes:
+ * To run a mutation, you first call `useCreateShoppingListItemsFromRecipeMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateShoppingListItemsFromRecipeMutation` returns a tuple that includes:
  * - A mutate function that you can call at any time to execute the mutation
  * - An object with fields that represent the current status of the mutation's execution
  *
  * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
  *
  * @example
- * const [addRecipeToShoppingListMutation, { data, loading, error }] = useAddRecipeToShoppingListMutation({
+ * const [createShoppingListItemsFromRecipeMutation, { data, loading, error }] = useCreateShoppingListItemsFromRecipeMutation({
  *   variables: {
  *      recipeId: // value for 'recipeId'
  *      shoppingListId: // value for 'shoppingListId'
@@ -34912,35 +35672,38 @@ export type AddRecipeToShoppingListMutationFn =
  *   },
  * });
  */
-export function useAddRecipeToShoppingListMutation(
+export function useCreateShoppingListItemsFromRecipeMutation(
   baseOptions?: ApolloReactHooks.MutationHookOptions<
-    AddRecipeToShoppingListMutation,
-    AddRecipeToShoppingListMutationVariables
+    CreateShoppingListItemsFromRecipeMutation,
+    CreateShoppingListItemsFromRecipeMutationVariables
   >,
 ) {
   const options = { ...defaultOptions, ...baseOptions };
   return ApolloReactHooks.useMutation<
-    AddRecipeToShoppingListMutation,
-    AddRecipeToShoppingListMutationVariables
-  >(AddRecipeToShoppingListDocument, options);
+    CreateShoppingListItemsFromRecipeMutation,
+    CreateShoppingListItemsFromRecipeMutationVariables
+  >(CreateShoppingListItemsFromRecipeDocument, options);
 }
-export type AddRecipeToShoppingListMutationHookResult = ReturnType<
-  typeof useAddRecipeToShoppingListMutation
+export type CreateShoppingListItemsFromRecipeMutationHookResult = ReturnType<
+  typeof useCreateShoppingListItemsFromRecipeMutation
 >;
-export type AddRecipeToShoppingListMutationResult =
-  ApolloReactCommon.MutationResult<AddRecipeToShoppingListMutation>;
-export type AddRecipeToShoppingListMutationOptions =
+export type CreateShoppingListItemsFromRecipeMutationResult =
+  ApolloReactCommon.MutationResult<CreateShoppingListItemsFromRecipeMutation>;
+export type CreateShoppingListItemsFromRecipeMutationOptions =
   ApolloReactCommon.BaseMutationOptions<
-    AddRecipeToShoppingListMutation,
-    AddRecipeToShoppingListMutationVariables
+    CreateShoppingListItemsFromRecipeMutation,
+    CreateShoppingListItemsFromRecipeMutationVariables
   >;
-export const AddRecipeIngredientToShoppingListDocument = {
+export const CreateShoppingListItemFromRecipeIngredientDocument = {
   kind: 'Document',
   definitions: [
     {
       kind: 'OperationDefinition',
       operation: 'mutation',
-      name: { kind: 'Name', value: 'AddRecipeIngredientToShoppingList' },
+      name: {
+        kind: 'Name',
+        value: 'CreateShoppingListItemFromRecipeIngredient',
+      },
       variableDefinitions: [
         {
           kind: 'VariableDefinition',
@@ -34978,7 +35741,10 @@ export const AddRecipeIngredientToShoppingListDocument = {
         selections: [
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'addRecipeIngredientToShoppingList' },
+            name: {
+              kind: 'Name',
+              value: 'createShoppingListItemFromRecipeIngredient',
+            },
             arguments: [
               {
                 kind: 'Argument',
@@ -35068,24 +35834,24 @@ export const AddRecipeIngredientToShoppingListDocument = {
     },
   ],
 } as unknown as DocumentNode;
-export type AddRecipeIngredientToShoppingListMutationFn =
+export type CreateShoppingListItemFromRecipeIngredientMutationFn =
   ApolloReactCommon.MutationFunction<
-    AddRecipeIngredientToShoppingListMutation,
-    AddRecipeIngredientToShoppingListMutationVariables
+    CreateShoppingListItemFromRecipeIngredientMutation,
+    CreateShoppingListItemFromRecipeIngredientMutationVariables
   >;
 
 /**
- * __useAddRecipeIngredientToShoppingListMutation__
+ * __useCreateShoppingListItemFromRecipeIngredientMutation__
  *
- * To run a mutation, you first call `useAddRecipeIngredientToShoppingListMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useAddRecipeIngredientToShoppingListMutation` returns a tuple that includes:
+ * To run a mutation, you first call `useCreateShoppingListItemFromRecipeIngredientMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateShoppingListItemFromRecipeIngredientMutation` returns a tuple that includes:
  * - A mutate function that you can call at any time to execute the mutation
  * - An object with fields that represent the current status of the mutation's execution
  *
  * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
  *
  * @example
- * const [addRecipeIngredientToShoppingListMutation, { data, loading, error }] = useAddRecipeIngredientToShoppingListMutation({
+ * const [createShoppingListItemFromRecipeIngredientMutation, { data, loading, error }] = useCreateShoppingListItemFromRecipeIngredientMutation({
  *   variables: {
  *      recipeIngredientId: // value for 'recipeIngredientId'
  *      shoppingListId: // value for 'shoppingListId'
@@ -35093,27 +35859,26 @@ export type AddRecipeIngredientToShoppingListMutationFn =
  *   },
  * });
  */
-export function useAddRecipeIngredientToShoppingListMutation(
+export function useCreateShoppingListItemFromRecipeIngredientMutation(
   baseOptions?: ApolloReactHooks.MutationHookOptions<
-    AddRecipeIngredientToShoppingListMutation,
-    AddRecipeIngredientToShoppingListMutationVariables
+    CreateShoppingListItemFromRecipeIngredientMutation,
+    CreateShoppingListItemFromRecipeIngredientMutationVariables
   >,
 ) {
   const options = { ...defaultOptions, ...baseOptions };
   return ApolloReactHooks.useMutation<
-    AddRecipeIngredientToShoppingListMutation,
-    AddRecipeIngredientToShoppingListMutationVariables
-  >(AddRecipeIngredientToShoppingListDocument, options);
+    CreateShoppingListItemFromRecipeIngredientMutation,
+    CreateShoppingListItemFromRecipeIngredientMutationVariables
+  >(CreateShoppingListItemFromRecipeIngredientDocument, options);
 }
-export type AddRecipeIngredientToShoppingListMutationHookResult = ReturnType<
-  typeof useAddRecipeIngredientToShoppingListMutation
->;
-export type AddRecipeIngredientToShoppingListMutationResult =
-  ApolloReactCommon.MutationResult<AddRecipeIngredientToShoppingListMutation>;
-export type AddRecipeIngredientToShoppingListMutationOptions =
+export type CreateShoppingListItemFromRecipeIngredientMutationHookResult =
+  ReturnType<typeof useCreateShoppingListItemFromRecipeIngredientMutation>;
+export type CreateShoppingListItemFromRecipeIngredientMutationResult =
+  ApolloReactCommon.MutationResult<CreateShoppingListItemFromRecipeIngredientMutation>;
+export type CreateShoppingListItemFromRecipeIngredientMutationOptions =
   ApolloReactCommon.BaseMutationOptions<
-    AddRecipeIngredientToShoppingListMutation,
-    AddRecipeIngredientToShoppingListMutationVariables
+    CreateShoppingListItemFromRecipeIngredientMutation,
+    CreateShoppingListItemFromRecipeIngredientMutationVariables
   >;
 export const MyShoppingListInvitesDocument = {
   kind: 'Document',
@@ -42441,3 +43206,1012 @@ export type ShoppingListItemRemovedSubscriptionHookResult = ReturnType<
 >;
 export type ShoppingListItemRemovedSubscriptionResult =
   ApolloReactCommon.SubscriptionResult<ShoppingListItemRemovedSubscription>;
+export const GetNotificationPreferencesDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'query',
+      name: { kind: 'Name', value: 'GetNotificationPreferences' },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'myNotificationPreferences' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'userId' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'emailEnabled' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'pushEnabled' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'smsEnabled' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'expirationNotifications' },
+                },
+                {
+                  kind: 'Field',
+                  name: {
+                    kind: 'Name',
+                    value: 'expirationNotificationFrequency',
+                  },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'expirationDaysThreshold' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'lowStockAlerts' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'shoppingListUpdates' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'pantryChanges' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'recipeRecommendations' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'mealPlanReminders' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'cookingReminders' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'collaborationInvites' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'homeInvites' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'sharedListUpdates' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'weeklyDigest' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'monthlyReport' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'quietHoursEnabled' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'quietHoursStart' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'quietHoursEnd' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'quietHoursTimezone' },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+
+/**
+ * __useGetNotificationPreferencesQuery__
+ *
+ * To run a query within a React component, call `useGetNotificationPreferencesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetNotificationPreferencesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetNotificationPreferencesQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useGetNotificationPreferencesQuery(
+  baseOptions?: ApolloReactHooks.QueryHookOptions<
+    GetNotificationPreferencesQuery,
+    GetNotificationPreferencesQueryVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useQuery<
+    GetNotificationPreferencesQuery,
+    GetNotificationPreferencesQueryVariables
+  >(GetNotificationPreferencesDocument, options);
+}
+export function useGetNotificationPreferencesLazyQuery(
+  baseOptions?: ApolloReactHooks.LazyQueryHookOptions<
+    GetNotificationPreferencesQuery,
+    GetNotificationPreferencesQueryVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useLazyQuery<
+    GetNotificationPreferencesQuery,
+    GetNotificationPreferencesQueryVariables
+  >(GetNotificationPreferencesDocument, options);
+}
+export function useGetNotificationPreferencesSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetNotificationPreferencesQuery,
+        GetNotificationPreferencesQueryVariables
+      >,
+) {
+  const options =
+    baseOptions === ApolloReactHooks.skipToken
+      ? baseOptions
+      : { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useSuspenseQuery<
+    GetNotificationPreferencesQuery,
+    GetNotificationPreferencesQueryVariables
+  >(GetNotificationPreferencesDocument, options);
+}
+export type GetNotificationPreferencesQueryHookResult = ReturnType<
+  typeof useGetNotificationPreferencesQuery
+>;
+export type GetNotificationPreferencesLazyQueryHookResult = ReturnType<
+  typeof useGetNotificationPreferencesLazyQuery
+>;
+export type GetNotificationPreferencesSuspenseQueryHookResult = ReturnType<
+  typeof useGetNotificationPreferencesSuspenseQuery
+>;
+export type GetNotificationPreferencesQueryResult =
+  ApolloReactCommon.QueryResult<
+    GetNotificationPreferencesQuery,
+    GetNotificationPreferencesQueryVariables
+  >;
+export function refetchGetNotificationPreferencesQuery(
+  variables?: GetNotificationPreferencesQueryVariables,
+) {
+  return { query: GetNotificationPreferencesDocument, variables: variables };
+}
+export const GetDietaryProfileDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'query',
+      name: { kind: 'Name', value: 'GetDietaryProfile' },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'myDietaryProfile' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'userId' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'restrictions' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'type' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'severity' },
+                      },
+                      { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'appliesToHomeId' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'createdAt' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'updatedAt' },
+                      },
+                    ],
+                  },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'preferredCuisines' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'dislikedIngredients' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'favoriteIngredients' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'calorieTarget' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'proteinTarget' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'carbsTarget' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'fatTarget' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'mealsPerDay' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'snacksPerDay' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'cookingSkillLevel' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'maxPrepTimeMinutes' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'maxCookTimeMinutes' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'budgetPerMeal' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+
+/**
+ * __useGetDietaryProfileQuery__
+ *
+ * To run a query within a React component, call `useGetDietaryProfileQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetDietaryProfileQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetDietaryProfileQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useGetDietaryProfileQuery(
+  baseOptions?: ApolloReactHooks.QueryHookOptions<
+    GetDietaryProfileQuery,
+    GetDietaryProfileQueryVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useQuery<
+    GetDietaryProfileQuery,
+    GetDietaryProfileQueryVariables
+  >(GetDietaryProfileDocument, options);
+}
+export function useGetDietaryProfileLazyQuery(
+  baseOptions?: ApolloReactHooks.LazyQueryHookOptions<
+    GetDietaryProfileQuery,
+    GetDietaryProfileQueryVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useLazyQuery<
+    GetDietaryProfileQuery,
+    GetDietaryProfileQueryVariables
+  >(GetDietaryProfileDocument, options);
+}
+export function useGetDietaryProfileSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetDietaryProfileQuery,
+        GetDietaryProfileQueryVariables
+      >,
+) {
+  const options =
+    baseOptions === ApolloReactHooks.skipToken
+      ? baseOptions
+      : { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useSuspenseQuery<
+    GetDietaryProfileQuery,
+    GetDietaryProfileQueryVariables
+  >(GetDietaryProfileDocument, options);
+}
+export type GetDietaryProfileQueryHookResult = ReturnType<
+  typeof useGetDietaryProfileQuery
+>;
+export type GetDietaryProfileLazyQueryHookResult = ReturnType<
+  typeof useGetDietaryProfileLazyQuery
+>;
+export type GetDietaryProfileSuspenseQueryHookResult = ReturnType<
+  typeof useGetDietaryProfileSuspenseQuery
+>;
+export type GetDietaryProfileQueryResult = ApolloReactCommon.QueryResult<
+  GetDietaryProfileQuery,
+  GetDietaryProfileQueryVariables
+>;
+export function refetchGetDietaryProfileQuery(
+  variables?: GetDietaryProfileQueryVariables,
+) {
+  return { query: GetDietaryProfileDocument, variables: variables };
+}
+export const UpdateNotificationPreferencesDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'UpdateNotificationPreferences' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'input' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: {
+              kind: 'NamedType',
+              name: {
+                kind: 'Name',
+                value: 'UpdateNotificationPreferencesInput',
+              },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'updateNotificationPreferences' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'input' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'input' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'userId' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'emailEnabled' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'pushEnabled' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'smsEnabled' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'expirationNotifications' },
+                },
+                {
+                  kind: 'Field',
+                  name: {
+                    kind: 'Name',
+                    value: 'expirationNotificationFrequency',
+                  },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'expirationDaysThreshold' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'lowStockAlerts' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'shoppingListUpdates' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'pantryChanges' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'recipeRecommendations' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'mealPlanReminders' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'cookingReminders' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'collaborationInvites' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'homeInvites' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'sharedListUpdates' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'weeklyDigest' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'monthlyReport' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'quietHoursEnabled' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'quietHoursStart' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'quietHoursEnd' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'quietHoursTimezone' },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type UpdateNotificationPreferencesMutationFn =
+  ApolloReactCommon.MutationFunction<
+    UpdateNotificationPreferencesMutation,
+    UpdateNotificationPreferencesMutationVariables
+  >;
+
+/**
+ * __useUpdateNotificationPreferencesMutation__
+ *
+ * To run a mutation, you first call `useUpdateNotificationPreferencesMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateNotificationPreferencesMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateNotificationPreferencesMutation, { data, loading, error }] = useUpdateNotificationPreferencesMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useUpdateNotificationPreferencesMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    UpdateNotificationPreferencesMutation,
+    UpdateNotificationPreferencesMutationVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useMutation<
+    UpdateNotificationPreferencesMutation,
+    UpdateNotificationPreferencesMutationVariables
+  >(UpdateNotificationPreferencesDocument, options);
+}
+export type UpdateNotificationPreferencesMutationHookResult = ReturnType<
+  typeof useUpdateNotificationPreferencesMutation
+>;
+export type UpdateNotificationPreferencesMutationResult =
+  ApolloReactCommon.MutationResult<UpdateNotificationPreferencesMutation>;
+export type UpdateNotificationPreferencesMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    UpdateNotificationPreferencesMutation,
+    UpdateNotificationPreferencesMutationVariables
+  >;
+export const UpdateDietaryProfileDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'UpdateDietaryProfile' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'input' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: {
+              kind: 'NamedType',
+              name: { kind: 'Name', value: 'UpdateDietaryProfileInput' },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'updateDietaryProfile' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'input' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'input' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'userId' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'restrictions' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'type' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'severity' },
+                      },
+                      { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'appliesToHomeId' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'createdAt' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'updatedAt' },
+                      },
+                    ],
+                  },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'preferredCuisines' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'dislikedIngredients' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'favoriteIngredients' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'calorieTarget' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'proteinTarget' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'carbsTarget' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'fatTarget' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'mealsPerDay' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'snacksPerDay' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'cookingSkillLevel' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'maxPrepTimeMinutes' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'maxCookTimeMinutes' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'budgetPerMeal' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type UpdateDietaryProfileMutationFn = ApolloReactCommon.MutationFunction<
+  UpdateDietaryProfileMutation,
+  UpdateDietaryProfileMutationVariables
+>;
+
+/**
+ * __useUpdateDietaryProfileMutation__
+ *
+ * To run a mutation, you first call `useUpdateDietaryProfileMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateDietaryProfileMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateDietaryProfileMutation, { data, loading, error }] = useUpdateDietaryProfileMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useUpdateDietaryProfileMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    UpdateDietaryProfileMutation,
+    UpdateDietaryProfileMutationVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useMutation<
+    UpdateDietaryProfileMutation,
+    UpdateDietaryProfileMutationVariables
+  >(UpdateDietaryProfileDocument, options);
+}
+export type UpdateDietaryProfileMutationHookResult = ReturnType<
+  typeof useUpdateDietaryProfileMutation
+>;
+export type UpdateDietaryProfileMutationResult =
+  ApolloReactCommon.MutationResult<UpdateDietaryProfileMutation>;
+export type UpdateDietaryProfileMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    UpdateDietaryProfileMutation,
+    UpdateDietaryProfileMutationVariables
+  >;
+export const AddDietaryRestrictionDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'AddDietaryRestriction' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'input' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: {
+              kind: 'NamedType',
+              name: { kind: 'Name', value: 'AddRestrictionInput' },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'addRestriction' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'input' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'input' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'dietaryProfileId' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'type' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'severity' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'appliesToHomeId' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type AddDietaryRestrictionMutationFn =
+  ApolloReactCommon.MutationFunction<
+    AddDietaryRestrictionMutation,
+    AddDietaryRestrictionMutationVariables
+  >;
+
+/**
+ * __useAddDietaryRestrictionMutation__
+ *
+ * To run a mutation, you first call `useAddDietaryRestrictionMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useAddDietaryRestrictionMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [addDietaryRestrictionMutation, { data, loading, error }] = useAddDietaryRestrictionMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useAddDietaryRestrictionMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    AddDietaryRestrictionMutation,
+    AddDietaryRestrictionMutationVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useMutation<
+    AddDietaryRestrictionMutation,
+    AddDietaryRestrictionMutationVariables
+  >(AddDietaryRestrictionDocument, options);
+}
+export type AddDietaryRestrictionMutationHookResult = ReturnType<
+  typeof useAddDietaryRestrictionMutation
+>;
+export type AddDietaryRestrictionMutationResult =
+  ApolloReactCommon.MutationResult<AddDietaryRestrictionMutation>;
+export type AddDietaryRestrictionMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    AddDietaryRestrictionMutation,
+    AddDietaryRestrictionMutationVariables
+  >;
+export const UpdateDietaryRestrictionDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'UpdateDietaryRestriction' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'input' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: {
+              kind: 'NamedType',
+              name: { kind: 'Name', value: 'UpdateRestrictionInput' },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'updateRestriction' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'input' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'input' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'dietaryProfileId' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'type' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'severity' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'appliesToHomeId' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type UpdateDietaryRestrictionMutationFn =
+  ApolloReactCommon.MutationFunction<
+    UpdateDietaryRestrictionMutation,
+    UpdateDietaryRestrictionMutationVariables
+  >;
+
+/**
+ * __useUpdateDietaryRestrictionMutation__
+ *
+ * To run a mutation, you first call `useUpdateDietaryRestrictionMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateDietaryRestrictionMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateDietaryRestrictionMutation, { data, loading, error }] = useUpdateDietaryRestrictionMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useUpdateDietaryRestrictionMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    UpdateDietaryRestrictionMutation,
+    UpdateDietaryRestrictionMutationVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useMutation<
+    UpdateDietaryRestrictionMutation,
+    UpdateDietaryRestrictionMutationVariables
+  >(UpdateDietaryRestrictionDocument, options);
+}
+export type UpdateDietaryRestrictionMutationHookResult = ReturnType<
+  typeof useUpdateDietaryRestrictionMutation
+>;
+export type UpdateDietaryRestrictionMutationResult =
+  ApolloReactCommon.MutationResult<UpdateDietaryRestrictionMutation>;
+export type UpdateDietaryRestrictionMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    UpdateDietaryRestrictionMutation,
+    UpdateDietaryRestrictionMutationVariables
+  >;
+export const RemoveDietaryRestrictionDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'RemoveDietaryRestriction' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'input' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: {
+              kind: 'NamedType',
+              name: { kind: 'Name', value: 'RemoveRestrictionInput' },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'removeRestriction' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'input' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'input' },
+                },
+              },
+            ],
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type RemoveDietaryRestrictionMutationFn =
+  ApolloReactCommon.MutationFunction<
+    RemoveDietaryRestrictionMutation,
+    RemoveDietaryRestrictionMutationVariables
+  >;
+
+/**
+ * __useRemoveDietaryRestrictionMutation__
+ *
+ * To run a mutation, you first call `useRemoveDietaryRestrictionMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useRemoveDietaryRestrictionMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [removeDietaryRestrictionMutation, { data, loading, error }] = useRemoveDietaryRestrictionMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useRemoveDietaryRestrictionMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    RemoveDietaryRestrictionMutation,
+    RemoveDietaryRestrictionMutationVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useMutation<
+    RemoveDietaryRestrictionMutation,
+    RemoveDietaryRestrictionMutationVariables
+  >(RemoveDietaryRestrictionDocument, options);
+}
+export type RemoveDietaryRestrictionMutationHookResult = ReturnType<
+  typeof useRemoveDietaryRestrictionMutation
+>;
+export type RemoveDietaryRestrictionMutationResult =
+  ApolloReactCommon.MutationResult<RemoveDietaryRestrictionMutation>;
+export type RemoveDietaryRestrictionMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    RemoveDietaryRestrictionMutation,
+    RemoveDietaryRestrictionMutationVariables
+  >;

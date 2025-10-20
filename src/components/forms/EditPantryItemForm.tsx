@@ -69,7 +69,7 @@ export const EditPantryItemForm: React.FC<EditPantryItemFormProps> = ({
         quantity: item.currentQuantity || 1,
         reservedQuantity: item.reservedQuantity?.toString() || '',
         storageState: item.storageState || StorageState.Ambient,
-        location: item.storageLocation || '',
+        location: typeof item.storageLocation === 'string' ? item.storageLocation : (item.storageLocation?.name || ''),
         expirationDate: item.expiresAt ? new Date(item.expiresAt) : undefined,
         notes: item.storageNotes || '',
         category: item.customCategory || '',

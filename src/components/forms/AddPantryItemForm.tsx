@@ -16,7 +16,7 @@ import { useDefaultHome } from '#hooks';
 import { useStore } from '#store';
 import {
   StorageState,
-  useAddItemToPantryMutation,
+  useCreatePantryItemMutation,
   useGetHomeQuery,
   useGetUnitBySymbolLazyQuery,
   ItemSuggestion,
@@ -94,10 +94,10 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
   // Use selectedPantryId from store as primary source, fallback to pantry from home data
   const currentPantryId = selectedPantryId || pantry?.id;
 
-  const [addItem] = useAddItemToPantryMutation({
+  const [addItem] = useCreatePantryItemMutation({
     update: (cache: ApolloCache, { data: mutationData }: any) => {
-      if (!mutationData?.addItemToPantry || !currentPantryId) return;
-      const newItem = mutationData.addItemToPantry;
+      if (!mutationData?.createPantryItem || !currentPantryId) return;
+      const newItem = mutationData.createPantryItem;
       try {
         const existingData = cache.readQuery<{
           pantryItems: PantryItemFragment[];
@@ -249,7 +249,7 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
       const result = await addItem({ variables: { input } });
 
       // Only call onSuccess if the mutation actually succeeded
-      if (result.data?.addItemToPantry) {
+      if (result.data?.createPantryItem) {
         onSuccess?.();
       } else {
         // Mutation completed but returned no data (likely an error)

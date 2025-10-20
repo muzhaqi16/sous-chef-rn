@@ -99,6 +99,36 @@ export const PROFILE_SETTINGS_CONFIG = [
     ],
   },
   {
+    title: 'Notifications',
+    items: [
+      {
+        key: 'notifications',
+        label: 'Notifications',
+        type: 'navigation',
+      },
+    ],
+  },
+  {
+    title: 'Dietary Profile',
+    items: [
+      {
+        key: 'dietaryProfile',
+        label: 'Dietary Profile',
+        type: 'navigation',
+      },
+    ],
+  },
+  {
+    title: 'App Settings',
+    items: [
+      {
+        key: 'appSettings',
+        label: 'App Settings',
+        type: 'navigation',
+      },
+    ],
+  },
+  {
     title: 'Security',
     items: [
       {

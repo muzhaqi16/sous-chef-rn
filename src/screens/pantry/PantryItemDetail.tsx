@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, Alert } from 'react-native';
 import {
   useGetPantryItemQuery,
-  useRemoveItemFromPantryMutation,
+  useDeletePantryItemMutation,
   useAddItemToShoppingListMutation,
   GetShoppingListItemsDocument,
 } from '#generated';
@@ -26,7 +26,7 @@ export const PantryItemDetail: React.FC<{
     variables: { id: itemId },
   });
 
-  const [deleteItem] = useRemoveItemFromPantryMutation();
+  const [deleteItem] = useDeletePantryItemMutation();
   const [addToShoppingList] = useAddItemToShoppingListMutation({
     refetchQueries: selectedShoppingListId
       ? [
@@ -204,7 +204,11 @@ export const PantryItemDetail: React.FC<{
               <Text style={[commonStyles.caption, styles.detailLabel]}>
                 Location
               </Text>
-              <Text style={styles.detailValue}>{item.storageLocation}</Text>
+              <Text style={styles.detailValue}>
+                {typeof item.storageLocation === 'string'
+                  ? item.storageLocation
+                  : item.storageLocation.name}
+              </Text>
             </View>
           )}
           {item?.expiresAt && (

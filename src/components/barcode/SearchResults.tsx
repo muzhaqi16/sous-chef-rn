@@ -5,7 +5,7 @@ import { ActionButtons } from './ActionButtons';
 import { StyleSheet } from 'react-native-unistyles';
 import { ApolloCache } from '@apollo/client';
 import {
-  useAddItemToPantryMutation,
+  useCreatePantryItemMutation,
   useAddItemToShoppingListMutation,
   GetPantryItemsDocument,
   GetPantryItemsQuery,
@@ -32,9 +32,9 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
 }) => {
   const [isAdded, setIsAdded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [addToPantry] = useAddItemToPantryMutation({
+  const [addToPantry] = useCreatePantryItemMutation({
     update: (cache: ApolloCache, { data }: any) => {
-      if (data?.addItemToPantry && pantryId) {
+      if (data?.createPantryItem && pantryId) {
         // Read the existing pantry items from cache
         const existingData = cache.readQuery<GetPantryItemsQuery>({
           query: GetPantryItemsDocument,
@@ -47,7 +47,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             query: GetPantryItemsDocument,
             variables: { pantryId },
             data: {
-              pantryItems: [...existingData.pantryItems, data.addItemToPantry],
+              pantryItems: [...existingData.pantryItems, data.createPantryItem],
             },
           });
         }

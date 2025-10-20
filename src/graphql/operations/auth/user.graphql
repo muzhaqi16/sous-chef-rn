@@ -30,6 +30,7 @@ query GetUserSettings {
     shareUsageData
     shareWithPartners
     personalizedAds
+    preferredUnitSystem
     enabledFeatures
     betaFeatures
     createdAt

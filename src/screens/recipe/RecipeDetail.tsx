@@ -21,10 +21,10 @@ import type { RecipeStackParamList } from '#/navigation/stacks/RecipeStack';
 import { spoonacularService } from '#/services/recipeApi';
 import type { RecipeInformation } from '#/services/recipeApi/types';
 import {
-  useSaveRecipeMutation,
+  useCreateRecipeMutation,
   useGetRecipeQuery,
-  useAddRecipeToShoppingListMutation,
-  useAddRecipeIngredientToShoppingListMutation,
+  useCreateShoppingListItemsFromRecipeMutation,
+  useCreateShoppingListItemFromRecipeIngredientMutation,
   useAddItemToShoppingListMutation,
   useGetShoppingListsQuery,
   useMyRecipesQuery,
@@ -78,15 +78,16 @@ export const RecipeDetail: React.FC = () => {
   const ingredientSelectorRef = useRef<BottomSheetModal>(null);
 
   // Mutations
-  const [saveRecipeMutation] = useSaveRecipeMutation({
+  const [saveRecipeMutation] = useCreateRecipeMutation({
     refetchQueries: ['MyRecipes'],
     awaitRefetchQueries: true,
   });
-  const [addRecipeToShoppingListMutation] = useAddRecipeToShoppingListMutation({
-    refetchQueries: ['GetShoppingList'],
-  });
+  const [addRecipeToShoppingListMutation] =
+    useCreateShoppingListItemsFromRecipeMutation({
+      refetchQueries: ['GetShoppingList'],
+    });
   const [addRecipeIngredientMutation] =
-    useAddRecipeIngredientToShoppingListMutation({
+    useCreateShoppingListItemFromRecipeIngredientMutation({
       refetchQueries: ['GetShoppingList'],
     });
   const [addItemToShoppingListMutation] = useAddItemToShoppingListMutation({
@@ -157,13 +158,13 @@ export const RecipeDetail: React.FC = () => {
 
   // Check if current external recipe is already saved
   useEffect(() => {
-    if (!externalSource || !externalId || !myRecipesData?.myRecipes?.recipes) {
+    if (!externalSource || !externalId || !myRecipesData?.recipes?.recipes) {
       setRecipeSaved(false);
       return;
     }
 
-    const isAlreadySaved = myRecipesData.myRecipes.recipes.some(
-      recipe =>
+    const isAlreadySaved = myRecipesData.recipes.recipes.some(
+      (recipe: any) =>
         recipe.externalSource === externalSource &&
         recipe.externalId === externalId,
     );
@@ -314,12 +315,12 @@ export const RecipeDetail: React.FC = () => {
           },
         });
 
-        const data = result.data?.addRecipeToShoppingList;
+        const data = result.data?.createShoppingListItemsFromRecipe;
         if (data) {
           // Log skipped items for debugging
           if (data.skippedItems && data.skippedItems.length > 0) {
             console.log('Skipped items:', data.skippedItems);
-            data.skippedItems.forEach(item => {
+            data.skippedItems.forEach((item: any) => {
               console.log(`  - ${item.name} (${item.quantity})`);
             });
           }
@@ -419,7 +420,7 @@ export const RecipeDetail: React.FC = () => {
         },
       });
 
-      const data = result.data?.addRecipeToShoppingList;
+      const data = result.data?.createShoppingListItemsFromRecipe;
       if (data) {
         Alert.alert(
           'Success!',
@@ -493,9 +494,9 @@ export const RecipeDetail: React.FC = () => {
           },
         });
 
-        if (result.data?.addRecipeIngredientToShoppingList) {
+        if (result.data?.createShoppingListItemFromRecipeIngredient) {
           const wasUpdated =
-            result.data.addRecipeIngredientToShoppingList.wasUpdated;
+            result.data.createShoppingListItemFromRecipeIngredient.wasUpdated;
           if (wasUpdated) {
             updatedCount++;
           } else {
@@ -675,10 +676,7 @@ export const RecipeDetail: React.FC = () => {
                 const ingredientText =
                   ingredient.original ||
                   `${ingredient.quantity || ''} ${
-                    ingredient.unit?.symbol ||
-                    ingredient.usUnit ||
-                    ingredient.metricUnit ||
-                    ''
+                    ingredient.unit?.symbol || ''
                   } ${ingredient.name}`.trim() ||
                   ingredient.originalString;
                 const isAdded = addedIngredients.has(ingredient.id);
@@ -846,8 +844,7 @@ export const RecipeDetail: React.FC = () => {
                 <View style={styles.ingredientInfo}>
                   <Text style={styles.ingredientName}>{item.name}</Text>
                   <Text style={styles.ingredientAmount}>
-                    {item.quantity}{' '}
-                    {item.unit?.symbol || item.usUnit || item.metricUnit || ''}
+                    {item.quantity} {item.unit?.symbol || ''}
                   </Text>
                 </View>
               </TouchableOpacity>

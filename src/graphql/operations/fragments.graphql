@@ -367,7 +367,11 @@ fragment PantryItemFragment on PantryItem {
     isCommon
   }
   expiresAt
-  storageLocation
+  storageLocation {
+    id
+    name
+    type
+  }
   storageState
   storageNotes
   initialQuantity
@@ -623,7 +627,6 @@ fragment RecipeIngredientFragment on RecipeIngredient {
   id
   name
   quantity
-  spoonacularIngredientId
   item {
     id
     name
@@ -634,14 +637,6 @@ fragment RecipeIngredientFragment on RecipeIngredient {
     name
     symbol
   }
-  aisle
-  consistency
-  originalString
-  metricAmount
-  metricUnit
-  usAmount
-  usUnit
-  meta
   image
   isOptional
   notes

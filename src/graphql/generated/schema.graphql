@@ -319,43 +319,6 @@ type AddIngredientResult {
   wasUpdated: Boolean!
 }
 
-input AddPantryItemInput {
-  acquisitionMethod: AcquisitionMethod
-  actualNetWeight: Float
-  actualNetWeightUnitId: String
-  autoReorderPoint: Float
-  batchNumber: String
-  bestByDate: String
-  condition: ItemCondition
-  costPerUnit: Float
-  customCategory: String
-  expiresAt: String
-  initialQuantity: Float!
-  isAutoReorder: Boolean
-  itemBrand: String
-  itemCategory: String
-  itemDescription: String
-  itemDisplayUnitId: String
-  itemId: String
-  itemName: String
-  itemNetWeight: Float
-  itemUpc: String
-  lastUsedAt: DateTime
-  lotNumber: String
-  pantryId: ID!
-  priority: Int
-  purchaseId: String
-  storageLocation: String
-  storageNotes: String
-  storageState: StorageState
-  storeId: String
-  tags: [String!]
-  totalCost: Float
-  unitId: String
-  unitName: String
-  unitSymbol: String
-}
-
 type AddRecipeToShoppingListResult {
   addedItems: [ShoppingListItem!]!
   skippedItems: [RecipeIngredient!]!
@@ -363,6 +326,13 @@ type AddRecipeToShoppingListResult {
   totalSkipped: Int!
   totalUpdated: Int!
   updatedItems: [ShoppingListItem!]!
+}
+
+input AddRestrictionInput {
+  appliesToHomeId: String
+  notes: String
+  severity: RestrictionSeverity!
+  type: DietaryTag!
 }
 
 input AddRestrictionsInput {
@@ -767,6 +737,7 @@ input CreateHomeInput {
 
 input CreateItemInput {
   allergens: JSON
+  alternateUpcs: [String!]
   brandId: String
   brandName: String
   categories: [CategoryInput!]
@@ -787,6 +758,7 @@ input CreateItemInput {
   metadata: JSON
   name: String!
   netWeight: Float
+  primaryUpc: String
   shelfLifeDays: Int
   storageState: StorageState
   tags: [String!]
@@ -902,6 +874,43 @@ input CreatePantryInput {
   temperature: String
 }
 
+input CreatePantryItemInput {
+  acquisitionMethod: AcquisitionMethod
+  actualNetWeight: Float
+  actualNetWeightUnitId: String
+  autoReorderPoint: Float
+  batchNumber: String
+  bestByDate: String
+  condition: ItemCondition
+  costPerUnit: Float
+  customCategory: String
+  expiresAt: String
+  initialQuantity: Float!
+  isAutoReorder: Boolean
+  itemBrand: String
+  itemCategory: String
+  itemDescription: String
+  itemDisplayUnitId: String
+  itemId: String
+  itemName: String
+  itemNetWeight: Float
+  itemUpc: String
+  lastUsedAt: DateTime
+  lotNumber: String
+  pantryId: ID!
+  priority: Int
+  purchaseId: String
+  storageLocation: String
+  storageNotes: String
+  storageState: StorageState
+  storeId: String
+  tags: [String!]
+  totalCost: Float
+  unitId: String
+  unitName: String
+  unitSymbol: String
+}
+
 input CreatePurchaseInput {
   currencyId: ID!
   discountAmount: Float
@@ -932,6 +941,7 @@ input CreateRecipeInput {
   externalSourceId: String
   externalSourceUrl: String
   imageUrl: String
+  ingredients: [RecipeIngredientInput!]!
   instructions: JSON!
   isPublished: Boolean
   name: String!
@@ -959,6 +969,7 @@ input CreateShoppingListInput {
 }
 
 input CreateShoppingListItemInput {
+  addedContext: String
   aisle: String
   budgetPrice: Float
   category: String
@@ -969,11 +980,29 @@ input CreateShoppingListItemInput {
   preferredStoreId: String
   priority: Int
   quantity: Float
+  recipeId: ID
+  recipeIngredientId: ID
   shoppingListId: ID!
   sortOrder: Int
   storeSection: String
   unitId: String
   unitName: String
+}
+
+input CreateStorageLocationInput {
+  capacity: Float
+  capacityUnit: String
+  color: String
+  description: String
+  homeId: ID!
+  icon: String
+  isClimateControlled: Boolean
+  isDefault: Boolean
+  name: String!
+  parentLocationId: ID
+  sortOrder: Int
+  temperature: StorageState
+  type: StorageType!
 }
 
 input CreateStoreInput {
@@ -1285,16 +1314,56 @@ type DeviceTypeStat {
   deviceType: DeviceType!
 }
 
+type DietaryProfile {
+  budgetPerMeal: Float
+  calorieTarget: Int
+  carbsTarget: Int
+  cookingSkillLevel: String
+  createdAt: DateTime!
+  dislikedIngredients: [String!]!
+  fatTarget: Int
+  favoriteIngredients: [String!]!
+  id: ID!
+  maxCookTimeMinutes: Int
+  maxPrepTimeMinutes: Int
+  mealsPerDay: Int!
+  preferredCuisines: [String!]!
+  proteinTarget: Int
+  restrictions: [DietaryRestriction!]!
+  snacksPerDay: Int!
+  updatedAt: DateTime!
+  user: User!
+  userId: String!
+}
+
+type DietaryRestriction {
+  appliesToHomeId: String
+  createdAt: DateTime!
+  dietaryProfile: DietaryProfile!
+  dietaryProfileId: String!
+  id: ID!
+  notes: String
+  severity: RestrictionSeverity!
+  type: DietaryTag!
+  updatedAt: DateTime!
+}
+
 enum DietaryTag {
   DAIRY_FREE
+  DIABETIC_FRIENDLY
+  EGG_FREE
+  FISH_FREE
   GLUTEN_FREE
   HALAL
+  HEART_HEALTHY
   KETO
   KOSHER
   LOW_CARB
   LOW_SODIUM
   NUT_FREE
   PALEO
+  SHELLFISH_FREE
+  SOY_FREE
   SUGAR_FREE
   VEGAN
   VEGETARIAN
@@ -1308,9 +1377,62 @@ enum Difficulty {
   VERY_EASY
 }
 
+input DismissNotificationInput {
+  notificationId: ID!
+}
+
 interface Edge {
   cursor: String!
   node: Node!
+}
+
+enum ExpirationAction {
+  CONSUMED
+  COOKED
+  EXTENDED
+  NO_ACTION
+  SHARED
+  WASTE
+}
+
+enum ExpirationFrequency {
+  DAILY_EVENING
+  DAILY_MORNING
+  NEVER
+  REAL_TIME
+  WEEKLY_DIGEST
+}
+
+type ExpirationNotification {
+  actionAt: DateTime
+  actionTaken: ExpirationAction
+  batchId: String
+  createdAt: DateTime!
+  daysUntilExpiry: Int!
+  dismissedAt: DateTime
+  expiresAt: DateTime!
+  genericNotification: Notification
+  genericNotificationId: String
+  id: ID!
+  isBatched: Boolean!
+  notificationType: ExpirationNotificationType!
+  pantryItem: PantryItem!
+  pantryItemId: String!
+  readAt: DateTime
+  sentAt: DateTime
+  status: NotificationDeliveryStatus!
+  updatedAt: DateTime!
+  user: User!
+  userId: String!
+}
+
+enum ExpirationNotificationType {
+  EXPIRED_REMINDER
+  EXPIRES_IN_3_DAYS
+  EXPIRES_IN_7_DAYS
+  EXPIRES_TODAY
+  EXPIRES_TOMORROW
+  WEEKLY_DIGEST
 }
 
 enum ExportFormat {
@@ -1407,9 +1529,23 @@ type FailedIPStat {
   ipAddress: String
 }
 
+input FavoriteRecipeInput {
+  folder: String
+  notes: String
+  recipeId: ID!
+  tags: [String!]
+}
+
 type ForgotPasswordResponse {
   message: String!
   success: Boolean!
+}
+
+input GetExpirationNotificationsInput {
+  limit: Int
+  offset: Int
+  pantryItemId: ID
+  status: NotificationDeliveryStatus
 }
 
 enum HealthBenefitCategory {
@@ -1662,6 +1798,9 @@ input InviteToShoppingListInput {
 
 type Item {
   allergens: JSON
+  alternateUpcs: [String!]!
+  approvedAt: DateTime
+  approvedBy: User
   brands: [ItemBrand!]!
   categories: [ItemCategory!]
   convertedNetWeight: ConvertedValue
@@ -1678,13 +1817,16 @@ type Item {
   imageUrl: String
   images: JSON
   ingredients: JSON
+  isUserCreated: Boolean!
   metadata: JSON
   name: String!
+  needsApproval: Boolean!
   netWeight: Float
   nutritions: JSON
   pantryItems: [PantryItem!]!
   popularity: Int!
   priceHistory: [ItemPriceHistory!]!
+  primaryUpc: String
   purchases: [Purchase!]!
   recipeIngredients: [RecipeIngredient!]!
   shelfLifeDays: Int
@@ -1782,8 +1924,13 @@ input ItemFilters {
   isDairyFree: Boolean
   isGlutenFree: Boolean
   isOrganic: Boolean
+  isPopular: Boolean
+  isRecent: Boolean
+  isTrending: Boolean
   isVegan: Boolean
+  limit: Int
   priceRange: PriceRangeInput
+  showInOnboarding: Boolean
   status: ItemStatus
   statuses: [ItemStatus!]
   storageState: StorageState
@@ -1791,6 +1938,7 @@ input ItemFilters {
   storeId: String
   storeIds: [String!]
   tags: [String!]
+  timeRange: DateRange
   type: ItemType
   types: [ItemType!]
   updatedAfter: DateTime
@@ -2146,6 +2294,11 @@ type LoginMethodStat {
   method: LoginMethod!
 }
 
+input MarkActionInput {
+  action: ExpirationAction!
+  notificationId: ID!
+}
+
 input MarkAsTemplateInput {
   saveItems: Boolean
   templateName: String!
@@ -2364,33 +2517,14 @@ type Mutation {
   addCollaborator(data: AddCollaboratorInput!): ShoppingListCollaborator!
   addItemTags(id: ID!, tags: [String!]!): Item!
   addItemToCategory(categoryId: ID!, isPrimary: Boolean, itemId: ID!): Item!
-  addItemToPantry(input: AddPantryItemInput!): PantryItem!
   addItemToShoppingList(input: CreateShoppingListItemInput!): ShoppingListItem!
   addItemUnit(input: ItemUnitInput!, itemId: ID!): ItemUnit!
-  addRecipe(
-    category: RecipeCategory
-    cookTimeMinutes: Int
-    difficulty: Difficulty
-    ingredients: [String!]!
-    instructions: JSON!
-    name: String!
-    prepTimeMinutes: Int
-    servings: Int
-  ): Recipe!
-  addRecipeIngredientToShoppingList(
-    quantityOverride: Float
-    recipeIngredientId: ID!
-    shoppingListId: ID!
-  ): AddIngredientResult!
-  addRecipeToShoppingList(
-    recipeId: ID!
-    servings: Int
-    shoppingListId: ID!
-  ): AddRecipeToShoppingListResult!
+  addRestriction(input: AddRestrictionInput!): DietaryRestriction!
   addRestrictions(input: AddRestrictionsInput!): UserModeration!
   addUserAddress(input: CreateUserAddressInput!): UserAddress!
   addWarning(input: AddWarningInput!): UserModeration!
   adminDeleteUser(id: ID!): Boolean!
+  approveItem(itemId: ID!): Item!
   archiveShoppingList(id: ID!): ShoppingList!
   banUser(input: BanUserInput!): UserModeration!
   bulkCreateItems(input: BulkCreateItemInput!): BulkCreateItemsResponse!
@@ -2440,9 +2574,23 @@ type Mutation {
   createModerationRecord(input: CreateUserModerationInput!): UserModeration!
   createNotification(input: CreateNotificationInput!): Notification!
   createPantry(input: CreatePantryInput!): Pantry!
+  createPantryItem(input: CreatePantryItemInput!): PantryItem!
+  createPantryItemUsage(input: RecordPantryItemUsageInput!): PantryItemUsage!
   createProfile(input: CreateUserProfileInput!): UserProfile!
   createPurchase(input: CreatePurchaseInput!): Purchase!
+  createRecipe(input: CreateRecipeInput!): Recipe!
   createShoppingList(input: CreateShoppingListInput!): ShoppingList!
+  createShoppingListItemFromRecipeIngredient(
+    quantityOverride: Float
+    recipeIngredientId: ID!
+    shoppingListId: ID!
+  ): AddIngredientResult!
+  createShoppingListItemsFromRecipe(
+    recipeId: ID!
+    servings: Int
+    shoppingListId: ID!
+  ): AddRecipeToShoppingListResult!
+  createStorageLocation(input: CreateStorageLocationInput!): StorageLocation!
   createStore(input: CreateStoreInput!): Store!
   createUnit(input: CreateUnitInput!): Unit!
   createUploadUrl(ext: String!, mime: String!): PresignPayload!
@@ -2466,14 +2614,21 @@ type Mutation {
   deleteMultipleNotifications(ids: [ID!]!): Int!
   deleteNotification(id: ID!): Boolean!
   deletePantry(id: ID!): Boolean!
+  deletePantryItem(id: ID!): PantryItem!
   deletePurchase(id: ID!): Boolean!
   deleteRecipe(id: ID!): Boolean!
   deleteShoppingList(id: ID!): Boolean!
+  deleteStorageLocation(id: ID!): Boolean!
   deleteStore(id: ID!): Boolean!
   deleteUnit(id: ID!): Boolean!
   deleteUserAddress(id: ID!): UserAddress!
+  dismissExpirationNotification(
+    input: DismissNotificationInput!
+  ): ExpirationNotification!
   exportItems(filters: ItemFilters, format: ExportFormat!): ExportResponse!
+  favoriteRecipe(input: FavoriteRecipeInput!): SavedRecipe!
   flagDeviceAsEmulator(id: ID!): Device!
+  flagItemForReview(itemId: ID!, reason: String): Item!
   flagLoginAsRisky(
     flaggedById: ID!
     loginId: ID!
@@ -2502,6 +2657,7 @@ type Mutation {
   ): ImportItemsResponse!
   incrementDeviceLoginCount(id: ID!): Device!
   incrementItemPopularity(id: ID!): Item!
+  incrementRecipeCookedCount(recipeId: ID!): SavedRecipe!
   inviteToHome(input: InviteToHomeInput!): HomeInvite!
   inviteToShoppingList(
     input: InviteToShoppingListInput!
@@ -2521,13 +2677,8 @@ type Mutation {
   login(input: LoginInput!): AuthPayload!
   markAllNotificationsAsRead: [Notification!]!
   markAsTemplate(id: ID!, input: MarkAsTemplateInput!): ShoppingList!
-  markItemAsWaste(
-    id: ID!
-    isComposted: Boolean
-    isRecycled: Boolean
-    wasteAmount: Float!
-    wasteReason: WasteReason!
-  ): PantryItem!
+  markExpirationAction(input: MarkActionInput!): ExpirationNotification!
+  markExpirationNotificationAsRead(notificationId: ID!): ExpirationNotification!
   markItemPurchased(id: ID!, status: Boolean!): ShoppingListItem!
   markLoginAsReviewed(
     loginId: ID!
@@ -2545,7 +2696,13 @@ type Mutation {
   putUnderReview(input: PutUnderReviewInput!): UserModeration!
   reactivateDevice(id: ID!): Device!
   recordLoginAttempt(input: LoginAttemptInput!): LoginHistory!
-  recordPantryItemUsage(input: RecordPantryItemUsageInput!): PantryItemUsage!
+  recordPantryItemWaste(
+    id: ID!
+    isComposted: Boolean
+    isRecycled: Boolean
+    wasteAmount: Float!
+    wasteReason: WasteReason!
+  ): PantryItem!
   recordPriceObservation(
     itemId: ID!
     observedAt: DateTime
@@ -2555,10 +2712,10 @@ type Mutation {
   refresh(token: String!): RefreshTokenPayload!
   register(input: RegisterInput!): AuthPayload!
   registerDevice(input: DeviceRegistrationInput!): Device!
+  rejectItem(input: RejectItemInput!): Boolean!
   removeCollaborator(data: RemoveCollaboratorInput!): Boolean!
   removeItemBrand(brandId: ID!, itemId: ID!): Item!
   removeItemFromCategory(categoryId: ID!, itemId: ID!): Item!
-  removeItemFromPantry(id: ID!): PantryItem!
   removeItemFromShoppingList(id: ID!): Boolean!
   removeItemImage(id: ID!): Item!
   removeItemTags(id: ID!, tags: [String!]!): Item!
@@ -2567,6 +2724,7 @@ type Mutation {
   removeProfileAvatar: UserProfile!
   removeProfileCover: UserProfile!
   removePushToken(id: ID!): Device!
+  removeRestriction(input: RemoveRestrictionInput!): Boolean!
   removeRestrictions(input: RemoveRestrictionsInput!): UserModeration!
   removeShoppingListCollaborator(id: ID!): Boolean!
   removeUnitConversion(unitId: ID!): Unit!
@@ -2581,7 +2739,6 @@ type Mutation {
   restoreItem(id: ID!): Item!
   reviewAppeal(input: ReviewAppealInput!): UserModeration!
   revokeHomeInvite(id: ID!): Boolean!
-  saveRecipe(input: SaveRecipeInput!): Recipe!
   sendBulkNotifications(input: BulkNotificationInput!): BulkNotificationResult!
   sendTestNotification(type: NotificationType!): Notification!
   setDefaultHome(homeId: ID!): UserSettings!
@@ -2609,6 +2766,7 @@ type Mutation {
   unbanUser(userId: ID!): UserModeration!
   uncategorizeItem(categoryId: ID!, itemId: ID!): Boolean!
   uncompleteShoppingList(id: ID!): ShoppingList!
+  unfavoriteRecipe(recipeId: ID!): Boolean!
   unsuspendUser(userId: ID!): UserModeration!
   untrustDevice(id: ID!): Device!
   untrustMultipleDevices(deviceIds: [ID!]!): [Device!]!
@@ -2637,6 +2795,11 @@ type Mutation {
     id: ID!
     peripherals: DevicePeripheralsInput!
   ): Device!
+  updateDietaryProfile(input: UpdateDietaryProfileInput!): DietaryProfile!
+  updateFavoriteRecipe(
+    input: UpdateFavoriteRecipeInput!
+    recipeId: ID!
+  ): SavedRecipe!
   updateHome(id: ID!, input: UpdateHomeInput!): Home!
   updateItem(id: ID!, input: UpdateItemInput!): Item!
   updateItemAllergens(allergens: [AllergenInput!]!, id: ID!): Item!
@@ -2667,7 +2830,7 @@ type Mutation {
   ): UserModeration!
   updateNotification(id: ID!, input: UpdateNotificationInput!): Notification!
   updateNotificationPreferences(
-    input: NotificationPreferencesInput!
+    input: UpdateNotificationPreferencesInput!
   ): NotificationPreferences!
   updatePantry(id: ID!, input: UpdatePantryInput!): Pantry!
   updatePantryItem(id: ID!, input: UpdatePantryItemInput!): PantryItem!
@@ -2677,6 +2840,7 @@ type Mutation {
   updatePurchase(id: ID!, input: UpdatePurchaseInput!): Purchase!
   updatePushToken(id: ID!, pushToken: String!): Device!
   updateRecipe(id: ID!, input: UpdateRecipeInput!): Recipe!
+  updateRestriction(input: UpdateRestrictionInput!): DietaryRestriction!
   updateRiskScore(riskScore: Float!, userId: ID!): UserModeration!
   updateSettings(input: UpdateUserSettingsInput!): UserSettings!
   updateShoppingList(id: ID!, input: UpdateShoppingListInput!): ShoppingList!
@@ -2684,6 +2848,10 @@ type Mutation {
     id: ID!
     input: UpdateShoppingListItemInput!
   ): ShoppingListItem!
+  updateStorageLocation(
+    id: ID!
+    input: UpdateStorageLocationInput!
+  ): StorageLocation!
   updateStore(id: ID!, input: UpdateStoreInput!): Store!
   updateStoreInfo(
     email: String
@@ -2761,6 +2929,15 @@ type NotificationConnection implements Connection {
   unreadCount: Int!
 }
 
+enum NotificationDeliveryStatus {
+  CANCELLED
+  DISMISSED
+  FAILED
+  PENDING
+  READ
+  SENT
+}
+
 type NotificationEdge implements Edge {
   cursor: String!
   node: Notification!
@@ -2799,13 +2976,38 @@ type NotificationPayload {
 
 type NotificationPreferences {
   categories: [String!]!
+  collaborationInvites: Boolean!
+  cookingReminders: Boolean!
+  createdAt: DateTime!
   email: Boolean!
+  emailEnabled: Boolean!
+  expirationDaysThreshold: Int!
+  expirationNotificationFrequency: ExpirationFrequency!
+  expirationNotifications: Boolean!
+  homeInvites: Boolean!
+  id: ID!
   inApp: Boolean!
+  lowStockAlerts: Boolean!
+  mealPlanReminders: Boolean!
+  monthlyReport: Boolean!
+  pantryChanges: Boolean!
   push: Boolean!
+  pushEnabled: Boolean!
   quietHours: QuietHours
+  quietHoursEnabled: Boolean!
+  quietHoursEnd: String
+  quietHoursStart: String
+  quietHoursTimezone: String
+  recipeRecommendations: Boolean!
+  sharedListUpdates: Boolean!
+  shoppingListUpdates: Boolean!
   sms: Boolean!
+  smsEnabled: Boolean!
   types: [NotificationType!]!
+  updatedAt: DateTime!
+  user: User!
   userId: String!
+  weeklyDigest: Boolean!
 }
 
 input NotificationPreferencesInput {
@@ -3011,7 +3213,7 @@ type PantryItem {
   purchaseId: String
   remainingValue: Float
   reservedQuantity: Float!
-  storageLocation: String
+  storageLocation: StorageLocation
   storageNotes: String
   storageState: StorageState!
   store: Store
@@ -3038,6 +3240,17 @@ type PantryItemChangedPayload {
   timestamp: DateTime!
   updatedFields: [String!]!
   userId: String!
+}
+
+input PantryItemFilters {
+  condition: ItemCondition
+  expirationDays: Int
+  expiringSoon: Boolean
+  itemId: String
+  lowStock: Boolean
+  search: String
+  storageState: StorageState
+  tags: [String!]
 }
 
 type PantryItemPhoto {
@@ -3238,7 +3451,6 @@ type Query {
   _empty: String
   activeDevices(userId: ID!): [Device!]!
   activeModerations: [UserModeration!]!
-  archivedShoppingLists: [ShoppingList!]!
   autocompleteCategories(
     input: AutocompleteCategoryInput!
   ): AutocompleteCategoryResponse!
@@ -3257,7 +3469,6 @@ type Query {
   categoryBySlug(slug: String!): Category
   checkItemAvailability(itemId: ID!, storeIds: [String!]): [ItemAvailability!]
   compareItemPrices(itemId: ID!, storeIds: [String!]): [StorePriceComparison!]
-  completedShoppingLists: [ShoppingList!]!
   convertUnit(fromUnitId: ID!, toUnitId: ID!, value: Float!): ConvertedUnitValue
   cookingLog(id: ID!): CookingLog
   currencies(isActive: Boolean): [Currency!]!
@@ -3278,8 +3489,9 @@ type Query {
   devicesByManufacturer(manufacturer: String!, userId: ID!): [Device!]!
   devicesByPlatform(platform: MobilePlatform!, userId: ID!): [Device!]!
   devicesWithPeripherals(userId: ID!): [Device!]!
+  dietaryProfile(userId: ID!): DietaryProfile
   emulatedDevices(userId: ID!): [Device!]!
-  expiringItems(pantryId: ID!): [PantryItem!]!
+  expirationNotification(id: ID!): ExpirationNotification
   failedLoginAttempts(hours: Int = 24, userId: ID!): [LoginHistory!]!
   frequentlyBoughtItems(limit: Int): [ShoppingListItem!]!
   getConvertibleUnits(unitId: ID!): [Unit!]!
@@ -3319,7 +3531,6 @@ type Query {
   ): [LoginHistory!]!
   loginHistoryStats(days: Int = 30, userId: ID!): LoginHistoryStats!
   lowBatteryDevices(threshold: Float = 0.2, userId: ID!): [Device!]!
-  lowStockItems(pantryId: ID!): [PantryItem!]!
   me: User
   mealPlan(id: ID!): MealPlan
   mealPlans(
@@ -3335,11 +3546,16 @@ type Query {
   myCookingLogs(limit: Int, offset: Int): [CookingLog!]!
   myCookingStats: CookingStats
   myDevices(filters: DeviceFiltersInput): [Device!]!
+  myDietaryProfile: DietaryProfile
+  myExpirationNotifications(
+    input: GetExpirationNotificationsInput
+  ): [ExpirationNotification!]!
   myHomes: [Home!]
   myInviteLogs(limit: Int): [InviteLog!]!
   myMembershipInHome(homeId: ID!): Membership
   myMemberships: [Membership!]
   myModeration: UserModeration
+  myNotificationPreferences: NotificationPreferences
   myNotifications(
     after: String
     before: String
@@ -3351,17 +3567,11 @@ type Query {
   myPendingCollaborationInvites: [ShoppingListCollaborator!]!
   myPendingInvites: [HomeInvite!]!
   myPurchases: [Purchase!]!
-  myRecipes(
-    category: RecipeCategory
-    difficulty: Difficulty
-    includeDeleted: Boolean
-    skip: Int
-    take: Int
-  ): RecipesResponse!
+  mySavedRecipes(folder: String): [SavedRecipe!]!
   myShoppingListInvites: [ShoppingListCollaborator!]!
   nearbyStores(lat: Float!, lng: Float!, radius: Float): [Store!]!
   notification(id: ID!): Notification
-  notificationPreferences: NotificationPreferences!
+  notificationPreferences(userId: ID!): NotificationPreferences!
   notificationStats(filter: NotificationFilterInput): NotificationStats!
   notificationsByCategory(
     after: String
@@ -3373,17 +3583,14 @@ type Query {
     first: Int
     type: NotificationType!
   ): NotificationConnection!
-  onboardingItems: [Item!]!
   pantries(homeId: ID!): [Pantry!]!
   pantry(id: ID!): Pantry
   pantryItem(id: ID!): PantryItem!
   pantryItemUsage(pantryItemId: ID!): [PantryItemUsage!]!
-  pantryItems(filter: String, pantryId: ID!): [PantryItem!]!
-  pantryItemsByItemId(itemId: String!): [PantryItem!]!
+  pantryItems(filters: PantryItemFilters, pantryId: ID!): [PantryItem!]!
   pantryStats(pantryId: ID!): PantryStats!
   popularBrands(limit: Int = 10): [Brand!]!
   popularCategories(limit: Int, type: CategoryType): [Category!]!
-  popularItems(category: String, limit: Int, timeRange: DateRange): [Item!]
   popularStores(limit: Int): [Store!]!
   purchase(id: ID!): Purchase
   purchaseStats(userId: ID): PurchaseStats!
@@ -3391,16 +3598,24 @@ type Query {
   purchasesByItem(itemId: ID!, userId: ID): [Purchase!]!
   purchasesByShoppingListItem(limit: Int, shoppingListItemId: ID!): [Purchase!]!
   purchasesByStore(storeId: ID!, userId: ID): [Purchase!]!
-  recentItems(limit: Int, userId: String): [Item!]
   recentNotifications(limit: Int = 10): [Notification!]!
   recipe(id: ID!): Recipe
   recipeCookingLogs(limit: Int, offset: Int, recipeId: ID!): [CookingLog!]!
+  recipeSuggestions: [Recipe!]!
+  recipes(
+    category: RecipeCategory
+    difficulty: Difficulty
+    includeDeleted: Boolean
+    skip: Int
+    take: Int
+  ): RecipesResponse!
   recommendedItems(limit: Int, userId: String): [ItemSuggestion!]
   recommendedStores: [Store!]!
-  recurringShoppingLists: [ShoppingList!]!
   relatedItems(itemId: ID!): RelatedItemsResponse
   rootBrands: [Brand!]!
   rootCategories(type: CategoryType): [Category!]!
+  savedRecipe(recipeId: ID!): SavedRecipe
+  savedRecipeFolders: [String!]!
   searchDevicesByUserAgent(userAgent: String!): [Device!]!
   searchItems(input: SearchItemsInput!): ItemsResponse
   searchLoginHistory(
@@ -3416,9 +3631,11 @@ type Query {
   shoppingListCollaborators(shoppingListId: ID!): [ShoppingListCollaborator!]!
   shoppingListItem(id: ID!): ShoppingListItem
   shoppingListItems(shoppingListId: ID!): [ShoppingListItem!]!
-  shoppingListTemplates: [ShoppingList!]!
-  shoppingLists: [ShoppingList!]!
+  shoppingLists(filters: ShoppingListFilters): [ShoppingList!]!
   staleDevices(daysInactive: Int = 90, userId: ID!): [Device!]!
+  storageLocation(id: ID!): StorageLocation
+  storageLocationTree(homeId: ID!): [StorageLocation!]!
+  storageLocations(homeId: ID!): [StorageLocation!]!
   store(id: ID!): Store
   storeByName(name: String!): Store
   storeStats(id: ID!): StoreStats
@@ -3426,12 +3643,10 @@ type Query {
   storeWithPurchases(id: ID!, limit: Int): Store
   stores: [Store!]!
   suggestedItemsForList(shoppingListId: ID!): [ItemSuggestion!]!
-  suggestedRecipes: [Recipe!]!
   suspiciousDevices(userId: ID!): [Device!]!
   suspiciousInviteActivity(timeWindowHours: Int): [InviteLog!]!
   suspiciousLoginActivity(hours: Int = 24, userId: ID!): SuspiciousActivity!
   tabletDevices(userId: ID!): [Device!]!
-  trendingItems(category: String, limit: Int): [Item!]
   trustedDevices(userId: ID!): [Device!]!
   unit(id: ID!): Unit
   unitBySymbol(symbol: String!): Unit
@@ -3495,6 +3710,7 @@ type Recipe {
   instructions: JSON!
   isExternal: Boolean!
   isPublished: Boolean!
+  isSaved: Boolean!
   matchPercentage: Float
   mealPlanItems: [MealPlanItem!]!
   name: String!
@@ -3510,6 +3726,7 @@ type Recipe {
   rating4Count: Int!
   rating5Count: Int!
   reviews: [RecipeReview!]!
+  savedDetails: SavedRecipe
   servings: Int!
   source: String
   sourceMapping: RecipeSourceMapping
@@ -3519,6 +3736,7 @@ type Recipe {
   tips: String
   totalCookingLogs: Int!
   totalReviews: Int!
+  totalSaves: Int!
   totalTimeMinutes: Int
   updatedAt: DateTime!
   version: Int!
@@ -3542,50 +3760,65 @@ enum RecipeCategory {
 }
 
 type RecipeIngredient {
-  aisle: String
   availablePantryItemIds: [String!]!
-  consistency: String
+  externalSources: [RecipeIngredientSourceMapping!]!
   id: ID!
   image: String
   isOptional: Boolean!
   item: Item
-  meta: [String!]!
-  metricAmount: Float
-  metricUnit: String
   name: String!
   notes: String
-  originalString: String
   preparation: String
   quantity: Float!
   recipe: Recipe!
   section: String
   sortOrder: Int!
-  spoonacularIngredientId: Int
   unit: Unit
-  usAmount: Float
-  usUnit: String
 }
 
 input RecipeIngredientInput {
-  aisle: String
-  consistency: String
+  externalSources: [RecipeIngredientSourceInput!]
   image: String
   isOptional: Boolean
   itemId: String
-  meta: [String!]
-  metricAmount: Float
-  metricUnit: String
   name: String!
   notes: String
-  originalString: String
   preparation: String
   quantity: Float!
   section: String
   sortOrder: Int
-  spoonacularIngredientId: Int
   unitId: String
-  usAmount: Float
-  usUnit: String
+}
+
+input RecipeIngredientSourceInput {
+  aisle: String
+  consistency: String
+  data: JSON
+  externalId: String!
+  imageUrl: String
+  isPrimary: Boolean
+  metadata: JSON
+  originalName: String
+  originalString: String
+  source: ExternalSource!
+}
+
+type RecipeIngredientSourceMapping {
+  aisle: String
+  consistency: String
+  createdAt: DateTime!
+  data: JSON
+  externalId: String!
+  id: ID!
+  imageUrl: String
+  isPrimary: Boolean!
+  lastSyncedAt: DateTime!
+  metadata: JSON
+  originalName: String
+  originalString: String
+  recipeIngredient: RecipeIngredient!
+  source: ExternalSource!
+  updatedAt: DateTime!
 }
 
 type RecipeReview {
@@ -3655,6 +3888,12 @@ input RegisterInput {
   password: String!
 }
 
+input RejectItemInput {
+  itemId: ID!
+  notifyUser: Boolean
+  reason: String!
+}
+
 type RelatedItemsResponse {
   complementaryItems: [ItemSuggestion!]!
   frequentlyBoughtTogether: [ItemSuggestion!]!
@@ -3664,6 +3903,10 @@ type RelatedItemsResponse {
 input RemoveCollaboratorInput {
   email: String
   shoppingListId: ID!
+}
+
+input RemoveRestrictionInput {
+  id: ID!
 }
 
 input RemoveRestrictionsInput {
@@ -3684,6 +3927,13 @@ input ResetPasswordInput {
 type ResetPasswordResponse {
   message: String!
   success: Boolean!
+}
+
+enum RestrictionSeverity {
+  ALLERGY
+  GOAL
+  INTOLERANCE
+  PREFERENCE
 }
 
 input ReviewAppealInput {
@@ -3714,25 +3964,20 @@ enum RiskFactor {
   VPN_DETECTED
 }
 
-input SaveRecipeInput {
-  caloriesPerServing: Float
-  category: RecipeCategory
-  cookTimeMinutes: Int
-  cuisine: String
-  description: String
-  dietaryTags: [DietaryTag!]
-  difficulty: Difficulty
-  externalSourceData: JSON
-  externalSourceId: String
-  externalSourceUrl: String
-  imageUrl: String
-  ingredients: [RecipeIngredientInput!]!
-  instructions: JSON!
-  name: String!
-  nutritionData: JSON
-  prepTimeMinutes: Int
-  servings: Int
-  source: String
+type SavedRecipe {
+  cookedCount: Int!
+  createdAt: DateTime!
+  folder: String
+  id: ID!
+  lastCookedAt: DateTime
+  notes: String
+  personalRating: Int
+  recipe: Recipe!
+  recipeId: String!
+  tags: [String!]!
+  updatedAt: DateTime!
+  user: User!
+  userId: String!
 }
 
 type SearchFacets {
@@ -3879,9 +4124,21 @@ type ShoppingListCollaboratorChangedPayload {
   userId: ID!
 }
 
+input ShoppingListFilters {
+  isArchived: Boolean
+  isCompleted: Boolean
+  isDefault: Boolean
+  isRecurring: Boolean
+  isTemplate: Boolean
+  search: String
+  status: ListStatus
+  tags: [String!]
+}
+
 type ShoppingListItem {
   addedBy: User
   addedById: String
+  addedContext: String
   aisle: String
   autoAddReason: String
   averagePrice: Float
@@ -3917,6 +4174,8 @@ type ShoppingListItem {
   purchasedQuantity: Float
   purchases: [Purchase!]
   quantity: Float
+  recipe: Recipe
+  recipeIngredient: RecipeIngredient
   shoppingList: ShoppingList!
   sortOrder: Int!
   storeSection: String
@@ -3998,11 +4257,53 @@ enum SortOrder {
   DESC
 }
 
+type StorageLocation {
+  capacity: Float
+  capacityUnit: String
+  childLocations: [StorageLocation!]!
+  color: String
+  createdAt: DateTime!
+  currentItemCount: Int!
+  deletedAt: DateTime
+  description: String
+  home: Home!
+  homeId: String!
+  icon: String
+  id: ID!
+  isActive: Boolean!
+  isClimateControlled: Boolean!
+  isDefault: Boolean!
+  name: String!
+  pantryItems: [PantryItem!]!
+  parentLocation: StorageLocation
+  parentLocationId: String
+  sortOrder: Int!
+  temperature: StorageState
+  type: StorageType!
+  updatedAt: DateTime!
+}
+
 enum StorageState {
   AMBIENT
   FROZEN
   NONE
   REFRIGERATED
+}
+
+enum StorageType {
+  BASEMENT
+  BOAT_STORAGE
+  CABINET
+  CLOSET
+  COUNTER
+  CUSTOM
+  DRAWER
+  FREEZER
+  GARAGE
+  OUTDOOR
+  PANTRY_SHELF
+  REFRIGERATOR
+  RV_STORAGE
 }
 
 type Store {
@@ -4113,6 +4414,8 @@ type Subscription {
   deviceStatusChanged(userId: ID!): Device!
   deviceTrustChanged(userId: ID!): Device!
   deviceVerified(userId: ID!): Device!
+  expirationNotificationCreated: ExpirationNotification!
+  expirationNotificationUpdated: ExpirationNotification!
   failedLoginAttempts(userId: ID!): LoginHistory!
   loginAttempts(userId: ID!): LoginHistory!
   memberJoined(homeId: ID!): MembershipUpdatePayload!
@@ -4366,6 +4669,29 @@ input UpdateDeviceInput {
   userAgent: String
 }
 
+input UpdateDietaryProfileInput {
+  budgetPerMeal: Float
+  calorieTarget: Int
+  carbsTarget: Int
+  cookingSkillLevel: String
+  dislikedIngredients: [String!]
+  fatTarget: Int
+  favoriteIngredients: [String!]
+  maxCookTimeMinutes: Int
+  maxPrepTimeMinutes: Int
+  mealsPerDay: Int
+  preferredCuisines: [String!]
+  proteinTarget: Int
+  snacksPerDay: Int
+}
+
+input UpdateFavoriteRecipeInput {
+  folder: String
+  notes: String
+  personalRating: Int
+  tags: [String!]
+}
+
 input UpdateHomeInput {
   allowJoinCode: Boolean
   currency: String
@@ -4383,6 +4709,7 @@ input UpdateItemInput {
   addTags: [String!]
   addUnits: [ItemUnitInput!]
   allergens: JSON
+  alternateUpcs: [String!]
   brandId: String
   brandName: String
   categories: [CategoryInput!]
@@ -4400,6 +4727,7 @@ input UpdateItemInput {
   name: String
   netWeight: Float
   popularity: Int
+  primaryUpc: String
   removeCategoryIds: [String!]
   removeStoreSkuIds: [String!]
   removeTags: [String!]
@@ -4495,6 +4823,30 @@ input UpdateNotificationInput {
   type: NotificationType
 }
 
+input UpdateNotificationPreferencesInput {
+  collaborationInvites: Boolean
+  cookingReminders: Boolean
+  emailEnabled: Boolean
+  expirationDaysThreshold: Int
+  expirationNotificationFrequency: ExpirationFrequency
+  expirationNotifications: Boolean
+  homeInvites: Boolean
+  lowStockAlerts: Boolean
+  mealPlanReminders: Boolean
+  monthlyReport: Boolean
+  pantryChanges: Boolean
+  pushEnabled: Boolean
+  quietHoursEnabled: Boolean
+  quietHoursEnd: String
+  quietHoursStart: String
+  quietHoursTimezone: String
+  recipeRecommendations: Boolean
+  sharedListUpdates: Boolean
+  shoppingListUpdates: Boolean
+  smsEnabled: Boolean
+  weeklyDigest: Boolean
+}
+
 input UpdatePantryInput {
   description: String
   isDefault: Boolean
@@ -4575,6 +4927,12 @@ input UpdateRecipeInput {
   visibility: Visibility
 }
 
+input UpdateRestrictionInput {
+  id: ID!
+  notes: String
+  severity: RestrictionSeverity
+}
+
 input UpdateShoppingListInput {
   autoAddSuggestions: Boolean
   budgetAmount: Float
@@ -4612,6 +4970,22 @@ input UpdateShoppingListItemInput {
   storeSection: String
   unitId: ID
   unitName: String
+}
+
+input UpdateStorageLocationInput {
+  capacity: Float
+  capacityUnit: String
+  color: String
+  description: String
+  icon: String
+  isActive: Boolean
+  isClimateControlled: Boolean
+  isDefault: Boolean
+  name: String
+  parentLocationId: ID
+  sortOrder: Int
+  temperature: StorageState
+  type: StorageType
 }
 
 input UpdateStoreInput {
@@ -4741,6 +5115,7 @@ type User {
   defaultHomeId: String
   defaultShoppingListId: String
   devices: [Device!]!
+  dietaryProfile: DietaryProfile
   email: String!
   emailVerified: Boolean!
   homeOwnerships: [HomeOwnership!]!
@@ -4749,6 +5124,7 @@ type User {
   lastActiveAt: DateTime
   loginHistory: [LoginHistory!]!
   moderation: UserModeration
+  notificationPreferences: NotificationPreferences
   onBoarded: Boolean!
   preferredCurrency: String
   profile: UserProfile

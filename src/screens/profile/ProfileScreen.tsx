@@ -95,6 +95,21 @@ export const ProfileScreen = () => {
                   onPress: handleLogout,
                 };
               }
+              // Handle navigation items
+              if (item.type === 'navigation') {
+                return {
+                  ...item,
+                  onPress: () => {
+                    if (item.key === 'notifications') {
+                      navigate('NotificationSettings');
+                    } else if (item.key === 'dietaryProfile') {
+                      navigate('DietaryProfile');
+                    } else if (item.key === 'appSettings') {
+                      navigate('AppSettings');
+                    }
+                  },
+                };
+              }
               return item;
             })}
           />

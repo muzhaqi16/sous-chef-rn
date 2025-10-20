@@ -20,15 +20,14 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
 
   // Initialize real-time notifications with user settings
   useNotifications({
-    enablePantryNotifications: settings.pantryUpdates,
+    enablePantryNotifications: settings.pantryChanges,
     enableShoppingListNotifications: settings.shoppingListUpdates,
-    enableMembershipNotifications: settings.membershipChanges,
+    enableMembershipNotifications: settings.homeInvites,
     enableLowStockAlerts: settings.lowStockAlerts,
-    enableExpirationAlerts: settings.expiredItemAlerts,
-    enableCollaborationNotifications: settings.collaboratorChanges,
-    showInAppNotifications: settings.pushNotifications,
-    showPushNotifications:
-      settings.pushNotifications && !settings.urgentNotificationsOnly,
+    enableExpirationAlerts: settings.expirationNotifications,
+    enableCollaborationNotifications: settings.collaborationInvites,
+    showInAppNotifications: settings.pushEnabled,
+    showPushNotifications: settings.pushEnabled,
   });
 
   // Only initialize notifications if user is authenticated

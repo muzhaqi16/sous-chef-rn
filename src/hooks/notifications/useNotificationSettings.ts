@@ -1,141 +1,162 @@
 import {useCallback} from 'react';
 import {useStore} from '#store';
 import {
-  useUpdateUserPreferencesMutation,
-  useGetUserSettingsQuery,
+  useGetNotificationPreferencesQuery,
+  useUpdateNotificationPreferencesMutation,
+  ExpirationFrequency,
 } from '#generated';
 
 export interface NotificationSettings {
-  // General settings
-  pushNotifications: boolean;
-  emailNotifications: boolean;
-  smsNotifications: boolean;
-  
+  // Core toggles
+  emailEnabled: boolean;
+  pushEnabled: boolean;
+  smsEnabled: boolean;
+
   // Pantry notifications
-  expiredItemAlerts: boolean;
+  expirationNotifications: boolean;
+  expirationNotificationFrequency: ExpirationFrequency;
+  expirationDaysThreshold: number;
   lowStockAlerts: boolean;
-  pantryUpdates: boolean;
-  
-  // Shopping list notifications
+  pantryChanges: boolean;
+
+  // Shopping list and collaboration
   shoppingListUpdates: boolean;
-  collaboratorChanges: boolean;
-  itemCompletedNotifications: boolean;
-  
-  // Home and membership notifications
-  homeInvitations: boolean;
-  membershipChanges: boolean;
-  newMemberNotifications: boolean;
-  
-  // Other settings
-  weeklyDigest: boolean;
+  collaborationInvites: boolean;
+  homeInvites: boolean;
+  sharedListUpdates: boolean;
+
+  // Recipe and meal planning
   recipeRecommendations: boolean;
-  urgentNotificationsOnly: boolean;
-  quietHours: boolean;
-  quietHoursStart: string;
-  quietHoursEnd: string;
+  mealPlanReminders: boolean;
+  cookingReminders: boolean;
+
+  // Digests and reports
+  weeklyDigest: boolean;
+  monthlyReport: boolean;
+
+  // Quiet hours
+  quietHoursEnabled: boolean;
+  quietHoursStart: string | null;
+  quietHoursEnd: string | null;
+  quietHoursTimezone: string | null;
 }
 
 export const useNotificationSettings = () => {
   const user = useStore(state => state.user);
-  const {data, loading, refetch} = useGetUserSettingsQuery({
+  const {data, loading, refetch} = useGetNotificationPreferencesQuery({
     skip: !user?.id,
   });
-  const [updateSettings] = useUpdateUserPreferencesMutation();
+  const [updatePreferences] = useUpdateNotificationPreferencesMutation();
 
-  const settings = data?.userSettings;
+  const preferences = data?.myNotificationPreferences;
 
   const getNotificationSettings = useCallback((): NotificationSettings => {
     return {
-      // General settings - use existing fields
-      pushNotifications: settings?.pushNotifications ?? true,
-      emailNotifications: settings?.emailNotifications ?? true,
-      smsNotifications: settings?.smsNotifications ?? false,
-      
-      // Pantry notifications - use existing fields where available
-      expiredItemAlerts: settings?.expiredItemAlerts ?? true,
-      lowStockAlerts: settings?.lowStockAlerts ?? true,
-      pantryUpdates: settings?.pushNotifications ?? true, // Use pushNotifications as fallback
-      
-      // Shopping list notifications - use existing fields where available
-      shoppingListUpdates: settings?.shoppingListUpdates ?? true,
-      collaboratorChanges: settings?.pushNotifications ?? true, // Use pushNotifications as fallback
-      itemCompletedNotifications: settings?.pushNotifications ?? true, // Use pushNotifications as fallback
-      
-      // Home and membership notifications - use pushNotifications as fallback
-      homeInvitations: settings?.pushNotifications ?? true,
-      membershipChanges: settings?.pushNotifications ?? true,
-      newMemberNotifications: settings?.pushNotifications ?? true,
-      
-      // Other settings - use existing fields where available
-      weeklyDigest: settings?.weeklyDigest ?? false,
-      recipeRecommendations: settings?.recipeRecommendations ?? false,
-      urgentNotificationsOnly: false, // Default to false for now
-      quietHours: false, // Default to false for now
-      quietHoursStart: '22:00',
-      quietHoursEnd: '08:00',
+      // Core toggles
+      emailEnabled: preferences?.emailEnabled ?? true,
+      pushEnabled: preferences?.pushEnabled ?? true,
+      smsEnabled: preferences?.smsEnabled ?? false,
+
+      // Pantry notifications
+      expirationNotifications: preferences?.expirationNotifications ?? true,
+      expirationNotificationFrequency: preferences?.expirationNotificationFrequency ?? ExpirationFrequency.DailyMorning,
+      expirationDaysThreshold: preferences?.expirationDaysThreshold ?? 3,
+      lowStockAlerts: preferences?.lowStockAlerts ?? true,
+      pantryChanges: preferences?.pantryChanges ?? true,
+
+      // Shopping list and collaboration
+      shoppingListUpdates: preferences?.shoppingListUpdates ?? true,
+      collaborationInvites: preferences?.collaborationInvites ?? true,
+      homeInvites: preferences?.homeInvites ?? true,
+      sharedListUpdates: preferences?.sharedListUpdates ?? true,
+
+      // Recipe and meal planning
+      recipeRecommendations: preferences?.recipeRecommendations ?? true,
+      mealPlanReminders: preferences?.mealPlanReminders ?? true,
+      cookingReminders: preferences?.cookingReminders ?? true,
+
+      // Digests and reports
+      weeklyDigest: preferences?.weeklyDigest ?? false,
+      monthlyReport: preferences?.monthlyReport ?? false,
+
+      // Quiet hours
+      quietHoursEnabled: preferences?.quietHoursEnabled ?? false,
+      quietHoursStart: preferences?.quietHoursStart ?? '22:00',
+      quietHoursEnd: preferences?.quietHoursEnd ?? '08:00',
+      quietHoursTimezone: preferences?.quietHoursTimezone ?? null,
     };
-  }, [settings]);
+  }, [preferences]);
 
   const updateNotificationSetting = useCallback(
-    async (key: keyof NotificationSettings, value: boolean | string) => {
+    async (key: keyof NotificationSettings, value: boolean | string | number | ExpirationFrequency) => {
       try {
-        await updateSettings({
+        await updatePreferences({
           variables: {
             input: {[key]: value},
           },
         });
-        
+
         // Refetch to ensure local state is updated
         await refetch();
-        
+
         return true;
       } catch (error) {
         console.error('Failed to update notification setting:', error);
         return false;
       }
     },
-    [updateSettings, refetch],
+    [updatePreferences, refetch],
   );
 
   const updateMultipleSettings = useCallback(
     async (updates: Partial<NotificationSettings>) => {
       try {
-        await updateSettings({
+        // Convert null to undefined for GraphQL input
+        const cleanedUpdates = Object.fromEntries(
+          Object.entries(updates).map(([key, value]) => [
+            key,
+            value === null ? undefined : value,
+          ])
+        );
+
+        await updatePreferences({
           variables: {
-            input: updates,
+            input: cleanedUpdates,
           },
         });
-        
+
         // Refetch to ensure local state is updated
         await refetch();
-        
+
         return true;
       } catch (error) {
         console.error('Failed to update notification settings:', error);
         return false;
       }
     },
-    [updateSettings, refetch],
+    [updatePreferences, refetch],
   );
 
   const resetToDefaults = useCallback(async () => {
-    const defaultSettings: NotificationSettings = {
-      pushNotifications: true,
-      emailNotifications: true,
-      smsNotifications: false,
-      expiredItemAlerts: true,
+    const defaultSettings: Partial<NotificationSettings> = {
+      emailEnabled: true,
+      pushEnabled: true,
+      smsEnabled: false,
+      expirationNotifications: true,
+      expirationNotificationFrequency: ExpirationFrequency.DailyMorning,
+      expirationDaysThreshold: 3,
       lowStockAlerts: true,
-      pantryUpdates: true,
+      pantryChanges: true,
       shoppingListUpdates: true,
-      collaboratorChanges: true,
-      itemCompletedNotifications: true,
-      homeInvitations: true,
-      membershipChanges: true,
-      newMemberNotifications: true,
+      collaborationInvites: true,
+      homeInvites: true,
+      sharedListUpdates: true,
+      recipeRecommendations: true,
+      mealPlanReminders: true,
+      cookingReminders: true,
       weeklyDigest: false,
-      recipeRecommendations: false,
-      urgentNotificationsOnly: false,
-      quietHours: false,
+      monthlyReport: false,
+      quietHoursEnabled: false,
       quietHoursStart: '22:00',
       quietHoursEnd: '08:00',
     };
@@ -145,17 +166,17 @@ export const useNotificationSettings = () => {
 
   const isQuietTime = useCallback((): boolean => {
     const currentSettings = getNotificationSettings();
-    
-    if (!currentSettings.quietHours) {
+
+    if (!currentSettings.quietHoursEnabled || !currentSettings.quietHoursStart || !currentSettings.quietHoursEnd) {
       return false;
     }
 
     const now = new Date();
     const currentTime = now.getHours() * 60 + now.getMinutes();
-    
+
     const [startHour, startMin] = currentSettings.quietHoursStart.split(':').map(Number);
     const [endHour, endMin] = currentSettings.quietHoursEnd.split(':').map(Number);
-    
+
     const startTime = startHour * 60 + startMin;
     const endTime = endHour * 60 + endMin;
 
@@ -167,41 +188,6 @@ export const useNotificationSettings = () => {
     }
   }, [getNotificationSettings]);
 
-  const shouldShowNotification = useCallback(
-    (type: 'pantry' | 'shopping' | 'membership' | 'system', priority: 'low' | 'medium' | 'high' | 'urgent' = 'medium'): boolean => {
-      const currentSettings = getNotificationSettings();
-      
-      // Always show urgent notifications unless explicitly disabled
-      if (priority === 'urgent' && !currentSettings.urgentNotificationsOnly) {
-        return true;
-      }
-      
-      // If in urgent-only mode, only show urgent notifications
-      if (currentSettings.urgentNotificationsOnly && priority !== 'urgent') {
-        return false;
-      }
-      
-      // Respect quiet hours for non-urgent notifications
-      if (priority !== 'urgent' && isQuietTime()) {
-        return false;
-      }
-      
-      // Check type-specific settings
-      switch (type) {
-        case 'pantry':
-          return currentSettings.pantryUpdates;
-        case 'shopping':
-          return currentSettings.shoppingListUpdates;
-        case 'membership':
-          return currentSettings.membershipChanges;
-        case 'system':
-        default:
-          return currentSettings.pushNotifications;
-      }
-    },
-    [getNotificationSettings, isQuietTime],
-  );
-
   return {
     settings: getNotificationSettings(),
     loading,
@@ -209,7 +195,6 @@ export const useNotificationSettings = () => {
     updateMultipleSettings,
     resetToDefaults,
     isQuietTime,
-    shouldShowNotification,
     refetch,
   };
 };

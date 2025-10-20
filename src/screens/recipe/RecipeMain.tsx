@@ -14,7 +14,7 @@ export const RecipeMain: React.FC = () => {
   const { data, loading, refetch } = useMyRecipesQuery({
     fetchPolicy: 'cache-and-network',
   });
-  const recipes = useMemo(() => data?.myRecipes?.recipes || [], [data]);
+  const recipes = useMemo(() => data?.recipes?.recipes || [], [data]);
 
   // Filter recipes based on search query
   const filteredRecipes = useMemo(() => {

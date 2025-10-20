@@ -4,9 +4,9 @@ import { v4 as uuid } from 'uuid';
 import {
   useGetPantryItemsQuery,
   usePantryItemsChangedSubscription,
-  useAddItemToPantryMutation,
+  useCreatePantryItemMutation,
   useUpdatePantryItemMutation,
-  useRemoveItemFromPantryMutation,
+  useDeletePantryItemMutation,
   StorageState,
 } from '#generated';
 import { useSearchableList } from '../useSearchableList';
@@ -150,20 +150,20 @@ export function usePantryManagement(pantryId: string | undefined) {
   }, [pantryItems]);
 
   // Mutations with optimistic updates
-  const [addItemMutation] = useAddItemToPantryMutation({
+  const [addItemMutation] = useCreatePantryItemMutation({
     errorPolicy: 'all',
-    onError: error => {
+    onError: (error: any) => {
       const { message } = handleApolloError(error, {
         operation: 'Add Pantry Item',
       });
       Alert.alert('Error', message);
     },
     // Optimistic response for instant UI feedback (especially important offline)
-    optimisticResponse: variables => {
+    optimisticResponse: (variables: any) => {
       const tempId = `temp-${uuid()}`;
       return {
-        __typename: 'Mutation',
-        addItemToPantry: {
+        __typename: 'Mutation' as const,
+        createPantryItem: {
           ...createOptimisticEntity('PantryItem', tempId, {
             itemName: variables.input.itemName,
             currentQuantity: variables.input.initialQuantity,
@@ -183,25 +183,25 @@ export function usePantryManagement(pantryId: string | undefined) {
                 }
               : null,
           }),
-          __typename: 'PantryItem',
+          __typename: 'PantryItem' as const,
         } as any, // Optimistic response - will be replaced by server response
       };
     },
     // Update Apollo cache directly instead of refetching
-    update: (cache, { data }) => {
-      if (!data?.addItemToPantry || !pantryId) return;
+    update: (cache: any, { data }: any) => {
+      if (!data?.createPantryItem || !pantryId) return;
 
       try {
         // Modify the pantryItems field in the cache
         cache.modify({
           fields: {
-            pantryItems(existingItems = [], { readField, toReference }) {
-              const newItemRef = toReference(data.addItemToPantry);
+            pantryItems(existingItems = [], { readField, toReference }: any) {
+              const newItemRef = toReference(data.createPantryItem);
 
               // Check if item already exists (avoid duplicates)
               const exists = existingItems.some(
                 (itemRef: any) =>
-                  readField('id', itemRef) === data.addItemToPantry.id,
+                  readField('id', itemRef) === data.createPantryItem.id,
               );
 
               if (exists) {
@@ -270,26 +270,26 @@ export function usePantryManagement(pantryId: string | undefined) {
     // The optimistic response provides instant UI feedback
   });
 
-  const [removeItemMutation] = useRemoveItemFromPantryMutation({
+  const [removeItemMutation] = useDeletePantryItemMutation({
     errorPolicy: 'all',
-    onError: error => {
+    onError: (error: any) => {
       const { message } = handleApolloError(error, {
         operation: 'Remove Pantry Item',
       });
       Alert.alert('Error', message);
     },
     // Optimistic response for instant removal
-    optimisticResponse: _variables => ({
-      __typename: 'Mutation',
-      removeItemFromPantry: {
-        __typename: 'PantryItem',
+    optimisticResponse: (_variables: any) => ({
+      __typename: 'Mutation' as const,
+      deletePantryItem: {
+        __typename: 'PantryItem' as const,
         // The mutation returns full PantryItemFragment, but we just need enough for removal
         id: _variables?.id ?? '',
       } as any,
     }),
     // Update cache to remove the item
-    update: (cache, { data }, { variables }) => {
-      if (!data?.removeItemFromPantry || !pantryId || !variables) return;
+    update: (cache: any, { data }: any, { variables }: any) => {
+      if (!data?.deletePantryItem || !pantryId || !variables) return;
 
       try {
         const itemId = variables.id;
@@ -297,7 +297,7 @@ export function usePantryManagement(pantryId: string | undefined) {
         // Remove the item from the cache
         cache.modify({
           fields: {
-            pantryItems(existingItems = [], { readField }) {
+            pantryItems(existingItems = [], { readField }: any) {
               return existingItems.filter(
                 (itemRef: any) => readField('id', itemRef) !== itemId,
               );
@@ -343,7 +343,7 @@ export function usePantryManagement(pantryId: string | undefined) {
         },
       });
 
-      return result.data?.addItemToPantry ?? false;
+      return result.data?.createPantryItem ?? false;
     } catch (error) {
       console.error('Add pantry item error:', error);
       return false;

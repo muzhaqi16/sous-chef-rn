@@ -24,7 +24,12 @@ import {
   ResetPasswordScreen,
 } from '#screens/auth';
 import { AcceptInvite } from '#screens/shoppingList/AcceptInvite';
-import { DeleteAccountScreen } from '#screens/profile';
+import {
+  DeleteAccountScreen,
+  DietaryProfileScreen,
+  AppSettingsScreen,
+} from '#screens/profile';
+import { NotificationSettingsScreen } from '#screens/notifications';
 import { linkingConfig } from './linking';
 import { ImageFile } from '#components/molecules/ImagePicker';
 import {
@@ -49,6 +54,9 @@ export type RootStackParamList = {
   ResetPassword: { token: string };
   AcceptInvitation: { token: string };
   DeleteAccount: undefined;
+  NotificationSettings: undefined;
+  DietaryProfile: undefined;
+  AppSettings: undefined;
   NotFound: undefined;
 };
 
@@ -178,6 +186,9 @@ function RootNavigator() {
               />
               <Stack.Screen name="ImageCrop" component={ImageCropScreen} />
               <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
+              <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
+              <Stack.Screen name="DietaryProfile" component={DietaryProfileScreen} />
+              <Stack.Screen name="AppSettings" component={AppSettingsScreen} />
             </>
           )}
 

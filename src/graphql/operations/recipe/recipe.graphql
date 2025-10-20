@@ -9,7 +9,7 @@ query SearchRecipes($query: String!) {
 }
 
 query SuggestedRecipes {
-  suggestedRecipes {
+  recipeSuggestions {
     ...BasicRecipeFragment
   }
 }
@@ -20,7 +20,7 @@ query MyRecipes(
   $category: RecipeCategory
   $difficulty: Difficulty
 ) {
-  myRecipes(
+  recipes(
     skip: $skip
     take: $take
     category: $category
@@ -44,32 +44,14 @@ query GetRecipe($id: ID!) {
 # MUTATIONS
 # ============================================
 
-mutation AddRecipe(
-  $name: String!
-  $ingredients: [String!]!
-  $instructions: JSON!
-  $category: RecipeCategory
-  $difficulty: Difficulty
-  $prepTimeMinutes: Int
-  $cookTimeMinutes: Int
-  $servings: Int
-) {
-  addRecipe(
-    name: $name
-    ingredients: $ingredients
-    instructions: $instructions
-    category: $category
-    difficulty: $difficulty
-    prepTimeMinutes: $prepTimeMinutes
-    cookTimeMinutes: $cookTimeMinutes
-    servings: $servings
-  ) {
+mutation CreateRecipe($input: CreateRecipeInput!) {
+  createRecipe(input: $input) {
     ...RecipeFragment
   }
 }
 
-mutation SaveRecipe($input: SaveRecipeInput!) {
-  saveRecipe(input: $input) {
+mutation UpdateRecipe($id: ID!, $input: UpdateRecipeInput!) {
+  updateRecipe(id: $id, input: $input) {
     ...RecipeFragment
   }
 }
@@ -78,12 +60,25 @@ mutation DeleteRecipe($id: ID!) {
   deleteRecipe(id: $id)
 }
 
-mutation AddRecipeToShoppingList(
+mutation FavoriteRecipe($input: FavoriteRecipeInput!) {
+  favoriteRecipe(input: $input) {
+    id
+    recipeId
+    userId
+    folder
+    tags
+    notes
+    createdAt
+    updatedAt
+  }
+}
+
+mutation CreateShoppingListItemsFromRecipe(
   $recipeId: ID!
   $shoppingListId: ID!
   $servings: Int
 ) {
-  addRecipeToShoppingList(
+  createShoppingListItemsFromRecipe(
     recipeId: $recipeId
     shoppingListId: $shoppingListId
     servings: $servings
@@ -122,12 +117,12 @@ mutation AddRecipeToShoppingList(
   }
 }
 
-mutation AddRecipeIngredientToShoppingList(
+mutation CreateShoppingListItemFromRecipeIngredient(
   $recipeIngredientId: ID!
   $shoppingListId: ID!
   $quantityOverride: Float
 ) {
-  addRecipeIngredientToShoppingList(
+  createShoppingListItemFromRecipeIngredient(
     recipeIngredientId: $recipeIngredientId
     shoppingListId: $shoppingListId
     quantityOverride: $quantityOverride

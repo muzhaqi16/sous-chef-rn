@@ -3,7 +3,7 @@ import {Alert} from 'react-native';
 import type {ApolloCache} from '@apollo/client';
 import {
   useCreateItemMutation,
-  useAddItemToPantryMutation,
+  useCreatePantryItemMutation,
   StorageState,
   ItemType,
   useGetHomeQuery,
@@ -39,12 +39,12 @@ export const useCreateItemAndAddToPantry = () => {
   
   const [createItem] = useCreateItemMutation();
   
-  const [addToPantry] = useAddItemToPantryMutation({
+  const [addToPantry] = useCreatePantryItemMutation({
     // Update cache using cache.modify for consistency
     update: (cache: ApolloCache, {data: mutationData}, {variables}) => {
-      if (!mutationData?.addItemToPantry || !variables?.input.pantryId) return;
+      if (!mutationData?.createPantryItem || !variables?.input.pantryId) return;
 
-      const newItem = mutationData.addItemToPantry;
+      const newItem = mutationData.createPantryItem;
 
       try {
         // Use cache.modify for better performance and consistency
@@ -151,9 +151,9 @@ export const useCreateItemAndAddToPantry = () => {
         },
       });
 
-      if (addToPantryResult.data?.addItemToPantry) {
+      if (addToPantryResult.data?.createPantryItem) {
         Alert.alert(
-          'Success', 
+          'Success',
           'Item created and added to pantry successfully!',
           [
             {
@@ -164,7 +164,7 @@ export const useCreateItemAndAddToPantry = () => {
             },
           ]
         );
-        return addToPantryResult.data.addItemToPantry;
+        return addToPantryResult.data.createPantryItem;
       }
       
     } catch (error) {
