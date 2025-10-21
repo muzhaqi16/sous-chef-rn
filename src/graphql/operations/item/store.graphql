@@ -10,16 +10,10 @@ subscription StoreUpdated($storeId: ID) {
     priceAccuracy
     lastPriceUpdate
     qualityRating
-    chain
-    city
-    state
-    zipCode
-    latitude
-    longitude
-    phone
-    website
-    isActive
-    updatedAt
+    storeInfo {
+      id
+      phone
+    }
   }
 }
 

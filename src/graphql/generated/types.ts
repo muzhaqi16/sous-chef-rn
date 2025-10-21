@@ -168,9 +168,9 @@ export type Brand = {
   __typename?: 'Brand';
   children: Array<Brand>;
   createdAt: Scalars['DateTime']['output'];
+  deletedAt?: Maybe<Scalars['DateTime']['output']>;
   description?: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
-  itemCount: Scalars['Int']['output'];
   items?: Maybe<Array<ItemBrand>>;
   name: Scalars['String']['output'];
   parent?: Maybe<Brand>;
@@ -260,10 +260,10 @@ export type Category = {
   itemCount: Scalars['Int']['output'];
   name: Scalars['String']['output'];
   parent?: Maybe<Category>;
-  slug?: Maybe<Scalars['String']['output']>;
+  slug: Scalars['String']['output'];
   sortOrder: Scalars['Int']['output'];
   type: CategoryType;
-  updatedAt?: Maybe<Scalars['DateTime']['output']>;
+  updatedAt: Scalars['DateTime']['output'];
   usageCount: Scalars['Int']['output'];
   version: Scalars['Int']['output'];
   visibility: Visibility;
@@ -859,7 +859,7 @@ export type Device = {
   androidId?: Maybe<Scalars['String']['output']>;
   apiLevel?: Maybe<Scalars['Int']['output']>;
   appVersion?: Maybe<Scalars['String']['output']>;
-  availableLocationProviders?: Maybe<Scalars['JSON']['output']>;
+  availableLocationProviders?: Maybe<Scalars['String']['output']>;
   batteryLevel?: Maybe<Scalars['Float']['output']>;
   brand?: Maybe<Scalars['String']['output']>;
   browserName?: Maybe<Scalars['String']['output']>;
@@ -875,7 +875,7 @@ export type Device = {
   freeDiskStorage?: Maybe<Scalars['String']['output']>;
   hasDynamicIsland?: Maybe<Scalars['Boolean']['output']>;
   hasNotch?: Maybe<Scalars['Boolean']['output']>;
-  hostNames?: Maybe<Scalars['JSON']['output']>;
+  hostNames?: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
   instanceId?: Maybe<Scalars['String']['output']>;
   isActive: Scalars['Boolean']['output'];
@@ -904,12 +904,12 @@ export type Device = {
   osName?: Maybe<Scalars['String']['output']>;
   osVersion?: Maybe<Scalars['String']['output']>;
   platform?: Maybe<MobilePlatform>;
-  powerState?: Maybe<Scalars['JSON']['output']>;
+  powerState?: Maybe<Scalars['String']['output']>;
   pushToken?: Maybe<Scalars['String']['output']>;
   readableVersion?: Maybe<Scalars['String']['output']>;
   screenResolution?: Maybe<Scalars['String']['output']>;
-  supportedAbis?: Maybe<Scalars['JSON']['output']>;
-  supportedMediaTypes?: Maybe<Scalars['JSON']['output']>;
+  supportedAbis?: Maybe<Scalars['String']['output']>;
+  supportedMediaTypes?: Maybe<Scalars['String']['output']>;
   systemVersion?: Maybe<Scalars['String']['output']>;
   timezone?: Maybe<Scalars['String']['output']>;
   totalDiskCapacity?: Maybe<Scalars['String']['output']>;
@@ -918,7 +918,7 @@ export type Device = {
   usedMemory?: Maybe<Scalars['String']['output']>;
   user?: Maybe<User>;
   userAgent?: Maybe<Scalars['String']['output']>;
-  userId: Scalars['ID']['output'];
+  userId: Scalars['String']['output'];
   verifiedAt?: Maybe<Scalars['DateTime']['output']>;
 };
 
@@ -1337,6 +1337,7 @@ export type Home = {
   allowJoinCode: Scalars['Boolean']['output'];
   createdAt: Scalars['DateTime']['output'];
   currency?: Maybe<Scalars['String']['output']>;
+  deletedAt?: Maybe<Scalars['DateTime']['output']>;
   description?: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
   invites?: Maybe<Array<HomeInvite>>;
@@ -1344,9 +1345,7 @@ export type Home = {
   joinCode?: Maybe<Scalars['String']['output']>;
   maxMembers?: Maybe<Scalars['Int']['output']>;
   members: Array<Membership>;
-  membershipStats: MembershipStats;
   metadata?: Maybe<Scalars['JSON']['output']>;
-  myMembership?: Maybe<Membership>;
   name: Scalars['String']['output'];
   pantries?: Maybe<Array<Pantry>>;
   tags: Array<Scalars['String']['output']>;
@@ -1358,26 +1357,26 @@ export type Home = {
 
 export type HomeInvite = {
   __typename?: 'HomeInvite';
-  acceptedAt?: Maybe<Scalars['String']['output']>;
+  acceptedAt?: Maybe<Scalars['DateTime']['output']>;
   createdAt: Scalars['DateTime']['output'];
   customPermissions?: Maybe<Scalars['JSON']['output']>;
-  declinedAt?: Maybe<Scalars['String']['output']>;
+  declinedAt?: Maybe<Scalars['DateTime']['output']>;
   email: Scalars['String']['output'];
-  expiresAt: Scalars['String']['output'];
+  expiresAt: Scalars['DateTime']['output'];
   home: Home;
   homeId: Scalars['String']['output'];
   id: Scalars['ID']['output'];
   invitedUser?: Maybe<User>;
   invitedUserId?: Maybe<Scalars['String']['output']>;
   inviter: User;
-  lastReminderAt?: Maybe<Scalars['String']['output']>;
+  lastReminderAt?: Maybe<Scalars['DateTime']['output']>;
   logs: Array<InviteLog>;
   message?: Maybe<Scalars['String']['output']>;
   recipientName?: Maybe<Scalars['String']['output']>;
   reminderCount: Scalars['Int']['output'];
-  revokedAt?: Maybe<Scalars['String']['output']>;
+  revokedAt?: Maybe<Scalars['DateTime']['output']>;
   role: MembershipRole;
-  sentAt: Scalars['String']['output'];
+  sentAt: Scalars['DateTime']['output'];
   status: InviteStatus;
   token: Scalars['String']['output'];
   updatedAt: Scalars['DateTime']['output'];
@@ -1392,15 +1391,6 @@ export type HomeInviteStatsGroup = {
   __typename?: 'HomeInviteStatsGroup';
   _count: InviteActionCount;
   action: InviteAction;
-};
-
-export type HomeMember = {
-  __typename?: 'HomeMember';
-  homeId: Scalars['String']['output'];
-  id: Scalars['ID']['output'];
-  joinedAt: Scalars['DateTime']['output'];
-  role?: Maybe<Scalars['String']['output']>;
-  userId: Scalars['String']['output'];
 };
 
 export type HomeOwnership = {
@@ -1638,10 +1628,9 @@ export type ItemAvailability = {
 
 export type ItemBrand = {
   __typename?: 'ItemBrand';
-  brand?: Maybe<Brand>;
+  brand: Brand;
   id: Scalars['ID']['output'];
-  item?: Maybe<Item>;
-  sku?: Maybe<Scalars['String']['output']>;
+  item: Item;
 };
 
 export type ItemCategory = {
@@ -1650,7 +1639,6 @@ export type ItemCategory = {
   assignedBy?: Maybe<User>;
   category: Category;
   confidence: Scalars['Float']['output'];
-  createdAt: Scalars['DateTime']['output'];
   id: Scalars['ID']['output'];
   isPrimary: Scalars['Boolean']['output'];
   item: Item;
@@ -1771,7 +1759,6 @@ export type ItemStoreSku = {
   __typename?: 'ItemStoreSku';
   createdAt: Scalars['DateTime']['output'];
   id: Scalars['ID']['output'];
-  inventoryStatus?: Maybe<Scalars['String']['output']>;
   item: Item;
   metadata?: Maybe<Scalars['JSON']['output']>;
   price?: Maybe<Scalars['Float']['output']>;
@@ -1815,7 +1802,7 @@ export type ItemUnit = {
   deletedAt?: Maybe<Scalars['DateTime']['output']>;
   id: Scalars['ID']['output'];
   isCommon: Scalars['Boolean']['output'];
-  isDefault?: Maybe<Scalars['Boolean']['output']>;
+  isDefault: Scalars['Boolean']['output'];
   isPreferred: Scalars['Boolean']['output'];
   isVerified: Scalars['Boolean']['output'];
   item?: Maybe<Item>;
@@ -1954,13 +1941,13 @@ export type LoginHistory = {
   campaign?: Maybe<Scalars['String']['output']>;
   createdAt: Scalars['DateTime']['output'];
   device?: Maybe<Device>;
-  deviceId?: Maybe<Scalars['ID']['output']>;
+  deviceId?: Maybe<Scalars['String']['output']>;
   deviceType?: Maybe<DeviceType>;
   failureDetails?: Maybe<Scalars['String']['output']>;
   failureReason?: Maybe<LoginFailureReason>;
   flaggedAt?: Maybe<Scalars['DateTime']['output']>;
   flaggedBy?: Maybe<User>;
-  flaggedById?: Maybe<Scalars['ID']['output']>;
+  flaggedById?: Maybe<Scalars['String']['output']>;
   flaggedReason?: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
   ipAddress?: Maybe<Scalars['String']['output']>;
@@ -3694,25 +3681,20 @@ export type NotificationPayload = {
 
 export type NotificationPreferences = {
   __typename?: 'NotificationPreferences';
-  categories: Array<Scalars['String']['output']>;
   collaborationInvites: Scalars['Boolean']['output'];
   cookingReminders: Scalars['Boolean']['output'];
   createdAt: Scalars['DateTime']['output'];
-  email: Scalars['Boolean']['output'];
   emailEnabled: Scalars['Boolean']['output'];
   expirationDaysThreshold: Scalars['Int']['output'];
   expirationNotificationFrequency: ExpirationFrequency;
   expirationNotifications: Scalars['Boolean']['output'];
   homeInvites: Scalars['Boolean']['output'];
   id: Scalars['ID']['output'];
-  inApp: Scalars['Boolean']['output'];
   lowStockAlerts: Scalars['Boolean']['output'];
   mealPlanReminders: Scalars['Boolean']['output'];
   monthlyReport: Scalars['Boolean']['output'];
   pantryChanges: Scalars['Boolean']['output'];
-  push: Scalars['Boolean']['output'];
   pushEnabled: Scalars['Boolean']['output'];
-  quietHours?: Maybe<QuietHours>;
   quietHoursEnabled: Scalars['Boolean']['output'];
   quietHoursEnd?: Maybe<Scalars['String']['output']>;
   quietHoursStart?: Maybe<Scalars['String']['output']>;
@@ -3720,9 +3702,7 @@ export type NotificationPreferences = {
   recipeRecommendations: Scalars['Boolean']['output'];
   sharedListUpdates: Scalars['Boolean']['output'];
   shoppingListUpdates: Scalars['Boolean']['output'];
-  sms: Scalars['Boolean']['output'];
   smsEnabled: Scalars['Boolean']['output'];
-  types: Array<NotificationType>;
   updatedAt: Scalars['DateTime']['output'];
   user: User;
   userId: Scalars['String']['output'];
@@ -3852,7 +3832,6 @@ export type PaginationInput = {
 
 export type Pantry = {
   __typename?: 'Pantry';
-  activities?: Maybe<Array<PantryActivity>>;
   createdAt: Scalars['DateTime']['output'];
   description?: Maybe<Scalars['String']['output']>;
   home: Home;
@@ -3865,7 +3844,7 @@ export type Pantry = {
   name: Scalars['String']['output'];
   tags: Array<Scalars['String']['output']>;
   temperature?: Maybe<Scalars['String']['output']>;
-  updatedAt?: Maybe<Scalars['DateTime']['output']>;
+  updatedAt: Scalars['DateTime']['output'];
   version: Scalars['Int']['output'];
 };
 
@@ -3925,9 +3904,9 @@ export type PantryItem = {
   isComposted: Scalars['Boolean']['output'];
   isRecycled: Scalars['Boolean']['output'];
   item: Item;
-  itemBarcode?: Maybe<Scalars['String']['output']>;
   itemId: Scalars['String']['output'];
   itemName: Scalars['String']['output'];
+  itemUpc?: Maybe<Scalars['String']['output']>;
   lastModifiedBy?: Maybe<User>;
   lastReorderDate?: Maybe<Scalars['DateTime']['output']>;
   lastUsedAt?: Maybe<Scalars['DateTime']['output']>;
@@ -3937,7 +3916,7 @@ export type PantryItem = {
   pantry: Pantry;
   pantryId: Scalars['String']['output'];
   photos: Array<PantryItemPhoto>;
-  priority: Scalars['Int']['output'];
+  priority?: Maybe<Scalars['Int']['output']>;
   purchase?: Maybe<Purchase>;
   purchaseId?: Maybe<Scalars['String']['output']>;
   remainingValue?: Maybe<Scalars['Float']['output']>;
@@ -3951,7 +3930,7 @@ export type PantryItem = {
   totalCost?: Maybe<Scalars['Float']['output']>;
   unit?: Maybe<Unit>;
   unitId?: Maybe<Scalars['String']['output']>;
-  unitName?: Maybe<Scalars['String']['output']>;
+  unitName: Scalars['String']['output'];
   updatedAt?: Maybe<Scalars['DateTime']['output']>;
   usageFrequency: UsageFrequency;
   usageRecords: Array<PantryItemUsage>;
@@ -3995,18 +3974,16 @@ export type PantryItemPhoto = {
 
 export type PantryItemUsage = {
   __typename?: 'PantryItemUsage';
-  cookingLogId?: Maybe<Scalars['String']['output']>;
+  cookingLog?: Maybe<CookingLog>;
   id: Scalars['ID']['output'];
-  mealPlanItemId?: Maybe<Scalars['String']['output']>;
+  mealPlanItem?: Maybe<MealPlanItem>;
   notes?: Maybe<Scalars['String']['output']>;
   pantryItem: PantryItem;
-  pantryItemId: Scalars['String']['output'];
   purpose: UsagePurpose;
   quantityUsed: Scalars['Float']['output'];
-  recipeId?: Maybe<Scalars['String']['output']>;
-  usedAt: Scalars['String']['output'];
+  recipe?: Maybe<Recipe>;
+  usedAt: Scalars['DateTime']['output'];
   usedBy: User;
-  usedById: Scalars['String']['output'];
 };
 
 export type PantryItemUsageChangedPayload = {
@@ -4939,14 +4916,6 @@ export type QueryVerifiedDevicesArgs = {
   userId: Scalars['ID']['input'];
 };
 
-export type QuietHours = {
-  __typename?: 'QuietHours';
-  enabled: Scalars['Boolean']['output'];
-  endTime: Scalars['String']['output'];
-  startTime: Scalars['String']['output'];
-  timezone: Scalars['String']['output'];
-};
-
 export type QuietHoursInput = {
   enabled: Scalars['Boolean']['input'];
   endTime: Scalars['String']['input'];
@@ -5508,9 +5477,11 @@ export type ShoppingListOwnership = {
   createdAt: Scalars['DateTime']['output'];
   id: Scalars['ID']['output'];
   shoppingList: ShoppingList;
+  shoppingListId: Scalars['String']['output'];
   transferredAt?: Maybe<Scalars['DateTime']['output']>;
   transferredFrom?: Maybe<Scalars['String']['output']>;
   user: User;
+  userId: Scalars['String']['output'];
 };
 
 export type ShoppingListPreviousValues = {
@@ -5611,35 +5582,20 @@ export type Store = {
   __typename?: 'Store';
   address?: Maybe<Scalars['String']['output']>;
   averageShelfLife?: Maybe<Scalars['JSON']['output']>;
-  chain?: Maybe<Scalars['String']['output']>;
-  chainLogo?: Maybe<Scalars['String']['output']>;
-  city?: Maybe<Scalars['String']['output']>;
-  country?: Maybe<Scalars['String']['output']>;
   createdAt: Scalars['DateTime']['output'];
   deletedAt?: Maybe<Scalars['DateTime']['output']>;
-  features?: Maybe<Array<Scalars['String']['output']>>;
-  hours?: Maybe<Scalars['JSON']['output']>;
   id: Scalars['ID']['output'];
-  isActive: Scalars['Boolean']['output'];
-  itemSkus: Array<ItemStoreSku>;
   lastPriceUpdate?: Maybe<Scalars['DateTime']['output']>;
-  latitude?: Maybe<Scalars['Float']['output']>;
-  longitude?: Maybe<Scalars['Float']['output']>;
-  metadata?: Maybe<Scalars['JSON']['output']>;
   name: Scalars['String']['output'];
   pantryItems: Array<PantryItem>;
-  phone?: Maybe<Scalars['String']['output']>;
   priceAccuracy?: Maybe<Scalars['Float']['output']>;
   priceHistory: Array<ItemPriceHistory>;
   purchases: Array<Purchase>;
   qualityRating?: Maybe<Scalars['Float']['output']>;
-  state?: Maybe<Scalars['String']['output']>;
   storeInfo?: Maybe<StoreInfo>;
   storeSkus: Array<ItemStoreSku>;
   supportsPriceAPI: Scalars['Boolean']['output'];
   updatedAt: Scalars['DateTime']['output'];
-  website?: Maybe<Scalars['String']['output']>;
-  zipCode?: Maybe<Scalars['String']['output']>;
 };
 
 export type StoreInfo = {
@@ -6709,7 +6665,7 @@ export type UserProfile = {
   bio?: Maybe<Scalars['String']['output']>;
   coverImage?: Maybe<Scalars['String']['output']>;
   createdAt: Scalars['DateTime']['output'];
-  dateOfBirth?: Maybe<Scalars['String']['output']>;
+  dateOfBirth?: Maybe<Scalars['DateTime']['output']>;
   displayName?: Maybe<Scalars['String']['output']>;
   firstName?: Maybe<Scalars['String']['output']>;
   gender?: Maybe<Scalars['String']['output']>;
@@ -6747,26 +6703,20 @@ export type UserSettings = {
   betaFeatures: Array<Scalars['String']['output']>;
   compactMode: Scalars['Boolean']['output'];
   createdAt: Scalars['DateTime']['output'];
-  defaultHome?: Maybe<Home>;
-  emailNotifications: Scalars['Boolean']['output'];
   enabledFeatures: Array<Scalars['String']['output']>;
-  expiredItemAlerts: Scalars['Boolean']['output'];
   id: Scalars['ID']['output'];
-  lowStockAlerts: Scalars['Boolean']['output'];
+  language: Scalars['String']['output'];
   offlineMode: Scalars['Boolean']['output'];
   personalizedAds: Scalars['Boolean']['output'];
+  preferredCurrency: Scalars['String']['output'];
   preferredUnitSystem: UnitSystem;
-  pushNotifications: Scalars['Boolean']['output'];
-  recipeRecommendations: Scalars['Boolean']['output'];
   shareUsageData: Scalars['Boolean']['output'];
   shareWithPartners: Scalars['Boolean']['output'];
-  shoppingListUpdates: Scalars['Boolean']['output'];
   showTutorials: Scalars['Boolean']['output'];
-  smsNotifications: Scalars['Boolean']['output'];
   theme: AppTheme;
+  timezone: Scalars['String']['output'];
   updatedAt: Scalars['DateTime']['output'];
   user: User;
-  weeklyDigest: Scalars['Boolean']['output'];
 };
 
 export type UserSocialPayload = {
@@ -6782,7 +6732,7 @@ export type UserStatistics = {
   averageRatingGiven?: Maybe<Scalars['Float']['output']>;
   helpfulVotesReceived: Scalars['Int']['output'];
   id: Scalars['ID']['output'];
-  lastCalculatedAt: Scalars['String']['output'];
+  lastCalculatedAt: Scalars['DateTime']['output'];
   streakDays: Scalars['Int']['output'];
   totalAmountSpent: Scalars['Float']['output'];
   totalCollaborations: Scalars['Int']['output'];
@@ -6794,6 +6744,7 @@ export type UserStatistics = {
   totalReviewsGiven: Scalars['Int']['output'];
   totalShoppingLists: Scalars['Int']['output'];
   totalWasteReduced: Scalars['Float']['output'];
+  user: User;
   userId: Scalars['String']['output'];
 };
 
@@ -7552,13 +7503,7 @@ export type GetMeQuery = {
           | null
           | undefined;
         settings?:
-          | {
-              __typename?: 'UserSettings';
-              id: string;
-              emailNotifications: boolean;
-              pushNotifications: boolean;
-              theme: AppTheme;
-            }
+          | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
           | null
           | undefined;
       }
@@ -7574,14 +7519,6 @@ export type GetUserSettingsQuery = {
     | {
         __typename?: 'UserSettings';
         id: string;
-        emailNotifications: boolean;
-        pushNotifications: boolean;
-        smsNotifications: boolean;
-        weeklyDigest: boolean;
-        expiredItemAlerts: boolean;
-        lowStockAlerts: boolean;
-        shoppingListUpdates: boolean;
-        recipeRecommendations: boolean;
         theme: AppTheme;
         compactMode: boolean;
         showTutorials: boolean;
@@ -7591,15 +7528,14 @@ export type GetUserSettingsQuery = {
         shareWithPartners: boolean;
         personalizedAds: boolean;
         preferredUnitSystem: UnitSystem;
+        language: string;
+        timezone: string;
+        preferredCurrency: string;
         enabledFeatures: Array<string>;
         betaFeatures: Array<string>;
         createdAt: string;
         updatedAt: string;
         user: { __typename?: 'User'; id: string; email: string };
-        defaultHome?:
-          | { __typename?: 'Home'; id: string; name: string }
-          | null
-          | undefined;
       }
     | null
     | undefined;
@@ -7696,14 +7632,6 @@ export type UpdateUserPreferencesMutation = {
   updateSettings: {
     __typename?: 'UserSettings';
     id: string;
-    emailNotifications: boolean;
-    pushNotifications: boolean;
-    smsNotifications: boolean;
-    weeklyDigest: boolean;
-    expiredItemAlerts: boolean;
-    lowStockAlerts: boolean;
-    shoppingListUpdates: boolean;
-    recipeRecommendations: boolean;
     theme: AppTheme;
     compactMode: boolean;
     showTutorials: boolean;
@@ -7712,6 +7640,10 @@ export type UpdateUserPreferencesMutation = {
     shareUsageData: boolean;
     shareWithPartners: boolean;
     personalizedAds: boolean;
+    preferredUnitSystem: UnitSystem;
+    language: string;
+    timezone: string;
+    preferredCurrency: string;
     enabledFeatures: Array<string>;
     betaFeatures: Array<string>;
     createdAt: string;
@@ -7979,13 +7911,7 @@ export type ShoppingListItemFragmentFragment = {
           | null
           | undefined;
         settings?:
-          | {
-              __typename?: 'UserSettings';
-              id: string;
-              emailNotifications: boolean;
-              pushNotifications: boolean;
-              theme: AppTheme;
-            }
+          | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
           | null
           | undefined;
       }
@@ -8021,13 +7947,7 @@ export type ShoppingListItemFragmentFragment = {
           | null
           | undefined;
         settings?:
-          | {
-              __typename?: 'UserSettings';
-              id: string;
-              emailNotifications: boolean;
-              pushNotifications: boolean;
-              theme: AppTheme;
-            }
+          | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
           | null
           | undefined;
       }
@@ -8108,13 +8028,7 @@ export type PartialUserFragment = {
     | null
     | undefined;
   settings?:
-    | {
-        __typename?: 'UserSettings';
-        id: string;
-        emailNotifications: boolean;
-        pushNotifications: boolean;
-        theme: AppTheme;
-      }
+    | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
     | null
     | undefined;
 };
@@ -8199,7 +8113,7 @@ export type UnitFragmentFragment = {
   id: string;
   itemId: string;
   unitId: string;
-  isDefault?: boolean | null | undefined;
+  isDefault: boolean;
   isPreferred: boolean;
   isCommon: boolean;
   conversionRatio?: number | null | undefined;
@@ -8230,25 +8144,22 @@ export type UnitFragmentFragment = {
 export type BrandFragmentFragment = {
   __typename?: 'ItemBrand';
   id: string;
-  brand?:
-    | {
-        __typename?: 'Brand';
-        id: string;
-        name: string;
-        description?: string | null | undefined;
-        createdAt: string;
-        updatedAt: string;
-        version: number;
-      }
-    | null
-    | undefined;
+  brand: {
+    __typename?: 'Brand';
+    id: string;
+    name: string;
+    description?: string | null | undefined;
+    createdAt: string;
+    updatedAt: string;
+    version: number;
+  };
 };
 
 export type CategoryFragmentFragment = {
   __typename?: 'Category';
   id: string;
   name: string;
-  slug?: string | null | undefined;
+  slug: string;
   description?: string | null | undefined;
   icon?: string | null | undefined;
   color?: string | null | undefined;
@@ -8260,7 +8171,7 @@ export type CategoryFragmentFragment = {
   itemCount: number;
   usageCount: number;
   createdAt: string;
-  updatedAt?: string | null | undefined;
+  updatedAt: string;
   deletedAt?: string | null | undefined;
   version: number;
 };
@@ -8300,7 +8211,7 @@ export type ItemFragmentFragment = {
     id: string;
     itemId: string;
     unitId: string;
-    isDefault?: boolean | null | undefined;
+    isDefault: boolean;
     isPreferred: boolean;
     isCommon: boolean;
     conversionRatio?: number | null | undefined;
@@ -8330,33 +8241,28 @@ export type ItemFragmentFragment = {
   brands: Array<{
     __typename?: 'ItemBrand';
     id: string;
-    brand?:
-      | {
-          __typename?: 'Brand';
-          id: string;
-          name: string;
-          description?: string | null | undefined;
-          createdAt: string;
-          updatedAt: string;
-          version: number;
-        }
-      | null
-      | undefined;
+    brand: {
+      __typename?: 'Brand';
+      id: string;
+      name: string;
+      description?: string | null | undefined;
+      createdAt: string;
+      updatedAt: string;
+      version: number;
+    };
   }>;
   categories?:
     | Array<{
         __typename?: 'ItemCategory';
         id: string;
-        source: CategorySource;
-        confidence: number;
         isPrimary: boolean;
-        createdAt: string;
         assignedAt?: string | null | undefined;
+        assignedBy?: { __typename?: 'User'; id: string } | null | undefined;
         category: {
           __typename?: 'Category';
           id: string;
           name: string;
-          slug?: string | null | undefined;
+          slug: string;
           description?: string | null | undefined;
           icon?: string | null | undefined;
           color?: string | null | undefined;
@@ -8368,7 +8274,7 @@ export type ItemFragmentFragment = {
           itemCount: number;
           usageCount: number;
           createdAt: string;
-          updatedAt?: string | null | undefined;
+          updatedAt: string;
           deletedAt?: string | null | undefined;
           version: number;
         };
@@ -8420,7 +8326,7 @@ export type PantryItemFragmentFragment = {
   pantryId: string;
   itemId: string;
   itemName: string;
-  unitName?: string | null | undefined;
+  unitName: string;
   unitId?: string | null | undefined;
   expiresAt?: string | null | undefined;
   storageState: StorageState;
@@ -8471,7 +8377,7 @@ export type PantryItemFragmentFragment = {
       id: string;
       itemId: string;
       unitId: string;
-      isDefault?: boolean | null | undefined;
+      isDefault: boolean;
       isPreferred: boolean;
       isCommon: boolean;
       conversionRatio?: number | null | undefined;
@@ -8501,33 +8407,28 @@ export type PantryItemFragmentFragment = {
     brands: Array<{
       __typename?: 'ItemBrand';
       id: string;
-      brand?:
-        | {
-            __typename?: 'Brand';
-            id: string;
-            name: string;
-            description?: string | null | undefined;
-            createdAt: string;
-            updatedAt: string;
-            version: number;
-          }
-        | null
-        | undefined;
+      brand: {
+        __typename?: 'Brand';
+        id: string;
+        name: string;
+        description?: string | null | undefined;
+        createdAt: string;
+        updatedAt: string;
+        version: number;
+      };
     }>;
     categories?:
       | Array<{
           __typename?: 'ItemCategory';
           id: string;
-          source: CategorySource;
-          confidence: number;
           isPrimary: boolean;
-          createdAt: string;
           assignedAt?: string | null | undefined;
+          assignedBy?: { __typename?: 'User'; id: string } | null | undefined;
           category: {
             __typename?: 'Category';
             id: string;
             name: string;
-            slug?: string | null | undefined;
+            slug: string;
             description?: string | null | undefined;
             icon?: string | null | undefined;
             color?: string | null | undefined;
@@ -8539,7 +8440,7 @@ export type PantryItemFragmentFragment = {
             itemCount: number;
             usageCount: number;
             createdAt: string;
-            updatedAt?: string | null | undefined;
+            updatedAt: string;
             deletedAt?: string | null | undefined;
             version: number;
           };
@@ -8590,16 +8491,18 @@ export type PantryItemFragmentFragment = {
   usageRecords: Array<{
     __typename?: 'PantryItemUsage';
     id: string;
-    pantryItemId: string;
     quantityUsed: number;
-    usedById: string;
     usedAt: string;
     purpose: UsagePurpose;
     notes?: string | null | undefined;
-    cookingLogId?: string | null | undefined;
-    mealPlanItemId?: string | null | undefined;
-    recipeId?: string | null | undefined;
+    pantryItem: { __typename?: 'PantryItem'; id: string };
     usedBy: { __typename?: 'User'; id: string };
+    cookingLog?: { __typename?: 'CookingLog'; id: string } | null | undefined;
+    mealPlanItem?:
+      | { __typename?: 'MealPlanItem'; id: string }
+      | null
+      | undefined;
+    recipe?: { __typename?: 'Recipe'; id: string } | null | undefined;
   }>;
 };
 
@@ -8683,13 +8586,7 @@ export type MemberShipFragmentFragment = {
       | null
       | undefined;
     settings?:
-      | {
-          __typename?: 'UserSettings';
-          id: string;
-          emailNotifications: boolean;
-          pushNotifications: boolean;
-          theme: AppTheme;
-        }
+      | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
       | null
       | undefined;
   };
@@ -8708,7 +8605,7 @@ export type PantryFragmentFragment = {
   metadata?: any | null | undefined;
   version: number;
   createdAt: string;
-  updatedAt?: string | null | undefined;
+  updatedAt: string;
   items?:
     | Array<{
         __typename?: 'PantryItem';
@@ -8716,7 +8613,7 @@ export type PantryFragmentFragment = {
         pantryId: string;
         itemId: string;
         itemName: string;
-        unitName?: string | null | undefined;
+        unitName: string;
         unitId?: string | null | undefined;
         expiresAt?: string | null | undefined;
         storageState: StorageState;
@@ -8767,7 +8664,7 @@ export type PantryFragmentFragment = {
             id: string;
             itemId: string;
             unitId: string;
-            isDefault?: boolean | null | undefined;
+            isDefault: boolean;
             isPreferred: boolean;
             isCommon: boolean;
             conversionRatio?: number | null | undefined;
@@ -8797,33 +8694,31 @@ export type PantryFragmentFragment = {
           brands: Array<{
             __typename?: 'ItemBrand';
             id: string;
-            brand?:
-              | {
-                  __typename?: 'Brand';
-                  id: string;
-                  name: string;
-                  description?: string | null | undefined;
-                  createdAt: string;
-                  updatedAt: string;
-                  version: number;
-                }
-              | null
-              | undefined;
+            brand: {
+              __typename?: 'Brand';
+              id: string;
+              name: string;
+              description?: string | null | undefined;
+              createdAt: string;
+              updatedAt: string;
+              version: number;
+            };
           }>;
           categories?:
             | Array<{
                 __typename?: 'ItemCategory';
                 id: string;
-                source: CategorySource;
-                confidence: number;
                 isPrimary: boolean;
-                createdAt: string;
                 assignedAt?: string | null | undefined;
+                assignedBy?:
+                  | { __typename?: 'User'; id: string }
+                  | null
+                  | undefined;
                 category: {
                   __typename?: 'Category';
                   id: string;
                   name: string;
-                  slug?: string | null | undefined;
+                  slug: string;
                   description?: string | null | undefined;
                   icon?: string | null | undefined;
                   color?: string | null | undefined;
@@ -8835,7 +8730,7 @@ export type PantryFragmentFragment = {
                   itemCount: number;
                   usageCount: number;
                   createdAt: string;
-                  updatedAt?: string | null | undefined;
+                  updatedAt: string;
                   deletedAt?: string | null | undefined;
                   version: number;
                 };
@@ -8886,16 +8781,21 @@ export type PantryFragmentFragment = {
         usageRecords: Array<{
           __typename?: 'PantryItemUsage';
           id: string;
-          pantryItemId: string;
           quantityUsed: number;
-          usedById: string;
           usedAt: string;
           purpose: UsagePurpose;
           notes?: string | null | undefined;
-          cookingLogId?: string | null | undefined;
-          mealPlanItemId?: string | null | undefined;
-          recipeId?: string | null | undefined;
+          pantryItem: { __typename?: 'PantryItem'; id: string };
           usedBy: { __typename?: 'User'; id: string };
+          cookingLog?:
+            | { __typename?: 'CookingLog'; id: string }
+            | null
+            | undefined;
+          mealPlanItem?:
+            | { __typename?: 'MealPlanItem'; id: string }
+            | null
+            | undefined;
+          recipe?: { __typename?: 'Recipe'; id: string } | null | undefined;
         }>;
       }>
     | null
@@ -8915,7 +8815,7 @@ export type BasicPantryFragmentFragment = {
   metadata?: any | null | undefined;
   version: number;
   createdAt: string;
-  updatedAt?: string | null | undefined;
+  updatedAt: string;
 };
 
 export type HomeWithPantriesFragmentFragment = {
@@ -9020,99 +8920,11 @@ export type HomeWithPantriesFragmentFragment = {
         | null
         | undefined;
       settings?:
-        | {
-            __typename?: 'UserSettings';
-            id: string;
-            emailNotifications: boolean;
-            pushNotifications: boolean;
-            theme: AppTheme;
-          }
+        | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
         | null
         | undefined;
     };
   }>;
-  myMembership?:
-    | {
-        __typename?: 'Membership';
-        id: string;
-        homeId: string;
-        userId: string;
-        role: MembershipRole;
-        status: MembershipStatus;
-        displayName?: string | null | undefined;
-        canViewPantry: boolean;
-        canEditPantry: boolean;
-        canAddItems: boolean;
-        canRemoveItems: boolean;
-        canInviteOthers: boolean;
-        canManageHome: boolean;
-        lastActiveAt?: string | null | undefined;
-        joinedAt: string;
-        leftAt?: string | null | undefined;
-        createdAt: string;
-        updatedAt: string;
-        user: {
-          __typename?: 'User';
-          id: string;
-          email: string;
-          emailVerified: boolean;
-          role: UserRole;
-          onBoarded: boolean;
-          timezone?: string | null | undefined;
-          preferredCurrency?: string | null | undefined;
-          language?: string | null | undefined;
-          defaultShoppingListId?: string | null | undefined;
-          defaultHomeId?: string | null | undefined;
-          createdAt: string;
-          updatedAt: string;
-          lastActiveAt?: string | null | undefined;
-          profile?:
-            | {
-                __typename?: 'UserProfile';
-                id: string;
-                firstName?: string | null | undefined;
-                lastName?: string | null | undefined;
-                displayName?: string | null | undefined;
-                bio?: string | null | undefined;
-                avatar?: string | null | undefined;
-                phone?: string | null | undefined;
-              }
-            | null
-            | undefined;
-          settings?:
-            | {
-                __typename?: 'UserSettings';
-                id: string;
-                emailNotifications: boolean;
-                pushNotifications: boolean;
-                theme: AppTheme;
-              }
-            | null
-            | undefined;
-        };
-      }
-    | null
-    | undefined;
-  membershipStats: {
-    __typename?: 'MembershipStats';
-    total: number;
-    active: number;
-    recentlyActive: number;
-    byRole: {
-      __typename?: 'MembershipRoleStats';
-      OWNER: number;
-      ADMIN: number;
-      MEMBER: number;
-      GUEST: number;
-    };
-    byStatus: {
-      __typename?: 'MembershipStatusStats';
-      ACTIVE: number;
-      SUSPENDED: number;
-      LEFT: number;
-      REMOVED: number;
-    };
-  };
   pantries?:
     | Array<{
         __typename?: 'Pantry';
@@ -9127,7 +8939,7 @@ export type HomeWithPantriesFragmentFragment = {
         metadata?: any | null | undefined;
         version: number;
         createdAt: string;
-        updatedAt?: string | null | undefined;
+        updatedAt: string;
       }>
     | null
     | undefined;
@@ -9235,99 +9047,11 @@ export type HomeFragmentFragment = {
         | null
         | undefined;
       settings?:
-        | {
-            __typename?: 'UserSettings';
-            id: string;
-            emailNotifications: boolean;
-            pushNotifications: boolean;
-            theme: AppTheme;
-          }
+        | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
         | null
         | undefined;
     };
   }>;
-  myMembership?:
-    | {
-        __typename?: 'Membership';
-        id: string;
-        homeId: string;
-        userId: string;
-        role: MembershipRole;
-        status: MembershipStatus;
-        displayName?: string | null | undefined;
-        canViewPantry: boolean;
-        canEditPantry: boolean;
-        canAddItems: boolean;
-        canRemoveItems: boolean;
-        canInviteOthers: boolean;
-        canManageHome: boolean;
-        lastActiveAt?: string | null | undefined;
-        joinedAt: string;
-        leftAt?: string | null | undefined;
-        createdAt: string;
-        updatedAt: string;
-        user: {
-          __typename?: 'User';
-          id: string;
-          email: string;
-          emailVerified: boolean;
-          role: UserRole;
-          onBoarded: boolean;
-          timezone?: string | null | undefined;
-          preferredCurrency?: string | null | undefined;
-          language?: string | null | undefined;
-          defaultShoppingListId?: string | null | undefined;
-          defaultHomeId?: string | null | undefined;
-          createdAt: string;
-          updatedAt: string;
-          lastActiveAt?: string | null | undefined;
-          profile?:
-            | {
-                __typename?: 'UserProfile';
-                id: string;
-                firstName?: string | null | undefined;
-                lastName?: string | null | undefined;
-                displayName?: string | null | undefined;
-                bio?: string | null | undefined;
-                avatar?: string | null | undefined;
-                phone?: string | null | undefined;
-              }
-            | null
-            | undefined;
-          settings?:
-            | {
-                __typename?: 'UserSettings';
-                id: string;
-                emailNotifications: boolean;
-                pushNotifications: boolean;
-                theme: AppTheme;
-              }
-            | null
-            | undefined;
-        };
-      }
-    | null
-    | undefined;
-  membershipStats: {
-    __typename?: 'MembershipStats';
-    total: number;
-    active: number;
-    recentlyActive: number;
-    byRole: {
-      __typename?: 'MembershipRoleStats';
-      OWNER: number;
-      ADMIN: number;
-      MEMBER: number;
-      GUEST: number;
-    };
-    byStatus: {
-      __typename?: 'MembershipStatusStats';
-      ACTIVE: number;
-      SUSPENDED: number;
-      LEFT: number;
-      REMOVED: number;
-    };
-  };
   pantries?:
     | Array<{
         __typename?: 'Pantry';
@@ -9342,7 +9066,7 @@ export type HomeFragmentFragment = {
         metadata?: any | null | undefined;
         version: number;
         createdAt: string;
-        updatedAt?: string | null | undefined;
+        updatedAt: string;
         items?:
           | Array<{
               __typename?: 'PantryItem';
@@ -9350,7 +9074,7 @@ export type HomeFragmentFragment = {
               pantryId: string;
               itemId: string;
               itemName: string;
-              unitName?: string | null | undefined;
+              unitName: string;
               unitId?: string | null | undefined;
               expiresAt?: string | null | undefined;
               storageState: StorageState;
@@ -9406,7 +9130,7 @@ export type HomeFragmentFragment = {
                   id: string;
                   itemId: string;
                   unitId: string;
-                  isDefault?: boolean | null | undefined;
+                  isDefault: boolean;
                   isPreferred: boolean;
                   isCommon: boolean;
                   conversionRatio?: number | null | undefined;
@@ -9436,33 +9160,31 @@ export type HomeFragmentFragment = {
                 brands: Array<{
                   __typename?: 'ItemBrand';
                   id: string;
-                  brand?:
-                    | {
-                        __typename?: 'Brand';
-                        id: string;
-                        name: string;
-                        description?: string | null | undefined;
-                        createdAt: string;
-                        updatedAt: string;
-                        version: number;
-                      }
-                    | null
-                    | undefined;
+                  brand: {
+                    __typename?: 'Brand';
+                    id: string;
+                    name: string;
+                    description?: string | null | undefined;
+                    createdAt: string;
+                    updatedAt: string;
+                    version: number;
+                  };
                 }>;
                 categories?:
                   | Array<{
                       __typename?: 'ItemCategory';
                       id: string;
-                      source: CategorySource;
-                      confidence: number;
                       isPrimary: boolean;
-                      createdAt: string;
                       assignedAt?: string | null | undefined;
+                      assignedBy?:
+                        | { __typename?: 'User'; id: string }
+                        | null
+                        | undefined;
                       category: {
                         __typename?: 'Category';
                         id: string;
                         name: string;
-                        slug?: string | null | undefined;
+                        slug: string;
                         description?: string | null | undefined;
                         icon?: string | null | undefined;
                         color?: string | null | undefined;
@@ -9474,7 +9196,7 @@ export type HomeFragmentFragment = {
                         itemCount: number;
                         usageCount: number;
                         createdAt: string;
-                        updatedAt?: string | null | undefined;
+                        updatedAt: string;
                         deletedAt?: string | null | undefined;
                         version: number;
                       };
@@ -9525,16 +9247,24 @@ export type HomeFragmentFragment = {
               usageRecords: Array<{
                 __typename?: 'PantryItemUsage';
                 id: string;
-                pantryItemId: string;
                 quantityUsed: number;
-                usedById: string;
                 usedAt: string;
                 purpose: UsagePurpose;
                 notes?: string | null | undefined;
-                cookingLogId?: string | null | undefined;
-                mealPlanItemId?: string | null | undefined;
-                recipeId?: string | null | undefined;
+                pantryItem: { __typename?: 'PantryItem'; id: string };
                 usedBy: { __typename?: 'User'; id: string };
+                cookingLog?:
+                  | { __typename?: 'CookingLog'; id: string }
+                  | null
+                  | undefined;
+                mealPlanItem?:
+                  | { __typename?: 'MealPlanItem'; id: string }
+                  | null
+                  | undefined;
+                recipe?:
+                  | { __typename?: 'Recipe'; id: string }
+                  | null
+                  | undefined;
               }>;
             }>
           | null
@@ -9804,99 +9534,11 @@ export type GetHomeQuery = {
               | null
               | undefined;
             settings?:
-              | {
-                  __typename?: 'UserSettings';
-                  id: string;
-                  emailNotifications: boolean;
-                  pushNotifications: boolean;
-                  theme: AppTheme;
-                }
+              | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
               | null
               | undefined;
           };
         }>;
-        myMembership?:
-          | {
-              __typename?: 'Membership';
-              id: string;
-              homeId: string;
-              userId: string;
-              role: MembershipRole;
-              status: MembershipStatus;
-              displayName?: string | null | undefined;
-              canViewPantry: boolean;
-              canEditPantry: boolean;
-              canAddItems: boolean;
-              canRemoveItems: boolean;
-              canInviteOthers: boolean;
-              canManageHome: boolean;
-              lastActiveAt?: string | null | undefined;
-              joinedAt: string;
-              leftAt?: string | null | undefined;
-              createdAt: string;
-              updatedAt: string;
-              user: {
-                __typename?: 'User';
-                id: string;
-                email: string;
-                emailVerified: boolean;
-                role: UserRole;
-                onBoarded: boolean;
-                timezone?: string | null | undefined;
-                preferredCurrency?: string | null | undefined;
-                language?: string | null | undefined;
-                defaultShoppingListId?: string | null | undefined;
-                defaultHomeId?: string | null | undefined;
-                createdAt: string;
-                updatedAt: string;
-                lastActiveAt?: string | null | undefined;
-                profile?:
-                  | {
-                      __typename?: 'UserProfile';
-                      id: string;
-                      firstName?: string | null | undefined;
-                      lastName?: string | null | undefined;
-                      displayName?: string | null | undefined;
-                      bio?: string | null | undefined;
-                      avatar?: string | null | undefined;
-                      phone?: string | null | undefined;
-                    }
-                  | null
-                  | undefined;
-                settings?:
-                  | {
-                      __typename?: 'UserSettings';
-                      id: string;
-                      emailNotifications: boolean;
-                      pushNotifications: boolean;
-                      theme: AppTheme;
-                    }
-                  | null
-                  | undefined;
-              };
-            }
-          | null
-          | undefined;
-        membershipStats: {
-          __typename?: 'MembershipStats';
-          total: number;
-          active: number;
-          recentlyActive: number;
-          byRole: {
-            __typename?: 'MembershipRoleStats';
-            OWNER: number;
-            ADMIN: number;
-            MEMBER: number;
-            GUEST: number;
-          };
-          byStatus: {
-            __typename?: 'MembershipStatusStats';
-            ACTIVE: number;
-            SUSPENDED: number;
-            LEFT: number;
-            REMOVED: number;
-          };
-        };
         pantries?:
           | Array<{
               __typename?: 'Pantry';
@@ -9911,7 +9553,7 @@ export type GetHomeQuery = {
               metadata?: any | null | undefined;
               version: number;
               createdAt: string;
-              updatedAt?: string | null | undefined;
+              updatedAt: string;
               items?:
                 | Array<{
                     __typename?: 'PantryItem';
@@ -9919,7 +9561,7 @@ export type GetHomeQuery = {
                     pantryId: string;
                     itemId: string;
                     itemName: string;
-                    unitName?: string | null | undefined;
+                    unitName: string;
                     unitId?: string | null | undefined;
                     expiresAt?: string | null | undefined;
                     storageState: StorageState;
@@ -9975,7 +9617,7 @@ export type GetHomeQuery = {
                         id: string;
                         itemId: string;
                         unitId: string;
-                        isDefault?: boolean | null | undefined;
+                        isDefault: boolean;
                         isPreferred: boolean;
                         isCommon: boolean;
                         conversionRatio?: number | null | undefined;
@@ -10005,33 +9647,31 @@ export type GetHomeQuery = {
                       brands: Array<{
                         __typename?: 'ItemBrand';
                         id: string;
-                        brand?:
-                          | {
-                              __typename?: 'Brand';
-                              id: string;
-                              name: string;
-                              description?: string | null | undefined;
-                              createdAt: string;
-                              updatedAt: string;
-                              version: number;
-                            }
-                          | null
-                          | undefined;
+                        brand: {
+                          __typename?: 'Brand';
+                          id: string;
+                          name: string;
+                          description?: string | null | undefined;
+                          createdAt: string;
+                          updatedAt: string;
+                          version: number;
+                        };
                       }>;
                       categories?:
                         | Array<{
                             __typename?: 'ItemCategory';
                             id: string;
-                            source: CategorySource;
-                            confidence: number;
                             isPrimary: boolean;
-                            createdAt: string;
                             assignedAt?: string | null | undefined;
+                            assignedBy?:
+                              | { __typename?: 'User'; id: string }
+                              | null
+                              | undefined;
                             category: {
                               __typename?: 'Category';
                               id: string;
                               name: string;
-                              slug?: string | null | undefined;
+                              slug: string;
                               description?: string | null | undefined;
                               icon?: string | null | undefined;
                               color?: string | null | undefined;
@@ -10043,7 +9683,7 @@ export type GetHomeQuery = {
                               itemCount: number;
                               usageCount: number;
                               createdAt: string;
-                              updatedAt?: string | null | undefined;
+                              updatedAt: string;
                               deletedAt?: string | null | undefined;
                               version: number;
                             };
@@ -10094,16 +9734,24 @@ export type GetHomeQuery = {
                     usageRecords: Array<{
                       __typename?: 'PantryItemUsage';
                       id: string;
-                      pantryItemId: string;
                       quantityUsed: number;
-                      usedById: string;
                       usedAt: string;
                       purpose: UsagePurpose;
                       notes?: string | null | undefined;
-                      cookingLogId?: string | null | undefined;
-                      mealPlanItemId?: string | null | undefined;
-                      recipeId?: string | null | undefined;
+                      pantryItem: { __typename?: 'PantryItem'; id: string };
                       usedBy: { __typename?: 'User'; id: string };
+                      cookingLog?:
+                        | { __typename?: 'CookingLog'; id: string }
+                        | null
+                        | undefined;
+                      mealPlanItem?:
+                        | { __typename?: 'MealPlanItem'; id: string }
+                        | null
+                        | undefined;
+                      recipe?:
+                        | { __typename?: 'Recipe'; id: string }
+                        | null
+                        | undefined;
                     }>;
                   }>
                 | null
@@ -10225,99 +9873,11 @@ export type GetHomeBasicQuery = {
               | null
               | undefined;
             settings?:
-              | {
-                  __typename?: 'UserSettings';
-                  id: string;
-                  emailNotifications: boolean;
-                  pushNotifications: boolean;
-                  theme: AppTheme;
-                }
+              | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
               | null
               | undefined;
           };
         }>;
-        myMembership?:
-          | {
-              __typename?: 'Membership';
-              id: string;
-              homeId: string;
-              userId: string;
-              role: MembershipRole;
-              status: MembershipStatus;
-              displayName?: string | null | undefined;
-              canViewPantry: boolean;
-              canEditPantry: boolean;
-              canAddItems: boolean;
-              canRemoveItems: boolean;
-              canInviteOthers: boolean;
-              canManageHome: boolean;
-              lastActiveAt?: string | null | undefined;
-              joinedAt: string;
-              leftAt?: string | null | undefined;
-              createdAt: string;
-              updatedAt: string;
-              user: {
-                __typename?: 'User';
-                id: string;
-                email: string;
-                emailVerified: boolean;
-                role: UserRole;
-                onBoarded: boolean;
-                timezone?: string | null | undefined;
-                preferredCurrency?: string | null | undefined;
-                language?: string | null | undefined;
-                defaultShoppingListId?: string | null | undefined;
-                defaultHomeId?: string | null | undefined;
-                createdAt: string;
-                updatedAt: string;
-                lastActiveAt?: string | null | undefined;
-                profile?:
-                  | {
-                      __typename?: 'UserProfile';
-                      id: string;
-                      firstName?: string | null | undefined;
-                      lastName?: string | null | undefined;
-                      displayName?: string | null | undefined;
-                      bio?: string | null | undefined;
-                      avatar?: string | null | undefined;
-                      phone?: string | null | undefined;
-                    }
-                  | null
-                  | undefined;
-                settings?:
-                  | {
-                      __typename?: 'UserSettings';
-                      id: string;
-                      emailNotifications: boolean;
-                      pushNotifications: boolean;
-                      theme: AppTheme;
-                    }
-                  | null
-                  | undefined;
-              };
-            }
-          | null
-          | undefined;
-        membershipStats: {
-          __typename?: 'MembershipStats';
-          total: number;
-          active: number;
-          recentlyActive: number;
-          byRole: {
-            __typename?: 'MembershipRoleStats';
-            OWNER: number;
-            ADMIN: number;
-            MEMBER: number;
-            GUEST: number;
-          };
-          byStatus: {
-            __typename?: 'MembershipStatusStats';
-            ACTIVE: number;
-            SUSPENDED: number;
-            LEFT: number;
-            REMOVED: number;
-          };
-        };
         pantries?:
           | Array<{
               __typename?: 'Pantry';
@@ -10332,7 +9892,7 @@ export type GetHomeBasicQuery = {
               metadata?: any | null | undefined;
               version: number;
               createdAt: string;
-              updatedAt?: string | null | undefined;
+              updatedAt: string;
             }>
           | null
           | undefined;
@@ -10397,33 +9957,11 @@ export type GetHomesQuery = {
           | null
           | undefined;
         settings?:
-          | {
-              __typename?: 'UserSettings';
-              id: string;
-              emailNotifications: boolean;
-              pushNotifications: boolean;
-              theme: AppTheme;
-            }
+          | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
           | null
           | undefined;
       };
     }>;
-    myMembership?:
-      | {
-          __typename?: 'Membership';
-          id: string;
-          role: MembershipRole;
-          status: MembershipStatus;
-          displayName?: string | null | undefined;
-          canViewPantry: boolean;
-          canEditPantry: boolean;
-          canAddItems: boolean;
-          canRemoveItems: boolean;
-          canInviteOthers: boolean;
-          canManageHome: boolean;
-        }
-      | null
-      | undefined;
   }>;
 };
 
@@ -10567,33 +10105,11 @@ export type CreateHomeMutation = {
           | null
           | undefined;
         settings?:
-          | {
-              __typename?: 'UserSettings';
-              id: string;
-              emailNotifications: boolean;
-              pushNotifications: boolean;
-              theme: AppTheme;
-            }
+          | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
           | null
           | undefined;
       };
     }>;
-    myMembership?:
-      | {
-          __typename?: 'Membership';
-          id: string;
-          role: MembershipRole;
-          status: MembershipStatus;
-          displayName?: string | null | undefined;
-          canViewPantry: boolean;
-          canEditPantry: boolean;
-          canAddItems: boolean;
-          canRemoveItems: boolean;
-          canInviteOthers: boolean;
-          canManageHome: boolean;
-        }
-      | null
-      | undefined;
   };
 };
 
@@ -10706,99 +10222,11 @@ export type UpdateHomeMutation = {
           | null
           | undefined;
         settings?:
-          | {
-              __typename?: 'UserSettings';
-              id: string;
-              emailNotifications: boolean;
-              pushNotifications: boolean;
-              theme: AppTheme;
-            }
+          | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
           | null
           | undefined;
       };
     }>;
-    myMembership?:
-      | {
-          __typename?: 'Membership';
-          id: string;
-          homeId: string;
-          userId: string;
-          role: MembershipRole;
-          status: MembershipStatus;
-          displayName?: string | null | undefined;
-          canViewPantry: boolean;
-          canEditPantry: boolean;
-          canAddItems: boolean;
-          canRemoveItems: boolean;
-          canInviteOthers: boolean;
-          canManageHome: boolean;
-          lastActiveAt?: string | null | undefined;
-          joinedAt: string;
-          leftAt?: string | null | undefined;
-          createdAt: string;
-          updatedAt: string;
-          user: {
-            __typename?: 'User';
-            id: string;
-            email: string;
-            emailVerified: boolean;
-            role: UserRole;
-            onBoarded: boolean;
-            timezone?: string | null | undefined;
-            preferredCurrency?: string | null | undefined;
-            language?: string | null | undefined;
-            defaultShoppingListId?: string | null | undefined;
-            defaultHomeId?: string | null | undefined;
-            createdAt: string;
-            updatedAt: string;
-            lastActiveAt?: string | null | undefined;
-            profile?:
-              | {
-                  __typename?: 'UserProfile';
-                  id: string;
-                  firstName?: string | null | undefined;
-                  lastName?: string | null | undefined;
-                  displayName?: string | null | undefined;
-                  bio?: string | null | undefined;
-                  avatar?: string | null | undefined;
-                  phone?: string | null | undefined;
-                }
-              | null
-              | undefined;
-            settings?:
-              | {
-                  __typename?: 'UserSettings';
-                  id: string;
-                  emailNotifications: boolean;
-                  pushNotifications: boolean;
-                  theme: AppTheme;
-                }
-              | null
-              | undefined;
-          };
-        }
-      | null
-      | undefined;
-    membershipStats: {
-      __typename?: 'MembershipStats';
-      total: number;
-      active: number;
-      recentlyActive: number;
-      byRole: {
-        __typename?: 'MembershipRoleStats';
-        OWNER: number;
-        ADMIN: number;
-        MEMBER: number;
-        GUEST: number;
-      };
-      byStatus: {
-        __typename?: 'MembershipStatusStats';
-        ACTIVE: number;
-        SUSPENDED: number;
-        LEFT: number;
-        REMOVED: number;
-      };
-    };
     pantries?:
       | Array<{
           __typename?: 'Pantry';
@@ -10813,7 +10241,7 @@ export type UpdateHomeMutation = {
           metadata?: any | null | undefined;
           version: number;
           createdAt: string;
-          updatedAt?: string | null | undefined;
+          updatedAt: string;
           items?:
             | Array<{
                 __typename?: 'PantryItem';
@@ -10821,7 +10249,7 @@ export type UpdateHomeMutation = {
                 pantryId: string;
                 itemId: string;
                 itemName: string;
-                unitName?: string | null | undefined;
+                unitName: string;
                 unitId?: string | null | undefined;
                 expiresAt?: string | null | undefined;
                 storageState: StorageState;
@@ -10877,7 +10305,7 @@ export type UpdateHomeMutation = {
                     id: string;
                     itemId: string;
                     unitId: string;
-                    isDefault?: boolean | null | undefined;
+                    isDefault: boolean;
                     isPreferred: boolean;
                     isCommon: boolean;
                     conversionRatio?: number | null | undefined;
@@ -10907,33 +10335,31 @@ export type UpdateHomeMutation = {
                   brands: Array<{
                     __typename?: 'ItemBrand';
                     id: string;
-                    brand?:
-                      | {
-                          __typename?: 'Brand';
-                          id: string;
-                          name: string;
-                          description?: string | null | undefined;
-                          createdAt: string;
-                          updatedAt: string;
-                          version: number;
-                        }
-                      | null
-                      | undefined;
+                    brand: {
+                      __typename?: 'Brand';
+                      id: string;
+                      name: string;
+                      description?: string | null | undefined;
+                      createdAt: string;
+                      updatedAt: string;
+                      version: number;
+                    };
                   }>;
                   categories?:
                     | Array<{
                         __typename?: 'ItemCategory';
                         id: string;
-                        source: CategorySource;
-                        confidence: number;
                         isPrimary: boolean;
-                        createdAt: string;
                         assignedAt?: string | null | undefined;
+                        assignedBy?:
+                          | { __typename?: 'User'; id: string }
+                          | null
+                          | undefined;
                         category: {
                           __typename?: 'Category';
                           id: string;
                           name: string;
-                          slug?: string | null | undefined;
+                          slug: string;
                           description?: string | null | undefined;
                           icon?: string | null | undefined;
                           color?: string | null | undefined;
@@ -10945,7 +10371,7 @@ export type UpdateHomeMutation = {
                           itemCount: number;
                           usageCount: number;
                           createdAt: string;
-                          updatedAt?: string | null | undefined;
+                          updatedAt: string;
                           deletedAt?: string | null | undefined;
                           version: number;
                         };
@@ -10996,16 +10422,24 @@ export type UpdateHomeMutation = {
                 usageRecords: Array<{
                   __typename?: 'PantryItemUsage';
                   id: string;
-                  pantryItemId: string;
                   quantityUsed: number;
-                  usedById: string;
                   usedAt: string;
                   purpose: UsagePurpose;
                   notes?: string | null | undefined;
-                  cookingLogId?: string | null | undefined;
-                  mealPlanItemId?: string | null | undefined;
-                  recipeId?: string | null | undefined;
+                  pantryItem: { __typename?: 'PantryItem'; id: string };
                   usedBy: { __typename?: 'User'; id: string };
+                  cookingLog?:
+                    | { __typename?: 'CookingLog'; id: string }
+                    | null
+                    | undefined;
+                  mealPlanItem?:
+                    | { __typename?: 'MealPlanItem'; id: string }
+                    | null
+                    | undefined;
+                  recipe?:
+                    | { __typename?: 'Recipe'; id: string }
+                    | null
+                    | undefined;
                 }>;
               }>
             | null
@@ -11124,99 +10558,11 @@ export type DeleteHomeMutation = {
           | null
           | undefined;
         settings?:
-          | {
-              __typename?: 'UserSettings';
-              id: string;
-              emailNotifications: boolean;
-              pushNotifications: boolean;
-              theme: AppTheme;
-            }
+          | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
           | null
           | undefined;
       };
     }>;
-    myMembership?:
-      | {
-          __typename?: 'Membership';
-          id: string;
-          homeId: string;
-          userId: string;
-          role: MembershipRole;
-          status: MembershipStatus;
-          displayName?: string | null | undefined;
-          canViewPantry: boolean;
-          canEditPantry: boolean;
-          canAddItems: boolean;
-          canRemoveItems: boolean;
-          canInviteOthers: boolean;
-          canManageHome: boolean;
-          lastActiveAt?: string | null | undefined;
-          joinedAt: string;
-          leftAt?: string | null | undefined;
-          createdAt: string;
-          updatedAt: string;
-          user: {
-            __typename?: 'User';
-            id: string;
-            email: string;
-            emailVerified: boolean;
-            role: UserRole;
-            onBoarded: boolean;
-            timezone?: string | null | undefined;
-            preferredCurrency?: string | null | undefined;
-            language?: string | null | undefined;
-            defaultShoppingListId?: string | null | undefined;
-            defaultHomeId?: string | null | undefined;
-            createdAt: string;
-            updatedAt: string;
-            lastActiveAt?: string | null | undefined;
-            profile?:
-              | {
-                  __typename?: 'UserProfile';
-                  id: string;
-                  firstName?: string | null | undefined;
-                  lastName?: string | null | undefined;
-                  displayName?: string | null | undefined;
-                  bio?: string | null | undefined;
-                  avatar?: string | null | undefined;
-                  phone?: string | null | undefined;
-                }
-              | null
-              | undefined;
-            settings?:
-              | {
-                  __typename?: 'UserSettings';
-                  id: string;
-                  emailNotifications: boolean;
-                  pushNotifications: boolean;
-                  theme: AppTheme;
-                }
-              | null
-              | undefined;
-          };
-        }
-      | null
-      | undefined;
-    membershipStats: {
-      __typename?: 'MembershipStats';
-      total: number;
-      active: number;
-      recentlyActive: number;
-      byRole: {
-        __typename?: 'MembershipRoleStats';
-        OWNER: number;
-        ADMIN: number;
-        MEMBER: number;
-        GUEST: number;
-      };
-      byStatus: {
-        __typename?: 'MembershipStatusStats';
-        ACTIVE: number;
-        SUSPENDED: number;
-        LEFT: number;
-        REMOVED: number;
-      };
-    };
     pantries?:
       | Array<{
           __typename?: 'Pantry';
@@ -11231,7 +10577,7 @@ export type DeleteHomeMutation = {
           metadata?: any | null | undefined;
           version: number;
           createdAt: string;
-          updatedAt?: string | null | undefined;
+          updatedAt: string;
           items?:
             | Array<{
                 __typename?: 'PantryItem';
@@ -11239,7 +10585,7 @@ export type DeleteHomeMutation = {
                 pantryId: string;
                 itemId: string;
                 itemName: string;
-                unitName?: string | null | undefined;
+                unitName: string;
                 unitId?: string | null | undefined;
                 expiresAt?: string | null | undefined;
                 storageState: StorageState;
@@ -11295,7 +10641,7 @@ export type DeleteHomeMutation = {
                     id: string;
                     itemId: string;
                     unitId: string;
-                    isDefault?: boolean | null | undefined;
+                    isDefault: boolean;
                     isPreferred: boolean;
                     isCommon: boolean;
                     conversionRatio?: number | null | undefined;
@@ -11325,33 +10671,31 @@ export type DeleteHomeMutation = {
                   brands: Array<{
                     __typename?: 'ItemBrand';
                     id: string;
-                    brand?:
-                      | {
-                          __typename?: 'Brand';
-                          id: string;
-                          name: string;
-                          description?: string | null | undefined;
-                          createdAt: string;
-                          updatedAt: string;
-                          version: number;
-                        }
-                      | null
-                      | undefined;
+                    brand: {
+                      __typename?: 'Brand';
+                      id: string;
+                      name: string;
+                      description?: string | null | undefined;
+                      createdAt: string;
+                      updatedAt: string;
+                      version: number;
+                    };
                   }>;
                   categories?:
                     | Array<{
                         __typename?: 'ItemCategory';
                         id: string;
-                        source: CategorySource;
-                        confidence: number;
                         isPrimary: boolean;
-                        createdAt: string;
                         assignedAt?: string | null | undefined;
+                        assignedBy?:
+                          | { __typename?: 'User'; id: string }
+                          | null
+                          | undefined;
                         category: {
                           __typename?: 'Category';
                           id: string;
                           name: string;
-                          slug?: string | null | undefined;
+                          slug: string;
                           description?: string | null | undefined;
                           icon?: string | null | undefined;
                           color?: string | null | undefined;
@@ -11363,7 +10707,7 @@ export type DeleteHomeMutation = {
                           itemCount: number;
                           usageCount: number;
                           createdAt: string;
-                          updatedAt?: string | null | undefined;
+                          updatedAt: string;
                           deletedAt?: string | null | undefined;
                           version: number;
                         };
@@ -11414,16 +10758,24 @@ export type DeleteHomeMutation = {
                 usageRecords: Array<{
                   __typename?: 'PantryItemUsage';
                   id: string;
-                  pantryItemId: string;
                   quantityUsed: number;
-                  usedById: string;
                   usedAt: string;
                   purpose: UsagePurpose;
                   notes?: string | null | undefined;
-                  cookingLogId?: string | null | undefined;
-                  mealPlanItemId?: string | null | undefined;
-                  recipeId?: string | null | undefined;
+                  pantryItem: { __typename?: 'PantryItem'; id: string };
                   usedBy: { __typename?: 'User'; id: string };
+                  cookingLog?:
+                    | { __typename?: 'CookingLog'; id: string }
+                    | null
+                    | undefined;
+                  mealPlanItem?:
+                    | { __typename?: 'MealPlanItem'; id: string }
+                    | null
+                    | undefined;
+                  recipe?:
+                    | { __typename?: 'Recipe'; id: string }
+                    | null
+                    | undefined;
                 }>;
               }>
             | null
@@ -11918,99 +11270,11 @@ export type GetDefaultHomeQuery = {
               | null
               | undefined;
             settings?:
-              | {
-                  __typename?: 'UserSettings';
-                  id: string;
-                  emailNotifications: boolean;
-                  pushNotifications: boolean;
-                  theme: AppTheme;
-                }
+              | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
               | null
               | undefined;
           };
         }>;
-        myMembership?:
-          | {
-              __typename?: 'Membership';
-              id: string;
-              homeId: string;
-              userId: string;
-              role: MembershipRole;
-              status: MembershipStatus;
-              displayName?: string | null | undefined;
-              canViewPantry: boolean;
-              canEditPantry: boolean;
-              canAddItems: boolean;
-              canRemoveItems: boolean;
-              canInviteOthers: boolean;
-              canManageHome: boolean;
-              lastActiveAt?: string | null | undefined;
-              joinedAt: string;
-              leftAt?: string | null | undefined;
-              createdAt: string;
-              updatedAt: string;
-              user: {
-                __typename?: 'User';
-                id: string;
-                email: string;
-                emailVerified: boolean;
-                role: UserRole;
-                onBoarded: boolean;
-                timezone?: string | null | undefined;
-                preferredCurrency?: string | null | undefined;
-                language?: string | null | undefined;
-                defaultShoppingListId?: string | null | undefined;
-                defaultHomeId?: string | null | undefined;
-                createdAt: string;
-                updatedAt: string;
-                lastActiveAt?: string | null | undefined;
-                profile?:
-                  | {
-                      __typename?: 'UserProfile';
-                      id: string;
-                      firstName?: string | null | undefined;
-                      lastName?: string | null | undefined;
-                      displayName?: string | null | undefined;
-                      bio?: string | null | undefined;
-                      avatar?: string | null | undefined;
-                      phone?: string | null | undefined;
-                    }
-                  | null
-                  | undefined;
-                settings?:
-                  | {
-                      __typename?: 'UserSettings';
-                      id: string;
-                      emailNotifications: boolean;
-                      pushNotifications: boolean;
-                      theme: AppTheme;
-                    }
-                  | null
-                  | undefined;
-              };
-            }
-          | null
-          | undefined;
-        membershipStats: {
-          __typename?: 'MembershipStats';
-          total: number;
-          active: number;
-          recentlyActive: number;
-          byRole: {
-            __typename?: 'MembershipRoleStats';
-            OWNER: number;
-            ADMIN: number;
-            MEMBER: number;
-            GUEST: number;
-          };
-          byStatus: {
-            __typename?: 'MembershipStatusStats';
-            ACTIVE: number;
-            SUSPENDED: number;
-            LEFT: number;
-            REMOVED: number;
-          };
-        };
         pantries?:
           | Array<{
               __typename?: 'Pantry';
@@ -12025,7 +11289,7 @@ export type GetDefaultHomeQuery = {
               metadata?: any | null | undefined;
               version: number;
               createdAt: string;
-              updatedAt?: string | null | undefined;
+              updatedAt: string;
               items?:
                 | Array<{
                     __typename?: 'PantryItem';
@@ -12033,7 +11297,7 @@ export type GetDefaultHomeQuery = {
                     pantryId: string;
                     itemId: string;
                     itemName: string;
-                    unitName?: string | null | undefined;
+                    unitName: string;
                     unitId?: string | null | undefined;
                     expiresAt?: string | null | undefined;
                     storageState: StorageState;
@@ -12089,7 +11353,7 @@ export type GetDefaultHomeQuery = {
                         id: string;
                         itemId: string;
                         unitId: string;
-                        isDefault?: boolean | null | undefined;
+                        isDefault: boolean;
                         isPreferred: boolean;
                         isCommon: boolean;
                         conversionRatio?: number | null | undefined;
@@ -12119,33 +11383,31 @@ export type GetDefaultHomeQuery = {
                       brands: Array<{
                         __typename?: 'ItemBrand';
                         id: string;
-                        brand?:
-                          | {
-                              __typename?: 'Brand';
-                              id: string;
-                              name: string;
-                              description?: string | null | undefined;
-                              createdAt: string;
-                              updatedAt: string;
-                              version: number;
-                            }
-                          | null
-                          | undefined;
+                        brand: {
+                          __typename?: 'Brand';
+                          id: string;
+                          name: string;
+                          description?: string | null | undefined;
+                          createdAt: string;
+                          updatedAt: string;
+                          version: number;
+                        };
                       }>;
                       categories?:
                         | Array<{
                             __typename?: 'ItemCategory';
                             id: string;
-                            source: CategorySource;
-                            confidence: number;
                             isPrimary: boolean;
-                            createdAt: string;
                             assignedAt?: string | null | undefined;
+                            assignedBy?:
+                              | { __typename?: 'User'; id: string }
+                              | null
+                              | undefined;
                             category: {
                               __typename?: 'Category';
                               id: string;
                               name: string;
-                              slug?: string | null | undefined;
+                              slug: string;
                               description?: string | null | undefined;
                               icon?: string | null | undefined;
                               color?: string | null | undefined;
@@ -12157,7 +11419,7 @@ export type GetDefaultHomeQuery = {
                               itemCount: number;
                               usageCount: number;
                               createdAt: string;
-                              updatedAt?: string | null | undefined;
+                              updatedAt: string;
                               deletedAt?: string | null | undefined;
                               version: number;
                             };
@@ -12208,16 +11470,24 @@ export type GetDefaultHomeQuery = {
                     usageRecords: Array<{
                       __typename?: 'PantryItemUsage';
                       id: string;
-                      pantryItemId: string;
                       quantityUsed: number;
-                      usedById: string;
                       usedAt: string;
                       purpose: UsagePurpose;
                       notes?: string | null | undefined;
-                      cookingLogId?: string | null | undefined;
-                      mealPlanItemId?: string | null | undefined;
-                      recipeId?: string | null | undefined;
+                      pantryItem: { __typename?: 'PantryItem'; id: string };
                       usedBy: { __typename?: 'User'; id: string };
+                      cookingLog?:
+                        | { __typename?: 'CookingLog'; id: string }
+                        | null
+                        | undefined;
+                      mealPlanItem?:
+                        | { __typename?: 'MealPlanItem'; id: string }
+                        | null
+                        | undefined;
+                      recipe?:
+                        | { __typename?: 'Recipe'; id: string }
+                        | null
+                        | undefined;
                     }>;
                   }>
                 | null
@@ -12236,14 +11506,7 @@ export type SetDefaultHomeMutationVariables = Exact<{
 
 export type SetDefaultHomeMutation = {
   __typename?: 'Mutation';
-  setDefaultHome: {
-    __typename?: 'UserSettings';
-    id: string;
-    defaultHome?:
-      | { __typename?: 'Home'; id: string; name: string }
-      | null
-      | undefined;
-  };
+  setDefaultHome: { __typename?: 'UserSettings'; id: string };
 };
 
 export type CreateImageUploadUrlMutationVariables = Exact<{
@@ -12394,7 +11657,7 @@ export type GetItemsQuery = {
           units: Array<{
             __typename?: 'ItemUnit';
             id: string;
-            isDefault?: boolean | null | undefined;
+            isDefault: boolean;
           }>;
           brands: Array<{ __typename?: 'ItemBrand'; id: string }>;
           categories?:
@@ -12442,7 +11705,7 @@ export type ItemByUpcQuery = {
         netWeight?: number | null | undefined;
         units: Array<{
           __typename?: 'ItemUnit';
-          isDefault?: boolean | null | undefined;
+          isDefault: boolean;
           unitId: string;
         }>;
       }
@@ -12467,7 +11730,7 @@ export type ItemBySkuQuery = {
         description?: string | null | undefined;
         units: Array<{
           __typename?: 'ItemUnit';
-          isDefault?: boolean | null | undefined;
+          isDefault: boolean;
           unitId: string;
         }>;
       }
@@ -12614,11 +11877,7 @@ export type CreateItemMutation = {
       | undefined;
     brands: Array<{
       __typename?: 'ItemBrand';
-      sku?: string | null | undefined;
-      brand?:
-        | { __typename?: 'Brand'; id: string; name: string }
-        | null
-        | undefined;
+      brand: { __typename?: 'Brand'; id: string; name: string };
     }>;
     categories?:
       | Array<{
@@ -12629,7 +11888,7 @@ export type CreateItemMutation = {
       | undefined;
     units: Array<{
       __typename?: 'ItemUnit';
-      isDefault?: boolean | null | undefined;
+      isDefault: boolean;
       unitId: string;
     }>;
   };
@@ -12649,16 +11908,14 @@ export type StoreUpdatedSubscription = {
     priceAccuracy?: number | null | undefined;
     lastPriceUpdate?: string | null | undefined;
     qualityRating?: number | null | undefined;
-    chain?: string | null | undefined;
-    city?: string | null | undefined;
-    state?: string | null | undefined;
-    zipCode?: string | null | undefined;
-    latitude?: number | null | undefined;
-    longitude?: number | null | undefined;
-    phone?: string | null | undefined;
-    website?: string | null | undefined;
-    isActive: boolean;
-    updatedAt: string;
+    storeInfo?:
+      | {
+          __typename?: 'StoreInfo';
+          id: string;
+          phone?: string | null | undefined;
+        }
+      | null
+      | undefined;
   };
 };
 
@@ -12973,7 +12230,7 @@ export type GetPantriesQuery = {
     name: string;
     isDefault: boolean;
     createdAt: string;
-    updatedAt?: string | null | undefined;
+    updatedAt: string;
     version: number;
     tags: Array<string>;
     items?:
@@ -13008,7 +12265,7 @@ export type GetPantryQuery = {
         metadata?: any | null | undefined;
         version: number;
         createdAt: string;
-        updatedAt?: string | null | undefined;
+        updatedAt: string;
         items?:
           | Array<{
               __typename?: 'PantryItem';
@@ -13035,7 +12292,7 @@ export type GetPantryItemsQuery = {
     pantryId: string;
     itemId: string;
     itemName: string;
-    unitName?: string | null | undefined;
+    unitName: string;
     unitId?: string | null | undefined;
     expiresAt?: string | null | undefined;
     storageState: StorageState;
@@ -13086,7 +12343,7 @@ export type GetPantryItemsQuery = {
         id: string;
         itemId: string;
         unitId: string;
-        isDefault?: boolean | null | undefined;
+        isDefault: boolean;
         isPreferred: boolean;
         isCommon: boolean;
         conversionRatio?: number | null | undefined;
@@ -13116,33 +12373,28 @@ export type GetPantryItemsQuery = {
       brands: Array<{
         __typename?: 'ItemBrand';
         id: string;
-        brand?:
-          | {
-              __typename?: 'Brand';
-              id: string;
-              name: string;
-              description?: string | null | undefined;
-              createdAt: string;
-              updatedAt: string;
-              version: number;
-            }
-          | null
-          | undefined;
+        brand: {
+          __typename?: 'Brand';
+          id: string;
+          name: string;
+          description?: string | null | undefined;
+          createdAt: string;
+          updatedAt: string;
+          version: number;
+        };
       }>;
       categories?:
         | Array<{
             __typename?: 'ItemCategory';
             id: string;
-            source: CategorySource;
-            confidence: number;
             isPrimary: boolean;
-            createdAt: string;
             assignedAt?: string | null | undefined;
+            assignedBy?: { __typename?: 'User'; id: string } | null | undefined;
             category: {
               __typename?: 'Category';
               id: string;
               name: string;
-              slug?: string | null | undefined;
+              slug: string;
               description?: string | null | undefined;
               icon?: string | null | undefined;
               color?: string | null | undefined;
@@ -13154,7 +12406,7 @@ export type GetPantryItemsQuery = {
               itemCount: number;
               usageCount: number;
               createdAt: string;
-              updatedAt?: string | null | undefined;
+              updatedAt: string;
               deletedAt?: string | null | undefined;
               version: number;
             };
@@ -13205,16 +12457,18 @@ export type GetPantryItemsQuery = {
     usageRecords: Array<{
       __typename?: 'PantryItemUsage';
       id: string;
-      pantryItemId: string;
       quantityUsed: number;
-      usedById: string;
       usedAt: string;
       purpose: UsagePurpose;
       notes?: string | null | undefined;
-      cookingLogId?: string | null | undefined;
-      mealPlanItemId?: string | null | undefined;
-      recipeId?: string | null | undefined;
+      pantryItem: { __typename?: 'PantryItem'; id: string };
       usedBy: { __typename?: 'User'; id: string };
+      cookingLog?: { __typename?: 'CookingLog'; id: string } | null | undefined;
+      mealPlanItem?:
+        | { __typename?: 'MealPlanItem'; id: string }
+        | null
+        | undefined;
+      recipe?: { __typename?: 'Recipe'; id: string } | null | undefined;
     }>;
   }>;
 };
@@ -13231,7 +12485,7 @@ export type GetPantryItemQuery = {
     pantryId: string;
     itemId: string;
     itemName: string;
-    unitName?: string | null | undefined;
+    unitName: string;
     unitId?: string | null | undefined;
     expiresAt?: string | null | undefined;
     storageState: StorageState;
@@ -13282,7 +12536,7 @@ export type GetPantryItemQuery = {
         id: string;
         itemId: string;
         unitId: string;
-        isDefault?: boolean | null | undefined;
+        isDefault: boolean;
         isPreferred: boolean;
         isCommon: boolean;
         conversionRatio?: number | null | undefined;
@@ -13312,33 +12566,28 @@ export type GetPantryItemQuery = {
       brands: Array<{
         __typename?: 'ItemBrand';
         id: string;
-        brand?:
-          | {
-              __typename?: 'Brand';
-              id: string;
-              name: string;
-              description?: string | null | undefined;
-              createdAt: string;
-              updatedAt: string;
-              version: number;
-            }
-          | null
-          | undefined;
+        brand: {
+          __typename?: 'Brand';
+          id: string;
+          name: string;
+          description?: string | null | undefined;
+          createdAt: string;
+          updatedAt: string;
+          version: number;
+        };
       }>;
       categories?:
         | Array<{
             __typename?: 'ItemCategory';
             id: string;
-            source: CategorySource;
-            confidence: number;
             isPrimary: boolean;
-            createdAt: string;
             assignedAt?: string | null | undefined;
+            assignedBy?: { __typename?: 'User'; id: string } | null | undefined;
             category: {
               __typename?: 'Category';
               id: string;
               name: string;
-              slug?: string | null | undefined;
+              slug: string;
               description?: string | null | undefined;
               icon?: string | null | undefined;
               color?: string | null | undefined;
@@ -13350,7 +12599,7 @@ export type GetPantryItemQuery = {
               itemCount: number;
               usageCount: number;
               createdAt: string;
-              updatedAt?: string | null | undefined;
+              updatedAt: string;
               deletedAt?: string | null | undefined;
               version: number;
             };
@@ -13401,16 +12650,18 @@ export type GetPantryItemQuery = {
     usageRecords: Array<{
       __typename?: 'PantryItemUsage';
       id: string;
-      pantryItemId: string;
       quantityUsed: number;
-      usedById: string;
       usedAt: string;
       purpose: UsagePurpose;
       notes?: string | null | undefined;
-      cookingLogId?: string | null | undefined;
-      mealPlanItemId?: string | null | undefined;
-      recipeId?: string | null | undefined;
+      pantryItem: { __typename?: 'PantryItem'; id: string };
       usedBy: { __typename?: 'User'; id: string };
+      cookingLog?: { __typename?: 'CookingLog'; id: string } | null | undefined;
+      mealPlanItem?:
+        | { __typename?: 'MealPlanItem'; id: string }
+        | null
+        | undefined;
+      recipe?: { __typename?: 'Recipe'; id: string } | null | undefined;
     }>;
   };
 };
@@ -13434,7 +12685,7 @@ export type CreatePantryMutation = {
     metadata?: any | null | undefined;
     version: number;
     createdAt: string;
-    updatedAt?: string | null | undefined;
+    updatedAt: string;
   };
 };
 
@@ -13458,7 +12709,7 @@ export type UpdatePantryMutation = {
     metadata?: any | null | undefined;
     version: number;
     createdAt: string;
-    updatedAt?: string | null | undefined;
+    updatedAt: string;
   };
 };
 
@@ -13483,7 +12734,7 @@ export type CreatePantryItemMutation = {
     pantryId: string;
     itemId: string;
     itemName: string;
-    unitName?: string | null | undefined;
+    unitName: string;
     unitId?: string | null | undefined;
     expiresAt?: string | null | undefined;
     storageState: StorageState;
@@ -13534,7 +12785,7 @@ export type CreatePantryItemMutation = {
         id: string;
         itemId: string;
         unitId: string;
-        isDefault?: boolean | null | undefined;
+        isDefault: boolean;
         isPreferred: boolean;
         isCommon: boolean;
         conversionRatio?: number | null | undefined;
@@ -13564,33 +12815,28 @@ export type CreatePantryItemMutation = {
       brands: Array<{
         __typename?: 'ItemBrand';
         id: string;
-        brand?:
-          | {
-              __typename?: 'Brand';
-              id: string;
-              name: string;
-              description?: string | null | undefined;
-              createdAt: string;
-              updatedAt: string;
-              version: number;
-            }
-          | null
-          | undefined;
+        brand: {
+          __typename?: 'Brand';
+          id: string;
+          name: string;
+          description?: string | null | undefined;
+          createdAt: string;
+          updatedAt: string;
+          version: number;
+        };
       }>;
       categories?:
         | Array<{
             __typename?: 'ItemCategory';
             id: string;
-            source: CategorySource;
-            confidence: number;
             isPrimary: boolean;
-            createdAt: string;
             assignedAt?: string | null | undefined;
+            assignedBy?: { __typename?: 'User'; id: string } | null | undefined;
             category: {
               __typename?: 'Category';
               id: string;
               name: string;
-              slug?: string | null | undefined;
+              slug: string;
               description?: string | null | undefined;
               icon?: string | null | undefined;
               color?: string | null | undefined;
@@ -13602,7 +12848,7 @@ export type CreatePantryItemMutation = {
               itemCount: number;
               usageCount: number;
               createdAt: string;
-              updatedAt?: string | null | undefined;
+              updatedAt: string;
               deletedAt?: string | null | undefined;
               version: number;
             };
@@ -13653,16 +12899,18 @@ export type CreatePantryItemMutation = {
     usageRecords: Array<{
       __typename?: 'PantryItemUsage';
       id: string;
-      pantryItemId: string;
       quantityUsed: number;
-      usedById: string;
       usedAt: string;
       purpose: UsagePurpose;
       notes?: string | null | undefined;
-      cookingLogId?: string | null | undefined;
-      mealPlanItemId?: string | null | undefined;
-      recipeId?: string | null | undefined;
+      pantryItem: { __typename?: 'PantryItem'; id: string };
       usedBy: { __typename?: 'User'; id: string };
+      cookingLog?: { __typename?: 'CookingLog'; id: string } | null | undefined;
+      mealPlanItem?:
+        | { __typename?: 'MealPlanItem'; id: string }
+        | null
+        | undefined;
+      recipe?: { __typename?: 'Recipe'; id: string } | null | undefined;
     }>;
   };
 };
@@ -13680,7 +12928,7 @@ export type UpdatePantryItemMutation = {
     pantryId: string;
     itemId: string;
     itemName: string;
-    unitName?: string | null | undefined;
+    unitName: string;
     unitId?: string | null | undefined;
     expiresAt?: string | null | undefined;
     storageState: StorageState;
@@ -13731,7 +12979,7 @@ export type UpdatePantryItemMutation = {
         id: string;
         itemId: string;
         unitId: string;
-        isDefault?: boolean | null | undefined;
+        isDefault: boolean;
         isPreferred: boolean;
         isCommon: boolean;
         conversionRatio?: number | null | undefined;
@@ -13761,33 +13009,28 @@ export type UpdatePantryItemMutation = {
       brands: Array<{
         __typename?: 'ItemBrand';
         id: string;
-        brand?:
-          | {
-              __typename?: 'Brand';
-              id: string;
-              name: string;
-              description?: string | null | undefined;
-              createdAt: string;
-              updatedAt: string;
-              version: number;
-            }
-          | null
-          | undefined;
+        brand: {
+          __typename?: 'Brand';
+          id: string;
+          name: string;
+          description?: string | null | undefined;
+          createdAt: string;
+          updatedAt: string;
+          version: number;
+        };
       }>;
       categories?:
         | Array<{
             __typename?: 'ItemCategory';
             id: string;
-            source: CategorySource;
-            confidence: number;
             isPrimary: boolean;
-            createdAt: string;
             assignedAt?: string | null | undefined;
+            assignedBy?: { __typename?: 'User'; id: string } | null | undefined;
             category: {
               __typename?: 'Category';
               id: string;
               name: string;
-              slug?: string | null | undefined;
+              slug: string;
               description?: string | null | undefined;
               icon?: string | null | undefined;
               color?: string | null | undefined;
@@ -13799,7 +13042,7 @@ export type UpdatePantryItemMutation = {
               itemCount: number;
               usageCount: number;
               createdAt: string;
-              updatedAt?: string | null | undefined;
+              updatedAt: string;
               deletedAt?: string | null | undefined;
               version: number;
             };
@@ -13850,16 +13093,18 @@ export type UpdatePantryItemMutation = {
     usageRecords: Array<{
       __typename?: 'PantryItemUsage';
       id: string;
-      pantryItemId: string;
       quantityUsed: number;
-      usedById: string;
       usedAt: string;
       purpose: UsagePurpose;
       notes?: string | null | undefined;
-      cookingLogId?: string | null | undefined;
-      mealPlanItemId?: string | null | undefined;
-      recipeId?: string | null | undefined;
+      pantryItem: { __typename?: 'PantryItem'; id: string };
       usedBy: { __typename?: 'User'; id: string };
+      cookingLog?: { __typename?: 'CookingLog'; id: string } | null | undefined;
+      mealPlanItem?:
+        | { __typename?: 'MealPlanItem'; id: string }
+        | null
+        | undefined;
+      recipe?: { __typename?: 'Recipe'; id: string } | null | undefined;
     }>;
   };
 };
@@ -13876,7 +13121,7 @@ export type DeletePantryItemMutation = {
     pantryId: string;
     itemId: string;
     itemName: string;
-    unitName?: string | null | undefined;
+    unitName: string;
     unitId?: string | null | undefined;
     expiresAt?: string | null | undefined;
     storageState: StorageState;
@@ -13927,7 +13172,7 @@ export type DeletePantryItemMutation = {
         id: string;
         itemId: string;
         unitId: string;
-        isDefault?: boolean | null | undefined;
+        isDefault: boolean;
         isPreferred: boolean;
         isCommon: boolean;
         conversionRatio?: number | null | undefined;
@@ -13957,33 +13202,28 @@ export type DeletePantryItemMutation = {
       brands: Array<{
         __typename?: 'ItemBrand';
         id: string;
-        brand?:
-          | {
-              __typename?: 'Brand';
-              id: string;
-              name: string;
-              description?: string | null | undefined;
-              createdAt: string;
-              updatedAt: string;
-              version: number;
-            }
-          | null
-          | undefined;
+        brand: {
+          __typename?: 'Brand';
+          id: string;
+          name: string;
+          description?: string | null | undefined;
+          createdAt: string;
+          updatedAt: string;
+          version: number;
+        };
       }>;
       categories?:
         | Array<{
             __typename?: 'ItemCategory';
             id: string;
-            source: CategorySource;
-            confidence: number;
             isPrimary: boolean;
-            createdAt: string;
             assignedAt?: string | null | undefined;
+            assignedBy?: { __typename?: 'User'; id: string } | null | undefined;
             category: {
               __typename?: 'Category';
               id: string;
               name: string;
-              slug?: string | null | undefined;
+              slug: string;
               description?: string | null | undefined;
               icon?: string | null | undefined;
               color?: string | null | undefined;
@@ -13995,7 +13235,7 @@ export type DeletePantryItemMutation = {
               itemCount: number;
               usageCount: number;
               createdAt: string;
-              updatedAt?: string | null | undefined;
+              updatedAt: string;
               deletedAt?: string | null | undefined;
               version: number;
             };
@@ -14046,16 +13286,18 @@ export type DeletePantryItemMutation = {
     usageRecords: Array<{
       __typename?: 'PantryItemUsage';
       id: string;
-      pantryItemId: string;
       quantityUsed: number;
-      usedById: string;
       usedAt: string;
       purpose: UsagePurpose;
       notes?: string | null | undefined;
-      cookingLogId?: string | null | undefined;
-      mealPlanItemId?: string | null | undefined;
-      recipeId?: string | null | undefined;
+      pantryItem: { __typename?: 'PantryItem'; id: string };
       usedBy: { __typename?: 'User'; id: string };
+      cookingLog?: { __typename?: 'CookingLog'; id: string } | null | undefined;
+      mealPlanItem?:
+        | { __typename?: 'MealPlanItem'; id: string }
+        | null
+        | undefined;
+      recipe?: { __typename?: 'Recipe'; id: string } | null | undefined;
     }>;
   };
 };
@@ -14129,7 +13371,7 @@ export type PantryLowStockAlertSubscription = {
     itemName: string;
     currentQuantity: number;
     autoReorderPoint?: number | null | undefined;
-    unitName?: string | null | undefined;
+    unitName: string;
     item: {
       __typename?: 'Item';
       id: string;
@@ -14153,7 +13395,7 @@ export type PantryExpiringItemsAlertSubscription = {
     expiresAt?: string | null | undefined;
     bestByDate?: string | null | undefined;
     currentQuantity: number;
-    unitName?: string | null | undefined;
+    unitName: string;
     item: {
       __typename?: 'Item';
       id: string;
@@ -14203,12 +13445,12 @@ export type PantryItemUsageChangedSubscription = {
     usage: {
       __typename?: 'PantryItemUsage';
       id: string;
-      pantryItemId: string;
       quantityUsed: number;
-      usedById: string;
       usedAt: string;
       purpose: UsagePurpose;
       notes?: string | null | undefined;
+      pantryItem: { __typename?: 'PantryItem'; id: string };
+      usedBy: { __typename?: 'User'; id: string };
     };
     previousValues?:
       | {
@@ -15313,13 +14555,7 @@ export type GetShoppingListItemsQuery = {
             | null
             | undefined;
           settings?:
-            | {
-                __typename?: 'UserSettings';
-                id: string;
-                emailNotifications: boolean;
-                pushNotifications: boolean;
-                theme: AppTheme;
-              }
+            | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
             | null
             | undefined;
         }
@@ -15355,13 +14591,7 @@ export type GetShoppingListItemsQuery = {
             | null
             | undefined;
           settings?:
-            | {
-                __typename?: 'UserSettings';
-                id: string;
-                emailNotifications: boolean;
-                pushNotifications: boolean;
-                theme: AppTheme;
-              }
+            | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
             | null
             | undefined;
         }
@@ -15512,13 +14742,7 @@ export type GetShoppingListItemQuery = {
                 | null
                 | undefined;
               settings?:
-                | {
-                    __typename?: 'UserSettings';
-                    id: string;
-                    emailNotifications: boolean;
-                    pushNotifications: boolean;
-                    theme: AppTheme;
-                  }
+                | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
                 | null
                 | undefined;
             }
@@ -15554,13 +14778,7 @@ export type GetShoppingListItemQuery = {
                 | null
                 | undefined;
               settings?:
-                | {
-                    __typename?: 'UserSettings';
-                    id: string;
-                    emailNotifications: boolean;
-                    pushNotifications: boolean;
-                    theme: AppTheme;
-                  }
+                | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
                 | null
                 | undefined;
             }
@@ -15911,13 +15129,7 @@ export type AddItemToShoppingListMutation = {
             | null
             | undefined;
           settings?:
-            | {
-                __typename?: 'UserSettings';
-                id: string;
-                emailNotifications: boolean;
-                pushNotifications: boolean;
-                theme: AppTheme;
-              }
+            | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
             | null
             | undefined;
         }
@@ -15953,13 +15165,7 @@ export type AddItemToShoppingListMutation = {
             | null
             | undefined;
           settings?:
-            | {
-                __typename?: 'UserSettings';
-                id: string;
-                emailNotifications: boolean;
-                pushNotifications: boolean;
-                theme: AppTheme;
-              }
+            | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
             | null
             | undefined;
         }
@@ -16105,13 +15311,7 @@ export type UpdateShoppingListItemMutation = {
             | null
             | undefined;
           settings?:
-            | {
-                __typename?: 'UserSettings';
-                id: string;
-                emailNotifications: boolean;
-                pushNotifications: boolean;
-                theme: AppTheme;
-              }
+            | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
             | null
             | undefined;
         }
@@ -16147,13 +15347,7 @@ export type UpdateShoppingListItemMutation = {
             | null
             | undefined;
           settings?:
-            | {
-                __typename?: 'UserSettings';
-                id: string;
-                emailNotifications: boolean;
-                pushNotifications: boolean;
-                theme: AppTheme;
-              }
+            | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
             | null
             | undefined;
         }
@@ -16308,13 +15502,7 @@ export type MarkItemPurchasedMutation = {
             | null
             | undefined;
           settings?:
-            | {
-                __typename?: 'UserSettings';
-                id: string;
-                emailNotifications: boolean;
-                pushNotifications: boolean;
-                theme: AppTheme;
-              }
+            | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
             | null
             | undefined;
         }
@@ -16350,13 +15538,7 @@ export type MarkItemPurchasedMutation = {
             | null
             | undefined;
           settings?:
-            | {
-                __typename?: 'UserSettings';
-                id: string;
-                emailNotifications: boolean;
-                pushNotifications: boolean;
-                theme: AppTheme;
-              }
+            | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
             | null
             | undefined;
         }
@@ -16501,13 +15683,7 @@ export type ReorderShoppingListItemsMutation = {
             | null
             | undefined;
           settings?:
-            | {
-                __typename?: 'UserSettings';
-                id: string;
-                emailNotifications: boolean;
-                pushNotifications: boolean;
-                theme: AppTheme;
-              }
+            | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
             | null
             | undefined;
         }
@@ -16543,13 +15719,7 @@ export type ReorderShoppingListItemsMutation = {
             | null
             | undefined;
           settings?:
-            | {
-                __typename?: 'UserSettings';
-                id: string;
-                emailNotifications: boolean;
-                pushNotifications: boolean;
-                theme: AppTheme;
-              }
+            | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
             | null
             | undefined;
         }
@@ -16805,8 +15975,6 @@ export type ShoppingListItemsChangedSubscription = {
                       | {
                           __typename?: 'UserSettings';
                           id: string;
-                          emailNotifications: boolean;
-                          pushNotifications: boolean;
                           theme: AppTheme;
                         }
                       | null
@@ -16847,8 +16015,6 @@ export type ShoppingListItemsChangedSubscription = {
                       | {
                           __typename?: 'UserSettings';
                           id: string;
-                          emailNotifications: boolean;
-                          pushNotifications: boolean;
                           theme: AppTheme;
                         }
                       | null
@@ -17096,13 +16262,7 @@ export type ShoppingListItemAddedSubscription = {
             | null
             | undefined;
           settings?:
-            | {
-                __typename?: 'UserSettings';
-                id: string;
-                emailNotifications: boolean;
-                pushNotifications: boolean;
-                theme: AppTheme;
-              }
+            | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
             | null
             | undefined;
         }
@@ -17138,13 +16298,7 @@ export type ShoppingListItemAddedSubscription = {
             | null
             | undefined;
           settings?:
-            | {
-                __typename?: 'UserSettings';
-                id: string;
-                emailNotifications: boolean;
-                pushNotifications: boolean;
-                theme: AppTheme;
-              }
+            | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
             | null
             | undefined;
         }
@@ -17289,13 +16443,7 @@ export type ShoppingListItemUpdatedSubscription = {
             | null
             | undefined;
           settings?:
-            | {
-                __typename?: 'UserSettings';
-                id: string;
-                emailNotifications: boolean;
-                pushNotifications: boolean;
-                theme: AppTheme;
-              }
+            | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
             | null
             | undefined;
         }
@@ -17331,13 +16479,7 @@ export type ShoppingListItemUpdatedSubscription = {
             | null
             | undefined;
           settings?:
-            | {
-                __typename?: 'UserSettings';
-                id: string;
-                emailNotifications: boolean;
-                pushNotifications: boolean;
-                theme: AppTheme;
-              }
+            | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
             | null
             | undefined;
         }

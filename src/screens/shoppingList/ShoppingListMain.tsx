@@ -198,6 +198,7 @@ export const ShoppingListMain: React.FC = () => {
     [lists, currentListId, setSelectedShoppingListId, navigate],
   );
 
+
   const handleSortOrderUpdate = useCallback(
     async (updates: SortOrderUpdate[]) => {
       if (!currentListId) return;
@@ -253,45 +254,50 @@ export const ShoppingListMain: React.FC = () => {
 
   // Transform shopping list items for SortableShoppingList
   const sortableItems = useMemo((): SortableShoppingListItem[] => {
-    // Group items by isPurchased status and sort within each group
+    // Sort by sortOrder within each group
     const sortBySortOrder = (a: any, b: any) => {
       const aOrder = a.sortOrder ?? 999999;
       const bOrder = b.sortOrder ?? 999999;
       return aOrder - bOrder;
     };
 
+    // Separate items by purchased status (Apollo cache has optimistic updates)
     const unpurchasedItems = items
       .filter((item: any) => !item.isPurchased)
       .sort(sortBySortOrder);
+
     const purchasedItems = items
       .filter((item: any) => item.isPurchased)
       .sort(sortBySortOrder);
 
+    // Unpurchased first, then purchased
     const sortedItems = [...unpurchasedItems, ...purchasedItems];
 
-    return sortedItems.map((item: any) => ({
-      id: item.id,
-      title: item.itemName,
-      subtitle: (
-        <FormattedItemSubtitle
-          quantity={item.quantity}
-          netWeight={item.item?.netWeight}
-          unitSymbol={item.item?.displayUnit?.symbol || item.unitName}
-        />
-      ),
-      sortOrder: item.sortOrder ?? 0,
-      isPurchased: item.isPurchased,
-      badge: undefined,
-      rightElement: (
-        <AnimatedCheckbox
-          checked={item.isPurchased}
-          onPress={() => toggleItem(item.id)}
-          size={24}
-        />
-      ),
-      leftElement: (() => {
-        const imageUrl = getItemImageUrl(item.item, 'small');
-        return imageUrl ? (
+    // Map to SortableShoppingListItem format
+    return sortedItems.map((item: any) => {
+      const imageUrl = getItemImageUrl(item.item, 'small');
+
+      return {
+        id: item.id,
+        title: item.itemName,
+        subtitle: (
+          <FormattedItemSubtitle
+            quantity={item.quantity}
+            netWeight={item.item?.netWeight}
+            unitSymbol={item.item?.displayUnit?.symbol || item.unitName}
+          />
+        ),
+        sortOrder: item.sortOrder ?? 0,
+        isPurchased: item.isPurchased,
+        badge: undefined,
+        rightElement: (
+          <AnimatedCheckbox
+            checked={item.isPurchased}
+            onPress={() => toggleItem(item.id)}
+            size={24}
+          />
+        ),
+        leftElement: imageUrl ? (
           <View
             style={[
               commonStyles.listItemImageContainer,
@@ -303,9 +309,9 @@ export const ShoppingListMain: React.FC = () => {
               style={commonStyles.listItemImage}
             />
           </View>
-        ) : null;
-      })(),
-    }));
+        ) : null,
+      };
+    });
   }, [items, toggleItem]);
 
   const handleAddItem = useCallback(() => {

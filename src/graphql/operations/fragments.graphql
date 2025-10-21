@@ -119,8 +119,6 @@ fragment PartialUser on User {
   }
   settings {
     id
-    emailNotifications
-    pushNotifications
     theme
   }
 }
@@ -305,11 +303,11 @@ fragment ItemFragment on Item {
   }
   categories {
     id
-    source
-    confidence
     isPrimary
-    createdAt
     assignedAt
+    assignedBy {
+      id
+    }
     category {
       ...CategoryFragment
     }
@@ -388,16 +386,23 @@ fragment PantryItemFragment on PantryItem {
 
   usageRecords {
     id
-    pantryItemId
     quantityUsed
-    usedById
     usedAt
     purpose
     notes
-    cookingLogId
-    mealPlanItemId
-    recipeId
+    pantryItem {
+      id
+    }
     usedBy {
+      id
+    }
+    cookingLog {
+      id
+    }
+    mealPlanItem {
+      id
+    }
+    recipe {
       id
     }
   }
@@ -515,28 +520,6 @@ fragment HomeWithPantriesFragment on Home {
     ...MemberShipFragment
   }
 
-  myMembership {
-    ...MemberShipFragment
-  }
-
-  membershipStats {
-    total
-    active
-    byRole {
-      OWNER
-      ADMIN
-      MEMBER
-      GUEST
-    }
-    byStatus {
-      ACTIVE
-      SUSPENDED
-      LEFT
-      REMOVED
-    }
-    recentlyActive
-  }
-
   pantries {
     ...BasicPantryFragment
   }
@@ -565,28 +548,6 @@ fragment HomeFragment on Home {
 
   members {
     ...MemberShipFragment
-  }
-
-  myMembership {
-    ...MemberShipFragment
-  }
-
-  membershipStats {
-    total
-    active
-    byRole {
-      OWNER
-      ADMIN
-      MEMBER
-      GUEST
-    }
-    byStatus {
-      ACTIVE
-      SUSPENDED
-      LEFT
-      REMOVED
-    }
-    recentlyActive
   }
 
   pantries {

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Alert } from 'react-native';
-import { v4 as uuid } from 'uuid';
+import { generateId } from '#/utils/generateId';
 import {
   useGetShoppingListItemsQuery,
   useShoppingListItemsChangedSubscription,
@@ -125,7 +125,7 @@ export function useShoppingListManagement(listId: string | undefined) {
     },
     // Optimistic response for instant UI feedback (especially important offline)
     optimisticResponse: variables => {
-      const tempId = `temp-${uuid()}`;
+      const tempId = `temp-${generateId()}`;
       return {
         __typename: 'Mutation' as const,
         addItemToShoppingList: {

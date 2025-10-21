@@ -36,18 +36,6 @@ query GetHomes {
         ...PartialUser
       }
     }
-    myMembership {
-      id
-      role
-      status
-      displayName
-      canViewPantry
-      canEditPantry
-      canAddItems
-      canRemoveItems
-      canInviteOthers
-      canManageHome
-    }
   }
 }
 
@@ -88,18 +76,6 @@ mutation CreateHome($input: CreateHomeInput!) {
       user {
         ...PartialUser
       }
-    }
-    myMembership {
-      id
-      role
-      status
-      displayName
-      canViewPantry
-      canEditPantry
-      canAddItems
-      canRemoveItems
-      canInviteOthers
-      canManageHome
     }
   }
 }

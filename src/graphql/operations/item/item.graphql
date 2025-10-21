@@ -180,7 +180,6 @@ mutation CreateItem($input: CreateItemInput!) {
         id
         name
       }
-      sku
     }
     categories {
       category {

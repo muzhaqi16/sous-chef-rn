@@ -1,6 +1,6 @@
 import { ApolloLink, Observable, Operation, FetchResult } from '@apollo/client';
 import { getMainDefinition } from '@apollo/client/utilities';
-import { v4 as uuid } from 'uuid';
+import { generateId } from '#/utils/generateId';
 import { useStore } from '#store';
 import { queueStore } from './queueStore';
 import { QueuedMutation, QueueStatus } from './types';
@@ -65,7 +65,7 @@ export const createQueueLink = () => {
         // Create queued mutation
         const operationName = operation.operationName || 'UnknownMutation';
         const queuedMutation: QueuedMutation = {
-          id: uuid(),
+          id: generateId(),
           userId: user.id,
           operationName: operationName,
           mutation: operation.query,

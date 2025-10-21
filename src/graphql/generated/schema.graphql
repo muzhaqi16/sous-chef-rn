@@ -426,9 +426,9 @@ scalar BigInt
 type Brand {
   children: [Brand!]!
   createdAt: DateTime!
+  deletedAt: DateTime
   description: String
   id: ID!
-  itemCount: Int!
   items: [ItemBrand!]
   name: String!
   parent: Brand
@@ -512,10 +512,10 @@ type Category {
   itemCount: Int!
   name: String!
   parent: Category
-  slug: String
+  slug: String!
   sortOrder: Int!
   type: CategoryType!
-  updatedAt: DateTime
+  updatedAt: DateTime!
   usageCount: Int!
   version: Int!
   visibility: Visibility!
@@ -1106,7 +1106,7 @@ type Device {
   androidId: String
   apiLevel: Int
   appVersion: String
-  availableLocationProviders: JSON
+  availableLocationProviders: String
   batteryLevel: Float
   brand: String
   browserName: String
@@ -1122,7 +1122,7 @@ type Device {
   freeDiskStorage: String
   hasDynamicIsland: Boolean
   hasNotch: Boolean
-  hostNames: JSON
+  hostNames: String
   id: ID!
   instanceId: String
   isActive: Boolean!
@@ -1151,12 +1151,12 @@ type Device {
   osName: String
   osVersion: String
   platform: MobilePlatform
-  powerState: JSON
+  powerState: String
   pushToken: String
   readableVersion: String
   screenResolution: String
-  supportedAbis: JSON
-  supportedMediaTypes: JSON
+  supportedAbis: String
+  supportedMediaTypes: String
   systemVersion: String
   timezone: String
   totalDiskCapacity: String
@@ -1165,7 +1165,7 @@ type Device {
   usedMemory: String
   user: User
   userAgent: String
-  userId: ID!
+  userId: String!
   verifiedAt: DateTime
 }
 
@@ -1568,6 +1568,7 @@ type Home {
   allowJoinCode: Boolean!
   createdAt: DateTime!
   currency: String
+  deletedAt: DateTime
   description: String
   id: ID!
   invites: [HomeInvite!]
@@ -1575,9 +1576,7 @@ type Home {
   joinCode: String
   maxMembers: Int
   members: [Membership!]!
-  membershipStats: MembershipStats!
   metadata: JSON
-  myMembership: Membership
   name: String!
   pantries: [Pantry!]
   tags: [String!]!
@@ -1588,26 +1587,26 @@ type Home {
 }
 
 type HomeInvite {
-  acceptedAt: String
+  acceptedAt: DateTime
   createdAt: DateTime!
   customPermissions: JSON
-  declinedAt: String
+  declinedAt: DateTime
   email: String!
-  expiresAt: String!
+  expiresAt: DateTime!
   home: Home!
   homeId: String!
   id: ID!
   invitedUser: User
   invitedUserId: String
   inviter: User!
-  lastReminderAt: String
+  lastReminderAt: DateTime
   logs(limit: Int): [InviteLog!]!
   message: String
   recipientName: String
   reminderCount: Int!
-  revokedAt: String
+  revokedAt: DateTime
   role: MembershipRole!
-  sentAt: String!
+  sentAt: DateTime!
   status: InviteStatus!
   token: String!
   updatedAt: DateTime!
@@ -1617,14 +1616,6 @@ type HomeInvite {
 type HomeInviteStatsGroup {
   _count: InviteActionCount!
   action: InviteAction!
-}
-
-type HomeMember {
-  homeId: String!
-  id: ID!
-  joinedAt: DateTime!
-  role: String
-  userId: String!
 }
 
 type HomeOwnership {
@@ -1853,10 +1844,9 @@ type ItemAvailability {
 }
 
 type ItemBrand {
-  brand: Brand
+  brand: Brand!
   id: ID!
-  item: Item
-  sku: String
+  item: Item!
 }
 
 type ItemCategory {
@@ -1864,7 +1854,6 @@ type ItemCategory {
   assignedBy: User
   category: Category!
   confidence: Float!
-  createdAt: DateTime!
   id: ID!
   isPrimary: Boolean!
   item: Item!
@@ -1980,7 +1969,6 @@ enum ItemStatus {
 type ItemStoreSku {
   createdAt: DateTime!
   id: ID!
-  inventoryStatus: String
   item: Item!
   metadata: JSON
   price: Float
@@ -2022,7 +2010,7 @@ type ItemUnit {
   deletedAt: DateTime
   id: ID!
   isCommon: Boolean!
-  isDefault: Boolean
+  isDefault: Boolean!
   isPreferred: Boolean!
   isVerified: Boolean!
   item: Item
@@ -2159,13 +2147,13 @@ type LoginHistory {
   campaign: String
   createdAt: DateTime!
   device: Device
-  deviceId: ID
+  deviceId: String
   deviceType: DeviceType
   failureDetails: String
   failureReason: LoginFailureReason
   flaggedAt: DateTime
   flaggedBy: User
-  flaggedById: ID
+  flaggedById: String
   flaggedReason: String
   id: ID!
   ipAddress: String
@@ -2975,25 +2963,20 @@ type NotificationPayload {
 }
 
 type NotificationPreferences {
-  categories: [String!]!
   collaborationInvites: Boolean!
   cookingReminders: Boolean!
   createdAt: DateTime!
-  email: Boolean!
   emailEnabled: Boolean!
   expirationDaysThreshold: Int!
   expirationNotificationFrequency: ExpirationFrequency!
   expirationNotifications: Boolean!
   homeInvites: Boolean!
   id: ID!
-  inApp: Boolean!
   lowStockAlerts: Boolean!
   mealPlanReminders: Boolean!
   monthlyReport: Boolean!
   pantryChanges: Boolean!
-  push: Boolean!
   pushEnabled: Boolean!
-  quietHours: QuietHours
   quietHoursEnabled: Boolean!
   quietHoursEnd: String
   quietHoursStart: String
@@ -3001,9 +2984,7 @@ type NotificationPreferences {
   recipeRecommendations: Boolean!
   sharedListUpdates: Boolean!
   shoppingListUpdates: Boolean!
-  sms: Boolean!
   smsEnabled: Boolean!
-  types: [NotificationType!]!
   updatedAt: DateTime!
   user: User!
   userId: String!
@@ -3125,7 +3106,6 @@ input PaginationInput {
 }
 
 type Pantry {
-  activities: [PantryActivity!]
   createdAt: DateTime!
   description: String
   home: Home!
@@ -3138,7 +3118,7 @@ type Pantry {
   name: String!
   tags: [String!]!
   temperature: String
-  updatedAt: DateTime
+  updatedAt: DateTime!
   version: Int!
 }
 
@@ -3196,9 +3176,9 @@ type PantryItem {
   isComposted: Boolean!
   isRecycled: Boolean!
   item: Item!
-  itemBarcode: String
   itemId: String!
   itemName: String!
+  itemUpc: String
   lastModifiedBy: User
   lastReorderDate: DateTime
   lastUsedAt: DateTime
@@ -3208,7 +3188,7 @@ type PantryItem {
   pantry: Pantry!
   pantryId: String!
   photos: [PantryItemPhoto!]!
-  priority: Int!
+  priority: Int
   purchase: Purchase
   purchaseId: String
   remainingValue: Float
@@ -3222,7 +3202,7 @@ type PantryItem {
   totalCost: Float
   unit: Unit
   unitId: String
-  unitName: String
+  unitName: String!
   updatedAt: DateTime
   usageFrequency: UsageFrequency!
   usageRecords: [PantryItemUsage!]!
@@ -3263,18 +3243,16 @@ type PantryItemPhoto {
 }
 
 type PantryItemUsage {
-  cookingLogId: String
+  cookingLog: CookingLog
   id: ID!
-  mealPlanItemId: String
+  mealPlanItem: MealPlanItem
   notes: String
   pantryItem: PantryItem!
-  pantryItemId: String!
   purpose: UsagePurpose!
   quantityUsed: Float!
-  recipeId: String
-  usedAt: String!
+  recipe: Recipe
+  usedAt: DateTime!
   usedBy: User!
-  usedById: String!
 }
 
 type PantryItemUsageChangedPayload {
@@ -3663,13 +3641,6 @@ type Query {
   verifiedDevices(userId: ID!): [Device!]!
   __schema: __Schema!
   __type(name: String!): __Type
-}
-
-type QuietHours {
-  enabled: Boolean!
-  endTime: String!
-  startTime: String!
-  timezone: String!
 }
 
 input QuietHoursInput {
@@ -4212,9 +4183,11 @@ type ShoppingListOwnership {
   createdAt: DateTime!
   id: ID!
   shoppingList: ShoppingList!
+  shoppingListId: String!
   transferredAt: DateTime
   transferredFrom: String
   user: User!
+  userId: String!
 }
 
 type ShoppingListPreviousValues {
@@ -4309,35 +4282,20 @@ enum StorageType {
 type Store {
   address: String
   averageShelfLife: JSON
-  chain: String
-  chainLogo: String
-  city: String
-  country: String
   createdAt: DateTime!
   deletedAt: DateTime
-  features: [String!]
-  hours: JSON
   id: ID!
-  isActive: Boolean!
-  itemSkus: [ItemStoreSku!]!
   lastPriceUpdate: DateTime
-  latitude: Float
-  longitude: Float
-  metadata: JSON
   name: String!
   pantryItems: [PantryItem!]!
-  phone: String
   priceAccuracy: Float
   priceHistory: [ItemPriceHistory!]!
   purchases: [Purchase!]!
   qualityRating: Float
-  state: String
   storeInfo: StoreInfo
   storeSkus: [ItemStoreSku!]!
   supportsPriceAPI: Boolean!
   updatedAt: DateTime!
-  website: String
-  zipCode: String
 }
 
 type StoreInfo {
@@ -5233,7 +5191,7 @@ type UserProfile {
   bio: String
   coverImage: String
   createdAt: DateTime!
-  dateOfBirth: String
+  dateOfBirth: DateTime
   displayName: String
   firstName: String
   gender: String
@@ -5269,26 +5227,20 @@ type UserSettings {
   betaFeatures: [String!]!
   compactMode: Boolean!
   createdAt: DateTime!
-  defaultHome: Home
-  emailNotifications: Boolean!
   enabledFeatures: [String!]!
-  expiredItemAlerts: Boolean!
   id: ID!
-  lowStockAlerts: Boolean!
+  language: String!
   offlineMode: Boolean!
   personalizedAds: Boolean!
+  preferredCurrency: String!
   preferredUnitSystem: UnitSystem!
-  pushNotifications: Boolean!
-  recipeRecommendations: Boolean!
   shareUsageData: Boolean!
   shareWithPartners: Boolean!
-  shoppingListUpdates: Boolean!
   showTutorials: Boolean!
-  smsNotifications: Boolean!
   theme: AppTheme!
+  timezone: String!
   updatedAt: DateTime!
   user: User!
-  weeklyDigest: Boolean!
 }
 
 type UserSocialPayload {
@@ -5302,7 +5254,7 @@ type UserStatistics {
   averageRatingGiven: Float
   helpfulVotesReceived: Int!
   id: ID!
-  lastCalculatedAt: String!
+  lastCalculatedAt: DateTime!
   streakDays: Int!
   totalAmountSpent: Float!
   totalCollaborations: Int!
@@ -5314,6 +5266,7 @@ type UserStatistics {
   totalReviewsGiven: Int!
   totalShoppingLists: Int!
   totalWasteReduced: Float!
+  user: User!
   userId: String!
 }
 

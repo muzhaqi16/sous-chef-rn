@@ -221,12 +221,16 @@ subscription PantryItemUsageChanged($pantryId: ID!) {
     pantryId
     usage {
       id
-      pantryItemId
       quantityUsed
-      usedById
       usedAt
       purpose
       notes
+      pantryItem {
+        id
+      }
+      usedBy {
+        id
+      }
     }
     previousValues {
       quantityUsed

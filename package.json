@@ -6,26 +6,20 @@
     "android": "react-native run-android",
     "android:stg": "npm run adb:gql && npm run codegen && npx react-native run-android --mode=staging",
     "android:release": "npx react-native run-android --mode=release",
-    
     "android:all": "npm run adb:gql:all && for device in $(adb devices | tail -n +2 | cut -f1 | grep -v '^$'); do echo \"Running on $device\" && npx react-native run-android --device=\"$device\"; done",
     "android:stg:all": "npm run adb:gql:all && npm run codegen && for device in $(adb devices | tail -n +2 | cut -f1 | grep -v '^$'); do echo \"Running on $device\" && npx react-native run-android --mode=staging --device=\"$device\"; done",
     "android:release:all": "npm run adb:gql:all && for device in $(adb devices | tail -n +2 | cut -f1 | grep -v '^$'); do echo \"Running on $device\" && npx react-native run-android --mode=release --device=\"$device\"; done",
-    
     "android:device": "[ -z \"$DEVICE_ID\" ] && npx react-native run-android || npx react-native run-android --device=\"$DEVICE_ID\"",
     "android:stg:device": "npm run codegen && ([ -z \"$DEVICE_ID\" ] && npx react-native run-android --mode=staging || npx react-native run-android --mode=staging --device=\"$DEVICE_ID\")",
-    
     "android:emulator": "npm run adb:gql:emulator && npx react-native run-android --device=$(adb devices | grep emulator | head -1 | cut -f1)",
     "android:phone": "npm run adb:gql:phone && npx react-native run-android --device=$(adb devices | grep -v emulator | grep device | head -1 | cut -f1)",
-
     "adb:devices": "adb devices -l",
     "adb:devices:count": "echo \"Connected devices: $(adb devices | tail -n +2 | grep device | wc -l)\"",
     "adb:kill": "adb kill-server",
-
     "adb:gql": "adb reverse tcp:4000 tcp:4000",
     "adb:gql:all": "for device in $(adb devices | tail -n +2 | cut -f1 | grep -v '^$'); do echo \"Setting up $device\" && adb -s \"$device\" reverse tcp:4000 tcp:4000; done",
     "adb:gql:emulator": "adb -e reverse tcp:4000 tcp:4000",
     "adb:gql:phone": "adb -d reverse tcp:4000 tcp:4000",
-    
     "adb:log": "adb logcat *:S ReactNative:V ReactNativeJS:V",
     "adb:log:device": "[ -z \"$DEVICE_ID\" ] && adb logcat *:S ReactNative:V ReactNativeJS:V || adb -s \"$DEVICE_ID\" logcat *:S ReactNative:V ReactNativeJS:V",
     "adb:clear:all": "for device in $(adb devices | tail -n +2 | cut -f1 | grep -v '^); do echo \"Clearing reverses on $device\" && adb -s \"$device\" reverse --remove-all; done",
@@ -95,7 +89,6 @@
     "react-native-worklets": "^0.6.1",
     "react-native-worklets-core": "^1.6.2",
     "rxjs": "^7.8.2",
-    "uuid": "^13.0.0",
     "yup": "^1.7.0",
     "zustand": "^5.0.8"
   },
