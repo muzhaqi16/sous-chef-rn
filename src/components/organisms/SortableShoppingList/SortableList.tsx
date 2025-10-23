@@ -11,6 +11,11 @@ import type {
   SortableShoppingListItem,
 } from './types';
 import { SimpleDraggableItem } from './SortableItem';
+import {
+  hasOrderChanged,
+  findMovedItem,
+  getNeighborIds,
+} from './SortableList.utils';
 
 // Tab bar height constant (65px from FloatingTabBar)
 const TAB_BAR_HEIGHT = 65;
@@ -28,10 +33,10 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
 }) => {
   // Track local order for optimistic updates
   const [localItems, setLocalItems] = useState(items);
-  // Track drag state
-  const [_isDragging, setIsDragging] = useState(false);
   // Track if we're currently updating the sort order
   const isUpdatingRef = useRef(false);
+  // Track previous item IDs to detect add/remove operations
+  const prevItemIdsRef = useRef<string>('');
 
   // Safe area insets for bottom padding
   const insets = useSafeAreaInsets();
@@ -41,36 +46,20 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
     if (!isUpdatingRef.current) {
       // Check if the items actually changed (not just re-sorted)
       // This prevents flickering when sortOrder updates from server
-      const currentIds = localItems.map(item => item.id).join(',');
+      const currentIds = prevItemIdsRef.current;
       const newIds = items.map(item => item.id).join(',');
 
       // Only update if items were added/removed
       if (currentIds !== newIds) {
         setLocalItems(items);
+        prevItemIdsRef.current = newIds;
       }
     }
-  }, [items]); // Removed localItems from deps to prevent unnecessary re-runs
-
-  // Check if the order of items has changed
-  const hasOrderChanged = useCallback(
-    (
-      originalItems: SortableShoppingListItem[],
-      newItems: SortableShoppingListItem[],
-    ): boolean => {
-      if (originalItems.length !== newItems.length) return true;
-
-      return originalItems.some(
-        (item, index) => item.id !== newItems[index].id,
-      );
-    },
-    [],
-  );
+  }, [items]);
 
   // Handle drag end - called when user releases item
   const handleDragEnd = useCallback(
     async (data: SortableShoppingListItem[]) => {
-      setIsDragging(false);
-
       if (disabled || !onSortOrderUpdate) {
         setLocalItems(data);
         return;
@@ -78,7 +67,9 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
 
       // Check if order actually changed - skip API call if no change
       if (!hasOrderChanged(items, data)) {
-        console.log('✓ Drag ended - order unchanged, skipping API call');
+        if (__DEV__) {
+          console.log('✓ Drag ended - order unchanged, skipping API call');
+        }
         return;
       }
 
@@ -88,46 +79,29 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
 
       try {
         // Find which item was moved by comparing positions
-        let movedItemId: string | null = null;
-        let newIndex = -1;
+        const movedItemInfo = findMovedItem(items, data);
 
-        for (let i = 0; i < data.length; i++) {
-          if (items[i]?.id !== data[i]?.id) {
-            // Found the item that moved
-            movedItemId = data[i].id;
-            newIndex = i;
-            break;
+        if (!movedItemInfo) {
+          if (__DEV__) {
+            console.warn('Could not determine which item was moved');
           }
-        }
-
-        if (!movedItemId || newIndex === -1) {
-          // Fallback: check from end of array
-          for (let i = data.length - 1; i >= 0; i--) {
-            if (items[i]?.id !== data[i]?.id) {
-              movedItemId = data[i].id;
-              newIndex = i;
-              break;
-            }
-          }
-        }
-
-        if (!movedItemId || newIndex === -1) {
-          console.warn('Could not determine which item was moved');
           isUpdatingRef.current = false;
           return;
         }
 
-        // Calculate afterItemId and beforeItemId based on new position
-        const afterItemId = newIndex > 0 ? data[newIndex - 1].id : null;
-        const beforeItemId =
-          newIndex < data.length - 1 ? data[newIndex + 1].id : null;
+        const { itemId: movedItemId, newIndex } = movedItemInfo;
 
-        console.log('Moving item:', {
-          itemId: movedItemId,
-          newIndex,
-          afterItemId,
-          beforeItemId,
-        });
+        // Calculate afterItemId and beforeItemId based on new position
+        const { afterId: afterItemId, beforeId: beforeItemId } = getNeighborIds(data, newIndex);
+
+        if (__DEV__) {
+          console.log('Moving item:', {
+            itemId: movedItemId,
+            newIndex,
+            afterItemId,
+            beforeItemId,
+          });
+        }
 
         // Wait for the mutation to complete and server to respond
         await onSortOrderUpdate(movedItemId, afterItemId, beforeItemId);
@@ -135,20 +109,21 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
         // Release the lock - local order will persist until items are added/removed
         // The useEffect will only sync when IDs change (items added/removed), not when order changes
         isUpdatingRef.current = false;
-        console.log('✓ Sort order updated on server');
+
+        if (__DEV__) {
+          console.log('✓ Sort order updated on server');
+        }
       } catch (error) {
-        console.error('Failed to update sort order:', error);
+        if (__DEV__) {
+          console.error('Failed to update sort order:', error);
+        }
         // Revert to original order on error
         setLocalItems(items);
         isUpdatingRef.current = false;
       }
     },
-    [disabled, onSortOrderUpdate, items, hasOrderChanged],
+    [disabled, onSortOrderUpdate, items],
   );
-
-  const handleDragBegin = useCallback(() => {
-    setIsDragging(true);
-  }, []);
 
   // Render item with ScaleDecorator for drag feedback
   const renderItem = useCallback(
@@ -187,7 +162,6 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
         data={localItems}
         renderItem={renderItem}
         keyExtractor={item => item.id}
-        onDragBegin={handleDragBegin}
         onDragEnd={({ data }) => handleDragEnd(data)}
         showsVerticalScrollIndicator={
           flatListProps.showsVerticalScrollIndicator ?? true

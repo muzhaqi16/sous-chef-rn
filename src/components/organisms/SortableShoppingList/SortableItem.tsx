@@ -26,7 +26,7 @@ interface SimpleDraggableItemProps {
   isActive?: boolean;
 }
 
-export const SimpleDraggableItem: React.FC<SimpleDraggableItemProps> = ({
+const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
   item,
   onItemPress,
   onItemEdit,
@@ -98,3 +98,6 @@ const styles = StyleSheet.create(theme => ({
     elevation: 8,
   },
 }));
+
+// Memoize component to prevent unnecessary re-renders during drag operations
+export const SimpleDraggableItem = React.memo(SimpleDraggableItemComponent);
