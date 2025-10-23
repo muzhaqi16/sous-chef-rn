@@ -736,7 +736,7 @@ export type CreateShoppingListItemInput = {
   recipeId?: InputMaybe<Scalars['ID']['input']>;
   recipeIngredientId?: InputMaybe<Scalars['ID']['input']>;
   shoppingListId: Scalars['ID']['input'];
-  sortOrder?: InputMaybe<Scalars['Int']['input']>;
+  sortOrder?: InputMaybe<Scalars['String']['input']>;
   storeSection?: InputMaybe<Scalars['String']['input']>;
   unitId?: InputMaybe<Scalars['String']['input']>;
   unitName?: InputMaybe<Scalars['String']['input']>;
@@ -2308,6 +2308,12 @@ export enum ModerationStatus {
   Warned = 'WARNED',
 }
 
+export type MoveShoppingListItemInput = {
+  afterItemId?: InputMaybe<Scalars['ID']['input']>;
+  beforeItemId?: InputMaybe<Scalars['ID']['input']>;
+  itemId: Scalars['ID']['input'];
+};
+
 export type Mutation = {
   __typename?: 'Mutation';
   _empty?: Maybe<Scalars['String']['output']>;
@@ -2432,6 +2438,7 @@ export type Mutation = {
   markNotificationAsRead: Notification;
   markNotificationUnread: Notification;
   mergeItems: Item;
+  moveShoppingListItem: ShoppingListItem;
   putUnderReview: UserModeration;
   reactivateDevice: Device;
   recordLoginAttempt: LoginHistory;
@@ -2456,7 +2463,6 @@ export type Mutation = {
   removeRestrictions: UserModeration;
   removeShoppingListCollaborator: Scalars['Boolean']['output'];
   removeUnitConversion: Unit;
-  reorderShoppingListItems: Array<ShoppingListItem>;
   resendVerificationEmail: Scalars['Boolean']['output'];
   /** Reset password using token from email */
   resetPassword: ResetPasswordResponse;
@@ -3048,6 +3054,10 @@ export type MutationMergeItemsArgs = {
   primaryId: Scalars['ID']['input'];
 };
 
+export type MutationMoveShoppingListItemArgs = {
+  input: MoveShoppingListItemInput;
+};
+
 export type MutationPutUnderReviewArgs = {
   input: PutUnderReviewInput;
 };
@@ -3144,10 +3154,6 @@ export type MutationRemoveShoppingListCollaboratorArgs = {
 
 export type MutationRemoveUnitConversionArgs = {
   unitId: Scalars['ID']['input'];
-};
-
-export type MutationReorderShoppingListItemsArgs = {
-  input: ReorderShoppingListItemsInput;
 };
 
 export type MutationResendVerificationEmailArgs = {
@@ -5167,11 +5173,6 @@ export type RemoveRestrictionsInput = {
   userId: Scalars['ID']['input'];
 };
 
-export type ReorderShoppingListItemsInput = {
-  items: Array<ShoppingListItemSortInput>;
-  shoppingListId: Scalars['ID']['input'];
-};
-
 export type ResetPasswordInput = {
   password: Scalars['String']['input'];
   token: Scalars['String']['input'];
@@ -5439,7 +5440,7 @@ export type ShoppingListItem = {
   recipe?: Maybe<Recipe>;
   recipeIngredient?: Maybe<RecipeIngredient>;
   shoppingList: ShoppingList;
-  sortOrder: Scalars['Int']['output'];
+  sortOrder: Scalars['String']['output'];
   storeSection?: Maybe<Scalars['String']['output']>;
   unit?: Maybe<Unit>;
   unitName?: Maybe<Scalars['String']['output']>;
@@ -5465,11 +5466,6 @@ export type ShoppingListItemPreviousValues = {
   notes?: Maybe<Scalars['String']['output']>;
   price?: Maybe<Scalars['Float']['output']>;
   quantity?: Maybe<Scalars['Int']['output']>;
-};
-
-export type ShoppingListItemSortInput = {
-  id: Scalars['ID']['input'];
-  sortOrder: Scalars['Int']['input'];
 };
 
 export type ShoppingListOwnership = {
@@ -6392,7 +6388,7 @@ export type UpdateShoppingListItemInput = {
   purchasedPrice?: InputMaybe<Scalars['Float']['input']>;
   purchasedQuantity?: InputMaybe<Scalars['Float']['input']>;
   quantity?: InputMaybe<Scalars['Float']['input']>;
-  sortOrder?: InputMaybe<Scalars['Int']['input']>;
+  sortOrder?: InputMaybe<Scalars['String']['input']>;
   storeSection?: InputMaybe<Scalars['String']['input']>;
   unitId?: InputMaybe<Scalars['ID']['input']>;
   unitName?: InputMaybe<Scalars['String']['input']>;
@@ -7831,7 +7827,7 @@ export type ShoppingListItemFragmentFragment = {
   notes?: string | null | undefined;
   priority: number;
   category?: string | null | undefined;
-  sortOrder: number;
+  sortOrder: string;
   isAutoAdded: boolean;
   autoAddReason?: string | null | undefined;
   isFromMealPlan: boolean;
@@ -14311,7 +14307,7 @@ export type GetShoppingListQuery = {
           notes?: string | null | undefined;
           priority: number;
           category?: string | null | undefined;
-          sortOrder: number;
+          sortOrder: string;
           isAutoAdded: boolean;
           autoAddReason?: string | null | undefined;
           isFromMealPlan: boolean;
@@ -14487,7 +14483,7 @@ export type GetShoppingListItemsQuery = {
     notes?: string | null | undefined;
     priority: number;
     category?: string | null | undefined;
-    sortOrder: number;
+    sortOrder: string;
     isAutoAdded: boolean;
     autoAddReason?: string | null | undefined;
     isFromMealPlan: boolean;
@@ -14681,7 +14677,7 @@ export type GetShoppingListItemQuery = {
         notes?: string | null | undefined;
         priority: number;
         category?: string | null | undefined;
-        sortOrder: number;
+        sortOrder: string;
         isAutoAdded: boolean;
         autoAddReason?: string | null | undefined;
         isFromMealPlan: boolean;
@@ -15089,7 +15085,7 @@ export type AddItemToShoppingListMutation = {
     notes?: string | null | undefined;
     priority: number;
     category?: string | null | undefined;
-    sortOrder: number;
+    sortOrder: string;
     isAutoAdded: boolean;
     autoAddReason?: string | null | undefined;
     isFromMealPlan: boolean;
@@ -15283,7 +15279,7 @@ export type UpdateShoppingListItemMutation = {
     notes?: string | null | undefined;
     priority: number;
     category?: string | null | undefined;
-    sortOrder: number;
+    sortOrder: string;
     isAutoAdded: boolean;
     autoAddReason?: string | null | undefined;
     isFromMealPlan: boolean;
@@ -15486,7 +15482,7 @@ export type MarkItemPurchasedMutation = {
     notes?: string | null | undefined;
     priority: number;
     category?: string | null | undefined;
-    sortOrder: number;
+    sortOrder: string;
     isAutoAdded: boolean;
     autoAddReason?: string | null | undefined;
     isFromMealPlan: boolean;
@@ -15649,13 +15645,13 @@ export type MarkItemPurchasedMutation = {
   };
 };
 
-export type ReorderShoppingListItemsMutationVariables = Exact<{
-  input: ReorderShoppingListItemsInput;
+export type MoveShoppingListItemMutationVariables = Exact<{
+  input: MoveShoppingListItemInput;
 }>;
 
-export type ReorderShoppingListItemsMutation = {
+export type MoveShoppingListItemMutation = {
   __typename?: 'Mutation';
-  reorderShoppingListItems: Array<{
+  moveShoppingListItem: {
     __typename?: 'ShoppingListItem';
     id: string;
     quantity?: number | null | undefined;
@@ -15679,7 +15675,7 @@ export type ReorderShoppingListItemsMutation = {
     notes?: string | null | undefined;
     priority: number;
     category?: string | null | undefined;
-    sortOrder: number;
+    sortOrder: string;
     isAutoAdded: boolean;
     autoAddReason?: string | null | undefined;
     isFromMealPlan: boolean;
@@ -15839,7 +15835,7 @@ export type ReorderShoppingListItemsMutation = {
         }>
       | null
       | undefined;
-  }>;
+  };
 };
 
 export type ShoppingListUpdatedSubscriptionVariables = Exact<{
@@ -15975,7 +15971,7 @@ export type ShoppingListItemsChangedSubscription = {
               notes?: string | null | undefined;
               priority: number;
               category?: string | null | undefined;
-              sortOrder: number;
+              sortOrder: string;
               isAutoAdded: boolean;
               autoAddReason?: string | null | undefined;
               isFromMealPlan: boolean;
@@ -16286,7 +16282,7 @@ export type ShoppingListItemAddedSubscription = {
     notes?: string | null | undefined;
     priority: number;
     category?: string | null | undefined;
-    sortOrder: number;
+    sortOrder: string;
     isAutoAdded: boolean;
     autoAddReason?: string | null | undefined;
     isFromMealPlan: boolean;
@@ -16479,7 +16475,7 @@ export type ShoppingListItemUpdatedSubscription = {
     notes?: string | null | undefined;
     priority: number;
     category?: string | null | undefined;
-    sortOrder: number;
+    sortOrder: string;
     isAutoAdded: boolean;
     autoAddReason?: string | null | undefined;
     isFromMealPlan: boolean;

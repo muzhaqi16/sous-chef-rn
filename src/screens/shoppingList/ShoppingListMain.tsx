@@ -11,7 +11,7 @@ import { useAppNavigation } from '#hooks';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
   useGetShoppingListsQuery,
-  useReorderShoppingListItemsMutation,
+  useMoveShoppingListItemMutation,
 } from '#generated';
 import { useScanner } from '#context';
 import {
@@ -20,15 +20,17 @@ import {
   SortableShoppingList,
   EmptyState,
   ListTemplate,
+  CollapsiblePurchasedSection,
 } from '#components';
 import { getItemImageUrl } from '#utils/imageUtils';
+import { generatePosition } from '#utils/fractionalIndexing';
+import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
 import type {
   SelectorConfig,
   ItemSelectorRef,
 } from '#components/organisms/AnimatedItemSelector';
 import type {
   SortableShoppingListItem,
-  SortOrderUpdate,
 } from '#components/organisms/SortableShoppingList';
 import { useShoppingListManagement } from '#/hooks';
 import { useStore } from '#/store';
@@ -43,11 +45,12 @@ const ShoppingListContent: React.FC<{
   onItemEdit?: (id: string) => void;
   onItemDelete?: (id: string) => void;
   onTogglePurchase?: (id: string) => void;
-  onSortOrderUpdate?: (updates: SortOrderUpdate[]) => Promise<void>;
+  onSortOrderUpdate?: (itemId: string, afterItemId: string | null, beforeItemId: string | null) => Promise<void>;
   onRefresh?: () => void | Promise<void>;
   refreshing?: boolean;
   disabled?: boolean;
   emptyState?: any;
+  onClearAllPurchased?: () => Promise<void>;
 }> = ({
   items,
   onItemPress,
@@ -59,7 +62,12 @@ const ShoppingListContent: React.FC<{
   refreshing,
   disabled,
   emptyState,
+  onClearAllPurchased,
 }) => {
+  // Separate items by purchased status
+  const unpurchasedItems = items.filter(item => !item.isPurchased);
+  const purchasedItems = items.filter(item => item.isPurchased);
+
   if (items.length === 0 && emptyState) {
     return (
       <ScrollView
@@ -79,9 +87,10 @@ const ShoppingListContent: React.FC<{
   }
 
   return (
-    <View style={{ flex: 1 }}>
+    <>
+      {/* Unpurchased Items */}
       <SortableShoppingList
-        items={items}
+        items={unpurchasedItems}
         onItemPress={onItemPress}
         onItemEdit={onItemEdit}
         onItemDelete={onItemDelete}
@@ -89,8 +98,21 @@ const ShoppingListContent: React.FC<{
         onSortOrderUpdate={onSortOrderUpdate}
         disabled={disabled}
         showsVerticalScrollIndicator={true}
+        ListFooterComponent={
+          /* Collapsible Purchased Section */
+          <CollapsiblePurchasedSection
+            purchasedItems={purchasedItems}
+            onItemPress={onItemPress}
+            onItemEdit={onItemEdit}
+            onItemDelete={onItemDelete}
+            onTogglePurchase={onTogglePurchase}
+            onSortOrderUpdate={onSortOrderUpdate}
+            onClearAll={onClearAllPurchased}
+            disabled={disabled}
+          />
+        }
       />
-    </View>
+    </>
   );
 };
 
@@ -104,7 +126,9 @@ export const ShoppingListMain: React.FC = () => {
   const { selectedShoppingListId, setSelectedShoppingListId } = useStore();
   const selectorRef = useRef<ItemSelectorRef>(null);
   const { setScannerProps, setOverlayOpen } = useScanner();
-  const [reorderItems] = useReorderShoppingListItemsMutation();
+  const [moveItem] = useMoveShoppingListItemMutation({
+    errorPolicy: 'all',
+  });
   const [refreshing, setRefreshing] = useState(false);
 
   const { data } = useGetShoppingListsQuery({
@@ -203,56 +227,60 @@ export const ShoppingListMain: React.FC = () => {
 
 
   const handleSortOrderUpdate = useCallback(
-    async (updates: SortOrderUpdate[]) => {
+    async (itemId: string, afterItemId: string | null, beforeItemId: string | null) => {
       if (!currentListId) return;
 
       try {
-        await reorderItems({
+        // Find the current item from cache to preserve all fields
+        const currentItem = items.find(item => item.id === itemId);
+        if (!currentItem) {
+          console.error('Item not found in cache:', itemId);
+          return;
+        }
+
+        // Calculate optimistic sortOrder using fractional indexing
+        const afterItem = afterItemId ? items.find(item => item.id === afterItemId) : null;
+        const beforeItem = beforeItemId ? items.find(item => item.id === beforeItemId) : null;
+        const afterSortOrder = afterItem?.sortOrder ?? null;
+        const beforeSortOrder = beforeItem?.sortOrder ?? null;
+
+        // Generate new fractional index between the two items
+        const optimisticSortOrder = generatePosition(afterSortOrder, beforeSortOrder);
+
+        console.log('Optimistic sortOrder calculation:', {
+          itemId,
+          afterItemId,
+          afterSortOrder,
+          beforeItemId,
+          beforeSortOrder,
+          optimisticSortOrder,
+        });
+
+        await moveItem({
           variables: {
             input: {
-              shoppingListId: currentListId,
-              items: updates.map(update => ({
-                id: update.id,
-                sortOrder: update.sortOrder,
-              })),
+              itemId,
+              afterItemId: afterItemId ?? undefined,
+              beforeItemId: beforeItemId ?? undefined,
             },
           },
-          errorPolicy: 'all', // Allow offline mutations
-          // Update cache immediately to prevent flicker
-          update: (cache, { data }) => {
-            if (!data?.reorderShoppingListItems) return;
-
-            try {
-              // Update each item's sortOrder in the cache
-              data.reorderShoppingListItems.forEach(item => {
-                const itemCacheId = cache.identify({
-                  __typename: 'ShoppingListItem',
-                  id: item.id,
-                });
-
-                if (itemCacheId) {
-                  cache.modify({
-                    id: itemCacheId,
-                    fields: {
-                      sortOrder() {
-                        return item.sortOrder;
-                      },
-                    },
-                  });
-                }
-              });
-            } catch (cacheError) {
-              console.warn('Cache update failed for reorder:', cacheError);
-              // Don't throw - mutation succeeded, cache update is optional
-            }
+          // Optimistic response: spread current item and only update sortOrder
+          // This prevents Apollo cache errors about missing fields
+          optimisticResponse: {
+            __typename: 'Mutation',
+            moveShoppingListItem: enhanceWithVersion(currentItem, {
+              sortOrder: optimisticSortOrder,
+            }) as any,
           },
         });
+
+        console.log('✓ Item moved successfully:', { itemId, afterItemId, beforeItemId });
       } catch (error) {
-        console.error('Failed to update sort order:', error);
+        console.error('Failed to move item:', error);
         Alert.alert('Error', 'Failed to reorder items');
       }
     },
-    [currentListId, reorderItems],
+    [currentListId, moveItem, items],
   );
 
   // Quantity update handlers
@@ -287,23 +315,12 @@ export const ShoppingListMain: React.FC = () => {
 
   // Transform shopping list items for SortableShoppingList
   const sortableItems = useMemo((): SortableShoppingListItem[] => {
-    // Sort by sortOrder within each group
-    const sortBySortOrder = (a: any, b: any) => {
-      const aOrder = a.sortOrder ?? 999999;
-      const bOrder = b.sortOrder ?? 999999;
-      return aOrder - bOrder;
-    };
+    // Server already returns items sorted by: isPurchased ASC, sortOrder ASC, createdAt ASC
+    // No need to re-sort on client - just separate by purchased status for UI
+    const unpurchasedItems = items.filter((item: any) => !item.isPurchased);
+    const purchasedItems = items.filter((item: any) => item.isPurchased);
 
-    // Separate items by purchased status (Apollo cache has optimistic updates)
-    const unpurchasedItems = items
-      .filter((item: any) => !item.isPurchased)
-      .sort(sortBySortOrder);
-
-    const purchasedItems = items
-      .filter((item: any) => item.isPurchased)
-      .sort(sortBySortOrder);
-
-    // Unpurchased first, then purchased
+    // Unpurchased first, then purchased (already sorted within each group by server)
     const sortedItems = [...unpurchasedItems, ...purchasedItems];
 
     // Map to SortableShoppingListItem format
@@ -322,7 +339,7 @@ export const ShoppingListMain: React.FC = () => {
         id: item.id,
         title: item.itemName,
         subtitle: categoryName || undefined,
-        sortOrder: item.sortOrder ?? 0,
+        sortOrder: item.sortOrder ?? 'zzz', // String fallback for fractional indexing
         isPurchased: item.isPurchased,
         badge: undefined,
         rightElement: (
@@ -401,6 +418,24 @@ export const ShoppingListMain: React.FC = () => {
       Alert.alert('Error', 'Failed to delete item');
     }
   };
+
+  const handleClearAllPurchased = useCallback(async () => {
+    const purchasedItems = items.filter((item: any) => item.isPurchased);
+
+    if (purchasedItems.length === 0) return;
+
+    try {
+      // Delete all purchased items
+      await Promise.all(
+        purchasedItems.map(item => removeItem(item.id))
+      );
+
+      // Refetch to ensure UI is in sync
+      await refetchItems();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to clear purchased items');
+    }
+  }, [items, removeItem, refetchItems]);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -549,6 +584,7 @@ export const ShoppingListMain: React.FC = () => {
           onRefresh: handleRefresh,
           refreshing,
           disabled: !!searchQuery.trim(),
+          onClearAllPurchased: handleClearAllPurchased,
         }}
       />
 

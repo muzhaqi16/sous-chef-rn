@@ -79,6 +79,54 @@ export class QueueManager {
   }
 
   /**
+   * Merge multiple move mutations for the same item
+   * Keeps only the latest move per item to prevent conflicts
+   */
+  private mergeMoveItemMutations(mutations: QueuedMutation[]): {
+    merged: QueuedMutation[];
+    removed: string[];
+  } {
+    const moveMutations = new Map<string, QueuedMutation>();
+    const otherMutations: QueuedMutation[] = [];
+    const removedIds: string[] = [];
+
+    mutations.forEach(mutation => {
+      if (mutation.operationName === 'MoveShoppingListItem') {
+        const itemId = mutation.variables?.input?.itemId;
+
+        if (itemId) {
+          // If we already have a move for this item, mark the old one for removal
+          const existing = moveMutations.get(itemId);
+          if (existing) {
+            removedIds.push(existing.id);
+            console.log(`🔄 Queue: Merging move mutation ${existing.id} into ${mutation.id} for item ${itemId}`);
+          }
+
+          // Keep only the latest move for each item
+          moveMutations.set(itemId, mutation);
+        } else {
+          // No itemId found, keep mutation as-is
+          otherMutations.push(mutation);
+        }
+      } else if (mutation.operationName === 'ReorderShoppingListItems') {
+        // Legacy mutation - keep for backward compatibility during migration
+        const listId = mutation.variables?.input?.shoppingListId;
+        if (listId) {
+          console.log(`⚠️ Queue: Found legacy ReorderShoppingListItems mutation ${mutation.id} - consider migrating to MoveShoppingListItem`);
+        }
+        otherMutations.push(mutation);
+      } else {
+        otherMutations.push(mutation);
+      }
+    });
+
+    return {
+      merged: [...otherMutations, ...Array.from(moveMutations.values())],
+      removed: removedIds,
+    };
+  }
+
+  /**
    * Internal queue processing logic
    */
   private async _processQueueInternal(userId: string): Promise<void> {
@@ -99,8 +147,20 @@ export class QueueManager {
 
     console.log(`📊 Queue: Found ${mutations.length} pending mutations`);
 
-    // Process mutations in batches
-    const batches = this.createBatches(mutations, this.config.batchSize);
+    // Merge multiple move mutations for the same item
+    const { merged: mergedMutations, removed: removedIds } = this.mergeMoveItemMutations(mutations);
+
+    // Remove merged mutations from queue
+    removedIds.forEach(id => {
+      queueStore.removeMutation(id);
+    });
+
+    if (removedIds.length > 0) {
+      console.log(`🔄 Queue: Merged ${removedIds.length} duplicate move mutations, processing ${mergedMutations.length} mutations`);
+    }
+
+    // Process mutations in batches (use merged mutations)
+    const batches = this.createBatches(mergedMutations, this.config.batchSize);
 
     for (const batch of batches) {
       // Check if still online before each batch

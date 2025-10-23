@@ -742,7 +742,7 @@ export type CreateShoppingListItemInput = {
   recipeId?: InputMaybe<Scalars['ID']['input']>;
   recipeIngredientId?: InputMaybe<Scalars['ID']['input']>;
   shoppingListId: Scalars['ID']['input'];
-  sortOrder?: InputMaybe<Scalars['Int']['input']>;
+  sortOrder?: InputMaybe<Scalars['String']['input']>;
   storeSection?: InputMaybe<Scalars['String']['input']>;
   unitId?: InputMaybe<Scalars['String']['input']>;
   unitName?: InputMaybe<Scalars['String']['input']>;
@@ -2314,6 +2314,12 @@ export enum ModerationStatus {
   Warned = 'WARNED',
 }
 
+export type MoveShoppingListItemInput = {
+  afterItemId?: InputMaybe<Scalars['ID']['input']>;
+  beforeItemId?: InputMaybe<Scalars['ID']['input']>;
+  itemId: Scalars['ID']['input'];
+};
+
 export type Mutation = {
   __typename?: 'Mutation';
   _empty: Maybe<Scalars['String']['output']>;
@@ -2438,6 +2444,7 @@ export type Mutation = {
   markNotificationAsRead: Notification;
   markNotificationUnread: Notification;
   mergeItems: Item;
+  moveShoppingListItem: ShoppingListItem;
   putUnderReview: UserModeration;
   reactivateDevice: Device;
   recordLoginAttempt: LoginHistory;
@@ -2462,7 +2469,6 @@ export type Mutation = {
   removeRestrictions: UserModeration;
   removeShoppingListCollaborator: Scalars['Boolean']['output'];
   removeUnitConversion: Unit;
-  reorderShoppingListItems: Array<ShoppingListItem>;
   resendVerificationEmail: Scalars['Boolean']['output'];
   /** Reset password using token from email */
   resetPassword: ResetPasswordResponse;
@@ -3054,6 +3060,10 @@ export type MutationMergeItemsArgs = {
   primaryId: Scalars['ID']['input'];
 };
 
+export type MutationMoveShoppingListItemArgs = {
+  input: MoveShoppingListItemInput;
+};
+
 export type MutationPutUnderReviewArgs = {
   input: PutUnderReviewInput;
 };
@@ -3150,10 +3160,6 @@ export type MutationRemoveShoppingListCollaboratorArgs = {
 
 export type MutationRemoveUnitConversionArgs = {
   unitId: Scalars['ID']['input'];
-};
-
-export type MutationReorderShoppingListItemsArgs = {
-  input: ReorderShoppingListItemsInput;
 };
 
 export type MutationResendVerificationEmailArgs = {
@@ -5173,11 +5179,6 @@ export type RemoveRestrictionsInput = {
   userId: Scalars['ID']['input'];
 };
 
-export type ReorderShoppingListItemsInput = {
-  items: Array<ShoppingListItemSortInput>;
-  shoppingListId: Scalars['ID']['input'];
-};
-
 export type ResetPasswordInput = {
   password: Scalars['String']['input'];
   token: Scalars['String']['input'];
@@ -5445,7 +5446,7 @@ export type ShoppingListItem = {
   recipe: Maybe<Recipe>;
   recipeIngredient: Maybe<RecipeIngredient>;
   shoppingList: ShoppingList;
-  sortOrder: Scalars['Int']['output'];
+  sortOrder: Scalars['String']['output'];
   storeSection: Maybe<Scalars['String']['output']>;
   unit: Maybe<Unit>;
   unitName: Maybe<Scalars['String']['output']>;
@@ -5471,11 +5472,6 @@ export type ShoppingListItemPreviousValues = {
   notes: Maybe<Scalars['String']['output']>;
   price: Maybe<Scalars['Float']['output']>;
   quantity: Maybe<Scalars['Int']['output']>;
-};
-
-export type ShoppingListItemSortInput = {
-  id: Scalars['ID']['input'];
-  sortOrder: Scalars['Int']['input'];
 };
 
 export type ShoppingListOwnership = {
@@ -6398,7 +6394,7 @@ export type UpdateShoppingListItemInput = {
   purchasedPrice?: InputMaybe<Scalars['Float']['input']>;
   purchasedQuantity?: InputMaybe<Scalars['Float']['input']>;
   quantity?: InputMaybe<Scalars['Float']['input']>;
-  sortOrder?: InputMaybe<Scalars['Int']['input']>;
+  sortOrder?: InputMaybe<Scalars['String']['input']>;
   storeSection?: InputMaybe<Scalars['String']['input']>;
   unitId?: InputMaybe<Scalars['ID']['input']>;
   unitName?: InputMaybe<Scalars['String']['input']>;
@@ -7685,7 +7681,7 @@ export type ShoppingListItemFragment = {
   notes: string | null | undefined;
   priority: number;
   category: string | null | undefined;
-  sortOrder: number;
+  sortOrder: string;
   isAutoAdded: boolean;
   autoAddReason: string | null | undefined;
   isFromMealPlan: boolean;
@@ -10382,7 +10378,7 @@ export type GetShoppingListQuery = {
           notes: string | null | undefined;
           priority: number;
           category: string | null | undefined;
-          sortOrder: number;
+          sortOrder: string;
           isAutoAdded: boolean;
           autoAddReason: string | null | undefined;
           isFromMealPlan: boolean;
@@ -10799,15 +10795,15 @@ export type MarkItemPurchasedMutation = {
   } & ShoppingListItemFragment;
 };
 
-export type ReorderShoppingListItemsMutationVariables = Exact<{
-  input: ReorderShoppingListItemsInput;
+export type MoveShoppingListItemMutationVariables = Exact<{
+  input: MoveShoppingListItemInput;
 }>;
 
-export type ReorderShoppingListItemsMutation = {
+export type MoveShoppingListItemMutation = {
   __typename?: 'Mutation';
-  reorderShoppingListItems: Array<
-    { __typename?: 'ShoppingListItem' } & ShoppingListItemFragment
-  >;
+  moveShoppingListItem: {
+    __typename?: 'ShoppingListItem';
+  } & ShoppingListItemFragment;
 };
 
 export type ShoppingListUpdatedSubscriptionVariables = Exact<{
@@ -40797,13 +40793,13 @@ export type MarkItemPurchasedMutationOptions =
     MarkItemPurchasedMutation,
     MarkItemPurchasedMutationVariables
   >;
-export const ReorderShoppingListItemsDocument = {
+export const MoveShoppingListItemDocument = {
   kind: 'Document',
   definitions: [
     {
       kind: 'OperationDefinition',
       operation: 'mutation',
-      name: { kind: 'Name', value: 'ReorderShoppingListItems' },
+      name: { kind: 'Name', value: 'MoveShoppingListItem' },
       variableDefinitions: [
         {
           kind: 'VariableDefinition',
@@ -40815,7 +40811,7 @@ export const ReorderShoppingListItemsDocument = {
             kind: 'NonNullType',
             type: {
               kind: 'NamedType',
-              name: { kind: 'Name', value: 'ReorderShoppingListItemsInput' },
+              name: { kind: 'Name', value: 'MoveShoppingListItemInput' },
             },
           },
         },
@@ -40825,7 +40821,7 @@ export const ReorderShoppingListItemsDocument = {
         selections: [
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'reorderShoppingListItems' },
+            name: { kind: 'Name', value: 'moveShoppingListItem' },
             arguments: [
               {
                 kind: 'Argument',
@@ -41154,50 +41150,49 @@ export const ReorderShoppingListItemsDocument = {
     },
   ],
 } as unknown as DocumentNode;
-export type ReorderShoppingListItemsMutationFn =
-  ApolloReactCommon.MutationFunction<
-    ReorderShoppingListItemsMutation,
-    ReorderShoppingListItemsMutationVariables
-  >;
+export type MoveShoppingListItemMutationFn = ApolloReactCommon.MutationFunction<
+  MoveShoppingListItemMutation,
+  MoveShoppingListItemMutationVariables
+>;
 
 /**
- * __useReorderShoppingListItemsMutation__
+ * __useMoveShoppingListItemMutation__
  *
- * To run a mutation, you first call `useReorderShoppingListItemsMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useReorderShoppingListItemsMutation` returns a tuple that includes:
+ * To run a mutation, you first call `useMoveShoppingListItemMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useMoveShoppingListItemMutation` returns a tuple that includes:
  * - A mutate function that you can call at any time to execute the mutation
  * - An object with fields that represent the current status of the mutation's execution
  *
  * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
  *
  * @example
- * const [reorderShoppingListItemsMutation, { data, loading, error }] = useReorderShoppingListItemsMutation({
+ * const [moveShoppingListItemMutation, { data, loading, error }] = useMoveShoppingListItemMutation({
  *   variables: {
  *      input: // value for 'input'
  *   },
  * });
  */
-export function useReorderShoppingListItemsMutation(
+export function useMoveShoppingListItemMutation(
   baseOptions?: ApolloReactHooks.MutationHookOptions<
-    ReorderShoppingListItemsMutation,
-    ReorderShoppingListItemsMutationVariables
+    MoveShoppingListItemMutation,
+    MoveShoppingListItemMutationVariables
   >,
 ) {
   const options = { ...defaultOptions, ...baseOptions };
   return ApolloReactHooks.useMutation<
-    ReorderShoppingListItemsMutation,
-    ReorderShoppingListItemsMutationVariables
-  >(ReorderShoppingListItemsDocument, options);
+    MoveShoppingListItemMutation,
+    MoveShoppingListItemMutationVariables
+  >(MoveShoppingListItemDocument, options);
 }
-export type ReorderShoppingListItemsMutationHookResult = ReturnType<
-  typeof useReorderShoppingListItemsMutation
+export type MoveShoppingListItemMutationHookResult = ReturnType<
+  typeof useMoveShoppingListItemMutation
 >;
-export type ReorderShoppingListItemsMutationResult =
-  ApolloReactCommon.MutationResult<ReorderShoppingListItemsMutation>;
-export type ReorderShoppingListItemsMutationOptions =
+export type MoveShoppingListItemMutationResult =
+  ApolloReactCommon.MutationResult<MoveShoppingListItemMutation>;
+export type MoveShoppingListItemMutationOptions =
   ApolloReactCommon.BaseMutationOptions<
-    ReorderShoppingListItemsMutation,
-    ReorderShoppingListItemsMutationVariables
+    MoveShoppingListItemMutation,
+    MoveShoppingListItemMutationVariables
   >;
 export const ShoppingListUpdatedDocument = {
   kind: 'Document',

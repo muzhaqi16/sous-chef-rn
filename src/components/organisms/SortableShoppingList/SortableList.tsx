@@ -8,7 +8,6 @@ import DraggableFlatList, {
 } from 'react-native-draggable-flatlist';
 import type {
   SortableShoppingListProps,
-  SortOrderUpdate,
   SortableShoppingListItem,
 } from './types';
 import { SimpleDraggableItem } from './SortableItem';
@@ -24,6 +23,7 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
   onTogglePurchase,
   onSortOrderUpdate,
   disabled = false,
+  ListFooterComponent,
   ...flatListProps
 }) => {
   // Track local order for optimistic updates
@@ -37,24 +37,34 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
   const insets = useSafeAreaInsets();
 
   // Update local items when props change, but not during our own updates
-  // Use a timeout to ensure cache updates have propagated before syncing
   useEffect(() => {
     if (!isUpdatingRef.current) {
-      setLocalItems(items);
+      // Check if the items actually changed (not just re-sorted)
+      // This prevents flickering when sortOrder updates from server
+      const currentIds = localItems.map(item => item.id).join(',');
+      const newIds = items.map(item => item.id).join(',');
+
+      // Only update if items were added/removed
+      if (currentIds !== newIds) {
+        setLocalItems(items);
+      }
     }
-  }, [items]);
+  }, [items]); // Removed localItems from deps to prevent unnecessary re-runs
 
   // Check if the order of items has changed
-  const hasOrderChanged = useCallback((
-    originalItems: SortableShoppingListItem[],
-    newItems: SortableShoppingListItem[]
-  ): boolean => {
-    if (originalItems.length !== newItems.length) return true;
+  const hasOrderChanged = useCallback(
+    (
+      originalItems: SortableShoppingListItem[],
+      newItems: SortableShoppingListItem[],
+    ): boolean => {
+      if (originalItems.length !== newItems.length) return true;
 
-    return originalItems.some((item, index) =>
-      item.id !== newItems[index].id
-    );
-  }, []);
+      return originalItems.some(
+        (item, index) => item.id !== newItems[index].id,
+      );
+    },
+    [],
+  );
 
   // Handle drag end - called when user releases item
   const handleDragEnd = useCallback(
@@ -77,19 +87,55 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
       isUpdatingRef.current = true;
 
       try {
-        // Generate sort order updates
-        const updates: SortOrderUpdate[] = data.map((item, index) => ({
-          id: item.id,
-          sortOrder: index * 10,
-        }));
+        // Find which item was moved by comparing positions
+        let movedItemId: string | null = null;
+        let newIndex = -1;
 
-        await onSortOrderUpdate(updates);
+        for (let i = 0; i < data.length; i++) {
+          if (items[i]?.id !== data[i]?.id) {
+            // Found the item that moved
+            movedItemId = data[i].id;
+            newIndex = i;
+            break;
+          }
+        }
 
-        // Keep isUpdatingRef true for a brief moment to ensure cache updates complete
-        // This prevents flickering when Apollo cache updates trigger a re-render
-        setTimeout(() => {
+        if (!movedItemId || newIndex === -1) {
+          // Fallback: check from end of array
+          for (let i = data.length - 1; i >= 0; i--) {
+            if (items[i]?.id !== data[i]?.id) {
+              movedItemId = data[i].id;
+              newIndex = i;
+              break;
+            }
+          }
+        }
+
+        if (!movedItemId || newIndex === -1) {
+          console.warn('Could not determine which item was moved');
           isUpdatingRef.current = false;
-        }, 100);
+          return;
+        }
+
+        // Calculate afterItemId and beforeItemId based on new position
+        const afterItemId = newIndex > 0 ? data[newIndex - 1].id : null;
+        const beforeItemId =
+          newIndex < data.length - 1 ? data[newIndex + 1].id : null;
+
+        console.log('Moving item:', {
+          itemId: movedItemId,
+          newIndex,
+          afterItemId,
+          beforeItemId,
+        });
+
+        // Wait for the mutation to complete and server to respond
+        await onSortOrderUpdate(movedItemId, afterItemId, beforeItemId);
+
+        // Release the lock - local order will persist until items are added/removed
+        // The useEffect will only sync when IDs change (items added/removed), not when order changes
+        isUpdatingRef.current = false;
+        console.log('✓ Sort order updated on server');
       } catch (error) {
         console.error('Failed to update sort order:', error);
         // Revert to original order on error
@@ -152,6 +198,7 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
         activationDistance={
           disabled ? 999999 : Platform.OS === 'android' ? 10 : 5
         }
+        ListFooterComponent={ListFooterComponent}
       />
     </View>
   );

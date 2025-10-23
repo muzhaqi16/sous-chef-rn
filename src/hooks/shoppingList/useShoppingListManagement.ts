@@ -14,6 +14,7 @@ import { useAuth } from '#hooks/auth/useAuth';
 import { useErrorHandler } from '#/utils/errorHandling';
 import { enhanceWithVersion, createOptimisticEntity } from '#/apollo/utils/createOptimisticResponse';
 import { useSubscriptionDeduplication } from '#/hooks/utils/useSubscriptionDeduplication';
+import { queueStore } from '#/apollo/offlineQueue/queueStore';
 
 export interface ShoppingListItemInput {
   itemName: string;
@@ -58,6 +59,28 @@ export function useShoppingListManagement(listId: string | undefined) {
       // Filter out self-echo and duplicate updates
       if (!shouldProcessUpdate(payload)) {
         return;
+      }
+
+      // Conflict detection: Check if another user reordered while we have pending offline reorders
+      // Move mutations come through as ITEM_UPDATED with sortOrder in updatedFields
+      const isMoveUpdate = payload?.mutation === 'ITEM_UPDATED' &&
+                           payload?.updatedFields?.includes('sortOrder');
+
+      if (isMoveUpdate && payload?.userId !== user?.id && user?.id) {
+        const hasPendingMove = queueStore
+          .getPendingMutationsForUser(user.id)
+          .some(m =>
+            (m.operationName === 'MoveShoppingListItem' || m.operationName === 'ReorderShoppingListItems') &&
+            (m.variables?.input?.itemId || m.variables?.input?.shoppingListId === listId)
+          );
+
+        if (hasPendingMove) {
+          Alert.alert(
+            'List Updated',
+            'Another user reordered this list. Your offline changes will sync when you reconnect.',
+            [{ text: 'OK' }]
+          );
+        }
       }
 
       // Apollo Client automatically updates cache via normalization
@@ -192,9 +215,33 @@ export function useShoppingListManagement(listId: string | undefined) {
       });
       Alert.alert('Error', message);
     },
+    // Optimistic response for instant UI feedback (especially for quantity changes)
+    optimisticResponse: variables => {
+      const currentItem = items.find(item => item.id === variables.id);
+
+      if (!currentItem) {
+        // Fallback for edge case where item not in cache
+        return {
+          __typename: 'Mutation',
+          updateShoppingListItem: {
+            __typename: 'ShoppingListItem',
+            id: variables.id,
+            ...variables.input,
+            version: 1,
+            updatedAt: new Date().toISOString(),
+          } as any,
+        };
+      }
+
+      // Use enhanceWithVersion to spread current item and apply updates
+      // This ensures all fields are present (no cache errors) and version is incremented
+      return {
+        __typename: 'Mutation',
+        updateShoppingListItem: enhanceWithVersion(currentItem, variables.input) as any,
+      };
+    },
     // Cache update happens automatically via Apollo's normalization
     // The mutation returns the full ShoppingListItemFragment, so Apollo merges it automatically
-    // No manual cache update needed!
   });
 
   const [removeItemMutation] = useRemoveItemFromShoppingListMutation({

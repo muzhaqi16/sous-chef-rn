@@ -328,8 +328,8 @@ mutation markItemPurchased($id: ID!, $status: Boolean!) {
   }
 }
 
-mutation ReorderShoppingListItems($input: ReorderShoppingListItemsInput!) {
-  reorderShoppingListItems(input: $input) {
+mutation MoveShoppingListItem($input: MoveShoppingListItemInput!) {
+  moveShoppingListItem(input: $input) {
     ...ShoppingListItemFragment
   }
 }

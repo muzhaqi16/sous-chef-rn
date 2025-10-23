@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { ReactNode, ComponentType, ReactElement, JSXElementConstructor } from 'react';
 import type { ScrollViewProps } from 'react-native';
 
 // Positions type for drag-and-drop animation
@@ -17,7 +17,7 @@ export interface SortableShoppingListItem {
   id: string;
   title: string;
   subtitle: string | ReactNode;
-  sortOrder: number;
+  sortOrder: string; // Changed from number to string for fractional indexing
   isPurchased?: boolean;
   badge?: {
     text: string;
@@ -35,15 +35,16 @@ export interface SortableShoppingListProps extends Omit<ScrollViewProps, 'data' 
   onItemDelete?: (id: string) => void;
   onTogglePurchase?: (id: string) => void;
   onDragEnd?: (reorderedItems: SortableShoppingListItem[]) => void;
-  onSortOrderUpdate?: (updates: SortOrderUpdate[]) => Promise<void>;
+  onSortOrderUpdate?: (itemId: string, afterItemId: string | null, beforeItemId: string | null) => Promise<void>;
   itemHeight?: number;
   disabled?: boolean;
   groupByPurchased?: boolean;
+  ListFooterComponent?: ReactElement<unknown, string | JSXElementConstructor<any>> | ComponentType<any> | null;
 }
 
 // Sort order update for API calls
 export interface SortOrderUpdate {
   id: string;
-  sortOrder: number;
+  sortOrder: string; // Changed from number to string for fractional indexing
 }
 
