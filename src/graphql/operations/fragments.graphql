@@ -22,6 +22,17 @@ fragment ShoppingListItemFragment on ShoppingListItem {
       name
       symbol
     }
+    categories {
+      id
+      isPrimary
+      confidence
+      source
+      assignedAt
+      category {
+        id
+        name
+      }
+    }
   }
   unit {
     id

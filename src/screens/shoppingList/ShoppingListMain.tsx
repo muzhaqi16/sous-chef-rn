@@ -20,7 +20,6 @@ import {
   SortableShoppingList,
   EmptyState,
   ListTemplate,
-  FormattedItemSubtitle,
 } from '#components';
 import { getItemImageUrl } from '#utils/imageUtils';
 import type {
@@ -34,7 +33,7 @@ import type {
 import { useShoppingListManagement } from '#/hooks';
 import { useStore } from '#/store';
 import { IconLibrary } from '#/utils/iconUtils';
-import { AnimatedCheckbox } from '#/components/atoms/AnimatedCheckbox';
+import { Counter } from '#/components/molecules/Counter';
 import { commonStyles } from '#/styles';
 
 // Wrapper component that conditionally renders EmptyState or SortableShoppingList
@@ -43,6 +42,7 @@ const ShoppingListContent: React.FC<{
   onItemPress: (id: string) => void;
   onItemEdit?: (id: string) => void;
   onItemDelete?: (id: string) => void;
+  onTogglePurchase?: (id: string) => void;
   onSortOrderUpdate?: (updates: SortOrderUpdate[]) => Promise<void>;
   onRefresh?: () => void | Promise<void>;
   refreshing?: boolean;
@@ -53,6 +53,7 @@ const ShoppingListContent: React.FC<{
   onItemPress,
   onItemEdit,
   onItemDelete,
+  onTogglePurchase,
   onSortOrderUpdate,
   onRefresh,
   refreshing,
@@ -84,6 +85,7 @@ const ShoppingListContent: React.FC<{
         onItemPress={onItemPress}
         onItemEdit={onItemEdit}
         onItemDelete={onItemDelete}
+        onTogglePurchase={onTogglePurchase}
         onSortOrderUpdate={onSortOrderUpdate}
         disabled={disabled}
         showsVerticalScrollIndicator={true}
@@ -141,6 +143,7 @@ export const ShoppingListMain: React.FC = () => {
     searchQuery,
     setSearchQuery,
     addItem,
+    updateItem,
     toggleItem,
     removeItem,
     refetch: refetchItems,
@@ -252,6 +255,36 @@ export const ShoppingListMain: React.FC = () => {
     [currentListId, reorderItems],
   );
 
+  // Quantity update handlers
+  const handleIncrementQuantity = useCallback(
+    async (itemId: string) => {
+      const currentItem = items.find(item => item.id === itemId);
+      if (!currentItem) return;
+
+      try {
+        await updateItem(itemId, { quantity: (currentItem.quantity || 1) + 1 });
+      } catch (error) {
+        Alert.alert('Error', 'Failed to update quantity');
+      }
+    },
+    [items, updateItem],
+  );
+
+  const handleDecrementQuantity = useCallback(
+    async (itemId: string) => {
+      const currentItem = items.find(item => item.id === itemId);
+      if (!currentItem) return;
+
+      const newQuantity = Math.max(0, (currentItem.quantity || 1) - 1);
+      try {
+        await updateItem(itemId, { quantity: newQuantity });
+      } catch (error) {
+        Alert.alert('Error', 'Failed to update quantity');
+      }
+    },
+    [items, updateItem],
+  );
+
   // Transform shopping list items for SortableShoppingList
   const sortableItems = useMemo((): SortableShoppingListItem[] => {
     // Sort by sortOrder within each group
@@ -277,24 +310,26 @@ export const ShoppingListMain: React.FC = () => {
     return sortedItems.map((item: any) => {
       const imageUrl = getItemImageUrl(item.item, 'small');
 
+      // Get primary category from item.item.categories
+      const primaryCategory = item.item?.categories?.find(
+        (cat: any) => cat.isPrimary
+      );
+      const categoryName = primaryCategory?.category?.name ||
+                          item.item?.categories?.[0]?.category?.name ||
+                          item.category;
+
       return {
         id: item.id,
         title: item.itemName,
-        subtitle: (
-          <FormattedItemSubtitle
-            quantity={item.quantity}
-            netWeight={item.item?.netWeight}
-            unitSymbol={item.item?.displayUnit?.symbol || item.unitName}
-          />
-        ),
+        subtitle: categoryName || undefined,
         sortOrder: item.sortOrder ?? 0,
         isPurchased: item.isPurchased,
         badge: undefined,
         rightElement: (
-          <AnimatedCheckbox
-            checked={item.isPurchased}
-            onPress={() => toggleItem(item.id)}
-            size={24}
+          <Counter
+            count={item.quantity}
+            onIncrement={() => handleIncrementQuantity(item.id)}
+            onDecrement={() => handleDecrementQuantity(item.id)}
           />
         ),
         leftElement: imageUrl ? (
@@ -312,7 +347,7 @@ export const ShoppingListMain: React.FC = () => {
         ) : null,
       };
     });
-  }, [items, toggleItem]);
+  }, [items, handleIncrementQuantity, handleDecrementQuantity]);
 
   const handleAddItem = useCallback(() => {
     if (!currentListId) {
@@ -510,6 +545,7 @@ export const ShoppingListMain: React.FC = () => {
           onSortOrderUpdate: searchQuery.trim()
             ? undefined
             : handleSortOrderUpdate,
+          onTogglePurchase: toggleItem,
           onRefresh: handleRefresh,
           refreshing,
           disabled: !!searchQuery.trim(),

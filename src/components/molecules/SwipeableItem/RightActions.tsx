@@ -9,16 +9,19 @@ interface RightActionsProps extends SwipeActionsProps {
   progress: SharedValue<number>;
 }
 
-export const RightActions: React.FC<RightActionsProps> = ({
+export const RightActions: React.FC<RightActionsProps> = React.memo(({
   onEdit,
   onDelete,
   onActionPress,
 }) => {
   return (
-    <Reanimated.View style={styles.actionsContainer}>
+    <Reanimated.View
+      style={styles.actionsContainer}
+      pointerEvents="box-none"
+    >
       {onEdit && (
         <ActionButton
-          onPress={() => onActionPress('edit')}
+          onPress={() => onActionPress?.('edit')}
           icon="edit"
           backgroundColor="transparent"
           circular={true}
@@ -26,7 +29,7 @@ export const RightActions: React.FC<RightActionsProps> = ({
       )}
       {onDelete && (
         <ActionButton
-          onPress={() => onActionPress('delete')}
+          onPress={() => onActionPress?.('delete')}
           icon="delete"
           backgroundColor="transparent"
           circular={true}
@@ -34,4 +37,4 @@ export const RightActions: React.FC<RightActionsProps> = ({
       )}
     </Reanimated.View>
   );
-};
+});

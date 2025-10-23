@@ -9,12 +9,14 @@ import Reanimated, {
 interface SwipeableContentProps {
   children: React.ReactNode;
   onPress?: () => void;
+  onLongPress?: () => void;
   dragX?: SharedValue<number>;
 }
 
 export const SwipeableContent: React.FC<SwipeableContentProps> = ({
   children,
   onPress,
+  onLongPress,
   dragX,
 }) => {
   const animatedStyle = useAnimatedStyle(() => {
@@ -34,6 +36,8 @@ export const SwipeableContent: React.FC<SwipeableContentProps> = ({
     <Reanimated.View style={[styles.itemContainer, animatedStyle]}>
       <TouchableOpacity
         onPress={onPress}
+        onLongPress={onLongPress}
+        delayLongPress={150}
         activeOpacity={0.7}
         style={styles.touchable}
       >
@@ -49,6 +53,6 @@ const styles = StyleSheet.create(() => ({
     overflow: 'hidden',
   },
   touchable: {
-    flex: 1,
+    // flex: 1 removed to prevent blocking swipe action buttons
   },
 }));

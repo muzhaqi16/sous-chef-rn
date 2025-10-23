@@ -13,7 +13,7 @@ const cache = makeCache();
 export const client = new ApolloClient({
   link,
   cache,
-  // Optimized default fetch policies for performance
+  // Optimized default fetch policies for performance and offline support
   defaultOptions: {
     query: {
       fetchPolicy: 'cache-first',
@@ -23,7 +23,10 @@ export const client = new ApolloClient({
       errorPolicy: 'all',
     },
     watchQuery: {
-      fetchPolicy: 'cache-and-network',
+      // Changed from 'cache-and-network' to 'cache-first' to prevent unnecessary
+      // refetches when cache is already updated by mutations. Queries that need
+      // fresh data can explicitly override with fetchPolicy: 'cache-and-network'
+      fetchPolicy: 'cache-first',
       errorPolicy: 'ignore',
     },
   },

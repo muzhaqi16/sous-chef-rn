@@ -7860,6 +7860,18 @@ export type ShoppingListItemFragmentFragment = {
           | { __typename?: 'Unit'; id: string; name: string; symbol: string }
           | null
           | undefined;
+        categories?:
+          | Array<{
+              __typename?: 'ItemCategory';
+              id: string;
+              isPrimary: boolean;
+              confidence: number;
+              source: CategorySource;
+              assignedAt?: string | null | undefined;
+              category: { __typename?: 'Category'; id: string; name: string };
+            }>
+          | null
+          | undefined;
       }
     | null
     | undefined;
@@ -14504,6 +14516,18 @@ export type GetShoppingListItemsQuery = {
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
             | null
             | undefined;
+          categories?:
+            | Array<{
+                __typename?: 'ItemCategory';
+                id: string;
+                isPrimary: boolean;
+                confidence: number;
+                source: CategorySource;
+                assignedAt?: string | null | undefined;
+                category: { __typename?: 'Category'; id: string; name: string };
+              }>
+            | null
+            | undefined;
         }
       | null
       | undefined;
@@ -14689,6 +14713,22 @@ export type GetShoppingListItemQuery = {
                     name: string;
                     symbol: string;
                   }
+                | null
+                | undefined;
+              categories?:
+                | Array<{
+                    __typename?: 'ItemCategory';
+                    id: string;
+                    isPrimary: boolean;
+                    confidence: number;
+                    source: CategorySource;
+                    assignedAt?: string | null | undefined;
+                    category: {
+                      __typename?: 'Category';
+                      id: string;
+                      name: string;
+                    };
+                  }>
                 | null
                 | undefined;
             }
@@ -15078,6 +15118,18 @@ export type AddItemToShoppingListMutation = {
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
             | null
             | undefined;
+          categories?:
+            | Array<{
+                __typename?: 'ItemCategory';
+                id: string;
+                isPrimary: boolean;
+                confidence: number;
+                source: CategorySource;
+                assignedAt?: string | null | undefined;
+                category: { __typename?: 'Category'; id: string; name: string };
+              }>
+            | null
+            | undefined;
         }
       | null
       | undefined;
@@ -15258,6 +15310,18 @@ export type UpdateShoppingListItemMutation = {
           netWeight?: number | null | undefined;
           displayUnit?:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+            | null
+            | undefined;
+          categories?:
+            | Array<{
+                __typename?: 'ItemCategory';
+                id: string;
+                isPrimary: boolean;
+                confidence: number;
+                source: CategorySource;
+                assignedAt?: string | null | undefined;
+                category: { __typename?: 'Category'; id: string; name: string };
+              }>
             | null
             | undefined;
         }
@@ -15451,6 +15515,18 @@ export type MarkItemPurchasedMutation = {
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
             | null
             | undefined;
+          categories?:
+            | Array<{
+                __typename?: 'ItemCategory';
+                id: string;
+                isPrimary: boolean;
+                confidence: number;
+                source: CategorySource;
+                assignedAt?: string | null | undefined;
+                category: { __typename?: 'Category'; id: string; name: string };
+              }>
+            | null
+            | undefined;
         }
       | null
       | undefined;
@@ -15630,6 +15706,18 @@ export type ReorderShoppingListItemsMutation = {
           netWeight?: number | null | undefined;
           displayUnit?:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+            | null
+            | undefined;
+          categories?:
+            | Array<{
+                __typename?: 'ItemCategory';
+                id: string;
+                isPrimary: boolean;
+                confidence: number;
+                source: CategorySource;
+                assignedAt?: string | null | undefined;
+                category: { __typename?: 'Category'; id: string; name: string };
+              }>
             | null
             | undefined;
         }
@@ -15919,6 +16007,22 @@ export type ShoppingListItemsChangedSubscription = {
                           name: string;
                           symbol: string;
                         }
+                      | null
+                      | undefined;
+                    categories?:
+                      | Array<{
+                          __typename?: 'ItemCategory';
+                          id: string;
+                          isPrimary: boolean;
+                          confidence: number;
+                          source: CategorySource;
+                          assignedAt?: string | null | undefined;
+                          category: {
+                            __typename?: 'Category';
+                            id: string;
+                            name: string;
+                          };
+                        }>
                       | null
                       | undefined;
                   }
@@ -16211,6 +16315,18 @@ export type ShoppingListItemAddedSubscription = {
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
             | null
             | undefined;
+          categories?:
+            | Array<{
+                __typename?: 'ItemCategory';
+                id: string;
+                isPrimary: boolean;
+                confidence: number;
+                source: CategorySource;
+                assignedAt?: string | null | undefined;
+                category: { __typename?: 'Category'; id: string; name: string };
+              }>
+            | null
+            | undefined;
         }
       | null
       | undefined;
@@ -16390,6 +16506,18 @@ export type ShoppingListItemUpdatedSubscription = {
           netWeight?: number | null | undefined;
           displayUnit?:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+            | null
+            | undefined;
+          categories?:
+            | Array<{
+                __typename?: 'ItemCategory';
+                id: string;
+                isPrimary: boolean;
+                confidence: number;
+                source: CategorySource;
+                assignedAt?: string | null | undefined;
+                category: { __typename?: 'Category'; id: string; name: string };
+              }>
             | null
             | undefined;
         }

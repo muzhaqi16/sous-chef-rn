@@ -45,7 +45,6 @@ export function useShoppingListManagement(listId: string | undefined) {
     variables: { shoppingListId: listId ?? '' },
     skip: shouldSkip,
     fetchPolicy: 'cache-first',
-    notifyOnNetworkStatusChange: true,
     errorPolicy: 'all',
   });
 
@@ -175,6 +174,7 @@ export function useShoppingListManagement(listId: string | undefined) {
               return [...existingItems, newItemRef];
             },
           },
+          broadcast: false, // Don't trigger query refetches
         });
       } catch (error) {
         console.warn('Cache update failed for addItem, will refetch:', error);
@@ -226,6 +226,7 @@ export function useShoppingListManagement(listId: string | undefined) {
               );
             },
           },
+          broadcast: false, // Don't trigger query refetches
         });
 
         // Evict the removed item from cache

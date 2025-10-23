@@ -21,6 +21,7 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
   onItemPress,
   onItemEdit,
   onItemDelete,
+  onTogglePurchase,
   onSortOrderUpdate,
   disabled = false,
   ...flatListProps
@@ -43,6 +44,18 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
     }
   }, [items]);
 
+  // Check if the order of items has changed
+  const hasOrderChanged = useCallback((
+    originalItems: SortableShoppingListItem[],
+    newItems: SortableShoppingListItem[]
+  ): boolean => {
+    if (originalItems.length !== newItems.length) return true;
+
+    return originalItems.some((item, index) =>
+      item.id !== newItems[index].id
+    );
+  }, []);
+
   // Handle drag end - called when user releases item
   const handleDragEnd = useCallback(
     async (data: SortableShoppingListItem[]) => {
@@ -50,6 +63,12 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
 
       if (disabled || !onSortOrderUpdate) {
         setLocalItems(data);
+        return;
+      }
+
+      // Check if order actually changed - skip API call if no change
+      if (!hasOrderChanged(items, data)) {
+        console.log('✓ Drag ended - order unchanged, skipping API call');
         return;
       }
 
@@ -78,7 +97,7 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
         isUpdatingRef.current = false;
       }
     },
-    [disabled, onSortOrderUpdate, items],
+    [disabled, onSortOrderUpdate, items, hasOrderChanged],
   );
 
   const handleDragBegin = useCallback(() => {
@@ -91,17 +110,19 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
       return (
         <ScaleDecorator>
           <SimpleDraggableItem
+            key={`${item.id}-${item.isPurchased ? 'purchased' : 'unpurchased'}`}
             item={item}
             onItemPress={onItemPress}
             onItemEdit={onItemEdit}
             onItemDelete={onItemDelete}
+            onTogglePurchase={onTogglePurchase}
             drag={disabled ? undefined : drag}
             isActive={isActive}
           />
         </ScaleDecorator>
       );
     },
-    [onItemPress, onItemEdit, onItemDelete, disabled],
+    [onItemPress, onItemEdit, onItemDelete, onTogglePurchase, disabled],
   );
 
   // Early validation

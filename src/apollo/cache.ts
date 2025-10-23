@@ -225,7 +225,7 @@ export function makeCache(): InMemoryCache {
       cache.restore(JSON.parse(saved));
     }
   } catch (e) {
-    storage.delete(CACHE_KEY);
+    storage.remove(CACHE_KEY);
   }
 
   // Cache size management

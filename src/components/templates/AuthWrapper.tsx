@@ -42,7 +42,7 @@ const styles = StyleSheet.create(theme => ({
   },
   inner: {
     flex: 1,
-    paddingHorizontal: 24,
+    paddingHorizontal: theme.spacing.md,
     justifyContent: 'space-around',
   },
 }));

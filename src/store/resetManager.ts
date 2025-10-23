@@ -106,7 +106,7 @@ export const createResetManager = (
       try {
         const { client } = await import('#/apollo/client');
         await client.clearStore();
-        storage.delete('apollo-cache-1.0');
+        storage.remove('apollo-cache-1.0');
       } catch (error) {
         console.error('Error clearing Apollo cache:', error);
       }
@@ -178,8 +178,8 @@ const clearAuthFromStorage = async () => {
     // Keychain credentials are only cleared during full reset or explicit user action
 
     // Clear individual auth-related keys
-    storage.delete('accessToken');
-    storage.delete('refreshToken');
+    storage.remove('accessToken');
+    storage.remove('refreshToken');
 
     // Update persisted zustand data
     const currentData = await zustandStorage.getItem(STORAGE_KEY);

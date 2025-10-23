@@ -35,15 +35,16 @@ export const styles = StyleSheet.create(theme => ({
     width: 60,
     ...commonStyles.center,
     height: '100%',
+    zIndex: 100, // Ensure button is above other elements for touch priority
   },
 
   circularActionButton: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#6C757D', // Gray circle background
     ...commonStyles.center,
     marginHorizontal: 8,
+    zIndex: 100, // Ensure button is above other elements for touch priority
   },
 
   editButton: {

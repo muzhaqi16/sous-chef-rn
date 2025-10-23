@@ -52,12 +52,13 @@ export const ItemCard: React.FC<ItemCardProps> = ({
       />
     );
 
-  return <View style={styles.container}>{innerContent}</View>;
+  return (
+    <View style={[commonStyles.shadow, styles.container]}>{innerContent}</View>
+  );
 };
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    ...commonStyles.shadow,
     // Horizontal margin for shadow visibility
     marginHorizontal: theme.spacing.sm,
     // Half vertical margin so stacked items merge to full spacing (md/2 + md/2 = md)
