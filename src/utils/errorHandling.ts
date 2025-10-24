@@ -5,6 +5,8 @@ import {
   ServerError,
   ServerParseError,
 } from '@apollo/client/errors';
+import { isQueryComplexityError, getQueryComplexityMessage } from './errors/queryComplexity';
+import { isVersionConflictError, getVersionConflictMessage } from './errors/versionConflict';
 
 export interface ApiErrorResponse {
   success: boolean;
@@ -93,6 +95,13 @@ export class ErrorHandler {
     // Email Errors
     EMAIL_ALREADY_EXISTS: 'An account with this email already exists.',
 
+    // Query Complexity Errors (New API Limits)
+    QUERY_TOO_COMPLEX: 'Query is too complex. Please simplify your request.',
+    PAGINATION_LIMIT_EXCEEDED: 'Too many items requested. Maximum is 100 items per request.',
+
+    // Version Control Errors
+    VERSION_CONFLICT: 'This item was updated by another user. Please refresh and try again.',
+
     // Application-Specific Errors
     SHOPPING_LIST_NOT_FOUND: 'Shopping list not found',
     SHOPPING_LIST_ACCESS_DENIED: "You don't have access to this shopping list",
@@ -175,8 +184,18 @@ export class ErrorHandler {
     let validationErrors: Record<string, string> | undefined;
 
     try {
+      // Check for query complexity errors first (new API limits)
+      if (isQueryComplexityError(error)) {
+        errorCode = 'QUERY_TOO_COMPLEX';
+        errorMessage = getQueryComplexityMessage(error);
+      }
+      // Check for version conflict errors
+      else if (isVersionConflictError(error)) {
+        errorCode = 'VERSION_CONFLICT';
+        errorMessage = getVersionConflictMessage(error);
+      }
       // Use Apollo's proper error type checking
-      if (CombinedGraphQLErrors.is(error)) {
+      else if (CombinedGraphQLErrors.is(error)) {
         // Handle GraphQL errors
         const graphQLError = error.errors[0];
         if (graphQLError) {

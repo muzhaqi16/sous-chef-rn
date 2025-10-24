@@ -1,6 +1,9 @@
 import { client } from './client';
+import { InMemoryCache } from '@apollo/client';
 import { useStore } from '#store';
 import { storage } from '#/storage/mmkv';
+import { apolloCachePersistence } from './offline/ApolloCachePersistence';
+import { optimisticDataPersistence } from './offline/OptimisticDataPersistence';
 
 interface LogoutCleanupOptions {
   clearCache?: boolean;
@@ -141,7 +144,19 @@ export class LogoutCleanup {
     try {
       await client.clearStore();
 
-      // Clear storage keys
+      // Run garbage collection with result cache reset
+      // Per Apollo docs: "call gc() after evict() operations"
+      const cache = client.cache as InMemoryCache;
+      const removedIds = cache.gc({ resetResultCache: true });
+      console.log(`🗑️ Garbage collected ${removedIds.length} unreachable cache objects`);
+
+      // Clear new cache persistence
+      apolloCachePersistence.clear();
+
+      // Clear optimistic data persistence
+      optimisticDataPersistence.clearAll();
+
+      // Clear storage keys (legacy cleanup)
       storage.remove('apollo-cache');
       storage.remove('navigation_state');
       storage.remove('apollo-client-cache');

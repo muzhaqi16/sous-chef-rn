@@ -1,4 +1,4 @@
-import { ApolloLink } from '@apollo/client';
+import { ApolloLink, InMemoryCache } from '@apollo/client';
 import { getMainDefinition } from '@apollo/client/utilities';
 import { authLink } from './authLink';
 import { createConsoleLink } from './consoleLink';
@@ -26,29 +26,37 @@ const transportLink = ApolloLink.split(
   httpTransport,
 );
 
-// Console link configuration - only verbose in development
-const consoleLink = createConsoleLink({
-  enabled: __DEV__,
-  logVariables: __DEV__,
-  logQuery: false, // Too verbose, disable even in dev
-  logResponse: false, // Too verbose, disable even in dev
-  logTiming: true,
-  slowQueryThreshold: 1000,
-});
+/**
+ * Create link chain for Apollo client
+ *
+ * @param cache - Apollo cache instance for cache persistence link
+ */
+export function createLink(_cache: InMemoryCache) {
+  // Console link configuration - only verbose in development
+  const consoleLink = createConsoleLink({
+    enabled: __DEV__,
+    logVariables: __DEV__,
+    logQuery: false, // Too verbose, disable even in dev
+    logResponse: false, // Too verbose, disable even in dev
+    logTiming: true,
+    slowQueryThreshold: 1000,
+  });
 
-// Telemetry link for tracking GraphQL operations
-const telemetryLink = createTelemetryLink();
+  // Telemetry link for tracking GraphQL operations
+  const telemetryLink = createTelemetryLink();
 
-// Queue link for offline mutation handling
-const queueLink = createQueueLink();
+  // Queue link for offline mutation handling
+  const queueLink = createQueueLink();
 
-// Simplified link chain - work WITH Apollo, not against it
-export const link = ApolloLink.from([
-  deduplicationLink, // Prevent duplicate requests
-  telemetryLink,     // Track operations for monitoring
-  errorLink,         // Handle/log errors (simplified)
-  authLink,          // Authentication headers
-  queueLink,         // Queue mutations when offline
-  consoleLink,       // Development logging
-  transportLink,     // HTTP/WebSocket transport
-]);
+  // Link chain - network operations only (NO cache persistence here)
+  // Cache persistence is handled by Apollo Client lifecycle hooks in client.ts
+  return ApolloLink.from([
+    deduplicationLink, // Prevent duplicate requests
+    telemetryLink, // Track operations for monitoring
+    errorLink, // Handle/log errors (simplified)
+    authLink, // Authentication headers
+    queueLink, // Queue mutations when offline
+    consoleLink, // Development logging
+    transportLink, // HTTP/WebSocket transport
+  ]);
+}

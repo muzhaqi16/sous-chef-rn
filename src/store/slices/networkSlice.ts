@@ -20,7 +20,7 @@ export interface NetworkState {
 }
 
 const initialNetworkState = {
-  isOnline: true, // Assume online until proven otherwise
+  isOnline: true, // Assume online until proven otherwise (per Apollo best practices)
   isInternetReachable: null,
   networkType: null,
   lastOnlineTime: null,

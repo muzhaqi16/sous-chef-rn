@@ -74,10 +74,40 @@ export class QueueStore {
 
   /**
    * Add a mutation to the queue
+   * Implements mutation coalescing for MoveShoppingListItem operations:
+   * - Multiple moves of the same item are merged into a single mutation
+   * - Only the final position is kept, reducing server load
    */
   addMutation(mutation: QueuedMutation): void {
     const queue = this.loadQueue();
 
+    // OPTIMIZATION: Coalesce move mutations for the same item
+    if (mutation.operationName === 'MoveShoppingListItem') {
+      const itemId = mutation.variables?.input?.itemId;
+
+      if (itemId) {
+        // Find existing move mutation for same item
+        const existingIndex = queue.findIndex(
+          m =>
+            m.operationName === 'MoveShoppingListItem' &&
+            m.variables?.input?.itemId === itemId &&
+            m.userId === mutation.userId &&
+            m.status === QueueStatus.PENDING, // Only coalesce pending mutations
+        );
+
+        if (existingIndex !== -1) {
+          // Replace existing mutation with new one (final position)
+          console.log(
+            `🔄 Queue: Coalescing move mutations for item ${itemId} - keeping final position`,
+          );
+          queue[existingIndex] = mutation;
+          this.saveQueue(queue);
+          return;
+        }
+      }
+    }
+
+    // Regular add logic for non-move mutations or first move
     // Check queue size limit
     if (queue.length >= 100) {
       console.warn('Queue size limit reached, removing oldest mutation');

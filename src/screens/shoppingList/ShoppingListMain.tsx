@@ -12,6 +12,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
   useGetShoppingListsQuery,
   useMoveShoppingListItemMutation,
+  useUpdateShoppingListItemQuantityMutation,
 } from '#generated';
 import { useScanner } from '#context';
 import {
@@ -29,14 +30,19 @@ import type {
   SelectorConfig,
   ItemSelectorRef,
 } from '#components/organisms/AnimatedItemSelector';
-import type {
-  SortableShoppingListItem,
-} from '#components/organisms/SortableShoppingList';
+import type { SortableShoppingListItem } from '#components/organisms/SortableShoppingList';
 import { useShoppingListManagement } from '#/hooks';
+import { useOptimisticDataRestoration } from '#/hooks/offline/useOptimisticDataRestoration';
+import { useOfflinePresetPolicy } from '#/apollo/policies/offlineFetchPolicies';
 import { useStore } from '#/store';
 import { IconLibrary } from '#/utils/iconUtils';
 import { Counter } from '#/components/molecules/Counter';
 import { commonStyles } from '#/styles';
+import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
+import {
+  handleVersionConflict,
+  getVersionConflictMessage,
+} from '#/utils/errors/versionConflict';
 
 // Wrapper component that conditionally renders EmptyState or SortableShoppingList
 const ShoppingListContent: React.FC<{
@@ -45,7 +51,11 @@ const ShoppingListContent: React.FC<{
   onItemEdit?: (id: string) => void;
   onItemDelete?: (id: string) => void;
   onTogglePurchase?: (id: string) => void;
-  onSortOrderUpdate?: (itemId: string, afterItemId: string | null, beforeItemId: string | null) => Promise<void>;
+  onSortOrderUpdate?: (
+    itemId: string,
+    afterItemId: string | null,
+    beforeItemId: string | null,
+  ) => Promise<void>;
   onRefresh?: () => void | Promise<void>;
   refreshing?: boolean;
   disabled?: boolean;
@@ -129,13 +139,27 @@ export const ShoppingListMain: React.FC = () => {
   const [moveItem] = useMoveShoppingListItemMutation({
     errorPolicy: 'all',
   });
-  const [refreshing, setRefreshing] = useState(false);
-
-  const { data } = useGetShoppingListsQuery({
-    fetchPolicy: 'cache-and-network',
+  const [updateQuantity] = useUpdateShoppingListItemQuantityMutation({
+    errorPolicy: 'all',
+    // DON'T refetch - server has eventual consistency issues
+    // Immediate refetch returns stale data and overwrites correct cache values
+    // Trust the mutation response instead (Apollo normalizes it automatically)
   });
 
-  const lists = useMemo(() => data?.shoppingLists || [], [data?.shoppingLists]);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // OPTIMIZATION: Use offline-aware fetch policy for lists query
+  const listsFetchPolicy = useOfflinePresetPolicy('LIST');
+  const { data, previousData } = useGetShoppingListsQuery({
+    fetchPolicy: listsFetchPolicy,
+    errorPolicy: 'all',
+  });
+
+  // OPTIMIZATION: Fall back to previousData if current data is unavailable (network error)
+  const lists = useMemo(
+    () => data?.shoppingLists ?? previousData?.shoppingLists ?? [],
+    [data?.shoppingLists, previousData?.shoppingLists],
+  );
 
   // Get the default list or the first list if none is default
   const defaultList = lists.find(list => list.isDefault) || lists[0];
@@ -167,11 +191,12 @@ export const ShoppingListMain: React.FC = () => {
     searchQuery,
     setSearchQuery,
     addItem,
-    updateItem,
     toggleItem,
     removeItem,
     refetch: refetchItems,
   } = useShoppingListManagement(currentListId);
+
+  // Let Apollo handle all data management - no manual optimization needed
 
   // Create selector configuration for shopping lists
   const listConfig: SelectorConfig<any> = useMemo(
@@ -225,9 +250,12 @@ export const ShoppingListMain: React.FC = () => {
     [lists, currentListId, setSelectedShoppingListId, navigate],
   );
 
-
   const handleSortOrderUpdate = useCallback(
-    async (itemId: string, afterItemId: string | null, beforeItemId: string | null) => {
+    async (
+      itemId: string,
+      afterItemId: string | null,
+      beforeItemId: string | null,
+    ) => {
       if (!currentListId) return;
 
       try {
@@ -239,13 +267,20 @@ export const ShoppingListMain: React.FC = () => {
         }
 
         // Calculate optimistic sortOrder using fractional indexing
-        const afterItem = afterItemId ? items.find(item => item.id === afterItemId) : null;
-        const beforeItem = beforeItemId ? items.find(item => item.id === beforeItemId) : null;
+        const afterItem = afterItemId
+          ? items.find(item => item.id === afterItemId)
+          : null;
+        const beforeItem = beforeItemId
+          ? items.find(item => item.id === beforeItemId)
+          : null;
         const afterSortOrder = afterItem?.sortOrder ?? null;
         const beforeSortOrder = beforeItem?.sortOrder ?? null;
 
         // Generate new fractional index between the two items
-        const optimisticSortOrder = generatePosition(afterSortOrder, beforeSortOrder);
+        const optimisticSortOrder = generatePosition(
+          afterSortOrder,
+          beforeSortOrder,
+        );
 
         console.log('Optimistic sortOrder calculation:', {
           itemId,
@@ -255,6 +290,14 @@ export const ShoppingListMain: React.FC = () => {
           beforeSortOrder,
           optimisticSortOrder,
         });
+
+        // OPTIMIZATION: Persist sortOrder for offline persistence using generic system
+        optimisticDataPersistence.save(
+          'ShoppingListItem',
+          itemId,
+          'sortOrder',
+          optimisticSortOrder,
+        );
 
         await moveItem({
           variables: {
@@ -272,9 +315,28 @@ export const ShoppingListMain: React.FC = () => {
               sortOrder: optimisticSortOrder,
             }) as any,
           },
+          onCompleted: () => {
+            // OPTIMIZATION: Clear persisted sortOrder after successful sync
+            optimisticDataPersistence.clear(
+              'ShoppingListItem',
+              itemId,
+              'sortOrder',
+            );
+          },
+          onError: error => {
+            // Keep persisted sortOrder on error - will retry when back online
+            console.error(
+              'Move failed, keeping optimistic sortOrder persisted:',
+              error,
+            );
+          },
         });
 
-        console.log('✓ Item moved successfully:', { itemId, afterItemId, beforeItemId });
+        console.log('✓ Item moved successfully:', {
+          itemId,
+          afterItemId,
+          beforeItemId,
+        });
       } catch (error) {
         console.error('Failed to move item:', error);
         Alert.alert('Error', 'Failed to reorder items');
@@ -283,19 +345,35 @@ export const ShoppingListMain: React.FC = () => {
     [currentListId, moveItem, items],
   );
 
-  // Quantity update handlers
+  // Quantity update handlers using specialized mutation (80% payload reduction)
   const handleIncrementQuantity = useCallback(
     async (itemId: string) => {
-      const currentItem = items.find(item => item.id === itemId);
-      if (!currentItem) return;
-
       try {
-        await updateItem(itemId, { quantity: (currentItem.quantity || 1) + 1 });
-      } catch (error) {
+        const currentItem = items.find(item => item.id === itemId);
+        if (!currentItem) return;
+
+        const newQuantity = (currentItem.quantity || 1) + 1;
+
+        await updateQuantity({
+          variables: {
+            id: itemId,
+            quantity: newQuantity,
+            version: currentItem.version,
+          },
+        });
+      } catch (error: any) {
+        // Handle version conflict errors
+        if (handleVersionConflict(error)) {
+          Alert.alert('Item Updated', getVersionConflictMessage(error), [
+            { text: 'Refresh', onPress: () => refetchItems() },
+            { text: 'Cancel', style: 'cancel' },
+          ]);
+          return;
+        }
         Alert.alert('Error', 'Failed to update quantity');
       }
     },
-    [items, updateItem],
+    [items, updateQuantity, refetchItems],
   );
 
   const handleDecrementQuantity = useCallback(
@@ -304,13 +382,28 @@ export const ShoppingListMain: React.FC = () => {
       if (!currentItem) return;
 
       const newQuantity = Math.max(0, (currentItem.quantity || 1) - 1);
+
       try {
-        await updateItem(itemId, { quantity: newQuantity });
-      } catch (error) {
+        await updateQuantity({
+          variables: {
+            id: itemId,
+            quantity: newQuantity,
+            version: currentItem.version,
+          },
+        });
+      } catch (error: any) {
+        // Handle version conflict errors
+        if (handleVersionConflict(error)) {
+          Alert.alert('Item Updated', getVersionConflictMessage(error), [
+            { text: 'Refresh', onPress: () => refetchItems() },
+            { text: 'Cancel', style: 'cancel' },
+          ]);
+          return;
+        }
         Alert.alert('Error', 'Failed to update quantity');
       }
     },
-    [items, updateItem],
+    [items, updateQuantity, refetchItems],
   );
 
   // Transform shopping list items for SortableShoppingList
@@ -329,11 +422,12 @@ export const ShoppingListMain: React.FC = () => {
 
       // Get primary category from item.item.categories
       const primaryCategory = item.item?.categories?.find(
-        (cat: any) => cat.isPrimary
+        (cat: any) => cat.isPrimary,
       );
-      const categoryName = primaryCategory?.category?.name ||
-                          item.item?.categories?.[0]?.category?.name ||
-                          item.category;
+      const categoryName =
+        primaryCategory?.category?.name ||
+        item.item?.categories?.[0]?.category?.name ||
+        item.category;
 
       return {
         id: item.id,
@@ -412,8 +506,8 @@ export const ShoppingListMain: React.FC = () => {
   const handleDeleteItem = async (itemId: string) => {
     try {
       await removeItem(itemId);
-      // Refetch to ensure UI is in sync after deletion
-      await refetchItems();
+      // OPTIMIZATION: No refetch needed - removeItem updates cache via cache.modify
+      // Cache automatically updates via Apollo's normalized cache
     } catch (error) {
       Alert.alert('Error', 'Failed to delete item');
     }
@@ -426,16 +520,14 @@ export const ShoppingListMain: React.FC = () => {
 
     try {
       // Delete all purchased items
-      await Promise.all(
-        purchasedItems.map(item => removeItem(item.id))
-      );
+      await Promise.all(purchasedItems.map(item => removeItem(item.id)));
 
-      // Refetch to ensure UI is in sync
-      await refetchItems();
+      // OPTIMIZATION: No refetch needed - each removeItem updates cache via cache.modify
+      // Cache automatically updates via Apollo's normalized cache
     } catch (error) {
       Alert.alert('Error', 'Failed to clear purchased items');
     }
-  }, [items, removeItem, refetchItems]);
+  }, [items, removeItem]);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);

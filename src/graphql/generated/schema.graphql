@@ -2686,8 +2686,10 @@ type Mutation {
   ): [LoginHistory!]!
   markNotificationAsRead(id: ID!): Notification!
   markNotificationUnread(id: ID!): Notification!
+  markPantryItemExpired(id: ID!, version: Int): PantryItem!
   mergeItems(duplicateIds: [ID!]!, primaryId: ID!): Item!
   moveShoppingListItem(input: MoveShoppingListItemInput!): ShoppingListItem!
+  openPantryItem(id: ID!, version: Int): PantryItem!
   putUnderReview(input: PutUnderReviewInput!): UserModeration!
   reactivateDevice(id: ID!): Device!
   recordLoginAttempt(input: LoginAttemptInput!): LoginHistory!
@@ -2752,6 +2754,11 @@ type Mutation {
   syncItemOffers(itemId: ID!, storeId: String!): Item!
   syncItemPrices(itemId: ID!, storeIds: [String!]): Item!
   syncItemWithProvider(itemId: ID!, provider: ProviderType!): Item!
+  toggleShoppingListItemPurchased(
+    id: ID!
+    purchased: Boolean!
+    version: Int
+  ): ShoppingListItem!
   transferHomeOwnership(homeId: ID!, newOwnerId: ID!): HomeOwnership!
   trustDevice(id: ID!): Device!
   trustMultipleDevices(deviceIds: [ID!]!): [Device!]!
@@ -2826,6 +2833,16 @@ type Mutation {
   ): NotificationPreferences!
   updatePantry(id: ID!, input: UpdatePantryInput!): Pantry!
   updatePantryItem(id: ID!, input: UpdatePantryItemInput!): PantryItem!
+  updatePantryItemLocation(
+    id: ID!
+    storageLocation: String!
+    version: Int
+  ): PantryItem!
+  updatePantryItemQuantity(
+    currentQuantity: Float!
+    id: ID!
+    version: Int
+  ): PantryItem!
   updateProfile(input: UpdateUserProfileInput!): UserProfile!
   updateProfileAvatar(avatarUrl: String!): UserProfile!
   updateProfileCover(coverImageUrl: String!): UserProfile!
@@ -2839,6 +2856,21 @@ type Mutation {
   updateShoppingListItem(
     id: ID!
     input: UpdateShoppingListItemInput!
+  ): ShoppingListItem!
+  updateShoppingListItemNotes(
+    id: ID!
+    notes: String
+    version: Int
+  ): ShoppingListItem!
+  updateShoppingListItemPriority(
+    id: ID!
+    priority: Int!
+    version: Int
+  ): ShoppingListItem!
+  updateShoppingListItemQuantity(
+    id: ID!
+    quantity: Float!
+    version: Int
   ): ShoppingListItem!
   updateStorageLocation(
     id: ID!
@@ -4653,6 +4685,7 @@ input UpdateHomeInput {
   name: String
   tags: [String!]
   timezone: String
+  version: Int
 }
 
 input UpdateItemInput {
@@ -4831,6 +4864,7 @@ input UpdatePantryItemInput {
   storageState: StorageState
   tags: [String!]
   usageFrequency: UsageFrequency
+  version: Int
   wasteAmount: Float
   wasteReason: WasteReason
 }
@@ -4903,6 +4937,7 @@ input UpdateShoppingListInput {
   status: ListStatus
   tags: [String!]
   targetStoreId: String
+  version: Int
 }
 
 input UpdateShoppingListItemInput {
@@ -4922,6 +4957,7 @@ input UpdateShoppingListItemInput {
   storeSection: String
   unitId: ID
   unitName: String
+  version: Int
 }
 
 input UpdateStorageLocationInput {
