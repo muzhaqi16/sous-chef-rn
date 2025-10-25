@@ -35,8 +35,6 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
   const [localItems, setLocalItems] = useState(items);
   // Track if we're currently updating the sort order
   const isUpdatingRef = useRef(false);
-  // Track previous item IDs to detect add/remove operations
-  const prevItemIdsRef = useRef<string>('');
 
   // Safe area insets for bottom padding
   const insets = useSafeAreaInsets();
@@ -44,16 +42,9 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
   // Update local items when props change, but not during our own updates
   useEffect(() => {
     if (!isUpdatingRef.current) {
-      // Check if the items actually changed (not just re-sorted)
-      // This prevents flickering when sortOrder updates from server
-      const currentIds = prevItemIdsRef.current;
-      const newIds = items.map(item => item.id).join(',');
-
-      // Only update if items were added/removed
-      if (currentIds !== newIds) {
-        setLocalItems(items);
-        prevItemIdsRef.current = newIds;
-      }
+      // Always update localItems when items prop changes
+      // This ensures item property updates (like quantity) are reflected in the UI
+      setLocalItems(items);
     }
   }, [items]);
 

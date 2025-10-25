@@ -117,7 +117,7 @@ export const useStore = create<RootState>()(
       ),
       {
         name: STORAGE_KEY,
-        version: 3,
+        version: 4,
         storage: createJSONStorage(() => zustandStorage),
         onRehydrateStorage: () => {
           return (state, error) => {
