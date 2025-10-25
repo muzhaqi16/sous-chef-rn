@@ -58,20 +58,6 @@ function mergeArrayByIdIntelligent<T extends { id: string; __ref?: string }>(
     }
   });
 
-  // Debug: Log what we're merging
-  console.log('🔄 Merge function called:', {
-    existingCount: existing.length,
-    incomingCount: incoming.length,
-    existingVersions: Array.from(existingMap.entries()).map(([id, data]) => ({
-      id: id.slice(-8),
-      version: data.version,
-    })),
-    incomingVersions: Array.from(incomingMap.entries()).map(([id, data]) => ({
-      id: id.slice(-8),
-      version: data.version,
-    })),
-  });
-
   // Merge with version-based conflict resolution
   const merged: T[] = [];
 

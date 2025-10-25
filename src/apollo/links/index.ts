@@ -7,6 +7,7 @@ import { errorLink } from './errorLink';
 import { httpLink } from './httpLink';
 import { wsLink } from './wsLink';
 import { deduplicationLink } from './deduplicationLink';
+import { createQueueLink } from '../offlineQueue/queueLink';
 
 // Simplified HTTP transport (let Apollo handle retries naturally)
 const httpTransport = httpLink;
@@ -27,7 +28,7 @@ const transportLink = ApolloLink.split(
 
 /**
  * Create link chain for Apollo client
- * VANILLA configuration - no offline queue, no cache persistence
+ * Full-featured configuration with offline support
  */
 export function createLink() {
   // Console link configuration - only verbose in development
@@ -43,12 +44,16 @@ export function createLink() {
   // Telemetry link for tracking GraphQL operations
   const telemetryLink = createTelemetryLink();
 
-  // Link chain - let Apollo handle everything automatically
+  // Queue link for offline mutation support
+  const queueLink = createQueueLink();
+
+  // Link chain - ordered by priority
   return ApolloLink.from([
     deduplicationLink, // Prevent duplicate requests
     telemetryLink, // Track operations for monitoring
     errorLink, // Handle/log errors
     authLink, // Authentication headers
+    queueLink, // Queue mutations when offline
     consoleLink, // Development logging
     transportLink, // HTTP/WebSocket transport
   ]);

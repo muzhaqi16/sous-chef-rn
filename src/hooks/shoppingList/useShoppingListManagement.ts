@@ -6,6 +6,7 @@ import {
   useUpdateShoppingListItemMutation,
   useRemoveItemFromShoppingListMutation,
   useToggleShoppingListItemPurchasedMutation,
+  useShoppingListItemsChangedSubscription,
 } from '#generated';
 import { useSearchableList } from '../useSearchableList';
 import { useAuth } from '#hooks/auth/useAuth';
@@ -48,26 +49,17 @@ export function useShoppingListManagement(listId: string | undefined) {
 
   const { data, loading, error, refetch } = queryResult;
 
-  // TEMPORARILY DISABLED: Testing if subscription is overwriting mutation cache updates
   // Real-time updates via subscription - Apollo handles cache updates automatically
-  // useShoppingListItemsChangedSubscription({
-  //   variables: { listId: listId ?? '' },
-  //   skip: shouldSkip,
-  //   // No onData, no onError - let Apollo do its thing
-  // });
+  useShoppingListItemsChangedSubscription({
+    variables: { listId: listId ?? '' },
+    skip: shouldSkip,
+    // No onData, no onError - let Apollo do its thing
+  });
 
   // Direct dependency on data?.shoppingListItems like pantry
   // Force new array AND object references to trigger React re-renders
   const items = useMemo(() => {
     const itemsList = data?.shoppingListItems ?? [];
-    console.log('📊 Items useMemo updated:', {
-      count: itemsList.length,
-      allItems: itemsList.map(i => ({
-        id: i.id.slice(-8),
-        version: i.version,
-        quantity: i.quantity,
-      })),
-    });
     // Deep clone: spread array AND spread each object to create new references
     // This ensures React's shallow comparison detects changes
     return itemsList.map(item => ({ ...item }));

@@ -140,8 +140,7 @@ export const ShoppingListMain: React.FC = () => {
     errorPolicy: 'all',
   });
   const [updateQuantity] = useUpdateShoppingListItemQuantityMutation({
-    // Remove errorPolicy to let errors throw properly
-    // Use refetchQueries for reliable cache updates and re-renders
+    errorPolicy: 'all',
     refetchQueries: ['GetShoppingListItems'],
     awaitRefetchQueries: true,
   });
@@ -188,7 +187,6 @@ export const ShoppingListMain: React.FC = () => {
   // Use the shopping list hook for both data and mutations to ensure consistency
   const {
     items,
-    allItems,
     searchQuery,
     setSearchQuery,
     addItem,
@@ -321,7 +319,10 @@ export const ShoppingListMain: React.FC = () => {
     async (itemId: string) => {
       // Read FRESH data from cache instead of stale closure
       const cachedItem = client.readFragment({
-        id: client.cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
+        id: client.cache.identify({
+          __typename: 'ShoppingListItem',
+          id: itemId,
+        }),
         fragment: gql`
           fragment ItemVersionData on ShoppingListItem {
             id
@@ -332,79 +333,18 @@ export const ShoppingListMain: React.FC = () => {
       }) as { id: string; version: number; quantity: number } | null;
 
       if (!cachedItem) {
-        console.warn('⚠️ Item not found in cache:', itemId);
         return;
       }
 
-      console.log('🔘 Increment clicked:', {
-        id: itemId.slice(-8),
-        currentVersion: cachedItem.version,
-        currentQuantity: cachedItem.quantity,
-        newQuantity: (cachedItem.quantity || 1) + 1,
-      });
-
       try {
-        const result = await updateQuantity({
+        await updateQuantity({
           variables: {
             id: itemId,
             quantity: (cachedItem.quantity || 1) + 1,
             version: cachedItem.version,
           },
         });
-
-        console.log('✅ Mutation result:', {
-          success: !!result.data,
-          hasErrors: !!result.error,
-          error: result.error,
-          newVersion: result.data?.updateShoppingListItemQuantity?.version,
-          newQuantity: result.data?.updateShoppingListItemQuantity?.quantity,
-        });
-
-        // If mutation succeeded, manually update cache to ensure version is updated
-        if (result.data?.updateShoppingListItemQuantity) {
-          const updatedItem = result.data.updateShoppingListItemQuantity;
-
-          console.log('💾 Manually updating cache with:', {
-            id: updatedItem.id.slice(-8),
-            version: updatedItem.version,
-            quantity: updatedItem.quantity,
-          });
-
-          // Write updated item to cache
-          client.cache.writeFragment({
-            id: client.cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
-            fragment: gql`
-              fragment UpdatedItem on ShoppingListItem {
-                id
-                version
-                quantity
-                updatedAt
-              }
-            `,
-            data: {
-              id: updatedItem.id,
-              version: updatedItem.version,
-              quantity: updatedItem.quantity,
-              updatedAt: updatedItem.updatedAt,
-            },
-          });
-
-          // Force cache to notify all watchers
-          (client.cache as any).broadcastWatches?.();
-
-          console.log('✅ Cache manually updated and broadcast');
-        } else {
-          console.warn('⚠️ Mutation returned no data, relying on refetchQueries');
-        }
       } catch (error: any) {
-        console.error('❌ Mutation error:', {
-          message: error.message,
-          name: error.name,
-          graphQLErrors: error.graphQLErrors,
-          networkError: error.networkError,
-          fullError: error,
-        });
-
         if (handleVersionConflict(error)) {
           Alert.alert('Item Updated', getVersionConflictMessage(error), [
             { text: 'Refresh', onPress: () => refetchItems() },
@@ -423,7 +363,10 @@ export const ShoppingListMain: React.FC = () => {
     async (itemId: string) => {
       // Read FRESH data from cache instead of stale closure
       const cachedItem = client.readFragment({
-        id: client.cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
+        id: client.cache.identify({
+          __typename: 'ShoppingListItem',
+          id: itemId,
+        }),
         fragment: gql`
           fragment ItemVersionData2 on ShoppingListItem {
             id
@@ -434,45 +377,17 @@ export const ShoppingListMain: React.FC = () => {
       }) as { id: string; version: number; quantity: number } | null;
 
       if (!cachedItem) {
-        console.warn('⚠️ Item not found in cache:', itemId);
         return;
       }
 
       try {
-        const result = await updateQuantity({
+        await updateQuantity({
           variables: {
             id: itemId,
             quantity: Math.max(0, (cachedItem.quantity || 1) - 1),
             version: cachedItem.version,
           },
         });
-
-        // If mutation succeeded, manually update cache to ensure version is updated
-        if (result.data?.updateShoppingListItemQuantity) {
-          const updatedItem = result.data.updateShoppingListItemQuantity;
-
-          // Write updated item to cache
-          client.cache.writeFragment({
-            id: client.cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
-            fragment: gql`
-              fragment UpdatedItem2 on ShoppingListItem {
-                id
-                version
-                quantity
-                updatedAt
-              }
-            `,
-            data: {
-              id: updatedItem.id,
-              version: updatedItem.version,
-              quantity: updatedItem.quantity,
-              updatedAt: updatedItem.updatedAt,
-            },
-          });
-
-          // Force cache to notify all watchers
-          (client.cache as any).broadcastWatches?.();
-        }
       } catch (error: any) {
         if (handleVersionConflict(error)) {
           Alert.alert('Item Updated', getVersionConflictMessage(error), [
@@ -489,14 +404,6 @@ export const ShoppingListMain: React.FC = () => {
 
   // Transform shopping list items for SortableShoppingList
   const sortableItems = useMemo((): SortableShoppingListItem[] => {
-    console.log('🔄 sortableItems useMemo running, items:',
-      items.map((i: any) => ({
-        id: i.id.slice(-8),
-        quantity: i.quantity,
-        version: i.version
-      }))
-    );
-
     // Server already returns items sorted by: isPurchased ASC, sortOrder ASC, createdAt ASC
     // No need to re-sort on client - just separate by purchased status for UI
     const unpurchasedItems = items.filter((item: any) => !item.isPurchased);
