@@ -17,6 +17,7 @@ import { Telemetry } from '#/services/telemetry';
 import { AppErrorBoundary } from '#/components/providers/ErrorBoundary';
 import { useNetworkStatus } from '#/hooks/useNetworkStatus';
 import { queueManager } from '#/apollo/offlineQueue';
+import { NotificationProvider } from '#/components/notifications/NotificationProvider';
 
 // Enable native screens for better performance
 enableScreens();
@@ -103,9 +104,11 @@ const App = () => {
             />
             <SafeAreaView style={styles.container}>
               <ToastProvider>
-                <BottomSheetModalProvider>
-                  <Navigation />
-                </BottomSheetModalProvider>
+                <NotificationProvider>
+                  <BottomSheetModalProvider>
+                    <Navigation />
+                  </BottomSheetModalProvider>
+                </NotificationProvider>
               </ToastProvider>
             </SafeAreaView>
           </SafeAreaProvider>

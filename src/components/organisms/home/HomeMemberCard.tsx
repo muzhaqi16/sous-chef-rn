@@ -9,6 +9,7 @@ interface HomeMemberCardProps {
   member: Member;
   displayName: string;
   isCurrentUser: boolean;
+  currentUserMembership?: Member | null;
   onChangeRole: () => void;
   onRemove: () => void;
 }
@@ -20,9 +21,18 @@ export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
   member,
   displayName,
   isCurrentUser,
+  currentUserMembership,
   onChangeRole,
   onRemove,
 }) => {
+  // Only show actions if:
+  // 1. Current user has canManageHome permission (OWNER/ADMIN)
+  // 2. Target member is not the current user
+  // 3. Target member is not OWNER (owners cannot be removed/demoted)
+  const canManageMember =
+    currentUserMembership?.canManageHome &&
+    !isCurrentUser &&
+    member.role !== 'OWNER';
   return (
     <View style={[commonStyles.card, commonStyles.shadow, styles.memberCard]}>
       <View style={styles.memberInfo}>
@@ -37,10 +47,10 @@ export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
         )}
       </View>
 
-      {!isCurrentUser && (
+      {canManageMember && (
         <View style={styles.memberActions}>
           <TouchableOpacity style={styles.actionButton} onPress={onChangeRole}>
-            <Icon name="swap-horizontal" size={18} />
+            <Icon name="swap-horizontal" size={18} library="Ionicons" />
             <Text style={styles.actionButtonText}>Change Role</Text>
           </TouchableOpacity>
           <TouchableOpacity

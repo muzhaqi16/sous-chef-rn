@@ -176,6 +176,7 @@ export const commonStyles = StyleSheet.create(theme => ({
       md: theme.spacing.md,
       lg: theme.spacing.lg,
     },
+    backgroundColor: theme.colors.background,
   },
 
   headerTitle: {

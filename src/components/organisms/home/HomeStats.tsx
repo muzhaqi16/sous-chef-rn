@@ -16,19 +16,19 @@ export const HomeStats: React.FC<HomeStatsProps> = ({
 }) => {
   return (
     <View style={styles.statsContainer}>
-      <View style={styles.statCard}>
+      <View style={[commonStyles.shadow, styles.statCard]}>
         <Text style={styles.statNumber}>{totalHomes}</Text>
         <Text style={styles.statLabel}>
           {totalHomes === 1 ? 'Home' : 'Homes'}
         </Text>
       </View>
-      <View style={styles.statCard}>
+      <View style={[commonStyles.shadow, styles.statCard]}>
         <Text style={styles.statNumber}>{totalMembers}</Text>
         <Text style={styles.statLabel}>
           {totalMembers === 1 ? 'Member' : 'Members'}
         </Text>
       </View>
-      <View style={styles.statCard}>
+      <View style={[commonStyles.shadow, styles.statCard]}>
         <Text style={styles.statNumber}>{totalPantries}</Text>
         <Text style={styles.statLabel}>
           {totalPantries === 1 ? 'Pantry' : 'Pantries'}
@@ -50,7 +50,6 @@ const styles = StyleSheet.create(theme => ({
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
-    ...commonStyles.shadow,
   },
   statNumber: {
     fontSize: 24,

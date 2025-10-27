@@ -7,6 +7,7 @@ export const useInviteUserModal = () => {
   const [modalConfig, setModalConfig] = useState<{
     onSubmit: (email: string, role: MembershipRole) => Promise<void> | void;
     title?: string;
+    allowedRoles?: MembershipRole[];
   }>({
     onSubmit: async () => {},
   });
@@ -14,6 +15,7 @@ export const useInviteUserModal = () => {
   const show = (config: {
     onSubmit: (email: string, role: MembershipRole) => Promise<void> | void;
     title?: string;
+    allowedRoles?: MembershipRole[];
   }) => {
     setModalConfig(config);
     setVisible(true);
@@ -31,9 +33,10 @@ export const useInviteUserModal = () => {
         onClose={hide}
         onSubmit={modalConfig.onSubmit}
         title={modalConfig.title}
+        allowedRoles={modalConfig.allowedRoles}
       />
     ),
-    [visible, modalConfig.onSubmit, modalConfig.title],
+    [visible, modalConfig.onSubmit, modalConfig.title, modalConfig.allowedRoles],
   );
 
   return {

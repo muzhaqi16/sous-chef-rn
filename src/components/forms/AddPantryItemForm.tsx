@@ -52,9 +52,7 @@ const addItemSchema = yup.object({
     .number()
     .positive('Item weight must be positive')
     .nullable()
-    .transform((value, originalValue) =>
-      originalValue === '' ? null : value,
-    ),
+    .transform((value, originalValue) => (originalValue === '' ? null : value)),
   unit: yup.string(),
   minimumQuantity: yup.string(),
   storageState: yup.string().oneOf(Object.values(StorageState)),
@@ -77,7 +75,7 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
     null,
   );
-  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(
+  const [_selectedLocationId, setSelectedLocationId] = useState<string | null>(
     null,
   );
 
@@ -259,8 +257,8 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
         const categoryInput = selectedCategoryId
           ? { customCategory: selectedCategoryId } // If we have a selected category ID, use it
           : data.category.trim()
-            ? { itemCategory: data.category.trim() } // Otherwise use the typed category name
-            : {};
+          ? { itemCategory: data.category.trim() } // Otherwise use the typed category name
+          : {};
 
         // Save package weight information (netWeight + displayUnit)
         const weightInput =

@@ -1,16 +1,18 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { useGetHomeInvitesQuery } from '#generated';
 import { Icon } from '#utils';
 import { formatRole, getRoleBadgeStyle } from '#utils/formatters';
 import { HomeActions } from './HomeActions';
 import { MembersList } from './MembersList';
 import { commonStyles } from '#/styles';
+import { HomeInviteFragment } from '#generated';
 
 export type PartialHome = {
   id: string;
   name: string;
+  joinCode?: string;
+  allowJoinCode?: boolean;
   members?: Array<{
     id: string;
     role: string;
@@ -28,6 +30,7 @@ export type PartialHome = {
     };
   }>;
   pantries?: Array<{ id: string }>;
+  invites?: HomeInviteFragment[];
   myMembership?: {
     id: string;
     role: string;
@@ -39,6 +42,7 @@ export type PartialHome = {
 interface HomeCardProps {
   home: PartialHome;
   isDefault: boolean;
+  canInvite?: boolean;
   onPress?: (homeId: string) => void;
   onSetDefault: (homeId: string) => void;
   onInvite: (homeId: string) => void;
@@ -48,6 +52,7 @@ interface HomeCardProps {
 export const HomeCard: React.FC<HomeCardProps> = ({
   home,
   isDefault,
+  canInvite,
   onPress,
   onSetDefault,
   onInvite,
@@ -55,20 +60,12 @@ export const HomeCard: React.FC<HomeCardProps> = ({
 }) => {
   const { theme } = useUnistyles();
 
-  // Fetch invites for this specific home
-  const { data: invitesData } = useGetHomeInvitesQuery({
-    variables: { homeId: home.id },
-    fetchPolicy: 'cache-and-network',
-  });
-
-  const homeInvites = invitesData?.homeInvites || [];
-
   const handleDelete = () => {
     onDelete(home.id, home.name);
   };
 
   return (
-    <View style={styles.homeCard}>
+    <View style={[commonStyles.shadow, styles.homeCard]}>
       <TouchableOpacity
         style={styles.homeHeader}
         onPress={() => onPress?.(home.id)}
@@ -93,7 +90,10 @@ export const HomeCard: React.FC<HomeCardProps> = ({
               <Text
                 style={[
                   styles.roleText,
-                  { color: getRoleBadgeStyle(home.myMembership.role, theme).color },
+                  {
+                    color: getRoleBadgeStyle(home.myMembership.role, theme)
+                      .color,
+                  },
                 ]}
               >
                 {formatRole(home.myMembership.role)}
@@ -107,19 +107,25 @@ export const HomeCard: React.FC<HomeCardProps> = ({
           )}
         </View>
         {onPress && (
-          <Icon name="chevron-forward" size={20} color="#999" library="Ionicons" />
+          <Icon
+            name="chevron-forward"
+            size={20}
+            color="#999"
+            library="Ionicons"
+          />
         )}
       </TouchableOpacity>
 
       <HomeActions
         homeId={home.id}
         isDefault={isDefault}
+        canInvite={canInvite}
         onSetDefault={onSetDefault}
         onInvite={onInvite}
         onDelete={handleDelete}
       />
 
-      <MembersList members={home.members || []} invites={homeInvites || []} />
+      <MembersList members={home.members || []} invites={home.invites || []} />
     </View>
   );
 };
@@ -130,7 +136,6 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.md,
     marginHorizontal: theme.spacing.md,
     marginVertical: theme.spacing.sm,
-    ...commonStyles.shadow,
   },
   homeHeader: {
     flexDirection: 'row',

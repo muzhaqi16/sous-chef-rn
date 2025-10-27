@@ -1,11 +1,19 @@
-import React, {useState, useEffect, useCallback} from 'react';
-import {View, ScrollView, Alert, KeyboardAvoidingView, Platform, ActivityIndicator, Text} from 'react-native';
-import {useForm} from 'react-hook-form';
-import {yupResolver} from '@hookform/resolvers/yup';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  View,
+  ScrollView,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+  Text,
+} from 'react-native';
+import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import {commonStyles} from '#/styles/commonStyles';
+import { commonStyles } from '#/styles/commonStyles';
 import {
   StorageState,
   useUpdatePantryItemMutation,
@@ -13,12 +21,15 @@ import {
   useGetPantryQuery,
   useGetUnitBySymbolLazyQuery,
 } from '#generated';
-import {DynamicFormFields, FieldDef} from '#components/molecules/DynamicFormFields';
-import {FormInput} from '#components/molecules/FormInput';
+import {
+  DynamicFormFields,
+  FieldDef,
+} from '#components/molecules/DynamicFormFields';
+import { FormInput } from '#components/molecules/FormInput';
 
-import {PantryItemFormHeader} from './PantryItemFormHeader';
-import {QuantitySection} from './QuantitySection';
-import {StorageDetailsSection} from './StorageDetailsSection';
+import { PantryItemFormHeader } from './PantryItemFormHeader';
+import { QuantitySection } from './QuantitySection';
+import { StorageDetailsSection } from './StorageDetailsSection';
 
 interface EditPantryItemFormData {
   quantity: number;
@@ -41,9 +52,7 @@ const editItemSchema = yup.object({
     .number()
     .positive('Item weight must be positive')
     .nullable()
-    .transform((value, originalValue) =>
-      originalValue === '' ? null : value,
-    ),
+    .transform((value, originalValue) => (originalValue === '' ? null : value)),
   unit: yup.string(),
   reservedQuantity: yup.string(),
   storageState: yup.string().oneOf(Object.values(StorageState)),
@@ -62,17 +71,22 @@ export const EditPantryItemForm: React.FC<EditPantryItemFormProps> = ({
   itemId,
   onSuccess,
 }) => {
-  const {theme} = useUnistyles();
+  const { theme } = useUnistyles();
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [_selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [_selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
+    null,
+  );
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
-  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
+  const [_selectedLocationId, setSelectedLocationId] = useState<string | null>(
+    null,
+  );
 
-  const {data: existingItemData, loading: itemLoading} = useGetPantryItemQuery({
-    variables: {id: itemId},
-    skip: !itemId,
-  });
+  const { data: existingItemData, loading: itemLoading } =
+    useGetPantryItemQuery({
+      variables: { id: itemId },
+      skip: !itemId,
+    });
 
   // Fetch pantry details to get storage locations
   const pantryId = existingItemData?.pantryItem?.pantryId;
@@ -99,7 +113,10 @@ export const EditPantryItemForm: React.FC<EditPantryItemFormProps> = ({
         unit: item.actualNetWeightUnit?.symbol || item.unit?.symbol || '',
         reservedQuantity: item.reservedQuantity?.toString() || '',
         storageState: item.storageState || StorageState.Ambient,
-        location: typeof item.storageLocation === 'string' ? item.storageLocation : (item.storageLocation?.name || ''),
+        location:
+          typeof item.storageLocation === 'string'
+            ? item.storageLocation
+            : item.storageLocation?.name || '',
         expirationDate: item.expiresAt ? new Date(item.expiresAt) : undefined,
         notes: item.storageNotes || '',
         category: item.customCategory || '',
@@ -127,7 +144,7 @@ export const EditPantryItemForm: React.FC<EditPantryItemFormProps> = ({
   const {
     control,
     handleSubmit,
-    formState: {errors},
+    formState: { errors },
     setValue,
     watch,
     reset,
@@ -155,12 +172,9 @@ export const EditPantryItemForm: React.FC<EditPantryItemFormProps> = ({
     setValue('quantity', Math.max(1, current - 1));
   }, [setValue, watchedValues.quantity]);
 
-  const handleCategorySelect = useCallback(
-    (categoryId: string | null) => {
-      setSelectedCategoryId(categoryId);
-    },
-    [],
-  );
+  const handleCategorySelect = useCallback((categoryId: string | null) => {
+    setSelectedCategoryId(categoryId);
+  }, []);
 
   const handleStorageLocationSelect = useCallback(
     (locationId: string | null, location: any) => {
@@ -262,7 +276,8 @@ export const EditPantryItemForm: React.FC<EditPantryItemFormProps> = ({
   return (
     <KeyboardAvoidingView
       style={commonStyles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
       <PantryItemFormHeader
         title="Edit Pantry Item"
         onSave={handleSubmit(handleSave)}
@@ -271,7 +286,8 @@ export const EditPantryItemForm: React.FC<EditPantryItemFormProps> = ({
 
       <ScrollView
         style={commonStyles.scrollContent}
-        showsVerticalScrollIndicator={false}>
+        showsVerticalScrollIndicator={false}
+      >
         <View style={commonStyles.padding}>
           {/* Item Information Section - Read Only */}
           <View style={styles.section}>
@@ -307,9 +323,9 @@ export const EditPantryItemForm: React.FC<EditPantryItemFormProps> = ({
             storageState={watchedValues.storageState}
             expirationDate={watchedValues.expirationDate}
             showDatePicker={showDatePicker}
-            onStorageStateChange={(state) => setValue('storageState', state)}
+            onStorageStateChange={state => setValue('storageState', state)}
             onDatePickerToggle={() => setShowDatePicker(!showDatePicker)}
-            onDateChange={(date) => {
+            onDateChange={date => {
               setShowDatePicker(Platform.OS === 'ios');
               if (date) setValue('expirationDate', date);
             }}

@@ -10130,6 +10130,8 @@ export type GetHomesQuery = {
     __typename?: 'Home';
     id: string;
     name: string;
+    joinCode?: string | null | undefined;
+    allowJoinCode: boolean;
     createdAt: string;
     updatedAt: string;
     pantries?:
@@ -10183,6 +10185,43 @@ export type GetHomesQuery = {
           | undefined;
       };
     }>;
+    invites?:
+      | Array<{
+          __typename?: 'HomeInvite';
+          id: string;
+          email: string;
+          token: string;
+          homeId: string;
+          invitedUserId?: string | null | undefined;
+          recipientName?: string | null | undefined;
+          role: MembershipRole;
+          customPermissions?: any | null | undefined;
+          status: InviteStatus;
+          expiresAt: string;
+          sentAt: string;
+          lastReminderAt?: string | null | undefined;
+          reminderCount: number;
+          acceptedAt?: string | null | undefined;
+          declinedAt?: string | null | undefined;
+          revokedAt?: string | null | undefined;
+          message?: string | null | undefined;
+          createdAt: string;
+          home: { __typename?: 'Home'; id: string; name: string };
+          inviter: {
+            __typename?: 'User';
+            id: string;
+            email: string;
+            profile?:
+              | {
+                  __typename?: 'UserProfile';
+                  displayName?: string | null | undefined;
+                }
+              | null
+              | undefined;
+          };
+        }>
+      | null
+      | undefined;
   }>;
 };
 
@@ -10266,6 +10305,355 @@ export type GetMyPendingInvitesQuery = {
         | undefined;
     };
   }>;
+};
+
+export type GetHomeByJoinCodeQueryVariables = Exact<{
+  joinCode: Scalars['String']['input'];
+}>;
+
+export type GetHomeByJoinCodeQuery = {
+  __typename?: 'Query';
+  homeByJoinCode?:
+    | {
+        __typename?: 'Home';
+        id: string;
+        name: string;
+        type: HomeType;
+        description?: string | null | undefined;
+        timezone?: string | null | undefined;
+        currency?: string | null | undefined;
+        isPublic: boolean;
+        joinCode?: string | null | undefined;
+        allowJoinCode: boolean;
+        maxMembers?: number | null | undefined;
+        tags: Array<string>;
+        metadata?: any | null | undefined;
+        version: number;
+        createdAt: string;
+        updatedAt: string;
+        invites?:
+          | Array<{
+              __typename?: 'HomeInvite';
+              id: string;
+              email: string;
+              token: string;
+              homeId: string;
+              invitedUserId?: string | null | undefined;
+              recipientName?: string | null | undefined;
+              role: MembershipRole;
+              customPermissions?: any | null | undefined;
+              status: InviteStatus;
+              expiresAt: string;
+              sentAt: string;
+              lastReminderAt?: string | null | undefined;
+              reminderCount: number;
+              acceptedAt?: string | null | undefined;
+              declinedAt?: string | null | undefined;
+              revokedAt?: string | null | undefined;
+              message?: string | null | undefined;
+              createdAt: string;
+              home: { __typename?: 'Home'; id: string; name: string };
+              inviter: {
+                __typename?: 'User';
+                id: string;
+                email: string;
+                profile?:
+                  | {
+                      __typename?: 'UserProfile';
+                      displayName?: string | null | undefined;
+                    }
+                  | null
+                  | undefined;
+              };
+            }>
+          | null
+          | undefined;
+        members: Array<{
+          __typename?: 'Membership';
+          id: string;
+          homeId: string;
+          userId: string;
+          role: MembershipRole;
+          status: MembershipStatus;
+          displayName?: string | null | undefined;
+          canViewPantry: boolean;
+          canEditPantry: boolean;
+          canAddItems: boolean;
+          canRemoveItems: boolean;
+          canInviteOthers: boolean;
+          canManageHome: boolean;
+          lastActiveAt?: string | null | undefined;
+          joinedAt: string;
+          leftAt?: string | null | undefined;
+          createdAt: string;
+          updatedAt: string;
+          user: {
+            __typename?: 'User';
+            id: string;
+            email: string;
+            emailVerified: boolean;
+            role: UserRole;
+            onBoarded: boolean;
+            timezone?: string | null | undefined;
+            preferredCurrency?: string | null | undefined;
+            language?: string | null | undefined;
+            defaultShoppingListId?: string | null | undefined;
+            defaultHomeId?: string | null | undefined;
+            createdAt: string;
+            updatedAt: string;
+            lastActiveAt?: string | null | undefined;
+            profile?:
+              | {
+                  __typename?: 'UserProfile';
+                  id: string;
+                  firstName?: string | null | undefined;
+                  lastName?: string | null | undefined;
+                  displayName?: string | null | undefined;
+                  bio?: string | null | undefined;
+                  avatar?: string | null | undefined;
+                  phone?: string | null | undefined;
+                }
+              | null
+              | undefined;
+            settings?:
+              | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
+              | null
+              | undefined;
+          };
+        }>;
+        pantries?:
+          | Array<{
+              __typename?: 'Pantry';
+              id: string;
+              homeId: string;
+              name: string;
+              description?: string | null | undefined;
+              isDefault: boolean;
+              location?: string | null | undefined;
+              temperature?: string | null | undefined;
+              tags: Array<string>;
+              metadata?: any | null | undefined;
+              version: number;
+              createdAt: string;
+              updatedAt: string;
+              items?:
+                | Array<{
+                    __typename?: 'PantryItem';
+                    id: string;
+                    pantryId: string;
+                    itemId: string;
+                    itemName: string;
+                    unitName: string;
+                    unitId?: string | null | undefined;
+                    expiresAt?: string | null | undefined;
+                    storageState: StorageState;
+                    storageNotes?: string | null | undefined;
+                    initialQuantity: number;
+                    currentQuantity: number;
+                    consumedQuantity: number;
+                    reservedQuantity: number;
+                    autoReorderPoint?: number | null | undefined;
+                    isAutoReorder: boolean;
+                    customCategory?: string | null | undefined;
+                    actualNetWeight?: number | null | undefined;
+                    createdAt: string;
+                    updatedAt?: string | null | undefined;
+                    version?: number | null | undefined;
+                    tags: Array<string>;
+                    item: {
+                      __typename?: 'Item';
+                      id: string;
+                      name: string;
+                      description?: string | null | undefined;
+                      dataSource: DataSource;
+                      type: ItemType;
+                      storageState: StorageState;
+                      showInOnboarding: boolean;
+                      shelfLifeDays?: number | null | undefined;
+                      popularity: number;
+                      status: ItemStatus;
+                      visibility: Visibility;
+                      imageUrl?: string | null | undefined;
+                      tags: Array<string>;
+                      healthBenefits?: any | null | undefined;
+                      allergens?: any | null | undefined;
+                      nutritions?: any | null | undefined;
+                      metadata?: any | null | undefined;
+                      ingredients?: any | null | undefined;
+                      createdAt: string;
+                      updatedAt: string;
+                      deletedAt?: string | null | undefined;
+                      version: number;
+                      netWeight?: number | null | undefined;
+                      displayUnit?:
+                        | {
+                            __typename?: 'Unit';
+                            id: string;
+                            name: string;
+                            symbol: string;
+                          }
+                        | null
+                        | undefined;
+                      units: Array<{
+                        __typename?: 'ItemUnit';
+                        id: string;
+                        itemId: string;
+                        unitId: string;
+                        isDefault: boolean;
+                        isPreferred: boolean;
+                        isCommon: boolean;
+                        conversionRatio?: number | null | undefined;
+                        conversionNote?: string | null | undefined;
+                        packageSize?: number | null | undefined;
+                        packageDescription?: string | null | undefined;
+                        retailUnit: boolean;
+                        usageContext: Array<UnitUsageContext>;
+                        recommendedFor: Array<UnitRecommendation>;
+                        minQuantity?: number | null | undefined;
+                        maxQuantity?: number | null | undefined;
+                        quantityStep?: number | null | undefined;
+                        averagePricePerUnit?: number | null | undefined;
+                        lastPriceUpdate?: string | null | undefined;
+                        priceSource?: string | null | undefined;
+                        usageCount: number;
+                        lastUsedAt?: string | null | undefined;
+                        popularityScore: number;
+                        source: UnitSource;
+                        confidence?: number | null | undefined;
+                        isVerified: boolean;
+                        verifiedAt?: string | null | undefined;
+                        createdAt: string;
+                        updatedAt: string;
+                        version: number;
+                      }>;
+                      brands: Array<{
+                        __typename?: 'ItemBrand';
+                        id: string;
+                        brand: {
+                          __typename?: 'Brand';
+                          id: string;
+                          name: string;
+                          description?: string | null | undefined;
+                          createdAt: string;
+                          updatedAt: string;
+                          version: number;
+                        };
+                      }>;
+                      categories?:
+                        | Array<{
+                            __typename?: 'ItemCategory';
+                            id: string;
+                            isPrimary: boolean;
+                            assignedAt?: string | null | undefined;
+                            assignedBy?:
+                              | { __typename?: 'User'; id: string }
+                              | null
+                              | undefined;
+                            category: {
+                              __typename?: 'Category';
+                              id: string;
+                              name: string;
+                              slug: string;
+                              description?: string | null | undefined;
+                              icon?: string | null | undefined;
+                              color?: string | null | undefined;
+                              sortOrder: number;
+                              type: CategoryType;
+                              isActive: boolean;
+                              isSystem: boolean;
+                              visibility: Visibility;
+                              itemCount: number;
+                              usageCount: number;
+                              createdAt: string;
+                              updatedAt: string;
+                              deletedAt?: string | null | undefined;
+                              version: number;
+                            };
+                          }>
+                        | null
+                        | undefined;
+                      creations: Array<{
+                        __typename?: 'ItemCreation';
+                        id: string;
+                        source: DataSource;
+                        reason?: string | null | undefined;
+                        metadata?: any | null | undefined;
+                        createdAt: string;
+                      }>;
+                      edits: Array<{
+                        __typename?: 'ItemEdit';
+                        id: string;
+                        fieldsChanged: Array<string>;
+                        oldValues?: any | null | undefined;
+                        newValues?: any | null | undefined;
+                        editReason?: string | null | undefined;
+                        createdAt: string;
+                      }>;
+                    };
+                    unit?:
+                      | {
+                          __typename?: 'Unit';
+                          id: string;
+                          name: string;
+                          symbol: string;
+                          type: UnitType;
+                          isMetric: boolean;
+                          baseUnitId?: string | null | undefined;
+                          conversionFactor: number;
+                          isCommon: boolean;
+                        }
+                      | null
+                      | undefined;
+                    storageLocation?:
+                      | {
+                          __typename?: 'StorageLocation';
+                          id: string;
+                          name: string;
+                          type: StorageType;
+                        }
+                      | null
+                      | undefined;
+                    actualNetWeightUnit?:
+                      | {
+                          __typename?: 'Unit';
+                          id: string;
+                          name: string;
+                          symbol: string;
+                          type: UnitType;
+                        }
+                      | null
+                      | undefined;
+                    usageRecords: Array<{
+                      __typename?: 'PantryItemUsage';
+                      id: string;
+                      quantityUsed: number;
+                      usedAt: string;
+                      purpose: UsagePurpose;
+                      notes?: string | null | undefined;
+                      pantryItem: { __typename?: 'PantryItem'; id: string };
+                      usedBy: { __typename?: 'User'; id: string };
+                      cookingLog?:
+                        | { __typename?: 'CookingLog'; id: string }
+                        | null
+                        | undefined;
+                      mealPlanItem?:
+                        | { __typename?: 'MealPlanItem'; id: string }
+                        | null
+                        | undefined;
+                      recipe?:
+                        | { __typename?: 'Recipe'; id: string }
+                        | null
+                        | undefined;
+                    }>;
+                  }>
+                | null
+                | undefined;
+            }>
+          | null
+          | undefined;
+      }
+    | null
+    | undefined;
 };
 
 export type CreateHomeMutationVariables = Exact<{
@@ -11153,6 +11541,34 @@ export type RevokeHomeInviteMutation = {
   revokeHomeInvite: boolean;
 };
 
+export type JoinHomeByCodeMutationVariables = Exact<{
+  joinCode: Scalars['String']['input'];
+}>;
+
+export type JoinHomeByCodeMutation = {
+  __typename?: 'Mutation';
+  joinHomeByCode: {
+    __typename?: 'Membership';
+    id: string;
+    homeId: string;
+    userId: string;
+    role: MembershipRole;
+    status: MembershipStatus;
+    displayName?: string | null | undefined;
+    canViewPantry: boolean;
+    canEditPantry: boolean;
+    canAddItems: boolean;
+    canRemoveItems: boolean;
+    canInviteOthers: boolean;
+    canManageHome: boolean;
+    lastActiveAt?: string | null | undefined;
+    joinedAt: string;
+    leftAt?: string | null | undefined;
+    createdAt: string;
+    updatedAt: string;
+  };
+};
+
 export type MembershipUpdatedSubscriptionVariables = Exact<{
   homeId?: InputMaybe<Scalars['ID']['input']>;
 }>;
@@ -11933,7 +12349,12 @@ export type SearchItemsQuery = {
         totalCount: number;
         hasMore: boolean;
         items?:
-          | Array<{ __typename?: 'Item'; id: string; name: string }>
+          | Array<{
+              __typename?: 'Item';
+              id: string;
+              name: string;
+              imageUrl?: string | null | undefined;
+            }>
           | null
           | undefined;
       }

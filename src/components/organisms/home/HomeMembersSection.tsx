@@ -17,6 +17,7 @@ interface HomeMembersSectionProps {
   members: Member[];
   invites: Invite[];
   currentUserId?: string;
+  currentUserMembership?: Member | null;
   onChangeRole: (membershipId: string, role: string, name: string) => void;
   onRemove: (membershipId: string, name: string) => void;
   onRevokeInvite: (inviteId: string, email: string) => void;
@@ -29,6 +30,7 @@ export const HomeMembersSection: React.FC<HomeMembersSectionProps> = ({
   members,
   invites,
   currentUserId,
+  currentUserMembership,
   onChangeRole,
   onRemove,
   onRevokeInvite,
@@ -50,6 +52,7 @@ export const HomeMembersSection: React.FC<HomeMembersSectionProps> = ({
               member={member}
               displayName={displayName}
               isCurrentUser={isCurrentUser}
+              currentUserMembership={currentUserMembership}
               onChangeRole={() =>
                 onChangeRole(member.id, member.role, displayName)
               }

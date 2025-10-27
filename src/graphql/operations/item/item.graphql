@@ -47,6 +47,7 @@ query SearchItems($input: SearchItemsInput!) {
     items {
       id
       name
+      imageUrl
     }
     totalCount
     hasMore

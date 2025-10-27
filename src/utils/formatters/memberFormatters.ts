@@ -7,6 +7,12 @@ export interface Member {
   status: string;
   userId?: string;
   displayName?: string | null;
+  canViewPantry?: boolean;
+  canEditPantry?: boolean;
+  canAddItems?: boolean;
+  canRemoveItems?: boolean;
+  canInviteOthers?: boolean;
+  canManageHome?: boolean;
   user?: {
     id: string;
     email?: string | null;

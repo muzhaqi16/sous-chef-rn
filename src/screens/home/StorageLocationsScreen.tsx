@@ -42,15 +42,6 @@ export const StorageLocationsScreen: React.FC<{
     error,
   } = useStorageLocationManagement(homeId);
 
-  // Debug logging
-  React.useEffect(() => {
-    console.log('StorageLocationsScreen - homeId:', homeId);
-    console.log('StorageLocationsScreen - locations count:', locations.length);
-    console.log('StorageLocationsScreen - locations:', locations);
-    console.log('StorageLocationsScreen - error:', error);
-    console.log('StorageLocationsScreen - initialLoading:', initialLoading);
-  }, [homeId, locations, error, initialLoading]);
-
   // Recursive component to render tree structure
   const renderTreeNode = (node: any, depth: number = 0): React.ReactElement => (
     <View key={node.id} style={{ marginLeft: depth * 16 }}>
@@ -128,29 +119,19 @@ export const StorageLocationsScreen: React.FC<{
     );
   }
 
-  // Show error state if query failed
-  if (error) {
-    console.error('StorageLocationsScreen - GraphQL Error:', error);
-  }
-
   const sections = [
     {
-      title: `Storage Locations (${locations.length})`,
       content: (
-        <View>
+        <View style={styles.contentContainer}>
+          {/* Title and count */}
+          <Text style={styles.sectionTitle}>
+            Storage Locations ({locations.length})
+          </Text>
+
           {/* Error Message */}
           {error && (
-            <View
-              style={[
-                commonStyles.card,
-                {
-                  backgroundColor: '#ffebee',
-                  marginHorizontal: 16,
-                  marginBottom: 16,
-                },
-              ]}
-            >
-              <Text style={{ color: '#c62828', fontSize: 14 }}>
+            <View style={styles.errorCard}>
+              <Text style={styles.errorText}>
                 Error loading storage locations: {error.message}
               </Text>
             </View>
@@ -266,6 +247,29 @@ export const StorageLocationsScreen: React.FC<{
 };
 
 const styles = StyleSheet.create(theme => ({
+  contentContainer: {
+    margin: -16, // Negate DetailTemplate section padding
+    padding: 0,
+  },
+  sectionTitle: {
+    fontSize: theme.fonts.size.lg,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textPrimary,
+    marginTop: theme.spacing.md,
+    marginBottom: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
+  },
+  errorCard: {
+    backgroundColor: '#ffebee',
+    padding: theme.spacing.md,
+    borderRadius: theme.radii.md,
+    marginHorizontal: theme.spacing.md,
+    marginBottom: theme.spacing.md,
+  },
+  errorText: {
+    color: '#c62828',
+    fontSize: theme.fonts.size.sm,
+  },
   emptyIcon: {
     fontSize: 64,
     marginBottom: theme.spacing.md,
@@ -282,7 +286,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
+    paddingHorizontal: theme.spacing.sm,
     borderRadius: theme.radii.md,
     borderWidth: 1,
     borderColor: theme.colors.border,

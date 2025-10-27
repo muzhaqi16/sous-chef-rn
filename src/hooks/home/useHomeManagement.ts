@@ -10,6 +10,9 @@ import {
   MembershipRole,
   useGetDefaultHomeQuery,
   useSetDefaultHomeMutation,
+  useJoinHomeByCodeMutation,
+  useGetHomeByJoinCodeLazyQuery,
+  GetDefaultHomeDocument,
 } from '#generated';
 import { useSearchableList } from '../useSearchableList';
 import { useStore } from '#store';
@@ -36,18 +39,15 @@ export function useHomeManagement() {
     nextFetchPolicy: 'cache-first', // Subsequent fetches use cache to avoid unnecessary refetches
   });
 
-  const [setDefaultHomeMutation] = useSetDefaultHomeMutation();
+  const [setDefaultHomeMutation] = useSetDefaultHomeMutation({
+    refetchQueries: [{ query: GetDefaultHomeDocument }],
+  });
   const homes = data?.homes;
   const remoteDefaultHomeId = defaultHomeData?.getDefaultHome?.id;
 
-  // One-way sync: remote default home → local store (read-only, no mutations)
-  useEffect(() => {
-    // Only update local when remote has a value and they differ
-    if (remoteDefaultHomeId && remoteDefaultHomeId !== selectedHomeId) {
-      console.log('🔄 Syncing remote default to local:', remoteDefaultHomeId);
-      setSelectedHomeId(remoteDefaultHomeId);
-    }
-  }, [remoteDefaultHomeId, selectedHomeId, setSelectedHomeId]);
+  // NOTE: Remote sync logic removed from here to prevent infinite loop
+  // The sync from remote → local is now handled ONLY by useDefaultHome hook
+  // This hook (useHomeManagement) should only handle ACTIONS (mutations), not passive syncing
 
   // Auto-select first home if no default is set and we have homes (initialization for first-time users)
   // This runs ONCE when the user has homes but no default home set anywhere
@@ -309,6 +309,57 @@ export function useHomeManagement() {
     },
   });
 
+  // Join home by code mutation
+  const [joinHomeByCodeMutation, { loading: joiningByCode }] =
+    useJoinHomeByCodeMutation({
+      update: (_cache, { data }) => {
+        if (!data?.joinHomeByCode) return;
+
+        try {
+          // The home should now be in the homes list
+          // We need to refetch to get the full home data with pantries, etc.
+          refetch();
+        } catch (error) {
+          console.warn('Cache update failed for joinHomeByCode:', error);
+          refetch();
+        }
+      },
+      onCompleted: data => {
+        if (data?.joinHomeByCode) {
+          const homeId = data.joinHomeByCode.homeId;
+
+          // Set as default if this is the first home
+          const freshHomes = homes || [];
+          if (freshHomes.length === 0) {
+            console.log('🏠 Setting newly joined home as default (first home)');
+            setSelectedHomeId(homeId);
+            setDefaultHomeMutation({
+              variables: { homeId },
+            }).catch((error: any) => {
+              const { message } = handleApolloError(error, {
+                operation: 'Set Default Home After Join',
+              });
+              console.warn('Failed to set default home after join:', message);
+            });
+          }
+
+          Alert.alert('Success', 'You have successfully joined the home!');
+        }
+      },
+      onError: (error: any) => {
+        const { message } = handleApolloError(error, {
+          operation: 'Join Home By Code',
+        });
+        Alert.alert('Error', message);
+      },
+    });
+
+  // Preview home by join code query
+  const [getHomeByJoinCode, { loading: loadingPreview, data: previewData }] =
+    useGetHomeByJoinCodeLazyQuery({
+      fetchPolicy: 'network-only', // Always fetch fresh data
+    });
+
   // Helper functions
   const createHome = async (
     name: string,
@@ -394,8 +445,8 @@ export function useHomeManagement() {
   };
 
   const setDefaultHome = async (homeId: string) => {
-    // Prevent redundant calls if already set as default
-    if (homeId === selectedHomeId) {
+    // Prevent redundant calls if already set as default (check both local and remote)
+    if (homeId === selectedHomeId && homeId === remoteDefaultHomeId) {
       console.log('🏠 Home is already set as default, skipping');
       return true;
     }
@@ -414,25 +465,20 @@ export function useHomeManagement() {
     }
 
     try {
-      // Update local state immediately for responsive UI
-      setSelectedHomeId(homeId);
-
-      // Sync to remote (Apollo cache will be updated automatically by the mutation)
+      // Call mutation first - the useDefaultHome sync effect will update local state
+      // when Apollo cache is updated by the mutation response
       const result = await setDefaultHomeMutation({
         variables: { homeId },
       });
 
       if (result.data) {
         console.log('🏠 Default home set successfully:', homeId);
+        // No need to manually update local state - useDefaultHome's sync effect handles it
         return true;
       }
 
-      // Rollback on failure
-      setSelectedHomeId(remoteDefaultHomeId || null);
       return false;
     } catch (error: any) {
-      // Rollback on error
-      setSelectedHomeId(remoteDefaultHomeId || null);
       Alert.alert('Error', 'Failed to set default home');
       return false;
     }
@@ -455,6 +501,43 @@ export function useHomeManagement() {
     });
 
     return result.data;
+  };
+
+  const joinHomeByCode = async (joinCode: string) => {
+    if (!joinCode.trim()) {
+      Alert.alert('Error', 'Please enter a join code');
+      return false;
+    }
+
+    try {
+      const result = await joinHomeByCodeMutation({
+        variables: { joinCode: joinCode.trim() },
+      });
+
+      return result.data?.joinHomeByCode || false;
+    } catch (error: any) {
+      return false;
+    }
+  };
+
+  const previewHomeByCode = async (joinCode: string) => {
+    if (!joinCode.trim()) {
+      return null;
+    }
+
+    try {
+      const result = await getHomeByJoinCode({
+        variables: { joinCode: joinCode.trim() },
+      });
+
+      return result.data?.homeByJoinCode || null;
+    } catch (error: any) {
+      const { message } = handleApolloError(error, {
+        operation: 'Preview Home',
+      });
+      Alert.alert('Error', message);
+      return null;
+    }
   };
 
   // Track the last known pantries count to avoid flickering to 0 during refetch
@@ -519,6 +602,7 @@ export function useHomeManagement() {
     initialLoading: (!homes && loading) || (!defaultHomeData && loadingDefaultHome),
     error,
     stats,
+    previewHome: previewData?.homeByJoinCode || null,
 
     // Search
     searchQuery: query,
@@ -529,6 +613,8 @@ export function useHomeManagement() {
     updating,
     deleting,
     inviting,
+    joiningByCode,
+    loadingPreview,
 
     // Actions
     createHome,
@@ -536,6 +622,8 @@ export function useHomeManagement() {
     deleteHome,
     setDefaultHome,
     inviteUserToHome,
+    joinHomeByCode,
+    previewHomeByCode,
     refetch: memoizedRefetch,
   };
 }

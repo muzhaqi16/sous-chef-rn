@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, ScrollView, Text } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils';
 import { Header } from '../molecules/Header';
 import { Button } from '../base/Button';
@@ -29,6 +29,7 @@ export const DetailTemplate: React.FC<DetailTemplateProps> = ({
   sections,
   primaryAction,
 }) => {
+  const { theme } = useUnistyles();
   return (
     <View style={styles.container}>
       <Header
@@ -39,7 +40,7 @@ export const DetailTemplate: React.FC<DetailTemplateProps> = ({
       />
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: 20 }}
+        contentContainerStyle={{ paddingVertical: theme.spacing.md }}
       >
         {sections.map((section, index) => (
           <View key={index} style={styles.section}>
@@ -62,9 +63,9 @@ export const DetailTemplate: React.FC<DetailTemplateProps> = ({
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-    paddingHorizontal: theme.spacing.md,
   },
   content: {
+    paddingHorizontal: theme.spacing.md,
     flex: 1,
   },
   section: {

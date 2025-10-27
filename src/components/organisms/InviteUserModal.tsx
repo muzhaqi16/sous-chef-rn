@@ -19,6 +19,7 @@ interface InviteUserModalProps {
   title?: string;
   submitText?: string;
   cancelText?: string;
+  allowedRoles?: MembershipRole[];
 }
 
 const ROLE_OPTIONS = [
@@ -56,11 +57,26 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
   title = 'Invite Member to Home',
   submitText = 'Send Invite',
   cancelText = 'Cancel',
+  allowedRoles,
 }) => {
+  // Filter role options based on allowed roles
+  // If no allowedRoles provided, exclude Owner by default (it's reserved for home creators)
+  const availableRoleOptions = ROLE_OPTIONS.filter(roleOption => {
+    if (allowedRoles) {
+      return allowedRoles.includes(roleOption.value);
+    }
+    // By default, exclude Owner role
+    return roleOption.value !== MembershipRole.Owner;
+  });
+
+  // Use first available role as default
+  const defaultRole =
+    availableRoleOptions.length > 0
+      ? availableRoleOptions[0].value
+      : MembershipRole.Member;
+
   const [email, setEmail] = useState('');
-  const [selectedRole, setSelectedRole] = useState<MembershipRole>(
-    MembershipRole.Member,
-  );
+  const [selectedRole, setSelectedRole] = useState<MembershipRole>(defaultRole);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -113,7 +129,7 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
 
   const handleClose = () => {
     setEmail('');
-    setSelectedRole(MembershipRole.Member);
+    setSelectedRole(defaultRole);
     setError('');
     onClose();
   };
@@ -154,7 +170,7 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
 
             {/* Role Selection */}
             <Text style={[styles.label, styles.roleLabel]}>Select Role</Text>
-            {ROLE_OPTIONS.map(role => (
+            {availableRoleOptions.map(role => (
               <TouchableOpacity
                 key={role.value}
                 style={[
@@ -196,7 +212,12 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
                   <Text style={styles.roleOptionLabel}>{role.label}</Text>
                   <Text style={styles.roleDescription}>{role.description}</Text>
                   {role.warning && selectedRole === role.value && (
-                    <Text style={[styles.warningText, { color: theme.colors.warning }]}>
+                    <Text
+                      style={[
+                        styles.warningText,
+                        { color: theme.colors.warning },
+                      ]}
+                    >
                       ⚠️ Owners have full control
                     </Text>
                   )}
@@ -265,8 +286,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 5,
-    minWidth: 320,
-    maxWidth: '90%',
+    width: '90%',
     maxHeight: '80%',
   },
   title: {
