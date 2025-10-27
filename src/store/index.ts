@@ -117,7 +117,7 @@ export const useStore = create<RootState>()(
       ),
       {
         name: STORAGE_KEY,
-        version: 4,
+        version: 5,
         storage: createJSONStorage(() => zustandStorage),
         onRehydrateStorage: () => {
           return (state, error) => {
@@ -137,6 +137,12 @@ export const useStore = create<RootState>()(
 
           /* eslint-disable @typescript-eslint/no-unused-vars */
           const {
+            // Exclude network state (always detect fresh on app start)
+            isOnline,
+            isInternetReachable,
+            networkType,
+            lastOnlineTime,
+            lastOfflineTime,
             // Exclude UI state that should not persist (intentionally unused)
             bottomSheetVisible,
             bottomSheetIndex,

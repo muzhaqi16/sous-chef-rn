@@ -8,3 +8,15 @@
 #   http://developer.android.com/guide/developing/tools/proguard.html
 
 # Add any project specific keep options here:
+
+# React Native NetInfo - Prevent stripping network detection module
+-keep class com.reactnativecommunity.netinfo.** { *; }
+-keepclassmembers class com.reactnativecommunity.netinfo.** { *; }
+
+# React Native Config - Prevent stripping environment variable module
+-keep class com.lugg.ReactNativeConfig.** { *; }
+-keepclassmembers class com.lugg.ReactNativeConfig.** { *; }
+
+# Apollo Client / GraphQL - Keep generated types and operations
+-keep class ** implements com.apollographql.apollo.api.** { *; }
+-keepclassmembers class ** implements com.apollographql.apollo.api.** { *; }
