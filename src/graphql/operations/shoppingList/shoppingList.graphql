@@ -319,7 +319,9 @@ mutation UpdateShoppingListItem(
 }
 
 mutation RemoveItemFromShoppingList($id: ID!) {
-  removeItemFromShoppingList(id: $id)
+  removeItemFromShoppingList(id: $id) {
+    ...ShoppingListItemFragment
+  }
 }
 
 mutation markItemPurchased($id: ID!, $status: Boolean!) {

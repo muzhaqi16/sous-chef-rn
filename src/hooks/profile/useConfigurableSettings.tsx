@@ -385,6 +385,7 @@ export const useConfigurableSettings = (profile: any) => {
           break;
 
         // Navigation items
+        case 'personalInformation':
         case 'notifications':
         case 'dietaryProfile':
         case 'appSettings':

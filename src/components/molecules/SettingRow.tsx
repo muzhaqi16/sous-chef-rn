@@ -166,6 +166,15 @@ export const SettingRow: React.FC<SettingRowProps> = ({
               color={theme.colors.textSecondary}
             />
           )}
+
+          {item.type === 'navigation' && (
+            <Icon
+              library="Feather"
+              name="chevron-right"
+              size={20}
+              color={theme.colors.textSecondary}
+            />
+          )}
         </View>
       </TouchableOpacity>
 

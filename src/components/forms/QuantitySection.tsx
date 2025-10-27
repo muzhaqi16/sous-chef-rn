@@ -87,6 +87,20 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
           props: { keyboardType: 'numeric' },
         },
         {
+          name: 'itemWeight',
+          label: 'Net Weight',
+          placeholder: 'e.g., 2.2',
+          component: FormInput,
+          props: { keyboardType: 'decimal-pad' },
+        },
+        {
+          name: 'unit',
+          label: 'Unit',
+          placeholder: 'kg, lbs, pcs',
+          component: 'unitAutocomplete',
+          onUnitSelected,
+        },
+        {
           name: 'reservedQuantity',
           label: 'Minimum Stock Level',
           placeholder: 'Alert when below this quantity',

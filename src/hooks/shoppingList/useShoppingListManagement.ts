@@ -95,6 +95,37 @@ export function useShoppingListManagement(listId: string | undefined) {
   // Mutations - Apollo handles cache updates automatically via optimistic responses
   const [addItemMutation] = useAddItemToShoppingListMutation({
     errorPolicy: 'all',
+    update(cache, { data }) {
+      if (!data?.addItemToShoppingList || !listId) return;
+
+      try {
+        // Modify the shoppingListItems field in the cache
+        cache.modify({
+          fields: {
+            shoppingListItems(existingItems = [], { readField, toReference }) {
+              const newItemRef = toReference(data.addItemToShoppingList);
+
+              // Check if item already exists (avoid duplicates)
+              const exists = existingItems.some(
+                (itemRef: any) =>
+                  readField('id', itemRef) === data.addItemToShoppingList.id,
+              );
+
+              if (exists) {
+                return existingItems;
+              }
+
+              // Add new item to the list
+              return [...existingItems, newItemRef];
+            },
+          },
+        });
+      } catch (error) {
+        console.warn('Cache update failed for addItem, will refetch:', error);
+        // Fallback: refetch if cache update fails
+        refetch();
+      }
+    },
     onError: error => {
       const { message } = handleApolloError(error, {
         operation: 'Add Shopping List Item',
@@ -115,6 +146,34 @@ export function useShoppingListManagement(listId: string | undefined) {
 
   const [removeItemMutation] = useRemoveItemFromShoppingListMutation({
     errorPolicy: 'all',
+    update(cache, { data }, { variables }) {
+      if (!data?.removeItemFromShoppingList || !listId || !variables) return;
+
+      try {
+        const itemId = variables.id;
+
+        // Remove the item from the cache using cache.modify (proper approach)
+        cache.modify({
+          fields: {
+            shoppingListItems(existingItems = [], { readField }) {
+              return existingItems.filter(
+                (itemRef: any) => readField('id', itemRef) !== itemId,
+              );
+            },
+          },
+        });
+
+        // Evict the removed item from cache
+        cache.evict({
+          id: cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
+        });
+        cache.gc(); // Garbage collect orphaned data
+      } catch (error) {
+        console.warn('Cache update failed for removeItem, will refetch:', error);
+        // Fallback: refetch if cache update fails
+        refetch();
+      }
+    },
     onError: error => {
       const { message } = handleApolloError(error, {
         operation: 'Remove Shopping List Item',

@@ -10,6 +10,7 @@ import {
   StorageState,
   useUpdatePantryItemMutation,
   useGetPantryItemQuery,
+  useGetUnitBySymbolLazyQuery,
 } from '#generated';
 import {DynamicFormFields, FieldDef} from '#components/molecules/DynamicFormFields';
 import {FormInput} from '#components/molecules/FormInput';
@@ -20,6 +21,8 @@ import {StorageDetailsSection} from './StorageDetailsSection';
 
 interface EditPantryItemFormData {
   quantity: number;
+  itemWeight?: number;
+  unit: string;
   reservedQuantity: string;
   storageState: StorageState;
   location: string;
@@ -33,6 +36,14 @@ interface EditPantryItemFormData {
 
 const editItemSchema = yup.object({
   quantity: yup.number().min(1, 'Quantity must be at least 1').required(),
+  itemWeight: yup
+    .number()
+    .positive('Item weight must be positive')
+    .nullable()
+    .transform((value, originalValue) =>
+      originalValue === '' ? null : value,
+    ),
+  unit: yup.string(),
   reservedQuantity: yup.string(),
   storageState: yup.string().oneOf(Object.values(StorageState)),
   location: yup.string(),
@@ -54,6 +65,7 @@ export const EditPantryItemForm: React.FC<EditPantryItemFormProps> = ({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [saving, setSaving] = useState(false);
   const [_selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
 
   const {data: existingItemData, loading: itemLoading} = useGetPantryItemQuery({
     variables: {id: itemId},
@@ -62,11 +74,17 @@ export const EditPantryItemForm: React.FC<EditPantryItemFormProps> = ({
 
   const [updateItem] = useUpdatePantryItemMutation();
 
+  const [unitQuery] = useGetUnitBySymbolLazyQuery({
+    fetchPolicy: 'cache-first',
+  });
+
   const getInitialValues = useCallback((): EditPantryItemFormData => {
     if (existingItemData?.pantryItem) {
       const item = existingItemData.pantryItem;
       return {
         quantity: item.currentQuantity || 1,
+        itemWeight: item.actualNetWeight || undefined,
+        unit: item.actualNetWeightUnit?.symbol || item.unit?.symbol || '',
         reservedQuantity: item.reservedQuantity?.toString() || '',
         storageState: item.storageState || StorageState.Ambient,
         location: typeof item.storageLocation === 'string' ? item.storageLocation : (item.storageLocation?.name || ''),
@@ -81,6 +99,8 @@ export const EditPantryItemForm: React.FC<EditPantryItemFormProps> = ({
 
     return {
       quantity: 1,
+      itemWeight: undefined,
+      unit: '',
       reservedQuantity: '',
       storageState: StorageState.Ambient,
       location: '',
@@ -138,11 +158,22 @@ export const EditPantryItemForm: React.FC<EditPantryItemFormProps> = ({
 
     setSaving(true);
     try {
+      // Use selectedUnitId if available, otherwise query by symbol
+      let unitId = selectedUnitId;
+      if (!unitId && data.unit.trim()) {
+        const unitData = await unitQuery({
+          variables: { symbol: data.unit.trim() },
+        });
+        unitId = unitData.data?.unitBySymbol?.id || '';
+      }
+
       await updateItem({
         variables: {
           id: itemId,
           input: {
             currentQuantity: data.quantity,
+            actualNetWeight: data.itemWeight || undefined,
+            actualNetWeightUnitId: unitId || undefined,
             reservedQuantity: parseFloat(data.reservedQuantity || '0') || 0,
             storageState: data.storageState,
             storageLocation: data.location,
@@ -226,10 +257,16 @@ export const EditPantryItemForm: React.FC<EditPantryItemFormProps> = ({
             errors={errors}
             mode="edit"
             quantity={watchedValues.quantity}
-            unit={item.unit?.symbol || ''}
+            itemWeight={watchedValues.itemWeight}
+            unit={watchedValues.unit}
             isAutoReorder={watchedValues.isAutoReorder}
             onIncrementQuantity={handleIncrementQuantity}
             onDecrementQuantity={handleDecrementQuantity}
+            onUnitSelected={setSelectedUnitId}
+            onUnitChange={unit => {
+              setValue('unit', unit);
+              setSelectedUnitId(null);
+            }}
           />
 
           <StorageDetailsSection

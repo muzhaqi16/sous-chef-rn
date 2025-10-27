@@ -60,6 +60,7 @@ const ShoppingListContent: React.FC<{
   disabled?: boolean;
   emptyState?: any;
   onClearAllPurchased?: () => Promise<void>;
+  onSwipeableWillOpen?: (ref: any) => void;
 }> = ({
   items,
   onItemPress,
@@ -72,6 +73,7 @@ const ShoppingListContent: React.FC<{
   disabled,
   emptyState,
   onClearAllPurchased,
+  onSwipeableWillOpen,
 }) => {
   // Separate items by purchased status
   const unpurchasedItems = items.filter(item => !item.isPurchased);
@@ -107,6 +109,7 @@ const ShoppingListContent: React.FC<{
         onSortOrderUpdate={onSortOrderUpdate}
         disabled={disabled}
         showsVerticalScrollIndicator={true}
+        onSwipeableWillOpen={onSwipeableWillOpen}
         ListFooterComponent={
           /* Collapsible Purchased Section */
           <CollapsiblePurchasedSection
@@ -118,6 +121,7 @@ const ShoppingListContent: React.FC<{
             onSortOrderUpdate={onSortOrderUpdate}
             onClearAll={onClearAllPurchased}
             disabled={disabled}
+            onSwipeableWillOpen={onSwipeableWillOpen}
           />
         }
       />
@@ -136,6 +140,8 @@ export const ShoppingListMain: React.FC = () => {
   const selectorRef = useRef<ItemSelectorRef>(null);
   const { setScannerProps, setOverlayOpen } = useScanner();
   const client = useApolloClient();
+  // Track currently open swipeable across both unpurchased and purchased lists
+  const openSwipeableRef = useRef<any>(null);
   const [moveItem] = useMoveShoppingListItemMutation({
     errorPolicy: 'all',
   });
@@ -414,7 +420,7 @@ export const ShoppingListMain: React.FC = () => {
 
     // Map to SortableShoppingListItem format
     return sortedItems.map((item: any) => {
-      const imageUrl = getItemImageUrl(item.item, 'small');
+      const imageUrl = getItemImageUrl(item.item);
 
       // Get primary category from item.item.categories
       const primaryCategory = item.item?.categories?.find(
@@ -533,6 +539,16 @@ export const ShoppingListMain: React.FC = () => {
       setRefreshing(false);
     }
   }, [refetchItems]);
+
+  // Handle swipeable item opening - ensure only one item is open at a time across both lists
+  const handleSwipeableWillOpen = useCallback((ref: any) => {
+    if (openSwipeableRef.current && openSwipeableRef.current !== ref) {
+      // Close the previously open swipeable
+      openSwipeableRef.current.current?.close();
+    }
+    // Update to track the newly opening swipeable
+    openSwipeableRef.current = ref;
+  }, []);
 
   // Search bar actions - conditionally show "Add" button when searching with no results
 
@@ -673,6 +689,7 @@ export const ShoppingListMain: React.FC = () => {
           refreshing,
           disabled: !!searchQuery.trim(),
           onClearAllPurchased: handleClearAllPurchased,
+          onSwipeableWillOpen: handleSwipeableWillOpen,
         }}
       />
 

@@ -2713,7 +2713,7 @@ type Mutation {
   removeCollaborator(data: RemoveCollaboratorInput!): Boolean!
   removeItemBrand(brandId: ID!, itemId: ID!): Item!
   removeItemFromCategory(categoryId: ID!, itemId: ID!): Item!
-  removeItemFromShoppingList(id: ID!): Boolean!
+  removeItemFromShoppingList(id: ID!): ShoppingListItem!
   removeItemImage(id: ID!): Item!
   removeItemTags(id: ID!, tags: [String!]!): Item!
   removeItemUnit(id: ID!): Boolean!

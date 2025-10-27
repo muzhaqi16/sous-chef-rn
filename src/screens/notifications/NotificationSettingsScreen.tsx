@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Alert } from 'react-native';
+import { View, Text, Alert } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { SettingSwitch, SettingSection } from '#components/settings';
+import { ProfileScreenWrapper } from '#components/templates';
 import { useNotificationSettings } from '#hooks';
 import { ExpirationFrequency } from '#generated';
 import { Picker } from '@react-native-picker/picker';
@@ -68,7 +69,7 @@ export const NotificationSettingsScreen: React.FC = () => {
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <ProfileScreenWrapper title="Notification Settings">
       {/* Quiet Hours Status */}
       {isQuietTime() && (
         <View style={styles.quietTimeAlert}>
@@ -292,15 +293,11 @@ export const NotificationSettingsScreen: React.FC = () => {
           loading={updating === 'reset'}
         />
       </SettingSection>
-    </ScrollView>
+    </ProfileScreenWrapper>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
