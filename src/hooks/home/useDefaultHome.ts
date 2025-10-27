@@ -16,16 +16,16 @@ export const useDefaultHome = () => {
     error,
   } = useGetHomesQuery({
     fetchPolicy: 'cache-and-network', // Ensure fresh data after token refresh
+    nextFetchPolicy: 'cache-first', // Subsequent fetches use cache to avoid unnecessary refetches
     skip: shouldSkip,
-    notifyOnNetworkStatusChange: true,
     errorPolicy: 'all', // Allow partial data and cache on errors
   });
 
   const { data: defaultHomeData, loading: loadingDefaultHome } =
     useGetDefaultHomeQuery({
       fetchPolicy: 'cache-and-network',
+      nextFetchPolicy: 'cache-first', // Subsequent fetches use cache to avoid unnecessary refetches
       skip: !canAttemptQueries,
-      notifyOnNetworkStatusChange: true,
       errorPolicy: 'all',
     });
 

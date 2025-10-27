@@ -15,12 +15,22 @@ fragment ShoppingListItemFragment on ShoppingListItem {
     name
     description
     imageUrl
-    images
     netWeight
     displayUnit {
       id
       name
       symbol
+    }
+    categories {
+      id
+      isPrimary
+      confidence
+      source
+      assignedAt
+      category {
+        id
+        name
+      }
     }
   }
   unit {
@@ -278,7 +288,6 @@ fragment ItemFragment on Item {
   status
   visibility
   imageUrl
-  images
   tags
   healthBenefits
   allergens
@@ -379,6 +388,13 @@ fragment PantryItemFragment on PantryItem {
   autoReorderPoint
   isAutoReorder
   customCategory
+  actualNetWeight
+  actualNetWeightUnit {
+    id
+    name
+    symbol
+    type
+  }
   createdAt
   updatedAt
   version
@@ -574,14 +590,9 @@ fragment PurchaseFragment on Purchase {
   totalPrice
   itemName
   unitSymbol
-  user {
-    id
-    email
-    profile {
-      id
-      displayName
-    }
-  }
+  # Removed user.profile to prevent subscription normalization crash
+  # The server sends incomplete user data in subscriptions, causing
+  # "Cannot read properties of undefined (reading 'shoppingLists')" error
 }
 
 fragment RecipeIngredientFragment on RecipeIngredient {

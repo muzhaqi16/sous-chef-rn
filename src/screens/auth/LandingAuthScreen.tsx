@@ -22,22 +22,26 @@ export function LandingAuthScreen() {
       {/* 2. Content flex-zone */}
       <View style={styles.content}>
         <Text style={styles.title}>End Waste, Save Time & Money</Text>
+
+        <View style={styles.divider} />
+
         <Text style={styles.subtitle}>
-          Know what you have, plan what’s next, and shop smarter every time.
+          Know what you have, plan what's next, and shop smarter every time.
         </Text>
 
         <View style={styles.buttons}>
           <Button
-            title="Let's get started"
-            onPress={() => navigation.navigate('SignUp')}
-            btnStyle={styles.primaryBtn}
+            title="Log In"
+            onPress={() => navigation.navigate('Login')}
+            variant="secondary"
+            fullWidth
+            txtStyle={styles.txt}
           />
           <Button
-            title="I already have an account"
-            onPress={() => navigation.navigate('Login')}
-            btnStyle={styles.secondaryBtn}
-            variant="secondary"
-            txtStyle={styles.secondaryBtnText}
+            title="Sign Up"
+            onPress={() => navigation.navigate('SignUp')}
+            fullWidth
+            txtStyle={styles.txt}
           />
         </View>
 
@@ -71,42 +75,43 @@ const styles = StyleSheet.create(theme => ({
   },
 
   content: {
-    paddingHorizontal: theme.spacing.lg,
     paddingBottom: theme.spacing.xl,
-    alignItems: 'center',
   },
 
   title: {
-    fontSize: theme.fonts.size.xl,
+    fontSize: theme.fonts.size.lg,
     fontWeight: '700',
     color: theme.colors.textPrimary,
-    textAlign: 'center',
+    textAlign: 'left',
+  },
+
+  divider: {
+    width: 40,
+    height: 3,
+    backgroundColor: theme.colors.primary,
+    borderRadius: 2,
+    alignSelf: 'flex-start',
+    marginTop: theme.spacing.sm,
     marginBottom: theme.spacing.md,
+  },
+  txt: {
+    textTransform: 'uppercase',
   },
   subtitle: {
     fontSize: theme.fonts.size.md,
     lineHeight: theme.spacing.lg,
     fontWeight: '500',
     color: theme.colors.textSecondary,
-    textAlign: 'center',
+    textAlign: 'left',
+    width: '100%',
   },
 
   buttons: {
-    width: '100%',
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    gap: theme.spacing.md,
     marginTop: theme.spacing.xl,
-  },
-  primaryBtn: {
-    alignSelf: 'center',
-    paddingVertical: theme.spacing.md,
-    marginBottom: theme.spacing.md,
-  },
-
-  secondaryBtn: {
-    alignSelf: 'center',
-    paddingVertical: theme.spacing.md,
-  },
-  secondaryBtnText: {
-    color: theme.colors.primary,
   },
 
   footerText: {

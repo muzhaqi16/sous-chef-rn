@@ -319,7 +319,9 @@ mutation UpdateShoppingListItem(
 }
 
 mutation RemoveItemFromShoppingList($id: ID!) {
-  removeItemFromShoppingList(id: $id)
+  removeItemFromShoppingList(id: $id) {
+    ...ShoppingListItemFragment
+  }
 }
 
 mutation markItemPurchased($id: ID!, $status: Boolean!) {
@@ -328,8 +330,68 @@ mutation markItemPurchased($id: ID!, $status: Boolean!) {
   }
 }
 
-mutation ReorderShoppingListItems($input: ReorderShoppingListItemsInput!) {
-  reorderShoppingListItems(input: $input) {
+mutation MoveShoppingListItem($input: MoveShoppingListItemInput!) {
+  moveShoppingListItem(input: $input) {
+    ...ShoppingListItemFragment
+  }
+}
+
+# ============================================
+# SPECIALIZED PERFORMANCE MUTATIONS
+# ============================================
+
+mutation ToggleShoppingListItemPurchased(
+  $id: ID!
+  $purchased: Boolean!
+  $version: Int
+) {
+  toggleShoppingListItemPurchased(
+    id: $id
+    purchased: $purchased
+    version: $version
+  ) {
+    ...ShoppingListItemFragment
+  }
+}
+
+mutation UpdateShoppingListItemQuantity(
+  $id: ID!
+  $quantity: Float!
+  $version: Int
+) {
+  updateShoppingListItemQuantity(
+    id: $id
+    quantity: $quantity
+    version: $version
+  ) {
+    ...ShoppingListItemFragment
+  }
+}
+
+mutation UpdateShoppingListItemNotes(
+  $id: ID!
+  $notes: String
+  $version: Int
+) {
+  updateShoppingListItemNotes(
+    id: $id
+    notes: $notes
+    version: $version
+  ) {
+    ...ShoppingListItemFragment
+  }
+}
+
+mutation UpdateShoppingListItemPriority(
+  $id: ID!
+  $priority: Int!
+  $version: Int
+) {
+  updateShoppingListItemPriority(
+    id: $id
+    priority: $priority
+    version: $version
+  ) {
     ...ShoppingListItemFragment
   }
 }

@@ -100,7 +100,9 @@ export const ProfileScreen = () => {
                 return {
                   ...item,
                   onPress: () => {
-                    if (item.key === 'notifications') {
+                    if (item.key === 'personalInformation') {
+                      navigate('PersonalInformation');
+                    } else if (item.key === 'notifications') {
                       navigate('NotificationSettings');
                     } else if (item.key === 'dietaryProfile') {
                       navigate('DietaryProfile');
@@ -143,7 +145,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.background,
   },
   scrollContent: {
-    padding: theme.spacing.lg,
+    paddingVertical: theme.spacing.lg,
   },
   menuItem: {
     flexDirection: 'row',

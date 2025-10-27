@@ -153,7 +153,7 @@ export function LoginScreen() {
         onLinkPress={() => {
           navigateToForgotPassword();
         }}
-        submitText={isLoggingIn ? 'Logging in…' : 'Login'}
+        submitText={isLoggingIn ? 'Logging in…' : 'Log In'}
         onSubmit={form.handleSubmit(onSubmit)}
         footerText="Don't have an account?"
         footerLinkText="Sign Up"

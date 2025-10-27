@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import Reanimated, {
   useAnimatedStyle,
@@ -16,23 +16,28 @@ import { SwipeableItemProps } from './types';
 export const SwipeableItem: React.FC<SwipeableItemProps> = ({
   children,
   onPress,
+  onLongPress,
   onDelete,
   onEdit,
+  onTogglePurchase,
+  isPurchased,
   enableSwipeToDelete = true,
   leftThreshold = 120,
   rightThreshold = 120,
   friction = 1,
+  onSwipeableWillOpen,
 }) => {
   const dragX = useSharedValue(0);
 
   const { itemOpacity, animateDelete } = useSwipeableAnimation();
 
-  const { swipeableRef, handleActionPress, handleSwipeableOpen } =
+  const { swipeableRef, handleActionPress, handleSwipeableWillOpen } =
     useSwipeableActions({
       onEdit,
       onDelete,
       animateDelete,
       enableSwipeToDelete,
+      onSwipeableWillOpen,
     });
 
   const animatedStyle = useAnimatedStyle(() => {
@@ -41,7 +46,7 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({
     };
   });
 
-  const renderRightActions = (
+  const renderRightActions = useCallback((
     progress: SharedValue<number>,
     dragXValue: SharedValue<number>,
   ) => {
@@ -54,9 +59,9 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({
         onActionPress={handleActionPress}
       />
     );
-  };
+  }, [onEdit, onDelete, handleActionPress]);
 
-  const renderLeftActions = (
+  const renderLeftActions = useCallback((
     progress: SharedValue<number>,
     dragXValue: SharedValue<number>,
   ) => {
@@ -64,12 +69,12 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({
       <LeftActions
         dragX={dragXValue}
         progress={progress}
-        onEdit={onEdit}
-        onDelete={onDelete}
-        onActionPress={handleActionPress}
+        onTogglePurchase={onTogglePurchase}
+        isPurchased={isPurchased}
+        swipeableRef={swipeableRef}
       />
     );
-  };
+  }, [onTogglePurchase, isPurchased, swipeableRef]);
 
   return (
     <Reanimated.View style={[styles.gestureContainer, animatedStyle]}>
@@ -80,11 +85,11 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({
         rightThreshold={rightThreshold}
         renderLeftActions={renderLeftActions}
         renderRightActions={renderRightActions}
-        onSwipeableOpen={handleSwipeableOpen}
+        onSwipeableWillOpen={handleSwipeableWillOpen}
         overshootFriction={8}
         containerStyle={{ overflow: 'visible' }}
       >
-        <SwipeableContent onPress={onPress} dragX={dragX}>
+        <SwipeableContent onPress={onPress} onLongPress={onLongPress} dragX={dragX}>
           {children}
         </SwipeableContent>
       </ReanimatedSwipeable>

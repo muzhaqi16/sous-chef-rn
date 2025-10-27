@@ -38,8 +38,8 @@ export const PantryMain: React.FC = () => {
   const { data: homeData, refetch: refetchHome } = useGetHomeBasicQuery({
     variables: { homeId: selectedHomeId ?? '' },
     fetchPolicy: 'cache-and-network', // Always check network for fresh data after token refresh
+    nextFetchPolicy: 'cache-first', // Subsequent fetches use cache to avoid unnecessary refetches
     skip: !selectedHomeId,
-    notifyOnNetworkStatusChange: true,
     errorPolicy: 'all', // Allow partial data and cache on errors
   });
 
@@ -199,7 +199,7 @@ export const PantryMain: React.FC = () => {
           ? { text: 'Low Stock', variant: 'warning' }
           : undefined,
         leftElement: (() => {
-          const imageUrl = getItemImageUrl(item.item, 'small');
+          const imageUrl = getItemImageUrl(item.item);
           return imageUrl ? (
             <View
               style={[

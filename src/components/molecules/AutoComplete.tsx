@@ -43,7 +43,7 @@ const Autocomplete: React.FC<AutocompleteProps> = ({
   if (searchTerm.length < 2) return null;
 
   const renderItem = ({ item }: { item: ItemSuggestion }) => {
-    const imageUrl = getItemImageUrl(item, 'small');
+    const imageUrl = getItemImageUrl(item);
 
     return (
       <TouchableOpacity

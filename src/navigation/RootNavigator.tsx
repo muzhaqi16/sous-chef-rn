@@ -28,6 +28,7 @@ import {
   DeleteAccountScreen,
   DietaryProfileScreen,
   AppSettingsScreen,
+  PersonalInformationScreen,
 } from '#screens/profile';
 import { NotificationSettingsScreen } from '#screens/notifications';
 import { linkingConfig } from './linking';
@@ -56,6 +57,7 @@ export type RootStackParamList = {
   DeleteAccount: undefined;
   NotificationSettings: undefined;
   DietaryProfile: undefined;
+  PersonalInformation: undefined;
   AppSettings: undefined;
   NotFound: undefined;
 };
@@ -188,6 +190,7 @@ function RootNavigator() {
               <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
               <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
               <Stack.Screen name="DietaryProfile" component={DietaryProfileScreen} />
+              <Stack.Screen name="PersonalInformation" component={PersonalInformationScreen} />
               <Stack.Screen name="AppSettings" component={AppSettingsScreen} />
             </>
           )}

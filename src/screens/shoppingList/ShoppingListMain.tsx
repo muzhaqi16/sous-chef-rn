@@ -11,8 +11,11 @@ import { useAppNavigation } from '#hooks';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
   useGetShoppingListsQuery,
-  useReorderShoppingListItemsMutation,
+  useMoveShoppingListItemMutation,
+  useUpdateShoppingListItemQuantityMutation,
 } from '#generated';
+import { useApolloClient } from '@apollo/client/react';
+import { gql } from '@apollo/client';
 import { useScanner } from '#context';
 import {
   SearchBarAction,
@@ -20,22 +23,25 @@ import {
   SortableShoppingList,
   EmptyState,
   ListTemplate,
-  FormattedItemSubtitle,
+  CollapsiblePurchasedSection,
 } from '#components';
 import { getItemImageUrl } from '#utils/imageUtils';
+import { generatePosition } from '#utils/fractionalIndexing';
 import type {
   SelectorConfig,
   ItemSelectorRef,
 } from '#components/organisms/AnimatedItemSelector';
-import type {
-  SortableShoppingListItem,
-  SortOrderUpdate,
-} from '#components/organisms/SortableShoppingList';
+import type { SortableShoppingListItem } from '#components/organisms/SortableShoppingList';
 import { useShoppingListManagement } from '#/hooks';
+import { useOfflinePresetPolicy } from '#/apollo/policies/offlineFetchPolicies';
 import { useStore } from '#/store';
 import { IconLibrary } from '#/utils/iconUtils';
-import { AnimatedCheckbox } from '#/components/atoms/AnimatedCheckbox';
+import { ShoppingListItemCounter } from '#/components/molecules/ShoppingListItemCounter';
 import { commonStyles } from '#/styles';
+import {
+  handleVersionConflict,
+  getVersionConflictMessage,
+} from '#/utils/errors/versionConflict';
 
 // Wrapper component that conditionally renders EmptyState or SortableShoppingList
 const ShoppingListContent: React.FC<{
@@ -43,22 +49,36 @@ const ShoppingListContent: React.FC<{
   onItemPress: (id: string) => void;
   onItemEdit?: (id: string) => void;
   onItemDelete?: (id: string) => void;
-  onSortOrderUpdate?: (updates: SortOrderUpdate[]) => Promise<void>;
+  onTogglePurchase?: (id: string) => void;
+  onSortOrderUpdate?: (
+    itemId: string,
+    afterItemId: string | null,
+    beforeItemId: string | null,
+  ) => Promise<void>;
   onRefresh?: () => void | Promise<void>;
   refreshing?: boolean;
   disabled?: boolean;
   emptyState?: any;
+  onClearAllPurchased?: () => Promise<void>;
+  onSwipeableWillOpen?: (ref: any) => void;
 }> = ({
   items,
   onItemPress,
   onItemEdit,
   onItemDelete,
+  onTogglePurchase,
   onSortOrderUpdate,
   onRefresh,
   refreshing,
   disabled,
   emptyState,
+  onClearAllPurchased,
+  onSwipeableWillOpen,
 }) => {
+  // Separate items by purchased status
+  const unpurchasedItems = items.filter(item => !item.isPurchased);
+  const purchasedItems = items.filter(item => item.isPurchased);
+
   if (items.length === 0 && emptyState) {
     return (
       <ScrollView
@@ -78,17 +98,34 @@ const ShoppingListContent: React.FC<{
   }
 
   return (
-    <View style={{ flex: 1 }}>
+    <>
+      {/* Unpurchased Items */}
       <SortableShoppingList
-        items={items}
+        items={unpurchasedItems}
         onItemPress={onItemPress}
         onItemEdit={onItemEdit}
         onItemDelete={onItemDelete}
+        onTogglePurchase={onTogglePurchase}
         onSortOrderUpdate={onSortOrderUpdate}
         disabled={disabled}
         showsVerticalScrollIndicator={true}
+        onSwipeableWillOpen={onSwipeableWillOpen}
+        ListFooterComponent={
+          /* Collapsible Purchased Section */
+          <CollapsiblePurchasedSection
+            purchasedItems={purchasedItems}
+            onItemPress={onItemPress}
+            onItemEdit={onItemEdit}
+            onItemDelete={onItemDelete}
+            onTogglePurchase={onTogglePurchase}
+            onSortOrderUpdate={onSortOrderUpdate}
+            onClearAll={onClearAllPurchased}
+            disabled={disabled}
+            onSwipeableWillOpen={onSwipeableWillOpen}
+          />
+        }
       />
-    </View>
+    </>
   );
 };
 
@@ -102,14 +139,32 @@ export const ShoppingListMain: React.FC = () => {
   const { selectedShoppingListId, setSelectedShoppingListId } = useStore();
   const selectorRef = useRef<ItemSelectorRef>(null);
   const { setScannerProps, setOverlayOpen } = useScanner();
-  const [reorderItems] = useReorderShoppingListItemsMutation();
-  const [refreshing, setRefreshing] = useState(false);
-
-  const { data } = useGetShoppingListsQuery({
-    fetchPolicy: 'cache-and-network',
+  const client = useApolloClient();
+  // Track currently open swipeable across both unpurchased and purchased lists
+  const openSwipeableRef = useRef<any>(null);
+  const [moveItem] = useMoveShoppingListItemMutation({
+    errorPolicy: 'all',
+  });
+  const [updateQuantity] = useUpdateShoppingListItemQuantityMutation({
+    errorPolicy: 'all',
+    refetchQueries: ['GetShoppingListItems'],
+    awaitRefetchQueries: true,
   });
 
-  const lists = useMemo(() => data?.shoppingLists || [], [data?.shoppingLists]);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // OPTIMIZATION: Use offline-aware fetch policy for lists query
+  const listsFetchPolicy = useOfflinePresetPolicy('LIST');
+  const { data, previousData } = useGetShoppingListsQuery({
+    fetchPolicy: listsFetchPolicy,
+    errorPolicy: 'all',
+  });
+
+  // OPTIMIZATION: Fall back to previousData if current data is unavailable (network error)
+  const lists = useMemo(
+    () => data?.shoppingLists ?? previousData?.shoppingLists ?? [],
+    [data?.shoppingLists, previousData?.shoppingLists],
+  );
 
   // Get the default list or the first list if none is default
   const defaultList = lists.find(list => list.isDefault) || lists[0];
@@ -145,6 +200,8 @@ export const ShoppingListMain: React.FC = () => {
     removeItem,
     refetch: refetchItems,
   } = useShoppingListManagement(currentListId);
+
+  // Let Apollo handle all data management - no manual optimization needed
 
   // Create selector configuration for shopping lists
   const listConfig: SelectorConfig<any> = useMemo(
@@ -198,103 +255,194 @@ export const ShoppingListMain: React.FC = () => {
     [lists, currentListId, setSelectedShoppingListId, navigate],
   );
 
-
   const handleSortOrderUpdate = useCallback(
-    async (updates: SortOrderUpdate[]) => {
+    async (
+      itemId: string,
+      afterItemId: string | null,
+      beforeItemId: string | null,
+    ) => {
       if (!currentListId) return;
 
       try {
-        await reorderItems({
+        // Find the current item from cache to preserve all fields
+        const currentItem = items.find(item => item.id === itemId);
+        if (!currentItem) {
+          console.error('Item not found in cache:', itemId);
+          return;
+        }
+
+        // Calculate optimistic sortOrder using fractional indexing
+        const afterItem = afterItemId
+          ? items.find(item => item.id === afterItemId)
+          : null;
+        const beforeItem = beforeItemId
+          ? items.find(item => item.id === beforeItemId)
+          : null;
+        const afterSortOrder = afterItem?.sortOrder ?? null;
+        const beforeSortOrder = beforeItem?.sortOrder ?? null;
+
+        // Generate new fractional index between the two items
+        const optimisticSortOrder = generatePosition(
+          afterSortOrder,
+          beforeSortOrder,
+        );
+
+        console.log('Optimistic sortOrder calculation:', {
+          itemId,
+          afterItemId,
+          afterSortOrder,
+          beforeItemId,
+          beforeSortOrder,
+          optimisticSortOrder,
+        });
+
+        // Let Apollo handle everything - no optimistic response, no persistence
+        await moveItem({
           variables: {
             input: {
-              shoppingListId: currentListId,
-              items: updates.map(update => ({
-                id: update.id,
-                sortOrder: update.sortOrder,
-              })),
+              itemId,
+              afterItemId: afterItemId ?? undefined,
+              beforeItemId: beforeItemId ?? undefined,
             },
           },
-          errorPolicy: 'all', // Allow offline mutations
-          // Update cache immediately to prevent flicker
-          update: (cache, { data }) => {
-            if (!data?.reorderShoppingListItems) return;
+        });
 
-            try {
-              // Update each item's sortOrder in the cache
-              data.reorderShoppingListItems.forEach(item => {
-                const itemCacheId = cache.identify({
-                  __typename: 'ShoppingListItem',
-                  id: item.id,
-                });
-
-                if (itemCacheId) {
-                  cache.modify({
-                    id: itemCacheId,
-                    fields: {
-                      sortOrder() {
-                        return item.sortOrder;
-                      },
-                    },
-                  });
-                }
-              });
-            } catch (cacheError) {
-              console.warn('Cache update failed for reorder:', cacheError);
-              // Don't throw - mutation succeeded, cache update is optional
-            }
-          },
+        console.log('✓ Item moved successfully:', {
+          itemId,
+          afterItemId,
+          beforeItemId,
         });
       } catch (error) {
-        console.error('Failed to update sort order:', error);
+        console.error('Failed to move item:', error);
         Alert.alert('Error', 'Failed to reorder items');
       }
     },
-    [currentListId, reorderItems],
+    [currentListId, moveItem, items],
+  );
+
+  // Quantity update handlers using specialized mutation (80% payload reduction)
+  const handleIncrementQuantity = useCallback(
+    async (itemId: string) => {
+      // Read FRESH data from cache instead of stale closure
+      const cachedItem = client.readFragment({
+        id: client.cache.identify({
+          __typename: 'ShoppingListItem',
+          id: itemId,
+        }),
+        fragment: gql`
+          fragment ItemVersionData on ShoppingListItem {
+            id
+            version
+            quantity
+          }
+        `,
+      }) as { id: string; version: number; quantity: number } | null;
+
+      if (!cachedItem) {
+        return;
+      }
+
+      try {
+        await updateQuantity({
+          variables: {
+            id: itemId,
+            quantity: (cachedItem.quantity || 1) + 1,
+            version: cachedItem.version,
+          },
+        });
+      } catch (error: any) {
+        if (handleVersionConflict(error)) {
+          Alert.alert('Item Updated', getVersionConflictMessage(error), [
+            { text: 'Refresh', onPress: () => refetchItems() },
+            { text: 'Cancel', style: 'cancel' },
+          ]);
+          return;
+        }
+        console.error('Failed to update quantity:', error);
+        Alert.alert('Error', 'Failed to update quantity');
+      }
+    },
+    [updateQuantity, refetchItems, client],
+  );
+
+  const handleDecrementQuantity = useCallback(
+    async (itemId: string) => {
+      // Read FRESH data from cache instead of stale closure
+      const cachedItem = client.readFragment({
+        id: client.cache.identify({
+          __typename: 'ShoppingListItem',
+          id: itemId,
+        }),
+        fragment: gql`
+          fragment ItemVersionData2 on ShoppingListItem {
+            id
+            version
+            quantity
+          }
+        `,
+      }) as { id: string; version: number; quantity: number } | null;
+
+      if (!cachedItem) {
+        return;
+      }
+
+      try {
+        await updateQuantity({
+          variables: {
+            id: itemId,
+            quantity: Math.max(0, (cachedItem.quantity || 1) - 1),
+            version: cachedItem.version,
+          },
+        });
+      } catch (error: any) {
+        if (handleVersionConflict(error)) {
+          Alert.alert('Item Updated', getVersionConflictMessage(error), [
+            { text: 'Refresh', onPress: () => refetchItems() },
+            { text: 'Cancel', style: 'cancel' },
+          ]);
+          return;
+        }
+        Alert.alert('Error', 'Failed to update quantity');
+      }
+    },
+    [updateQuantity, refetchItems, client],
   );
 
   // Transform shopping list items for SortableShoppingList
   const sortableItems = useMemo((): SortableShoppingListItem[] => {
-    // Sort by sortOrder within each group
-    const sortBySortOrder = (a: any, b: any) => {
-      const aOrder = a.sortOrder ?? 999999;
-      const bOrder = b.sortOrder ?? 999999;
-      return aOrder - bOrder;
-    };
+    // Server already returns items sorted by: isPurchased ASC, sortOrder ASC, createdAt ASC
+    // No need to re-sort on client - just separate by purchased status for UI
+    const unpurchasedItems = items.filter((item: any) => !item.isPurchased);
+    const purchasedItems = items.filter((item: any) => item.isPurchased);
 
-    // Separate items by purchased status (Apollo cache has optimistic updates)
-    const unpurchasedItems = items
-      .filter((item: any) => !item.isPurchased)
-      .sort(sortBySortOrder);
-
-    const purchasedItems = items
-      .filter((item: any) => item.isPurchased)
-      .sort(sortBySortOrder);
-
-    // Unpurchased first, then purchased
+    // Unpurchased first, then purchased (already sorted within each group by server)
     const sortedItems = [...unpurchasedItems, ...purchasedItems];
 
     // Map to SortableShoppingListItem format
     return sortedItems.map((item: any) => {
-      const imageUrl = getItemImageUrl(item.item, 'small');
+      const imageUrl = getItemImageUrl(item.item);
+
+      // Get primary category from item.item.categories
+      const primaryCategory = item.item?.categories?.find(
+        (cat: any) => cat.isPrimary,
+      );
+      const categoryName =
+        primaryCategory?.category?.name ||
+        item.item?.categories?.[0]?.category?.name ||
+        item.category;
 
       return {
         id: item.id,
         title: item.itemName,
-        subtitle: (
-          <FormattedItemSubtitle
-            quantity={item.quantity}
-            netWeight={item.item?.netWeight}
-            unitSymbol={item.item?.displayUnit?.symbol || item.unitName}
-          />
-        ),
-        sortOrder: item.sortOrder ?? 0,
+        subtitle: categoryName || undefined,
+        sortOrder: item.sortOrder ?? 'zzz', // String fallback for fractional indexing
         isPurchased: item.isPurchased,
         badge: undefined,
         rightElement: (
-          <AnimatedCheckbox
-            checked={item.isPurchased}
-            onPress={() => toggleItem(item.id)}
-            size={24}
+          <ShoppingListItemCounter
+            quantity={item.quantity || 0}
+            onIncrement={() => handleIncrementQuantity(item.id)}
+            onDecrement={() => handleDecrementQuantity(item.id)}
           />
         ),
         leftElement: imageUrl ? (
@@ -312,7 +460,7 @@ export const ShoppingListMain: React.FC = () => {
         ) : null,
       };
     });
-  }, [items, toggleItem]);
+  }, [items, handleIncrementQuantity, handleDecrementQuantity]);
 
   const handleAddItem = useCallback(() => {
     if (!currentListId) {
@@ -360,12 +508,28 @@ export const ShoppingListMain: React.FC = () => {
   const handleDeleteItem = async (itemId: string) => {
     try {
       await removeItem(itemId);
-      // Refetch to ensure UI is in sync after deletion
-      await refetchItems();
+      // OPTIMIZATION: No refetch needed - removeItem updates cache via cache.modify
+      // Cache automatically updates via Apollo's normalized cache
     } catch (error) {
       Alert.alert('Error', 'Failed to delete item');
     }
   };
+
+  const handleClearAllPurchased = useCallback(async () => {
+    const purchasedItems = items.filter((item: any) => item.isPurchased);
+
+    if (purchasedItems.length === 0) return;
+
+    try {
+      // Delete all purchased items
+      await Promise.all(purchasedItems.map(item => removeItem(item.id)));
+
+      // OPTIMIZATION: No refetch needed - each removeItem updates cache via cache.modify
+      // Cache automatically updates via Apollo's normalized cache
+    } catch (error) {
+      Alert.alert('Error', 'Failed to clear purchased items');
+    }
+  }, [items, removeItem]);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -375,6 +539,16 @@ export const ShoppingListMain: React.FC = () => {
       setRefreshing(false);
     }
   }, [refetchItems]);
+
+  // Handle swipeable item opening - ensure only one item is open at a time across both lists
+  const handleSwipeableWillOpen = useCallback((ref: any) => {
+    if (openSwipeableRef.current && openSwipeableRef.current !== ref) {
+      // Close the previously open swipeable
+      openSwipeableRef.current.current?.close();
+    }
+    // Update to track the newly opening swipeable
+    openSwipeableRef.current = ref;
+  }, []);
 
   // Search bar actions - conditionally show "Add" button when searching with no results
 
@@ -510,9 +684,12 @@ export const ShoppingListMain: React.FC = () => {
           onSortOrderUpdate: searchQuery.trim()
             ? undefined
             : handleSortOrderUpdate,
+          onTogglePurchase: toggleItem,
           onRefresh: handleRefresh,
           refreshing,
           disabled: !!searchQuery.trim(),
+          onClearAllPurchased: handleClearAllPurchased,
+          onSwipeableWillOpen: handleSwipeableWillOpen,
         }}
       />
 

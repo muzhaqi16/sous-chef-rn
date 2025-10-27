@@ -65,13 +65,7 @@ export function AuthFormTemplate<T extends FieldValues>({
       )}
 
       <View style={styles.action}>
-        <Button
-          title={submitText}
-          onPress={onSubmit}
-          btnStyle={styles.button}
-          txtStyle={styles.buttonText}
-          disabled={isLoading}
-        />
+        <Button title={submitText} onPress={onSubmit} disabled={isLoading} />
       </View>
 
       {footerText && footerLinkText && onFooterLinkPress && (
@@ -87,9 +81,8 @@ export function AuthFormTemplate<T extends FieldValues>({
 
 const styles = StyleSheet.create(theme => ({
   formContainer: {
-    maxWidth: 480,
-    alignSelf: 'center',
-    width: '100%',
+    flex: 1,
+    justifyContent: 'space-around',
   },
   headerAction: {
     width: 40,

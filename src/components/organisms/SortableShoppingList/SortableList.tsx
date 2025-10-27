@@ -8,10 +8,14 @@ import DraggableFlatList, {
 } from 'react-native-draggable-flatlist';
 import type {
   SortableShoppingListProps,
-  SortOrderUpdate,
   SortableShoppingListItem,
 } from './types';
 import { SimpleDraggableItem } from './SortableItem';
+import {
+  hasOrderChanged,
+  findMovedItem,
+  getNeighborIds,
+} from './SortableList.utils';
 
 // Tab bar height constant (65px from FloatingTabBar)
 const TAB_BAR_HEIGHT = 65;
@@ -21,35 +25,61 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
   onItemPress,
   onItemEdit,
   onItemDelete,
+  onTogglePurchase,
   onSortOrderUpdate,
   disabled = false,
+  ListFooterComponent,
+  onSwipeableWillOpen: externalOnSwipeableWillOpen,
   ...flatListProps
 }) => {
   // Track local order for optimistic updates
   const [localItems, setLocalItems] = useState(items);
-  // Track drag state
-  const [_isDragging, setIsDragging] = useState(false);
   // Track if we're currently updating the sort order
   const isUpdatingRef = useRef(false);
+  // Track currently open swipeable item (only used if no external handler provided)
+  const openSwipeableRef = useRef<any>(null);
 
   // Safe area insets for bottom padding
   const insets = useSafeAreaInsets();
 
   // Update local items when props change, but not during our own updates
-  // Use a timeout to ensure cache updates have propagated before syncing
   useEffect(() => {
     if (!isUpdatingRef.current) {
+      // Always update localItems when items prop changes
+      // This ensures item property updates (like quantity) are reflected in the UI
       setLocalItems(items);
     }
   }, [items]);
 
+  // Handle swipeable item opening - close previously open item
+  const handleSwipeableWillOpen = useCallback((ref: any) => {
+    // If external handler provided, use it (for coordinating across multiple lists)
+    if (externalOnSwipeableWillOpen) {
+      externalOnSwipeableWillOpen(ref);
+    } else {
+      // Otherwise, handle locally within this list
+      if (openSwipeableRef.current && openSwipeableRef.current !== ref) {
+        // Close the previously open swipeable
+        openSwipeableRef.current.current?.close();
+      }
+      // Update to track the newly opening swipeable
+      openSwipeableRef.current = ref;
+    }
+  }, [externalOnSwipeableWillOpen]);
+
   // Handle drag end - called when user releases item
   const handleDragEnd = useCallback(
     async (data: SortableShoppingListItem[]) => {
-      setIsDragging(false);
-
       if (disabled || !onSortOrderUpdate) {
         setLocalItems(data);
+        return;
+      }
+
+      // Check if order actually changed - skip API call if no change
+      if (!hasOrderChanged(items, data)) {
+        if (__DEV__) {
+          console.log('✓ Drag ended - order unchanged, skipping API call');
+        }
         return;
       }
 
@@ -58,21 +88,45 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
       isUpdatingRef.current = true;
 
       try {
-        // Generate sort order updates
-        const updates: SortOrderUpdate[] = data.map((item, index) => ({
-          id: item.id,
-          sortOrder: index * 10,
-        }));
+        // Find which item was moved by comparing positions
+        const movedItemInfo = findMovedItem(items, data);
 
-        await onSortOrderUpdate(updates);
-
-        // Keep isUpdatingRef true for a brief moment to ensure cache updates complete
-        // This prevents flickering when Apollo cache updates trigger a re-render
-        setTimeout(() => {
+        if (!movedItemInfo) {
+          if (__DEV__) {
+            console.warn('Could not determine which item was moved');
+          }
           isUpdatingRef.current = false;
-        }, 100);
+          return;
+        }
+
+        const { itemId: movedItemId, newIndex } = movedItemInfo;
+
+        // Calculate afterItemId and beforeItemId based on new position
+        const { afterId: afterItemId, beforeId: beforeItemId } = getNeighborIds(data, newIndex);
+
+        if (__DEV__) {
+          console.log('Moving item:', {
+            itemId: movedItemId,
+            newIndex,
+            afterItemId,
+            beforeItemId,
+          });
+        }
+
+        // Wait for the mutation to complete and server to respond
+        await onSortOrderUpdate(movedItemId, afterItemId, beforeItemId);
+
+        // Release the lock - local order will persist until items are added/removed
+        // The useEffect will only sync when IDs change (items added/removed), not when order changes
+        isUpdatingRef.current = false;
+
+        if (__DEV__) {
+          console.log('✓ Sort order updated on server');
+        }
       } catch (error) {
-        console.error('Failed to update sort order:', error);
+        if (__DEV__) {
+          console.error('Failed to update sort order:', error);
+        }
         // Revert to original order on error
         setLocalItems(items);
         isUpdatingRef.current = false;
@@ -81,27 +135,26 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
     [disabled, onSortOrderUpdate, items],
   );
 
-  const handleDragBegin = useCallback(() => {
-    setIsDragging(true);
-  }, []);
-
   // Render item with ScaleDecorator for drag feedback
   const renderItem = useCallback(
     ({ item, drag, isActive }: RenderItemParams<SortableShoppingListItem>) => {
       return (
         <ScaleDecorator>
           <SimpleDraggableItem
+            key={`${item.id}-${item.isPurchased ? 'purchased' : 'unpurchased'}`}
             item={item}
             onItemPress={onItemPress}
             onItemEdit={onItemEdit}
             onItemDelete={onItemDelete}
+            onTogglePurchase={onTogglePurchase}
             drag={disabled ? undefined : drag}
             isActive={isActive}
+            onSwipeableWillOpen={handleSwipeableWillOpen}
           />
         </ScaleDecorator>
       );
     },
-    [onItemPress, onItemEdit, onItemDelete, disabled],
+    [onItemPress, onItemEdit, onItemDelete, onTogglePurchase, disabled, handleSwipeableWillOpen],
   );
 
   // Early validation
@@ -120,7 +173,6 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
         data={localItems}
         renderItem={renderItem}
         keyExtractor={item => item.id}
-        onDragBegin={handleDragBegin}
         onDragEnd={({ data }) => handleDragEnd(data)}
         showsVerticalScrollIndicator={
           flatListProps.showsVerticalScrollIndicator ?? true
@@ -131,6 +183,7 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
         activationDistance={
           disabled ? 999999 : Platform.OS === 'android' ? 10 : 5
         }
+        ListFooterComponent={ListFooterComponent}
       />
     </View>
   );

@@ -1,9 +1,12 @@
 import React from 'react';
-import {TouchableOpacity, Text} from 'react-native';
-import {Icon} from '#utils/iconUtils';
-import {styles} from './styles';
-import {useUnistyles} from 'react-native-unistyles';
-import {ActionButtonProps} from './types';
+import { Text } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
+import { Icon } from '#utils/iconUtils';
+import { styles } from './styles';
+import { useUnistyles } from 'react-native-unistyles';
+import { ActionButtonProps } from './types';
 
 export const ActionButton: React.FC<ActionButtonProps> = ({
   onPress,
@@ -11,8 +14,9 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
   backgroundColor,
   label,
   circular = false,
+  library,
 }) => {
-  const {theme} = useUnistyles();
+  const { theme } = useUnistyles();
 
   const buttonStyle = circular
     ? styles.circularActionButton
@@ -20,12 +24,27 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
   const iconColor = circular ? theme.colors.white : theme.colors.white;
   const iconSize = circular ? 24 : 20;
 
+  const handlePress = () => {
+    console.log('ActionButton pressed! Icon:', icon, 'Library:', library);
+    onPress();
+  };
+
+  // Create tap gesture with proper priority to avoid conflicts with swipeable
+  const tapGesture = Gesture.Tap()
+    .onEnd(() => {
+      'worklet';
+      scheduleOnRN(handlePress);
+    })
+    .shouldCancelWhenOutside(false);
+
   return (
-    <TouchableOpacity
-      style={[buttonStyle, circular ? {} : {backgroundColor: backgroundColor}]}
-      onPress={onPress}>
-      <Icon name={icon} size={iconSize} color={iconColor} />
-      {label && <Text style={styles.deleteText}>{label}</Text>}
-    </TouchableOpacity>
+    <GestureDetector gesture={tapGesture}>
+      <Animated.View
+        style={[buttonStyle, { backgroundColor: backgroundColor }]}
+      >
+        <Icon name={icon} size={iconSize} color={iconColor} library={library} />
+        {label && <Text style={styles.deleteText}>{label}</Text>}
+      </Animated.View>
+    </GestureDetector>
   );
 };

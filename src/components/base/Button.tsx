@@ -82,14 +82,15 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: theme.radii.md,
+    borderRadius: theme.radii.lg,
     gap: theme.spacing.xs,
+    minHeight: 50,
   },
   primary: {
     backgroundColor: theme.colors.primary,
   },
   secondary: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: theme.colors.white,
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
@@ -119,7 +120,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.md,
   },
   fullWidth: {
-    width: '100%',
+    flex: 1,
   },
   disabled: {
     opacity: 0.5,

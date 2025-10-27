@@ -1,4 +1,4 @@
-import {MMKV} from 'react-native-mmkv';
+import {createMMKV, type MMKV} from 'react-native-mmkv';
 import {StateStorage} from 'zustand/middleware';
 import {DeviceKeyManager} from '#/utils/security/deviceKey';
 
@@ -17,7 +17,7 @@ export const getStorage = async (): Promise<MMKV> => {
 
   try {
     const encryptionKey = await DeviceKeyManager.getDeviceEncryptionKey();
-    secureStorageInstance = new MMKV({
+    secureStorageInstance = createMMKV({
       id: STORAGE_KEY,
       encryptionKey,
     });
@@ -26,7 +26,7 @@ export const getStorage = async (): Promise<MMKV> => {
     console.error('Failed to initialize secure storage:', error);
     // Fallback to unencrypted storage (logged for monitoring)
     console.warn('WARNING: Using unencrypted storage as fallback');
-    secureStorageInstance = new MMKV({
+    secureStorageInstance = createMMKV({
       id: STORAGE_KEY,
     });
     return secureStorageInstance;
@@ -34,7 +34,7 @@ export const getStorage = async (): Promise<MMKV> => {
 };
 
 // Legacy synchronous storage for immediate use (will be migrated)
-export const storage = new MMKV({
+export const storage = createMMKV({
   id: STORAGE_KEY + '_temp',
   // Note: This temporary instance will be migrated to secure storage
 });
@@ -65,11 +65,11 @@ export const zustandStorage: StateStorage = {
   removeItem: async name => {
     try {
       const secureStorage = await getStorage();
-      return secureStorage.delete(name);
+      return secureStorage.remove(name);
     } catch (error) {
       console.error('Failed to remove item from secure storage:', error);
       // Fallback to temporary storage
-      return storage.delete(name);
+      return storage.remove(name);
     }
   },
 };

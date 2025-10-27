@@ -983,7 +983,7 @@ input CreateShoppingListItemInput {
   recipeId: ID
   recipeIngredientId: ID
   shoppingListId: ID!
-  sortOrder: Int
+  sortOrder: String
   storeSection: String
   unitId: String
   unitName: String
@@ -2498,6 +2498,12 @@ enum ModerationStatus {
   WARNED
 }
 
+input MoveShoppingListItemInput {
+  afterItemId: ID
+  beforeItemId: ID
+  itemId: ID!
+}
+
 type Mutation {
   _empty: String
   acceptHomeInvite(token: String!): Membership!
@@ -2680,7 +2686,10 @@ type Mutation {
   ): [LoginHistory!]!
   markNotificationAsRead(id: ID!): Notification!
   markNotificationUnread(id: ID!): Notification!
+  markPantryItemExpired(id: ID!, version: Int): PantryItem!
   mergeItems(duplicateIds: [ID!]!, primaryId: ID!): Item!
+  moveShoppingListItem(input: MoveShoppingListItemInput!): ShoppingListItem!
+  openPantryItem(id: ID!, version: Int): PantryItem!
   putUnderReview(input: PutUnderReviewInput!): UserModeration!
   reactivateDevice(id: ID!): Device!
   recordLoginAttempt(input: LoginAttemptInput!): LoginHistory!
@@ -2704,7 +2713,7 @@ type Mutation {
   removeCollaborator(data: RemoveCollaboratorInput!): Boolean!
   removeItemBrand(brandId: ID!, itemId: ID!): Item!
   removeItemFromCategory(categoryId: ID!, itemId: ID!): Item!
-  removeItemFromShoppingList(id: ID!): Boolean!
+  removeItemFromShoppingList(id: ID!): ShoppingListItem!
   removeItemImage(id: ID!): Item!
   removeItemTags(id: ID!, tags: [String!]!): Item!
   removeItemUnit(id: ID!): Boolean!
@@ -2716,9 +2725,6 @@ type Mutation {
   removeRestrictions(input: RemoveRestrictionsInput!): UserModeration!
   removeShoppingListCollaborator(id: ID!): Boolean!
   removeUnitConversion(unitId: ID!): Unit!
-  reorderShoppingListItems(
-    input: ReorderShoppingListItemsInput!
-  ): [ShoppingListItem!]!
   resendVerificationEmail(email: String!): Boolean!
   """
   Reset password using token from email
@@ -2748,6 +2754,11 @@ type Mutation {
   syncItemOffers(itemId: ID!, storeId: String!): Item!
   syncItemPrices(itemId: ID!, storeIds: [String!]): Item!
   syncItemWithProvider(itemId: ID!, provider: ProviderType!): Item!
+  toggleShoppingListItemPurchased(
+    id: ID!
+    purchased: Boolean!
+    version: Int
+  ): ShoppingListItem!
   transferHomeOwnership(homeId: ID!, newOwnerId: ID!): HomeOwnership!
   trustDevice(id: ID!): Device!
   trustMultipleDevices(deviceIds: [ID!]!): [Device!]!
@@ -2822,6 +2833,16 @@ type Mutation {
   ): NotificationPreferences!
   updatePantry(id: ID!, input: UpdatePantryInput!): Pantry!
   updatePantryItem(id: ID!, input: UpdatePantryItemInput!): PantryItem!
+  updatePantryItemLocation(
+    id: ID!
+    storageLocation: String!
+    version: Int
+  ): PantryItem!
+  updatePantryItemQuantity(
+    currentQuantity: Float!
+    id: ID!
+    version: Int
+  ): PantryItem!
   updateProfile(input: UpdateUserProfileInput!): UserProfile!
   updateProfileAvatar(avatarUrl: String!): UserProfile!
   updateProfileCover(coverImageUrl: String!): UserProfile!
@@ -2835,6 +2856,21 @@ type Mutation {
   updateShoppingListItem(
     id: ID!
     input: UpdateShoppingListItemInput!
+  ): ShoppingListItem!
+  updateShoppingListItemNotes(
+    id: ID!
+    notes: String
+    version: Int
+  ): ShoppingListItem!
+  updateShoppingListItemPriority(
+    id: ID!
+    priority: Int!
+    version: Int
+  ): ShoppingListItem!
+  updateShoppingListItemQuantity(
+    id: ID!
+    quantity: Float!
+    version: Int
   ): ShoppingListItem!
   updateStorageLocation(
     id: ID!
@@ -3885,11 +3921,6 @@ input RemoveRestrictionsInput {
   userId: ID!
 }
 
-input ReorderShoppingListItemsInput {
-  items: [ShoppingListItemSortInput!]!
-  shoppingListId: ID!
-}
-
 input ResetPasswordInput {
   password: String!
   token: String!
@@ -4148,7 +4179,7 @@ type ShoppingListItem {
   recipe: Recipe
   recipeIngredient: RecipeIngredient
   shoppingList: ShoppingList!
-  sortOrder: Int!
+  sortOrder: String!
   storeSection: String
   unit: Unit
   unitName: String
@@ -4172,11 +4203,6 @@ type ShoppingListItemPreviousValues {
   notes: String
   price: Float
   quantity: Int
-}
-
-input ShoppingListItemSortInput {
-  id: ID!
-  sortOrder: Int!
 }
 
 type ShoppingListOwnership {
@@ -4659,6 +4685,7 @@ input UpdateHomeInput {
   name: String
   tags: [String!]
   timezone: String
+  version: Int
 }
 
 input UpdateItemInput {
@@ -4837,6 +4864,7 @@ input UpdatePantryItemInput {
   storageState: StorageState
   tags: [String!]
   usageFrequency: UsageFrequency
+  version: Int
   wasteAmount: Float
   wasteReason: WasteReason
 }
@@ -4909,6 +4937,7 @@ input UpdateShoppingListInput {
   status: ListStatus
   tags: [String!]
   targetStoreId: String
+  version: Int
 }
 
 input UpdateShoppingListItemInput {
@@ -4924,10 +4953,11 @@ input UpdateShoppingListItemInput {
   purchasedPrice: Float
   purchasedQuantity: Float
   quantity: Float
-  sortOrder: Int
+  sortOrder: String
   storeSection: String
   unitId: ID
   unitName: String
+  version: Int
 }
 
 input UpdateStorageLocationInput {

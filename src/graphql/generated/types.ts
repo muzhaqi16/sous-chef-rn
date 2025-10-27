@@ -736,7 +736,7 @@ export type CreateShoppingListItemInput = {
   recipeId?: InputMaybe<Scalars['ID']['input']>;
   recipeIngredientId?: InputMaybe<Scalars['ID']['input']>;
   shoppingListId: Scalars['ID']['input'];
-  sortOrder?: InputMaybe<Scalars['Int']['input']>;
+  sortOrder?: InputMaybe<Scalars['String']['input']>;
   storeSection?: InputMaybe<Scalars['String']['input']>;
   unitId?: InputMaybe<Scalars['String']['input']>;
   unitName?: InputMaybe<Scalars['String']['input']>;
@@ -2308,6 +2308,12 @@ export enum ModerationStatus {
   Warned = 'WARNED',
 }
 
+export type MoveShoppingListItemInput = {
+  afterItemId?: InputMaybe<Scalars['ID']['input']>;
+  beforeItemId?: InputMaybe<Scalars['ID']['input']>;
+  itemId: Scalars['ID']['input'];
+};
+
 export type Mutation = {
   __typename?: 'Mutation';
   _empty?: Maybe<Scalars['String']['output']>;
@@ -2431,7 +2437,10 @@ export type Mutation = {
   markMultipleLoginsAsReviewed: Array<LoginHistory>;
   markNotificationAsRead: Notification;
   markNotificationUnread: Notification;
+  markPantryItemExpired: PantryItem;
   mergeItems: Item;
+  moveShoppingListItem: ShoppingListItem;
+  openPantryItem: PantryItem;
   putUnderReview: UserModeration;
   reactivateDevice: Device;
   recordLoginAttempt: LoginHistory;
@@ -2444,7 +2453,7 @@ export type Mutation = {
   removeCollaborator: Scalars['Boolean']['output'];
   removeItemBrand: Item;
   removeItemFromCategory: Item;
-  removeItemFromShoppingList: Scalars['Boolean']['output'];
+  removeItemFromShoppingList: ShoppingListItem;
   removeItemImage: Item;
   removeItemTags: Item;
   removeItemUnit: Scalars['Boolean']['output'];
@@ -2456,7 +2465,6 @@ export type Mutation = {
   removeRestrictions: UserModeration;
   removeShoppingListCollaborator: Scalars['Boolean']['output'];
   removeUnitConversion: Unit;
-  reorderShoppingListItems: Array<ShoppingListItem>;
   resendVerificationEmail: Scalars['Boolean']['output'];
   /** Reset password using token from email */
   resetPassword: ResetPasswordResponse;
@@ -2480,6 +2488,7 @@ export type Mutation = {
   syncItemOffers: Item;
   syncItemPrices: Item;
   syncItemWithProvider: Item;
+  toggleShoppingListItemPurchased: ShoppingListItem;
   transferHomeOwnership: HomeOwnership;
   trustDevice: Device;
   trustMultipleDevices: Array<Device>;
@@ -2521,6 +2530,8 @@ export type Mutation = {
   updateNotificationPreferences: NotificationPreferences;
   updatePantry: Pantry;
   updatePantryItem: PantryItem;
+  updatePantryItemLocation: PantryItem;
+  updatePantryItemQuantity: PantryItem;
   updateProfile: UserProfile;
   updateProfileAvatar: UserProfile;
   updateProfileCover: UserProfile;
@@ -2532,6 +2543,9 @@ export type Mutation = {
   updateSettings: UserSettings;
   updateShoppingList: ShoppingList;
   updateShoppingListItem: ShoppingListItem;
+  updateShoppingListItemNotes: ShoppingListItem;
+  updateShoppingListItemPriority: ShoppingListItem;
+  updateShoppingListItemQuantity: ShoppingListItem;
   updateStorageLocation: StorageLocation;
   updateStore: Store;
   updateStoreInfo: StoreInfo;
@@ -3043,9 +3057,23 @@ export type MutationMarkNotificationUnreadArgs = {
   id: Scalars['ID']['input'];
 };
 
+export type MutationMarkPantryItemExpiredArgs = {
+  id: Scalars['ID']['input'];
+  version?: InputMaybe<Scalars['Int']['input']>;
+};
+
 export type MutationMergeItemsArgs = {
   duplicateIds: Array<Scalars['ID']['input']>;
   primaryId: Scalars['ID']['input'];
+};
+
+export type MutationMoveShoppingListItemArgs = {
+  input: MoveShoppingListItemInput;
+};
+
+export type MutationOpenPantryItemArgs = {
+  id: Scalars['ID']['input'];
+  version?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type MutationPutUnderReviewArgs = {
@@ -3144,10 +3172,6 @@ export type MutationRemoveShoppingListCollaboratorArgs = {
 
 export type MutationRemoveUnitConversionArgs = {
   unitId: Scalars['ID']['input'];
-};
-
-export type MutationReorderShoppingListItemsArgs = {
-  input: ReorderShoppingListItemsInput;
 };
 
 export type MutationResendVerificationEmailArgs = {
@@ -3250,6 +3274,12 @@ export type MutationSyncItemPricesArgs = {
 export type MutationSyncItemWithProviderArgs = {
   itemId: Scalars['ID']['input'];
   provider: ProviderType;
+};
+
+export type MutationToggleShoppingListItemPurchasedArgs = {
+  id: Scalars['ID']['input'];
+  purchased: Scalars['Boolean']['input'];
+  version?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type MutationTransferHomeOwnershipArgs = {
@@ -3453,6 +3483,18 @@ export type MutationUpdatePantryItemArgs = {
   input: UpdatePantryItemInput;
 };
 
+export type MutationUpdatePantryItemLocationArgs = {
+  id: Scalars['ID']['input'];
+  storageLocation: Scalars['String']['input'];
+  version?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type MutationUpdatePantryItemQuantityArgs = {
+  currentQuantity: Scalars['Float']['input'];
+  id: Scalars['ID']['input'];
+  version?: InputMaybe<Scalars['Int']['input']>;
+};
+
 export type MutationUpdateProfileArgs = {
   input: UpdateUserProfileInput;
 };
@@ -3501,6 +3543,24 @@ export type MutationUpdateShoppingListArgs = {
 export type MutationUpdateShoppingListItemArgs = {
   id: Scalars['ID']['input'];
   input: UpdateShoppingListItemInput;
+};
+
+export type MutationUpdateShoppingListItemNotesArgs = {
+  id: Scalars['ID']['input'];
+  notes?: InputMaybe<Scalars['String']['input']>;
+  version?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type MutationUpdateShoppingListItemPriorityArgs = {
+  id: Scalars['ID']['input'];
+  priority: Scalars['Int']['input'];
+  version?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type MutationUpdateShoppingListItemQuantityArgs = {
+  id: Scalars['ID']['input'];
+  quantity: Scalars['Float']['input'];
+  version?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type MutationUpdateStorageLocationArgs = {
@@ -5167,11 +5227,6 @@ export type RemoveRestrictionsInput = {
   userId: Scalars['ID']['input'];
 };
 
-export type ReorderShoppingListItemsInput = {
-  items: Array<ShoppingListItemSortInput>;
-  shoppingListId: Scalars['ID']['input'];
-};
-
 export type ResetPasswordInput = {
   password: Scalars['String']['input'];
   token: Scalars['String']['input'];
@@ -5439,7 +5494,7 @@ export type ShoppingListItem = {
   recipe?: Maybe<Recipe>;
   recipeIngredient?: Maybe<RecipeIngredient>;
   shoppingList: ShoppingList;
-  sortOrder: Scalars['Int']['output'];
+  sortOrder: Scalars['String']['output'];
   storeSection?: Maybe<Scalars['String']['output']>;
   unit?: Maybe<Unit>;
   unitName?: Maybe<Scalars['String']['output']>;
@@ -5465,11 +5520,6 @@ export type ShoppingListItemPreviousValues = {
   notes?: Maybe<Scalars['String']['output']>;
   price?: Maybe<Scalars['Float']['output']>;
   quantity?: Maybe<Scalars['Int']['output']>;
-};
-
-export type ShoppingListItemSortInput = {
-  id: Scalars['ID']['input'];
-  sortOrder: Scalars['Int']['input'];
 };
 
 export type ShoppingListOwnership = {
@@ -6127,6 +6177,7 @@ export type UpdateHomeInput = {
   name?: InputMaybe<Scalars['String']['input']>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
   timezone?: InputMaybe<Scalars['String']['input']>;
+  version?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type UpdateItemInput = {
@@ -6305,6 +6356,7 @@ export type UpdatePantryItemInput = {
   storageState?: InputMaybe<StorageState>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
   usageFrequency?: InputMaybe<UsageFrequency>;
+  version?: InputMaybe<Scalars['Int']['input']>;
   wasteAmount?: InputMaybe<Scalars['Float']['input']>;
   wasteReason?: InputMaybe<WasteReason>;
 };
@@ -6377,6 +6429,7 @@ export type UpdateShoppingListInput = {
   status?: InputMaybe<ListStatus>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
   targetStoreId?: InputMaybe<Scalars['String']['input']>;
+  version?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type UpdateShoppingListItemInput = {
@@ -6392,10 +6445,11 @@ export type UpdateShoppingListItemInput = {
   purchasedPrice?: InputMaybe<Scalars['Float']['input']>;
   purchasedQuantity?: InputMaybe<Scalars['Float']['input']>;
   quantity?: InputMaybe<Scalars['Float']['input']>;
-  sortOrder?: InputMaybe<Scalars['Int']['input']>;
+  sortOrder?: InputMaybe<Scalars['String']['input']>;
   storeSection?: InputMaybe<Scalars['String']['input']>;
   unitId?: InputMaybe<Scalars['ID']['input']>;
   unitName?: InputMaybe<Scalars['String']['input']>;
+  version?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type UpdateStorageLocationInput = {
@@ -7831,7 +7885,7 @@ export type ShoppingListItemFragmentFragment = {
   notes?: string | null | undefined;
   priority: number;
   category?: string | null | undefined;
-  sortOrder: number;
+  sortOrder: string;
   isAutoAdded: boolean;
   autoAddReason?: string | null | undefined;
   isFromMealPlan: boolean;
@@ -7854,10 +7908,21 @@ export type ShoppingListItemFragmentFragment = {
         name: string;
         description?: string | null | undefined;
         imageUrl?: string | null | undefined;
-        images?: any | null | undefined;
         netWeight?: number | null | undefined;
         displayUnit?:
           | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+          | null
+          | undefined;
+        categories?:
+          | Array<{
+              __typename?: 'ItemCategory';
+              id: string;
+              isPrimary: boolean;
+              confidence: number;
+              source: CategorySource;
+              assignedAt?: string | null | undefined;
+              category: { __typename?: 'Category'; id: string; name: string };
+            }>
           | null
           | undefined;
       }
@@ -7963,19 +8028,6 @@ export type ShoppingListItemFragmentFragment = {
         totalPrice: number;
         itemName: string;
         unitSymbol: string;
-        user: {
-          __typename?: 'User';
-          id: string;
-          email: string;
-          profile?:
-            | {
-                __typename?: 'UserProfile';
-                id: string;
-                displayName?: string | null | undefined;
-              }
-            | null
-            | undefined;
-        };
       }>
     | null
     | undefined;
@@ -8190,7 +8242,6 @@ export type ItemFragmentFragment = {
   status: ItemStatus;
   visibility: Visibility;
   imageUrl?: string | null | undefined;
-  images?: any | null | undefined;
   tags: Array<string>;
   healthBenefits?: any | null | undefined;
   allergens?: any | null | undefined;
@@ -8338,6 +8389,7 @@ export type PantryItemFragmentFragment = {
   autoReorderPoint?: number | null | undefined;
   isAutoReorder: boolean;
   customCategory?: string | null | undefined;
+  actualNetWeight?: number | null | undefined;
   createdAt: string;
   updatedAt?: string | null | undefined;
   version?: number | null | undefined;
@@ -8356,7 +8408,6 @@ export type PantryItemFragmentFragment = {
     status: ItemStatus;
     visibility: Visibility;
     imageUrl?: string | null | undefined;
-    images?: any | null | undefined;
     tags: Array<string>;
     healthBenefits?: any | null | undefined;
     allergens?: any | null | undefined;
@@ -8485,6 +8536,16 @@ export type PantryItemFragmentFragment = {
         id: string;
         name: string;
         type: StorageType;
+      }
+    | null
+    | undefined;
+  actualNetWeightUnit?:
+    | {
+        __typename?: 'Unit';
+        id: string;
+        name: string;
+        symbol: string;
+        type: UnitType;
       }
     | null
     | undefined;
@@ -8625,6 +8686,7 @@ export type PantryFragmentFragment = {
         autoReorderPoint?: number | null | undefined;
         isAutoReorder: boolean;
         customCategory?: string | null | undefined;
+        actualNetWeight?: number | null | undefined;
         createdAt: string;
         updatedAt?: string | null | undefined;
         version?: number | null | undefined;
@@ -8643,7 +8705,6 @@ export type PantryFragmentFragment = {
           status: ItemStatus;
           visibility: Visibility;
           imageUrl?: string | null | undefined;
-          images?: any | null | undefined;
           tags: Array<string>;
           healthBenefits?: any | null | undefined;
           allergens?: any | null | undefined;
@@ -8775,6 +8836,16 @@ export type PantryFragmentFragment = {
               id: string;
               name: string;
               type: StorageType;
+            }
+          | null
+          | undefined;
+        actualNetWeightUnit?:
+          | {
+              __typename?: 'Unit';
+              id: string;
+              name: string;
+              symbol: string;
+              type: UnitType;
             }
           | null
           | undefined;
@@ -9086,6 +9157,7 @@ export type HomeFragmentFragment = {
               autoReorderPoint?: number | null | undefined;
               isAutoReorder: boolean;
               customCategory?: string | null | undefined;
+              actualNetWeight?: number | null | undefined;
               createdAt: string;
               updatedAt?: string | null | undefined;
               version?: number | null | undefined;
@@ -9104,7 +9176,6 @@ export type HomeFragmentFragment = {
                 status: ItemStatus;
                 visibility: Visibility;
                 imageUrl?: string | null | undefined;
-                images?: any | null | undefined;
                 tags: Array<string>;
                 healthBenefits?: any | null | undefined;
                 allergens?: any | null | undefined;
@@ -9244,6 +9315,16 @@ export type HomeFragmentFragment = {
                   }
                 | null
                 | undefined;
+              actualNetWeightUnit?:
+                | {
+                    __typename?: 'Unit';
+                    id: string;
+                    name: string;
+                    symbol: string;
+                    type: UnitType;
+                  }
+                | null
+                | undefined;
               usageRecords: Array<{
                 __typename?: 'PantryItemUsage';
                 id: string;
@@ -9295,19 +9376,6 @@ export type PurchaseFragmentFragment = {
   totalPrice: number;
   itemName: string;
   unitSymbol: string;
-  user: {
-    __typename?: 'User';
-    id: string;
-    email: string;
-    profile?:
-      | {
-          __typename?: 'UserProfile';
-          id: string;
-          displayName?: string | null | undefined;
-        }
-      | null
-      | undefined;
-  };
 };
 
 export type RecipeIngredientFragmentFragment = {
@@ -9573,6 +9641,7 @@ export type GetHomeQuery = {
                     autoReorderPoint?: number | null | undefined;
                     isAutoReorder: boolean;
                     customCategory?: string | null | undefined;
+                    actualNetWeight?: number | null | undefined;
                     createdAt: string;
                     updatedAt?: string | null | undefined;
                     version?: number | null | undefined;
@@ -9591,7 +9660,6 @@ export type GetHomeQuery = {
                       status: ItemStatus;
                       visibility: Visibility;
                       imageUrl?: string | null | undefined;
-                      images?: any | null | undefined;
                       tags: Array<string>;
                       healthBenefits?: any | null | undefined;
                       allergens?: any | null | undefined;
@@ -9728,6 +9796,16 @@ export type GetHomeQuery = {
                           id: string;
                           name: string;
                           type: StorageType;
+                        }
+                      | null
+                      | undefined;
+                    actualNetWeightUnit?:
+                      | {
+                          __typename?: 'Unit';
+                          id: string;
+                          name: string;
+                          symbol: string;
+                          type: UnitType;
                         }
                       | null
                       | undefined;
@@ -10261,6 +10339,7 @@ export type UpdateHomeMutation = {
                 autoReorderPoint?: number | null | undefined;
                 isAutoReorder: boolean;
                 customCategory?: string | null | undefined;
+                actualNetWeight?: number | null | undefined;
                 createdAt: string;
                 updatedAt?: string | null | undefined;
                 version?: number | null | undefined;
@@ -10279,7 +10358,6 @@ export type UpdateHomeMutation = {
                   status: ItemStatus;
                   visibility: Visibility;
                   imageUrl?: string | null | undefined;
-                  images?: any | null | undefined;
                   tags: Array<string>;
                   healthBenefits?: any | null | undefined;
                   allergens?: any | null | undefined;
@@ -10416,6 +10494,16 @@ export type UpdateHomeMutation = {
                       id: string;
                       name: string;
                       type: StorageType;
+                    }
+                  | null
+                  | undefined;
+                actualNetWeightUnit?:
+                  | {
+                      __typename?: 'Unit';
+                      id: string;
+                      name: string;
+                      symbol: string;
+                      type: UnitType;
                     }
                   | null
                   | undefined;
@@ -10597,6 +10685,7 @@ export type DeleteHomeMutation = {
                 autoReorderPoint?: number | null | undefined;
                 isAutoReorder: boolean;
                 customCategory?: string | null | undefined;
+                actualNetWeight?: number | null | undefined;
                 createdAt: string;
                 updatedAt?: string | null | undefined;
                 version?: number | null | undefined;
@@ -10615,7 +10704,6 @@ export type DeleteHomeMutation = {
                   status: ItemStatus;
                   visibility: Visibility;
                   imageUrl?: string | null | undefined;
-                  images?: any | null | undefined;
                   tags: Array<string>;
                   healthBenefits?: any | null | undefined;
                   allergens?: any | null | undefined;
@@ -10752,6 +10840,16 @@ export type DeleteHomeMutation = {
                       id: string;
                       name: string;
                       type: StorageType;
+                    }
+                  | null
+                  | undefined;
+                actualNetWeightUnit?:
+                  | {
+                      __typename?: 'Unit';
+                      id: string;
+                      name: string;
+                      symbol: string;
+                      type: UnitType;
                     }
                   | null
                   | undefined;
@@ -11309,6 +11407,7 @@ export type GetDefaultHomeQuery = {
                     autoReorderPoint?: number | null | undefined;
                     isAutoReorder: boolean;
                     customCategory?: string | null | undefined;
+                    actualNetWeight?: number | null | undefined;
                     createdAt: string;
                     updatedAt?: string | null | undefined;
                     version?: number | null | undefined;
@@ -11327,7 +11426,6 @@ export type GetDefaultHomeQuery = {
                       status: ItemStatus;
                       visibility: Visibility;
                       imageUrl?: string | null | undefined;
-                      images?: any | null | undefined;
                       tags: Array<string>;
                       healthBenefits?: any | null | undefined;
                       allergens?: any | null | undefined;
@@ -11464,6 +11562,16 @@ export type GetDefaultHomeQuery = {
                           id: string;
                           name: string;
                           type: StorageType;
+                        }
+                      | null
+                      | undefined;
+                    actualNetWeightUnit?:
+                      | {
+                          __typename?: 'Unit';
+                          id: string;
+                          name: string;
+                          symbol: string;
+                          type: UnitType;
                         }
                       | null
                       | undefined;
@@ -12304,6 +12412,7 @@ export type GetPantryItemsQuery = {
     autoReorderPoint?: number | null | undefined;
     isAutoReorder: boolean;
     customCategory?: string | null | undefined;
+    actualNetWeight?: number | null | undefined;
     createdAt: string;
     updatedAt?: string | null | undefined;
     version?: number | null | undefined;
@@ -12322,7 +12431,6 @@ export type GetPantryItemsQuery = {
       status: ItemStatus;
       visibility: Visibility;
       imageUrl?: string | null | undefined;
-      images?: any | null | undefined;
       tags: Array<string>;
       healthBenefits?: any | null | undefined;
       allergens?: any | null | undefined;
@@ -12451,6 +12559,16 @@ export type GetPantryItemsQuery = {
           id: string;
           name: string;
           type: StorageType;
+        }
+      | null
+      | undefined;
+    actualNetWeightUnit?:
+      | {
+          __typename?: 'Unit';
+          id: string;
+          name: string;
+          symbol: string;
+          type: UnitType;
         }
       | null
       | undefined;
@@ -12497,6 +12615,7 @@ export type GetPantryItemQuery = {
     autoReorderPoint?: number | null | undefined;
     isAutoReorder: boolean;
     customCategory?: string | null | undefined;
+    actualNetWeight?: number | null | undefined;
     createdAt: string;
     updatedAt?: string | null | undefined;
     version?: number | null | undefined;
@@ -12515,7 +12634,6 @@ export type GetPantryItemQuery = {
       status: ItemStatus;
       visibility: Visibility;
       imageUrl?: string | null | undefined;
-      images?: any | null | undefined;
       tags: Array<string>;
       healthBenefits?: any | null | undefined;
       allergens?: any | null | undefined;
@@ -12644,6 +12762,16 @@ export type GetPantryItemQuery = {
           id: string;
           name: string;
           type: StorageType;
+        }
+      | null
+      | undefined;
+    actualNetWeightUnit?:
+      | {
+          __typename?: 'Unit';
+          id: string;
+          name: string;
+          symbol: string;
+          type: UnitType;
         }
       | null
       | undefined;
@@ -12746,6 +12874,7 @@ export type CreatePantryItemMutation = {
     autoReorderPoint?: number | null | undefined;
     isAutoReorder: boolean;
     customCategory?: string | null | undefined;
+    actualNetWeight?: number | null | undefined;
     createdAt: string;
     updatedAt?: string | null | undefined;
     version?: number | null | undefined;
@@ -12764,7 +12893,6 @@ export type CreatePantryItemMutation = {
       status: ItemStatus;
       visibility: Visibility;
       imageUrl?: string | null | undefined;
-      images?: any | null | undefined;
       tags: Array<string>;
       healthBenefits?: any | null | undefined;
       allergens?: any | null | undefined;
@@ -12893,6 +13021,16 @@ export type CreatePantryItemMutation = {
           id: string;
           name: string;
           type: StorageType;
+        }
+      | null
+      | undefined;
+    actualNetWeightUnit?:
+      | {
+          __typename?: 'Unit';
+          id: string;
+          name: string;
+          symbol: string;
+          type: UnitType;
         }
       | null
       | undefined;
@@ -12940,6 +13078,7 @@ export type UpdatePantryItemMutation = {
     autoReorderPoint?: number | null | undefined;
     isAutoReorder: boolean;
     customCategory?: string | null | undefined;
+    actualNetWeight?: number | null | undefined;
     createdAt: string;
     updatedAt?: string | null | undefined;
     version?: number | null | undefined;
@@ -12958,7 +13097,6 @@ export type UpdatePantryItemMutation = {
       status: ItemStatus;
       visibility: Visibility;
       imageUrl?: string | null | undefined;
-      images?: any | null | undefined;
       tags: Array<string>;
       healthBenefits?: any | null | undefined;
       allergens?: any | null | undefined;
@@ -13087,6 +13225,16 @@ export type UpdatePantryItemMutation = {
           id: string;
           name: string;
           type: StorageType;
+        }
+      | null
+      | undefined;
+    actualNetWeightUnit?:
+      | {
+          __typename?: 'Unit';
+          id: string;
+          name: string;
+          symbol: string;
+          type: UnitType;
         }
       | null
       | undefined;
@@ -13133,6 +13281,7 @@ export type DeletePantryItemMutation = {
     autoReorderPoint?: number | null | undefined;
     isAutoReorder: boolean;
     customCategory?: string | null | undefined;
+    actualNetWeight?: number | null | undefined;
     createdAt: string;
     updatedAt?: string | null | undefined;
     version?: number | null | undefined;
@@ -13151,7 +13300,6 @@ export type DeletePantryItemMutation = {
       status: ItemStatus;
       visibility: Visibility;
       imageUrl?: string | null | undefined;
-      images?: any | null | undefined;
       tags: Array<string>;
       healthBenefits?: any | null | undefined;
       allergens?: any | null | undefined;
@@ -13280,6 +13428,16 @@ export type DeletePantryItemMutation = {
           id: string;
           name: string;
           type: StorageType;
+        }
+      | null
+      | undefined;
+    actualNetWeightUnit?:
+      | {
+          __typename?: 'Unit';
+          id: string;
+          name: string;
+          symbol: string;
+          type: UnitType;
         }
       | null
       | undefined;
@@ -14299,7 +14457,7 @@ export type GetShoppingListQuery = {
           notes?: string | null | undefined;
           priority: number;
           category?: string | null | undefined;
-          sortOrder: number;
+          sortOrder: string;
           isAutoAdded: boolean;
           autoAddReason?: string | null | undefined;
           isFromMealPlan: boolean;
@@ -14475,7 +14633,7 @@ export type GetShoppingListItemsQuery = {
     notes?: string | null | undefined;
     priority: number;
     category?: string | null | undefined;
-    sortOrder: number;
+    sortOrder: string;
     isAutoAdded: boolean;
     autoAddReason?: string | null | undefined;
     isFromMealPlan: boolean;
@@ -14498,10 +14656,21 @@ export type GetShoppingListItemsQuery = {
           name: string;
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
-          images?: any | null | undefined;
           netWeight?: number | null | undefined;
           displayUnit?:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+            | null
+            | undefined;
+          categories?:
+            | Array<{
+                __typename?: 'ItemCategory';
+                id: string;
+                isPrimary: boolean;
+                confidence: number;
+                source: CategorySource;
+                assignedAt?: string | null | undefined;
+                category: { __typename?: 'Category'; id: string; name: string };
+              }>
             | null
             | undefined;
         }
@@ -14607,19 +14776,6 @@ export type GetShoppingListItemsQuery = {
           totalPrice: number;
           itemName: string;
           unitSymbol: string;
-          user: {
-            __typename?: 'User';
-            id: string;
-            email: string;
-            profile?:
-              | {
-                  __typename?: 'UserProfile';
-                  id: string;
-                  displayName?: string | null | undefined;
-                }
-              | null
-              | undefined;
-          };
         }>
       | null
       | undefined;
@@ -14657,7 +14813,7 @@ export type GetShoppingListItemQuery = {
         notes?: string | null | undefined;
         priority: number;
         category?: string | null | undefined;
-        sortOrder: number;
+        sortOrder: string;
         isAutoAdded: boolean;
         autoAddReason?: string | null | undefined;
         isFromMealPlan: boolean;
@@ -14680,7 +14836,6 @@ export type GetShoppingListItemQuery = {
               name: string;
               description?: string | null | undefined;
               imageUrl?: string | null | undefined;
-              images?: any | null | undefined;
               netWeight?: number | null | undefined;
               displayUnit?:
                 | {
@@ -14689,6 +14844,22 @@ export type GetShoppingListItemQuery = {
                     name: string;
                     symbol: string;
                   }
+                | null
+                | undefined;
+              categories?:
+                | Array<{
+                    __typename?: 'ItemCategory';
+                    id: string;
+                    isPrimary: boolean;
+                    confidence: number;
+                    source: CategorySource;
+                    assignedAt?: string | null | undefined;
+                    category: {
+                      __typename?: 'Category';
+                      id: string;
+                      name: string;
+                    };
+                  }>
                 | null
                 | undefined;
             }
@@ -14794,19 +14965,6 @@ export type GetShoppingListItemQuery = {
               totalPrice: number;
               itemName: string;
               unitSymbol: string;
-              user: {
-                __typename?: 'User';
-                id: string;
-                email: string;
-                profile?:
-                  | {
-                      __typename?: 'UserProfile';
-                      id: string;
-                      displayName?: string | null | undefined;
-                    }
-                  | null
-                  | undefined;
-              };
             }>
           | null
           | undefined;
@@ -15049,7 +15207,7 @@ export type AddItemToShoppingListMutation = {
     notes?: string | null | undefined;
     priority: number;
     category?: string | null | undefined;
-    sortOrder: number;
+    sortOrder: string;
     isAutoAdded: boolean;
     autoAddReason?: string | null | undefined;
     isFromMealPlan: boolean;
@@ -15072,10 +15230,21 @@ export type AddItemToShoppingListMutation = {
           name: string;
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
-          images?: any | null | undefined;
           netWeight?: number | null | undefined;
           displayUnit?:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+            | null
+            | undefined;
+          categories?:
+            | Array<{
+                __typename?: 'ItemCategory';
+                id: string;
+                isPrimary: boolean;
+                confidence: number;
+                source: CategorySource;
+                assignedAt?: string | null | undefined;
+                category: { __typename?: 'Category'; id: string; name: string };
+              }>
             | null
             | undefined;
         }
@@ -15181,19 +15350,6 @@ export type AddItemToShoppingListMutation = {
           totalPrice: number;
           itemName: string;
           unitSymbol: string;
-          user: {
-            __typename?: 'User';
-            id: string;
-            email: string;
-            profile?:
-              | {
-                  __typename?: 'UserProfile';
-                  id: string;
-                  displayName?: string | null | undefined;
-                }
-              | null
-              | undefined;
-          };
         }>
       | null
       | undefined;
@@ -15231,7 +15387,7 @@ export type UpdateShoppingListItemMutation = {
     notes?: string | null | undefined;
     priority: number;
     category?: string | null | undefined;
-    sortOrder: number;
+    sortOrder: string;
     isAutoAdded: boolean;
     autoAddReason?: string | null | undefined;
     isFromMealPlan: boolean;
@@ -15254,10 +15410,21 @@ export type UpdateShoppingListItemMutation = {
           name: string;
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
-          images?: any | null | undefined;
           netWeight?: number | null | undefined;
           displayUnit?:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+            | null
+            | undefined;
+          categories?:
+            | Array<{
+                __typename?: 'ItemCategory';
+                id: string;
+                isPrimary: boolean;
+                confidence: number;
+                source: CategorySource;
+                assignedAt?: string | null | undefined;
+                category: { __typename?: 'Category'; id: string; name: string };
+              }>
             | null
             | undefined;
         }
@@ -15363,19 +15530,6 @@ export type UpdateShoppingListItemMutation = {
           totalPrice: number;
           itemName: string;
           unitSymbol: string;
-          user: {
-            __typename?: 'User';
-            id: string;
-            email: string;
-            profile?:
-              | {
-                  __typename?: 'UserProfile';
-                  id: string;
-                  displayName?: string | null | undefined;
-                }
-              | null
-              | undefined;
-          };
         }>
       | null
       | undefined;
@@ -15388,7 +15542,177 @@ export type RemoveItemFromShoppingListMutationVariables = Exact<{
 
 export type RemoveItemFromShoppingListMutation = {
   __typename?: 'Mutation';
-  removeItemFromShoppingList: boolean;
+  removeItemFromShoppingList: {
+    __typename?: 'ShoppingListItem';
+    id: string;
+    quantity?: number | null | undefined;
+    estimatedPrice?: number | null | undefined;
+    budgetPrice?: number | null | undefined;
+    lastKnownPrice?: number | null | undefined;
+    lowestPrice?: number | null | undefined;
+    highestPrice?: number | null | undefined;
+    priceLastUpdated?: string | null | undefined;
+    isPurchased: boolean;
+    purchasedQuantity?: number | null | undefined;
+    purchasedPrice?: number | null | undefined;
+    purchaseDate?: string | null | undefined;
+    aisle?: string | null | undefined;
+    storeSection?: string | null | undefined;
+    previouslyPurchased: boolean;
+    lastPurchaseDate?: string | null | undefined;
+    purchaseCount: number;
+    itemName?: string | null | undefined;
+    unitName?: string | null | undefined;
+    notes?: string | null | undefined;
+    priority: number;
+    category?: string | null | undefined;
+    sortOrder: string;
+    isAutoAdded: boolean;
+    autoAddReason?: string | null | undefined;
+    isFromMealPlan: boolean;
+    mealPlanReference?: string | null | undefined;
+    createdAt: string;
+    updatedAt: string;
+    deletedAt?: string | null | undefined;
+    version: number;
+    shoppingList: {
+      __typename?: 'ShoppingList';
+      id: string;
+      totalItems: number;
+      completedItems: number;
+      estimatedTotal: number;
+    };
+    item?:
+      | {
+          __typename?: 'Item';
+          id: string;
+          name: string;
+          description?: string | null | undefined;
+          imageUrl?: string | null | undefined;
+          netWeight?: number | null | undefined;
+          displayUnit?:
+            | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+            | null
+            | undefined;
+          categories?:
+            | Array<{
+                __typename?: 'ItemCategory';
+                id: string;
+                isPrimary: boolean;
+                confidence: number;
+                source: CategorySource;
+                assignedAt?: string | null | undefined;
+                category: { __typename?: 'Category'; id: string; name: string };
+              }>
+            | null
+            | undefined;
+        }
+      | null
+      | undefined;
+    unit?:
+      | {
+          __typename?: 'Unit';
+          id: string;
+          name: string;
+          symbol: string;
+          type: UnitType;
+          isMetric: boolean;
+          baseUnitId?: string | null | undefined;
+          conversionFactor: number;
+          notes?: string | null | undefined;
+          isCommon: boolean;
+          sortOrder: number;
+          createdAt: string;
+          updatedAt: string;
+        }
+      | null
+      | undefined;
+    addedBy?:
+      | {
+          __typename?: 'User';
+          id: string;
+          email: string;
+          emailVerified: boolean;
+          role: UserRole;
+          onBoarded: boolean;
+          timezone?: string | null | undefined;
+          preferredCurrency?: string | null | undefined;
+          language?: string | null | undefined;
+          defaultShoppingListId?: string | null | undefined;
+          defaultHomeId?: string | null | undefined;
+          createdAt: string;
+          updatedAt: string;
+          lastActiveAt?: string | null | undefined;
+          profile?:
+            | {
+                __typename?: 'UserProfile';
+                id: string;
+                firstName?: string | null | undefined;
+                lastName?: string | null | undefined;
+                displayName?: string | null | undefined;
+                bio?: string | null | undefined;
+                avatar?: string | null | undefined;
+                phone?: string | null | undefined;
+              }
+            | null
+            | undefined;
+          settings?:
+            | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
+            | null
+            | undefined;
+        }
+      | null
+      | undefined;
+    purchasedBy?:
+      | {
+          __typename?: 'User';
+          id: string;
+          email: string;
+          emailVerified: boolean;
+          role: UserRole;
+          onBoarded: boolean;
+          timezone?: string | null | undefined;
+          preferredCurrency?: string | null | undefined;
+          language?: string | null | undefined;
+          defaultShoppingListId?: string | null | undefined;
+          defaultHomeId?: string | null | undefined;
+          createdAt: string;
+          updatedAt: string;
+          lastActiveAt?: string | null | undefined;
+          profile?:
+            | {
+                __typename?: 'UserProfile';
+                id: string;
+                firstName?: string | null | undefined;
+                lastName?: string | null | undefined;
+                displayName?: string | null | undefined;
+                bio?: string | null | undefined;
+                avatar?: string | null | undefined;
+                phone?: string | null | undefined;
+              }
+            | null
+            | undefined;
+          settings?:
+            | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
+            | null
+            | undefined;
+        }
+      | null
+      | undefined;
+    purchases?:
+      | Array<{
+          __typename?: 'Purchase';
+          id: string;
+          purchaseDate: string;
+          quantity: number;
+          unitPrice: number;
+          totalPrice: number;
+          itemName: string;
+          unitSymbol: string;
+        }>
+      | null
+      | undefined;
+  };
 };
 
 export type MarkItemPurchasedMutationVariables = Exact<{
@@ -15422,7 +15746,7 @@ export type MarkItemPurchasedMutation = {
     notes?: string | null | undefined;
     priority: number;
     category?: string | null | undefined;
-    sortOrder: number;
+    sortOrder: string;
     isAutoAdded: boolean;
     autoAddReason?: string | null | undefined;
     isFromMealPlan: boolean;
@@ -15445,10 +15769,21 @@ export type MarkItemPurchasedMutation = {
           name: string;
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
-          images?: any | null | undefined;
           netWeight?: number | null | undefined;
           displayUnit?:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+            | null
+            | undefined;
+          categories?:
+            | Array<{
+                __typename?: 'ItemCategory';
+                id: string;
+                isPrimary: boolean;
+                confidence: number;
+                source: CategorySource;
+                assignedAt?: string | null | undefined;
+                category: { __typename?: 'Category'; id: string; name: string };
+              }>
             | null
             | undefined;
         }
@@ -15554,32 +15889,19 @@ export type MarkItemPurchasedMutation = {
           totalPrice: number;
           itemName: string;
           unitSymbol: string;
-          user: {
-            __typename?: 'User';
-            id: string;
-            email: string;
-            profile?:
-              | {
-                  __typename?: 'UserProfile';
-                  id: string;
-                  displayName?: string | null | undefined;
-                }
-              | null
-              | undefined;
-          };
         }>
       | null
       | undefined;
   };
 };
 
-export type ReorderShoppingListItemsMutationVariables = Exact<{
-  input: ReorderShoppingListItemsInput;
+export type MoveShoppingListItemMutationVariables = Exact<{
+  input: MoveShoppingListItemInput;
 }>;
 
-export type ReorderShoppingListItemsMutation = {
+export type MoveShoppingListItemMutation = {
   __typename?: 'Mutation';
-  reorderShoppingListItems: Array<{
+  moveShoppingListItem: {
     __typename?: 'ShoppingListItem';
     id: string;
     quantity?: number | null | undefined;
@@ -15603,7 +15925,7 @@ export type ReorderShoppingListItemsMutation = {
     notes?: string | null | undefined;
     priority: number;
     category?: string | null | undefined;
-    sortOrder: number;
+    sortOrder: string;
     isAutoAdded: boolean;
     autoAddReason?: string | null | undefined;
     isFromMealPlan: boolean;
@@ -15626,10 +15948,21 @@ export type ReorderShoppingListItemsMutation = {
           name: string;
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
-          images?: any | null | undefined;
           netWeight?: number | null | undefined;
           displayUnit?:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+            | null
+            | undefined;
+          categories?:
+            | Array<{
+                __typename?: 'ItemCategory';
+                id: string;
+                isPrimary: boolean;
+                confidence: number;
+                source: CategorySource;
+                assignedAt?: string | null | undefined;
+                category: { __typename?: 'Category'; id: string; name: string };
+              }>
             | null
             | undefined;
         }
@@ -15735,23 +16068,734 @@ export type ReorderShoppingListItemsMutation = {
           totalPrice: number;
           itemName: string;
           unitSymbol: string;
-          user: {
-            __typename?: 'User';
-            id: string;
-            email: string;
-            profile?:
-              | {
-                  __typename?: 'UserProfile';
-                  id: string;
-                  displayName?: string | null | undefined;
-                }
-              | null
-              | undefined;
-          };
         }>
       | null
       | undefined;
-  }>;
+  };
+};
+
+export type ToggleShoppingListItemPurchasedMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+  purchased: Scalars['Boolean']['input'];
+  version?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+export type ToggleShoppingListItemPurchasedMutation = {
+  __typename?: 'Mutation';
+  toggleShoppingListItemPurchased: {
+    __typename?: 'ShoppingListItem';
+    id: string;
+    quantity?: number | null | undefined;
+    estimatedPrice?: number | null | undefined;
+    budgetPrice?: number | null | undefined;
+    lastKnownPrice?: number | null | undefined;
+    lowestPrice?: number | null | undefined;
+    highestPrice?: number | null | undefined;
+    priceLastUpdated?: string | null | undefined;
+    isPurchased: boolean;
+    purchasedQuantity?: number | null | undefined;
+    purchasedPrice?: number | null | undefined;
+    purchaseDate?: string | null | undefined;
+    aisle?: string | null | undefined;
+    storeSection?: string | null | undefined;
+    previouslyPurchased: boolean;
+    lastPurchaseDate?: string | null | undefined;
+    purchaseCount: number;
+    itemName?: string | null | undefined;
+    unitName?: string | null | undefined;
+    notes?: string | null | undefined;
+    priority: number;
+    category?: string | null | undefined;
+    sortOrder: string;
+    isAutoAdded: boolean;
+    autoAddReason?: string | null | undefined;
+    isFromMealPlan: boolean;
+    mealPlanReference?: string | null | undefined;
+    createdAt: string;
+    updatedAt: string;
+    deletedAt?: string | null | undefined;
+    version: number;
+    shoppingList: {
+      __typename?: 'ShoppingList';
+      id: string;
+      totalItems: number;
+      completedItems: number;
+      estimatedTotal: number;
+    };
+    item?:
+      | {
+          __typename?: 'Item';
+          id: string;
+          name: string;
+          description?: string | null | undefined;
+          imageUrl?: string | null | undefined;
+          netWeight?: number | null | undefined;
+          displayUnit?:
+            | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+            | null
+            | undefined;
+          categories?:
+            | Array<{
+                __typename?: 'ItemCategory';
+                id: string;
+                isPrimary: boolean;
+                confidence: number;
+                source: CategorySource;
+                assignedAt?: string | null | undefined;
+                category: { __typename?: 'Category'; id: string; name: string };
+              }>
+            | null
+            | undefined;
+        }
+      | null
+      | undefined;
+    unit?:
+      | {
+          __typename?: 'Unit';
+          id: string;
+          name: string;
+          symbol: string;
+          type: UnitType;
+          isMetric: boolean;
+          baseUnitId?: string | null | undefined;
+          conversionFactor: number;
+          notes?: string | null | undefined;
+          isCommon: boolean;
+          sortOrder: number;
+          createdAt: string;
+          updatedAt: string;
+        }
+      | null
+      | undefined;
+    addedBy?:
+      | {
+          __typename?: 'User';
+          id: string;
+          email: string;
+          emailVerified: boolean;
+          role: UserRole;
+          onBoarded: boolean;
+          timezone?: string | null | undefined;
+          preferredCurrency?: string | null | undefined;
+          language?: string | null | undefined;
+          defaultShoppingListId?: string | null | undefined;
+          defaultHomeId?: string | null | undefined;
+          createdAt: string;
+          updatedAt: string;
+          lastActiveAt?: string | null | undefined;
+          profile?:
+            | {
+                __typename?: 'UserProfile';
+                id: string;
+                firstName?: string | null | undefined;
+                lastName?: string | null | undefined;
+                displayName?: string | null | undefined;
+                bio?: string | null | undefined;
+                avatar?: string | null | undefined;
+                phone?: string | null | undefined;
+              }
+            | null
+            | undefined;
+          settings?:
+            | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
+            | null
+            | undefined;
+        }
+      | null
+      | undefined;
+    purchasedBy?:
+      | {
+          __typename?: 'User';
+          id: string;
+          email: string;
+          emailVerified: boolean;
+          role: UserRole;
+          onBoarded: boolean;
+          timezone?: string | null | undefined;
+          preferredCurrency?: string | null | undefined;
+          language?: string | null | undefined;
+          defaultShoppingListId?: string | null | undefined;
+          defaultHomeId?: string | null | undefined;
+          createdAt: string;
+          updatedAt: string;
+          lastActiveAt?: string | null | undefined;
+          profile?:
+            | {
+                __typename?: 'UserProfile';
+                id: string;
+                firstName?: string | null | undefined;
+                lastName?: string | null | undefined;
+                displayName?: string | null | undefined;
+                bio?: string | null | undefined;
+                avatar?: string | null | undefined;
+                phone?: string | null | undefined;
+              }
+            | null
+            | undefined;
+          settings?:
+            | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
+            | null
+            | undefined;
+        }
+      | null
+      | undefined;
+    purchases?:
+      | Array<{
+          __typename?: 'Purchase';
+          id: string;
+          purchaseDate: string;
+          quantity: number;
+          unitPrice: number;
+          totalPrice: number;
+          itemName: string;
+          unitSymbol: string;
+        }>
+      | null
+      | undefined;
+  };
+};
+
+export type UpdateShoppingListItemQuantityMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+  quantity: Scalars['Float']['input'];
+  version?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+export type UpdateShoppingListItemQuantityMutation = {
+  __typename?: 'Mutation';
+  updateShoppingListItemQuantity: {
+    __typename?: 'ShoppingListItem';
+    id: string;
+    quantity?: number | null | undefined;
+    estimatedPrice?: number | null | undefined;
+    budgetPrice?: number | null | undefined;
+    lastKnownPrice?: number | null | undefined;
+    lowestPrice?: number | null | undefined;
+    highestPrice?: number | null | undefined;
+    priceLastUpdated?: string | null | undefined;
+    isPurchased: boolean;
+    purchasedQuantity?: number | null | undefined;
+    purchasedPrice?: number | null | undefined;
+    purchaseDate?: string | null | undefined;
+    aisle?: string | null | undefined;
+    storeSection?: string | null | undefined;
+    previouslyPurchased: boolean;
+    lastPurchaseDate?: string | null | undefined;
+    purchaseCount: number;
+    itemName?: string | null | undefined;
+    unitName?: string | null | undefined;
+    notes?: string | null | undefined;
+    priority: number;
+    category?: string | null | undefined;
+    sortOrder: string;
+    isAutoAdded: boolean;
+    autoAddReason?: string | null | undefined;
+    isFromMealPlan: boolean;
+    mealPlanReference?: string | null | undefined;
+    createdAt: string;
+    updatedAt: string;
+    deletedAt?: string | null | undefined;
+    version: number;
+    shoppingList: {
+      __typename?: 'ShoppingList';
+      id: string;
+      totalItems: number;
+      completedItems: number;
+      estimatedTotal: number;
+    };
+    item?:
+      | {
+          __typename?: 'Item';
+          id: string;
+          name: string;
+          description?: string | null | undefined;
+          imageUrl?: string | null | undefined;
+          netWeight?: number | null | undefined;
+          displayUnit?:
+            | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+            | null
+            | undefined;
+          categories?:
+            | Array<{
+                __typename?: 'ItemCategory';
+                id: string;
+                isPrimary: boolean;
+                confidence: number;
+                source: CategorySource;
+                assignedAt?: string | null | undefined;
+                category: { __typename?: 'Category'; id: string; name: string };
+              }>
+            | null
+            | undefined;
+        }
+      | null
+      | undefined;
+    unit?:
+      | {
+          __typename?: 'Unit';
+          id: string;
+          name: string;
+          symbol: string;
+          type: UnitType;
+          isMetric: boolean;
+          baseUnitId?: string | null | undefined;
+          conversionFactor: number;
+          notes?: string | null | undefined;
+          isCommon: boolean;
+          sortOrder: number;
+          createdAt: string;
+          updatedAt: string;
+        }
+      | null
+      | undefined;
+    addedBy?:
+      | {
+          __typename?: 'User';
+          id: string;
+          email: string;
+          emailVerified: boolean;
+          role: UserRole;
+          onBoarded: boolean;
+          timezone?: string | null | undefined;
+          preferredCurrency?: string | null | undefined;
+          language?: string | null | undefined;
+          defaultShoppingListId?: string | null | undefined;
+          defaultHomeId?: string | null | undefined;
+          createdAt: string;
+          updatedAt: string;
+          lastActiveAt?: string | null | undefined;
+          profile?:
+            | {
+                __typename?: 'UserProfile';
+                id: string;
+                firstName?: string | null | undefined;
+                lastName?: string | null | undefined;
+                displayName?: string | null | undefined;
+                bio?: string | null | undefined;
+                avatar?: string | null | undefined;
+                phone?: string | null | undefined;
+              }
+            | null
+            | undefined;
+          settings?:
+            | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
+            | null
+            | undefined;
+        }
+      | null
+      | undefined;
+    purchasedBy?:
+      | {
+          __typename?: 'User';
+          id: string;
+          email: string;
+          emailVerified: boolean;
+          role: UserRole;
+          onBoarded: boolean;
+          timezone?: string | null | undefined;
+          preferredCurrency?: string | null | undefined;
+          language?: string | null | undefined;
+          defaultShoppingListId?: string | null | undefined;
+          defaultHomeId?: string | null | undefined;
+          createdAt: string;
+          updatedAt: string;
+          lastActiveAt?: string | null | undefined;
+          profile?:
+            | {
+                __typename?: 'UserProfile';
+                id: string;
+                firstName?: string | null | undefined;
+                lastName?: string | null | undefined;
+                displayName?: string | null | undefined;
+                bio?: string | null | undefined;
+                avatar?: string | null | undefined;
+                phone?: string | null | undefined;
+              }
+            | null
+            | undefined;
+          settings?:
+            | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
+            | null
+            | undefined;
+        }
+      | null
+      | undefined;
+    purchases?:
+      | Array<{
+          __typename?: 'Purchase';
+          id: string;
+          purchaseDate: string;
+          quantity: number;
+          unitPrice: number;
+          totalPrice: number;
+          itemName: string;
+          unitSymbol: string;
+        }>
+      | null
+      | undefined;
+  };
+};
+
+export type UpdateShoppingListItemNotesMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+  notes?: InputMaybe<Scalars['String']['input']>;
+  version?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+export type UpdateShoppingListItemNotesMutation = {
+  __typename?: 'Mutation';
+  updateShoppingListItemNotes: {
+    __typename?: 'ShoppingListItem';
+    id: string;
+    quantity?: number | null | undefined;
+    estimatedPrice?: number | null | undefined;
+    budgetPrice?: number | null | undefined;
+    lastKnownPrice?: number | null | undefined;
+    lowestPrice?: number | null | undefined;
+    highestPrice?: number | null | undefined;
+    priceLastUpdated?: string | null | undefined;
+    isPurchased: boolean;
+    purchasedQuantity?: number | null | undefined;
+    purchasedPrice?: number | null | undefined;
+    purchaseDate?: string | null | undefined;
+    aisle?: string | null | undefined;
+    storeSection?: string | null | undefined;
+    previouslyPurchased: boolean;
+    lastPurchaseDate?: string | null | undefined;
+    purchaseCount: number;
+    itemName?: string | null | undefined;
+    unitName?: string | null | undefined;
+    notes?: string | null | undefined;
+    priority: number;
+    category?: string | null | undefined;
+    sortOrder: string;
+    isAutoAdded: boolean;
+    autoAddReason?: string | null | undefined;
+    isFromMealPlan: boolean;
+    mealPlanReference?: string | null | undefined;
+    createdAt: string;
+    updatedAt: string;
+    deletedAt?: string | null | undefined;
+    version: number;
+    shoppingList: {
+      __typename?: 'ShoppingList';
+      id: string;
+      totalItems: number;
+      completedItems: number;
+      estimatedTotal: number;
+    };
+    item?:
+      | {
+          __typename?: 'Item';
+          id: string;
+          name: string;
+          description?: string | null | undefined;
+          imageUrl?: string | null | undefined;
+          netWeight?: number | null | undefined;
+          displayUnit?:
+            | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+            | null
+            | undefined;
+          categories?:
+            | Array<{
+                __typename?: 'ItemCategory';
+                id: string;
+                isPrimary: boolean;
+                confidence: number;
+                source: CategorySource;
+                assignedAt?: string | null | undefined;
+                category: { __typename?: 'Category'; id: string; name: string };
+              }>
+            | null
+            | undefined;
+        }
+      | null
+      | undefined;
+    unit?:
+      | {
+          __typename?: 'Unit';
+          id: string;
+          name: string;
+          symbol: string;
+          type: UnitType;
+          isMetric: boolean;
+          baseUnitId?: string | null | undefined;
+          conversionFactor: number;
+          notes?: string | null | undefined;
+          isCommon: boolean;
+          sortOrder: number;
+          createdAt: string;
+          updatedAt: string;
+        }
+      | null
+      | undefined;
+    addedBy?:
+      | {
+          __typename?: 'User';
+          id: string;
+          email: string;
+          emailVerified: boolean;
+          role: UserRole;
+          onBoarded: boolean;
+          timezone?: string | null | undefined;
+          preferredCurrency?: string | null | undefined;
+          language?: string | null | undefined;
+          defaultShoppingListId?: string | null | undefined;
+          defaultHomeId?: string | null | undefined;
+          createdAt: string;
+          updatedAt: string;
+          lastActiveAt?: string | null | undefined;
+          profile?:
+            | {
+                __typename?: 'UserProfile';
+                id: string;
+                firstName?: string | null | undefined;
+                lastName?: string | null | undefined;
+                displayName?: string | null | undefined;
+                bio?: string | null | undefined;
+                avatar?: string | null | undefined;
+                phone?: string | null | undefined;
+              }
+            | null
+            | undefined;
+          settings?:
+            | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
+            | null
+            | undefined;
+        }
+      | null
+      | undefined;
+    purchasedBy?:
+      | {
+          __typename?: 'User';
+          id: string;
+          email: string;
+          emailVerified: boolean;
+          role: UserRole;
+          onBoarded: boolean;
+          timezone?: string | null | undefined;
+          preferredCurrency?: string | null | undefined;
+          language?: string | null | undefined;
+          defaultShoppingListId?: string | null | undefined;
+          defaultHomeId?: string | null | undefined;
+          createdAt: string;
+          updatedAt: string;
+          lastActiveAt?: string | null | undefined;
+          profile?:
+            | {
+                __typename?: 'UserProfile';
+                id: string;
+                firstName?: string | null | undefined;
+                lastName?: string | null | undefined;
+                displayName?: string | null | undefined;
+                bio?: string | null | undefined;
+                avatar?: string | null | undefined;
+                phone?: string | null | undefined;
+              }
+            | null
+            | undefined;
+          settings?:
+            | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
+            | null
+            | undefined;
+        }
+      | null
+      | undefined;
+    purchases?:
+      | Array<{
+          __typename?: 'Purchase';
+          id: string;
+          purchaseDate: string;
+          quantity: number;
+          unitPrice: number;
+          totalPrice: number;
+          itemName: string;
+          unitSymbol: string;
+        }>
+      | null
+      | undefined;
+  };
+};
+
+export type UpdateShoppingListItemPriorityMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+  priority: Scalars['Int']['input'];
+  version?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+export type UpdateShoppingListItemPriorityMutation = {
+  __typename?: 'Mutation';
+  updateShoppingListItemPriority: {
+    __typename?: 'ShoppingListItem';
+    id: string;
+    quantity?: number | null | undefined;
+    estimatedPrice?: number | null | undefined;
+    budgetPrice?: number | null | undefined;
+    lastKnownPrice?: number | null | undefined;
+    lowestPrice?: number | null | undefined;
+    highestPrice?: number | null | undefined;
+    priceLastUpdated?: string | null | undefined;
+    isPurchased: boolean;
+    purchasedQuantity?: number | null | undefined;
+    purchasedPrice?: number | null | undefined;
+    purchaseDate?: string | null | undefined;
+    aisle?: string | null | undefined;
+    storeSection?: string | null | undefined;
+    previouslyPurchased: boolean;
+    lastPurchaseDate?: string | null | undefined;
+    purchaseCount: number;
+    itemName?: string | null | undefined;
+    unitName?: string | null | undefined;
+    notes?: string | null | undefined;
+    priority: number;
+    category?: string | null | undefined;
+    sortOrder: string;
+    isAutoAdded: boolean;
+    autoAddReason?: string | null | undefined;
+    isFromMealPlan: boolean;
+    mealPlanReference?: string | null | undefined;
+    createdAt: string;
+    updatedAt: string;
+    deletedAt?: string | null | undefined;
+    version: number;
+    shoppingList: {
+      __typename?: 'ShoppingList';
+      id: string;
+      totalItems: number;
+      completedItems: number;
+      estimatedTotal: number;
+    };
+    item?:
+      | {
+          __typename?: 'Item';
+          id: string;
+          name: string;
+          description?: string | null | undefined;
+          imageUrl?: string | null | undefined;
+          netWeight?: number | null | undefined;
+          displayUnit?:
+            | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+            | null
+            | undefined;
+          categories?:
+            | Array<{
+                __typename?: 'ItemCategory';
+                id: string;
+                isPrimary: boolean;
+                confidence: number;
+                source: CategorySource;
+                assignedAt?: string | null | undefined;
+                category: { __typename?: 'Category'; id: string; name: string };
+              }>
+            | null
+            | undefined;
+        }
+      | null
+      | undefined;
+    unit?:
+      | {
+          __typename?: 'Unit';
+          id: string;
+          name: string;
+          symbol: string;
+          type: UnitType;
+          isMetric: boolean;
+          baseUnitId?: string | null | undefined;
+          conversionFactor: number;
+          notes?: string | null | undefined;
+          isCommon: boolean;
+          sortOrder: number;
+          createdAt: string;
+          updatedAt: string;
+        }
+      | null
+      | undefined;
+    addedBy?:
+      | {
+          __typename?: 'User';
+          id: string;
+          email: string;
+          emailVerified: boolean;
+          role: UserRole;
+          onBoarded: boolean;
+          timezone?: string | null | undefined;
+          preferredCurrency?: string | null | undefined;
+          language?: string | null | undefined;
+          defaultShoppingListId?: string | null | undefined;
+          defaultHomeId?: string | null | undefined;
+          createdAt: string;
+          updatedAt: string;
+          lastActiveAt?: string | null | undefined;
+          profile?:
+            | {
+                __typename?: 'UserProfile';
+                id: string;
+                firstName?: string | null | undefined;
+                lastName?: string | null | undefined;
+                displayName?: string | null | undefined;
+                bio?: string | null | undefined;
+                avatar?: string | null | undefined;
+                phone?: string | null | undefined;
+              }
+            | null
+            | undefined;
+          settings?:
+            | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
+            | null
+            | undefined;
+        }
+      | null
+      | undefined;
+    purchasedBy?:
+      | {
+          __typename?: 'User';
+          id: string;
+          email: string;
+          emailVerified: boolean;
+          role: UserRole;
+          onBoarded: boolean;
+          timezone?: string | null | undefined;
+          preferredCurrency?: string | null | undefined;
+          language?: string | null | undefined;
+          defaultShoppingListId?: string | null | undefined;
+          defaultHomeId?: string | null | undefined;
+          createdAt: string;
+          updatedAt: string;
+          lastActiveAt?: string | null | undefined;
+          profile?:
+            | {
+                __typename?: 'UserProfile';
+                id: string;
+                firstName?: string | null | undefined;
+                lastName?: string | null | undefined;
+                displayName?: string | null | undefined;
+                bio?: string | null | undefined;
+                avatar?: string | null | undefined;
+                phone?: string | null | undefined;
+              }
+            | null
+            | undefined;
+          settings?:
+            | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
+            | null
+            | undefined;
+        }
+      | null
+      | undefined;
+    purchases?:
+      | Array<{
+          __typename?: 'Purchase';
+          id: string;
+          purchaseDate: string;
+          quantity: number;
+          unitPrice: number;
+          totalPrice: number;
+          itemName: string;
+          unitSymbol: string;
+        }>
+      | null
+      | undefined;
+  };
 };
 
 export type ShoppingListUpdatedSubscriptionVariables = Exact<{
@@ -15887,7 +16931,7 @@ export type ShoppingListItemsChangedSubscription = {
               notes?: string | null | undefined;
               priority: number;
               category?: string | null | undefined;
-              sortOrder: number;
+              sortOrder: string;
               isAutoAdded: boolean;
               autoAddReason?: string | null | undefined;
               isFromMealPlan: boolean;
@@ -15910,7 +16954,6 @@ export type ShoppingListItemsChangedSubscription = {
                     name: string;
                     description?: string | null | undefined;
                     imageUrl?: string | null | undefined;
-                    images?: any | null | undefined;
                     netWeight?: number | null | undefined;
                     displayUnit?:
                       | {
@@ -15919,6 +16962,22 @@ export type ShoppingListItemsChangedSubscription = {
                           name: string;
                           symbol: string;
                         }
+                      | null
+                      | undefined;
+                    categories?:
+                      | Array<{
+                          __typename?: 'ItemCategory';
+                          id: string;
+                          isPrimary: boolean;
+                          confidence: number;
+                          source: CategorySource;
+                          assignedAt?: string | null | undefined;
+                          category: {
+                            __typename?: 'Category';
+                            id: string;
+                            name: string;
+                          };
+                        }>
                       | null
                       | undefined;
                   }
@@ -16032,19 +17091,6 @@ export type ShoppingListItemsChangedSubscription = {
                     totalPrice: number;
                     itemName: string;
                     unitSymbol: string;
-                    user: {
-                      __typename?: 'User';
-                      id: string;
-                      email: string;
-                      profile?:
-                        | {
-                            __typename?: 'UserProfile';
-                            id: string;
-                            displayName?: string | null | undefined;
-                          }
-                        | null
-                        | undefined;
-                    };
                   }>
                 | null
                 | undefined;
@@ -16182,7 +17228,7 @@ export type ShoppingListItemAddedSubscription = {
     notes?: string | null | undefined;
     priority: number;
     category?: string | null | undefined;
-    sortOrder: number;
+    sortOrder: string;
     isAutoAdded: boolean;
     autoAddReason?: string | null | undefined;
     isFromMealPlan: boolean;
@@ -16205,10 +17251,21 @@ export type ShoppingListItemAddedSubscription = {
           name: string;
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
-          images?: any | null | undefined;
           netWeight?: number | null | undefined;
           displayUnit?:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+            | null
+            | undefined;
+          categories?:
+            | Array<{
+                __typename?: 'ItemCategory';
+                id: string;
+                isPrimary: boolean;
+                confidence: number;
+                source: CategorySource;
+                assignedAt?: string | null | undefined;
+                category: { __typename?: 'Category'; id: string; name: string };
+              }>
             | null
             | undefined;
         }
@@ -16314,19 +17371,6 @@ export type ShoppingListItemAddedSubscription = {
           totalPrice: number;
           itemName: string;
           unitSymbol: string;
-          user: {
-            __typename?: 'User';
-            id: string;
-            email: string;
-            profile?:
-              | {
-                  __typename?: 'UserProfile';
-                  id: string;
-                  displayName?: string | null | undefined;
-                }
-              | null
-              | undefined;
-          };
         }>
       | null
       | undefined;
@@ -16363,7 +17407,7 @@ export type ShoppingListItemUpdatedSubscription = {
     notes?: string | null | undefined;
     priority: number;
     category?: string | null | undefined;
-    sortOrder: number;
+    sortOrder: string;
     isAutoAdded: boolean;
     autoAddReason?: string | null | undefined;
     isFromMealPlan: boolean;
@@ -16386,10 +17430,21 @@ export type ShoppingListItemUpdatedSubscription = {
           name: string;
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
-          images?: any | null | undefined;
           netWeight?: number | null | undefined;
           displayUnit?:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+            | null
+            | undefined;
+          categories?:
+            | Array<{
+                __typename?: 'ItemCategory';
+                id: string;
+                isPrimary: boolean;
+                confidence: number;
+                source: CategorySource;
+                assignedAt?: string | null | undefined;
+                category: { __typename?: 'Category'; id: string; name: string };
+              }>
             | null
             | undefined;
         }
@@ -16495,19 +17550,6 @@ export type ShoppingListItemUpdatedSubscription = {
           totalPrice: number;
           itemName: string;
           unitSymbol: string;
-          user: {
-            __typename?: 'User';
-            id: string;
-            email: string;
-            profile?:
-              | {
-                  __typename?: 'UserProfile';
-                  id: string;
-                  displayName?: string | null | undefined;
-                }
-              | null
-              | undefined;
-          };
         }>
       | null
       | undefined;

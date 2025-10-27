@@ -28,3 +28,4 @@ export * from './UnitsAutocompleteInput';
 export * from './BrandAutocompleteInput';
 export * from './ScreenHeader';
 export * from './ClickableInfoPanel';
+export * from './CollapsiblePurchasedSection';

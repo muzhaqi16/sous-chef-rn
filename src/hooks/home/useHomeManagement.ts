@@ -24,7 +24,7 @@ export function useHomeManagement() {
 
   const { data, loading, error, refetch } = useGetHomesQuery({
     fetchPolicy: 'cache-and-network',
-    notifyOnNetworkStatusChange: true,
+    nextFetchPolicy: 'cache-first', // Subsequent fetches use cache to avoid unnecessary refetches
   });
 
   const {
@@ -33,6 +33,7 @@ export function useHomeManagement() {
     refetch: refetchDefaultHome,
   } = useGetDefaultHomeQuery({
     fetchPolicy: 'cache-and-network',
+    nextFetchPolicy: 'cache-first', // Subsequent fetches use cache to avoid unnecessary refetches
   });
 
   const [setDefaultHomeMutation] = useSetDefaultHomeMutation();
