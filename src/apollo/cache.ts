@@ -126,6 +126,47 @@ export function makeCache(): InMemoryCache {
     typePolicies: {
       Query: {
         fields: {
+          // List-level queries (return collections of lists/homes)
+          shoppingLists: {
+            // No keyArgs needed - app doesn't use filters parameter
+            // Simple merge: always replace with fresh data from server
+            merge(existing, incoming) {
+              return incoming;
+            },
+          },
+          pantries: {
+            // Different homes have different pantries - cache separately
+            keyArgs: ['homeId'],
+            merge(existing, incoming) {
+              return incoming;
+            },
+          },
+          homes: {
+            // No parameters - simple merge with existing data preservation
+            merge(existing = [], incoming) {
+              // If refetching and incoming is empty/null, preserve existing data
+              // This prevents flickering when navigating back to the screen
+              if (!incoming || incoming.length === 0) {
+                return existing;
+              }
+              return incoming;
+            },
+          },
+          storageLocations: {
+            // Different homes have different storage locations - cache separately
+            keyArgs: ['homeId'],
+            merge(existing, incoming) {
+              return incoming;
+            },
+          },
+          storageLocationTree: {
+            // Different homes have different storage location trees - cache separately
+            keyArgs: ['homeId'],
+            merge(existing, incoming) {
+              return incoming;
+            },
+          },
+          // Item-level queries (return items within a list/pantry)
           pantryItems: {
             keyArgs: ['pantryId'],
             // Intelligent merge to properly update cache when mutations return

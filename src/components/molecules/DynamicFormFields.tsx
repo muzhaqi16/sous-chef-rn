@@ -15,12 +15,14 @@ import { EnhancedAutocompleteInput } from './EnhancedAutocompleteInput';
 import { BrandAutocompleteInput } from './BrandAutocompleteInput';
 import { UnitsAutocompleteInput } from './UnitsAutocompleteInput';
 import { CategoryAutocompleteInput } from './CategoryAutocompleteInput';
+import { StorageLocationAutocompleteInput } from './StorageLocationAutocompleteInput';
 
 // Create memoized versions to prevent re-renders
 const MemoizedEnhancedAutocomplete = React.memo(EnhancedAutocompleteInput);
 const MemoizedBrandAutocomplete = React.memo(BrandAutocompleteInput);
 const MemoizedUnitsAutocomplete = React.memo(UnitsAutocompleteInput);
 const MemoizedCategoryAutocomplete = React.memo(CategoryAutocompleteInput);
+const MemoizedStorageLocationAutocomplete = React.memo(StorageLocationAutocompleteInput);
 
 export type FieldDef<T extends FieldValues> = {
   name: Path<T>;
@@ -31,7 +33,8 @@ export type FieldDef<T extends FieldValues> = {
     | 'itemAutocomplete'
     | 'brandAutocomplete'
     | 'unitAutocomplete'
-    | 'categoryAutocomplete';
+    | 'categoryAutocomplete'
+    | 'storageLocationAutocomplete';
   props?: Record<string, any>;
   // For select fields
   options?: Array<{ label: string; value: string }>;
@@ -47,6 +50,8 @@ export type FieldDef<T extends FieldValues> = {
   onSelectItem?: (item: any) => void;
   onUnitSelected?: (unitId: string | null) => void;
   onCategorySelected?: (categoryId: string | null) => void;
+  onStorageLocationSelected?: (locationId: string | null, location: any) => void;
+  storageLocations?: any[];
 };
 
 interface DynamicFormFieldsProps<T extends FieldValues> {
@@ -78,6 +83,8 @@ export function DynamicFormFields<T extends FieldValues>({
           onSelectItem,
           onUnitSelected,
           onCategorySelected,
+          onStorageLocationSelected,
+          storageLocations,
         },
         idx,
       ) => ({
@@ -94,6 +101,8 @@ export function DynamicFormFields<T extends FieldValues>({
         onSelectItem,
         onUnitSelected,
         onCategorySelected,
+        onStorageLocationSelected,
+        storageLocations,
         key: `${String(name)}-${idx}`,
       }),
     );
@@ -115,6 +124,8 @@ export function DynamicFormFields<T extends FieldValues>({
           onSelectItem,
           onUnitSelected,
           onCategorySelected,
+          onStorageLocationSelected,
+          storageLocations,
           key,
         }) => (
           <React.Fragment key={key}>
@@ -196,6 +207,22 @@ export function DynamicFormFields<T extends FieldValues>({
                       required={props?.required}
                       error={errors[name]?.message?.toString()}
                       onCategorySelected={onCategorySelected}
+                      {...props}
+                    />
+                  );
+                }
+
+                if (Input === 'storageLocationAutocomplete') {
+                  return (
+                    <MemoizedStorageLocationAutocomplete
+                      label={label}
+                      value={displayValue || ''}
+                      onChangeText={handleChange}
+                      placeholder={placeholder}
+                      required={props?.required}
+                      error={errors[name]?.message?.toString()}
+                      storageLocations={storageLocations || []}
+                      onStorageLocationSelected={onStorageLocationSelected}
                       {...props}
                     />
                   );

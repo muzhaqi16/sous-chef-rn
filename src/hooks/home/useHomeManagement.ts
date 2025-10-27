@@ -516,6 +516,7 @@ export function useHomeManagement() {
     remoteDefaultHomeId,
     isSynced,
     loading: loading || loadingDefaultHome,
+    initialLoading: (!homes && loading) || (!defaultHomeData && loadingDefaultHome),
     error,
     stats,
 

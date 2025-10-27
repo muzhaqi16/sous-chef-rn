@@ -989,19 +989,61 @@ input CreateShoppingListItemInput {
   unitName: String
 }
 
+"""
+Input for creating a new storage location
+"""
 input CreateStorageLocationInput {
+  """
+  Maximum capacity in specified units
+  """
   capacity: Float
+  """
+  Unit of measurement for capacity
+  """
   capacityUnit: String
+  """
+  Optional color code (hex format recommended)
+  """
   color: String
+  """
+  Optional description or notes
+  """
   description: String
+  """
+  ID of the home this location belongs to
+  """
   homeId: ID!
+  """
+  Optional icon identifier
+  """
   icon: String
+  """
+  Whether the location has climate control (default: false)
+  """
   isClimateControlled: Boolean
+  """
+  Set as default location for the home (default: false)
+  """
   isDefault: Boolean
+  """
+  Display name for the location
+  """
   name: String!
+  """
+  Optional parent location ID for nested locations
+  """
   parentLocationId: ID
+  """
+  Sort order (default: 0)
+  """
   sortOrder: Int
+  """
+  Temperature state of the location
+  """
   temperature: StorageState
+  """
+  Type of storage location
+  """
   type: StorageType!
 }
 
@@ -2584,6 +2626,11 @@ type Mutation {
     servings: Int
     shoppingListId: ID!
   ): AddRecipeToShoppingListResult!
+  """
+  Create a new storage location
+  Validates parent-child relationships and prevents circular references
+  Requires user to have edit permissions in the home
+  """
   createStorageLocation(input: CreateStorageLocationInput!): StorageLocation!
   createStore(input: CreateStoreInput!): Store!
   createUnit(input: CreateUnitInput!): Unit!
@@ -2612,6 +2659,11 @@ type Mutation {
   deletePurchase(id: ID!): Boolean!
   deleteRecipe(id: ID!): Boolean!
   deleteShoppingList(id: ID!): Boolean!
+  """
+  Delete a storage location (soft delete)
+  Fails if location has child locations or items
+  Requires user to have edit permissions in the home
+  """
   deleteStorageLocation(id: ID!): Boolean!
   deleteStore(id: ID!): Boolean!
   deleteUnit(id: ID!): Boolean!
@@ -2725,6 +2777,12 @@ type Mutation {
   removeRestrictions(input: RemoveRestrictionsInput!): UserModeration!
   removeShoppingListCollaborator(id: ID!): Boolean!
   removeUnitConversion(unitId: ID!): Unit!
+  """
+  Reorder multiple storage locations
+  All locations must belong to the same home
+  Requires user to have edit permissions in the home
+  """
+  reorderStorageLocations(input: ReorderStorageLocationsInput!): Boolean!
   resendVerificationEmail(email: String!): Boolean!
   """
   Reset password using token from email
@@ -2738,6 +2796,12 @@ type Mutation {
   setDefaultHome(homeId: ID!): UserSettings!
   setDefaultItemUnit(itemId: ID!, unitId: ID!): ItemUnit!
   setDefaultShoppingList(id: ID!): ShoppingList!
+  """
+  Set a storage location as the default for its home
+  Automatically unsets the previous default location
+  Requires user to have edit permissions in the home
+  """
+  setDefaultStorageLocation(id: ID!): StorageLocation!
   setItemBrand(brandId: ID!, isPrimary: Boolean, itemId: ID!): Item!
   setItemCategories(categoryIds: [ID!]!, itemId: ID!): Item!
   setReminder(id: ID!, input: SetReminderInput!): ShoppingList!
@@ -2872,6 +2936,11 @@ type Mutation {
     quantity: Float!
     version: Int
   ): ShoppingListItem!
+  """
+  Update an existing storage location
+  Validates parent-child relationships and prevents circular references
+  Requires user to have edit permissions in the home
+  """
   updateStorageLocation(
     id: ID!
     input: UpdateStorageLocationInput!
@@ -3152,6 +3221,11 @@ type Pantry {
   location: String
   metadata: JSON
   name: String!
+  """
+  Storage locations available for this pantry's home.
+  Useful for assigning pantry items to specific storage locations.
+  """
+  storageLocations: [StorageLocation!]!
   tags: [String!]!
   temperature: String
   updatedAt: DateTime!
@@ -3647,8 +3721,23 @@ type Query {
   shoppingListItems(shoppingListId: ID!): [ShoppingListItem!]!
   shoppingLists(filters: ShoppingListFilters): [ShoppingList!]!
   staleDevices(daysInactive: Int = 90, userId: ID!): [Device!]!
+  """
+  Get a single storage location by ID
+  Requires user to be a member of the home
+  """
   storageLocation(id: ID!): StorageLocation
+  """
+  Get hierarchical tree of storage locations for a home
+  Returns top-level locations with nested children
+  Ideal for rendering nested location pickers
+  Requires user to be a member of the home
+  """
   storageLocationTree(homeId: ID!): [StorageLocation!]!
+  """
+  Get all active storage locations for a home (flat list)
+  Returns locations ordered by sortOrder
+  Requires user to be a member of the home
+  """
   storageLocations(homeId: ID!): [StorageLocation!]!
   store(id: ID!): Store
   storeByName(name: String!): Store
@@ -3919,6 +4008,21 @@ input RemoveRestrictionInput {
 input RemoveRestrictionsInput {
   restrictions: [ModerationRestriction!]!
   userId: ID!
+}
+
+"""
+Input for reordering multiple storage locations
+Arrays must be the same length
+"""
+input ReorderStorageLocationsInput {
+  """
+  Array of location IDs to reorder
+  """
+  locationIds: [ID!]!
+  """
+  Array of new sort orders (must match locationIds length)
+  """
+  sortOrders: [Int!]!
 }
 
 input ResetPasswordInput {
@@ -4256,52 +4360,182 @@ enum SortOrder {
   DESC
 }
 
+"""
+Storage location within a home (refrigerator, freezer, pantry shelf, etc.)
+Supports hierarchical organization with parent-child relationships
+"""
 type StorageLocation {
+  """
+  Maximum capacity (in capacityUnit)
+  """
   capacity: Float
+  """
+  Unit of measurement for capacity (e.g., 'liters', 'cubic feet')
+  """
   capacityUnit: String
+  """
+  Child locations nested within this location
+  """
   childLocations: [StorageLocation!]!
+  """
+  Optional color code (hex) for UI display
+  """
   color: String
+  """
+  When this storage location was created
+  """
   createdAt: DateTime!
+  """
+  Current count of items stored in this location
+  """
   currentItemCount: Int!
+  """
+  When this storage location was soft-deleted (if applicable)
+  """
   deletedAt: DateTime
+  """
+  Optional description or notes about this location
+  """
   description: String
+  """
+  The home this storage location belongs to
+  """
   home: Home!
+  """
+  ID of the home this storage location belongs to
+  """
   homeId: String!
+  """
+  Optional icon identifier for UI display
+  """
   icon: String
+  """
+  Unique identifier for the storage location
+  """
   id: ID!
+  """
+  Whether this location is active and visible
+  """
   isActive: Boolean!
+  """
+  Whether this location has climate control
+  """
   isClimateControlled: Boolean!
+  """
+  Whether this is the default storage location for the home
+  """
   isDefault: Boolean!
+  """
+  Display name of the storage location (e.g., 'Main Fridge', 'Basement Freezer')
+  """
   name: String!
+  """
+  Items currently stored in this location
+  """
   pantryItems: [PantryItem!]!
+  """
+  Parent location if this is a nested location (e.g., a drawer inside a refrigerator)
+  """
   parentLocation: StorageLocation
+  """
+  ID of the parent location
+  """
   parentLocationId: String
+  """
+  Sort order for display (lower numbers appear first)
+  """
   sortOrder: Int!
+  """
+  Temperature state (FROZEN, REFRIGERATED, AMBIENT, NONE)
+  """
   temperature: StorageState
+  """
+  Type of storage (REFRIGERATOR, FREEZER, PANTRY_SHELF, etc.)
+  """
   type: StorageType!
+  """
+  When this storage location was last updated
+  """
   updatedAt: DateTime!
 }
 
+"""
+Temperature state of a storage location
+"""
 enum StorageState {
+  """
+  Room temperature / ambient conditions
+  """
   AMBIENT
+  """
+  Below freezing temperature (typically -18°C / 0°F or below)
+  """
   FROZEN
+  """
+  No specific temperature control or not applicable
+  """
   NONE
+  """
+  Refrigerated temperature (typically 1-4°C / 34-39°F)
+  """
   REFRIGERATED
 }
 
+"""
+Type of storage location
+"""
 enum StorageType {
+  """
+  Basement storage area
+  """
   BASEMENT
+  """
+  Boat storage compartment
+  """
   BOAT_STORAGE
+  """
+  Kitchen or storage cabinet
+  """
   CABINET
+  """
+  Closet storage
+  """
   CLOSET
+  """
+  Kitchen counter or surface
+  """
   COUNTER
+  """
+  Custom or other storage type
+  """
   CUSTOM
+  """
+  Storage drawer
+  """
   DRAWER
+  """
+  Freezer or deep freezer
+  """
   FREEZER
+  """
+  Garage storage
+  """
   GARAGE
+  """
+  Outdoor storage area
+  """
   OUTDOOR
+  """
+  Pantry shelf or cabinet shelf
+  """
   PANTRY_SHELF
+  """
+  Standard refrigerator
+  """
   REFRIGERATOR
+  """
+  RV storage compartment
+  """
   RV_STORAGE
 }
 
@@ -4960,19 +5194,62 @@ input UpdateShoppingListItemInput {
   version: Int
 }
 
+"""
+Input for updating an existing storage location
+All fields are optional
+"""
 input UpdateStorageLocationInput {
+  """
+  New capacity value
+  """
   capacity: Float
+  """
+  New capacity unit
+  """
   capacityUnit: String
+  """
+  New color code
+  """
   color: String
+  """
+  New description
+  """
   description: String
+  """
+  New icon identifier
+  """
   icon: String
+  """
+  Activate or deactivate the location
+  """
   isActive: Boolean
+  """
+  Update climate control setting
+  """
   isClimateControlled: Boolean
+  """
+  Set or unset as default location
+  """
   isDefault: Boolean
+  """
+  New display name
+  """
   name: String
+  """
+  New parent location ID (set to null to make top-level)
+  """
   parentLocationId: ID
+  """
+  New sort order
+  """
   sortOrder: Int
+  """
+  New temperature state
+  """
   temperature: StorageState
+  """
+  New storage type
+  """
   type: StorageType
 }
 

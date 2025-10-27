@@ -43,6 +43,24 @@ query GetPantry($id: ID!) {
         name
       }
     }
+    storageLocations {
+      id
+      name
+      type
+      icon
+      color
+      temperature
+      isDefault
+      sortOrder
+      parentLocation {
+        id
+        name
+      }
+      childLocations {
+        id
+        name
+      }
+    }
   }
 }
 

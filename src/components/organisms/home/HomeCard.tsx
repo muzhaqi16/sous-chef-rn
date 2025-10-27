@@ -1,8 +1,9 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useGetHomeInvitesQuery } from '#generated';
 import { Icon } from '#utils';
+import { formatRole, getRoleBadgeStyle } from '#utils/formatters';
 import { HomeActions } from './HomeActions';
 import { MembersList } from './MembersList';
 import { commonStyles } from '#/styles';
@@ -52,6 +53,8 @@ export const HomeCard: React.FC<HomeCardProps> = ({
   onInvite,
   onDelete,
 }) => {
+  const { theme } = useUnistyles();
+
   // Fetch invites for this specific home
   const { data: invitesData } = useGetHomeInvitesQuery({
     variables: { homeId: home.id },
@@ -64,35 +67,6 @@ export const HomeCard: React.FC<HomeCardProps> = ({
     onDelete(home.id, home.name);
   };
 
-  const formatRole = (role: string): string => {
-    switch (role) {
-      case 'OWNER':
-        return 'Owner';
-      case 'ADMIN':
-        return 'Admin';
-      case 'MEMBER':
-        return 'Member';
-      case 'GUEST':
-        return 'Guest';
-      default:
-        return role;
-    }
-  };
-
-  const getRoleBadgeColor = (role: string): string => {
-    switch (role) {
-      case 'OWNER':
-        return '#FF6B35'; // Orange for owner
-      case 'ADMIN':
-        return '#4CAF50'; // Green for admin
-      case 'MEMBER':
-        return '#2196F3'; // Blue for member
-      case 'GUEST':
-        return '#9E9E9E'; // Gray for guest
-      default:
-        return '#9E9E9E';
-    }
-  };
   return (
     <View style={styles.homeCard}>
       <TouchableOpacity
@@ -113,16 +87,13 @@ export const HomeCard: React.FC<HomeCardProps> = ({
             <View
               style={[
                 styles.roleBadge,
-                {
-                  backgroundColor:
-                    getRoleBadgeColor(home.myMembership.role) + '20',
-                },
+                getRoleBadgeStyle(home.myMembership.role, theme),
               ]}
             >
               <Text
                 style={[
                   styles.roleText,
-                  { color: getRoleBadgeColor(home.myMembership.role) },
+                  { color: getRoleBadgeStyle(home.myMembership.role, theme).color },
                 ]}
               >
                 {formatRole(home.myMembership.role)}

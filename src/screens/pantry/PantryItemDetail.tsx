@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Alert } from 'react-native';
+import { View, Text, Alert, Image } from 'react-native';
 import {
   useGetPantryItemQuery,
   useDeletePantryItemMutation,
@@ -13,6 +13,7 @@ import { commonStyles } from '#styles';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks';
 import { PantryStackParamList } from '#navigation/stacks/PantryStack';
+import { getItemImageUrl } from '#utils/imageUtils';
 
 export const PantryItemDetail: React.FC<{
   route: { params: PantryStackParamList['PantryItemDetail'] };
@@ -107,10 +108,21 @@ export const PantryItemDetail: React.FC<{
       .join(' ');
   };
 
+  const imageUrl = getItemImageUrl(item?.item);
+
   const sections = [
     {
       content: (
         <View>
+          {imageUrl && (
+            <View style={styles.imageContainer}>
+              <Image
+                source={{ uri: imageUrl }}
+                style={styles.itemImage}
+                resizeMode="contain"
+              />
+            </View>
+          )}
           <Text style={[commonStyles.title, styles.itemName]}>
             {item?.item?.name}
           </Text>
@@ -329,6 +341,18 @@ export const PantryItemDetail: React.FC<{
 };
 
 const styles = StyleSheet.create(theme => ({
+  imageContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    borderRadius: theme.radii.lg,
+    padding: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
+  },
+  itemImage: {
+    width: 200,
+    height: 200,
+  },
   itemName: {
     fontSize: theme.fonts.size['2xl'],
   },

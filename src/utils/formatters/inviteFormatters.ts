@@ -1,0 +1,70 @@
+/**
+ * Format an invite status from API format to display format
+ * @param status - Status in API format (PENDING, ACCEPTED, DECLINED, EXPIRED, REVOKED)
+ * @returns Formatted status string (Invited, Accepted, Declined, Expired, Revoked)
+ */
+export function formatInviteStatus(status: string): string {
+  switch (status) {
+    case 'PENDING':
+      return 'Invited';
+    case 'ACCEPTED':
+      return 'Accepted';
+    case 'DECLINED':
+      return 'Declined';
+    case 'EXPIRED':
+      return 'Expired';
+    case 'REVOKED':
+      return 'Revoked';
+    default:
+      return status;
+  }
+}
+
+/**
+ * Get the theme color for an invite status
+ * @param status - Status in API format (PENDING, ACCEPTED, DECLINED, EXPIRED, REVOKED)
+ * @param theme - Unistyles theme object
+ * @returns Color string from theme
+ */
+export function getInviteStatusColor(status: string, theme: any): string {
+  switch (status) {
+    case 'PENDING':
+      return theme.colors.status.pending;
+    case 'ACCEPTED':
+      return theme.colors.status.accepted;
+    case 'DECLINED':
+      return theme.colors.status.declined;
+    case 'EXPIRED':
+    case 'REVOKED':
+      return theme.colors.status.expired;
+    default:
+      return theme.colors.status.expired;
+  }
+}
+
+/**
+ * Get display name for an invite
+ * Prefers recipientName, falls back to email username, then full email
+ * @param invite - Invite object with email and optional recipientName
+ * @returns Display name string
+ */
+export function getInviteDisplayName(invite: {
+  recipientName?: string | null;
+  email: string;
+}): string {
+  return invite.recipientName || invite.email.split('@')[0] || invite.email;
+}
+
+/**
+ * Get badge style object for an invite status
+ * @param status - Status in API format (PENDING, ACCEPTED, DECLINED, EXPIRED, REVOKED)
+ * @param theme - Unistyles theme object
+ * @returns Object with backgroundColor and color for badge
+ */
+export function getInviteStatusBadgeStyle(status: string, theme: any) {
+  const color = getInviteStatusColor(status, theme);
+  return {
+    backgroundColor: `${color}20`, // 20 = 12.5% opacity in hex
+    color,
+  };
+}

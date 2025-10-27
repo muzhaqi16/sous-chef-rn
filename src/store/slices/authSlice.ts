@@ -1,10 +1,13 @@
 // ============================================
 // store/slices/authSlice.ts
 // Updated to work with your existing store structure
+// Implements proactive token refresh (best practice)
 // ============================================
 
 import { StateCreator } from 'zustand';
 import { RootState } from '../index';
+import { scheduleTokenRefresh, cancelTokenRefresh } from '../../apollo/links/tokenScheduler';
+import { proactiveTokenRefresh } from '../../apollo/links/refreshToken';
 
 export interface User {
   id: string;
@@ -74,6 +77,13 @@ export const createAuthSlice: StateCreator<
       state.refreshToken = refreshToken;
       state.isAutoLoggingIn = false; // Clear auto-login state on success
     });
+
+    // Schedule proactive token refresh (best practice)
+    // This will automatically refresh the token 5 minutes before it expires
+    // to prevent user-facing 401 errors and provide seamless UX
+    scheduleTokenRefresh(accessToken, async () => {
+      await proactiveTokenRefresh();
+    });
   },
 
   updateUser: updates => {
@@ -89,6 +99,14 @@ export const createAuthSlice: StateCreator<
       if (accessToken !== undefined) state.accessToken = accessToken;
       if (refreshToken !== undefined) state.refreshToken = refreshToken;
     });
+
+    // Schedule proactive token refresh whenever tokens are updated
+    // This handles both initial login and token refresh scenarios
+    if (accessToken) {
+      scheduleTokenRefresh(accessToken, async () => {
+        await proactiveTokenRefresh();
+      });
+    }
   },
 
   setEmailVerified: verified => {
@@ -108,6 +126,10 @@ export const createAuthSlice: StateCreator<
   },
 
   clearAuth: () => {
+    // Cancel any scheduled token refresh before clearing auth
+    // This prevents refresh attempts with invalid/cleared tokens
+    cancelTokenRefresh();
+
     set(state => {
       state.user = null;
       state.accessToken = null;

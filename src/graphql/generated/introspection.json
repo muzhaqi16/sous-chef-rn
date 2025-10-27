@@ -5785,13 +5785,13 @@
       {
         "kind": "INPUT_OBJECT",
         "name": "CreateStorageLocationInput",
-        "description": null,
+        "description": "Input for creating a new storage location",
         "isOneOf": false,
         "fields": null,
         "inputFields": [
           {
             "name": "capacity",
-            "description": null,
+            "description": "Maximum capacity in specified units",
             "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
             "defaultValue": null,
             "isDeprecated": false,
@@ -5799,7 +5799,7 @@
           },
           {
             "name": "capacityUnit",
-            "description": null,
+            "description": "Unit of measurement for capacity",
             "type": { "kind": "SCALAR", "name": "String", "ofType": null },
             "defaultValue": null,
             "isDeprecated": false,
@@ -5807,7 +5807,7 @@
           },
           {
             "name": "color",
-            "description": null,
+            "description": "Optional color code (hex format recommended)",
             "type": { "kind": "SCALAR", "name": "String", "ofType": null },
             "defaultValue": null,
             "isDeprecated": false,
@@ -5815,7 +5815,7 @@
           },
           {
             "name": "description",
-            "description": null,
+            "description": "Optional description or notes",
             "type": { "kind": "SCALAR", "name": "String", "ofType": null },
             "defaultValue": null,
             "isDeprecated": false,
@@ -5823,7 +5823,7 @@
           },
           {
             "name": "homeId",
-            "description": null,
+            "description": "ID of the home this location belongs to",
             "type": {
               "kind": "NON_NULL",
               "name": null,
@@ -5835,7 +5835,7 @@
           },
           {
             "name": "icon",
-            "description": null,
+            "description": "Optional icon identifier",
             "type": { "kind": "SCALAR", "name": "String", "ofType": null },
             "defaultValue": null,
             "isDeprecated": false,
@@ -5843,7 +5843,7 @@
           },
           {
             "name": "isClimateControlled",
-            "description": null,
+            "description": "Whether the location has climate control (default: false)",
             "type": { "kind": "SCALAR", "name": "Boolean", "ofType": null },
             "defaultValue": null,
             "isDeprecated": false,
@@ -5851,7 +5851,7 @@
           },
           {
             "name": "isDefault",
-            "description": null,
+            "description": "Set as default location for the home (default: false)",
             "type": { "kind": "SCALAR", "name": "Boolean", "ofType": null },
             "defaultValue": null,
             "isDeprecated": false,
@@ -5859,7 +5859,7 @@
           },
           {
             "name": "name",
-            "description": null,
+            "description": "Display name for the location",
             "type": {
               "kind": "NON_NULL",
               "name": null,
@@ -5871,7 +5871,7 @@
           },
           {
             "name": "parentLocationId",
-            "description": null,
+            "description": "Optional parent location ID for nested locations",
             "type": { "kind": "SCALAR", "name": "ID", "ofType": null },
             "defaultValue": null,
             "isDeprecated": false,
@@ -5879,7 +5879,7 @@
           },
           {
             "name": "sortOrder",
-            "description": null,
+            "description": "Sort order (default: 0)",
             "type": { "kind": "SCALAR", "name": "Int", "ofType": null },
             "defaultValue": null,
             "isDeprecated": false,
@@ -5887,7 +5887,7 @@
           },
           {
             "name": "temperature",
-            "description": null,
+            "description": "Temperature state of the location",
             "type": { "kind": "ENUM", "name": "StorageState", "ofType": null },
             "defaultValue": null,
             "isDeprecated": false,
@@ -5895,7 +5895,7 @@
           },
           {
             "name": "type",
-            "description": null,
+            "description": "Type of storage location",
             "type": {
               "kind": "NON_NULL",
               "name": null,
@@ -20238,7 +20238,7 @@
           },
           {
             "name": "createStorageLocation",
-            "description": null,
+            "description": "Create a new storage location\nValidates parent-child relationships and prevents circular references\nRequires user to have edit permissions in the home",
             "args": [
               {
                 "name": "input",
@@ -21031,7 +21031,7 @@
           },
           {
             "name": "deleteStorageLocation",
-            "description": null,
+            "description": "Delete a storage location (soft delete)\nFails if location has child locations or items\nRequires user to have edit permissions in the home",
             "args": [
               {
                 "name": "id",
@@ -23345,6 +23345,35 @@
             "deprecationReason": null
           },
           {
+            "name": "reorderStorageLocations",
+            "description": "Reorder multiple storage locations\nAll locations must belong to the same home\nRequires user to have edit permissions in the home",
+            "args": [
+              {
+                "name": "input",
+                "description": null,
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "INPUT_OBJECT",
+                    "name": "ReorderStorageLocationsInput",
+                    "ofType": null
+                  }
+                },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              }
+            ],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": { "kind": "SCALAR", "name": "Boolean", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "resendVerificationEmail",
             "description": null,
             "args": [
@@ -23660,6 +23689,35 @@
               "ofType": {
                 "kind": "OBJECT",
                 "name": "ShoppingList",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "setDefaultStorageLocation",
+            "description": "Set a storage location as the default for its home\nAutomatically unsets the previous default location\nRequires user to have edit permissions in the home",
+            "args": [
+              {
+                "name": "id",
+                "description": null,
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": { "kind": "SCALAR", "name": "ID", "ofType": null }
+                },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              }
+            ],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "StorageLocation",
                 "ofType": null
               }
             },
@@ -26602,7 +26660,7 @@
           },
           {
             "name": "updateStorageLocation",
-            "description": null,
+            "description": "Update an existing storage location\nValidates parent-child relationships and prevents circular references\nRequires user to have edit permissions in the home",
             "args": [
               {
                 "name": "id",
@@ -29271,6 +29329,30 @@
               "kind": "NON_NULL",
               "name": null,
               "ofType": { "kind": "SCALAR", "name": "String", "ofType": null }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "storageLocations",
+            "description": "Storage locations available for this pantry's home.\nUseful for assigning pantry items to specific storage locations.",
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": {
+                    "kind": "OBJECT",
+                    "name": "StorageLocation",
+                    "ofType": null
+                  }
+                }
+              }
             },
             "isDeprecated": false,
             "deprecationReason": null
@@ -36366,7 +36448,7 @@
           },
           {
             "name": "storageLocation",
-            "description": null,
+            "description": "Get a single storage location by ID\nRequires user to be a member of the home",
             "args": [
               {
                 "name": "id",
@@ -36391,7 +36473,7 @@
           },
           {
             "name": "storageLocationTree",
-            "description": null,
+            "description": "Get hierarchical tree of storage locations for a home\nReturns top-level locations with nested children\nIdeal for rendering nested location pickers\nRequires user to be a member of the home",
             "args": [
               {
                 "name": "homeId",
@@ -36428,7 +36510,7 @@
           },
           {
             "name": "storageLocations",
-            "description": null,
+            "description": "Get all active storage locations for a home (flat list)\nReturns locations ordered by sortOrder\nRequires user to be a member of the home",
             "args": [
               {
                 "name": "homeId",
@@ -39415,6 +39497,58 @@
               "kind": "NON_NULL",
               "name": null,
               "ofType": { "kind": "SCALAR", "name": "ID", "ofType": null }
+            },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "interfaces": null,
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "INPUT_OBJECT",
+        "name": "ReorderStorageLocationsInput",
+        "description": "Input for reordering multiple storage locations\nArrays must be the same length",
+        "isOneOf": false,
+        "fields": null,
+        "inputFields": [
+          {
+            "name": "locationIds",
+            "description": "Array of location IDs to reorder",
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": { "kind": "SCALAR", "name": "ID", "ofType": null }
+                }
+              }
+            },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "sortOrders",
+            "description": "Array of new sort orders (must match locationIds length)",
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "LIST",
+                "name": null,
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": { "kind": "SCALAR", "name": "Int", "ofType": null }
+                }
+              }
             },
             "defaultValue": null,
             "isDeprecated": false,
@@ -42548,12 +42682,12 @@
       {
         "kind": "OBJECT",
         "name": "StorageLocation",
-        "description": null,
+        "description": "Storage location within a home (refrigerator, freezer, pantry shelf, etc.)\nSupports hierarchical organization with parent-child relationships",
         "isOneOf": null,
         "fields": [
           {
             "name": "capacity",
-            "description": null,
+            "description": "Maximum capacity (in capacityUnit)",
             "args": [],
             "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
             "isDeprecated": false,
@@ -42561,7 +42695,7 @@
           },
           {
             "name": "capacityUnit",
-            "description": null,
+            "description": "Unit of measurement for capacity (e.g., 'liters', 'cubic feet')",
             "args": [],
             "type": { "kind": "SCALAR", "name": "String", "ofType": null },
             "isDeprecated": false,
@@ -42569,7 +42703,7 @@
           },
           {
             "name": "childLocations",
-            "description": null,
+            "description": "Child locations nested within this location",
             "args": [],
             "type": {
               "kind": "NON_NULL",
@@ -42593,7 +42727,7 @@
           },
           {
             "name": "color",
-            "description": null,
+            "description": "Optional color code (hex) for UI display",
             "args": [],
             "type": { "kind": "SCALAR", "name": "String", "ofType": null },
             "isDeprecated": false,
@@ -42601,7 +42735,7 @@
           },
           {
             "name": "createdAt",
-            "description": null,
+            "description": "When this storage location was created",
             "args": [],
             "type": {
               "kind": "NON_NULL",
@@ -42613,7 +42747,7 @@
           },
           {
             "name": "currentItemCount",
-            "description": null,
+            "description": "Current count of items stored in this location",
             "args": [],
             "type": {
               "kind": "NON_NULL",
@@ -42625,7 +42759,7 @@
           },
           {
             "name": "deletedAt",
-            "description": null,
+            "description": "When this storage location was soft-deleted (if applicable)",
             "args": [],
             "type": { "kind": "SCALAR", "name": "DateTime", "ofType": null },
             "isDeprecated": false,
@@ -42633,7 +42767,7 @@
           },
           {
             "name": "description",
-            "description": null,
+            "description": "Optional description or notes about this location",
             "args": [],
             "type": { "kind": "SCALAR", "name": "String", "ofType": null },
             "isDeprecated": false,
@@ -42641,7 +42775,7 @@
           },
           {
             "name": "home",
-            "description": null,
+            "description": "The home this storage location belongs to",
             "args": [],
             "type": {
               "kind": "NON_NULL",
@@ -42653,7 +42787,7 @@
           },
           {
             "name": "homeId",
-            "description": null,
+            "description": "ID of the home this storage location belongs to",
             "args": [],
             "type": {
               "kind": "NON_NULL",
@@ -42665,7 +42799,7 @@
           },
           {
             "name": "icon",
-            "description": null,
+            "description": "Optional icon identifier for UI display",
             "args": [],
             "type": { "kind": "SCALAR", "name": "String", "ofType": null },
             "isDeprecated": false,
@@ -42673,7 +42807,7 @@
           },
           {
             "name": "id",
-            "description": null,
+            "description": "Unique identifier for the storage location",
             "args": [],
             "type": {
               "kind": "NON_NULL",
@@ -42685,7 +42819,7 @@
           },
           {
             "name": "isActive",
-            "description": null,
+            "description": "Whether this location is active and visible",
             "args": [],
             "type": {
               "kind": "NON_NULL",
@@ -42697,7 +42831,7 @@
           },
           {
             "name": "isClimateControlled",
-            "description": null,
+            "description": "Whether this location has climate control",
             "args": [],
             "type": {
               "kind": "NON_NULL",
@@ -42709,7 +42843,7 @@
           },
           {
             "name": "isDefault",
-            "description": null,
+            "description": "Whether this is the default storage location for the home",
             "args": [],
             "type": {
               "kind": "NON_NULL",
@@ -42721,7 +42855,7 @@
           },
           {
             "name": "name",
-            "description": null,
+            "description": "Display name of the storage location (e.g., 'Main Fridge', 'Basement Freezer')",
             "args": [],
             "type": {
               "kind": "NON_NULL",
@@ -42733,7 +42867,7 @@
           },
           {
             "name": "pantryItems",
-            "description": null,
+            "description": "Items currently stored in this location",
             "args": [],
             "type": {
               "kind": "NON_NULL",
@@ -42757,7 +42891,7 @@
           },
           {
             "name": "parentLocation",
-            "description": null,
+            "description": "Parent location if this is a nested location (e.g., a drawer inside a refrigerator)",
             "args": [],
             "type": {
               "kind": "OBJECT",
@@ -42769,7 +42903,7 @@
           },
           {
             "name": "parentLocationId",
-            "description": null,
+            "description": "ID of the parent location",
             "args": [],
             "type": { "kind": "SCALAR", "name": "String", "ofType": null },
             "isDeprecated": false,
@@ -42777,7 +42911,7 @@
           },
           {
             "name": "sortOrder",
-            "description": null,
+            "description": "Sort order for display (lower numbers appear first)",
             "args": [],
             "type": {
               "kind": "NON_NULL",
@@ -42789,7 +42923,7 @@
           },
           {
             "name": "temperature",
-            "description": null,
+            "description": "Temperature state (FROZEN, REFRIGERATED, AMBIENT, NONE)",
             "args": [],
             "type": { "kind": "ENUM", "name": "StorageState", "ofType": null },
             "isDeprecated": false,
@@ -42797,7 +42931,7 @@
           },
           {
             "name": "type",
-            "description": null,
+            "description": "Type of storage (REFRIGERATOR, FREEZER, PANTRY_SHELF, etc.)",
             "args": [],
             "type": {
               "kind": "NON_NULL",
@@ -42813,7 +42947,7 @@
           },
           {
             "name": "updatedAt",
-            "description": null,
+            "description": "When this storage location was last updated",
             "args": [],
             "type": {
               "kind": "NON_NULL",
@@ -42832,7 +42966,7 @@
       {
         "kind": "ENUM",
         "name": "StorageState",
-        "description": null,
+        "description": "Temperature state of a storage location",
         "isOneOf": null,
         "fields": null,
         "inputFields": null,
@@ -42840,25 +42974,25 @@
         "enumValues": [
           {
             "name": "AMBIENT",
-            "description": null,
+            "description": "Room temperature / ambient conditions",
             "isDeprecated": false,
             "deprecationReason": null
           },
           {
             "name": "FROZEN",
-            "description": null,
+            "description": "Below freezing temperature (typically -18°C / 0°F or below)",
             "isDeprecated": false,
             "deprecationReason": null
           },
           {
             "name": "NONE",
-            "description": null,
+            "description": "No specific temperature control or not applicable",
             "isDeprecated": false,
             "deprecationReason": null
           },
           {
             "name": "REFRIGERATED",
-            "description": null,
+            "description": "Refrigerated temperature (typically 1-4°C / 34-39°F)",
             "isDeprecated": false,
             "deprecationReason": null
           }
@@ -42868,7 +43002,7 @@
       {
         "kind": "ENUM",
         "name": "StorageType",
-        "description": null,
+        "description": "Type of storage location",
         "isOneOf": null,
         "fields": null,
         "inputFields": null,
@@ -42876,79 +43010,79 @@
         "enumValues": [
           {
             "name": "BASEMENT",
-            "description": null,
+            "description": "Basement storage area",
             "isDeprecated": false,
             "deprecationReason": null
           },
           {
             "name": "BOAT_STORAGE",
-            "description": null,
+            "description": "Boat storage compartment",
             "isDeprecated": false,
             "deprecationReason": null
           },
           {
             "name": "CABINET",
-            "description": null,
+            "description": "Kitchen or storage cabinet",
             "isDeprecated": false,
             "deprecationReason": null
           },
           {
             "name": "CLOSET",
-            "description": null,
+            "description": "Closet storage",
             "isDeprecated": false,
             "deprecationReason": null
           },
           {
             "name": "COUNTER",
-            "description": null,
+            "description": "Kitchen counter or surface",
             "isDeprecated": false,
             "deprecationReason": null
           },
           {
             "name": "CUSTOM",
-            "description": null,
+            "description": "Custom or other storage type",
             "isDeprecated": false,
             "deprecationReason": null
           },
           {
             "name": "DRAWER",
-            "description": null,
+            "description": "Storage drawer",
             "isDeprecated": false,
             "deprecationReason": null
           },
           {
             "name": "FREEZER",
-            "description": null,
+            "description": "Freezer or deep freezer",
             "isDeprecated": false,
             "deprecationReason": null
           },
           {
             "name": "GARAGE",
-            "description": null,
+            "description": "Garage storage",
             "isDeprecated": false,
             "deprecationReason": null
           },
           {
             "name": "OUTDOOR",
-            "description": null,
+            "description": "Outdoor storage area",
             "isDeprecated": false,
             "deprecationReason": null
           },
           {
             "name": "PANTRY_SHELF",
-            "description": null,
+            "description": "Pantry shelf or cabinet shelf",
             "isDeprecated": false,
             "deprecationReason": null
           },
           {
             "name": "REFRIGERATOR",
-            "description": null,
+            "description": "Standard refrigerator",
             "isDeprecated": false,
             "deprecationReason": null
           },
           {
             "name": "RV_STORAGE",
-            "description": null,
+            "description": "RV storage compartment",
             "isDeprecated": false,
             "deprecationReason": null
           }
@@ -49223,13 +49357,13 @@
       {
         "kind": "INPUT_OBJECT",
         "name": "UpdateStorageLocationInput",
-        "description": null,
+        "description": "Input for updating an existing storage location\nAll fields are optional",
         "isOneOf": false,
         "fields": null,
         "inputFields": [
           {
             "name": "capacity",
-            "description": null,
+            "description": "New capacity value",
             "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
             "defaultValue": null,
             "isDeprecated": false,
@@ -49237,7 +49371,7 @@
           },
           {
             "name": "capacityUnit",
-            "description": null,
+            "description": "New capacity unit",
             "type": { "kind": "SCALAR", "name": "String", "ofType": null },
             "defaultValue": null,
             "isDeprecated": false,
@@ -49245,7 +49379,7 @@
           },
           {
             "name": "color",
-            "description": null,
+            "description": "New color code",
             "type": { "kind": "SCALAR", "name": "String", "ofType": null },
             "defaultValue": null,
             "isDeprecated": false,
@@ -49253,7 +49387,7 @@
           },
           {
             "name": "description",
-            "description": null,
+            "description": "New description",
             "type": { "kind": "SCALAR", "name": "String", "ofType": null },
             "defaultValue": null,
             "isDeprecated": false,
@@ -49261,7 +49395,7 @@
           },
           {
             "name": "icon",
-            "description": null,
+            "description": "New icon identifier",
             "type": { "kind": "SCALAR", "name": "String", "ofType": null },
             "defaultValue": null,
             "isDeprecated": false,
@@ -49269,7 +49403,7 @@
           },
           {
             "name": "isActive",
-            "description": null,
+            "description": "Activate or deactivate the location",
             "type": { "kind": "SCALAR", "name": "Boolean", "ofType": null },
             "defaultValue": null,
             "isDeprecated": false,
@@ -49277,7 +49411,7 @@
           },
           {
             "name": "isClimateControlled",
-            "description": null,
+            "description": "Update climate control setting",
             "type": { "kind": "SCALAR", "name": "Boolean", "ofType": null },
             "defaultValue": null,
             "isDeprecated": false,
@@ -49285,7 +49419,7 @@
           },
           {
             "name": "isDefault",
-            "description": null,
+            "description": "Set or unset as default location",
             "type": { "kind": "SCALAR", "name": "Boolean", "ofType": null },
             "defaultValue": null,
             "isDeprecated": false,
@@ -49293,7 +49427,7 @@
           },
           {
             "name": "name",
-            "description": null,
+            "description": "New display name",
             "type": { "kind": "SCALAR", "name": "String", "ofType": null },
             "defaultValue": null,
             "isDeprecated": false,
@@ -49301,7 +49435,7 @@
           },
           {
             "name": "parentLocationId",
-            "description": null,
+            "description": "New parent location ID (set to null to make top-level)",
             "type": { "kind": "SCALAR", "name": "ID", "ofType": null },
             "defaultValue": null,
             "isDeprecated": false,
@@ -49309,7 +49443,7 @@
           },
           {
             "name": "sortOrder",
-            "description": null,
+            "description": "New sort order",
             "type": { "kind": "SCALAR", "name": "Int", "ofType": null },
             "defaultValue": null,
             "isDeprecated": false,
@@ -49317,7 +49451,7 @@
           },
           {
             "name": "temperature",
-            "description": null,
+            "description": "New temperature state",
             "type": { "kind": "ENUM", "name": "StorageState", "ofType": null },
             "defaultValue": null,
             "isDeprecated": false,
@@ -49325,7 +49459,7 @@
           },
           {
             "name": "type",
-            "description": null,
+            "description": "New storage type",
             "type": { "kind": "ENUM", "name": "StorageType", "ofType": null },
             "defaultValue": null,
             "isDeprecated": false,

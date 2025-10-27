@@ -50,11 +50,7 @@ export const DetailTemplate: React.FC<DetailTemplateProps> = ({
           </View>
         ))}
         {primaryAction && (
-          <Button
-            onPress={primaryAction.onPress}
-            icon={primaryAction.icon}
-            fullWidth
-          >
+          <Button onPress={primaryAction.onPress} icon={primaryAction.icon}>
             {primaryAction.label}
           </Button>
         )}
@@ -66,8 +62,7 @@ export const DetailTemplate: React.FC<DetailTemplateProps> = ({
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-    gap: theme.spacing.md,
-    backgroundColor: theme.colors.background,
+    paddingHorizontal: theme.spacing.md,
   },
   content: {
     flex: 1,

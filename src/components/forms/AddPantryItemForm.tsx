@@ -18,6 +18,7 @@ import {
   StorageState,
   useCreatePantryItemMutation,
   useGetHomeQuery,
+  useGetPantryQuery,
   useGetUnitBySymbolLazyQuery,
   ItemSuggestion,
   GetPantryItemsDocument,
@@ -76,6 +77,9 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
     null,
   );
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(
+    null,
+  );
 
   const { selectedPantryId } = useStore();
   const { selectedHomeId, getDefaultPantry } = useDefaultHome();
@@ -93,6 +97,15 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
 
   // Use selectedPantryId from store as primary source, fallback to pantry from home data
   const currentPantryId = selectedPantryId || pantry?.id;
+
+  // Fetch pantry details to get storage locations
+  const { data: pantryData } = useGetPantryQuery({
+    variables: { id: currentPantryId ?? '' },
+    skip: !currentPantryId,
+    fetchPolicy: 'cache-first',
+  });
+
+  const storageLocations = pantryData?.pantry?.storageLocations || [];
 
   const [addItem] = useCreatePantryItemMutation({
     update: (cache: ApolloCache, { data: mutationData }: any) => {
@@ -167,6 +180,25 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
   const handleCategorySelect = useCallback((categoryId: string | null) => {
     setSelectedCategoryId(categoryId);
   }, []);
+
+  const handleStorageLocationSelect = useCallback(
+    (locationId: string | null, location: any) => {
+      setSelectedLocationId(locationId);
+
+      // Auto-fill storage state based on location temperature
+      if (location?.temperature) {
+        const tempLower = location.temperature.toLowerCase();
+        if (tempLower === 'frozen') {
+          setValue('storageState', StorageState.Frozen);
+        } else if (tempLower === 'refrigerated') {
+          setValue('storageState', StorageState.Refrigerated);
+        } else if (tempLower === 'ambient') {
+          setValue('storageState', StorageState.Ambient);
+        }
+      }
+    },
+    [setValue],
+  );
 
   const handleIncrementQuantity = useCallback(() => {
     const current = watchedValues.quantity || 0;
@@ -317,6 +349,8 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
               if (date) setValue('expirationDate', date);
             }}
             onCategorySelected={handleCategorySelect}
+            storageLocations={storageLocations}
+            onStorageLocationSelected={handleStorageLocationSelect}
           />
         </View>
       </ScrollView>

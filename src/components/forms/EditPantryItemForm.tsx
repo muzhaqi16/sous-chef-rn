@@ -10,6 +10,7 @@ import {
   StorageState,
   useUpdatePantryItemMutation,
   useGetPantryItemQuery,
+  useGetPantryQuery,
   useGetUnitBySymbolLazyQuery,
 } from '#generated';
 import {DynamicFormFields, FieldDef} from '#components/molecules/DynamicFormFields';
@@ -66,11 +67,22 @@ export const EditPantryItemForm: React.FC<EditPantryItemFormProps> = ({
   const [saving, setSaving] = useState(false);
   const [_selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
 
   const {data: existingItemData, loading: itemLoading} = useGetPantryItemQuery({
     variables: {id: itemId},
     skip: !itemId,
   });
+
+  // Fetch pantry details to get storage locations
+  const pantryId = existingItemData?.pantryItem?.pantryId;
+  const { data: pantryData } = useGetPantryQuery({
+    variables: { id: pantryId ?? '' },
+    skip: !pantryId,
+    fetchPolicy: 'cache-first',
+  });
+
+  const storageLocations = pantryData?.pantry?.storageLocations || [];
 
   const [updateItem] = useUpdatePantryItemMutation();
 
@@ -148,6 +160,25 @@ export const EditPantryItemForm: React.FC<EditPantryItemFormProps> = ({
       setSelectedCategoryId(categoryId);
     },
     [],
+  );
+
+  const handleStorageLocationSelect = useCallback(
+    (locationId: string | null, location: any) => {
+      setSelectedLocationId(locationId);
+
+      // Auto-fill storage state based on location temperature
+      if (location?.temperature) {
+        const tempLower = location.temperature.toLowerCase();
+        if (tempLower === 'frozen') {
+          setValue('storageState', StorageState.Frozen);
+        } else if (tempLower === 'refrigerated') {
+          setValue('storageState', StorageState.Refrigerated);
+        } else if (tempLower === 'ambient') {
+          setValue('storageState', StorageState.Ambient);
+        }
+      }
+    },
+    [setValue],
   );
 
   const handleSave = async (data: EditPantryItemFormData) => {
@@ -283,6 +314,8 @@ export const EditPantryItemForm: React.FC<EditPantryItemFormProps> = ({
               if (date) setValue('expirationDate', date);
             }}
             onCategorySelected={handleCategorySelect}
+            storageLocations={storageLocations}
+            onStorageLocationSelected={handleStorageLocationSelect}
           />
 
           {/* Tags Section */}

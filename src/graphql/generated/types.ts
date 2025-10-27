@@ -742,19 +742,33 @@ export type CreateShoppingListItemInput = {
   unitName?: InputMaybe<Scalars['String']['input']>;
 };
 
+/** Input for creating a new storage location */
 export type CreateStorageLocationInput = {
+  /** Maximum capacity in specified units */
   capacity?: InputMaybe<Scalars['Float']['input']>;
+  /** Unit of measurement for capacity */
   capacityUnit?: InputMaybe<Scalars['String']['input']>;
+  /** Optional color code (hex format recommended) */
   color?: InputMaybe<Scalars['String']['input']>;
+  /** Optional description or notes */
   description?: InputMaybe<Scalars['String']['input']>;
+  /** ID of the home this location belongs to */
   homeId: Scalars['ID']['input'];
+  /** Optional icon identifier */
   icon?: InputMaybe<Scalars['String']['input']>;
+  /** Whether the location has climate control (default: false) */
   isClimateControlled?: InputMaybe<Scalars['Boolean']['input']>;
+  /** Set as default location for the home (default: false) */
   isDefault?: InputMaybe<Scalars['Boolean']['input']>;
+  /** Display name for the location */
   name: Scalars['String']['input'];
+  /** Optional parent location ID for nested locations */
   parentLocationId?: InputMaybe<Scalars['ID']['input']>;
+  /** Sort order (default: 0) */
   sortOrder?: InputMaybe<Scalars['Int']['input']>;
+  /** Temperature state of the location */
   temperature?: InputMaybe<StorageState>;
+  /** Type of storage location */
   type: StorageType;
 };
 
@@ -2370,6 +2384,11 @@ export type Mutation = {
   createShoppingList: ShoppingList;
   createShoppingListItemFromRecipeIngredient: AddIngredientResult;
   createShoppingListItemsFromRecipe: AddRecipeToShoppingListResult;
+  /**
+   * Create a new storage location
+   * Validates parent-child relationships and prevents circular references
+   * Requires user to have edit permissions in the home
+   */
   createStorageLocation: StorageLocation;
   createStore: Store;
   createUnit: Unit;
@@ -2398,6 +2417,11 @@ export type Mutation = {
   deletePurchase: Scalars['Boolean']['output'];
   deleteRecipe: Scalars['Boolean']['output'];
   deleteShoppingList: Scalars['Boolean']['output'];
+  /**
+   * Delete a storage location (soft delete)
+   * Fails if location has child locations or items
+   * Requires user to have edit permissions in the home
+   */
   deleteStorageLocation: Scalars['Boolean']['output'];
   deleteStore: Scalars['Boolean']['output'];
   deleteUnit: Scalars['Boolean']['output'];
@@ -2465,6 +2489,12 @@ export type Mutation = {
   removeRestrictions: UserModeration;
   removeShoppingListCollaborator: Scalars['Boolean']['output'];
   removeUnitConversion: Unit;
+  /**
+   * Reorder multiple storage locations
+   * All locations must belong to the same home
+   * Requires user to have edit permissions in the home
+   */
+  reorderStorageLocations: Scalars['Boolean']['output'];
   resendVerificationEmail: Scalars['Boolean']['output'];
   /** Reset password using token from email */
   resetPassword: ResetPasswordResponse;
@@ -2476,6 +2506,12 @@ export type Mutation = {
   setDefaultHome: UserSettings;
   setDefaultItemUnit: ItemUnit;
   setDefaultShoppingList: ShoppingList;
+  /**
+   * Set a storage location as the default for its home
+   * Automatically unsets the previous default location
+   * Requires user to have edit permissions in the home
+   */
+  setDefaultStorageLocation: StorageLocation;
   setItemBrand: Item;
   setItemCategories: Item;
   setReminder: ShoppingList;
@@ -2546,6 +2582,11 @@ export type Mutation = {
   updateShoppingListItemNotes: ShoppingListItem;
   updateShoppingListItemPriority: ShoppingListItem;
   updateShoppingListItemQuantity: ShoppingListItem;
+  /**
+   * Update an existing storage location
+   * Validates parent-child relationships and prevents circular references
+   * Requires user to have edit permissions in the home
+   */
   updateStorageLocation: StorageLocation;
   updateStore: Store;
   updateStoreInfo: StoreInfo;
@@ -3174,6 +3215,10 @@ export type MutationRemoveUnitConversionArgs = {
   unitId: Scalars['ID']['input'];
 };
 
+export type MutationReorderStorageLocationsArgs = {
+  input: ReorderStorageLocationsInput;
+};
+
 export type MutationResendVerificationEmailArgs = {
   email: Scalars['String']['input'];
 };
@@ -3213,6 +3258,10 @@ export type MutationSetDefaultItemUnitArgs = {
 };
 
 export type MutationSetDefaultShoppingListArgs = {
+  id: Scalars['ID']['input'];
+};
+
+export type MutationSetDefaultStorageLocationArgs = {
   id: Scalars['ID']['input'];
 };
 
@@ -3902,6 +3951,11 @@ export type Pantry = {
   location?: Maybe<Scalars['String']['output']>;
   metadata?: Maybe<Scalars['JSON']['output']>;
   name: Scalars['String']['output'];
+  /**
+   * Storage locations available for this pantry's home.
+   * Useful for assigning pantry items to specific storage locations.
+   */
+  storageLocations: Array<StorageLocation>;
   tags: Array<Scalars['String']['output']>;
   temperature?: Maybe<Scalars['String']['output']>;
   updatedAt: Scalars['DateTime']['output'];
@@ -4356,8 +4410,23 @@ export type Query = {
   shoppingListItems: Array<ShoppingListItem>;
   shoppingLists: Array<ShoppingList>;
   staleDevices: Array<Device>;
+  /**
+   * Get a single storage location by ID
+   * Requires user to be a member of the home
+   */
   storageLocation?: Maybe<StorageLocation>;
+  /**
+   * Get hierarchical tree of storage locations for a home
+   * Returns top-level locations with nested children
+   * Ideal for rendering nested location pickers
+   * Requires user to be a member of the home
+   */
   storageLocationTree: Array<StorageLocation>;
+  /**
+   * Get all active storage locations for a home (flat list)
+   * Returns locations ordered by sortOrder
+   * Requires user to be a member of the home
+   */
   storageLocations: Array<StorageLocation>;
   store?: Maybe<Store>;
   storeByName?: Maybe<Store>;
@@ -5227,6 +5296,17 @@ export type RemoveRestrictionsInput = {
   userId: Scalars['ID']['input'];
 };
 
+/**
+ * Input for reordering multiple storage locations
+ * Arrays must be the same length
+ */
+export type ReorderStorageLocationsInput = {
+  /** Array of location IDs to reorder */
+  locationIds: Array<Scalars['ID']['input']>;
+  /** Array of new sort orders (must match locationIds length) */
+  sortOrders: Array<Scalars['Int']['input']>;
+};
+
 export type ResetPasswordInput = {
   password: Scalars['String']['input'];
   token: Scalars['String']['input'];
@@ -5578,53 +5658,99 @@ export enum SortOrder {
   Desc = 'DESC',
 }
 
+/**
+ * Storage location within a home (refrigerator, freezer, pantry shelf, etc.)
+ * Supports hierarchical organization with parent-child relationships
+ */
 export type StorageLocation = {
   __typename?: 'StorageLocation';
+  /** Maximum capacity (in capacityUnit) */
   capacity?: Maybe<Scalars['Float']['output']>;
+  /** Unit of measurement for capacity (e.g., 'liters', 'cubic feet') */
   capacityUnit?: Maybe<Scalars['String']['output']>;
+  /** Child locations nested within this location */
   childLocations: Array<StorageLocation>;
+  /** Optional color code (hex) for UI display */
   color?: Maybe<Scalars['String']['output']>;
+  /** When this storage location was created */
   createdAt: Scalars['DateTime']['output'];
+  /** Current count of items stored in this location */
   currentItemCount: Scalars['Int']['output'];
+  /** When this storage location was soft-deleted (if applicable) */
   deletedAt?: Maybe<Scalars['DateTime']['output']>;
+  /** Optional description or notes about this location */
   description?: Maybe<Scalars['String']['output']>;
+  /** The home this storage location belongs to */
   home: Home;
+  /** ID of the home this storage location belongs to */
   homeId: Scalars['String']['output'];
+  /** Optional icon identifier for UI display */
   icon?: Maybe<Scalars['String']['output']>;
+  /** Unique identifier for the storage location */
   id: Scalars['ID']['output'];
+  /** Whether this location is active and visible */
   isActive: Scalars['Boolean']['output'];
+  /** Whether this location has climate control */
   isClimateControlled: Scalars['Boolean']['output'];
+  /** Whether this is the default storage location for the home */
   isDefault: Scalars['Boolean']['output'];
+  /** Display name of the storage location (e.g., 'Main Fridge', 'Basement Freezer') */
   name: Scalars['String']['output'];
+  /** Items currently stored in this location */
   pantryItems: Array<PantryItem>;
+  /** Parent location if this is a nested location (e.g., a drawer inside a refrigerator) */
   parentLocation?: Maybe<StorageLocation>;
+  /** ID of the parent location */
   parentLocationId?: Maybe<Scalars['String']['output']>;
+  /** Sort order for display (lower numbers appear first) */
   sortOrder: Scalars['Int']['output'];
+  /** Temperature state (FROZEN, REFRIGERATED, AMBIENT, NONE) */
   temperature?: Maybe<StorageState>;
+  /** Type of storage (REFRIGERATOR, FREEZER, PANTRY_SHELF, etc.) */
   type: StorageType;
+  /** When this storage location was last updated */
   updatedAt: Scalars['DateTime']['output'];
 };
 
+/** Temperature state of a storage location */
 export enum StorageState {
+  /** Room temperature / ambient conditions */
   Ambient = 'AMBIENT',
+  /** Below freezing temperature (typically -18°C / 0°F or below) */
   Frozen = 'FROZEN',
+  /** No specific temperature control or not applicable */
   None = 'NONE',
+  /** Refrigerated temperature (typically 1-4°C / 34-39°F) */
   Refrigerated = 'REFRIGERATED',
 }
 
+/** Type of storage location */
 export enum StorageType {
+  /** Basement storage area */
   Basement = 'BASEMENT',
+  /** Boat storage compartment */
   BoatStorage = 'BOAT_STORAGE',
+  /** Kitchen or storage cabinet */
   Cabinet = 'CABINET',
+  /** Closet storage */
   Closet = 'CLOSET',
+  /** Kitchen counter or surface */
   Counter = 'COUNTER',
+  /** Custom or other storage type */
   Custom = 'CUSTOM',
+  /** Storage drawer */
   Drawer = 'DRAWER',
+  /** Freezer or deep freezer */
   Freezer = 'FREEZER',
+  /** Garage storage */
   Garage = 'GARAGE',
+  /** Outdoor storage area */
   Outdoor = 'OUTDOOR',
+  /** Pantry shelf or cabinet shelf */
   PantryShelf = 'PANTRY_SHELF',
+  /** Standard refrigerator */
   Refrigerator = 'REFRIGERATOR',
+  /** RV storage compartment */
   RvStorage = 'RV_STORAGE',
 }
 
@@ -6452,19 +6578,36 @@ export type UpdateShoppingListItemInput = {
   version?: InputMaybe<Scalars['Int']['input']>;
 };
 
+/**
+ * Input for updating an existing storage location
+ * All fields are optional
+ */
 export type UpdateStorageLocationInput = {
+  /** New capacity value */
   capacity?: InputMaybe<Scalars['Float']['input']>;
+  /** New capacity unit */
   capacityUnit?: InputMaybe<Scalars['String']['input']>;
+  /** New color code */
   color?: InputMaybe<Scalars['String']['input']>;
+  /** New description */
   description?: InputMaybe<Scalars['String']['input']>;
+  /** New icon identifier */
   icon?: InputMaybe<Scalars['String']['input']>;
+  /** Activate or deactivate the location */
   isActive?: InputMaybe<Scalars['Boolean']['input']>;
+  /** Update climate control setting */
   isClimateControlled?: InputMaybe<Scalars['Boolean']['input']>;
+  /** Set or unset as default location */
   isDefault?: InputMaybe<Scalars['Boolean']['input']>;
+  /** New display name */
   name?: InputMaybe<Scalars['String']['input']>;
+  /** New parent location ID (set to null to make top-level) */
   parentLocationId?: InputMaybe<Scalars['ID']['input']>;
+  /** New sort order */
   sortOrder?: InputMaybe<Scalars['Int']['input']>;
+  /** New temperature state */
   temperature?: InputMaybe<StorageState>;
+  /** New storage type */
   type?: InputMaybe<StorageType>;
 };
 
@@ -12383,6 +12526,26 @@ export type GetPantryQuery = {
             }>
           | null
           | undefined;
+        storageLocations: Array<{
+          __typename?: 'StorageLocation';
+          id: string;
+          name: string;
+          type: StorageType;
+          icon?: string | null | undefined;
+          color?: string | null | undefined;
+          temperature?: StorageState | null | undefined;
+          isDefault: boolean;
+          sortOrder: number;
+          parentLocation?:
+            | { __typename?: 'StorageLocation'; id: string; name: string }
+            | null
+            | undefined;
+          childLocations: Array<{
+            __typename?: 'StorageLocation';
+            id: string;
+            name: string;
+          }>;
+        }>;
       }
     | null
     | undefined;
@@ -17566,6 +17729,167 @@ export type ShoppingListItemRemovedSubscription = {
     __typename?: 'ShoppingListItem';
     id: string;
     itemName?: string | null | undefined;
+  };
+};
+
+export type GetStorageLocationsQueryVariables = Exact<{
+  homeId: Scalars['ID']['input'];
+}>;
+
+export type GetStorageLocationsQuery = {
+  __typename?: 'Query';
+  storageLocations: Array<{
+    __typename?: 'StorageLocation';
+    id: string;
+    name: string;
+    type: StorageType;
+    icon?: string | null | undefined;
+    color?: string | null | undefined;
+    temperature?: StorageState | null | undefined;
+    sortOrder: number;
+    isDefault: boolean;
+    currentItemCount: number;
+    parentLocation?:
+      | { __typename?: 'StorageLocation'; id: string; name: string }
+      | null
+      | undefined;
+  }>;
+};
+
+export type GetStorageLocationTreeQueryVariables = Exact<{
+  homeId: Scalars['ID']['input'];
+}>;
+
+export type GetStorageLocationTreeQuery = {
+  __typename?: 'Query';
+  storageLocationTree: Array<{
+    __typename?: 'StorageLocation';
+    id: string;
+    name: string;
+    type: StorageType;
+    icon?: string | null | undefined;
+    color?: string | null | undefined;
+    sortOrder: number;
+    currentItemCount: number;
+    isDefault: boolean;
+    childLocations: Array<{
+      __typename?: 'StorageLocation';
+      id: string;
+      name: string;
+      type: StorageType;
+      icon?: string | null | undefined;
+      color?: string | null | undefined;
+      sortOrder: number;
+      currentItemCount: number;
+      childLocations: Array<{
+        __typename?: 'StorageLocation';
+        id: string;
+        name: string;
+        type: StorageType;
+        currentItemCount: number;
+      }>;
+    }>;
+  }>;
+};
+
+export type GetStorageLocationQueryVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type GetStorageLocationQuery = {
+  __typename?: 'Query';
+  storageLocation?:
+    | {
+        __typename?: 'StorageLocation';
+        id: string;
+        name: string;
+        type: StorageType;
+        icon?: string | null | undefined;
+        color?: string | null | undefined;
+        temperature?: StorageState | null | undefined;
+        isClimateControlled: boolean;
+        sortOrder: number;
+        isDefault: boolean;
+        currentItemCount: number;
+        parentLocation?:
+          | { __typename?: 'StorageLocation'; id: string; name: string }
+          | null
+          | undefined;
+        childLocations: Array<{
+          __typename?: 'StorageLocation';
+          id: string;
+          name: string;
+          type: StorageType;
+        }>;
+      }
+    | null
+    | undefined;
+};
+
+export type CreateStorageLocationMutationVariables = Exact<{
+  input: CreateStorageLocationInput;
+}>;
+
+export type CreateStorageLocationMutation = {
+  __typename?: 'Mutation';
+  createStorageLocation: {
+    __typename?: 'StorageLocation';
+    id: string;
+    name: string;
+    type: StorageType;
+    icon?: string | null | undefined;
+    color?: string | null | undefined;
+    temperature?: StorageState | null | undefined;
+    sortOrder: number;
+    isDefault: boolean;
+    currentItemCount: number;
+    homeId: string;
+    parentLocation?:
+      | { __typename?: 'StorageLocation'; id: string; name: string }
+      | null
+      | undefined;
+  };
+};
+
+export type UpdateStorageLocationMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+  input: UpdateStorageLocationInput;
+}>;
+
+export type UpdateStorageLocationMutation = {
+  __typename?: 'Mutation';
+  updateStorageLocation: {
+    __typename?: 'StorageLocation';
+    id: string;
+    name: string;
+    type: StorageType;
+    icon?: string | null | undefined;
+    color?: string | null | undefined;
+    sortOrder: number;
+    parentLocationId?: string | null | undefined;
+  };
+};
+
+export type DeleteStorageLocationMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type DeleteStorageLocationMutation = {
+  __typename?: 'Mutation';
+  deleteStorageLocation: boolean;
+};
+
+export type SetDefaultStorageLocationMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type SetDefaultStorageLocationMutation = {
+  __typename?: 'Mutation';
+  setDefaultStorageLocation: {
+    __typename?: 'StorageLocation';
+    id: string;
+    name: string;
+    isDefault: boolean;
   };
 };
 

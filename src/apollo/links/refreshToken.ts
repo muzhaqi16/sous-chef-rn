@@ -241,3 +241,46 @@ export const clearRefreshState = () => {
   resetRefreshState();
   refreshQueue = [];
 };
+
+/**
+ * Proactive token refresh - called by scheduler before token expires
+ * This is the recommended approach to prevent user-facing 401 errors
+ *
+ * Benefits over reactive refresh:
+ * - Zero user-facing errors (refresh before expiration)
+ * - Smoother UX (no momentary failures or loading states)
+ * - Fewer concurrent refresh requests (scheduled instead of burst on expiration)
+ * - Cleaner logs (no expected 401 errors)
+ *
+ * Fallback: If this fails, reactive refresh (errorLink) will still handle
+ * token expiration when the next request fails with 401
+ *
+ * @returns The new access token on success, null on failure
+ */
+export const proactiveTokenRefresh = async (): Promise<string | null> => {
+  console.log('[ProactiveRefresh] Starting proactive token refresh');
+
+  // Check if already refreshing (shouldn't happen with proactive, but safety check)
+  if (refreshState.isRefreshing && refreshState.refreshPromise) {
+    console.log('[ProactiveRefresh] Already refreshing, returning existing promise');
+    return refreshState.refreshPromise;
+  }
+
+  // Start refresh process
+  refreshState.isRefreshing = true;
+  refreshState.refreshPromise = performTokenRefresh();
+
+  try {
+    const newToken = await refreshState.refreshPromise;
+    processQueue(newToken);
+    console.log('[ProactiveRefresh] Successfully completed');
+    return newToken;
+  } catch (error) {
+    processQueue(null);
+    console.error('[ProactiveRefresh] Failed:', error);
+    // Don't rethrow - reactive refresh will handle it if needed
+    return null;
+  } finally {
+    resetRefreshState();
+  }
+};

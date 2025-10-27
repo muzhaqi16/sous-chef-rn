@@ -7,12 +7,10 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Icon } from '#utils';
-import { useFocusEffect } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useHomeManagement } from '#/hooks';
-import { useCallback } from 'react';
-import { useEmailInputModal } from '#/hooks/useEmailInputModal';
+import { useInviteUserModal } from '#/hooks/useInviteUserModal';
 import {
   HomeStats,
   CreateHomeForm,
@@ -31,32 +29,27 @@ export const HomeManagement: React.FC = () => {
   const {
     homes,
     defaultHomeId,
-    loading,
+    initialLoading,
     creating,
     createHome,
     deleteHome,
     setDefaultHome,
     inviteUserToHome,
     stats,
-    refetch,
   } = useHomeManagement();
 
-  // Refetch data when screen comes into focus to ensure fresh data
-  useFocusEffect(
-    useCallback(() => {
-      refetch();
-    }, [refetch]),
-  );
+  // Note: Removed useFocusEffect refetch to prevent flickering
+  // Apollo's cache-and-network + cache-first strategy handles data freshness
+  // Mutations (create, delete, update) automatically update the cache
 
-  const { show, EmailModalComponent } = useEmailInputModal();
+  const { show, InviteModalComponent } = useInviteUserModal();
   const inviteUserPrompt = (homeId: string) => {
     show({
-      title: 'Invite Member',
-      placeholder: 'Enter email address',
-      onSubmit: async email => {
+      title: 'Invite Member to Home',
+      onSubmit: async (email, role) => {
         // Just call the function and let any errors bubble up to the modal
         // The modal will handle displaying the error and keeping itself open
-        await inviteUserToHome(homeId, email);
+        await inviteUserToHome(homeId, email, role);
         // If we reach here, the invitation was successful and the modal will close
       },
     });
@@ -93,7 +86,9 @@ export const HomeManagement: React.FC = () => {
     navigate('HomeDetail', { homeId });
   };
 
-  if (loading) {
+  // Only show loading screen on initial load (no cached data)
+  // Once we have data, show it immediately even if refetching
+  if (initialLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
@@ -162,7 +157,7 @@ export const HomeManagement: React.FC = () => {
             ))}
         </ScrollView>
       </View>
-      {EmailModalComponent}
+      {InviteModalComponent}
     </>
   );
 };

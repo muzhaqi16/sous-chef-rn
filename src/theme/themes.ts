@@ -72,6 +72,15 @@ export const lightTheme = {
     chipSelectedText: colors.neutral[0],
     iconPrimary: colors.jaffa[500],
 
+    // Status colors - for invites, tasks, etc.
+    status: colors.status,
+
+    // Role colors - for user roles
+    roles: colors.roles,
+
+    // Validation colors - for forms
+    validation: colors.validation,
+
     // Overlay
     overlay: colors.overlay,
     gap: (v: number) => v * 8,
@@ -132,6 +141,15 @@ export const darkTheme = {
     chipSelectedBackground: colors.jaffa[400],
     chipSelectedText: colors.neutral[900],
     iconPrimary: colors.jaffa[400],
+
+    // Status colors - for invites, tasks, etc.
+    status: colors.status,
+
+    // Role colors - for user roles
+    roles: colors.roles,
+
+    // Validation colors - for forms
+    validation: colors.validation,
 
     // Overlay
     overlay: colors.overlay,

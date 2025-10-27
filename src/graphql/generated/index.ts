@@ -748,19 +748,33 @@ export type CreateShoppingListItemInput = {
   unitName?: InputMaybe<Scalars['String']['input']>;
 };
 
+/** Input for creating a new storage location */
 export type CreateStorageLocationInput = {
+  /** Maximum capacity in specified units */
   capacity?: InputMaybe<Scalars['Float']['input']>;
+  /** Unit of measurement for capacity */
   capacityUnit?: InputMaybe<Scalars['String']['input']>;
+  /** Optional color code (hex format recommended) */
   color?: InputMaybe<Scalars['String']['input']>;
+  /** Optional description or notes */
   description?: InputMaybe<Scalars['String']['input']>;
+  /** ID of the home this location belongs to */
   homeId: Scalars['ID']['input'];
+  /** Optional icon identifier */
   icon?: InputMaybe<Scalars['String']['input']>;
+  /** Whether the location has climate control (default: false) */
   isClimateControlled?: InputMaybe<Scalars['Boolean']['input']>;
+  /** Set as default location for the home (default: false) */
   isDefault?: InputMaybe<Scalars['Boolean']['input']>;
+  /** Display name for the location */
   name: Scalars['String']['input'];
+  /** Optional parent location ID for nested locations */
   parentLocationId?: InputMaybe<Scalars['ID']['input']>;
+  /** Sort order (default: 0) */
   sortOrder?: InputMaybe<Scalars['Int']['input']>;
+  /** Temperature state of the location */
   temperature?: InputMaybe<StorageState>;
+  /** Type of storage location */
   type: StorageType;
 };
 
@@ -2376,6 +2390,11 @@ export type Mutation = {
   createShoppingList: ShoppingList;
   createShoppingListItemFromRecipeIngredient: AddIngredientResult;
   createShoppingListItemsFromRecipe: AddRecipeToShoppingListResult;
+  /**
+   * Create a new storage location
+   * Validates parent-child relationships and prevents circular references
+   * Requires user to have edit permissions in the home
+   */
   createStorageLocation: StorageLocation;
   createStore: Store;
   createUnit: Unit;
@@ -2404,6 +2423,11 @@ export type Mutation = {
   deletePurchase: Scalars['Boolean']['output'];
   deleteRecipe: Scalars['Boolean']['output'];
   deleteShoppingList: Scalars['Boolean']['output'];
+  /**
+   * Delete a storage location (soft delete)
+   * Fails if location has child locations or items
+   * Requires user to have edit permissions in the home
+   */
   deleteStorageLocation: Scalars['Boolean']['output'];
   deleteStore: Scalars['Boolean']['output'];
   deleteUnit: Scalars['Boolean']['output'];
@@ -2471,6 +2495,12 @@ export type Mutation = {
   removeRestrictions: UserModeration;
   removeShoppingListCollaborator: Scalars['Boolean']['output'];
   removeUnitConversion: Unit;
+  /**
+   * Reorder multiple storage locations
+   * All locations must belong to the same home
+   * Requires user to have edit permissions in the home
+   */
+  reorderStorageLocations: Scalars['Boolean']['output'];
   resendVerificationEmail: Scalars['Boolean']['output'];
   /** Reset password using token from email */
   resetPassword: ResetPasswordResponse;
@@ -2482,6 +2512,12 @@ export type Mutation = {
   setDefaultHome: UserSettings;
   setDefaultItemUnit: ItemUnit;
   setDefaultShoppingList: ShoppingList;
+  /**
+   * Set a storage location as the default for its home
+   * Automatically unsets the previous default location
+   * Requires user to have edit permissions in the home
+   */
+  setDefaultStorageLocation: StorageLocation;
   setItemBrand: Item;
   setItemCategories: Item;
   setReminder: ShoppingList;
@@ -2552,6 +2588,11 @@ export type Mutation = {
   updateShoppingListItemNotes: ShoppingListItem;
   updateShoppingListItemPriority: ShoppingListItem;
   updateShoppingListItemQuantity: ShoppingListItem;
+  /**
+   * Update an existing storage location
+   * Validates parent-child relationships and prevents circular references
+   * Requires user to have edit permissions in the home
+   */
   updateStorageLocation: StorageLocation;
   updateStore: Store;
   updateStoreInfo: StoreInfo;
@@ -3180,6 +3221,10 @@ export type MutationRemoveUnitConversionArgs = {
   unitId: Scalars['ID']['input'];
 };
 
+export type MutationReorderStorageLocationsArgs = {
+  input: ReorderStorageLocationsInput;
+};
+
 export type MutationResendVerificationEmailArgs = {
   email: Scalars['String']['input'];
 };
@@ -3219,6 +3264,10 @@ export type MutationSetDefaultItemUnitArgs = {
 };
 
 export type MutationSetDefaultShoppingListArgs = {
+  id: Scalars['ID']['input'];
+};
+
+export type MutationSetDefaultStorageLocationArgs = {
   id: Scalars['ID']['input'];
 };
 
@@ -3908,6 +3957,11 @@ export type Pantry = {
   location: Maybe<Scalars['String']['output']>;
   metadata: Maybe<Scalars['JSON']['output']>;
   name: Scalars['String']['output'];
+  /**
+   * Storage locations available for this pantry's home.
+   * Useful for assigning pantry items to specific storage locations.
+   */
+  storageLocations: Array<StorageLocation>;
   tags: Array<Scalars['String']['output']>;
   temperature: Maybe<Scalars['String']['output']>;
   updatedAt: Scalars['DateTime']['output'];
@@ -4362,8 +4416,23 @@ export type Query = {
   shoppingListItems: Array<ShoppingListItem>;
   shoppingLists: Array<ShoppingList>;
   staleDevices: Array<Device>;
+  /**
+   * Get a single storage location by ID
+   * Requires user to be a member of the home
+   */
   storageLocation: Maybe<StorageLocation>;
+  /**
+   * Get hierarchical tree of storage locations for a home
+   * Returns top-level locations with nested children
+   * Ideal for rendering nested location pickers
+   * Requires user to be a member of the home
+   */
   storageLocationTree: Array<StorageLocation>;
+  /**
+   * Get all active storage locations for a home (flat list)
+   * Returns locations ordered by sortOrder
+   * Requires user to be a member of the home
+   */
   storageLocations: Array<StorageLocation>;
   store: Maybe<Store>;
   storeByName: Maybe<Store>;
@@ -5233,6 +5302,17 @@ export type RemoveRestrictionsInput = {
   userId: Scalars['ID']['input'];
 };
 
+/**
+ * Input for reordering multiple storage locations
+ * Arrays must be the same length
+ */
+export type ReorderStorageLocationsInput = {
+  /** Array of location IDs to reorder */
+  locationIds: Array<Scalars['ID']['input']>;
+  /** Array of new sort orders (must match locationIds length) */
+  sortOrders: Array<Scalars['Int']['input']>;
+};
+
 export type ResetPasswordInput = {
   password: Scalars['String']['input'];
   token: Scalars['String']['input'];
@@ -5584,53 +5664,99 @@ export enum SortOrder {
   Desc = 'DESC',
 }
 
+/**
+ * Storage location within a home (refrigerator, freezer, pantry shelf, etc.)
+ * Supports hierarchical organization with parent-child relationships
+ */
 export type StorageLocation = {
   __typename?: 'StorageLocation';
+  /** Maximum capacity (in capacityUnit) */
   capacity: Maybe<Scalars['Float']['output']>;
+  /** Unit of measurement for capacity (e.g., 'liters', 'cubic feet') */
   capacityUnit: Maybe<Scalars['String']['output']>;
+  /** Child locations nested within this location */
   childLocations: Array<StorageLocation>;
+  /** Optional color code (hex) for UI display */
   color: Maybe<Scalars['String']['output']>;
+  /** When this storage location was created */
   createdAt: Scalars['DateTime']['output'];
+  /** Current count of items stored in this location */
   currentItemCount: Scalars['Int']['output'];
+  /** When this storage location was soft-deleted (if applicable) */
   deletedAt: Maybe<Scalars['DateTime']['output']>;
+  /** Optional description or notes about this location */
   description: Maybe<Scalars['String']['output']>;
+  /** The home this storage location belongs to */
   home: Home;
+  /** ID of the home this storage location belongs to */
   homeId: Scalars['String']['output'];
+  /** Optional icon identifier for UI display */
   icon: Maybe<Scalars['String']['output']>;
+  /** Unique identifier for the storage location */
   id: Scalars['ID']['output'];
+  /** Whether this location is active and visible */
   isActive: Scalars['Boolean']['output'];
+  /** Whether this location has climate control */
   isClimateControlled: Scalars['Boolean']['output'];
+  /** Whether this is the default storage location for the home */
   isDefault: Scalars['Boolean']['output'];
+  /** Display name of the storage location (e.g., 'Main Fridge', 'Basement Freezer') */
   name: Scalars['String']['output'];
+  /** Items currently stored in this location */
   pantryItems: Array<PantryItem>;
+  /** Parent location if this is a nested location (e.g., a drawer inside a refrigerator) */
   parentLocation: Maybe<StorageLocation>;
+  /** ID of the parent location */
   parentLocationId: Maybe<Scalars['String']['output']>;
+  /** Sort order for display (lower numbers appear first) */
   sortOrder: Scalars['Int']['output'];
+  /** Temperature state (FROZEN, REFRIGERATED, AMBIENT, NONE) */
   temperature: Maybe<StorageState>;
+  /** Type of storage (REFRIGERATOR, FREEZER, PANTRY_SHELF, etc.) */
   type: StorageType;
+  /** When this storage location was last updated */
   updatedAt: Scalars['DateTime']['output'];
 };
 
+/** Temperature state of a storage location */
 export enum StorageState {
+  /** Room temperature / ambient conditions */
   Ambient = 'AMBIENT',
+  /** Below freezing temperature (typically -18°C / 0°F or below) */
   Frozen = 'FROZEN',
+  /** No specific temperature control or not applicable */
   None = 'NONE',
+  /** Refrigerated temperature (typically 1-4°C / 34-39°F) */
   Refrigerated = 'REFRIGERATED',
 }
 
+/** Type of storage location */
 export enum StorageType {
+  /** Basement storage area */
   Basement = 'BASEMENT',
+  /** Boat storage compartment */
   BoatStorage = 'BOAT_STORAGE',
+  /** Kitchen or storage cabinet */
   Cabinet = 'CABINET',
+  /** Closet storage */
   Closet = 'CLOSET',
+  /** Kitchen counter or surface */
   Counter = 'COUNTER',
+  /** Custom or other storage type */
   Custom = 'CUSTOM',
+  /** Storage drawer */
   Drawer = 'DRAWER',
+  /** Freezer or deep freezer */
   Freezer = 'FREEZER',
+  /** Garage storage */
   Garage = 'GARAGE',
+  /** Outdoor storage area */
   Outdoor = 'OUTDOOR',
+  /** Pantry shelf or cabinet shelf */
   PantryShelf = 'PANTRY_SHELF',
+  /** Standard refrigerator */
   Refrigerator = 'REFRIGERATOR',
+  /** RV storage compartment */
   RvStorage = 'RV_STORAGE',
 }
 
@@ -6458,19 +6584,36 @@ export type UpdateShoppingListItemInput = {
   version?: InputMaybe<Scalars['Int']['input']>;
 };
 
+/**
+ * Input for updating an existing storage location
+ * All fields are optional
+ */
 export type UpdateStorageLocationInput = {
+  /** New capacity value */
   capacity?: InputMaybe<Scalars['Float']['input']>;
+  /** New capacity unit */
   capacityUnit?: InputMaybe<Scalars['String']['input']>;
+  /** New color code */
   color?: InputMaybe<Scalars['String']['input']>;
+  /** New description */
   description?: InputMaybe<Scalars['String']['input']>;
+  /** New icon identifier */
   icon?: InputMaybe<Scalars['String']['input']>;
+  /** Activate or deactivate the location */
   isActive?: InputMaybe<Scalars['Boolean']['input']>;
+  /** Update climate control setting */
   isClimateControlled?: InputMaybe<Scalars['Boolean']['input']>;
+  /** Set or unset as default location */
   isDefault?: InputMaybe<Scalars['Boolean']['input']>;
+  /** New display name */
   name?: InputMaybe<Scalars['String']['input']>;
+  /** New parent location ID (set to null to make top-level) */
   parentLocationId?: InputMaybe<Scalars['ID']['input']>;
+  /** New sort order */
   sortOrder?: InputMaybe<Scalars['Int']['input']>;
+  /** New temperature state */
   temperature?: InputMaybe<StorageState>;
+  /** New storage type */
   type?: InputMaybe<StorageType>;
 };
 
@@ -9585,6 +9728,26 @@ export type GetPantryQuery = {
             }>
           | null
           | undefined;
+        storageLocations: Array<{
+          __typename?: 'StorageLocation';
+          id: string;
+          name: string;
+          type: StorageType;
+          icon: string | null | undefined;
+          color: string | null | undefined;
+          temperature: StorageState | null | undefined;
+          isDefault: boolean;
+          sortOrder: number;
+          parentLocation:
+            | { __typename?: 'StorageLocation'; id: string; name: string }
+            | null
+            | undefined;
+          childLocations: Array<{
+            __typename?: 'StorageLocation';
+            id: string;
+            name: string;
+          }>;
+        }>;
       }
     | null
     | undefined;
@@ -11159,6 +11322,167 @@ export type ShoppingListItemRemovedSubscription = {
     __typename?: 'ShoppingListItem';
     id: string;
     itemName: string | null | undefined;
+  };
+};
+
+export type GetStorageLocationsQueryVariables = Exact<{
+  homeId: Scalars['ID']['input'];
+}>;
+
+export type GetStorageLocationsQuery = {
+  __typename?: 'Query';
+  storageLocations: Array<{
+    __typename?: 'StorageLocation';
+    id: string;
+    name: string;
+    type: StorageType;
+    icon: string | null | undefined;
+    color: string | null | undefined;
+    temperature: StorageState | null | undefined;
+    sortOrder: number;
+    isDefault: boolean;
+    currentItemCount: number;
+    parentLocation:
+      | { __typename?: 'StorageLocation'; id: string; name: string }
+      | null
+      | undefined;
+  }>;
+};
+
+export type GetStorageLocationTreeQueryVariables = Exact<{
+  homeId: Scalars['ID']['input'];
+}>;
+
+export type GetStorageLocationTreeQuery = {
+  __typename?: 'Query';
+  storageLocationTree: Array<{
+    __typename?: 'StorageLocation';
+    id: string;
+    name: string;
+    type: StorageType;
+    icon: string | null | undefined;
+    color: string | null | undefined;
+    sortOrder: number;
+    currentItemCount: number;
+    isDefault: boolean;
+    childLocations: Array<{
+      __typename?: 'StorageLocation';
+      id: string;
+      name: string;
+      type: StorageType;
+      icon: string | null | undefined;
+      color: string | null | undefined;
+      sortOrder: number;
+      currentItemCount: number;
+      childLocations: Array<{
+        __typename?: 'StorageLocation';
+        id: string;
+        name: string;
+        type: StorageType;
+        currentItemCount: number;
+      }>;
+    }>;
+  }>;
+};
+
+export type GetStorageLocationQueryVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type GetStorageLocationQuery = {
+  __typename?: 'Query';
+  storageLocation:
+    | {
+        __typename?: 'StorageLocation';
+        id: string;
+        name: string;
+        type: StorageType;
+        icon: string | null | undefined;
+        color: string | null | undefined;
+        temperature: StorageState | null | undefined;
+        isClimateControlled: boolean;
+        sortOrder: number;
+        isDefault: boolean;
+        currentItemCount: number;
+        parentLocation:
+          | { __typename?: 'StorageLocation'; id: string; name: string }
+          | null
+          | undefined;
+        childLocations: Array<{
+          __typename?: 'StorageLocation';
+          id: string;
+          name: string;
+          type: StorageType;
+        }>;
+      }
+    | null
+    | undefined;
+};
+
+export type CreateStorageLocationMutationVariables = Exact<{
+  input: CreateStorageLocationInput;
+}>;
+
+export type CreateStorageLocationMutation = {
+  __typename?: 'Mutation';
+  createStorageLocation: {
+    __typename?: 'StorageLocation';
+    id: string;
+    name: string;
+    type: StorageType;
+    icon: string | null | undefined;
+    color: string | null | undefined;
+    temperature: StorageState | null | undefined;
+    sortOrder: number;
+    isDefault: boolean;
+    currentItemCount: number;
+    homeId: string;
+    parentLocation:
+      | { __typename?: 'StorageLocation'; id: string; name: string }
+      | null
+      | undefined;
+  };
+};
+
+export type UpdateStorageLocationMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+  input: UpdateStorageLocationInput;
+}>;
+
+export type UpdateStorageLocationMutation = {
+  __typename?: 'Mutation';
+  updateStorageLocation: {
+    __typename?: 'StorageLocation';
+    id: string;
+    name: string;
+    type: StorageType;
+    icon: string | null | undefined;
+    color: string | null | undefined;
+    sortOrder: number;
+    parentLocationId: string | null | undefined;
+  };
+};
+
+export type DeleteStorageLocationMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type DeleteStorageLocationMutation = {
+  __typename?: 'Mutation';
+  deleteStorageLocation: boolean;
+};
+
+export type SetDefaultStorageLocationMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+export type SetDefaultStorageLocationMutation = {
+  __typename?: 'Mutation';
+  setDefaultStorageLocation: {
+    __typename?: 'StorageLocation';
+    id: string;
+    name: string;
+    isDefault: boolean;
   };
 };
 
@@ -29908,6 +30232,66 @@ export const GetPantryDocument = {
                     ],
                   },
                 },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'storageLocations' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'type' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'icon' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'color' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'temperature' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'isDefault' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'sortOrder' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'parentLocation' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'id' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'name' },
+                            },
+                          ],
+                        },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'childLocations' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'id' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'name' },
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
               ],
             },
           },
@@ -44998,6 +45382,921 @@ export type ShoppingListItemRemovedSubscriptionHookResult = ReturnType<
 >;
 export type ShoppingListItemRemovedSubscriptionResult =
   ApolloReactCommon.SubscriptionResult<ShoppingListItemRemovedSubscription>;
+export const GetStorageLocationsDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'query',
+      name: { kind: 'Name', value: 'GetStorageLocations' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'homeId' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'storageLocations' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'homeId' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'homeId' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'type' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'icon' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'color' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'temperature' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'isDefault' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'currentItemCount' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'parentLocation' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+
+/**
+ * __useGetStorageLocationsQuery__
+ *
+ * To run a query within a React component, call `useGetStorageLocationsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetStorageLocationsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetStorageLocationsQuery({
+ *   variables: {
+ *      homeId: // value for 'homeId'
+ *   },
+ * });
+ */
+export function useGetStorageLocationsQuery(
+  baseOptions: ApolloReactHooks.QueryHookOptions<
+    GetStorageLocationsQuery,
+    GetStorageLocationsQueryVariables
+  > &
+    (
+      | { variables: GetStorageLocationsQueryVariables; skip?: boolean }
+      | { skip: boolean }
+    ),
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useQuery<
+    GetStorageLocationsQuery,
+    GetStorageLocationsQueryVariables
+  >(GetStorageLocationsDocument, options);
+}
+export function useGetStorageLocationsLazyQuery(
+  baseOptions?: ApolloReactHooks.LazyQueryHookOptions<
+    GetStorageLocationsQuery,
+    GetStorageLocationsQueryVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useLazyQuery<
+    GetStorageLocationsQuery,
+    GetStorageLocationsQueryVariables
+  >(GetStorageLocationsDocument, options);
+}
+export function useGetStorageLocationsSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetStorageLocationsQuery,
+        GetStorageLocationsQueryVariables
+      >,
+) {
+  const options =
+    baseOptions === ApolloReactHooks.skipToken
+      ? baseOptions
+      : { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useSuspenseQuery<
+    GetStorageLocationsQuery,
+    GetStorageLocationsQueryVariables
+  >(GetStorageLocationsDocument, options);
+}
+export type GetStorageLocationsQueryHookResult = ReturnType<
+  typeof useGetStorageLocationsQuery
+>;
+export type GetStorageLocationsLazyQueryHookResult = ReturnType<
+  typeof useGetStorageLocationsLazyQuery
+>;
+export type GetStorageLocationsSuspenseQueryHookResult = ReturnType<
+  typeof useGetStorageLocationsSuspenseQuery
+>;
+export type GetStorageLocationsQueryResult = ApolloReactCommon.QueryResult<
+  GetStorageLocationsQuery,
+  GetStorageLocationsQueryVariables
+>;
+export function refetchGetStorageLocationsQuery(
+  variables: GetStorageLocationsQueryVariables,
+) {
+  return { query: GetStorageLocationsDocument, variables: variables };
+}
+export const GetStorageLocationTreeDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'query',
+      name: { kind: 'Name', value: 'GetStorageLocationTree' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'homeId' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'storageLocationTree' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'homeId' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'homeId' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'type' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'icon' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'color' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'currentItemCount' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'isDefault' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'childLocations' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'type' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'icon' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'color' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'sortOrder' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'currentItemCount' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'childLocations' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'id' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'name' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'type' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'currentItemCount' },
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+
+/**
+ * __useGetStorageLocationTreeQuery__
+ *
+ * To run a query within a React component, call `useGetStorageLocationTreeQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetStorageLocationTreeQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetStorageLocationTreeQuery({
+ *   variables: {
+ *      homeId: // value for 'homeId'
+ *   },
+ * });
+ */
+export function useGetStorageLocationTreeQuery(
+  baseOptions: ApolloReactHooks.QueryHookOptions<
+    GetStorageLocationTreeQuery,
+    GetStorageLocationTreeQueryVariables
+  > &
+    (
+      | { variables: GetStorageLocationTreeQueryVariables; skip?: boolean }
+      | { skip: boolean }
+    ),
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useQuery<
+    GetStorageLocationTreeQuery,
+    GetStorageLocationTreeQueryVariables
+  >(GetStorageLocationTreeDocument, options);
+}
+export function useGetStorageLocationTreeLazyQuery(
+  baseOptions?: ApolloReactHooks.LazyQueryHookOptions<
+    GetStorageLocationTreeQuery,
+    GetStorageLocationTreeQueryVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useLazyQuery<
+    GetStorageLocationTreeQuery,
+    GetStorageLocationTreeQueryVariables
+  >(GetStorageLocationTreeDocument, options);
+}
+export function useGetStorageLocationTreeSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetStorageLocationTreeQuery,
+        GetStorageLocationTreeQueryVariables
+      >,
+) {
+  const options =
+    baseOptions === ApolloReactHooks.skipToken
+      ? baseOptions
+      : { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useSuspenseQuery<
+    GetStorageLocationTreeQuery,
+    GetStorageLocationTreeQueryVariables
+  >(GetStorageLocationTreeDocument, options);
+}
+export type GetStorageLocationTreeQueryHookResult = ReturnType<
+  typeof useGetStorageLocationTreeQuery
+>;
+export type GetStorageLocationTreeLazyQueryHookResult = ReturnType<
+  typeof useGetStorageLocationTreeLazyQuery
+>;
+export type GetStorageLocationTreeSuspenseQueryHookResult = ReturnType<
+  typeof useGetStorageLocationTreeSuspenseQuery
+>;
+export type GetStorageLocationTreeQueryResult = ApolloReactCommon.QueryResult<
+  GetStorageLocationTreeQuery,
+  GetStorageLocationTreeQueryVariables
+>;
+export function refetchGetStorageLocationTreeQuery(
+  variables: GetStorageLocationTreeQueryVariables,
+) {
+  return { query: GetStorageLocationTreeDocument, variables: variables };
+}
+export const GetStorageLocationDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'query',
+      name: { kind: 'Name', value: 'GetStorageLocation' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: { kind: 'Variable', name: { kind: 'Name', value: 'id' } },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'storageLocation' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'id' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'id' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'type' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'icon' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'color' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'temperature' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'isClimateControlled' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'isDefault' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'currentItemCount' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'parentLocation' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                    ],
+                  },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'childLocations' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'type' } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+
+/**
+ * __useGetStorageLocationQuery__
+ *
+ * To run a query within a React component, call `useGetStorageLocationQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetStorageLocationQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetStorageLocationQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useGetStorageLocationQuery(
+  baseOptions: ApolloReactHooks.QueryHookOptions<
+    GetStorageLocationQuery,
+    GetStorageLocationQueryVariables
+  > &
+    (
+      | { variables: GetStorageLocationQueryVariables; skip?: boolean }
+      | { skip: boolean }
+    ),
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useQuery<
+    GetStorageLocationQuery,
+    GetStorageLocationQueryVariables
+  >(GetStorageLocationDocument, options);
+}
+export function useGetStorageLocationLazyQuery(
+  baseOptions?: ApolloReactHooks.LazyQueryHookOptions<
+    GetStorageLocationQuery,
+    GetStorageLocationQueryVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useLazyQuery<
+    GetStorageLocationQuery,
+    GetStorageLocationQueryVariables
+  >(GetStorageLocationDocument, options);
+}
+export function useGetStorageLocationSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetStorageLocationQuery,
+        GetStorageLocationQueryVariables
+      >,
+) {
+  const options =
+    baseOptions === ApolloReactHooks.skipToken
+      ? baseOptions
+      : { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useSuspenseQuery<
+    GetStorageLocationQuery,
+    GetStorageLocationQueryVariables
+  >(GetStorageLocationDocument, options);
+}
+export type GetStorageLocationQueryHookResult = ReturnType<
+  typeof useGetStorageLocationQuery
+>;
+export type GetStorageLocationLazyQueryHookResult = ReturnType<
+  typeof useGetStorageLocationLazyQuery
+>;
+export type GetStorageLocationSuspenseQueryHookResult = ReturnType<
+  typeof useGetStorageLocationSuspenseQuery
+>;
+export type GetStorageLocationQueryResult = ApolloReactCommon.QueryResult<
+  GetStorageLocationQuery,
+  GetStorageLocationQueryVariables
+>;
+export function refetchGetStorageLocationQuery(
+  variables: GetStorageLocationQueryVariables,
+) {
+  return { query: GetStorageLocationDocument, variables: variables };
+}
+export const CreateStorageLocationDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'CreateStorageLocation' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'input' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: {
+              kind: 'NamedType',
+              name: { kind: 'Name', value: 'CreateStorageLocationInput' },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'createStorageLocation' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'input' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'input' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'type' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'icon' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'color' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'temperature' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'isDefault' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'currentItemCount' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'homeId' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'parentLocation' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type CreateStorageLocationMutationFn =
+  ApolloReactCommon.MutationFunction<
+    CreateStorageLocationMutation,
+    CreateStorageLocationMutationVariables
+  >;
+
+/**
+ * __useCreateStorageLocationMutation__
+ *
+ * To run a mutation, you first call `useCreateStorageLocationMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateStorageLocationMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createStorageLocationMutation, { data, loading, error }] = useCreateStorageLocationMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useCreateStorageLocationMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    CreateStorageLocationMutation,
+    CreateStorageLocationMutationVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useMutation<
+    CreateStorageLocationMutation,
+    CreateStorageLocationMutationVariables
+  >(CreateStorageLocationDocument, options);
+}
+export type CreateStorageLocationMutationHookResult = ReturnType<
+  typeof useCreateStorageLocationMutation
+>;
+export type CreateStorageLocationMutationResult =
+  ApolloReactCommon.MutationResult<CreateStorageLocationMutation>;
+export type CreateStorageLocationMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    CreateStorageLocationMutation,
+    CreateStorageLocationMutationVariables
+  >;
+export const UpdateStorageLocationDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'UpdateStorageLocation' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: { kind: 'Variable', name: { kind: 'Name', value: 'id' } },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'input' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: {
+              kind: 'NamedType',
+              name: { kind: 'Name', value: 'UpdateStorageLocationInput' },
+            },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'updateStorageLocation' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'id' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'id' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'input' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'input' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'type' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'icon' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'color' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'parentLocationId' },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type UpdateStorageLocationMutationFn =
+  ApolloReactCommon.MutationFunction<
+    UpdateStorageLocationMutation,
+    UpdateStorageLocationMutationVariables
+  >;
+
+/**
+ * __useUpdateStorageLocationMutation__
+ *
+ * To run a mutation, you first call `useUpdateStorageLocationMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateStorageLocationMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateStorageLocationMutation, { data, loading, error }] = useUpdateStorageLocationMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useUpdateStorageLocationMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    UpdateStorageLocationMutation,
+    UpdateStorageLocationMutationVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useMutation<
+    UpdateStorageLocationMutation,
+    UpdateStorageLocationMutationVariables
+  >(UpdateStorageLocationDocument, options);
+}
+export type UpdateStorageLocationMutationHookResult = ReturnType<
+  typeof useUpdateStorageLocationMutation
+>;
+export type UpdateStorageLocationMutationResult =
+  ApolloReactCommon.MutationResult<UpdateStorageLocationMutation>;
+export type UpdateStorageLocationMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    UpdateStorageLocationMutation,
+    UpdateStorageLocationMutationVariables
+  >;
+export const DeleteStorageLocationDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'DeleteStorageLocation' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: { kind: 'Variable', name: { kind: 'Name', value: 'id' } },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'deleteStorageLocation' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'id' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'id' },
+                },
+              },
+            ],
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type DeleteStorageLocationMutationFn =
+  ApolloReactCommon.MutationFunction<
+    DeleteStorageLocationMutation,
+    DeleteStorageLocationMutationVariables
+  >;
+
+/**
+ * __useDeleteStorageLocationMutation__
+ *
+ * To run a mutation, you first call `useDeleteStorageLocationMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteStorageLocationMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteStorageLocationMutation, { data, loading, error }] = useDeleteStorageLocationMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeleteStorageLocationMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    DeleteStorageLocationMutation,
+    DeleteStorageLocationMutationVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useMutation<
+    DeleteStorageLocationMutation,
+    DeleteStorageLocationMutationVariables
+  >(DeleteStorageLocationDocument, options);
+}
+export type DeleteStorageLocationMutationHookResult = ReturnType<
+  typeof useDeleteStorageLocationMutation
+>;
+export type DeleteStorageLocationMutationResult =
+  ApolloReactCommon.MutationResult<DeleteStorageLocationMutation>;
+export type DeleteStorageLocationMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    DeleteStorageLocationMutation,
+    DeleteStorageLocationMutationVariables
+  >;
+export const SetDefaultStorageLocationDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'SetDefaultStorageLocation' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: { kind: 'Variable', name: { kind: 'Name', value: 'id' } },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'setDefaultStorageLocation' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'id' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'id' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'isDefault' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type SetDefaultStorageLocationMutationFn =
+  ApolloReactCommon.MutationFunction<
+    SetDefaultStorageLocationMutation,
+    SetDefaultStorageLocationMutationVariables
+  >;
+
+/**
+ * __useSetDefaultStorageLocationMutation__
+ *
+ * To run a mutation, you first call `useSetDefaultStorageLocationMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useSetDefaultStorageLocationMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [setDefaultStorageLocationMutation, { data, loading, error }] = useSetDefaultStorageLocationMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useSetDefaultStorageLocationMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    SetDefaultStorageLocationMutation,
+    SetDefaultStorageLocationMutationVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useMutation<
+    SetDefaultStorageLocationMutation,
+    SetDefaultStorageLocationMutationVariables
+  >(SetDefaultStorageLocationDocument, options);
+}
+export type SetDefaultStorageLocationMutationHookResult = ReturnType<
+  typeof useSetDefaultStorageLocationMutation
+>;
+export type SetDefaultStorageLocationMutationResult =
+  ApolloReactCommon.MutationResult<SetDefaultStorageLocationMutation>;
+export type SetDefaultStorageLocationMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    SetDefaultStorageLocationMutation,
+    SetDefaultStorageLocationMutationVariables
+  >;
 export const GetNotificationPreferencesDocument = {
   kind: 'Document',
   definitions: [

@@ -17,7 +17,7 @@ import {
   ImageCropScreen,
   NotFoundScreen,
 } from '#screens';
-import { HomeDetailScreen } from '#screens/home';
+import { HomeDetailScreen, StorageLocationsScreen } from '#screens/home';
 import {
   CodeVerificationScreen,
   EmailVerificationDeepLinkScreen,
@@ -47,6 +47,7 @@ export type RootStackParamList = {
   Home: undefined;
   HomeManagement: { selectedHomeId?: string };
   HomeDetail: { homeId: string };
+  StorageLocations: { homeId: string };
   Barcode: undefined;
   Notifications: undefined;
   ProfilePhotoUpload: undefined;
@@ -177,6 +178,10 @@ function RootNavigator() {
               </Stack.Screen>
               <Stack.Screen name="HomeManagement" component={HomeManagement} />
               <Stack.Screen name="HomeDetail" component={HomeDetailScreen} />
+              <Stack.Screen
+                name="StorageLocations"
+                component={StorageLocationsScreen}
+              />
               <Stack.Screen name="Barcode" component={BarcodeStack} />
               <Stack.Screen
                 name="Notifications"
