@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Alert } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
+import { ProfileScreenWrapper } from '#components/templates';
 import { useDietaryProfile } from '#hooks/profile/useDietaryProfile';
 import { DietaryTag, RestrictionSeverity } from '#generated';
 import { commonStyles } from '#/styles/commonStyles';
@@ -150,7 +151,7 @@ export const DietaryProfileScreen: React.FC = () => {
   );
 
   return (
-    <ScrollView style={commonStyles.container}>
+    <ProfileScreenWrapper title="Dietary Profile">
       {/* Dietary Restrictions Section */}
       <View style={styles.section}>
         <View style={commonStyles.rowSpaceBetween}>
@@ -383,13 +384,14 @@ export const DietaryProfileScreen: React.FC = () => {
           )}
         </View>
       </View>
-    </ScrollView>
+    </ProfileScreenWrapper>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
   section: {
-    padding: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
     marginBottom: theme.spacing.lg,
   },
   addButton: {

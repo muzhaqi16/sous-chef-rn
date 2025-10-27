@@ -14,6 +14,8 @@ import {
   useMoveShoppingListItemMutation,
   useUpdateShoppingListItemQuantityMutation,
 } from '#generated';
+import { useApolloClient } from '@apollo/client/react';
+import { gql } from '@apollo/client';
 import { useScanner } from '#context';
 import {
   SearchBarAction,
@@ -25,20 +27,17 @@ import {
 } from '#components';
 import { getItemImageUrl } from '#utils/imageUtils';
 import { generatePosition } from '#utils/fractionalIndexing';
-import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
 import type {
   SelectorConfig,
   ItemSelectorRef,
 } from '#components/organisms/AnimatedItemSelector';
 import type { SortableShoppingListItem } from '#components/organisms/SortableShoppingList';
 import { useShoppingListManagement } from '#/hooks';
-import { useOptimisticDataRestoration } from '#/hooks/offline/useOptimisticDataRestoration';
 import { useOfflinePresetPolicy } from '#/apollo/policies/offlineFetchPolicies';
 import { useStore } from '#/store';
 import { IconLibrary } from '#/utils/iconUtils';
-import { Counter } from '#/components/molecules/Counter';
+import { ShoppingListItemCounter } from '#/components/molecules/ShoppingListItemCounter';
 import { commonStyles } from '#/styles';
-import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import {
   handleVersionConflict,
   getVersionConflictMessage,
@@ -61,6 +60,7 @@ const ShoppingListContent: React.FC<{
   disabled?: boolean;
   emptyState?: any;
   onClearAllPurchased?: () => Promise<void>;
+  onSwipeableWillOpen?: (ref: any) => void;
 }> = ({
   items,
   onItemPress,
@@ -73,6 +73,7 @@ const ShoppingListContent: React.FC<{
   disabled,
   emptyState,
   onClearAllPurchased,
+  onSwipeableWillOpen,
 }) => {
   // Separate items by purchased status
   const unpurchasedItems = items.filter(item => !item.isPurchased);
@@ -108,6 +109,7 @@ const ShoppingListContent: React.FC<{
         onSortOrderUpdate={onSortOrderUpdate}
         disabled={disabled}
         showsVerticalScrollIndicator={true}
+        onSwipeableWillOpen={onSwipeableWillOpen}
         ListFooterComponent={
           /* Collapsible Purchased Section */
           <CollapsiblePurchasedSection
@@ -119,6 +121,7 @@ const ShoppingListContent: React.FC<{
             onSortOrderUpdate={onSortOrderUpdate}
             onClearAll={onClearAllPurchased}
             disabled={disabled}
+            onSwipeableWillOpen={onSwipeableWillOpen}
           />
         }
       />
@@ -136,14 +139,16 @@ export const ShoppingListMain: React.FC = () => {
   const { selectedShoppingListId, setSelectedShoppingListId } = useStore();
   const selectorRef = useRef<ItemSelectorRef>(null);
   const { setScannerProps, setOverlayOpen } = useScanner();
+  const client = useApolloClient();
+  // Track currently open swipeable across both unpurchased and purchased lists
+  const openSwipeableRef = useRef<any>(null);
   const [moveItem] = useMoveShoppingListItemMutation({
     errorPolicy: 'all',
   });
   const [updateQuantity] = useUpdateShoppingListItemQuantityMutation({
     errorPolicy: 'all',
-    // DON'T refetch - server has eventual consistency issues
-    // Immediate refetch returns stale data and overwrites correct cache values
-    // Trust the mutation response instead (Apollo normalizes it automatically)
+    refetchQueries: ['GetShoppingListItems'],
+    awaitRefetchQueries: true,
   });
 
   const [refreshing, setRefreshing] = useState(false);
@@ -291,14 +296,7 @@ export const ShoppingListMain: React.FC = () => {
           optimisticSortOrder,
         });
 
-        // OPTIMIZATION: Persist sortOrder for offline persistence using generic system
-        optimisticDataPersistence.save(
-          'ShoppingListItem',
-          itemId,
-          'sortOrder',
-          optimisticSortOrder,
-        );
-
+        // Let Apollo handle everything - no optimistic response, no persistence
         await moveItem({
           variables: {
             input: {
@@ -306,29 +304,6 @@ export const ShoppingListMain: React.FC = () => {
               afterItemId: afterItemId ?? undefined,
               beforeItemId: beforeItemId ?? undefined,
             },
-          },
-          // Optimistic response: spread current item and only update sortOrder
-          // This prevents Apollo cache errors about missing fields
-          optimisticResponse: {
-            __typename: 'Mutation',
-            moveShoppingListItem: enhanceWithVersion(currentItem, {
-              sortOrder: optimisticSortOrder,
-            }) as any,
-          },
-          onCompleted: () => {
-            // OPTIMIZATION: Clear persisted sortOrder after successful sync
-            optimisticDataPersistence.clear(
-              'ShoppingListItem',
-              itemId,
-              'sortOrder',
-            );
-          },
-          onError: error => {
-            // Keep persisted sortOrder on error - will retry when back online
-            console.error(
-              'Move failed, keeping optimistic sortOrder persisted:',
-              error,
-            );
           },
         });
 
@@ -348,21 +323,34 @@ export const ShoppingListMain: React.FC = () => {
   // Quantity update handlers using specialized mutation (80% payload reduction)
   const handleIncrementQuantity = useCallback(
     async (itemId: string) => {
+      // Read FRESH data from cache instead of stale closure
+      const cachedItem = client.readFragment({
+        id: client.cache.identify({
+          __typename: 'ShoppingListItem',
+          id: itemId,
+        }),
+        fragment: gql`
+          fragment ItemVersionData on ShoppingListItem {
+            id
+            version
+            quantity
+          }
+        `,
+      }) as { id: string; version: number; quantity: number } | null;
+
+      if (!cachedItem) {
+        return;
+      }
+
       try {
-        const currentItem = items.find(item => item.id === itemId);
-        if (!currentItem) return;
-
-        const newQuantity = (currentItem.quantity || 1) + 1;
-
         await updateQuantity({
           variables: {
             id: itemId,
-            quantity: newQuantity,
-            version: currentItem.version,
+            quantity: (cachedItem.quantity || 1) + 1,
+            version: cachedItem.version,
           },
         });
       } catch (error: any) {
-        // Handle version conflict errors
         if (handleVersionConflict(error)) {
           Alert.alert('Item Updated', getVersionConflictMessage(error), [
             { text: 'Refresh', onPress: () => refetchItems() },
@@ -370,29 +358,43 @@ export const ShoppingListMain: React.FC = () => {
           ]);
           return;
         }
+        console.error('Failed to update quantity:', error);
         Alert.alert('Error', 'Failed to update quantity');
       }
     },
-    [items, updateQuantity, refetchItems],
+    [updateQuantity, refetchItems, client],
   );
 
   const handleDecrementQuantity = useCallback(
     async (itemId: string) => {
-      const currentItem = items.find(item => item.id === itemId);
-      if (!currentItem) return;
+      // Read FRESH data from cache instead of stale closure
+      const cachedItem = client.readFragment({
+        id: client.cache.identify({
+          __typename: 'ShoppingListItem',
+          id: itemId,
+        }),
+        fragment: gql`
+          fragment ItemVersionData2 on ShoppingListItem {
+            id
+            version
+            quantity
+          }
+        `,
+      }) as { id: string; version: number; quantity: number } | null;
 
-      const newQuantity = Math.max(0, (currentItem.quantity || 1) - 1);
+      if (!cachedItem) {
+        return;
+      }
 
       try {
         await updateQuantity({
           variables: {
             id: itemId,
-            quantity: newQuantity,
-            version: currentItem.version,
+            quantity: Math.max(0, (cachedItem.quantity || 1) - 1),
+            version: cachedItem.version,
           },
         });
       } catch (error: any) {
-        // Handle version conflict errors
         if (handleVersionConflict(error)) {
           Alert.alert('Item Updated', getVersionConflictMessage(error), [
             { text: 'Refresh', onPress: () => refetchItems() },
@@ -403,7 +405,7 @@ export const ShoppingListMain: React.FC = () => {
         Alert.alert('Error', 'Failed to update quantity');
       }
     },
-    [items, updateQuantity, refetchItems],
+    [updateQuantity, refetchItems, client],
   );
 
   // Transform shopping list items for SortableShoppingList
@@ -418,7 +420,7 @@ export const ShoppingListMain: React.FC = () => {
 
     // Map to SortableShoppingListItem format
     return sortedItems.map((item: any) => {
-      const imageUrl = getItemImageUrl(item.item, 'small');
+      const imageUrl = getItemImageUrl(item.item);
 
       // Get primary category from item.item.categories
       const primaryCategory = item.item?.categories?.find(
@@ -437,8 +439,8 @@ export const ShoppingListMain: React.FC = () => {
         isPurchased: item.isPurchased,
         badge: undefined,
         rightElement: (
-          <Counter
-            count={item.quantity}
+          <ShoppingListItemCounter
+            quantity={item.quantity || 0}
             onIncrement={() => handleIncrementQuantity(item.id)}
             onDecrement={() => handleDecrementQuantity(item.id)}
           />
@@ -537,6 +539,16 @@ export const ShoppingListMain: React.FC = () => {
       setRefreshing(false);
     }
   }, [refetchItems]);
+
+  // Handle swipeable item opening - ensure only one item is open at a time across both lists
+  const handleSwipeableWillOpen = useCallback((ref: any) => {
+    if (openSwipeableRef.current && openSwipeableRef.current !== ref) {
+      // Close the previously open swipeable
+      openSwipeableRef.current.current?.close();
+    }
+    // Update to track the newly opening swipeable
+    openSwipeableRef.current = ref;
+  }, []);
 
   // Search bar actions - conditionally show "Add" button when searching with no results
 
@@ -677,6 +689,7 @@ export const ShoppingListMain: React.FC = () => {
           refreshing,
           disabled: !!searchQuery.trim(),
           onClearAllPurchased: handleClearAllPurchased,
+          onSwipeableWillOpen: handleSwipeableWillOpen,
         }}
       />
 

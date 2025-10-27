@@ -199,7 +199,7 @@ export const PantryMain: React.FC = () => {
           ? { text: 'Low Stock', variant: 'warning' }
           : undefined,
         leftElement: (() => {
-          const imageUrl = getItemImageUrl(item.item, 'small');
+          const imageUrl = getItemImageUrl(item.item);
           return imageUrl ? (
             <View
               style={[

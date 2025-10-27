@@ -1,4 +1,4 @@
-import { ApolloLink, InMemoryCache } from '@apollo/client';
+import { ApolloLink } from '@apollo/client';
 import { getMainDefinition } from '@apollo/client/utilities';
 import { authLink } from './authLink';
 import { createConsoleLink } from './consoleLink';
@@ -28,10 +28,9 @@ const transportLink = ApolloLink.split(
 
 /**
  * Create link chain for Apollo client
- *
- * @param cache - Apollo cache instance for cache persistence link
+ * Full-featured configuration with offline support
  */
-export function createLink(_cache: InMemoryCache) {
+export function createLink() {
   // Console link configuration - only verbose in development
   const consoleLink = createConsoleLink({
     enabled: __DEV__,
@@ -45,15 +44,14 @@ export function createLink(_cache: InMemoryCache) {
   // Telemetry link for tracking GraphQL operations
   const telemetryLink = createTelemetryLink();
 
-  // Queue link for offline mutation handling
+  // Queue link for offline mutation support
   const queueLink = createQueueLink();
 
-  // Link chain - network operations only (NO cache persistence here)
-  // Cache persistence is handled by Apollo Client lifecycle hooks in client.ts
+  // Link chain - ordered by priority
   return ApolloLink.from([
     deduplicationLink, // Prevent duplicate requests
     telemetryLink, // Track operations for monitoring
-    errorLink, // Handle/log errors (simplified)
+    errorLink, // Handle/log errors
     authLink, // Authentication headers
     queueLink, // Queue mutations when offline
     consoleLink, // Development logging

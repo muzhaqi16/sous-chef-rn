@@ -45,6 +45,7 @@
   },
   "dependencies": {
     "@apollo/client": "^4.0.5",
+    "@apollo/client-devtools-vscode": "^4.21.9",
     "@gorhom/bottom-sheet": "^5.2.6",
     "@hookform/resolvers": "^5.2.2",
     "@notifee/react-native": "^9.1.8",

@@ -29,14 +29,15 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
   onSortOrderUpdate,
   disabled = false,
   ListFooterComponent,
+  onSwipeableWillOpen: externalOnSwipeableWillOpen,
   ...flatListProps
 }) => {
   // Track local order for optimistic updates
   const [localItems, setLocalItems] = useState(items);
   // Track if we're currently updating the sort order
   const isUpdatingRef = useRef(false);
-  // Track previous item IDs to detect add/remove operations
-  const prevItemIdsRef = useRef<string>('');
+  // Track currently open swipeable item (only used if no external handler provided)
+  const openSwipeableRef = useRef<any>(null);
 
   // Safe area insets for bottom padding
   const insets = useSafeAreaInsets();
@@ -44,18 +45,27 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
   // Update local items when props change, but not during our own updates
   useEffect(() => {
     if (!isUpdatingRef.current) {
-      // Check if the items actually changed (not just re-sorted)
-      // This prevents flickering when sortOrder updates from server
-      const currentIds = prevItemIdsRef.current;
-      const newIds = items.map(item => item.id).join(',');
-
-      // Only update if items were added/removed
-      if (currentIds !== newIds) {
-        setLocalItems(items);
-        prevItemIdsRef.current = newIds;
-      }
+      // Always update localItems when items prop changes
+      // This ensures item property updates (like quantity) are reflected in the UI
+      setLocalItems(items);
     }
   }, [items]);
+
+  // Handle swipeable item opening - close previously open item
+  const handleSwipeableWillOpen = useCallback((ref: any) => {
+    // If external handler provided, use it (for coordinating across multiple lists)
+    if (externalOnSwipeableWillOpen) {
+      externalOnSwipeableWillOpen(ref);
+    } else {
+      // Otherwise, handle locally within this list
+      if (openSwipeableRef.current && openSwipeableRef.current !== ref) {
+        // Close the previously open swipeable
+        openSwipeableRef.current.current?.close();
+      }
+      // Update to track the newly opening swipeable
+      openSwipeableRef.current = ref;
+    }
+  }, [externalOnSwipeableWillOpen]);
 
   // Handle drag end - called when user releases item
   const handleDragEnd = useCallback(
@@ -139,11 +149,12 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
             onTogglePurchase={onTogglePurchase}
             drag={disabled ? undefined : drag}
             isActive={isActive}
+            onSwipeableWillOpen={handleSwipeableWillOpen}
           />
         </ScaleDecorator>
       );
     },
-    [onItemPress, onItemEdit, onItemDelete, onTogglePurchase, disabled],
+    [onItemPress, onItemEdit, onItemDelete, onTogglePurchase, disabled, handleSwipeableWillOpen],
   );
 
   // Early validation

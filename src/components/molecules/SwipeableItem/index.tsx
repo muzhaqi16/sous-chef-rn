@@ -25,17 +25,19 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({
   leftThreshold = 120,
   rightThreshold = 120,
   friction = 1,
+  onSwipeableWillOpen,
 }) => {
   const dragX = useSharedValue(0);
 
   const { itemOpacity, animateDelete } = useSwipeableAnimation();
 
-  const { swipeableRef, handleActionPress, handleSwipeableOpen } =
+  const { swipeableRef, handleActionPress, handleSwipeableWillOpen } =
     useSwipeableActions({
       onEdit,
       onDelete,
       animateDelete,
       enableSwipeToDelete,
+      onSwipeableWillOpen,
     });
 
   const animatedStyle = useAnimatedStyle(() => {
@@ -83,7 +85,7 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({
         rightThreshold={rightThreshold}
         renderLeftActions={renderLeftActions}
         renderRightActions={renderRightActions}
-        onSwipeableOpen={handleSwipeableOpen}
+        onSwipeableWillOpen={handleSwipeableWillOpen}
         overshootFriction={8}
         containerStyle={{ overflow: 'visible' }}
       >

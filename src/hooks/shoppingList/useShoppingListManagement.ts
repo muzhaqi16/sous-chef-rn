@@ -2,11 +2,11 @@ import { useMemo } from 'react';
 import { Alert } from 'react-native';
 import {
   useGetShoppingListItemsQuery,
-  useShoppingListItemsChangedSubscription,
   useAddItemToShoppingListMutation,
   useUpdateShoppingListItemMutation,
   useRemoveItemFromShoppingListMutation,
   useToggleShoppingListItemPurchasedMutation,
+  useShoppingListItemsChangedSubscription,
 } from '#generated';
 import { useSearchableList } from '../useSearchableList';
 import { useAuth } from '#hooks/auth/useAuth';
@@ -30,27 +30,24 @@ export interface ShoppingListItemUpdate extends Partial<ShoppingListItemInput> {
 }
 
 /**
- * Simplified shopping list management hook using Apollo Client only
- * No custom caches, no complex state management - just Apollo
+ * Vanilla Apollo shopping list management hook
+ * Uses optimistic responses for instant UI updates
+ * No refetchQueries, no custom caches - Apollo handles everything
  */
 export function useShoppingListManagement(listId: string | undefined) {
   const { isLoggedOut } = useAuth();
   const { handleApolloError } = useErrorHandler();
   const shouldSkip = !listId || isLoggedOut;
 
-  // Subscription deduplication filter
+  // Watch cache for updates from mutations
+  const queryResult = useGetShoppingListItemsQuery({
+    variables: { shoppingListId: listId ?? '' },
+    skip: shouldSkip,
+    fetchPolicy: 'cache-first', // Optimized: use cache first, then network (same as pantry)
+    errorPolicy: 'all',
+  });
 
-  // Standard Apollo fetch policy - let Apollo handle everything
-  const fetchPolicy = 'cache-and-network' as const;
-
-  // Single source of truth: Apollo cache
-  const { data, loading, error, refetch, previousData } =
-    useGetShoppingListItemsQuery({
-      variables: { shoppingListId: listId ?? '' },
-      skip: shouldSkip,
-      fetchPolicy,
-      errorPolicy: 'all',
-    });
+  const { data, loading, error, refetch } = queryResult;
 
   // Real-time updates via subscription - Apollo handles cache updates automatically
   useShoppingListItemsChangedSubscription({
@@ -59,11 +56,14 @@ export function useShoppingListManagement(listId: string | undefined) {
     // No onData, no onError - let Apollo do its thing
   });
 
+  // Direct dependency on data?.shoppingListItems like pantry
+  // Force new array AND object references to trigger React re-renders
   const items = useMemo(() => {
-    const currentItems = data?.shoppingListItems;
-    const cachedItems = previousData?.shoppingListItems;
-    return currentItems ?? cachedItems ?? [];
-  }, [data?.shoppingListItems, previousData?.shoppingListItems]);
+    const itemsList = data?.shoppingListItems ?? [];
+    // Deep clone: spread array AND spread each object to create new references
+    // This ensures React's shallow comparison detects changes
+    return itemsList.map(item => ({ ...item }));
+  }, [data?.shoppingListItems]);
 
   // Search functionality
   const {
@@ -92,9 +92,40 @@ export function useShoppingListManagement(listId: string | undefined) {
     };
   }, [items]);
 
-  // Mutations - let Apollo handle cache updates automatically
+  // Mutations - Apollo handles cache updates automatically via optimistic responses
   const [addItemMutation] = useAddItemToShoppingListMutation({
     errorPolicy: 'all',
+    update(cache, { data }) {
+      if (!data?.addItemToShoppingList || !listId) return;
+
+      try {
+        // Modify the shoppingListItems field in the cache
+        cache.modify({
+          fields: {
+            shoppingListItems(existingItems = [], { readField, toReference }) {
+              const newItemRef = toReference(data.addItemToShoppingList);
+
+              // Check if item already exists (avoid duplicates)
+              const exists = existingItems.some(
+                (itemRef: any) =>
+                  readField('id', itemRef) === data.addItemToShoppingList.id,
+              );
+
+              if (exists) {
+                return existingItems;
+              }
+
+              // Add new item to the list
+              return [...existingItems, newItemRef];
+            },
+          },
+        });
+      } catch (error) {
+        console.warn('Cache update failed for addItem, will refetch:', error);
+        // Fallback: refetch if cache update fails
+        refetch();
+      }
+    },
     onError: error => {
       const { message } = handleApolloError(error, {
         operation: 'Add Shopping List Item',
@@ -115,6 +146,34 @@ export function useShoppingListManagement(listId: string | undefined) {
 
   const [removeItemMutation] = useRemoveItemFromShoppingListMutation({
     errorPolicy: 'all',
+    update(cache, { data }, { variables }) {
+      if (!data?.removeItemFromShoppingList || !listId || !variables) return;
+
+      try {
+        const itemId = variables.id;
+
+        // Remove the item from the cache using cache.modify (proper approach)
+        cache.modify({
+          fields: {
+            shoppingListItems(existingItems = [], { readField }) {
+              return existingItems.filter(
+                (itemRef: any) => readField('id', itemRef) !== itemId,
+              );
+            },
+          },
+        });
+
+        // Evict the removed item from cache
+        cache.evict({
+          id: cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
+        });
+        cache.gc(); // Garbage collect orphaned data
+      } catch (error) {
+        console.warn('Cache update failed for removeItem, will refetch:', error);
+        // Fallback: refetch if cache update fails
+        refetch();
+      }
+    },
     onError: error => {
       const { message } = handleApolloError(error, {
         operation: 'Remove Shopping List Item',

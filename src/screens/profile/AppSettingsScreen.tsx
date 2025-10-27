@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Alert } from 'react-native';
+import { View, Text, Alert } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { SettingSwitch, SettingSection } from '#components/settings';
+import { ProfileScreenWrapper } from '#components/templates';
 import { useAppSettings } from '#hooks/profile/useAppSettings';
-import { AppTheme, UnitSystem } from '#generated';
+import { UnitSystem } from '#generated';
 import { Picker } from '@react-native-picker/picker';
 import { commonStyles } from '#/styles/commonStyles';
 
@@ -68,30 +69,7 @@ export const AppSettingsScreen: React.FC = () => {
   }
 
   return (
-    <ScrollView style={commonStyles.container}>
-      <SettingSection title="Appearance">
-        <View style={styles.pickerContainer}>
-          <Text style={commonStyles.subtitle}>Theme</Text>
-          <Picker
-            selectedValue={settings.theme}
-            onValueChange={(value) => handleSettingChange('theme', value)}
-            style={styles.picker}
-          >
-            <Picker.Item label="☀️ Light" value={AppTheme.Light} />
-            <Picker.Item label="🌙 Dark" value={AppTheme.Dark} />
-            <Picker.Item label="📱 System" value={AppTheme.System} />
-          </Picker>
-        </View>
-
-        <SettingSwitch
-          title="Compact Mode"
-          description="Use a more condensed layout to fit more content"
-          value={settings.compactMode}
-          onValueChange={value => handleSettingChange('compactMode', value)}
-          loading={updating === 'compactMode'}
-        />
-      </SettingSection>
-
+    <ProfileScreenWrapper title="App Settings">
       <SettingSection title="Units & Measurements">
         <View style={styles.pickerContainer}>
           <Text style={commonStyles.subtitle}>Preferred Unit System</Text>
@@ -180,7 +158,7 @@ export const AppSettingsScreen: React.FC = () => {
           loading={updating === 'reset'}
         />
       </SettingSection>
-    </ScrollView>
+    </ProfileScreenWrapper>
   );
 };
 

@@ -2453,7 +2453,7 @@ export type Mutation = {
   removeCollaborator: Scalars['Boolean']['output'];
   removeItemBrand: Item;
   removeItemFromCategory: Item;
-  removeItemFromShoppingList: Scalars['Boolean']['output'];
+  removeItemFromShoppingList: ShoppingListItem;
   removeItemImage: Item;
   removeItemTags: Item;
   removeItemUnit: Scalars['Boolean']['output'];
@@ -7908,7 +7908,6 @@ export type ShoppingListItemFragmentFragment = {
         name: string;
         description?: string | null | undefined;
         imageUrl?: string | null | undefined;
-        images?: any | null | undefined;
         netWeight?: number | null | undefined;
         displayUnit?:
           | { __typename?: 'Unit'; id: string; name: string; symbol: string }
@@ -8243,7 +8242,6 @@ export type ItemFragmentFragment = {
   status: ItemStatus;
   visibility: Visibility;
   imageUrl?: string | null | undefined;
-  images?: any | null | undefined;
   tags: Array<string>;
   healthBenefits?: any | null | undefined;
   allergens?: any | null | undefined;
@@ -8391,6 +8389,7 @@ export type PantryItemFragmentFragment = {
   autoReorderPoint?: number | null | undefined;
   isAutoReorder: boolean;
   customCategory?: string | null | undefined;
+  actualNetWeight?: number | null | undefined;
   createdAt: string;
   updatedAt?: string | null | undefined;
   version?: number | null | undefined;
@@ -8409,7 +8408,6 @@ export type PantryItemFragmentFragment = {
     status: ItemStatus;
     visibility: Visibility;
     imageUrl?: string | null | undefined;
-    images?: any | null | undefined;
     tags: Array<string>;
     healthBenefits?: any | null | undefined;
     allergens?: any | null | undefined;
@@ -8538,6 +8536,16 @@ export type PantryItemFragmentFragment = {
         id: string;
         name: string;
         type: StorageType;
+      }
+    | null
+    | undefined;
+  actualNetWeightUnit?:
+    | {
+        __typename?: 'Unit';
+        id: string;
+        name: string;
+        symbol: string;
+        type: UnitType;
       }
     | null
     | undefined;
@@ -8678,6 +8686,7 @@ export type PantryFragmentFragment = {
         autoReorderPoint?: number | null | undefined;
         isAutoReorder: boolean;
         customCategory?: string | null | undefined;
+        actualNetWeight?: number | null | undefined;
         createdAt: string;
         updatedAt?: string | null | undefined;
         version?: number | null | undefined;
@@ -8696,7 +8705,6 @@ export type PantryFragmentFragment = {
           status: ItemStatus;
           visibility: Visibility;
           imageUrl?: string | null | undefined;
-          images?: any | null | undefined;
           tags: Array<string>;
           healthBenefits?: any | null | undefined;
           allergens?: any | null | undefined;
@@ -8828,6 +8836,16 @@ export type PantryFragmentFragment = {
               id: string;
               name: string;
               type: StorageType;
+            }
+          | null
+          | undefined;
+        actualNetWeightUnit?:
+          | {
+              __typename?: 'Unit';
+              id: string;
+              name: string;
+              symbol: string;
+              type: UnitType;
             }
           | null
           | undefined;
@@ -9139,6 +9157,7 @@ export type HomeFragmentFragment = {
               autoReorderPoint?: number | null | undefined;
               isAutoReorder: boolean;
               customCategory?: string | null | undefined;
+              actualNetWeight?: number | null | undefined;
               createdAt: string;
               updatedAt?: string | null | undefined;
               version?: number | null | undefined;
@@ -9157,7 +9176,6 @@ export type HomeFragmentFragment = {
                 status: ItemStatus;
                 visibility: Visibility;
                 imageUrl?: string | null | undefined;
-                images?: any | null | undefined;
                 tags: Array<string>;
                 healthBenefits?: any | null | undefined;
                 allergens?: any | null | undefined;
@@ -9294,6 +9312,16 @@ export type HomeFragmentFragment = {
                     id: string;
                     name: string;
                     type: StorageType;
+                  }
+                | null
+                | undefined;
+              actualNetWeightUnit?:
+                | {
+                    __typename?: 'Unit';
+                    id: string;
+                    name: string;
+                    symbol: string;
+                    type: UnitType;
                   }
                 | null
                 | undefined;
@@ -9613,6 +9641,7 @@ export type GetHomeQuery = {
                     autoReorderPoint?: number | null | undefined;
                     isAutoReorder: boolean;
                     customCategory?: string | null | undefined;
+                    actualNetWeight?: number | null | undefined;
                     createdAt: string;
                     updatedAt?: string | null | undefined;
                     version?: number | null | undefined;
@@ -9631,7 +9660,6 @@ export type GetHomeQuery = {
                       status: ItemStatus;
                       visibility: Visibility;
                       imageUrl?: string | null | undefined;
-                      images?: any | null | undefined;
                       tags: Array<string>;
                       healthBenefits?: any | null | undefined;
                       allergens?: any | null | undefined;
@@ -9768,6 +9796,16 @@ export type GetHomeQuery = {
                           id: string;
                           name: string;
                           type: StorageType;
+                        }
+                      | null
+                      | undefined;
+                    actualNetWeightUnit?:
+                      | {
+                          __typename?: 'Unit';
+                          id: string;
+                          name: string;
+                          symbol: string;
+                          type: UnitType;
                         }
                       | null
                       | undefined;
@@ -10301,6 +10339,7 @@ export type UpdateHomeMutation = {
                 autoReorderPoint?: number | null | undefined;
                 isAutoReorder: boolean;
                 customCategory?: string | null | undefined;
+                actualNetWeight?: number | null | undefined;
                 createdAt: string;
                 updatedAt?: string | null | undefined;
                 version?: number | null | undefined;
@@ -10319,7 +10358,6 @@ export type UpdateHomeMutation = {
                   status: ItemStatus;
                   visibility: Visibility;
                   imageUrl?: string | null | undefined;
-                  images?: any | null | undefined;
                   tags: Array<string>;
                   healthBenefits?: any | null | undefined;
                   allergens?: any | null | undefined;
@@ -10456,6 +10494,16 @@ export type UpdateHomeMutation = {
                       id: string;
                       name: string;
                       type: StorageType;
+                    }
+                  | null
+                  | undefined;
+                actualNetWeightUnit?:
+                  | {
+                      __typename?: 'Unit';
+                      id: string;
+                      name: string;
+                      symbol: string;
+                      type: UnitType;
                     }
                   | null
                   | undefined;
@@ -10637,6 +10685,7 @@ export type DeleteHomeMutation = {
                 autoReorderPoint?: number | null | undefined;
                 isAutoReorder: boolean;
                 customCategory?: string | null | undefined;
+                actualNetWeight?: number | null | undefined;
                 createdAt: string;
                 updatedAt?: string | null | undefined;
                 version?: number | null | undefined;
@@ -10655,7 +10704,6 @@ export type DeleteHomeMutation = {
                   status: ItemStatus;
                   visibility: Visibility;
                   imageUrl?: string | null | undefined;
-                  images?: any | null | undefined;
                   tags: Array<string>;
                   healthBenefits?: any | null | undefined;
                   allergens?: any | null | undefined;
@@ -10792,6 +10840,16 @@ export type DeleteHomeMutation = {
                       id: string;
                       name: string;
                       type: StorageType;
+                    }
+                  | null
+                  | undefined;
+                actualNetWeightUnit?:
+                  | {
+                      __typename?: 'Unit';
+                      id: string;
+                      name: string;
+                      symbol: string;
+                      type: UnitType;
                     }
                   | null
                   | undefined;
@@ -11349,6 +11407,7 @@ export type GetDefaultHomeQuery = {
                     autoReorderPoint?: number | null | undefined;
                     isAutoReorder: boolean;
                     customCategory?: string | null | undefined;
+                    actualNetWeight?: number | null | undefined;
                     createdAt: string;
                     updatedAt?: string | null | undefined;
                     version?: number | null | undefined;
@@ -11367,7 +11426,6 @@ export type GetDefaultHomeQuery = {
                       status: ItemStatus;
                       visibility: Visibility;
                       imageUrl?: string | null | undefined;
-                      images?: any | null | undefined;
                       tags: Array<string>;
                       healthBenefits?: any | null | undefined;
                       allergens?: any | null | undefined;
@@ -11504,6 +11562,16 @@ export type GetDefaultHomeQuery = {
                           id: string;
                           name: string;
                           type: StorageType;
+                        }
+                      | null
+                      | undefined;
+                    actualNetWeightUnit?:
+                      | {
+                          __typename?: 'Unit';
+                          id: string;
+                          name: string;
+                          symbol: string;
+                          type: UnitType;
                         }
                       | null
                       | undefined;
@@ -12344,6 +12412,7 @@ export type GetPantryItemsQuery = {
     autoReorderPoint?: number | null | undefined;
     isAutoReorder: boolean;
     customCategory?: string | null | undefined;
+    actualNetWeight?: number | null | undefined;
     createdAt: string;
     updatedAt?: string | null | undefined;
     version?: number | null | undefined;
@@ -12362,7 +12431,6 @@ export type GetPantryItemsQuery = {
       status: ItemStatus;
       visibility: Visibility;
       imageUrl?: string | null | undefined;
-      images?: any | null | undefined;
       tags: Array<string>;
       healthBenefits?: any | null | undefined;
       allergens?: any | null | undefined;
@@ -12491,6 +12559,16 @@ export type GetPantryItemsQuery = {
           id: string;
           name: string;
           type: StorageType;
+        }
+      | null
+      | undefined;
+    actualNetWeightUnit?:
+      | {
+          __typename?: 'Unit';
+          id: string;
+          name: string;
+          symbol: string;
+          type: UnitType;
         }
       | null
       | undefined;
@@ -12537,6 +12615,7 @@ export type GetPantryItemQuery = {
     autoReorderPoint?: number | null | undefined;
     isAutoReorder: boolean;
     customCategory?: string | null | undefined;
+    actualNetWeight?: number | null | undefined;
     createdAt: string;
     updatedAt?: string | null | undefined;
     version?: number | null | undefined;
@@ -12555,7 +12634,6 @@ export type GetPantryItemQuery = {
       status: ItemStatus;
       visibility: Visibility;
       imageUrl?: string | null | undefined;
-      images?: any | null | undefined;
       tags: Array<string>;
       healthBenefits?: any | null | undefined;
       allergens?: any | null | undefined;
@@ -12684,6 +12762,16 @@ export type GetPantryItemQuery = {
           id: string;
           name: string;
           type: StorageType;
+        }
+      | null
+      | undefined;
+    actualNetWeightUnit?:
+      | {
+          __typename?: 'Unit';
+          id: string;
+          name: string;
+          symbol: string;
+          type: UnitType;
         }
       | null
       | undefined;
@@ -12786,6 +12874,7 @@ export type CreatePantryItemMutation = {
     autoReorderPoint?: number | null | undefined;
     isAutoReorder: boolean;
     customCategory?: string | null | undefined;
+    actualNetWeight?: number | null | undefined;
     createdAt: string;
     updatedAt?: string | null | undefined;
     version?: number | null | undefined;
@@ -12804,7 +12893,6 @@ export type CreatePantryItemMutation = {
       status: ItemStatus;
       visibility: Visibility;
       imageUrl?: string | null | undefined;
-      images?: any | null | undefined;
       tags: Array<string>;
       healthBenefits?: any | null | undefined;
       allergens?: any | null | undefined;
@@ -12933,6 +13021,16 @@ export type CreatePantryItemMutation = {
           id: string;
           name: string;
           type: StorageType;
+        }
+      | null
+      | undefined;
+    actualNetWeightUnit?:
+      | {
+          __typename?: 'Unit';
+          id: string;
+          name: string;
+          symbol: string;
+          type: UnitType;
         }
       | null
       | undefined;
@@ -12980,6 +13078,7 @@ export type UpdatePantryItemMutation = {
     autoReorderPoint?: number | null | undefined;
     isAutoReorder: boolean;
     customCategory?: string | null | undefined;
+    actualNetWeight?: number | null | undefined;
     createdAt: string;
     updatedAt?: string | null | undefined;
     version?: number | null | undefined;
@@ -12998,7 +13097,6 @@ export type UpdatePantryItemMutation = {
       status: ItemStatus;
       visibility: Visibility;
       imageUrl?: string | null | undefined;
-      images?: any | null | undefined;
       tags: Array<string>;
       healthBenefits?: any | null | undefined;
       allergens?: any | null | undefined;
@@ -13127,6 +13225,16 @@ export type UpdatePantryItemMutation = {
           id: string;
           name: string;
           type: StorageType;
+        }
+      | null
+      | undefined;
+    actualNetWeightUnit?:
+      | {
+          __typename?: 'Unit';
+          id: string;
+          name: string;
+          symbol: string;
+          type: UnitType;
         }
       | null
       | undefined;
@@ -13173,6 +13281,7 @@ export type DeletePantryItemMutation = {
     autoReorderPoint?: number | null | undefined;
     isAutoReorder: boolean;
     customCategory?: string | null | undefined;
+    actualNetWeight?: number | null | undefined;
     createdAt: string;
     updatedAt?: string | null | undefined;
     version?: number | null | undefined;
@@ -13191,7 +13300,6 @@ export type DeletePantryItemMutation = {
       status: ItemStatus;
       visibility: Visibility;
       imageUrl?: string | null | undefined;
-      images?: any | null | undefined;
       tags: Array<string>;
       healthBenefits?: any | null | undefined;
       allergens?: any | null | undefined;
@@ -13320,6 +13428,16 @@ export type DeletePantryItemMutation = {
           id: string;
           name: string;
           type: StorageType;
+        }
+      | null
+      | undefined;
+    actualNetWeightUnit?:
+      | {
+          __typename?: 'Unit';
+          id: string;
+          name: string;
+          symbol: string;
+          type: UnitType;
         }
       | null
       | undefined;
@@ -14538,7 +14656,6 @@ export type GetShoppingListItemsQuery = {
           name: string;
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
-          images?: any | null | undefined;
           netWeight?: number | null | undefined;
           displayUnit?:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
@@ -14719,7 +14836,6 @@ export type GetShoppingListItemQuery = {
               name: string;
               description?: string | null | undefined;
               imageUrl?: string | null | undefined;
-              images?: any | null | undefined;
               netWeight?: number | null | undefined;
               displayUnit?:
                 | {
@@ -15114,7 +15230,6 @@ export type AddItemToShoppingListMutation = {
           name: string;
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
-          images?: any | null | undefined;
           netWeight?: number | null | undefined;
           displayUnit?:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
@@ -15295,7 +15410,6 @@ export type UpdateShoppingListItemMutation = {
           name: string;
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
-          images?: any | null | undefined;
           netWeight?: number | null | undefined;
           displayUnit?:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
@@ -15428,7 +15542,177 @@ export type RemoveItemFromShoppingListMutationVariables = Exact<{
 
 export type RemoveItemFromShoppingListMutation = {
   __typename?: 'Mutation';
-  removeItemFromShoppingList: boolean;
+  removeItemFromShoppingList: {
+    __typename?: 'ShoppingListItem';
+    id: string;
+    quantity?: number | null | undefined;
+    estimatedPrice?: number | null | undefined;
+    budgetPrice?: number | null | undefined;
+    lastKnownPrice?: number | null | undefined;
+    lowestPrice?: number | null | undefined;
+    highestPrice?: number | null | undefined;
+    priceLastUpdated?: string | null | undefined;
+    isPurchased: boolean;
+    purchasedQuantity?: number | null | undefined;
+    purchasedPrice?: number | null | undefined;
+    purchaseDate?: string | null | undefined;
+    aisle?: string | null | undefined;
+    storeSection?: string | null | undefined;
+    previouslyPurchased: boolean;
+    lastPurchaseDate?: string | null | undefined;
+    purchaseCount: number;
+    itemName?: string | null | undefined;
+    unitName?: string | null | undefined;
+    notes?: string | null | undefined;
+    priority: number;
+    category?: string | null | undefined;
+    sortOrder: string;
+    isAutoAdded: boolean;
+    autoAddReason?: string | null | undefined;
+    isFromMealPlan: boolean;
+    mealPlanReference?: string | null | undefined;
+    createdAt: string;
+    updatedAt: string;
+    deletedAt?: string | null | undefined;
+    version: number;
+    shoppingList: {
+      __typename?: 'ShoppingList';
+      id: string;
+      totalItems: number;
+      completedItems: number;
+      estimatedTotal: number;
+    };
+    item?:
+      | {
+          __typename?: 'Item';
+          id: string;
+          name: string;
+          description?: string | null | undefined;
+          imageUrl?: string | null | undefined;
+          netWeight?: number | null | undefined;
+          displayUnit?:
+            | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+            | null
+            | undefined;
+          categories?:
+            | Array<{
+                __typename?: 'ItemCategory';
+                id: string;
+                isPrimary: boolean;
+                confidence: number;
+                source: CategorySource;
+                assignedAt?: string | null | undefined;
+                category: { __typename?: 'Category'; id: string; name: string };
+              }>
+            | null
+            | undefined;
+        }
+      | null
+      | undefined;
+    unit?:
+      | {
+          __typename?: 'Unit';
+          id: string;
+          name: string;
+          symbol: string;
+          type: UnitType;
+          isMetric: boolean;
+          baseUnitId?: string | null | undefined;
+          conversionFactor: number;
+          notes?: string | null | undefined;
+          isCommon: boolean;
+          sortOrder: number;
+          createdAt: string;
+          updatedAt: string;
+        }
+      | null
+      | undefined;
+    addedBy?:
+      | {
+          __typename?: 'User';
+          id: string;
+          email: string;
+          emailVerified: boolean;
+          role: UserRole;
+          onBoarded: boolean;
+          timezone?: string | null | undefined;
+          preferredCurrency?: string | null | undefined;
+          language?: string | null | undefined;
+          defaultShoppingListId?: string | null | undefined;
+          defaultHomeId?: string | null | undefined;
+          createdAt: string;
+          updatedAt: string;
+          lastActiveAt?: string | null | undefined;
+          profile?:
+            | {
+                __typename?: 'UserProfile';
+                id: string;
+                firstName?: string | null | undefined;
+                lastName?: string | null | undefined;
+                displayName?: string | null | undefined;
+                bio?: string | null | undefined;
+                avatar?: string | null | undefined;
+                phone?: string | null | undefined;
+              }
+            | null
+            | undefined;
+          settings?:
+            | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
+            | null
+            | undefined;
+        }
+      | null
+      | undefined;
+    purchasedBy?:
+      | {
+          __typename?: 'User';
+          id: string;
+          email: string;
+          emailVerified: boolean;
+          role: UserRole;
+          onBoarded: boolean;
+          timezone?: string | null | undefined;
+          preferredCurrency?: string | null | undefined;
+          language?: string | null | undefined;
+          defaultShoppingListId?: string | null | undefined;
+          defaultHomeId?: string | null | undefined;
+          createdAt: string;
+          updatedAt: string;
+          lastActiveAt?: string | null | undefined;
+          profile?:
+            | {
+                __typename?: 'UserProfile';
+                id: string;
+                firstName?: string | null | undefined;
+                lastName?: string | null | undefined;
+                displayName?: string | null | undefined;
+                bio?: string | null | undefined;
+                avatar?: string | null | undefined;
+                phone?: string | null | undefined;
+              }
+            | null
+            | undefined;
+          settings?:
+            | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
+            | null
+            | undefined;
+        }
+      | null
+      | undefined;
+    purchases?:
+      | Array<{
+          __typename?: 'Purchase';
+          id: string;
+          purchaseDate: string;
+          quantity: number;
+          unitPrice: number;
+          totalPrice: number;
+          itemName: string;
+          unitSymbol: string;
+        }>
+      | null
+      | undefined;
+  };
 };
 
 export type MarkItemPurchasedMutationVariables = Exact<{
@@ -15485,7 +15769,6 @@ export type MarkItemPurchasedMutation = {
           name: string;
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
-          images?: any | null | undefined;
           netWeight?: number | null | undefined;
           displayUnit?:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
@@ -15665,7 +15948,6 @@ export type MoveShoppingListItemMutation = {
           name: string;
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
-          images?: any | null | undefined;
           netWeight?: number | null | undefined;
           displayUnit?:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
@@ -15847,7 +16129,6 @@ export type ToggleShoppingListItemPurchasedMutation = {
           name: string;
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
-          images?: any | null | undefined;
           netWeight?: number | null | undefined;
           displayUnit?:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
@@ -16029,7 +16310,6 @@ export type UpdateShoppingListItemQuantityMutation = {
           name: string;
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
-          images?: any | null | undefined;
           netWeight?: number | null | undefined;
           displayUnit?:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
@@ -16211,7 +16491,6 @@ export type UpdateShoppingListItemNotesMutation = {
           name: string;
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
-          images?: any | null | undefined;
           netWeight?: number | null | undefined;
           displayUnit?:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
@@ -16393,7 +16672,6 @@ export type UpdateShoppingListItemPriorityMutation = {
           name: string;
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
-          images?: any | null | undefined;
           netWeight?: number | null | undefined;
           displayUnit?:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
@@ -16676,7 +16954,6 @@ export type ShoppingListItemsChangedSubscription = {
                     name: string;
                     description?: string | null | undefined;
                     imageUrl?: string | null | undefined;
-                    images?: any | null | undefined;
                     netWeight?: number | null | undefined;
                     displayUnit?:
                       | {
@@ -16974,7 +17251,6 @@ export type ShoppingListItemAddedSubscription = {
           name: string;
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
-          images?: any | null | undefined;
           netWeight?: number | null | undefined;
           displayUnit?:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
@@ -17154,7 +17430,6 @@ export type ShoppingListItemUpdatedSubscription = {
           name: string;
           description?: string | null | undefined;
           imageUrl?: string | null | undefined;
-          images?: any | null | undefined;
           netWeight?: number | null | undefined;
           displayUnit?:
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }

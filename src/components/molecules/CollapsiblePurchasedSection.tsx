@@ -18,6 +18,7 @@ interface CollapsiblePurchasedSectionProps {
   ) => Promise<void>;
   onClearAll?: () => Promise<void>;
   disabled?: boolean;
+  onSwipeableWillOpen?: (ref: any) => void;
 }
 
 export const CollapsiblePurchasedSection: React.FC<
@@ -31,6 +32,7 @@ export const CollapsiblePurchasedSection: React.FC<
   onSortOrderUpdate,
   onClearAll,
   disabled,
+  onSwipeableWillOpen,
 }) => {
   const { theme } = useUnistyles();
   const [isExpanded, setIsExpanded] = useState(false);
@@ -124,6 +126,7 @@ export const CollapsiblePurchasedSection: React.FC<
             onSortOrderUpdate={onSortOrderUpdate}
             disabled={disabled}
             showsVerticalScrollIndicator={false}
+            onSwipeableWillOpen={onSwipeableWillOpen}
           />
         </View>
       )}

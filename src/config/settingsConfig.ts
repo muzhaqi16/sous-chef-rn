@@ -1,4 +1,5 @@
-export const PROFILE_SETTINGS_CONFIG = [
+// Personal Information screen configuration (shown when navigating to Personal Information)
+export const PERSONAL_INFO_CONFIG = [
   {
     title: 'Personal Information',
     items: [
@@ -68,6 +69,20 @@ export const PROFILE_SETTINGS_CONFIG = [
         key: 'showPhone',
         label: 'Show Phone',
         type: 'switch',
+      },
+    ],
+  },
+];
+
+// Main profile settings configuration (shown in ProfileScreen)
+export const PROFILE_SETTINGS_CONFIG = [
+  {
+    title: 'Personal Information',
+    items: [
+      {
+        key: 'personalInformation',
+        label: 'Personal Information',
+        type: 'navigation',
       },
     ],
   },

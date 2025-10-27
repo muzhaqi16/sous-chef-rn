@@ -24,6 +24,7 @@ interface SimpleDraggableItemProps {
   onTogglePurchase?: (id: string) => void;
   drag?: () => void;
   isActive?: boolean;
+  onSwipeableWillOpen?: (ref: any) => void;
 }
 
 const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
@@ -34,6 +35,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
   onTogglePurchase,
   drag,
   isActive,
+  onSwipeableWillOpen,
 }) => {
   // Handle long press for drag activation with haptic feedback
   const handleLongPress = useCallback(() => {
@@ -61,6 +63,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
         onTogglePurchase={onTogglePurchase ? () => onTogglePurchase(item.id) : undefined}
         isPurchased={item.isPurchased}
         friction={1}
+        onSwipeableWillOpen={onSwipeableWillOpen}
       >
         <ListItem
           title={item.title}
