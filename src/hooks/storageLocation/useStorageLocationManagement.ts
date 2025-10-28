@@ -11,6 +11,7 @@ import {
   CreateStorageLocationInput,
   UpdateStorageLocationInput,
 } from '#generated';
+import { usePreservedArrayData } from '#/hooks/apollo';
 
 /**
  * Build a tree structure from a flat list of locations using parentLocation references
@@ -69,14 +70,14 @@ export function useStorageLocationManagement(homeId: string | undefined) {
     variables: { homeId: homeId ?? '' },
     skip: shouldSkip,
     fetchPolicy: 'cache-and-network',
-    errorPolicy: 'all',
+    errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
   });
 
   const { data: treeData } = useGetStorageLocationTreeQuery({
     variables: { homeId: homeId ?? '' },
     skip: shouldSkip,
     fetchPolicy: 'cache-and-network',
-    errorPolicy: 'all',
+    errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
   });
 
   // Mutations
@@ -260,9 +261,11 @@ export function useStorageLocationManagement(homeId: string | undefined) {
     [setDefaultMutation],
   );
 
+  // Preserve data even when query fails to prevent cascade failures
+  const locations = usePreservedArrayData(data?.storageLocations);
+  const treeFromQuery = usePreservedArrayData(treeData?.storageLocationTree);
+
   // Build tree from flat list if tree query returns empty
-  const locations = data?.storageLocations ?? [];
-  const treeFromQuery = treeData?.storageLocationTree ?? [];
   const tree = treeFromQuery.length > 0 ? treeFromQuery : buildTreeFromFlatList(locations);
 
   return {

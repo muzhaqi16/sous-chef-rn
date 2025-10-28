@@ -2511,6 +2511,7 @@ export type Mutation = {
   sendTestNotification: Notification;
   setDefaultHome: UserSettings;
   setDefaultItemUnit: ItemUnit;
+  setDefaultPantry: Pantry;
   setDefaultShoppingList: ShoppingList;
   /**
    * Set a storage location as the default for its home
@@ -3261,6 +3262,10 @@ export type MutationSetDefaultHomeArgs = {
 export type MutationSetDefaultItemUnitArgs = {
   itemId: Scalars['ID']['input'];
   unitId: Scalars['ID']['input'];
+};
+
+export type MutationSetDefaultPantryArgs = {
+  id: Scalars['ID']['input'];
 };
 
 export type MutationSetDefaultShoppingListArgs = {

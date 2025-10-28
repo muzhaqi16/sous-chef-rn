@@ -16,14 +16,14 @@ function mergeArrayByIdIntelligent<T extends { id: string; __ref?: string }>(
   incoming: T[] = [],
   { readField }: { readField: (field: string, ref: any) => any },
 ): T[] {
-  // If no existing data, just return incoming
-  if (!existing || existing.length === 0) {
-    return incoming;
+  // If no incoming data, always keep existing (preserves cache on network errors)
+  if (!incoming || incoming.length === 0) {
+    return existing || [];
   }
 
-  // If no incoming data, keep existing (might be optimistic)
-  if (!incoming || incoming.length === 0) {
-    return existing;
+  // If no existing data, return incoming (first load or after cache clear)
+  if (!existing || existing.length === 0) {
+    return incoming;
   }
 
   // Create a map of existing items by ID with version metadata
@@ -129,15 +129,25 @@ export function makeCache(): InMemoryCache {
           // List-level queries (return collections of lists/homes)
           shoppingLists: {
             // No keyArgs needed - app doesn't use filters parameter
-            // Simple merge: always replace with fresh data from server
-            merge(existing, incoming) {
+            // Simple merge with cache preservation on network errors
+            merge(existing = [], incoming) {
+              // Preserve existing cache if network request failed and returned empty
+              // This prevents cache clearing when API is offline
+              if (!incoming || incoming.length === 0) {
+                return existing;
+              }
               return incoming;
             },
           },
           pantries: {
             // Different homes have different pantries - cache separately
             keyArgs: ['homeId'],
-            merge(existing, incoming) {
+            merge(existing = [], incoming) {
+              // Preserve existing cache if network request failed and returned empty
+              // This prevents cache clearing when API is offline
+              if (!incoming || incoming.length === 0) {
+                return existing;
+              }
               return incoming;
             },
           },
@@ -155,14 +165,24 @@ export function makeCache(): InMemoryCache {
           storageLocations: {
             // Different homes have different storage locations - cache separately
             keyArgs: ['homeId'],
-            merge(existing, incoming) {
+            merge(existing = [], incoming) {
+              // Preserve existing cache if network request failed and returned empty
+              // This prevents cache clearing when API is offline
+              if (!incoming || incoming.length === 0) {
+                return existing;
+              }
               return incoming;
             },
           },
           storageLocationTree: {
             // Different homes have different storage location trees - cache separately
             keyArgs: ['homeId'],
-            merge(existing, incoming) {
+            merge(existing = [], incoming) {
+              // Preserve existing cache if network request failed and returned empty
+              // This prevents cache clearing when API is offline
+              if (!incoming || incoming.length === 0) {
+                return existing;
+              }
               return incoming;
             },
           },
@@ -170,7 +190,9 @@ export function makeCache(): InMemoryCache {
           pantryItems: {
             keyArgs: ['pantryId'],
             // Intelligent merge to properly update cache when mutations return
-            merge(existing, incoming, { readField }) {
+            merge(existing, incoming, options) {
+              const { readField } = options;
+
               return mergeArrayByIdIntelligent(existing, incoming, {
                 readField,
               });

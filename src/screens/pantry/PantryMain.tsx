@@ -55,14 +55,35 @@ export const PantryMain: React.FC = () => {
   );
 
   const pantry = useMemo(() => {
-    if (selectedPantryId) {
-      return (
-        currentHomeData?.home?.pantries?.find(
-          (p: any) => p.id === selectedPantryId,
-        ) || defaultPantry
+    let result;
+
+    // Try to find selected pantry in current home data
+    if (selectedPantryId && currentHomeData?.home?.pantries) {
+      result = currentHomeData.home.pantries.find(
+        (p: any) => p.id === selectedPantryId
       );
+      if (result) {
+        return result;
+      }
     }
-    return defaultPantry;
+
+    // Fall back to default pantry
+    if (defaultPantry) {
+      return defaultPantry;
+    }
+
+    // Last resort: if we have selectedPantryId but no home data yet
+    // (e.g., during loading or network error), create minimal pantry object
+    // to keep the query running with the correct ID
+    if (selectedPantryId) {
+      return {
+        id: selectedPantryId,
+        name: 'Pantry',
+        isDefault: false,
+      };
+    }
+
+    return null;
   }, [selectedPantryId, currentHomeData, defaultPantry]);
 
   // Auto-select the default pantry if none is selected

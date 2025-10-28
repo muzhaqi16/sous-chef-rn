@@ -61,6 +61,7 @@ export const lightTheme = {
     warning: colors.warning,
     error: colors.error,
     info: colors.info,
+    danger: colors.error,
 
     // Components specific
     white: colors.neutral[0],
@@ -131,6 +132,7 @@ export const darkTheme = {
     warning: colors.warning,
     error: colors.error,
     info: colors.info,
+    danger: colors.error,
 
     // Components specific
     white: colors.neutral[0],

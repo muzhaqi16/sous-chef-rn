@@ -17,6 +17,11 @@ import {
 import { useSearchableList } from '../useSearchableList';
 import { useStore } from '#store';
 import { useErrorHandler } from '#/utils/errorHandling';
+import {
+  handleVersionConflict,
+  getVersionConflictMessage,
+} from '#/utils/errors/versionConflict';
+import { usePreservedArrayData } from '#/hooks/apollo';
 
 export function useHomeManagement() {
   const { selectedHomeId, setSelectedHomeId, setSelectedPantryId } = useStore();
@@ -28,6 +33,7 @@ export function useHomeManagement() {
   const { data, loading, error, refetch } = useGetHomesQuery({
     fetchPolicy: 'cache-and-network',
     nextFetchPolicy: 'cache-first', // Subsequent fetches use cache to avoid unnecessary refetches
+    errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
   });
 
   const {
@@ -37,12 +43,38 @@ export function useHomeManagement() {
   } = useGetDefaultHomeQuery({
     fetchPolicy: 'cache-and-network',
     nextFetchPolicy: 'cache-first', // Subsequent fetches use cache to avoid unnecessary refetches
+    errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
   });
 
   const [setDefaultHomeMutation] = useSetDefaultHomeMutation({
-    refetchQueries: [{ query: GetDefaultHomeDocument }],
+    // Update cache directly instead of refetching
+    update: (cache, { data }) => {
+      if (!data?.setDefaultHome) return;
+
+      try {
+        // Find the home that was set as default
+        const homeId = data.setDefaultHome.id;
+        const home = homes?.find(h => h.id === homeId);
+
+        if (home) {
+          // Write the default home query result to cache
+          cache.writeQuery({
+            query: GetDefaultHomeDocument,
+            data: {
+              getDefaultHome: home,
+            },
+          });
+        }
+      } catch (error) {
+        console.warn('Cache update failed for setDefaultHome:', error);
+        // Fallback: refetch only on error
+        refetchDefaultHome();
+      }
+    },
   });
-  const homes = data?.homes;
+
+  // Preserve homes even when query fails to prevent cascade failures
+  const homes = usePreservedArrayData(data?.homes);
   const remoteDefaultHomeId = defaultHomeData?.getDefaultHome?.id;
 
   // NOTE: Remote sync logic removed from here to prevent infinite loop
@@ -185,6 +217,15 @@ export function useHomeManagement() {
       }
     },
     onError: (error: any) => {
+      // Handle version conflicts with user-friendly message
+      if (handleVersionConflict(error)) {
+        Alert.alert('Home Updated', getVersionConflictMessage(error), [
+          { text: 'Refresh', onPress: () => refetch() },
+          { text: 'Cancel', style: 'cancel' },
+        ]);
+        return;
+      }
+
       const { message } = handleApolloError(error, {
         operation: 'Update Home',
       });

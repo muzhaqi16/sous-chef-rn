@@ -53,10 +53,7 @@ export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
             <Icon name="swap-horizontal" size={18} library="Ionicons" />
             <Text style={styles.actionButtonText}>Change Role</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.removeButton]}
-            onPress={onRemove}
-          >
+          <TouchableOpacity style={styles.actionButton} onPress={onRemove}>
             <Icon name="person-remove" size={18} />
             <Text style={styles.removeButtonText}>Remove</Text>
           </TouchableOpacity>
@@ -125,9 +122,6 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.sm,
     color: theme.colors.info,
     fontWeight: theme.fonts.weight.medium,
-  },
-  removeButton: {
-    backgroundColor: theme.colors.validation.errorBg,
   },
   removeButtonText: {
     fontSize: theme.fonts.size.sm,

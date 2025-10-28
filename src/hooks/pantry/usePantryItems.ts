@@ -7,6 +7,7 @@ import {
 import { useSearchableList } from '../useSearchableList';
 import { useErrorHandler } from '#/utils/errorHandling';
 import { useAuth } from '#hooks/auth/useAuth';
+import { usePreservedArrayData } from '#/hooks/apollo';
 
 export function usePantryItems(pantryId: string | undefined) {
   const { handleApolloError } = useErrorHandler();
@@ -18,7 +19,7 @@ export function usePantryItems(pantryId: string | undefined) {
     skip: shouldSkip,
     variables: { pantryId: pantryId ?? '' },
     notifyOnNetworkStatusChange: true,
-    errorPolicy: 'all', // Allow partial data and cache on errors
+    errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
   });
 
   usePantryItemsChangedSubscription({
@@ -53,10 +54,8 @@ export function usePantryItems(pantryId: string | undefined) {
     },
   });
 
-  const pantryItems = useMemo(
-    () => data?.pantryItems ?? [],
-    [data?.pantryItems],
-  );
+  // Preserve pantry items even when query fails to prevent cascade failures
+  const pantryItems = usePreservedArrayData(data?.pantryItems);
 
   // Search functionality
   const {

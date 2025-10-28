@@ -2795,6 +2795,7 @@ type Mutation {
   sendTestNotification(type: NotificationType!): Notification!
   setDefaultHome(homeId: ID!): UserSettings!
   setDefaultItemUnit(itemId: ID!, unitId: ID!): ItemUnit!
+  setDefaultPantry(id: ID!): Pantry!
   setDefaultShoppingList(id: ID!): ShoppingList!
   """
   Set a storage location as the default for its home

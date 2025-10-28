@@ -19,6 +19,7 @@ import {
   ShoppingList,
 } from '#generated';
 import { useStore } from '#store';
+import { useErrorHandler } from '#/utils/errorHandling';
 
 import { ShoppingListStackParamList } from '#navigation/stacks/ShoppingListStack';
 
@@ -29,6 +30,7 @@ export const ListSettings: React.FC<{
   const listId = route.params?.listId;
   const { navigate, goBack, navigateTo } = useAppNavigation();
   const { setSelectedShoppingListId } = useStore();
+  const { handleApolloError } = useErrorHandler();
 
   const [name, setName] = useState('');
   const [isDefault, setIsDefault] = useState(false);
@@ -37,7 +39,17 @@ export const ListSettings: React.FC<{
   const { shoppingList, isShared } = useShoppingListDetails(listId);
 
   const [updateList] = useUpdateShoppingListMutation();
-  const [deleteList] = useDeleteShoppingListMutation();
+  const [deleteList] = useDeleteShoppingListMutation({
+    errorPolicy: 'all',
+    onError: (error: any) => {
+      const { message } = handleApolloError(error, {
+        operation: 'Delete Shopping List',
+      });
+      Alert.alert('Error', message);
+    },
+    refetchQueries: ['GetShoppingLists'],
+    awaitRefetchQueries: true,
+  });
   const [createList] = useCreateShoppingListMutation({
     // Update the cache when a new list is created
     update(cache, { data }) {
@@ -144,14 +156,10 @@ export const ListSettings: React.FC<{
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            try {
-              await deleteList({ variables: { id: listId! } });
-              // Clear the selected shopping list ID if we just deleted it
-              setSelectedShoppingListId(null);
-              navigateTo.shoppingListMain();
-            } catch (error) {
-              Alert.alert('Error', 'Failed to delete list');
-            }
+            await deleteList({ variables: { id: listId! } });
+            // Clear the selected shopping list ID if we just deleted it
+            setSelectedShoppingListId(null);
+            navigateTo.shoppingListMain();
           },
         },
       ],

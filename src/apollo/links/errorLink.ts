@@ -34,16 +34,13 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
       }
     }
   } else if (!CombinedProtocolErrors.is(error)) {
-    if (isSubscription(operation) && error.message?.includes('Socket closed with event 4500')) {
-      return attemptTokenRefresh(operation, forward);
-    }
-
+    // Check for known server errors first
     if (isSubscription(operation) && isKnownServerError({ message: error.message })) {
       console.warn(`Known server error for ${operation.operationName}:`, error.message);
       return;
     }
 
-    // Minimal logging for network errors (Apollo handles retries + cache fallback)
+    // Enhanced network error detection - includes WebSocket errors
     const message = error.message?.toLowerCase() || '';
     const isNetworkIssue = [
       'network request failed',
@@ -53,12 +50,23 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
       'enotfound',
       'econnrefused',
       'econnreset',
-      'ehostunreach'
+      'ehostunreach',
+      'socket closed',  // WebSocket connection failures
+      'websocket',      // Generic WebSocket errors
     ].some(issue => message.includes(issue));
 
-    // Only log non-network errors as these are unexpected
-    if (!isNetworkIssue) {
-      console.error(`Unexpected network error [${operation.operationName}]:`, error.message);
+    // For network/WebSocket errors, log and allow errorPolicy to handle
+    if (isNetworkIssue) {
+      console.warn(
+        `Network error for ${operation.operationName}, preserving cache:`,
+        error.message
+      );
+      // Return undefined to let errorPolicy handle the error
+      // errorPolicy: 'ignore' will suppress error and return cached data
+      return;
     }
+
+    // Only log non-network errors as these are unexpected
+    console.error(`Unexpected error [${operation.operationName}]:`, error.message);
   }
 });

@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useGetHomesQuery, useGetDefaultHomeQuery } from '#generated';
 import { useStore } from '#store';
 import { useAuth } from '#hooks/auth/useAuth';
+import { usePreservedArrayData } from '#/hooks/apollo';
 
 export const useDefaultHome = () => {
   const { selectedHomeId, setSelectedHomeId } = useStore();
@@ -18,15 +19,18 @@ export const useDefaultHome = () => {
     fetchPolicy: 'cache-and-network', // Ensure fresh data after token refresh
     nextFetchPolicy: 'cache-first', // Subsequent fetches use cache to avoid unnecessary refetches
     skip: shouldSkip,
-    errorPolicy: 'all', // Allow partial data and cache on errors
+    errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
   });
+
+  // Preserve homes data even when query fails - prevents cascade failures
+  const homesList = usePreservedArrayData(homes?.homes);
 
   const { data: defaultHomeData, loading: loadingDefaultHome } =
     useGetDefaultHomeQuery({
       fetchPolicy: 'cache-and-network',
       nextFetchPolicy: 'cache-first', // Subsequent fetches use cache to avoid unnecessary refetches
       skip: !canAttemptQueries,
-      errorPolicy: 'all',
+      errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
     });
 
   const remoteDefaultHomeId = defaultHomeData?.getDefaultHome?.id;
@@ -61,7 +65,7 @@ export const useDefaultHome = () => {
 
   return {
     selectedHomeId: currentHomeId,
-    homes: homes?.homes || [],
+    homes: homesList,
     loading: loading || loadingDefaultHome,
     error,
     hasDefaultHome: !!currentHomeId,

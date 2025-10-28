@@ -13,10 +13,15 @@ import { useSearchableList } from '../useSearchableList';
 import { useAuth } from '#hooks/auth/useAuth';
 import { useErrorHandler } from '#/utils/errorHandling';
 import { useSubscriptionDeduplication } from '#/hooks/utils/useSubscriptionDeduplication';
+import { usePreservedArrayData } from '#/hooks/apollo';
 import {
   enhanceWithVersion,
   createOptimisticEntity,
 } from '#/apollo/utils/createOptimisticResponse';
+import {
+  handleVersionConflict,
+  getVersionConflictMessage,
+} from '#/utils/errors/versionConflict';
 
 export interface PantryItemInput {
   itemName: string;
@@ -56,7 +61,7 @@ export function usePantryManagement(pantryId: string | undefined) {
     skip: shouldSkip,
     fetchPolicy: 'cache-first', // Optimized: use cache first, then network
     notifyOnNetworkStatusChange: true,
-    errorPolicy: 'all',
+    errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
   });
 
   // Real-time updates via subscription with deduplication
@@ -92,10 +97,8 @@ export function usePantryManagement(pantryId: string | undefined) {
     },
   });
 
-  const pantryItems = useMemo(
-    () => data?.pantryItems ?? [],
-    [data?.pantryItems],
-  );
+  // Preserve pantry items even when query fails to prevent cascade failures
+  const pantryItems = usePreservedArrayData(data?.pantryItems);
 
   // Search functionality
   const {
@@ -223,7 +226,16 @@ export function usePantryManagement(pantryId: string | undefined) {
 
   const [updateItemMutation] = useUpdatePantryItemMutation({
     errorPolicy: 'all',
-    onError: error => {
+    onError: (error: any) => {
+      // Handle version conflicts with user-friendly message
+      if (handleVersionConflict(error)) {
+        Alert.alert('Item Updated', getVersionConflictMessage(error), [
+          { text: 'Refresh', onPress: () => refetch() },
+          { text: 'Cancel', style: 'cancel' },
+        ]);
+        return;
+      }
+
       const { message } = handleApolloError(error, {
         operation: 'Update Pantry Item',
       });

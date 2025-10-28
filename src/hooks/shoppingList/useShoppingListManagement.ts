@@ -11,10 +11,16 @@ import {
 import { useSearchableList } from '../useSearchableList';
 import { useAuth } from '#hooks/auth/useAuth';
 import { useErrorHandler } from '#/utils/errorHandling';
+import { usePreservedArrayData } from '#/hooks/apollo';
 import {
   handleVersionConflict,
   getVersionConflictMessage,
 } from '#/utils/errors/versionConflict';
+import {
+  createOptimisticEntity,
+  enhanceWithVersion,
+} from '#/apollo/utils/createOptimisticResponse';
+import { generateId } from '#/utils/generateId';
 
 export interface ShoppingListItemInput {
   itemName: string;
@@ -44,7 +50,7 @@ export function useShoppingListManagement(listId: string | undefined) {
     variables: { shoppingListId: listId ?? '' },
     skip: shouldSkip,
     fetchPolicy: 'cache-and-network', // Fetch from network while showing cache (ensures first load works)
-    errorPolicy: 'all',
+    errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
   });
 
   const { data, loading, error, refetch } = queryResult;
@@ -56,14 +62,8 @@ export function useShoppingListManagement(listId: string | undefined) {
     // No onData, no onError - let Apollo do its thing
   });
 
-  // Direct dependency on data?.shoppingListItems like pantry
-  // Force new array AND object references to trigger React re-renders
-  const items = useMemo(() => {
-    const itemsList = data?.shoppingListItems ?? [];
-    // Deep clone: spread array AND spread each object to create new references
-    // This ensures React's shallow comparison detects changes
-    return itemsList.map(item => ({ ...item }));
-  }, [data?.shoppingListItems]);
+  // Preserve shopping list items even when query fails to prevent cascade failures
+  const items = usePreservedArrayData(data?.shoppingListItems);
 
   // Search functionality
   const {
@@ -95,6 +95,35 @@ export function useShoppingListManagement(listId: string | undefined) {
   // Mutations - Apollo handles cache updates automatically via optimistic responses
   const [addItemMutation] = useAddItemToShoppingListMutation({
     errorPolicy: 'all',
+    // Optimistic response for instant UI feedback (especially important offline)
+    optimisticResponse: (variables: any) => {
+      const tempId = `temp-${generateId()}`;
+      return {
+        __typename: 'Mutation' as const,
+        addItemToShoppingList: {
+          ...createOptimisticEntity('ShoppingListItem', tempId, {
+            itemName: variables.input.itemName,
+            quantity: variables.input.quantity || 1,
+            isPurchased: false,
+            notes: variables.input.notes || null,
+            category: variables.input.category || null,
+            unitName: variables.input.unitName || null,
+            shoppingList: {
+              __typename: 'ShoppingList',
+              id: listId || '',
+            },
+            unit: variables.input.unitId
+              ? {
+                  __typename: 'Unit',
+                  id: variables.input.unitId,
+                }
+              : null,
+            item: null, // Will be populated by server if matched
+          }),
+          __typename: 'ShoppingListItem' as const,
+        } as any, // Optimistic response - will be replaced by server response
+      };
+    },
     update(cache, { data }) {
       if (!data?.addItemToShoppingList || !listId) return;
 
@@ -136,6 +165,45 @@ export function useShoppingListManagement(listId: string | undefined) {
 
   const [updateItemMutation] = useUpdateShoppingListItemMutation({
     errorPolicy: 'all',
+    // Enhanced optimistic response with version management
+    optimisticResponse: variables => {
+      // Find the current item to preserve its fields
+      const currentItem = items.find(item => item.id === variables.id);
+
+      if (!currentItem) {
+        // Fallback for edge case where item not in cache
+        return {
+          __typename: 'Mutation',
+          updateShoppingListItem: {
+            __typename: 'ShoppingListItem',
+            id: variables.id,
+            version: 1,
+            updatedAt: new Date().toISOString(),
+            ...variables.input,
+          } as any,
+        };
+      }
+
+      // Use version-aware helper to create optimistic response
+      // This automatically keeps current version and updates timestamp
+      const optimisticUpdate = enhanceWithVersion(
+        {
+          ...currentItem,
+          updatedAt: currentItem.updatedAt ?? new Date().toISOString(),
+        } as any,
+        {
+          ...variables.input,
+        },
+      );
+
+      return {
+        __typename: 'Mutation',
+        updateShoppingListItem: optimisticUpdate as any,
+      };
+    },
+    // Cache update happens automatically via Apollo's normalization
+    // The mutation returns the full ShoppingListItemFragment, so Apollo merges it automatically
+    // The optimistic response provides instant UI feedback
     onError: error => {
       const { message } = handleApolloError(error, {
         operation: 'Update Shopping List Item',
@@ -184,6 +252,41 @@ export function useShoppingListManagement(listId: string | undefined) {
 
   const [togglePurchasedMutation] = useToggleShoppingListItemPurchasedMutation({
     errorPolicy: 'all',
+    // Optimistic response for instant toggle feedback
+    optimisticResponse: variables => {
+      const currentItem = items.find(item => item.id === variables.id);
+
+      if (!currentItem) {
+        // Fallback for edge case
+        return {
+          __typename: 'Mutation',
+          toggleShoppingListItemPurchased: {
+            __typename: 'ShoppingListItem',
+            id: variables.id,
+            isPurchased: variables.purchased,
+            version: 1,
+            updatedAt: new Date().toISOString(),
+          } as any,
+        };
+      }
+
+      // Use version-aware helper for optimistic response
+      const optimisticUpdate = enhanceWithVersion(
+        {
+          ...currentItem,
+          updatedAt: currentItem.updatedAt ?? new Date().toISOString(),
+        } as any,
+        {
+          isPurchased: variables.purchased,
+        },
+      );
+
+      return {
+        __typename: 'Mutation',
+        toggleShoppingListItemPurchased: optimisticUpdate as any,
+      };
+    },
+    // Cache update happens automatically via Apollo's normalization
     onError: error => {
       const { message } = handleApolloError(error, {
         operation: 'Toggle Item Purchased',

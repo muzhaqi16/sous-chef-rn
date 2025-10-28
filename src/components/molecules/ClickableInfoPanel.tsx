@@ -4,14 +4,14 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils';
 import { commonStyles } from '#styles';
 
-export interface InfoRow {
+export interface InfoRowData {
   label: string;
   value: string | number;
 }
 
 interface ClickableInfoPanelProps {
   title: string;
-  items: InfoRow[];
+  items: InfoRowData[];
   onPress: () => void;
   emptyMessage?: string;
   style?: ViewStyle;
