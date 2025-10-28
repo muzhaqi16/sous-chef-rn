@@ -43,7 +43,7 @@ export function useShoppingListManagement(listId: string | undefined) {
   const queryResult = useGetShoppingListItemsQuery({
     variables: { shoppingListId: listId ?? '' },
     skip: shouldSkip,
-    fetchPolicy: 'cache-first', // Optimized: use cache first, then network (same as pantry)
+    fetchPolicy: 'cache-and-network', // Fetch from network while showing cache (ensures first load works)
     errorPolicy: 'all',
   });
 

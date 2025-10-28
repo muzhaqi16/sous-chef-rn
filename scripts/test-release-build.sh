@@ -83,12 +83,12 @@ fi
 info "Cleaning Android build cache..."
 cd android && ./gradlew clean && cd ..
 
-info "Building local release APK (with debug signing)..."
+info "Building staging APK (with debug signing)..."
 info "Note: This has all release optimizations but uses debug keystore"
-cd android && ./gradlew assembleLocalRelease && cd ..
+cd android && ./gradlew assembleStaging && cd ..
 
 # Step 6: Install APK
-APK_PATH="android/app/build/outputs/apk/localRelease/app-universal-localRelease.apk"
+APK_PATH="android/app/build/outputs/apk/staging/app-universal-staging.apk"
 
 if [ ! -f "$APK_PATH" ]; then
     error "APK not found at $APK_PATH"
@@ -105,9 +105,9 @@ echo -e "${GREEN}========================================${NC}"
 echo -e "${GREEN}  Build Complete!${NC}"
 echo -e "${GREEN}========================================${NC}"
 echo ""
-info "Local release APK installed successfully"
+info "Staging APK installed successfully"
 echo ""
-info "Build info: localRelease variant (ProGuard enabled, debug signed)"
+info "Build info: staging variant (ProGuard enabled, debug signed)"
 echo ""
 echo "To view debug logs, run:"
 echo "  ${YELLOW}adb logcat | grep -E '(Auth:|Network:|Queue Link:|Store:)'${NC}"

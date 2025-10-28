@@ -33,7 +33,6 @@ import type {
 } from '#components/organisms/AnimatedItemSelector';
 import type { SortableShoppingListItem } from '#components/organisms/SortableShoppingList';
 import { useShoppingListManagement } from '#/hooks';
-import { useOfflinePresetPolicy } from '#/apollo/policies/offlineFetchPolicies';
 import { useStore } from '#/store';
 import { IconLibrary } from '#/utils/iconUtils';
 import { ShoppingListItemCounter } from '#/components/molecules/ShoppingListItemCounter';
@@ -153,10 +152,9 @@ export const ShoppingListMain: React.FC = () => {
 
   const [refreshing, setRefreshing] = useState(false);
 
-  // OPTIMIZATION: Use offline-aware fetch policy for lists query
-  const listsFetchPolicy = useOfflinePresetPolicy('LIST');
+  // Use cache-and-network like pantry and recipes - Apollo handles offline gracefully
   const { data, previousData } = useGetShoppingListsQuery({
-    fetchPolicy: listsFetchPolicy,
+    fetchPolicy: 'cache-and-network',
     errorPolicy: 'all',
   });
 

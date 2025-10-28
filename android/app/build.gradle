@@ -69,20 +69,25 @@ android {
     
     buildTypes {
         debug {
+            manifestPlaceholders = [usesCleartextTraffic: "true"]
             signingConfig signingConfigs.debug
             resValue "string", "build_config_package", "dev.souschef.app"
         }
         release {
+            manifestPlaceholders = [usesCleartextTraffic: "false"]
             signingConfig signingConfigs.release
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
             resValue "string", "build_config_package", "dev.souschef.app"
         }
         staging {
-            initWith debug
+            initWith release
+            manifestPlaceholders = [usesCleartextTraffic: "true"]
             signingConfig signingConfigs.debug
+            minifyEnabled enableProguardInReleaseBuilds
+            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
             resValue "string", "build_config_package", "dev.souschef.app"
-            matchingFallbacks = ['debug']
+            matchingFallbacks = ['release', 'debug']
         }
     }
 }
