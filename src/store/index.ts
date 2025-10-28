@@ -119,6 +119,26 @@ export const useStore = create<RootState>()(
         name: STORAGE_KEY,
         version: 5,
         storage: createJSONStorage(() => zustandStorage),
+        // Do store migrations here
+        migrate: (persistedState: any, version: number) => {
+          // Migration from version 4 to 5: Remove persisted network state
+          if (version === 4) {
+            /* eslint-disable @typescript-eslint/no-unused-vars */
+            const {
+              isOnline,
+              isInternetReachable,
+              networkType,
+              lastOnlineTime,
+              lastOfflineTime,
+              ...rest
+            } = persistedState || {};
+            /* eslint-enable @typescript-eslint/no-unused-vars */
+
+            return rest;
+          }
+
+          return persistedState;
+        },
         onRehydrateStorage: () => {
           return (state, error) => {
             if (error) {
@@ -152,7 +172,6 @@ export const useStore = create<RootState>()(
             isFetching,
             ...persistedState
           } = state;
-          /* eslint-enable @typescript-eslint/no-unused-vars */
 
           return persistedState;
         },
