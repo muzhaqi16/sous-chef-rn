@@ -1,8 +1,10 @@
-import {HttpLink} from '@apollo/client';
+import { HttpLink } from '@apollo/client';
 import Config from 'react-native-config';
+import { Environment } from '#/utils/environment';
 
 export const httpLink = new HttpLink({
-  uri: Config.API_URL || 'http://localhost:4000/graphql',
+  // Use Config.API_URL from .env if set, otherwise use environment-specific default
+  uri: Config.API_URL || Environment.getApiConfig().baseUrl,
   headers: {
     'Content-Type': 'application/json',
   },

@@ -16,7 +16,7 @@ class CircuitBreaker {
   constructor(
     endpoint: string,
     failureThreshold = 3,
-    recoveryTimeoutMs = 60000 // 1 minute
+    recoveryTimeoutMs = 60000, // 1 minute
   ) {
     this.endpoint = endpoint;
     this.failureThreshold = failureThreshold;
@@ -35,7 +35,9 @@ class CircuitBreaker {
         // Check if enough time has passed to try recovery
         if (now - this.lastFailureTime >= this.recoveryTimeoutMs) {
           this.state = 'HALF_OPEN';
-          console.log(`[API Monitor] ${this.endpoint} - Moving to HALF_OPEN state for monitoring`);
+          console.log(
+            `[API Monitor] ${this.endpoint} - Moving to HALF_OPEN state for monitoring`,
+          );
         }
         break;
     }
@@ -51,7 +53,9 @@ class CircuitBreaker {
     this.failureCount = 0;
     if (this.state === 'HALF_OPEN') {
       this.state = 'CLOSED';
-      console.log(`[API Monitor] ${this.endpoint} - Recovery successful, API health restored`);
+      console.log(
+        `[API Monitor] ${this.endpoint} - Recovery successful, API health restored`,
+      );
     }
   }
 
@@ -65,11 +69,14 @@ class CircuitBreaker {
 
     // Track API health status for monitoring
     if (this.isEndpointUnreachable(error)) {
-      if (this.state === 'HALF_OPEN' || this.failureCount >= this.failureThreshold) {
+      if (
+        this.state === 'HALF_OPEN' ||
+        this.failureCount >= this.failureThreshold
+      ) {
         this.state = 'OPEN';
         console.warn(
           `[API Monitor] ${this.endpoint} - API health degraded after ${this.failureCount} failures. ` +
-          `Monitoring recovery (requests continue with Apollo cache-first policy)`
+            `Monitoring recovery (requests continue with Apollo cache-first policy)`,
         );
       }
     }
@@ -91,12 +98,14 @@ class CircuitBreaker {
       'enotfound',
       'econnrefused',
       'econnreset',
-      'ehostunreach'
+      'ehostunreach',
     ];
 
-    return connectionIssues.some(issue => message.includes(issue)) ||
-           networkError?.code === 'NETWORK_ERROR' ||
-           networkError?.code === 'TIMEOUT';
+    return (
+      connectionIssues.some(issue => message.includes(issue)) ||
+      networkError?.code === 'NETWORK_ERROR' ||
+      networkError?.code === 'TIMEOUT'
+    );
   }
 
   /**
@@ -106,7 +115,7 @@ class CircuitBreaker {
     return {
       state: this.state,
       failureCount: this.failureCount,
-      lastFailureTime: this.lastFailureTime
+      lastFailureTime: this.lastFailureTime,
     };
   }
 
@@ -117,15 +126,17 @@ class CircuitBreaker {
     this.failureCount = 0;
     this.lastFailureTime = 0;
     this.state = 'CLOSED';
-    console.log(`[API Monitor] ${this.endpoint} - Health monitor reset, API marked healthy`);
+    console.log(
+      `[API Monitor] ${this.endpoint} - Health monitor reset, API marked healthy`,
+    );
   }
 }
 
 // Global API health monitor instance for the main API endpoint
 export const apiCircuitBreaker = new CircuitBreaker(
-  Config.API_URL || 'http://localhost:4000/graphql',
+  Config.API_URL,
   3, // Track degraded health after 3 consecutive failures
-  60000 // Monitor recovery after 1 minute
+  60000, // Monitor recovery after 1 minute
 );
 
 export { CircuitBreaker };
