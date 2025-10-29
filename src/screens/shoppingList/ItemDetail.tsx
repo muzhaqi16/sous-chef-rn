@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, Image } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useGetShoppingListItemQuery } from '#generated';
 import { useAppNavigation } from '#hooks';
 import { Icon } from '#utils';
@@ -17,6 +17,7 @@ type RouteParams = {
 export const ShoppingListItemDetail: React.FC<{
   route: { params: RouteParams };
 }> = ({ route }) => {
+  const { theme } = useUnistyles();
   const { navigate, goBack } = useAppNavigation();
   const { listId, itemId } = route.params;
 
@@ -72,7 +73,7 @@ export const ShoppingListItemDetail: React.FC<{
               />
             ) : (
               <View style={styles.imagePlaceholder}>
-                <Icon name="shopping-basket" size={48} color="#999" />
+                <Icon name="shopping-basket" size={48} color={theme.colors.textSecondary} />
               </View>
             )}
           </View>
@@ -91,7 +92,7 @@ export const ShoppingListItemDetail: React.FC<{
           {/* Status Badge */}
           {item.isPurchased ? (
             <View style={styles.statusBadge}>
-              <Icon name="check-circle" size={20} color="#4CAF50" />
+              <Icon name="check-circle" size={20} color={theme.colors.success} />
               <Text style={styles.statusBadgeText}>Purchased</Text>
             </View>
           ) : null}

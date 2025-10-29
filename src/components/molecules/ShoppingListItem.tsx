@@ -102,7 +102,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.surface,
     borderRadius: 12,
   },
   purchasedContainer: {

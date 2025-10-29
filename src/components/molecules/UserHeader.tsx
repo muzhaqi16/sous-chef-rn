@@ -65,6 +65,7 @@ const styles = StyleSheet.create(theme => ({
   headerTitle: {
     fontSize: 28,
     fontWeight: '400',
+    color: theme.colors.textPrimary,
   },
   headerActions: {
     flexDirection: 'row',

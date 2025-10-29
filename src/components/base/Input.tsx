@@ -77,7 +77,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: 10,
     fontSize: 16,
     color: theme.colors.textPrimary,
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.surface,
   },
   textArea: {
     minHeight: 80,

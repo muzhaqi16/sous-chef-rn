@@ -5,9 +5,9 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
   ActivityIndicator,
 } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
 import { useUnistyles } from 'react-native-unistyles';
 
 interface EmailInputModalProps {
@@ -159,7 +159,7 @@ export const EmailInputModal: React.FC<EmailInputModalProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create(theme => ({
   centeredView: {
     flex: 1,
     justifyContent: 'center',
@@ -168,10 +168,10 @@ const styles = StyleSheet.create({
   },
   modalView: {
     margin: 20,
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.surface,
     borderRadius: 12,
     padding: 20,
-    shadowColor: '#000',
+    shadowColor: theme.colors.black,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -236,4 +236,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-});
+}));

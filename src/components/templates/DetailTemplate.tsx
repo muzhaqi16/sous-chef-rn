@@ -63,13 +63,15 @@ export const DetailTemplate: React.FC<DetailTemplateProps> = ({
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
+    backgroundColor: theme.colors.background,
   },
   content: {
     paddingHorizontal: theme.spacing.md,
     flex: 1,
+    backgroundColor: theme.colors.background,
   },
   section: {
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.surface,
     borderRadius: 8,
     padding: 16,
     marginBottom: 16,

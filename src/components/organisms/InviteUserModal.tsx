@@ -5,11 +5,10 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
-import { useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { MembershipRole } from '#generated';
 
 interface InviteUserModalProps {
@@ -156,7 +155,7 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
                 error ? { borderColor: theme.colors.error } : {},
               ]}
               placeholder="Enter email address"
-              placeholderTextColor="#999"
+              placeholderTextColor={theme.colors.textSecondary}
               value={email}
               onChangeText={text => {
                 setEmail(text);
@@ -266,7 +265,7 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create(theme => ({
   centeredView: {
     flex: 1,
     justifyContent: 'center',
@@ -275,10 +274,10 @@ const styles = StyleSheet.create({
   },
   modalView: {
     margin: 20,
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.surface,
     borderRadius: 12,
     padding: 20,
-    shadowColor: '#000',
+    shadowColor: theme.colors.black,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -294,12 +293,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 20,
     textAlign: 'center',
-    color: '#000',
+    color: theme.colors.textPrimary,
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
+    color: theme.colors.textPrimary,
     marginBottom: 8,
   },
   roleLabel: {
@@ -307,20 +306,20 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: theme.colors.border,
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
     marginBottom: 8,
-    color: '#000',
-    backgroundColor: '#FAFAFA',
+    color: theme.colors.textPrimary,
+    backgroundColor: theme.colors.inputBackground,
   },
   roleOption: {
     borderWidth: 2,
     borderRadius: 12,
     padding: 12,
     marginBottom: 12,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: theme.colors.inputBackground,
   },
   roleOptionSelected: {
     borderWidth: 2,
@@ -358,12 +357,12 @@ const styles = StyleSheet.create({
   roleOptionLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000',
+    color: theme.colors.textPrimary,
     marginBottom: 4,
   },
   roleDescription: {
     fontSize: 13,
-    color: '#666',
+    color: theme.colors.textSecondary,
     lineHeight: 18,
   },
   warningText: {
@@ -390,7 +389,7 @@ const styles = StyleSheet.create({
     minHeight: 48,
   },
   cancelButton: {
-    backgroundColor: '#F0F0F0',
+    backgroundColor: theme.colors.surfaceVariant,
     marginRight: 8,
   },
   submitButton: {
@@ -400,7 +399,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   cancelButtonText: {
-    color: '#666',
+    color: theme.colors.textPrimary,
     fontSize: 16,
     fontWeight: '500',
   },
@@ -409,4 +408,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-});
+}));

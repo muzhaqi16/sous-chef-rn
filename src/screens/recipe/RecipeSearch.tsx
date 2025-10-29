@@ -279,7 +279,7 @@ export const RecipeSearch: React.FC = () => {
           icon: 'search',
           onPress: handleTextSearch,
           color: theme.colors.primary,
-          backgroundColor: '#fff',
+          backgroundColor: theme.colors.surface,
         },
       ] as SearchBarAction[],
     }),

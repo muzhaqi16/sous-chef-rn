@@ -151,7 +151,7 @@ const styles = StyleSheet.create(theme => ({
   item: {
     paddingVertical: 12,
     paddingHorizontal: 16,
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.surface,
   },
   itemContent: {
     flexDirection: 'row',

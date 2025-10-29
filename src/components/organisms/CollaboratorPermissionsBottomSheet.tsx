@@ -233,6 +233,8 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
       enablePanDownToClose
       animateOnMount={true}
       backdropComponent={renderBackdrop}
+      backgroundStyle={{ backgroundColor: theme.colors.background }}
+      handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
     >
       <BottomSheetScrollView
         style={styles.scrollView}
@@ -301,7 +303,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
                             size={14}
                             color={
                               permission.granted
-                                ? theme.colors.success || '#4CAF50'
+                                ? theme.colors.success
                                 : theme.colors.textSecondary
                             }
                             library="MaterialIcons"

@@ -56,7 +56,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     paddingVertical: 16,
     paddingHorizontal: 20,
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.surface,
     borderRadius: 12,
     marginVertical: 4,
     borderWidth: 1,

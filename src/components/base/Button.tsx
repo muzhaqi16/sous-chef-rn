@@ -90,7 +90,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.primary,
   },
   secondary: {
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,
   },

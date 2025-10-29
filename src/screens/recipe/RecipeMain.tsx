@@ -91,11 +91,11 @@ export const RecipeMain: React.FC = () => {
           icon: 'search',
           onPress: handleSearchRecipes,
           color: theme.colors.primary,
-          backgroundColor: '#fff',
+          backgroundColor: theme.colors.surface,
         },
       ] as SearchBarAction[],
     }),
-    [handleSearchRecipes, theme.colors.primary],
+    [handleSearchRecipes, theme.colors.primary, theme.colors.surface],
   );
 
   const emptyStateConfig = {

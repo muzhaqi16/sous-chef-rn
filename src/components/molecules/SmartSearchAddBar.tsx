@@ -168,7 +168,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'space-between',
     paddingVertical: 12,
     paddingHorizontal: 16,
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.surface,
     marginBottom: 4,
     borderRadius: 8,
   },

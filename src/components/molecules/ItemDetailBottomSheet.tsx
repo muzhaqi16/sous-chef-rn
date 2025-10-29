@@ -72,7 +72,7 @@ export const ItemDetailBottomSheet: React.FC<ItemDetailProps> = ({
   );
 };
 
-const styles = StyleSheet.create(() => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     flexDirection: 'column',
@@ -82,7 +82,7 @@ const styles = StyleSheet.create(() => ({
   },
   input: {
     marginBottom: 8,
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.surface,
   },
 }));
 

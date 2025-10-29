@@ -56,7 +56,7 @@ const styles = StyleSheet.create(theme => ({
     padding: 20,
   },
   modalContent: {
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.surface,
     borderRadius: 16,
     padding: 24,
     width: '100%',

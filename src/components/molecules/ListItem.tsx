@@ -80,7 +80,7 @@ const styles = StyleSheet.create(theme => ({
   container: {
     borderRadius: 12,
     overflow: 'hidden',
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.surface,
   },
   contentContainer: {
     flexDirection: 'row',

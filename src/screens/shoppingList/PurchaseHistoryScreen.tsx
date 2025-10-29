@@ -113,7 +113,12 @@ export const PurchaseHistoryScreen: React.FC<{
           </>
         ) : (
           <View style={styles.emptyContainer}>
-            <Icon name="receipt-outline" size={64} color="#ccc" />
+            <Icon
+              name="receipt-outline"
+              size={64}
+              color="#ccc"
+              library="Ionicons"
+            />
             <Text style={styles.emptyText}>No purchase history</Text>
             <Text style={styles.emptySubtext}>
               Mark this item as purchased to start tracking history
