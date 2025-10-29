@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, Vibration } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 import { useUnistyles } from 'react-native-unistyles';
 import Animated, {
   useAnimatedStyle,
@@ -11,6 +11,7 @@ import Animated, {
   FadeOut,
 } from 'react-native-reanimated';
 import { Icon } from '#utils';
+import { HapticService } from '#services/haptic';
 
 type AnimatedCheckboxProps = {
   checked: boolean;
@@ -64,8 +65,8 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = React.memo(({
   const handlePressIn = () => {
     if (!disabled) {
       isPressed.value = true;
-      // Short vibration for tactile feedback
-      Vibration.vibrate(50);
+      // Short haptic feedback for checkbox toggle
+      HapticService.light();
     }
   };
 

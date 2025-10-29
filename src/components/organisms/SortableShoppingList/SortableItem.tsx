@@ -5,6 +5,7 @@ import { SwipeableItem } from '#/components/molecules/SwipeableItem';
 import { ListItem } from '#/components/molecules/ListItem';
 import { DragHandle } from '#/components/atoms/DragHandle';
 import { commonStyles } from '#/styles';
+import { HapticService } from '#services/haptic';
 
 interface SimpleDraggableItemProps {
   item: {
@@ -44,11 +45,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
   const handleLongPress = useCallback(() => {
     if (drag) {
       // Provide haptic feedback when drag activates
-      if (Platform.OS === 'ios') {
-        Vibration.vibrate(100);
-      } else {
-        Vibration.vibrate(100);
-      }
+      HapticService.longPress();
       drag();
     }
   }, [drag]);
@@ -91,10 +88,14 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
     <View style={[styles.container, isActive && styles.activeContainer]}>
       <SwipeableItem
         onPress={() => onItemPress(item.id)}
-        onLongPress={!drag && onTogglePurchase ? handleToggleLongPress : undefined}
+        onLongPress={
+          !drag && onTogglePurchase ? handleToggleLongPress : undefined
+        }
         onEdit={onItemEdit ? () => onItemEdit(item.id) : undefined}
         onDelete={onItemDelete ? () => onItemDelete(item.id) : undefined}
-        onTogglePurchase={onTogglePurchase ? () => onTogglePurchase(item.id) : undefined}
+        onTogglePurchase={
+          onTogglePurchase ? () => onTogglePurchase(item.id) : undefined
+        }
         isPurchased={item.isPurchased}
         friction={1}
         onSwipeableWillOpen={onSwipeableWillOpen}

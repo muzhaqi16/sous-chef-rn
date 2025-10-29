@@ -14,6 +14,7 @@ import { SplashScreen } from '#screens';
 import { ToastProvider } from '#/components/atoms';
 import { useTheme } from '#/hooks/useTheme';
 import { Telemetry } from '#/services/telemetry';
+import { MemoryMonitor } from '#/services/performance';
 import { AppErrorBoundary } from '#/components/providers/ErrorBoundary';
 import { useNetworkStatus } from '#/hooks/useNetworkStatus';
 import { queueManager } from '#/apollo/offlineQueue';
@@ -54,12 +55,24 @@ const App = () => {
       Telemetry.updateConfig(getTelemetryConfig());
       Telemetry.initialize();
 
+      // Start memory monitoring (only in dev or if enabled in settings)
+      if (__DEV__) {
+        MemoryMonitor.start(10000); // Sample every 10 seconds
+      }
+
       // Track app launch
       Telemetry.trackEvent('app_launched', {
         theme,
         timestamp: new Date().toISOString(),
       });
     }
+
+    return () => {
+      // Cleanup memory monitor on unmount
+      if (__DEV__) {
+        MemoryMonitor.stop();
+      }
+    };
   }, [isHydrated, setHasStoredCredentials, getTelemetryConfig, theme]);
 
   useEffect(() => {

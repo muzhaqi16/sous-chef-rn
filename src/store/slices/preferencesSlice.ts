@@ -26,6 +26,10 @@ export interface PreferencesState {
   rememberMe?: boolean;
   setRememberMe: (remember: boolean) => void;
 
+  // Haptic Feedback
+  hapticFeedbackEnabled: boolean;
+  setHapticFeedbackEnabled: (enabled: boolean) => void;
+
   // Reset
   resetPreferences: () => void;
 }
@@ -36,6 +40,7 @@ const initialPreferencesState = {
   emailNotifications: false,
   pushNotifications: false,
   rememberMe: undefined,
+  hapticFeedbackEnabled: true, // Enabled by default
 };
 
 export const createPreferencesSlice: StateCreator<
@@ -51,6 +56,7 @@ export const createPreferencesSlice: StateCreator<
   setEmailNotifications: enabled => set({ emailNotifications: enabled }),
   setNotificationsEnabled: enabled => set({ pushNotifications: enabled }),
   setRememberMe: remember => set({ rememberMe: remember }),
+  setHapticFeedbackEnabled: enabled => set({ hapticFeedbackEnabled: enabled }),
 
   resetPreferences: () => set(initialPreferencesState),
 });

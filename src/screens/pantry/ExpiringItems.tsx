@@ -5,12 +5,12 @@ import {
   FlatList,
   TouchableOpacity,
   RefreshControl,
-  ActivityIndicator,
 } from 'react-native';
 import { Icon } from '#utils';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { SwipeableItem } from '#components';
+import { PantryItemSkeleton } from '#components/base/Skeleton';
 import { usePantryManagement, useDefaultHome, useAppNavigation } from '#hooks';
 import { useGetHomeQuery } from '#generated';
 import { commonStyles } from '#styles';
@@ -89,8 +89,10 @@ export const ExpiringItems: React.FC = () => {
         }
         ListEmptyComponent={
           loading || !items ? (
-            <View style={[commonStyles.center, styles.loadingContainer]}>
-              <ActivityIndicator size="large" color={theme.colors.primary} />
+            <View style={styles.skeletonContainer}>
+              {[1, 2, 3, 4, 5].map(key => (
+                <PantryItemSkeleton key={key} />
+              ))}
             </View>
           ) : (
             <View style={[commonStyles.center, styles.emptyState]}>
@@ -172,6 +174,9 @@ const styles = StyleSheet.create(theme => ({
   },
   loadingContainer: {
     padding: theme.spacing['2xl'],
+  },
+  skeletonContainer: {
+    gap: theme.spacing.sm,
   },
   itemCard: {
     marginBottom: theme.spacing.sm,
