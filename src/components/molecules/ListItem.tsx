@@ -18,7 +18,7 @@ interface ListItemProps {
   leftElement?: React.ReactNode; // Optional left element for image or icon
 }
 
-export const ListItem: React.FC<ListItemProps> = ({
+const ListItemComponent: React.FC<ListItemProps> = ({
   title,
   subtitle,
   onPress,
@@ -75,6 +75,9 @@ export const ListItem: React.FC<ListItemProps> = ({
     </View>
   );
 };
+
+// Memoize the component to prevent unnecessary re-renders
+export const ListItem = React.memo(ListItemComponent);
 
 const styles = StyleSheet.create(theme => ({
   container: {

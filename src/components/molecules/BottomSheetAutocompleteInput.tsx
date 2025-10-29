@@ -195,6 +195,12 @@ export function BottomSheetAutocompleteInput<T>({
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContent}
+          // Performance optimizations
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          removeClippedSubviews={true}
+          initialNumToRender={10}
+          updateCellsBatchingPeriod={50}
           ListHeaderComponent={
             <View style={styles.headerSection}>
               <Text style={styles.autocompleteTitle}>{title}</Text>

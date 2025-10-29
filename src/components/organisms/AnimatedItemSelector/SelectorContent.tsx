@@ -87,6 +87,12 @@ export const SelectorContent = <T extends SelectableItem>({
           showsVerticalScrollIndicator={false}
           bounces={false}
           contentContainerStyle={styles.listContent}
+          // Performance optimizations
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          removeClippedSubviews={true}
+          initialNumToRender={10}
+          updateCellsBatchingPeriod={50}
         />
       </Animated.View>
       <ActionButtons actions={actions} />

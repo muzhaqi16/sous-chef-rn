@@ -20,7 +20,7 @@ interface ItemCardProps {
   leftElement?: React.ReactNode; // Optional left element for image or icon
 }
 
-export const ItemCard: React.FC<ItemCardProps> = ({
+const ItemCardComponent: React.FC<ItemCardProps> = ({
   title,
   subtitle,
   onPress,
@@ -56,6 +56,9 @@ export const ItemCard: React.FC<ItemCardProps> = ({
     <View style={[commonStyles.shadow, styles.container]}>{innerContent}</View>
   );
 };
+
+// Memoize the component to prevent unnecessary re-renders
+export const ItemCard = React.memo(ItemCardComponent);
 
 const styles = StyleSheet.create(theme => ({
   container: {

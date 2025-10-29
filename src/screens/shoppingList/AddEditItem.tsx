@@ -13,7 +13,7 @@ import {
 } from '#generated';
 import {FormModal} from '#components/organisms/FormModal';
 import {Input} from '#components/base/Input';
-import {AutocompleteInput} from '#components/molecules/AutoCompleteInput';
+import {ItemAutocompleteInput} from '#components/molecules/ItemAutocompleteInput';
 import {UnitsAutocompleteInput} from '#components/molecules/UnitsAutocompleteInput';
 import {CategoryAutocompleteInput} from '#components/molecules/CategoryAutocompleteInput';
 import {Counter} from '#components/molecules/Counter';
@@ -241,7 +241,7 @@ export const AddEditItem: React.FC<{
           autoFocus
         />
       ) : (
-        <AutocompleteInput
+        <ItemAutocompleteInput
           label="Item Name"
           value={itemName}
           onChangeText={setItemName}

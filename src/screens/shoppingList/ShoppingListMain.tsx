@@ -21,10 +21,10 @@ import {
   SearchBarAction,
   AnimatedItemSelector,
   SortableShoppingList,
-  EmptyState,
   ListTemplate,
   CollapsiblePurchasedSection,
 } from '#components';
+import { EmptyState } from '#components/base/EmptyState';
 import { getItemImageUrl } from '#utils/imageUtils';
 import { generatePosition } from '#/utils/fractionalIndexing';
 import { GetShoppingListItemsDocument, GetShoppingListItemsQuery } from '#generated';
