@@ -170,6 +170,7 @@ export interface SubscriptionConfig<TData = any> {
  * Return type from SubscriptionService.register()
  * Contains configured handlers ready to spread into Apollo subscription hooks
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export interface SubscriptionHandlers<TData = any> {
   onData: (context: { data: any; client: any }) => void;
   onError: (error: any) => void;

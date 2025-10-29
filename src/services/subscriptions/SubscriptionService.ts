@@ -281,7 +281,7 @@ export class SubscriptionService {
    */
   private shouldProcessUpdate<TData>(
     payload: SubscriptionPayload<TData>,
-    config: SubscriptionConfig<TData>,
+    _config: SubscriptionConfig<TData>,
   ): boolean {
     if (!payload) return false;
 
