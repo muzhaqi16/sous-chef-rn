@@ -74,7 +74,7 @@ export function usePantrySubscriptions(userId?: string) {
   });
 
   usePantryUpdatedSubscription({
-    variables: { id: selectedPantryId || '' },
+    variables: { pantryId: selectedPantryId || '' },
     skip: !selectedPantryId,
     ...metadataHandlers,
   });

@@ -4128,6 +4128,16 @@ export type PantryItemUsageChangedPayload = {
   userId: Scalars['String']['output'];
 };
 
+export type PantryPreviousValues = {
+  __typename?: 'PantryPreviousValues';
+  description: Maybe<Scalars['String']['output']>;
+  location: Maybe<Scalars['String']['output']>;
+  metadata: Maybe<Scalars['JSON']['output']>;
+  name: Maybe<Scalars['String']['output']>;
+  tags: Maybe<Array<Scalars['String']['output']>>;
+  temperature: Maybe<Scalars['String']['output']>;
+};
+
 export type PantryStats = {
   __typename?: 'PantryStats';
   activeItems: Scalars['Int']['output'];
@@ -4139,17 +4149,12 @@ export type PantryStats = {
 
 export type PantryUpdatedPayload = {
   __typename?: 'PantryUpdatedPayload';
-  description: Maybe<Scalars['String']['output']>;
-  home: Home;
-  homeId: Scalars['String']['output'];
-  id: Scalars['ID']['output'];
-  location: Maybe<Scalars['String']['output']>;
-  metadata: Maybe<Scalars['JSON']['output']>;
-  name: Scalars['String']['output'];
-  tags: Array<Scalars['String']['output']>;
-  temperature: Maybe<Scalars['String']['output']>;
-  updatedAt: Scalars['DateTime']['output'];
-  version: Scalars['Int']['output'];
+  mutation: MutationType;
+  node: Maybe<Pantry>;
+  previousValues: Maybe<PantryPreviousValues>;
+  timestamp: Scalars['DateTime']['output'];
+  updatedFields: Maybe<Array<Scalars['String']['output']>>;
+  userId: Scalars['ID']['output'];
 };
 
 export type PantryWasteAlertPayload = {
@@ -5990,7 +5995,7 @@ export type SubscriptionPantryLowStockAlertArgs = {
 };
 
 export type SubscriptionPantryUpdatedArgs = {
-  id: Scalars['ID']['input'];
+  pantryId: Scalars['ID']['input'];
 };
 
 export type SubscriptionPantryWasteAlertArgs = {
@@ -9407,7 +9412,10 @@ export type ItemBySkuQuery = {
     | undefined;
 };
 
-export type GetOnboardingItemsQueryVariables = Exact<{ [key: string]: never }>;
+export type GetOnboardingItemsQueryVariables = Exact<{
+  filters?: InputMaybe<ItemFilters>;
+  sort?: InputMaybe<ItemSortInput>;
+}>;
 
 export type GetOnboardingItemsQuery = {
   __typename?: 'Query';
@@ -9990,24 +9998,46 @@ export type DeletePantryItemMutation = {
 };
 
 export type PantryUpdatedSubscriptionVariables = Exact<{
-  id: Scalars['ID']['input'];
+  pantryId: Scalars['ID']['input'];
 }>;
 
 export type PantryUpdatedSubscription = {
   __typename?: 'Subscription';
   pantryUpdated: {
     __typename?: 'PantryUpdatedPayload';
-    id: string;
-    homeId: string;
-    name: string;
-    description: string | null | undefined;
-    location: string | null | undefined;
-    temperature: string | null | undefined;
-    tags: Array<string>;
-    metadata: any | null | undefined;
-    version: number;
-    updatedAt: string;
-    home: { __typename?: 'Home'; id: string; name: string };
+    mutation: MutationType;
+    updatedFields: Array<string> | null | undefined;
+    userId: string;
+    timestamp: string;
+    node:
+      | {
+          __typename?: 'Pantry';
+          id: string;
+          homeId: string;
+          name: string;
+          description: string | null | undefined;
+          location: string | null | undefined;
+          temperature: string | null | undefined;
+          tags: Array<string>;
+          metadata: any | null | undefined;
+          version: number;
+          updatedAt: string;
+          home: { __typename?: 'Home'; id: string; name: string };
+        }
+      | null
+      | undefined;
+    previousValues:
+      | {
+          __typename?: 'PantryPreviousValues';
+          name: string | null | undefined;
+          description: string | null | undefined;
+          location: string | null | undefined;
+          temperature: string | null | undefined;
+          tags: Array<string> | null | undefined;
+          metadata: any | null | undefined;
+        }
+      | null
+      | undefined;
   };
 };
 
@@ -28728,6 +28758,27 @@ export const GetOnboardingItemsDocument = {
       kind: 'OperationDefinition',
       operation: 'query',
       name: { kind: 'Name', value: 'GetOnboardingItems' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'filters' },
+          },
+          type: {
+            kind: 'NamedType',
+            name: { kind: 'Name', value: 'ItemFilters' },
+          },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: { kind: 'Variable', name: { kind: 'Name', value: 'sort' } },
+          type: {
+            kind: 'NamedType',
+            name: { kind: 'Name', value: 'ItemSortInput' },
+          },
+        },
+      ],
       selectionSet: {
         kind: 'SelectionSet',
         selections: [
@@ -28739,14 +28790,16 @@ export const GetOnboardingItemsDocument = {
                 kind: 'Argument',
                 name: { kind: 'Name', value: 'filters' },
                 value: {
-                  kind: 'ObjectValue',
-                  fields: [
-                    {
-                      kind: 'ObjectField',
-                      name: { kind: 'Name', value: 'showInOnboarding' },
-                      value: { kind: 'BooleanValue', value: true },
-                    },
-                  ],
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'filters' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'sort' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'sort' },
                 },
               },
             ],
@@ -28810,6 +28863,8 @@ export const GetOnboardingItemsDocument = {
  * @example
  * const { data, loading, error } = useGetOnboardingItemsQuery({
  *   variables: {
+ *      filters: // value for 'filters'
+ *      sort: // value for 'sort'
  *   },
  * });
  */
@@ -34672,7 +34727,10 @@ export const PantryUpdatedDocument = {
       variableDefinitions: [
         {
           kind: 'VariableDefinition',
-          variable: { kind: 'Variable', name: { kind: 'Name', value: 'id' } },
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'pantryId' },
+          },
           type: {
             kind: 'NonNullType',
             type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
@@ -34688,37 +34746,107 @@ export const PantryUpdatedDocument = {
             arguments: [
               {
                 kind: 'Argument',
-                name: { kind: 'Name', value: 'id' },
+                name: { kind: 'Name', value: 'pantryId' },
                 value: {
                   kind: 'Variable',
-                  name: { kind: 'Name', value: 'id' },
+                  name: { kind: 'Name', value: 'pantryId' },
                 },
               },
             ],
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'homeId' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'description' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'location' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'temperature' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'tags' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'metadata' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'version' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'mutation' } },
                 {
                   kind: 'Field',
-                  name: { kind: 'Name', value: 'home' },
+                  name: { kind: 'Name', value: 'node' },
                   selectionSet: {
                     kind: 'SelectionSet',
                     selections: [
                       { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'homeId' },
+                      },
                       { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'description' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'location' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'temperature' },
+                      },
+                      { kind: 'Field', name: { kind: 'Name', value: 'tags' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'metadata' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'version' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'updatedAt' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'home' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'id' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'name' },
+                            },
+                          ],
+                        },
+                      },
                     ],
                   },
                 },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'previousValues' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'description' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'location' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'temperature' },
+                      },
+                      { kind: 'Field', name: { kind: 'Name', value: 'tags' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'metadata' },
+                      },
+                    ],
+                  },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'updatedFields' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'userId' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'timestamp' } },
               ],
             },
           },
@@ -34740,7 +34868,7 @@ export const PantryUpdatedDocument = {
  * @example
  * const { data, loading, error } = usePantryUpdatedSubscription({
  *   variables: {
- *      id: // value for 'id'
+ *      pantryId: // value for 'pantryId'
  *   },
  * });
  */

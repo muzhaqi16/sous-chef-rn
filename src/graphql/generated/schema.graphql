@@ -3380,6 +3380,15 @@ type PantryItemUsageChangedPayload {
   userId: String!
 }
 
+type PantryPreviousValues {
+  description: String
+  location: String
+  metadata: JSON
+  name: String
+  tags: [String!]
+  temperature: String
+}
+
 type PantryStats {
   activeItems: Int!
   expiringCount: Int!
@@ -3389,17 +3398,12 @@ type PantryStats {
 }
 
 type PantryUpdatedPayload {
-  description: String
-  home: Home!
-  homeId: String!
-  id: ID!
-  location: String
-  metadata: JSON
-  name: String!
-  tags: [String!]!
-  temperature: String
-  updatedAt: DateTime!
-  version: Int!
+  mutation: MutationType!
+  node: Pantry
+  previousValues: PantryPreviousValues
+  timestamp: DateTime!
+  updatedFields: [String!]
+  userId: ID!
 }
 
 type PantryWasteAlertPayload {
@@ -4656,7 +4660,7 @@ type Subscription {
   pantryItemUsageChanged(pantryId: ID!): PantryItemUsageChangedPayload!
   pantryItemsChanged(pantryId: ID!): PantryItemChangedPayload!
   pantryLowStockAlert(pantryId: ID!): [PantryItem!]!
-  pantryUpdated(id: ID!): PantryUpdatedPayload!
+  pantryUpdated(pantryId: ID!): PantryUpdatedPayload!
   pantryWasteAlert(pantryId: ID!): PantryWasteAlertPayload!
   purchaseCreated(userId: ID): Purchase!
   purchaseDeleted(userId: ID): Purchase!

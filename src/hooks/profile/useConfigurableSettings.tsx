@@ -275,13 +275,7 @@ export const useConfigurableSettings = (profile: any) => {
               { label: '📱 System', value: 'SYSTEM' },
             ];
             baseItem.onSave = (value: 'LIGHT' | 'DARK' | 'SYSTEM') => {
-              // Convert to lowercase for local theme management
-              const localThemeValue = value.toLowerCase() as
-                | 'light'
-                | 'dark'
-                | 'system';
-              setTheme(localThemeValue);
-              // Use uppercase for GraphQL mutation
+              setTheme(value);
               updateUserPreferences({ theme: value });
             };
           }
@@ -290,16 +284,12 @@ export const useConfigurableSettings = (profile: any) => {
         // Keep backward compatibility with old darkMode setting
         case 'darkMode':
           if (config.type === 'switch') {
-            baseItem.value = userThemePreference === 'dark';
+            baseItem.value = userThemePreference === 'DARK';
             baseItem.onPress = () => {
               const newTheme =
-                userThemePreference === 'dark' ? 'light' : 'dark';
+                userThemePreference === 'DARK' ? 'LIGHT' : 'DARK';
               setTheme(newTheme);
-              // Convert to uppercase for GraphQL mutation
-              const graphqlThemeValue = newTheme.toUpperCase() as
-                | 'LIGHT'
-                | 'DARK';
-              updateUserPreferences({ theme: graphqlThemeValue });
+              updateUserPreferences({ theme: newTheme });
             };
           }
           break;

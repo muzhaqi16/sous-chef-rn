@@ -344,7 +344,7 @@ const styles = StyleSheet.create(theme => ({
   imageContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.lg,
     padding: theme.spacing.lg,
     marginBottom: theme.spacing.md,

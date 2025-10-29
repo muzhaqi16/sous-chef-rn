@@ -46,7 +46,7 @@ const styles = StyleSheet.create(theme => ({
   },
   statCard: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.surface,
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',

@@ -260,14 +260,14 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
   },
   errorCard: {
-    backgroundColor: '#ffebee',
+    backgroundColor: theme.colors.errorLight,
     padding: theme.spacing.md,
     borderRadius: theme.radii.md,
     marginHorizontal: theme.spacing.md,
     marginBottom: theme.spacing.md,
   },
   errorText: {
-    color: '#c62828',
+    color: theme.colors.error,
     fontSize: theme.fonts.size.sm,
   },
   emptyIcon: {

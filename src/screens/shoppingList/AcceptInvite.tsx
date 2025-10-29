@@ -360,7 +360,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.primary,
   },
   acceptButtonText: {
-    color: 'white',
+    color: theme.colors.white,
     fontSize: 16,
     fontWeight: '600',
   },

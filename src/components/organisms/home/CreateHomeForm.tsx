@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 
 interface CreateHomeFormProps {
   isVisible: boolean;
@@ -25,6 +25,8 @@ export const CreateHomeForm: React.FC<CreateHomeFormProps> = ({
   onCancel,
   isCreating,
 }) => {
+  const { theme } = useUnistyles();
+
   if (!isVisible) return null;
 
   return (
@@ -47,7 +49,7 @@ export const CreateHomeForm: React.FC<CreateHomeFormProps> = ({
           onPress={onSubmit}
           disabled={isCreating}>
           {isCreating ? (
-            <ActivityIndicator size="small" color="white" />
+            <ActivityIndicator size="small" color={theme.colors.white} />
           ) : (
             <Text style={styles.createButtonText}>Create</Text>
           )}
@@ -89,7 +91,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.primary,
   },
   createButtonText: {
-    color: 'white',
+    color: theme.colors.white,
     fontWeight: '600',
   },
   input: {
@@ -100,6 +102,6 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: 8,
     fontSize: 16,
     color: theme.colors.textPrimary,
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.surface,
   },
 }));

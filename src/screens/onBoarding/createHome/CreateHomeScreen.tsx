@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { View, Text, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { formatRole } from '#utils/formatters';
 import { ApolloCache } from '@apollo/client';
 
@@ -37,6 +37,7 @@ import { getCreateHomeSchema } from '#/utils';
 import { createPantryForHome, showPantryCreationError } from './helpers';
 
 export const CreateHomeScreen = () => {
+  const { theme } = useUnistyles();
   const { navigateToNextStep, setUserNavigationState, skipToStep } =
     useOnboardingNavigation();
 
@@ -361,7 +362,7 @@ export const CreateHomeScreen = () => {
                     onPress={() => handleAcceptInvite(invite.token)}
                     disabled={accepting}>
                     {accepting ? (
-                      <ActivityIndicator size="small" color="#fff" />
+                      <ActivityIndicator size="small" color={theme.colors.white} />
                     ) : (
                       <Text style={styles.inviteAcceptButtonText}>Accept</Text>
                     )}
@@ -547,7 +548,7 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.md,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    shadowColor: '#000',
+    shadowColor: theme.colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -641,7 +642,7 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: theme.fonts.weight.semibold,
   },
   skipButton: {
-    backgroundColor: 'transparent',
+    backgroundColor: theme.colors.transparent,
     padding: theme.spacing.md,
     alignItems: 'center',
   },

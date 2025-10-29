@@ -185,7 +185,6 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
         },
       });
 
-      Alert.alert('Success', 'Collaborator role updated successfully');
       bottomSheetRef.current?.close();
       onSuccess?.();
     } catch (error: any) {

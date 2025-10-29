@@ -140,22 +140,36 @@ mutation DeletePantryItem($id: ID!) {
 # SUBSCRIPTIONS
 # ============================================
 
-subscription PantryUpdated($id: ID!) {
-  pantryUpdated(id: $id) {
-    id
-    homeId
-    name
-    description
-    location
-    temperature
-    tags
-    metadata
-    version
-    updatedAt
-    home {
+subscription PantryUpdated($pantryId: ID!) {
+  pantryUpdated(pantryId: $pantryId) {
+    mutation
+    node {
       id
+      homeId
       name
+      description
+      location
+      temperature
+      tags
+      metadata
+      version
+      updatedAt
+      home {
+        id
+        name
+      }
     }
+    previousValues {
+      name
+      description
+      location
+      temperature
+      tags
+      metadata
+    }
+    updatedFields
+    userId
+    timestamp
   }
 }
 

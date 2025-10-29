@@ -79,6 +79,8 @@ export const colors = {
     successBg: '#E8F5E9',
     warning: '#FF9800',
     warningBg: '#FFF3E0',
+    info: '#2196F3',
+    infoBg: '#E3F2FD',
   },
 
   // Overlay variations - for modals, backdrops

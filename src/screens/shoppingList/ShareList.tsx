@@ -308,7 +308,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 12,
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.surface,
     marginBottom: 8,
     borderRadius: 8,
   },
@@ -330,7 +330,7 @@ const styles = StyleSheet.create(theme => ({
     marginRight: 12,
   },
   avatarText: {
-    color: 'white',
+    color: theme.colors.white,
     fontSize: 16,
     fontWeight: '600',
   },

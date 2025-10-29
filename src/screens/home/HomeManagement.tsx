@@ -304,7 +304,7 @@ export const HomeManagement: React.FC = () => {
                     disabled={!joinCode.trim() || joiningByCode}
                   >
                     {joiningByCode ? (
-                      <ActivityIndicator size="small" color="#fff" />
+                      <ActivityIndicator size="small" color={theme.colors.white} />
                     ) : (
                       <Text style={styles.submitButtonText}>Join Home</Text>
                     )}
@@ -419,7 +419,7 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
   },
   modeButtonTextActive: {
-    color: '#fff',
+    color: theme.colors.white,
   },
   joinForm: {
     gap: 16,
@@ -501,7 +501,7 @@ const styles = StyleSheet.create(theme => ({
   submitButtonText: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#fff',
+    color: theme.colors.white,
   },
   buttonDisabled: {
     opacity: 0.5,

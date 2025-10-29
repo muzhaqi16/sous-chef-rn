@@ -13,7 +13,6 @@
  */
 
 import {
-  useNotificationReceivedSubscription,
   useUrgentNotificationReceivedSubscription,
   useNotificationUpdatedSubscription,
 } from '#generated';

@@ -46,7 +46,7 @@ export interface PantryItemUpdate extends Partial<PantryItemInput> {
  * Uses Apollo Client with subscription deduplication and version-based conflict resolution
  */
 export function usePantryManagement(pantryId: string | undefined) {
-  const { isLoggedOut, user } = useAuth();
+  const { isLoggedOut } = useAuth();
   const { handleApolloError } = useErrorHandler();
   const shouldSkip = !pantryId || isLoggedOut;
 

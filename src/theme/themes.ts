@@ -58,9 +58,13 @@ export const lightTheme = {
 
     // Semantic
     success: colors.success,
+    successLight: colors.validation.successBg,
     warning: colors.warning,
+    warningLight: colors.validation.warningBg,
     error: colors.error,
+    errorLight: colors.validation.errorBg,
     info: colors.info,
+    infoLight: colors.validation.infoBg,
     danger: colors.error,
 
     // Components specific
@@ -129,9 +133,13 @@ export const darkTheme = {
 
     // Semantic
     success: colors.success,
+    successLight: colors.success + '20',  // 20% opacity on dark bg
     warning: colors.warning,
+    warningLight: colors.warning + '20',
     error: colors.error,
+    errorLight: colors.error + '20',
     info: colors.info,
+    infoLight: colors.info + '20',
     danger: colors.error,
 
     // Components specific

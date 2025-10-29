@@ -144,11 +144,11 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.primary,
   },
   currentUserText: {
-    color: 'white',
+    color: theme.colors.white,
     fontWeight: '700',
   },
   inviteChip: {
-    backgroundColor: 'transparent',
+    backgroundColor: theme.colors.transparent,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 16,

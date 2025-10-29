@@ -289,14 +289,14 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: theme.colors.successLight,
     marginTop: theme.spacing.md,
     borderRadius: theme.radii.md,
   },
   statusBadgeText: {
     fontSize: theme.fonts.size.md,
     fontWeight: '600',
-    color: '#4CAF50',
+    color: theme.colors.success,
     marginLeft: theme.spacing.xs,
   },
   detailRow: {

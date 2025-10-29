@@ -110,7 +110,7 @@ export const HomeCard: React.FC<HomeCardProps> = ({
           <Icon
             name="chevron-forward"
             size={20}
-            color="#999"
+            color={theme.colors.textSecondary}
             library="Ionicons"
           />
         )}

@@ -227,7 +227,11 @@ export const ShoppingListMain: React.FC = () => {
       loading: false,
       emptyMessage: 'No shopping lists available',
       // Custom render for list items with avatar and role badge
-      renderCustomItem: (list: any, isSelected: boolean, onPress: () => void) => (
+      renderCustomItem: (
+        list: any,
+        isSelected: boolean,
+        onPress: () => void,
+      ) => (
         <TouchableOpacity
           style={[
             styles.selectorItemContainer,
@@ -241,12 +245,20 @@ export const ShoppingListMain: React.FC = () => {
             <Text style={styles.selectorItemSubtext}>
               {list._isOwner
                 ? 'You own this list'
-                : `Shared by ${list.ownerships?.[0]?.user?.profile?.displayName || list.ownerships?.[0]?.user?.email || 'someone'}`
-              }
+                : `Shared by ${
+                    list.ownerships?.[0]?.user?.profile?.displayName ||
+                    list.ownerships?.[0]?.user?.email ||
+                    'someone'
+                  }`}
             </Text>
           </View>
           {isSelected && (
-            <Icon name="check" size={20} color={colors.primary} library="MaterialIcons" />
+            <Icon
+              name="check"
+              size={20}
+              color={colors.primary}
+              library="MaterialIcons"
+            />
           )}
         </TouchableOpacity>
       ),
@@ -286,7 +298,14 @@ export const ShoppingListMain: React.FC = () => {
           : []),
       ],
     }),
-    [lists, currentListId, user?.id, setSelectedShoppingListId, navigate, colors],
+    [
+      lists,
+      currentListId,
+      user?.id,
+      setSelectedShoppingListId,
+      navigate,
+      colors,
+    ],
   );
 
   const handleSortOrderUpdate = useCallback(
@@ -592,12 +611,12 @@ export const ShoppingListMain: React.FC = () => {
     const rightActions: SearchBarAction[] = [
       {
         icon: 'refresh',
-        color: '#fff',
+        color: colors.white,
         onPress: handleRefresh,
       },
       {
         icon: 'list',
-        color: '#fff',
+        color: colors.white,
         onPress: () => selectorRef.current?.open(),
       },
     ];
@@ -614,7 +633,7 @@ export const ShoppingListMain: React.FC = () => {
         icon: 'add',
         onPress: handleAddItem,
         color: primaryColor, // ← Use extracted variable
-        backgroundColor: 'white',
+        backgroundColor: colors.surface,
       });
     }
 
@@ -630,6 +649,7 @@ export const ShoppingListMain: React.FC = () => {
     sortableItems.length,
     primaryColor, // ← Include extracted variable in deps
     primaryLightColor, // ← Include extracted variable in deps
+    colors,
   ]);
 
   const handleOverlayOpen = useCallback(() => {
@@ -756,7 +776,8 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.border,
   },
   selectorItemSelected: {
-    backgroundColor: (theme.colors as any).primaryLight || theme.colors.primary + '10',
+    backgroundColor:
+      (theme.colors as any).primaryLight || theme.colors.primary + '10',
     borderColor: theme.colors.primary,
   },
   selectorItemInfo: {

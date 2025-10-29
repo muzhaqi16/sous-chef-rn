@@ -60,7 +60,7 @@ export const PantryMain: React.FC = () => {
     // Try to find selected pantry in current home data
     if (selectedPantryId && currentHomeData?.home?.pantries) {
       result = currentHomeData.home.pantries.find(
-        (p: any) => p.id === selectedPantryId
+        (p: any) => p.id === selectedPantryId,
       );
       if (result) {
         return result;
@@ -225,7 +225,7 @@ export const PantryMain: React.FC = () => {
             <View
               style={[
                 commonStyles.listItemImageContainer,
-                { backgroundColor: '#fff' },
+                { backgroundColor: theme.colors.surface },
               ]}
             >
               <Image
@@ -239,7 +239,7 @@ export const PantryMain: React.FC = () => {
     });
 
     return transformedItems;
-  }, [pantryItems]);
+  }, [pantryItems, theme]);
 
   const handleAddItem = useCallback(() => {
     if (!selectedHomeId) {
@@ -288,7 +288,7 @@ export const PantryMain: React.FC = () => {
           icon: 'schedule',
           onPress: () => navigate('ExpiringItems'),
           badge: stats.expired,
-          color: '#FF6B6B',
+          color: theme.colors.error,
         });
       }
 
@@ -298,7 +298,7 @@ export const PantryMain: React.FC = () => {
           icon: 'warning',
           onPress: () => navigate('LowStockItems'),
           badge: stats.lowStock,
-          color: '#FFB84D',
+          color: theme.colors.warning,
         });
       }
 
@@ -329,11 +329,11 @@ export const PantryMain: React.FC = () => {
   }, [
     navigate,
     selectedHomeId,
-    theme.colors.primary,
     stats.expired,
     stats.lowStock,
     items.length,
     pantryItems,
+    theme,
   ]);
 
   // Search bar actions
@@ -345,16 +345,21 @@ export const PantryMain: React.FC = () => {
           icon: 'add',
           onPress: handleAddItem,
           color: theme.colors.primary,
-          backgroundColor: '#fff',
+          backgroundColor: theme.colors.surface,
         },
         {
           icon: 'list',
-          color: '#fff',
+          color: theme.colors.white,
           onPress: () => selectorRef.current?.open(),
         },
       ] as SearchBarAction[],
     }),
-    [handleAddItem, theme.colors.primary],
+    [
+      handleAddItem,
+      theme.colors.primary,
+      theme.colors.surface,
+      theme.colors.white,
+    ],
   );
 
   // Determine loading state - only show loading if we have no data at all

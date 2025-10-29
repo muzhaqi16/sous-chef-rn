@@ -1,17 +1,15 @@
 import React from 'react';
-import {View, Text, ScrollView, TouchableOpacity} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
-import {Icon} from '#utils';
-import {useAppNavigation} from '#/hooks';
-import {NotificationActionHandler} from '#components/notifications/NotificationActionHandler';
+import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { Icon } from '#utils';
+import { NotificationActionHandler } from '#components/notifications/NotificationActionHandler';
 
-import {format} from 'date-fns';
-import {NotificationStackParamList} from '#navigation/stacks/NotificationStack';
+import { format } from 'date-fns';
+import { NotificationStackParamList } from '#navigation/stacks/NotificationStack';
 
 export const NotificationDetailScreen: React.FC<{
-  route: {params: NotificationStackParamList['NotificationDetail']};
-}> = ({route}) => {
-  const navigation = useAppNavigation();
+  route: { params: NotificationStackParamList['NotificationDetail'] };
+}> = ({ route }) => {
   const notification = route.params?.notification;
 
   if (!notification) {
@@ -29,7 +27,7 @@ export const NotificationDetailScreen: React.FC<{
 
   return (
     <NotificationActionHandler>
-      {({handleNotificationAction}) => (
+      {({ handleNotificationAction }) => (
         <ScrollView style={styles.container}>
           <View style={styles.header}>
             <View style={styles.iconContainer}>
@@ -45,7 +43,9 @@ export const NotificationDetailScreen: React.FC<{
 
           <View style={styles.content}>
             <Text style={styles.message}>
-              {payload.message || notification.message || 'No message available'}
+              {payload.message ||
+                notification.message ||
+                'No message available'}
             </Text>
 
             {payload.details && (
@@ -58,7 +58,8 @@ export const NotificationDetailScreen: React.FC<{
             {notification.requiresAction && notification.actionType && (
               <TouchableOpacity
                 style={styles.actionButton}
-                onPress={() => handleNotificationAction(notification)}>
+                onPress={() => handleNotificationAction(notification)}
+              >
                 <Text style={styles.actionButtonText}>
                   {notification.actionType === 'ACCEPT_HOME_INVITE'
                     ? 'Accept Home Invitation'

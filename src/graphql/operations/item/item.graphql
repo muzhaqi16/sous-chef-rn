@@ -81,8 +81,11 @@ query ItemBySku($sku: String!, $storeId: String) {
   }
 }
 
-query GetOnboardingItems {
-  items(filters: { showInOnboarding: true }) {
+query GetOnboardingItems(
+  $filters: ItemFilters
+  $sort: ItemSortInput
+) {
+  items(filters: $filters, sort: $sort) {
     items {
       id
       name

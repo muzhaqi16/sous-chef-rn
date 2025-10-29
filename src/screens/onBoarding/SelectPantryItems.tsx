@@ -10,6 +10,8 @@ import {
   StorageState,
   ItemCondition,
   AcquisitionMethod,
+  ItemSortField,
+  SortOrder,
 } from '#generated';
 import { useStore } from '#store';
 import { Button } from '#components';
@@ -26,6 +28,15 @@ export const SelectPantryItems = () => {
     loading,
     error: queryError,
   } = useGetOnboardingItemsQuery({
+    variables: {
+      filters: {
+        showInOnboarding: true,
+      },
+      sort: {
+        field: ItemSortField.Name,
+        order: SortOrder.Asc,
+      },
+    },
     fetchPolicy: 'cache-and-network',
   });
   const [addItemToPantry] = useCreatePantryItemMutation({

@@ -4122,6 +4122,16 @@ export type PantryItemUsageChangedPayload = {
   userId: Scalars['String']['output'];
 };
 
+export type PantryPreviousValues = {
+  __typename?: 'PantryPreviousValues';
+  description?: Maybe<Scalars['String']['output']>;
+  location?: Maybe<Scalars['String']['output']>;
+  metadata?: Maybe<Scalars['JSON']['output']>;
+  name?: Maybe<Scalars['String']['output']>;
+  tags?: Maybe<Array<Scalars['String']['output']>>;
+  temperature?: Maybe<Scalars['String']['output']>;
+};
+
 export type PantryStats = {
   __typename?: 'PantryStats';
   activeItems: Scalars['Int']['output'];
@@ -4133,17 +4143,12 @@ export type PantryStats = {
 
 export type PantryUpdatedPayload = {
   __typename?: 'PantryUpdatedPayload';
-  description?: Maybe<Scalars['String']['output']>;
-  home: Home;
-  homeId: Scalars['String']['output'];
-  id: Scalars['ID']['output'];
-  location?: Maybe<Scalars['String']['output']>;
-  metadata?: Maybe<Scalars['JSON']['output']>;
-  name: Scalars['String']['output'];
-  tags: Array<Scalars['String']['output']>;
-  temperature?: Maybe<Scalars['String']['output']>;
-  updatedAt: Scalars['DateTime']['output'];
-  version: Scalars['Int']['output'];
+  mutation: MutationType;
+  node?: Maybe<Pantry>;
+  previousValues?: Maybe<PantryPreviousValues>;
+  timestamp: Scalars['DateTime']['output'];
+  updatedFields?: Maybe<Array<Scalars['String']['output']>>;
+  userId: Scalars['ID']['output'];
 };
 
 export type PantryWasteAlertPayload = {
@@ -5984,7 +5989,7 @@ export type SubscriptionPantryLowStockAlertArgs = {
 };
 
 export type SubscriptionPantryUpdatedArgs = {
-  id: Scalars['ID']['input'];
+  pantryId: Scalars['ID']['input'];
 };
 
 export type SubscriptionPantryWasteAlertArgs = {
@@ -12496,7 +12501,10 @@ export type ItemBySkuQuery = {
     | undefined;
 };
 
-export type GetOnboardingItemsQueryVariables = Exact<{ [key: string]: never }>;
+export type GetOnboardingItemsQueryVariables = Exact<{
+  filters?: InputMaybe<ItemFilters>;
+  sort?: InputMaybe<ItemSortInput>;
+}>;
 
 export type GetOnboardingItemsQuery = {
   __typename?: 'Query';
@@ -14131,24 +14139,46 @@ export type DeletePantryItemMutation = {
 };
 
 export type PantryUpdatedSubscriptionVariables = Exact<{
-  id: Scalars['ID']['input'];
+  pantryId: Scalars['ID']['input'];
 }>;
 
 export type PantryUpdatedSubscription = {
   __typename?: 'Subscription';
   pantryUpdated: {
     __typename?: 'PantryUpdatedPayload';
-    id: string;
-    homeId: string;
-    name: string;
-    description?: string | null | undefined;
-    location?: string | null | undefined;
-    temperature?: string | null | undefined;
-    tags: Array<string>;
-    metadata?: any | null | undefined;
-    version: number;
-    updatedAt: string;
-    home: { __typename?: 'Home'; id: string; name: string };
+    mutation: MutationType;
+    updatedFields?: Array<string> | null | undefined;
+    userId: string;
+    timestamp: string;
+    node?:
+      | {
+          __typename?: 'Pantry';
+          id: string;
+          homeId: string;
+          name: string;
+          description?: string | null | undefined;
+          location?: string | null | undefined;
+          temperature?: string | null | undefined;
+          tags: Array<string>;
+          metadata?: any | null | undefined;
+          version: number;
+          updatedAt: string;
+          home: { __typename?: 'Home'; id: string; name: string };
+        }
+      | null
+      | undefined;
+    previousValues?:
+      | {
+          __typename?: 'PantryPreviousValues';
+          name?: string | null | undefined;
+          description?: string | null | undefined;
+          location?: string | null | undefined;
+          temperature?: string | null | undefined;
+          tags?: Array<string> | null | undefined;
+          metadata?: any | null | undefined;
+        }
+      | null
+      | undefined;
   };
 };
 

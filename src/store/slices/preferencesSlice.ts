@@ -3,8 +3,8 @@ import {RootState} from '../index';
 
 export interface PreferencesState {
   // Theme
-  theme: 'light' | 'dark' | 'system';
-  setTheme: (theme: 'light' | 'dark' | 'system') => void;
+  theme: 'LIGHT' | 'DARK' | 'SYSTEM';
+  setTheme: (theme: 'LIGHT' | 'DARK' | 'SYSTEM') => void;
 
   // Language
   language?: string;
@@ -25,7 +25,7 @@ export interface PreferencesState {
 }
 
 const initialPreferencesState = {
-  theme: 'system' as const,
+  theme: 'SYSTEM' as const,
   language: undefined,
   emailNotifications: false,
   pushNotifications: false,
