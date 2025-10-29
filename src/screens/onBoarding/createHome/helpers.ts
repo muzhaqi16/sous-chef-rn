@@ -50,7 +50,6 @@ export const createPantryForHome = async (
     });
 
     if (result.data?.createPantry) {
-      console.log('Pantry created:', result.data.createPantry.id);
       setSelectedPantryId(result.data.createPantry.id);
       return true;
     }

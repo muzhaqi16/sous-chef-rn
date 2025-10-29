@@ -115,7 +115,6 @@ export const SearchResultsScreen: React.FC<{
   };
 
   const handleBackPress = () => {
-    console.log('Back pressed, source:', source);
     // Navigate back to the appropriate screen based on source
     if (source === 'pantry') {
       navigateToNested('Home', 'Pantry');

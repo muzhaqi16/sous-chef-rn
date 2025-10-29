@@ -56,9 +56,6 @@ export class SubscriptionService {
 
   private constructor() {
     // Private constructor for singleton pattern
-    if (__DEV__) {
-      console.log('🔌 SubscriptionService initialized');
-    }
   }
 
   /**
@@ -125,16 +122,6 @@ export class SubscriptionService {
   ): (context: { data: any; client: any }) => void {
     return ({ data, client }) => {
       try {
-        // DETAILED DEBUGGING - Log raw subscription data received
-        if (__DEV__) {
-          console.log('📡 [RAW SUBSCRIPTION] Data received:', {
-            subscriptionName: config.subscriptionName,
-            hasData: !!data,
-            dataKeys: data ? Object.keys(data) : [],
-            rawData: JSON.stringify(data, null, 2),
-          });
-        }
-
         // Extract payload from subscription data
         const subscriptionData = data?.data;
         if (!subscriptionData) {
@@ -166,20 +153,6 @@ export class SubscriptionService {
 
         // Step 3: Log subscription update
         const item: any = payload.item || payload.node;
-
-        // DETAILED DEBUGGING - Log full payload structure
-        if (__DEV__) {
-          console.log('🔍 [DETAILED DEBUG] Full subscription payload:', {
-            subscriptionName: config.subscriptionName,
-            mutation: payload.mutation,
-            userId: payload.userId,
-            timestamp: payload.timestamp,
-            itemId: item?.id,
-            itemName: item?.itemName || item?.name,
-            fullPayload: JSON.stringify(payload, null, 2),
-            fullItem: JSON.stringify(item, null, 2),
-          });
-        }
 
         this.log(config, LogLevel.INFO, 'Subscription update received', {
           mutation: payload.mutation,
@@ -337,17 +310,6 @@ export class SubscriptionService {
       return;
     }
 
-    // DETAILED DEBUGGING - Log cache update attempt
-    if (__DEV__) {
-      console.log('🔧 [CACHE UPDATE] Attempting cache update:', {
-        subscriptionName: config.subscriptionName,
-        mutation,
-        itemId,
-        cacheFieldName: config.cacheFieldName,
-        entityType: config.entityType,
-      });
-    }
-
     try {
       switch (mutation) {
         case MutationType.CREATE:
@@ -376,12 +338,6 @@ export class SubscriptionService {
             },
           });
 
-          if (__DEV__) {
-            console.log('✅ [CACHE UPDATE] Successfully added item to cache', {
-              itemId,
-              cacheFieldName: config.cacheFieldName,
-            });
-          }
           this.log(config, LogLevel.DEBUG, 'Added item to cache', itemId);
           break;
 
@@ -393,11 +349,6 @@ export class SubscriptionService {
         case 'COMPLETED':
           // Apollo automatic normalization handles this
           // The item data in the subscription will be merged into the cache automatically
-          if (__DEV__) {
-            console.log('✅ [CACHE UPDATE] Update handled by Apollo normalization', {
-              itemId,
-            });
-          }
           this.log(config, LogLevel.DEBUG, 'Update handled by Apollo normalization', itemId);
           break;
 
@@ -423,13 +374,6 @@ export class SubscriptionService {
           if (cacheId) {
             cache.evict({ id: cacheId });
             cache.gc(); // Garbage collect orphaned references
-            if (__DEV__) {
-              console.log('✅ [CACHE UPDATE] Successfully removed and evicted item from cache', {
-                itemId,
-                cacheId,
-                cacheFieldName: config.cacheFieldName,
-              });
-            }
             this.log(config, LogLevel.DEBUG, 'Removed and evicted item from cache', itemId);
           }
           break;
@@ -545,10 +489,6 @@ export class SubscriptionService {
       totalErrors: 0,
       dedupedUpdates: 0,
     };
-
-    if (__DEV__) {
-      console.log('🧹 SubscriptionService cleaned up');
-    }
   }
 
   /**

@@ -130,7 +130,6 @@ export const createResetManager = (
     await resetManager.resetStore('LOGOUT');
 
     // Reset navigation state to auth after logout
-    console.log('🚪 ResetManager logout: Resetting navigation state to auth');
     set({ navigationState: 'auth' });
   },
 
@@ -171,8 +170,6 @@ export const createResetManager = (
 // Simplified auth storage cleanup
 const clearAuthFromStorage = async () => {
   try {
-    console.log('Clearing auth tokens from storage');
-
     // Note: We intentionally do NOT clear keychain credentials during logout
     // This allows users to use biometric login after logging out
     // Keychain credentials are only cleared during full reset or explicit user action

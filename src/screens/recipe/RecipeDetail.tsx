@@ -317,19 +317,6 @@ export const RecipeDetail: React.FC = () => {
 
         const data = result.data?.createShoppingListItemsFromRecipe;
         if (data) {
-          // Log skipped items for debugging
-          if (data.skippedItems && data.skippedItems.length > 0) {
-            console.log('Skipped items:', data.skippedItems);
-            data.skippedItems.forEach((item: any) => {
-              console.log(`  - ${item.name} (${item.quantity})`);
-            });
-          }
-
-          // Log summary
-          console.log(
-            `Shopping list update: Added ${data.totalAdded}, Updated ${data.totalUpdated}, Skipped ${data.totalSkipped}`,
-          );
-
           // Mark all ingredients as added for visual feedback (checkmarks)
           const allIngredientIds = backendRecipe.ingredients.map(ing => ing.id);
           setAddedIngredients(prev => {

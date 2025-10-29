@@ -45,10 +45,8 @@ export const createNetworkSlice: StateCreator<
       // Track transition timestamps
       if (!wasOnline && status.isOnline) {
         state.lastOnlineTime = Date.now();
-        console.log('📡 Network: Online');
       } else if (wasOnline && !status.isOnline) {
         state.lastOfflineTime = Date.now();
-        console.log('📴 Network: Offline');
       }
     });
   },
@@ -60,7 +58,6 @@ export const createNetworkSlice: StateCreator<
         draft.isOnline = true;
         draft.lastOnlineTime = Date.now();
       });
-      console.log('📡 Network: Back online');
     }
   },
 
@@ -71,7 +68,6 @@ export const createNetworkSlice: StateCreator<
         draft.isOnline = false;
         draft.lastOfflineTime = Date.now();
       });
-      console.log('📴 Network: Went offline');
     }
   },
 });

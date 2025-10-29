@@ -26,7 +26,6 @@ import {
   CollapsiblePurchasedSection,
 } from '#components';
 import { getItemImageUrl } from '#utils/imageUtils';
-import { generatePosition } from '#utils/fractionalIndexing';
 import { Icon } from '#utils';
 import type {
   SelectorConfig,
@@ -324,31 +323,6 @@ export const ShoppingListMain: React.FC = () => {
           return;
         }
 
-        // Calculate optimistic sortOrder using fractional indexing
-        const afterItem = afterItemId
-          ? items.find(item => item.id === afterItemId)
-          : null;
-        const beforeItem = beforeItemId
-          ? items.find(item => item.id === beforeItemId)
-          : null;
-        const afterSortOrder = afterItem?.sortOrder ?? null;
-        const beforeSortOrder = beforeItem?.sortOrder ?? null;
-
-        // Generate new fractional index between the two items
-        const optimisticSortOrder = generatePosition(
-          afterSortOrder,
-          beforeSortOrder,
-        );
-
-        console.log('Optimistic sortOrder calculation:', {
-          itemId,
-          afterItemId,
-          afterSortOrder,
-          beforeItemId,
-          beforeSortOrder,
-          optimisticSortOrder,
-        });
-
         // Let Apollo handle everything - no optimistic response, no persistence
         await moveItem({
           variables: {
@@ -358,12 +332,6 @@ export const ShoppingListMain: React.FC = () => {
               beforeItemId: beforeItemId ?? undefined,
             },
           },
-        });
-
-        console.log('✓ Item moved successfully:', {
-          itemId,
-          afterItemId,
-          beforeItemId,
         });
       } catch (error) {
         console.error('Failed to move item:', error);

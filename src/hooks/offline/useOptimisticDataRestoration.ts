@@ -47,20 +47,11 @@ export function useOptimisticDataRestoration(
       return;
     }
 
-    console.log(
-      `📦 Restoring ${allUpdates.size} ${entityType} entities with optimistic updates`,
-    );
-
     // Apply all updates to Apollo cache using cache.batch() for better performance
     // This broadcasts changes once instead of after each modify
-    let totalFieldsRestored = 0;
-
     client.cache.batch({
       update: (cache) => {
         allUpdates.forEach((fields, entityId) => {
-          const fieldCount = Object.keys(fields).length;
-          totalFieldsRestored += fieldCount;
-
           // Build field update functions
           const fieldUpdates = Object.keys(fields).reduce((acc, field) => {
             acc[field] = () => fields[field];
@@ -78,10 +69,6 @@ export function useOptimisticDataRestoration(
         });
       }
     });
-
-    console.log(
-      `✓ Restored ${totalFieldsRestored} optimistic fields across ${allUpdates.size} ${entityType} entities`,
-    );
   }, [user?.id, entityType, enabled]);
 }
 
@@ -108,11 +95,6 @@ export function useOptimisticDataRestorationMultiple(
   useEffect(() => {
     if (!user?.id || !enabled || entityTypes.length === 0) return;
 
-    console.log(`📦 Restoring optimistic data for ${entityTypes.length} entity types`);
-
-    let totalEntities = 0;
-    let totalFields = 0;
-
     // Batch all cache modifications for better performance
     client.cache.batch({
       update: (cache) => {
@@ -122,12 +104,8 @@ export function useOptimisticDataRestorationMultiple(
 
           if (allUpdates.size === 0) return;
 
-          totalEntities += allUpdates.size;
-
           // Apply updates to cache
           allUpdates.forEach((fields, entityId) => {
-            totalFields += Object.keys(fields).length;
-
             const fieldUpdates = Object.keys(fields).reduce((acc, field) => {
               acc[field] = () => fields[field];
               return acc;
@@ -144,11 +122,5 @@ export function useOptimisticDataRestorationMultiple(
         });
       }
     });
-
-    if (totalFields > 0) {
-      console.log(
-        `✓ Restored ${totalFields} fields across ${totalEntities} entities of ${entityTypes.length} types`,
-      );
-    }
   }, [user?.id, entityTypes, enabled]);
 }

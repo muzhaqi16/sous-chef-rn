@@ -108,8 +108,6 @@ export const createAuthSlice: StateCreator<
         scheduleTokenRefresh(accessToken, async () => {
           await proactiveTokenRefresh();
         });
-      } else {
-        console.log('[AuthSlice] Skipping token refresh schedule - device is offline. Will refresh when back online.');
       }
     }
   },

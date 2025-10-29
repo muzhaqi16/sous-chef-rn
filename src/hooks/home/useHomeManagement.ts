@@ -94,7 +94,6 @@ export function useHomeManagement() {
     ) {
       hasInitializedDefaultHome.current = true; // Mark as done
       const firstHome = homes[0];
-      console.log('🏠 Auto-selecting first home as default:', firstHome.id);
       setSelectedHomeId(firstHome.id);
 
       // Sync this choice to the backend
@@ -174,9 +173,6 @@ export function useHomeManagement() {
 
           // Only set as default if this is truly the first/only home
           if (freshHomes.length === 1 && freshHomes[0].id === newHome.id) {
-            console.log(
-              '🏠 Setting newly created home as default (first home)',
-            );
             setSelectedHomeId(newHome.id);
             setDefaultHomeMutation({
               variables: { homeId: newHome.id },
@@ -278,10 +274,6 @@ export function useHomeManagement() {
             if (remainingHomes.length > 0) {
               // Set first remaining home as default
               const newDefaultHome = remainingHomes[0];
-              console.log(
-                '🏠 Setting new default home after delete:',
-                newDefaultHome.id,
-              );
               setSelectedHomeId(newDefaultHome.id);
               setDefaultHomeMutation({
                 variables: { homeId: newDefaultHome.id },
@@ -296,7 +288,6 @@ export function useHomeManagement() {
               });
             } else {
               // No homes left, clear the selection
-              console.log('🏠 No homes remaining, clearing default');
               setSelectedHomeId(null);
             }
           }
@@ -372,7 +363,6 @@ export function useHomeManagement() {
           // Set as default if this is the first home
           const freshHomes = homes || [];
           if (freshHomes.length === 0) {
-            console.log('🏠 Setting newly joined home as default (first home)');
             setSelectedHomeId(homeId);
             setDefaultHomeMutation({
               variables: { homeId },
@@ -488,7 +478,6 @@ export function useHomeManagement() {
   const setDefaultHome = async (homeId: string) => {
     // Prevent redundant calls if already set as default (check both local and remote)
     if (homeId === selectedHomeId && homeId === remoteDefaultHomeId) {
-      console.log('🏠 Home is already set as default, skipping');
       return true;
     }
 
@@ -513,7 +502,6 @@ export function useHomeManagement() {
       });
 
       if (result.data) {
-        console.log('🏠 Default home set successfully:', homeId);
         // No need to manually update local state - useDefaultHome's sync effect handles it
         return true;
       }

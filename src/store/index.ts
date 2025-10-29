@@ -78,18 +78,12 @@ export const useStore = create<RootState>()(
           // Create navigation state manager
           const navigationStateManager: NavigationStateManagerState = {
             initiateLogout: () => {
-              console.log(
-                '🔄 Store: Logout initiated - setting global logout state',
-              );
               set(state => {
                 state.isLoggingOut = true;
               });
               return true; // Success
             },
             completeLogout: () => {
-              console.log(
-                '🔄 Store: Logout completed - clearing global logout state',
-              );
               set(state => {
                 state.isLoggingOut = false;
               });
@@ -144,7 +138,6 @@ export const useStore = create<RootState>()(
             if (error) {
               console.log('An error happened during hydration', error);
             } else {
-              console.log('🏪 Store hydrated successfully');
               // Mark store as hydrated
               state?.setHydrated(true);
             }

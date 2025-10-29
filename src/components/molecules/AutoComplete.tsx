@@ -1,7 +1,7 @@
 import React, { useMemo, useEffect } from 'react';
-import { Text, TouchableOpacity, View, Image } from 'react-native';
+import { Text, TouchableOpacity, View, Image, ActivityIndicator } from 'react-native';
 import { BottomSheetFlatList, BottomSheetView } from '@gorhom/bottom-sheet';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAutocompleteItemsLazyQuery, ItemSuggestion } from '#generated';
 import { getItemImageUrl } from '#utils/imageUtils';
 
@@ -14,6 +14,7 @@ const Autocomplete: React.FC<AutocompleteProps> = ({
   searchTerm,
   onSelectItem,
 }) => {
+  const { theme } = useUnistyles();
   const [fetchItems, { data, loading, error }] = useAutocompleteItemsLazyQuery({
     fetchPolicy: 'cache-and-network',
   });
@@ -72,7 +73,14 @@ const Autocomplete: React.FC<AutocompleteProps> = ({
   };
 
   const renderHeader = () => {
-    if (loading) {
+    // Don't show header during initial load (when we have no suggestions yet)
+    // The loading indicator will handle that state
+    if (loading && suggestions.length === 0) {
+      return null;
+    }
+
+    // Show "Searching..." only when we have previous results and are loading more
+    if (loading && suggestions.length > 0) {
       return (
         <View style={styles.headerContainer}>
           <Text style={styles.headerText}>Searching...</Text>
@@ -80,6 +88,7 @@ const Autocomplete: React.FC<AutocompleteProps> = ({
       );
     }
 
+    // Show count when we have results
     if (totalCount > 0) {
       return (
         <View style={styles.headerContainer}>
@@ -93,21 +102,26 @@ const Autocomplete: React.FC<AutocompleteProps> = ({
     return null;
   };
 
-  const renderEmpty = () => (
-    <BottomSheetView style={styles.messageContainer}>
-      <Text style={styles.emptyText}>No items found</Text>
-      <Text style={styles.emptySubtext}>
-        Try a different search term or continue typing to add "{searchTerm}"
-      </Text>
+  const renderLoading = () => (
+    <BottomSheetView style={styles.loadingContainer}>
+      <ActivityIndicator size="large" color={theme.colors.primary} />
+      <Text style={styles.loadingText}>Searching...</Text>
     </BottomSheetView>
   );
 
-  const renderFooter = () => {
-    if (!loading) return null;
+  const renderEmpty = () => {
+    // Only show empty state when NOT loading
+    if (loading) {
+      return null;
+    }
+
     return (
-      <View style={styles.footerContainer}>
-        <Text style={styles.loadingText}>Loading more...</Text>
-      </View>
+      <BottomSheetView style={styles.messageContainer}>
+        <Text style={styles.emptyText}>No items found</Text>
+        <Text style={styles.emptySubtext}>
+          Try a different search term or continue typing to add "{searchTerm}"
+        </Text>
+      </BottomSheetView>
     );
   };
 
@@ -119,8 +133,7 @@ const Autocomplete: React.FC<AutocompleteProps> = ({
       keyExtractor={(item: ItemSuggestion) => item.id}
       renderItem={renderItem}
       ListHeaderComponent={renderHeader}
-      ListEmptyComponent={renderEmpty}
-      ListFooterComponent={renderFooter}
+      ListEmptyComponent={loading ? renderLoading : renderEmpty}
       ItemSeparatorComponent={() => <View style={styles.separator} />}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
@@ -213,12 +226,15 @@ const styles = StyleSheet.create(theme => ({
     fontSize: 14,
     color: theme.colors.textSecondary,
   },
-  footerContainer: {
-    padding: 16,
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
+    paddingVertical: theme.spacing.xl * 2,
   },
   loadingText: {
-    fontSize: 14,
+    marginTop: theme.spacing.md,
+    fontSize: theme.fonts.size.md,
     color: theme.colors.textSecondary,
   },
 }));

@@ -39,7 +39,6 @@ export const useDefaultHome = () => {
   // This ensures backend's default home is auto-selected on new device login
   useEffect(() => {
     if (remoteDefaultHomeId && remoteDefaultHomeId !== selectedHomeId) {
-      console.log('🏠 Syncing remote default home to local store:', remoteDefaultHomeId);
       setSelectedHomeId(remoteDefaultHomeId);
     }
   }, [remoteDefaultHomeId, selectedHomeId, setSelectedHomeId]);

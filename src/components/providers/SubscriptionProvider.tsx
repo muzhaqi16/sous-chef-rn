@@ -64,17 +64,6 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
     }
   }, [isAuthenticated]);
 
-  // Log subscription statistics in development
-  useEffect(() => {
-    if (__DEV__ && isAuthenticated) {
-      const stats = subscriptionService.getStats();
-      console.log('📊 SubscriptionProvider initialized:', {
-        totalSubscriptions: stats.totalSubscriptions,
-        activeSubscriptions: subscriptionService.getActiveSubscriptions(),
-      });
-    }
-  }, [isAuthenticated]);
-
   // Return children immediately - subscriptions run in background
   return <>{children}</>;
 };
