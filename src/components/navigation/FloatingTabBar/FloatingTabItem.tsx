@@ -29,11 +29,6 @@ export const FloatingTabItem: React.FC<FloatingTabItemProps> = ({
       stiffness: 150,
     });
 
-    // Icon color opacity animation
-    const iconOpacity = withSpring(isActiveTab ? 1 : 0.6, {
-      duration: 200,
-    });
-
     // Subtle bounce animation when pressed
     const translateY = interpolate(
       scale,
@@ -46,7 +41,6 @@ export const FloatingTabItem: React.FC<FloatingTabItemProps> = ({
         { scale },
         { translateY },
       ],
-      opacity: iconOpacity,
     };
   }, [index]);
 
@@ -77,10 +71,7 @@ const styles = StyleSheet.create(_theme => ({
     justifyContent: 'center',
     alignItems: 'center',
     height: '100%',
-    zIndex: 1,
     minWidth: 40, // Ensure minimum width for touch target
-    backgroundColor: 'rgba(255, 255, 255, 0.1)', // Temporary: see tab boundaries
-    marginHorizontal: 2, // Small gap between tabs for visibility
-    borderRadius: 16,
+    // NO z-index or elevation needed - parent layer controls stacking
   },
 }));

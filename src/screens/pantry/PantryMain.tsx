@@ -350,7 +350,10 @@ export const PantryMain: React.FC = () => {
         {
           icon: 'list',
           color: theme.colors.white,
-          onPress: () => selectorRef.current?.open(),
+          onPress: () => {
+            setOverlayOpen(true);
+            selectorRef.current?.open();
+          },
         },
       ] as SearchBarAction[],
     }),
@@ -359,6 +362,7 @@ export const PantryMain: React.FC = () => {
       theme.colors.primary,
       theme.colors.surface,
       theme.colors.white,
+      setOverlayOpen,
     ],
   );
 
