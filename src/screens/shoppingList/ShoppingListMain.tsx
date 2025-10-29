@@ -26,6 +26,8 @@ import {
   CollapsiblePurchasedSection,
 } from '#components';
 import { getItemImageUrl } from '#utils/imageUtils';
+import { generatePosition } from '#/utils/fractionalIndexing';
+import { GetShoppingListItemsDocument, GetShoppingListItemsQuery } from '#generated';
 import { Icon } from '#utils';
 import type {
   SelectorConfig,
@@ -147,6 +149,75 @@ export const ShoppingListMain: React.FC = () => {
   const openSwipeableRef = useRef<any>(null);
   const [moveItem] = useMoveShoppingListItemMutation({
     errorPolicy: 'all',
+    // Optimistic response for instant UI feedback
+    optimisticResponse: variables => {
+      // Find the moved item
+      const movedItem = items.find(item => item.id === variables.input.itemId);
+      if (!movedItem) {
+        return { __typename: 'Mutation', moveShoppingListItem: null as any };
+      }
+
+      // Calculate optimistic sortOrder using fractional indexing
+      const afterItem = variables.input.afterItemId
+        ? items.find(item => item.id === variables.input.afterItemId)
+        : null;
+      const beforeItem = variables.input.beforeItemId
+        ? items.find(item => item.id === variables.input.beforeItemId)
+        : null;
+
+      // Generate new position between neighbors
+      const optimisticSortOrder = generatePosition(
+        afterItem?.sortOrder ?? null,
+        beforeItem?.sortOrder ?? null
+      );
+
+      // Return updated item with new sortOrder
+      return {
+        __typename: 'Mutation' as const,
+        moveShoppingListItem: {
+          ...movedItem,
+          sortOrder: optimisticSortOrder,
+          updatedAt: new Date().toISOString(),
+          __typename: 'ShoppingListItem' as const,
+        } as any,
+      };
+    },
+    // Update cache to reflect new order
+    update(cache, { data }) {
+      if (!data?.moveShoppingListItem || !currentListId) return;
+
+      try {
+        // Read the current shopping list items query
+        const queryResult = cache.readQuery<GetShoppingListItemsQuery>({
+          query: GetShoppingListItemsDocument,
+          variables: { shoppingListId: currentListId },
+        });
+
+        if (!queryResult?.shoppingListItems) return;
+
+        // Create new array with updated item
+        const updatedItems = queryResult.shoppingListItems.map(item =>
+          item.id === data.moveShoppingListItem.id
+            ? { ...item, sortOrder: data.moveShoppingListItem.sortOrder }
+            : item
+        );
+
+        // Sort by sortOrder (server returns them sorted, so we should too)
+        const sortedItems = [...updatedItems].sort((a, b) =>
+          a.sortOrder.localeCompare(b.sortOrder)
+        );
+
+        // Write back to cache
+        cache.writeQuery({
+          query: GetShoppingListItemsDocument,
+          variables: { shoppingListId: currentListId },
+          data: { shoppingListItems: sortedItems },
+        });
+      } catch (error) {
+        console.warn('Cache update failed for moveItem:', error);
+        // Don't throw - let mutation succeed even if cache update fails
+      }
+    },
   });
   const [updateQuantity] = useUpdateShoppingListItemQuantityMutation({
     errorPolicy: 'all',
@@ -323,7 +394,7 @@ export const ShoppingListMain: React.FC = () => {
           return;
         }
 
-        // Let Apollo handle everything - no optimistic response, no persistence
+        // Execute mutation with optimistic response and cache update
         await moveItem({
           variables: {
             input: {
@@ -585,7 +656,10 @@ export const ShoppingListMain: React.FC = () => {
       {
         icon: 'list',
         color: colors.white,
-        onPress: () => selectorRef.current?.open(),
+        onPress: () => {
+          setOverlayOpen(true);
+          selectorRef.current?.open();
+        },
       },
     ];
 
@@ -618,6 +692,7 @@ export const ShoppingListMain: React.FC = () => {
     primaryColor, // ← Include extracted variable in deps
     primaryLightColor, // ← Include extracted variable in deps
     colors,
+    setOverlayOpen,
   ]);
 
   const handleOverlayOpen = useCallback(() => {
