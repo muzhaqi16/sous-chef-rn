@@ -32,6 +32,7 @@ import {
 } from './slices/navigationSlice';
 import { createTelemetrySlice, TelemetryState } from './slices/telemetrySlice';
 import { createNetworkSlice, NetworkState } from './slices/networkSlice';
+import { createPerformanceSlice, PerformanceState } from './slices/performanceSlice';
 // import {logger} from './logger';
 import { zustandStorage, STORAGE_KEY } from '#/storage/mmkv';
 
@@ -62,6 +63,7 @@ export type RootState = AuthState &
   UIState &
   TelemetryState &
   NetworkState &
+  PerformanceState &
   ResetManagerState &
   NavigationStateManagerState;
 
@@ -101,6 +103,7 @@ export const useStore = create<RootState>()(
             ...createUISlice(set, get, store),
             ...createTelemetrySlice(set, get, store),
             ...createNetworkSlice(set, get, store),
+            ...createPerformanceSlice(set, get, store),
             // Add reset manager methods to the store
             ...resetManager,
             // Add navigation state manager methods
@@ -163,6 +166,10 @@ export const useStore = create<RootState>()(
             isLoading,
             isError,
             isFetching,
+            // Exclude performance state (volatile runtime data)
+            componentMetrics,
+            screenMetrics,
+            memorySnapshots,
             ...persistedState
           } = state;
 

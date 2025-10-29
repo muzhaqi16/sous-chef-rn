@@ -5,3 +5,4 @@ export {DeleteAccountScreen} from './DeleteAccountScreen';
 export {DietaryProfileScreen} from './DietaryProfileScreen';
 export {PersonalInformationScreen} from './PersonalInformationScreen';
 export {AppSettingsScreen} from './AppSettingsScreen';
+export {PerformanceDashboard} from './PerformanceDashboard';

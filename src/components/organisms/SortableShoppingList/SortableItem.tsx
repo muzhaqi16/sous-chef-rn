@@ -1,9 +1,10 @@
 import React, { useCallback } from 'react';
-import { View, Vibration, Platform } from 'react-native';
+import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { SwipeableItem } from '#/components/molecules/SwipeableItem';
 import { ListItem } from '#/components/molecules/ListItem';
 import { commonStyles } from '#/styles';
+import { HapticService } from '#services/haptic';
 
 interface SimpleDraggableItemProps {
   item: {
@@ -41,11 +42,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
   const handleLongPress = useCallback(() => {
     if (drag) {
       // Provide haptic feedback when drag activates
-      if (Platform.OS === 'ios') {
-        Vibration.vibrate(100);
-      } else {
-        Vibration.vibrate(100);
-      }
+      HapticService.longPress();
       drag();
     }
   }, [drag]);

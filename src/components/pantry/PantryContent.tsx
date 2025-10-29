@@ -1,0 +1,54 @@
+import React from 'react';
+import { ScrollView } from 'react-native-gesture-handler';
+import { ItemList } from '#components/organisms/ItemList';
+import { PantryItemSkeleton } from '#components/base/Skeleton';
+
+interface PantryContentProps {
+  items: any[];
+  loading?: boolean;
+  onItemPress: (id: string) => void;
+  onItemEdit?: (id: string) => void;
+  onItemDelete?: (id: string) => void;
+  onRefresh?: () => Promise<void>;
+  emptyState?: any;
+}
+
+/**
+ * Wrapper component that shows skeleton screens during loading
+ *
+ * Handles two states:
+ * 1. Loading with no items - shows skeleton screens
+ * 2. Has items or not loading - shows ItemList with items/empty state
+ */
+export const PantryContent: React.FC<PantryContentProps> = ({
+  items,
+  loading,
+  onItemPress,
+  onItemEdit,
+  onItemDelete,
+  onRefresh,
+  emptyState,
+}) => {
+  // Show skeleton screens during initial load
+  if (loading && items.length === 0) {
+    return (
+      <ScrollView contentContainerStyle={{ padding: 16, gap: 8 }}>
+        {[1, 2, 3, 4, 5].map(key => (
+          <PantryItemSkeleton key={key} />
+        ))}
+      </ScrollView>
+    );
+  }
+
+  // Otherwise show the normal ItemList
+  return (
+    <ItemList
+      items={items}
+      onItemPress={onItemPress}
+      onItemEdit={onItemEdit}
+      onItemDelete={onItemDelete}
+      onRefresh={onRefresh}
+      emptyState={emptyState}
+    />
+  );
+};

@@ -1,0 +1,203 @@
+/**
+ * BaseScreen
+ *
+ * Base class for all screen object models.
+ * Provides common functionality for interacting with screens in E2E tests.
+ */
+
+import { element, by, waitFor, device } from 'detox';
+
+export abstract class BaseScreen {
+  /**
+   * The test ID of the screen container.
+   * Must be implemented by subclasses.
+   */
+  protected abstract screenID: string;
+
+  /**
+   * Get the screen container element
+   */
+  get screen() {
+    return element(by.id(this.screenID));
+  }
+
+  /**
+   * Wait for the screen to be visible
+   */
+  async waitForScreen(timeout: number = 10000) {
+    await waitFor(this.screen).toBeVisible().withTimeout(timeout);
+  }
+
+  /**
+   * Assert that the screen is visible
+   */
+  async expectScreenVisible() {
+    await expect(this.screen).toBeVisible();
+  }
+
+  /**
+   * Find element by test ID
+   */
+  protected getElementById(testID: string) {
+    return element(by.id(testID));
+  }
+
+  /**
+   * Find element by text
+   */
+  protected getElementByText(text: string) {
+    return element(by.text(text));
+  }
+
+  /**
+   * Find element by label (iOS) or contentDescription (Android)
+   */
+  protected getElementByLabel(label: string) {
+    return element(by.label(label));
+  }
+
+  /**
+   * Tap element by test ID
+   */
+  async tapByID(testID: string) {
+    await this.getElementById(testID).tap();
+  }
+
+  /**
+   * Tap element by text
+   */
+  async tapByText(text: string) {
+    await this.getElementByText(text).tap();
+  }
+
+  /**
+   * Type text into field by test ID
+   */
+  async typeIntoField(testID: string, text: string) {
+    await this.getElementById(testID).typeText(text);
+  }
+
+  /**
+   * Clear field and type text
+   */
+  async clearAndType(testID: string, text: string) {
+    const field = this.getElementById(testID);
+    await field.clearText();
+    await field.typeText(text);
+  }
+
+  /**
+   * Scroll to element within the screen
+   */
+  async scrollTo(testID: string, direction: 'top' | 'bottom' = 'bottom') {
+    await this.getElementById(testID).scrollTo(direction);
+  }
+
+  /**
+   * Swipe element
+   */
+  async swipe(
+    testID: string,
+    direction: 'left' | 'right' | 'up' | 'down',
+    speed: 'fast' | 'slow' = 'fast',
+  ) {
+    await this.getElementById(testID).swipe(direction, speed);
+  }
+
+  /**
+   * Wait for element to be visible
+   */
+  async waitForElement(testID: string, timeout: number = 5000) {
+    await waitFor(this.getElementById(testID))
+      .toBeVisible()
+      .withTimeout(timeout);
+  }
+
+  /**
+   * Wait for element to disappear
+   */
+  async waitForElementToDisappear(testID: string, timeout: number = 5000) {
+    await waitFor(this.getElementById(testID))
+      .not.toBeVisible()
+      .withTimeout(timeout);
+  }
+
+  /**
+   * Expect element to be visible
+   */
+  async expectVisible(testID: string) {
+    await expect(this.getElementById(testID)).toBeVisible();
+  }
+
+  /**
+   * Expect element to not be visible
+   */
+  async expectNotVisible(testID: string) {
+    await expect(this.getElementById(testID)).not.toBeVisible();
+  }
+
+  /**
+   * Expect element to exist (may not be visible)
+   */
+  async expectExists(testID: string) {
+    await expect(this.getElementById(testID)).toExist();
+  }
+
+  /**
+   * Expect text to be visible
+   */
+  async expectTextVisible(text: string) {
+    await expect(this.getElementByText(text)).toBeVisible();
+  }
+
+  /**
+   * Expect element to have text
+   */
+  async expectElementText(testID: string, text: string) {
+    await expect(this.getElementById(testID)).toHaveText(text);
+  }
+
+  /**
+   * Dismiss keyboard
+   */
+  async dismissKeyboard() {
+    if (device.getPlatform() === 'ios') {
+      try {
+        await element(by.id('keyboard-dismiss-button')).tap();
+      } catch {
+        // Fallback: tap outside keyboard area
+        await this.screen.tap();
+      }
+    } else {
+      await device.pressBack();
+    }
+  }
+
+  /**
+   * Go back using native back button
+   */
+  async goBack() {
+    if (device.getPlatform() === 'ios') {
+      await this.tapByID('back-button');
+    } else {
+      await device.pressBack();
+    }
+  }
+
+  /**
+   * Take screenshot with screen name
+   */
+  async takeScreenshot(suffix?: string) {
+    const screenshotName = suffix
+      ? `${this.screenID}-${suffix}`
+      : this.screenID;
+    await device.takeScreenshot(screenshotName);
+  }
+
+  /**
+   * Reload React Native
+   */
+  async reloadApp() {
+    await device.reloadReactNative();
+  }
+}

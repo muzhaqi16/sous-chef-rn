@@ -12,7 +12,6 @@ import {
   StatusBar,
   Dimensions,
   Platform,
-  Vibration,
 } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
@@ -29,6 +28,7 @@ import { useBarcodeScanner } from '#hooks';
 import BarcodeMask from '#components/organisms/BarcodeMask';
 import { Button } from '#components/base/Button';
 import { IconButton } from '#components/atoms/IconButton';
+import { HapticService } from '#services/haptic';
 
 const { height: screenHeight } = Dimensions.get('window');
 
@@ -128,9 +128,8 @@ export const BarcodeScannerScreen: React.FC<{
         setScannedBarcode(value);
         setScanning(false);
 
-        if (Platform.OS === 'ios') {
-          Vibration.vibrate(100);
-        }
+        // Haptic feedback on successful barcode scan
+        HapticService.success();
 
         navigate('SearchResults', {
           barcode: value,
