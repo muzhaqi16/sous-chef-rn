@@ -5,7 +5,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { Alert, Image, View } from 'react-native';
+import { Alert, Image, View, Text, TouchableOpacity } from 'react-native';
 import { ScrollView, RefreshControl } from 'react-native-gesture-handler';
 import { useAppNavigation } from '#hooks';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -27,6 +27,7 @@ import {
 } from '#components';
 import { getItemImageUrl } from '#utils/imageUtils';
 import { generatePosition } from '#utils/fractionalIndexing';
+import { Icon } from '#utils';
 import type {
   SelectorConfig,
   ItemSelectorRef,
@@ -41,6 +42,9 @@ import {
   handleVersionConflict,
   getVersionConflictMessage,
 } from '#/utils/errors/versionConflict';
+import { useAuth } from '#/hooks/auth/useAuth';
+import { isShoppingListOwner } from '#utils/ownershipHelpers';
+import { ShoppingListAvatar } from '#components/atoms';
 
 // Wrapper component that conditionally renders EmptyState or SortableShoppingList
 const ShoppingListContent: React.FC<{
@@ -136,6 +140,7 @@ export const ShoppingListMain: React.FC = () => {
   const { primary: primaryColor, primaryLight: primaryLightColor } = colors;
   // Step 2: Use the extracted variables INSIDE useMemo
   const { selectedShoppingListId, setSelectedShoppingListId } = useStore();
+  const { user } = useAuth();
   const selectorRef = useRef<ItemSelectorRef>(null);
   const { setScannerProps, setOverlayOpen } = useScanner();
   const client = useApolloClient();
@@ -201,11 +206,18 @@ export const ShoppingListMain: React.FC = () => {
 
   // Let Apollo handle all data management - no manual optimization needed
 
-  // Create selector configuration for shopping lists
+  // Create selector configuration for shopping lists with owner info
   const listConfig: SelectorConfig<any> = useMemo(
     () => ({
       title: 'Select Shopping List',
-      data: lists,
+      data: lists.map(list => {
+        const isOwner = isShoppingListOwner(list, user?.id);
+        return {
+          ...list,
+          // Add computed properties for display
+          _isOwner: isOwner,
+        };
+      }),
       selectedId: currentListId,
       onSelect: (id: string) => {
         setSelectedShoppingListId(id);
@@ -214,6 +226,30 @@ export const ShoppingListMain: React.FC = () => {
       displayProperty: 'name',
       loading: false,
       emptyMessage: 'No shopping lists available',
+      // Custom render for list items with avatar and role badge
+      renderCustomItem: (list: any, isSelected: boolean, onPress: () => void) => (
+        <TouchableOpacity
+          style={[
+            styles.selectorItemContainer,
+            isSelected && styles.selectorItemSelected,
+          ]}
+          onPress={onPress}
+        >
+          <ShoppingListAvatar list={list} size={40} />
+          <View style={styles.selectorItemInfo}>
+            <Text style={styles.selectorItemName}>{list.name}</Text>
+            <Text style={styles.selectorItemSubtext}>
+              {list._isOwner
+                ? 'You own this list'
+                : `Shared by ${list.ownerships?.[0]?.user?.profile?.displayName || list.ownerships?.[0]?.user?.email || 'someone'}`
+              }
+            </Text>
+          </View>
+          {isSelected && (
+            <Icon name="check" size={20} color={colors.primary} library="MaterialIcons" />
+          )}
+        </TouchableOpacity>
+      ),
       actions: [
         {
           icon: 'add',
@@ -250,7 +286,7 @@ export const ShoppingListMain: React.FC = () => {
           : []),
       ],
     }),
-    [lists, currentListId, setSelectedShoppingListId, navigate],
+    [lists, currentListId, user?.id, setSelectedShoppingListId, navigate, colors],
   );
 
   const handleSortOrderUpdate = useCallback(
@@ -706,5 +742,34 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  selectorItemContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    gap: theme.spacing.md,
+    borderRadius: theme.radii.md,
+    marginBottom: theme.spacing.xs,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  selectorItemSelected: {
+    backgroundColor: (theme.colors as any).primaryLight || theme.colors.primary + '10',
+    borderColor: theme.colors.primary,
+  },
+  selectorItemInfo: {
+    flex: 1,
+    gap: theme.spacing.xs,
+  },
+  selectorItemName: {
+    fontSize: theme.fonts.size.md,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textPrimary,
+  },
+  selectorItemSubtext: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textSecondary,
   },
 }));

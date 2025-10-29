@@ -73,10 +73,10 @@ export const HomeCard: React.FC<HomeCardProps> = ({
       >
         <View style={styles.homeInfo}>
           <Text style={styles.homeName}>{home.name}</Text>
+
           <Text style={styles.homeDetails}>
-            {home.members?.length || 0} members
-            {'  '}
-            {home.pantries?.length || 0} pantries
+            {home.members?.length || 0} members • {home.pantries?.length || 0}{' '}
+            pantries
           </Text>
         </View>
         <View style={styles.badgeContainer}>
@@ -142,9 +142,11 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 12,
+    gap: theme.spacing.md,
   },
   homeInfo: {
     flex: 1,
+    gap: theme.spacing.xs,
   },
   homeName: {
     fontSize: theme.fonts.size.lg,

@@ -18,6 +18,8 @@ import { AppErrorBoundary } from '#/components/providers/ErrorBoundary';
 import { useNetworkStatus } from '#/hooks/useNetworkStatus';
 import { queueManager } from '#/apollo/offlineQueue';
 import { NotificationProvider } from '#/components/notifications/NotificationProvider';
+import { DataProvider } from '#/components/providers/DataProvider';
+import { SubscriptionProvider } from '#/components/providers/SubscriptionProvider';
 
 // Enable native screens for better performance
 enableScreens();
@@ -87,8 +89,10 @@ const App = () => {
     <AppErrorBoundary>
       <GestureHandlerRootView style={styles.container}>
         <ApolloProvider client={client}>
-          <SafeAreaProvider>
-            <StatusBar
+          <DataProvider>
+            <SubscriptionProvider>
+              <SafeAreaProvider>
+                <StatusBar
               //  translucent on android
               {...Platform.select({
                 android: {
@@ -112,6 +116,8 @@ const App = () => {
               </ToastProvider>
             </SafeAreaView>
           </SafeAreaProvider>
+            </SubscriptionProvider>
+          </DataProvider>
         </ApolloProvider>
       </GestureHandlerRootView>
     </AppErrorBoundary>

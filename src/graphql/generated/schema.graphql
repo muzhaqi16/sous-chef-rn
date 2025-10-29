@@ -885,7 +885,7 @@ input CreatePantryItemInput {
   costPerUnit: Float
   customCategory: String
   expiresAt: String
-  initialQuantity: Float!
+  initialQuantity: Float
   isAutoReorder: Boolean
   itemBrand: String
   itemCategory: String
@@ -2836,6 +2836,11 @@ type Mutation {
   untrustMultipleDevices(deviceIds: [ID!]!): [Device!]!
   updateBrand(input: UpdateBrandInput): Brand!
   updateCategory(id: ID!, input: UpdateCategoryInput!): Category!
+  updateCollaboratorPermissions(
+    collaboratorId: ID!
+    permissions: UpdateCollaboratorPermissionsInput!
+    shoppingListId: ID!
+  ): ShoppingListCollaborator!
   updateCollaboratorRole(
     collaboratorId: ID!
     role: CollaboratorRole!
@@ -4811,6 +4816,17 @@ input UpdateCategoryInput {
   slug: String
   sortOrder: Int
   visibility: Visibility
+}
+
+input UpdateCollaboratorPermissionsInput {
+  canAddItems: Boolean
+  canEdit: Boolean
+  canEditItems: Boolean
+  canExport: Boolean
+  canInviteOthers: Boolean
+  canMarkPurchased: Boolean
+  canRemoveItems: Boolean
+  canViewHistory: Boolean
 }
 
 input UpdateCookingLogInput {

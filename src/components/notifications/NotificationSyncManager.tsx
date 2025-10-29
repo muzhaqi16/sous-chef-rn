@@ -45,11 +45,15 @@ export const useNotificationSync = ({ userId }: UseNotificationSyncProps) => {
             sentAt: node.sentAt,
             readAt: node.readAt,
             isRead: Boolean(node.readAt), // Proper read state sync
-            requiresAction: node.type === 'HOME_INVITATION',
+            requiresAction:
+              node.type === 'HOME_INVITATION' ||
+              node.type === 'COLLABORATION_INVITE',
             actionType:
               node.type === 'HOME_INVITATION'
                 ? 'ACCEPT_HOME_INVITE'
-                : undefined,
+                : node.type === 'COLLABORATION_INVITE'
+                  ? 'ACCEPT_SHOPPING_LIST_INVITE'
+                  : undefined,
             source: 'server' as const, // Mark as server notifications
           };
         },
@@ -77,6 +81,8 @@ export const useNotificationSync = ({ userId }: UseNotificationSyncProps) => {
     switch (type) {
       case 'HOME_INVITATION':
         return NotificationCategory.MEMBERSHIP;
+      case 'COLLABORATION_INVITE':
+        return NotificationCategory.COLLABORATION;
       case 'EXPIRY_REMINDER':
         return NotificationCategory.PANTRY;
       case 'LOW_STOCK':
@@ -90,6 +96,8 @@ export const useNotificationSync = ({ userId }: UseNotificationSyncProps) => {
     switch (type) {
       case 'HOME_INVITATION':
         return 'Home Invitation';
+      case 'COLLABORATION_INVITE':
+        return 'Shopping List Invitation';
       case 'EXPIRY_REMINDER':
         return 'Items Expiring Soon';
       case 'LOW_STOCK':
@@ -103,6 +111,8 @@ export const useNotificationSync = ({ userId }: UseNotificationSyncProps) => {
     switch (type) {
       case 'HOME_INVITATION':
         return `You've been invited to join ${payload?.homeName || 'a home'}`;
+      case 'COLLABORATION_INVITE':
+        return `${payload?.inviterName || 'Someone'} invited you to collaborate on "${payload?.listName || 'a shopping list'}"`;
       case 'EXPIRY_REMINDER':
         return `${payload?.itemCount || 'Some'} items are expiring soon`;
       case 'LOW_STOCK':

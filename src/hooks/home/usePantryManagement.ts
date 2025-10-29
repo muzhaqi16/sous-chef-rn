@@ -3,7 +3,6 @@ import { Alert } from 'react-native';
 import { generateId } from '#/utils/generateId';
 import {
   useGetPantryItemsQuery,
-  usePantryItemsChangedSubscription,
   useCreatePantryItemMutation,
   useUpdatePantryItemMutation,
   useDeletePantryItemMutation,
@@ -12,7 +11,6 @@ import {
 import { useSearchableList } from '../useSearchableList';
 import { useAuth } from '#hooks/auth/useAuth';
 import { useErrorHandler } from '#/utils/errorHandling';
-import { useSubscriptionDeduplication } from '#/hooks/utils/useSubscriptionDeduplication';
 import { usePreservedArrayData } from '#/hooks/apollo';
 import {
   enhanceWithVersion,
@@ -52,50 +50,20 @@ export function usePantryManagement(pantryId: string | undefined) {
   const { handleApolloError } = useErrorHandler();
   const shouldSkip = !pantryId || isLoggedOut;
 
-  // Subscription deduplication filter
-  const shouldProcessUpdate = useSubscriptionDeduplication(user?.id);
-
   // Single source of truth: Apollo cache
   const { data, loading, error, refetch } = useGetPantryItemsQuery({
     variables: { pantryId: pantryId ?? '' },
     skip: shouldSkip,
-    fetchPolicy: 'cache-first', // Optimized: use cache first, then network
+    fetchPolicy: 'cache-and-network', // Show cache immediately, then fetch fresh data with complete images
     notifyOnNetworkStatusChange: true,
     errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
   });
 
-  // Real-time updates via subscription with deduplication
-  usePantryItemsChangedSubscription({
-    variables: { pantryId: pantryId ?? '' },
-    skip: shouldSkip,
-    onData: ({ data }) => {
-      const payload = data.data?.pantryItemsChanged;
-
-      // Filter out self-echo and duplicate updates
-      if (!shouldProcessUpdate(payload)) {
-        return;
-      }
-
-      // Apollo Client automatically updates cache via normalization
-      // No manual cache update needed - the subscription data is merged automatically
-      console.log('✅ Processing pantry subscription update from other user:', {
-        userId: payload?.userId,
-        mutation: payload?.mutation,
-        itemId: payload?.item?.id,
-      });
-    },
-    onError: error => {
-      const { message } = handleApolloError(error, {
-        operation: 'Pantry Subscription',
-      });
-      console.warn('❌ Pantry subscription error:', {
-        pantryId,
-        error: message,
-        timestamp: new Date().toISOString(),
-      });
-      // Don't refetch on subscription errors - let the query handle reconnection
-    },
-  });
+  // Real-time updates via subscription are now handled by SubscriptionProvider
+  // This provides automatic deduplication, error handling, and consistent logging
+  // across all subscriptions. The PantryItemsChanged subscription now receives
+  // the full PantryItemFragment (after GraphQL fix) and Apollo automatically
+  // updates the cache via normalization.
 
   // Preserve pantry items even when query fails to prevent cascade failures
   const pantryItems = usePreservedArrayData(data?.pantryItems);

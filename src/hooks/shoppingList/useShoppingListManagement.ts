@@ -6,7 +6,6 @@ import {
   useUpdateShoppingListItemMutation,
   useRemoveItemFromShoppingListMutation,
   useToggleShoppingListItemPurchasedMutation,
-  useShoppingListItemsChangedSubscription,
 } from '#generated';
 import { useSearchableList } from '../useSearchableList';
 import { useAuth } from '#hooks/auth/useAuth';
@@ -17,8 +16,8 @@ import {
   getVersionConflictMessage,
 } from '#/utils/errors/versionConflict';
 import {
-  createOptimisticEntity,
   enhanceWithVersion,
+  createOptimisticEntity,
 } from '#/apollo/utils/createOptimisticResponse';
 import { generateId } from '#/utils/generateId';
 
@@ -55,12 +54,9 @@ export function useShoppingListManagement(listId: string | undefined) {
 
   const { data, loading, error, refetch } = queryResult;
 
-  // Real-time updates via subscription - Apollo handles cache updates automatically
-  useShoppingListItemsChangedSubscription({
-    variables: { listId: listId ?? '' },
-    skip: shouldSkip,
-    // No onData, no onError - let Apollo do its thing
-  });
+  // Real-time updates via subscription are now handled by SubscriptionProvider
+  // This eliminates duplicate subscription code and provides consistent behavior
+  // across all subscriptions (deduplication, error handling, logging)
 
   // Preserve shopping list items even when query fails to prevent cascade failures
   const items = usePreservedArrayData(data?.shoppingListItems);
@@ -92,11 +88,11 @@ export function useShoppingListManagement(listId: string | undefined) {
     };
   }, [items]);
 
-  // Mutations - Apollo handles cache updates automatically via optimistic responses
+  // Mutations - Apollo handles cache updates automatically
   const [addItemMutation] = useAddItemToShoppingListMutation({
     errorPolicy: 'all',
-    // Optimistic response for instant UI feedback (especially important offline)
-    optimisticResponse: (variables: any) => {
+    // Minimal optimistic response for instant UI feedback (critical for offline)
+    optimisticResponse: variables => {
       const tempId = `temp-${generateId()}`;
       return {
         __typename: 'Mutation' as const,
@@ -105,9 +101,9 @@ export function useShoppingListManagement(listId: string | undefined) {
             itemName: variables.input.itemName,
             quantity: variables.input.quantity || 1,
             isPurchased: false,
+            unitName: variables.input.unitName || null,
             notes: variables.input.notes || null,
             category: variables.input.category || null,
-            unitName: variables.input.unitName || null,
             shoppingList: {
               __typename: 'ShoppingList',
               id: listId || '',
@@ -118,7 +114,6 @@ export function useShoppingListManagement(listId: string | undefined) {
                   id: variables.input.unitId,
                 }
               : null,
-            item: null, // Will be populated by server if matched
           }),
           __typename: 'ShoppingListItem' as const,
         } as any, // Optimistic response - will be replaced by server response
@@ -144,8 +139,8 @@ export function useShoppingListManagement(listId: string | undefined) {
                 return existingItems;
               }
 
-              // Add new item to the list
-              return [...existingItems, newItemRef];
+              // Add new item to the top of the list
+              return [newItemRef, ...existingItems];
             },
           },
         });
@@ -237,7 +232,10 @@ export function useShoppingListManagement(listId: string | undefined) {
         });
         cache.gc(); // Garbage collect orphaned data
       } catch (error) {
-        console.warn('Cache update failed for removeItem, will refetch:', error);
+        console.warn(
+          'Cache update failed for removeItem, will refetch:',
+          error,
+        );
         // Fallback: refetch if cache update fails
         refetch();
       }

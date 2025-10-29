@@ -1,9 +1,12 @@
+import 'react-native-get-random-values';
+import { v4 as uuidv4 } from 'uuid';
+
 /**
- * Generate a UUID v4 using the native Web Crypto API
+ * Generate a UUID v4 using the uuid library
  *
- * Available in React Native 0.74+ with Hermes engine.
+ * Uses react-native-get-random-values polyfill for React Native compatibility.
  * Provides cryptographically secure, spec-compliant UUIDs.
  */
 export function generateId(): string {
-  return crypto.randomUUID();
+  return uuidv4();
 }

@@ -1,6 +1,7 @@
 export * from './auth';
 export * from './notifications';
 export * from './shoppingList';
+export * from './invitations';
 export * from './profile';
 export * from './home/useHomeManagement';
 export * from './home/usePantryManagement';

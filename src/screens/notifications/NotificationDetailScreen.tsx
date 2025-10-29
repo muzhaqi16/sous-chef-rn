@@ -3,6 +3,7 @@ import {View, Text, ScrollView, TouchableOpacity} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
 import {Icon} from '#utils';
 import {useAppNavigation} from '#/hooks';
+import {NotificationActionHandler} from '#components/notifications/NotificationActionHandler';
 
 import {format} from 'date-fns';
 import {NotificationStackParamList} from '#navigation/stacks/NotificationStack';
@@ -26,63 +27,49 @@ export const NotificationDetailScreen: React.FC<{
       ? JSON.parse(notification.payload)
       : notification.payload;
 
-  const handleAction = () => {
-    switch (notification.type) {
-      case 'MEMBERSHIP_INVITE':
-        navigation.navigate('ShoppingListStack', {
-          screen: 'AcceptInvite',
-          params: {inviteId: payload.inviteId},
-        });
-        break;
-      case 'COLLABORATION_INVITE':
-        navigation.navigate('ShoppingListStack', {
-          screen: 'JoinList',
-          params: {listId: payload.listId},
-        });
-        break;
-      default:
-        navigation.goBack();
-    }
-  };
-
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.iconContainer}>
-          <Icon name="notifications" size={32} color={styles.icon.color} />
-        </View>
-        <Text style={styles.title}>
-          {getNotificationTitle(notification.type)}
-        </Text>
-        <Text style={styles.timestamp}>
-          {format(new Date(notification.sentAt), 'PPpp')}
-        </Text>
-      </View>
-
-      <View style={styles.content}>
-        <Text style={styles.message}>
-          {payload.message || 'No message available'}
-        </Text>
-
-        {payload.details && (
-          <View style={styles.detailsContainer}>
-            <Text style={styles.detailsTitle}>Details</Text>
-            <Text style={styles.detailsText}>{payload.details}</Text>
-          </View>
-        )}
-
-        {(notification.type === 'MEMBERSHIP_INVITE' ||
-          notification.type === 'COLLABORATION_INVITE') && (
-          <TouchableOpacity style={styles.actionButton} onPress={handleAction}>
-            <Text style={styles.actionButtonText}>
-              {notification.type === 'MEMBERSHIP_INVITE'
-                ? 'View Invitation'
-                : 'View List'}
+    <NotificationActionHandler>
+      {({handleNotificationAction}) => (
+        <ScrollView style={styles.container}>
+          <View style={styles.header}>
+            <View style={styles.iconContainer}>
+              <Icon name="notifications" size={32} color={styles.icon.color} />
+            </View>
+            <Text style={styles.title}>
+              {getNotificationTitle(notification.type)}
             </Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    </ScrollView>
+            <Text style={styles.timestamp}>
+              {format(new Date(notification.sentAt), 'PPpp')}
+            </Text>
+          </View>
+
+          <View style={styles.content}>
+            <Text style={styles.message}>
+              {payload.message || notification.message || 'No message available'}
+            </Text>
+
+            {payload.details && (
+              <View style={styles.detailsContainer}>
+                <Text style={styles.detailsTitle}>Details</Text>
+                <Text style={styles.detailsText}>{payload.details}</Text>
+              </View>
+            )}
+
+            {notification.requiresAction && notification.actionType && (
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => handleNotificationAction(notification)}>
+                <Text style={styles.actionButtonText}>
+                  {notification.actionType === 'ACCEPT_HOME_INVITE'
+                    ? 'Accept Home Invitation'
+                    : 'Accept Invitation'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </ScrollView>
+      )}
+    </NotificationActionHandler>
   );
 };
 

@@ -108,9 +108,7 @@ export const NotificationListScreen: React.FC<{
         // Default navigation based on category
         switch (notification.category) {
           case NotificationCategory.SHOPPING_LIST:
-            navigate('ListSettings', {
-              listId: notification.payload.listId,
-            });
+            navigateTo.shoppingListMain();
             break;
           case NotificationCategory.PANTRY:
             navigateTo.pantryMain();

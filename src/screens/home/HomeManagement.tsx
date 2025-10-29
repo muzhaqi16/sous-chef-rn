@@ -22,13 +22,6 @@ import {
   PartialHome,
 } from '#/components/organisms/home';
 import {
-  useGetMyPendingInvitesQuery,
-  useAcceptHomeInviteMutation,
-  useDeclineHomeInviteMutation,
-  GetHomesDocument,
-} from '#generated';
-import { formatRole } from '#utils/formatters';
-import {
   findUserMembership,
   getInvitableRoles,
   canInviteToHome,
@@ -63,33 +56,6 @@ export const HomeManagement: React.FC = () => {
     stats,
     refetch: refetchHomes,
   } = useHomeManagement();
-
-  // Fetch pending home invitations
-  const {
-    data: pendingInvitesData,
-    loading: invitesLoading,
-    refetch: refetchPendingInvites,
-  } = useGetMyPendingInvitesQuery({
-    fetchPolicy: 'cache-and-network',
-  });
-
-  const [acceptHomeInvite, { loading: accepting }] =
-    useAcceptHomeInviteMutation({
-      refetchQueries: [{ query: GetHomesDocument }],
-      onError: error => {
-        Alert.alert('Error', error.message || 'Failed to accept invitation');
-      },
-    });
-
-  const [declineHomeInvite, { loading: declining }] =
-    useDeclineHomeInviteMutation({
-      refetchQueries: [{ query: GetHomesDocument }],
-      onError: error => {
-        Alert.alert('Error', error.message || 'Failed to decline invitation');
-      },
-    });
-
-  const pendingInvites = pendingInvitesData?.myPendingInvites || [];
 
   // Note: Removed useFocusEffect refetch to prevent flickering
   // Apollo's cache-and-network + cache-first strategy handles data freshness
@@ -183,39 +149,10 @@ export const HomeManagement: React.FC = () => {
     navigate('HomeDetail', { homeId });
   };
 
-  const handleAcceptInvite = async (token: string) => {
-    try {
-      await acceptHomeInvite({ variables: { token } });
-    } catch (error) {
-      // Error is handled by onError in mutation
-    }
-  };
-
-  const handleDeclineInvite = (token: string, inviteHomeName: string) => {
-    Alert.alert(
-      'Decline Invitation',
-      `Are you sure you want to decline the invitation to join ${inviteHomeName}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Decline',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await declineHomeInvite({ variables: { token } });
-            } catch (error) {
-              // Error is handled by onError in mutation
-            }
-          },
-        },
-      ],
-    );
-  };
-
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      await Promise.all([refetchHomes(), refetchPendingInvites()]);
+      await refetchHomes();
     } catch (error) {
       console.error('Error refreshing data:', error);
     } finally {
@@ -375,102 +312,6 @@ export const HomeManagement: React.FC = () => {
                 </View>
               </View>
             )}
-          </View>
-        )}
-
-        {/* Pending Invitations */}
-        {!invitesLoading && pendingInvites.length > 0 && (
-          <View style={styles.invitesContainer}>
-            <Text style={styles.invitesSectionTitle}>Pending Invitations</Text>
-            <Text style={styles.invitesSubtitle}>
-              You have been invited to join the following homes
-            </Text>
-            {pendingInvites.map(invite => {
-              const inviterName =
-                invite.inviter?.profile?.displayName ||
-                invite.inviter?.email ||
-                'Someone';
-              const inviteHomeName = invite.home?.name || 'Unknown Home';
-
-              return (
-                <View key={invite.id} style={styles.inviteCard}>
-                  {/* Header with icon */}
-                  <View style={styles.inviteCardHeader}>
-                    <Icon
-                      name="home"
-                      size={24}
-                      color={theme.colors.primary}
-                      library="Ionicons"
-                    />
-                    <Text style={styles.inviteCardTitle}>
-                      Invitation to Join Home
-                    </Text>
-                  </View>
-
-                  {/* Home name - prominent */}
-                  <Text style={styles.inviteHomeName}>{inviteHomeName}</Text>
-
-                  {/* Invitation details */}
-                  <View style={styles.inviteDetailsContainer}>
-                    <View style={styles.inviteDetailRow}>
-                      <Icon
-                        name="person"
-                        size={16}
-                        color={theme.colors.textSecondary}
-                        library="Ionicons"
-                      />
-                      <Text style={styles.inviteDetailLabel}>From:</Text>
-                      <Text style={styles.inviteDetailValue}>
-                        {inviterName}
-                      </Text>
-                    </View>
-
-                    <View style={styles.inviteDetailRow}>
-                      <Icon
-                        name="shield-checkmark"
-                        size={16}
-                        color={theme.colors.textSecondary}
-                        library="Ionicons"
-                      />
-                      <Text style={styles.inviteDetailLabel}>Role:</Text>
-                      <View style={styles.roleBadge}>
-                        <Text style={styles.roleBadgeText}>
-                          {formatRole(invite.role)}
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-
-                  {/* Actions */}
-                  <View style={styles.inviteActions}>
-                    <TouchableOpacity
-                      style={[styles.button, styles.inviteDeclineButton]}
-                      onPress={() =>
-                        handleDeclineInvite(invite.token, inviteHomeName)
-                      }
-                      disabled={declining}
-                    >
-                      <Text style={styles.inviteDeclineButtonText}>
-                        Decline
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.button, styles.inviteAcceptButton]}
-                      onPress={() => handleAcceptInvite(invite.token)}
-                      disabled={accepting}
-                    >
-                      {accepting ? (
-                        <ActivityIndicator size="small" color="#fff" />
-                      ) : (
-                        <Text style={styles.inviteAcceptButtonText}>
-                          Accept
-                        </Text>
-                      )}
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              );
-            })}
           </View>
         )}
 
@@ -664,114 +505,5 @@ const styles = StyleSheet.create(theme => ({
   },
   buttonDisabled: {
     opacity: 0.5,
-  },
-  invitesContainer: {
-    padding: 16,
-    backgroundColor: theme.colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  invitesSectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
-    marginBottom: 4,
-  },
-  invitesSubtitle: {
-    fontSize: 14,
-    color: theme.colors.textSecondary,
-    marginBottom: 16,
-  },
-  inviteCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  inviteCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  inviteCardTitle: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: theme.colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  inviteHomeName: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: theme.colors.textPrimary,
-    marginBottom: 16,
-    lineHeight: 28,
-  },
-  inviteDetailsContainer: {
-    gap: 12,
-    marginBottom: 16,
-  },
-  inviteDetailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  inviteDetailLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: theme.colors.textSecondary,
-    minWidth: 50,
-  },
-  inviteDetailValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
-    flex: 1,
-  },
-  roleBadge: {
-    backgroundColor: theme.colors.primary + '20',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  roleBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: theme.colors.primary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  inviteActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  inviteDeclineButton: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  inviteDeclineButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: theme.colors.textPrimary,
-  },
-  inviteAcceptButton: {
-    backgroundColor: theme.colors.primary,
-  },
-  inviteAcceptButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#fff',
   },
 }));

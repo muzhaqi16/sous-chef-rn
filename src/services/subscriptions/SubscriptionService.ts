@@ -1,0 +1,563 @@
+/**
+ * SubscriptionService - Centralized Subscription Management
+ *
+ * A singleton service that provides unified subscription handling across
+ * the entire application. Eliminates code duplication and provides consistent
+ * patterns for deduplication, cache updates, error handling, and logging.
+ *
+ * @example
+ * ```typescript
+ * const service = SubscriptionService.getInstance();
+ *
+ * const handlers = service.register({
+ *   subscriptionName: 'ShoppingListItemsChanged',
+ *   entityType: 'ShoppingListItem',
+ *   enableDeduplication: true,
+ *   userId: user?.id,
+ *   cacheUpdateStrategy: CacheStrategy.AUTOMATIC,
+ *   cacheFieldName: 'shoppingListItems',
+ * });
+ *
+ * useShoppingListItemsChangedSubscription({
+ *   variables: { listId },
+ *   skip: !listId,
+ *   ...handlers,
+ * });
+ * ```
+ */
+
+import {
+  SubscriptionConfig,
+  SubscriptionHandlers,
+  SubscriptionPayload,
+  SubscriptionEntry,
+  SubscriptionStats,
+  CacheStrategy,
+  MutationType,
+  LogLevel,
+} from './types';
+
+export class SubscriptionService {
+  private static instance: SubscriptionService;
+
+  // Active subscription registry
+  private subscriptions = new Map<string, SubscriptionEntry>();
+
+  // Deduplication tracking
+  private processedMutations = new Set<string>();
+  private readonly MAX_PROCESSED_MUTATIONS = 100;
+
+  // Statistics
+  private stats = {
+    totalUpdates: 0,
+    totalErrors: 0,
+    dedupedUpdates: 0,
+  };
+
+  private constructor() {
+    // Private constructor for singleton pattern
+    if (__DEV__) {
+      console.log('🔌 SubscriptionService initialized');
+    }
+  }
+
+  /**
+   * Get singleton instance
+   */
+  static getInstance(): SubscriptionService {
+    if (!SubscriptionService.instance) {
+      SubscriptionService.instance = new SubscriptionService();
+    }
+    return SubscriptionService.instance;
+  }
+
+  /**
+   * Register a subscription and get configured handlers
+   *
+   * This is the main entry point for using the service. It returns handlers
+   * that can be spread directly into Apollo subscription hooks.
+   *
+   * @param config - Subscription configuration
+   * @returns Configured handlers (onData, onError, onComplete)
+   */
+  register<TData = any>(config: SubscriptionConfig<TData>): SubscriptionHandlers<TData> {
+    // Set defaults - use Partial for optional fields
+    const finalConfig = {
+      subscriptionName: config.subscriptionName,
+      entityType: config.entityType,
+      mutation: config.mutation || MutationType.UPDATE,
+      enableDeduplication: config.enableDeduplication ?? true,
+      userId: config.userId,
+      cacheUpdateStrategy: config.cacheUpdateStrategy || CacheStrategy.AUTOMATIC,
+      cacheFieldName: config.cacheFieldName || '',
+      customOnData: config.customOnData,
+      customOnError: config.customOnError,
+      customOnComplete: config.customOnComplete,
+      enableLogging: config.enableLogging ?? __DEV__,
+      logLevel: config.logLevel || LogLevel.INFO,
+      entityId: config.entityId,
+    } as const;
+
+    // Register subscription in tracking registry
+    const key = this.getSubscriptionKey(finalConfig);
+    this.subscriptions.set(key, {
+      subscriptionName: finalConfig.subscriptionName,
+      entityType: finalConfig.entityType,
+      entityId: finalConfig.entityId,
+      userId: finalConfig.userId,
+      connectedAt: new Date(),
+      updateCount: 0,
+      errorCount: 0,
+    });
+
+    return {
+      onData: this.createOnDataHandler(finalConfig),
+      onError: this.createOnErrorHandler(finalConfig),
+      onComplete: this.createOnCompleteHandler(finalConfig),
+    };
+  }
+
+  /**
+   * Create unified onData handler
+   */
+  private createOnDataHandler<TData>(
+    config: SubscriptionConfig<TData>,
+  ): (context: { data: any; client: any }) => void {
+    return ({ data, client }) => {
+      try {
+        // DETAILED DEBUGGING - Log raw subscription data received
+        if (__DEV__) {
+          console.log('📡 [RAW SUBSCRIPTION] Data received:', {
+            subscriptionName: config.subscriptionName,
+            hasData: !!data,
+            dataKeys: data ? Object.keys(data) : [],
+            rawData: JSON.stringify(data, null, 2),
+          });
+        }
+
+        // Extract payload from subscription data
+        const subscriptionData = data?.data;
+        if (!subscriptionData) {
+          this.log(config, LogLevel.WARN, 'No subscription data received', data);
+          return;
+        }
+
+        // Get the actual payload (first property of subscription data)
+        const payload = Object.values(subscriptionData)[0] as SubscriptionPayload<TData>;
+
+        if (!payload) {
+          this.log(config, LogLevel.WARN, 'Empty subscription payload', subscriptionData);
+          return;
+        }
+
+        // Step 1: Deduplication check
+        if (config.enableDeduplication && !this.shouldProcessUpdate(payload, config)) {
+          this.stats.dedupedUpdates++;
+          this.log(config, LogLevel.DEBUG, 'Filtered duplicate/self-echo update', {
+            userId: payload.userId,
+            mutation: payload.mutation,
+          });
+          return;
+        }
+
+        // Step 2: Update statistics
+        this.stats.totalUpdates++;
+        this.updateSubscriptionStats(config, 'update');
+
+        // Step 3: Log subscription update
+        const item: any = payload.item || payload.node;
+
+        // DETAILED DEBUGGING - Log full payload structure
+        if (__DEV__) {
+          console.log('🔍 [DETAILED DEBUG] Full subscription payload:', {
+            subscriptionName: config.subscriptionName,
+            mutation: payload.mutation,
+            userId: payload.userId,
+            timestamp: payload.timestamp,
+            itemId: item?.id,
+            itemName: item?.itemName || item?.name,
+            fullPayload: JSON.stringify(payload, null, 2),
+            fullItem: JSON.stringify(item, null, 2),
+          });
+        }
+
+        this.log(config, LogLevel.INFO, 'Subscription update received', {
+          mutation: payload.mutation,
+          userId: payload.userId,
+          timestamp: payload.timestamp,
+          entityId: item?.id,
+        });
+
+        // Step 4: Update cache based on strategy
+        if (config.cacheUpdateStrategy !== CacheStrategy.NONE) {
+          // For AUTOMATIC: Apollo normalization handles UPDATE, but we need to manually handle CREATE/DELETE
+          // For MANUAL: We handle all mutations manually
+          const mutation = payload.mutation || config.mutation;
+          const shouldUpdateCache =
+            config.cacheUpdateStrategy === CacheStrategy.MANUAL ||
+            // CREATE operations - add to arrays
+            mutation === MutationType.CREATE ||
+            mutation === 'CREATED' ||
+            mutation === 'ITEM_ADDED' ||
+            mutation === 'COLLABORATOR_ADDED' ||
+            // DELETE operations - remove from arrays
+            mutation === MutationType.DELETE ||
+            mutation === 'DELETED' ||
+            mutation === 'ITEM_REMOVED' ||
+            mutation === 'COLLABORATOR_REMOVED';
+
+          if (shouldUpdateCache) {
+            this.updateCache(client.cache, config, payload);
+          } else {
+            // UPDATE with AUTOMATIC - let Apollo normalization handle it
+            this.log(config, LogLevel.DEBUG, 'Using Apollo normalization for UPDATE', {
+              mutation,
+            });
+          }
+        }
+        // CacheStrategy.NONE - Skip all cache updates
+
+        // Step 5: Call custom handler if provided
+        if (config.customOnData && typeof config.customOnData === 'function') {
+          config.customOnData(payload as TData, client);
+        }
+      } catch (error) {
+        this.log(config, LogLevel.ERROR, 'Error in onData handler', error);
+      }
+    };
+  }
+
+  /**
+   * Create unified onError handler
+   */
+  private createOnErrorHandler<TData>(
+    config: SubscriptionConfig<TData>,
+  ): (error: any) => void {
+    return (error: any) => {
+      this.stats.totalErrors++;
+      this.updateSubscriptionStats(config, 'error');
+
+      this.log(config, LogLevel.ERROR, 'Subscription error', {
+        message: error?.message,
+        graphQLErrors: error?.graphQLErrors?.map((e: any) => e.message),
+        networkError: error?.networkError?.message,
+      });
+
+      // Call custom error handler if provided
+      if (config.customOnError && typeof config.customOnError === 'function') {
+        config.customOnError(error);
+      }
+    };
+  }
+
+  /**
+   * Create unified onComplete handler
+   */
+  private createOnCompleteHandler<TData>(
+    config: SubscriptionConfig<TData>,
+  ): () => void {
+    return () => {
+      this.log(config, LogLevel.INFO, 'Subscription connected', {
+        entityId: config.entityId,
+      });
+
+      // Call custom complete handler if provided
+      if (config.customOnComplete && typeof config.customOnComplete === 'function') {
+        config.customOnComplete();
+      }
+    };
+  }
+
+  /**
+   * Unified deduplication logic
+   *
+   * Filters out:
+   * 1. Duplicate updates (same timestamp + mutation)
+   *
+   * Note: Self-echo filtering (userId check) has been removed to support
+   * multi-device scenarios where the same user may be on multiple devices.
+   * For most use cases (family members on shared pantry/shopping lists),
+   * different users will see each other's updates in real-time.
+   */
+  private shouldProcessUpdate<TData>(
+    payload: SubscriptionPayload<TData>,
+    config: SubscriptionConfig<TData>,
+  ): boolean {
+    if (!payload) return false;
+
+    // Duplicate prevention using timestamp + mutation type as deduplication key
+    // This prevents the same subscription event from being processed multiple times
+    if (payload.timestamp && payload.mutation) {
+      const mutationKey = `${payload.mutation}-${payload.timestamp}-${payload.userId}`;
+
+      if (this.processedMutations.has(mutationKey)) {
+        return false;
+      }
+
+      // Add to processed set
+      this.processedMutations.add(mutationKey);
+
+      // Clean up old entries if set gets too large
+      if (this.processedMutations.size > this.MAX_PROCESSED_MUTATIONS) {
+        const iterator = this.processedMutations.values();
+        const firstKey = iterator.next().value;
+        if (firstKey) {
+          this.processedMutations.delete(firstKey);
+        }
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * Unified cache update strategy
+   *
+   * Handles:
+   * - CREATE: Add item to array using cache.modify()
+   * - UPDATE: Apollo automatic normalization (no action needed)
+   * - DELETE: Remove item from array and evict from cache
+   */
+  private updateCache<TData>(
+    cache: any,
+    config: SubscriptionConfig<TData>,
+    payload: SubscriptionPayload<TData>,
+  ): void {
+    if (!config.cacheFieldName) {
+      this.log(config, LogLevel.WARN, 'No cacheFieldName provided for manual cache update');
+      return;
+    }
+
+    const item: any = payload.item || payload.node;
+    const mutation = payload.mutation || config.mutation;
+    const itemId = item?.id;
+
+    if (!itemId) {
+      this.log(config, LogLevel.WARN, 'No item ID found in payload', payload);
+      return;
+    }
+
+    // DETAILED DEBUGGING - Log cache update attempt
+    if (__DEV__) {
+      console.log('🔧 [CACHE UPDATE] Attempting cache update:', {
+        subscriptionName: config.subscriptionName,
+        mutation,
+        itemId,
+        cacheFieldName: config.cacheFieldName,
+        entityType: config.entityType,
+      });
+    }
+
+    try {
+      switch (mutation) {
+        case MutationType.CREATE:
+        case 'CREATED':
+        case 'ITEM_ADDED':
+        case 'COLLABORATOR_ADDED':
+          // Add item to array field
+          cache.modify({
+            fields: {
+              [config.cacheFieldName]: (existingItems = [], { toReference, readField }: any) => {
+                const newItemRef = toReference(item);
+
+                // Check if item already exists (prevent duplicates)
+                const exists = existingItems.some(
+                  (itemRef: any) => readField('id', itemRef) === itemId,
+                );
+
+                if (exists) {
+                  this.log(config, LogLevel.DEBUG, 'Item already in cache, skipping add', itemId);
+                  return existingItems;
+                }
+
+                // Add to beginning of array (newest first)
+                return [newItemRef, ...existingItems];
+              },
+            },
+          });
+
+          if (__DEV__) {
+            console.log('✅ [CACHE UPDATE] Successfully added item to cache', {
+              itemId,
+              cacheFieldName: config.cacheFieldName,
+            });
+          }
+          this.log(config, LogLevel.DEBUG, 'Added item to cache', itemId);
+          break;
+
+        case MutationType.UPDATE:
+        case 'UPDATED':
+        case 'ITEM_UPDATED':
+        case 'STATUS_CHANGED':
+        case 'ITEM_COMPLETED':
+        case 'COMPLETED':
+          // Apollo automatic normalization handles this
+          // The item data in the subscription will be merged into the cache automatically
+          if (__DEV__) {
+            console.log('✅ [CACHE UPDATE] Update handled by Apollo normalization', {
+              itemId,
+            });
+          }
+          this.log(config, LogLevel.DEBUG, 'Update handled by Apollo normalization', itemId);
+          break;
+
+        case MutationType.DELETE:
+        case 'DELETED':
+        case 'ITEM_REMOVED':
+        case 'COLLABORATOR_REMOVED':
+          // Remove item from array field
+          cache.modify({
+            fields: {
+              [config.cacheFieldName]: (existingItems = [], { readField }: any) => {
+                return existingItems.filter((itemRef: any) => readField('id', itemRef) !== itemId);
+              },
+            },
+          });
+
+          // Evict item from cache
+          const cacheId = cache.identify({
+            __typename: config.entityType,
+            id: itemId,
+          });
+
+          if (cacheId) {
+            cache.evict({ id: cacheId });
+            cache.gc(); // Garbage collect orphaned references
+            if (__DEV__) {
+              console.log('✅ [CACHE UPDATE] Successfully removed and evicted item from cache', {
+                itemId,
+                cacheId,
+                cacheFieldName: config.cacheFieldName,
+              });
+            }
+            this.log(config, LogLevel.DEBUG, 'Removed and evicted item from cache', itemId);
+          }
+          break;
+
+        default:
+          this.log(config, LogLevel.WARN, 'Unknown mutation type', mutation);
+      }
+    } catch (error) {
+      if (__DEV__) {
+        console.error('❌ [CACHE UPDATE] Cache update failed:', {
+          subscriptionName: config.subscriptionName,
+          mutation,
+          itemId,
+          error,
+        });
+      }
+      this.log(config, LogLevel.ERROR, 'Cache update failed', error);
+    }
+  }
+
+  /**
+   * Unified logging
+   */
+  private log<TData>(
+    config: SubscriptionConfig<TData>,
+    level: LogLevel,
+    message: string,
+    data?: any,
+  ): void {
+    if (!config.enableLogging && level !== LogLevel.ERROR) {
+      return;
+    }
+
+    // Skip logs below configured level
+    const logLevels = [LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARN, LogLevel.ERROR];
+    const configLogLevel = config.logLevel || LogLevel.INFO;
+    if (logLevels.indexOf(level) < logLevels.indexOf(configLogLevel)) {
+      return;
+    }
+
+    const emoji = {
+      [LogLevel.DEBUG]: '🔍',
+      [LogLevel.INFO]: '🔔',
+      [LogLevel.WARN]: '⚠️',
+      [LogLevel.ERROR]: '❌',
+    }[level];
+
+    const prefix = `${emoji} [${config.subscriptionName}]`;
+
+    switch (level) {
+      case LogLevel.ERROR:
+        console.error(prefix, message, data || '');
+        break;
+      case LogLevel.WARN:
+        console.warn(prefix, message, data || '');
+        break;
+      case LogLevel.DEBUG:
+      case LogLevel.INFO:
+      default:
+        console.log(prefix, message, data || '');
+    }
+  }
+
+  /**
+   * Update subscription statistics
+   */
+  private updateSubscriptionStats<TData>(
+    config: SubscriptionConfig<TData>,
+    type: 'update' | 'error',
+  ): void {
+    const key = this.getSubscriptionKey(config);
+    const entry = this.subscriptions.get(key);
+
+    if (entry) {
+      if (type === 'update') {
+        entry.updateCount++;
+        entry.lastUpdate = new Date();
+      } else if (type === 'error') {
+        entry.errorCount++;
+      }
+    }
+  }
+
+  /**
+   * Generate unique subscription key
+   */
+  private getSubscriptionKey<TData>(config: SubscriptionConfig<TData>): string {
+    return `${config.subscriptionName}-${config.entityId || 'default'}-${config.userId || 'anonymous'}`;
+  }
+
+  /**
+   * Get subscription statistics
+   */
+  getStats(): SubscriptionStats {
+    return {
+      totalSubscriptions: this.subscriptions.size,
+      activeSubscriptions: Array.from(this.subscriptions.values()),
+      totalUpdates: this.stats.totalUpdates,
+      totalErrors: this.stats.totalErrors,
+      dedupedUpdates: this.stats.dedupedUpdates,
+    };
+  }
+
+  /**
+   * Cleanup all subscriptions
+   * Should be called on logout
+   */
+  cleanup(): void {
+    this.subscriptions.clear();
+    this.processedMutations.clear();
+    this.stats = {
+      totalUpdates: 0,
+      totalErrors: 0,
+      dedupedUpdates: 0,
+    };
+
+    if (__DEV__) {
+      console.log('🧹 SubscriptionService cleaned up');
+    }
+  }
+
+  /**
+   * Get list of active subscription names (for debugging)
+   */
+  getActiveSubscriptions(): string[] {
+    return Array.from(this.subscriptions.values()).map(sub => sub.subscriptionName);
+  }
+}
+
+// Export singleton instance
+export const subscriptionService = SubscriptionService.getInstance();

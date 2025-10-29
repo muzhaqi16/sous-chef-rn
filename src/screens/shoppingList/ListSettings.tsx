@@ -20,6 +20,13 @@ import {
 } from '#generated';
 import { useStore } from '#store';
 import { useErrorHandler } from '#/utils/errorHandling';
+import { useAuth } from '#/hooks/auth/useAuth';
+import {
+  isShoppingListOwner,
+  getShoppingListRole,
+  formatRoleDisplay,
+  getShoppingListOwnerInfo,
+} from '#utils/ownershipHelpers';
 
 import { ShoppingListStackParamList } from '#navigation/stacks/ShoppingListStack';
 
@@ -37,6 +44,15 @@ export const ListSettings: React.FC<{
   const [saving, setSaving] = useState(false);
 
   const { shoppingList, isShared } = useShoppingListDetails(listId);
+  const { user } = useAuth();
+
+  // Check if current user is the owner
+  const isOwner = listId && shoppingList
+    ? isShoppingListOwner(shoppingList, user?.id)
+    : true; // For new lists, user is always the owner
+  const role = shoppingList ? getShoppingListRole(shoppingList, user?.id) : null;
+  const roleDisplay = formatRoleDisplay(role);
+  const ownerInfo = shoppingList ? getShoppingListOwnerInfo(shoppingList) : null;
 
   const [updateList] = useUpdateShoppingListMutation();
   const [deleteList] = useDeleteShoppingListMutation({
@@ -173,47 +189,94 @@ export const ListSettings: React.FC<{
           <Icon name="arrow-back" size={24} color={theme.colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.title}>
-          {!listId ? 'Create New List' : 'List Settings'}
+          {!listId
+            ? 'Create New List'
+            : isOwner
+              ? 'List Settings'
+              : 'List Info'}
         </Text>
-        <TouchableOpacity onPress={handleSave} disabled={saving}>
-          <Text style={styles.saveButton}>
-            {saving ? 'Saving...' : !listId ? 'Create' : 'Save'}
-          </Text>
-        </TouchableOpacity>
+        {isOwner && (
+          <TouchableOpacity onPress={handleSave} disabled={saving}>
+            <Text style={styles.saveButton}>
+              {saving ? 'Saving...' : !listId ? 'Create' : 'Save'}
+            </Text>
+          </TouchableOpacity>
+        )}
+        {!isOwner && <View style={{width: 60}} />}
       </View>
 
       <ScrollView style={styles.content}>
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>General</Text>
+        {!isOwner && listId ? (
+          // Read-only view for collaborators
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>List Information</Text>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>List Name</Text>
-            <TextInput
-              style={styles.input}
-              value={name}
-              onChangeText={setName}
-              placeholder="Enter list name"
-              placeholderTextColor={theme.colors.textSecondary}
-            />
-          </View>
-
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingLabel}>Default List</Text>
-              <Text style={styles.settingDescription}>
-                Make this your default shopping list
-              </Text>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>List Name</Text>
+              <Text style={styles.infoValue}>{name}</Text>
             </View>
-            <Switch
-              value={isDefault}
-              onValueChange={setIsDefault}
-              trackColor={{ true: theme.colors.primary }}
-            />
-          </View>
-        </View>
 
-        {/* Only show sharing section if editing existing list */}
-        {listId && (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Your Role</Text>
+              <View style={styles.roleBadgeContainer}>
+                <View style={styles.collaboratorBadge}>
+                  <Text style={styles.collaboratorBadgeText}>{roleDisplay}</Text>
+                </View>
+              </View>
+            </View>
+
+            {ownerInfo && (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Owner</Text>
+                <Text style={styles.infoValue}>
+                  {ownerInfo.displayName || ownerInfo.email || 'Unknown'}
+                </Text>
+              </View>
+            )}
+
+            {isShared && (
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Shared With</Text>
+                <Text style={styles.infoValue}>
+                  {shoppingList?.collaborators?.length || 0} members
+                </Text>
+              </View>
+            )}
+          </View>
+        ) : (
+          // Editable view for owners
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>General</Text>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>List Name</Text>
+              <TextInput
+                style={styles.input}
+                value={name}
+                onChangeText={setName}
+                placeholder="Enter list name"
+                placeholderTextColor={theme.colors.textSecondary}
+              />
+            </View>
+
+            <View style={styles.settingRow}>
+              <View style={styles.settingInfo}>
+                <Text style={styles.settingLabel}>Default List</Text>
+                <Text style={styles.settingDescription}>
+                  Make this your default shopping list
+                </Text>
+              </View>
+              <Switch
+                value={isDefault}
+                onValueChange={setIsDefault}
+                trackColor={{ true: theme.colors.primary }}
+              />
+            </View>
+          </View>
+        )}
+
+        {/* Only show sharing section if editing existing list and user is owner */}
+        {listId && isOwner && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Sharing</Text>
 
@@ -239,8 +302,8 @@ export const ListSettings: React.FC<{
           </View>
         )}
 
-        {/* Only show danger zone if editing existing list */}
-        {listId && (
+        {/* Only show danger zone if editing existing list and user is owner */}
+        {listId && isOwner && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Danger Zone</Text>
 
@@ -364,5 +427,38 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: '600',
     color: theme.colors.error,
     marginLeft: 8,
+  },
+  // Read-only view styles for collaborators
+  infoRow: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  infoLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: theme.colors.textSecondary,
+    marginBottom: 6,
+  },
+  infoValue: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: theme.colors.textPrimary,
+  },
+  roleBadgeContainer: {
+    flexDirection: 'row',
+    marginTop: 4,
+  },
+  collaboratorBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: theme.colors.border || '#E0E0E0',
+  },
+  collaboratorBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.textSecondary,
+    textTransform: 'uppercase',
   },
 }));

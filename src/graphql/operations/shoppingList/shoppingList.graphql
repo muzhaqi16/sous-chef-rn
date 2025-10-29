@@ -72,11 +72,11 @@ query GetShoppingList($id: ID!) {
       createdAt
       updatedAt
     }
+    ownerships {
+      ...ShoppingListOwnershipFragment
+    }
     collaborators {
-      id
-      email
-      role
-      status
+      ...ShoppingListCollaboratorFragment
       canEdit
       canAddItems
       canRemoveItems
@@ -115,10 +115,33 @@ query GetShoppingLists {
       id
       isPurchased
     }
+    ownerships {
+      id
+      userId
+      user {
+        id
+        email
+        profile {
+          displayName
+          avatar
+        }
+      }
+      createdAt
+    }
     collaborators {
       id
       email
       role
+      status
+      collaboratorId
+      collaborator {
+        id
+        email
+        profile {
+          displayName
+          avatar
+        }
+      }
     }
   }
 }
@@ -142,6 +165,12 @@ query GetDefaultShoppingList {
         imageUrl
       }
     }
+    ownerships {
+      ...ShoppingListOwnershipFragment
+    }
+    collaborators {
+      ...ShoppingListCollaboratorFragment
+    }
   }
 }
 
@@ -159,18 +188,8 @@ query GetShoppingListItem($id: ID!) {
 
 query GetShoppingListCollaborators($shoppingListId: ID!) {
   shoppingListCollaborators(shoppingListId: $shoppingListId) {
-    id
-    role
-    status
-    invitedAt
+    ...ShoppingListCollaboratorFragment
     statusChangedAt
-    email
-    collaborator {
-      email
-      role
-      emailVerified
-      id
-    }
   }
 }
 
@@ -201,21 +220,10 @@ mutation CreateShoppingList($input: CreateShoppingListInput!) {
       isPurchased
     }
     collaborators {
-      id
-      email
-      role
+      ...ShoppingListCollaboratorFragment
     }
     ownerships {
-      id
-      user {
-        id
-      }
-      shoppingList {
-        id
-      }
-      createdAt
-      transferredAt
-      transferredFrom
+      ...ShoppingListOwnershipFragment
     }
   }
 }
@@ -242,9 +250,10 @@ mutation UpdateShoppingList($id: ID!, $input: UpdateShoppingListInput!) {
       isPurchased
     }
     collaborators {
-      id
-      email
-      role
+      ...ShoppingListCollaboratorFragment
+    }
+    ownerships {
+      ...ShoppingListOwnershipFragment
     }
   }
 }
@@ -396,6 +405,18 @@ mutation UpdateShoppingListItemPriority(
   }
 }
 
+mutation UpdateCollaboratorRole(
+  $shoppingListId: ID!
+  $collaboratorId: ID!
+  $role: CollaboratorRole!
+) {
+  updateCollaboratorRole(
+    shoppingListId: $shoppingListId
+    collaboratorId: $collaboratorId
+    role: $role
+  )
+}
+
 # ============================================
 # SUBSCRIPTIONS
 # ============================================
@@ -519,6 +540,7 @@ subscription ShoppingListStatusChanged($listId: ID!) {
       email
       profile {
         displayName
+        avatar
       }
     }
     userId

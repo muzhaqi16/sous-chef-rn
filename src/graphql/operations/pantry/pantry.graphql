@@ -219,12 +219,7 @@ subscription PantryItemsChanged($pantryId: ID!) {
   pantryItemsChanged(pantryId: $pantryId) {
     pantryId
     item {
-      id
-      unit {
-        id
-        name
-      }
-      itemName
+      ...PantryItemFragment
     }
     updatedFields
     mutation

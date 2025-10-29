@@ -15,7 +15,12 @@ import {
 import { useStore } from '#store';
 import { NotificationCategory as StoreNotificationCategory } from '#store/slices/notificationSlice';
 import { showLocalNotification } from '#utils/notifications/localNotificationHelper';
-import { parseNotificationPayload } from '#utils/notifications/notificationParser';
+import {
+  parseNotificationPayload,
+  getNotificationTitle,
+  getNotificationMessage,
+  getNotificationCategory,
+} from '#utils/notifications/notificationParser';
 import {
   NotificationCategory,
   NotificationPriority,
@@ -74,6 +79,19 @@ export const useNotifications = (config: NotificationConfig = {}) => {
   const processNotification = useCallback((notification: any, category: NotificationCategory) => {
     if (!finalConfig.showInAppNotifications) return;
 
+    // Determine if notification requires action based on type
+    const requiresAction =
+      notification.type === NotificationType.MembershipInvite ||
+      notification.type === NotificationType.CollaborationInvite;
+
+    // Set action type based on notification type
+    const actionType =
+      notification.type === NotificationType.MembershipInvite
+        ? 'ACCEPT_HOME_INVITE'
+        : notification.type === NotificationType.CollaborationInvite
+          ? 'ACCEPT_SHOPPING_LIST_INVITE'
+          : undefined;
+
     const processedNotification = {
       id: notification.id || Date.now().toString(),
       type: notification.type || NotificationType.HomeJoined,
@@ -84,6 +102,9 @@ export const useNotifications = (config: NotificationConfig = {}) => {
       payload: notification.payload || {},
       sentAt: notification.sentAt || new Date().toISOString(),
       isRead: false,
+      requiresAction,
+      actionType,
+      actionData: notification.payload,
     };
 
     addNotification(processedNotification);
@@ -107,23 +128,61 @@ export const useNotifications = (config: NotificationConfig = {}) => {
   useNotificationReceivedSubscription({
     skip: !user?.id,
     onData: ({ data }) => {
-      if (data.data?.notificationReceived) {
-        const notification = parseNotificationPayload(data.data.notificationReceived);
-        processNotification(notification, NotificationCategory.SYSTEM);
+      console.log('🔔 [NotificationReceived] Raw subscription data received:', data);
+      if (data.data?.notificationReceived?.notification) {
+        const rawNotification = data.data.notificationReceived.notification;
+
+        console.log('🔔 [NotificationReceived] Processing notification:', {
+          type: rawNotification.type,
+          id: rawNotification.id,
+          payload: rawNotification.payload,
+        });
+
+        // Create properly structured notification using helper functions
+        processNotification({
+          type: rawNotification.type,
+          title: getNotificationTitle(rawNotification.type, rawNotification.payload),
+          message: getNotificationMessage(rawNotification.type, rawNotification.payload),
+          payload: rawNotification.payload,
+          sentAt: rawNotification.sentAt,
+        }, getNotificationCategory(rawNotification.type));
+      } else {
+        console.warn('⚠️ [NotificationReceived] Data received but no notification payload');
       }
     },
-    onError: (error) => handleError('NotificationReceived', error),
+    onError: (error) => {
+      console.error('❌ [NotificationReceived] Subscription error:', error);
+      handleError('NotificationReceived', error);
+    },
   });
 
   useUrgentNotificationReceivedSubscription({
     skip: !user?.id,
     onData: ({ data }) => {
-      if (data.data?.urgentNotificationReceived) {
-        const notification = parseNotificationPayload(data.data.urgentNotificationReceived);
-        processNotification(notification, NotificationCategory.SYSTEM);
+      console.log('🚨 [UrgentNotification] Raw subscription data received:', data);
+      if (data.data?.urgentNotificationReceived?.notification) {
+        const rawNotification = data.data.urgentNotificationReceived.notification;
+
+        console.log('🚨 [UrgentNotification] Processing urgent notification:', {
+          type: rawNotification.type,
+          id: rawNotification.id,
+          payload: rawNotification.payload,
+        });
+
+        // Create properly structured notification using helper functions
+        processNotification({
+          type: rawNotification.type,
+          title: getNotificationTitle(rawNotification.type, rawNotification.payload),
+          message: getNotificationMessage(rawNotification.type, rawNotification.payload),
+          payload: rawNotification.payload,
+          sentAt: rawNotification.sentAt,
+        }, getNotificationCategory(rawNotification.type));
       }
     },
-    onError: (error) => handleError('UrgentNotificationReceived', error),
+    onError: (error) => {
+      console.error('❌ [UrgentNotification] Subscription error:', error);
+      handleError('UrgentNotificationReceived', error);
+    },
   });
 
   // Pantry notifications
@@ -257,6 +316,15 @@ export const useNotifications = (config: NotificationConfig = {}) => {
   useEffect(() => {
     if (!user?.id) {
       clearAllRetryStates();
+    }
+  }, [user?.id]);
+
+  // Log subscription status for debugging
+  useEffect(() => {
+    if (user?.id) {
+      console.log('✅ [NotificationReceived] Subscription ACTIVE for user:', user.id);
+    } else {
+      console.log('⏸️ [NotificationReceived] Subscription SKIPPED - no user ID');
     }
   }, [user?.id]);
 

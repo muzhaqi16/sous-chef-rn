@@ -88,6 +88,48 @@ fragment ShoppingListItemFragment on ShoppingListItem {
     ...PurchaseFragment
   }
 }
+
+# Shopping List Owner/Collaborator Fragments
+fragment ShoppingListOwnershipFragment on ShoppingListOwnership {
+  id
+  userId
+  shoppingListId
+  createdAt
+  transferredAt
+  transferredFrom
+  user {
+    id
+    email
+    profile {
+      displayName
+      avatar
+    }
+  }
+}
+
+fragment ShoppingListCollaboratorFragment on ShoppingListCollaborator {
+  id
+  email
+  role
+  status
+  collaboratorId
+  collaborator {
+    id
+    email
+    profile {
+      displayName
+      avatar
+    }
+  }
+  invitedBy {
+    id
+    email
+    profile {
+      displayName
+    }
+  }
+}
+
 fragment BasicUser on User {
   id
   email

@@ -638,7 +638,7 @@ export type CreatePantryItemInput = {
   costPerUnit?: InputMaybe<Scalars['Float']['input']>;
   customCategory?: InputMaybe<Scalars['String']['input']>;
   expiresAt?: InputMaybe<Scalars['String']['input']>;
-  initialQuantity: Scalars['Float']['input'];
+  initialQuantity?: InputMaybe<Scalars['Float']['input']>;
   isAutoReorder?: InputMaybe<Scalars['Boolean']['input']>;
   itemBrand?: InputMaybe<Scalars['String']['input']>;
   itemCategory?: InputMaybe<Scalars['String']['input']>;
@@ -2538,6 +2538,7 @@ export type Mutation = {
   untrustMultipleDevices: Array<Device>;
   updateBrand: Brand;
   updateCategory: Category;
+  updateCollaboratorPermissions: ShoppingListCollaborator;
   updateCollaboratorRole: Scalars['Boolean']['output'];
   updateCookingLog: CookingLog;
   updateCurrency: Currency;
@@ -3385,6 +3386,12 @@ export type MutationUpdateBrandArgs = {
 export type MutationUpdateCategoryArgs = {
   id: Scalars['ID']['input'];
   input: UpdateCategoryInput;
+};
+
+export type MutationUpdateCollaboratorPermissionsArgs = {
+  collaboratorId: Scalars['ID']['input'];
+  permissions: UpdateCollaboratorPermissionsInput;
+  shoppingListId: Scalars['ID']['input'];
 };
 
 export type MutationUpdateCollaboratorRoleArgs = {
@@ -6201,6 +6208,17 @@ export type UpdateCategoryInput = {
   visibility?: InputMaybe<Visibility>;
 };
 
+export type UpdateCollaboratorPermissionsInput = {
+  canAddItems?: InputMaybe<Scalars['Boolean']['input']>;
+  canEdit?: InputMaybe<Scalars['Boolean']['input']>;
+  canEditItems?: InputMaybe<Scalars['Boolean']['input']>;
+  canExport?: InputMaybe<Scalars['Boolean']['input']>;
+  canInviteOthers?: InputMaybe<Scalars['Boolean']['input']>;
+  canMarkPurchased?: InputMaybe<Scalars['Boolean']['input']>;
+  canRemoveItems?: InputMaybe<Scalars['Boolean']['input']>;
+  canViewHistory?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
 export type UpdateCookingLogInput = {
   actualCookTime?: InputMaybe<Scalars['Int']['input']>;
   actualPrepTime?: InputMaybe<Scalars['Int']['input']>;
@@ -8177,6 +8195,69 @@ export type ShoppingListItemFragmentFragment = {
         itemName: string;
         unitSymbol: string;
       }>
+    | null
+    | undefined;
+};
+
+export type ShoppingListOwnershipFragmentFragment = {
+  __typename?: 'ShoppingListOwnership';
+  id: string;
+  userId: string;
+  shoppingListId: string;
+  createdAt: string;
+  transferredAt?: string | null | undefined;
+  transferredFrom?: string | null | undefined;
+  user: {
+    __typename?: 'User';
+    id: string;
+    email: string;
+    profile?:
+      | {
+          __typename?: 'UserProfile';
+          displayName?: string | null | undefined;
+          avatar?: string | null | undefined;
+        }
+      | null
+      | undefined;
+  };
+};
+
+export type ShoppingListCollaboratorFragmentFragment = {
+  __typename?: 'ShoppingListCollaborator';
+  id: string;
+  email?: string | null | undefined;
+  role: CollaboratorRole;
+  status: CollaboratorStatus;
+  collaboratorId?: string | null | undefined;
+  collaborator?:
+    | {
+        __typename?: 'User';
+        id: string;
+        email: string;
+        profile?:
+          | {
+              __typename?: 'UserProfile';
+              displayName?: string | null | undefined;
+              avatar?: string | null | undefined;
+            }
+          | null
+          | undefined;
+      }
+    | null
+    | undefined;
+  invitedBy?:
+    | {
+        __typename?: 'User';
+        id: string;
+        email: string;
+        profile?:
+          | {
+              __typename?: 'UserProfile';
+              displayName?: string | null | undefined;
+            }
+          | null
+          | undefined;
+      }
     | null
     | undefined;
 };
@@ -14168,11 +14249,203 @@ export type PantryItemsChangedSubscription = {
     item: {
       __typename?: 'PantryItem';
       id: string;
+      pantryId: string;
+      itemId: string;
       itemName: string;
+      unitName: string;
+      unitId?: string | null | undefined;
+      expiresAt?: string | null | undefined;
+      storageState: StorageState;
+      storageNotes?: string | null | undefined;
+      initialQuantity: number;
+      currentQuantity: number;
+      consumedQuantity: number;
+      reservedQuantity: number;
+      autoReorderPoint?: number | null | undefined;
+      isAutoReorder: boolean;
+      customCategory?: string | null | undefined;
+      actualNetWeight?: number | null | undefined;
+      createdAt: string;
+      updatedAt?: string | null | undefined;
+      version?: number | null | undefined;
+      tags: Array<string>;
+      item: {
+        __typename?: 'Item';
+        id: string;
+        name: string;
+        description?: string | null | undefined;
+        dataSource: DataSource;
+        type: ItemType;
+        storageState: StorageState;
+        showInOnboarding: boolean;
+        shelfLifeDays?: number | null | undefined;
+        popularity: number;
+        status: ItemStatus;
+        visibility: Visibility;
+        imageUrl?: string | null | undefined;
+        tags: Array<string>;
+        healthBenefits?: any | null | undefined;
+        allergens?: any | null | undefined;
+        nutritions?: any | null | undefined;
+        metadata?: any | null | undefined;
+        ingredients?: any | null | undefined;
+        createdAt: string;
+        updatedAt: string;
+        deletedAt?: string | null | undefined;
+        version: number;
+        netWeight?: number | null | undefined;
+        displayUnit?:
+          | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+          | null
+          | undefined;
+        units: Array<{
+          __typename?: 'ItemUnit';
+          id: string;
+          itemId: string;
+          unitId: string;
+          isDefault: boolean;
+          isPreferred: boolean;
+          isCommon: boolean;
+          conversionRatio?: number | null | undefined;
+          conversionNote?: string | null | undefined;
+          packageSize?: number | null | undefined;
+          packageDescription?: string | null | undefined;
+          retailUnit: boolean;
+          usageContext: Array<UnitUsageContext>;
+          recommendedFor: Array<UnitRecommendation>;
+          minQuantity?: number | null | undefined;
+          maxQuantity?: number | null | undefined;
+          quantityStep?: number | null | undefined;
+          averagePricePerUnit?: number | null | undefined;
+          lastPriceUpdate?: string | null | undefined;
+          priceSource?: string | null | undefined;
+          usageCount: number;
+          lastUsedAt?: string | null | undefined;
+          popularityScore: number;
+          source: UnitSource;
+          confidence?: number | null | undefined;
+          isVerified: boolean;
+          verifiedAt?: string | null | undefined;
+          createdAt: string;
+          updatedAt: string;
+          version: number;
+        }>;
+        brands: Array<{
+          __typename?: 'ItemBrand';
+          id: string;
+          brand: {
+            __typename?: 'Brand';
+            id: string;
+            name: string;
+            description?: string | null | undefined;
+            createdAt: string;
+            updatedAt: string;
+            version: number;
+          };
+        }>;
+        categories?:
+          | Array<{
+              __typename?: 'ItemCategory';
+              id: string;
+              isPrimary: boolean;
+              assignedAt?: string | null | undefined;
+              assignedBy?:
+                | { __typename?: 'User'; id: string }
+                | null
+                | undefined;
+              category: {
+                __typename?: 'Category';
+                id: string;
+                name: string;
+                slug: string;
+                description?: string | null | undefined;
+                icon?: string | null | undefined;
+                color?: string | null | undefined;
+                sortOrder: number;
+                type: CategoryType;
+                isActive: boolean;
+                isSystem: boolean;
+                visibility: Visibility;
+                itemCount: number;
+                usageCount: number;
+                createdAt: string;
+                updatedAt: string;
+                deletedAt?: string | null | undefined;
+                version: number;
+              };
+            }>
+          | null
+          | undefined;
+        creations: Array<{
+          __typename?: 'ItemCreation';
+          id: string;
+          source: DataSource;
+          reason?: string | null | undefined;
+          metadata?: any | null | undefined;
+          createdAt: string;
+        }>;
+        edits: Array<{
+          __typename?: 'ItemEdit';
+          id: string;
+          fieldsChanged: Array<string>;
+          oldValues?: any | null | undefined;
+          newValues?: any | null | undefined;
+          editReason?: string | null | undefined;
+          createdAt: string;
+        }>;
+      };
       unit?:
-        | { __typename?: 'Unit'; id: string; name: string }
+        | {
+            __typename?: 'Unit';
+            id: string;
+            name: string;
+            symbol: string;
+            type: UnitType;
+            isMetric: boolean;
+            baseUnitId?: string | null | undefined;
+            conversionFactor: number;
+            isCommon: boolean;
+          }
         | null
         | undefined;
+      storageLocation?:
+        | {
+            __typename?: 'StorageLocation';
+            id: string;
+            name: string;
+            type: StorageType;
+          }
+        | null
+        | undefined;
+      actualNetWeightUnit?:
+        | {
+            __typename?: 'Unit';
+            id: string;
+            name: string;
+            symbol: string;
+            type: UnitType;
+          }
+        | null
+        | undefined;
+      usageRecords: Array<{
+        __typename?: 'PantryItemUsage';
+        id: string;
+        quantityUsed: number;
+        usedAt: string;
+        purpose: UsagePurpose;
+        notes?: string | null | undefined;
+        pantryItem: { __typename?: 'PantryItem'; id: string };
+        usedBy: { __typename?: 'User'; id: string };
+        cookingLog?:
+          | { __typename?: 'CookingLog'; id: string }
+          | null
+          | undefined;
+        mealPlanItem?:
+          | { __typename?: 'MealPlanItem'; id: string }
+          | null
+          | undefined;
+        recipe?: { __typename?: 'Recipe'; id: string } | null | undefined;
+      }>;
     };
   };
 };
@@ -15086,13 +15359,34 @@ export type GetShoppingListQuery = {
             | null
             | undefined;
         }>;
+        ownerships?:
+          | Array<{
+              __typename?: 'ShoppingListOwnership';
+              id: string;
+              userId: string;
+              shoppingListId: string;
+              createdAt: string;
+              transferredAt?: string | null | undefined;
+              transferredFrom?: string | null | undefined;
+              user: {
+                __typename?: 'User';
+                id: string;
+                email: string;
+                profile?:
+                  | {
+                      __typename?: 'UserProfile';
+                      displayName?: string | null | undefined;
+                      avatar?: string | null | undefined;
+                    }
+                  | null
+                  | undefined;
+              };
+            }>
+          | null
+          | undefined;
         collaborators?:
           | Array<{
               __typename?: 'ShoppingListCollaborator';
-              id: string;
-              email?: string | null | undefined;
-              role: CollaboratorRole;
-              status: CollaboratorStatus;
               canEdit: boolean;
               canAddItems: boolean;
               canRemoveItems: boolean;
@@ -15101,6 +15395,42 @@ export type GetShoppingListQuery = {
               canInviteOthers: boolean;
               invitedAt: string;
               lastViewedAt?: string | null | undefined;
+              id: string;
+              email?: string | null | undefined;
+              role: CollaboratorRole;
+              status: CollaboratorStatus;
+              collaboratorId?: string | null | undefined;
+              collaborator?:
+                | {
+                    __typename?: 'User';
+                    id: string;
+                    email: string;
+                    profile?:
+                      | {
+                          __typename?: 'UserProfile';
+                          displayName?: string | null | undefined;
+                          avatar?: string | null | undefined;
+                        }
+                      | null
+                      | undefined;
+                  }
+                | null
+                | undefined;
+              invitedBy?:
+                | {
+                    __typename?: 'User';
+                    id: string;
+                    email: string;
+                    profile?:
+                      | {
+                          __typename?: 'UserProfile';
+                          displayName?: string | null | undefined;
+                        }
+                      | null
+                      | undefined;
+                  }
+                | null
+                | undefined;
             }>
           | null
           | undefined;
@@ -15144,12 +15474,52 @@ export type GetShoppingListsQuery = {
       id: string;
       isPurchased: boolean;
     }>;
+    ownerships?:
+      | Array<{
+          __typename?: 'ShoppingListOwnership';
+          id: string;
+          userId: string;
+          createdAt: string;
+          user: {
+            __typename?: 'User';
+            id: string;
+            email: string;
+            profile?:
+              | {
+                  __typename?: 'UserProfile';
+                  displayName?: string | null | undefined;
+                  avatar?: string | null | undefined;
+                }
+              | null
+              | undefined;
+          };
+        }>
+      | null
+      | undefined;
     collaborators?:
       | Array<{
           __typename?: 'ShoppingListCollaborator';
           id: string;
           email?: string | null | undefined;
           role: CollaboratorRole;
+          status: CollaboratorStatus;
+          collaboratorId?: string | null | undefined;
+          collaborator?:
+            | {
+                __typename?: 'User';
+                id: string;
+                email: string;
+                profile?:
+                  | {
+                      __typename?: 'UserProfile';
+                      displayName?: string | null | undefined;
+                      avatar?: string | null | undefined;
+                    }
+                  | null
+                  | undefined;
+              }
+            | null
+            | undefined;
         }>
       | null
       | undefined;
@@ -15187,6 +15557,73 @@ export type GetDefaultShoppingListQuery = {
             | null
             | undefined;
         }>;
+        ownerships?:
+          | Array<{
+              __typename?: 'ShoppingListOwnership';
+              id: string;
+              userId: string;
+              shoppingListId: string;
+              createdAt: string;
+              transferredAt?: string | null | undefined;
+              transferredFrom?: string | null | undefined;
+              user: {
+                __typename?: 'User';
+                id: string;
+                email: string;
+                profile?:
+                  | {
+                      __typename?: 'UserProfile';
+                      displayName?: string | null | undefined;
+                      avatar?: string | null | undefined;
+                    }
+                  | null
+                  | undefined;
+              };
+            }>
+          | null
+          | undefined;
+        collaborators?:
+          | Array<{
+              __typename?: 'ShoppingListCollaborator';
+              id: string;
+              email?: string | null | undefined;
+              role: CollaboratorRole;
+              status: CollaboratorStatus;
+              collaboratorId?: string | null | undefined;
+              collaborator?:
+                | {
+                    __typename?: 'User';
+                    id: string;
+                    email: string;
+                    profile?:
+                      | {
+                          __typename?: 'UserProfile';
+                          displayName?: string | null | undefined;
+                          avatar?: string | null | undefined;
+                        }
+                      | null
+                      | undefined;
+                  }
+                | null
+                | undefined;
+              invitedBy?:
+                | {
+                    __typename?: 'User';
+                    id: string;
+                    email: string;
+                    profile?:
+                      | {
+                          __typename?: 'UserProfile';
+                          displayName?: string | null | undefined;
+                        }
+                      | null
+                      | undefined;
+                  }
+                | null
+                | undefined;
+            }>
+          | null
+          | undefined;
       }
     | null
     | undefined;
@@ -15570,19 +16007,40 @@ export type GetShoppingListCollaboratorsQuery = {
   __typename?: 'Query';
   shoppingListCollaborators: Array<{
     __typename?: 'ShoppingListCollaborator';
+    statusChangedAt?: string | null | undefined;
     id: string;
+    email?: string | null | undefined;
     role: CollaboratorRole;
     status: CollaboratorStatus;
-    invitedAt: string;
-    statusChangedAt?: string | null | undefined;
-    email?: string | null | undefined;
+    collaboratorId?: string | null | undefined;
     collaborator?:
       | {
           __typename?: 'User';
-          email: string;
-          role: UserRole;
-          emailVerified: boolean;
           id: string;
+          email: string;
+          profile?:
+            | {
+                __typename?: 'UserProfile';
+                displayName?: string | null | undefined;
+                avatar?: string | null | undefined;
+              }
+            | null
+            | undefined;
+        }
+      | null
+      | undefined;
+    invitedBy?:
+      | {
+          __typename?: 'User';
+          id: string;
+          email: string;
+          profile?:
+            | {
+                __typename?: 'UserProfile';
+                displayName?: string | null | undefined;
+              }
+            | null
+            | undefined;
         }
       | null
       | undefined;
@@ -15624,6 +16082,39 @@ export type CreateShoppingListMutation = {
           id: string;
           email?: string | null | undefined;
           role: CollaboratorRole;
+          status: CollaboratorStatus;
+          collaboratorId?: string | null | undefined;
+          collaborator?:
+            | {
+                __typename?: 'User';
+                id: string;
+                email: string;
+                profile?:
+                  | {
+                      __typename?: 'UserProfile';
+                      displayName?: string | null | undefined;
+                      avatar?: string | null | undefined;
+                    }
+                  | null
+                  | undefined;
+              }
+            | null
+            | undefined;
+          invitedBy?:
+            | {
+                __typename?: 'User';
+                id: string;
+                email: string;
+                profile?:
+                  | {
+                      __typename?: 'UserProfile';
+                      displayName?: string | null | undefined;
+                    }
+                  | null
+                  | undefined;
+              }
+            | null
+            | undefined;
         }>
       | null
       | undefined;
@@ -15631,11 +16122,24 @@ export type CreateShoppingListMutation = {
       | Array<{
           __typename?: 'ShoppingListOwnership';
           id: string;
+          userId: string;
+          shoppingListId: string;
           createdAt: string;
           transferredAt?: string | null | undefined;
           transferredFrom?: string | null | undefined;
-          user: { __typename?: 'User'; id: string };
-          shoppingList: { __typename?: 'ShoppingList'; id: string };
+          user: {
+            __typename?: 'User';
+            id: string;
+            email: string;
+            profile?:
+              | {
+                  __typename?: 'UserProfile';
+                  displayName?: string | null | undefined;
+                  avatar?: string | null | undefined;
+                }
+              | null
+              | undefined;
+          };
         }>
       | null
       | undefined;
@@ -15677,6 +16181,64 @@ export type UpdateShoppingListMutation = {
           id: string;
           email?: string | null | undefined;
           role: CollaboratorRole;
+          status: CollaboratorStatus;
+          collaboratorId?: string | null | undefined;
+          collaborator?:
+            | {
+                __typename?: 'User';
+                id: string;
+                email: string;
+                profile?:
+                  | {
+                      __typename?: 'UserProfile';
+                      displayName?: string | null | undefined;
+                      avatar?: string | null | undefined;
+                    }
+                  | null
+                  | undefined;
+              }
+            | null
+            | undefined;
+          invitedBy?:
+            | {
+                __typename?: 'User';
+                id: string;
+                email: string;
+                profile?:
+                  | {
+                      __typename?: 'UserProfile';
+                      displayName?: string | null | undefined;
+                    }
+                  | null
+                  | undefined;
+              }
+            | null
+            | undefined;
+        }>
+      | null
+      | undefined;
+    ownerships?:
+      | Array<{
+          __typename?: 'ShoppingListOwnership';
+          id: string;
+          userId: string;
+          shoppingListId: string;
+          createdAt: string;
+          transferredAt?: string | null | undefined;
+          transferredFrom?: string | null | undefined;
+          user: {
+            __typename?: 'User';
+            id: string;
+            email: string;
+            profile?:
+              | {
+                  __typename?: 'UserProfile';
+                  displayName?: string | null | undefined;
+                  avatar?: string | null | undefined;
+                }
+              | null
+              | undefined;
+          };
         }>
       | null
       | undefined;
@@ -17387,6 +17949,17 @@ export type UpdateShoppingListItemPriorityMutation = {
   };
 };
 
+export type UpdateCollaboratorRoleMutationVariables = Exact<{
+  shoppingListId: Scalars['ID']['input'];
+  collaboratorId: Scalars['ID']['input'];
+  role: CollaboratorRole;
+}>;
+
+export type UpdateCollaboratorRoleMutation = {
+  __typename?: 'Mutation';
+  updateCollaboratorRole: boolean;
+};
+
 export type ShoppingListUpdatedSubscriptionVariables = Exact<{
   listId: Scalars['ID']['input'];
 }>;
@@ -17776,6 +18349,7 @@ export type ShoppingListStatusChangedSubscription = {
                 | {
                     __typename?: 'UserProfile';
                     displayName?: string | null | undefined;
+                    avatar?: string | null | undefined;
                   }
                 | null
                 | undefined;
