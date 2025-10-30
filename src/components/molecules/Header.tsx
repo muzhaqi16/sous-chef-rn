@@ -90,7 +90,9 @@ export const Header: React.FC<HeaderProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   title: {
-    ...commonStyles.headerTitle,
+    fontSize: 18,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
     flex: 1,
     marginHorizontal: 8,
   },

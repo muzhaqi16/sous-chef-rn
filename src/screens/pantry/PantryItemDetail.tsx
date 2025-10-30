@@ -40,7 +40,11 @@ export const PantryItemDetail: React.FC<{
           'itemsConnection',
           'ShoppingListItem',
         );
-        addToShoppingListItemsCache(cache, selectedShoppingListId, data.addItemToShoppingList);
+        addToShoppingListItemsCache(
+          cache,
+          selectedShoppingListId,
+          data.addItemToShoppingList,
+        );
       } catch (error) {
         console.warn('Cache update failed for addToShoppingList:', error);
       }
@@ -163,7 +167,9 @@ export const PantryItemDetail: React.FC<{
               <FormattedItemSubtitle
                 quantity={item?.currentQuantity}
                 netWeight={item?.item?.netWeight}
-                unitSymbol={item?.item?.displayUnit?.symbol || item?.unit?.symbol}
+                unitSymbol={
+                  item?.item?.displayUnit?.symbol || item?.unit?.symbol
+                }
               />
             </View>
           </View>
@@ -175,7 +181,9 @@ export const PantryItemDetail: React.FC<{
               <FormattedItemSubtitle
                 quantity={item?.initialQuantity}
                 netWeight={item?.item?.netWeight}
-                unitSymbol={item?.item?.displayUnit?.symbol || item?.unit?.symbol}
+                unitSymbol={
+                  item?.item?.displayUnit?.symbol || item?.unit?.symbol
+                }
               />
             </View>
           </View>
@@ -216,7 +224,9 @@ export const PantryItemDetail: React.FC<{
             <Text style={[commonStyles.caption, styles.detailLabel]}>
               Storage
             </Text>
-            <Text style={styles.detailValue}>{item?.storageState || 'N/A'}</Text>
+            <Text style={styles.detailValue}>
+              {item?.storageState || 'N/A'}
+            </Text>
           </View>
           {item?.storageLocation && (
             <View style={styles.detailRow}>
@@ -262,7 +272,8 @@ export const PantryItemDetail: React.FC<{
                 Auto-Reorder
               </Text>
               <Text style={styles.detailValue}>
-                Enabled (at {item.autoReorderPoint ?? 0} {item?.unit?.symbol ?? ''})
+                Enabled (at {item.autoReorderPoint ?? 0}{' '}
+                {item?.unit?.symbol ?? ''})
               </Text>
             </View>
           )}

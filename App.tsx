@@ -28,7 +28,9 @@ enableScreens();
 const App = () => {
   const isHydrated = useAppStore(selectHydrated);
   const isOnline = useAppStore(state => state.isOnline);
-  const setHasStoredCredentials = useAppStore(state => state.setHasStoredCredentials);
+  const setHasStoredCredentials = useAppStore(
+    state => state.setHasStoredCredentials,
+  );
   const getTelemetryConfig = useAppStore(state => state.getTelemetryConfig);
   const { theme } = useTheme();
 
@@ -110,16 +112,16 @@ const App = () => {
                   backgroundColor="transparent"
                   barStyle={theme === 'dark' ? 'light-content' : 'dark-content'}
                 />
-            <SafeAreaView style={styles.container}>
-              <ToastProvider>
-                <NotificationProvider>
-                  <BottomSheetModalProvider>
-                    <Navigation />
-                  </BottomSheetModalProvider>
-                </NotificationProvider>
-              </ToastProvider>
-            </SafeAreaView>
-          </SafeAreaProvider>
+                <SafeAreaView style={styles.container}>
+                  <ToastProvider>
+                    <NotificationProvider>
+                      <BottomSheetModalProvider>
+                        <Navigation />
+                      </BottomSheetModalProvider>
+                    </NotificationProvider>
+                  </ToastProvider>
+                </SafeAreaView>
+              </SafeAreaProvider>
             </SubscriptionProvider>
           </DataProvider>
         </ApolloProvider>

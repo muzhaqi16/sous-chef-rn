@@ -15,7 +15,7 @@ const ShareShoppingListBottomSheet: React.FC = () => {
   const [renderBottomSheet, setRenderBottomSheet] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const {selectedShoppingListId} = useStore();
+  const selectedShoppingListId = useStore(state => state.selectedShoppingListId);
   const shoppingListId = selectedShoppingListId;
   const [shareShoppingList] = useAddCollaboratorMutation();
 

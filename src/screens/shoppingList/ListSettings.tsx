@@ -38,23 +38,29 @@ export const ListSettings: React.FC<{
   const { theme } = useUnistyles();
   const listId = route.params?.listId;
   const { navigate, goBack, navigateTo } = useAppNavigation();
-  const setSelectedShoppingListId = useAppStore(state => state.setSelectedShoppingListId);
+  const setSelectedShoppingListId = useAppStore(
+    state => state.setSelectedShoppingListId,
+  );
   const { handleApolloError } = useErrorHandler();
 
   const [name, setName] = useState('');
   const [isDefault, setIsDefault] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const { shoppingList, isShared, collaborators } = useShoppingListDetails(listId);
+  const { shoppingList, isShared, collaborators } =
+    useShoppingListDetails(listId);
   const { user } = useAuth();
 
   // Check if current user is the owner
-  const isOwner = listId && shoppingList
-    ? isShoppingListOwner(shoppingList, user?.id)
-    : true; // For new lists, user is always the owner
-  const role = shoppingList ? getShoppingListRole(shoppingList, user?.id) : null;
+  const isOwner =
+    listId && shoppingList ? isShoppingListOwner(shoppingList, user?.id) : true; // For new lists, user is always the owner
+  const role = shoppingList
+    ? getShoppingListRole(shoppingList, user?.id)
+    : null;
   const roleDisplay = formatRoleDisplay(role);
-  const ownerInfo = shoppingList ? getShoppingListOwnerInfo(shoppingList) : null;
+  const ownerInfo = shoppingList
+    ? getShoppingListOwnerInfo(shoppingList)
+    : null;
 
   const [updateList] = useUpdateShoppingListMutation();
   const [deleteList] = useDeleteShoppingListMutation({
@@ -207,8 +213,8 @@ export const ListSettings: React.FC<{
           {!listId
             ? 'Create New List'
             : isOwner
-              ? 'List Settings'
-              : 'List Info'}
+            ? 'List Settings'
+            : 'List Info'}
         </Text>
         {isOwner && (
           <TouchableOpacity onPress={handleSave} disabled={saving}>
@@ -217,7 +223,7 @@ export const ListSettings: React.FC<{
             </Text>
           </TouchableOpacity>
         )}
-        {!isOwner && <View style={{width: 60}} />}
+        {!isOwner && <View style={{ width: 60 }} />}
       </View>
 
       <ScrollView style={styles.content}>
@@ -235,7 +241,9 @@ export const ListSettings: React.FC<{
               <Text style={styles.infoLabel}>Your Role</Text>
               <View style={styles.roleBadgeContainer}>
                 <View style={styles.collaboratorBadge}>
-                  <Text style={styles.collaboratorBadgeText}>{roleDisplay}</Text>
+                  <Text style={styles.collaboratorBadgeText}>
+                    {roleDisplay}
+                  </Text>
                 </View>
               </View>
             </View>
@@ -310,8 +318,7 @@ export const ListSettings: React.FC<{
 
             {isShared && (
               <Text style={styles.sharedInfo}>
-                This list is shared with {collaborators.length}{' '}
-                members
+                This list is shared with {collaborators.length} members
               </Text>
             )}
           </View>

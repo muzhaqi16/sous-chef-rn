@@ -1,5 +1,5 @@
-import React, { useRef, useEffect, useCallback } from 'react';
-import { StatusBar, View, Dimensions, Platform } from 'react-native';
+import React, { useRef, useEffect } from 'react';
+import { View, Dimensions } from 'react-native';
 import { useAppNavigation } from '#hooks';
 import BottomSheet, {
   BottomSheetBackdrop,
@@ -54,53 +54,6 @@ export const SearchResultsScreen: React.FC<{
       bottomSheetRef.current.close();
     }
   }, [bottomSheetVisible, bottomSheetIndex]);
-
-  // Update status bar style based on bottom sheet visibility
-  useEffect(() => {
-    if (bottomSheetVisible) {
-      // When bottom sheet is open: dark status bar with light content
-      StatusBar.setBarStyle('light-content', true);
-
-      // Platform-specific handling
-      if (Platform.OS === 'android') {
-        StatusBar.setBackgroundColor('rgba(0, 0, 0, 0.7)', true); // Semi-transparent black
-        StatusBar.setTranslucent(true); // Keep translucent for better appearance
-      }
-    } else {
-      // When bottom sheet is closed: restore to default
-      StatusBar.setBarStyle('dark-content', true);
-
-      if (Platform.OS === 'android') {
-        StatusBar.setBackgroundColor('transparent', true);
-        StatusBar.setTranslucent(true);
-      }
-    }
-
-    // Cleanup function to restore status bar when component unmounts
-    return () => {
-      StatusBar.setBarStyle('dark-content', true);
-      if (Platform.OS === 'android') {
-        StatusBar.setBackgroundColor('transparent', true);
-        StatusBar.setTranslucent(true);
-      }
-    };
-  }, [bottomSheetVisible]);
-
-  const handleSheetChanges = useCallback((index: number) => {
-    if (index >= 0) {
-      // Sheet is opening or open
-      StatusBar.setBarStyle('light-content', true);
-      if (Platform.OS === 'android') {
-        StatusBar.setBackgroundColor('rgba(0, 0, 0, 0.7)', true);
-      }
-    } else {
-      // Sheet is closed
-      StatusBar.setBarStyle('dark-content', true);
-      if (Platform.OS === 'android') {
-        StatusBar.setBackgroundColor('transparent', true);
-      }
-    }
-  }, []);
 
   const handleScanAnother = () => {
     clearSearch();
@@ -184,7 +137,6 @@ export const SearchResultsScreen: React.FC<{
           maxDynamicContentSize={Dimensions.get('window').height * 0.85}
           enablePanDownToClose
           animateOnMount={true}
-          onChange={handleSheetChanges} // Add this line
           onClose={hideBottomSheet}
           backgroundStyle={styles.bottomSheetBackground}
           handleIndicatorStyle={styles.bottomSheetHandle}

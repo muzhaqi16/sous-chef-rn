@@ -1,8 +1,8 @@
-import React, {useState, useEffect, useMemo} from 'react';
-import {View, Text, TouchableOpacity} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
-import {useSearchUnitsQuery} from '#generated';
-import {useStore} from '#store';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, Text, TouchableOpacity } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { useSearchUnitsQuery } from '#generated';
+import { useStore } from '#store';
 import { BottomSheetAutocompleteInput } from './BottomSheetAutocompleteInput';
 
 interface Unit {
@@ -34,8 +34,8 @@ export const UnitsAutocompleteInput: React.FC<UnitsAutocompleteInputProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
 
-  // Get cached common units from store (preloaded on app startup)
-  const {cachedUnits} = useStore();
+  // Get cached units from store
+  const cachedUnits = useStore(state => state.cachedUnits);
 
   // Debounce search term to avoid excessive API calls
   useEffect(() => {
@@ -48,8 +48,8 @@ export const UnitsAutocompleteInput: React.FC<UnitsAutocompleteInputProps> = ({
 
   // Use SearchUnits query for server-side filtering when user types
   // Only search if we have a search term, otherwise show cached common units
-  const {data: searchData, loading: searchLoading} = useSearchUnitsQuery({
-    variables: {query: debouncedSearchTerm},
+  const { data: searchData, loading: searchLoading } = useSearchUnitsQuery({
+    variables: { query: debouncedSearchTerm },
     skip: !debouncedSearchTerm || debouncedSearchTerm.length < 2,
     fetchPolicy: 'cache-first',
   });
@@ -93,7 +93,8 @@ export const UnitsAutocompleteInput: React.FC<UnitsAutocompleteInputProps> = ({
     <TouchableOpacity
       onPress={() => handleSelectUnit(unit)}
       style={styles.unitItem}
-      activeOpacity={0.7}>
+      activeOpacity={0.7}
+    >
       <View style={styles.unitContent}>
         <Text style={styles.unitSymbol}>{unit.symbol}</Text>
         <Text style={styles.unitName}>{unit.name}</Text>

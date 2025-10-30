@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Telemetry } from '#/services/telemetry';
 import { DEFAULT_PERFORMANCE_CONFIG } from '#/services/performance';
+import { usePerformanceStore } from '#/store/performanceStore';
 
 /**
  * Hook to track component render time and count
@@ -67,6 +68,9 @@ export function useRenderTime(
       component: componentName,
     });
 
+    // Record metrics in performance store for dashboard (isolated from main store)
+    usePerformanceStore.getState().recordComponentRender(componentName, renderDuration);
+
     // Track slow renders
     if (renderDuration > slowThreshold) {
       Telemetry.increment('slow_component_renders_total', 1, {
@@ -82,10 +86,17 @@ export function useRenderTime(
     }
 
     // Log render metrics in dev
-    if (__DEV__ && renderCount.current === 1) {
-      console.log(
-        `[Performance] ${componentName} first render: ${renderDuration.toFixed(2)}ms`,
-      );
+    if (__DEV__) {
+      if (renderCount.current === 1) {
+        console.log(
+          `[Performance] ${componentName} first render: ${renderDuration.toFixed(2)}ms`,
+        );
+      } else if (renderCount.current <= 10) {
+        // Log first 10 renders to track unnecessary re-renders
+        console.log(
+          `[Performance] ${componentName} render #${renderCount.current}: ${renderDuration.toFixed(2)}ms (avg: ${avgRenderTime.toFixed(2)}ms)`,
+        );
+      }
     }
 
     // Reset start time for next render

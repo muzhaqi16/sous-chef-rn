@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { Alert } from 'react-native';
 import { useScanner } from '#context';
 import { useAppNavigation } from '#hooks';
@@ -67,31 +67,23 @@ export function useScannerSetup(options: UseScannerSetupOptions): void {
   const { setScannerProps } = useScanner();
   const { navigate, navigateTo } = useAppNavigation();
 
-  const handleScanPress = useCallback(() => {
-    // Validate home selection
-    if (!homeId) {
-      if (onNoHome) {
-        onNoHome();
-      } else {
-        Alert.alert(
-          'No Home Selected',
-          'You need to be a member of a home to scan items.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            {
-              text: 'Manage Homes',
-              onPress: () => navigate('HomeManagement'),
-              style: 'default',
-            },
-          ],
-        );
-      }
-      return;
-    }
+  // Use refs to track dynamic values without triggering effect re-runs
+  const homeIdRef = useRef(homeId);
+  const contextRef = useRef(context);
+  const onNoHomeRef = useRef(onNoHome);
 
-    // Navigate to barcode scanner with context
-    navigateTo.barcode(context);
-  }, [homeId, context, navigate, navigateTo, onNoHome]);
+  // Update refs when values change
+  useEffect(() => {
+    homeIdRef.current = homeId;
+  }, [homeId]);
+
+  useEffect(() => {
+    contextRef.current = context;
+  }, [context]);
+
+  useEffect(() => {
+    onNoHomeRef.current = onNoHome;
+  }, [onNoHome]);
 
   // Set up scanner button
   useEffect(() => {
@@ -99,11 +91,37 @@ export function useScannerSetup(options: UseScannerSetupOptions): void {
       return;
     }
 
+    const handleScanPress = () => {
+      // Validate home selection
+      if (!homeIdRef.current) {
+        if (onNoHomeRef.current) {
+          onNoHomeRef.current();
+        } else {
+          Alert.alert(
+            'No Home Selected',
+            'You need to be a member of a home to scan items.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Manage Homes',
+                onPress: () => navigate('HomeManagement'),
+                style: 'default',
+              },
+            ],
+          );
+        }
+        return;
+      }
+
+      // Navigate to barcode scanner with context
+      navigateTo.barcode(contextRef.current);
+    };
+
     setScannerProps(handleScanPress, true);
 
     // Clean up on unmount
     return () => {
       setScannerProps(undefined, false);
     };
-  }, [enabled, setScannerProps, handleScanPress]);
+  }, [enabled, setScannerProps, navigate, navigateTo]);
 }

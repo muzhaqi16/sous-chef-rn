@@ -103,7 +103,9 @@ export const PantrySettings: React.FC<{
                 totalCount: Math.max(
                   0,
                   (existingConnection.totalCount ?? filteredEdges.length) -
-                    (filteredEdges.length < existingConnection.edges.length ? 1 : 0),
+                    (filteredEdges.length < existingConnection.edges.length
+                      ? 1
+                      : 0),
                 ),
               };
             },
