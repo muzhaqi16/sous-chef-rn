@@ -16,6 +16,7 @@ import {
   findMovedItem,
   getNeighborIds,
 } from './SortableList.utils';
+import { useRenderTime } from '#hooks/performance';
 
 // Tab bar height constant (65px from FloatingTabBar)
 const TAB_BAR_HEIGHT = 65;
@@ -32,6 +33,9 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
   onSwipeableWillOpen: externalOnSwipeableWillOpen,
   ...flatListProps
 }) => {
+  // Track render performance
+  useRenderTime('SortableShoppingList');
+
   // Track local order for optimistic updates
   const [localItems, setLocalItems] = useState(items);
   // Track if we're currently updating the sort order

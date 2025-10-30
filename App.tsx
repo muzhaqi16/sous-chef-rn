@@ -26,11 +26,16 @@ import { SubscriptionProvider } from '#/components/providers/SubscriptionProvide
 enableScreens();
 
 const App = () => {
-  const { isHydrated, isOnline, setHasStoredCredentials, getTelemetryConfig } =
-    useStore();
+  const isHydrated = useStore(state => state.isHydrated);
+  const isOnline = useStore(state => state.isOnline);
+  const setHasStoredCredentials = useStore(state => state.setHasStoredCredentials);
+  const getTelemetryConfig = useStore(state => state.getTelemetryConfig);
   const { theme } = useTheme();
   const { theme: themeStyles } = useUnistyles();
   const isDark = theme === 'dark';
+
+  // Subscribe to theme from store to trigger re-renders
+  const themeFromStore = useStore(state => state.theme);
 
   // Initialize network monitoring
   useNetworkStatus();
@@ -114,7 +119,6 @@ const App = () => {
                 },
                 ios: {},
               })}
-              backgroundColor={'red'}
               hidden={false}
               animated={true}
               barStyle={isDark ? 'light-content' : 'dark-content'}

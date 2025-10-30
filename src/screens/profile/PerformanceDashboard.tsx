@@ -3,25 +3,25 @@ import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { SettingSwitch, SettingSection } from '#components/settings';
 import { ProfileScreenWrapper } from '#components/templates';
-import { useStore } from '#/store';
+import { usePerformanceStore } from '#/store/performanceStore';
 import { commonStyles } from '#/styles/commonStyles';
 
 export const PerformanceDashboard: React.FC = () => {
-  // Performance state
-  const isEnabled = useStore(state => state.isEnabled);
-  const trackRenders = useStore(state => state.trackRenders);
-  const trackMemory = useStore(state => state.trackMemory);
-  const trackScreens = useStore(state => state.trackScreens);
+  // Performance state (from isolated performance store)
+  const isEnabled = usePerformanceStore(state => state.isEnabled);
+  const trackRenders = usePerformanceStore(state => state.trackRenders);
+  const trackMemory = usePerformanceStore(state => state.trackMemory);
+  const trackScreens = usePerformanceStore(state => state.trackScreens);
 
-  const setPerformanceEnabled = useStore(state => state.setPerformanceEnabled);
-  const setTrackRenders = useStore(state => state.setTrackRenders);
-  const setTrackMemory = useStore(state => state.setTrackMemory);
-  const setTrackScreens = useStore(state => state.setTrackScreens);
+  const setPerformanceEnabled = usePerformanceStore(state => state.setPerformanceEnabled);
+  const setTrackRenders = usePerformanceStore(state => state.setTrackRenders);
+  const setTrackMemory = usePerformanceStore(state => state.setTrackMemory);
+  const setTrackScreens = usePerformanceStore(state => state.setTrackScreens);
 
-  const getSlowestComponents = useStore(state => state.getSlowestComponents);
-  const getSlowestScreens = useStore(state => state.getSlowestScreens);
-  const getRecentMemorySnapshots = useStore(state => state.getRecentMemorySnapshots);
-  const clearPerformanceData = useStore(state => state.clearPerformanceData);
+  const getSlowestComponents = usePerformanceStore(state => state.getSlowestComponents);
+  const getSlowestScreens = usePerformanceStore(state => state.getSlowestScreens);
+  const getRecentMemorySnapshots = usePerformanceStore(state => state.getRecentMemorySnapshots);
+  const clearPerformanceData = usePerformanceStore(state => state.clearPerformanceData);
 
   // Get metrics
   const slowestComponents = getSlowestComponents(10);

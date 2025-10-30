@@ -73,7 +73,7 @@ export const BarcodeScannerScreen: React.FC<{
     // Cleanup on unmount
     return () => {
       StatusBar.setHidden(false, 'slide');
-      StatusBar.setBarStyle('dark-content', true);
+      // Don't set barStyle - let App.tsx handle theme-aware styling
     };
   }, [hasPermission, requestPermission]);
 
@@ -98,7 +98,7 @@ export const BarcodeScannerScreen: React.FC<{
         setScanning(false);
         // Show status bar when leaving
         StatusBar.setHidden(false, 'slide');
-        StatusBar.setBarStyle('dark-content', true);
+        // Don't set barStyle - let App.tsx handle theme-aware styling
       };
     }, [hasPermission, setScanning]),
   );

@@ -6,6 +6,7 @@ import {
   MemoryWarningLevel,
   DEFAULT_PERFORMANCE_CONFIG,
 } from './types';
+import { usePerformanceStore } from '#/store/performanceStore';
 
 /**
  * Memory Monitor Service
@@ -94,6 +95,9 @@ class MemoryMonitorService {
     if (this.snapshots.length > this.maxSnapshots) {
       this.snapshots = this.snapshots.slice(-this.maxSnapshots);
     }
+
+    // Record snapshot in performance store for dashboard (isolated from main store)
+    usePerformanceStore.getState().addMemorySnapshot(snapshot);
 
     // Report metrics
     Telemetry.gauge('app_memory_used_bytes', snapshot.usedBytes, {

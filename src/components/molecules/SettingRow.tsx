@@ -110,7 +110,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
 
           {item.type === 'text' && (
             <>
-              <ValueText>{item.value as string}</ValueText>
+              <ValueText>d{item.value as string}</ValueText>
               <Icon
                 library="Feather"
                 name="edit-2"

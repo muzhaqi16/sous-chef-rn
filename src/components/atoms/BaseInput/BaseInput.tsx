@@ -11,6 +11,7 @@ import {
 import {useUnistyles} from 'react-native-unistyles';
 import styles from './BaseInput.styles';
 import {Icon} from '#/utils/iconUtils';
+import {useStore} from '#/store';
 
 export interface BaseInputProps extends TextInputProps {
   label?: string;
@@ -35,6 +36,8 @@ export const BaseInput: React.FC<BaseInputProps> = ({
   ...textInputProps
 }) => {
   const {theme} = useUnistyles();
+  // Subscribe to theme from store to trigger re-renders when theme changes
+  const themeFromStore = useStore(state => state.theme);
   const [isFocused, setIsFocused] = useState(false);
   const hasError = Boolean(errorMessage);
   const showClear = showClearIcon && Boolean(value && value.length > 0);

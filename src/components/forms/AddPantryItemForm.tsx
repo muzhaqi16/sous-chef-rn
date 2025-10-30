@@ -79,7 +79,7 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
     null,
   );
 
-  const { selectedPantryId } = useStore();
+  const selectedPantryId = useStore(state => state.selectedPantryId);
   const { selectedHomeId, getDefaultPantry } = useDefaultHome();
 
   const { data: homeData } = useGetHomeQuery({

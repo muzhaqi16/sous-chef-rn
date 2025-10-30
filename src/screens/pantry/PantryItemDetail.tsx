@@ -21,7 +21,7 @@ export const PantryItemDetail: React.FC<{
   const itemId = route.params.itemId;
   const { goBack, navigateTo } = useAppNavigation();
   const { theme } = useUnistyles();
-  const { selectedShoppingListId } = useStore();
+  const selectedShoppingListId = useStore(state => state.selectedShoppingListId);
 
   const { data } = useGetPantryItemQuery({
     variables: { id: itemId },

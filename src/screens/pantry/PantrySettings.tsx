@@ -28,7 +28,7 @@ export const PantrySettings: React.FC<{
   const { theme } = useUnistyles();
   const pantryId = route.params?.pantryId;
 
-  const { selectedHomeId } = useStore();
+  const selectedHomeId = useStore(state => state.selectedHomeId);
   const setSelectedPantryId = useStore(state => state.setSelectedPantryId);
   const { handleApolloError } = useErrorHandler();
 

@@ -1,10 +1,14 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
+import { enableMapSet } from 'immer';
 import {
   createJSONStorage,
   persist,
   subscribeWithSelector,
 } from 'zustand/middleware';
+
+// Enable Immer MapSet plugin for performance slice
+enableMapSet();
 import { createAuthSlice, AuthState } from './slices/authSlice';
 import {
   createPreferencesSlice,
@@ -32,7 +36,8 @@ import {
 } from './slices/navigationSlice';
 import { createTelemetrySlice, TelemetryState } from './slices/telemetrySlice';
 import { createNetworkSlice, NetworkState } from './slices/networkSlice';
-import { createPerformanceSlice, PerformanceState } from './slices/performanceSlice';
+// Performance slice moved to separate store (performanceStore.ts) to prevent re-render loops
+// import { createPerformanceSlice, PerformanceState } from './slices/performanceSlice';
 // import {logger} from './logger';
 import { zustandStorage, STORAGE_KEY } from '#/storage/mmkv';
 
@@ -63,7 +68,7 @@ export type RootState = AuthState &
   UIState &
   TelemetryState &
   NetworkState &
-  PerformanceState &
+  // PerformanceState moved to separate store
   ResetManagerState &
   NavigationStateManagerState;
 
@@ -103,7 +108,7 @@ export const useStore = create<RootState>()(
             ...createUISlice(set, get, store),
             ...createTelemetrySlice(set, get, store),
             ...createNetworkSlice(set, get, store),
-            ...createPerformanceSlice(set, get, store),
+            // createPerformanceSlice moved to separate store (performanceStore.ts)
             // Add reset manager methods to the store
             ...resetManager,
             // Add navigation state manager methods

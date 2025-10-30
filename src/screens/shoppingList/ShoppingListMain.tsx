@@ -38,7 +38,8 @@ export const ShoppingListMain: React.FC = () => {
   } = useUnistyles();
   const { primary: primaryColor, primaryLight: primaryLightColor } = colors;
   // Step 2: Use the extracted variables INSIDE useMemo
-  const { selectedShoppingListId, setSelectedShoppingListId } = useStore();
+  const selectedShoppingListId = useStore(state => state.selectedShoppingListId);
+  const setSelectedShoppingListId = useStore(state => state.setSelectedShoppingListId);
   const { user } = useAuth();
   const selectorRef = useRef<ItemSelectorRef>(null);
   const { setScannerProps, setOverlayOpen } = useScanner();
@@ -265,22 +266,30 @@ export const ShoppingListMain: React.FC = () => {
     colors,
   ]);
 
-  const handleScanPress = useCallback(() => {
-    navigateTo.barcode({
-      source: 'shoppingList',
-      shoppingListId: currentListId,
-    });
-  }, [navigateTo, currentListId]);
+  // Use ref to track currentListId without triggering effect re-runs
+  const currentListIdRef = useRef(currentListId);
+
+  // Update ref when currentListId changes
+  useEffect(() => {
+    currentListIdRef.current = currentListId;
+  }, [currentListId]);
 
   // Set up scanner button when component mounts
   useEffect(() => {
+    const handleScanPress = () => {
+      navigateTo.barcode({
+        source: 'shoppingList',
+        shoppingListId: currentListIdRef.current,
+      });
+    };
+
     setScannerProps(handleScanPress, true);
 
     // Clean up on unmount
     return () => {
       setScannerProps(undefined, false);
     };
-  }, [setScannerProps, handleScanPress]);
+  }, [setScannerProps, navigateTo]);
 
   // If no lists exist at all
   if (lists.length === 0) {

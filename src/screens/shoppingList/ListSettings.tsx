@@ -36,7 +36,7 @@ export const ListSettings: React.FC<{
   const { theme } = useUnistyles();
   const listId = route.params?.listId;
   const { navigate, goBack, navigateTo } = useAppNavigation();
-  const { setSelectedShoppingListId } = useStore();
+  const setSelectedShoppingListId = useStore(state => state.setSelectedShoppingListId);
   const { handleApolloError } = useErrorHandler();
 
   const [name, setName] = useState('');

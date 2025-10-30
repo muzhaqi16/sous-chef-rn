@@ -3,6 +3,7 @@ import { View, StyleProp, ViewStyle, TextInputProps } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { BaseInput, ActionButton } from '#components';
 import { commonStyles } from '#/styles';
+import { useStore } from '#/store';
 
 export interface SearchBarAction {
   icon: string;
@@ -38,6 +39,8 @@ export const SearchBar: FC<SearchBarProps> = ({
   ...textInputProps
 }) => {
   const { theme } = useUnistyles();
+  // Subscribe to theme from store to trigger re-renders when theme changes
+  const themeFromStore = useStore(state => state.theme);
   // Handle legacy props by converting them to action arrays
 
   const renderActionButtons = (

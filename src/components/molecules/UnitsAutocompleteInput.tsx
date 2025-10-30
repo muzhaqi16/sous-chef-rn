@@ -34,7 +34,8 @@ export const UnitsAutocompleteInput: React.FC<UnitsAutocompleteInputProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
 
   // Get cached units from store
-  const {cachedUnits, setCachedUnits} = useStore();
+  const cachedUnits = useStore(state => state.cachedUnits);
+  const setCachedUnits = useStore(state => state.setCachedUnits);
 
   // Fetch common units and cache them
   const {data: commonUnitsData, loading} = useGetUnitsQuery({

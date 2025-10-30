@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { Telemetry } from '#/services/telemetry';
 import { DEFAULT_PERFORMANCE_CONFIG } from '#/services/performance';
+import { usePerformanceStore } from '#/store/performanceStore';
 
 /**
  * Hook to track screen transition performance
@@ -95,6 +96,9 @@ export function useScreenTransition(
         Telemetry.histogram('screen_transition_duration_ms', interactiveDuration, {
           screen: screenName,
         });
+
+        // Record metrics in performance store for dashboard (isolated from main store)
+        usePerformanceStore.getState().recordScreenTransition(screenName, mountDuration, interactiveDuration);
 
         if (__DEV__) {
           console.log(

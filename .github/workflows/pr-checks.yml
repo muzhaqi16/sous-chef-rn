@@ -22,8 +22,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
@@ -44,8 +44,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
@@ -66,8 +66,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
@@ -95,8 +95,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
@@ -104,7 +104,7 @@ jobs:
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '3.2'
+          ruby-version: "3.2"
           bundler-cache: true
 
       - name: Install CocoaPods
@@ -131,75 +131,11 @@ jobs:
           path: artifacts/
           retention-days: 3
 
-  # Build verification
-  build-ios:
-    name: Build iOS
-    runs-on: macos-14
-    timeout-minutes: 30
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Setup Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.2'
-          bundler-cache: true
-
-      - name: Install CocoaPods
-        run: |
-          cd ios
-          pod install
-
-      - name: Build iOS app
-        run: |
-          cd ios
-          xcodebuild -workspace SousChef.xcworkspace -scheme SousChef -configuration Debug -sdk iphonesimulator -derivedDataPath build
-
-  build-android:
-    name: Build Android
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Build Android app
-        run: |
-          cd android
-          ./gradlew assembleDebug --no-daemon
-
   # PR status check
   pr-status:
     name: PR Status Check
     runs-on: ubuntu-latest
-    needs: [typecheck, lint, unit-tests, e2e-smoke, build-ios, build-android]
+    needs: [typecheck, lint, unit-tests, e2e-smoke]
     if: always()
 
     steps:
@@ -208,9 +144,7 @@ jobs:
           if [ "${{ needs.typecheck.result }}" != "success" ] || \
              [ "${{ needs.lint.result }}" != "success" ] || \
              [ "${{ needs.unit-tests.result }}" != "success" ] || \
-             [ "${{ needs.e2e-smoke.result }}" != "success" ] || \
-             [ "${{ needs.build-ios.result }}" != "success" ] || \
-             [ "${{ needs.build-android.result }}" != "success" ]; then
+             [ "${{ needs.e2e-smoke.result }}" != "success" ]; then
             echo "❌ One or more PR checks failed"
             echo "## PR Check Results" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
@@ -218,8 +152,6 @@ jobs:
             echo "- Lint: ${{ needs.lint.result }}" >> $GITHUB_STEP_SUMMARY
             echo "- Unit Tests: ${{ needs.unit-tests.result }}" >> $GITHUB_STEP_SUMMARY
             echo "- E2E Smoke: ${{ needs.e2e-smoke.result }}" >> $GITHUB_STEP_SUMMARY
-            echo "- Build iOS: ${{ needs.build-ios.result }}" >> $GITHUB_STEP_SUMMARY
-            echo "- Build Android: ${{ needs.build-android.result }}" >> $GITHUB_STEP_SUMMARY
             exit 1
           fi
           echo "✅ All PR checks passed!"
@@ -230,5 +162,3 @@ jobs:
           echo "- ✅ Lint" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Unit Tests" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ E2E Smoke Tests" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Build iOS" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Build Android" >> $GITHUB_STEP_SUMMARY

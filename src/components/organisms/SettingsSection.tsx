@@ -1,7 +1,7 @@
 import React from 'react';
-import {View, Text} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
-import {SettingRow, SettingRowProps} from '../molecules/SettingRow';
+import { View, Text } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { SettingRow, SettingRowProps } from '../molecules/SettingRow';
 
 export interface SettingsSectionProps {
   title: string;
@@ -13,7 +13,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
   items,
 }) => {
   return (
-    <View style={styles.section}>
+    <View style={[styles.section]}>
       <Text style={styles.sectionTitle}>{title}</Text>
       <View style={styles.sectionBody}>
         {items.map((item, idx) => (
