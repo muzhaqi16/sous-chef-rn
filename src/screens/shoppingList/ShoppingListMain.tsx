@@ -27,7 +27,10 @@ import {
 import { EmptyState } from '#components/base/EmptyState';
 import { getItemImageUrl } from '#utils/imageUtils';
 import { generatePosition } from '#/utils/fractionalIndexing';
-import { GetShoppingListItemsDocument, GetShoppingListItemsQuery } from '#generated';
+import {
+  GetShoppingListItemsDocument,
+  GetShoppingListItemsQuery,
+} from '#generated';
 import { Icon } from '#utils';
 import type {
   SelectorConfig,
@@ -168,7 +171,7 @@ export const ShoppingListMain: React.FC = () => {
       // Generate new position between neighbors
       const optimisticSortOrder = generatePosition(
         afterItem?.sortOrder ?? null,
-        beforeItem?.sortOrder ?? null
+        beforeItem?.sortOrder ?? null,
       );
 
       // Return updated item with new sortOrder
@@ -199,12 +202,12 @@ export const ShoppingListMain: React.FC = () => {
         const updatedItems = queryResult.shoppingListItems.map(item =>
           item.id === data.moveShoppingListItem.id
             ? { ...item, sortOrder: data.moveShoppingListItem.sortOrder }
-            : item
+            : item,
         );
 
         // Sort by sortOrder (server returns them sorted, so we should too)
         const sortedItems = [...updatedItems].sort((a, b) =>
-          a.sortOrder.localeCompare(b.sortOrder)
+          a.sortOrder.localeCompare(b.sortOrder),
         );
 
         // Write back to cache
@@ -746,7 +749,7 @@ export const ShoppingListMain: React.FC = () => {
   }
 
   const emptyStateConfig = {
-    icon: 'add-shopping-cart' as const,
+    icon: 'add-shopping-cart',
     title: 'No items in this list',
     description: 'Add some items to get started',
     action: {
