@@ -1,24 +1,13 @@
 import React, { useMemo, RefObject } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
-import type { SelectorConfig, ItemSelectorRef } from '#components/organisms/AnimatedItemSelector';
+import type {
+  SelectorConfig,
+  ItemSelectorRef,
+} from '#components/organisms/AnimatedItemSelector';
 import { ShoppingListAvatar } from '#components/atoms';
 import { Icon } from '#utils';
 import { IconLibrary } from '#/utils/iconUtils';
 import { isShoppingListOwner } from '#utils/ownershipHelpers';
-
-interface ShoppingList {
-  id: string;
-  name: string;
-  isDefault?: boolean;
-  ownerships?: Array<{
-    user?: {
-      profile?: {
-        displayName?: string | null;
-      } | null;
-      email?: string;
-    } | null;
-  }> | null;
-}
 
 interface UseShoppingListSelectorOptions {
   /**

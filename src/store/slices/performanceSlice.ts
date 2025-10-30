@@ -1,5 +1,4 @@
 import { StateCreator } from 'zustand';
-import { RootState } from '../index';
 import {
   RenderMetrics,
   ScreenMetrics,
@@ -64,7 +63,7 @@ const MAX_SCREENS = 30;
 const MAX_MEMORY_SNAPSHOTS = 100;
 
 export const createPerformanceSlice: StateCreator<
-  RootState,
+  PerformanceState,
   [['zustand/immer', never]],
   [],
   PerformanceState

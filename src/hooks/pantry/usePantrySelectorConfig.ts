@@ -1,12 +1,9 @@
 import { useMemo, RefObject } from 'react';
-import type { SelectorConfig, ItemSelectorRef } from '#components/organisms/AnimatedItemSelector';
+import type {
+  SelectorConfig,
+  ItemSelectorRef,
+} from '#components/organisms/AnimatedItemSelector';
 import { IconLibrary } from '#/utils/iconUtils';
-
-interface Pantry {
-  id: string;
-  name: string;
-  isDefault?: boolean;
-}
 
 interface UsePantrySelectorConfigOptions {
   /**
@@ -114,6 +111,13 @@ export function usePantrySelectorConfig(
         },
       ],
     }),
-    [pantries, selectedPantryId, loading, setSelectedPantryId, selectorRef, navigate],
+    [
+      pantries,
+      selectedPantryId,
+      loading,
+      setSelectedPantryId,
+      selectorRef,
+      navigate,
+    ],
   );
 }

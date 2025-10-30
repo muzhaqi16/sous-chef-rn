@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Alert } from 'react-native';
 import { useScanner } from '#context';
 import { useAppNavigation } from '#hooks';
@@ -57,12 +57,7 @@ interface UseScannerSetupOptions {
  * ```
  */
 export function useScannerSetup(options: UseScannerSetupOptions): void {
-  const {
-    enabled = true,
-    homeId,
-    context,
-    onNoHome,
-  } = options;
+  const { enabled = true, homeId, context, onNoHome } = options;
 
   const { setScannerProps } = useScanner();
   const { navigate, navigateTo } = useAppNavigation();

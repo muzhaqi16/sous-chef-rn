@@ -4,7 +4,6 @@ import { StyleSheet } from 'react-native-unistyles';
 import { SettingSwitch, SettingSection } from '#components/settings';
 import { ProfileScreenWrapper } from '#components/templates';
 import { usePerformanceStore } from '#/store/performanceStore';
-import { commonStyles } from '#/styles/commonStyles';
 
 export const PerformanceDashboard: React.FC = () => {
   // Performance state (from isolated performance store)
@@ -13,15 +12,25 @@ export const PerformanceDashboard: React.FC = () => {
   const trackMemory = usePerformanceStore(state => state.trackMemory);
   const trackScreens = usePerformanceStore(state => state.trackScreens);
 
-  const setPerformanceEnabled = usePerformanceStore(state => state.setPerformanceEnabled);
+  const setPerformanceEnabled = usePerformanceStore(
+    state => state.setPerformanceEnabled,
+  );
   const setTrackRenders = usePerformanceStore(state => state.setTrackRenders);
   const setTrackMemory = usePerformanceStore(state => state.setTrackMemory);
   const setTrackScreens = usePerformanceStore(state => state.setTrackScreens);
 
-  const getSlowestComponents = usePerformanceStore(state => state.getSlowestComponents);
-  const getSlowestScreens = usePerformanceStore(state => state.getSlowestScreens);
-  const getRecentMemorySnapshots = usePerformanceStore(state => state.getRecentMemorySnapshots);
-  const clearPerformanceData = usePerformanceStore(state => state.clearPerformanceData);
+  const getSlowestComponents = usePerformanceStore(
+    state => state.getSlowestComponents,
+  );
+  const getSlowestScreens = usePerformanceStore(
+    state => state.getSlowestScreens,
+  );
+  const getRecentMemorySnapshots = usePerformanceStore(
+    state => state.getRecentMemorySnapshots,
+  );
+  const clearPerformanceData = usePerformanceStore(
+    state => state.clearPerformanceData,
+  );
 
   // Get metrics
   const slowestComponents = getSlowestComponents(10);
@@ -117,10 +126,18 @@ export const PerformanceDashboard: React.FC = () => {
             </Text>
             <View style={styles.table}>
               <View style={styles.tableHeader}>
-                <Text style={[styles.tableHeaderText, styles.nameColumn]}>Component</Text>
-                <Text style={[styles.tableHeaderText, styles.avgColumn]}>Avg</Text>
-                <Text style={[styles.tableHeaderText, styles.maxColumn]}>Max</Text>
-                <Text style={[styles.tableHeaderText, styles.countColumn]}>Count</Text>
+                <Text style={[styles.tableHeaderText, styles.nameColumn]}>
+                  Component
+                </Text>
+                <Text style={[styles.tableHeaderText, styles.avgColumn]}>
+                  Avg
+                </Text>
+                <Text style={[styles.tableHeaderText, styles.maxColumn]}>
+                  Max
+                </Text>
+                <Text style={[styles.tableHeaderText, styles.countColumn]}>
+                  Count
+                </Text>
               </View>
               {slowestComponents.map((metric, index) => (
                 <View
@@ -160,10 +177,18 @@ export const PerformanceDashboard: React.FC = () => {
             </Text>
             <View style={styles.table}>
               <View style={styles.tableHeader}>
-                <Text style={[styles.tableHeaderText, styles.nameColumn]}>Screen</Text>
-                <Text style={[styles.tableHeaderText, styles.avgColumn]}>Avg Mount</Text>
-                <Text style={[styles.tableHeaderText, styles.maxColumn]}>Avg Interactive</Text>
-                <Text style={[styles.tableHeaderText, styles.countColumn]}>Count</Text>
+                <Text style={[styles.tableHeaderText, styles.nameColumn]}>
+                  Screen
+                </Text>
+                <Text style={[styles.tableHeaderText, styles.avgColumn]}>
+                  Avg Mount
+                </Text>
+                <Text style={[styles.tableHeaderText, styles.maxColumn]}>
+                  Avg Interactive
+                </Text>
+                <Text style={[styles.tableHeaderText, styles.countColumn]}>
+                  Count
+                </Text>
               </View>
               {slowestScreens.map((metric, index) => (
                 <View
@@ -202,7 +227,7 @@ export const PerformanceDashboard: React.FC = () => {
               Last 5 memory measurements
             </Text>
             <View style={styles.memoryList}>
-              {recentMemorySnapshots.map((snapshot, index) => (
+              {recentMemorySnapshots.map((snapshot, _index) => (
                 <View key={snapshot.timestamp} style={styles.memoryItem}>
                   <View style={styles.memoryItemHeader}>
                     <Text style={styles.memoryTime}>
@@ -220,7 +245,8 @@ export const PerformanceDashboard: React.FC = () => {
                   </View>
                   <Text style={styles.memoryDetails}>
                     {formatMemory(snapshot.usedBytes)}
-                    {snapshot.limitBytes && ` / ${formatMemory(snapshot.limitBytes)}`}
+                    {snapshot.limitBytes &&
+                      ` / ${formatMemory(snapshot.limitBytes)}`}
                     {snapshot.context && ` • ${snapshot.context}`}
                   </Text>
                 </View>
@@ -234,15 +260,15 @@ export const PerformanceDashboard: React.FC = () => {
           slowestComponents.length === 0 &&
           slowestScreens.length === 0 &&
           recentMemorySnapshots.length === 0 && (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>
-              No performance data collected yet.
-            </Text>
-            <Text style={styles.emptyStateSubtext}>
-              Navigate through the app to start collecting metrics.
-            </Text>
-          </View>
-        )}
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>
+                No performance data collected yet.
+              </Text>
+              <Text style={styles.emptyStateSubtext}>
+                Navigate through the app to start collecting metrics.
+              </Text>
+            </View>
+          )}
 
         {/* Clear Data Button */}
         {(slowestComponents.length > 0 ||
