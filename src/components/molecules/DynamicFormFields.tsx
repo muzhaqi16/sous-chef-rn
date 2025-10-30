@@ -11,14 +11,14 @@ import {
 import { StyleSheet } from 'react-native-unistyles';
 
 // Import your autocomplete components
-import { EnhancedAutocompleteInput } from './EnhancedAutocompleteInput';
+import { ItemAutocompleteInput } from './ItemAutocompleteInput';
 import { BrandAutocompleteInput } from './BrandAutocompleteInput';
 import { UnitsAutocompleteInput } from './UnitsAutocompleteInput';
 import { CategoryAutocompleteInput } from './CategoryAutocompleteInput';
 import { StorageLocationAutocompleteInput } from './StorageLocationAutocompleteInput';
 
 // Create memoized versions to prevent re-renders
-const MemoizedEnhancedAutocomplete = React.memo(EnhancedAutocompleteInput);
+const MemoizedItemAutocomplete = React.memo(ItemAutocompleteInput);
 const MemoizedBrandAutocomplete = React.memo(BrandAutocompleteInput);
 const MemoizedUnitsAutocomplete = React.memo(UnitsAutocompleteInput);
 const MemoizedCategoryAutocomplete = React.memo(CategoryAutocompleteInput);
@@ -157,7 +157,7 @@ export function DynamicFormFields<T extends FieldValues>({
                 // Handle autocomplete components by string identifier
                 if (Input === 'itemAutocomplete') {
                   return (
-                    <MemoizedEnhancedAutocomplete
+                    <MemoizedItemAutocomplete
                       label={label}
                       value={displayValue || ''}
                       onChangeText={handleChange}

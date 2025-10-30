@@ -111,6 +111,12 @@ export function ItemSelectorWithActions<T extends SelectableItem>({
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContent}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
+          // Performance optimizations
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          removeClippedSubviews={true}
+          initialNumToRender={10}
+          updateCellsBatchingPeriod={50}
         />
       )}
 

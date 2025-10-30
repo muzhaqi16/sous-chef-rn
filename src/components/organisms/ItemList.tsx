@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { RefreshControl, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { EmptyState } from '../molecules/EmptyState';
+import { EmptyState } from '../base/EmptyState';
 import { ItemCard } from './ItemCard';
 import { IconName } from '#/utils/iconUtils';
 

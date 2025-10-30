@@ -4,6 +4,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils';
 import { Header } from '../molecules/Header';
 import { Button } from '../base/Button';
+import { commonStyles } from '#/styles';
 
 interface DetailSection {
   title?: string;
@@ -43,7 +44,7 @@ export const DetailTemplate: React.FC<DetailTemplateProps> = ({
         contentContainerStyle={{ paddingVertical: theme.spacing.md }}
       >
         {sections.map((section, index) => (
-          <View key={index} style={styles.section}>
+          <View key={index} style={[commonStyles.shadow, styles.section]}>
             {section.title && (
               <Text style={styles.sectionTitle}>{section.title}</Text>
             )}
