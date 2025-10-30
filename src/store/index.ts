@@ -171,10 +171,7 @@ export const useStore = create<RootState>()(
             isLoading,
             isError,
             isFetching,
-            // Exclude performance state (volatile runtime data)
-            componentMetrics,
-            screenMetrics,
-            memorySnapshots,
+            // Performance state is in separate store (performanceStore.ts), not part of RootState
             ...persistedState
           } = state;
 

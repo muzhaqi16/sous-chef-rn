@@ -138,7 +138,10 @@ const config: CodegenConfig = {
       plugins: [
         {
           add: {
-            content: '// Shared GraphQL types - no hooks',
+            content: [
+              '// Shared GraphQL types - no hooks',
+              '/* eslint-disable */',
+            ].join('\n'),
           },
         },
         'typescript',

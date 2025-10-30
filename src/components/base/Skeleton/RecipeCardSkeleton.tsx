@@ -1,7 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { SkeletonBase } from './SkeletonBase';
 import { SkeletonLine } from './SkeletonLine';
 import { SkeletonRectangle } from './SkeletonRectangle';
 
@@ -42,28 +41,16 @@ export const RecipeCardSkeleton: React.FC<RecipeCardSkeletonProps> = ({
       {/* Right: Recipe Details */}
       <View style={styles.content}>
         {/* Recipe Title */}
-        <SkeletonLine
-          width="85%"
-          height={18}
-          animated={animated}
-        />
+        <SkeletonLine width="85%" height={18} animated={animated} />
 
         {/* Recipe Details (ingredients, time, servings) */}
         <View style={styles.detailsRow}>
-          <SkeletonLine
-            width="95%"
-            height={14}
-            animated={animated}
-          />
+          <SkeletonLine width="95%" height={14} animated={animated} />
         </View>
 
         {/* Likes Badge Area */}
         <View style={styles.badgeArea}>
-          <SkeletonLine
-            width="30%"
-            height={12}
-            animated={animated}
-          />
+          <SkeletonLine width="30%" height={12} animated={animated} />
         </View>
       </View>
     </View>

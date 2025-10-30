@@ -35,23 +35,23 @@ export function useRenderTime(
   const sampleRate = options?.sampleRate ?? DEFAULT_PERFORMANCE_CONFIG.sampleRate;
   const slowThreshold = options?.slowThreshold ?? DEFAULT_PERFORMANCE_CONFIG.slowRenderThreshold;
 
-  // Skip if disabled
-  if (!enabled) {
-    return;
-  }
-
   // Increment render count
   renderCount.current += 1;
 
   // Apply sampling - only track a percentage of renders
   const shouldTrack = Math.random() < sampleRate;
-  if (!shouldTrack && renderCount.current > 1) {
-    // Always track first render, then apply sampling
-    return;
-  }
 
   // Measure render time after paint
   useEffect(() => {
+    // Skip if disabled
+    if (!enabled) {
+      return;
+    }
+
+    // Skip if not tracking this render (except first render)
+    if (!shouldTrack && renderCount.current > 1) {
+      return;
+    }
     const renderEndTime = performance.now();
     const renderDuration = renderEndTime - renderStartTime.current;
 

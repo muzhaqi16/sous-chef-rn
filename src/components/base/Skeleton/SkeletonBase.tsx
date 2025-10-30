@@ -8,7 +8,7 @@ import Animated, {
   interpolate,
   Easing,
 } from 'react-native-reanimated';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 
 interface SkeletonBaseProps {
   /** Width of the skeleton (number or percentage string) */
@@ -42,7 +42,6 @@ export const SkeletonBase: React.FC<SkeletonBaseProps> = ({
   style,
   animated = true,
 }) => {
-  const { theme } = useUnistyles();
   const shimmerTranslate = useSharedValue(0);
 
   useEffect(() => {
@@ -70,7 +69,7 @@ export const SkeletonBase: React.FC<SkeletonBaseProps> = ({
     };
   });
 
-  const styles = StyleSheet.create((theme) => ({
+  const styles = StyleSheet.create(theme => ({
     skeleton: {
       backgroundColor: theme.colors.surfaceVariant,
       overflow: 'hidden',
@@ -95,9 +94,7 @@ export const SkeletonBase: React.FC<SkeletonBaseProps> = ({
         style,
       ]}
     >
-      {animated && (
-        <Animated.View style={[styles.shimmer, animatedStyle]} />
-      )}
+      {animated && <Animated.View style={[styles.shimmer, animatedStyle]} />}
     </View>
   );
 };
