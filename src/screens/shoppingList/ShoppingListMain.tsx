@@ -9,7 +9,6 @@ import { Alert, View } from 'react-native';
 import { useAppNavigation } from '#hooks';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useGetShoppingListsQuery } from '#generated';
-import { useApolloClient } from '@apollo/client/react';
 import { useScanner } from '#context';
 import {
   SearchBarAction,
@@ -18,7 +17,6 @@ import {
 } from '#components';
 import { ShoppingListContent } from '#components/organisms/ShoppingListContent';
 import type { ItemSelectorRef } from '#components/organisms/AnimatedItemSelector';
-import type { SortableShoppingListItem } from '#components/organisms/SortableShoppingList';
 import {
   useShoppingListManagement,
   useQuantityManagement,
@@ -32,7 +30,6 @@ import { useAuth } from '#/hooks/auth/useAuth';
 import { useHaptic } from '#hooks/haptic';
 import { useScreenTransition } from '#hooks/performance';
 import { useSwipeableCoordinator, useSelectorManagement } from '#hooks/ui';
-import { FRAGMENT_NAMES } from '#/constants/shoppingList';
 
 export const ShoppingListMain: React.FC = () => {
   const { navigate, navigateTo } = useAppNavigation();
@@ -45,7 +42,6 @@ export const ShoppingListMain: React.FC = () => {
   const { user } = useAuth();
   const selectorRef = useRef<ItemSelectorRef>(null);
   const { setScannerProps, setOverlayOpen } = useScanner();
-  const client = useApolloClient();
   const haptic = useHaptic();
 
   // Track screen performance
