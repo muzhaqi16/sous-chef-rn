@@ -33,7 +33,7 @@ export const SelectPantryItems = () => {
         showInOnboarding: true,
       },
       sort: {
-        field: ItemSortField.Name,
+        field: ItemSortField.Popularity,
         order: SortOrder.Asc,
       },
     },
@@ -108,7 +108,7 @@ export const SelectPantryItems = () => {
                 input: {
                   pantryId: selectedPantryId,
                   itemId: item.id,
-                  unitId: item.defaultUnit?.id || '',
+                  unitId: item.displayUnit?.id || '',
                   initialQuantity: 1,
                   storageState: StorageState.Ambient,
                   condition: ItemCondition.Good,
