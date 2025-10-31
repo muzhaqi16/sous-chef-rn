@@ -13,23 +13,28 @@ module.exports = {
     'ios.debug': {
       type: 'ios.app',
       binaryPath: 'ios/build/Build/Products/Debug-iphonesimulator/SousChef.app',
-      build: 'xcodebuild -workspace ios/SousChef.xcworkspace -scheme SousChef -configuration Debug -sdk iphonesimulator -derivedDataPath ios/build',
+      build:
+        'xcodebuild -workspace ios/SousChef.xcworkspace -scheme SousChef -configuration Debug -sdk iphonesimulator -derivedDataPath ios/build',
     },
     'ios.release': {
       type: 'ios.app',
-      binaryPath: 'ios/build/Build/Products/Release-iphonesimulator/SousChef.app',
-      build: 'xcodebuild -workspace ios/SousChef.xcworkspace -scheme SousChef -configuration Release -sdk iphonesimulator -derivedDataPath ios/build',
+      binaryPath:
+        'ios/build/Build/Products/Release-iphonesimulator/SousChef.app',
+      build:
+        'xcodebuild -workspace ios/SousChef.xcworkspace -scheme SousChef -configuration Release -sdk iphonesimulator -derivedDataPath ios/build',
     },
     'android.debug': {
       type: 'android.apk',
       binaryPath: 'android/app/build/outputs/apk/debug/app-debug.apk',
-      build: 'cd android && ./gradlew assembleDebug assembleAndroidTest -DtestBuildType=debug',
+      build:
+        'cd android && ./gradlew assembleDebug assembleAndroidTest -DtestBuildType=debug',
       reversePorts: [8081],
     },
     'android.release': {
       type: 'android.apk',
       binaryPath: 'android/app/build/outputs/apk/release/app-release.apk',
-      build: 'cd android && ./gradlew assembleRelease assembleAndroidTest -DtestBuildType=release',
+      build:
+        'cd android && ./gradlew assembleRelease assembleAndroidTest -DtestBuildType=release',
     },
   },
   devices: {
@@ -48,7 +53,7 @@ module.exports = {
     emulator: {
       type: 'android.emulator',
       device: {
-        avdName: 'Pixel_7_API_34',
+        avdName: 'Pixel_7_API_36',
       },
     },
   },
