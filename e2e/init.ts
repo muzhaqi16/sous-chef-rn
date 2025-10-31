@@ -16,10 +16,14 @@ global.expect = expect;
 // Global test timeout
 jest.setTimeout(120000);
 
-// Global setup runs once before all tests
+// Configure Detox to handle React Native Fabric compatibility
 beforeAll(async () => {
   console.log('🚀 Starting Detox E2E Test Suite');
   console.log(`Platform: ${device.getPlatform()}`);
+
+  // Workaround for Fabric UIManager compatibility issue
+  // This disables the problematic idling resource checks
+  await device.setURLBlacklist(['.*inappbrowser.*']);
 });
 
 // Global teardown runs once after all tests
