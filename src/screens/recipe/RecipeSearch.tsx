@@ -30,11 +30,7 @@ import type {
 } from '#/services/recipeApi/types';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
-import {
-  useGetHomeQuery,
-  Diet,
-  ReligiousDiet,
-} from '#generated';
+import { useGetHomeQuery, Diet, ReligiousDiet } from '#generated';
 
 type RecipeSearchRouteProp = RouteProp<
   { RecipeSearch: { initialQuery?: string } },
@@ -96,7 +92,8 @@ export const RecipeSearch: React.FC = () => {
 
       for (const restriction of restrictions) {
         // Check if this restriction has a religious diet
-        const religionDiet = restriction.diet as unknown as ReligiousDiet | null;
+        const religionDiet =
+          restriction.diet as unknown as ReligiousDiet | null;
 
         if (religionDiet === ReligiousDiet.Halal) {
           excluded.push(
@@ -160,7 +157,9 @@ export const RecipeSearch: React.FC = () => {
 
       // Collect all intolerance restrictions
       if (restriction.intolerance) {
-        intolerances.push(restriction.intolerance.toLowerCase().replace(/_/g, ' '));
+        intolerances.push(
+          restriction.intolerance.toLowerCase().replace(/_/g, ' '),
+        );
       }
     }
 
@@ -557,6 +556,7 @@ export const RecipeSearch: React.FC = () => {
         headerActions={headerActions}
         searchBarActions={searchBarActions}
         emptyState={emptyStateConfig}
+        showUserHeader={false}
       />
 
       {/* Ingredient Selector Bottom Sheet */}
@@ -564,6 +564,7 @@ export const RecipeSearch: React.FC = () => {
         sheetRef={ingredientSheetRef}
         sheetTitle="Select Ingredients"
         snapPoints={['50%', '75%', '90%']}
+        scrollable={false}
       >
         <FlatList
           data={pantryItems}
