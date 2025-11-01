@@ -67,6 +67,14 @@ export const InvitationAcceptanceModal: React.FC<
         });
 
         if (result.data?.acceptHomeInvite) {
+          const newHomeId = result.data.acceptHomeInvite.homeId;
+
+          // Pass the homeId to the handler so it can update the store
+          const invitationWithHomeId = {
+            ...invitation,
+            acceptedHomeId: newHomeId,
+          };
+
           Alert.alert(
             'Success',
             `You've successfully joined ${invitation.entityName}!`,
@@ -74,7 +82,7 @@ export const InvitationAcceptanceModal: React.FC<
               {
                 text: 'OK',
                 onPress: () => {
-                  onAccept?.(invitation);
+                  onAccept?.(invitationWithHomeId);
                   onClose();
                 },
               },

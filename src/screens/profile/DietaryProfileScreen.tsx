@@ -10,32 +10,53 @@ import {
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { ProfileScreenWrapper } from '#components/templates';
 import { useDietaryProfile } from '#hooks/profile/useDietaryProfile';
-import { DietaryTag, RestrictionSeverity } from '#generated';
+import { Diet, Intolerance, HealthGoal, RestrictionSeverity } from '#generated';
 import { commonStyles } from '#/styles/commonStyles';
 import { Icon } from '#/utils';
 import { StringArrayManager } from '#/components/organisms';
 import { NumberInputModal } from '#/components/organisms/modal';
 import { InfoRow } from '#/components/molecules/InfoRow';
 
-const DIETARY_TAGS: { label: string; value: DietaryTag }[] = [
-  { label: 'Vegetarian', value: DietaryTag.Vegetarian },
-  { label: 'Vegan', value: DietaryTag.Vegan },
-  { label: 'Gluten Free', value: DietaryTag.GlutenFree },
-  { label: 'Dairy Free', value: DietaryTag.DairyFree },
-  { label: 'Nut Free', value: DietaryTag.NutFree },
-  { label: 'Soy Free', value: DietaryTag.SoyFree },
-  { label: 'Egg Free', value: DietaryTag.EggFree },
-  { label: 'Fish Free', value: DietaryTag.FishFree },
-  { label: 'Shellfish Free', value: DietaryTag.ShellfishFree },
-  { label: 'Low Carb', value: DietaryTag.LowCarb },
-  { label: 'Keto', value: DietaryTag.Keto },
-  { label: 'Paleo', value: DietaryTag.Paleo },
-  { label: 'Halal', value: DietaryTag.Halal },
-  { label: 'Kosher', value: DietaryTag.Kosher },
-  { label: 'Low Sodium', value: DietaryTag.LowSodium },
-  { label: 'Sugar Free', value: DietaryTag.SugarFree },
-  { label: 'Diabetic Friendly', value: DietaryTag.DiabeticFriendly },
-  { label: 'Heart Healthy', value: DietaryTag.HeartHealthy },
+// Lifestyle dietary choices
+const DIETS: { label: string; value: Diet }[] = [
+  { label: 'Vegetarian', value: Diet.Vegetarian },
+  { label: 'Vegan', value: Diet.Vegan },
+  { label: 'Gluten Free', value: Diet.GlutenFree },
+  { label: 'Keto', value: Diet.Keto },
+  { label: 'Paleo', value: Diet.Paleo },
+  { label: 'Pescetarian', value: Diet.Pescetarian },
+  { label: 'Lacto Vegetarian', value: Diet.LactoVegetarian },
+  { label: 'Ovo Vegetarian', value: Diet.OvoVegetarian },
+  { label: 'Primal', value: Diet.Primal },
+  { label: 'Low FODMAP', value: Diet.LowFodmap },
+  { label: 'Whole30', value: Diet.Whole30 },
+];
+
+// Allergies and intolerances
+const INTOLERANCES: { label: string; value: Intolerance }[] = [
+  { label: 'Dairy', value: Intolerance.Dairy },
+  { label: 'Egg', value: Intolerance.Egg },
+  { label: 'Gluten', value: Intolerance.Gluten },
+  { label: 'Grain', value: Intolerance.Grain },
+  { label: 'Peanut', value: Intolerance.Peanut },
+  { label: 'Seafood', value: Intolerance.Seafood },
+  { label: 'Sesame', value: Intolerance.Sesame },
+  { label: 'Shellfish', value: Intolerance.Shellfish },
+  { label: 'Soy', value: Intolerance.Soy },
+  { label: 'Sulfite', value: Intolerance.Sulfite },
+  { label: 'Tree Nut', value: Intolerance.TreeNut },
+  { label: 'Wheat', value: Intolerance.Wheat },
+  { label: 'Fish', value: Intolerance.Fish },
+];
+
+// Nutritional objectives
+const HEALTH_GOALS: { label: string; value: HealthGoal }[] = [
+  { label: 'Low Carb', value: HealthGoal.LowCarb },
+  { label: 'High Protein', value: HealthGoal.HighProtein },
+  { label: 'Low Sodium', value: HealthGoal.LowSodium },
+  { label: 'Sugar Free', value: HealthGoal.SugarFree },
+  { label: 'Diabetic Friendly', value: HealthGoal.DiabeticFriendly },
+  { label: 'Heart Healthy', value: HealthGoal.HeartHealthy },
 ];
 
 const SEVERITY_LABELS: Record<
@@ -63,13 +84,15 @@ export const DietaryProfileScreen: React.FC = () => {
   const [editingMeals, setEditingMeals] = useState(false);
   const [editingSnacks, setEditingSnacks] = useState(false);
 
-  const handleAddRestriction = async (tag: DietaryTag) => {
+  const handleAddRestriction = async (
+    restriction: { diet?: Diet; intolerance?: Intolerance; healthGoal?: HealthGoal },
+  ) => {
     Alert.alert('Add Dietary Restriction', 'Select the severity level:', [
       {
         text: 'Allergy',
         onPress: async () => {
           const success = await addDietaryRestriction(
-            tag,
+            restriction,
             RestrictionSeverity.Allergy,
           );
           if (success) {
@@ -83,7 +106,7 @@ export const DietaryProfileScreen: React.FC = () => {
         text: 'Intolerance',
         onPress: async () => {
           const success = await addDietaryRestriction(
-            tag,
+            restriction,
             RestrictionSeverity.Intolerance,
           );
           if (success) {
@@ -97,7 +120,7 @@ export const DietaryProfileScreen: React.FC = () => {
         text: 'Preference',
         onPress: async () => {
           const success = await addDietaryRestriction(
-            tag,
+            restriction,
             RestrictionSeverity.Preference,
           );
           if (success) {
@@ -111,7 +134,7 @@ export const DietaryProfileScreen: React.FC = () => {
         text: 'Goal',
         onPress: async () => {
           const success = await addDietaryRestriction(
-            tag,
+            restriction,
             RestrictionSeverity.Goal,
           );
           if (success) {
@@ -303,10 +326,14 @@ export const DietaryProfileScreen: React.FC = () => {
     );
   }
 
-  const existingRestrictionTypes = profile.restrictions.map(r => r.type);
-  const availableTags = DIETARY_TAGS.filter(
-    tag => !existingRestrictionTypes.includes(tag.value),
-  );
+  // Get existing restriction values to filter out
+  const existingDiets = profile.restrictions.map(r => r.diet).filter(Boolean);
+  const existingIntolerances = profile.restrictions.map(r => r.intolerance).filter(Boolean);
+  const existingHealthGoals = profile.restrictions.map(r => r.healthGoal).filter(Boolean);
+
+  const availableDiets = DIETS.filter(d => !existingDiets.includes(d.value));
+  const availableIntolerances = INTOLERANCES.filter(i => !existingIntolerances.includes(i.value));
+  const availableHealthGoals = HEALTH_GOALS.filter(h => !existingHealthGoals.includes(h.value));
 
   return (
     <ProfileScreenWrapper title="Dietary Profile">
@@ -329,20 +356,60 @@ export const DietaryProfileScreen: React.FC = () => {
 
         {showAddRestriction && (
           <View style={styles.addRestrictionContainer}>
-            <Text style={commonStyles.subtitle}>
-              Select a restriction to add:
-            </Text>
-            <View style={styles.chipContainer}>
-              {availableTags.map(tag => (
-                <TouchableOpacity
-                  key={tag.value}
-                  style={[commonStyles.chip, styles.tagChip]}
-                  onPress={() => handleAddRestriction(tag.value)}
-                >
-                  <Text style={commonStyles.chipText}>{tag.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            {availableDiets.length > 0 && (
+              <>
+                <Text style={commonStyles.subtitle}>Diets:</Text>
+                <View style={styles.chipContainer}>
+                  {availableDiets.map(diet => (
+                    <TouchableOpacity
+                      key={diet.value}
+                      style={[commonStyles.chip, styles.tagChip]}
+                      onPress={() => handleAddRestriction({ diet: diet.value })}
+                    >
+                      <Text style={commonStyles.chipText}>{diet.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </>
+            )}
+
+            {availableIntolerances.length > 0 && (
+              <>
+                <Text style={[commonStyles.subtitle, { marginTop: 12 }]}>
+                  Intolerances:
+                </Text>
+                <View style={styles.chipContainer}>
+                  {availableIntolerances.map(intolerance => (
+                    <TouchableOpacity
+                      key={intolerance.value}
+                      style={[commonStyles.chip, styles.tagChip]}
+                      onPress={() => handleAddRestriction({ intolerance: intolerance.value })}
+                    >
+                      <Text style={commonStyles.chipText}>{intolerance.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </>
+            )}
+
+            {availableHealthGoals.length > 0 && (
+              <>
+                <Text style={[commonStyles.subtitle, { marginTop: 12 }]}>
+                  Health Goals:
+                </Text>
+                <View style={styles.chipContainer}>
+                  {availableHealthGoals.map(goal => (
+                    <TouchableOpacity
+                      key={goal.value}
+                      style={[commonStyles.chip, styles.tagChip]}
+                      onPress={() => handleAddRestriction({ healthGoal: goal.value })}
+                    >
+                      <Text style={commonStyles.chipText}>{goal.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </>
+            )}
           </View>
         )}
 
@@ -355,9 +422,16 @@ export const DietaryProfileScreen: React.FC = () => {
         ) : (
           <View style={styles.restrictionsList}>
             {profile.restrictions.map(restriction => {
-              const tagLabel =
-                DIETARY_TAGS.find(t => t.value === restriction.type)?.label ||
-                restriction.type;
+              // Determine the label based on which field is set
+              let tagLabel = '';
+              if (restriction.diet) {
+                tagLabel = DIETS.find(d => d.value === restriction.diet)?.label || restriction.diet;
+              } else if (restriction.intolerance) {
+                tagLabel = INTOLERANCES.find(i => i.value === restriction.intolerance)?.label || restriction.intolerance;
+              } else if (restriction.healthGoal) {
+                tagLabel = HEALTH_GOALS.find(h => h.value === restriction.healthGoal)?.label || restriction.healthGoal;
+              }
+
               const severityInfo = SEVERITY_LABELS[restriction.severity];
 
               return (

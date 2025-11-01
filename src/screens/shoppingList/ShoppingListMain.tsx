@@ -536,6 +536,7 @@ export const ShoppingListMain: React.FC = () => {
         rightElement: (
           <ShoppingListItemCounter
             quantity={item.quantity || 0}
+            unit={item.unit?.symbol || item.unitName}
             onIncrement={() => handleIncrementQuantity(item.id)}
             onDecrement={() => handleDecrementQuantity(item.id)}
           />

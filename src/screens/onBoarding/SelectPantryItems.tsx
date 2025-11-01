@@ -59,7 +59,7 @@ export const SelectPantryItems = () => {
   const { items, selectedItems, toggleItem, isMaxReached } = useSelectableItems(
     {
       initialItems: selectableItems,
-      maxSelection: 5,
+      maxSelection: 100,
     },
   );
 
@@ -137,9 +137,7 @@ export const SelectPantryItems = () => {
       onSkip={() => navigateToNextStep('SelectPantryItems')}
     >
       <KeyboardAwareScrollView style={styles.form}>
-        <Text style={styles.helperText}>
-          Select up to 5 items (you have {selectedItems.length} selected)
-        </Text>
+        <Text style={styles.helperText}>{selectedItems.length} selected</Text>
         <View style={styles.picker}>
           {items.map(item => (
             <AnimatedChip
@@ -148,6 +146,7 @@ export const SelectPantryItems = () => {
               selected={item.selected}
               onPress={() => toggleItem(item.id)}
               disabled={!item.selected && isMaxReached}
+              imageUrl={item.imageUrl}
             />
           ))}
         </View>
@@ -173,7 +172,6 @@ export const SelectPantryItems = () => {
 const styles = StyleSheet.create(theme => ({
   form: {
     flex: 1,
-    marginTop: 24,
     marginBottom: 12,
   },
   helperText: {

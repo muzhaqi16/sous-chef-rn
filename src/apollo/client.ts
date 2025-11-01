@@ -3,6 +3,19 @@ import { createLink } from './links';
 import { makeCache } from './cache';
 import { apolloCachePersistence } from './offline/ApolloCachePersistence';
 
+// Load Apollo dev messages in development for better error reporting
+if (__DEV__) {
+  import('@apollo/client/dev')
+    .then(({ loadDevMessages, loadErrorMessages }) => {
+      loadDevMessages();
+      loadErrorMessages();
+    })
+    .catch(() => {
+      // Silently fail if dev messages can't be loaded
+      console.warn('Failed to load Apollo dev messages');
+    });
+}
+
 /**
  * Initialize Apollo Client with cache persistence
  */

@@ -124,6 +124,14 @@ function mergeArrayByIdIntelligent<T extends { id: string; __ref?: string }>(
 export function makeCache(): InMemoryCache {
   return new InMemoryCache({
     typePolicies: {
+      ShoppingListItem: {
+        keyFields: ['id'],
+        merge: true, // Enable automatic field-level merging for partial data
+      },
+      ShoppingList: {
+        keyFields: ['id'],
+        merge: true, // Enable automatic field-level merging for partial data
+      },
       Query: {
         fields: {
           // List-level queries (return collections of lists/homes)

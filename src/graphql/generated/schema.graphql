@@ -330,9 +330,11 @@ type AddRecipeToShoppingListResult {
 
 input AddRestrictionInput {
   appliesToHomeId: String
+  diet: Diet
+  healthGoal: HealthGoal
+  intolerance: Intolerance
   notes: String
   severity: RestrictionSeverity!
-  type: DietaryTag!
 }
 
 input AddRestrictionsInput {
@@ -935,14 +937,16 @@ input CreateRecipeInput {
   cookTimeMinutes: Int
   cuisine: String
   description: String
-  dietaryTags: [DietaryTag!]
+  diets: [Diet!]
   difficulty: Difficulty
   externalSourceData: JSON
   externalSourceId: String
   externalSourceUrl: String
+  healthGoals: [HealthGoal!]
   imageUrl: String
   ingredients: [RecipeIngredientInput!]!
   instructions: JSON!
+  intolerances: [Intolerance!]
   isPublished: Boolean
   name: String!
   notes: String
@@ -1100,6 +1104,34 @@ input CreateUserProfileInput {
   showEmail: Boolean
   showPhone: Boolean
   website: String
+}
+
+enum Cuisine {
+  AFRICAN
+  AMERICAN
+  BRITISH
+  CAJUN
+  CARIBBEAN
+  CHINESE
+  EASTERN_EUROPEAN
+  FRENCH
+  GERMAN
+  GREEK
+  INDIAN
+  IRISH
+  ITALIAN
+  JAPANESE
+  JEWISH
+  KOREAN
+  LATIN_AMERICAN
+  MEDITERRANEAN
+  MEXICAN
+  MIDDLE_EASTERN
+  NORDIC
+  SOUTHERN
+  SPANISH
+  THAI
+  VIETNAMESE
 }
 
 type Currency {
@@ -1356,6 +1388,20 @@ type DeviceTypeStat {
   deviceType: DeviceType!
 }
 
+enum Diet {
+  GLUTEN_FREE
+  KETO
+  LACTO_VEGETARIAN
+  LOW_FODMAP
+  OVO_VEGETARIAN
+  PALEO
+  PESCETARIAN
+  PRIMAL
+  VEGAN
+  VEGETARIAN
+  WHOLE30
+}
+
 type DietaryProfile {
   budgetPerMeal: Float
   calorieTarget: Int
@@ -1381,34 +1427,15 @@ type DietaryProfile {
 type DietaryRestriction {
   appliesToHomeId: String
   createdAt: DateTime!
+  diet: Diet
   dietaryProfile: DietaryProfile!
   dietaryProfileId: String!
+  healthGoal: HealthGoal
   id: ID!
+  intolerance: Intolerance
   notes: String
   severity: RestrictionSeverity!
-  type: DietaryTag!
   updatedAt: DateTime!
-}
-
-enum DietaryTag {
-  DAIRY_FREE
-  DIABETIC_FRIENDLY
-  EGG_FREE
-  FISH_FREE
-  GLUTEN_FREE
-  HALAL
-  HEART_HEALTHY
-  KETO
-  KOSHER
-  LOW_CARB
-  LOW_SODIUM
-  NUT_FREE
-  PALEO
-  SHELLFISH_FREE
-  SOY_FREE
-  SUGAR_FREE
-  VEGAN
-  VEGETARIAN
 }
 
 enum Difficulty {
@@ -1606,6 +1633,15 @@ input HealthBenefitInput {
   scientificEvidence: String
 }
 
+enum HealthGoal {
+  DIABETIC_FRIENDLY
+  HEART_HEALTHY
+  HIGH_PROTEIN
+  LOW_CARB
+  LOW_SODIUM
+  SUGAR_FREE
+}
+
 type Home {
   allowJoinCode: Boolean!
   createdAt: DateTime!
@@ -1743,6 +1779,22 @@ input IngredientInput {
   order: Int
   percentage: Float
   subIngredients: [IngredientInput!]
+}
+
+enum Intolerance {
+  DAIRY
+  EGG
+  FISH
+  GLUTEN
+  GRAIN
+  PEANUT
+  SEAFOOD
+  SESAME
+  SHELLFISH
+  SOY
+  SULFITE
+  TREE_NUT
+  WHEAT
 }
 
 enum InviteAction {
@@ -3801,7 +3853,7 @@ type Recipe {
   cuisine: String
   deletedAt: DateTime
   description: String
-  dietaryTags: [DietaryTag!]!
+  diets: [Diet!]!
   difficulty: Difficulty!
   externalData: JSON
   externalId: String
@@ -3810,10 +3862,12 @@ type Recipe {
   forkedFrom: Recipe
   forkedFromId: ID
   forks: [Recipe!]!
+  healthGoals: [HealthGoal!]!
   id: ID!
   imageUrl: String
   ingredients: [RecipeIngredient!]!
   instructions: JSON!
+  intolerances: [Intolerance!]!
   isExternal: Boolean!
   isPublished: Boolean!
   isSaved: Boolean!
@@ -3883,17 +3937,26 @@ type RecipeIngredient {
 }
 
 input RecipeIngredientInput {
+  aisle: String
+  consistency: String
   externalSources: [RecipeIngredientSourceInput!]
   image: String
   isOptional: Boolean
   itemId: String
+  meta: [String!]
+  metricAmount: Float
+  metricUnit: String
   name: String!
   notes: String
+  originalString: String
   preparation: String
   quantity: Float!
   section: String
   sortOrder: Int
+  spoonacularIngredientId: Int
   unitId: String
+  usAmount: Float
+  usUnit: String
 }
 
 input RecipeIngredientSourceInput {
@@ -4004,6 +4067,11 @@ type RelatedItemsResponse {
   complementaryItems: [ItemSuggestion!]!
   frequentlyBoughtTogether: [ItemSuggestion!]!
   similarItems: [ItemSuggestion!]!
+}
+
+enum ReligiousDiet {
+  HALAL
+  KOSHER
 }
 
 input RemoveCollaboratorInput {
@@ -4919,8 +4987,9 @@ input UpdateDietaryProfileInput {
   maxCookTimeMinutes: Int
   maxPrepTimeMinutes: Int
   mealsPerDay: Int
-  preferredCuisines: [String!]
+  preferredCuisines: [Cuisine!]
   proteinTarget: Int
+  religiousDiet: ReligiousDiet
   snacksPerDay: Int
 }
 
@@ -5143,13 +5212,15 @@ input UpdateRecipeInput {
   cookTimeMinutes: Int
   cuisine: String
   description: String
-  dietaryTags: [DietaryTag!]
+  diets: [Diet!]
   difficulty: Difficulty
   externalSourceData: JSON
   externalSourceId: String
   externalSourceUrl: String
+  healthGoals: [HealthGoal!]
   imageUrl: String
   instructions: JSON
+  intolerances: [Intolerance!]
   isPublished: Boolean
   name: String
   notes: String

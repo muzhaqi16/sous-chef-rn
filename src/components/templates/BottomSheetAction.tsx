@@ -2,7 +2,7 @@ import React, { useRef, ReactNode, Ref } from 'react';
 import { Keyboard } from 'react-native';
 import {
   BottomSheetModal,
-  BottomSheetView,
+  BottomSheetScrollView,
   BottomSheetBackdrop,
 } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -52,17 +52,24 @@ export const BottomSheetAction: React.FC<BottomSheetActionProps> = ({
         />
       )}
     >
-      <BottomSheetView
-        style={[styles.sheetView, { paddingBottom: insets.bottom }]}
+      <BottomSheetScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom }]}
+        showsVerticalScrollIndicator={false}
       >
         {sheetTitle && <Title style={styles.sheetTitle}>{sheetTitle}</Title>}
         {children}
-      </BottomSheetView>
+      </BottomSheetScrollView>
     </BottomSheetModal>
   );
 };
 
 const styles = StyleSheet.create(() => ({
+  scrollView: {
+    flex: 1, // Allow ScrollView to fill the bottom sheet
+  },
+  contentContainer: {
+    padding: 16, // Padding for content, no flex to allow scrolling
+  },
   sheetTitle: {},
-  sheetView: { padding: 16, flex: 1 },
 }));

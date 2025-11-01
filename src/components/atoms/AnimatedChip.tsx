@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet } from 'react-native';
+import { Image, StyleSheet } from 'react-native';
 import { useUnistyles } from 'react-native-unistyles';
 import Animated, {
   Easing,
@@ -15,6 +15,7 @@ type AnimatedChipProps = {
   selected: boolean;
   onPress: () => void;
   disabled?: boolean;
+  imageUrl?: string;
 };
 
 export const AnimatedChip: React.FC<AnimatedChipProps> = ({
@@ -22,12 +23,14 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
   selected,
   onPress,
   disabled = false,
+  imageUrl,
 }) => {
   const { theme } = useUnistyles();
 
   // Animated container style with dynamic padding and colors
   const animatedContainerStyle = useAnimatedStyle(() => {
     return {
+      paddingLeft: imageUrl ? 8 : 16,
       paddingRight: selected ? 12 : 16,
       borderWidth: 1.5,
       borderColor: selected
@@ -38,7 +41,7 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
         : theme.colors.chipBackground,
       opacity: disabled ? 0.5 : 1,
     };
-  }, [selected, disabled, theme]);
+  }, [selected, disabled, theme, imageUrl]);
 
   // Animated text style for color transitions
   const animatedTextStyle = useAnimatedStyle(() => {
@@ -55,6 +58,13 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
       onTouchEnd={disabled ? undefined : onPress}
       style={[styles.container, animatedContainerStyle]}
     >
+      {imageUrl && (
+        <Image
+          source={{ uri: imageUrl }}
+          style={styles.image}
+          resizeMode="cover"
+        />
+      )}
       <Animated.Text style={[styles.label, animatedTextStyle]}>
         {label}
       </Animated.Text>
@@ -89,6 +99,12 @@ const styles = StyleSheet.create({
     paddingLeft: 16,
     paddingVertical: 8,
     margin: 4,
+  },
+  image: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    marginRight: 8,
   },
   label: {
     fontSize: 15,

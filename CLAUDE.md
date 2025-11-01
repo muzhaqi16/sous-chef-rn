@@ -1,0 +1,2 @@
+- to regenerate the schema run npm run codegen
+- always run npm run typecheck and npm run lint after making code changes to ensure no typescript and linting errors were introduced

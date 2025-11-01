@@ -70,9 +70,11 @@ export type AddRecipeToShoppingListResult = {
 
 export type AddRestrictionInput = {
   appliesToHomeId?: InputMaybe<Scalars['String']['input']>;
+  diet?: InputMaybe<Diet>;
+  healthGoal?: InputMaybe<HealthGoal>;
+  intolerance?: InputMaybe<Intolerance>;
   notes?: InputMaybe<Scalars['String']['input']>;
   severity: RestrictionSeverity;
-  type: DietaryTag;
 };
 
 export type AddRestrictionsInput = {
@@ -688,14 +690,16 @@ export type CreateRecipeInput = {
   cookTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
   cuisine?: InputMaybe<Scalars['String']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
-  dietaryTags?: InputMaybe<Array<DietaryTag>>;
+  diets?: InputMaybe<Array<Diet>>;
   difficulty?: InputMaybe<Difficulty>;
   externalSourceData?: InputMaybe<Scalars['JSON']['input']>;
   externalSourceId?: InputMaybe<Scalars['String']['input']>;
   externalSourceUrl?: InputMaybe<Scalars['String']['input']>;
+  healthGoals?: InputMaybe<Array<HealthGoal>>;
   imageUrl?: InputMaybe<Scalars['String']['input']>;
   ingredients: Array<RecipeIngredientInput>;
   instructions: Scalars['JSON']['input'];
+  intolerances?: InputMaybe<Array<Intolerance>>;
   isPublished?: InputMaybe<Scalars['Boolean']['input']>;
   name: Scalars['String']['input'];
   notes?: InputMaybe<Scalars['String']['input']>;
@@ -826,6 +830,34 @@ export type CreateUserProfileInput = {
   showPhone?: InputMaybe<Scalars['Boolean']['input']>;
   website?: InputMaybe<Scalars['String']['input']>;
 };
+
+export enum Cuisine {
+  African = 'AFRICAN',
+  American = 'AMERICAN',
+  British = 'BRITISH',
+  Cajun = 'CAJUN',
+  Caribbean = 'CARIBBEAN',
+  Chinese = 'CHINESE',
+  EasternEuropean = 'EASTERN_EUROPEAN',
+  French = 'FRENCH',
+  German = 'GERMAN',
+  Greek = 'GREEK',
+  Indian = 'INDIAN',
+  Irish = 'IRISH',
+  Italian = 'ITALIAN',
+  Japanese = 'JAPANESE',
+  Jewish = 'JEWISH',
+  Korean = 'KOREAN',
+  LatinAmerican = 'LATIN_AMERICAN',
+  Mediterranean = 'MEDITERRANEAN',
+  Mexican = 'MEXICAN',
+  MiddleEastern = 'MIDDLE_EASTERN',
+  Nordic = 'NORDIC',
+  Southern = 'SOUTHERN',
+  Spanish = 'SPANISH',
+  Thai = 'THAI',
+  Vietnamese = 'VIETNAMESE',
+}
 
 export type Currency = {
   __typename?: 'Currency';
@@ -1088,6 +1120,20 @@ export type DeviceTypeStat = {
   deviceType: DeviceType;
 };
 
+export enum Diet {
+  GlutenFree = 'GLUTEN_FREE',
+  Keto = 'KETO',
+  LactoVegetarian = 'LACTO_VEGETARIAN',
+  LowFodmap = 'LOW_FODMAP',
+  OvoVegetarian = 'OVO_VEGETARIAN',
+  Paleo = 'PALEO',
+  Pescetarian = 'PESCETARIAN',
+  Primal = 'PRIMAL',
+  Vegan = 'VEGAN',
+  Vegetarian = 'VEGETARIAN',
+  Whole30 = 'WHOLE30',
+}
+
 export type DietaryProfile = {
   __typename?: 'DietaryProfile';
   budgetPerMeal?: Maybe<Scalars['Float']['output']>;
@@ -1115,35 +1161,16 @@ export type DietaryRestriction = {
   __typename?: 'DietaryRestriction';
   appliesToHomeId?: Maybe<Scalars['String']['output']>;
   createdAt: Scalars['DateTime']['output'];
+  diet?: Maybe<Diet>;
   dietaryProfile: DietaryProfile;
   dietaryProfileId: Scalars['String']['output'];
+  healthGoal?: Maybe<HealthGoal>;
   id: Scalars['ID']['output'];
+  intolerance?: Maybe<Intolerance>;
   notes?: Maybe<Scalars['String']['output']>;
   severity: RestrictionSeverity;
-  type: DietaryTag;
   updatedAt: Scalars['DateTime']['output'];
 };
-
-export enum DietaryTag {
-  DairyFree = 'DAIRY_FREE',
-  DiabeticFriendly = 'DIABETIC_FRIENDLY',
-  EggFree = 'EGG_FREE',
-  FishFree = 'FISH_FREE',
-  GlutenFree = 'GLUTEN_FREE',
-  Halal = 'HALAL',
-  HeartHealthy = 'HEART_HEALTHY',
-  Keto = 'KETO',
-  Kosher = 'KOSHER',
-  LowCarb = 'LOW_CARB',
-  LowSodium = 'LOW_SODIUM',
-  NutFree = 'NUT_FREE',
-  Paleo = 'PALEO',
-  ShellfishFree = 'SHELLFISH_FREE',
-  SoyFree = 'SOY_FREE',
-  SugarFree = 'SUGAR_FREE',
-  Vegan = 'VEGAN',
-  Vegetarian = 'VEGETARIAN',
-}
 
 export enum Difficulty {
   Easy = 'EASY',
@@ -1346,6 +1373,15 @@ export type HealthBenefitInput = {
   scientificEvidence?: InputMaybe<Scalars['String']['input']>;
 };
 
+export enum HealthGoal {
+  DiabeticFriendly = 'DIABETIC_FRIENDLY',
+  HeartHealthy = 'HEART_HEALTHY',
+  HighProtein = 'HIGH_PROTEIN',
+  LowCarb = 'LOW_CARB',
+  LowSodium = 'LOW_SODIUM',
+  SugarFree = 'SUGAR_FREE',
+}
+
 export type Home = {
   __typename?: 'Home';
   allowJoinCode: Scalars['Boolean']['output'];
@@ -1492,6 +1528,22 @@ export type IngredientInput = {
   percentage?: InputMaybe<Scalars['Float']['input']>;
   subIngredients?: InputMaybe<Array<IngredientInput>>;
 };
+
+export enum Intolerance {
+  Dairy = 'DAIRY',
+  Egg = 'EGG',
+  Fish = 'FISH',
+  Gluten = 'GLUTEN',
+  Grain = 'GRAIN',
+  Peanut = 'PEANUT',
+  Seafood = 'SEAFOOD',
+  Sesame = 'SESAME',
+  Shellfish = 'SHELLFISH',
+  Soy = 'SOY',
+  Sulfite = 'SULFITE',
+  TreeNut = 'TREE_NUT',
+  Wheat = 'WHEAT',
+}
 
 export enum InviteAction {
   InviteAccepted = 'INVITE_ACCEPTED',
@@ -5087,7 +5139,7 @@ export type Recipe = {
   cuisine?: Maybe<Scalars['String']['output']>;
   deletedAt?: Maybe<Scalars['DateTime']['output']>;
   description?: Maybe<Scalars['String']['output']>;
-  dietaryTags: Array<DietaryTag>;
+  diets: Array<Diet>;
   difficulty: Difficulty;
   externalData?: Maybe<Scalars['JSON']['output']>;
   externalId?: Maybe<Scalars['String']['output']>;
@@ -5096,10 +5148,12 @@ export type Recipe = {
   forkedFrom?: Maybe<Recipe>;
   forkedFromId?: Maybe<Scalars['ID']['output']>;
   forks: Array<Recipe>;
+  healthGoals: Array<HealthGoal>;
   id: Scalars['ID']['output'];
   imageUrl?: Maybe<Scalars['String']['output']>;
   ingredients: Array<RecipeIngredient>;
   instructions: Scalars['JSON']['output'];
+  intolerances: Array<Intolerance>;
   isExternal: Scalars['Boolean']['output'];
   isPublished: Scalars['Boolean']['output'];
   isSaved: Scalars['Boolean']['output'];
@@ -5170,17 +5224,26 @@ export type RecipeIngredient = {
 };
 
 export type RecipeIngredientInput = {
+  aisle?: InputMaybe<Scalars['String']['input']>;
+  consistency?: InputMaybe<Scalars['String']['input']>;
   externalSources?: InputMaybe<Array<RecipeIngredientSourceInput>>;
   image?: InputMaybe<Scalars['String']['input']>;
   isOptional?: InputMaybe<Scalars['Boolean']['input']>;
   itemId?: InputMaybe<Scalars['String']['input']>;
+  meta?: InputMaybe<Array<Scalars['String']['input']>>;
+  metricAmount?: InputMaybe<Scalars['Float']['input']>;
+  metricUnit?: InputMaybe<Scalars['String']['input']>;
   name: Scalars['String']['input'];
   notes?: InputMaybe<Scalars['String']['input']>;
+  originalString?: InputMaybe<Scalars['String']['input']>;
   preparation?: InputMaybe<Scalars['String']['input']>;
   quantity: Scalars['Float']['input'];
   section?: InputMaybe<Scalars['String']['input']>;
   sortOrder?: InputMaybe<Scalars['Int']['input']>;
+  spoonacularIngredientId?: InputMaybe<Scalars['Int']['input']>;
   unitId?: InputMaybe<Scalars['String']['input']>;
+  usAmount?: InputMaybe<Scalars['Float']['input']>;
+  usUnit?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type RecipeIngredientSourceInput = {
@@ -5298,6 +5361,11 @@ export type RelatedItemsResponse = {
   frequentlyBoughtTogether: Array<ItemSuggestion>;
   similarItems: Array<ItemSuggestion>;
 };
+
+export enum ReligiousDiet {
+  Halal = 'HALAL',
+  Kosher = 'KOSHER',
+}
 
 export type RemoveCollaboratorInput = {
   email?: InputMaybe<Scalars['String']['input']>;
@@ -6310,8 +6378,9 @@ export type UpdateDietaryProfileInput = {
   maxCookTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
   maxPrepTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
   mealsPerDay?: InputMaybe<Scalars['Int']['input']>;
-  preferredCuisines?: InputMaybe<Array<Scalars['String']['input']>>;
+  preferredCuisines?: InputMaybe<Array<Cuisine>>;
   proteinTarget?: InputMaybe<Scalars['Int']['input']>;
+  religiousDiet?: InputMaybe<ReligiousDiet>;
   snacksPerDay?: InputMaybe<Scalars['Int']['input']>;
 };
 
@@ -6534,13 +6603,15 @@ export type UpdateRecipeInput = {
   cookTimeMinutes?: InputMaybe<Scalars['Int']['input']>;
   cuisine?: InputMaybe<Scalars['String']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
-  dietaryTags?: InputMaybe<Array<DietaryTag>>;
+  diets?: InputMaybe<Array<Diet>>;
   difficulty?: InputMaybe<Difficulty>;
   externalSourceData?: InputMaybe<Scalars['JSON']['input']>;
   externalSourceId?: InputMaybe<Scalars['String']['input']>;
   externalSourceUrl?: InputMaybe<Scalars['String']['input']>;
+  healthGoals?: InputMaybe<Array<HealthGoal>>;
   imageUrl?: InputMaybe<Scalars['String']['input']>;
   instructions?: InputMaybe<Scalars['JSON']['input']>;
+  intolerances?: InputMaybe<Array<Intolerance>>;
   isPublished?: InputMaybe<Scalars['Boolean']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
   notes?: InputMaybe<Scalars['String']['input']>;
@@ -9689,7 +9760,6 @@ export type RecipeFragmentFragment = {
   primarySource?: string | null | undefined;
   caloriesPerServing?: number | null | undefined;
   nutritionData?: any | null | undefined;
-  dietaryTags: Array<DietaryTag>;
   tags: Array<string>;
   visibility: Visibility;
   isPublished: boolean;
@@ -14677,7 +14747,6 @@ export type GetRecipeQuery = {
         primarySource?: string | null | undefined;
         caloriesPerServing?: number | null | undefined;
         nutritionData?: any | null | undefined;
-        dietaryTags: Array<DietaryTag>;
         tags: Array<string>;
         visibility: Visibility;
         isPublished: boolean;
@@ -14753,7 +14822,6 @@ export type CreateRecipeMutation = {
     primarySource?: string | null | undefined;
     caloriesPerServing?: number | null | undefined;
     nutritionData?: any | null | undefined;
-    dietaryTags: Array<DietaryTag>;
     tags: Array<string>;
     visibility: Visibility;
     isPublished: boolean;
@@ -14828,7 +14896,6 @@ export type UpdateRecipeMutation = {
     primarySource?: string | null | undefined;
     caloriesPerServing?: number | null | undefined;
     nutritionData?: any | null | undefined;
-    dietaryTags: Array<DietaryTag>;
     tags: Array<string>;
     visibility: Visibility;
     isPublished: boolean;
@@ -18987,12 +19054,13 @@ export type GetDietaryProfileQuery = {
         restrictions: Array<{
           __typename?: 'DietaryRestriction';
           id: string;
-          type: DietaryTag;
+          diet?: Diet | null | undefined;
+          intolerance?: Intolerance | null | undefined;
+          healthGoal?: HealthGoal | null | undefined;
           severity: RestrictionSeverity;
           notes?: string | null | undefined;
           appliesToHomeId?: string | null | undefined;
           createdAt: string;
-          updatedAt: string;
         }>;
       }
     | null
@@ -19061,12 +19129,13 @@ export type UpdateDietaryProfileMutation = {
     restrictions: Array<{
       __typename?: 'DietaryRestriction';
       id: string;
-      type: DietaryTag;
+      diet?: Diet | null | undefined;
+      intolerance?: Intolerance | null | undefined;
+      healthGoal?: HealthGoal | null | undefined;
       severity: RestrictionSeverity;
       notes?: string | null | undefined;
       appliesToHomeId?: string | null | undefined;
       createdAt: string;
-      updatedAt: string;
     }>;
   };
 };
@@ -19080,13 +19149,13 @@ export type AddDietaryRestrictionMutation = {
   addRestriction: {
     __typename?: 'DietaryRestriction';
     id: string;
-    dietaryProfileId: string;
-    type: DietaryTag;
+    diet?: Diet | null | undefined;
+    intolerance?: Intolerance | null | undefined;
+    healthGoal?: HealthGoal | null | undefined;
     severity: RestrictionSeverity;
     notes?: string | null | undefined;
     appliesToHomeId?: string | null | undefined;
     createdAt: string;
-    updatedAt: string;
   };
 };
 
@@ -19099,13 +19168,13 @@ export type UpdateDietaryRestrictionMutation = {
   updateRestriction: {
     __typename?: 'DietaryRestriction';
     id: string;
-    dietaryProfileId: string;
-    type: DietaryTag;
+    diet?: Diet | null | undefined;
+    intolerance?: Intolerance | null | undefined;
+    healthGoal?: HealthGoal | null | undefined;
     severity: RestrictionSeverity;
     notes?: string | null | undefined;
     appliesToHomeId?: string | null | undefined;
     createdAt: string;
-    updatedAt: string;
   };
 };
 

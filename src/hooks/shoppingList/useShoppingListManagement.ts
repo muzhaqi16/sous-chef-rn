@@ -91,32 +91,94 @@ export function useShoppingListManagement(listId: string | undefined) {
   // Mutations - Apollo handles cache updates automatically
   const [addItemMutation] = useAddItemToShoppingListMutation({
     errorPolicy: 'all',
-    // Minimal optimistic response for instant UI feedback (critical for offline)
-    optimisticResponse: variables => {
+    // Complete optimistic response for offline-first support
+    // Uses 'as any' cast (like PantryItem) to bypass TypeScript validation
+    // Provides all required fragment fields with null for unknowns
+    optimisticResponse: (variables: any) => {
       const tempId = `temp-${generateId()}`;
       return {
         __typename: 'Mutation' as const,
         addItemToShoppingList: {
           ...createOptimisticEntity('ShoppingListItem', tempId, {
+            // Core fields from mutation input
             itemName: variables.input.itemName,
-            quantity: variables.input.quantity || 1,
-            isPurchased: false,
+            quantity: variables.input.quantity ?? 1,
             unitName: variables.input.unitName || null,
             notes: variables.input.notes || null,
             category: variables.input.category || null,
+            isPurchased: false,
+            // Nested shoppingList object with required fields
             shoppingList: {
               __typename: 'ShoppingList',
               id: listId || '',
+              totalItems: null,
+              completedItems: null,
+              estimatedTotal: null,
             },
+            // Nested item object (null if creating from scratch)
+            item: variables.input.itemId
+              ? {
+                  __typename: 'Item',
+                  id: variables.input.itemId,
+                  name: null,
+                  description: null,
+                  imageUrl: null,
+                  netWeight: null,
+                  displayUnit: null,
+                  categories: [],
+                }
+              : null,
+            // Nested unit object
             unit: variables.input.unitId
               ? {
                   __typename: 'Unit',
                   id: variables.input.unitId,
+                  name: null,
+                  symbol: null,
+                  type: null,
+                  isMetric: null,
+                  baseUnitId: null,
+                  conversionFactor: null,
+                  notes: null,
+                  isCommon: null,
+                  sortOrder: null,
+                  createdAt: null,
+                  updatedAt: null,
                 }
               : null,
+            // Price-related fields (null for new items)
+            estimatedPrice: null,
+            budgetPrice: null,
+            lastKnownPrice: null,
+            lowestPrice: null,
+            highestPrice: null,
+            priceLastUpdated: null,
+            // Purchase-related fields (null for unpurchased items)
+            purchasedQuantity: null,
+            purchasedPrice: null,
+            purchaseDate: null,
+            purchasedBy: null,
+            purchases: [],
+            // Store/location fields
+            aisle: null,
+            storeSection: null,
+            // History fields
+            previouslyPurchased: false,
+            lastPurchaseDate: null,
+            purchaseCount: 0,
+            // Metadata fields
+            priority: null,
+            sortOrder: null,
+            isAutoAdded: false,
+            autoAddReason: null,
+            isFromMealPlan: false,
+            mealPlanReference: null,
+            createdAt: null,
+            deletedAt: null,
+            addedBy: null,
           }),
           __typename: 'ShoppingListItem' as const,
-        } as any, // Optimistic response - will be replaced by server response
+        } as any, // Cast to any (like PantryItem) to bypass TypeScript validation
       };
     },
     update(cache, { data }) {

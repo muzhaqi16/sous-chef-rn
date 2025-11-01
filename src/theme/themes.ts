@@ -73,7 +73,7 @@ export const lightTheme = {
     transparent: colors.transparent,
     chipBackground: colors.neutral[200],
     chipText: colors.neutral[700],
-    chipSelectedBackground: colors.jaffa[500],
+    chipSelectedBackground: colors.jaffa[300],
     chipSelectedText: colors.neutral[0],
     iconPrimary: colors.jaffa[500],
 
@@ -133,7 +133,7 @@ export const darkTheme = {
 
     // Semantic
     success: colors.success,
-    successLight: colors.success + '20',  // 20% opacity on dark bg
+    successLight: colors.success + '20', // 20% opacity on dark bg
     warning: colors.warning,
     warningLight: colors.warning + '20',
     error: colors.error,

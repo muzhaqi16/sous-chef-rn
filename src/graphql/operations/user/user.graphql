@@ -34,15 +34,6 @@ query GetDietaryProfile {
   myDietaryProfile {
     id
     userId
-    restrictions {
-      id
-      type
-      severity
-      notes
-      appliesToHomeId
-      createdAt
-      updatedAt
-    }
     preferredCuisines
     dislikedIngredients
     favoriteIngredients
@@ -58,6 +49,16 @@ query GetDietaryProfile {
     budgetPerMeal
     createdAt
     updatedAt
+    restrictions {
+      id
+      diet
+      intolerance
+      healthGoal
+      severity
+      notes
+      appliesToHomeId
+      createdAt
+    }
   }
 }
 
@@ -97,15 +98,6 @@ mutation UpdateDietaryProfile($input: UpdateDietaryProfileInput!) {
   updateDietaryProfile(input: $input) {
     id
     userId
-    restrictions {
-      id
-      type
-      severity
-      notes
-      appliesToHomeId
-      createdAt
-      updatedAt
-    }
     preferredCuisines
     dislikedIngredients
     favoriteIngredients
@@ -121,32 +113,42 @@ mutation UpdateDietaryProfile($input: UpdateDietaryProfileInput!) {
     budgetPerMeal
     createdAt
     updatedAt
+    restrictions {
+      id
+      diet
+      intolerance
+      healthGoal
+      severity
+      notes
+      appliesToHomeId
+      createdAt
+    }
   }
 }
 
 mutation AddDietaryRestriction($input: AddRestrictionInput!) {
   addRestriction(input: $input) {
     id
-    dietaryProfileId
-    type
+    diet
+    intolerance
+    healthGoal
     severity
     notes
     appliesToHomeId
     createdAt
-    updatedAt
   }
 }
 
 mutation UpdateDietaryRestriction($input: UpdateRestrictionInput!) {
   updateRestriction(input: $input) {
     id
-    dietaryProfileId
-    type
+    diet
+    intolerance
+    healthGoal
     severity
     notes
     appliesToHomeId
     createdAt
-    updatedAt
   }
 }
 

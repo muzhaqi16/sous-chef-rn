@@ -1,7 +1,7 @@
 import React from 'react';
-import {View, Text} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
-import {SettingRow, SettingRowProps} from '../molecules/SettingRow';
+import { View, Text } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { SettingRow, SettingRowProps } from '../molecules/SettingRow';
 
 export interface SettingsSectionProps {
   title: string;

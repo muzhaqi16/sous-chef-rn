@@ -7,14 +7,19 @@ import React, {
 } from 'react';
 import {
   View,
-  ScrollView,
-  Image,
   Text,
   TouchableOpacity,
   Alert,
   ActivityIndicator,
   FlatList,
 } from 'react-native';
+import Animated, {
+  useAnimatedScrollHandler,
+  useSharedValue,
+  useAnimatedStyle,
+  interpolate,
+  Extrapolation,
+} from 'react-native-reanimated';
 import { useRoute, RouteProp } from '@react-navigation/native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type { RecipeStackParamList } from '#/navigation/stacks/RecipeStack';
@@ -32,12 +37,14 @@ import {
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { BottomSheetAction } from '#components';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
+import { useAppNavigation } from '#/hooks';
 
 type RecipeDetailRouteProp = RouteProp<RecipeStackParamList, 'RecipeDetail'>;
 
 export const RecipeDetail: React.FC = () => {
   const route = useRoute<RecipeDetailRouteProp>();
   const { theme } = useUnistyles();
+  const { goBack } = useAppNavigation();
   const { recipeId, externalSource, externalId } = route.params;
 
   // Get shopping lists
@@ -76,6 +83,28 @@ export const RecipeDetail: React.FC = () => {
   // Refs for bottom sheets
   const shoppingListOptionsRef = useRef<BottomSheetModal>(null);
   const ingredientSelectorRef = useRef<BottomSheetModal>(null);
+
+  // Scroll animation for parallax effect
+  const scrollY = useSharedValue(0);
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: event => {
+      scrollY.value = event.contentOffset.y;
+    },
+  });
+
+  // Parallax style for recipe image
+  const imageAnimatedStyle = useAnimatedStyle(() => {
+    const scale = interpolate(
+      scrollY.value,
+      [0, 300],
+      [1, 0.95],
+      Extrapolation.CLAMP,
+    );
+
+    return {
+      transform: [{ scale }],
+    };
+  });
 
   // Mutations
   const [saveRecipeMutation] = useCreateRecipeMutation({
@@ -574,16 +603,24 @@ export const RecipeDetail: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <ScrollView
+      <Animated.ScrollView
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Recipe Image */}
+        {/* Recipe Image with Back Button */}
         {displayData.image && (
-          <Image
-            source={{ uri: displayData.image }}
-            style={styles.recipeImage}
-          />
+          <View style={styles.imageContainer}>
+            <Animated.Image
+              source={{ uri: displayData.image }}
+              style={[styles.recipeImage, imageAnimatedStyle]}
+            />
+            {/* Back Button */}
+            <TouchableOpacity onPress={goBack} style={styles.backButton}>
+              <Ionicons name="arrow-back" size={24} color="#1d1d1d" />
+            </TouchableOpacity>
+          </View>
         )}
 
         {/* Recipe Title */}
@@ -740,7 +777,7 @@ export const RecipeDetail: React.FC = () => {
           {/* Extra padding for floating button (only for external recipes) */}
           {!isBackendRecipe && <View style={{ height: 140 }} />}
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
 
       {/* Floating Action Button - Only for external recipes */}
       {!isBackendRecipe && (
@@ -906,6 +943,10 @@ const styles = StyleSheet.create(theme => ({
   },
   content: {
     padding: theme.spacing.lg,
+    backgroundColor: theme.colors.background,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    marginTop: -20,
   },
   title: {
     fontSize: theme.fonts.size['2xl'],
@@ -1097,5 +1138,29 @@ const styles = StyleSheet.create(theme => ({
     color: '#fff',
     fontSize: theme.fonts.size.md,
     fontWeight: '600',
+  },
+  // Image container for back button positioning
+  imageContainer: {
+    position: 'relative',
+  },
+  // Back button positioned over image
+  backButton: {
+    position: 'absolute',
+    top: 48,
+    left: 12,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 9999,
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.22,
+    shadowRadius: 2.22,
+    elevation: 3,
   },
 }));

@@ -6,13 +6,17 @@ import {
   useAddDietaryRestrictionMutation,
   useUpdateDietaryRestrictionMutation,
   useRemoveDietaryRestrictionMutation,
-  DietaryTag,
+  Diet,
+  Intolerance,
+  HealthGoal,
   RestrictionSeverity,
 } from '#generated';
 
 export interface DietaryRestriction {
   id: string;
-  type: DietaryTag;
+  diet?: Diet | null;
+  intolerance?: Intolerance | null;
+  healthGoal?: HealthGoal | null;
   severity: RestrictionSeverity;
   notes?: string | null;
   appliesToHomeId?: string | null;
@@ -55,13 +59,15 @@ export const useDietaryProfile = () => {
     return {
       id: profile.id,
       userId: profile.userId,
-      restrictions: profile.restrictions.map(r => ({
+      restrictions: profile.restrictions?.map(r => ({
         id: r.id,
-        type: r.type,
+        diet: r.diet,
+        intolerance: r.intolerance,
+        healthGoal: r.healthGoal,
         severity: r.severity,
         notes: r.notes,
         appliesToHomeId: r.appliesToHomeId,
-      })),
+      })) || [],
       preferredCuisines: profile.preferredCuisines || [],
       dislikedIngredients: profile.dislikedIngredients || [],
       favoriteIngredients: profile.favoriteIngredients || [],
@@ -121,7 +127,11 @@ export const useDietaryProfile = () => {
 
   const addDietaryRestriction = useCallback(
     async (
-      type: DietaryTag,
+      restriction: {
+        diet?: Diet;
+        intolerance?: Intolerance;
+        healthGoal?: HealthGoal;
+      },
       severity: RestrictionSeverity,
       notes?: string,
       appliesToHomeId?: string,
@@ -130,7 +140,7 @@ export const useDietaryProfile = () => {
         await addRestriction({
           variables: {
             input: {
-              type,
+              ...restriction,
               severity,
               notes,
               appliesToHomeId,

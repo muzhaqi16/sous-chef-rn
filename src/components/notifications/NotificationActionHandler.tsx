@@ -6,6 +6,7 @@ import {
 } from './InvitationAcceptanceModal';
 import { NotificationItem } from '#store/slices/notificationSlice';
 import { useAppNavigation } from '#/hooks';
+import { useStore } from '#store';
 
 interface NotificationActionHandlerProps {
   children: (props: {
@@ -21,6 +22,7 @@ export const NotificationActionHandler: React.FC<
   const [currentInvitation, setCurrentInvitation] =
     useState<InvitationData | null>(null);
   const { navigateTo, navigate } = useAppNavigation();
+  const setSelectedHomeId = useStore(state => state.setSelectedHomeId);
   const showInvitationModal = (notification: NotificationItem) => {
     if (
       notification.actionType === 'ACCEPT_HOME_INVITE' ||
@@ -135,17 +137,30 @@ export const NotificationActionHandler: React.FC<
     }
   };
 
-  const handleInvitationAccept = (invitation: InvitationData) => {
+  const handleInvitationAccept = async (invitation: InvitationData) => {
     // Handle successful acceptance
     if (invitation.type === 'HOME_INVITE') {
-      // You might want to refresh user data or navigate to the home
-      Alert.alert('Success', `Welcome to ${invitation.entityName}!`, [
-        {
-          text: 'Explore Home',
-          onPress: () => navigateTo.pantryMain(),
-        },
-        { text: 'OK' },
-      ]);
+      // Set the newly accepted home as selected
+      const acceptedHomeId = (invitation as any).acceptedHomeId;
+
+      if (acceptedHomeId) {
+        setSelectedHomeId(acceptedHomeId);
+
+        // Wait briefly for GetHomes refetch to complete
+        // (refetch is already configured in the acceptHomeInvite mutation)
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Navigate to pantry - it will auto-select the default pantry for this home
+        navigateTo.pantryMain();
+      } else {
+        // Fallback if homeId not provided
+        Alert.alert('Success', `Welcome to ${invitation.entityName}!`, [
+          {
+            text: 'OK',
+            onPress: () => navigateTo.pantryMain(),
+          },
+        ]);
+      }
     } else {
       // Shopping list invitation accepted
       Alert.alert(
