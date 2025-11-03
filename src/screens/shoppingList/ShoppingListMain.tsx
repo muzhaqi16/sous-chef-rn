@@ -14,8 +14,6 @@ import {
   useMoveShoppingListItemMutation,
   useUpdateShoppingListItemQuantityMutation,
 } from '#generated';
-import { useApolloClient } from '@apollo/client/react';
-import { gql } from '@apollo/client';
 import { useScanner } from '#context';
 import {
   SearchBarAction,
@@ -121,6 +119,7 @@ const ShoppingListContent: React.FC<{
           /* Collapsible Purchased Section */
           <CollapsiblePurchasedSection
             purchasedItems={purchasedItems}
+            unpurchasedCount={unpurchasedItems.length}
             onItemPress={onItemPress}
             onItemEdit={onItemEdit}
             onItemDelete={onItemDelete}
@@ -147,7 +146,6 @@ export const ShoppingListMain: React.FC = () => {
   const { user } = useAuth();
   const selectorRef = useRef<ItemSelectorRef>(null);
   const { setScannerProps, setOverlayOpen } = useScanner();
-  const client = useApolloClient();
   // Track currently open swipeable across both unpurchased and purchased lists
   const openSwipeableRef = useRef<any>(null);
   const [moveItem] = useMoveShoppingListItemMutation({
@@ -176,13 +174,13 @@ export const ShoppingListMain: React.FC = () => {
 
       // Return updated item with new sortOrder
       return {
-        __typename: 'Mutation' as const,
+        __typename: 'Mutation',
         moveShoppingListItem: {
           ...movedItem,
           sortOrder: optimisticSortOrder,
           updatedAt: new Date().toISOString(),
-          __typename: 'ShoppingListItem' as const,
-        } as any,
+          __typename: 'ShoppingListItem',
+        },
       };
     },
     // Update cache to reflect new order
@@ -224,8 +222,8 @@ export const ShoppingListMain: React.FC = () => {
   });
   const [updateQuantity] = useUpdateShoppingListItemQuantityMutation({
     errorPolicy: 'all',
-    refetchQueries: ['GetShoppingListItems'],
-    awaitRefetchQueries: true,
+    // No optimisticResponse here - will be passed at call site with fresh cache data
+    // This avoids stale closure issues as per Apollo best practices
   });
 
   const [refreshing, setRefreshing] = useState(false);
@@ -418,31 +416,22 @@ export const ShoppingListMain: React.FC = () => {
   // Quantity update handlers using specialized mutation (80% payload reduction)
   const handleIncrementQuantity = useCallback(
     async (itemId: string) => {
-      // Read FRESH data from cache instead of stale closure
-      const cachedItem = client.readFragment({
-        id: client.cache.identify({
-          __typename: 'ShoppingListItem',
-          id: itemId,
-        }),
-        fragment: gql`
-          fragment ItemVersionData on ShoppingListItem {
-            id
-            version
-            quantity
-          }
-        `,
-      }) as { id: string; version: number; quantity: number } | null;
+      // Find item from the items array (already available from hook)
+      const currentItem = items.find(item => item.id === itemId);
 
-      if (!cachedItem) {
+      if (!currentItem) {
+        console.warn('Item not found:', itemId);
         return;
       }
+
+      const newQuantity = (currentItem.quantity || 1) + 1;
 
       try {
         await updateQuantity({
           variables: {
             id: itemId,
-            quantity: (cachedItem.quantity || 1) + 1,
-            version: cachedItem.version,
+            quantity: newQuantity,
+            version: currentItem.version,
           },
         });
       } catch (error: any) {
@@ -457,37 +446,29 @@ export const ShoppingListMain: React.FC = () => {
         Alert.alert('Error', 'Failed to update quantity');
       }
     },
-    [updateQuantity, refetchItems, client],
+    [updateQuantity, refetchItems, items],
   );
 
   const handleDecrementQuantity = useCallback(
     async (itemId: string) => {
-      // Read FRESH data from cache instead of stale closure
-      const cachedItem = client.readFragment({
-        id: client.cache.identify({
-          __typename: 'ShoppingListItem',
-          id: itemId,
-        }),
-        fragment: gql`
-          fragment ItemVersionData2 on ShoppingListItem {
-            id
-            version
-            quantity
-          }
-        `,
-      }) as { id: string; version: number; quantity: number } | null;
+      // Find item from the items array (already available from hook)
+      const currentItem = items.find(item => item.id === itemId);
 
-      if (!cachedItem) {
+      if (!currentItem) {
+        console.warn('Item not found:', itemId);
         return;
       }
+
+      const newQuantity = Math.max(0, (currentItem.quantity || 1) - 1);
 
       try {
         await updateQuantity({
           variables: {
             id: itemId,
-            quantity: Math.max(0, (cachedItem.quantity || 1) - 1),
-            version: cachedItem.version,
+            quantity: newQuantity,
+            version: currentItem.version,
           },
+          // Removed optimisticResponse entirely
         });
       } catch (error: any) {
         if (handleVersionConflict(error)) {
@@ -497,10 +478,11 @@ export const ShoppingListMain: React.FC = () => {
           ]);
           return;
         }
+        console.error('Failed to update quantity:', error);
         Alert.alert('Error', 'Failed to update quantity');
       }
     },
-    [updateQuantity, refetchItems, client],
+    [updateQuantity, refetchItems, items],
   );
 
   // Transform shopping list items for SortableShoppingList

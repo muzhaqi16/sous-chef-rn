@@ -23,8 +23,10 @@ export const PantryItemDetail: React.FC<{
   const { theme } = useUnistyles();
   const { selectedShoppingListId } = useStore();
 
+  // Use cache-first policy - offlineQueryLink will handle offline behavior automatically
   const { data } = useGetPantryItemQuery({
     variables: { id: itemId },
+    fetchPolicy: 'cache-first',
   });
 
   const [deleteItem] = useDeletePantryItemMutation();

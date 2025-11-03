@@ -295,6 +295,29 @@ schema {
   subscription: Subscription
 }
 
+"""
+Cache control directive for GraphQL fields and types
+
+Examples:
+- @cacheControl(maxAge: 3600) - Cache for 1 hour
+- @cacheControl(maxAge: 0) - Don't cache (real-time data)
+- @cacheControl(maxAge: 300, scope: PUBLIC) - Public cache for 5 minutes
+"""
+directive @cacheControl(
+  """
+  Whether to inherit max age from parent type
+  """
+  inheritMaxAge: Boolean
+  """
+  Maximum age in seconds for cache TTL
+  """
+  maxAge: Int
+  """
+  Scope of the cache (PUBLIC or PRIVATE)
+  """
+  scope: CacheControlScope
+) on FIELD_DEFINITION | INTERFACE | OBJECT | UNION
+
 enum AcquisitionMethod {
   BULK_SPLIT
   FOUND
@@ -425,6 +448,10 @@ input BanUserInput {
 
 scalar BigInt
 
+"""
+Brand type for product manufacturers and retailers
+Cache: 1 hour - brand catalog is relatively stable
+"""
 type Brand {
   children: [Brand!]!
   createdAt: DateTime!
@@ -499,6 +526,20 @@ type BulkOperationSummary {
   total: Int!
 }
 
+"""
+Scope for cache control (PUBLIC or PRIVATE)
+PUBLIC: Can be cached by CDN and shared caches
+PRIVATE: Can only be cached by private/user-specific caches
+"""
+enum CacheControlScope {
+  PRIVATE
+  PUBLIC
+}
+
+"""
+Category type for organizing items
+Cache: 2 hours - reference data that changes very rarely
+"""
 type Category {
   children: [Category!]
   color: String
@@ -1134,6 +1175,10 @@ enum Cuisine {
   VIETNAMESE
 }
 
+"""
+Currency type for price information
+Cache: 2 hours - currency definitions are static reference data
+"""
 type Currency {
   code: String!
   createdAt: DateTime!
@@ -1881,6 +1926,10 @@ input InviteToShoppingListInput {
   shoppingListId: ID!
 }
 
+"""
+Item/Product catalog type
+Cache: 30 minutes - catalog items are relatively static
+"""
 type Item {
   allergens: JSON
   alternateUpcs: [String!]!
@@ -2060,6 +2109,10 @@ enum ItemStatus {
   PENDING
 }
 
+"""
+Store SKU mapping for items
+Cache: 10 minutes - SKU mappings can change but not frequently
+"""
 type ItemStoreSku {
   createdAt: DateTime!
   id: ID!
@@ -2868,9 +2921,34 @@ type Mutation {
   submitAppeal(input: SubmitAppealInput!): UserModeration!
   suspendUser(input: SuspendUserInput!): UserModeration!
   syncAllItemPrices(batchSize: Int, storeId: String!): BulkOperationSummary!
+  syncDeletePantryItem(clientId: ID!, version: Int): SyncPantryItemResult!
+  syncDeleteShoppingListItem(
+    clientId: ID!
+    version: Int
+  ): SyncShoppingListItemResult!
   syncItemOffers(itemId: ID!, storeId: String!): Item!
   syncItemPrices(itemId: ID!, storeIds: [String!]): Item!
   syncItemWithProvider(itemId: ID!, provider: ProviderType!): Item!
+  syncMovePantryItem(
+    afterId: ID
+    beforeId: ID
+    clientId: ID!
+    version: Int
+  ): SyncPantryItemResult!
+  syncMoveShoppingListItem(
+    afterId: ID
+    beforeId: ID
+    clientId: ID!
+    version: Int
+  ): SyncShoppingListItemResult!
+  syncPantryItem(
+    clientId: ID!
+    input: SyncPantryItemInput!
+  ): SyncPantryItemResult!
+  syncShoppingListItem(
+    clientId: ID!
+    input: SyncShoppingListItemInput!
+  ): SyncShoppingListItemResult!
   toggleShoppingListItemPurchased(
     id: ID!
     purchased: Boolean!
@@ -3055,6 +3133,10 @@ interface Node {
   id: ID!
 }
 
+"""
+Notification type for user alerts and messages
+Cache: None - notifications must be real-time
+"""
 type Notification implements Node & Timestamped {
   createdAt: DateTime!
   id: ID!
@@ -3125,6 +3207,10 @@ type NotificationPayload {
   userId: String
 }
 
+"""
+User notification preferences
+Cache: 10 minutes - preferences rarely change, always private
+"""
 type NotificationPreferences {
   collaborationInvites: Boolean!
   cookingReminders: Boolean!
@@ -3170,6 +3256,10 @@ type NotificationPriorityCount {
   unreadCount: Int!
 }
 
+"""
+Notification statistics
+Cache: 1 minute - stats update frequently but can tolerate brief staleness
+"""
 type NotificationStats {
   byCategory: [NotificationCategoryCount!]!
   byPriority: [NotificationPriorityCount!]!
@@ -3190,6 +3280,10 @@ enum NotificationStatus {
   SENT
 }
 
+"""
+Notification subscription payload
+Cache: None - subscription events must be real-time
+"""
 type NotificationSubscriptionPayload {
   mutation: MutationType!
   node: Notification!
@@ -3842,6 +3936,10 @@ type RapidAttempt {
   hour: String!
 }
 
+"""
+Recipe type for meal instructions and ingredients
+Cache: 30 minutes - published recipes are static content
+"""
 type Recipe {
   averageRating: Float
   caloriesPerServing: Float
@@ -4617,6 +4715,10 @@ enum StorageType {
   RV_STORAGE
 }
 
+"""
+Store type for retail locations
+Cache: 30 minutes - store information changes rarely
+"""
 type Store {
   address: String
   averageShelfLife: JSON
@@ -4636,6 +4738,10 @@ type Store {
   updatedAt: DateTime!
 }
 
+"""
+Store information and contact details
+Cache: 30 minutes - store metadata changes rarely
+"""
 type StoreInfo {
   email: String
   hoursJSON: JSON
@@ -4665,6 +4771,10 @@ input StoreSkuInput {
   storeId: String!
 }
 
+"""
+Store statistics and analytics
+Cache: 10 minutes - stats aggregate over time
+"""
 type StoreStats {
   averagePurchaseAmount: Float!
   priceAccuracy: Float
@@ -4782,6 +4892,180 @@ type SuspiciousInviteActivity {
   summary: SuspiciousActivitySummary!
 }
 
+"""
+Information about a sync conflict
+"""
+type SyncConflictInfo {
+  """
+  The version the client had
+  """
+  clientVersion: Int!
+  """
+  Description of the conflict
+  """
+  message: String!
+  """
+  The current state of the item on the server
+  """
+  serverItem: ShoppingListItem!
+  """
+  The current version on the server
+  """
+  serverVersion: Int!
+}
+
+enum SyncOperation {
+  CREATE
+  DELETE
+  MOVE
+  UPDATE
+}
+
+input SyncPantryItemInput {
+  acquisitionMethod: AcquisitionMethod
+  actualNetWeight: Float
+  actualNetWeightUnitId: String
+  autoReorderPoint: Float
+  batchNumber: String
+  bestByDate: String
+  condition: ItemCondition
+  costPerUnit: Float
+  currentQuantity: Float
+  customCategory: String
+  expirationAlert: Boolean
+  expiresAt: String
+  initialQuantity: Float
+  isAutoReorder: Boolean
+  isComposted: Boolean
+  isRecycled: Boolean
+  itemBrand: String
+  itemCategory: String
+  itemDescription: String
+  itemDisplayUnitId: String
+  itemId: String
+  itemName: String
+  itemNetWeight: Float
+  itemUpc: String
+  lastUsedAt: DateTime
+  lotNumber: String
+  lowStockAlert: Boolean
+  openedAt: String
+  pantryId: ID!
+  priority: Int
+  purchaseId: String
+  reservedQuantity: Float
+  storageLocation: String
+  storageNotes: String
+  storageState: StorageState
+  storeId: String
+  tags: [String!]
+  totalCost: Float
+  unitId: String
+  unitName: String
+  unitSymbol: String
+  usageFrequency: UsageFrequency
+  version: Int
+  wasteAmount: Float
+  wasteReason: WasteReason
+}
+
+type SyncPantryItemResult {
+  clientId: ID!
+  conflict: SyncConflictInfo
+  item: PantryItem
+  operation: SyncOperation!
+  serverId: ID
+  wasCreated: Boolean!
+}
+
+input SyncShoppingListItemInput {
+  addedContext: String
+  aisle: String
+  budgetPrice: Float
+  category: String
+  """
+  Price information
+  """
+  estimatedPrice: Float
+  """
+  Purchase tracking
+  """
+  isPurchased: Boolean
+  """
+  Item reference (if linking to catalog item)
+  """
+  itemId: String
+  """
+  Item details (for items not in catalog)
+  """
+  itemName: String
+  """
+  User-provided information
+  """
+  notes: String
+  """
+  Store preferences
+  """
+  preferredStoreId: String
+  priority: Int
+  purchasedPrice: Float
+  purchasedQuantity: Float
+  """
+  Quantity of the item
+  """
+  quantity: Float
+  """
+  Recipe references
+  """
+  recipeId: ID
+  recipeIngredientId: ID
+  """
+  Required: ID of the shopping list this item belongs to
+  """
+  shoppingListId: ID!
+  sortOrder: String
+  storeSection: String
+  """
+  Unit reference (if linking to catalog unit)
+  """
+  unitId: String
+  unitName: String
+  """
+  Version for optimistic locking (null if new item)
+  """
+  version: Int
+}
+
+"""
+Result of syncing a shopping list item
+"""
+type SyncShoppingListItemResult {
+  """
+  The client-provided ID (may be temp ID like 'temp-uuid')
+  """
+  clientId: ID!
+  """
+  Conflict information if version mismatch occurred
+  """
+  conflict: SyncConflictInfo
+  """
+  The synced shopping list item (null for delete operations)
+  """
+  item: ShoppingListItem
+  """
+  The operation that was performed
+  """
+  operation: SyncOperation!
+  """
+  The server-assigned MongoDB ObjectID (null if item was deleted before reaching server)
+  """
+  serverId: ID
+  """
+  Whether this was a create (true) or update (false) operation
+  """
+  wasCreated: Boolean!
+}
+
 interface Timestamped {
   createdAt: DateTime!
 }
@@ -4795,6 +5079,10 @@ enum TrustLevel {
   VERIFIED
 }
 
+"""
+Unit of measurement type
+Cache: 2 hours - measurement units are static reference data
+"""
 type Unit {
   baseUnit: Unit
   baseUnitId: String
@@ -5465,6 +5753,10 @@ enum UsagePurpose {
   WASTE
 }
 
+"""
+User account type
+Cache: 5 minutes - user data changes occasionally, always private
+"""
 type User {
   addresses: [UserAddress!]!
   createdAt: DateTime!
@@ -5515,6 +5807,10 @@ enum UserActivityType {
   SOCIAL_ACTION
 }
 
+"""
+User address information
+Cache: 10 minutes - addresses rarely change, always private
+"""
 type UserAddress {
   city: String!
   country: String!
@@ -5585,6 +5881,10 @@ type UserModerationChangedPayload {
   userId: String!
 }
 
+"""
+User profile information
+Cache: 10 minutes - profile data rarely changes, always private
+"""
 type UserProfile {
   avatar: String
   bio: String
@@ -5621,6 +5921,10 @@ enum UserRole {
   USER
 }
 
+"""
+User settings and preferences
+Cache: 10 minutes - settings rarely change, always private
+"""
 type UserSettings {
   autoSync: Boolean!
   betaFeatures: [String!]!
@@ -5649,6 +5953,10 @@ type UserSocialPayload {
   userId: String!
 }
 
+"""
+User activity statistics
+Cache: 3 minutes - stats update with user activity, always private
+"""
 type UserStatistics {
   averageRatingGiven: Float
   helpfulVotesReceived: Int!

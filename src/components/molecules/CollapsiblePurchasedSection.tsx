@@ -7,6 +7,7 @@ import { SortableShoppingList } from '../organisms/SortableShoppingList';
 
 interface CollapsiblePurchasedSectionProps {
   purchasedItems: SortableShoppingListItem[];
+  unpurchasedCount?: number;
   onItemPress: (id: string) => void;
   onItemEdit?: (id: string) => void;
   onItemDelete?: (id: string) => void;
@@ -25,6 +26,7 @@ export const CollapsiblePurchasedSection: React.FC<
   CollapsiblePurchasedSectionProps
 > = ({
   purchasedItems,
+  unpurchasedCount = 0,
   onItemPress,
   onItemEdit,
   onItemDelete,
@@ -35,7 +37,9 @@ export const CollapsiblePurchasedSection: React.FC<
   onSwipeableWillOpen,
 }) => {
   const { theme } = useUnistyles();
-  const [isExpanded, setIsExpanded] = useState(false);
+  // Auto-expand when all items are purchased (no unpurchased items)
+  // This prevents the confusing "empty list" appearance when finishing shopping
+  const [isExpanded, setIsExpanded] = useState(unpurchasedCount === 0);
 
   if (purchasedItems.length === 0) {
     return null;

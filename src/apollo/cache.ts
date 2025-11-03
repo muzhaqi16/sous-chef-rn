@@ -131,6 +131,35 @@ export function makeCache(): InMemoryCache {
       ShoppingList: {
         keyFields: ['id'],
         merge: true, // Enable automatic field-level merging for partial data
+        fields: {
+          items: {
+            // Merge shopping list items intelligently to prevent cache data loss
+            // Uses same version-based conflict resolution as Query.shoppingListItems
+            merge(existing, incoming, { readField }) {
+              return mergeArrayByIdIntelligent(existing, incoming, {
+                readField,
+              });
+            },
+          },
+        },
+      },
+      Pantry: {
+        keyFields: ['id'],
+        fields: {
+          items: {
+            // Merge pantry items intelligently to prevent cache data loss
+            // Uses same version-based conflict resolution as Query.pantryItems
+            merge(existing, incoming, { readField }) {
+              return mergeArrayByIdIntelligent(existing, incoming, {
+                readField,
+              });
+            },
+          },
+        },
+      },
+      PantryItem: {
+        keyFields: ['id'],
+        merge: true, // Enable automatic field-level merging for partial data
       },
       Query: {
         fields: {

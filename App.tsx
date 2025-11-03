@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
-import { StatusBar, AppState, Platform } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { AppState, StatusBar } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
@@ -28,8 +28,6 @@ const App = () => {
   const { isHydrated, isOnline, setHasStoredCredentials, getTelemetryConfig } =
     useStore();
   const { theme } = useTheme();
-  const { theme: themeStyles } = useUnistyles();
-  const isDark = theme === 'dark';
 
   // Initialize network monitoring
   useNetworkStatus();
@@ -92,20 +90,7 @@ const App = () => {
           <DataProvider>
             <SubscriptionProvider>
               <SafeAreaProvider>
-                <StatusBar
-              //  translucent on android
-              {...Platform.select({
-                android: {
-                  translucent: true,
-                  backgroundColor: themeStyles.colors.background,
-                },
-                ios: {},
-              })}
-              backgroundColor={'red'}
-              hidden={false}
-              animated={true}
-              barStyle={isDark ? 'light-content' : 'dark-content'}
-            />
+                <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
             <SafeAreaView style={styles.container}>
               <ToastProvider>
                 <NotificationProvider>

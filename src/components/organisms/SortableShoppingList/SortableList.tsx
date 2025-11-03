@@ -164,6 +164,17 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
   }
 
   if (items.length === 0) {
+    // If there's a footer (e.g., purchased items section), still render it
+    // This allows the CollapsiblePurchasedSection to display when all items are purchased
+    if (ListFooterComponent) {
+      return (
+        <View style={styles.container}>
+          {React.isValidElement(ListFooterComponent)
+            ? ListFooterComponent
+            : React.createElement(ListFooterComponent as React.ComponentType)}
+        </View>
+      );
+    }
     return null;
   }
 

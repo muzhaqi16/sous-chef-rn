@@ -168,6 +168,10 @@ export type BanUserInput = {
   userId: Scalars['ID']['input'];
 };
 
+/**
+ * Brand type for product manufacturers and retailers
+ * Cache: 1 hour - brand catalog is relatively stable
+ */
 export type Brand = {
   __typename?: 'Brand';
   children: Array<Brand>;
@@ -248,6 +252,20 @@ export type BulkOperationSummary = {
   total: Scalars['Int']['output'];
 };
 
+/**
+ * Scope for cache control (PUBLIC or PRIVATE)
+ * PUBLIC: Can be cached by CDN and shared caches
+ * PRIVATE: Can only be cached by private/user-specific caches
+ */
+export enum CacheControlScope {
+  Private = 'PRIVATE',
+  Public = 'PUBLIC',
+}
+
+/**
+ * Category type for organizing items
+ * Cache: 2 hours - reference data that changes very rarely
+ */
 export type Category = {
   __typename?: 'Category';
   children?: Maybe<Array<Category>>;
@@ -861,6 +879,10 @@ export enum Cuisine {
   Vietnamese = 'VIETNAMESE',
 }
 
+/**
+ * Currency type for price information
+ * Cache: 2 hours - currency definitions are static reference data
+ */
 export type Currency = {
   __typename?: 'Currency';
   code: Scalars['String']['output'];
@@ -1636,6 +1658,10 @@ export type InviteToShoppingListInput = {
   shoppingListId: Scalars['ID']['input'];
 };
 
+/**
+ * Item/Product catalog type
+ * Cache: 30 minutes - catalog items are relatively static
+ */
 export type Item = {
   __typename?: 'Item';
   allergens?: Maybe<Scalars['JSON']['output']>;
@@ -1823,6 +1849,10 @@ export enum ItemStatus {
   Pending = 'PENDING',
 }
 
+/**
+ * Store SKU mapping for items
+ * Cache: 10 minutes - SKU mappings can change but not frequently
+ */
 export type ItemStoreSku = {
   __typename?: 'ItemStoreSku';
   createdAt: Scalars['DateTime']['output'];
@@ -2576,9 +2606,15 @@ export type Mutation = {
   submitAppeal: UserModeration;
   suspendUser: UserModeration;
   syncAllItemPrices: BulkOperationSummary;
+  syncDeletePantryItem: SyncPantryItemResult;
+  syncDeleteShoppingListItem: SyncShoppingListItemResult;
   syncItemOffers: Item;
   syncItemPrices: Item;
   syncItemWithProvider: Item;
+  syncMovePantryItem: SyncPantryItemResult;
+  syncMoveShoppingListItem: SyncShoppingListItemResult;
+  syncPantryItem: SyncPantryItemResult;
+  syncShoppingListItem: SyncShoppingListItemResult;
   toggleShoppingListItemPurchased: ShoppingListItem;
   transferHomeOwnership: HomeOwnership;
   trustDevice: Device;
@@ -3370,6 +3406,16 @@ export type MutationSyncAllItemPricesArgs = {
   storeId: Scalars['String']['input'];
 };
 
+export type MutationSyncDeletePantryItemArgs = {
+  clientId: Scalars['ID']['input'];
+  version?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type MutationSyncDeleteShoppingListItemArgs = {
+  clientId: Scalars['ID']['input'];
+  version?: InputMaybe<Scalars['Int']['input']>;
+};
+
 export type MutationSyncItemOffersArgs = {
   itemId: Scalars['ID']['input'];
   storeId: Scalars['String']['input'];
@@ -3383,6 +3429,30 @@ export type MutationSyncItemPricesArgs = {
 export type MutationSyncItemWithProviderArgs = {
   itemId: Scalars['ID']['input'];
   provider: ProviderType;
+};
+
+export type MutationSyncMovePantryItemArgs = {
+  afterId?: InputMaybe<Scalars['ID']['input']>;
+  beforeId?: InputMaybe<Scalars['ID']['input']>;
+  clientId: Scalars['ID']['input'];
+  version?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type MutationSyncMoveShoppingListItemArgs = {
+  afterId?: InputMaybe<Scalars['ID']['input']>;
+  beforeId?: InputMaybe<Scalars['ID']['input']>;
+  clientId: Scalars['ID']['input'];
+  version?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type MutationSyncPantryItemArgs = {
+  clientId: Scalars['ID']['input'];
+  input: SyncPantryItemInput;
+};
+
+export type MutationSyncShoppingListItemArgs = {
+  clientId: Scalars['ID']['input'];
+  input: SyncShoppingListItemInput;
 };
 
 export type MutationToggleShoppingListItemPurchasedArgs = {
@@ -3778,6 +3848,10 @@ export type Node = {
   id: Scalars['ID']['output'];
 };
 
+/**
+ * Notification type for user alerts and messages
+ * Cache: None - notifications must be real-time
+ */
 export type Notification = Node &
   Timestamped & {
     __typename?: 'Notification';
@@ -3854,6 +3928,10 @@ export type NotificationPayload = {
   userId?: Maybe<Scalars['String']['output']>;
 };
 
+/**
+ * User notification preferences
+ * Cache: 10 minutes - preferences rarely change, always private
+ */
 export type NotificationPreferences = {
   __typename?: 'NotificationPreferences';
   collaborationInvites: Scalars['Boolean']['output'];
@@ -3901,6 +3979,10 @@ export type NotificationPriorityCount = {
   unreadCount: Scalars['Int']['output'];
 };
 
+/**
+ * Notification statistics
+ * Cache: 1 minute - stats update frequently but can tolerate brief staleness
+ */
 export type NotificationStats = {
   __typename?: 'NotificationStats';
   byCategory: Array<NotificationCategoryCount>;
@@ -3922,6 +4004,10 @@ export enum NotificationStatus {
   Sent = 'SENT',
 }
 
+/**
+ * Notification subscription payload
+ * Cache: None - subscription events must be real-time
+ */
 export type NotificationSubscriptionPayload = {
   __typename?: 'NotificationSubscriptionPayload';
   mutation: MutationType;
@@ -5129,6 +5215,10 @@ export type RapidAttempt = {
   hour: Scalars['String']['output'];
 };
 
+/**
+ * Recipe type for meal instructions and ingredients
+ * Cache: 30 minutes - published recipes are static content
+ */
 export type Recipe = {
   __typename?: 'Recipe';
   averageRating?: Maybe<Scalars['Float']['output']>;
@@ -5841,6 +5931,10 @@ export enum StorageType {
   RvStorage = 'RV_STORAGE',
 }
 
+/**
+ * Store type for retail locations
+ * Cache: 30 minutes - store information changes rarely
+ */
 export type Store = {
   __typename?: 'Store';
   address?: Maybe<Scalars['String']['output']>;
@@ -5861,6 +5955,10 @@ export type Store = {
   updatedAt: Scalars['DateTime']['output'];
 };
 
+/**
+ * Store information and contact details
+ * Cache: 30 minutes - store metadata changes rarely
+ */
 export type StoreInfo = {
   __typename?: 'StoreInfo';
   email?: Maybe<Scalars['String']['output']>;
@@ -5892,6 +5990,10 @@ export type StoreSkuInput = {
   storeId: Scalars['String']['input'];
 };
 
+/**
+ * Store statistics and analytics
+ * Cache: 10 minutes - stats aggregate over time
+ */
 export type StoreStats = {
   __typename?: 'StoreStats';
   averagePurchaseAmount: Scalars['Float']['output'];
@@ -6173,6 +6275,137 @@ export type SuspiciousInviteActivity = {
   summary: SuspiciousActivitySummary;
 };
 
+/** Information about a sync conflict */
+export type SyncConflictInfo = {
+  __typename?: 'SyncConflictInfo';
+  /** The version the client had */
+  clientVersion: Scalars['Int']['output'];
+  /** Description of the conflict */
+  message: Scalars['String']['output'];
+  /** The current state of the item on the server */
+  serverItem: ShoppingListItem;
+  /** The current version on the server */
+  serverVersion: Scalars['Int']['output'];
+};
+
+export enum SyncOperation {
+  Create = 'CREATE',
+  Delete = 'DELETE',
+  Move = 'MOVE',
+  Update = 'UPDATE',
+}
+
+export type SyncPantryItemInput = {
+  acquisitionMethod?: InputMaybe<AcquisitionMethod>;
+  actualNetWeight?: InputMaybe<Scalars['Float']['input']>;
+  actualNetWeightUnitId?: InputMaybe<Scalars['String']['input']>;
+  autoReorderPoint?: InputMaybe<Scalars['Float']['input']>;
+  batchNumber?: InputMaybe<Scalars['String']['input']>;
+  bestByDate?: InputMaybe<Scalars['String']['input']>;
+  condition?: InputMaybe<ItemCondition>;
+  costPerUnit?: InputMaybe<Scalars['Float']['input']>;
+  currentQuantity?: InputMaybe<Scalars['Float']['input']>;
+  customCategory?: InputMaybe<Scalars['String']['input']>;
+  expirationAlert?: InputMaybe<Scalars['Boolean']['input']>;
+  expiresAt?: InputMaybe<Scalars['String']['input']>;
+  initialQuantity?: InputMaybe<Scalars['Float']['input']>;
+  isAutoReorder?: InputMaybe<Scalars['Boolean']['input']>;
+  isComposted?: InputMaybe<Scalars['Boolean']['input']>;
+  isRecycled?: InputMaybe<Scalars['Boolean']['input']>;
+  itemBrand?: InputMaybe<Scalars['String']['input']>;
+  itemCategory?: InputMaybe<Scalars['String']['input']>;
+  itemDescription?: InputMaybe<Scalars['String']['input']>;
+  itemDisplayUnitId?: InputMaybe<Scalars['String']['input']>;
+  itemId?: InputMaybe<Scalars['String']['input']>;
+  itemName?: InputMaybe<Scalars['String']['input']>;
+  itemNetWeight?: InputMaybe<Scalars['Float']['input']>;
+  itemUpc?: InputMaybe<Scalars['String']['input']>;
+  lastUsedAt?: InputMaybe<Scalars['DateTime']['input']>;
+  lotNumber?: InputMaybe<Scalars['String']['input']>;
+  lowStockAlert?: InputMaybe<Scalars['Boolean']['input']>;
+  openedAt?: InputMaybe<Scalars['String']['input']>;
+  pantryId: Scalars['ID']['input'];
+  priority?: InputMaybe<Scalars['Int']['input']>;
+  purchaseId?: InputMaybe<Scalars['String']['input']>;
+  reservedQuantity?: InputMaybe<Scalars['Float']['input']>;
+  storageLocation?: InputMaybe<Scalars['String']['input']>;
+  storageNotes?: InputMaybe<Scalars['String']['input']>;
+  storageState?: InputMaybe<StorageState>;
+  storeId?: InputMaybe<Scalars['String']['input']>;
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
+  totalCost?: InputMaybe<Scalars['Float']['input']>;
+  unitId?: InputMaybe<Scalars['String']['input']>;
+  unitName?: InputMaybe<Scalars['String']['input']>;
+  unitSymbol?: InputMaybe<Scalars['String']['input']>;
+  usageFrequency?: InputMaybe<UsageFrequency>;
+  version?: InputMaybe<Scalars['Int']['input']>;
+  wasteAmount?: InputMaybe<Scalars['Float']['input']>;
+  wasteReason?: InputMaybe<WasteReason>;
+};
+
+export type SyncPantryItemResult = {
+  __typename?: 'SyncPantryItemResult';
+  clientId: Scalars['ID']['output'];
+  conflict?: Maybe<SyncConflictInfo>;
+  item?: Maybe<PantryItem>;
+  operation: SyncOperation;
+  serverId?: Maybe<Scalars['ID']['output']>;
+  wasCreated: Scalars['Boolean']['output'];
+};
+
+export type SyncShoppingListItemInput = {
+  addedContext?: InputMaybe<Scalars['String']['input']>;
+  aisle?: InputMaybe<Scalars['String']['input']>;
+  budgetPrice?: InputMaybe<Scalars['Float']['input']>;
+  category?: InputMaybe<Scalars['String']['input']>;
+  /** Price information */
+  estimatedPrice?: InputMaybe<Scalars['Float']['input']>;
+  /** Purchase tracking */
+  isPurchased?: InputMaybe<Scalars['Boolean']['input']>;
+  /** Item reference (if linking to catalog item) */
+  itemId?: InputMaybe<Scalars['String']['input']>;
+  /** Item details (for items not in catalog) */
+  itemName?: InputMaybe<Scalars['String']['input']>;
+  /** User-provided information */
+  notes?: InputMaybe<Scalars['String']['input']>;
+  /** Store preferences */
+  preferredStoreId?: InputMaybe<Scalars['String']['input']>;
+  priority?: InputMaybe<Scalars['Int']['input']>;
+  purchasedPrice?: InputMaybe<Scalars['Float']['input']>;
+  purchasedQuantity?: InputMaybe<Scalars['Float']['input']>;
+  /** Quantity of the item */
+  quantity?: InputMaybe<Scalars['Float']['input']>;
+  /** Recipe references */
+  recipeId?: InputMaybe<Scalars['ID']['input']>;
+  recipeIngredientId?: InputMaybe<Scalars['ID']['input']>;
+  /** Required: ID of the shopping list this item belongs to */
+  shoppingListId: Scalars['ID']['input'];
+  sortOrder?: InputMaybe<Scalars['String']['input']>;
+  storeSection?: InputMaybe<Scalars['String']['input']>;
+  /** Unit reference (if linking to catalog unit) */
+  unitId?: InputMaybe<Scalars['String']['input']>;
+  unitName?: InputMaybe<Scalars['String']['input']>;
+  /** Version for optimistic locking (null if new item) */
+  version?: InputMaybe<Scalars['Int']['input']>;
+};
+
+/** Result of syncing a shopping list item */
+export type SyncShoppingListItemResult = {
+  __typename?: 'SyncShoppingListItemResult';
+  /** The client-provided ID (may be temp ID like 'temp-uuid') */
+  clientId: Scalars['ID']['output'];
+  /** Conflict information if version mismatch occurred */
+  conflict?: Maybe<SyncConflictInfo>;
+  /** The synced shopping list item (null for delete operations) */
+  item?: Maybe<ShoppingListItem>;
+  /** The operation that was performed */
+  operation: SyncOperation;
+  /** The server-assigned MongoDB ObjectID (null if item was deleted before reaching server) */
+  serverId?: Maybe<Scalars['ID']['output']>;
+  /** Whether this was a create (true) or update (false) operation */
+  wasCreated: Scalars['Boolean']['output'];
+};
+
 export type Timestamped = {
   createdAt: Scalars['DateTime']['output'];
 };
@@ -6186,6 +6419,10 @@ export enum TrustLevel {
   Verified = 'VERIFIED',
 }
 
+/**
+ * Unit of measurement type
+ * Cache: 2 hours - measurement units are static reference data
+ */
 export type Unit = {
   __typename?: 'Unit';
   baseUnit?: Maybe<Unit>;
@@ -6831,6 +7068,10 @@ export enum UsagePurpose {
   Waste = 'WASTE',
 }
 
+/**
+ * User account type
+ * Cache: 5 minutes - user data changes occasionally, always private
+ */
 export type User = {
   __typename?: 'User';
   addresses: Array<UserAddress>;
@@ -6883,6 +7124,10 @@ export enum UserActivityType {
   SocialAction = 'SOCIAL_ACTION',
 }
 
+/**
+ * User address information
+ * Cache: 10 minutes - addresses rarely change, always private
+ */
 export type UserAddress = {
   __typename?: 'UserAddress';
   city: Scalars['String']['output'];
@@ -6957,6 +7202,10 @@ export type UserModerationChangedPayload = {
   userId: Scalars['String']['output'];
 };
 
+/**
+ * User profile information
+ * Cache: 10 minutes - profile data rarely changes, always private
+ */
 export type UserProfile = {
   __typename?: 'UserProfile';
   avatar?: Maybe<Scalars['String']['output']>;
@@ -6995,6 +7244,10 @@ export enum UserRole {
   User = 'USER',
 }
 
+/**
+ * User settings and preferences
+ * Cache: 10 minutes - settings rarely change, always private
+ */
 export type UserSettings = {
   __typename?: 'UserSettings';
   autoSync: Scalars['Boolean']['output'];
@@ -7025,6 +7278,10 @@ export type UserSocialPayload = {
   userId: Scalars['String']['output'];
 };
 
+/**
+ * User activity statistics
+ * Cache: 3 minutes - stats update with user activity, always private
+ */
 export type UserStatistics = {
   __typename?: 'UserStatistics';
   averageRatingGiven?: Maybe<Scalars['Float']['output']>;
@@ -8105,17 +8362,31 @@ export type UserProfileChangedSubscription = {
   };
 };
 
-export type ShoppingListItemFragmentFragment = {
+export type ShoppingListItemCoreFragment = {
   __typename?: 'ShoppingListItem';
   id: string;
+  itemName?: string | null | undefined;
   quantity?: number | null | undefined;
+  isPurchased: boolean;
+  version: number;
+  updatedAt: string;
+  category?: string | null | undefined;
+  notes?: string | null | undefined;
+  unitName?: string | null | undefined;
+  unit?:
+    | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+    | null
+    | undefined;
+};
+
+export type ShoppingListItemFragmentFragment = {
+  __typename?: 'ShoppingListItem';
   estimatedPrice?: number | null | undefined;
   budgetPrice?: number | null | undefined;
   lastKnownPrice?: number | null | undefined;
   lowestPrice?: number | null | undefined;
   highestPrice?: number | null | undefined;
   priceLastUpdated?: string | null | undefined;
-  isPurchased: boolean;
   purchasedQuantity?: number | null | undefined;
   purchasedPrice?: number | null | undefined;
   purchaseDate?: string | null | undefined;
@@ -8124,20 +8395,23 @@ export type ShoppingListItemFragmentFragment = {
   previouslyPurchased: boolean;
   lastPurchaseDate?: string | null | undefined;
   purchaseCount: number;
-  itemName?: string | null | undefined;
-  unitName?: string | null | undefined;
-  notes?: string | null | undefined;
   priority: number;
-  category?: string | null | undefined;
   sortOrder: string;
   isAutoAdded: boolean;
   autoAddReason?: string | null | undefined;
   isFromMealPlan: boolean;
   mealPlanReference?: string | null | undefined;
   createdAt: string;
-  updatedAt: string;
   deletedAt?: string | null | undefined;
+  id: string;
+  itemName?: string | null | undefined;
+  quantity?: number | null | undefined;
+  isPurchased: boolean;
   version: number;
+  updatedAt: string;
+  category?: string | null | undefined;
+  notes?: string | null | undefined;
+  unitName?: string | null | undefined;
   shoppingList: {
     __typename?: 'ShoppingList';
     id: string;
@@ -8175,9 +8449,6 @@ export type ShoppingListItemFragmentFragment = {
   unit?:
     | {
         __typename?: 'Unit';
-        id: string;
-        name: string;
-        symbol: string;
         type: UnitType;
         isMetric: boolean;
         baseUnitId?: string | null | undefined;
@@ -8187,6 +8458,9 @@ export type ShoppingListItemFragmentFragment = {
         sortOrder: number;
         createdAt: string;
         updatedAt: string;
+        id: string;
+        name: string;
+        symbol: string;
       }
     | null
     | undefined;
@@ -14210,6 +14484,274 @@ export type DeletePantryItemMutation = {
   };
 };
 
+export type SyncPantryItemMutationVariables = Exact<{
+  clientId: Scalars['ID']['input'];
+  input: SyncPantryItemInput;
+}>;
+
+export type SyncPantryItemMutation = {
+  __typename?: 'Mutation';
+  syncPantryItem: {
+    __typename?: 'SyncPantryItemResult';
+    clientId: string;
+    serverId?: string | null | undefined;
+    operation: SyncOperation;
+    wasCreated: boolean;
+    item?:
+      | {
+          __typename?: 'PantryItem';
+          id: string;
+          pantryId: string;
+          itemId: string;
+          itemName: string;
+          unitName: string;
+          unitId?: string | null | undefined;
+          expiresAt?: string | null | undefined;
+          storageState: StorageState;
+          storageNotes?: string | null | undefined;
+          initialQuantity: number;
+          currentQuantity: number;
+          consumedQuantity: number;
+          reservedQuantity: number;
+          autoReorderPoint?: number | null | undefined;
+          isAutoReorder: boolean;
+          customCategory?: string | null | undefined;
+          actualNetWeight?: number | null | undefined;
+          createdAt: string;
+          updatedAt?: string | null | undefined;
+          version?: number | null | undefined;
+          tags: Array<string>;
+          item: {
+            __typename?: 'Item';
+            id: string;
+            name: string;
+            description?: string | null | undefined;
+            dataSource: DataSource;
+            type: ItemType;
+            storageState: StorageState;
+            showInOnboarding: boolean;
+            shelfLifeDays?: number | null | undefined;
+            popularity: number;
+            status: ItemStatus;
+            visibility: Visibility;
+            imageUrl?: string | null | undefined;
+            tags: Array<string>;
+            healthBenefits?: any | null | undefined;
+            allergens?: any | null | undefined;
+            nutritions?: any | null | undefined;
+            metadata?: any | null | undefined;
+            ingredients?: any | null | undefined;
+            createdAt: string;
+            updatedAt: string;
+            deletedAt?: string | null | undefined;
+            version: number;
+            netWeight?: number | null | undefined;
+            displayUnit?:
+              | {
+                  __typename?: 'Unit';
+                  id: string;
+                  name: string;
+                  symbol: string;
+                }
+              | null
+              | undefined;
+            units: Array<{
+              __typename?: 'ItemUnit';
+              id: string;
+              itemId: string;
+              unitId: string;
+              isDefault: boolean;
+              isPreferred: boolean;
+              isCommon: boolean;
+              conversionRatio?: number | null | undefined;
+              conversionNote?: string | null | undefined;
+              packageSize?: number | null | undefined;
+              packageDescription?: string | null | undefined;
+              retailUnit: boolean;
+              usageContext: Array<UnitUsageContext>;
+              recommendedFor: Array<UnitRecommendation>;
+              minQuantity?: number | null | undefined;
+              maxQuantity?: number | null | undefined;
+              quantityStep?: number | null | undefined;
+              averagePricePerUnit?: number | null | undefined;
+              lastPriceUpdate?: string | null | undefined;
+              priceSource?: string | null | undefined;
+              usageCount: number;
+              lastUsedAt?: string | null | undefined;
+              popularityScore: number;
+              source: UnitSource;
+              confidence?: number | null | undefined;
+              isVerified: boolean;
+              verifiedAt?: string | null | undefined;
+              createdAt: string;
+              updatedAt: string;
+              version: number;
+            }>;
+            brands: Array<{
+              __typename?: 'ItemBrand';
+              id: string;
+              brand: {
+                __typename?: 'Brand';
+                id: string;
+                name: string;
+                description?: string | null | undefined;
+                createdAt: string;
+                updatedAt: string;
+                version: number;
+              };
+            }>;
+            categories?:
+              | Array<{
+                  __typename?: 'ItemCategory';
+                  id: string;
+                  isPrimary: boolean;
+                  assignedAt?: string | null | undefined;
+                  assignedBy?:
+                    | { __typename?: 'User'; id: string }
+                    | null
+                    | undefined;
+                  category: {
+                    __typename?: 'Category';
+                    id: string;
+                    name: string;
+                    slug: string;
+                    description?: string | null | undefined;
+                    icon?: string | null | undefined;
+                    color?: string | null | undefined;
+                    sortOrder: number;
+                    type: CategoryType;
+                    isActive: boolean;
+                    isSystem: boolean;
+                    visibility: Visibility;
+                    itemCount: number;
+                    usageCount: number;
+                    createdAt: string;
+                    updatedAt: string;
+                    deletedAt?: string | null | undefined;
+                    version: number;
+                  };
+                }>
+              | null
+              | undefined;
+            creations: Array<{
+              __typename?: 'ItemCreation';
+              id: string;
+              source: DataSource;
+              reason?: string | null | undefined;
+              metadata?: any | null | undefined;
+              createdAt: string;
+            }>;
+            edits: Array<{
+              __typename?: 'ItemEdit';
+              id: string;
+              fieldsChanged: Array<string>;
+              oldValues?: any | null | undefined;
+              newValues?: any | null | undefined;
+              editReason?: string | null | undefined;
+              createdAt: string;
+            }>;
+          };
+          unit?:
+            | {
+                __typename?: 'Unit';
+                id: string;
+                name: string;
+                symbol: string;
+                type: UnitType;
+                isMetric: boolean;
+                baseUnitId?: string | null | undefined;
+                conversionFactor: number;
+                isCommon: boolean;
+              }
+            | null
+            | undefined;
+          storageLocation?:
+            | {
+                __typename?: 'StorageLocation';
+                id: string;
+                name: string;
+                type: StorageType;
+              }
+            | null
+            | undefined;
+          actualNetWeightUnit?:
+            | {
+                __typename?: 'Unit';
+                id: string;
+                name: string;
+                symbol: string;
+                type: UnitType;
+              }
+            | null
+            | undefined;
+          usageRecords: Array<{
+            __typename?: 'PantryItemUsage';
+            id: string;
+            quantityUsed: number;
+            usedAt: string;
+            purpose: UsagePurpose;
+            notes?: string | null | undefined;
+            pantryItem: { __typename?: 'PantryItem'; id: string };
+            usedBy: { __typename?: 'User'; id: string };
+            cookingLog?:
+              | { __typename?: 'CookingLog'; id: string }
+              | null
+              | undefined;
+            mealPlanItem?:
+              | { __typename?: 'MealPlanItem'; id: string }
+              | null
+              | undefined;
+            recipe?: { __typename?: 'Recipe'; id: string } | null | undefined;
+          }>;
+        }
+      | null
+      | undefined;
+    conflict?:
+      | {
+          __typename?: 'SyncConflictInfo';
+          clientVersion: number;
+          serverVersion: number;
+          message: string;
+          serverItem: {
+            __typename?: 'ShoppingListItem';
+            id: string;
+            version: number;
+          };
+        }
+      | null
+      | undefined;
+  };
+};
+
+export type SyncDeletePantryItemMutationVariables = Exact<{
+  clientId: Scalars['ID']['input'];
+  version?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+export type SyncDeletePantryItemMutation = {
+  __typename?: 'Mutation';
+  syncDeletePantryItem: {
+    __typename?: 'SyncPantryItemResult';
+    clientId: string;
+    serverId?: string | null | undefined;
+    operation: SyncOperation;
+    wasCreated: boolean;
+    item?:
+      | { __typename?: 'PantryItem'; id: string; itemName: string }
+      | null
+      | undefined;
+    conflict?:
+      | {
+          __typename?: 'SyncConflictInfo';
+          clientVersion: number;
+          serverVersion: number;
+          message: string;
+        }
+      | null
+      | undefined;
+  };
+};
+
 export type PantryUpdatedSubscriptionVariables = Exact<{
   pantryId: Scalars['ID']['input'];
 }>;
@@ -15736,15 +16278,12 @@ export type GetShoppingListItemsQuery = {
   __typename?: 'Query';
   shoppingListItems: Array<{
     __typename?: 'ShoppingListItem';
-    id: string;
-    quantity?: number | null | undefined;
     estimatedPrice?: number | null | undefined;
     budgetPrice?: number | null | undefined;
     lastKnownPrice?: number | null | undefined;
     lowestPrice?: number | null | undefined;
     highestPrice?: number | null | undefined;
     priceLastUpdated?: string | null | undefined;
-    isPurchased: boolean;
     purchasedQuantity?: number | null | undefined;
     purchasedPrice?: number | null | undefined;
     purchaseDate?: string | null | undefined;
@@ -15753,20 +16292,23 @@ export type GetShoppingListItemsQuery = {
     previouslyPurchased: boolean;
     lastPurchaseDate?: string | null | undefined;
     purchaseCount: number;
-    itemName?: string | null | undefined;
-    unitName?: string | null | undefined;
-    notes?: string | null | undefined;
     priority: number;
-    category?: string | null | undefined;
     sortOrder: string;
     isAutoAdded: boolean;
     autoAddReason?: string | null | undefined;
     isFromMealPlan: boolean;
     mealPlanReference?: string | null | undefined;
     createdAt: string;
-    updatedAt: string;
     deletedAt?: string | null | undefined;
+    id: string;
+    itemName?: string | null | undefined;
+    quantity?: number | null | undefined;
+    isPurchased: boolean;
     version: number;
+    updatedAt: string;
+    category?: string | null | undefined;
+    notes?: string | null | undefined;
+    unitName?: string | null | undefined;
     shoppingList: {
       __typename?: 'ShoppingList';
       id: string;
@@ -15804,9 +16346,6 @@ export type GetShoppingListItemsQuery = {
     unit?:
       | {
           __typename?: 'Unit';
-          id: string;
-          name: string;
-          symbol: string;
           type: UnitType;
           isMetric: boolean;
           baseUnitId?: string | null | undefined;
@@ -15816,6 +16355,9 @@ export type GetShoppingListItemsQuery = {
           sortOrder: number;
           createdAt: string;
           updatedAt: string;
+          id: string;
+          name: string;
+          symbol: string;
         }
       | null
       | undefined;
@@ -15916,15 +16458,12 @@ export type GetShoppingListItemQuery = {
   shoppingListItem?:
     | {
         __typename?: 'ShoppingListItem';
-        id: string;
-        quantity?: number | null | undefined;
         estimatedPrice?: number | null | undefined;
         budgetPrice?: number | null | undefined;
         lastKnownPrice?: number | null | undefined;
         lowestPrice?: number | null | undefined;
         highestPrice?: number | null | undefined;
         priceLastUpdated?: string | null | undefined;
-        isPurchased: boolean;
         purchasedQuantity?: number | null | undefined;
         purchasedPrice?: number | null | undefined;
         purchaseDate?: string | null | undefined;
@@ -15933,20 +16472,23 @@ export type GetShoppingListItemQuery = {
         previouslyPurchased: boolean;
         lastPurchaseDate?: string | null | undefined;
         purchaseCount: number;
-        itemName?: string | null | undefined;
-        unitName?: string | null | undefined;
-        notes?: string | null | undefined;
         priority: number;
-        category?: string | null | undefined;
         sortOrder: string;
         isAutoAdded: boolean;
         autoAddReason?: string | null | undefined;
         isFromMealPlan: boolean;
         mealPlanReference?: string | null | undefined;
         createdAt: string;
-        updatedAt: string;
         deletedAt?: string | null | undefined;
+        id: string;
+        itemName?: string | null | undefined;
+        quantity?: number | null | undefined;
+        isPurchased: boolean;
         version: number;
+        updatedAt: string;
+        category?: string | null | undefined;
+        notes?: string | null | undefined;
+        unitName?: string | null | undefined;
         shoppingList: {
           __typename?: 'ShoppingList';
           id: string;
@@ -15993,9 +16535,6 @@ export type GetShoppingListItemQuery = {
         unit?:
           | {
               __typename?: 'Unit';
-              id: string;
-              name: string;
-              symbol: string;
               type: UnitType;
               isMetric: boolean;
               baseUnitId?: string | null | undefined;
@@ -16005,6 +16544,9 @@ export type GetShoppingListItemQuery = {
               sortOrder: number;
               createdAt: string;
               updatedAt: string;
+              id: string;
+              name: string;
+              symbol: string;
             }
           | null
           | undefined;
@@ -16435,15 +16977,12 @@ export type AddItemToShoppingListMutation = {
   __typename?: 'Mutation';
   addItemToShoppingList: {
     __typename?: 'ShoppingListItem';
-    id: string;
-    quantity?: number | null | undefined;
     estimatedPrice?: number | null | undefined;
     budgetPrice?: number | null | undefined;
     lastKnownPrice?: number | null | undefined;
     lowestPrice?: number | null | undefined;
     highestPrice?: number | null | undefined;
     priceLastUpdated?: string | null | undefined;
-    isPurchased: boolean;
     purchasedQuantity?: number | null | undefined;
     purchasedPrice?: number | null | undefined;
     purchaseDate?: string | null | undefined;
@@ -16452,20 +16991,23 @@ export type AddItemToShoppingListMutation = {
     previouslyPurchased: boolean;
     lastPurchaseDate?: string | null | undefined;
     purchaseCount: number;
-    itemName?: string | null | undefined;
-    unitName?: string | null | undefined;
-    notes?: string | null | undefined;
     priority: number;
-    category?: string | null | undefined;
     sortOrder: string;
     isAutoAdded: boolean;
     autoAddReason?: string | null | undefined;
     isFromMealPlan: boolean;
     mealPlanReference?: string | null | undefined;
     createdAt: string;
-    updatedAt: string;
     deletedAt?: string | null | undefined;
+    id: string;
+    itemName?: string | null | undefined;
+    quantity?: number | null | undefined;
+    isPurchased: boolean;
     version: number;
+    updatedAt: string;
+    category?: string | null | undefined;
+    notes?: string | null | undefined;
+    unitName?: string | null | undefined;
     shoppingList: {
       __typename?: 'ShoppingList';
       id: string;
@@ -16503,9 +17045,6 @@ export type AddItemToShoppingListMutation = {
     unit?:
       | {
           __typename?: 'Unit';
-          id: string;
-          name: string;
-          symbol: string;
           type: UnitType;
           isMetric: boolean;
           baseUnitId?: string | null | undefined;
@@ -16515,6 +17054,9 @@ export type AddItemToShoppingListMutation = {
           sortOrder: number;
           createdAt: string;
           updatedAt: string;
+          id: string;
+          name: string;
+          symbol: string;
         }
       | null
       | undefined;
@@ -16615,15 +17157,12 @@ export type UpdateShoppingListItemMutation = {
   __typename?: 'Mutation';
   updateShoppingListItem: {
     __typename?: 'ShoppingListItem';
-    id: string;
-    quantity?: number | null | undefined;
     estimatedPrice?: number | null | undefined;
     budgetPrice?: number | null | undefined;
     lastKnownPrice?: number | null | undefined;
     lowestPrice?: number | null | undefined;
     highestPrice?: number | null | undefined;
     priceLastUpdated?: string | null | undefined;
-    isPurchased: boolean;
     purchasedQuantity?: number | null | undefined;
     purchasedPrice?: number | null | undefined;
     purchaseDate?: string | null | undefined;
@@ -16632,20 +17171,23 @@ export type UpdateShoppingListItemMutation = {
     previouslyPurchased: boolean;
     lastPurchaseDate?: string | null | undefined;
     purchaseCount: number;
-    itemName?: string | null | undefined;
-    unitName?: string | null | undefined;
-    notes?: string | null | undefined;
     priority: number;
-    category?: string | null | undefined;
     sortOrder: string;
     isAutoAdded: boolean;
     autoAddReason?: string | null | undefined;
     isFromMealPlan: boolean;
     mealPlanReference?: string | null | undefined;
     createdAt: string;
-    updatedAt: string;
     deletedAt?: string | null | undefined;
+    id: string;
+    itemName?: string | null | undefined;
+    quantity?: number | null | undefined;
+    isPurchased: boolean;
     version: number;
+    updatedAt: string;
+    category?: string | null | undefined;
+    notes?: string | null | undefined;
+    unitName?: string | null | undefined;
     shoppingList: {
       __typename?: 'ShoppingList';
       id: string;
@@ -16683,9 +17225,6 @@ export type UpdateShoppingListItemMutation = {
     unit?:
       | {
           __typename?: 'Unit';
-          id: string;
-          name: string;
-          symbol: string;
           type: UnitType;
           isMetric: boolean;
           baseUnitId?: string | null | undefined;
@@ -16695,6 +17234,9 @@ export type UpdateShoppingListItemMutation = {
           sortOrder: number;
           createdAt: string;
           updatedAt: string;
+          id: string;
+          name: string;
+          symbol: string;
         }
       | null
       | undefined;
@@ -16794,15 +17336,12 @@ export type RemoveItemFromShoppingListMutation = {
   __typename?: 'Mutation';
   removeItemFromShoppingList: {
     __typename?: 'ShoppingListItem';
-    id: string;
-    quantity?: number | null | undefined;
     estimatedPrice?: number | null | undefined;
     budgetPrice?: number | null | undefined;
     lastKnownPrice?: number | null | undefined;
     lowestPrice?: number | null | undefined;
     highestPrice?: number | null | undefined;
     priceLastUpdated?: string | null | undefined;
-    isPurchased: boolean;
     purchasedQuantity?: number | null | undefined;
     purchasedPrice?: number | null | undefined;
     purchaseDate?: string | null | undefined;
@@ -16811,20 +17350,23 @@ export type RemoveItemFromShoppingListMutation = {
     previouslyPurchased: boolean;
     lastPurchaseDate?: string | null | undefined;
     purchaseCount: number;
-    itemName?: string | null | undefined;
-    unitName?: string | null | undefined;
-    notes?: string | null | undefined;
     priority: number;
-    category?: string | null | undefined;
     sortOrder: string;
     isAutoAdded: boolean;
     autoAddReason?: string | null | undefined;
     isFromMealPlan: boolean;
     mealPlanReference?: string | null | undefined;
     createdAt: string;
-    updatedAt: string;
     deletedAt?: string | null | undefined;
+    id: string;
+    itemName?: string | null | undefined;
+    quantity?: number | null | undefined;
+    isPurchased: boolean;
     version: number;
+    updatedAt: string;
+    category?: string | null | undefined;
+    notes?: string | null | undefined;
+    unitName?: string | null | undefined;
     shoppingList: {
       __typename?: 'ShoppingList';
       id: string;
@@ -16862,9 +17404,6 @@ export type RemoveItemFromShoppingListMutation = {
     unit?:
       | {
           __typename?: 'Unit';
-          id: string;
-          name: string;
-          symbol: string;
           type: UnitType;
           isMetric: boolean;
           baseUnitId?: string | null | undefined;
@@ -16874,6 +17413,9 @@ export type RemoveItemFromShoppingListMutation = {
           sortOrder: number;
           createdAt: string;
           updatedAt: string;
+          id: string;
+          name: string;
+          symbol: string;
         }
       | null
       | undefined;
@@ -16974,15 +17516,12 @@ export type MarkItemPurchasedMutation = {
   __typename?: 'Mutation';
   markItemPurchased: {
     __typename?: 'ShoppingListItem';
-    id: string;
-    quantity?: number | null | undefined;
     estimatedPrice?: number | null | undefined;
     budgetPrice?: number | null | undefined;
     lastKnownPrice?: number | null | undefined;
     lowestPrice?: number | null | undefined;
     highestPrice?: number | null | undefined;
     priceLastUpdated?: string | null | undefined;
-    isPurchased: boolean;
     purchasedQuantity?: number | null | undefined;
     purchasedPrice?: number | null | undefined;
     purchaseDate?: string | null | undefined;
@@ -16991,20 +17530,23 @@ export type MarkItemPurchasedMutation = {
     previouslyPurchased: boolean;
     lastPurchaseDate?: string | null | undefined;
     purchaseCount: number;
-    itemName?: string | null | undefined;
-    unitName?: string | null | undefined;
-    notes?: string | null | undefined;
     priority: number;
-    category?: string | null | undefined;
     sortOrder: string;
     isAutoAdded: boolean;
     autoAddReason?: string | null | undefined;
     isFromMealPlan: boolean;
     mealPlanReference?: string | null | undefined;
     createdAt: string;
-    updatedAt: string;
     deletedAt?: string | null | undefined;
+    id: string;
+    itemName?: string | null | undefined;
+    quantity?: number | null | undefined;
+    isPurchased: boolean;
     version: number;
+    updatedAt: string;
+    category?: string | null | undefined;
+    notes?: string | null | undefined;
+    unitName?: string | null | undefined;
     shoppingList: {
       __typename?: 'ShoppingList';
       id: string;
@@ -17042,9 +17584,6 @@ export type MarkItemPurchasedMutation = {
     unit?:
       | {
           __typename?: 'Unit';
-          id: string;
-          name: string;
-          symbol: string;
           type: UnitType;
           isMetric: boolean;
           baseUnitId?: string | null | undefined;
@@ -17054,6 +17593,9 @@ export type MarkItemPurchasedMutation = {
           sortOrder: number;
           createdAt: string;
           updatedAt: string;
+          id: string;
+          name: string;
+          symbol: string;
         }
       | null
       | undefined;
@@ -17153,15 +17695,12 @@ export type MoveShoppingListItemMutation = {
   __typename?: 'Mutation';
   moveShoppingListItem: {
     __typename?: 'ShoppingListItem';
-    id: string;
-    quantity?: number | null | undefined;
     estimatedPrice?: number | null | undefined;
     budgetPrice?: number | null | undefined;
     lastKnownPrice?: number | null | undefined;
     lowestPrice?: number | null | undefined;
     highestPrice?: number | null | undefined;
     priceLastUpdated?: string | null | undefined;
-    isPurchased: boolean;
     purchasedQuantity?: number | null | undefined;
     purchasedPrice?: number | null | undefined;
     purchaseDate?: string | null | undefined;
@@ -17170,20 +17709,23 @@ export type MoveShoppingListItemMutation = {
     previouslyPurchased: boolean;
     lastPurchaseDate?: string | null | undefined;
     purchaseCount: number;
-    itemName?: string | null | undefined;
-    unitName?: string | null | undefined;
-    notes?: string | null | undefined;
     priority: number;
-    category?: string | null | undefined;
     sortOrder: string;
     isAutoAdded: boolean;
     autoAddReason?: string | null | undefined;
     isFromMealPlan: boolean;
     mealPlanReference?: string | null | undefined;
     createdAt: string;
-    updatedAt: string;
     deletedAt?: string | null | undefined;
+    id: string;
+    itemName?: string | null | undefined;
+    quantity?: number | null | undefined;
+    isPurchased: boolean;
     version: number;
+    updatedAt: string;
+    category?: string | null | undefined;
+    notes?: string | null | undefined;
+    unitName?: string | null | undefined;
     shoppingList: {
       __typename?: 'ShoppingList';
       id: string;
@@ -17221,9 +17763,6 @@ export type MoveShoppingListItemMutation = {
     unit?:
       | {
           __typename?: 'Unit';
-          id: string;
-          name: string;
-          symbol: string;
           type: UnitType;
           isMetric: boolean;
           baseUnitId?: string | null | undefined;
@@ -17233,6 +17772,9 @@ export type MoveShoppingListItemMutation = {
           sortOrder: number;
           createdAt: string;
           updatedAt: string;
+          id: string;
+          name: string;
+          symbol: string;
         }
       | null
       | undefined;
@@ -17334,15 +17876,12 @@ export type ToggleShoppingListItemPurchasedMutation = {
   __typename?: 'Mutation';
   toggleShoppingListItemPurchased: {
     __typename?: 'ShoppingListItem';
-    id: string;
-    quantity?: number | null | undefined;
     estimatedPrice?: number | null | undefined;
     budgetPrice?: number | null | undefined;
     lastKnownPrice?: number | null | undefined;
     lowestPrice?: number | null | undefined;
     highestPrice?: number | null | undefined;
     priceLastUpdated?: string | null | undefined;
-    isPurchased: boolean;
     purchasedQuantity?: number | null | undefined;
     purchasedPrice?: number | null | undefined;
     purchaseDate?: string | null | undefined;
@@ -17351,20 +17890,23 @@ export type ToggleShoppingListItemPurchasedMutation = {
     previouslyPurchased: boolean;
     lastPurchaseDate?: string | null | undefined;
     purchaseCount: number;
-    itemName?: string | null | undefined;
-    unitName?: string | null | undefined;
-    notes?: string | null | undefined;
     priority: number;
-    category?: string | null | undefined;
     sortOrder: string;
     isAutoAdded: boolean;
     autoAddReason?: string | null | undefined;
     isFromMealPlan: boolean;
     mealPlanReference?: string | null | undefined;
     createdAt: string;
-    updatedAt: string;
     deletedAt?: string | null | undefined;
+    id: string;
+    itemName?: string | null | undefined;
+    quantity?: number | null | undefined;
+    isPurchased: boolean;
     version: number;
+    updatedAt: string;
+    category?: string | null | undefined;
+    notes?: string | null | undefined;
+    unitName?: string | null | undefined;
     shoppingList: {
       __typename?: 'ShoppingList';
       id: string;
@@ -17402,9 +17944,6 @@ export type ToggleShoppingListItemPurchasedMutation = {
     unit?:
       | {
           __typename?: 'Unit';
-          id: string;
-          name: string;
-          symbol: string;
           type: UnitType;
           isMetric: boolean;
           baseUnitId?: string | null | undefined;
@@ -17414,6 +17953,9 @@ export type ToggleShoppingListItemPurchasedMutation = {
           sortOrder: number;
           createdAt: string;
           updatedAt: string;
+          id: string;
+          name: string;
+          symbol: string;
         }
       | null
       | undefined;
@@ -17515,15 +18057,12 @@ export type UpdateShoppingListItemQuantityMutation = {
   __typename?: 'Mutation';
   updateShoppingListItemQuantity: {
     __typename?: 'ShoppingListItem';
-    id: string;
-    quantity?: number | null | undefined;
     estimatedPrice?: number | null | undefined;
     budgetPrice?: number | null | undefined;
     lastKnownPrice?: number | null | undefined;
     lowestPrice?: number | null | undefined;
     highestPrice?: number | null | undefined;
     priceLastUpdated?: string | null | undefined;
-    isPurchased: boolean;
     purchasedQuantity?: number | null | undefined;
     purchasedPrice?: number | null | undefined;
     purchaseDate?: string | null | undefined;
@@ -17532,20 +18071,23 @@ export type UpdateShoppingListItemQuantityMutation = {
     previouslyPurchased: boolean;
     lastPurchaseDate?: string | null | undefined;
     purchaseCount: number;
-    itemName?: string | null | undefined;
-    unitName?: string | null | undefined;
-    notes?: string | null | undefined;
     priority: number;
-    category?: string | null | undefined;
     sortOrder: string;
     isAutoAdded: boolean;
     autoAddReason?: string | null | undefined;
     isFromMealPlan: boolean;
     mealPlanReference?: string | null | undefined;
     createdAt: string;
-    updatedAt: string;
     deletedAt?: string | null | undefined;
+    id: string;
+    itemName?: string | null | undefined;
+    quantity?: number | null | undefined;
+    isPurchased: boolean;
     version: number;
+    updatedAt: string;
+    category?: string | null | undefined;
+    notes?: string | null | undefined;
+    unitName?: string | null | undefined;
     shoppingList: {
       __typename?: 'ShoppingList';
       id: string;
@@ -17583,9 +18125,6 @@ export type UpdateShoppingListItemQuantityMutation = {
     unit?:
       | {
           __typename?: 'Unit';
-          id: string;
-          name: string;
-          symbol: string;
           type: UnitType;
           isMetric: boolean;
           baseUnitId?: string | null | undefined;
@@ -17595,6 +18134,9 @@ export type UpdateShoppingListItemQuantityMutation = {
           sortOrder: number;
           createdAt: string;
           updatedAt: string;
+          id: string;
+          name: string;
+          symbol: string;
         }
       | null
       | undefined;
@@ -17696,15 +18238,12 @@ export type UpdateShoppingListItemNotesMutation = {
   __typename?: 'Mutation';
   updateShoppingListItemNotes: {
     __typename?: 'ShoppingListItem';
-    id: string;
-    quantity?: number | null | undefined;
     estimatedPrice?: number | null | undefined;
     budgetPrice?: number | null | undefined;
     lastKnownPrice?: number | null | undefined;
     lowestPrice?: number | null | undefined;
     highestPrice?: number | null | undefined;
     priceLastUpdated?: string | null | undefined;
-    isPurchased: boolean;
     purchasedQuantity?: number | null | undefined;
     purchasedPrice?: number | null | undefined;
     purchaseDate?: string | null | undefined;
@@ -17713,20 +18252,23 @@ export type UpdateShoppingListItemNotesMutation = {
     previouslyPurchased: boolean;
     lastPurchaseDate?: string | null | undefined;
     purchaseCount: number;
-    itemName?: string | null | undefined;
-    unitName?: string | null | undefined;
-    notes?: string | null | undefined;
     priority: number;
-    category?: string | null | undefined;
     sortOrder: string;
     isAutoAdded: boolean;
     autoAddReason?: string | null | undefined;
     isFromMealPlan: boolean;
     mealPlanReference?: string | null | undefined;
     createdAt: string;
-    updatedAt: string;
     deletedAt?: string | null | undefined;
+    id: string;
+    itemName?: string | null | undefined;
+    quantity?: number | null | undefined;
+    isPurchased: boolean;
     version: number;
+    updatedAt: string;
+    category?: string | null | undefined;
+    notes?: string | null | undefined;
+    unitName?: string | null | undefined;
     shoppingList: {
       __typename?: 'ShoppingList';
       id: string;
@@ -17764,9 +18306,6 @@ export type UpdateShoppingListItemNotesMutation = {
     unit?:
       | {
           __typename?: 'Unit';
-          id: string;
-          name: string;
-          symbol: string;
           type: UnitType;
           isMetric: boolean;
           baseUnitId?: string | null | undefined;
@@ -17776,6 +18315,9 @@ export type UpdateShoppingListItemNotesMutation = {
           sortOrder: number;
           createdAt: string;
           updatedAt: string;
+          id: string;
+          name: string;
+          symbol: string;
         }
       | null
       | undefined;
@@ -17877,15 +18419,12 @@ export type UpdateShoppingListItemPriorityMutation = {
   __typename?: 'Mutation';
   updateShoppingListItemPriority: {
     __typename?: 'ShoppingListItem';
-    id: string;
-    quantity?: number | null | undefined;
     estimatedPrice?: number | null | undefined;
     budgetPrice?: number | null | undefined;
     lastKnownPrice?: number | null | undefined;
     lowestPrice?: number | null | undefined;
     highestPrice?: number | null | undefined;
     priceLastUpdated?: string | null | undefined;
-    isPurchased: boolean;
     purchasedQuantity?: number | null | undefined;
     purchasedPrice?: number | null | undefined;
     purchaseDate?: string | null | undefined;
@@ -17894,20 +18433,23 @@ export type UpdateShoppingListItemPriorityMutation = {
     previouslyPurchased: boolean;
     lastPurchaseDate?: string | null | undefined;
     purchaseCount: number;
-    itemName?: string | null | undefined;
-    unitName?: string | null | undefined;
-    notes?: string | null | undefined;
     priority: number;
-    category?: string | null | undefined;
     sortOrder: string;
     isAutoAdded: boolean;
     autoAddReason?: string | null | undefined;
     isFromMealPlan: boolean;
     mealPlanReference?: string | null | undefined;
     createdAt: string;
-    updatedAt: string;
     deletedAt?: string | null | undefined;
+    id: string;
+    itemName?: string | null | undefined;
+    quantity?: number | null | undefined;
+    isPurchased: boolean;
     version: number;
+    updatedAt: string;
+    category?: string | null | undefined;
+    notes?: string | null | undefined;
+    unitName?: string | null | undefined;
     shoppingList: {
       __typename?: 'ShoppingList';
       id: string;
@@ -17945,9 +18487,6 @@ export type UpdateShoppingListItemPriorityMutation = {
     unit?:
       | {
           __typename?: 'Unit';
-          id: string;
-          name: string;
-          symbol: string;
           type: UnitType;
           isMetric: boolean;
           baseUnitId?: string | null | undefined;
@@ -17957,6 +18496,9 @@ export type UpdateShoppingListItemPriorityMutation = {
           sortOrder: number;
           createdAt: string;
           updatedAt: string;
+          id: string;
+          name: string;
+          symbol: string;
         }
       | null
       | undefined;
@@ -18057,6 +18599,469 @@ export type UpdateCollaboratorRoleMutationVariables = Exact<{
 export type UpdateCollaboratorRoleMutation = {
   __typename?: 'Mutation';
   updateCollaboratorRole: boolean;
+};
+
+export type SyncShoppingListItemMutationVariables = Exact<{
+  clientId: Scalars['ID']['input'];
+  input: SyncShoppingListItemInput;
+}>;
+
+export type SyncShoppingListItemMutation = {
+  __typename?: 'Mutation';
+  syncShoppingListItem: {
+    __typename?: 'SyncShoppingListItemResult';
+    clientId: string;
+    serverId?: string | null | undefined;
+    operation: SyncOperation;
+    wasCreated: boolean;
+    item?:
+      | {
+          __typename?: 'ShoppingListItem';
+          estimatedPrice?: number | null | undefined;
+          budgetPrice?: number | null | undefined;
+          lastKnownPrice?: number | null | undefined;
+          lowestPrice?: number | null | undefined;
+          highestPrice?: number | null | undefined;
+          priceLastUpdated?: string | null | undefined;
+          purchasedQuantity?: number | null | undefined;
+          purchasedPrice?: number | null | undefined;
+          purchaseDate?: string | null | undefined;
+          aisle?: string | null | undefined;
+          storeSection?: string | null | undefined;
+          previouslyPurchased: boolean;
+          lastPurchaseDate?: string | null | undefined;
+          purchaseCount: number;
+          priority: number;
+          sortOrder: string;
+          isAutoAdded: boolean;
+          autoAddReason?: string | null | undefined;
+          isFromMealPlan: boolean;
+          mealPlanReference?: string | null | undefined;
+          createdAt: string;
+          deletedAt?: string | null | undefined;
+          id: string;
+          itemName?: string | null | undefined;
+          quantity?: number | null | undefined;
+          isPurchased: boolean;
+          version: number;
+          updatedAt: string;
+          category?: string | null | undefined;
+          notes?: string | null | undefined;
+          unitName?: string | null | undefined;
+          shoppingList: {
+            __typename?: 'ShoppingList';
+            id: string;
+            totalItems: number;
+            completedItems: number;
+            estimatedTotal: number;
+          };
+          item?:
+            | {
+                __typename?: 'Item';
+                id: string;
+                name: string;
+                description?: string | null | undefined;
+                imageUrl?: string | null | undefined;
+                netWeight?: number | null | undefined;
+                displayUnit?:
+                  | {
+                      __typename?: 'Unit';
+                      id: string;
+                      name: string;
+                      symbol: string;
+                    }
+                  | null
+                  | undefined;
+                categories?:
+                  | Array<{
+                      __typename?: 'ItemCategory';
+                      id: string;
+                      isPrimary: boolean;
+                      confidence: number;
+                      source: CategorySource;
+                      assignedAt?: string | null | undefined;
+                      category: {
+                        __typename?: 'Category';
+                        id: string;
+                        name: string;
+                      };
+                    }>
+                  | null
+                  | undefined;
+              }
+            | null
+            | undefined;
+          unit?:
+            | {
+                __typename?: 'Unit';
+                type: UnitType;
+                isMetric: boolean;
+                baseUnitId?: string | null | undefined;
+                conversionFactor: number;
+                notes?: string | null | undefined;
+                isCommon: boolean;
+                sortOrder: number;
+                createdAt: string;
+                updatedAt: string;
+                id: string;
+                name: string;
+                symbol: string;
+              }
+            | null
+            | undefined;
+          addedBy?:
+            | {
+                __typename?: 'User';
+                id: string;
+                email: string;
+                emailVerified: boolean;
+                role: UserRole;
+                onBoarded: boolean;
+                timezone?: string | null | undefined;
+                preferredCurrency?: string | null | undefined;
+                language?: string | null | undefined;
+                defaultShoppingListId?: string | null | undefined;
+                defaultHomeId?: string | null | undefined;
+                createdAt: string;
+                updatedAt: string;
+                lastActiveAt?: string | null | undefined;
+                profile?:
+                  | {
+                      __typename?: 'UserProfile';
+                      id: string;
+                      firstName?: string | null | undefined;
+                      lastName?: string | null | undefined;
+                      displayName?: string | null | undefined;
+                      bio?: string | null | undefined;
+                      avatar?: string | null | undefined;
+                      phone?: string | null | undefined;
+                    }
+                  | null
+                  | undefined;
+                settings?:
+                  | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
+                  | null
+                  | undefined;
+              }
+            | null
+            | undefined;
+          purchasedBy?:
+            | {
+                __typename?: 'User';
+                id: string;
+                email: string;
+                emailVerified: boolean;
+                role: UserRole;
+                onBoarded: boolean;
+                timezone?: string | null | undefined;
+                preferredCurrency?: string | null | undefined;
+                language?: string | null | undefined;
+                defaultShoppingListId?: string | null | undefined;
+                defaultHomeId?: string | null | undefined;
+                createdAt: string;
+                updatedAt: string;
+                lastActiveAt?: string | null | undefined;
+                profile?:
+                  | {
+                      __typename?: 'UserProfile';
+                      id: string;
+                      firstName?: string | null | undefined;
+                      lastName?: string | null | undefined;
+                      displayName?: string | null | undefined;
+                      bio?: string | null | undefined;
+                      avatar?: string | null | undefined;
+                      phone?: string | null | undefined;
+                    }
+                  | null
+                  | undefined;
+                settings?:
+                  | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
+                  | null
+                  | undefined;
+              }
+            | null
+            | undefined;
+          purchases?:
+            | Array<{
+                __typename?: 'Purchase';
+                id: string;
+                purchaseDate: string;
+                quantity: number;
+                unitPrice: number;
+                totalPrice: number;
+                itemName: string;
+                unitSymbol: string;
+              }>
+            | null
+            | undefined;
+        }
+      | null
+      | undefined;
+    conflict?:
+      | {
+          __typename?: 'SyncConflictInfo';
+          clientVersion: number;
+          serverVersion: number;
+          message: string;
+          serverItem: {
+            __typename?: 'ShoppingListItem';
+            id: string;
+            version: number;
+            sortOrder: string;
+          };
+        }
+      | null
+      | undefined;
+  };
+};
+
+export type SyncDeleteShoppingListItemMutationVariables = Exact<{
+  clientId: Scalars['ID']['input'];
+  version?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+export type SyncDeleteShoppingListItemMutation = {
+  __typename?: 'Mutation';
+  syncDeleteShoppingListItem: {
+    __typename?: 'SyncShoppingListItemResult';
+    clientId: string;
+    serverId?: string | null | undefined;
+    operation: SyncOperation;
+    wasCreated: boolean;
+    item?:
+      | {
+          __typename?: 'ShoppingListItem';
+          id: string;
+          itemName?: string | null | undefined;
+        }
+      | null
+      | undefined;
+    conflict?:
+      | {
+          __typename?: 'SyncConflictInfo';
+          clientVersion: number;
+          serverVersion: number;
+          message: string;
+        }
+      | null
+      | undefined;
+  };
+};
+
+export type SyncMoveShoppingListItemMutationVariables = Exact<{
+  clientId: Scalars['ID']['input'];
+  afterId?: InputMaybe<Scalars['ID']['input']>;
+  beforeId?: InputMaybe<Scalars['ID']['input']>;
+  version?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+export type SyncMoveShoppingListItemMutation = {
+  __typename?: 'Mutation';
+  syncMoveShoppingListItem: {
+    __typename?: 'SyncShoppingListItemResult';
+    clientId: string;
+    serverId?: string | null | undefined;
+    operation: SyncOperation;
+    wasCreated: boolean;
+    item?:
+      | {
+          __typename?: 'ShoppingListItem';
+          estimatedPrice?: number | null | undefined;
+          budgetPrice?: number | null | undefined;
+          lastKnownPrice?: number | null | undefined;
+          lowestPrice?: number | null | undefined;
+          highestPrice?: number | null | undefined;
+          priceLastUpdated?: string | null | undefined;
+          purchasedQuantity?: number | null | undefined;
+          purchasedPrice?: number | null | undefined;
+          purchaseDate?: string | null | undefined;
+          aisle?: string | null | undefined;
+          storeSection?: string | null | undefined;
+          previouslyPurchased: boolean;
+          lastPurchaseDate?: string | null | undefined;
+          purchaseCount: number;
+          priority: number;
+          sortOrder: string;
+          isAutoAdded: boolean;
+          autoAddReason?: string | null | undefined;
+          isFromMealPlan: boolean;
+          mealPlanReference?: string | null | undefined;
+          createdAt: string;
+          deletedAt?: string | null | undefined;
+          id: string;
+          itemName?: string | null | undefined;
+          quantity?: number | null | undefined;
+          isPurchased: boolean;
+          version: number;
+          updatedAt: string;
+          category?: string | null | undefined;
+          notes?: string | null | undefined;
+          unitName?: string | null | undefined;
+          shoppingList: {
+            __typename?: 'ShoppingList';
+            id: string;
+            totalItems: number;
+            completedItems: number;
+            estimatedTotal: number;
+          };
+          item?:
+            | {
+                __typename?: 'Item';
+                id: string;
+                name: string;
+                description?: string | null | undefined;
+                imageUrl?: string | null | undefined;
+                netWeight?: number | null | undefined;
+                displayUnit?:
+                  | {
+                      __typename?: 'Unit';
+                      id: string;
+                      name: string;
+                      symbol: string;
+                    }
+                  | null
+                  | undefined;
+                categories?:
+                  | Array<{
+                      __typename?: 'ItemCategory';
+                      id: string;
+                      isPrimary: boolean;
+                      confidence: number;
+                      source: CategorySource;
+                      assignedAt?: string | null | undefined;
+                      category: {
+                        __typename?: 'Category';
+                        id: string;
+                        name: string;
+                      };
+                    }>
+                  | null
+                  | undefined;
+              }
+            | null
+            | undefined;
+          unit?:
+            | {
+                __typename?: 'Unit';
+                type: UnitType;
+                isMetric: boolean;
+                baseUnitId?: string | null | undefined;
+                conversionFactor: number;
+                notes?: string | null | undefined;
+                isCommon: boolean;
+                sortOrder: number;
+                createdAt: string;
+                updatedAt: string;
+                id: string;
+                name: string;
+                symbol: string;
+              }
+            | null
+            | undefined;
+          addedBy?:
+            | {
+                __typename?: 'User';
+                id: string;
+                email: string;
+                emailVerified: boolean;
+                role: UserRole;
+                onBoarded: boolean;
+                timezone?: string | null | undefined;
+                preferredCurrency?: string | null | undefined;
+                language?: string | null | undefined;
+                defaultShoppingListId?: string | null | undefined;
+                defaultHomeId?: string | null | undefined;
+                createdAt: string;
+                updatedAt: string;
+                lastActiveAt?: string | null | undefined;
+                profile?:
+                  | {
+                      __typename?: 'UserProfile';
+                      id: string;
+                      firstName?: string | null | undefined;
+                      lastName?: string | null | undefined;
+                      displayName?: string | null | undefined;
+                      bio?: string | null | undefined;
+                      avatar?: string | null | undefined;
+                      phone?: string | null | undefined;
+                    }
+                  | null
+                  | undefined;
+                settings?:
+                  | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
+                  | null
+                  | undefined;
+              }
+            | null
+            | undefined;
+          purchasedBy?:
+            | {
+                __typename?: 'User';
+                id: string;
+                email: string;
+                emailVerified: boolean;
+                role: UserRole;
+                onBoarded: boolean;
+                timezone?: string | null | undefined;
+                preferredCurrency?: string | null | undefined;
+                language?: string | null | undefined;
+                defaultShoppingListId?: string | null | undefined;
+                defaultHomeId?: string | null | undefined;
+                createdAt: string;
+                updatedAt: string;
+                lastActiveAt?: string | null | undefined;
+                profile?:
+                  | {
+                      __typename?: 'UserProfile';
+                      id: string;
+                      firstName?: string | null | undefined;
+                      lastName?: string | null | undefined;
+                      displayName?: string | null | undefined;
+                      bio?: string | null | undefined;
+                      avatar?: string | null | undefined;
+                      phone?: string | null | undefined;
+                    }
+                  | null
+                  | undefined;
+                settings?:
+                  | { __typename?: 'UserSettings'; id: string; theme: AppTheme }
+                  | null
+                  | undefined;
+              }
+            | null
+            | undefined;
+          purchases?:
+            | Array<{
+                __typename?: 'Purchase';
+                id: string;
+                purchaseDate: string;
+                quantity: number;
+                unitPrice: number;
+                totalPrice: number;
+                itemName: string;
+                unitSymbol: string;
+              }>
+            | null
+            | undefined;
+        }
+      | null
+      | undefined;
+    conflict?:
+      | {
+          __typename?: 'SyncConflictInfo';
+          clientVersion: number;
+          serverVersion: number;
+          message: string;
+          serverItem: {
+            __typename?: 'ShoppingListItem';
+            id: string;
+            version: number;
+            sortOrder: string;
+          };
+        }
+      | null
+      | undefined;
+  };
 };
 
 export type ShoppingListUpdatedSubscriptionVariables = Exact<{
@@ -18170,15 +19175,12 @@ export type ShoppingListItemsChangedSubscription = {
         item?:
           | {
               __typename?: 'ShoppingListItem';
-              id: string;
-              quantity?: number | null | undefined;
               estimatedPrice?: number | null | undefined;
               budgetPrice?: number | null | undefined;
               lastKnownPrice?: number | null | undefined;
               lowestPrice?: number | null | undefined;
               highestPrice?: number | null | undefined;
               priceLastUpdated?: string | null | undefined;
-              isPurchased: boolean;
               purchasedQuantity?: number | null | undefined;
               purchasedPrice?: number | null | undefined;
               purchaseDate?: string | null | undefined;
@@ -18187,20 +19189,23 @@ export type ShoppingListItemsChangedSubscription = {
               previouslyPurchased: boolean;
               lastPurchaseDate?: string | null | undefined;
               purchaseCount: number;
-              itemName?: string | null | undefined;
-              unitName?: string | null | undefined;
-              notes?: string | null | undefined;
               priority: number;
-              category?: string | null | undefined;
               sortOrder: string;
               isAutoAdded: boolean;
               autoAddReason?: string | null | undefined;
               isFromMealPlan: boolean;
               mealPlanReference?: string | null | undefined;
               createdAt: string;
-              updatedAt: string;
               deletedAt?: string | null | undefined;
+              id: string;
+              itemName?: string | null | undefined;
+              quantity?: number | null | undefined;
+              isPurchased: boolean;
               version: number;
+              updatedAt: string;
+              category?: string | null | undefined;
+              notes?: string | null | undefined;
+              unitName?: string | null | undefined;
               shoppingList: {
                 __typename?: 'ShoppingList';
                 id: string;
@@ -18247,9 +19252,6 @@ export type ShoppingListItemsChangedSubscription = {
               unit?:
                 | {
                     __typename?: 'Unit';
-                    id: string;
-                    name: string;
-                    symbol: string;
                     type: UnitType;
                     isMetric: boolean;
                     baseUnitId?: string | null | undefined;
@@ -18259,6 +19261,9 @@ export type ShoppingListItemsChangedSubscription = {
                     sortOrder: number;
                     createdAt: string;
                     updatedAt: string;
+                    id: string;
+                    name: string;
+                    symbol: string;
                   }
                 | null
                 | undefined;
@@ -18468,15 +19473,12 @@ export type ShoppingListItemAddedSubscription = {
   __typename?: 'Subscription';
   shoppingListItemAdded: {
     __typename?: 'ShoppingListItem';
-    id: string;
-    quantity?: number | null | undefined;
     estimatedPrice?: number | null | undefined;
     budgetPrice?: number | null | undefined;
     lastKnownPrice?: number | null | undefined;
     lowestPrice?: number | null | undefined;
     highestPrice?: number | null | undefined;
     priceLastUpdated?: string | null | undefined;
-    isPurchased: boolean;
     purchasedQuantity?: number | null | undefined;
     purchasedPrice?: number | null | undefined;
     purchaseDate?: string | null | undefined;
@@ -18485,20 +19487,23 @@ export type ShoppingListItemAddedSubscription = {
     previouslyPurchased: boolean;
     lastPurchaseDate?: string | null | undefined;
     purchaseCount: number;
-    itemName?: string | null | undefined;
-    unitName?: string | null | undefined;
-    notes?: string | null | undefined;
     priority: number;
-    category?: string | null | undefined;
     sortOrder: string;
     isAutoAdded: boolean;
     autoAddReason?: string | null | undefined;
     isFromMealPlan: boolean;
     mealPlanReference?: string | null | undefined;
     createdAt: string;
-    updatedAt: string;
     deletedAt?: string | null | undefined;
+    id: string;
+    itemName?: string | null | undefined;
+    quantity?: number | null | undefined;
+    isPurchased: boolean;
     version: number;
+    updatedAt: string;
+    category?: string | null | undefined;
+    notes?: string | null | undefined;
+    unitName?: string | null | undefined;
     shoppingList: {
       __typename?: 'ShoppingList';
       id: string;
@@ -18536,9 +19541,6 @@ export type ShoppingListItemAddedSubscription = {
     unit?:
       | {
           __typename?: 'Unit';
-          id: string;
-          name: string;
-          symbol: string;
           type: UnitType;
           isMetric: boolean;
           baseUnitId?: string | null | undefined;
@@ -18548,6 +19550,9 @@ export type ShoppingListItemAddedSubscription = {
           sortOrder: number;
           createdAt: string;
           updatedAt: string;
+          id: string;
+          name: string;
+          symbol: string;
         }
       | null
       | undefined;
@@ -18647,15 +19652,12 @@ export type ShoppingListItemUpdatedSubscription = {
   __typename?: 'Subscription';
   shoppingListItemUpdated: {
     __typename?: 'ShoppingListItem';
-    id: string;
-    quantity?: number | null | undefined;
     estimatedPrice?: number | null | undefined;
     budgetPrice?: number | null | undefined;
     lastKnownPrice?: number | null | undefined;
     lowestPrice?: number | null | undefined;
     highestPrice?: number | null | undefined;
     priceLastUpdated?: string | null | undefined;
-    isPurchased: boolean;
     purchasedQuantity?: number | null | undefined;
     purchasedPrice?: number | null | undefined;
     purchaseDate?: string | null | undefined;
@@ -18664,20 +19666,23 @@ export type ShoppingListItemUpdatedSubscription = {
     previouslyPurchased: boolean;
     lastPurchaseDate?: string | null | undefined;
     purchaseCount: number;
-    itemName?: string | null | undefined;
-    unitName?: string | null | undefined;
-    notes?: string | null | undefined;
     priority: number;
-    category?: string | null | undefined;
     sortOrder: string;
     isAutoAdded: boolean;
     autoAddReason?: string | null | undefined;
     isFromMealPlan: boolean;
     mealPlanReference?: string | null | undefined;
     createdAt: string;
-    updatedAt: string;
     deletedAt?: string | null | undefined;
+    id: string;
+    itemName?: string | null | undefined;
+    quantity?: number | null | undefined;
+    isPurchased: boolean;
     version: number;
+    updatedAt: string;
+    category?: string | null | undefined;
+    notes?: string | null | undefined;
+    unitName?: string | null | undefined;
     shoppingList: {
       __typename?: 'ShoppingList';
       id: string;
@@ -18715,9 +19720,6 @@ export type ShoppingListItemUpdatedSubscription = {
     unit?:
       | {
           __typename?: 'Unit';
-          id: string;
-          name: string;
-          symbol: string;
           type: UnitType;
           isMetric: boolean;
           baseUnitId?: string | null | undefined;
@@ -18727,6 +19729,9 @@ export type ShoppingListItemUpdatedSubscription = {
           sortOrder: number;
           createdAt: string;
           updatedAt: string;
+          id: string;
+          name: string;
+          symbol: string;
         }
       | null
       | undefined;

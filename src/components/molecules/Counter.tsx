@@ -1,6 +1,6 @@
 import React from 'react';
 import Icon from '@react-native-vector-icons/ionicons';
-import {Text, View, TouchableOpacity} from 'react-native';
+import {Text, View, Pressable} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
 
 export const Counter = ({
@@ -12,15 +12,35 @@ export const Counter = ({
   onIncrement: () => void;
   onDecrement: () => void;
 }) => {
+  const handleDecrement = (e: any) => {
+    e.stopPropagation();
+    onDecrement();
+  };
+
+  const handleIncrement = (e: any) => {
+    e.stopPropagation();
+    onIncrement();
+  };
+
   return (
     <View style={styles.container}>
-      <TouchableOpacity onPress={onDecrement} style={styles.cardAdd}>
+      <Pressable
+        onPress={handleDecrement}
+        style={({pressed}) => [
+          styles.cardAdd,
+          pressed && styles.pressed,
+        ]}>
         <Icon color="#1d1d1d" name="remove" size={11} />
-      </TouchableOpacity>
+      </Pressable>
       <Text style={styles.counterActionText}>{count}</Text>
-      <TouchableOpacity onPress={onIncrement} style={styles.cardMinus}>
+      <Pressable
+        onPress={handleIncrement}
+        style={({pressed}) => [
+          styles.cardMinus,
+          pressed && styles.pressed,
+        ]}>
         <Icon color="#1d1d1d" name="add" size={11} />
-      </TouchableOpacity>
+      </Pressable>
     </View>
   );
 };
@@ -77,5 +97,8 @@ const styles = StyleSheet.create(theme => ({
     shadowOpacity: 0.23,
     shadowRadius: 2.62,
     elevation: 4,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 }));

@@ -7,7 +7,7 @@ import { errorLink } from './errorLink';
 import { httpLink } from './httpLink';
 import { wsLink } from './wsLink';
 import { deduplicationLink } from './deduplicationLink';
-import { createQueueLink } from '../offlineQueue/queueLink';
+import { createQueueLink } from '../offlineQueue';
 
 // Simplified HTTP transport (let Apollo handle retries naturally)
 const httpTransport = httpLink;
@@ -48,10 +48,14 @@ export function createLink() {
   const queueLink = createQueueLink();
 
   // Link chain - ordered by priority
+  // Offline support is handled by:
+  // 1. errorLink - catches network failures, returns cached data
+  // 2. fetch policies (cache-first) - try cache before network
+  // 3. queueLink - queues mutations when offline
   return ApolloLink.from([
     deduplicationLink, // Prevent duplicate requests
     telemetryLink, // Track operations for monitoring
-    errorLink, // Handle/log errors
+    errorLink, // Handle/log errors + return cached data on network failures
     authLink, // Authentication headers
     queueLink, // Queue mutations when offline
     consoleLink, // Development logging

@@ -274,7 +274,10 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.divider,
     backgroundColor: theme.colors.surface,
   },
-  rowFirst: { borderTopLeftRadius: 12, borderTopRightRadius: 12 },
+  rowFirst: {
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+  },
   rowLast: {
     borderBottomLeftRadius: theme.radii.lg,
     borderBottomRightRadius: theme.radii.lg,

@@ -418,6 +418,82 @@ mutation UpdateCollaboratorRole(
 }
 
 # ============================================
+# OFFLINE SYNC MUTATIONS
+# ============================================
+
+mutation SyncShoppingListItem($clientId: ID!, $input: SyncShoppingListItemInput!) {
+  syncShoppingListItem(clientId: $clientId, input: $input) {
+    clientId
+    serverId
+    operation
+    wasCreated
+    item {
+      ...ShoppingListItemFragment
+    }
+    conflict {
+      clientVersion
+      serverVersion
+      message
+      serverItem {
+        id
+        version
+        sortOrder
+      }
+    }
+  }
+}
+
+mutation SyncDeleteShoppingListItem($clientId: ID!, $version: Int) {
+  syncDeleteShoppingListItem(clientId: $clientId, version: $version) {
+    clientId
+    serverId
+    operation
+    wasCreated
+    item {
+      id
+      itemName
+    }
+    conflict {
+      clientVersion
+      serverVersion
+      message
+    }
+  }
+}
+
+mutation SyncMoveShoppingListItem(
+  $clientId: ID!
+  $afterId: ID
+  $beforeId: ID
+  $version: Int
+) {
+  syncMoveShoppingListItem(
+    clientId: $clientId
+    afterId: $afterId
+    beforeId: $beforeId
+    version: $version
+  ) {
+    clientId
+    serverId
+    operation
+    wasCreated
+    item {
+      ...ShoppingListItemFragment
+    }
+    conflict {
+      clientVersion
+      serverVersion
+      message
+      serverItem {
+        id
+        version
+        sortOrder
+      }
+    }
+  }
+}
+
+# ============================================
 # SUBSCRIPTIONS
 # ============================================
 

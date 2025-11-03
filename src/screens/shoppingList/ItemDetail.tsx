@@ -21,9 +21,10 @@ export const ShoppingListItemDetail: React.FC<{
   const { navigate, goBack } = useAppNavigation();
   const { listId, itemId } = route.params;
 
+  // Use cache-first policy - offlineQueryLink will handle offline behavior automatically
   const { data } = useGetShoppingListItemQuery({
     variables: { id: itemId },
-    fetchPolicy: 'cache-and-network',
+    fetchPolicy: 'cache-first',
   });
 
   const item = data?.shoppingListItem;

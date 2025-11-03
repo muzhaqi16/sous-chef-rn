@@ -2,8 +2,30 @@
 # FRAGMENTS
 # ============================================
 
-fragment ShoppingListItemFragment on ShoppingListItem {
+# Core fragment for optimistic updates and list views
+# Contains only essential fields needed for basic operations
+fragment ShoppingListItemCore on ShoppingListItem {
   id
+  itemName
+  quantity
+  isPurchased
+  version
+  updatedAt
+  category
+  notes
+  unitName
+  unit {
+    id
+    name
+    symbol
+  }
+}
+
+# Full fragment for detail views and complete data
+# Spreads Core and adds all extended fields
+fragment ShoppingListItemFragment on ShoppingListItem {
+  ...ShoppingListItemCore
+  # Extended fields not in Core
   shoppingList {
     id
     totalItems
@@ -33,10 +55,8 @@ fragment ShoppingListItemFragment on ShoppingListItem {
       }
     }
   }
+  # Extended unit fields (Core has id, name, symbol)
   unit {
-    id
-    name
-    symbol
     type
     isMetric
     baseUnitId
@@ -47,43 +67,41 @@ fragment ShoppingListItemFragment on ShoppingListItem {
     createdAt
     updatedAt
   }
-  quantity
+  # Price fields
   estimatedPrice
   budgetPrice
   lastKnownPrice
   lowestPrice
   highestPrice
   priceLastUpdated
-  isPurchased
+  # Purchase fields
   purchasedQuantity
   purchasedPrice
   purchaseDate
+  # Location fields
   aisle
   storeSection
+  # History fields
   previouslyPurchased
   lastPurchaseDate
   purchaseCount
-  itemName
-  unitName
-  notes
+  # Metadata fields
   priority
-  category
   sortOrder
   isAutoAdded
   autoAddReason
   isFromMealPlan
   mealPlanReference
   createdAt
-  updatedAt
   deletedAt
-  version
-  # Add these fields if they're missing and causing the TypeScript errors
+  # User references
   addedBy {
     ...PartialUser
   }
   purchasedBy {
     ...PartialUser
   }
+  # Purchase history
   purchases {
     ...PurchaseFragment
   }

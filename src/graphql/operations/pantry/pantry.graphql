@@ -137,6 +137,49 @@ mutation DeletePantryItem($id: ID!) {
 }
 
 # ============================================
+# OFFLINE SYNC MUTATIONS
+# ============================================
+
+mutation SyncPantryItem($clientId: ID!, $input: SyncPantryItemInput!) {
+  syncPantryItem(clientId: $clientId, input: $input) {
+    clientId
+    serverId
+    operation
+    wasCreated
+    item {
+      ...PantryItemFragment
+    }
+    conflict {
+      clientVersion
+      serverVersion
+      message
+      serverItem {
+        id
+        version
+      }
+    }
+  }
+}
+
+mutation SyncDeletePantryItem($clientId: ID!, $version: Int) {
+  syncDeletePantryItem(clientId: $clientId, version: $version) {
+    clientId
+    serverId
+    operation
+    wasCreated
+    item {
+      id
+      itemName
+    }
+    conflict {
+      clientVersion
+      serverVersion
+      message
+    }
+  }
+}
+
+# ============================================
 # SUBSCRIPTIONS
 # ============================================
 
