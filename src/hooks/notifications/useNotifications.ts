@@ -3,10 +3,6 @@ import { AppState } from 'react-native';
 import {
   useNotificationReceivedSubscription,
   useUrgentNotificationReceivedSubscription,
-  useShoppingListItemsChangedSubscription,
-  useShoppingListCollaboratorsChangedSubscription,
-  useMyMembershipUpdatedSubscription,
-  useMemberJoinedSubscription,
   NotificationType,
 } from '#generated';
 import { useStore } from '#store';
@@ -48,10 +44,7 @@ export const useNotifications = (config: NotificationConfig = {}) => {
   const getNotificationsByCategory = useStore(
     state => state.getNotificationsByCategory,
   );
-  const selectedHomeId = useStore(state => state.selectedHomeId);
-  const selectedShoppingListId = useStore(
-    state => state.selectedShoppingListId,
-  );
+
   const user = useStore(state => state.user);
 
   // Fetch user notification preferences
@@ -298,104 +291,6 @@ export const useNotifications = (config: NotificationConfig = {}) => {
       console.error('❌ [UrgentNotification] Subscription error:', error);
       handleError('UrgentNotificationReceived', error);
     },
-  });
-
-  // Shopping list notifications
-  useShoppingListItemsChangedSubscription({
-    variables: { listId: selectedShoppingListId || '' },
-    skip:
-      !user?.id ||
-      !selectedShoppingListId ||
-      !finalConfig.enableShoppingListNotifications,
-    onData: ({ data }) => {
-      if (data.data?.shoppingListItemsChanged) {
-        const payload = data.data.shoppingListItemsChanged;
-        processNotification(
-          {
-            type: NotificationType.ListUpdated,
-            title: 'Shopping List Updated',
-            message: 'Items in your shopping list have been updated',
-            payload: payload,
-            sentAt: new Date().toISOString(),
-          },
-          NotificationCategory.SHOPPING_LIST,
-          payload.userId,
-        );
-      }
-    },
-    onError: error => handleError('ShoppingListItemsChanged', error),
-  });
-
-  useShoppingListCollaboratorsChangedSubscription({
-    variables: { listId: selectedShoppingListId || '' },
-    skip:
-      !user?.id ||
-      !selectedShoppingListId ||
-      !finalConfig.enableCollaborationNotifications,
-    onData: ({ data }) => {
-      if (data.data?.shoppingListCollaboratorsChanged) {
-        const payload = data.data.shoppingListCollaboratorsChanged;
-        processNotification(
-          {
-            type: NotificationType.CollaborationInvite,
-            title: 'Collaborator Updated',
-            message: 'Collaborators on your shopping list have been updated',
-            payload: payload,
-            sentAt: new Date().toISOString(),
-          },
-          NotificationCategory.SHOPPING_LIST,
-          payload.userId,
-        );
-      }
-    },
-    onError: error => handleError('ShoppingListCollaboratorsChanged', error),
-  });
-
-  // Membership notifications
-  useMyMembershipUpdatedSubscription({
-    skip: !user?.id || !finalConfig.enableMembershipNotifications,
-    onData: ({ data }) => {
-      if (data.data?.myMembershipUpdated) {
-        const payload = data.data.myMembershipUpdated;
-        processNotification(
-          {
-            type: NotificationType.MembershipInvite,
-            title: 'Membership Updated',
-            message: 'Your membership status has been updated',
-            payload: payload,
-            sentAt: new Date().toISOString(),
-          },
-          NotificationCategory.MEMBERSHIP,
-          payload.userId,
-        );
-      }
-    },
-    onError: error => handleError('MyMembershipUpdated', error),
-  });
-
-  useMemberJoinedSubscription({
-    variables: { homeId: selectedHomeId || '' },
-    skip:
-      !user?.id ||
-      !selectedHomeId ||
-      !finalConfig.enableMembershipNotifications,
-    onData: ({ data }) => {
-      if (data.data?.memberJoined) {
-        const payload = data.data.memberJoined;
-        processNotification(
-          {
-            type: NotificationType.HomeJoined,
-            title: 'New Member',
-            message: 'A new member has joined your home',
-            payload: payload,
-            sentAt: new Date().toISOString(),
-          },
-          NotificationCategory.MEMBERSHIP,
-          payload.userId,
-        );
-      }
-    },
-    onError: error => handleError('MemberJoined', error),
   });
 
   // App state handling

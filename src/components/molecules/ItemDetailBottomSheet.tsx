@@ -6,7 +6,7 @@ import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { Button } from '../base/Button';
 import {
   useUpdateShoppingListItemMutation,
-  useGetUnitsQuery,
+  useGetCommonUnitsQuery,
   Unit,
   ShoppingListItem,
 } from '#generated';
@@ -25,7 +25,7 @@ export const ItemDetailBottomSheet: React.FC<ItemDetailProps> = ({
   const [name, setName] = useState(item.itemName || '');
   const [quantity, setQuantity] = useState(1);
   const [unit, setUnit] = useState('pcs');
-  const { data } = useGetUnitsQuery();
+  const { data } = useGetCommonUnitsQuery({ fetchPolicy: 'cache-first' });
 
   const [updateItem] = useUpdateShoppingListItemMutation();
 
