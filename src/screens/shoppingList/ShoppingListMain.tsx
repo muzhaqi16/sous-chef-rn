@@ -7,9 +7,11 @@ import React, {
 } from 'react';
 import { Alert, Image, View, Text, TouchableOpacity } from 'react-native';
 import { ScrollView, RefreshControl } from 'react-native-gesture-handler';
+import { useApolloClient } from '@apollo/client/react';
 import { useAppNavigation } from '#hooks';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
+  ShoppingListItemFragmentDoc,
   useGetShoppingListsQuery,
   useMoveShoppingListItemMutation,
   useUpdateShoppingListItemQuantityMutation,
@@ -40,6 +42,7 @@ import { useStore } from '#/store';
 import { IconLibrary } from '#/utils/iconUtils';
 import { ShoppingListItemCounter } from '#/components/molecules/ShoppingListItemCounter';
 import { commonStyles } from '#/styles';
+import { useOptimisticDataRestorationMultiple } from '#/hooks/offline/useOptimisticDataRestoration';
 import {
   handleVersionConflict,
   getVersionConflictMessage,
@@ -47,6 +50,7 @@ import {
 import { useAuth } from '#/hooks/auth/useAuth';
 import { isShoppingListOwner } from '#utils/ownershipHelpers';
 import { ShoppingListAvatar } from '#components/atoms';
+import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 
 // Wrapper component that conditionally renders EmptyState or SortableShoppingList
 const ShoppingListContent: React.FC<{
@@ -136,7 +140,11 @@ const ShoppingListContent: React.FC<{
 };
 
 export const ShoppingListMain: React.FC = () => {
+  // Restore optimistic data on mount (offline changes that haven't synced)
+  useOptimisticDataRestorationMultiple(['ShoppingList', 'ShoppingListItem']);
+
   const { navigate, navigateTo } = useAppNavigation();
+  const client = useApolloClient();
   const {
     theme: { colors },
   } = useUnistyles();
@@ -426,12 +434,63 @@ export const ShoppingListMain: React.FC = () => {
 
       const newQuantity = (currentItem.quantity || 1) + 1;
 
+      const cacheId = client.cache.identify({
+        __typename: 'ShoppingListItem',
+        id: itemId,
+      });
+      const fullItem = cacheId
+        ? client.readFragment<any>({
+            id: cacheId,
+            fragment: ShoppingListItemFragmentDoc,
+            fragmentName: 'ShoppingListItemFragment',
+          })
+        : null;
+      const optimisticItem = fullItem ?? currentItem ?? null;
+
       try {
+        optimisticDataPersistence.save(
+          'ShoppingListItem',
+          itemId,
+          'quantity',
+          newQuantity,
+        );
+
         await updateQuantity({
           variables: {
             id: itemId,
             quantity: newQuantity,
             version: currentItem.version,
+          },
+          optimisticResponse: optimisticItem
+            ? {
+                __typename: 'Mutation',
+                updateShoppingListItemQuantity: {
+                  ...optimisticItem,
+                  __typename: 'ShoppingListItem',
+                  quantity: newQuantity,
+                  // Keep current version; server response will deliver incremented version
+                  version: optimisticItem.version ?? currentItem.version,
+                  updatedAt: new Date().toISOString(),
+                },
+              }
+            : {
+                __typename: 'Mutation',
+                updateShoppingListItemQuantity: {
+                  __typename: 'ShoppingListItem',
+                  id: itemId,
+                  quantity: newQuantity,
+                  version: currentItem.version,
+                  updatedAt: new Date().toISOString(),
+                } as any,
+              },
+          onCompleted: data => {
+            if (data?.updateShoppingListItemQuantity) {
+              optimisticDataPersistence.clear(
+                'ShoppingListItem',
+                data.updateShoppingListItemQuantity.id,
+                'quantity',
+              );
+            }
           },
         });
       } catch (error: any) {
@@ -446,7 +505,7 @@ export const ShoppingListMain: React.FC = () => {
         Alert.alert('Error', 'Failed to update quantity');
       }
     },
-    [updateQuantity, refetchItems, items],
+    [updateQuantity, refetchItems, items, client],
   );
 
   const handleDecrementQuantity = useCallback(
@@ -461,14 +520,63 @@ export const ShoppingListMain: React.FC = () => {
 
       const newQuantity = Math.max(0, (currentItem.quantity || 1) - 1);
 
+      const cacheId = client.cache.identify({
+        __typename: 'ShoppingListItem',
+        id: itemId,
+      });
+      const fullItem = cacheId
+        ? client.readFragment<any>({
+            id: cacheId,
+            fragment: ShoppingListItemFragmentDoc,
+            fragmentName: 'ShoppingListItemFragment',
+          })
+        : null;
+      const optimisticItem = fullItem ?? currentItem ?? null;
+
       try {
+        optimisticDataPersistence.save(
+          'ShoppingListItem',
+          itemId,
+          'quantity',
+          newQuantity,
+        );
+
         await updateQuantity({
           variables: {
             id: itemId,
             quantity: newQuantity,
             version: currentItem.version,
           },
-          // Removed optimisticResponse entirely
+          optimisticResponse: optimisticItem
+            ? {
+                __typename: 'Mutation',
+                updateShoppingListItemQuantity: {
+                  ...optimisticItem,
+                  __typename: 'ShoppingListItem',
+                  quantity: newQuantity,
+                  version: optimisticItem.version ?? currentItem.version,
+                  updatedAt: new Date().toISOString(),
+                },
+              }
+            : {
+                __typename: 'Mutation',
+                updateShoppingListItemQuantity: {
+                  __typename: 'ShoppingListItem',
+                  id: itemId,
+                  quantity: newQuantity,
+                  version: currentItem.version,
+                  updatedAt: new Date().toISOString(),
+                } as any,
+              },
+          onCompleted: data => {
+            if (data?.updateShoppingListItemQuantity) {
+              optimisticDataPersistence.clear(
+                'ShoppingListItem',
+                data.updateShoppingListItemQuantity.id,
+                'quantity',
+              );
+            }
+          },
         });
       } catch (error: any) {
         if (handleVersionConflict(error)) {
@@ -482,7 +590,7 @@ export const ShoppingListMain: React.FC = () => {
         Alert.alert('Error', 'Failed to update quantity');
       }
     },
-    [updateQuantity, refetchItems, items],
+    [updateQuantity, refetchItems, items, client],
   );
 
   // Transform shopping list items for SortableShoppingList

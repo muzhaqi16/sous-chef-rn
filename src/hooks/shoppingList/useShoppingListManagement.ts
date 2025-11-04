@@ -20,6 +20,8 @@ import {
 } from '#/utils/errors/versionConflict';
 import { createOptimisticEntity } from '#/apollo/utils/createOptimisticResponse';
 import { generateId } from '#/utils/generateId';
+import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
+import { useOfflineAwareFetchPolicy, OFFLINE_FETCH_POLICIES } from '#/apollo/policies/offlineFetchPolicies';
 
 export interface ShoppingListItemInput {
   itemName: string;
@@ -45,15 +47,19 @@ export function useShoppingListManagement(listId: string | undefined) {
   const { handleApolloError } = useErrorHandler();
   const shouldSkip = !listId || isLoggedOut;
 
+  // Dynamic fetch policy based on network status
+  // Online: cache-and-network (fresh data + instant UI)
+  // Offline: cache-only (stops network thrashing and loading flickers)
+  const fetchPolicy = useOfflineAwareFetchPolicy(
+    OFFLINE_FETCH_POLICIES.LIST.online,   // 'cache-and-network'
+    OFFLINE_FETCH_POLICIES.LIST.offline   // 'cache-only'
+  );
+
   // Watch cache for updates from mutations and subscriptions
-  // Use cache-and-network for fresh data while maintaining offline support
   const queryResult = useGetShoppingListItemsQuery({
     variables: { shoppingListId: listId ?? '' },
     skip: shouldSkip,
-    // cache-and-network: Returns cached data immediately (instant UI),
-    // then always fetches fresh data from network when online.
-    // Apollo automatically falls back to cache-only when offline.
-    fetchPolicy: 'cache-and-network',
+    fetchPolicy,
     errorPolicy: 'all', // Return both data and errors for better debugging
   });
 
@@ -194,7 +200,14 @@ export function useShoppingListManagement(listId: string | undefined) {
         // Modify the shoppingListItems field in the cache
         cache.modify({
           fields: {
-            shoppingListItems(existingItems = [], { readField, toReference }) {
+            shoppingListItems(existingItems = [], helpers: any) {
+              const { readField, toReference, args } = helpers;
+
+              // Only modify if this field belongs to the current shopping list
+              if (args?.shoppingListId !== listId) {
+                return existingItems;
+              }
+
               const newItemRef = toReference(data.addItemToShoppingList);
 
               // Check if item already exists (avoid duplicates)
@@ -240,16 +253,44 @@ export function useShoppingListManagement(listId: string | undefined) {
 
   const [removeItemMutation] = useRemoveItemFromShoppingListMutation({
     errorPolicy: 'all',
+    optimisticResponse: (variables) => {
+      // Find the item being removed to return in optimistic response
+      const item = items.find(i => i.id === variables.id);
+      if (!item) {
+        // Fallback - return minimal entity
+        return {
+          __typename: 'Mutation',
+          removeItemFromShoppingList: {
+            __typename: 'ShoppingListItem',
+            id: variables.id,
+          } as any,
+        };
+      }
+      // Return the full item being removed
+      return {
+        __typename: 'Mutation',
+        removeItemFromShoppingList: item as any,
+      };
+    },
     update(cache, { data }, { variables }) {
       if (!data?.removeItemFromShoppingList || !listId || !variables) return;
 
       try {
         const itemId = variables.id;
 
+        // Save to optimistic persistence before removing
+        optimisticDataPersistence.save('ShoppingListItem', itemId, '__deleted', true);
+
         // Remove the item from the cache using cache.modify (proper approach)
         cache.modify({
           fields: {
-            shoppingListItems(existingItems = [], { readField }) {
+            shoppingListItems(existingItems = [], helpers: any) {
+              const { readField, args } = helpers;
+              // Only modify if this field belongs to the current shopping list
+              if (args?.shoppingListId !== listId) {
+                return existingItems;
+              }
+
               return existingItems.filter(
                 (itemRef: any) => readField('id', itemRef) !== itemId,
               );
@@ -271,6 +312,12 @@ export function useShoppingListManagement(listId: string | undefined) {
         refetch();
       }
     },
+    onCompleted: (data) => {
+      // Clear optimistic data after successful sync
+      if (data?.removeItemFromShoppingList) {
+        optimisticDataPersistence.clear('ShoppingListItem', data.removeItemFromShoppingList.id, '__deleted');
+      }
+    },
     onError: error => {
       const { message } = handleApolloError(error, {
         operation: 'Remove Shopping List Item',
@@ -281,15 +328,75 @@ export function useShoppingListManagement(listId: string | undefined) {
 
   const [togglePurchasedMutation] = useToggleShoppingListItemPurchasedMutation({
     errorPolicy: 'all',
-    // Use cache.modify for instant UI updates without optimistic response
-    // This avoids "Missing field" warnings from partial fragments
-    update(cache, { data }, { variables }) {
-      if (!data?.toggleShoppingListItemPurchased || !variables) return;
+    optimisticResponse: (variables) => {
+      const cacheId = client.cache.identify({
+        __typename: 'ShoppingListItem',
+        id: variables.id,
+      });
+
+      const fullItem = cacheId
+        ? client.readFragment<any>({
+            id: cacheId,
+            fragment: ShoppingListItemFragmentDoc,
+            fragmentName: 'ShoppingListItemFragment',
+          })
+        : null;
+
+      if (fullItem) {
+        return {
+          __typename: 'Mutation',
+          toggleShoppingListItemPurchased: {
+            ...fullItem,
+            __typename: 'ShoppingListItem',
+            isPurchased: variables.purchased,
+            updatedAt: new Date().toISOString(),
+          },
+        };
+      }
+
+      // Fallback to core data if fragment is missing in cache
+      const currentItem = items.find(item => item.id === variables.id);
+
+      if (currentItem) {
+        return {
+          __typename: 'Mutation',
+          toggleShoppingListItemPurchased: {
+            __typename: 'ShoppingListItem',
+            id: currentItem.id,
+            itemName: currentItem.itemName,
+            quantity: currentItem.quantity,
+            isPurchased: variables.purchased,
+            version: currentItem.version,
+            updatedAt: new Date().toISOString(),
+            category: currentItem.category,
+            notes: currentItem.notes,
+            unitName: currentItem.unitName,
+            unit: currentItem.unit,
+          } as any,
+        };
+      }
+
+      return {
+        __typename: 'Mutation',
+        toggleShoppingListItemPurchased: {
+          __typename: 'ShoppingListItem',
+          id: variables.id,
+          isPurchased: variables.purchased,
+          updatedAt: new Date().toISOString(),
+        } as any,
+      };
+    },
+    update(cache, _result, { variables }) {
+      if (!variables) return;
 
       const itemId = variables.id;
       const newStatus = variables.purchased;
 
+      // Save to optimistic persistence before modifying
+      optimisticDataPersistence.save('ShoppingListItem', itemId, 'isPurchased', newStatus);
+
       // Directly modify the cached item's fields
+      // This works offline because update runs before link chain (with optimisticResponse)
       cache.modify({
         id: cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
         fields: {
@@ -301,6 +408,12 @@ export function useShoppingListManagement(listId: string | undefined) {
           },
         },
       });
+    },
+    onCompleted: (data) => {
+      // Clear optimistic data after successful sync
+      if (data?.toggleShoppingListItemPurchased) {
+        optimisticDataPersistence.clear('ShoppingListItem', data.toggleShoppingListItemPurchased.id, 'isPurchased');
+      }
     },
     onError: error => {
       const { message } = handleApolloError(error, {

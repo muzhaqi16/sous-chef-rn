@@ -39,6 +39,18 @@ export type Scalars = {
   Upload: { input: File; output: File };
 };
 
+/**
+ * Access level for resource-based authorization
+ * - OWNER: Full control (create, read, update, delete, manage permissions)
+ * - WRITE: Can modify (create, read, update, delete own items)
+ * - READ: Can only view (read-only access)
+ */
+export enum AccessLevel {
+  Owner = 'OWNER',
+  Read = 'READ',
+  Write = 'WRITE',
+}
+
 export enum AcquisitionMethod {
   BulkSplit = 'BULK_SPLIT',
   Found = 'FOUND',
@@ -357,6 +369,14 @@ export type Connection = {
   edges: Array<Edge>;
   pageInfo: PageInfo;
   totalCount: Scalars['Int']['output'];
+};
+
+/** Relay-style cursor pagination input (for Connection types) */
+export type ConnectionPaginationInput = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type ConvertedUnitValue = {
@@ -1418,19 +1438,46 @@ export type Home = {
   deletedAt: Maybe<Scalars['DateTime']['output']>;
   description: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
+  /** @deprecated Use invitesConnection for pagination. Will be removed in v2.0 */
   invites: Maybe<Array<HomeInvite>>;
+  invitesConnection: HomeInviteConnection;
   isPublic: Scalars['Boolean']['output'];
   joinCode: Maybe<Scalars['String']['output']>;
   maxMembers: Maybe<Scalars['Int']['output']>;
+  /** @deprecated Use membersConnection for pagination. Will be removed in v2.0 */
   members: Array<Membership>;
+  membersConnection: MembershipConnection;
   metadata: Maybe<Scalars['JSON']['output']>;
   name: Scalars['String']['output'];
+  /** @deprecated Use pantriesConnection for pagination. Will be removed in v2.0 */
   pantries: Maybe<Array<Pantry>>;
+  pantriesConnection: PantryConnection;
   tags: Array<Scalars['String']['output']>;
   timezone: Maybe<Scalars['String']['output']>;
   type: HomeType;
   updatedAt: Scalars['DateTime']['output'];
   version: Scalars['Int']['output'];
+};
+
+export type HomeInvitesConnectionArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type HomeMembersConnectionArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type HomePantriesConnectionArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type HomeInvite = {
@@ -1463,6 +1510,20 @@ export type HomeInvite = {
 
 export type HomeInviteLogsArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type HomeInviteConnection = {
+  __typename?: 'HomeInviteConnection';
+  edges: Array<HomeInviteEdge>;
+  pageInfo: PageInfo;
+  totalCount: Scalars['Int']['output'];
+};
+
+/** Home invite connection for pagination */
+export type HomeInviteEdge = {
+  __typename?: 'HomeInviteEdge';
+  cursor: Scalars['String']['output'];
+  node: HomeInvite;
 };
 
 export type HomeInviteStatsGroup = {
@@ -2276,6 +2337,20 @@ export type Membership = {
   user: User;
   userId: Scalars['String']['output'];
   version: Scalars['Int']['output'];
+};
+
+export type MembershipConnection = {
+  __typename?: 'MembershipConnection';
+  edges: Array<MembershipEdge>;
+  pageInfo: PageInfo;
+  totalCount: Scalars['Int']['output'];
+};
+
+/** Membership connection for pagination */
+export type MembershipEdge = {
+  __typename?: 'MembershipEdge';
+  cursor: Scalars['String']['output'];
+  node: Membership;
 };
 
 export enum MembershipJoinMethod {
@@ -3894,6 +3969,7 @@ export enum NotificationDeliveryStatus {
   Sent = 'SENT',
 }
 
+/** Notification connection for pagination */
 export type NotificationEdge = Edge & {
   __typename?: 'NotificationEdge';
   cursor: Scalars['String']['output'];
@@ -4081,12 +4157,14 @@ export type OperatingSystemStat = {
   osName: Scalars['String']['output'];
 };
 
+/** Page information for cursor-based pagination (Relay spec) */
 export type PageInfo = {
   __typename?: 'PageInfo';
   endCursor: Maybe<Scalars['String']['output']>;
   hasNextPage: Scalars['Boolean']['output'];
   hasPreviousPage: Scalars['Boolean']['output'];
   startCursor: Maybe<Scalars['String']['output']>;
+  totalCount: Maybe<Scalars['Int']['output']>;
 };
 
 export type PaginationInput = {
@@ -4103,19 +4181,37 @@ export type Pantry = {
   homeId: Scalars['String']['output'];
   id: Scalars['ID']['output'];
   isDefault: Scalars['Boolean']['output'];
+  /** @deprecated Use itemsConnection for pagination. Will be removed in v2.0 */
   items: Maybe<Array<PantryItem>>;
+  itemsConnection: PantryItemConnection;
   location: Maybe<Scalars['String']['output']>;
   metadata: Maybe<Scalars['JSON']['output']>;
   name: Scalars['String']['output'];
   /**
    * Storage locations available for this pantry's home.
    * Useful for assigning pantry items to specific storage locations.
+   * @deprecated Use storageLocationsConnection for pagination. Will be removed in v2.0
    */
   storageLocations: Array<StorageLocation>;
+  storageLocationsConnection: StorageLocationConnection;
   tags: Array<Scalars['String']['output']>;
   temperature: Maybe<Scalars['String']['output']>;
   updatedAt: Scalars['DateTime']['output'];
   version: Scalars['Int']['output'];
+};
+
+export type PantryItemsConnectionArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type PantryStorageLocationsConnectionArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type PantryActivity = {
@@ -4146,6 +4242,20 @@ export enum PantryActivityType {
   PantryUpdated = 'PANTRY_UPDATED',
   QuantityUpdated = 'QUANTITY_UPDATED',
 }
+
+export type PantryConnection = {
+  __typename?: 'PantryConnection';
+  edges: Array<PantryEdge>;
+  pageInfo: PageInfo;
+  totalCount: Scalars['Int']['output'];
+};
+
+/** Pantry connection for pagination */
+export type PantryEdge = {
+  __typename?: 'PantryEdge';
+  cursor: Scalars['String']['output'];
+  node: Pantry;
+};
 
 export type PantryItem = {
   __typename?: 'PantryItem';
@@ -4219,6 +4329,20 @@ export type PantryItemChangedPayload = {
   timestamp: Scalars['DateTime']['output'];
   updatedFields: Array<Scalars['String']['output']>;
   userId: Scalars['String']['output'];
+};
+
+export type PantryItemConnection = {
+  __typename?: 'PantryItemConnection';
+  edges: Array<PantryItemEdge>;
+  pageInfo: PageInfo;
+  totalCount: Scalars['Int']['output'];
+};
+
+/** Pantry item connection for pagination */
+export type PantryItemEdge = {
+  __typename?: 'PantryItemEdge';
+  cursor: Scalars['String']['output'];
+  node: PantryItem;
 };
 
 export type PantryItemFilters = {
@@ -4425,6 +4549,20 @@ export type Purchase = {
   user: User;
   userId: Scalars['String']['output'];
   version: Scalars['Int']['output'];
+};
+
+export type PurchaseConnection = {
+  __typename?: 'PurchaseConnection';
+  edges: Array<PurchaseEdge>;
+  pageInfo: PageInfo;
+  totalCount: Scalars['Int']['output'];
+};
+
+/** Purchase connection for pagination */
+export type PurchaseEdge = {
+  __typename?: 'PurchaseEdge';
+  cursor: Scalars['String']['output'];
+  node: Purchase;
 };
 
 export type PurchaseStats = {
@@ -5301,6 +5439,20 @@ export enum RecipeCategory {
   Snack = 'SNACK',
 }
 
+export type RecipeConnection = {
+  __typename?: 'RecipeConnection';
+  edges: Array<RecipeEdge>;
+  pageInfo: PageInfo;
+  totalCount: Scalars['Int']['output'];
+};
+
+/** Recipe connection for pagination */
+export type RecipeEdge = {
+  __typename?: 'RecipeEdge';
+  cursor: Scalars['String']['output'];
+  node: Recipe;
+};
+
 export type RecipeIngredient = {
   __typename?: 'RecipeIngredient';
   availablePantryItemIds: Array<Scalars['String']['output']>;
@@ -5552,6 +5704,20 @@ export type SavedRecipe = {
   userId: Scalars['String']['output'];
 };
 
+export type SavedRecipeConnection = {
+  __typename?: 'SavedRecipeConnection';
+  edges: Array<SavedRecipeEdge>;
+  pageInfo: PageInfo;
+  totalCount: Scalars['Int']['output'];
+};
+
+/** Saved recipe connection for pagination */
+export type SavedRecipeEdge = {
+  __typename?: 'SavedRecipeEdge';
+  cursor: Scalars['String']['output'];
+  node: SavedRecipe;
+};
+
 export type SearchFacets = {
   __typename?: 'SearchFacets';
   brands: Array<FacetValue>;
@@ -5608,7 +5774,9 @@ export type ShoppingList = {
   isPublic: Scalars['Boolean']['output'];
   isRecurring: Scalars['Boolean']['output'];
   isTemplate: Scalars['Boolean']['output'];
+  /** @deprecated Use itemsConnection for pagination. Will be removed in v2.0 */
   items: Array<ShoppingListItem>;
+  itemsConnection: ShoppingListItemConnection;
   lastRecurredAt: Maybe<Scalars['DateTime']['output']>;
   lastReminderSent: Maybe<Scalars['DateTime']['output']>;
   mealPlan: Maybe<MealPlan>;
@@ -5640,6 +5808,13 @@ export type ShoppingList = {
   updatedAt: Scalars['DateTime']['output'];
   version: Scalars['Int']['output'];
   viewCount: Scalars['Int']['output'];
+};
+
+export type ShoppingListItemsConnectionArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type ShoppingListActivity = {
@@ -5699,6 +5874,20 @@ export type ShoppingListCollaboratorChangedPayload = {
   mutation: MutationType;
   timestamp: Scalars['DateTime']['output'];
   userId: Scalars['ID']['output'];
+};
+
+export type ShoppingListConnection = {
+  __typename?: 'ShoppingListConnection';
+  edges: Array<ShoppingListEdge>;
+  pageInfo: PageInfo;
+  totalCount: Scalars['Int']['output'];
+};
+
+/** Shopping list connection for pagination */
+export type ShoppingListEdge = {
+  __typename?: 'ShoppingListEdge';
+  cursor: Scalars['String']['output'];
+  node: ShoppingList;
 };
 
 export type ShoppingListFilters = {
@@ -5772,6 +5961,20 @@ export type ShoppingListItemChangedPayload = {
   timestamp: Scalars['DateTime']['output'];
   updatedFields: Maybe<Array<Scalars['String']['output']>>;
   userId: Scalars['ID']['output'];
+};
+
+export type ShoppingListItemConnection = {
+  __typename?: 'ShoppingListItemConnection';
+  edges: Array<ShoppingListItemEdge>;
+  pageInfo: PageInfo;
+  totalCount: Scalars['Int']['output'];
+};
+
+/** Shopping list item connection for pagination */
+export type ShoppingListItemEdge = {
+  __typename?: 'ShoppingListItemEdge';
+  cursor: Scalars['String']['output'];
+  node: ShoppingListItem;
 };
 
 export type ShoppingListItemPreviousValues = {
@@ -5891,6 +6094,20 @@ export type StorageLocation = {
   type: StorageType;
   /** When this storage location was last updated */
   updatedAt: Scalars['DateTime']['output'];
+};
+
+export type StorageLocationConnection = {
+  __typename?: 'StorageLocationConnection';
+  edges: Array<StorageLocationEdge>;
+  pageInfo: PageInfo;
+  totalCount: Scalars['Int']['output'];
+};
+
+/** Storage location connection for pagination */
+export type StorageLocationEdge = {
+  __typename?: 'StorageLocationEdge';
+  cursor: Scalars['String']['output'];
+  node: StorageLocation;
 };
 
 /** Temperature state of a storage location */

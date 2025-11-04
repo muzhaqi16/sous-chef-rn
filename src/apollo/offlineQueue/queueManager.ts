@@ -360,11 +360,13 @@ export class QueueManager {
     if (
       operationName === 'AddItemToShoppingList' ||
       operationName === 'UpdateShoppingListItem' ||
-      operationName === 'UpdateShoppingListItemQuantity'
+      operationName === 'UpdateShoppingListItemQuantity' ||
+      operationName === 'ToggleShoppingListItemPurchased'
     ) {
       let input = variables.input;
 
-      // For specialized mutations like UpdateShoppingListItemQuantity that don't have input wrapper
+      // For specialized mutations like UpdateShoppingListItemQuantity and ToggleShoppingListItemPurchased
+      // that don't have input wrapper
       if (!input) {
         // Read item from cache to get shoppingListId (required by sync mutation)
         const itemId = variables.id;
@@ -389,11 +391,20 @@ export class QueueManager {
           );
         }
 
-        input = {
-          shoppingListId: itemData.shoppingList.id,
-          quantity: variables.quantity,
-          version: variables.version,
-        };
+        // Construct input based on mutation type
+        if (operationName === 'UpdateShoppingListItemQuantity') {
+          input = {
+            shoppingListId: itemData.shoppingList.id,
+            quantity: variables.quantity,
+            version: variables.version,
+          };
+        } else if (operationName === 'ToggleShoppingListItemPurchased') {
+          input = {
+            shoppingListId: itemData.shoppingList.id,
+            isPurchased: variables.purchased,
+            version: variables.version,
+          };
+        }
       }
 
       return {

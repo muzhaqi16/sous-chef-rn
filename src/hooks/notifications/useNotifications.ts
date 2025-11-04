@@ -3,9 +3,6 @@ import { AppState } from 'react-native';
 import {
   useNotificationReceivedSubscription,
   useUrgentNotificationReceivedSubscription,
-  usePantryItemsChangedSubscription,
-  usePantryLowStockAlertSubscription,
-  usePantryExpiringItemsAlertSubscription,
   useShoppingListItemsChangedSubscription,
   useShoppingListCollaboratorsChangedSubscription,
   useMyMembershipUpdatedSubscription,
@@ -301,70 +298,6 @@ export const useNotifications = (config: NotificationConfig = {}) => {
       console.error('❌ [UrgentNotification] Subscription error:', error);
       handleError('UrgentNotificationReceived', error);
     },
-  });
-
-  // Pantry notifications
-  usePantryItemsChangedSubscription({
-    variables: { pantryId: selectedHomeId || '' },
-    skip:
-      !user?.id || !selectedHomeId || !finalConfig.enablePantryNotifications,
-    onData: ({ data }) => {
-      if (data.data?.pantryItemsChanged) {
-        const payload = data.data.pantryItemsChanged;
-        processNotification(
-          {
-            type: NotificationType.ItemUpdated,
-            title: 'Pantry Updated',
-            message: 'Items in your pantry have been updated',
-            payload: payload,
-            sentAt: new Date().toISOString(),
-          },
-          NotificationCategory.PANTRY,
-          payload.userId,
-        );
-      }
-    },
-    onError: error => handleError('PantryItemsChanged', error),
-  });
-
-  usePantryLowStockAlertSubscription({
-    variables: { pantryId: selectedHomeId || '' },
-    skip: !user?.id || !selectedHomeId || !finalConfig.enableLowStockAlerts,
-    onData: ({ data }) => {
-      if (data.data?.pantryLowStockAlert) {
-        processNotification(
-          {
-            type: NotificationType.LowStock,
-            title: 'Low Stock Alert',
-            message: 'Some items in your pantry are running low',
-            payload: data.data.pantryLowStockAlert,
-            sentAt: new Date().toISOString(),
-          },
-          NotificationCategory.PANTRY,
-        );
-      }
-    },
-    onError: error => handleError('PantryLowStockAlert', error),
-  });
-
-  usePantryExpiringItemsAlertSubscription({
-    variables: { pantryId: selectedHomeId || '' },
-    skip: !user?.id || !selectedHomeId || !finalConfig.enableExpirationAlerts,
-    onData: ({ data }) => {
-      if (data.data?.pantryExpiringItemsAlert) {
-        processNotification(
-          {
-            type: NotificationType.ExpiryReminder,
-            title: 'Items Expiring Soon',
-            message: 'Some items in your pantry will expire soon',
-            payload: data.data.pantryExpiringItemsAlert,
-            sentAt: new Date().toISOString(),
-          },
-          NotificationCategory.PANTRY,
-        );
-      }
-    },
-    onError: error => handleError('PantryExpiringItemsAlert', error),
   });
 
   // Shopping list notifications

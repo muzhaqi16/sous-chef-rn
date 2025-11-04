@@ -296,6 +296,17 @@ schema {
 }
 
 """
+Require user authentication for this field or type
+Returns UNAUTHENTICATED error if user is not logged in
+
+Example:
+type Query {
+  myProfile: User @auth
+}
+"""
+directive @auth on FIELD_DEFINITION | OBJECT
+
+"""
 Cache control directive for GraphQL fields and types
 
 Examples:
@@ -317,6 +328,71 @@ directive @cacheControl(
   """
   scope: CacheControlScope
 ) on FIELD_DEFINITION | INTERFACE | OBJECT | UNION
+
+"""
+Require specific access level to a resource
+Returns FORBIDDEN error if user doesn't have required access level
+
+The resource ID is extracted from:
+1. parent.id (for field resolvers)
+2. args.id (for query/mutation arguments)
+
+Access level mapping:
+- OWNER role → OWNER, WRITE, READ access
+- ADMIN/MEMBER roles → WRITE, READ access
+- GUEST role → READ access
+
+Example:
+type ShoppingList {
+  items: [Item!]! @requireAccess(resource: "ShoppingList", level: READ)
+  collaborators: [Collaborator!]! @requireAccess(resource: "ShoppingList", level: OWNER)
+}
+
+type Mutation {
+  deleteShoppingList(id: ID!): Boolean
+    @requireAccess(resource: "ShoppingList", level: OWNER)
+}
+"""
+directive @requireAccess(
+  """
+  Required access level
+  """
+  level: AccessLevel!
+  """
+  Resource type (e.g., ShoppingList, Pantry, Home)
+  """
+  resource: String!
+) on FIELD_DEFINITION
+
+"""
+Require specific home membership role
+Returns FORBIDDEN error if user doesn't have required role
+
+Note: Uses existing MembershipRole enum (OWNER, ADMIN, MEMBER, GUEST)
+
+Example:
+type Mutation {
+  deleteHome(id: ID!): Boolean @requireRole(role: OWNER)
+}
+"""
+directive @requireRole(
+  """
+  Required membership role in the home
+  """
+  role: MembershipRole!
+) on FIELD_DEFINITION
+
+"""
+Access level for resource-based authorization
+- OWNER: Full control (create, read, update, delete, manage permissions)
+- WRITE: Can modify (create, read, update, delete own items)
+- READ: Can only view (read-only access)
+"""
+enum AccessLevel {
+  OWNER
+  READ
+  WRITE
+}
 
 enum AcquisitionMethod {
   BULK_SPLIT
@@ -625,6 +701,16 @@ interface Connection {
   edges: [Edge!]!
   pageInfo: PageInfo!
   totalCount: Int!
+}
+
+"""
+Relay-style cursor pagination input (for Connection types)
+"""
+input ConnectionPaginationInput {
+  after: String
+  before: String
+  first: Int
+  last: Int
 }
 
 type ConvertedUnitValue {
@@ -1695,13 +1781,40 @@ type Home {
   description: String
   id: ID!
   invites: [HomeInvite!]
+    @deprecated(
+      reason: "Use invitesConnection for pagination. Will be removed in v2.0"
+    )
+  invitesConnection(
+    after: String
+    before: String
+    first: Int
+    last: Int
+  ): HomeInviteConnection!
   isPublic: Boolean!
   joinCode: String
   maxMembers: Int
   members: [Membership!]!
+    @deprecated(
+      reason: "Use membersConnection for pagination. Will be removed in v2.0"
+    )
+  membersConnection(
+    after: String
+    before: String
+    first: Int
+    last: Int
+  ): MembershipConnection!
   metadata: JSON
   name: String!
   pantries: [Pantry!]
+    @deprecated(
+      reason: "Use pantriesConnection for pagination. Will be removed in v2.0"
+    )
+  pantriesConnection(
+    after: String
+    before: String
+    first: Int
+    last: Int
+  ): PantryConnection!
   tags: [String!]!
   timezone: String
   type: HomeType!
@@ -1734,6 +1847,20 @@ type HomeInvite {
   token: String!
   updatedAt: DateTime!
   version: Int!
+}
+
+type HomeInviteConnection {
+  edges: [HomeInviteEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+"""
+Home invite connection for pagination
+"""
+type HomeInviteEdge {
+  cursor: String!
+  node: HomeInvite!
 }
 
 type HomeInviteStatsGroup {
@@ -2520,6 +2647,20 @@ type Membership {
   version: Int!
 }
 
+type MembershipConnection {
+  edges: [MembershipEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+"""
+Membership connection for pagination
+"""
+type MembershipEdge {
+  cursor: String!
+  node: Membership!
+}
+
 enum MembershipJoinMethod {
   DIRECT_ADD
   INVITE
@@ -3171,6 +3312,9 @@ enum NotificationDeliveryStatus {
   SENT
 }
 
+"""
+Notification connection for pagination
+"""
 type NotificationEdge implements Edge {
   cursor: String!
   node: Notification!
@@ -3349,11 +3493,15 @@ type OperatingSystemStat {
   osName: String!
 }
 
+"""
+Page information for cursor-based pagination (Relay spec)
+"""
 type PageInfo {
   endCursor: String
   hasNextPage: Boolean!
   hasPreviousPage: Boolean!
   startCursor: String
+  totalCount: Int
 }
 
 input PaginationInput {
@@ -3370,6 +3518,15 @@ type Pantry {
   id: ID!
   isDefault: Boolean!
   items: [PantryItem!]
+    @deprecated(
+      reason: "Use itemsConnection for pagination. Will be removed in v2.0"
+    )
+  itemsConnection(
+    after: String
+    before: String
+    first: Int
+    last: Int
+  ): PantryItemConnection!
   location: String
   metadata: JSON
   name: String!
@@ -3378,6 +3535,15 @@ type Pantry {
   Useful for assigning pantry items to specific storage locations.
   """
   storageLocations: [StorageLocation!]!
+    @deprecated(
+      reason: "Use storageLocationsConnection for pagination. Will be removed in v2.0"
+    )
+  storageLocationsConnection(
+    after: String
+    before: String
+    first: Int
+    last: Int
+  ): StorageLocationConnection!
   tags: [String!]!
   temperature: String
   updatedAt: DateTime!
@@ -3410,6 +3576,20 @@ enum PantryActivityType {
   PANTRY_DELETED
   PANTRY_UPDATED
   QUANTITY_UPDATED
+}
+
+type PantryConnection {
+  edges: [PantryEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+"""
+Pantry connection for pagination
+"""
+type PantryEdge {
+  cursor: String!
+  node: Pantry!
 }
 
 type PantryItem {
@@ -3482,6 +3662,20 @@ type PantryItemChangedPayload {
   timestamp: DateTime!
   updatedFields: [String!]!
   userId: String!
+}
+
+type PantryItemConnection {
+  edges: [PantryItemEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+"""
+Pantry item connection for pagination
+"""
+type PantryItemEdge {
+  cursor: String!
+  node: PantryItem!
 }
 
 input PantryItemFilters {
@@ -3676,6 +3870,20 @@ type Purchase {
   user: User!
   userId: String!
   version: Int!
+}
+
+type PurchaseConnection {
+  edges: [PurchaseEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+"""
+Purchase connection for pagination
+"""
+type PurchaseEdge {
+  cursor: String!
+  node: Purchase!
 }
 
 type PurchaseStats {
@@ -4017,6 +4225,20 @@ enum RecipeCategory {
   SNACK
 }
 
+type RecipeConnection {
+  edges: [RecipeEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+"""
+Recipe connection for pagination
+"""
+type RecipeEdge {
+  cursor: String!
+  node: Recipe!
+}
+
 type RecipeIngredient {
   availablePantryItemIds: [String!]!
   externalSources: [RecipeIngredientSourceMapping!]!
@@ -4262,6 +4484,20 @@ type SavedRecipe {
   userId: String!
 }
 
+type SavedRecipeConnection {
+  edges: [SavedRecipeEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+"""
+Saved recipe connection for pagination
+"""
+type SavedRecipeEdge {
+  cursor: String!
+  node: SavedRecipe!
+}
+
 type SearchFacets {
   brands: [FacetValue!]!
   categories: [FacetValue!]!
@@ -4317,6 +4553,15 @@ type ShoppingList {
   isRecurring: Boolean!
   isTemplate: Boolean!
   items: [ShoppingListItem!]!
+    @deprecated(
+      reason: "Use itemsConnection for pagination. Will be removed in v2.0"
+    )
+  itemsConnection(
+    after: String
+    before: String
+    first: Int
+    last: Int
+  ): ShoppingListItemConnection!
   lastRecurredAt: DateTime
   lastReminderSent: DateTime
   mealPlan: MealPlan
@@ -4406,6 +4651,20 @@ type ShoppingListCollaboratorChangedPayload {
   userId: ID!
 }
 
+type ShoppingListConnection {
+  edges: [ShoppingListEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+"""
+Shopping list connection for pagination
+"""
+type ShoppingListEdge {
+  cursor: String!
+  node: ShoppingList!
+}
+
 input ShoppingListFilters {
   isArchived: Boolean
   isCompleted: Boolean
@@ -4475,6 +4734,20 @@ type ShoppingListItemChangedPayload {
   timestamp: DateTime!
   updatedFields: [String!]
   userId: ID!
+}
+
+type ShoppingListItemConnection {
+  edges: [ShoppingListItemEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+"""
+Shopping list item connection for pagination
+"""
+type ShoppingListItemEdge {
+  cursor: String!
+  node: ShoppingListItem!
 }
 
 type ShoppingListItemPreviousValues {
@@ -4633,6 +4906,20 @@ type StorageLocation {
   When this storage location was last updated
   """
   updatedAt: DateTime!
+}
+
+type StorageLocationConnection {
+  edges: [StorageLocationEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+"""
+Storage location connection for pagination
+"""
+type StorageLocationEdge {
+  cursor: String!
+  node: StorageLocation!
 }
 
 """

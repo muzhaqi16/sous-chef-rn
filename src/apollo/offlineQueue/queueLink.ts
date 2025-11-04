@@ -88,10 +88,13 @@ export const createQueueLink = () => {
         // Add to queue
         queueStore.addMutation(queuedMutation);
 
-        // CRITICAL: Do NOT call observer.next()
-        // Apollo applies optimistic responses BEFORE the link chain executes
-        // Calling observer.next() would overwrite the optimistic layer with our data
-        // Just completing the observable preserves the optimistic response in cache
+        // Return empty success response to satisfy Observable contract
+        // Apollo has already applied the optimistic response to the cache
+        // Returning empty data signals successful queuing without overwriting anything
+        observer.next({
+          data: {},
+          errors: undefined,
+        });
         observer.complete();
 
         console.log(`✅ Queue Link: Queued ${operationName}, optimistic response preserved`);
