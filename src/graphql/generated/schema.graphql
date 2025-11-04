@@ -3592,6 +3592,15 @@ type PantryEdge {
   node: Pantry!
 }
 
+type PantryExpiringItemsAlertPayload {
+  daysUntilExpiration: Int!
+  expiresAt: DateTime!
+  item: PantryItem!
+  pantryId: String!
+  timestamp: DateTime!
+  userId: String!
+}
+
 type PantryItem {
   acquisitionMethod: AcquisitionMethod!
   actualNetWeight: Float
@@ -3717,6 +3726,15 @@ type PantryItemUsageChangedPayload {
   previousValues: PantryItemUsage
   timestamp: DateTime!
   usage: PantryItemUsage!
+  userId: String!
+}
+
+type PantryLowStockAlertPayload {
+  currentQuantity: Float!
+  item: PantryItem!
+  minimumQuantity: Float!
+  pantryId: String!
+  timestamp: DateTime!
   userId: String!
 }
 
@@ -5121,10 +5139,10 @@ type Subscription {
   notificationReceived: NotificationPayload!
   notificationUpdated: NotificationPayload!
   pantryActivityAdded(pantryId: ID!): PantryActivity!
-  pantryExpiringItemsAlert(pantryId: ID!): [PantryItem!]!
+  pantryExpiringItemsAlert(pantryId: ID!): PantryExpiringItemsAlertPayload!
   pantryItemUsageChanged(pantryId: ID!): PantryItemUsageChangedPayload!
   pantryItemsChanged(pantryId: ID!): PantryItemChangedPayload!
-  pantryLowStockAlert(pantryId: ID!): [PantryItem!]!
+  pantryLowStockAlert(pantryId: ID!): PantryLowStockAlertPayload!
   pantryUpdated(pantryId: ID!): PantryUpdatedPayload!
   pantryWasteAlert(pantryId: ID!): PantryWasteAlertPayload!
   purchaseCreated(userId: ID): Purchase!

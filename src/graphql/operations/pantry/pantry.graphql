@@ -241,33 +241,42 @@ subscription PantryActivityAdded($pantryId: ID!) {
 
 subscription PantryLowStockAlert($pantryId: ID!) {
   pantryLowStockAlert(pantryId: $pantryId) {
-    id
-    itemId
-    itemName
+    pantryId
     currentQuantity
-    autoReorderPoint
-    unitName
+    minimumQuantity
+    userId
+    timestamp
     item {
       id
-      name
-      imageUrl
+      itemId
+      itemName
+      unitName
+      item {
+        id
+        name
+        imageUrl
+      }
     }
   }
 }
 
 subscription PantryExpiringItemsAlert($pantryId: ID!) {
   pantryExpiringItemsAlert(pantryId: $pantryId) {
-    id
-    itemId
-    itemName
+    pantryId
     expiresAt
-    bestByDate
-    currentQuantity
-    unitName
+    daysUntilExpiration
+    userId
+    timestamp
     item {
       id
-      name
-      imageUrl
+      itemId
+      itemName
+      unitName
+      item {
+        id
+        name
+        imageUrl
+      }
     }
   }
 }

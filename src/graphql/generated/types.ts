@@ -4253,6 +4253,16 @@ export type PantryEdge = {
   node: Pantry;
 };
 
+export type PantryExpiringItemsAlertPayload = {
+  __typename?: 'PantryExpiringItemsAlertPayload';
+  daysUntilExpiration: Scalars['Int']['output'];
+  expiresAt: Scalars['DateTime']['output'];
+  item: PantryItem;
+  pantryId: Scalars['String']['output'];
+  timestamp: Scalars['DateTime']['output'];
+  userId: Scalars['String']['output'];
+};
+
 export type PantryItem = {
   __typename?: 'PantryItem';
   acquisitionMethod: AcquisitionMethod;
@@ -4383,6 +4393,16 @@ export type PantryItemUsageChangedPayload = {
   previousValues?: Maybe<PantryItemUsage>;
   timestamp: Scalars['DateTime']['output'];
   usage: PantryItemUsage;
+  userId: Scalars['String']['output'];
+};
+
+export type PantryLowStockAlertPayload = {
+  __typename?: 'PantryLowStockAlertPayload';
+  currentQuantity: Scalars['Float']['output'];
+  item: PantryItem;
+  minimumQuantity: Scalars['Float']['output'];
+  pantryId: Scalars['String']['output'];
+  timestamp: Scalars['DateTime']['output'];
   userId: Scalars['String']['output'];
 };
 
@@ -6261,10 +6281,10 @@ export type Subscription = {
   notificationReceived: NotificationPayload;
   notificationUpdated: NotificationPayload;
   pantryActivityAdded: PantryActivity;
-  pantryExpiringItemsAlert: Array<PantryItem>;
+  pantryExpiringItemsAlert: PantryExpiringItemsAlertPayload;
   pantryItemUsageChanged: PantryItemUsageChangedPayload;
   pantryItemsChanged: PantryItemChangedPayload;
-  pantryLowStockAlert: Array<PantryItem>;
+  pantryLowStockAlert: PantryLowStockAlertPayload;
   pantryUpdated: PantryUpdatedPayload;
   pantryWasteAlert: PantryWasteAlertPayload;
   purchaseCreated: Purchase;
@@ -15053,21 +15073,27 @@ export type PantryLowStockAlertSubscriptionVariables = Exact<{
 
 export type PantryLowStockAlertSubscription = {
   __typename?: 'Subscription';
-  pantryLowStockAlert: Array<{
-    __typename?: 'PantryItem';
-    id: string;
-    itemId: string;
-    itemName: string;
+  pantryLowStockAlert: {
+    __typename?: 'PantryLowStockAlertPayload';
+    pantryId: string;
     currentQuantity: number;
-    autoReorderPoint?: number | null | undefined;
-    unitName: string;
+    minimumQuantity: number;
+    userId: string;
+    timestamp: string;
     item: {
-      __typename?: 'Item';
+      __typename?: 'PantryItem';
       id: string;
-      name: string;
-      imageUrl?: string | null | undefined;
+      itemId: string;
+      itemName: string;
+      unitName: string;
+      item: {
+        __typename?: 'Item';
+        id: string;
+        name: string;
+        imageUrl?: string | null | undefined;
+      };
     };
-  }>;
+  };
 };
 
 export type PantryExpiringItemsAlertSubscriptionVariables = Exact<{
@@ -15076,22 +15102,27 @@ export type PantryExpiringItemsAlertSubscriptionVariables = Exact<{
 
 export type PantryExpiringItemsAlertSubscription = {
   __typename?: 'Subscription';
-  pantryExpiringItemsAlert: Array<{
-    __typename?: 'PantryItem';
-    id: string;
-    itemId: string;
-    itemName: string;
-    expiresAt?: string | null | undefined;
-    bestByDate?: string | null | undefined;
-    currentQuantity: number;
-    unitName: string;
+  pantryExpiringItemsAlert: {
+    __typename?: 'PantryExpiringItemsAlertPayload';
+    pantryId: string;
+    expiresAt: string;
+    daysUntilExpiration: number;
+    userId: string;
+    timestamp: string;
     item: {
-      __typename?: 'Item';
+      __typename?: 'PantryItem';
       id: string;
-      name: string;
-      imageUrl?: string | null | undefined;
+      itemId: string;
+      itemName: string;
+      unitName: string;
+      item: {
+        __typename?: 'Item';
+        id: string;
+        name: string;
+        imageUrl?: string | null | undefined;
+      };
     };
-  }>;
+  };
 };
 
 export type PantryItemsChangedSubscriptionVariables = Exact<{
