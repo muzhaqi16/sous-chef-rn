@@ -629,17 +629,17 @@ export const RecipeDetail: React.FC = () => {
 
           {/* Recipe Metadata */}
           <View style={styles.metadata}>
-            {displayData.servings && (
+            {displayData.servings != null && (
               <Text style={styles.metadataText}>
                 🍽️ {displayData.servings} servings
               </Text>
             )}
-            {displayData.readyInMinutes && (
+            {displayData.readyInMinutes != null && (
               <Text style={styles.metadataText}>
                 ⏱️ {displayData.readyInMinutes} min
               </Text>
             )}
-            {displayData.healthScore && (
+            {displayData.healthScore != null && !isNaN(displayData.healthScore) && (
               <Text style={styles.metadataText}>
                 💚 {Math.round(displayData.healthScore)}% healthy
               </Text>
