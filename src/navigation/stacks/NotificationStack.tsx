@@ -15,7 +15,13 @@ export type NotificationStackParamList = {
 const Stack = createNativeStackNavigator<NotificationStackParamList>();
 
 export const NotificationStack = () => (
-  <Stack.Navigator screenOptions={{headerShown: false}}>
+  <Stack.Navigator
+    screenOptions={{
+      headerShown: false,
+      animation: 'fade_from_bottom',
+      animationDuration: 200,
+    }}
+  >
     <Stack.Screen name="NotificationList" component={NotificationListScreen} />
     <Stack.Screen
       name="NotificationDetail"
