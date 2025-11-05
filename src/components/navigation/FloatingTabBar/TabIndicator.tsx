@@ -15,10 +15,13 @@ export const TabIndicator: React.FC<TabIndicatorProps> = ({
   const animatedStyle = useAnimatedStyle(() => {
     // Use percentage-based padding offset like reference (5% of tab bar width)
     const paddingOffset = tabBarWidth * 0.05;
-    const translateX = withSpring(paddingOffset + (activeIndex.value * tabWidth), {
-      damping: 20,
-      stiffness: 150,
-    });
+    const translateX = withSpring(
+      paddingOffset + activeIndex.value * tabWidth,
+      {
+        damping: 20,
+        stiffness: 150,
+      },
+    );
 
     return {
       transform: [{ translateX }],

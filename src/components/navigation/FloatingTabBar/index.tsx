@@ -5,6 +5,7 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
+  withSequence,
 } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useScanner } from '#context/ScannerContext';
@@ -82,7 +83,25 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = React.memo(({
         const { options } = descriptors[route.key];
         const isFocused = state.index === index;
 
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        const iconScale = useSharedValue(isFocused ? 1.2 : 1);
+
+        // Update scale when focus changes
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        useEffect(() => {
+          iconScale.value = withSpring(isFocused ? 1.2 : 1, {
+            damping: 20,
+            stiffness: 200,
+          });
+        }, [isFocused, iconScale]);
+
         const onPress = () => {
+          // Animate icon scale on press (squeeze then expand)
+          iconScale.value = withSequence(
+            withSpring(0.85, { damping: 15, stiffness: 300 }),
+            withSpring(isFocused ? 1.2 : 1, { damping: 15, stiffness: 300 })
+          );
+
           const event = navigation.emit({
             type: 'tabPress',
             target: route.key,
@@ -94,6 +113,11 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = React.memo(({
           }
         };
 
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        const animatedIconStyle = useAnimatedStyle(() => ({
+          transform: [{ scale: iconScale.value }],
+        }));
+
         return (
           <TouchableOpacity
             key={route.key}
@@ -104,13 +128,15 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = React.memo(({
             style={styles.tabItem}
             activeOpacity={0.7}
           >
-            {options.tabBarIcon && (
-              <options.tabBarIcon
-                focused={isFocused}
-                color={isFocused ? theme.colors.primary : '#CCCCCC'}
-                size={24}
-              />
-            )}
+            <Animated.View style={animatedIconStyle}>
+              {options.tabBarIcon && (
+                <options.tabBarIcon
+                  focused={isFocused}
+                  color={isFocused ? theme.colors.primary : '#CCCCCC'}
+                  size={24}
+                />
+              )}
+            </Animated.View>
           </TouchableOpacity>
         );
       })}

@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { View, Vibration, Platform } from 'react-native';
+import { Vibration, Platform, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { SwipeableItem } from '#/components/molecules/SwipeableItem';
 import { ListItem } from '#/components/molecules/ListItem';

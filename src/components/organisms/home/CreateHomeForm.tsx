@@ -4,9 +4,9 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  ActivityIndicator,
 } from 'react-native';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
+import {AnimatedButton} from '#/components/atoms/AnimatedButton';
 
 interface CreateHomeFormProps {
   isVisible: boolean;
@@ -25,8 +25,6 @@ export const CreateHomeForm: React.FC<CreateHomeFormProps> = ({
   onCancel,
   isCreating,
 }) => {
-  const { theme } = useUnistyles();
-
   if (!isVisible) return null;
 
   return (
@@ -44,16 +42,15 @@ export const CreateHomeForm: React.FC<CreateHomeFormProps> = ({
           onPress={onCancel}>
           <Text style={styles.cancelButtonText}>Cancel</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.button, styles.createButton]}
+        <AnimatedButton
+          loading={isCreating}
+          disabled={!homeName.trim()}
           onPress={onSubmit}
-          disabled={isCreating}>
-          {isCreating ? (
-            <ActivityIndicator size="small" color={theme.colors.white} />
-          ) : (
-            <Text style={styles.createButtonText}>Create</Text>
-          )}
-        </TouchableOpacity>
+          variant="primary"
+          style={styles.button}
+        >
+          Create
+        </AnimatedButton>
       </View>
     </View>
   );

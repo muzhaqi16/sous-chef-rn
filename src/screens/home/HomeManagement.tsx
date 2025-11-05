@@ -9,13 +9,19 @@ import {
   Alert,
   RefreshControl,
 } from 'react-native';
-import Animated, { LinearTransition } from 'react-native-reanimated';
+import Animated, {
+  LinearTransition,
+  FadeInDown,
+  SlideInUp,
+  SlideOutUp,
+} from 'react-native-reanimated';
 import { Icon } from '#utils';
 import { useAppNavigation } from '#hooks';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useHomeManagement } from '#/hooks';
 import { useInviteUserModal } from '#/hooks/useInviteUserModal';
 import { useAuth } from '#/hooks/auth/useAuth';
+import { AnimatedButton } from '#/components/atoms/AnimatedButton';
 import {
   HomeStats,
   CreateHomeForm,
@@ -213,7 +219,11 @@ export const HomeManagement: React.FC = () => {
 
         {/* Create/Join Home Form */}
         {showCreateForm && (
-          <View style={styles.formContainer}>
+          <Animated.View
+            entering={SlideInUp.duration(300).springify()}
+            exiting={SlideOutUp.duration(250)}
+            style={styles.formContainer}
+          >
             {/* Mode Switcher */}
             <View style={styles.modeSwitcher}>
               <TouchableOpacity
@@ -309,26 +319,19 @@ export const HomeManagement: React.FC = () => {
                   >
                     <Text style={styles.cancelButtonText}>Cancel</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.button,
-                      styles.submitButton,
-                      (!joinCode.trim() || joiningByCode) &&
-                        styles.buttonDisabled,
-                    ]}
+                  <AnimatedButton
+                    loading={joiningByCode}
+                    disabled={!joinCode.trim()}
                     onPress={handleJoinHome}
-                    disabled={!joinCode.trim() || joiningByCode}
+                    variant="primary"
+                    style={styles.button}
                   >
-                    {joiningByCode ? (
-                      <ActivityIndicator size="small" color={theme.colors.white} />
-                    ) : (
-                      <Text style={styles.submitButtonText}>Join Home</Text>
-                    )}
-                  </TouchableOpacity>
+                    Join Home
+                  </AnimatedButton>
                 </View>
               </View>
             )}
-          </View>
+          </Animated.View>
         )}
 
         {/* Homes List */}
@@ -352,7 +355,7 @@ export const HomeManagement: React.FC = () => {
               if (b.id === defaultHomeId) return 1;
               return 0;
             })
-            .map(home => {
+            .map((home, index) => {
               // Calculate if user can invite to this home
               const membership = findUserMembership(home.members, user?.id);
               const userCanInvite = membership
@@ -362,6 +365,7 @@ export const HomeManagement: React.FC = () => {
               return (
                 <Animated.View
                   key={home.id}
+                  entering={FadeInDown.delay(index * 50).springify()}
                   layout={LinearTransition.duration(600).springify().damping(30).stiffness(180).mass(1.5)}
                 >
                   <HomeCard

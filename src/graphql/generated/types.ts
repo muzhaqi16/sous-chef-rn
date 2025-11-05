@@ -103,6 +103,15 @@ export type AddWarningInput = {
   userId: Scalars['ID']['input'];
 };
 
+/** Result of quantity aggregation (add/subtract) */
+export type AggregationResult = {
+  __typename?: 'AggregationResult';
+  displayText: Scalars['String']['output'];
+  quantity: Scalars['Float']['output'];
+  sufficient?: Maybe<Scalars['Boolean']['output']>;
+  unit: Unit;
+};
+
 export type AllergenInput = {
   contains: Scalars['Boolean']['input'];
   mayContain?: InputMaybe<Scalars['Boolean']['input']>;
@@ -374,6 +383,44 @@ export type ConnectionPaginationInput = {
   first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
 };
+
+/** Conversion availability result */
+export type ConversionAvailability = {
+  __typename?: 'ConversionAvailability';
+  available: Scalars['Boolean']['output'];
+  confidence: Scalars['Float']['output'];
+  conversionType: ConversionType;
+  notes?: Maybe<Scalars['String']['output']>;
+  requiresItemContext: Scalars['Boolean']['output'];
+};
+
+/** Result of a unit conversion operation */
+export type ConversionResult = {
+  __typename?: 'ConversionResult';
+  displayText: Scalars['String']['output'];
+  unit: Unit;
+  value: Scalars['Float']['output'];
+};
+
+/** Source of the unit conversion data */
+export enum ConversionSource {
+  Calculated = 'CALCULATED',
+  Community = 'COMMUNITY',
+  Kroger = 'KROGER',
+  MlPredicted = 'ML_PREDICTED',
+  Spoonacular = 'SPOONACULAR',
+  Usda = 'USDA',
+  UserDefined = 'USER_DEFINED',
+}
+
+/** Type of conversion being performed */
+export enum ConversionType {
+  CrossTypeDensityBased = 'CROSS_TYPE_DENSITY_BASED',
+  CrossTypeItemSpecific = 'CROSS_TYPE_ITEM_SPECIFIC',
+  NotPossible = 'NOT_POSSIBLE',
+  SameTypeCustom = 'SAME_TYPE_CUSTOM',
+  SameTypeStandard = 'SAME_TYPE_STANDARD',
+}
 
 export type ConvertedUnitValue = {
   __typename?: 'ConvertedUnitValue';
@@ -1228,6 +1275,14 @@ export type DismissNotificationInput = {
   notificationId: Scalars['ID']['input'];
 };
 
+/** Display format for quantities */
+export enum DisplayFormat {
+  Auto = 'AUTO',
+  Decimal = 'DECIMAL',
+  Fraction = 'FRACTION',
+  Mixed = 'MIXED',
+}
+
 export type Edge = {
   cursor: Scalars['String']['output'];
   node: Node;
@@ -1614,6 +1669,13 @@ export type IngredientInput = {
   subIngredients?: InputMaybe<Array<IngredientInput>>;
 };
 
+/** Input for ingredient usage when marking recipe as cooked */
+export type IngredientUsageInput = {
+  actualQuantity: Scalars['Float']['input'];
+  actualUnitId: Scalars['ID']['input'];
+  recipeIngredientId: Scalars['ID']['input'];
+};
+
 export enum Intolerance {
   Dairy = 'DAIRY',
   Egg = 'EGG',
@@ -1986,6 +2048,27 @@ export type ItemUnit = {
   verifiedAt?: Maybe<Scalars['DateTime']['output']>;
   verifiedBy?: Maybe<User>;
   version: Scalars['Int']['output'];
+};
+
+/**
+ * Item-specific unit conversion
+ * Stores conversions like "1 cup flour = 120g"
+ */
+export type ItemUnitConversion = {
+  __typename?: 'ItemUnitConversion';
+  addedBy?: Maybe<User>;
+  confidence: Scalars['Float']['output'];
+  conversionRatio: Scalars['Float']['output'];
+  createdAt: Scalars['DateTime']['output'];
+  fromUnit: Unit;
+  id: Scalars['ID']['output'];
+  isVerified: Scalars['Boolean']['output'];
+  item: Item;
+  notes?: Maybe<Scalars['String']['output']>;
+  source: ConversionSource;
+  toUnit: Unit;
+  updatedAt: Scalars['DateTime']['output'];
+  verifiedBy?: Maybe<User>;
 };
 
 export type ItemUnitInput = {
@@ -2497,6 +2580,11 @@ export type Mutation = {
   addItemToCategory: Item;
   addItemToShoppingList: ShoppingListItem;
   addItemUnit: ItemUnit;
+  /**
+   * Add recipe ingredients to shopping list with smart unit handling
+   * Checks pantry for available items and only adds deficit
+   */
+  addRecipeToShoppingList: ShoppingList;
   addRestriction: DietaryRestriction;
   addRestrictions: UserModeration;
   addUserAddress: UserAddress;
@@ -2621,6 +2709,8 @@ export type Mutation = {
   markNotificationAsRead: Notification;
   markNotificationUnread: Notification;
   markPantryItemExpired: PantryItem;
+  /** Mark recipe as cooked and optionally deduct from pantry */
+  markRecipeAsCooked: CookingLog;
   mergeItems: Item;
   moveShoppingListItem: ShoppingListItem;
   openPantryItem: PantryItem;
@@ -2628,6 +2718,8 @@ export type Mutation = {
   reactivateDevice: Device;
   recordLoginAttempt: LoginHistory;
   recordPantryItemWaste: PantryItem;
+  /** Manually record pantry item usage */
+  recordPantryUsage: PantryItemUsage;
   recordPriceObservation: ItemPriceHistory;
   refresh: RefreshTokenPayload;
   register: AuthPayload;
@@ -2734,6 +2826,7 @@ export type Mutation = {
   updatePantry: Pantry;
   updatePantryItem: PantryItem;
   updatePantryItemLocation: PantryItem;
+  /** Update pantry item quantity (supports fractions) */
   updatePantryItemQuantity: PantryItem;
   updateProfile: UserProfile;
   updateProfileAvatar: UserProfile;
@@ -2748,6 +2841,7 @@ export type Mutation = {
   updateShoppingListItem: ShoppingListItem;
   updateShoppingListItemNotes: ShoppingListItem;
   updateShoppingListItemPriority: ShoppingListItem;
+  /** Update shopping list item quantity (supports fractions) */
   updateShoppingListItemQuantity: ShoppingListItem;
   /**
    * Update an existing storage location
@@ -2764,6 +2858,8 @@ export type Mutation = {
   updateUser: User;
   updateUserAddress: UserAddress;
   upsertItemByExternalSource: UpsertItemResult;
+  /** Add or update item-specific unit conversion */
+  upsertItemUnitConversion: ItemUnitConversion;
   validateItem: ValidationResult;
   /** Validate if a password reset token is still valid */
   validatePasswordResetToken: ValidateTokenResponse;
@@ -2803,6 +2899,13 @@ export type MutationAddItemToShoppingListArgs = {
 export type MutationAddItemUnitArgs = {
   input: ItemUnitInput;
   itemId: Scalars['ID']['input'];
+};
+
+export type MutationAddRecipeToShoppingListArgs = {
+  checkPantry?: InputMaybe<Scalars['Boolean']['input']>;
+  recipeId: Scalars['ID']['input'];
+  servings?: InputMaybe<Scalars['Float']['input']>;
+  shoppingListId: Scalars['ID']['input'];
 };
 
 export type MutationAddRestrictionArgs = {
@@ -3270,6 +3373,14 @@ export type MutationMarkPantryItemExpiredArgs = {
   version?: InputMaybe<Scalars['Int']['input']>;
 };
 
+export type MutationMarkRecipeAsCookedArgs = {
+  deductFromPantry: Scalars['Boolean']['input'];
+  ingredientsUsed?: InputMaybe<Array<IngredientUsageInput>>;
+  notes?: InputMaybe<Scalars['String']['input']>;
+  recipeId: Scalars['ID']['input'];
+  servings?: InputMaybe<Scalars['Float']['input']>;
+};
+
 export type MutationMergeItemsArgs = {
   duplicateIds: Array<Scalars['ID']['input']>;
   primaryId: Scalars['ID']['input'];
@@ -3302,6 +3413,14 @@ export type MutationRecordPantryItemWasteArgs = {
   isRecycled?: InputMaybe<Scalars['Boolean']['input']>;
   wasteAmount: Scalars['Float']['input'];
   wasteReason: WasteReason;
+};
+
+export type MutationRecordPantryUsageArgs = {
+  notes?: InputMaybe<Scalars['String']['input']>;
+  pantryItemId: Scalars['ID']['input'];
+  purpose?: InputMaybe<Scalars['String']['input']>;
+  quantity: Scalars['Float']['input'];
+  unitId: Scalars['ID']['input'];
 };
 
 export type MutationRecordPriceObservationArgs = {
@@ -3750,8 +3869,9 @@ export type MutationUpdatePantryItemLocationArgs = {
 };
 
 export type MutationUpdatePantryItemQuantityArgs = {
-  currentQuantity: Scalars['Float']['input'];
-  id: Scalars['ID']['input'];
+  pantryItemId: Scalars['ID']['input'];
+  quantity: Scalars['String']['input'];
+  unitId?: InputMaybe<Scalars['ID']['input']>;
   version?: InputMaybe<Scalars['Int']['input']>;
 };
 
@@ -3818,8 +3938,9 @@ export type MutationUpdateShoppingListItemPriorityArgs = {
 };
 
 export type MutationUpdateShoppingListItemQuantityArgs = {
-  id: Scalars['ID']['input'];
-  quantity: Scalars['Float']['input'];
+  itemId: Scalars['ID']['input'];
+  quantity: Scalars['String']['input'];
+  unitId?: InputMaybe<Scalars['ID']['input']>;
   version?: InputMaybe<Scalars['Int']['input']>;
 };
 
@@ -3878,6 +3999,14 @@ export type MutationUpsertItemByExternalSourceArgs = {
   itemData: CreateItemInput;
   source: ExternalSource;
   sourceData?: InputMaybe<Scalars['JSON']['input']>;
+};
+
+export type MutationUpsertItemUnitConversionArgs = {
+  conversionRatio: Scalars['Float']['input'];
+  fromUnitId: Scalars['ID']['input'];
+  itemId: Scalars['ID']['input'];
+  notes?: InputMaybe<Scalars['String']['input']>;
+  toUnitId: Scalars['ID']['input'];
 };
 
 export type MutationValidateItemArgs = {
@@ -4246,6 +4375,18 @@ export type PantryConnection = {
   totalCount: Scalars['Int']['output'];
 };
 
+/** Deficit calculation for recipe ingredients */
+export type PantryDeficit = {
+  __typename?: 'PantryDeficit';
+  available: Scalars['Float']['output'];
+  availableItems: Array<PantryItem>;
+  deficit: Scalars['Float']['output'];
+  ingredient: RecipeIngredient;
+  needed: Scalars['Float']['output'];
+  needsToBuy: Scalars['Boolean']['output'];
+  unit: Unit;
+};
+
 /** Pantry connection for pagination */
 export type PantryEdge = {
   __typename?: 'PantryEdge';
@@ -4595,20 +4736,67 @@ export type PutUnderReviewInput = {
   userId: Scalars['ID']['input'];
 };
 
+/**
+ * Quantity displayed in multiple formats
+ * Useful for showing both fraction and decimal representations
+ */
+export type QuantityDisplay = {
+  __typename?: 'QuantityDisplay';
+  decimal: Scalars['Float']['output'];
+  display: Scalars['String']['output'];
+  fraction?: Maybe<Scalars['String']['output']>;
+  mixed?: Maybe<Scalars['String']['output']>;
+  unit?: Maybe<Unit>;
+};
+
+/** User preference for quantity display */
+export enum QuantityDisplayPreference {
+  Auto = 'AUTO',
+  Decimal = 'DECIMAL',
+  Fraction = 'FRACTION',
+  Mixed = 'MIXED',
+}
+
+/** Input for quantity aggregation */
+export type QuantityInput = {
+  quantity: Scalars['Float']['input'];
+  unitId: Scalars['ID']['input'];
+};
+
 export type Query = {
   __typename?: 'Query';
   _empty?: Maybe<Scalars['String']['output']>;
   activeDevices: Array<Device>;
   activeModerations: Array<UserModeration>;
+  /**
+   * Aggregate multiple quantities of the same item
+   * Useful for calculating total needed across multiple recipes
+   */
+  aggregateQuantities: AggregationResult;
   autocompleteCategories: AutocompleteCategoryResponse;
   autocompleteItems?: Maybe<AutocompleteResponse>;
   brand?: Maybe<Brand>;
   brands: Array<Brand>;
+  /**
+   * Calculate pantry deficit for recipe ingredients
+   * Compares recipe needs against available pantry items
+   */
+  calculateRecipePantryDeficit: Array<PantryDeficit>;
+  /**
+   * Check if conversion is possible between two units
+   * Returns availability and confidence level
+   */
+  canConvert: ConversionAvailability;
   categories: Array<Category>;
   category?: Maybe<Category>;
   categoryBySlug?: Maybe<Category>;
   checkItemAvailability?: Maybe<Array<ItemAvailability>>;
   compareItemPrices?: Maybe<Array<StorePriceComparison>>;
+  /**
+   * Convert quantity between units with item context
+   * Supports both same-type (cup→tbsp) and cross-type (cup→gram) conversions
+   */
+  convertQuantity?: Maybe<ConversionResult>;
   convertUnit?: Maybe<ConvertedUnitValue>;
   cookingLog?: Maybe<CookingLog>;
   currencies: Array<Currency>;
@@ -4627,8 +4815,18 @@ export type Query = {
   expirationNotification?: Maybe<ExpirationNotification>;
   failedLoginAttempts: Array<LoginHistory>;
   frequentlyBoughtItems: Array<ShoppingListItem>;
+  /**
+   * Get best display unit for a quantity
+   * Auto-converts to more readable units (1000mL → 1L)
+   */
+  getBestDisplayUnit: Unit;
   getConvertibleUnits: Array<Unit>;
   getDefaultHome?: Maybe<Home>;
+  /**
+   * Get all available conversions for an item
+   * Returns both stored conversions and calculable standard conversions
+   */
+  getItemConversions: Array<ItemUnitConversion>;
   hasUrgentNotifications: Scalars['Boolean']['output'];
   home?: Maybe<Home>;
   homeByJoinCode?: Maybe<Home>;
@@ -4690,6 +4888,11 @@ export type Query = {
   pantryItemUsage: Array<PantryItemUsage>;
   pantryItems: Array<PantryItem>;
   pantryStats: PantryStats;
+  /**
+   * Parse fractional input string to decimal
+   * Handles "1/4", "1 1/4", "0.25" formats
+   */
+  parseQuantityInput: QuantityDisplay;
   popularBrands: Array<Brand>;
   popularCategories: Array<Category>;
   popularStores: Array<Store>;
@@ -4749,6 +4952,11 @@ export type Query = {
   storeWithPriceHistory?: Maybe<Store>;
   storeWithPurchases?: Maybe<Store>;
   stores: Array<Store>;
+  /**
+   * Get suggested display format for a quantity
+   * Based on unit rules, user preferences, and quantity value
+   */
+  suggestDisplayFormat: QuantityDisplay;
   suggestedItemsForList: Array<ItemSuggestion>;
   suspiciousDevices: Array<Device>;
   suspiciousInviteActivity: Array<InviteLog>;
@@ -4774,6 +4982,11 @@ export type QueryActiveDevicesArgs = {
   userId: Scalars['ID']['input'];
 };
 
+export type QueryAggregateQuantitiesArgs = {
+  itemId: Scalars['ID']['input'];
+  quantities: Array<QuantityInput>;
+};
+
 export type QueryAutocompleteCategoriesArgs = {
   input: AutocompleteCategoryInput;
 };
@@ -4793,6 +5006,18 @@ export type QueryBrandsArgs = {
   search?: InputMaybe<Scalars['String']['input']>;
   skip?: InputMaybe<Scalars['Int']['input']>;
   take?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type QueryCalculateRecipePantryDeficitArgs = {
+  householdId: Scalars['ID']['input'];
+  recipeId: Scalars['ID']['input'];
+  servings?: InputMaybe<Scalars['Float']['input']>;
+};
+
+export type QueryCanConvertArgs = {
+  fromUnitId: Scalars['ID']['input'];
+  itemId?: InputMaybe<Scalars['ID']['input']>;
+  toUnitId: Scalars['ID']['input'];
 };
 
 export type QueryCategoriesArgs = {
@@ -4816,6 +5041,13 @@ export type QueryCheckItemAvailabilityArgs = {
 export type QueryCompareItemPricesArgs = {
   itemId: Scalars['ID']['input'];
   storeIds?: InputMaybe<Array<Scalars['String']['input']>>;
+};
+
+export type QueryConvertQuantityArgs = {
+  fromUnitId: Scalars['ID']['input'];
+  itemId?: InputMaybe<Scalars['ID']['input']>;
+  quantity: Scalars['Float']['input'];
+  toUnitId: Scalars['ID']['input'];
 };
 
 export type QueryConvertUnitArgs = {
@@ -4896,8 +5128,19 @@ export type QueryFrequentlyBoughtItemsArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
 };
 
+export type QueryGetBestDisplayUnitArgs = {
+  currentUnitId: Scalars['ID']['input'];
+  itemId?: InputMaybe<Scalars['ID']['input']>;
+  quantity: Scalars['Float']['input'];
+};
+
 export type QueryGetConvertibleUnitsArgs = {
   unitId: Scalars['ID']['input'];
+};
+
+export type QueryGetItemConversionsArgs = {
+  includeStandard?: InputMaybe<Scalars['Boolean']['input']>;
+  itemId: Scalars['ID']['input'];
 };
 
 export type QueryHomeArgs = {
@@ -5115,6 +5358,11 @@ export type QueryPantryStatsArgs = {
   pantryId: Scalars['ID']['input'];
 };
 
+export type QueryParseQuantityInputArgs = {
+  input: Scalars['String']['input'];
+  unitId: Scalars['ID']['input'];
+};
+
 export type QueryPopularBrandsArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
 };
@@ -5285,6 +5533,12 @@ export type QueryStoreWithPriceHistoryArgs = {
 export type QueryStoreWithPurchasesArgs = {
   id: Scalars['ID']['input'];
   limit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type QuerySuggestDisplayFormatArgs = {
+  quantity: Scalars['Float']['input'];
+  unitId: Scalars['ID']['input'];
+  userId?: InputMaybe<Scalars['ID']['input']>;
 };
 
 export type QuerySuggestedItemsForListArgs = {
@@ -18296,8 +18550,8 @@ export type ToggleShoppingListItemPurchasedMutation = {
 };
 
 export type UpdateShoppingListItemQuantityMutationVariables = Exact<{
-  id: Scalars['ID']['input'];
-  quantity: Scalars['Float']['input'];
+  itemId: Scalars['ID']['input'];
+  quantity: Scalars['String']['input'];
   version?: InputMaybe<Scalars['Int']['input']>;
 }>;
 

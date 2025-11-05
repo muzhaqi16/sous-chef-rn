@@ -364,12 +364,12 @@ mutation ToggleShoppingListItemPurchased(
 }
 
 mutation UpdateShoppingListItemQuantity(
-  $id: ID!
-  $quantity: Float!
+  $itemId: ID!
+  $quantity: String!
   $version: Int
 ) {
   updateShoppingListItemQuantity(
-    id: $id
+    itemId: $itemId
     quantity: $quantity
     version: $version
   ) {
@@ -377,16 +377,8 @@ mutation UpdateShoppingListItemQuantity(
   }
 }
 
-mutation UpdateShoppingListItemNotes(
-  $id: ID!
-  $notes: String
-  $version: Int
-) {
-  updateShoppingListItemNotes(
-    id: $id
-    notes: $notes
-    version: $version
-  ) {
+mutation UpdateShoppingListItemNotes($id: ID!, $notes: String, $version: Int) {
+  updateShoppingListItemNotes(id: $id, notes: $notes, version: $version) {
     ...ShoppingListItemFragment
   }
 }
@@ -421,7 +413,10 @@ mutation UpdateCollaboratorRole(
 # OFFLINE SYNC MUTATIONS
 # ============================================
 
-mutation SyncShoppingListItem($clientId: ID!, $input: SyncShoppingListItemInput!) {
+mutation SyncShoppingListItem(
+  $clientId: ID!
+  $input: SyncShoppingListItemInput!
+) {
   syncShoppingListItem(clientId: $clientId, input: $input) {
     clientId
     serverId

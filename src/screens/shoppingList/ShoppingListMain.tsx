@@ -457,8 +457,8 @@ export const ShoppingListMain: React.FC = () => {
 
         await updateQuantity({
           variables: {
-            id: itemId,
-            quantity: newQuantity,
+            itemId,
+            quantity: newQuantity.toString(),
             version: currentItem.version,
           },
           optimisticResponse: optimisticItem
@@ -543,8 +543,8 @@ export const ShoppingListMain: React.FC = () => {
 
         await updateQuantity({
           variables: {
-            id: itemId,
-            quantity: newQuantity,
+            itemId,
+            quantity: newQuantity.toString(),
             version: currentItem.version,
           },
           optimisticResponse: optimisticItem
