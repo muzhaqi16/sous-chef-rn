@@ -489,6 +489,8 @@ export function useShoppingListManagement(listId: string | undefined) {
         id: fullItem.id,
         itemName: fullItem.itemName,
         quantity: fullItem.quantity,
+        quantityInput: fullItem.quantityInput,
+        displayFormat: fullItem.displayFormat,
         isPurchased: fullItem.isPurchased,
         version: fullItem.version,
         updatedAt: fullItem.updatedAt,
@@ -501,6 +503,9 @@ export function useShoppingListManagement(listId: string | undefined) {
               id: fullItem.unit.id,
               name: fullItem.unit.name,
               symbol: fullItem.unit.symbol,
+              displayAsFraction: fullItem.unit.displayAsFraction,
+              minPrecision: fullItem.unit.minPrecision,
+              autoConvertThreshold: fullItem.unit.autoConvertThreshold,
             }
           : null,
       };

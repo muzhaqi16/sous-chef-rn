@@ -8,6 +8,8 @@ fragment ShoppingListItemCore on ShoppingListItem {
   id
   itemName
   quantity
+  quantityInput
+  displayFormat
   isPurchased
   version
   updatedAt
@@ -18,6 +20,9 @@ fragment ShoppingListItemCore on ShoppingListItem {
     id
     name
     symbol
+    displayAsFraction
+    minPrecision
+    autoConvertThreshold
   }
 }
 
@@ -55,7 +60,7 @@ fragment ShoppingListItemFragment on ShoppingListItem {
       }
     }
   }
-  # Extended unit fields (Core has id, name, symbol)
+  # Extended unit fields (Core has id, name, symbol, displayAsFraction, minPrecision, autoConvertThreshold)
   unit {
     type
     isMetric
@@ -280,8 +285,6 @@ fragment UnitFragment on ItemUnit {
   isDefault
   isPreferred
   isCommon
-  conversionRatio
-  conversionNote
   packageSize
   packageDescription
   retailUnit
@@ -359,6 +362,13 @@ fragment ItemFragment on Item {
   deletedAt
   version
   netWeight
+  density
+  preferredTrackingUnitId
+  preferredTrackingUnit {
+    id
+    name
+    symbol
+  }
   displayUnit {
     id
     name
@@ -432,6 +442,9 @@ fragment PantryItemFragment on PantryItem {
     baseUnitId
     conversionFactor
     isCommon
+    displayAsFraction
+    minPrecision
+    autoConvertThreshold
   }
   expiresAt
   storageLocation {
@@ -443,6 +456,15 @@ fragment PantryItemFragment on PantryItem {
   storageNotes
   initialQuantity
   currentQuantity
+  quantityInput
+  normalizedQuantity
+  normalizedUnitId
+  normalizedUnit {
+    id
+    name
+    symbol
+  }
+  displayFormat
   consumedQuantity
   reservedQuantity
   autoReorderPoint

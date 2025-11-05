@@ -61,10 +61,12 @@ export const useConfigurableSettings = (profile: any) => {
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [biometricType, setBiometricType] = useState<string | null>(null);
+  const [biometricLoading, setBiometricLoading] = useState(true);
 
   // Load biometric info on mount
   useEffect(() => {
     const loadBiometricInfo = async () => {
+      setBiometricLoading(true);
       try {
         const [biometricInfo, hasCredentials] = await Promise.all([
           getBiometricInfo(),
@@ -76,11 +78,15 @@ export const useConfigurableSettings = (profile: any) => {
         setBiometricEnabled(hasCredentials && biometricInfo.isAvailable);
       } catch (error) {
         console.error('Error loading biometric info:', error);
+      } finally {
+        setBiometricLoading(false);
       }
     };
 
     if (user?.email) {
       loadBiometricInfo();
+    } else {
+      setBiometricLoading(false);
     }
   }, [user?.email, getBiometricInfo, checkStoredCredentials]);
 
@@ -454,5 +460,6 @@ export const useConfigurableSettings = (profile: any) => {
   return {
     sections,
     BiometricModal,
+    biometricLoading,
   };
 };

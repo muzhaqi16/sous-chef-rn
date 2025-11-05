@@ -33,6 +33,7 @@ import { StorageDetailsSection } from './StorageDetailsSection';
 
 interface EditPantryItemFormData {
   quantity: number;
+  quantityInput: string; // User's fractional input (e.g., "1 1/2")
   itemWeight?: number;
   unit: string;
   reservedQuantity: string;
@@ -109,6 +110,8 @@ export const EditPantryItemForm: React.FC<EditPantryItemFormProps> = ({
       const item = existingItemData.pantryItem;
       return {
         quantity: item.currentQuantity || 1,
+        quantityInput:
+          item.quantityInput || item.currentQuantity?.toString() || '1',
         itemWeight: item.actualNetWeight || undefined,
         unit: item.actualNetWeightUnit?.symbol || item.unit?.symbol || '',
         reservedQuantity: item.reservedQuantity?.toString() || '',
@@ -128,6 +131,7 @@ export const EditPantryItemForm: React.FC<EditPantryItemFormProps> = ({
 
     return {
       quantity: 1,
+      quantityInput: '1',
       itemWeight: undefined,
       unit: '',
       reservedQuantity: '',
@@ -161,6 +165,13 @@ export const EditPantryItemForm: React.FC<EditPantryItemFormProps> = ({
       reset(getInitialValues());
     }
   }, [existingItemData, reset, getInitialValues]);
+
+  const handleQuantityInputChange = useCallback(
+    (text: string) => {
+      setValue('quantityInput', text);
+    },
+    [setValue],
+  );
 
   const handleIncrementQuantity = useCallback(() => {
     const current = watchedValues.quantity || 0;
@@ -196,7 +207,34 @@ export const EditPantryItemForm: React.FC<EditPantryItemFormProps> = ({
   );
 
   const handleSave = async (data: EditPantryItemFormData) => {
-    if (data.quantity <= 0) {
+    // Parse quantityInput to get numeric quantity
+    let quantityValue: number;
+    try {
+      const trimmed = data.quantityInput.trim();
+
+      // Check if it contains a fraction
+      if (trimmed.includes('/')) {
+        const parts = trimmed.split(/\s+/);
+        if (parts.length === 2) {
+          // Mixed number like "1 1/4"
+          const whole = parseInt(parts[0]);
+          const [num, den] = parts[1].split('/').map(Number);
+          quantityValue = whole + num / den;
+        } else {
+          // Simple fraction like "3/4"
+          const [num, den] = trimmed.split('/').map(Number);
+          quantityValue = num / den;
+        }
+      } else {
+        // Regular number
+        quantityValue = parseFloat(trimmed);
+      }
+
+      if (isNaN(quantityValue) || quantityValue <= 0) {
+        Alert.alert('Error', 'Please enter a valid quantity');
+        return;
+      }
+    } catch (err) {
       Alert.alert('Error', 'Please enter a valid quantity');
       return;
     }
@@ -216,7 +254,9 @@ export const EditPantryItemForm: React.FC<EditPantryItemFormProps> = ({
         variables: {
           id: itemId,
           input: {
-            currentQuantity: data.quantity,
+            currentQuantity: quantityValue,
+            // Note: quantityInput is not supported in UpdatePantryItemInput yet
+            // Backend needs to be updated to accept quantityInput for edit operations
             actualNetWeight: data.itemWeight || undefined,
             actualNetWeightUnitId: unitId || undefined,
             reservedQuantity: parseFloat(data.reservedQuantity || '0') || 0,
@@ -304,9 +344,11 @@ export const EditPantryItemForm: React.FC<EditPantryItemFormProps> = ({
             errors={errors}
             mode="edit"
             quantity={watchedValues.quantity}
+            quantityInput={watchedValues.quantityInput}
             itemWeight={watchedValues.itemWeight}
             unit={watchedValues.unit}
             isAutoReorder={watchedValues.isAutoReorder}
+            onQuantityInputChange={handleQuantityInputChange}
             onIncrementQuantity={handleIncrementQuantity}
             onDecrementQuantity={handleDecrementQuantity}
             onUnitSelected={setSelectedUnitId}

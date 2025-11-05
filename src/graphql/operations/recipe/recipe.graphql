@@ -143,3 +143,74 @@ mutation CreateShoppingListItemFromRecipeIngredient(
     unitConversionApplied
   }
 }
+
+mutation AddRecipeToShoppingList(
+  $recipeId: ID!
+  $shoppingListId: ID!
+  $servings: Float
+  $checkPantry: Boolean
+) {
+  addRecipeToShoppingList(
+    recipeId: $recipeId
+    shoppingListId: $shoppingListId
+    servings: $servings
+    checkPantry: $checkPantry
+  ) {
+    id
+    items {
+      ...ShoppingListItemCore
+    }
+  }
+}
+
+mutation MarkRecipeAsCooked(
+  $recipeId: ID!
+  $servings: Float
+  $deductFromPantry: Boolean!
+  $ingredientsUsed: [IngredientUsageInput!]
+  $notes: String
+) {
+  markRecipeAsCooked(
+    recipeId: $recipeId
+    servings: $servings
+    deductFromPantry: $deductFromPantry
+    ingredientsUsed: $ingredientsUsed
+    notes: $notes
+  ) {
+    id
+    servingsMade
+    notes
+    cookedAt
+    recipe {
+      id
+      name
+    }
+  }
+}
+
+mutation RecordPantryUsage(
+  $pantryItemId: ID!
+  $quantity: Float!
+  $unitId: ID!
+  $purpose: String
+  $notes: String
+) {
+  recordPantryUsage(
+    pantryItemId: $pantryItemId
+    quantity: $quantity
+    unitId: $unitId
+    purpose: $purpose
+    notes: $notes
+  ) {
+    id
+    quantityUsed
+    usedAt
+    purpose
+    notes
+    pantryItem {
+      id
+      itemName
+      currentQuantity
+    }
+  }
+}

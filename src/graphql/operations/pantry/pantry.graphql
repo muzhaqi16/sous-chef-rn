@@ -136,6 +136,60 @@ mutation DeletePantryItem($id: ID!) {
   }
 }
 
+mutation CreatePantryItemUsage($input: RecordPantryItemUsageInput!) {
+  createPantryItemUsage(input: $input) {
+    id
+    quantityUsed
+    usedAt
+    purpose
+    notes
+    pantryItem {
+      id
+      currentQuantity
+      consumedQuantity
+      ...PantryItemFragment
+    }
+    usedBy {
+      id
+      email
+    }
+  }
+}
+
+mutation RecordPantryItemWaste(
+  $id: ID!
+  $wasteAmount: Float!
+  $wasteReason: WasteReason!
+  $isComposted: Boolean
+  $isRecycled: Boolean
+) {
+  recordPantryItemWaste(
+    id: $id
+    wasteAmount: $wasteAmount
+    wasteReason: $wasteReason
+    isComposted: $isComposted
+    isRecycled: $isRecycled
+  ) {
+    ...PantryItemFragment
+  }
+}
+
+mutation UpdatePantryItemQuantity(
+  $pantryItemId: ID!
+  $quantity: String!
+  $unitId: ID
+  $version: Int
+) {
+  updatePantryItemQuantity(
+    pantryItemId: $pantryItemId
+    quantity: $quantity
+    unitId: $unitId
+    version: $version
+  ) {
+    ...PantryItemFragment
+  }
+}
+
 # ============================================
 # OFFLINE SYNC MUTATIONS
 # ============================================

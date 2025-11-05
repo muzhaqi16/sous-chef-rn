@@ -12,8 +12,9 @@ import {
 import Animated, {
   LinearTransition,
   FadeInDown,
-  SlideInUp,
-  SlideOutUp,
+  FadeIn,
+  FadeOut,
+  Easing,
 } from 'react-native-reanimated';
 import { Icon } from '#utils';
 import { useAppNavigation } from '#hooks';
@@ -33,6 +34,7 @@ import {
   getInvitableRoles,
   canInviteToHome,
 } from '#/utils/permissions/homePermissions';
+import { commonStyles } from '#/styles';
 
 export const HomeManagement: React.FC = () => {
   const { goBack, navigate } = useAppNavigation();
@@ -45,7 +47,9 @@ export const HomeManagement: React.FC = () => {
   const [homeName, setHomeName] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [refreshing, setRefreshing] = useState(false);
-  const [highlightedHomeId, setHighlightedHomeId] = useState<string | null>(null);
+  const [highlightedHomeId, setHighlightedHomeId] = useState<string | null>(
+    null,
+  );
   const highlightTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const {
@@ -220,9 +224,10 @@ export const HomeManagement: React.FC = () => {
         {/* Create/Join Home Form */}
         {showCreateForm && (
           <Animated.View
-            entering={SlideInUp.duration(300).springify()}
-            exiting={SlideOutUp.duration(250)}
-            style={styles.formContainer}
+            entering={FadeIn.duration(300).easing(Easing.bezier(0.25, 0.1, 0.25, 1).factory())}
+            exiting={FadeOut.duration(200).easing(Easing.bezier(0.25, 0.1, 0.25, 1).factory())}
+            layout={LinearTransition.duration(250)}
+            style={[commonStyles.shadow, styles.formContainer]}
           >
             {/* Mode Switcher */}
             <View style={styles.modeSwitcher}>
@@ -335,19 +340,23 @@ export const HomeManagement: React.FC = () => {
         )}
 
         {/* Homes List */}
-        <ScrollView
+        <Animated.View
+          layout={LinearTransition.duration(300)}
           style={styles.scrollView}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              tintColor={theme.colors.primary}
-              colors={[theme.colors.primary]}
-            />
-          }
         >
+          <ScrollView
+            style={{ flex: 1 }}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+                tintColor={theme.colors.primary}
+                colors={[theme.colors.primary]}
+              />
+            }
+          >
           {[...homes]
             .sort((a, b) => {
               // Put default home first, keep rest in original order
@@ -366,7 +375,11 @@ export const HomeManagement: React.FC = () => {
                 <Animated.View
                   key={home.id}
                   entering={FadeInDown.delay(index * 50).springify()}
-                  layout={LinearTransition.duration(600).springify().damping(30).stiffness(180).mass(1.5)}
+                  layout={LinearTransition.duration(600)
+                    .springify()
+                    .damping(30)
+                    .stiffness(180)
+                    .mass(1.5)}
                 >
                   <HomeCard
                     home={home as PartialHome}
@@ -382,6 +395,7 @@ export const HomeManagement: React.FC = () => {
               );
             })}
         </ScrollView>
+        </Animated.View>
       </View>
       {InviteModalComponent}
     </>
@@ -418,8 +432,9 @@ const styles = StyleSheet.create(theme => ({
   formContainer: {
     padding: 16,
     backgroundColor: theme.colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    marginHorizontal: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+    borderRadius: theme.radii.lg,
   },
   modeSwitcher: {
     flexDirection: 'row',

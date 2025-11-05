@@ -64,7 +64,9 @@ export const DetailTemplate: React.FC<DetailTemplateProps> = ({
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
+    paddingVertical: theme.spacing.md,
     backgroundColor: theme.colors.background,
+    gap: theme.spacing.md,
   },
   content: {
     paddingHorizontal: theme.spacing.md,

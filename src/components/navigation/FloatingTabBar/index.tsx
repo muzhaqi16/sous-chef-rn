@@ -51,12 +51,12 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = React.memo(({
     const shouldHide = isOverlayOpen || shouldHideFromNavigation;
 
     translateY.value = withSpring(shouldHide ? 150 : 0, {
-      damping: 20,
-      stiffness: 200,
+      damping: 40,
+      stiffness: 250,
     });
     opacity.value = withSpring(shouldHide ? 0 : 1, {
-      damping: 20,
-      stiffness: 200,
+      damping: 40,
+      stiffness: 250,
     });
   }, [isOverlayOpen, shouldHideFromNavigation, translateY, opacity]);
 
@@ -90,8 +90,8 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = React.memo(({
         // eslint-disable-next-line react-hooks/rules-of-hooks
         useEffect(() => {
           iconScale.value = withSpring(isFocused ? 1.2 : 1, {
-            damping: 20,
-            stiffness: 200,
+            damping: 35,
+            stiffness: 250,
           });
         }, [isFocused, iconScale]);
 

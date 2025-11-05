@@ -35,6 +35,7 @@ interface AddPantryItemFormData {
   selectedItemId?: string;
   brand: string;
   quantity: number;
+  quantityInput: string; // User's fractional input (e.g., "1 1/2")
   itemWeight?: number; // Optional weight per item for packaged items
   unit: string;
   minimumQuantity: string;
@@ -143,6 +144,7 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
       itemName: '',
       brand: '',
       quantity: 1,
+      quantityInput: '1',
       itemWeight: undefined,
       unit: '',
       minimumQuantity: '',
@@ -198,6 +200,13 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
     [setValue],
   );
 
+  const handleQuantityInputChange = useCallback(
+    (text: string) => {
+      setValue('quantityInput', text);
+    },
+    [setValue],
+  );
+
   const handleIncrementQuantity = useCallback(() => {
     const current = watchedValues.quantity || 0;
     setValue('quantity', current + 1);
@@ -214,13 +223,40 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
       return;
     }
 
-    if (data.quantity <= 0) {
-      Alert.alert('Error', 'Please enter a valid quantity');
+    if (!currentPantryId) {
+      Alert.alert('Error', 'No pantry selected. Please select a pantry first.');
       return;
     }
 
-    if (!currentPantryId) {
-      Alert.alert('Error', 'No pantry selected. Please select a pantry first.');
+    // Parse quantityInput to get numeric quantity
+    let quantityValue: number;
+    try {
+      const trimmed = data.quantityInput.trim();
+
+      // Check if it contains a fraction
+      if (trimmed.includes('/')) {
+        const parts = trimmed.split(/\s+/);
+        if (parts.length === 2) {
+          // Mixed number like "1 1/4"
+          const whole = parseInt(parts[0]);
+          const [num, den] = parts[1].split('/').map(Number);
+          quantityValue = whole + num / den;
+        } else {
+          // Simple fraction like "3/4"
+          const [num, den] = trimmed.split('/').map(Number);
+          quantityValue = num / den;
+        }
+      } else {
+        // Regular number
+        quantityValue = parseFloat(trimmed);
+      }
+
+      if (isNaN(quantityValue) || quantityValue <= 0) {
+        Alert.alert('Error', 'Please enter a valid quantity');
+        return;
+      }
+    } catch (err) {
+      Alert.alert('Error', 'Please enter a valid quantity');
       return;
     }
 
@@ -238,7 +274,8 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
       const baseInput = {
         pantryId: currentPantryId, // Already validated above, so we know it exists
         unitId: unitId || '',
-        initialQuantity: data.quantity,
+        initialQuantity: quantityValue,
+        quantityInput: data.quantityInput.trim(), // Save the user's fractional input
         storageState: data.storageState as StorageState,
         expiresAt: data.expirationDate?.toISOString() || null,
         storageNotes: data.notes.trim() || null,
@@ -321,8 +358,10 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
             errors={errors}
             mode="add"
             quantity={watchedValues.quantity}
+            quantityInput={watchedValues.quantityInput}
             itemWeight={watchedValues.itemWeight}
             unit={watchedValues.unit}
+            onQuantityInputChange={handleQuantityInputChange}
             onIncrementQuantity={handleIncrementQuantity}
             onDecrementQuantity={handleDecrementQuantity}
             onUnitSelected={setSelectedUnitId}

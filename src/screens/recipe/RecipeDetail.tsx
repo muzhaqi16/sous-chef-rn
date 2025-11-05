@@ -629,9 +629,11 @@ export const RecipeDetail: React.FC = () => {
 
           {/* Recipe Metadata */}
           <View style={styles.metadata}>
-            <Text style={styles.metadataText}>
-              🍽️ {displayData.servings} servings
-            </Text>
+            {displayData.servings && (
+              <Text style={styles.metadataText}>
+                🍽️ {displayData.servings} servings
+              </Text>
+            )}
             {displayData.readyInMinutes && (
               <Text style={styles.metadataText}>
                 ⏱️ {displayData.readyInMinutes} min
@@ -701,8 +703,9 @@ export const RecipeDetail: React.FC = () => {
                   ingredient.original ||
                   `${ingredient.quantity || ''} ${
                     ingredient.unit?.symbol || ''
-                  } ${ingredient.name}`.trim() ||
-                  ingredient.originalString;
+                  } ${ingredient.name || ''}`.trim() ||
+                  ingredient.originalString ||
+                  'Unknown ingredient';
                 const isAdded = addedIngredients.has(ingredient.id);
 
                 return (
@@ -868,7 +871,7 @@ export const RecipeDetail: React.FC = () => {
                 <View style={styles.ingredientInfo}>
                   <Text style={styles.ingredientName}>{item.name}</Text>
                   <Text style={styles.ingredientAmount}>
-                    {item.quantity} {item.unit?.symbol || ''}
+                    {item.quantity ?? ''} {item.unit?.symbol || ''}
                   </Text>
                 </View>
               </TouchableOpacity>

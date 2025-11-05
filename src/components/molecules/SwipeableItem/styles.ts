@@ -24,7 +24,8 @@ export const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.charade['950'],
     justifyContent: 'center',
     alignItems: 'center',
-    width: 120, // Fixed width for consistent spacing
+    width: 180, // Fixed width for two buttons (consume + waste)
+    gap: theme.spacing.sm, // Space between buttons
     borderTopRightRadius: 0, // Square connection to card
     borderBottomRightRadius: 0, // Square connection to card
     borderTopLeftRadius: 12, // Round the outer edge

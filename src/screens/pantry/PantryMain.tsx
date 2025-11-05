@@ -1,10 +1,16 @@
-import React, { useMemo, useEffect, useCallback, useRef } from 'react';
+import React, { useMemo, useEffect, useCallback, useRef, useState } from 'react';
 import { Alert, View, Image } from 'react-native';
 import { useAppNavigation } from '#hooks';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
 import { useDefaultHome, usePantryManagement } from '#hooks';
 import { useStore } from '#store';
-import { useGetHomeBasicQuery } from '#generated';
+import {
+  useGetHomeBasicQuery,
+  useCreatePantryItemUsageMutation,
+  useRecordPantryItemWasteMutation,
+  UsagePurpose,
+  WasteReason,
+} from '#generated';
 import { useScanner } from '#context';
 import { commonStyles } from '#/styles';
 
@@ -15,6 +21,8 @@ import {
   AnimatedItemSelector,
   FormattedItemSubtitle,
 } from '#components';
+import { ConsumePantryItemModal } from '#components/modals/ConsumePantryItemModal';
+import { RecordWastePantryItemModal } from '#components/modals/RecordWastePantryItemModal';
 import { getItemImageUrl } from '#utils/imageUtils';
 import type {
   SelectorConfig,
@@ -29,6 +37,15 @@ export const PantryMain: React.FC = () => {
   const setSelectedPantryId = useStore(state => state.setSelectedPantryId);
   const selectedPantryId = useStore(state => state.selectedPantryId);
   const selectorRef = useRef<ItemSelectorRef>(null);
+  const openSwipeableRef = useRef<any>(null);
+
+  // Consume item state
+  const [consumeModalVisible, setConsumeModalVisible] = useState(false);
+  const [selectedItemForConsume, setSelectedItemForConsume] = useState<any>(null);
+
+  // Waste item state
+  const [wasteModalVisible, setWasteModalVisible] = useState(false);
+  const [selectedItemForWaste, setSelectedItemForWaste] = useState<any>(null);
 
   const { selectedHomeId, homes, getDefaultPantry } = useDefaultHome();
 
@@ -132,6 +149,128 @@ export const PantryMain: React.FC = () => {
     refetch,
     loading,
   } = usePantryManagement(pantry?.id);
+
+  // Consume item mutation
+  const [createPantryItemUsage] = useCreatePantryItemUsageMutation({
+    errorPolicy: 'all',
+    onError: error => {
+      console.error('Failed to create pantry item usage:', error);
+      Alert.alert('Error', 'Failed to record item consumption. Please try again.');
+    },
+  });
+
+  // Waste item mutation
+  const [recordPantryItemWaste] = useRecordPantryItemWasteMutation({
+    errorPolicy: 'all',
+    onError: error => {
+      console.error('Failed to record pantry item waste:', error);
+      Alert.alert('Error', 'Failed to record waste. Please try again.');
+    },
+  });
+
+  // Handler to open consume modal
+  const handleConsumeItem = useCallback((itemId: string) => {
+    const item = pantryItems.find(p => p.id === itemId);
+    if (item) {
+      setSelectedItemForConsume(item);
+      setConsumeModalVisible(true);
+    }
+  }, [pantryItems]);
+
+  // Handler to confirm consumption
+  const handleConfirmConsume = useCallback(async (
+    quantityUsed: number,
+    quantityInput: string,
+    purpose: UsagePurpose,
+    notes: string,
+  ) => {
+    if (!selectedItemForConsume) return;
+
+    try {
+      await createPantryItemUsage({
+        variables: {
+          input: {
+            pantryItemId: selectedItemForConsume.id,
+            quantityUsed,
+            purpose,
+            notes: notes || undefined,
+          },
+        },
+      });
+
+      // Reset state
+      setConsumeModalVisible(false);
+      setSelectedItemForConsume(null);
+
+      // Refetch to get updated quantities
+      await refetch();
+    } catch (error) {
+      console.error('Error consuming pantry item:', error);
+    }
+  }, [selectedItemForConsume, createPantryItemUsage, refetch]);
+
+  // Handler to close consume modal
+  const handleCloseConsumeModal = useCallback(() => {
+    setConsumeModalVisible(false);
+    setSelectedItemForConsume(null);
+  }, []);
+
+  // Handler to open waste modal
+  const handleWasteItem = useCallback((itemId: string) => {
+    const item = pantryItems.find(p => p.id === itemId);
+    if (item) {
+      setSelectedItemForWaste(item);
+      setWasteModalVisible(true);
+    }
+  }, [pantryItems]);
+
+  // Handler to confirm waste recording
+  const handleConfirmWaste = useCallback(async (
+    wasteAmount: number,
+    wasteReason: WasteReason,
+    isComposted: boolean,
+    isRecycled: boolean,
+    _notes: string,
+  ) => {
+    if (!selectedItemForWaste) return;
+
+    try {
+      await recordPantryItemWaste({
+        variables: {
+          id: selectedItemForWaste.id,
+          wasteAmount,
+          wasteReason,
+          isComposted,
+          isRecycled,
+        },
+      });
+
+      // Reset state
+      setWasteModalVisible(false);
+      setSelectedItemForWaste(null);
+
+      // Refetch to get updated quantities
+      await refetch();
+    } catch (error) {
+      console.error('Error recording pantry item waste:', error);
+    }
+  }, [selectedItemForWaste, recordPantryItemWaste, refetch]);
+
+  // Handler to close waste modal
+  const handleCloseWasteModal = useCallback(() => {
+    setWasteModalVisible(false);
+    setSelectedItemForWaste(null);
+  }, []);
+
+  // Handle swipeable item opening - ensure only one item is open at a time
+  const handleSwipeableWillOpen = useCallback((ref: any) => {
+    if (openSwipeableRef.current && openSwipeableRef.current !== ref) {
+      // Close the previously open swipeable
+      openSwipeableRef.current.current?.close();
+    }
+    // Update to track the newly opening swipeable
+    openSwipeableRef.current = ref;
+  }, []);
 
   // Refetch pantry items when switching between pantries
   const prevPantryIdRef = useRef<string | undefined>(pantry?.id);
@@ -402,7 +541,10 @@ export const PantryMain: React.FC = () => {
         onItemPress={id => navigateTo.pantryItemDetail({ itemId: id })}
         onItemEdit={id => navigateTo.pantryItem({ itemId: id })}
         onItemDelete={handleDeleteItem}
+        onItemConsume={handleConsumeItem}
+        onItemWaste={handleWasteItem}
         onRefresh={handleRefresh}
+        onSwipeableWillOpen={handleSwipeableWillOpen}
         loading={isLoadingInitial}
         hasNoData={!selectedHomeId}
         showHeader={true}
@@ -417,6 +559,18 @@ export const PantryMain: React.FC = () => {
         maxHeight={600}
         onOpen={handleOverlayOpen}
         onClose={handleOverlayClose}
+      />
+      <ConsumePantryItemModal
+        visible={consumeModalVisible}
+        pantryItem={selectedItemForConsume}
+        onClose={handleCloseConsumeModal}
+        onConfirm={handleConfirmConsume}
+      />
+      <RecordWastePantryItemModal
+        visible={wasteModalVisible}
+        pantryItem={selectedItemForWaste}
+        onClose={handleCloseWasteModal}
+        onConfirm={handleConfirmWaste}
       />
     </View>
   );

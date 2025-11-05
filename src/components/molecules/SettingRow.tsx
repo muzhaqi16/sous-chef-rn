@@ -145,10 +145,14 @@ export const SettingRow: React.FC<SettingRowProps> = ({
 
           {item.type === 'modal' && (
             <View style={styles.modalValueContainer}>
-              <ValueText>
+              <Text
+                style={styles.modalValueText}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
                 {item.options?.find((opt: any) => opt.value === item.value)
                   ?.label || 'Select'}
-              </ValueText>
+              </Text>
               <Icon
                 library="Feather"
                 name="chevron-right"
@@ -272,7 +276,7 @@ const styles = StyleSheet.create(theme => ({
     padding: 16,
     borderBottomWidth: 1,
     borderColor: theme.colors.divider,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: theme.colors.surfaceVariant,
   },
   rowFirst: {
     borderTopLeftRadius: 12,
@@ -289,6 +293,12 @@ const styles = StyleSheet.create(theme => ({
   modalValueContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 4,
+  },
+  modalValueText: {
+    fontSize: 16,
+    color: theme.colors.textSecondary,
   },
   modalContainer: {
     flex: 1,

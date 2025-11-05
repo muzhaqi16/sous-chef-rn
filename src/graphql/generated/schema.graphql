@@ -783,10 +783,13 @@ type CookingLog {
   actualCookTime: Int
   actualPrepTime: Int
   cookedAt: DateTime!
+  deductionMethod: DeductionMethod
   difficulty: Difficulty
   id: ID!
   imageUrl: String
+  ingredientsUsed: JSON
   notes: String
+  pantryDeducted: Boolean!
   pantryItemsUsed: [PantryItemUsage!]!
   rating: Int
   recipe: Recipe!
@@ -1360,6 +1363,15 @@ input DateRangeInput {
 }
 
 scalar DateTime
+
+"""
+Method used to deduct ingredients from pantry
+"""
+enum DeductionMethod {
+  AUTOMATIC
+  MANUAL
+  RECIPE_BASED
+}
 
 type Device {
   androidId: String
@@ -2142,8 +2154,10 @@ type Item {
   creations: [ItemCreation!]!
   dataSource: DataSource!
   deletedAt: DateTime
+  density: Float
   description: String
   displayUnit: Unit
+  displayUnitId: String
   edits: [ItemEdit!]!
   externalSources: [ExternalSourceMapping!]!
   healthBenefits: JSON
@@ -2159,10 +2173,15 @@ type Item {
   nutritions: JSON
   pantryItems: [PantryItem!]!
   popularity: Int!
+  preferredTrackingUnit: Unit
+  preferredTrackingUnitId: String
   priceHistory: [ItemPriceHistory!]!
   primaryUpc: String
   purchases: [Purchase!]!
   recipeIngredients: [RecipeIngredient!]!
+  servingSize: Float
+  servingSizeUnit: String
+  servingsPerPackage: Int
   shelfLifeDays: Int
   shoppingListItems: [ShoppingListItem!]!
   showInOnboarding: Boolean!
@@ -2171,6 +2190,7 @@ type Item {
   storeSkus: [ItemStoreSku!]!
   tags: [String!]!
   type: ItemType!
+  unitConversions: [ItemUnitConversion!]!
   units: [ItemUnit!]!
   updatedAt: DateTime!
   version: Int!
@@ -2351,28 +2371,31 @@ type ItemUnit {
   addedBy: User
   averagePricePerUnit: Float
   confidence: Float
-  conversionNote: String
-  conversionRatio: Float
   createdAt: DateTime!
   deletedAt: DateTime
+  displayFormat: DisplayFormat!
   id: ID!
   isCommon: Boolean!
   isDefault: Boolean!
   isPreferred: Boolean!
+  isTrackingDefault: Boolean!
   isVerified: Boolean!
   item: Item
   itemId: String!
   lastPriceUpdate: DateTime
   lastUsedAt: DateTime
+  maxDisplayPrecision: Int
   maxQuantity: Float
   minQuantity: Float
   packageDescription: String
   packageSize: Float
   popularityScore: Float!
+  preferredDenominators: JSON
   priceSource: String
   quantityStep: Float
   recommendedFor: [UnitRecommendation!]!
   retailUnit: Boolean!
+  roundToNearestFraction: Boolean!
   source: UnitSource!
   unit: Unit
   unitId: String!
@@ -3772,6 +3795,7 @@ type PantryItem {
   createdAt: DateTime!
   currentQuantity: Float!
   customCategory: String
+  displayFormat: DisplayFormat!
   estimatedShelfLife: Int
   expirationAlert: Boolean!
   expiresAt: DateTime
@@ -3789,6 +3813,9 @@ type PantryItem {
   lastUsedAt: DateTime
   lotNumber: String
   lowStockAlert: Boolean!
+  normalizedQuantity: Float
+  normalizedUnit: Unit
+  normalizedUnitId: String
   openedAt: DateTime
   pantry: Pantry!
   pantryId: String!
@@ -3796,6 +3823,7 @@ type PantryItem {
   priority: Int
   purchase: Purchase
   purchaseId: String
+  quantityInput: String
   remainingValue: Float
   reservedQuantity: Float!
   storageLocation: StorageLocation
@@ -3863,13 +3891,17 @@ type PantryItemPhoto {
 
 type PantryItemUsage {
   cookingLog: CookingLog
+  cookingLogId: String
   id: ID!
   mealPlanItem: MealPlanItem
+  mealPlanItemId: String
   notes: String
   pantryItem: PantryItem!
   purpose: UsagePurpose!
   quantityUsed: Float!
   recipe: Recipe
+  recipeId: String
+  usageSource: UsageSource!
   usedAt: DateTime!
   usedBy: User!
 }
@@ -4952,6 +4984,7 @@ type ShoppingListItem {
   category: String
   createdAt: DateTime!
   deletedAt: DateTime
+  displayFormat: DisplayFormat!
   estimatedPrice: Float
   highestPrice: Float
   id: ID!
@@ -4966,7 +4999,14 @@ type ShoppingListItem {
   lastKnownPrice: Float
   lastPurchaseDate: DateTime
   lowestPrice: Float
+  mealPlan: MealPlan
+  mealPlanId: String
+  mealPlanItem: MealPlanItem
+  mealPlanItemId: String
   mealPlanReference: String
+  normalizedQuantity: Float
+  normalizedUnit: Unit
+  normalizedUnitId: String
   notes: String
   preferredStore: Store
   previouslyPurchased: Boolean!
@@ -4980,10 +5020,12 @@ type ShoppingListItem {
   purchasedQuantity: Float
   purchases: [Purchase!]
   quantity: Float
+  quantityInput: String
   recipe: Recipe
   recipeIngredient: RecipeIngredient
   shoppingList: ShoppingList!
   sortOrder: String!
+  storageLocation: String
   storeSection: String
   unit: Unit
   unitName: String
@@ -5020,7 +5062,7 @@ type ShoppingListItemPreviousValues {
   name: String
   notes: String
   price: Float
-  quantity: Int
+  quantity: Float
 }
 
 type ShoppingListOwnership {
@@ -5636,15 +5678,21 @@ Unit of measurement type
 Cache: 2 hours - measurement units are static reference data
 """
 type Unit {
+  autoConvertThreshold: Float
+  autoConvertToUnit: Unit
+  autoConvertToUnitId: String
   baseUnit: Unit
   baseUnitId: String
+  commonFractions: JSON
   conversionFactor: Float!
   createdAt: DateTime!
   derivedUnits: [Unit!]!
+  displayAsFraction: Boolean!
   id: ID!
   isCommon: Boolean!
   isMetric: Boolean!
   itemUnits: [ItemUnit!]!
+  minPrecision: Float!
   name: String!
   notes: String
   pantryItems: [PantryItem!]!
@@ -6306,6 +6354,16 @@ enum UsagePurpose {
 }
 
 """
+Source that triggered pantry item usage
+"""
+enum UsageSource {
+  COOKING_LOG
+  MANUAL
+  MEAL_PLAN
+  RECIPE
+}
+
+"""
 User account type
 Cache: 5 minutes - user data changes occasionally, always private
 """
@@ -6478,6 +6536,7 @@ User settings and preferences
 Cache: 10 minutes - settings rarely change, always private
 """
 type UserSettings {
+  alwaysShowFractions: Boolean!
   autoSync: Boolean!
   betaFeatures: [String!]!
   compactMode: Boolean!
@@ -6485,10 +6544,13 @@ type UserSettings {
   enabledFeatures: [String!]!
   id: ID!
   language: String!
+  maxDecimalPlaces: Int!
   offlineMode: Boolean!
   personalizedAds: Boolean!
   preferredCurrency: String!
+  preferredFractionSet: JSON
   preferredUnitSystem: UnitSystem!
+  quantityDisplayPreference: QuantityDisplayPreference!
   shareUsageData: Boolean!
   shareWithPartners: Boolean!
   showTutorials: Boolean!
