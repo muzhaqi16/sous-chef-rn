@@ -2,14 +2,12 @@ import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { Alert } from 'react-native';
 import { useStore } from '#store';
 import { useTheme, useAuth } from '#hooks';
-import { useApolloClient } from '@apollo/client/react';
 import {
   useUpdateUserProfileMutation,
   useUpdateUserPreferencesMutation,
-  GetUserProfileQuery,
-  GetUserProfileDocument,
   ProfileVisibility,
 } from '#generated';
+import { ThemePreference } from '#store/slices/preferencesSlice';
 
 import { PROFILE_SETTINGS_CONFIG } from '#config';
 import { dateStringToISO, extractDateString } from '#utils/dateUtils';
@@ -18,15 +16,46 @@ import { useUserPreferences } from '#hooks/navigation/useUserPreferences';
 
 export const useConfigurableSettings = (profile: any) => {
   const store = useStore();
-  const client = useApolloClient();
   const { user, logout, getUserNavigationState } = useStore();
   const { userThemePreference, setTheme } = useTheme();
   const { checkStoredCredentials, getBiometricInfo, removeCredentials } =
     useAuth();
   const { resetBiometricDeclination, markBiometricEnabled } =
     useUserPreferences();
-  const [updateProfileMutation] = useUpdateUserProfileMutation();
-  const [updateSettingsMutation] = useUpdateUserPreferencesMutation();
+  // ===== MUTATION 1: Update User Profile =====
+  const [updateProfileMutation] = useUpdateUserProfileMutation({
+    errorPolicy: 'all',
+    // Uses automatic normalization - mutation returns full UserProfile fragment
+    // No manual cache update needed (Pattern 2)
+    optimisticResponse: (variables, { IGNORE }) => {
+      if (!profile) return IGNORE;
+
+      return {
+        __typename: 'Mutation',
+        updateProfile: {
+          ...profile,
+          ...variables.input,
+          __typename: 'UserProfile',
+        },
+      };
+    },
+    onError: error => {
+      console.error('Failed to update profile:', error);
+      Alert.alert('Error', 'Failed to update profile. Please try again.');
+    },
+  });
+
+  // ===== MUTATION 2: Update User Preferences =====
+  const [updateSettingsMutation] = useUpdateUserPreferencesMutation({
+    errorPolicy: 'all',
+    // Note: No optimistic response - UserSettings has many required fields that are difficult to predict
+    // Automatic normalization handles UI updates when server responds (~100-200ms)
+    // No manual cache update needed (Pattern 2)
+    onError: error => {
+      console.error('Failed to update preferences:', error);
+      Alert.alert('Error', 'Failed to update preferences. Please try again.');
+    },
+  });
 
   // Biometric state
   const [biometricAvailable, setBiometricAvailable] = useState(false);
@@ -85,39 +114,19 @@ export const useConfigurableSettings = (profile: any) => {
   const updateProfile = useCallback(
     async (input: Partial<Record<any, any>>) => {
       try {
-        // Read current cache
-        const cache = client.readQuery<GetUserProfileQuery>({
-          query: GetUserProfileDocument,
-        });
-
-        // Optimistically update the cache immediately
-        if (cache?.userProfile) {
-          client.writeQuery<GetUserProfileQuery>({
-            query: GetUserProfileDocument,
-            data: {
-              userProfile: {
-                ...cache.userProfile,
-                ...input,
-              },
-            },
-          });
-        }
-
-        // Then perform the actual mutation
+        // Mutation uses automatic normalization + optimistic response
+        // No manual cache update needed (Pattern 2)
         await updateProfileMutation({
           variables: {
             input,
           },
         });
       } catch (error) {
+        // Error handled by onError handler in mutation options
         console.error('Failed to update profile:', error);
-        // On error, refetch to restore correct state
-        client.refetchQueries({
-          include: [GetUserProfileDocument],
-        });
       }
     },
-    [updateProfileMutation, client],
+    [updateProfileMutation],
   );
 
   const updateUserPreferences = useCallback(
@@ -274,7 +283,7 @@ export const useConfigurableSettings = (profile: any) => {
               { label: '🌙 Dark', value: 'DARK' },
               { label: '📱 System', value: 'SYSTEM' },
             ];
-            baseItem.onSave = (value: 'LIGHT' | 'DARK' | 'SYSTEM') => {
+            baseItem.onSave = (value: ThemePreference) => {
               setTheme(value);
               updateUserPreferences({ theme: value });
             };
@@ -287,7 +296,9 @@ export const useConfigurableSettings = (profile: any) => {
             baseItem.value = userThemePreference === 'DARK';
             baseItem.onPress = () => {
               const newTheme =
-                userThemePreference === 'DARK' ? 'LIGHT' : 'DARK';
+                userThemePreference === ThemePreference.DARK
+                  ? ThemePreference.LIGHT
+                  : ThemePreference.DARK;
               setTheme(newTheme);
               updateUserPreferences({ theme: newTheme });
             };

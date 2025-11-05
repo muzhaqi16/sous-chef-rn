@@ -38,8 +38,9 @@ export const useDefaultHome = () => {
   // Sync remote default home and pantry to local store
   // This ensures backend's defaults are auto-selected on new device login
   useEffect(() => {
-    // Sync default home ID
-    if (remoteDefaultHomeId && remoteDefaultHomeId !== selectedHomeId) {
+    // Only sync remote → local when no local selection exists
+    // This prevents interference with user-initiated setDefaultHome actions
+    if (!selectedHomeId && remoteDefaultHomeId) {
       setSelectedHomeId(remoteDefaultHomeId);
       console.log('🏠 Auto-selected default home:', remoteDefaultHomeId);
     }
@@ -78,8 +79,9 @@ export const useDefaultHome = () => {
     return homeData.home.pantries.length > 0 ? homeData.home.pantries[0] : null;
   };
 
-  // Provide the most appropriate home ID (prefer remote default, fallback to store value)
-  const currentHomeId = remoteDefaultHomeId || selectedHomeId;
+  // Provide the most appropriate home ID (prefer Zustand store, fallback to remote default)
+  // This ensures instant UI updates after mutations while still syncing from server on initial load
+  const currentHomeId = selectedHomeId ?? remoteDefaultHomeId;
 
   return {
     selectedHomeId: currentHomeId,

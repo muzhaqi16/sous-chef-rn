@@ -12,7 +12,6 @@ import {
   useSetDefaultHomeMutation,
   useJoinHomeByCodeMutation,
   useGetHomeByJoinCodeLazyQuery,
-  GetDefaultHomeDocument,
 } from '#generated';
 import { useSearchableList } from '../useSearchableList';
 import { useStore } from '#store';
@@ -22,6 +21,7 @@ import {
   getVersionConflictMessage,
 } from '#/utils/errors/versionConflict';
 import { usePreservedArrayData } from '#/hooks/apollo';
+import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
 
 export function useHomeManagement() {
   const { selectedHomeId, setSelectedHomeId, setSelectedPantryId } = useStore();
@@ -47,29 +47,32 @@ export function useHomeManagement() {
   });
 
   const [setDefaultHomeMutation] = useSetDefaultHomeMutation({
-    // Update cache directly instead of refetching
-    update: (cache, { data }) => {
-      if (!data?.setDefaultHome) return;
+    errorPolicy: 'all',
 
-      try {
-        // Find the home that was set as default
-        const homeId = data.setDefaultHome.id;
-        const home = homes?.find(h => h.id === homeId);
+    // Optimistic response for instant UI updates (especially offline)
+    optimisticResponse: variables => ({
+      __typename: 'Mutation',
+      setDefaultHome: {
+        __typename: 'UserSettings',
+        id: variables.homeId,
+      },
+    }),
 
-        if (home) {
-          // Write the default home query result to cache
-          cache.writeQuery({
-            query: GetDefaultHomeDocument,
-            data: {
-              getDefaultHome: home,
-            },
-          });
-        }
-      } catch (error) {
-        console.warn('Cache update failed for setDefaultHome:', error);
-        // Fallback: refetch only on error
-        refetchDefaultHome();
-      }
+    // Update Apollo cache to keep GetDefaultHomeQuery in sync
+    // Uses existing Home reference from cache to avoid "Missing fields" errors
+    update: (cache, _result, { variables }) => {
+      if (!variables?.homeId) return;
+
+      // Get reference to the Home object already in cache
+      const homeRef = cache.identify({ __typename: 'Home', id: variables.homeId });
+      if (!homeRef) return;
+
+      // Update the getDefaultHome field to point to this Home reference
+      cache.modify({
+        fields: {
+          getDefaultHome: () => homeRef,
+        },
+      });
     },
   });
 
@@ -125,9 +128,14 @@ export function useHomeManagement() {
 
   const [createHomeMutation, { loading: creating, client }] =
     useCreateHomeMutation({
-      // Note: No optimisticResponse - the mutation returns complex nested types
-      // (members, myMembership with 15+ fields, pantries, membershipStats, etc.)
-      // Cache update provides instant UI feedback when server responds (~100-200ms)
+      errorPolicy: 'all',
+      // Note: No optimisticResponse - the mutation returns complex nested types that are difficult to predict:
+      // - Home object with 20+ fields (members, myMembership, pantries, membershipStats, etc.)
+      // - Nested objects like default pantry (if createDefaultPantry=true)
+      // - Server-generated IDs, timestamps, and computed fields
+      // Creating accurate optimistic response would require duplicating complex server logic
+      // Instead, cache update provides feedback within ~100-200ms which is acceptable UX
+      // (See docs/apollo-client-patterns.md - acceptable to skip optimistic response for complex creates)
       // Update cache directly instead of refetching
       update: (cache, { data }) => {
         if (!data?.createHome) return;
@@ -207,6 +215,18 @@ export function useHomeManagement() {
     });
 
   const [updateHomeMutation, { loading: updating }] = useUpdateHomeMutation({
+    errorPolicy: 'all',
+    // Uses automatic normalization - mutation returns full Home fragment
+    // No manual cache update needed (Pattern 2)
+    optimisticResponse: (variables, { IGNORE }) => {
+      const currentHome = homes?.find((h: any) => h.id === variables.id);
+      if (!currentHome) return IGNORE;
+
+      return {
+        __typename: 'Mutation',
+        updateHome: enhanceWithVersion(currentHome as any, variables.input),
+      };
+    },
     onCompleted: data => {
       if (data?.updateHome) {
         Alert.alert('Success', 'Home updated successfully');
@@ -303,33 +323,33 @@ export function useHomeManagement() {
 
   // Invite user to home mutation
   const [inviteUserMutation, { loading: inviting }] = useInviteToHomeMutation({
-    // Cache update to add the new invite/member
+    errorPolicy: 'all',
+    // Note: No cache update or optimistic response needed
+    // The cache update returns existingMembers unchanged because:
+    // 1. Invites don't immediately add members (requires acceptance)
+    // 2. Real-time subscription handles all updates when invite is sent/accepted
+    // 3. This pattern avoids UI flickering from optimistic updates that may not match server state
+    // Following subscription-based update pattern for real-time features (see docs/apollo-client-patterns.md)
     update: (cache, { data }, { variables }) => {
       if (!data?.inviteToHome || !variables) return;
 
       try {
         const homeId = variables.input.homeId;
 
-        // Update the home's members list if the invite data includes member info
+        // Empty cache.modify - subscription handles the actual update
         if (data.inviteToHome) {
           cache.modify({
             id: cache.identify({ __typename: 'Home', id: homeId }),
             fields: {
-              members(existingMembers = [], { toReference: _toReference }) {
-                // Note: The invite might not immediately add a member until accepted
-                // This depends on your backend implementation
-                // For now, we'll just let the subscription handle the update
+              members(existingMembers = []) {
+                // Return unchanged - subscription will handle the update when invite is accepted
                 return existingMembers;
               },
             },
           });
         }
-
-        // Note: We don't need to manually update homeInvites query
-        // because the subscription should handle that automatically
       } catch (error) {
         console.warn('Cache update failed for inviteUser:', error);
-        // No need to refetch - subscription will update
       }
     },
 
@@ -344,16 +364,20 @@ export function useHomeManagement() {
   // Join home by code mutation
   const [joinHomeByCodeMutation, { loading: joiningByCode }] =
     useJoinHomeByCodeMutation({
+      errorPolicy: 'all',
+      // Note: No optimistic response or manual cache update
+      // The mutation returns only Membership data (not the full Home object)
+      // We refetch GetHomesQuery to get the complete home with all fields (members, pantries, etc.)
+      // This is acceptable because join-home is an infrequent action (~100-200ms refetch time)
+      // Alternative approach would require a subscription or separate query for the joined home
       update: (_cache, { data }) => {
         if (!data?.joinHomeByCode) return;
 
         try {
-          // The home should now be in the homes list
-          // We need to refetch to get the full home data with pantries, etc.
+          // Refetch homes list to get the newly joined home with all fields
           refetch();
         } catch (error) {
-          console.warn('Cache update failed for joinHomeByCode:', error);
-          refetch();
+          console.warn('Failed to refetch homes after join:', error);
         }
       },
       onCompleted: data => {
@@ -495,14 +519,14 @@ export function useHomeManagement() {
     }
 
     try {
-      // Call mutation first - the useDefaultHome sync effect will update local state
-      // when Apollo cache is updated by the mutation response
+      // Call mutation first to update backend and Apollo cache
       const result = await setDefaultHomeMutation({
         variables: { homeId },
       });
 
       if (result.data) {
-        // No need to manually update local state - useDefaultHome's sync effect handles it
+        // Immediately update local state for instant UI feedback
+        setSelectedHomeId(homeId);
         return true;
       }
 
@@ -628,7 +652,8 @@ export function useHomeManagement() {
     remoteDefaultHomeId,
     isSynced,
     loading: loading || loadingDefaultHome,
-    initialLoading: (!homes && loading) || (!defaultHomeData && loadingDefaultHome),
+    initialLoading:
+      (!homes && loading) || (!defaultHomeData && loadingDefaultHome),
     error,
     stats,
     previewHome: previewData?.homeByJoinCode || null,

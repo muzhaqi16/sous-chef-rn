@@ -29,7 +29,7 @@ export const FormContent = ({
             ]
           : []),
         {
-          name: 'pantryName' as const,
+          name: 'pantryName',
           label: needsHome ? 'Default Pantry Name' : 'Pantry Name',
           placeholder: 'e.g. Kitchen Pantry',
           component: BaseInput,

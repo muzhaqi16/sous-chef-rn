@@ -58,4 +58,4 @@ export const PLACEHOLDERS = {
   // General
   optional: '(optional)',
   required: '(required)',
-} as const;
+};

@@ -21,6 +21,7 @@ import {
   handleSubscriptionError,
   clearAllRetryStates,
 } from '#utils/subscriptionErrorHandler';
+import { serializeError } from '#/utils/errorSerialization';
 import { useNotificationSettings } from './useNotificationSettings';
 
 interface NotificationConfig {
@@ -246,7 +247,7 @@ export const useNotifications = (config: NotificationConfig = {}) => {
       }
     },
     onError: error => {
-      console.error('❌ [NotificationReceived] Subscription error:', error);
+      console.error('❌ [NotificationReceived] Subscription error:', serializeError(error));
       handleError('NotificationReceived', error);
     },
   });
@@ -288,7 +289,7 @@ export const useNotifications = (config: NotificationConfig = {}) => {
       }
     },
     onError: error => {
-      console.error('❌ [UrgentNotification] Subscription error:', error);
+      console.error('❌ [UrgentNotification] Subscription error:', serializeError(error));
       handleError('UrgentNotificationReceived', error);
     },
   });

@@ -15,7 +15,7 @@ const commonTheme = {
   radii,
   shadows,
   sizes,
-} as const;
+};
 
 export const lightTheme = {
   ...commonTheme,
@@ -90,7 +90,7 @@ export const lightTheme = {
     overlay: colors.overlay,
     gap: (v: number) => v * 8,
   },
-} as const;
+};
 
 export const darkTheme = {
   ...commonTheme,
@@ -165,7 +165,7 @@ export const darkTheme = {
     overlay: colors.overlay,
     gap: (v: number) => v * 8,
   },
-} as const;
+};
 
 // Type exports
 export type Theme = typeof lightTheme;
