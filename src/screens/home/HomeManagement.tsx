@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Alert,
   RefreshControl,
 } from 'react-native';
+import Animated, { LinearTransition } from 'react-native-reanimated';
 import { Icon } from '#utils';
 import { useAppNavigation } from '#hooks';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -38,6 +39,8 @@ export const HomeManagement: React.FC = () => {
   const [homeName, setHomeName] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [highlightedHomeId, setHighlightedHomeId] = useState<string | null>(null);
+  const highlightTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const {
     homes,
@@ -138,7 +141,20 @@ export const HomeManagement: React.FC = () => {
   };
 
   const handleSetDefault = async (homeId: string) => {
+    // Clear any existing highlight timeout
+    if (highlightTimeoutRef.current) {
+      clearTimeout(highlightTimeoutRef.current);
+    }
+
     await setDefaultHome(homeId);
+
+    // Highlight the newly-set default home
+    setHighlightedHomeId(homeId);
+
+    // Auto-dismiss highlight after 2 seconds
+    highlightTimeoutRef.current = setTimeout(() => {
+      setHighlightedHomeId(null);
+    }, 2000);
   };
 
   const handleInviteMember = (homeId: string) => {
@@ -344,16 +360,21 @@ export const HomeManagement: React.FC = () => {
                 : false;
 
               return (
-                <HomeCard
+                <Animated.View
                   key={home.id}
-                  home={home as PartialHome}
-                  isDefault={home.id === defaultHomeId}
-                  canInvite={userCanInvite}
-                  onPress={handleViewHomeDetail}
-                  onSetDefault={handleSetDefault}
-                  onInvite={handleInviteMember}
-                  onDelete={handleDeleteHome}
-                />
+                  layout={LinearTransition.duration(600).springify().damping(30).stiffness(180).mass(1.5)}
+                >
+                  <HomeCard
+                    home={home as PartialHome}
+                    isDefault={home.id === defaultHomeId}
+                    isHighlighted={home.id === highlightedHomeId}
+                    canInvite={userCanInvite}
+                    onPress={handleViewHomeDetail}
+                    onSetDefault={handleSetDefault}
+                    onInvite={handleInviteMember}
+                    onDelete={handleDeleteHome}
+                  />
+                </Animated.View>
               );
             })}
         </ScrollView>
