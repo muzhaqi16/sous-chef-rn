@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { View, Platform } from 'react-native';
+import { View } from 'react-native';
 import { RefreshControl } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
@@ -17,6 +17,7 @@ import {
   findMovedItem,
   getNeighborIds,
 } from './SortableList.utils';
+import { DRAG_DISABLED_DISTANCE } from '#/constants/gestures';
 
 // Tab bar height constant (65px from FloatingTabBar)
 const TAB_BAR_HEIGHT = 65;
@@ -219,9 +220,7 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
         contentContainerStyle={{
           paddingBottom: TAB_BAR_HEIGHT + insets.bottom + 16,
         }}
-        activationDistance={
-          disabled ? 999999 : Platform.OS === 'android' ? 10 : 5
-        }
+        activationDistance={DRAG_DISABLED_DISTANCE}
         ListFooterComponent={ListFooterComponent}
         refreshControl={
           onRefresh && !disabled && !isDragging && !isSwipeActive ? (

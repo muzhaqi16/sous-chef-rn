@@ -106,16 +106,45 @@ export function useOptimisticDataRestorationMultiple(
 
           // Apply updates to cache
           allUpdates.forEach((fields, entityId) => {
+            const cacheId = cache.identify({
+              __typename: entityType,
+              id: entityId,
+            });
+
+            // Version guard: Only restore if cache version < persisted version
+            // This ensures API data (source of truth) is never overwritten by stale optimistic data
+            if (cacheId && fields.version) {
+              // Read the current version directly from cache
+              let currentVersion: number | undefined;
+              cache.modify({
+                id: cacheId,
+                fields: {
+                  version(existingVersion) {
+                    currentVersion = existingVersion;
+                    return existingVersion; // Don't modify, just read
+                  },
+                },
+                optimistic: false,
+              });
+
+              // If cache has newer or equal version, skip restoration
+              if (currentVersion !== undefined && currentVersion >= fields.version) {
+                // Cache has newer or equal version - skip restoration
+                // This means API data is more recent than our optimistic update
+                if (__DEV__) {
+                  console.log(`Skipping optimistic restoration for ${entityType}:${entityId} - cache version (${currentVersion}) >= persisted version (${fields.version})`);
+                }
+                return;
+              }
+            }
+
             const fieldUpdates = Object.keys(fields).reduce((acc, field) => {
               acc[field] = () => fields[field];
               return acc;
             }, {} as Record<string, () => any>);
 
             cache.modify({
-              id: cache.identify({
-                __typename: entityType,
-                id: entityId,
-              }),
+              id: cacheId,
               fields: fieldUpdates,
             });
           });

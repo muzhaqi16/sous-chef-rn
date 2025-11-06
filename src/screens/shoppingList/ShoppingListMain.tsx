@@ -749,6 +749,8 @@ export const ShoppingListMain: React.FC = () => {
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
+      // Clear optimistic data before refetch to ensure API data is source of truth
+      optimisticDataPersistence.clearType('ShoppingListItem');
       await refetchItems();
     } finally {
       setRefreshing(false);

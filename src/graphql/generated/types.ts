@@ -1509,6 +1509,7 @@ export type Home = {
   members: Array<Membership>;
   membersConnection: MembershipConnection;
   metadata?: Maybe<Scalars['JSON']['output']>;
+  myMembership?: Maybe<Membership>;
   name: Scalars['String']['output'];
   /** @deprecated Use pantriesConnection for pagination. Will be removed in v2.0 */
   pantries?: Maybe<Array<Pantry>>;

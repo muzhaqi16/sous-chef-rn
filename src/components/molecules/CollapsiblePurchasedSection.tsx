@@ -151,7 +151,6 @@ export const CollapsiblePurchasedSection: React.FC<
         <Animated.View
           entering={FadeIn.duration(200)}
           exiting={FadeOut.duration(150)}
-          style={styles.listContainer}
         >
           <SortableShoppingList
             items={purchasedItems}
@@ -210,8 +209,5 @@ const styles = StyleSheet.create(() => ({
   clearButtonText: {
     fontSize: 14,
     fontWeight: '600',
-  },
-  listContainer: {
-    height: 400, // Fixed height for the list to render properly with flex: 1
   },
 }));

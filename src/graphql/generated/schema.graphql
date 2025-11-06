@@ -1880,6 +1880,7 @@ type Home {
     last: Int
   ): MembershipConnection!
   metadata: JSON
+  myMembership: Membership
   name: String!
   pantries: [Pantry!]
     @deprecated(

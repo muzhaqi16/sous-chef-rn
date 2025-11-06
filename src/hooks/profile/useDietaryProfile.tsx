@@ -14,6 +14,7 @@ import {
 } from '#generated';
 import {enhanceWithVersion} from '#/apollo/utils/createOptimisticResponse';
 import {useErrorHandler} from '#/utils/errorHandling';
+import {useOfflinePresetPolicy} from '#/apollo/policies/offlineFetchPolicies';
 
 export interface DietaryRestriction {
   id: string;
@@ -47,9 +48,12 @@ export interface DietaryProfileData {
 export const useDietaryProfile = () => {
   const user = useStore(state => state.user);
   const {handleApolloError} = useErrorHandler();
+  const fetchPolicy = useOfflinePresetPolicy('DETAIL');
 
-  const {data, loading} = useGetDietaryProfileQuery({
+  const {data, loading, networkStatus} = useGetDietaryProfileQuery({
     skip: !user?.id,
+    fetchPolicy,
+    notifyOnNetworkStatusChange: true,
   });
 
   const profile = data?.myDietaryProfile;
@@ -333,6 +337,7 @@ export const useDietaryProfile = () => {
   return {
     profile: getDietaryProfile(),
     loading,
+    networkStatus,
     updateDietaryProfile,
     addDietaryRestriction,
     updateDietaryRestriction,
