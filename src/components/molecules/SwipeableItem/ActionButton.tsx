@@ -22,7 +22,7 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
     ? styles.circularActionButton
     : styles.actionButton;
   const iconColor = circular ? theme.colors.white : theme.colors.white;
-  const iconSize = circular ? 24 : 20;
+  const iconSize = theme.fonts.size['3xl'];
 
   const handlePress = () => {
     console.log('ActionButton pressed! Icon:', icon, 'Library:', library);

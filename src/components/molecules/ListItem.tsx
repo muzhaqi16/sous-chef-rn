@@ -16,6 +16,7 @@ interface ListItemProps {
   };
   rightElement?: React.ReactNode;
   leftElement?: React.ReactNode; // Optional left element for image or icon
+  isPurchased?: boolean; // For strikethrough styling
 }
 
 const ListItemComponent: React.FC<ListItemProps> = ({
@@ -27,6 +28,7 @@ const ListItemComponent: React.FC<ListItemProps> = ({
   badge,
   rightElement,
   leftElement,
+  isPurchased = false,
 }) => {
   const { theme } = useUnistyles();
 
@@ -40,14 +42,22 @@ const ListItemComponent: React.FC<ListItemProps> = ({
         </View>
       )}
       <View style={styles.content}>
-        <Text style={styles.title} numberOfLines={2} ellipsizeMode="tail">
+        <Text
+          style={[styles.title, isPurchased && styles.purchasedText]}
+          numberOfLines={2}
+          ellipsizeMode="tail"
+        >
           {title}
         </Text>
         {subtitle && (
           typeof subtitle === 'string' ? (
-            <Text style={styles.subtitle}>{subtitle}</Text>
+            <Text style={[styles.subtitle, isPurchased && styles.purchasedText]}>
+              {subtitle}
+            </Text>
           ) : (
-            <View style={styles.subtitleContainer}>{subtitle}</View>
+            <View style={[styles.subtitleContainer, isPurchased && { opacity: 0.6 }]}>
+              {subtitle}
+            </View>
           )
         )}
       </View>
@@ -109,5 +119,10 @@ const styles = StyleSheet.create(theme => ({
   },
   subtitleContainer: {
     marginTop: 4,
+  },
+  purchasedText: {
+    textDecorationLine: 'line-through',
+    opacity: 0.6,
+    color: theme.colors.textSecondary,
   },
 }));

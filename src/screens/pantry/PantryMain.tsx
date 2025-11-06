@@ -13,6 +13,8 @@ import {
 } from '#generated';
 import { useScanner } from '#context';
 import { commonStyles } from '#/styles';
+import { useFeatureHint } from '#/hooks/useFeatureHint';
+import { FeatureHintOverlay } from '#/components/organisms/FeatureHintOverlay';
 
 import {
   ListTemplate,
@@ -33,6 +35,12 @@ export const PantryMain: React.FC = () => {
   const { navigate, navigateTo } = useAppNavigation();
   const { theme } = useUnistyles();
   const { setScannerProps, setOverlayOpen } = useScanner();
+
+  // Feature hint for home switch button
+  const homeSwitchHint = useFeatureHint({
+    featureId: 'pantry_home_switch',
+    showOnMount: false, // We'll manually trigger when appropriate
+  });
 
   const setSelectedPantryId = useStore(state => state.setSelectedPantryId);
   const selectedPantryId = useStore(state => state.selectedPantryId);
@@ -380,6 +388,18 @@ export const PantryMain: React.FC = () => {
     return transformedItems;
   }, [pantryItems, theme]);
 
+  // Show home switch hint when user has items and home is selected
+  useEffect(() => {
+    if (selectedHomeId && items.length > 0 && !homeSwitchHint.hasBeenShown) {
+      // Show hint after a delay to let UI settle
+      const timer = setTimeout(() => {
+        homeSwitchHint.show();
+      }, 2000); // 2 seconds delay
+      return () => clearTimeout(timer);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items.length, selectedHomeId, homeSwitchHint.hasBeenShown, homeSwitchHint.show]);
+
   const handleAddItem = useCallback(() => {
     if (!selectedHomeId) {
       Alert.alert(
@@ -572,6 +592,22 @@ export const PantryMain: React.FC = () => {
         onClose={handleCloseWasteModal}
         onConfirm={handleConfirmWaste}
       />
+
+      {/* Home switch hint overlay */}
+      {homeSwitchHint.isVisible && (
+        <FeatureHintOverlay
+          config={{
+            title: 'Tap to manage homes',
+            subtitle: 'Click the home icon to switch between homes or manage home settings',
+            icon: {
+              name: 'home-switch-outline',
+              library: 'MaterialDesignIcons',
+              size: 40,
+            },
+            onDismiss: homeSwitchHint.dismiss,
+          }}
+        />
+      )}
     </View>
   );
 };

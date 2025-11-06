@@ -51,6 +51,8 @@ import { useAuth } from '#/hooks/auth/useAuth';
 import { isShoppingListOwner } from '#utils/ownershipHelpers';
 import { ShoppingListAvatar } from '#components/atoms';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
+import { useFeatureHint } from '#/hooks/useFeatureHint';
+import { SwipeHintOverlay } from '#/components/organisms/SwipeHintOverlay';
 
 // Wrapper component that conditionally renders EmptyState or SortableShoppingList
 const ShoppingListContent: React.FC<{
@@ -142,6 +144,12 @@ const ShoppingListContent: React.FC<{
 export const ShoppingListMain: React.FC = () => {
   // Restore optimistic data on mount (offline changes that haven't synced)
   useOptimisticDataRestorationMultiple(['ShoppingList', 'ShoppingListItem']);
+
+  // Feature hint for swipe gesture (shows once, after items load)
+  const swipeHint = useFeatureHint({
+    featureId: 'shopping_list_swipe',
+    showOnMount: false, // We'll manually trigger when items are available
+  });
 
   const { navigate, navigateTo } = useAppNavigation();
   const client = useApolloClient();
@@ -282,6 +290,21 @@ export const ShoppingListMain: React.FC = () => {
     removeItem,
     refetch: refetchItems,
   } = useShoppingListManagement(currentListId);
+
+  // Show swipe hint after items load (only once, only if there are unpurchased items)
+  useEffect(() => {
+    if (items.length > 0 && !swipeHint.hasBeenShown) {
+      const unpurchasedItems = items.filter((item: any) => !item.isPurchased);
+      if (unpurchasedItems.length > 0) {
+        // Show hint after a brief delay to let UI settle
+        const timer = setTimeout(() => {
+          swipeHint.show();
+        }, 1500);
+        return () => clearTimeout(timer);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items.length, swipeHint.hasBeenShown, swipeHint.show]);
 
   // Let Apollo handle all data management - no manual optimization needed
 
@@ -891,6 +914,11 @@ export const ShoppingListMain: React.FC = () => {
         onOpen={handleOverlayOpen}
         onClose={handleOverlayClose}
       />
+
+      {/* Swipe gesture hint overlay */}
+      {swipeHint.isVisible && (
+        <SwipeHintOverlay onDismiss={swipeHint.dismiss} />
+      )}
     </View>
   );
 };

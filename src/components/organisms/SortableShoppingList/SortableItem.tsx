@@ -47,8 +47,17 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
         Vibration.vibrate(100);
       }
       drag();
+    } else if (onTogglePurchase) {
+      // If drag is not available, use long-press for quick purchase toggle
+      // Provide haptic feedback for toggle action
+      if (Platform.OS === 'ios') {
+        Vibration.vibrate([0, 50]); // Short vibration for toggle
+      } else {
+        Vibration.vibrate(50);
+      }
+      onTogglePurchase(item.id);
     }
-  }, [drag]);
+  }, [drag, onTogglePurchase, item.id]);
 
   // Just use the original rightElement without drag handle
   const rightElement = item.rightElement;
@@ -57,7 +66,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
     <View style={[styles.container, isActive && styles.activeContainer]}>
       <SwipeableItem
         onPress={() => onItemPress(item.id)}
-        onLongPress={drag ? handleLongPress : undefined}
+        onLongPress={(drag || onTogglePurchase) ? handleLongPress : undefined}
         onEdit={onItemEdit ? () => onItemEdit(item.id) : undefined}
         onDelete={onItemDelete ? () => onItemDelete(item.id) : undefined}
         onTogglePurchase={onTogglePurchase ? () => onTogglePurchase(item.id) : undefined}
@@ -72,6 +81,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
           rightElement={rightElement}
           leftElement={item.leftElement}
           rightIcon={undefined}
+          isPurchased={item.isPurchased}
         />
       </SwipeableItem>
     </View>

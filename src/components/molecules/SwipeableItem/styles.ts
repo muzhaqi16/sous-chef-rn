@@ -40,9 +40,9 @@ export const styles = StyleSheet.create(theme => ({
   },
 
   circularActionButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 50,
+    height: 50,
+    borderRadius: 28,
     ...commonStyles.center,
     marginHorizontal: 8,
     zIndex: 100, // Ensure button is above other elements for touch priority

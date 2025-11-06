@@ -27,11 +27,27 @@ export function serializeError(error: any): Record<string, any> {
 
   // Handle Apollo GraphQL errors
   if (error.graphQLErrors) {
-    serialized.graphQLErrors = error.graphQLErrors.map((e: any) => ({
-      message: e.message,
-      path: e.path,
-      extensions: e.extensions,
-    }));
+    serialized.graphQLErrors = error.graphQLErrors.map((e: any) => {
+      const gqlError: Record<string, any> = {
+        message: e.message,
+        path: e.path,
+      };
+
+      // Sanitize extensions to remove circular references (e.g., Timeout objects)
+      if (e.extensions) {
+        try {
+          // Deep-clone to break any circular references
+          gqlError.extensions = JSON.parse(JSON.stringify(e.extensions));
+        } catch {
+          // If extensions contains circular refs, provide a safe fallback
+          gqlError.extensions = {
+            error: 'Extensions contained circular references and were omitted',
+          };
+        }
+      }
+
+      return gqlError;
+    });
   }
 
   // Handle Apollo network errors (avoid serializing the full networkError object)
