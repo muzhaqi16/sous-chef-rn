@@ -15,6 +15,7 @@ export interface SwipeableItemProps {
   rightThreshold?: number;
   friction?: number;
   onSwipeableWillOpen?: (ref: any) => void;
+  onSwipeableClose?: () => void;
 }
 
 export interface ActionButtonProps {

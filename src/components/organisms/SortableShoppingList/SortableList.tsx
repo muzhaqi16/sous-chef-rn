@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { View, Platform } from 'react-native';
+import { RefreshControl } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
 import DraggableFlatList, {
@@ -30,6 +31,8 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
   disabled = false,
   ListFooterComponent,
   onSwipeableWillOpen: externalOnSwipeableWillOpen,
+  onRefresh,
+  refreshing,
   ...flatListProps
 }) => {
   // Track local order for optimistic updates
@@ -38,6 +41,10 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
   const isUpdatingRef = useRef(false);
   // Track currently open swipeable item (only used if no external handler provided)
   const openSwipeableRef = useRef<any>(null);
+
+  // Track gesture states to prevent RefreshControl conflicts
+  const [isDragging, setIsDragging] = useState(false);
+  const [isSwipeActive, setIsSwipeActive] = useState(false);
 
   // Safe area insets for bottom padding
   const insets = useSafeAreaInsets();
@@ -51,8 +58,18 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
     }
   }, [items]);
 
-  // Handle swipeable item opening - close previously open item
+  // Drag gesture callbacks
+  const handleDragBegin = useCallback(() => {
+    setIsDragging(true);
+  }, []);
+
+  const handleDragRelease = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  // Handle swipeable item opening - close previously open item and track swipe state
   const handleSwipeableWillOpen = useCallback((ref: any) => {
+    setIsSwipeActive(true);
     // If external handler provided, use it (for coordinating across multiple lists)
     if (externalOnSwipeableWillOpen) {
       externalOnSwipeableWillOpen(ref);
@@ -66,6 +83,11 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
       openSwipeableRef.current = ref;
     }
   }, [externalOnSwipeableWillOpen]);
+
+  // Handle swipeable item closing - reset swipe active state
+  const handleSwipeableClose = useCallback(() => {
+    setIsSwipeActive(false);
+  }, []);
 
   // Handle drag end - called when user releases item
   const handleDragEnd = useCallback(
@@ -150,11 +172,12 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
             drag={disabled ? undefined : drag}
             isActive={isActive}
             onSwipeableWillOpen={handleSwipeableWillOpen}
+            onSwipeableClose={handleSwipeableClose}
           />
         </ScaleDecorator>
       );
     },
-    [onItemPress, onItemEdit, onItemDelete, onTogglePurchase, disabled, handleSwipeableWillOpen],
+    [onItemPress, onItemEdit, onItemDelete, onTogglePurchase, disabled, handleSwipeableWillOpen, handleSwipeableClose],
   );
 
   // Early validation
@@ -184,7 +207,12 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
         data={localItems}
         renderItem={renderItem}
         keyExtractor={item => item.id}
-        onDragEnd={({ data }) => handleDragEnd(data)}
+        onDragBegin={handleDragBegin}
+        onDragEnd={({ data }) => {
+          handleDragRelease();
+          handleDragEnd(data);
+        }}
+        onRelease={handleDragRelease}
         showsVerticalScrollIndicator={
           flatListProps.showsVerticalScrollIndicator ?? true
         }
@@ -195,6 +223,14 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
           disabled ? 999999 : Platform.OS === 'android' ? 10 : 5
         }
         ListFooterComponent={ListFooterComponent}
+        refreshControl={
+          onRefresh && !disabled && !isDragging && !isSwipeActive ? (
+            <RefreshControl
+              refreshing={refreshing || false}
+              onRefresh={onRefresh}
+            />
+          ) : undefined
+        }
       />
     </View>
   );

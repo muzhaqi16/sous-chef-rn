@@ -63,7 +63,7 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.md,
   },
   headerTitle: {
-    fontSize: theme.fonts.size.md,
+    fontSize: theme.fonts.size['2xl'],
     fontWeight: '400',
     color: theme.colors.textOnSurfaceVariant,
   },

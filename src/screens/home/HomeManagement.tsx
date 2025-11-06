@@ -12,9 +12,6 @@ import {
 import Animated, {
   LinearTransition,
   FadeInDown,
-  FadeIn,
-  FadeOut,
-  Easing,
 } from 'react-native-reanimated';
 import { Icon } from '#utils';
 import { useAppNavigation } from '#hooks';
@@ -35,6 +32,7 @@ import {
   canInviteToHome,
 } from '#/utils/permissions/homePermissions';
 import { commonStyles } from '#/styles';
+import { formAnimationPreset } from '#/constants/animations';
 
 export const HomeManagement: React.FC = () => {
   const { goBack, navigate } = useAppNavigation();
@@ -224,9 +222,7 @@ export const HomeManagement: React.FC = () => {
         {/* Create/Join Home Form */}
         {showCreateForm && (
           <Animated.View
-            entering={FadeIn.duration(300).easing(Easing.bezier(0.25, 0.1, 0.25, 1).factory())}
-            exiting={FadeOut.duration(200).easing(Easing.bezier(0.25, 0.1, 0.25, 1).factory())}
-            layout={LinearTransition.duration(250)}
+            {...formAnimationPreset}
             style={[commonStyles.shadow, styles.formContainer]}
           >
             {/* Mode Switcher */}

@@ -33,15 +33,15 @@ export const styles = StyleSheet.create(theme => ({
   },
 
   actionButton: {
-    width: 60,
+    width: 50,
     ...commonStyles.center,
     height: '100%',
     zIndex: 100, // Ensure button is above other elements for touch priority
   },
 
   circularActionButton: {
-    width: 50,
-    height: 50,
+    width: 45,
+    height: 45,
     borderRadius: 28,
     ...commonStyles.center,
     marginHorizontal: 8,

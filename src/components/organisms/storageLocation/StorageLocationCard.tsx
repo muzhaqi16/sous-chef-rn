@@ -92,7 +92,6 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   card: {
-    marginHorizontal: theme.spacing.md,
     marginBottom: theme.spacing.sm,
     padding: theme.spacing.sm, // Reduced from md to sm
   },
@@ -100,7 +99,7 @@ const styles = StyleSheet.create(theme => ({
     paddingBottom: theme.spacing.xs, // Reduced from sm to xs
   },
   icon: {
-    fontSize: 28, // Reduced from 32 to 28
+    fontSize: theme.fonts.size.lg, // Reduced from 32 to 28
     marginRight: theme.spacing.sm, // Reduced from md to sm
   },
   info: {

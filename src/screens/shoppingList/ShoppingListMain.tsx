@@ -72,6 +72,7 @@ const ShoppingListContent: React.FC<{
   emptyState?: any;
   onClearAllPurchased?: () => Promise<void>;
   onSwipeableWillOpen?: (ref: any) => void;
+  onSwipeableClose?: () => void;
 }> = ({
   items,
   onItemPress,
@@ -85,6 +86,7 @@ const ShoppingListContent: React.FC<{
   emptyState,
   onClearAllPurchased,
   onSwipeableWillOpen,
+  onSwipeableClose,
 }) => {
   // Separate items by purchased status
   const unpurchasedItems = items.filter(item => !item.isPurchased);
@@ -121,6 +123,9 @@ const ShoppingListContent: React.FC<{
         disabled={disabled}
         showsVerticalScrollIndicator={true}
         onSwipeableWillOpen={onSwipeableWillOpen}
+        onSwipeableClose={onSwipeableClose}
+        onRefresh={onRefresh}
+        refreshing={refreshing}
         ListFooterComponent={
           /* Collapsible Purchased Section */
           <CollapsiblePurchasedSection
@@ -134,6 +139,7 @@ const ShoppingListContent: React.FC<{
             onClearAll={onClearAllPurchased}
             disabled={disabled}
             onSwipeableWillOpen={onSwipeableWillOpen}
+            onSwipeableClose={onSwipeableClose}
           />
         }
       />
@@ -759,17 +765,17 @@ export const ShoppingListMain: React.FC = () => {
     openSwipeableRef.current = ref;
   }, []);
 
+  // Handle swipeable item closing - clear the reference
+  const handleSwipeableClose = useCallback(() => {
+    openSwipeableRef.current = null;
+  }, []);
+
   // Search bar actions - conditionally show "Add" button when searching with no results
 
   const searchBarActions = useMemo(() => {
     const hasSearchWithNoResults =
       searchQuery.trim() && sortableItems.length === 0;
     const rightActions: SearchBarAction[] = [
-      {
-        icon: 'refresh',
-        color: colors.white,
-        onPress: handleRefresh,
-      },
       {
         icon: 'list',
         color: colors.white,
@@ -803,7 +809,6 @@ export const ShoppingListMain: React.FC = () => {
   }, [
     handleAddItem,
     handleAddItemFromSearch,
-    handleRefresh,
     searchQuery,
     sortableItems.length,
     primaryColor, // ← Include extracted variable in deps
@@ -904,6 +909,7 @@ export const ShoppingListMain: React.FC = () => {
           disabled: !!searchQuery.trim(),
           onClearAllPurchased: handleClearAllPurchased,
           onSwipeableWillOpen: handleSwipeableWillOpen,
+          onSwipeableClose: handleSwipeableClose,
         }}
       />
 

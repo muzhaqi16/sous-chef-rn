@@ -27,6 +27,7 @@ interface CollapsiblePurchasedSectionProps {
   onClearAll?: () => Promise<void>;
   disabled?: boolean;
   onSwipeableWillOpen?: (ref: any) => void;
+  onSwipeableClose?: () => void;
 }
 
 export const CollapsiblePurchasedSection: React.FC<
@@ -42,6 +43,7 @@ export const CollapsiblePurchasedSection: React.FC<
   onClearAll,
   disabled,
   onSwipeableWillOpen,
+  onSwipeableClose,
 }) => {
   const { theme } = useUnistyles();
   // Auto-expand when all items are purchased (no unpurchased items)
@@ -161,6 +163,7 @@ export const CollapsiblePurchasedSection: React.FC<
             disabled={disabled}
             showsVerticalScrollIndicator={false}
             onSwipeableWillOpen={onSwipeableWillOpen}
+            onSwipeableClose={onSwipeableClose}
           />
         </Animated.View>
       )}
