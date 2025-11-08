@@ -1,0 +1,158 @@
+# ============================================
+# QUERIES
+# ============================================
+
+query GetNotificationPreferences {
+  myNotificationPreferences {
+    id
+    userId
+    emailEnabled
+    pushEnabled
+    smsEnabled
+    expirationNotifications
+    expirationNotificationFrequency
+    expirationDaysThreshold
+    lowStockAlerts
+    shoppingListUpdates
+    pantryChanges
+    recipeRecommendations
+    mealPlanReminders
+    cookingReminders
+    collaborationInvites
+    homeInvites
+    sharedListUpdates
+    weeklyDigest
+    monthlyReport
+    quietHoursEnabled
+    quietHoursStart
+    quietHoursEnd
+    quietHoursTimezone
+  }
+}
+
+query GetDietaryProfile {
+  myDietaryProfile {
+    id
+    userId
+    preferredCuisines
+    dislikedIngredients
+    favoriteIngredients
+    calorieTarget
+    proteinTarget
+    carbsTarget
+    fatTarget
+    mealsPerDay
+    snacksPerDay
+    cookingSkillLevel
+    maxPrepTimeMinutes
+    maxCookTimeMinutes
+    budgetPerMeal
+    createdAt
+    updatedAt
+    restrictions {
+      id
+      diet
+      intolerance
+      healthGoal
+      severity
+      notes
+      appliesToHomeId
+      createdAt
+    }
+  }
+}
+
+# ============================================
+# MUTATIONS
+# ============================================
+
+mutation UpdateNotificationPreferences($input: UpdateNotificationPreferencesInput!) {
+  updateNotificationPreferences(input: $input) {
+    id
+    userId
+    emailEnabled
+    pushEnabled
+    smsEnabled
+    expirationNotifications
+    expirationNotificationFrequency
+    expirationDaysThreshold
+    lowStockAlerts
+    shoppingListUpdates
+    pantryChanges
+    recipeRecommendations
+    mealPlanReminders
+    cookingReminders
+    collaborationInvites
+    homeInvites
+    sharedListUpdates
+    weeklyDigest
+    monthlyReport
+    quietHoursEnabled
+    quietHoursStart
+    quietHoursEnd
+    quietHoursTimezone
+  }
+}
+
+mutation UpdateDietaryProfile($input: UpdateDietaryProfileInput!) {
+  updateDietaryProfile(input: $input) {
+    id
+    userId
+    preferredCuisines
+    dislikedIngredients
+    favoriteIngredients
+    calorieTarget
+    proteinTarget
+    carbsTarget
+    fatTarget
+    mealsPerDay
+    snacksPerDay
+    cookingSkillLevel
+    maxPrepTimeMinutes
+    maxCookTimeMinutes
+    budgetPerMeal
+    createdAt
+    updatedAt
+    restrictions {
+      id
+      diet
+      intolerance
+      healthGoal
+      severity
+      notes
+      appliesToHomeId
+      createdAt
+    }
+  }
+}
+
+mutation AddDietaryRestriction($input: AddRestrictionInput!) {
+  addRestriction(input: $input) {
+    id
+    diet
+    intolerance
+    healthGoal
+    severity
+    notes
+    appliesToHomeId
+    createdAt
+  }
+}
+
+mutation UpdateDietaryRestriction($input: UpdateRestrictionInput!) {
+  updateRestriction(input: $input) {
+    id
+    diet
+    intolerance
+    healthGoal
+    severity
+    notes
+    appliesToHomeId
+    createdAt
+  }
+}
+
+mutation RemoveDietaryRestriction($input: RemoveRestrictionInput!) {
+  removeRestriction(input: $input)
+}
+

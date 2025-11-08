@@ -1,4 +1,5 @@
 import {ApolloLink, Observable} from '@apollo/client';
+import {serializeError} from '#/utils/errorSerialization';
 
 // Enable detailed logging only in development
 const isDevelopment = __DEV__;
@@ -71,7 +72,8 @@ export const createConsoleLink = (
 
           // Log errors as expandable objects
           if (hasErrors) {
-            console.error('   ❌ Errors:', result.errors);
+            const safeErrors = result.errors?.map(serializeError);
+            console.error('   ❌ Errors:', safeErrors);
           }
 
           // Log response data as expandable object

@@ -72,6 +72,11 @@ jobs:
           echo "API_URL=${{ vars.API_URL }}" > .env
           echo "API_KEY=${{ secrets.API_KEY }}" >> .env
           echo "WEB_SOCKET_URL=${{ vars.WEB_SOCKET_URL }}" >> .env
+          echo "LOKI_ENDPOINT=${{ vars.LOKI_ENDPOINT }}" >> .env
+          echo "PROMETHEUS_ENDPOINT=${{ vars.PROMETHEUS_ENDPOINT }}" >> .env
+          echo "TELEMETRY_AUTH_USERNAME=${{ secrets.TELEMETRY_AUTH_USERNAME }}" >> .env
+          echo "TELEMETRY_AUTH_PASSWORD=${{ secrets.TELEMETRY_AUTH_PASSWORD }}" >> .env
+          echo "SPOONACULAR_API_KEY=${{ secrets.SPOONACULAR_API_KEY }}" >> .env
 
       - name: Build AAB for Play Store
         run: |

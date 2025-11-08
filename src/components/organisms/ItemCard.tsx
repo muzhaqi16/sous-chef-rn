@@ -12,6 +12,9 @@ interface ItemCardProps {
   onPress: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
+  onConsume?: () => void;
+  onWaste?: () => void;
+  onSwipeableWillOpen?: (ref: any) => void;
   badge?: {
     text: string;
     variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger';
@@ -20,19 +23,29 @@ interface ItemCardProps {
   leftElement?: React.ReactNode; // Optional left element for image or icon
 }
 
-export const ItemCard: React.FC<ItemCardProps> = ({
+const ItemCardComponent: React.FC<ItemCardProps> = ({
   title,
   subtitle,
   onPress,
   onEdit,
   onDelete,
+  onConsume,
+  onWaste,
+  onSwipeableWillOpen,
   badge,
   rightElement,
   leftElement,
 }) => {
   const innerContent =
-    onEdit || onDelete ? (
-      <SwipeableItem onPress={onPress} onEdit={onEdit} onDelete={onDelete}>
+    onEdit || onDelete || onConsume || onWaste ? (
+      <SwipeableItem
+        onPress={onPress}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        onConsume={onConsume}
+        onWaste={onWaste}
+        onSwipeableWillOpen={onSwipeableWillOpen}
+      >
         <ListItem
           title={title}
           subtitle={subtitle}
@@ -52,12 +65,17 @@ export const ItemCard: React.FC<ItemCardProps> = ({
       />
     );
 
-  return <View style={styles.container}>{innerContent}</View>;
+  return (
+    <View style={[commonStyles.shadow, styles.container]}>{innerContent}</View>
+  );
 };
+
+// Memoize the component to prevent unnecessary re-renders
+export const ItemCard = React.memo(ItemCardComponent);
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    ...commonStyles.shadow,
+    opacity: 1, // Prevent TouchableOpacity transparency inheritance
     // Horizontal margin for shadow visibility
     marginHorizontal: theme.spacing.sm,
     // Half vertical margin so stacked items merge to full spacing (md/2 + md/2 = md)

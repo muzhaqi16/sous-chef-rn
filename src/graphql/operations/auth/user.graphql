@@ -14,14 +14,6 @@ query GetUserSettings {
       id
       email
     }
-    emailNotifications
-    pushNotifications
-    smsNotifications
-    weeklyDigest
-    expiredItemAlerts
-    lowStockAlerts
-    shoppingListUpdates
-    recipeRecommendations
     theme
     compactMode
     showTutorials
@@ -30,14 +22,14 @@ query GetUserSettings {
     shareUsageData
     shareWithPartners
     personalizedAds
+    preferredUnitSystem
+    language
+    timezone
+    preferredCurrency
     enabledFeatures
     betaFeatures
     createdAt
     updatedAt
-    defaultHome {
-      id
-      name
-    }
   }
 }
 
@@ -114,14 +106,6 @@ mutation UpdateUserPreferences($input: UpdateUserSettingsInput!) {
       id
       email
     }
-    emailNotifications
-    pushNotifications
-    smsNotifications
-    weeklyDigest
-    expiredItemAlerts
-    lowStockAlerts
-    shoppingListUpdates
-    recipeRecommendations
     theme
     compactMode
     showTutorials
@@ -130,6 +114,10 @@ mutation UpdateUserPreferences($input: UpdateUserSettingsInput!) {
     shareUsageData
     shareWithPartners
     personalizedAds
+    preferredUnitSystem
+    language
+    timezone
+    preferredCurrency
     enabledFeatures
     betaFeatures
     createdAt

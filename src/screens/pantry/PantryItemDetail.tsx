@@ -1,8 +1,8 @@
 import React from 'react';
-import { View, Text, Alert } from 'react-native';
+import { View, Text, Alert, Image } from 'react-native';
 import {
   useGetPantryItemQuery,
-  useRemoveItemFromPantryMutation,
+  useDeletePantryItemMutation,
   useAddItemToShoppingListMutation,
   GetShoppingListItemsDocument,
 } from '#generated';
@@ -13,6 +13,7 @@ import { commonStyles } from '#styles';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks';
 import { PantryStackParamList } from '#navigation/stacks/PantryStack';
+import { getItemImageUrl } from '#utils/imageUtils';
 
 export const PantryItemDetail: React.FC<{
   route: { params: PantryStackParamList['PantryItemDetail'] };
@@ -22,11 +23,13 @@ export const PantryItemDetail: React.FC<{
   const { theme } = useUnistyles();
   const { selectedShoppingListId } = useStore();
 
+  // Use cache-first policy - offlineQueryLink will handle offline behavior automatically
   const { data } = useGetPantryItemQuery({
     variables: { id: itemId },
+    fetchPolicy: 'cache-first',
   });
 
-  const [deleteItem] = useRemoveItemFromPantryMutation();
+  const [deleteItem] = useDeletePantryItemMutation();
   const [addToShoppingList] = useAddItemToShoppingListMutation({
     refetchQueries: selectedShoppingListId
       ? [
@@ -107,10 +110,21 @@ export const PantryItemDetail: React.FC<{
       .join(' ');
   };
 
+  const imageUrl = getItemImageUrl(item?.item);
+
   const sections = [
     {
       content: (
         <View>
+          {imageUrl && (
+            <View style={styles.imageContainer}>
+              <Image
+                source={{ uri: imageUrl }}
+                style={styles.itemImage}
+                resizeMode="contain"
+              />
+            </View>
+          )}
           <Text style={[commonStyles.title, styles.itemName]}>
             {item?.item?.name}
           </Text>
@@ -165,7 +179,7 @@ export const PantryItemDetail: React.FC<{
               Consumed
             </Text>
             <Text style={styles.detailValue}>
-              {item?.consumedQuantity} {item?.unit?.symbol}
+              {item?.consumedQuantity ?? 0} {item?.unit?.symbol ?? ''}
             </Text>
           </View>
           <View style={styles.detailRow}>
@@ -173,7 +187,7 @@ export const PantryItemDetail: React.FC<{
               Minimum Stock
             </Text>
             <Text style={styles.detailValue}>
-              {item?.reservedQuantity} {item?.unit?.symbol}
+              {item?.reservedQuantity ?? 0} {item?.unit?.symbol ?? ''}
             </Text>
           </View>
           {item?.item?.netWeight && item?.item?.displayUnit && (
@@ -197,14 +211,18 @@ export const PantryItemDetail: React.FC<{
             <Text style={[commonStyles.caption, styles.detailLabel]}>
               Storage
             </Text>
-            <Text style={styles.detailValue}>{item?.storageState}</Text>
+            <Text style={styles.detailValue}>{item?.storageState || 'N/A'}</Text>
           </View>
           {item?.storageLocation && (
             <View style={styles.detailRow}>
               <Text style={[commonStyles.caption, styles.detailLabel]}>
                 Location
               </Text>
-              <Text style={styles.detailValue}>{item.storageLocation}</Text>
+              <Text style={styles.detailValue}>
+                {typeof item.storageLocation === 'string'
+                  ? item.storageLocation
+                  : item.storageLocation.name}
+              </Text>
             </View>
           )}
           {item?.expiresAt && (
@@ -239,7 +257,7 @@ export const PantryItemDetail: React.FC<{
                 Auto-Reorder
               </Text>
               <Text style={styles.detailValue}>
-                Enabled (at {item.autoReorderPoint} {item?.unit?.symbol})
+                Enabled (at {item.autoReorderPoint ?? 0} {item?.unit?.symbol ?? ''})
               </Text>
             </View>
           )}
@@ -325,6 +343,18 @@ export const PantryItemDetail: React.FC<{
 };
 
 const styles = StyleSheet.create(theme => ({
+  imageContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radii.lg,
+    padding: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
+  },
+  itemImage: {
+    width: 200,
+    height: 200,
+  },
   itemName: {
     fontSize: theme.fonts.size['2xl'],
   },

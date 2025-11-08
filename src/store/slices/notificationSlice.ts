@@ -212,7 +212,6 @@ export const createNotificationSlice: StateCreator<
     });
 
     if (validNotifications.length === 0) {
-      console.log('No valid notifications to add');
       return;
     }
 
@@ -233,8 +232,6 @@ export const createNotificationSlice: StateCreator<
 
       if (newNotifications.length > 0) {
         state.notifications.unshift(...newNotifications);
-      } else {
-        console.log('No new notifications to add (all were duplicates)');
       }
 
       state.unreadCount = state.notifications.filter(n => !n.isRead).length;
@@ -249,7 +246,6 @@ export const createNotificationSlice: StateCreator<
     const state = get();
 
     if (!state.user?.emailVerified) {
-      console.log('Skipping notification sync - user not verified');
       return;
     }
 
@@ -291,14 +287,12 @@ export const createNotificationSlice: StateCreator<
   addSubscribedList: listId => {
     const state = get();
     if (!state.selectedShoppingListId) {
-      console.log('Not adding list subscription - no shopping list selected');
       return;
     }
 
     set(state => {
       if (!state.subscribedLists.includes(listId)) {
         state.subscribedLists.push(listId);
-        console.log('Added shopping list subscription:', listId);
       }
     });
   },
@@ -306,14 +300,12 @@ export const createNotificationSlice: StateCreator<
   addSubscribedPantry: pantryId => {
     const state = get();
     if (!state.selectedPantryId) {
-      console.log('Not adding pantry subscription - no pantry selected');
       return;
     }
 
     set(state => {
       if (!state.subscribedPantries.includes(pantryId)) {
         state.subscribedPantries.push(pantryId);
-        console.log('Added pantry subscription:', pantryId);
       }
     });
   },
@@ -333,7 +325,6 @@ export const createNotificationSlice: StateCreator<
       }
 
       // Remove notifications for entities that no longer exist
-      const originalCount = draft.notifications.length;
       draft.notifications = draft.notifications.filter(notification => {
         if (
           notification.category === NotificationCategory.PANTRY &&
@@ -355,11 +346,6 @@ export const createNotificationSlice: StateCreator<
         }
         return true;
       });
-
-      const cleanedCount = originalCount - draft.notifications.length;
-      if (cleanedCount > 0) {
-        console.log(`Cleaned up ${cleanedCount} orphaned notifications`);
-      }
 
       // Recalculate counts
       draft.unreadCount = draft.notifications.filter(n => !n.isRead).length;

@@ -1,6 +1,9 @@
 import { client } from './client';
+import { InMemoryCache } from '@apollo/client';
 import { useStore } from '#store';
 import { storage } from '#/storage/mmkv';
+import { apolloCachePersistence } from './offline/ApolloCachePersistence';
+import { optimisticDataPersistence } from './offline/OptimisticDataPersistence';
 
 interface LogoutCleanupOptions {
   clearCache?: boolean;
@@ -141,24 +144,40 @@ export class LogoutCleanup {
     try {
       await client.clearStore();
 
-      // Clear storage keys
-      storage.delete('apollo-cache');
-      storage.delete('navigation_state');
-      storage.delete('apollo-client-cache');
-      storage.delete('persisted-queries');
+      // Run garbage collection with result cache reset
+      // Per Apollo docs: "call gc() after evict() operations"
+      const cache = client.cache as InMemoryCache;
+      const removedIds = cache.gc({ resetResultCache: true });
+      console.log(`🗑️ Garbage collected ${removedIds.length} unreachable cache objects`);
+
+      // Clear new cache persistence
+      apolloCachePersistence.clear();
+
+      // Clear optimistic data persistence
+      optimisticDataPersistence.clearAll();
+
+      // Clear storage keys (legacy cleanup)
+      storage.remove('apollo-cache');
+      storage.remove('navigation_state');
+      storage.remove('apollo-client-cache');
+      storage.remove('persisted-queries');
+      storage.remove('apollo-mutation-queue'); // Clear offline mutation queue
+      storage.remove('apollo-queue-current-user'); // Clear queue user ID
 
       // Get secure storage and clear auth-related data
       try {
         const { getStorage } = await import('#/storage/mmkv');
         const secureStorage = await getStorage();
-        secureStorage.delete('apollo-cache');
-        secureStorage.delete('navigation_state');
-        secureStorage.delete('apollo-client-cache');
+        secureStorage.remove('apollo-cache');
+        secureStorage.remove('navigation_state');
+        secureStorage.remove('apollo-client-cache');
+        secureStorage.remove('apollo-mutation-queue');
+        secureStorage.remove('apollo-queue-current-user');
       } catch (storageError) {
         console.warn('Failed to clear secure storage:', storageError);
       }
 
-      console.log('🗑️ Apollo cache and navigation state cleared');
+      console.log('🗑️ Apollo cache, navigation state, and mutation queue cleared');
     } catch (error) {
       console.warn('Failed to clear Apollo cache:', error);
     }

@@ -1,8 +1,4 @@
-import {
-  useGetShoppingListQuery,
-  useShoppingListUpdatedSubscription,
-  GetShoppingListDocument,
-} from '#generated';
+import { useGetShoppingListQuery } from '#generated';
 
 export function useShoppingListDetails(listId: string | undefined) {
   const {data, loading, error, refetch} = useGetShoppingListQuery({
@@ -11,30 +7,9 @@ export function useShoppingListDetails(listId: string | undefined) {
     fetchPolicy: 'cache-and-network',
   });
 
-  useShoppingListUpdatedSubscription({
-    variables: {listId: listId!},
-    skip: !listId,
-    onData: ({data: subscriptionData, client}) => {
-      const updatedList = subscriptionData?.data?.shoppingListUpdated;
-
-      if (!updatedList || !listId) {
-        console.warn(
-          'Invalid shoppingListMetadataUpdated payload',
-          subscriptionData,
-        );
-        return;
-      }
-
-      // Update the cache with the new list data
-      client.writeQuery({
-        query: GetShoppingListDocument,
-        variables: {id: listId},
-        data: {
-          shoppingList: updatedList,
-        },
-      });
-    },
-  });
+  // Real-time updates via subscription are now handled by SubscriptionProvider
+  // The ShoppingListUpdated subscription automatically updates the cache via
+  // Apollo's normalization, eliminating the need for manual client.writeQuery
 
   const shoppingList = data?.shoppingList || null;
 

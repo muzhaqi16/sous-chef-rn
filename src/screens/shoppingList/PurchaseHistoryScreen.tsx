@@ -113,7 +113,12 @@ export const PurchaseHistoryScreen: React.FC<{
           </>
         ) : (
           <View style={styles.emptyContainer}>
-            <Icon name="receipt-outline" size={64} color="#ccc" />
+            <Icon
+              name="receipt-outline"
+              size={64}
+              color="#ccc"
+              library="Ionicons"
+            />
             <Text style={styles.emptyText}>No purchase history</Text>
             <Text style={styles.emptySubtext}>
               Mark this item as purchased to start tracking history
@@ -137,7 +142,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
   },
   backButton: {
     padding: theme.spacing.xs,
@@ -166,12 +171,12 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.md,
   },
   statsContainer: {
-    backgroundColor: '#F0F9FF',
+    backgroundColor: theme.colors.infoLight,
     padding: theme.spacing.md,
     borderRadius: theme.radii.md,
     marginBottom: theme.spacing.md,
     borderWidth: 1,
-    borderColor: '#BFDBFE',
+    borderColor: theme.colors.info,
   },
   statsText: {
     fontSize: theme.fonts.size.md,
@@ -179,7 +184,7 @@ const styles = StyleSheet.create(theme => ({
   },
   statsValue: {
     fontWeight: theme.fonts.weight.bold,
-    color: '#0284C7',
+    color: theme.colors.info,
   },
   purchaseCard: {
     borderRadius: theme.radii.md,
@@ -205,7 +210,7 @@ const styles = StyleSheet.create(theme => ({
     marginRight: theme.spacing.sm,
   },
   purchaseNumberText: {
-    color: '#fff',
+    color: theme.colors.white,
     fontSize: theme.fonts.size.xs,
     fontWeight: theme.fonts.weight.bold,
   },

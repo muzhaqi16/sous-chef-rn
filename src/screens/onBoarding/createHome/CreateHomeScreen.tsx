@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { View, Text } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { View, Text, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { formatRole } from '#utils/formatters';
 import { ApolloCache } from '@apollo/client';
 
 // Components
@@ -22,6 +23,9 @@ import {
   useGetPantriesQuery,
   GetHomesDocument,
   GetHomesQuery,
+  useGetMyPendingInvitesQuery,
+  useAcceptHomeInviteMutation,
+  useDeclineHomeInviteMutation,
 } from '#generated';
 
 // Store & Navigation
@@ -33,6 +37,7 @@ import { getCreateHomeSchema } from '#/utils';
 import { createPantryForHome, showPantryCreationError } from './helpers';
 
 export const CreateHomeScreen = () => {
+  const { theme } = useUnistyles();
   const { navigateToNextStep, setUserNavigationState, skipToStep } =
     useOnboardingNavigation();
 
@@ -43,6 +48,7 @@ export const CreateHomeScreen = () => {
   const [graphqlError, setGraphqlError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [checkingExisting, setCheckingExisting] = useState(true);
+  const [forceShowCreateForm, setForceShowCreateForm] = useState(false);
 
   // Track onboarding start (only once at the beginning)
   const hasTrackedStartRef = useRef(false);
@@ -68,12 +74,20 @@ export const CreateHomeScreen = () => {
     fetchPolicy: 'cache-and-network',
   });
 
+  const { data: pendingInvitesData, loading: invitesLoading } =
+    useGetMyPendingInvitesQuery({
+      skip: !user?.id,
+      fetchPolicy: 'cache-and-network',
+    });
+
   const homes = homesData?.homes || [];
   const pantries = pantriesData?.pantries || [];
+  const pendingInvites = pendingInvitesData?.myPendingInvites || [];
   const existingHome = homes[0];
   const existingPantry = pantries.find(p => p.isDefault) || pantries[0];
   const needsHome = !existingHome;
   const needsPantry = !existingPantry;
+  const hasPendingInvites = pendingInvites.length > 0;
 
   // GraphQL Mutations
   const [createHome] = useCreateHomeMutation();
@@ -112,6 +126,27 @@ export const CreateHomeScreen = () => {
           console.log('Cache update failed, will rely on refetch:', error);
         }
       }
+    },
+  });
+
+  const [acceptHomeInvite, { loading: accepting }] =
+    useAcceptHomeInviteMutation({
+      refetchQueries: [{ query: GetHomesDocument }],
+      onCompleted: data => {
+        if (data.acceptHomeInvite?.homeId) {
+          setSelectedHomeId(data.acceptHomeInvite.homeId);
+          navigateToNextStep('CreateHome');
+        }
+      },
+      onError: error => {
+        Alert.alert('Error', error.message || 'Failed to accept invitation');
+      },
+    });
+
+  const [declineHomeInvite] = useDeclineHomeInviteMutation({
+    refetchQueries: [{ query: GetHomesDocument }],
+    onError: error => {
+      Alert.alert('Error', error.message || 'Failed to decline invitation');
     },
   });
 
@@ -233,8 +268,37 @@ export const CreateHomeScreen = () => {
     ],
   );
 
+  const handleAcceptInvite = async (token: string) => {
+    try {
+      await acceptHomeInvite({ variables: { token } });
+    } catch (error) {
+      // Error handled by onError in mutation
+    }
+  };
+
+  const handleDeclineInvite = (token: string, homeNameParam: string) => {
+    Alert.alert(
+      'Decline Invitation',
+      `Are you sure you want to decline the invitation to join ${homeNameParam}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Decline',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await declineHomeInvite({ variables: { token } });
+            } catch (error) {
+              // Error handled by onError in mutation
+            }
+          },
+        },
+      ],
+    );
+  };
+
   // Loading state
-  if (checkingExisting || homesLoading || (selectedHomeId && pantriesLoading)) {
+  if (checkingExisting || homesLoading || invitesLoading || (selectedHomeId && pantriesLoading)) {
     return <LoadingView onSkip={() => skipToStep('CreateShoppingList')} />;
   }
 
@@ -250,6 +314,87 @@ export const CreateHomeScreen = () => {
     if (!existingPantry) return `Let's add a pantry to ${existingHome.name}`;
     return 'Your home and pantry are already configured';
   };
+
+  // If user has pending invites and no home, show invitations (unless forcing create form)
+  if (hasPendingInvites && !existingHome && !forceShowCreateForm) {
+    return (
+      <OnBoardingWrapper
+        title="You have pending home invitations!"
+        subtitle="Accept an invitation to join an existing home or create your own"
+        step={1}
+        totalSteps={7}
+        onSkip={() => skipToStep('CreateShoppingList')}
+      >
+        <View style={styles.invitesContainer}>
+          <Text style={styles.invitesSectionTitle}>Pending Invitations</Text>
+          {pendingInvites.map(invite => {
+            const inviterName = invite.inviter?.profile?.displayName || invite.inviter?.email || 'Someone';
+            const inviteHomeName = invite.home?.name || 'Unknown Home';
+
+            return (
+              <View key={invite.id} style={styles.inviteCard}>
+                {/* Home name - prominent */}
+                <Text style={styles.inviteHomeName}>{inviteHomeName}</Text>
+
+                {/* Invitation details */}
+                <View style={styles.inviteDetailsContainer}>
+                  <Text style={styles.inviteDetail}>
+                    <Text style={styles.inviteDetailLabel}>From: </Text>
+                    <Text style={styles.inviteDetailValue}>{inviterName}</Text>
+                  </Text>
+
+                  <Text style={styles.inviteDetail}>
+                    <Text style={styles.inviteDetailLabel}>Role: </Text>
+                    <Text style={styles.inviteRoleText}>{formatRole(invite.role)}</Text>
+                  </Text>
+                </View>
+
+                {/* Actions */}
+                <View style={styles.inviteActions}>
+                  <TouchableOpacity
+                    style={[styles.button, styles.inviteDeclineButton]}
+                    onPress={() => handleDeclineInvite(invite.token, inviteHomeName)}
+                    disabled={accepting}>
+                    <Text style={styles.inviteDeclineButtonText}>Decline</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.button, styles.inviteAcceptButton]}
+                    onPress={() => handleAcceptInvite(invite.token)}
+                    disabled={accepting}>
+                    {accepting ? (
+                      <ActivityIndicator size="small" color={theme.colors.white} />
+                    ) : (
+                      <Text style={styles.inviteAcceptButtonText}>Accept</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+
+        <View style={styles.orDivider}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>OR</Text>
+          <View style={styles.dividerLine} />
+        </View>
+
+        <Button
+          title="Create My Own Home"
+          onPress={() => setForceShowCreateForm(true)}
+          btnStyle={styles.createOwnButton}
+          txtStyle={styles.createOwnText}
+        />
+
+        <Button
+          title="Skip for Now"
+          onPress={() => skipToStep('CreateShoppingList')}
+          btnStyle={styles.skipButton}
+          txtStyle={styles.skipText}
+        />
+      </OnBoardingWrapper>
+    );
+  }
 
   // If both exist, show summary and continue button
   if (existingHome && existingPantry) {
@@ -386,5 +531,124 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.white,
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.bold,
+  },
+  invitesContainer: {
+    marginVertical: theme.spacing.lg,
+  },
+  invitesSectionTitle: {
+    fontSize: theme.fonts.size.md,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.md,
+  },
+  inviteCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radii.lg,
+    padding: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    shadowColor: theme.colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  inviteHomeName: {
+    fontSize: 20,
+    fontWeight: theme.fonts.weight.bold,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.md,
+    lineHeight: 26,
+  },
+  inviteDetailsContainer: {
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
+  },
+  inviteDetail: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textPrimary,
+    lineHeight: 20,
+  },
+  inviteDetailLabel: {
+    fontWeight: theme.fonts.weight.medium,
+    color: theme.colors.textSecondary,
+  },
+  inviteDetailValue: {
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textPrimary,
+  },
+  inviteRoleText: {
+    fontWeight: theme.fonts.weight.bold,
+    color: theme.colors.primary,
+  },
+  inviteActions: {
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
+  },
+  button: {
+    flex: 1,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  inviteDeclineButton: {
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  inviteDeclineButtonText: {
+    fontSize: theme.fonts.size.sm,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textPrimary,
+  },
+  inviteAcceptButton: {
+    backgroundColor: theme.colors.primary,
+  },
+  inviteAcceptButtonText: {
+    fontSize: theme.fonts.size.sm,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.white,
+  },
+  orDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: theme.spacing.lg,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: theme.colors.border,
+  },
+  dividerText: {
+    paddingHorizontal: theme.spacing.md,
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textSecondary,
+    fontWeight: theme.fonts.weight.medium,
+  },
+  createOwnButton: {
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: theme.spacing.md,
+    borderRadius: theme.radii.md,
+    alignItems: 'center',
+    marginBottom: theme.spacing.sm,
+  },
+  createOwnText: {
+    color: theme.colors.textPrimary,
+    fontSize: theme.fonts.size.md,
+    fontWeight: theme.fonts.weight.semibold,
+  },
+  skipButton: {
+    backgroundColor: theme.colors.transparent,
+    padding: theme.spacing.md,
+    alignItems: 'center',
+  },
+  skipText: {
+    color: theme.colors.textSecondary,
+    fontSize: theme.fonts.size.sm,
+    fontWeight: theme.fonts.weight.medium,
   },
 }));

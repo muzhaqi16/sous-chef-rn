@@ -1,8 +1,15 @@
 import React from 'react';
 import { View, Text } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useStore } from '#store';
 import { HomeInviteFragment } from '#generated';
+import {
+  formatRole,
+  formatInviteStatus,
+  getInviteStatusColor,
+  getMemberDisplayName,
+  getInviteDisplayName,
+} from '#utils/formatters';
 
 interface Member {
   id: string;
@@ -31,6 +38,7 @@ export const MembersList: React.FC<MembersListProps> = ({
   invites = [],
 }) => {
   const currentUser = useStore(state => state.user);
+  const { theme } = useUnistyles();
 
   // Filter out accepted invites since they are now members
   const pendingInvites = invites.filter(invite => invite.status !== 'ACCEPTED');
@@ -41,88 +49,12 @@ export const MembersList: React.FC<MembersListProps> = ({
   )
     return null;
 
-  const getMemberDisplayName = (member: Member): string => {
-    // Check if this member is the current user
-    const isCurrentUser = member.user?.id === currentUser?.id;
-
-    if (isCurrentUser) {
-      return 'You';
-    }
-
-    // Try to get display name in order of preference
-    const displayName =
-      member.displayName ||
-      member.user?.profile?.displayName ||
-      member.user?.profile?.firstName ||
-      (member.user?.profile?.firstName && member.user?.profile?.lastName
-        ? `${member.user.profile.firstName} ${member.user.profile.lastName}`
-        : null) ||
-      member.user?.email?.split('@')[0] || // Use email username part
-      member.user?.email ||
-      'Unknown Member';
-
-    return displayName;
-  };
-
-  const formatRole = (role: string): string => {
-    switch (role) {
-      case 'OWNER':
-        return 'Owner';
-      case 'ADMIN':
-        return 'Admin';
-      case 'MEMBER':
-        return 'Member';
-      case 'GUEST':
-        return 'Guest';
-      default:
-        return role;
-    }
-  };
-
-  const getInviteDisplayName = (invite: HomeInviteFragment): string => {
-    return invite.recipientName || invite.email.split('@')[0] || invite.email;
-  };
-
-  const formatInviteStatus = (status: string): string => {
-    switch (status) {
-      case 'PENDING':
-        return 'Invited';
-      case 'ACCEPTED':
-        return 'Accepted';
-      case 'DECLINED':
-        return 'Declined';
-      case 'EXPIRED':
-        return 'Expired';
-      case 'REVOKED':
-        return 'Revoked';
-      default:
-        return status;
-    }
-  };
-
-  const getInviteStatusColor = (status: string): string => {
-    switch (status) {
-      case 'PENDING':
-        return '#FFA500'; // Orange
-      case 'ACCEPTED':
-        return '#4CAF50'; // Green
-      case 'DECLINED':
-        return '#F44336'; // Red
-      case 'EXPIRED':
-        return '#9E9E9E'; // Gray
-      case 'REVOKED':
-        return '#9E9E9E'; // Gray
-      default:
-        return '#9E9E9E';
-    }
-  };
-
   return (
     <View style={styles.membersSection}>
       <Text style={styles.membersSectionTitle}>Members</Text>
       <View style={styles.membersList}>
         {members.map(member => {
-          const displayName = getMemberDisplayName(member);
+          const displayName = getMemberDisplayName(member, currentUser?.id);
           const isCurrentUser = member.user?.id === currentUser?.id;
 
           return (
@@ -148,7 +80,7 @@ export const MembersList: React.FC<MembersListProps> = ({
 
         {pendingInvites.map(invite => {
           const displayName = getInviteDisplayName(invite);
-          const statusColor = getInviteStatusColor(invite.status);
+          const statusColor = getInviteStatusColor(invite.status, theme);
 
           return (
             <View
@@ -212,11 +144,11 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.primary,
   },
   currentUserText: {
-    color: 'white',
+    color: theme.colors.white,
     fontWeight: '700',
   },
   inviteChip: {
-    backgroundColor: 'transparent',
+    backgroundColor: theme.colors.transparent,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 16,

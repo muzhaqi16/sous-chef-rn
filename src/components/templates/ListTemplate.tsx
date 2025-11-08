@@ -26,7 +26,10 @@ interface ListTemplateProps {
   onItemPress?: (id: string) => void;
   onItemEdit?: (id: string) => void;
   onItemDelete?: (id: string) => void;
+  onItemConsume?: (id: string) => void;
+  onItemWaste?: (id: string) => void;
   onRefresh?: () => Promise<void>;
+  onSwipeableWillOpen?: (ref: any) => void;
   emptyState?: any;
 
   // State management
@@ -64,7 +67,10 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
   onItemPress = () => {},
   onItemEdit = () => {},
   onItemDelete = () => {},
+  onItemConsume,
+  onItemWaste,
   onRefresh = async () => {},
+  onSwipeableWillOpen,
   emptyState,
 
   // State management
@@ -154,7 +160,10 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
           onItemPress={isLoading ? () => {} : onItemPress}
           onItemEdit={isLoading ? () => {} : onItemEdit}
           onItemDelete={isLoading ? () => {} : onItemDelete}
+          onItemConsume={isLoading ? undefined : onItemConsume}
+          onItemWaste={isLoading ? undefined : onItemWaste}
           onRefresh={onRefresh}
+          onSwipeableWillOpen={onSwipeableWillOpen}
           emptyState={effectiveEmptyState}
           {...customListProps}
         />
@@ -164,7 +173,10 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
           onItemPress={isLoading ? () => {} : onItemPress}
           onItemEdit={isLoading ? () => {} : onItemEdit}
           onItemDelete={isLoading ? () => {} : onItemDelete}
+          onItemConsume={isLoading ? undefined : onItemConsume}
+          onItemWaste={isLoading ? undefined : onItemWaste}
           onRefresh={onRefresh}
+          onSwipeableWillOpen={onSwipeableWillOpen}
           emptyState={effectiveEmptyState}
         />
       )}

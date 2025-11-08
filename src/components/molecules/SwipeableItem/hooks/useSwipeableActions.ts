@@ -6,12 +6,16 @@ interface UseSwipeableActionsProps {
   onDelete?: () => void;
   animateDelete: () => void;
   enableSwipeToDelete?: boolean;
+  onSwipeableWillOpen?: (ref: any) => void;
+  onSwipeableClose?: () => void;
 }
 
 export const useSwipeableActions = ({
   onEdit,
   onDelete,
   animateDelete,
+  onSwipeableWillOpen,
+  onSwipeableClose,
 }: UseSwipeableActionsProps) => {
   const swipeableRef = useRef<ComponentRef<typeof ReanimatedSwipeable>>(null);
 
@@ -27,14 +31,21 @@ export const useSwipeableActions = ({
     }
   };
 
-  const handleSwipeableOpen = () => {
-    // Swipe only reveals actions, doesn't execute them
-    // Actions are only executed when clicked
+  const handleSwipeableWillOpen = () => {
+    // Notify parent that this swipeable is about to open
+    // This allows parent to close any previously open swipeable
+    onSwipeableWillOpen?.(swipeableRef);
+  };
+
+  const handleSwipeableClose = () => {
+    // Notify parent that this swipeable has closed
+    onSwipeableClose?.();
   };
 
   return {
     swipeableRef,
     handleActionPress,
-    handleSwipeableOpen,
+    handleSwipeableWillOpen,
+    handleSwipeableClose,
   };
 };

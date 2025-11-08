@@ -33,6 +33,10 @@ export const ScannerProvider: React.FC<ScannerProviderProps> = ({ children }) =>
     setIsOverlayOpen(isOpen);
   }, []);
 
+  const handleSetActiveTab = useCallback((tabName: string) => {
+    setActiveTab(tabName);
+  }, []);
+
   // Only show scanner button if the current tab is in the allowed list and scanner is enabled
   const shouldShowScanner = showScannerButton && allowedTabs.includes(activeTab);
 
@@ -41,7 +45,7 @@ export const ScannerProvider: React.FC<ScannerProviderProps> = ({ children }) =>
       onScanPress,
       showScannerButton: shouldShowScanner,
       setScannerProps,
-      setActiveTab,
+      setActiveTab: handleSetActiveTab,
       isOverlayOpen,
       setOverlayOpen,
     }}>

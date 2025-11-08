@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Alert } from 'react-native';
+import { View, Text, Alert } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { SettingSwitch, SettingSection } from '#components/settings';
+import { ProfileScreenWrapper } from '#components/templates';
 import { useNotificationSettings } from '#hooks';
+import { ExpirationFrequency } from '#generated';
+import { Picker } from '@react-native-picker/picker';
 
 export const NotificationSettingsScreen: React.FC = () => {
   const [updating, setUpdating] = useState<string | null>(null);
@@ -15,7 +18,7 @@ export const NotificationSettingsScreen: React.FC = () => {
     isQuietTime,
   } = useNotificationSettings();
 
-  const handleSettingChange = async (key: string, value: boolean) => {
+  const handleSettingChange = async (key: string, value: boolean | string | number | ExpirationFrequency) => {
     setUpdating(key);
     try {
       const success = await updateNotificationSetting(key as any, value);
@@ -66,7 +69,7 @@ export const NotificationSettingsScreen: React.FC = () => {
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <ProfileScreenWrapper title="Notification Settings">
       {/* Quiet Hours Status */}
       {isQuietTime() && (
         <View style={styles.quietTimeAlert}>
@@ -80,37 +83,29 @@ export const NotificationSettingsScreen: React.FC = () => {
         <SettingSwitch
           title="Push Notifications"
           description="Receive push notifications on your device"
-          value={settings.pushNotifications}
+          value={settings.pushEnabled}
           onValueChange={value =>
-            handleSettingChange('pushNotifications', value)
+            handleSettingChange('pushEnabled', value)
           }
+          loading={updating === 'pushEnabled'}
         />
         <SettingSwitch
           title="Email Notifications"
           description="Receive notifications via email"
-          value={settings.emailNotifications}
+          value={settings.emailEnabled}
           onValueChange={value =>
-            handleSettingChange('emailNotifications', value)
+            handleSettingChange('emailEnabled', value)
           }
-          loading={updating === 'emailNotifications'}
+          loading={updating === 'emailEnabled'}
         />
         <SettingSwitch
           title="SMS Notifications"
           description="Receive text message notifications"
-          value={settings.smsNotifications}
+          value={settings.smsEnabled}
           onValueChange={value =>
-            handleSettingChange('smsNotifications', value)
+            handleSettingChange('smsEnabled', value)
           }
-          loading={updating === 'smsNotifications'}
-        />
-        <SettingSwitch
-          title="Urgent Only Mode"
-          description="Only receive urgent notifications (low stock, expiration)"
-          value={settings.urgentNotificationsOnly}
-          onValueChange={value =>
-            handleSettingChange('urgentNotificationsOnly', value)
-          }
-          loading={updating === 'urgentNotificationsOnly'}
+          loading={updating === 'smsEnabled'}
         />
       </SettingSection>
 
@@ -118,12 +113,54 @@ export const NotificationSettingsScreen: React.FC = () => {
         <SettingSwitch
           title="Expiration Alerts"
           description="Get notified when items are about to expire"
-          value={settings.expiredItemAlerts}
+          value={settings.expirationNotifications}
           onValueChange={value =>
-            handleSettingChange('expiredItemAlerts', value)
+            handleSettingChange('expirationNotifications', value)
           }
-          loading={updating === 'expiredItemAlerts'}
+          loading={updating === 'expirationNotifications'}
         />
+
+        {settings.expirationNotifications && (
+          <>
+            <View style={styles.indentedSetting}>
+              <Text style={styles.settingLabel}>Notification Frequency</Text>
+              <Picker
+                selectedValue={settings.expirationNotificationFrequency}
+                onValueChange={(value) =>
+                  handleSettingChange('expirationNotificationFrequency', value)
+                }
+                style={styles.picker}
+              >
+                <Picker.Item label="Real-time (as items expire)" value={ExpirationFrequency.RealTime} />
+                <Picker.Item label="Daily - Morning" value={ExpirationFrequency.DailyMorning} />
+                <Picker.Item label="Daily - Evening" value={ExpirationFrequency.DailyEvening} />
+                <Picker.Item label="Weekly Digest" value={ExpirationFrequency.WeeklyDigest} />
+                <Picker.Item label="Never" value={ExpirationFrequency.Never} />
+              </Picker>
+            </View>
+
+            <View style={styles.indentedSetting}>
+              <Text style={styles.settingLabel}>
+                Alert threshold: {settings.expirationDaysThreshold} day{settings.expirationDaysThreshold !== 1 ? 's' : ''} before expiration
+              </Text>
+              <Picker
+                selectedValue={settings.expirationDaysThreshold}
+                onValueChange={(value) =>
+                  handleSettingChange('expirationDaysThreshold', Number(value))
+                }
+                style={styles.picker}
+              >
+                <Picker.Item label="Same day (0 days)" value={0} />
+                <Picker.Item label="1 day before" value={1} />
+                <Picker.Item label="2 days before" value={2} />
+                <Picker.Item label="3 days before" value={3} />
+                <Picker.Item label="5 days before" value={5} />
+                <Picker.Item label="7 days before" value={7} />
+              </Picker>
+            </View>
+          </>
+        )}
+
         <SettingSwitch
           title="Low Stock Alerts"
           description="Get notified when pantry items are running low"
@@ -134,9 +171,9 @@ export const NotificationSettingsScreen: React.FC = () => {
         <SettingSwitch
           title="Pantry Updates"
           description="Get notified when items are added or updated"
-          value={settings.pantryUpdates}
-          onValueChange={value => handleSettingChange('pantryUpdates', value)}
-          loading={updating === 'pantryUpdates'}
+          value={settings.pantryChanges}
+          onValueChange={value => handleSettingChange('pantryChanges', value)}
+          loading={updating === 'pantryChanges'}
         />
       </SettingSection>
 
@@ -151,68 +188,36 @@ export const NotificationSettingsScreen: React.FC = () => {
           loading={updating === 'shoppingListUpdates'}
         />
         <SettingSwitch
-          title="Collaborator Changes"
-          description="Get notified when collaborators are added or removed"
-          value={settings.collaboratorChanges}
+          title="Shared List Updates"
+          description="Get notified about changes in shared lists"
+          value={settings.sharedListUpdates}
           onValueChange={value =>
-            handleSettingChange('collaboratorChanges', value)
+            handleSettingChange('sharedListUpdates', value)
           }
-          loading={updating === 'collaboratorChanges'}
-        />
-        <SettingSwitch
-          title="Item Completed"
-          description="Get notified when others mark items as purchased"
-          value={settings.itemCompletedNotifications}
-          onValueChange={value =>
-            handleSettingChange('itemCompletedNotifications', value)
-          }
-          loading={updating === 'itemCompletedNotifications'}
+          loading={updating === 'sharedListUpdates'}
         />
       </SettingSection>
 
-      <SettingSection title="Home & Membership">
+      <SettingSection title="Collaboration & Home">
+        <SettingSwitch
+          title="Collaboration Invites"
+          description="Get notified when invited to collaborate on lists"
+          value={settings.collaborationInvites}
+          onValueChange={value =>
+            handleSettingChange('collaborationInvites', value)
+          }
+          loading={updating === 'collaborationInvites'}
+        />
         <SettingSwitch
           title="Home Invitations"
           description="Get notified about invitations to join homes"
-          value={settings.homeInvitations}
-          onValueChange={value => handleSettingChange('homeInvitations', value)}
-          loading={updating === 'homeInvitations'}
-        />
-        <SettingSwitch
-          title="Membership Changes"
-          description="Get notified about role changes and permissions"
-          value={settings.membershipChanges}
-          onValueChange={value =>
-            handleSettingChange('membershipChanges', value)
-          }
-          loading={updating === 'membershipChanges'}
-        />
-        <SettingSwitch
-          title="New Members"
-          description="Get notified when new members join your home"
-          value={settings.newMemberNotifications}
-          onValueChange={value =>
-            handleSettingChange('newMemberNotifications', value)
-          }
-          loading={updating === 'newMemberNotifications'}
+          value={settings.homeInvites}
+          onValueChange={value => handleSettingChange('homeInvites', value)}
+          loading={updating === 'homeInvites'}
         />
       </SettingSection>
 
-      <SettingSection title="Schedule & Preferences">
-        <SettingSwitch
-          title="Quiet Hours"
-          description="Mute notifications during specified hours"
-          value={settings.quietHours}
-          onValueChange={value => handleSettingChange('quietHours', value)}
-          loading={updating === 'quietHours'}
-        />
-        <SettingSwitch
-          title="Weekly Digest"
-          description="Receive a weekly summary of your pantry activity"
-          value={settings.weeklyDigest}
-          onValueChange={value => handleSettingChange('weeklyDigest', value)}
-          loading={updating === 'weeklyDigest'}
-        />
+      <SettingSection title="Recipes & Meal Planning">
         <SettingSwitch
           title="Recipe Recommendations"
           description="Get recipe suggestions based on your pantry items"
@@ -222,6 +227,61 @@ export const NotificationSettingsScreen: React.FC = () => {
           }
           loading={updating === 'recipeRecommendations'}
         />
+        <SettingSwitch
+          title="Meal Plan Reminders"
+          description="Get reminders about upcoming meals"
+          value={settings.mealPlanReminders}
+          onValueChange={value =>
+            handleSettingChange('mealPlanReminders', value)
+          }
+          loading={updating === 'mealPlanReminders'}
+        />
+        <SettingSwitch
+          title="Cooking Reminders"
+          description="Get reminders when it's time to start cooking"
+          value={settings.cookingReminders}
+          onValueChange={value =>
+            handleSettingChange('cookingReminders', value)
+          }
+          loading={updating === 'cookingReminders'}
+        />
+      </SettingSection>
+
+      <SettingSection title="Digests & Reports">
+        <SettingSwitch
+          title="Weekly Digest"
+          description="Receive a weekly summary of your pantry activity"
+          value={settings.weeklyDigest}
+          onValueChange={value => handleSettingChange('weeklyDigest', value)}
+          loading={updating === 'weeklyDigest'}
+        />
+        <SettingSwitch
+          title="Monthly Report"
+          description="Receive a monthly report with insights and statistics"
+          value={settings.monthlyReport}
+          onValueChange={value => handleSettingChange('monthlyReport', value)}
+          loading={updating === 'monthlyReport'}
+        />
+      </SettingSection>
+
+      <SettingSection title="Quiet Hours">
+        <SettingSwitch
+          title="Enable Quiet Hours"
+          description="Mute notifications during specified hours"
+          value={settings.quietHoursEnabled}
+          onValueChange={value => handleSettingChange('quietHoursEnabled', value)}
+          loading={updating === 'quietHoursEnabled'}
+        />
+        {settings.quietHoursEnabled && (
+          <View style={styles.quietHoursInfo}>
+            <Text style={styles.quietHoursText}>
+              Quiet hours: {settings.quietHoursStart || '22:00'} - {settings.quietHoursEnd || '08:00'}
+            </Text>
+            <Text style={styles.quietHoursSubtext}>
+              Notifications will be muted during these hours
+            </Text>
+          </View>
+        )}
       </SettingSection>
 
       <SettingSection title="Reset">
@@ -233,15 +293,11 @@ export const NotificationSettingsScreen: React.FC = () => {
           loading={updating === 'reset'}
         />
       </SettingSection>
-    </ScrollView>
+    </ProfileScreenWrapper>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -264,5 +320,41 @@ const styles = StyleSheet.create(theme => ({
     fontSize: 14,
     color: '#1565C0',
     textAlign: 'center',
+  },
+  indentedSetting: {
+    marginLeft: theme.spacing.xl,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 8,
+    marginBottom: theme.spacing.sm,
+  },
+  settingLabel: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.xs,
+    fontWeight: '500',
+  },
+  picker: {
+    height: 50,
+    width: '100%',
+  },
+  quietHoursInfo: {
+    marginLeft: theme.spacing.xl,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 8,
+    marginBottom: theme.spacing.sm,
+  },
+  quietHoursText: {
+    fontSize: theme.fonts.size.md,
+    color: theme.colors.textPrimary,
+    fontWeight: '500',
+    marginBottom: theme.spacing.xs,
+  },
+  quietHoursSubtext: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textSecondary,
   },
 }));

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,9 @@ import {
   CollaboratorRole,
 } from '#generated';
 import { useShoppingListDetails } from '#/hooks';
+import CollaboratorPermissionsBottomSheet, {
+  CollaboratorPermissionsBottomSheetRef,
+} from '#/components/organisms/CollaboratorPermissionsBottomSheet';
 
 export const ShareList: React.FC = () => {
   const { theme } = useUnistyles();
@@ -26,6 +29,8 @@ export const ShareList: React.FC = () => {
 
   const [email, setEmail] = useState('');
   const [sharing, setSharing] = useState(false);
+  const permissionsBottomSheetRef =
+    useRef<CollaboratorPermissionsBottomSheetRef>(null);
 
   const { loading, collaborators, refetch } = useShoppingListDetails(listId);
 
@@ -167,7 +172,12 @@ export const ShareList: React.FC = () => {
             const statusText = formatStatus(member.status);
 
             return (
-              <View key={member.id} style={styles.memberCard}>
+              <TouchableOpacity
+                key={member.id}
+                style={styles.memberCard}
+                onPress={() => permissionsBottomSheetRef.current?.open(member)}
+                activeOpacity={0.7}
+              >
                 <View style={styles.memberInfo}>
                   <View style={styles.avatar}>
                     <Text style={styles.avatarText}>
@@ -206,15 +216,24 @@ export const ShareList: React.FC = () => {
                   </View>
                 </View>
                 <TouchableOpacity
-                  onPress={() => handleRemoveMember(member.email)}
+                  onPress={(e) => {
+                    e?.stopPropagation?.();
+                    handleRemoveMember(member.email);
+                  }}
                 >
                   <Icon name="close" size={20} color={theme.colors.error} />
                 </TouchableOpacity>
-              </View>
+              </TouchableOpacity>
             );
           })}
         </ScrollView>
       </View>
+
+      <CollaboratorPermissionsBottomSheet
+        ref={permissionsBottomSheetRef}
+        shoppingListId={listId}
+        onSuccess={refetch}
+      />
     </View>
   );
 };
@@ -289,7 +308,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 12,
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.surface,
     marginBottom: 8,
     borderRadius: 8,
   },
@@ -311,7 +330,7 @@ const styles = StyleSheet.create(theme => ({
     marginRight: 12,
   },
   avatarText: {
-    color: 'white',
+    color: theme.colors.white,
     fontSize: 16,
     fontWeight: '600',
   },

@@ -6,6 +6,7 @@ import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 interface HomeActionsProps {
   homeId: string;
   isDefault: boolean;
+  canInvite?: boolean;
   onSetDefault: (homeId: string) => void;
   onInvite: (homeId: string) => void;
   onDelete: (homeId: string) => void;
@@ -14,6 +15,7 @@ interface HomeActionsProps {
 export const HomeActions: React.FC<HomeActionsProps> = ({
   homeId,
   isDefault,
+  canInvite = true, // Default to true for backward compatibility
   onSetDefault,
   onInvite,
   onDelete,
@@ -34,12 +36,14 @@ export const HomeActions: React.FC<HomeActionsProps> = ({
         </TouchableOpacity>
       )}
 
-      <TouchableOpacity
-        style={styles.actionButton}
-        onPress={() => onInvite(homeId)}>
-        <Icon name="person-add" size={20} color={theme.colors.textSecondary} />
-        <Text style={styles.actionText}>Invite</Text>
-      </TouchableOpacity>
+      {canInvite && (
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => onInvite(homeId)}>
+          <Icon name="person-add" size={20} color={theme.colors.textSecondary} />
+          <Text style={styles.actionText}>Invite</Text>
+        </TouchableOpacity>
+      )}
 
       <TouchableOpacity
         style={styles.actionButton}

@@ -1,4 +1,5 @@
-export const PROFILE_SETTINGS_CONFIG = [
+// Personal Information screen configuration (shown when navigating to Personal Information)
+export const PERSONAL_INFO_CONFIG = [
   {
     title: 'Personal Information',
     items: [
@@ -37,11 +38,11 @@ export const PROFILE_SETTINGS_CONFIG = [
         label: 'Gender',
         type: 'modal',
         options: [
-          {label: 'Male', value: 'male'},
-          {label: 'Female', value: 'female'},
-          {label: 'Non-binary', value: 'non-binary'},
-          {label: 'Other', value: 'other'},
-          {label: 'Prefer not to say', value: 'prefer-not-to-say'},
+          { label: 'Male', value: 'male' },
+          { label: 'Female', value: 'female' },
+          { label: 'Non-binary', value: 'non-binary' },
+          { label: 'Other', value: 'other' },
+          { label: 'Prefer not to say', value: 'prefer-not-to-say' },
         ],
       },
     ],
@@ -54,9 +55,9 @@ export const PROFILE_SETTINGS_CONFIG = [
         label: 'Profile Visibility',
         type: 'modal',
         options: [
-          {label: 'Public', value: 'PUBLIC'},
-          {label: 'Friends Only', value: 'FRIENDS_ONLY'},
-          {label: 'Private', value: 'PRIVATE'},
+          { label: 'Public', value: 'PUBLIC' },
+          { label: 'Friends Only', value: 'FRIENDS_ONLY' },
+          { label: 'Private', value: 'PRIVATE' },
         ],
       },
       {
@@ -71,6 +72,20 @@ export const PROFILE_SETTINGS_CONFIG = [
       },
     ],
   },
+];
+
+// Main profile settings configuration (shown in ProfileScreen)
+export const PROFILE_SETTINGS_CONFIG = [
+  {
+    title: 'Personal Information',
+    items: [
+      {
+        key: 'personalInformation',
+        label: 'Personal Information',
+        type: 'navigation',
+      },
+    ],
+  },
   {
     title: 'Theme & Language',
     items: [
@@ -79,22 +94,46 @@ export const PROFILE_SETTINGS_CONFIG = [
         label: 'Theme',
         type: 'modal',
         options: [
-          {label: '☀️ Light', value: 'light'},
-          {label: '🌙 Dark', value: 'dark'},
-          {label: '📱 System', value: 'system'},
+          { label: '☀️ Light', value: 'LIGHT' },
+          { label: '🌙 Dark', value: 'DARK' },
+          { label: '📱 System', value: 'SYSTEM' },
         ],
       },
       {
         key: 'language',
         label: 'Language',
         type: 'modal',
-        options: [
-          {label: 'English', value: 'en'},
-          {label: 'Spanish', value: 'es'},
-          {label: 'French', value: 'fr'},
-          {label: 'German', value: 'de'},
-          {label: 'Italian', value: 'it'},
-        ],
+        options: [{ label: 'English', value: 'en' }],
+      },
+    ],
+  },
+  {
+    title: 'Notifications',
+    items: [
+      {
+        key: 'notifications',
+        label: 'Notifications',
+        type: 'navigation',
+      },
+    ],
+  },
+  {
+    title: 'Dietary Profile',
+    items: [
+      {
+        key: 'dietaryProfile',
+        label: 'Dietary Profile',
+        type: 'navigation',
+      },
+    ],
+  },
+  {
+    title: 'App Settings',
+    items: [
+      {
+        key: 'appSettings',
+        label: 'App Settings',
+        type: 'navigation',
       },
     ],
   },

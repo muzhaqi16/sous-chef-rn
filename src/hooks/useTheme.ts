@@ -1,22 +1,23 @@
-import {useEffect} from 'react';
-import {useColorScheme} from 'react-native';
-import {UnistylesRuntime} from 'react-native-unistyles';
-import {useStore} from '#/store';
+import { useEffect } from 'react';
+import { useColorScheme } from 'react-native';
+import { UnistylesRuntime } from 'react-native-unistyles';
+import { useStore } from '#/store';
+import { ThemePreference } from '#/store/slices/preferencesSlice';
 
 export const useTheme = () => {
   const systemColorScheme = useColorScheme();
-  const {theme: userThemePreference, setTheme} = useStore();
+  const { theme: userThemePreference, setTheme } = useStore();
 
   // Resolve the effective theme based on user preference and system
   const resolveEffectiveTheme = (): 'light' | 'dark' => {
     switch (userThemePreference) {
-      case 'system':
+      case 'SYSTEM':
         // When user chooses system, follow device preference
         return systemColorScheme === 'dark' ? 'dark' : 'light';
-      case 'light':
-      case 'dark':
-        // When user has explicit preference, use it
-        return userThemePreference;
+      case 'LIGHT':
+        return 'light';
+      case 'DARK':
+        return 'dark';
       default:
         // Fallback to light
         return 'light';
@@ -36,7 +37,7 @@ export const useTheme = () => {
   // Update system theme detection when system changes (only if user prefers system)
   useEffect(() => {
     if (
-      userThemePreference === 'system' &&
+      userThemePreference === 'SYSTEM' &&
       UnistylesRuntime.themeName !== effectiveTheme
     ) {
       UnistylesRuntime.setTheme(effectiveTheme);
@@ -47,21 +48,21 @@ export const useTheme = () => {
     // Current effective theme ('light' or 'dark')
     theme: effectiveTheme,
 
-    // User's theme preference ('light', 'dark', or 'system')
+    // User's theme preference ('LIGHT', 'DARK', or 'SYSTEM')
     userThemePreference,
 
     // System's color scheme
     systemColorScheme,
 
     // Whether we're currently following system preference
-    isFollowingSystem: userThemePreference === 'system',
+    isFollowingSystem: userThemePreference === 'SYSTEM',
 
     // Theme setter
     setTheme,
 
     // Helper methods
-    setLightTheme: () => setTheme('light'),
-    setDarkTheme: () => setTheme('dark'),
-    setSystemTheme: () => setTheme('system'),
+    setLightTheme: () => setTheme(ThemePreference.LIGHT),
+    setDarkTheme: () => setTheme(ThemePreference.DARK),
+    setSystemTheme: () => setTheme(ThemePreference.SYSTEM),
   };
 };

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, Image } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useGetShoppingListItemQuery } from '#generated';
 import { useAppNavigation } from '#hooks';
 import { Icon } from '#utils';
@@ -17,12 +17,14 @@ type RouteParams = {
 export const ShoppingListItemDetail: React.FC<{
   route: { params: RouteParams };
 }> = ({ route }) => {
+  const { theme } = useUnistyles();
   const { navigate, goBack } = useAppNavigation();
   const { listId, itemId } = route.params;
 
+  // Use cache-first policy - offlineQueryLink will handle offline behavior automatically
   const { data } = useGetShoppingListItemQuery({
     variables: { id: itemId },
-    fetchPolicy: 'cache-and-network',
+    fetchPolicy: 'cache-first',
   });
 
   const item = data?.shoppingListItem;
@@ -72,7 +74,7 @@ export const ShoppingListItemDetail: React.FC<{
               />
             ) : (
               <View style={styles.imagePlaceholder}>
-                <Icon name="shopping-basket" size={48} color="#999" />
+                <Icon name="shopping-basket" size={48} color={theme.colors.textSecondary} />
               </View>
             )}
           </View>
@@ -83,6 +85,9 @@ export const ShoppingListItemDetail: React.FC<{
             <View style={styles.itemDescription}>
               <FormattedItemSubtitle
                 quantity={item.quantity}
+                quantityInput={item.quantityInput}
+                displayFormat={item.displayFormat}
+                displayAsFraction={item.unit?.displayAsFraction}
                 netWeight={item.item?.netWeight}
                 unitSymbol={item.item?.displayUnit?.symbol || item.unitName}
               />
@@ -91,7 +96,7 @@ export const ShoppingListItemDetail: React.FC<{
           {/* Status Badge */}
           {item.isPurchased ? (
             <View style={styles.statusBadge}>
-              <Icon name="check-circle" size={20} color="#4CAF50" />
+              <Icon name="check-circle" size={20} color={theme.colors.success} />
               <Text style={styles.statusBadgeText}>Purchased</Text>
             </View>
           ) : null}
@@ -109,6 +114,9 @@ export const ShoppingListItemDetail: React.FC<{
             <View>
               <FormattedItemSubtitle
                 quantity={item.quantity}
+                quantityInput={item.quantityInput}
+                displayFormat={item.displayFormat}
+                displayAsFraction={item.unit?.displayAsFraction}
                 netWeight={item.item?.netWeight}
                 unitSymbol={item.item?.displayUnit?.symbol || item.unitName}
               />
@@ -289,14 +297,14 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: theme.colors.successLight,
     marginTop: theme.spacing.md,
     borderRadius: theme.radii.md,
   },
   statusBadgeText: {
     fontSize: theme.fonts.size.md,
     fontWeight: '600',
-    color: '#4CAF50',
+    color: theme.colors.success,
     marginLeft: theme.spacing.xs,
   },
   detailRow: {

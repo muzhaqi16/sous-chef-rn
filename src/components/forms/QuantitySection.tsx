@@ -6,19 +6,20 @@ import {
   DynamicFormFields,
   FieldDef,
 } from '#components/molecules/DynamicFormFields';
-import { Counter } from '#components/molecules/Counter';
 import { FormInput } from '#components/molecules/FormInput';
 import { FormCheckbox } from '#components/molecules/FormCheckbox';
-import { commonStyles } from '#/styles/commonStyles';
+import { FractionInput } from '#components/molecules/FractionInput';
 
 interface QuantitySectionProps {
   control: Control<any>;
   errors: FieldErrors<any>;
   mode: 'add' | 'edit';
   quantity: number;
+  quantityInput: string;
   unit: string;
   itemWeight?: number;
   isAutoReorder?: boolean;
+  onQuantityInputChange: (text: string) => void;
   onIncrementQuantity: () => void;
   onDecrementQuantity: () => void;
   onUnitSelected?: (unitId: string | null) => void;
@@ -29,29 +30,24 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
   control,
   errors,
   mode,
-  quantity,
+  quantityInput,
   isAutoReorder,
-  onIncrementQuantity,
-  onDecrementQuantity,
+  onQuantityInputChange,
   onUnitSelected,
 }) => {
   const getFields = (): FieldDef<any>[] => {
     if (mode === 'add') {
       return [
         {
-          name: 'quantity',
+          name: 'quantityInput',
           label: 'Quantity',
           component: () => (
-            <View style={[commonStyles.inputGroup]}>
-              <Text style={commonStyles.label}>Quantity *</Text>
-              <View style={styles.quantityContainer}>
-                <Counter
-                  count={quantity}
-                  onIncrement={onIncrementQuantity}
-                  onDecrement={onDecrementQuantity}
-                />
-              </View>
-            </View>
+            <FractionInput
+              label="Quantity *"
+              value={quantityInput}
+              onChangeText={onQuantityInputChange}
+              placeholder="e.g., 1, 1 1/4, or 1.5"
+            />
           ),
         },
         {
@@ -80,11 +76,30 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
       // Edit mode fields
       const baseFields: FieldDef<any>[] = [
         {
-          name: 'quantity',
+          name: 'quantityInput',
           label: 'Current Quantity',
-          placeholder: '1',
+          component: () => (
+            <FractionInput
+              label="Current Quantity *"
+              value={quantityInput}
+              onChangeText={onQuantityInputChange}
+              placeholder="e.g., 1, 1 1/4, or 1.5"
+            />
+          ),
+        },
+        {
+          name: 'itemWeight',
+          label: 'Net Weight',
+          placeholder: 'e.g., 2.2',
           component: FormInput,
-          props: { keyboardType: 'numeric' },
+          props: { keyboardType: 'decimal-pad' },
+        },
+        {
+          name: 'unit',
+          label: 'Unit',
+          placeholder: 'kg, lbs, pcs',
+          component: 'unitAutocomplete',
+          onUnitSelected,
         },
         {
           name: 'reservedQuantity',

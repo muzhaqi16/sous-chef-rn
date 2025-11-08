@@ -1,3 +1,5 @@
+import { serializeError } from './errorSerialization';
+
 // Define a simple error interface instead of importing ApolloError
 interface SubscriptionError {
   message?: string;
@@ -28,7 +30,7 @@ export const handleSubscriptionError = (
 
   if (!isServerResolverError) {
     // For non-resolver errors, don't retry
-    console.error(`Subscription ${operationName} failed with non-resolver error:`, error);
+    console.error(`Subscription ${operationName} failed with non-resolver error:`, serializeError(error));
     return false;
   }
 
@@ -41,7 +43,6 @@ export const handleSubscriptionError = (
 
   // Check if we've exceeded max retries
   if (state.count >= MAX_RETRIES) {
-    console.warn(`Subscription ${operationName} failed after ${MAX_RETRIES} retries, giving up`);
     retryStates.delete(operationName);
     return false;
   }
@@ -49,7 +50,6 @@ export const handleSubscriptionError = (
   // Check if we're still in backoff period
   const now = Date.now();
   if (now - state.lastAttempt < state.backoffMs) {
-    console.log(`Subscription ${operationName} in backoff period, not retrying yet`);
     return false;
   }
 
@@ -57,12 +57,8 @@ export const handleSubscriptionError = (
   state.count += 1;
   state.lastAttempt = now;
   state.backoffMs = Math.min(state.backoffMs * 2, MAX_BACKOFF_MS);
-  
-  retryStates.set(operationName, state);
 
-  console.log(
-    `Retrying subscription ${operationName} (attempt ${state.count}/${MAX_RETRIES}) after ${state.backoffMs}ms`
-  );
+  retryStates.set(operationName, state);
 
   // Schedule retry if callback provided
   if (onRetry) {

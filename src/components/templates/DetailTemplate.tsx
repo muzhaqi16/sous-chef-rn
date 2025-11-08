@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, ScrollView, Text } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { View, ScrollView, Text, RefreshControl } from 'react-native';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils';
 import { Header } from '../molecules/Header';
 import { Button } from '../base/Button';
+import { commonStyles } from '#/styles';
 
 interface DetailSection {
   title?: string;
@@ -20,6 +21,8 @@ interface DetailTemplateProps {
     icon?: React.ComponentProps<typeof Icon>['name'];
     onPress: () => void;
   };
+  refreshing?: boolean;
+  onRefresh?: () => void | Promise<void>;
 }
 
 export const DetailTemplate: React.FC<DetailTemplateProps> = ({
@@ -28,7 +31,10 @@ export const DetailTemplate: React.FC<DetailTemplateProps> = ({
   headerActions = [],
   sections,
   primaryAction,
+  refreshing,
+  onRefresh,
 }) => {
+  const { theme } = useUnistyles();
   return (
     <View style={styles.container}>
       <Header
@@ -39,10 +45,18 @@ export const DetailTemplate: React.FC<DetailTemplateProps> = ({
       />
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingBottom: 20 }}
+        contentContainerStyle={{ paddingVertical: theme.spacing.sm }}
+        refreshControl={
+          onRefresh ? (
+            <RefreshControl
+              refreshing={refreshing ?? false}
+              onRefresh={onRefresh}
+            />
+          ) : undefined
+        }
       >
         {sections.map((section, index) => (
-          <View key={index} style={styles.section}>
+          <View key={index} style={[commonStyles.shadow, styles.section]}>
             {section.title && (
               <Text style={styles.sectionTitle}>{section.title}</Text>
             )}
@@ -50,11 +64,7 @@ export const DetailTemplate: React.FC<DetailTemplateProps> = ({
           </View>
         ))}
         {primaryAction && (
-          <Button
-            onPress={primaryAction.onPress}
-            icon={primaryAction.icon}
-            fullWidth
-          >
+          <Button onPress={primaryAction.onPress} icon={primaryAction.icon}>
             {primaryAction.label}
           </Button>
         )}
@@ -66,14 +76,16 @@ export const DetailTemplate: React.FC<DetailTemplateProps> = ({
 const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
-    gap: theme.spacing.md,
     backgroundColor: theme.colors.background,
+    gap: theme.spacing.md,
   },
   content: {
+    paddingHorizontal: theme.spacing.md,
     flex: 1,
+    backgroundColor: theme.colors.background,
   },
   section: {
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.surface,
     borderRadius: 8,
     padding: 16,
     marginBottom: 16,

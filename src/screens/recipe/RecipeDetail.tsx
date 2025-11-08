@@ -7,24 +7,29 @@ import React, {
 } from 'react';
 import {
   View,
-  ScrollView,
-  Image,
   Text,
   TouchableOpacity,
   Alert,
   ActivityIndicator,
   FlatList,
 } from 'react-native';
+import Animated, {
+  useAnimatedScrollHandler,
+  useSharedValue,
+  useAnimatedStyle,
+  interpolate,
+  Extrapolation,
+} from 'react-native-reanimated';
 import { useRoute, RouteProp } from '@react-navigation/native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type { RecipeStackParamList } from '#/navigation/stacks/RecipeStack';
 import { spoonacularService } from '#/services/recipeApi';
 import type { RecipeInformation } from '#/services/recipeApi/types';
 import {
-  useSaveRecipeMutation,
+  useCreateRecipeMutation,
   useGetRecipeQuery,
-  useAddRecipeToShoppingListMutation,
-  useAddRecipeIngredientToShoppingListMutation,
+  useCreateShoppingListItemsFromRecipeMutation,
+  useCreateShoppingListItemFromRecipeIngredientMutation,
   useAddItemToShoppingListMutation,
   useGetShoppingListsQuery,
   useMyRecipesQuery,
@@ -32,12 +37,14 @@ import {
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { BottomSheetAction } from '#components';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
+import { useAppNavigation } from '#/hooks';
 
 type RecipeDetailRouteProp = RouteProp<RecipeStackParamList, 'RecipeDetail'>;
 
 export const RecipeDetail: React.FC = () => {
   const route = useRoute<RecipeDetailRouteProp>();
   const { theme } = useUnistyles();
+  const { goBack } = useAppNavigation();
   const { recipeId, externalSource, externalId } = route.params;
 
   // Get shopping lists
@@ -77,16 +84,39 @@ export const RecipeDetail: React.FC = () => {
   const shoppingListOptionsRef = useRef<BottomSheetModal>(null);
   const ingredientSelectorRef = useRef<BottomSheetModal>(null);
 
+  // Scroll animation for parallax effect
+  const scrollY = useSharedValue(0);
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: event => {
+      scrollY.value = event.contentOffset.y;
+    },
+  });
+
+  // Parallax style for recipe image
+  const imageAnimatedStyle = useAnimatedStyle(() => {
+    const scale = interpolate(
+      scrollY.value,
+      [0, 300],
+      [1, 0.95],
+      Extrapolation.CLAMP,
+    );
+
+    return {
+      transform: [{ scale }],
+    };
+  });
+
   // Mutations
-  const [saveRecipeMutation] = useSaveRecipeMutation({
+  const [saveRecipeMutation] = useCreateRecipeMutation({
     refetchQueries: ['MyRecipes'],
     awaitRefetchQueries: true,
   });
-  const [addRecipeToShoppingListMutation] = useAddRecipeToShoppingListMutation({
-    refetchQueries: ['GetShoppingList'],
-  });
+  const [addRecipeToShoppingListMutation] =
+    useCreateShoppingListItemsFromRecipeMutation({
+      refetchQueries: ['GetShoppingList'],
+    });
   const [addRecipeIngredientMutation] =
-    useAddRecipeIngredientToShoppingListMutation({
+    useCreateShoppingListItemFromRecipeIngredientMutation({
       refetchQueries: ['GetShoppingList'],
     });
   const [addItemToShoppingListMutation] = useAddItemToShoppingListMutation({
@@ -157,13 +187,13 @@ export const RecipeDetail: React.FC = () => {
 
   // Check if current external recipe is already saved
   useEffect(() => {
-    if (!externalSource || !externalId || !myRecipesData?.myRecipes?.recipes) {
+    if (!externalSource || !externalId || !myRecipesData?.recipes?.recipes) {
       setRecipeSaved(false);
       return;
     }
 
-    const isAlreadySaved = myRecipesData.myRecipes.recipes.some(
-      recipe =>
+    const isAlreadySaved = myRecipesData.recipes.recipes.some(
+      (recipe: any) =>
         recipe.externalSource === externalSource &&
         recipe.externalId === externalId,
     );
@@ -314,21 +344,8 @@ export const RecipeDetail: React.FC = () => {
           },
         });
 
-        const data = result.data?.addRecipeToShoppingList;
+        const data = result.data?.createShoppingListItemsFromRecipe;
         if (data) {
-          // Log skipped items for debugging
-          if (data.skippedItems && data.skippedItems.length > 0) {
-            console.log('Skipped items:', data.skippedItems);
-            data.skippedItems.forEach(item => {
-              console.log(`  - ${item.name} (${item.quantity})`);
-            });
-          }
-
-          // Log summary
-          console.log(
-            `Shopping list update: Added ${data.totalAdded}, Updated ${data.totalUpdated}, Skipped ${data.totalSkipped}`,
-          );
-
           // Mark all ingredients as added for visual feedback (checkmarks)
           const allIngredientIds = backendRecipe.ingredients.map(ing => ing.id);
           setAddedIngredients(prev => {
@@ -419,7 +436,7 @@ export const RecipeDetail: React.FC = () => {
         },
       });
 
-      const data = result.data?.addRecipeToShoppingList;
+      const data = result.data?.createShoppingListItemsFromRecipe;
       if (data) {
         Alert.alert(
           'Success!',
@@ -493,9 +510,9 @@ export const RecipeDetail: React.FC = () => {
           },
         });
 
-        if (result.data?.addRecipeIngredientToShoppingList) {
+        if (result.data?.createShoppingListItemFromRecipeIngredient) {
           const wasUpdated =
-            result.data.addRecipeIngredientToShoppingList.wasUpdated;
+            result.data.createShoppingListItemFromRecipeIngredient.wasUpdated;
           if (wasUpdated) {
             updatedCount++;
           } else {
@@ -586,16 +603,24 @@ export const RecipeDetail: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <ScrollView
+      <Animated.ScrollView
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Recipe Image */}
+        {/* Recipe Image with Back Button */}
         {displayData.image && (
-          <Image
-            source={{ uri: displayData.image }}
-            style={styles.recipeImage}
-          />
+          <View style={styles.imageContainer}>
+            <Animated.Image
+              source={{ uri: displayData.image }}
+              style={[styles.recipeImage, imageAnimatedStyle]}
+            />
+            {/* Back Button */}
+            <TouchableOpacity onPress={goBack} style={styles.backButton}>
+              <Ionicons name="arrow-back" size={24} color="#1d1d1d" />
+            </TouchableOpacity>
+          </View>
         )}
 
         {/* Recipe Title */}
@@ -604,15 +629,17 @@ export const RecipeDetail: React.FC = () => {
 
           {/* Recipe Metadata */}
           <View style={styles.metadata}>
-            <Text style={styles.metadataText}>
-              🍽️ {displayData.servings} servings
-            </Text>
-            {displayData.readyInMinutes && (
+            {displayData.servings != null && (
+              <Text style={styles.metadataText}>
+                🍽️ {displayData.servings} servings
+              </Text>
+            )}
+            {displayData.readyInMinutes != null && (
               <Text style={styles.metadataText}>
                 ⏱️ {displayData.readyInMinutes} min
               </Text>
             )}
-            {displayData.healthScore && (
+            {displayData.healthScore != null && !isNaN(displayData.healthScore) && (
               <Text style={styles.metadataText}>
                 💚 {Math.round(displayData.healthScore)}% healthy
               </Text>
@@ -675,12 +702,10 @@ export const RecipeDetail: React.FC = () => {
                 const ingredientText =
                   ingredient.original ||
                   `${ingredient.quantity || ''} ${
-                    ingredient.unit?.symbol ||
-                    ingredient.usUnit ||
-                    ingredient.metricUnit ||
-                    ''
-                  } ${ingredient.name}`.trim() ||
-                  ingredient.originalString;
+                    ingredient.unit?.symbol || ''
+                  } ${ingredient.name || ''}`.trim() ||
+                  ingredient.originalString ||
+                  'Unknown ingredient';
                 const isAdded = addedIngredients.has(ingredient.id);
 
                 return (
@@ -755,7 +780,7 @@ export const RecipeDetail: React.FC = () => {
           {/* Extra padding for floating button (only for external recipes) */}
           {!isBackendRecipe && <View style={{ height: 140 }} />}
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
 
       {/* Floating Action Button - Only for external recipes */}
       {!isBackendRecipe && (
@@ -846,8 +871,7 @@ export const RecipeDetail: React.FC = () => {
                 <View style={styles.ingredientInfo}>
                   <Text style={styles.ingredientName}>{item.name}</Text>
                   <Text style={styles.ingredientAmount}>
-                    {item.quantity}{' '}
-                    {item.unit?.symbol || item.usUnit || item.metricUnit || ''}
+                    {item.quantity ?? ''} {item.unit?.symbol || ''}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -922,6 +946,10 @@ const styles = StyleSheet.create(theme => ({
   },
   content: {
     padding: theme.spacing.lg,
+    backgroundColor: theme.colors.background,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    marginTop: -20,
   },
   title: {
     fontSize: theme.fonts.size['2xl'],
@@ -1113,5 +1141,29 @@ const styles = StyleSheet.create(theme => ({
     color: '#fff',
     fontSize: theme.fonts.size.md,
     fontWeight: '600',
+  },
+  // Image container for back button positioning
+  imageContainer: {
+    position: 'relative',
+  },
+  // Back button positioned over image
+  backButton: {
+    position: 'absolute',
+    top: 48,
+    left: 12,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 9999,
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.22,
+    shadowRadius: 2.22,
+    elevation: 3,
   },
 }));

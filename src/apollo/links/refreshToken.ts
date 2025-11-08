@@ -88,6 +88,12 @@ const isNetworkError = (error: any): boolean => {
     'econnreset',
     'ehostunreach',
     'fetch failed',
+    'socket closed',        // WebSocket connection failures
+    'websocket',            // Generic WebSocket errors
+    'ws connection',        // WebSocket connection issues
+    'connection lost',      // General connection lost
+    'no connection',        // Offline state
+    'unreachable',          // Server unreachable
   ];
 
   return networkPatterns.some(pattern => message.includes(pattern));
@@ -144,7 +150,31 @@ const performTokenRefresh = async (): Promise<string | null> => {
   } catch (error: any) {
     console.error(`Token refresh failed (attempt ${refreshState.retryCount}):`, error);
 
-    // Check if this is a fatal error (refresh token expired/invalid)
+    // IMPORTANT: Check network errors FIRST before auth errors
+    // This prevents offline scenarios from incorrectly clearing the cache
+    const isNetworkFailure = isNetworkError(error);
+
+    if (isNetworkFailure) {
+      console.warn(
+        `Token refresh failed due to network error (attempt ${refreshState.retryCount}/${REFRESH_CONFIG.MAX_RETRIES}), cache will be preserved:`,
+        error.message
+      );
+
+      // For network errors, we retry but DON'T trigger logout after max retries
+      if (refreshState.retryCount < REFRESH_CONFIG.MAX_RETRIES) {
+        const delay = calculateRetryDelay(refreshState.retryCount - 1);
+        console.log(`Will retry token refresh in ${delay}ms`);
+
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return performTokenRefresh(); // Recursive retry
+      }
+
+      // Max retries exceeded - preserve cache, don't logout
+      console.warn('Token refresh failed due to network error after max retries, preserving cache for offline usage');
+      throw error; // Just fail the operation, don't trigger session expiry
+    }
+
+    // ONLY check for auth errors if NOT a network error
     const isTokenExpiredError =
       error?.networkError?.statusCode === 401 ||
       error?.graphQLErrors?.some((e: any) =>
@@ -153,34 +183,15 @@ const performTokenRefresh = async (): Promise<string | null> => {
       );
 
     if (isTokenExpiredError) {
-      console.log('Refresh token expired, triggering logout with cache clear');
+      console.log('Refresh token expired (genuine auth error), triggering logout with cache clear');
       state.tokenRefreshFailed(true); // Clear cache for auth failures
       throw new Error('Refresh token expired');
     }
 
-    // Check if this is a network error (offline, timeout, etc.)
-    const isNetworkFailure = isNetworkError(error);
-
-    // For network errors, we retry but DON'T trigger logout after max retries
-    if (refreshState.retryCount < REFRESH_CONFIG.MAX_RETRIES) {
-      const delay = calculateRetryDelay(refreshState.retryCount - 1);
-      console.log(`Will retry token refresh in ${delay}ms`);
-
-      await new Promise(resolve => setTimeout(resolve, delay));
-      return performTokenRefresh(); // Recursive retry
-    }
-
-    // Max retries exceeded
-    if (isNetworkFailure) {
-      // Network error after max retries - preserve cache, don't logout
-      console.warn('Token refresh failed due to network error, preserving cache for offline usage');
-      throw error; // Just fail the operation, don't trigger session expiry
-    } else {
-      // Unknown error after max retries - trigger logout without clearing cache
-      console.error('Max token refresh retries exceeded for unknown error, triggering session expiry');
-      state.tokenRefreshFailed(false); // Don't clear cache for unknown errors
-      throw error;
-    }
+    // Unknown error after max retries - trigger logout without clearing cache
+    console.error('Max token refresh retries exceeded for unknown error, triggering session expiry');
+    state.tokenRefreshFailed(false); // Don't clear cache for unknown errors
+    throw error;
   }
 };
 
@@ -240,4 +251,47 @@ export const getRefreshState = () => ({ ...refreshState });
 export const clearRefreshState = () => {
   resetRefreshState();
   refreshQueue = [];
+};
+
+/**
+ * Proactive token refresh - called by scheduler before token expires
+ * This is the recommended approach to prevent user-facing 401 errors
+ *
+ * Benefits over reactive refresh:
+ * - Zero user-facing errors (refresh before expiration)
+ * - Smoother UX (no momentary failures or loading states)
+ * - Fewer concurrent refresh requests (scheduled instead of burst on expiration)
+ * - Cleaner logs (no expected 401 errors)
+ *
+ * Fallback: If this fails, reactive refresh (errorLink) will still handle
+ * token expiration when the next request fails with 401
+ *
+ * @returns The new access token on success, null on failure
+ */
+export const proactiveTokenRefresh = async (): Promise<string | null> => {
+  console.log('[ProactiveRefresh] Starting proactive token refresh');
+
+  // Check if already refreshing (shouldn't happen with proactive, but safety check)
+  if (refreshState.isRefreshing && refreshState.refreshPromise) {
+    console.log('[ProactiveRefresh] Already refreshing, returning existing promise');
+    return refreshState.refreshPromise;
+  }
+
+  // Start refresh process
+  refreshState.isRefreshing = true;
+  refreshState.refreshPromise = performTokenRefresh();
+
+  try {
+    const newToken = await refreshState.refreshPromise;
+    processQueue(newToken);
+    console.log('[ProactiveRefresh] Successfully completed');
+    return newToken;
+  } catch (error) {
+    processQueue(null);
+    console.error('[ProactiveRefresh] Failed:', error);
+    // Don't rethrow - reactive refresh will handle it if needed
+    return null;
+  } finally {
+    resetRefreshState();
+  }
 };

@@ -16,8 +16,9 @@ import { useDefaultHome } from '#hooks';
 import { useStore } from '#store';
 import {
   StorageState,
-  useAddItemToPantryMutation,
+  useCreatePantryItemMutation,
   useGetHomeQuery,
+  useGetPantryQuery,
   useGetUnitBySymbolLazyQuery,
   ItemSuggestion,
   GetPantryItemsDocument,
@@ -34,6 +35,7 @@ interface AddPantryItemFormData {
   selectedItemId?: string;
   brand: string;
   quantity: number;
+  quantityInput: string; // User's fractional input (e.g., "1 1/2")
   itemWeight?: number; // Optional weight per item for packaged items
   unit: string;
   minimumQuantity: string;
@@ -51,9 +53,7 @@ const addItemSchema = yup.object({
     .number()
     .positive('Item weight must be positive')
     .nullable()
-    .transform((value, originalValue) =>
-      originalValue === '' ? null : value,
-    ),
+    .transform((value, originalValue) => (originalValue === '' ? null : value)),
   unit: yup.string(),
   minimumQuantity: yup.string(),
   storageState: yup.string().oneOf(Object.values(StorageState)),
@@ -76,6 +76,9 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
     null,
   );
+  const [_selectedLocationId, setSelectedLocationId] = useState<string | null>(
+    null,
+  );
 
   const { selectedPantryId } = useStore();
   const { selectedHomeId, getDefaultPantry } = useDefaultHome();
@@ -94,10 +97,19 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
   // Use selectedPantryId from store as primary source, fallback to pantry from home data
   const currentPantryId = selectedPantryId || pantry?.id;
 
-  const [addItem] = useAddItemToPantryMutation({
+  // Fetch pantry details to get storage locations
+  const { data: pantryData } = useGetPantryQuery({
+    variables: { id: currentPantryId ?? '' },
+    skip: !currentPantryId,
+    fetchPolicy: 'cache-first',
+  });
+
+  const storageLocations = pantryData?.pantry?.storageLocations || [];
+
+  const [addItem] = useCreatePantryItemMutation({
     update: (cache: ApolloCache, { data: mutationData }: any) => {
-      if (!mutationData?.addItemToPantry || !currentPantryId) return;
-      const newItem = mutationData.addItemToPantry;
+      if (!mutationData?.createPantryItem || !currentPantryId) return;
+      const newItem = mutationData.createPantryItem;
       try {
         const existingData = cache.readQuery<{
           pantryItems: PantryItemFragment[];
@@ -132,6 +144,7 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
       itemName: '',
       brand: '',
       quantity: 1,
+      quantityInput: '1',
       itemWeight: undefined,
       unit: '',
       minimumQuantity: '',
@@ -168,6 +181,32 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
     setSelectedCategoryId(categoryId);
   }, []);
 
+  const handleStorageLocationSelect = useCallback(
+    (locationId: string | null, location: any) => {
+      setSelectedLocationId(locationId);
+
+      // Auto-fill storage state based on location temperature
+      if (location?.temperature) {
+        const tempLower = location.temperature.toLowerCase();
+        if (tempLower === 'frozen') {
+          setValue('storageState', StorageState.Frozen);
+        } else if (tempLower === 'refrigerated') {
+          setValue('storageState', StorageState.Refrigerated);
+        } else if (tempLower === 'ambient') {
+          setValue('storageState', StorageState.Ambient);
+        }
+      }
+    },
+    [setValue],
+  );
+
+  const handleQuantityInputChange = useCallback(
+    (text: string) => {
+      setValue('quantityInput', text);
+    },
+    [setValue],
+  );
+
   const handleIncrementQuantity = useCallback(() => {
     const current = watchedValues.quantity || 0;
     setValue('quantity', current + 1);
@@ -184,13 +223,40 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
       return;
     }
 
-    if (data.quantity <= 0) {
-      Alert.alert('Error', 'Please enter a valid quantity');
+    if (!currentPantryId) {
+      Alert.alert('Error', 'No pantry selected. Please select a pantry first.');
       return;
     }
 
-    if (!currentPantryId) {
-      Alert.alert('Error', 'No pantry selected. Please select a pantry first.');
+    // Parse quantityInput to get numeric quantity
+    let quantityValue: number;
+    try {
+      const trimmed = data.quantityInput.trim();
+
+      // Check if it contains a fraction
+      if (trimmed.includes('/')) {
+        const parts = trimmed.split(/\s+/);
+        if (parts.length === 2) {
+          // Mixed number like "1 1/4"
+          const whole = parseInt(parts[0]);
+          const [num, den] = parts[1].split('/').map(Number);
+          quantityValue = whole + num / den;
+        } else {
+          // Simple fraction like "3/4"
+          const [num, den] = trimmed.split('/').map(Number);
+          quantityValue = num / den;
+        }
+      } else {
+        // Regular number
+        quantityValue = parseFloat(trimmed);
+      }
+
+      if (isNaN(quantityValue) || quantityValue <= 0) {
+        Alert.alert('Error', 'Please enter a valid quantity');
+        return;
+      }
+    } catch (err) {
+      Alert.alert('Error', 'Please enter a valid quantity');
       return;
     }
 
@@ -208,7 +274,8 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
       const baseInput = {
         pantryId: currentPantryId, // Already validated above, so we know it exists
         unitId: unitId || '',
-        initialQuantity: data.quantity,
+        initialQuantity: quantityValue,
+        quantityInput: data.quantityInput.trim(), // Save the user's fractional input
         storageState: data.storageState as StorageState,
         expiresAt: data.expirationDate?.toISOString() || null,
         storageNotes: data.notes.trim() || null,
@@ -227,8 +294,8 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
         const categoryInput = selectedCategoryId
           ? { customCategory: selectedCategoryId } // If we have a selected category ID, use it
           : data.category.trim()
-            ? { itemCategory: data.category.trim() } // Otherwise use the typed category name
-            : {};
+          ? { itemCategory: data.category.trim() } // Otherwise use the typed category name
+          : {};
 
         // Save package weight information (netWeight + displayUnit)
         const weightInput =
@@ -249,7 +316,7 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
       const result = await addItem({ variables: { input } });
 
       // Only call onSuccess if the mutation actually succeeded
-      if (result.data?.addItemToPantry) {
+      if (result.data?.createPantryItem) {
         onSuccess?.();
       } else {
         // Mutation completed but returned no data (likely an error)
@@ -291,8 +358,10 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
             errors={errors}
             mode="add"
             quantity={watchedValues.quantity}
+            quantityInput={watchedValues.quantityInput}
             itemWeight={watchedValues.itemWeight}
             unit={watchedValues.unit}
+            onQuantityInputChange={handleQuantityInputChange}
             onIncrementQuantity={handleIncrementQuantity}
             onDecrementQuantity={handleDecrementQuantity}
             onUnitSelected={setSelectedUnitId}
@@ -317,6 +386,8 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
               if (date) setValue('expirationDate', date);
             }}
             onCategorySelected={handleCategorySelect}
+            storageLocations={storageLocations}
+            onStorageLocationSelected={handleStorageLocationSelect}
           />
         </View>
       </ScrollView>

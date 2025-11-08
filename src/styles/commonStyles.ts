@@ -1,6 +1,21 @@
 import { StyleSheet } from 'react-native-unistyles';
 
 /**
+ * Common shadow definition
+ */
+const shadowStyle = {
+  boxShadow: [
+    {
+      offsetX: 0,
+      offsetY: 4,
+      blurRadius: 15,
+      spreadDistance: 1,
+      color: '#0000001A',
+    },
+  ],
+};
+
+/**
  * Common style patterns used throughout the application
  * Uses theme values for consistency
  */
@@ -147,7 +162,6 @@ export const commonStyles = StyleSheet.create(theme => ({
     justifyContent: 'space-between',
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
-    // Add safe area padding on tablets/desktop
     paddingTop: {
       xs: theme.spacing.sm,
       md: theme.spacing.md,
@@ -301,6 +315,26 @@ export const commonStyles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.xs,
   },
 
+  listItemImageContainer: {
+    width: theme.sizes.listImage.width,
+    height: theme.sizes.listImage.height,
+    marginRight: theme.spacing.md,
+    borderRadius: theme.radii.md,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    ...shadowStyle,
+  },
+
+  listItemImage: {
+    width: theme.sizes.listImage.width,
+    height: theme.sizes.listImage.height,
+    borderRadius: theme.radii.md,
+    resizeMode: 'cover',
+  },
+
   // ============= EMPTY STATES =============
 
   emptyState: {
@@ -447,17 +481,7 @@ export const commonStyles = StyleSheet.create(theme => ({
 
   // ============= UTILITY =============
   // Reusable shadow style
-  shadow: {
-    boxShadow: [
-      {
-        offsetX: 0,
-        offsetY: 4,
-        blurRadius: 15,
-        spreadDistance: 1,
-        color: '#0000001A',
-      },
-    ],
-  },
+  shadow: shadowStyle,
   absoluteFill: {
     position: 'absolute',
     top: 0,

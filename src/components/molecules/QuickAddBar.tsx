@@ -61,12 +61,12 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.surface,
     padding: 12,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: theme.colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 2,

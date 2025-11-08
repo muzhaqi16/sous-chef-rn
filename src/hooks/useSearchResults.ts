@@ -75,7 +75,7 @@ export const useSearchResults = (barcode: string) => {
           // Continue without showing error since item was created successfully
         } finally {
           // Clean up the temporary storage
-          storage.delete('temp_pending_item_image');
+          storage.remove('temp_pending_item_image');
         }
 
         const newItem = convertToScannedItem(finalItem, barcode);
@@ -87,7 +87,7 @@ export const useSearchResults = (barcode: string) => {
     },
     onError: error => {
       // Clean up pending image upload on error
-      storage.delete('temp_pending_item_image');
+      storage.remove('temp_pending_item_image');
 
       Alert.alert('Error', `Failed to add item: ${error.message}`);
     },

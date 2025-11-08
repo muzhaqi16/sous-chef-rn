@@ -146,7 +146,7 @@ export class Environment {
 
     if (config.isDevelopment) {
       return {
-        baseUrl: getConfigValue('DEV_API_URL', 'http://localhost:4000'),
+        baseUrl: getConfigValue('DEV_API_URL', 'http://localhost:4000/graphql'),
         wsUrl: getConfigValue('DEV_WS_URL', 'ws://localhost:4000/graphql'),
         timeout: 30000,
         retries: 3,
@@ -155,7 +155,7 @@ export class Environment {
 
     if (config.isStaging) {
       return {
-        baseUrl: getConfigValue('STAGING_API_URL', 'https://staging-api.souschef.dev'),
+        baseUrl: getConfigValue('STAGING_API_URL', 'https://staging-api.souschef.dev/graphql'),
         wsUrl: getConfigValue('STAGING_WS_URL', 'wss://staging-api.souschef.dev/graphql'),
         timeout: 15000,
         retries: 2,
@@ -164,8 +164,8 @@ export class Environment {
 
     // Production
     return {
-      baseUrl: getConfigValue('PROD_API_URL', 'https://api.souschef.com'),
-      wsUrl: getConfigValue('PROD_WS_URL', 'wss://api.souschef.com/graphql'),
+      baseUrl: getConfigValue('PROD_API_URL', 'https://api.souschef.dev/graphql'),
+      wsUrl: getConfigValue('PROD_WS_URL', 'wss://api.souschef.dev/graphql'),
       timeout: 10000,
       retries: 1,
     };

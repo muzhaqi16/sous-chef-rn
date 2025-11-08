@@ -4,6 +4,7 @@ import {
   useGetPantriesQuery,
   useGetHomesQuery,
 } from '../graphql/generated';
+import {usePreservedArrayData} from './apollo';
 
 interface UseItemSelectorConfig {
   type: 'shoppingList' | 'pantry' | 'home' | 'custom';
@@ -35,6 +36,7 @@ export const useItemSelector = ({
   const {data: shoppingListData, loading: shoppingListLoading} =
     useGetShoppingListsQuery({
       fetchPolicy: 'cache-and-network',
+      errorPolicy: 'ignore', // Return cached data on network errors
       skip: type !== 'shoppingList',
     });
 
@@ -43,29 +45,34 @@ export const useItemSelector = ({
     fetchPolicy: 'cache-and-network',
     skip: type !== 'pantry' || !selectedHomeId,
     notifyOnNetworkStatusChange: true,
-    errorPolicy: 'all',
+    errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
   });
 
   const {data: homeData, loading: homeLoading} = useGetHomesQuery({
     fetchPolicy: 'cache-and-network',
+    errorPolicy: 'ignore', // Return cached data on network errors
     skip: type !== 'home',
   });
+
+  // Preserve data even when queries fail
+  const shoppingLists = usePreservedArrayData(shoppingListData?.shoppingLists);
+  const pantries = usePreservedArrayData(pantryData?.pantries);
+  const homes = usePreservedArrayData(homeData?.homes);
 
   // Get the appropriate data and loading state
   const getData = () => {
     switch (type) {
       case 'shoppingList':
-        return shoppingListData?.shoppingLists ?? [];
+        return shoppingLists;
       case 'pantry':
         // Sort pantries by creation date, newest first
-        const pantries = pantryData?.pantries ?? [];
         return [...pantries].sort((a, b) => {
           const dateA = new Date(a.createdAt);
           const dateB = new Date(b.createdAt);
           return dateB.getTime() - dateA.getTime(); // Newest first
         });
       case 'home':
-        return homeData?.homes ?? [];
+        return homes;
       case 'custom':
         return customData ?? [];
       default:

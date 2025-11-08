@@ -38,14 +38,19 @@ class SpoonacularService {
     if (this.requestCount >= this.dailyLimit) {
       logger.warn('Spoonacular daily request limit reached or exceeded');
     } else if (this.requestCount >= this.dailyLimit * 0.9) {
-      logger.warn(`Approaching Spoonacular daily limit: ${this.requestCount}/${this.dailyLimit}`);
+      logger.warn(
+        `Approaching Spoonacular daily limit: ${this.requestCount}/${this.dailyLimit}`,
+      );
     }
   }
 
   /**
    * Generic fetch wrapper with error handling
    */
-  private async fetch<T>(endpoint: string, params: Record<string, any> = {}): Promise<T> {
+  private async fetch<T>(
+    endpoint: string,
+    params: Record<string, any> = {},
+  ): Promise<T> {
     this.checkRateLimit();
 
     const url = new URL(`${BASE_URL}${endpoint}`);
@@ -70,7 +75,7 @@ class SpoonacularService {
 
       if (!response.ok) {
         const error: SpoonacularApiError = new Error(
-          `Spoonacular API error: ${response.status} ${response.statusText}`
+          `Spoonacular API error: ${response.status} ${response.statusText}`,
         );
         error.status = response.status;
 
@@ -106,9 +111,14 @@ class SpoonacularService {
    * @returns Array of recipe search results
    */
   async searchRecipesByIngredients(
-    params: SearchRecipesByIngredientsParams
+    params: SearchRecipesByIngredientsParams,
   ): Promise<RecipeSearchResult[]> {
-    const { ingredients, number = 10, ranking = 1, ignorePantry = true } = params;
+    const {
+      ingredients,
+      number = 10,
+      ranking = 1,
+      ignorePantry = true,
+    } = params;
 
     return this.fetch<RecipeSearchResult[]>('/recipes/findByIngredients', {
       ingredients,
@@ -126,7 +136,7 @@ class SpoonacularService {
    * @returns Detailed recipe information
    */
   async getRecipeInformation(
-    params: GetRecipeInformationParams
+    params: GetRecipeInformationParams,
   ): Promise<RecipeInformation> {
     const { id, includeNutrition = true } = params;
 
@@ -142,13 +152,10 @@ class SpoonacularService {
    * @param params - Search parameters
    * @returns Search results with pagination
    */
-  async searchRecipes(params: SearchRecipesParams): Promise<SearchRecipesResponse> {
-    const {
-      query,
-      number = 10,
-      offset = 0,
-      ...restParams
-    } = params;
+  async searchRecipes(
+    params: SearchRecipesParams,
+  ): Promise<SearchRecipesResponse> {
+    const { query, number = 10, offset = 0, ...restParams } = params;
 
     return this.fetch<SearchRecipesResponse>('/recipes/complexSearch', {
       query,

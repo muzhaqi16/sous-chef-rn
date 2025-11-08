@@ -64,12 +64,12 @@ export const ProfilePictureUploadScreen = () => {
           setCroppedImage(croppedImageFile);
 
           // Clean up the temporary storage
-          storage.delete('temp_cropped_image');
+          storage.remove('temp_cropped_image');
         }
       } catch (error) {
         console.error('Error reading cropped image from MMKV:', error);
         // Clean up potentially corrupted data
-        storage.delete('temp_cropped_image');
+        storage.remove('temp_cropped_image');
       }
     }, []),
   );
@@ -77,7 +77,7 @@ export const ProfilePictureUploadScreen = () => {
   // Clean up MMKV on unmount
   useEffect(() => {
     return () => {
-      storage.delete('temp_cropped_image');
+      storage.remove('temp_cropped_image');
     };
   }, []);
 

@@ -2,8 +2,35 @@
 # FRAGMENTS
 # ============================================
 
-fragment ShoppingListItemFragment on ShoppingListItem {
+# Core fragment for optimistic updates and list views
+# Contains only essential fields needed for basic operations
+fragment ShoppingListItemCore on ShoppingListItem {
   id
+  itemName
+  quantity
+  quantityInput
+  displayFormat
+  isPurchased
+  version
+  updatedAt
+  category
+  notes
+  unitName
+  unit {
+    id
+    name
+    symbol
+    displayAsFraction
+    minPrecision
+    autoConvertThreshold
+  }
+}
+
+# Full fragment for detail views and complete data
+# Spreads Core and adds all extended fields
+fragment ShoppingListItemFragment on ShoppingListItem {
+  ...ShoppingListItemCore
+  # Extended fields not in Core
   shoppingList {
     id
     totalItems
@@ -21,11 +48,20 @@ fragment ShoppingListItemFragment on ShoppingListItem {
       name
       symbol
     }
+    categories {
+      id
+      isPrimary
+      confidence
+      source
+      assignedAt
+      category {
+        id
+        name
+      }
+    }
   }
+  # Extended unit fields (Core has id, name, symbol, displayAsFraction, minPrecision, autoConvertThreshold)
   unit {
-    id
-    name
-    symbol
     type
     isMetric
     baseUnitId
@@ -36,47 +72,87 @@ fragment ShoppingListItemFragment on ShoppingListItem {
     createdAt
     updatedAt
   }
-  quantity
+  # Price fields
   estimatedPrice
   budgetPrice
   lastKnownPrice
   lowestPrice
   highestPrice
   priceLastUpdated
-  isPurchased
+  # Purchase fields
   purchasedQuantity
   purchasedPrice
   purchaseDate
+  # Location fields
   aisle
   storeSection
+  # History fields
   previouslyPurchased
   lastPurchaseDate
   purchaseCount
-  itemName
-  unitName
-  notes
+  # Metadata fields
   priority
-  category
   sortOrder
   isAutoAdded
   autoAddReason
   isFromMealPlan
   mealPlanReference
   createdAt
-  updatedAt
   deletedAt
-  version
-  # Add these fields if they're missing and causing the TypeScript errors
+  # User references
   addedBy {
     ...PartialUser
   }
   purchasedBy {
     ...PartialUser
   }
+  # Purchase history
   purchases {
     ...PurchaseFragment
   }
 }
+
+# Shopping List Owner/Collaborator Fragments
+fragment ShoppingListOwnershipFragment on ShoppingListOwnership {
+  id
+  userId
+  shoppingListId
+  createdAt
+  transferredAt
+  transferredFrom
+  user {
+    id
+    email
+    profile {
+      displayName
+      avatar
+    }
+  }
+}
+
+fragment ShoppingListCollaboratorFragment on ShoppingListCollaborator {
+  id
+  email
+  role
+  status
+  collaboratorId
+  collaborator {
+    id
+    email
+    profile {
+      displayName
+      avatar
+    }
+  }
+  invitedBy {
+    id
+    email
+    profile {
+      displayName
+    }
+  }
+}
+
 fragment BasicUser on User {
   id
   email
@@ -118,8 +194,6 @@ fragment PartialUser on User {
   }
   settings {
     id
-    emailNotifications
-    pushNotifications
     theme
   }
 }
@@ -211,8 +285,6 @@ fragment UnitFragment on ItemUnit {
   isDefault
   isPreferred
   isCommon
-  conversionRatio
-  conversionNote
   packageSize
   packageDescription
   retailUnit
@@ -290,6 +362,13 @@ fragment ItemFragment on Item {
   deletedAt
   version
   netWeight
+  density
+  preferredTrackingUnitId
+  preferredTrackingUnit {
+    id
+    name
+    symbol
+  }
   displayUnit {
     id
     name
@@ -303,11 +382,11 @@ fragment ItemFragment on Item {
   }
   categories {
     id
-    source
-    confidence
     isPrimary
-    createdAt
     assignedAt
+    assignedBy {
+      id
+    }
     category {
       ...CategoryFragment
     }
@@ -363,18 +442,41 @@ fragment PantryItemFragment on PantryItem {
     baseUnitId
     conversionFactor
     isCommon
+    displayAsFraction
+    minPrecision
+    autoConvertThreshold
   }
   expiresAt
-  storageLocation
+  storageLocation {
+    id
+    name
+    type
+  }
   storageState
   storageNotes
   initialQuantity
   currentQuantity
+  quantityInput
+  normalizedQuantity
+  normalizedUnitId
+  normalizedUnit {
+    id
+    name
+    symbol
+  }
+  displayFormat
   consumedQuantity
   reservedQuantity
   autoReorderPoint
   isAutoReorder
   customCategory
+  actualNetWeight
+  actualNetWeightUnit {
+    id
+    name
+    symbol
+    type
+  }
   createdAt
   updatedAt
   version
@@ -382,16 +484,23 @@ fragment PantryItemFragment on PantryItem {
 
   usageRecords {
     id
-    pantryItemId
     quantityUsed
-    usedById
     usedAt
     purpose
     notes
-    cookingLogId
-    mealPlanItemId
-    recipeId
+    pantryItem {
+      id
+    }
     usedBy {
+      id
+    }
+    cookingLog {
+      id
+    }
+    mealPlanItem {
+      id
+    }
+    recipe {
       id
     }
   }
@@ -509,28 +618,6 @@ fragment HomeWithPantriesFragment on Home {
     ...MemberShipFragment
   }
 
-  myMembership {
-    ...MemberShipFragment
-  }
-
-  membershipStats {
-    total
-    active
-    byRole {
-      OWNER
-      ADMIN
-      MEMBER
-      GUEST
-    }
-    byStatus {
-      ACTIVE
-      SUSPENDED
-      LEFT
-      REMOVED
-    }
-    recentlyActive
-  }
-
   pantries {
     ...BasicPantryFragment
   }
@@ -561,28 +648,6 @@ fragment HomeFragment on Home {
     ...MemberShipFragment
   }
 
-  myMembership {
-    ...MemberShipFragment
-  }
-
-  membershipStats {
-    total
-    active
-    byRole {
-      OWNER
-      ADMIN
-      MEMBER
-      GUEST
-    }
-    byStatus {
-      ACTIVE
-      SUSPENDED
-      LEFT
-      REMOVED
-    }
-    recentlyActive
-  }
-
   pantries {
     ...PantryFragment
   }
@@ -607,21 +672,15 @@ fragment PurchaseFragment on Purchase {
   totalPrice
   itemName
   unitSymbol
-  user {
-    id
-    email
-    profile {
-      id
-      displayName
-    }
-  }
+  # Removed user.profile to prevent subscription normalization crash
+  # The server sends incomplete user data in subscriptions, causing
+  # "Cannot read properties of undefined (reading 'shoppingLists')" error
 }
 
 fragment RecipeIngredientFragment on RecipeIngredient {
   id
   name
   quantity
-  spoonacularIngredientId
   item {
     id
     name
@@ -632,14 +691,6 @@ fragment RecipeIngredientFragment on RecipeIngredient {
     name
     symbol
   }
-  aisle
-  consistency
-  originalString
-  metricAmount
-  metricUnit
-  usAmount
-  usUnit
-  meta
   image
   isOptional
   notes
@@ -703,7 +754,6 @@ fragment RecipeFragment on Recipe {
   nutritionData
 
   # Tags and metadata
-  dietaryTags
   tags
   visibility
   isPublished

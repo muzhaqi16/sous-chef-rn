@@ -21,7 +21,7 @@ const TAB_BAR_HEIGHT = 65;
 export const ProfileScreen = () => {
   const { navigate, goBack } = useAppNavigation();
   const { profile, user, loading } = useProfileData();
-  const { sections, BiometricModal } = useConfigurableSettings(profile);
+  const { sections, BiometricModal, biometricLoading } = useConfigurableSettings(profile);
   const { bottom: safeBottom } = useSafeAreaInsets();
   const { setOverlayOpen } = useScanner();
   const { theme } = useUnistyles();
@@ -62,8 +62,8 @@ export const ProfileScreen = () => {
 
   // ✅ OPTIMIZED: Don't block render on loading
   // Show cached profile data immediately while loading fresh data in background
-  // Only show loading state if we have NO data at all
-  if (loading && !profile) {
+  // Only show loading state if we have NO data at all OR biometric data is still loading
+  if ((loading && !profile) || biometricLoading) {
     return null; // or loading component
   }
   return (
@@ -93,6 +93,23 @@ export const ProfileScreen = () => {
                 return {
                   ...item,
                   onPress: handleLogout,
+                };
+              }
+              // Handle navigation items
+              if (item.type === 'navigation') {
+                return {
+                  ...item,
+                  onPress: () => {
+                    if (item.key === 'personalInformation') {
+                      navigate('PersonalInformation');
+                    } else if (item.key === 'notifications') {
+                      navigate('NotificationSettings');
+                    } else if (item.key === 'dietaryProfile') {
+                      navigate('DietaryProfile');
+                    } else if (item.key === 'appSettings') {
+                      navigate('AppSettings');
+                    }
+                  },
                 };
               }
               return item;
@@ -128,7 +145,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.background,
   },
   scrollContent: {
-    padding: theme.spacing.lg,
+    paddingVertical: theme.spacing.lg,
   },
   menuItem: {
     flexDirection: 'row',

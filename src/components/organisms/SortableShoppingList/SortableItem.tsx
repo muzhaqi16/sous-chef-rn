@@ -1,8 +1,9 @@
-import React from 'react';
-import { View, TouchableOpacity, Vibration, Platform } from 'react-native';
+import React, { useCallback } from 'react';
+import { Vibration, Platform, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { SwipeableItem } from '#/components/molecules/SwipeableItem';
 import { ListItem } from '#/components/molecules/ListItem';
+import { DragHandle } from '#/components/atoms/DragHandle';
 import { commonStyles } from '#/styles';
 
 interface SimpleDraggableItemProps {
@@ -10,6 +11,7 @@ interface SimpleDraggableItemProps {
     id: string;
     title: string;
     subtitle: string | React.ReactNode;
+    isPurchased?: boolean;
     badge?: {
       text: string;
       variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger';
@@ -20,59 +22,83 @@ interface SimpleDraggableItemProps {
   onItemPress: (id: string) => void;
   onItemEdit?: (id: string) => void;
   onItemDelete?: (id: string) => void;
+  onTogglePurchase?: (id: string) => void;
   drag?: () => void;
   isActive?: boolean;
+  onSwipeableWillOpen?: (ref: any) => void;
+  onSwipeableClose?: () => void;
 }
 
-export const SimpleDraggableItem: React.FC<SimpleDraggableItemProps> = ({
+const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
   item,
   onItemPress,
   onItemEdit,
   onItemDelete,
+  onTogglePurchase,
   drag,
   isActive,
+  onSwipeableWillOpen,
+  onSwipeableClose,
 }) => {
-  // Handle drag activation with haptic feedback
-  const handleDragStart = () => {
+  // Handle long press for drag activation with haptic feedback
+  const handleLongPress = useCallback(() => {
     if (drag) {
       // Provide haptic feedback when drag activates
       if (Platform.OS === 'ios') {
         Vibration.vibrate(100);
       } else {
-        // Android allows pattern vibration
         Vibration.vibrate(100);
       }
       drag();
     }
-  };
+  }, [drag]);
 
-  // Combine the original rightElement with the drag handle
-  const rightElement = (
-    <View style={styles.rightContainer}>
-      {item.rightElement}
-      {drag && (
-        <TouchableOpacity
-          onLongPress={handleDragStart}
-          delayLongPress={150}
-          style={styles.dragHandle}
-        >
-          <View style={styles.dragIcon}>
-            <View style={styles.dragLine} />
-            <View style={styles.dragLine} />
-            <View style={styles.dragLine} />
-          </View>
-        </TouchableOpacity>
-      )}
-    </View>
-  );
+  // Handle long press for purchase toggle (when drag handle is not available)
+  const handleToggleLongPress = useCallback(() => {
+    if (onTogglePurchase) {
+      // Provide haptic feedback for toggle action
+      if (Platform.OS === 'ios') {
+        Vibration.vibrate([0, 50]); // Short vibration for toggle
+      } else {
+        Vibration.vibrate(50);
+      }
+      onTogglePurchase(item.id);
+    }
+  }, [onTogglePurchase, item.id]);
+
+  // Clone rightElement if it's ShoppingListItemCounter and inject drag handle
+  const rightElement = React.useMemo(() => {
+    if (!drag || item.isPurchased) {
+      return item.rightElement;
+    }
+
+    // Clone the counter element and inject drag handle
+    if (React.isValidElement(item.rightElement)) {
+      return React.cloneElement(item.rightElement as React.ReactElement<any>, {
+        rightElement: (
+          <DragHandle
+            onLongPress={handleLongPress}
+            disabled={item.isPurchased}
+          />
+        ),
+      });
+    }
+
+    return item.rightElement;
+  }, [drag, item.isPurchased, item.rightElement, handleLongPress]);
 
   return (
     <View style={[styles.container, isActive && styles.activeContainer]}>
       <SwipeableItem
         onPress={() => onItemPress(item.id)}
+        onLongPress={!drag && onTogglePurchase ? handleToggleLongPress : undefined}
         onEdit={onItemEdit ? () => onItemEdit(item.id) : undefined}
         onDelete={onItemDelete ? () => onItemDelete(item.id) : undefined}
+        onTogglePurchase={onTogglePurchase ? () => onTogglePurchase(item.id) : undefined}
+        isPurchased={item.isPurchased}
         friction={1}
+        onSwipeableWillOpen={onSwipeableWillOpen}
+        onSwipeableClose={onSwipeableClose}
       >
         <ListItem
           title={item.title}
@@ -81,6 +107,7 @@ export const SimpleDraggableItem: React.FC<SimpleDraggableItemProps> = ({
           rightElement={rightElement}
           leftElement={item.leftElement}
           rightIcon={undefined}
+          isPurchased={item.isPurchased}
         />
       </SwipeableItem>
     </View>
@@ -109,23 +136,7 @@ const styles = StyleSheet.create(theme => ({
     shadowRadius: 8,
     elevation: 8,
   },
-  rightContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  dragHandle: {
-    padding: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  dragIcon: {
-    width: 20,
-    gap: 3,
-  },
-  dragLine: {
-    height: 2,
-    backgroundColor: '#999',
-    borderRadius: 1,
-  },
 }));
+
+// Memoize component to prevent unnecessary re-renders during drag operations
+export const SimpleDraggableItem = React.memo(SimpleDraggableItemComponent);

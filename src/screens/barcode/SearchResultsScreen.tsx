@@ -55,7 +55,7 @@ export const SearchResultsScreen: React.FC<{
     }
   }, [bottomSheetVisible, bottomSheetIndex]);
 
-  // Replace your current status bar effect with this improved version
+  // Update status bar style based on bottom sheet visibility
   useEffect(() => {
     if (bottomSheetVisible) {
       // When bottom sheet is open: dark status bar with light content
@@ -65,13 +65,10 @@ export const SearchResultsScreen: React.FC<{
       if (Platform.OS === 'android') {
         StatusBar.setBackgroundColor('rgba(0, 0, 0, 0.7)', true); // Semi-transparent black
         StatusBar.setTranslucent(true); // Keep translucent for better appearance
-      } else {
-        // iOS doesn't support backgroundColor, but respects bar style
-        StatusBar.setBarStyle('light-content', true);
       }
     } else {
       // When bottom sheet is closed: restore to default
-      StatusBar.setBarStyle('dark-content', true); // Or 'light-content' based on your app theme
+      StatusBar.setBarStyle('dark-content', true);
 
       if (Platform.OS === 'android') {
         StatusBar.setBackgroundColor('transparent', true);
@@ -115,7 +112,6 @@ export const SearchResultsScreen: React.FC<{
   };
 
   const handleBackPress = () => {
-    console.log('Back pressed, source:', source);
     // Navigate back to the appropriate screen based on source
     if (source === 'pantry') {
       navigateToNested('Home', 'Pantry');

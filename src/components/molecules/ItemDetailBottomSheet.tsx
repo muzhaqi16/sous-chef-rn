@@ -6,7 +6,7 @@ import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { Button } from '../base/Button';
 import {
   useUpdateShoppingListItemMutation,
-  useGetUnitsQuery,
+  useGetCommonUnitsQuery,
   Unit,
   ShoppingListItem,
 } from '#generated';
@@ -25,7 +25,7 @@ export const ItemDetailBottomSheet: React.FC<ItemDetailProps> = ({
   const [name, setName] = useState(item.itemName || '');
   const [quantity, setQuantity] = useState(1);
   const [unit, setUnit] = useState('pcs');
-  const { data } = useGetUnitsQuery();
+  const { data } = useGetCommonUnitsQuery({ fetchPolicy: 'cache-first' });
 
   const [updateItem] = useUpdateShoppingListItemMutation();
 
@@ -72,7 +72,7 @@ export const ItemDetailBottomSheet: React.FC<ItemDetailProps> = ({
   );
 };
 
-const styles = StyleSheet.create(() => ({
+const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     flexDirection: 'column',
@@ -82,7 +82,7 @@ const styles = StyleSheet.create(() => ({
   },
   input: {
     marginBottom: 8,
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.surface,
   },
 }));
 

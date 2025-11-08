@@ -1,15 +1,20 @@
-import React, { useEffect } from 'react';
-import { TouchableOpacity, View } from 'react-native';
-import { useWindowDimensions } from 'react-native';
+import React, { useEffect, useMemo } from 'react';
+import { useWindowDimensions, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { StyleSheet } from 'react-native-unistyles';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withSequence,
+} from 'react-native-reanimated';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useScanner } from '#context/ScannerContext';
 import type { FloatingTabBarProps } from './types';
 import { AddButton } from './AddButton';
 
 export const TAB_BAR_HEIGHT = 65;
 
-export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
+export const FloatingTabBar: React.FC<FloatingTabBarProps> = React.memo(({
   state,
   descriptors,
   navigation,
@@ -17,20 +22,20 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
   const { onScanPress, showScannerButton, setActiveTab, isOverlayOpen } = useScanner();
   const { bottom: safeBottom } = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
+  const { theme } = useUnistyles();
 
-  // Follow reference implementation exactly
-  const tabBarWidth = screenWidth * 0.95;
+  // Memoize tab bar width calculation
+  const tabBarWidth = useMemo(() => screenWidth * 0.95, [screenWidth]);
+
+  // Animated values for smooth hide/show
+  const translateY = useSharedValue(0);
+  const opacity = useSharedValue(1);
 
   // Track active tab for scanner visibility
   useEffect(() => {
     const activeRoute = state.routes[state.index];
     setActiveTab(activeRoute.name);
   }, [state.index, state.routes, setActiveTab]);
-
-  // Hide tab bar when overlay is open
-  if (isOverlayOpen) {
-    return null;
-  }
 
   // Check if the focused route has tabBarStyle: { display: 'none' }
   const focusedRoute = state.routes[state.index];
@@ -41,26 +46,62 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
     'display' in focusedOptions.tabBarStyle &&
     focusedOptions.tabBarStyle.display === 'none';
 
-  if (shouldHideFromNavigation) {
-    return null;
-  }
+  // Animate tab bar visibility
+  useEffect(() => {
+    const shouldHide = isOverlayOpen || shouldHideFromNavigation;
+
+    translateY.value = withSpring(shouldHide ? 150 : 0, {
+      damping: 40,
+      stiffness: 250,
+    });
+    opacity.value = withSpring(shouldHide ? 0 : 1, {
+      damping: 40,
+      stiffness: 250,
+    });
+  }, [isOverlayOpen, shouldHideFromNavigation, translateY, opacity]);
+
+  // Animated style for smooth transitions
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+    opacity: opacity.value,
+  }));
+
+  // Memoize container style
+  const containerStyle = useMemo(
+    () => ({
+      width: tabBarWidth,
+      bottom: safeBottom,
+    }),
+    [tabBarWidth, safeBottom]
+  );
 
   return (
-    <View
-      style={[
-        {
-          width: tabBarWidth,
-          bottom: safeBottom,
-        },
-        styles.container,
-      ]}
+    <Animated.View
+      style={[containerStyle, styles.container, animatedStyle]}
     >
-      {/* Render tabs - following reference pattern */}
       {state.routes.map((route, index) => {
         const { options } = descriptors[route.key];
         const isFocused = state.index === index;
 
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        const iconScale = useSharedValue(isFocused ? 1.2 : 1);
+
+        // Update scale when focus changes
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        useEffect(() => {
+          iconScale.value = withSpring(isFocused ? 1.2 : 1, {
+            damping: 35,
+            stiffness: 250,
+          });
+        }, [isFocused, iconScale]);
+
         const onPress = () => {
+          // Animate icon scale on press (squeeze then expand)
+          iconScale.value = withSequence(
+            withSpring(0.85, { damping: 15, stiffness: 300 }),
+            withSpring(isFocused ? 1.2 : 1, { damping: 15, stiffness: 300 })
+          );
+
           const event = navigation.emit({
             type: 'tabPress',
             target: route.key,
@@ -72,48 +113,47 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
           }
         };
 
-        const IconComponent = options.tabBarIcon;
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        const animatedIconStyle = useAnimatedStyle(() => ({
+          transform: [{ scale: iconScale.value }],
+        }));
 
         return (
           <TouchableOpacity
             key={route.key}
-            onPress={onPress}
-            style={styles.iconContainer}
             accessibilityRole="button"
             accessibilityState={isFocused ? { selected: true } : {}}
             accessibilityLabel={options.tabBarAccessibilityLabel}
+            onPress={onPress}
+            style={styles.tabItem}
+            activeOpacity={0.7}
           >
-            {IconComponent && (
-              <IconComponent
-                focused={isFocused}
-                color={isFocused ? '#FFFFFF' : '#CCCCCC'}
-                size={24}
-              />
-            )}
+            <Animated.View style={animatedIconStyle}>
+              {options.tabBarIcon && (
+                <options.tabBarIcon
+                  focused={isFocused}
+                  color={isFocused ? theme.colors.primary : '#CCCCCC'}
+                  size={24}
+                />
+              )}
+            </Animated.View>
           </TouchableOpacity>
         );
       })}
 
-      {/* Scanner Button */}
       {showScannerButton && onScanPress && (
         <AddButton onPress={onScanPress} />
       )}
-    </View>
+    </Animated.View>
   );
-};
+});
 
 const styles = StyleSheet.create(theme => ({
-  iconContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1,
-  },
   container: {
     backgroundColor: theme.colors.secondaryDark,
     height: 65,
     alignSelf: 'center',
-    borderRadius: 20, // Make more rounded to match reference
+    borderRadius: 20,
     position: 'absolute',
     paddingHorizontal: '5%',
     flexDirection: 'row',
@@ -125,6 +165,13 @@ const styles = StyleSheet.create(theme => ({
     shadowOpacity: 0.15,
     shadowRadius: 16,
     elevation: 12,
-    zIndex: 1000, // Much higher z-index to be above everything
+    zIndex: 1000,
+  },
+  tabItem: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: '100%',
+    minWidth: 40,
   },
 }));

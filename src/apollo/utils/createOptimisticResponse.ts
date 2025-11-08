@@ -16,15 +16,16 @@ export interface VersionedEntity {
 }
 
 /**
- * Enhances an entity with incremented version and updated timestamp
+ * Enhances an entity with updated timestamp for optimistic responses
  *
- * Use this in optimistic responses to ensure the optimistic update
- * has a higher version than the current cached version.
+ * Note: Does NOT increment version - the server handles version increments.
+ * The optimistic response should predict the field changes but keep the
+ * current version. The server response will have the incremented version.
  *
  * @template T - Entity type that extends VersionedEntity
  * @param currentItem - The current item from cache
  * @param updates - Partial updates to apply
- * @returns Enhanced item with incremented version and current timestamp
+ * @returns Enhanced item with updates and current timestamp (version unchanged)
  *
  * @example
  * ```typescript
@@ -52,7 +53,8 @@ export function enhanceWithVersion<T extends VersionedEntity>(
   return {
     ...currentItem,
     ...updates,
-    version: (currentItem.version || 0) + 1,
+    // Keep current version - server will increment it
+    version: currentItem.version || 0,
     updatedAt: new Date().toISOString(),
   } as T;
 }

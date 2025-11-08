@@ -182,6 +182,12 @@ export const FormSelect: React.FC<FormSelectProps> = ({
               renderItem={renderOption}
               keyExtractor={item => item.value}
               showsVerticalScrollIndicator={false}
+              // Performance optimizations
+              maxToRenderPerBatch={10}
+              windowSize={5}
+              removeClippedSubviews={true}
+              initialNumToRender={10}
+              updateCellsBatchingPeriod={50}
             />
             <TouchableOpacity
               style={styles.closeButton}

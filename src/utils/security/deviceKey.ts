@@ -263,7 +263,7 @@ export class DeviceKeyManager {
     try {
       // Clear old key from keychain
       await Keychain.resetGenericPassword({ service: DEVICE_KEY_SERVICE });
-      storage.delete(DEVICE_KEY_STORAGE);
+      storage.remove(DEVICE_KEY_STORAGE);
     } catch (error) {
       console.warn('Error clearing old key:', error);
     }

@@ -12,6 +12,9 @@ import { Icon } from '#utils';
 import {
   useAcceptHomeInviteMutation,
   useAcceptShoppingListInviteMutation,
+  useDeclineHomeInviteMutation,
+  useDeclineShoppingListInviteMutation,
+  GetHomesDocument,
 } from '#generated';
 
 export interface InvitationData {
@@ -37,10 +40,19 @@ export const InvitationAcceptanceModal: React.FC<
   InvitationAcceptanceModalProps
 > = ({ visible, invitation, onClose, onAccept, onReject }) => {
   const [accepting, setAccepting] = useState(false);
-  const [rejecting] = useState(false);
+  const [rejecting, setRejecting] = useState(false);
 
-  const [acceptHomeInvite] = useAcceptHomeInviteMutation();
-  const [acceptShoppingListInvite] = useAcceptShoppingListInviteMutation();
+  const [acceptHomeInvite] = useAcceptHomeInviteMutation({
+    refetchQueries: [{query: GetHomesDocument}],
+  });
+  const [acceptShoppingListInvite] = useAcceptShoppingListInviteMutation({
+    refetchQueries: ['GetShoppingLists'],
+    awaitRefetchQueries: true,
+  });
+  const [declineHomeInvite] = useDeclineHomeInviteMutation({
+    refetchQueries: [{query: GetHomesDocument}],
+  });
+  const [declineShoppingListInvite] = useDeclineShoppingListInviteMutation();
 
   const handleAccept = async () => {
     if (!invitation) return;
@@ -55,6 +67,14 @@ export const InvitationAcceptanceModal: React.FC<
         });
 
         if (result.data?.acceptHomeInvite) {
+          const newHomeId = result.data.acceptHomeInvite.homeId;
+
+          // Pass the homeId to the handler so it can update the store
+          const invitationWithHomeId = {
+            ...invitation,
+            acceptedHomeId: newHomeId,
+          };
+
           Alert.alert(
             'Success',
             `You've successfully joined ${invitation.entityName}!`,
@@ -62,7 +82,7 @@ export const InvitationAcceptanceModal: React.FC<
               {
                 text: 'OK',
                 onPress: () => {
-                  onAccept?.(invitation);
+                  onAccept?.(invitationWithHomeId);
                   onClose();
                 },
               },
@@ -107,19 +127,60 @@ export const InvitationAcceptanceModal: React.FC<
 
     // Show confirmation alert
     Alert.alert(
-      'Reject Invitation',
-      `Are you sure you want to reject this invitation to ${invitation.entityName}?`,
+      'Decline Invitation',
+      `Are you sure you want to decline this invitation to ${invitation.entityName}?`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        {text: 'Cancel', style: 'cancel'},
         {
-          text: 'Reject',
+          text: 'Decline',
           style: 'destructive',
           onPress: async () => {
-            // For now, just close the modal and call onReject
-            // The actual rejection logic would need to be implemented
-            // based on your GraphQL schema
-            onReject?.(invitation);
-            onClose();
+            setRejecting(true);
+            try {
+              if (invitation.type === 'HOME_INVITE') {
+                await declineHomeInvite({
+                  variables: {token: invitation.token!},
+                });
+                Alert.alert(
+                  'Invitation Declined',
+                  `You have declined the invitation to ${invitation.entityName}`,
+                  [
+                    {
+                      text: 'OK',
+                      onPress: () => {
+                        onReject?.(invitation);
+                        onClose();
+                      },
+                    },
+                  ],
+                );
+              } else if (invitation.type === 'SHOPPING_LIST_INVITE') {
+                await declineShoppingListInvite({
+                  variables: {token: invitation.token!},
+                });
+                Alert.alert(
+                  'Invitation Declined',
+                  `You have declined the invitation to ${invitation.entityName}`,
+                  [
+                    {
+                      text: 'OK',
+                      onPress: () => {
+                        onReject?.(invitation);
+                        onClose();
+                      },
+                    },
+                  ],
+                );
+              }
+            } catch (error: any) {
+              Alert.alert(
+                'Error',
+                error.message ||
+                  'Failed to decline invitation. Please try again.',
+              );
+            } finally {
+              setRejecting(false);
+            }
           },
         },
       ],

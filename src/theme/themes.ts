@@ -15,7 +15,7 @@ const commonTheme = {
   radii,
   shadows,
   sizes,
-} as const;
+};
 
 export const lightTheme = {
   ...commonTheme,
@@ -58,9 +58,14 @@ export const lightTheme = {
 
     // Semantic
     success: colors.success,
+    successLight: colors.validation.successBg,
     warning: colors.warning,
+    warningLight: colors.validation.warningBg,
     error: colors.error,
+    errorLight: colors.validation.errorBg,
     info: colors.info,
+    infoLight: colors.validation.infoBg,
+    danger: colors.error,
 
     // Components specific
     white: colors.neutral[0],
@@ -68,15 +73,24 @@ export const lightTheme = {
     transparent: colors.transparent,
     chipBackground: colors.neutral[200],
     chipText: colors.neutral[700],
-    chipSelectedBackground: colors.jaffa[500],
+    chipSelectedBackground: colors.jaffa[300],
     chipSelectedText: colors.neutral[0],
     iconPrimary: colors.jaffa[500],
+
+    // Status colors - for invites, tasks, etc.
+    status: colors.status,
+
+    // Role colors - for user roles
+    roles: colors.roles,
+
+    // Validation colors - for forms
+    validation: colors.validation,
 
     // Overlay
     overlay: colors.overlay,
     gap: (v: number) => v * 8,
   },
-} as const;
+};
 
 export const darkTheme = {
   ...commonTheme,
@@ -119,9 +133,14 @@ export const darkTheme = {
 
     // Semantic
     success: colors.success,
+    successLight: colors.success + '20', // 20% opacity on dark bg
     warning: colors.warning,
+    warningLight: colors.warning + '20',
     error: colors.error,
+    errorLight: colors.error + '20',
     info: colors.info,
+    infoLight: colors.info + '20',
+    danger: colors.error,
 
     // Components specific
     white: colors.neutral[0],
@@ -133,11 +152,20 @@ export const darkTheme = {
     chipSelectedText: colors.neutral[900],
     iconPrimary: colors.jaffa[400],
 
+    // Status colors - for invites, tasks, etc.
+    status: colors.status,
+
+    // Role colors - for user roles
+    roles: colors.roles,
+
+    // Validation colors - for forms
+    validation: colors.validation,
+
     // Overlay
     overlay: colors.overlay,
     gap: (v: number) => v * 8,
   },
-} as const;
+};
 
 // Type exports
 export type Theme = typeof lightTheme;

@@ -3,6 +3,7 @@ import { createClient, Client } from 'graphql-ws';
 import { Platform } from 'react-native';
 import Config from 'react-native-config';
 import { useStore } from '#store';
+import { Environment } from '#/utils/environment';
 
 // pick the right WebSocket constructor
 const webSocketImpl =
@@ -10,22 +11,8 @@ const webSocketImpl =
     ? WebSocket // for RN-Web
     : global.WebSocket; // for iOS & Android
 
-// Environment-based WebSocket URL with fallbacks
-const getWebSocketUrl = () => {
-  if (Config.WEB_SOCKET_URL) {
-    return Config.WEB_SOCKET_URL;
-  }
-
-  // Fallback based on __DEV__ flag
-  if (__DEV__) {
-    return 'ws://localhost:4000/graphql';
-  } else {
-    // Production fallback
-    return 'wss://api.souschef.com/graphql';
-  }
-};
-
-const WS_URL = getWebSocketUrl();
+// Use Config.WEB_SOCKET_URL from .env if set, otherwise use environment-specific default
+const WS_URL = Config.WEB_SOCKET_URL || Environment.getApiConfig().wsUrl;
 
 // Store the client instance so we can reconnect it
 let wsClient: Client;

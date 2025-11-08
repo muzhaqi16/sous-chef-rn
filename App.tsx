@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
-import { StatusBar, AppState, Platform } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { AppState, StatusBar } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
@@ -15,15 +15,31 @@ import { ToastProvider } from '#/components/atoms';
 import { useTheme } from '#/hooks/useTheme';
 import { Telemetry } from '#/services/telemetry';
 import { AppErrorBoundary } from '#/components/providers/ErrorBoundary';
+import { useNetworkStatus } from '#/hooks/useNetworkStatus';
+import { queueManager } from '#/apollo/offlineQueue';
+import { NotificationProvider } from '#/components/notifications/NotificationProvider';
+import { DataProvider } from '#/components/providers/DataProvider';
+import { SubscriptionProvider } from '#/components/providers/SubscriptionProvider';
+
 // Enable native screens for better performance
 enableScreens();
 
 const App = () => {
-  const { isHydrated, setHasStoredCredentials, getTelemetryConfig } =
+  const { isHydrated, isOnline, setHasStoredCredentials, getTelemetryConfig } =
     useStore();
   const { theme } = useTheme();
-  const { theme: themeStyles } = useUnistyles();
-  const isDark = theme === 'dark';
+
+  // Initialize network monitoring
+  useNetworkStatus();
+
+  // Handle network status changes - trigger queue processing when online
+  useEffect(() => {
+    if (isOnline) {
+      queueManager.onOnline();
+    } else {
+      queueManager.onOffline();
+    }
+  }, [isOnline]);
 
   useEffect(() => {
     if (isHydrated) {
@@ -71,29 +87,22 @@ const App = () => {
     <AppErrorBoundary>
       <GestureHandlerRootView style={styles.container}>
         <ApolloProvider client={client}>
-          <SafeAreaProvider>
-            <StatusBar
-              //  translucent on android
-              {...Platform.select({
-                android: {
-                  translucent: true,
-                  backgroundColor: themeStyles.colors.background,
-                },
-                ios: {},
-              })}
-              backgroundColor={'red'}
-              hidden={false}
-              animated={true}
-              barStyle={isDark ? 'light-content' : 'dark-content'}
-            />
+          <DataProvider>
+            <SubscriptionProvider>
+              <SafeAreaProvider>
+                <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
             <SafeAreaView style={styles.container}>
               <ToastProvider>
-                <BottomSheetModalProvider>
-                  <Navigation />
-                </BottomSheetModalProvider>
+                <NotificationProvider>
+                  <BottomSheetModalProvider>
+                    <Navigation />
+                  </BottomSheetModalProvider>
+                </NotificationProvider>
               </ToastProvider>
             </SafeAreaView>
           </SafeAreaProvider>
+            </SubscriptionProvider>
+          </DataProvider>
         </ApolloProvider>
       </GestureHandlerRootView>
     </AppErrorBoundary>

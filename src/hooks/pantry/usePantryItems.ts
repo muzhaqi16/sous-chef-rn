@@ -1,15 +1,13 @@
 import { useMemo } from 'react';
 import {
   useGetPantryItemsQuery,
-  usePantryItemsChangedSubscription,
   StorageState,
 } from '#generated';
 import { useSearchableList } from '../useSearchableList';
-import { useErrorHandler } from '#/utils/errorHandling';
 import { useAuth } from '#hooks/auth/useAuth';
+import { usePreservedArrayData } from '#/hooks/apollo';
 
 export function usePantryItems(pantryId: string | undefined) {
-  const { handleApolloError } = useErrorHandler();
   const { isLoggedOut } = useAuth();
   const shouldSkip = !pantryId || isLoggedOut;
 
@@ -18,45 +16,15 @@ export function usePantryItems(pantryId: string | undefined) {
     skip: shouldSkip,
     variables: { pantryId: pantryId ?? '' },
     notifyOnNetworkStatusChange: true,
-    errorPolicy: 'all', // Allow partial data and cache on errors
+    errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
   });
 
-  usePantryItemsChangedSubscription({
-    variables: { pantryId: pantryId ?? '' },
-    skip: shouldSkip,
-    onData: ({ data }) => {
-      // Apollo cache is automatically updated by subscription
-      // Log subscription updates for debugging
-      if (__DEV__) {
-        console.log('🔔 Pantry subscription update received:', {
-          pantryId,
-          changeType: data.data?.pantryItemsChanged?.__typename,
-          timestamp: new Date().toISOString(),
-        });
-      }
-    },
-    onComplete: () => {
-      if (__DEV__) {
-        console.log('✅ Pantry subscription connected:', pantryId);
-      }
-    },
-    onError: error => {
-      const { message } = handleApolloError(error, {
-        operation: 'Pantry Subscription',
-      });
-      console.warn('❌ Pantry subscription error:', {
-        pantryId,
-        error: message,
-        timestamp: new Date().toISOString(),
-      });
-      // Don't refetch on subscription errors - let the query handle reconnection
-    },
-  });
+  // Real-time updates via subscription are now handled by SubscriptionProvider
+  // This provides automatic deduplication, error handling, and consistent logging
+  // across all pantry subscriptions.
 
-  const pantryItems = useMemo(
-    () => data?.pantryItems ?? [],
-    [data?.pantryItems],
-  );
+  // Preserve pantry items even when query fails to prevent cascade failures
+  const pantryItems = usePreservedArrayData(data?.pantryItems);
 
   // Search functionality
   const {

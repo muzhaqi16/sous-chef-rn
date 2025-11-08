@@ -92,6 +92,12 @@ export function ItemSelector<T extends SelectableItem>({
       contentContainerStyle={{}}
       style={{flexGrow: 0}}
       ItemSeparatorComponent={() => <View style={{height: 8}} />}
+      // Performance optimizations
+      maxToRenderPerBatch={10}
+      windowSize={5}
+      removeClippedSubviews={true}
+      initialNumToRender={10}
+      updateCellsBatchingPeriod={50}
     />
   );
 }

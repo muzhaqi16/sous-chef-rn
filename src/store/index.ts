@@ -31,6 +31,7 @@ import {
   NavigationState,
 } from './slices/navigationSlice';
 import { createTelemetrySlice, TelemetryState } from './slices/telemetrySlice';
+import { createNetworkSlice, NetworkState } from './slices/networkSlice';
 // import {logger} from './logger';
 import { zustandStorage, STORAGE_KEY } from '#/storage/mmkv';
 
@@ -60,6 +61,7 @@ export type RootState = AuthState &
   BarcodeScannerState &
   UIState &
   TelemetryState &
+  NetworkState &
   ResetManagerState &
   NavigationStateManagerState;
 
@@ -76,18 +78,12 @@ export const useStore = create<RootState>()(
           // Create navigation state manager
           const navigationStateManager: NavigationStateManagerState = {
             initiateLogout: () => {
-              console.log(
-                '🔄 Store: Logout initiated - setting global logout state',
-              );
               set(state => {
                 state.isLoggingOut = true;
               });
               return true; // Success
             },
             completeLogout: () => {
-              console.log(
-                '🔄 Store: Logout completed - clearing global logout state',
-              );
               set(state => {
                 state.isLoggingOut = false;
               });
@@ -104,6 +100,7 @@ export const useStore = create<RootState>()(
             ...createNotificationSlice(set, get, store),
             ...createUISlice(set, get, store),
             ...createTelemetrySlice(set, get, store),
+            ...createNetworkSlice(set, get, store),
             // Add reset manager methods to the store
             ...resetManager,
             // Add navigation state manager methods
@@ -114,14 +111,33 @@ export const useStore = create<RootState>()(
       ),
       {
         name: STORAGE_KEY,
-        version: 3,
+        version: 5,
         storage: createJSONStorage(() => zustandStorage),
+        // Do store migrations here
+        migrate: (persistedState: any, version: number) => {
+          // Migration from version 4 to 5: Remove persisted network state
+          if (version === 4) {
+            /* eslint-disable @typescript-eslint/no-unused-vars */
+            const {
+              isOnline,
+              isInternetReachable,
+              networkType,
+              lastOnlineTime,
+              lastOfflineTime,
+              ...rest
+            } = persistedState || {};
+            /* eslint-enable @typescript-eslint/no-unused-vars */
+
+            return rest;
+          }
+
+          return persistedState;
+        },
         onRehydrateStorage: () => {
           return (state, error) => {
             if (error) {
               console.log('An error happened during hydration', error);
             } else {
-              console.log('🏪 Store hydrated successfully');
               // Mark store as hydrated
               state?.setHydrated(true);
             }
@@ -134,6 +150,12 @@ export const useStore = create<RootState>()(
 
           /* eslint-disable @typescript-eslint/no-unused-vars */
           const {
+            // Exclude network state (always detect fresh on app start)
+            isOnline,
+            isInternetReachable,
+            networkType,
+            lastOnlineTime,
+            lastOfflineTime,
             // Exclude UI state that should not persist (intentionally unused)
             bottomSheetVisible,
             bottomSheetIndex,
@@ -143,7 +165,6 @@ export const useStore = create<RootState>()(
             isFetching,
             ...persistedState
           } = state;
-          /* eslint-enable @typescript-eslint/no-unused-vars */
 
           return persistedState;
         },

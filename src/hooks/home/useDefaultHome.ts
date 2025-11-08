@@ -2,9 +2,10 @@ import { useEffect } from 'react';
 import { useGetHomesQuery, useGetDefaultHomeQuery } from '#generated';
 import { useStore } from '#store';
 import { useAuth } from '#hooks/auth/useAuth';
+import { usePreservedArrayData } from '#/hooks/apollo';
 
 export const useDefaultHome = () => {
-  const { selectedHomeId, setSelectedHomeId } = useStore();
+  const { selectedHomeId, setSelectedHomeId, selectedPantryId, setSelectedPantryId } = useStore();
   const { canAttemptQueries } = useAuth();
 
   // Always fetch homes when authenticated (needed for UI and getDefaultPantry)
@@ -14,42 +15,53 @@ export const useDefaultHome = () => {
     data: homes,
     loading,
     error,
-    refetch,
   } = useGetHomesQuery({
     fetchPolicy: 'cache-and-network', // Ensure fresh data after token refresh
+    nextFetchPolicy: 'cache-first', // Subsequent fetches use cache to avoid unnecessary refetches
     skip: shouldSkip,
-    notifyOnNetworkStatusChange: true,
-    errorPolicy: 'all', // Allow partial data and cache on errors
+    errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
   });
+
+  // Preserve homes data even when query fails - prevents cascade failures
+  const homesList = usePreservedArrayData(homes?.homes);
 
   const { data: defaultHomeData, loading: loadingDefaultHome } =
     useGetDefaultHomeQuery({
       fetchPolicy: 'cache-and-network',
+      nextFetchPolicy: 'cache-first', // Subsequent fetches use cache to avoid unnecessary refetches
       skip: !canAttemptQueries,
-      notifyOnNetworkStatusChange: true,
-      errorPolicy: 'all',
+      errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
     });
 
   const remoteDefaultHomeId = defaultHomeData?.getDefaultHome?.id;
 
-  // Retry mechanism: retry when we can attempt queries but no homes data
-  // Note: Auth errors (token expiry) are automatically retried by errorLink after token refresh
-  // This handles other types of errors (network issues, etc.)
+  // Sync remote default home and pantry to local store
+  // This ensures backend's defaults are auto-selected on new device login
   useEffect(() => {
-    if (canAttemptQueries && !homes?.homes && !loading && error) {
-      console.log('🔄 Retrying homes query after non-auth error...');
-      refetch();
-    }
-  }, [canAttemptQueries, homes?.homes, loading, error, refetch]);
-
-  // Sync remote default home to local store when available and different
-  // This ensures backend's default home is auto-selected on new device login
-  useEffect(() => {
-    if (remoteDefaultHomeId && remoteDefaultHomeId !== selectedHomeId) {
-      console.log('🏠 Syncing remote default home to local store:', remoteDefaultHomeId);
+    // Only sync remote → local when no local selection exists
+    // This prevents interference with user-initiated setDefaultHome actions
+    if (!selectedHomeId && remoteDefaultHomeId) {
       setSelectedHomeId(remoteDefaultHomeId);
+      console.log('🏠 Auto-selected default home:', remoteDefaultHomeId);
     }
-  }, [remoteDefaultHomeId, selectedHomeId, setSelectedHomeId]);
+
+    // Auto-select default pantry when home data loads (for returning users on new devices)
+    // This ensures users see their pantry immediately after login, matching onboarding behavior
+    if (remoteDefaultHomeId && !selectedPantryId) {
+      const defaultPantry = getDefaultPantry(defaultHomeData);
+      if (defaultPantry?.id) {
+        setSelectedPantryId(defaultPantry.id);
+        console.log('🏠 Auto-selected default pantry:', defaultPantry.id);
+      }
+    }
+  }, [
+    remoteDefaultHomeId,
+    selectedHomeId,
+    setSelectedHomeId,
+    selectedPantryId,
+    defaultHomeData,
+    setSelectedPantryId,
+  ]);
 
   // Helper function to get the default pantry from a home
   const getDefaultPantry = (homeData: any) => {
@@ -67,16 +79,19 @@ export const useDefaultHome = () => {
     return homeData.home.pantries.length > 0 ? homeData.home.pantries[0] : null;
   };
 
-  // Provide the most appropriate home ID (prefer remote default, fallback to store value)
-  const currentHomeId = remoteDefaultHomeId || selectedHomeId;
+  // Provide the most appropriate home ID (prefer Zustand store, fallback to remote default)
+  // This ensures instant UI updates after mutations while still syncing from server on initial load
+  const currentHomeId = selectedHomeId ?? remoteDefaultHomeId;
 
   return {
     selectedHomeId: currentHomeId,
-    homes: homes?.homes || [],
+    homes: homesList,
     loading: loading || loadingDefaultHome,
     error,
     hasDefaultHome: !!currentHomeId,
     getDefaultPantry,
     remoteDefaultHomeId,
+    selectedPantryId,
+    setSelectedPantryId,
   };
 };

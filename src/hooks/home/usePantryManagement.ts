@@ -1,18 +1,25 @@
 import { useMemo } from 'react';
 import { Alert } from 'react-native';
+import { generateId } from '#/utils/generateId';
 import {
   useGetPantryItemsQuery,
-  usePantryItemsChangedSubscription,
-  useAddItemToPantryMutation,
+  useCreatePantryItemMutation,
   useUpdatePantryItemMutation,
-  useRemoveItemFromPantryMutation,
+  useDeletePantryItemMutation,
   StorageState,
 } from '#generated';
 import { useSearchableList } from '../useSearchableList';
 import { useAuth } from '#hooks/auth/useAuth';
 import { useErrorHandler } from '#/utils/errorHandling';
-import { useSubscriptionDeduplication } from '#/hooks/utils/useSubscriptionDeduplication';
-import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
+import { usePreservedArrayData } from '#/hooks/apollo';
+import {
+  enhanceWithVersion,
+  createOptimisticEntity,
+} from '#/apollo/utils/createOptimisticResponse';
+import {
+  handleVersionConflict,
+  getVersionConflictMessage,
+} from '#/utils/errors/versionConflict';
 
 export interface PantryItemInput {
   itemName: string;
@@ -39,59 +46,27 @@ export interface PantryItemUpdate extends Partial<PantryItemInput> {
  * Uses Apollo Client with subscription deduplication and version-based conflict resolution
  */
 export function usePantryManagement(pantryId: string | undefined) {
-  const { isLoggedOut, user } = useAuth();
+  const { isLoggedOut } = useAuth();
   const { handleApolloError } = useErrorHandler();
   const shouldSkip = !pantryId || isLoggedOut;
-
-  // Subscription deduplication filter
-  const shouldProcessUpdate = useSubscriptionDeduplication(user?.id);
 
   // Single source of truth: Apollo cache
   const { data, loading, error, refetch } = useGetPantryItemsQuery({
     variables: { pantryId: pantryId ?? '' },
     skip: shouldSkip,
-    fetchPolicy: 'cache-first', // Optimized: use cache first, then network
+    fetchPolicy: 'cache-and-network', // Show cache immediately, then fetch fresh data with complete images
     notifyOnNetworkStatusChange: true,
-    errorPolicy: 'all',
+    errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
   });
 
-  // Real-time updates via subscription with deduplication
-  usePantryItemsChangedSubscription({
-    variables: { pantryId: pantryId ?? '' },
-    skip: shouldSkip,
-    onData: ({ data }) => {
-      const payload = data.data?.pantryItemsChanged;
+  // Real-time updates via subscription are now handled by SubscriptionProvider
+  // This provides automatic deduplication, error handling, and consistent logging
+  // across all subscriptions. The PantryItemsChanged subscription now receives
+  // the full PantryItemFragment (after GraphQL fix) and Apollo automatically
+  // updates the cache via normalization.
 
-      // Filter out self-echo and duplicate updates
-      if (!shouldProcessUpdate(payload)) {
-        return;
-      }
-
-      // Apollo Client automatically updates cache via normalization
-      // No manual cache update needed - the subscription data is merged automatically
-      console.log('✅ Processing pantry subscription update from other user:', {
-        userId: payload?.userId,
-        mutation: payload?.mutation,
-        itemId: payload?.item?.id,
-      });
-    },
-    onError: error => {
-      const { message } = handleApolloError(error, {
-        operation: 'Pantry Subscription',
-      });
-      console.warn('❌ Pantry subscription error:', {
-        pantryId,
-        error: message,
-        timestamp: new Date().toISOString(),
-      });
-      // Don't refetch on subscription errors - let the query handle reconnection
-    },
-  });
-
-  const pantryItems = useMemo(
-    () => data?.pantryItems ?? [],
-    [data?.pantryItems],
-  );
+  // Preserve pantry items even when query fails to prevent cascade failures
+  const pantryItems = usePreservedArrayData(data?.pantryItems);
 
   // Search functionality
   const {
@@ -146,31 +121,58 @@ export function usePantryManagement(pantryId: string | undefined) {
   }, [pantryItems]);
 
   // Mutations with optimistic updates
-  const [addItemMutation] = useAddItemToPantryMutation({
+  const [addItemMutation] = useCreatePantryItemMutation({
     errorPolicy: 'all',
-    onError: error => {
+    onError: (error: any) => {
       const { message } = handleApolloError(error, {
         operation: 'Add Pantry Item',
       });
       Alert.alert('Error', message);
     },
+    // Optimistic response for instant UI feedback (especially important offline)
+    optimisticResponse: (variables: any) => {
+      const tempId = `temp-${generateId()}`;
+      return {
+        __typename: 'Mutation' as const,
+        createPantryItem: {
+          ...createOptimisticEntity('PantryItem', tempId, {
+            itemName: variables.input.itemName,
+            currentQuantity: variables.input.initialQuantity,
+            storageState: variables.input.storageState,
+            storageLocation: variables.input.storageLocation || null,
+            storageNotes: variables.input.storageNotes || null,
+            expiresAt: variables.input.expiresAt || null,
+            autoReorderPoint: variables.input.autoReorderPoint || null,
+            pantry: {
+              __typename: 'Pantry',
+              id: pantryId || '',
+            },
+            unit: variables.input.unitId
+              ? {
+                  __typename: 'Unit',
+                  id: variables.input.unitId,
+                }
+              : null,
+          }),
+          __typename: 'PantryItem' as const,
+        } as any, // Optimistic response - will be replaced by server response
+      };
+    },
     // Update Apollo cache directly instead of refetching
-    // Note: No optimisticResponse - the mutation returns 40+ fields from PantryItemFragment
-    // The cache update provides instant UI feedback when server responds (~100-200ms)
-    update: (cache, { data }) => {
-      if (!data?.addItemToPantry || !pantryId) return;
+    update: (cache: any, { data }: any) => {
+      if (!data?.createPantryItem || !pantryId) return;
 
       try {
         // Modify the pantryItems field in the cache
         cache.modify({
           fields: {
-            pantryItems(existingItems = [], { readField, toReference }) {
-              const newItemRef = toReference(data.addItemToPantry);
+            pantryItems(existingItems = [], { readField, toReference }: any) {
+              const newItemRef = toReference(data.createPantryItem);
 
               // Check if item already exists (avoid duplicates)
               const exists = existingItems.some(
                 (itemRef: any) =>
-                  readField('id', itemRef) === data.addItemToPantry.id,
+                  readField('id', itemRef) === data.createPantryItem.id,
               );
 
               if (exists) {
@@ -192,7 +194,16 @@ export function usePantryManagement(pantryId: string | undefined) {
 
   const [updateItemMutation] = useUpdatePantryItemMutation({
     errorPolicy: 'all',
-    onError: error => {
+    onError: (error: any) => {
+      // Handle version conflicts with user-friendly message
+      if (handleVersionConflict(error)) {
+        Alert.alert('Item Updated', getVersionConflictMessage(error), [
+          { text: 'Refresh', onPress: () => refetch() },
+          { text: 'Cancel', style: 'cancel' },
+        ]);
+        return;
+      }
+
       const { message } = handleApolloError(error, {
         operation: 'Update Pantry Item',
       });
@@ -239,26 +250,21 @@ export function usePantryManagement(pantryId: string | undefined) {
     // The optimistic response provides instant UI feedback
   });
 
-  const [removeItemMutation] = useRemoveItemFromPantryMutation({
+  const [removeItemMutation] = useDeletePantryItemMutation({
     errorPolicy: 'all',
-    onError: error => {
+    onError: (error: any) => {
       const { message } = handleApolloError(error, {
         operation: 'Remove Pantry Item',
       });
       Alert.alert('Error', message);
     },
-    // Optimistic response for instant removal
-    optimisticResponse: _variables => ({
-      __typename: 'Mutation',
-      removeItemFromPantry: {
-        __typename: 'PantryItem',
-        // The mutation returns full PantryItemFragment, but we just need enough for removal
-        id: _variables?.id ?? '',
-      } as any,
-    }),
+    // No optimisticResponse - the mutation returns full PantryItemFragment (50+ fields)
+    // The cache update function below provides instant UI feedback for both online and offline scenarios
+    // This approach avoids cache normalization warnings and aligns with delete patterns used
+    // in useHomeManagement and useShoppingListManagement
     // Update cache to remove the item
-    update: (cache, { data }, { variables }) => {
-      if (!data?.removeItemFromPantry || !pantryId || !variables) return;
+    update: (cache: any, { data }: any, { variables }: any) => {
+      if (!data?.deletePantryItem || !pantryId || !variables) return;
 
       try {
         const itemId = variables.id;
@@ -266,7 +272,7 @@ export function usePantryManagement(pantryId: string | undefined) {
         // Remove the item from the cache
         cache.modify({
           fields: {
-            pantryItems(existingItems = [], { readField }) {
+            pantryItems(existingItems = [], { readField }: any) {
               return existingItems.filter(
                 (itemRef: any) => readField('id', itemRef) !== itemId,
               );
@@ -312,7 +318,7 @@ export function usePantryManagement(pantryId: string | undefined) {
         },
       });
 
-      return result.data?.addItemToPantry ?? false;
+      return result.data?.createPantryItem ?? false;
     } catch (error) {
       console.error('Add pantry item error:', error);
       return false;

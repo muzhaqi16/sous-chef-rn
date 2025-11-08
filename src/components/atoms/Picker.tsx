@@ -39,7 +39,7 @@ export const PickerSelect = ({
 
 const styles = StyleSheet.create(theme => ({
   picker: {
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.surface,
     borderRadius: 8,
   },
   item: {

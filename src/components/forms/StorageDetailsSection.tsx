@@ -15,6 +15,20 @@ import {commonStyles} from '#/styles/commonStyles';
 
 const STORAGE_STATES = Object.values(StorageState);
 
+interface StorageLocation {
+  id: string;
+  name: string;
+  type: string;
+  icon?: string | null;
+  color?: string | null;
+  temperature?: string | null;
+  isDefault: boolean;
+  parentLocation?: {
+    id: string;
+    name: string;
+  } | null;
+}
+
 interface StorageDetailsSectionProps {
   control: Control<any>;
   errors: FieldErrors<any>;
@@ -26,6 +40,8 @@ interface StorageDetailsSectionProps {
   onDatePickerToggle: () => void;
   onDateChange: (date?: Date) => void;
   onCategorySelected?: (categoryId: string | null) => void;
+  storageLocations?: StorageLocation[];
+  onStorageLocationSelected?: (locationId: string | null, location: StorageLocation | null) => void;
 }
 
 export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
@@ -39,6 +55,8 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
   onDatePickerToggle,
   onDateChange,
   onCategorySelected,
+  storageLocations = [],
+  onStorageLocationSelected,
 }) => {
   const {theme} = useUnistyles();
 
@@ -73,7 +91,9 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
       name: 'location',
       label: 'Location',
       placeholder: 'e.g., Top shelf, Drawer 2',
-      component: FormInput,
+      component: storageLocations.length > 0 ? 'storageLocationAutocomplete' : FormInput,
+      storageLocations,
+      onStorageLocationSelected,
     },
     {
       name: 'expirationDate',

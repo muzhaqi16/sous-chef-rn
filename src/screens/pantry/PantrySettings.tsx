@@ -15,12 +15,11 @@ import {
   useUpdatePantryMutation,
   useDeletePantryMutation,
   useCreatePantryMutation,
-  GetHomesDocument,
-  GetHomeBasicDocument,
 } from '#generated';
 import { useStore } from '#store';
 import { useAppNavigation } from '#hooks';
 import { PantryStackParamList } from '#navigation/stacks/PantryStack';
+import { useErrorHandler } from '#/utils/errorHandling';
 
 export const PantrySettings: React.FC<{
   route: { params?: PantryStackParamList['PantrySettings'] };
@@ -31,43 +30,103 @@ export const PantrySettings: React.FC<{
 
   const { selectedHomeId } = useStore();
   const setSelectedPantryId = useStore(state => state.setSelectedPantryId);
+  const { handleApolloError } = useErrorHandler();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [isDefault, setIsDefault] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const { data: pantryData, loading: loadingPantry } = useGetPantryQuery({
+  // Simplified query configuration - let Apollo handle caching naturally
+  const {
+    data: pantryData,
+    loading: loadingPantry,
+    error: pantryError,
+  } = useGetPantryQuery({
     variables: { id: pantryId ?? '' },
     skip: !pantryId,
-    fetchPolicy: 'cache-and-network',
-    notifyOnNetworkStatusChange: true,
-    errorPolicy: 'all',
   });
 
   const pantry = pantryData?.pantry;
 
   const [updatePantry] = useUpdatePantryMutation({
-    refetchQueries: [
-      { query: GetHomesDocument },
-      { query: GetHomeBasicDocument, variables: { homeId: selectedHomeId } },
-    ],
-    awaitRefetchQueries: true,
+    // Update cache directly - Apollo automatically merges the Pantry entity
+    // No need to update home's pantries array since the pantry is just updated, not added/removed
   });
   const [deletePantry] = useDeletePantryMutation({
-    refetchQueries: [
-      { query: GetHomesDocument },
-      { query: GetHomeBasicDocument, variables: { homeId: selectedHomeId } },
-    ],
-    awaitRefetchQueries: true,
+    errorPolicy: 'all',
+    onError: (error: any) => {
+      const { message } = handleApolloError(error, {
+        operation: 'Delete Pantry',
+      });
+      Alert.alert('Error', message);
+    },
+    // Update cache directly instead of refetching
+    update: (cache, { data }, { variables }) => {
+      if (!data?.deletePantry || !variables?.id || !selectedHomeId) return;
+
+      try {
+        const deletedPantryId = variables.id;
+
+        // Remove pantry from home's pantries array
+        cache.modify({
+          id: cache.identify({ __typename: 'Home', id: selectedHomeId }),
+          fields: {
+            pantries(existingPantries = [], { readField }) {
+              return existingPantries.filter(
+                (pantryRef: any) =>
+                  readField('id', pantryRef) !== deletedPantryId,
+              );
+            },
+          },
+        });
+
+        // Evict the deleted pantry from cache
+        cache.evict({
+          id: cache.identify({ __typename: 'Pantry', id: deletedPantryId }),
+        });
+        cache.gc(); // Garbage collect orphaned data
+      } catch (error) {
+        console.warn('Cache update failed for deletePantry:', error);
+        // Fallback handled by UI refetch
+      }
+    },
   });
 
   const [createPantry] = useCreatePantryMutation({
-    refetchQueries: [
-      { query: GetHomesDocument },
-      { query: GetHomeBasicDocument, variables: { homeId: selectedHomeId } },
-    ],
-    awaitRefetchQueries: true,
+    // Update cache directly instead of refetching
+    update: (cache, { data }) => {
+      if (!data?.createPantry || !selectedHomeId) return;
+
+      try {
+        const newPantry = data.createPantry;
+
+        // Add new pantry to home's pantries array
+        cache.modify({
+          id: cache.identify({ __typename: 'Home', id: selectedHomeId }),
+          fields: {
+            pantries(existingPantries = [], { readField, toReference }) {
+              const newPantryRef = toReference(newPantry);
+
+              // Check if pantry already exists (avoid duplicates)
+              const exists = existingPantries.some(
+                (pantryRef: any) => readField('id', pantryRef) === newPantry.id,
+              );
+
+              if (exists) {
+                return existingPantries;
+              }
+
+              // Add new pantry to the list
+              return [...existingPantries, newPantryRef];
+            },
+          },
+        });
+      } catch (error) {
+        console.warn('Cache update failed for createPantry:', error);
+        // Fallback handled by UI
+      }
+    },
     onCompleted: data => {
       if (data?.createPantry) {
         // Set the newly created pantry as selected if it's marked as default
@@ -83,28 +142,27 @@ export const PantrySettings: React.FC<{
   });
 
   useEffect(() => {
-    console.log('🔧 PantrySettings useEffect:', {
-      pantryId,
-      hasPantryData: !!pantry,
-      pantryName: pantry?.name,
-      loading: loadingPantry,
-    });
+    // Handle error case
+    if (pantryError && pantryId) {
+      console.error('❌ Error loading pantry:', pantryError);
+      Alert.alert(
+        'Error Loading Pantry',
+        'Failed to load pantry data. Please try again.',
+      );
+      return;
+    }
 
     if (pantry && pantryId) {
-      console.log('✅ Populating form with pantry data:', pantry.name);
-      setName(pantry.name);
+      setName(pantry.name || '');
       setDescription(pantry.description || '');
-      setIsDefault(pantry.isDefault);
+      setIsDefault(pantry.isDefault || false);
     } else if (!pantryId) {
       // Set default values for new pantry
-      console.log('🆕 Setting defaults for new pantry');
       setName('');
       setDescription('');
       setIsDefault(false);
-    } else {
-      console.log('⏳ Waiting for pantry data...');
     }
-  }, [pantry, pantryId, loadingPantry]);
+  }, [pantry, pantryId, pantryError]);
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -140,6 +198,7 @@ export const PantrySettings: React.FC<{
             input: {
               name: name.trim(),
               description: description.trim(),
+              isDefault,
             },
           },
         });
@@ -166,17 +225,40 @@ export const PantrySettings: React.FC<{
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            try {
-              await deletePantry({ variables: { id: pantryId } });
-              goBack();
-            } catch (error) {
-              Alert.alert('Error', 'Failed to delete pantry');
-            }
+            await deletePantry({ variables: { id: pantryId } });
+            goBack();
           },
         },
       ],
     );
   };
+
+  // Show loading state while fetching pantry data
+  if (pantryId && loadingPantry && !pantry) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => goBack()}>
+            <Icon
+              name="arrow-back"
+              size={24}
+              color={theme.colors.textPrimary}
+            />
+          </TouchableOpacity>
+          <Text style={styles.title}>Loading...</Text>
+          <View style={{ width: 50 }} />
+        </View>
+        <View
+          style={[
+            styles.content,
+            { justifyContent: 'center', alignItems: 'center' },
+          ]}
+        >
+          <Text style={styles.label}>Loading pantry data...</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -335,7 +417,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: 10,
     fontSize: 16,
     color: theme.colors.textPrimary,
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.surface,
   },
   settingRow: {
     flexDirection: 'row',

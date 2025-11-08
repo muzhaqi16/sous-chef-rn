@@ -61,7 +61,8 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
     if (!icon) return null;
 
     // Check if icon is an emoji (single character or emoji sequence)
-    const isEmoji = typeof icon === 'string' && icon.length <= 4 && !/^[a-z-]+$/.test(icon);
+    const isEmoji =
+      typeof icon === 'string' && icon.length <= 4 && !/^[a-z-]+$/.test(icon);
 
     if (isEmoji) {
       return <Text style={[styles.emoji, { fontSize: iconSize }]}>{icon}</Text>;
@@ -79,14 +80,20 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   return (
     <View style={[styles.container, { justifyContent: alignment }, style]}>
       {renderIcon()}
-      <Text style={[styles.title, { color: theme.colors.textPrimary }]}>{title}</Text>
+      <Text style={[styles.title, { color: theme.colors.textPrimary }]}>
+        {title}
+      </Text>
       {description && (
-        <Text style={[styles.description, { color: theme.colors.textSecondary }]}>
+        <Text
+          style={[styles.description, { color: theme.colors.textSecondary }]}
+        >
           {description}
         </Text>
       )}
       {hint && (
-        <Text style={[styles.hint, { color: theme.colors.textTertiary }]}>{hint}</Text>
+        <Text style={[styles.hint, { color: theme.colors.textTertiary }]}>
+          {hint}
+        </Text>
       )}
       {action && (
         <Button
@@ -125,7 +132,7 @@ const styles = StyleSheet.create(theme => ({
 
   title: {
     fontSize: theme.typography.fontSize.xl,
-    fontWeight: theme.fonts.weight.semibold as any,
+    fontWeight: theme.fonts.weight.semibold,
     marginTop: theme.spacing.md,
     marginBottom: theme.spacing.sm,
     textAlign: 'center',
@@ -135,7 +142,6 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.md,
     marginBottom: theme.spacing.lg,
     textAlign: 'center',
-    lineHeight: theme.typography.lineHeight.normal as any,
   },
 
   hint: {

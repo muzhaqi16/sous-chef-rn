@@ -40,9 +40,9 @@ export const createThemeItems = (
     key: 'darkMode',
     label: 'Dark Mode',
     type: 'switch',
-    value: store.theme === 'dark',
+    value: store.theme === 'DARK',
     onPress: () => {
-      const newTheme = store.theme === 'dark' ? 'light' : 'dark';
+      const newTheme = store.theme === 'DARK' ? 'LIGHT' : 'DARK';
       store.setTheme(newTheme);
       updatePreferences({theme: newTheme});
     },

@@ -6,10 +6,12 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useOnboardingNavigation, useSelectableItems } from '#hooks';
 import {
   useGetOnboardingItemsQuery,
-  useAddItemToPantryMutation,
+  useCreatePantryItemMutation,
   StorageState,
   ItemCondition,
   AcquisitionMethod,
+  ItemSortField,
+  SortOrder,
 } from '#generated';
 import { useStore } from '#store';
 import { Button } from '#components';
@@ -26,10 +28,19 @@ export const SelectPantryItems = () => {
     loading,
     error: queryError,
   } = useGetOnboardingItemsQuery({
+    variables: {
+      filters: {
+        showInOnboarding: true,
+      },
+      sort: {
+        field: ItemSortField.Popularity,
+        order: SortOrder.Asc,
+      },
+    },
     fetchPolicy: 'cache-and-network',
   });
-  const [addItemToPantry] = useAddItemToPantryMutation({
-    onError: e => console.error(e),
+  const [addItemToPantry] = useCreatePantryItemMutation({
+    onError: (e: any) => console.error(e),
   });
 
   const [isAddingItems, setIsAddingItems] = useState(false);
@@ -37,18 +48,18 @@ export const SelectPantryItems = () => {
   // Transform onboarding items into selectable items with id and selected properties
   const selectableItems = useMemo(
     () =>
-      (data?.onboardingItems || []).map(item => ({
+      (data?.items?.items || []).map((item: any) => ({
         ...item,
         selected: false,
       })),
-    [data?.onboardingItems],
+    [data?.items],
   );
 
   // Use the custom hook for managing selection state
   const { items, selectedItems, toggleItem, isMaxReached } = useSelectableItems(
     {
       initialItems: selectableItems,
-      maxSelection: 5,
+      maxSelection: 100,
     },
   );
 
@@ -92,16 +103,12 @@ export const SelectPantryItems = () => {
         // Add all selected items to pantry
         await Promise.all(
           selectedItems.map(item => {
-            // Find the default unit or use the first available unit
-            const defaultUnit = item.units?.find(u => u?.unit?.isCommon);
-            const unitToUse = defaultUnit || item.units?.[0];
-
             return addItemToPantry({
               variables: {
                 input: {
                   pantryId: selectedPantryId,
                   itemId: item.id,
-                  unitId: unitToUse?.unit?.id || '',
+                  unitId: item.displayUnit?.id || '',
                   initialQuantity: 1,
                   storageState: StorageState.Ambient,
                   condition: ItemCondition.Good,
@@ -130,9 +137,7 @@ export const SelectPantryItems = () => {
       onSkip={() => navigateToNextStep('SelectPantryItems')}
     >
       <KeyboardAwareScrollView style={styles.form}>
-        <Text style={styles.helperText}>
-          Select up to 5 items (you have {selectedItems.length} selected)
-        </Text>
+        <Text style={styles.helperText}>{selectedItems.length} selected</Text>
         <View style={styles.picker}>
           {items.map(item => (
             <AnimatedChip
@@ -141,6 +146,7 @@ export const SelectPantryItems = () => {
               selected={item.selected}
               onPress={() => toggleItem(item.id)}
               disabled={!item.selected && isMaxReached}
+              imageUrl={item.imageUrl}
             />
           ))}
         </View>
@@ -166,7 +172,6 @@ export const SelectPantryItems = () => {
 const styles = StyleSheet.create(theme => ({
   form: {
     flex: 1,
-    marginTop: 24,
     marginBottom: 12,
   },
   helperText: {

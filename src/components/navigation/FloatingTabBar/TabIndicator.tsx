@@ -15,10 +15,13 @@ export const TabIndicator: React.FC<TabIndicatorProps> = ({
   const animatedStyle = useAnimatedStyle(() => {
     // Use percentage-based padding offset like reference (5% of tab bar width)
     const paddingOffset = tabBarWidth * 0.05;
-    const translateX = withSpring(paddingOffset + (activeIndex.value * tabWidth), {
-      damping: 20,
-      stiffness: 150,
-    });
+    const translateX = withSpring(
+      paddingOffset + activeIndex.value * tabWidth,
+      {
+        damping: 20,
+        stiffness: 150,
+      },
+    );
 
     return {
       transform: [{ translateX }],
@@ -27,6 +30,7 @@ export const TabIndicator: React.FC<TabIndicatorProps> = ({
 
   return (
     <Animated.View
+      pointerEvents="none"
       style={[
         styles.indicator,
         {
@@ -44,7 +48,7 @@ const styles = StyleSheet.create(theme => ({
     height: '100%',
     backgroundColor: theme.colors.primary,
     borderRadius: 20,
-    zIndex: 0,
-    opacity: 0.3, // Make it semi-transparent so we can see if it's covering icons
+    opacity: 0.35, // More visible indicator
+    // NO z-index or elevation needed - parent layer controls stacking
   },
 }));

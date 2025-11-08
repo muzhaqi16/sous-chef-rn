@@ -4,14 +4,14 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils';
 import { commonStyles } from '#styles';
 
-export interface InfoRow {
+export interface InfoRowData {
   label: string;
   value: string | number;
 }
 
 interface ClickableInfoPanelProps {
   title: string;
-  items: InfoRow[];
+  items: InfoRowData[];
   onPress: () => void;
   emptyMessage?: string;
   style?: ViewStyle;
@@ -83,12 +83,12 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.xs,
   },
   panel: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.lg,
     borderWidth: 1,
     borderColor: theme.colors.border,
     padding: theme.spacing.md,
-    shadowColor: '#000',
+    shadowColor: theme.colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 4,

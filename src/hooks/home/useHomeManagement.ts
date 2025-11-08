@@ -10,10 +10,18 @@ import {
   MembershipRole,
   useGetDefaultHomeQuery,
   useSetDefaultHomeMutation,
+  useJoinHomeByCodeMutation,
+  useGetHomeByJoinCodeLazyQuery,
 } from '#generated';
 import { useSearchableList } from '../useSearchableList';
 import { useStore } from '#store';
 import { useErrorHandler } from '#/utils/errorHandling';
+import {
+  handleVersionConflict,
+  getVersionConflictMessage,
+} from '#/utils/errors/versionConflict';
+import { usePreservedArrayData } from '#/hooks/apollo';
+import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
 
 export function useHomeManagement() {
   const { selectedHomeId, setSelectedHomeId, setSelectedPantryId } = useStore();
@@ -24,7 +32,8 @@ export function useHomeManagement() {
 
   const { data, loading, error, refetch } = useGetHomesQuery({
     fetchPolicy: 'cache-and-network',
-    notifyOnNetworkStatusChange: true,
+    nextFetchPolicy: 'cache-first', // Subsequent fetches use cache to avoid unnecessary refetches
+    errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
   });
 
   const {
@@ -33,20 +42,47 @@ export function useHomeManagement() {
     refetch: refetchDefaultHome,
   } = useGetDefaultHomeQuery({
     fetchPolicy: 'cache-and-network',
+    nextFetchPolicy: 'cache-first', // Subsequent fetches use cache to avoid unnecessary refetches
+    errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
   });
 
-  const [setDefaultHomeMutation] = useSetDefaultHomeMutation();
-  const homes = data?.homes;
+  const [setDefaultHomeMutation] = useSetDefaultHomeMutation({
+    errorPolicy: 'all',
+
+    // Optimistic response for instant UI updates (especially offline)
+    optimisticResponse: variables => ({
+      __typename: 'Mutation',
+      setDefaultHome: {
+        __typename: 'UserSettings',
+        id: variables.homeId,
+      },
+    }),
+
+    // Update Apollo cache to keep GetDefaultHomeQuery in sync
+    // Uses existing Home reference from cache to avoid "Missing fields" errors
+    update: (cache, _result, { variables }) => {
+      if (!variables?.homeId) return;
+
+      // Get reference to the Home object already in cache
+      const homeRef = cache.identify({ __typename: 'Home', id: variables.homeId });
+      if (!homeRef) return;
+
+      // Update the getDefaultHome field to point to this Home reference
+      cache.modify({
+        fields: {
+          getDefaultHome: () => homeRef,
+        },
+      });
+    },
+  });
+
+  // Preserve homes even when query fails to prevent cascade failures
+  const homes = usePreservedArrayData(data?.homes);
   const remoteDefaultHomeId = defaultHomeData?.getDefaultHome?.id;
 
-  // One-way sync: remote default home → local store (read-only, no mutations)
-  useEffect(() => {
-    // Only update local when remote has a value and they differ
-    if (remoteDefaultHomeId && remoteDefaultHomeId !== selectedHomeId) {
-      console.log('🔄 Syncing remote default to local:', remoteDefaultHomeId);
-      setSelectedHomeId(remoteDefaultHomeId);
-    }
-  }, [remoteDefaultHomeId, selectedHomeId, setSelectedHomeId]);
+  // NOTE: Remote sync logic removed from here to prevent infinite loop
+  // The sync from remote → local is now handled ONLY by useDefaultHome hook
+  // This hook (useHomeManagement) should only handle ACTIONS (mutations), not passive syncing
 
   // Auto-select first home if no default is set and we have homes (initialization for first-time users)
   // This runs ONCE when the user has homes but no default home set anywhere
@@ -61,7 +97,6 @@ export function useHomeManagement() {
     ) {
       hasInitializedDefaultHome.current = true; // Mark as done
       const firstHome = homes[0];
-      console.log('🏠 Auto-selecting first home as default:', firstHome.id);
       setSelectedHomeId(firstHome.id);
 
       // Sync this choice to the backend
@@ -93,9 +128,14 @@ export function useHomeManagement() {
 
   const [createHomeMutation, { loading: creating, client }] =
     useCreateHomeMutation({
-      // Note: No optimisticResponse - the mutation returns complex nested types
-      // (members, myMembership with 15+ fields, pantries, membershipStats, etc.)
-      // Cache update provides instant UI feedback when server responds (~100-200ms)
+      errorPolicy: 'all',
+      // Note: No optimisticResponse - the mutation returns complex nested types that are difficult to predict:
+      // - Home object with 20+ fields (members, myMembership, pantries, membershipStats, etc.)
+      // - Nested objects like default pantry (if createDefaultPantry=true)
+      // - Server-generated IDs, timestamps, and computed fields
+      // Creating accurate optimistic response would require duplicating complex server logic
+      // Instead, cache update provides feedback within ~100-200ms which is acceptable UX
+      // (See docs/apollo-client-patterns.md - acceptable to skip optimistic response for complex creates)
       // Update cache directly instead of refetching
       update: (cache, { data }) => {
         if (!data?.createHome) return;
@@ -141,9 +181,6 @@ export function useHomeManagement() {
 
           // Only set as default if this is truly the first/only home
           if (freshHomes.length === 1 && freshHomes[0].id === newHome.id) {
-            console.log(
-              '🏠 Setting newly created home as default (first home)',
-            );
             setSelectedHomeId(newHome.id);
             setDefaultHomeMutation({
               variables: { homeId: newHome.id },
@@ -178,12 +215,33 @@ export function useHomeManagement() {
     });
 
   const [updateHomeMutation, { loading: updating }] = useUpdateHomeMutation({
+    errorPolicy: 'all',
+    // Uses automatic normalization - mutation returns full Home fragment
+    // No manual cache update needed (Pattern 2)
+    optimisticResponse: (variables, { IGNORE }) => {
+      const currentHome = homes?.find((h: any) => h.id === variables.id);
+      if (!currentHome) return IGNORE;
+
+      return {
+        __typename: 'Mutation',
+        updateHome: enhanceWithVersion(currentHome as any, variables.input),
+      };
+    },
     onCompleted: data => {
       if (data?.updateHome) {
         Alert.alert('Success', 'Home updated successfully');
       }
     },
     onError: (error: any) => {
+      // Handle version conflicts with user-friendly message
+      if (handleVersionConflict(error)) {
+        Alert.alert('Home Updated', getVersionConflictMessage(error), [
+          { text: 'Refresh', onPress: () => refetch() },
+          { text: 'Cancel', style: 'cancel' },
+        ]);
+        return;
+      }
+
       const { message } = handleApolloError(error, {
         operation: 'Update Home',
       });
@@ -236,10 +294,6 @@ export function useHomeManagement() {
             if (remainingHomes.length > 0) {
               // Set first remaining home as default
               const newDefaultHome = remainingHomes[0];
-              console.log(
-                '🏠 Setting new default home after delete:',
-                newDefaultHome.id,
-              );
               setSelectedHomeId(newDefaultHome.id);
               setDefaultHomeMutation({
                 variables: { homeId: newDefaultHome.id },
@@ -254,7 +308,6 @@ export function useHomeManagement() {
               });
             } else {
               // No homes left, clear the selection
-              console.log('🏠 No homes remaining, clearing default');
               setSelectedHomeId(null);
             }
           }
@@ -270,33 +323,33 @@ export function useHomeManagement() {
 
   // Invite user to home mutation
   const [inviteUserMutation, { loading: inviting }] = useInviteToHomeMutation({
-    // Cache update to add the new invite/member
+    errorPolicy: 'all',
+    // Note: No cache update or optimistic response needed
+    // The cache update returns existingMembers unchanged because:
+    // 1. Invites don't immediately add members (requires acceptance)
+    // 2. Real-time subscription handles all updates when invite is sent/accepted
+    // 3. This pattern avoids UI flickering from optimistic updates that may not match server state
+    // Following subscription-based update pattern for real-time features (see docs/apollo-client-patterns.md)
     update: (cache, { data }, { variables }) => {
       if (!data?.inviteToHome || !variables) return;
 
       try {
         const homeId = variables.input.homeId;
 
-        // Update the home's members list if the invite data includes member info
+        // Empty cache.modify - subscription handles the actual update
         if (data.inviteToHome) {
           cache.modify({
             id: cache.identify({ __typename: 'Home', id: homeId }),
             fields: {
-              members(existingMembers = [], { toReference: _toReference }) {
-                // Note: The invite might not immediately add a member until accepted
-                // This depends on your backend implementation
-                // For now, we'll just let the subscription handle the update
+              members(existingMembers = []) {
+                // Return unchanged - subscription will handle the update when invite is accepted
                 return existingMembers;
               },
             },
           });
         }
-
-        // Note: We don't need to manually update homeInvites query
-        // because the subscription should handle that automatically
       } catch (error) {
         console.warn('Cache update failed for inviteUser:', error);
-        // No need to refetch - subscription will update
       }
     },
 
@@ -307,6 +360,60 @@ export function useHomeManagement() {
       Alert.alert('Error', message);
     },
   });
+
+  // Join home by code mutation
+  const [joinHomeByCodeMutation, { loading: joiningByCode }] =
+    useJoinHomeByCodeMutation({
+      errorPolicy: 'all',
+      // Note: No optimistic response or manual cache update
+      // The mutation returns only Membership data (not the full Home object)
+      // We refetch GetHomesQuery to get the complete home with all fields (members, pantries, etc.)
+      // This is acceptable because join-home is an infrequent action (~100-200ms refetch time)
+      // Alternative approach would require a subscription or separate query for the joined home
+      update: (_cache, { data }) => {
+        if (!data?.joinHomeByCode) return;
+
+        try {
+          // Refetch homes list to get the newly joined home with all fields
+          refetch();
+        } catch (error) {
+          console.warn('Failed to refetch homes after join:', error);
+        }
+      },
+      onCompleted: data => {
+        if (data?.joinHomeByCode) {
+          const homeId = data.joinHomeByCode.homeId;
+
+          // Set as default if this is the first home
+          const freshHomes = homes || [];
+          if (freshHomes.length === 0) {
+            setSelectedHomeId(homeId);
+            setDefaultHomeMutation({
+              variables: { homeId },
+            }).catch((error: any) => {
+              const { message } = handleApolloError(error, {
+                operation: 'Set Default Home After Join',
+              });
+              console.warn('Failed to set default home after join:', message);
+            });
+          }
+
+          Alert.alert('Success', 'You have successfully joined the home!');
+        }
+      },
+      onError: (error: any) => {
+        const { message } = handleApolloError(error, {
+          operation: 'Join Home By Code',
+        });
+        Alert.alert('Error', message);
+      },
+    });
+
+  // Preview home by join code query
+  const [getHomeByJoinCode, { loading: loadingPreview, data: previewData }] =
+    useGetHomeByJoinCodeLazyQuery({
+      fetchPolicy: 'network-only', // Always fetch fresh data
+    });
 
   // Helper functions
   const createHome = async (
@@ -393,9 +500,8 @@ export function useHomeManagement() {
   };
 
   const setDefaultHome = async (homeId: string) => {
-    // Prevent redundant calls if already set as default
-    if (homeId === selectedHomeId) {
-      console.log('🏠 Home is already set as default, skipping');
+    // Prevent redundant calls if already set as default (check both local and remote)
+    if (homeId === selectedHomeId && homeId === remoteDefaultHomeId) {
       return true;
     }
 
@@ -413,25 +519,19 @@ export function useHomeManagement() {
     }
 
     try {
-      // Update local state immediately for responsive UI
-      setSelectedHomeId(homeId);
-
-      // Sync to remote (Apollo cache will be updated automatically by the mutation)
+      // Call mutation first to update backend and Apollo cache
       const result = await setDefaultHomeMutation({
         variables: { homeId },
       });
 
       if (result.data) {
-        console.log('🏠 Default home set successfully:', homeId);
+        // Immediately update local state for instant UI feedback
+        setSelectedHomeId(homeId);
         return true;
       }
 
-      // Rollback on failure
-      setSelectedHomeId(remoteDefaultHomeId || null);
       return false;
     } catch (error: any) {
-      // Rollback on error
-      setSelectedHomeId(remoteDefaultHomeId || null);
       Alert.alert('Error', 'Failed to set default home');
       return false;
     }
@@ -454,6 +554,43 @@ export function useHomeManagement() {
     });
 
     return result.data;
+  };
+
+  const joinHomeByCode = async (joinCode: string) => {
+    if (!joinCode.trim()) {
+      Alert.alert('Error', 'Please enter a join code');
+      return false;
+    }
+
+    try {
+      const result = await joinHomeByCodeMutation({
+        variables: { joinCode: joinCode.trim() },
+      });
+
+      return result.data?.joinHomeByCode || false;
+    } catch (error: any) {
+      return false;
+    }
+  };
+
+  const previewHomeByCode = async (joinCode: string) => {
+    if (!joinCode.trim()) {
+      return null;
+    }
+
+    try {
+      const result = await getHomeByJoinCode({
+        variables: { joinCode: joinCode.trim() },
+      });
+
+      return result.data?.homeByJoinCode || null;
+    } catch (error: any) {
+      const { message } = handleApolloError(error, {
+        operation: 'Preview Home',
+      });
+      Alert.alert('Error', message);
+      return null;
+    }
   };
 
   // Track the last known pantries count to avoid flickering to 0 during refetch
@@ -515,8 +652,11 @@ export function useHomeManagement() {
     remoteDefaultHomeId,
     isSynced,
     loading: loading || loadingDefaultHome,
+    initialLoading:
+      (!homes && loading) || (!defaultHomeData && loadingDefaultHome),
     error,
     stats,
+    previewHome: previewData?.homeByJoinCode || null,
 
     // Search
     searchQuery: query,
@@ -527,6 +667,8 @@ export function useHomeManagement() {
     updating,
     deleting,
     inviting,
+    joiningByCode,
+    loadingPreview,
 
     // Actions
     createHome,
@@ -534,6 +676,8 @@ export function useHomeManagement() {
     deleteHome,
     setDefaultHome,
     inviteUserToHome,
+    joinHomeByCode,
+    previewHomeByCode,
     refetch: memoizedRefetch,
   };
 }

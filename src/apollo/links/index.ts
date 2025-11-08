@@ -7,6 +7,7 @@ import { errorLink } from './errorLink';
 import { httpLink } from './httpLink';
 import { wsLink } from './wsLink';
 import { deduplicationLink } from './deduplicationLink';
+import { createQueueLink } from '../offlineQueue';
 
 // Simplified HTTP transport (let Apollo handle retries naturally)
 const httpTransport = httpLink;
@@ -25,25 +26,39 @@ const transportLink = ApolloLink.split(
   httpTransport,
 );
 
-// Single console link configuration (simplified)
-const consoleLink = createConsoleLink({
-  enabled: false, // __DEV__,
-  logVariables: false,
-  logQuery: false,
-  logResponse: false,
-  logTiming: true,
-  slowQueryThreshold: 1000,
-});
+/**
+ * Create link chain for Apollo client
+ * Full-featured configuration with offline support
+ */
+export function createLink() {
+  // Console link configuration - only verbose in development
+  const consoleLink = createConsoleLink({
+    enabled: __DEV__,
+    logVariables: __DEV__,
+    logQuery: false, // Too verbose, disable even in dev
+    logResponse: false, // Too verbose, disable even in dev
+    logTiming: true,
+    slowQueryThreshold: 1000,
+  });
 
-// Telemetry link for tracking GraphQL operations
-const telemetryLink = createTelemetryLink();
+  // Telemetry link for tracking GraphQL operations
+  const telemetryLink = createTelemetryLink();
 
-// Simplified link chain - work WITH Apollo, not against it
-export const link = ApolloLink.from([
-  deduplicationLink, // Prevent duplicate requests
-  telemetryLink,     // Track operations for monitoring
-  errorLink,         // Handle/log errors (simplified)
-  authLink,          // Authentication headers
-  consoleLink,       // Development logging
-  transportLink,     // HTTP/WebSocket transport
-]);
+  // Queue link for offline mutation support
+  const queueLink = createQueueLink();
+
+  // Link chain - ordered by priority
+  // Offline support is handled by:
+  // 1. errorLink - catches network failures, returns cached data
+  // 2. fetch policies (cache-first) - try cache before network
+  // 3. queueLink - queues mutations when offline
+  return ApolloLink.from([
+    deduplicationLink, // Prevent duplicate requests
+    telemetryLink, // Track operations for monitoring
+    errorLink, // Handle/log errors + return cached data on network failures
+    authLink, // Authentication headers
+    queueLink, // Queue mutations when offline
+    consoleLink, // Development logging
+    transportLink, // HTTP/WebSocket transport
+  ]);
+}

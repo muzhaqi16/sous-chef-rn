@@ -36,7 +36,7 @@ export const RESET_SCENARIOS = {
     preferences: true,
     clearApolloCache: false,
   },
-} as const;
+};
 
 // Simplified reset manager
 export const createResetManager = (
@@ -106,7 +106,7 @@ export const createResetManager = (
       try {
         const { client } = await import('#/apollo/client');
         await client.clearStore();
-        storage.delete('apollo-cache-1.0');
+        storage.remove('apollo-cache-1.0');
       } catch (error) {
         console.error('Error clearing Apollo cache:', error);
       }
@@ -130,7 +130,6 @@ export const createResetManager = (
     await resetManager.resetStore('LOGOUT');
 
     // Reset navigation state to auth after logout
-    console.log('🚪 ResetManager logout: Resetting navigation state to auth');
     set({ navigationState: 'auth' });
   },
 
@@ -171,15 +170,13 @@ export const createResetManager = (
 // Simplified auth storage cleanup
 const clearAuthFromStorage = async () => {
   try {
-    console.log('Clearing auth tokens from storage');
-
     // Note: We intentionally do NOT clear keychain credentials during logout
     // This allows users to use biometric login after logging out
     // Keychain credentials are only cleared during full reset or explicit user action
 
     // Clear individual auth-related keys
-    storage.delete('accessToken');
-    storage.delete('refreshToken');
+    storage.remove('accessToken');
+    storage.remove('refreshToken');
 
     // Update persisted zustand data
     const currentData = await zustandStorage.getItem(STORAGE_KEY);

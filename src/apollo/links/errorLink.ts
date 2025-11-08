@@ -1,4 +1,4 @@
-import { ErrorLink } from '@apollo/client/link/error';
+import { onError } from '@apollo/client/link/error';
 import { CombinedGraphQLErrors, CombinedProtocolErrors } from '@apollo/client/errors';
 import { isKnownServerError } from '#utils/subscriptionErrorHandler';
 import { LogoutCleanup } from '../logoutCleanup';
@@ -16,7 +16,7 @@ const isApiKeyError = (code: string, msg: string) =>
 const isSubscription = (op: any) =>
   op.query.definitions.some((def: any) => def.kind === 'OperationDefinition' && def.operation === 'subscription');
 
-export const errorLink = new ErrorLink(({ error, operation, forward }) => {
+export const errorLink = onError(({ error, operation, forward }) => {
   if (operation.getContext().skipErrorLink || LogoutCleanup.isInLogoutProcess()) return;
 
   if (CombinedGraphQLErrors.is(error)) {
@@ -34,16 +34,13 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
       }
     }
   } else if (!CombinedProtocolErrors.is(error)) {
-    if (isSubscription(operation) && error.message?.includes('Socket closed with event 4500')) {
-      return attemptTokenRefresh(operation, forward);
-    }
-
+    // Check for known server errors first
     if (isSubscription(operation) && isKnownServerError({ message: error.message })) {
       console.warn(`Known server error for ${operation.operationName}:`, error.message);
       return;
     }
 
-    // Minimal logging for network errors (Apollo handles retries + cache fallback)
+    // Enhanced network error detection - includes WebSocket errors
     const message = error.message?.toLowerCase() || '';
     const isNetworkIssue = [
       'network request failed',
@@ -53,12 +50,22 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
       'enotfound',
       'econnrefused',
       'econnreset',
-      'ehostunreach'
+      'ehostunreach',
+      'socket closed',  // WebSocket connection failures
+      'websocket',      // Generic WebSocket errors
     ].some(issue => message.includes(issue));
 
-    // Only log non-network errors as these are unexpected
-    if (!isNetworkIssue) {
-      console.error(`Unexpected network error [${operation.operationName}]:`, error.message);
+    // For network errors, just log and let Apollo's errorPolicy handle it
+    // With cache-first + errorPolicy: 'ignore', Apollo will use cached data automatically
+    if (isNetworkIssue) {
+      console.warn(
+        `Network error for ${operation.operationName}:`,
+        error.message
+      );
+      return; // Let Apollo's errorPolicy handle it
     }
+
+    // Only log non-network errors as these are unexpected
+    console.error(`Unexpected error [${operation.operationName}]:`, error.message);
   }
 });

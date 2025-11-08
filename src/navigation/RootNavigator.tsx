@@ -17,14 +17,20 @@ import {
   ImageCropScreen,
   NotFoundScreen,
 } from '#screens';
-import { HomeDetailScreen } from '#screens/home';
+import { HomeDetailScreen, StorageLocationsScreen } from '#screens/home';
 import {
   CodeVerificationScreen,
   EmailVerificationDeepLinkScreen,
   ResetPasswordScreen,
 } from '#screens/auth';
 import { AcceptInvite } from '#screens/shoppingList/AcceptInvite';
-import { DeleteAccountScreen } from '#screens/profile';
+import {
+  DeleteAccountScreen,
+  DietaryProfileScreen,
+  AppSettingsScreen,
+  PersonalInformationScreen,
+} from '#screens/profile';
+import { NotificationSettingsScreen } from '#screens/notifications';
 import { linkingConfig } from './linking';
 import { ImageFile } from '#components/molecules/ImagePicker';
 import {
@@ -41,6 +47,7 @@ export type RootStackParamList = {
   Home: undefined;
   HomeManagement: { selectedHomeId?: string };
   HomeDetail: { homeId: string };
+  StorageLocations: { homeId: string };
   Barcode: undefined;
   Notifications: undefined;
   ProfilePhotoUpload: undefined;
@@ -49,6 +56,10 @@ export type RootStackParamList = {
   ResetPassword: { token: string };
   AcceptInvitation: { token: string };
   DeleteAccount: undefined;
+  NotificationSettings: undefined;
+  DietaryProfile: undefined;
+  PersonalInformation: undefined;
+  AppSettings: undefined;
   NotFound: undefined;
 };
 
@@ -120,7 +131,13 @@ function RootNavigator() {
   return (
     <>
       <NavigationErrorBoundary>
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Navigator
+          screenOptions={{
+            headerShown: false,
+            animation: 'slide_from_right',
+            animationDuration: 300,
+          }}
+        >
           {/* Auth Group */}
           {navigationState === 'auth' && (
             <Stack.Screen name="Auth">
@@ -166,7 +183,18 @@ function RootNavigator() {
                 )}
               </Stack.Screen>
               <Stack.Screen name="HomeManagement" component={HomeManagement} />
-              <Stack.Screen name="HomeDetail" component={HomeDetailScreen} />
+              <Stack.Screen
+                name="HomeDetail"
+                component={HomeDetailScreen}
+                options={{
+                  presentation: 'modal',
+                  animation: 'slide_from_bottom',
+                }}
+              />
+              <Stack.Screen
+                name="StorageLocations"
+                component={StorageLocationsScreen}
+              />
               <Stack.Screen name="Barcode" component={BarcodeStack} />
               <Stack.Screen
                 name="Notifications"
@@ -175,9 +203,31 @@ function RootNavigator() {
               <Stack.Screen
                 name="ProfilePhotoUpload"
                 component={ProfilePhotoUploadScreen}
+                options={{
+                  presentation: 'modal',
+                  animation: 'slide_from_bottom',
+                }}
               />
-              <Stack.Screen name="ImageCrop" component={ImageCropScreen} />
+              <Stack.Screen
+                name="ImageCrop"
+                component={ImageCropScreen}
+                options={{
+                  presentation: 'modal',
+                  animation: 'slide_from_bottom',
+                }}
+              />
               <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
+              <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
+              <Stack.Screen name="DietaryProfile" component={DietaryProfileScreen} />
+              <Stack.Screen name="PersonalInformation" component={PersonalInformationScreen} />
+              <Stack.Screen
+                name="AppSettings"
+                component={AppSettingsScreen}
+                options={{
+                  animation: 'fade',
+                  animationDuration: 200,
+                }}
+              />
             </>
           )}
 

@@ -10,6 +10,8 @@ import { logger } from '#/utils/environment';
 import { useErrorHandler } from '#/utils/errorHandling';
 import { useDeviceRegistration } from '#/hooks/useDeviceRegistration';
 import { useUserPreferences } from '#/hooks/navigation/useUserPreferences';
+import { queueManager } from '#/apollo/offlineQueue/queueManager';
+import { queueStore } from '#/apollo/offlineQueue/queueStore';
 
 // Simple credential representation - doesn't know about internal storage structure
 export interface LoginCredentials {
@@ -142,8 +144,15 @@ export const useAuthOperations = ({
 
       const { user, accessToken, refreshToken } = loginResponse;
 
+      // Get previous user ID from queue store to detect user changes
+      const previousUserId = queueStore.getCurrentUserId();
+
       // Set auth state first
       authState.onSetAuth(user, accessToken, refreshToken);
+
+      // Notify queue manager about user change
+      // This will clear the previous user's queue if it's a different user
+      queueManager.onUserChange(user.id, previousUserId);
 
       if (shouldRemember !== undefined) {
         authState.onSetRememberMe(shouldRemember);
@@ -413,6 +422,11 @@ export const useAuthOperations = ({
       try {
         const currentUserEmail = user?.email;
         const currentUserId = user?.id;
+
+        // Notify queue manager about logout (clears queue for this user)
+        if (currentUserId) {
+          queueManager.onLogout(currentUserId);
+        }
 
         // Clear auth state first
         authState.onClearAuth();

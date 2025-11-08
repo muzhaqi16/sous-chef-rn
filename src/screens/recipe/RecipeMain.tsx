@@ -14,7 +14,7 @@ export const RecipeMain: React.FC = () => {
   const { data, loading, refetch } = useMyRecipesQuery({
     fetchPolicy: 'cache-and-network',
   });
-  const recipes = useMemo(() => data?.myRecipes?.recipes || [], [data]);
+  const recipes = useMemo(() => data?.recipes?.recipes || [], [data]);
 
   // Filter recipes based on search query
   const filteredRecipes = useMemo(() => {
@@ -36,19 +36,31 @@ export const RecipeMain: React.FC = () => {
 
   // Transform filtered recipes to list items format
   const items = useMemo(() => {
-    return filteredRecipes.map((recipe: any) => ({
-      id: recipe.id,
-      title: recipe.name,
-      subtitle: `${recipe.servings} servings • ${
-        recipe.totalTimeMinutes || 'N/A'
-      } min`,
-      badge: undefined,
-      leftElement: recipe.imageUrl ? (
-        <View style={styles.imageContainer}>
-          <Image source={{ uri: recipe.imageUrl }} style={styles.leftImage} />
-        </View>
-      ) : undefined,
-    }));
+    return filteredRecipes.map((recipe: any) => {
+      // Calculate total time with fallback logic
+      const totalTime =
+        recipe.totalTimeMinutes ||
+        (recipe.prepTimeMinutes && recipe.cookTimeMinutes
+          ? recipe.prepTimeMinutes + recipe.cookTimeMinutes
+          : recipe.prepTimeMinutes || recipe.cookTimeMinutes || null);
+
+      return {
+        id: recipe.id,
+        title: recipe.name,
+        subtitle: `${recipe.servings} servings${
+          totalTime ? ` • ${totalTime} min` : ''
+        }`,
+        badge: undefined,
+        leftElement: recipe.imageUrl ? (
+          <View style={styles.imageContainer}>
+            <Image
+              source={{ uri: recipe.imageUrl }}
+              style={styles.leftImage}
+            />
+          </View>
+        ) : undefined,
+      };
+    });
   }, [filteredRecipes]);
 
   const handleSearchRecipes = useCallback(() => {
@@ -91,11 +103,11 @@ export const RecipeMain: React.FC = () => {
           icon: 'search',
           onPress: handleSearchRecipes,
           color: theme.colors.primary,
-          backgroundColor: '#fff',
+          backgroundColor: theme.colors.surface,
         },
       ] as SearchBarAction[],
     }),
-    [handleSearchRecipes, theme.colors.primary],
+    [handleSearchRecipes, theme.colors.primary, theme.colors.surface],
   );
 
   const emptyStateConfig = {

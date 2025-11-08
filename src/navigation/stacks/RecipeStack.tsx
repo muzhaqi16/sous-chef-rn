@@ -18,7 +18,14 @@ export type RecipeStackParamList = {
 const Stack = createNativeStackNavigator<RecipeStackParamList>();
 
 export const RecipeStack = () => (
-  <Stack.Navigator screenOptions={{headerShown: false}}>
+  <Stack.Navigator
+    screenOptions={{
+      headerShown: false,
+      animation: 'slide_from_right',
+      animationDuration: 250,
+      fullScreenGestureEnabled: true,
+    }}
+  >
     <Stack.Screen name="RecipeMain" component={RecipeMain} />
     <Stack.Screen name="RecipeDetail" component={RecipeDetail} />
     <Stack.Screen name="RecipeSearch" component={RecipeSearch} />

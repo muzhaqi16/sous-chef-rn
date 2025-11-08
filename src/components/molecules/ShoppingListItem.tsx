@@ -3,13 +3,18 @@ import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { SwipeableItem } from './SwipeableItem';
 import { Counter } from './Counter';
+import { QuantityDisplay } from './QuantityDisplay';
 import { Icon } from '#/utils/iconUtils';
+import { DisplayFormat } from '#/graphql/generated';
 
 interface ShoppingListItemProps {
   id: string;
   name: string;
   quantity: number;
+  quantityInput?: string | null;
+  displayFormat?: DisplayFormat | null;
   unit?: string;
+  displayAsFraction?: boolean | null;
   imageUrl?: string;
   isPurchased: boolean;
   onToggle: (id: string) => void;
@@ -22,7 +27,10 @@ export const ShoppingListItem: React.FC<ShoppingListItemProps> = ({
   id,
   name,
   quantity,
+  quantityInput,
+  displayFormat,
   unit,
+  displayAsFraction,
   imageUrl,
   isPurchased,
   onToggle,
@@ -80,14 +88,17 @@ export const ShoppingListItem: React.FC<ShoppingListItemProps> = ({
               style={styles.quantityContainer}
               onPress={() => setIsEditingQuantity(true)}
             >
-              <Text
-                style={[
-                  styles.quantityText,
-                  isPurchased && styles.purchasedText,
-                ]}
-              >
-                {quantity} {unit || ''}
-              </Text>
+              <QuantityDisplay
+                quantity={quantity}
+                quantityInput={quantityInput}
+                displayFormat={displayFormat}
+                unitSymbol={unit}
+                displayAsFraction={displayAsFraction}
+                style={{
+                  ...styles.quantityText,
+                  ...(isPurchased ? styles.purchasedText : {}),
+                }}
+              />
               <Icon name="edit" size={14} color={theme.colors.textSecondary} />
             </TouchableOpacity>
           )}
@@ -102,7 +113,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.surface,
     borderRadius: 12,
   },
   purchasedContainer: {

@@ -11,6 +11,7 @@ import {
   ImageUploadPurpose,
 } from '#generated';
 import { MAX_PROFILE_SIZE } from '#utils/imageValidation';
+import { useStore } from '#store';
 
 export interface ImageFile {
   uri: string;
@@ -45,58 +46,96 @@ export const useImageUpload = () => {
     async (
       file: ImageFile,
       uploadData: PresignedUploadData,
-      _onProgress?: (progress: number) => void,
+      onProgress?: (progress: number) => void,
     ): Promise<void> => {
       const mimeType = file.type || getMimeTypeFromUri(file.uri);
 
-      // For MinIO presigned URLs, we need to upload the raw file directly
-      const response = await fetch(file.uri);
-      const blob = await response.blob();
+      return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
 
-      const uploadResponse = await fetch(uploadData.url, {
-        method: 'PUT',
-        body: blob,
-        headers: {
-          'Content-Type': mimeType,
-        },
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve();
+          } else {
+            reject(
+              new Error(
+                `Upload failed: ${xhr.status} ${xhr.statusText}`,
+              ),
+            );
+          }
+        };
+
+        xhr.onerror = () => {
+          reject(new Error('Network request failed during upload'));
+        };
+
+        xhr.ontimeout = () => {
+          reject(new Error('Upload request timed out'));
+        };
+
+        if (onProgress && xhr.upload) {
+          xhr.upload.onprogress = (event) => {
+            if (event.lengthComputable) {
+              const uploadProgress = event.loaded / event.total;
+              onProgress(uploadProgress);
+            }
+          };
+        }
+
+        xhr.open('PUT', uploadData.url);
+        xhr.setRequestHeader('Content-Type', mimeType);
+        xhr.timeout = 60000; // 60 second timeout
+
+        // XMLHttpRequest in React Native can handle file:// URIs properly
+        // by passing an object with uri, type, and name
+        xhr.send({
+          uri: file.uri,
+          type: mimeType,
+          name: file.fileName || 'image.jpg',
+        });
       });
-
-      if (!uploadResponse.ok) {
-        throw new Error(
-          `Upload failed: ${uploadResponse.status} ${uploadResponse.statusText}`,
-        );
-      }
     },
     [],
   );
 
-  const uploadProfileImage = useCallback(
+  const uploadImage = useCallback(
     async (
       file: ImageFile,
-      purpose: ImageUploadPurpose = ImageUploadPurpose.ProfileAvatar,
+      purpose: ImageUploadPurpose,
+      isProfileImage: boolean,
+      itemId: string | undefined,
+      confirmUploadFn: (key: string) => Promise<string | null>,
       options: ImageUploadOptions = {},
     ): Promise<string | null> => {
       const { onProgress, onSuccess, onError } = options;
+
+      // Check if online before attempting upload
+      const state = useStore.getState();
+      if (!state.isOnline) {
+        const offlineError = new Error(
+          "You're offline. Image upload requires an internet connection."
+        );
+        onError?.(offlineError);
+        Alert.alert(
+          'No Internet Connection',
+          "Image upload requires an internet connection. Please try again when you're online."
+        );
+        return null;
+      }
 
       try {
         setUploading(true);
         setProgress(0);
 
-        // Ensure we have file size - critical for validation
+        // For profile images, handle missing file size gracefully
         let fileToUpload = { ...file };
-        if (!fileToUpload.fileSize) {
+        if (isProfileImage && !fileToUpload.fileSize) {
           console.warn('File size missing, attempting to determine it...');
-          try {
-            const response = await fetch(file.uri);
-            const blob = await response.blob();
-            fileToUpload.fileSize = blob.size;
-          } catch (fetchError) {
-            throw new Error('Unable to determine file size for upload');
-          }
+          console.warn('Proceeding without file size - server will validate');
         }
 
         // Validate the image file
-        validateImageFile(fileToUpload, true);
+        validateImageFile(fileToUpload, isProfileImage);
 
         onProgress?.(10);
 
@@ -107,6 +146,7 @@ export const useImageUpload = () => {
           variables: {
             mime: mimeType,
             purpose: purpose,
+            itemId: itemId,
           },
         });
 
@@ -125,13 +165,7 @@ export const useImageUpload = () => {
         onProgress?.(80);
 
         // Step 3: Confirm upload
-        const { data: confirmData } = await confirmProfileUpload({
-          variables: {
-            key: uploadResult.key,
-          },
-        });
-
-        const finalImageUrl = confirmData?.confirmProfileImageUpload;
+        const finalImageUrl = await confirmUploadFn(uploadResult.key);
         if (!finalImageUrl) {
           throw new Error('Failed to confirm upload');
         }
@@ -140,11 +174,39 @@ export const useImageUpload = () => {
         onSuccess?.(finalImageUrl);
 
         return finalImageUrl;
+      } finally {
+        setUploading(false);
+        setProgress(0);
+      }
+    },
+    [createUploadUrl, uploadToMinIO],
+  );
+
+  const uploadProfileImage = useCallback(
+    async (
+      file: ImageFile,
+      purpose: ImageUploadPurpose = ImageUploadPurpose.ProfileAvatar,
+      options: ImageUploadOptions = {},
+    ): Promise<string | null> => {
+      try {
+        return await uploadImage(
+          file,
+          purpose,
+          true,
+          undefined,
+          async (key: string) => {
+            const { data } = await confirmProfileUpload({
+              variables: { key },
+            });
+            return data?.confirmProfileImageUpload || null;
+          },
+          options,
+        );
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : 'Upload failed';
 
-        // Provide more specific error messages based on the error
+        // Provide more specific error messages for profile images
         let userErrorMessage = errorMessage;
         if (errorMessage.includes('file size')) {
           userErrorMessage =
@@ -155,15 +217,12 @@ export const useImageUpload = () => {
           userErrorMessage = `The image is too large. Profile images must be under ${MAX_PROFILE_SIZE / 1024 / 1024}MB.`;
         }
 
-        onError?.(new Error(userErrorMessage));
+        options.onError?.(new Error(userErrorMessage));
         Alert.alert('Upload Failed', userErrorMessage);
         return null;
-      } finally {
-        setUploading(false);
-        setProgress(0);
       }
     },
-    [createUploadUrl, confirmProfileUpload, uploadToMinIO],
+    [uploadImage, confirmProfileUpload],
   );
 
   const uploadItemImage = useCallback(
@@ -172,71 +231,30 @@ export const useImageUpload = () => {
       itemId: string,
       options: ImageUploadOptions = {},
     ): Promise<string | null> => {
-      const { onProgress, onSuccess, onError } = options;
-
       try {
-        setUploading(true);
-        setProgress(0);
-
-        // Validate the image file
-        validateImageFile(file, false);
-
-        onProgress?.(10);
-
-        // Step 1: Get presigned URL
-        const mimeType = file.type || getMimeTypeFromUri(file.uri);
-
-        const { data: uploadData } = await createUploadUrl({
-          variables: {
-            mime: mimeType,
-            purpose: ImageUploadPurpose.ItemImage,
-            itemId: itemId,
+        return await uploadImage(
+          file,
+          ImageUploadPurpose.ItemImage,
+          false,
+          itemId,
+          async (key: string) => {
+            const { data } = await confirmItemUpload({
+              variables: { itemId, key },
+            });
+            return data?.confirmItemImageUpload || null;
           },
-        });
-
-        const uploadResult = uploadData?.createImageUploadUrl;
-        if (!uploadResult) {
-          throw new Error('Failed to get upload URL');
-        }
-
-        onProgress?.(30);
-
-        // Step 2: Upload to MinIO
-        await uploadToMinIO(file, uploadResult, uploadProgress => {
-          onProgress?.(30 + uploadProgress * 0.5);
-        });
-
-        onProgress?.(80);
-
-        // Step 3: Confirm upload
-        const { data: confirmData } = await confirmItemUpload({
-          variables: {
-            itemId: itemId,
-            key: uploadResult.key,
-          },
-        });
-
-        const finalImageUrl = confirmData?.confirmItemImageUpload;
-        if (!finalImageUrl) {
-          throw new Error('Failed to confirm upload');
-        }
-        onProgress?.(100);
-        onSuccess?.(finalImageUrl);
-
-        return finalImageUrl;
+          options,
+        );
       } catch (error) {
         console.error('Item image upload failed:', error);
         const errorMessage =
           error instanceof Error ? error.message : 'Upload failed';
-        onError?.(new Error(errorMessage));
+        options.onError?.(new Error(errorMessage));
         Alert.alert('Upload Failed', errorMessage);
         return null;
-      } finally {
-        setUploading(false);
-        setProgress(0);
       }
     },
-    [createUploadUrl, confirmItemUpload, uploadToMinIO],
+    [uploadImage, confirmItemUpload],
   );
 
   const updateProfileAvatarUrl = useCallback(

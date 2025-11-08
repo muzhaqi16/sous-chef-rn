@@ -1,0 +1,120 @@
+# ============================================
+# QUERIES
+# ============================================
+
+query GetStorageLocations($homeId: ID!) {
+  storageLocations(homeId: $homeId) {
+    id
+    name
+    type
+    icon
+    color
+    temperature
+    sortOrder
+    isDefault
+    currentItemCount
+    parentLocation {
+      id
+      name
+    }
+  }
+}
+
+query GetStorageLocationTree($homeId: ID!) {
+  storageLocationTree(homeId: $homeId) {
+    id
+    name
+    type
+    icon
+    color
+    sortOrder
+    currentItemCount
+    isDefault
+    childLocations {
+      id
+      name
+      type
+      icon
+      color
+      sortOrder
+      currentItemCount
+      childLocations {
+        id
+        name
+        type
+        currentItemCount
+      }
+    }
+  }
+}
+
+query GetStorageLocation($id: ID!) {
+  storageLocation(id: $id) {
+    id
+    name
+    type
+    icon
+    color
+    temperature
+    isClimateControlled
+    sortOrder
+    isDefault
+    currentItemCount
+    parentLocation {
+      id
+      name
+    }
+    childLocations {
+      id
+      name
+      type
+    }
+  }
+}
+
+# ============================================
+# MUTATIONS
+# ============================================
+
+mutation CreateStorageLocation($input: CreateStorageLocationInput!) {
+  createStorageLocation(input: $input) {
+    id
+    name
+    type
+    icon
+    color
+    temperature
+    sortOrder
+    isDefault
+    currentItemCount
+    homeId
+    parentLocation {
+      id
+      name
+    }
+  }
+}
+
+mutation UpdateStorageLocation($id: ID!, $input: UpdateStorageLocationInput!) {
+  updateStorageLocation(id: $id, input: $input) {
+    id
+    name
+    type
+    icon
+    color
+    sortOrder
+    parentLocationId
+  }
+}
+
+mutation DeleteStorageLocation($id: ID!) {
+  deleteStorageLocation(id: $id)
+}
+
+mutation SetDefaultStorageLocation($id: ID!) {
+  setDefaultStorageLocation(id: $id) {
+    id
+    name
+    isDefault
+  }
+}

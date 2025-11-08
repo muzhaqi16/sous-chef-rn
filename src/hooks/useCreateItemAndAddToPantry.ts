@@ -3,7 +3,7 @@ import {Alert} from 'react-native';
 import type {ApolloCache} from '@apollo/client';
 import {
   useCreateItemMutation,
-  useAddItemToPantryMutation,
+  useCreatePantryItemMutation,
   StorageState,
   ItemType,
   useGetHomeQuery,
@@ -39,20 +39,30 @@ export const useCreateItemAndAddToPantry = () => {
   
   const [createItem] = useCreateItemMutation();
   
-  const [addToPantry] = useAddItemToPantryMutation({
+  const [addToPantry] = useCreatePantryItemMutation({
+    errorPolicy: 'all',
     // Update cache using cache.modify for consistency
     update: (cache: ApolloCache, {data: mutationData}, {variables}) => {
-      if (!mutationData?.addItemToPantry || !variables?.input.pantryId) return;
+      if (!mutationData?.createPantryItem || !variables?.input.pantryId) return;
 
-      const newItem = mutationData.addItemToPantry;
+      const newItem = mutationData.createPantryItem;
 
       try {
-        // Use cache.modify for better performance and consistency
+        // Use cache.modify with toReference and duplicate checking (consistent with other hooks)
         cache.modify({
           fields: {
-            pantryItems: (existingItems = []) => {
-              // Add the new item to the list
-              return [...existingItems, newItem];
+            pantryItems: (existingItems = [], { readField, toReference }) => {
+              const newItemRef = toReference(newItem);
+
+              // Check if item already exists (avoid duplicates)
+              const exists = existingItems.some(
+                (itemRef: any) => readField('id', itemRef) === newItem.id,
+              );
+
+              if (exists) return existingItems;
+
+              // Add new item to the list
+              return [...existingItems, newItemRef];
             },
           },
         });
@@ -151,9 +161,9 @@ export const useCreateItemAndAddToPantry = () => {
         },
       });
 
-      if (addToPantryResult.data?.addItemToPantry) {
+      if (addToPantryResult.data?.createPantryItem) {
         Alert.alert(
-          'Success', 
+          'Success',
           'Item created and added to pantry successfully!',
           [
             {
@@ -164,7 +174,7 @@ export const useCreateItemAndAddToPantry = () => {
             },
           ]
         );
-        return addToPantryResult.data.addItemToPantry;
+        return addToPantryResult.data.createPantryItem;
       }
       
     } catch (error) {

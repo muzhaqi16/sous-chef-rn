@@ -1,15 +1,23 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
-import { useGetHomeInvitesQuery } from '#generated';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils';
+import { formatRole, getRoleBadgeStyle } from '#utils/formatters';
 import { HomeActions } from './HomeActions';
 import { MembersList } from './MembersList';
 import { commonStyles } from '#/styles';
+import { HomeInviteFragment } from '#generated';
 
 export type PartialHome = {
   id: string;
   name: string;
+  joinCode?: string;
+  allowJoinCode?: boolean;
   members?: Array<{
     id: string;
     role: string;
@@ -27,6 +35,7 @@ export type PartialHome = {
     };
   }>;
   pantries?: Array<{ id: string }>;
+  invites?: HomeInviteFragment[];
   myMembership?: {
     id: string;
     role: string;
@@ -38,6 +47,8 @@ export type PartialHome = {
 interface HomeCardProps {
   home: PartialHome;
   isDefault: boolean;
+  isHighlighted?: boolean;
+  canInvite?: boolean;
   onPress?: (homeId: string) => void;
   onSetDefault: (homeId: string) => void;
   onInvite: (homeId: string) => void;
@@ -47,54 +58,79 @@ interface HomeCardProps {
 export const HomeCard: React.FC<HomeCardProps> = ({
   home,
   isDefault,
+  isHighlighted = false,
+  canInvite,
   onPress,
   onSetDefault,
   onInvite,
   onDelete,
 }) => {
-  // Fetch invites for this specific home
-  const { data: invitesData } = useGetHomeInvitesQuery({
-    variables: { homeId: home.id },
-    fetchPolicy: 'cache-and-network',
+  const { theme } = useUnistyles();
+
+  // Animated values for highlight effect
+  const highlightOpacity = useSharedValue(0);
+  const shadowOpacity = useSharedValue(0.05);
+  const scale = useSharedValue(1);
+
+  // Trigger highlight animation when isHighlighted changes
+  useEffect(() => {
+    if (isHighlighted) {
+      // Animate in
+      highlightOpacity.value = withSpring(1, {
+        damping: 25,
+        stiffness: 200,
+        mass: 1.2,
+      });
+      shadowOpacity.value = withSpring(0.2, {
+        damping: 25,
+        stiffness: 200,
+        mass: 1.2,
+      });
+      scale.value = withSpring(1.02, {
+        damping: 30,
+        stiffness: 180,
+        mass: 1.5,
+      });
+    } else {
+      // Animate out
+      highlightOpacity.value = withSpring(0, {
+        damping: 25,
+        stiffness: 200,
+        mass: 1.2,
+      });
+      shadowOpacity.value = withSpring(0.05, {
+        damping: 25,
+        stiffness: 200,
+        mass: 1.2,
+      });
+      scale.value = withSpring(1, {
+        damping: 30,
+        stiffness: 180,
+        mass: 1.5,
+      });
+    }
+  }, [isHighlighted, highlightOpacity, shadowOpacity, scale]);
+
+  const animatedCardStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: scale.value }],
+      shadowOpacity: shadowOpacity.value,
+    };
   });
 
-  const homeInvites = invitesData?.homeInvites || [];
+  const animatedHighlightStyle = useAnimatedStyle(() => {
+    return {
+      opacity: highlightOpacity.value,
+    };
+  });
 
   const handleDelete = () => {
     onDelete(home.id, home.name);
   };
 
-  const formatRole = (role: string): string => {
-    switch (role) {
-      case 'OWNER':
-        return 'Owner';
-      case 'ADMIN':
-        return 'Admin';
-      case 'MEMBER':
-        return 'Member';
-      case 'GUEST':
-        return 'Guest';
-      default:
-        return role;
-    }
-  };
-
-  const getRoleBadgeColor = (role: string): string => {
-    switch (role) {
-      case 'OWNER':
-        return '#FF6B35'; // Orange for owner
-      case 'ADMIN':
-        return '#4CAF50'; // Green for admin
-      case 'MEMBER':
-        return '#2196F3'; // Blue for member
-      case 'GUEST':
-        return '#9E9E9E'; // Gray for guest
-      default:
-        return '#9E9E9E';
-    }
-  };
   return (
-    <View style={styles.homeCard}>
+    <Animated.View style={[commonStyles.shadow, styles.homeCard, animatedCardStyle]}>
+      <Animated.View style={[styles.highlightOverlay, animatedHighlightStyle]} />
       <TouchableOpacity
         style={styles.homeHeader}
         onPress={() => onPress?.(home.id)}
@@ -102,10 +138,10 @@ export const HomeCard: React.FC<HomeCardProps> = ({
       >
         <View style={styles.homeInfo}>
           <Text style={styles.homeName}>{home.name}</Text>
+
           <Text style={styles.homeDetails}>
-            {home.members?.length || 0} members
-            {'  '}
-            {home.pantries?.length || 0} pantries
+            {home.members?.length || 0} members • {home.pantries?.length || 0}{' '}
+            pantries
           </Text>
         </View>
         <View style={styles.badgeContainer}>
@@ -113,16 +149,16 @@ export const HomeCard: React.FC<HomeCardProps> = ({
             <View
               style={[
                 styles.roleBadge,
-                {
-                  backgroundColor:
-                    getRoleBadgeColor(home.myMembership.role) + '20',
-                },
+                getRoleBadgeStyle(home.myMembership.role, theme),
               ]}
             >
               <Text
                 style={[
                   styles.roleText,
-                  { color: getRoleBadgeColor(home.myMembership.role) },
+                  {
+                    color: getRoleBadgeStyle(home.myMembership.role, theme)
+                      .color,
+                  },
                 ]}
               >
                 {formatRole(home.myMembership.role)}
@@ -136,20 +172,26 @@ export const HomeCard: React.FC<HomeCardProps> = ({
           )}
         </View>
         {onPress && (
-          <Icon name="chevron-forward" size={20} color="#999" library="Ionicons" />
+          <Icon
+            name="chevron-forward"
+            size={20}
+            color={theme.colors.textSecondary}
+            library="Ionicons"
+          />
         )}
       </TouchableOpacity>
 
       <HomeActions
         homeId={home.id}
         isDefault={isDefault}
+        canInvite={canInvite}
         onSetDefault={onSetDefault}
         onInvite={onInvite}
         onDelete={handleDelete}
       />
 
-      <MembersList members={home.members || []} invites={homeInvites || []} />
-    </View>
+      <MembersList members={home.members || []} invites={home.invites || []} />
+    </Animated.View>
   );
 };
 
@@ -159,16 +201,29 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.md,
     marginHorizontal: theme.spacing.md,
     marginVertical: theme.spacing.sm,
-    ...commonStyles.shadow,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  highlightOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: theme.colors.primary + '10',
+    borderRadius: theme.radii.md,
+    pointerEvents: 'none',
   },
   homeHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 12,
+    gap: theme.spacing.md,
   },
   homeInfo: {
     flex: 1,
+    gap: theme.spacing.xs,
   },
   homeName: {
     fontSize: theme.fonts.size.lg,

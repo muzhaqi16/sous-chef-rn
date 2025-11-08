@@ -1,8 +1,9 @@
-import React, {useEffect} from 'react';
-import {useForm} from 'react-hook-form';
-import {Text} from 'react-native';
-import {AuthWrapper, AuthFormTemplate, CodeInputAdapter} from '#components';
-import {useStore} from '#store';
+import React, { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { Text } from 'react-native';
+import { GraphQLError } from 'graphql';
+import { AuthWrapper, AuthFormTemplate, CodeInputAdapter } from '#components';
+import { useStore } from '#store';
 import {
   useVerifyEmailMutation,
   useResendVerificationEmailMutation,
@@ -13,16 +14,16 @@ type CodeVerificationValues = {
 };
 
 export function CodeVerificationScreen() {
-  const {user, updateUser} = useStore();
+  const { user, updateUser } = useStore();
   const [verifyEmail] = useVerifyEmailMutation();
   const [resendVerificationEmail] = useResendVerificationEmailMutation();
 
   const {
     control,
     handleSubmit,
-    formState: {errors},
+    formState: { errors },
   } = useForm({
-    defaultValues: {code: ''},
+    defaultValues: { code: '' },
   });
 
   // No navigation effects needed - conditional groups handle it
@@ -37,13 +38,13 @@ export function CodeVerificationScreen() {
   const onVerifyCode = async (data: CodeVerificationValues) => {
     try {
       const response = await verifyEmail({
-        variables: {code: data.code},
+        variables: { code: data.code },
       });
 
       if (response.data?.verifyEmail) {
         // Just update the user state
         // Navigation happens automatically
-        updateUser({emailVerified: true});
+        updateUser({ emailVerified: true });
       }
     } catch (error) {
       console.error('Error verifying email:', error);
@@ -54,11 +55,29 @@ export function CodeVerificationScreen() {
     try {
       if (!user?.email) return;
 
-      await resendVerificationEmail({
-        variables: {email: user.email},
+      const response = await resendVerificationEmail({
+        variables: { email: user.email },
       });
 
-      // Show success message
+      // Check for errors in response (errorPolicy: 'all' returns errors in error.errors)
+      if (response.error && 'errors' in response.error) {
+        const graphQLErrors = response.error.errors as ReadonlyArray<GraphQLError>;
+        const alreadyVerified = graphQLErrors.some(
+          (err) => err.extensions?.code === 'EMAIL_ALREADY_VERIFIED',
+        );
+
+        if (alreadyVerified) {
+          // Update state to mark email as verified
+          // Navigation will automatically move to next screen
+          updateUser({ emailVerified: true });
+          return;
+        }
+
+        console.error('Error resending verification email:', response.error);
+        return;
+      }
+
+      // Show success message only if no errors
       console.log('Verification email resent');
     } catch (error) {
       console.error('Error resending verification email:', error);
@@ -77,13 +96,13 @@ export function CodeVerificationScreen() {
         subtitle={
           <>
             We emailed a code to{' '}
-            <Text style={{fontWeight: 'bold'}}>
+            <Text style={{ fontWeight: 'bold' }}>
               {user.email || 'your email'}
             </Text>
             . Please enter the code to continue.
           </>
         }
-        fields={[{name: 'code', label: '', component: CodeInputAdapter}]}
+        fields={[{ name: 'code', label: '', component: CodeInputAdapter }]}
         control={control}
         errors={errors}
         submitText="Submit"

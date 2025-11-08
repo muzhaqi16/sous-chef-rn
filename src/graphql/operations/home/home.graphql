@@ -18,6 +18,8 @@ query GetHomes {
   homes {
     id
     name
+    joinCode
+    allowJoinCode
     createdAt
     updatedAt
     pantries {
@@ -36,17 +38,8 @@ query GetHomes {
         ...PartialUser
       }
     }
-    myMembership {
-      id
-      role
-      status
-      displayName
-      canViewPantry
-      canEditPantry
-      canAddItems
-      canRemoveItems
-      canInviteOthers
-      canManageHome
+    invites {
+      ...HomeInviteFragment
     }
   }
 }
@@ -60,6 +53,12 @@ query GetHomeInvites($homeId: ID!) {
 query GetMyPendingInvites {
   myPendingInvites {
     ...HomeInviteFragment
+  }
+}
+
+query GetHomeByJoinCode($joinCode: String!) {
+  homeByJoinCode(joinCode: $joinCode) {
+    ...HomeFragment
   }
 }
 
@@ -88,18 +87,6 @@ mutation CreateHome($input: CreateHomeInput!) {
       user {
         ...PartialUser
       }
-    }
-    myMembership {
-      id
-      role
-      status
-      displayName
-      canViewPantry
-      canEditPantry
-      canAddItems
-      canRemoveItems
-      canInviteOthers
-      canManageHome
     }
   }
 }
@@ -176,4 +163,26 @@ mutation RemoveMember($membershipId: ID!) {
 
 mutation RevokeHomeInvite($id: ID!) {
   revokeHomeInvite(id: $id)
+}
+
+mutation JoinHomeByCode($joinCode: String!) {
+  joinHomeByCode(joinCode: $joinCode) {
+    id
+    homeId
+    userId
+    role
+    status
+    displayName
+    canViewPantry
+    canEditPantry
+    canAddItems
+    canRemoveItems
+    canInviteOthers
+    canManageHome
+    lastActiveAt
+    joinedAt
+    leftAt
+    createdAt
+    updatedAt
+  }
 }

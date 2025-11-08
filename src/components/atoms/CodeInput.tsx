@@ -39,7 +39,7 @@ export const CodeInput: React.FC<{
 const styles = StyleSheet.create(theme => ({
   formInput: {
     position: 'relative',
-    backgroundColor: theme.colors.white,
+    backgroundColor: theme.colors.surface,
     borderRadius: 12,
   },
   formInputControl: {

@@ -1,8 +1,4 @@
 import { InMemoryCache } from '@apollo/client';
-import { storage } from '#storage/mmkv';
-
-const CACHE_VERSION = '1.0';
-const CACHE_KEY = `apollo-cache-${CACHE_VERSION}`;
 
 /**
  * Version-aware merge function that handles optimistic updates and conflict resolution
@@ -20,18 +16,21 @@ function mergeArrayByIdIntelligent<T extends { id: string; __ref?: string }>(
   incoming: T[] = [],
   { readField }: { readField: (field: string, ref: any) => any },
 ): T[] {
-  // If no existing data, just return incoming
+  // If no incoming data, always keep existing (preserves cache on network errors)
+  if (!incoming || incoming.length === 0) {
+    return existing || [];
+  }
+
+  // If no existing data, return incoming (first load or after cache clear)
   if (!existing || existing.length === 0) {
     return incoming;
   }
 
-  // If no incoming data, keep existing (might be optimistic)
-  if (!incoming || incoming.length === 0) {
-    return existing;
-  }
-
   // Create a map of existing items by ID with version metadata
-  const existingMap = new Map<string, { item: T; version: number; updatedAt: string }>();
+  const existingMap = new Map<
+    string,
+    { item: T; version: number; updatedAt: string }
+  >();
   existing.forEach(item => {
     const id = readField('id', item) as string;
     if (id) {
@@ -44,7 +43,10 @@ function mergeArrayByIdIntelligent<T extends { id: string; __ref?: string }>(
   });
 
   // Create a map of incoming items by ID with version metadata
-  const incomingMap = new Map<string, { item: T; version: number; updatedAt: string }>();
+  const incomingMap = new Map<
+    string,
+    { item: T; version: number; updatedAt: string }
+  >();
   incoming.forEach(item => {
     const id = readField('id', item) as string;
     if (id) {
@@ -60,31 +62,40 @@ function mergeArrayByIdIntelligent<T extends { id: string; __ref?: string }>(
   const merged: T[] = [];
 
   // Process all incoming items
-  incomingMap.forEach(({ item: incomingItem, version: incomingVersion, updatedAt: incomingUpdatedAt }, id) => {
-    const existingData = existingMap.get(id);
+  incomingMap.forEach(
+    (
+      {
+        item: incomingItem,
+        version: incomingVersion,
+        updatedAt: incomingUpdatedAt,
+      },
+      id,
+    ) => {
+      const existingData = existingMap.get(id);
 
-    if (!existingData) {
-      // New item from server, add it
-      merged.push(incomingItem);
-      return;
-    }
-
-    // Both exist - resolve conflict using version
-    if (incomingVersion > existingData.version) {
-      // Incoming has higher version, use it
-      merged.push(incomingItem);
-    } else if (incomingVersion < existingData.version) {
-      // Existing has higher version (optimistic update ahead of server), keep existing
-      merged.push(existingData.item);
-    } else {
-      // Same version - use timestamp as tiebreaker
-      if (incomingUpdatedAt >= existingData.updatedAt) {
+      if (!existingData) {
+        // New item from server, add it
         merged.push(incomingItem);
-      } else {
-        merged.push(existingData.item);
+        return;
       }
-    }
-  });
+
+      // Both exist - resolve conflict using version
+      if (incomingVersion > existingData.version) {
+        // Incoming has higher version, use it
+        merged.push(incomingItem);
+      } else if (incomingVersion < existingData.version) {
+        // Existing has higher version (optimistic update ahead of server), keep existing
+        merged.push(existingData.item);
+      } else {
+        // Same version - use timestamp as tiebreaker
+        if (incomingUpdatedAt >= existingData.updatedAt) {
+          merged.push(incomingItem);
+        } else {
+          merged.push(existingData.item);
+        }
+      }
+    },
+  );
 
   // Add any optimistic items not yet confirmed by server
   existingMap.forEach(({ item }, id) => {
@@ -102,40 +113,43 @@ function mergeArrayByIdIntelligent<T extends { id: string; __ref?: string }>(
   return merged;
 }
 
+/**
+ * Apollo InMemoryCache with intelligent merge functions
+ *
+ * Uses version-based conflict resolution to properly handle:
+ * - Mutation responses updating cached queries
+ * - Optimistic updates
+ * - Concurrent modifications
+ */
 export function makeCache(): InMemoryCache {
-  const cache = new InMemoryCache({
+  return new InMemoryCache({
     typePolicies: {
-      Query: {
+      ShoppingListItem: {
+        keyFields: ['id'],
+        merge: true, // Enable automatic field-level merging for partial data
+      },
+      ShoppingList: {
+        keyFields: ['id'],
+        merge: true, // Enable automatic field-level merging for partial data
         fields: {
-          homes: {
-            // Intelligent merge to preserve optimistic home additions
-            merge(existing = [], incoming = [], { readField }) {
-              return mergeArrayByIdIntelligent(existing, incoming, {
-                readField,
-              });
-            },
-          },
-          pantryItems: {
-            keyArgs: ['pantryId'],
-            // Intelligent merge to preserve optimistic pantry item changes
+          items: {
+            // Merge shopping list items intelligently to prevent cache data loss
+            // Uses same version-based conflict resolution as Query.shoppingListItems
             merge(existing, incoming, { readField }) {
               return mergeArrayByIdIntelligent(existing, incoming, {
                 readField,
               });
             },
           },
-          shoppingListItems: {
-            keyArgs: ['shoppingListId'],
-            // Intelligent merge to preserve optimistic shopping list changes
+        },
+      },
+      Pantry: {
+        keyFields: ['id'],
+        fields: {
+          items: {
+            // Merge pantry items intelligently to prevent cache data loss
+            // Uses same version-based conflict resolution as Query.pantryItems
             merge(existing, incoming, { readField }) {
-              return mergeArrayByIdIntelligent(existing, incoming, {
-                readField,
-              });
-            },
-          },
-          shoppingLists: {
-            // Intelligent merge to preserve optimistic list additions
-            merge(existing = [], incoming = [], { readField }) {
               return mergeArrayByIdIntelligent(existing, incoming, {
                 readField,
               });
@@ -145,46 +159,86 @@ export function makeCache(): InMemoryCache {
       },
       PantryItem: {
         keyFields: ['id'],
+        merge: true, // Enable automatic field-level merging for partial data
       },
-      ShoppingListItem: {
-        keyFields: ['id'],
-      },
-      Item: {
-        keyFields: ['id'],
-      },
-      User: {
-        keyFields: ['id'],
+      Query: {
         fields: {
-          // Merge user updates instead of replacing
-          profile: {
-            merge(existing, incoming) {
-              return { ...existing, ...incoming };
-            },
-          },
-        },
-      },
-      Home: {
-        keyFields: ['id'],
-        fields: {
-          members: {
-            // Intelligent merge to preserve optimistic member additions/updates
-            merge(existing = [], incoming = [], { readField }) {
-              return mergeArrayByIdIntelligent(existing, incoming, {
-                readField,
-              });
+          // List-level queries (return collections of lists/homes)
+          shoppingLists: {
+            // No keyArgs needed - app doesn't use filters parameter
+            // Simple merge with cache preservation on network errors
+            merge(existing = [], incoming) {
+              // Preserve existing cache if network request failed and returned empty
+              // This prevents cache clearing when API is offline
+              if (!incoming || incoming.length === 0) {
+                return existing;
+              }
+              return incoming;
             },
           },
           pantries: {
-            // Intelligent merge to preserve optimistic pantry additions
-            merge(existing = [], incoming = [], { readField }) {
+            // Different homes have different pantries - cache separately
+            keyArgs: ['homeId'],
+            merge(existing = [], incoming) {
+              // Preserve existing cache if network request failed and returned empty
+              // This prevents cache clearing when API is offline
+              if (!incoming || incoming.length === 0) {
+                return existing;
+              }
+              return incoming;
+            },
+          },
+          homes: {
+            // No parameters - simple merge with existing data preservation
+            merge(existing = [], incoming) {
+              // If refetching and incoming is empty/null, preserve existing data
+              // This prevents flickering when navigating back to the screen
+              if (!incoming || incoming.length === 0) {
+                return existing;
+              }
+              return incoming;
+            },
+          },
+          storageLocations: {
+            // Different homes have different storage locations - cache separately
+            keyArgs: ['homeId'],
+            merge(existing = [], incoming) {
+              // Preserve existing cache if network request failed and returned empty
+              // This prevents cache clearing when API is offline
+              if (!incoming || incoming.length === 0) {
+                return existing;
+              }
+              return incoming;
+            },
+          },
+          storageLocationTree: {
+            // Different homes have different storage location trees - cache separately
+            keyArgs: ['homeId'],
+            merge(existing = [], incoming) {
+              // Preserve existing cache if network request failed and returned empty
+              // This prevents cache clearing when API is offline
+              if (!incoming || incoming.length === 0) {
+                return existing;
+              }
+              return incoming;
+            },
+          },
+          // Item-level queries (return items within a list/pantry)
+          pantryItems: {
+            keyArgs: ['pantryId'],
+            // Intelligent merge to properly update cache when mutations return
+            merge(existing, incoming, options) {
+              const { readField } = options;
+
               return mergeArrayByIdIntelligent(existing, incoming, {
                 readField,
               });
             },
           },
-          shoppingLists: {
-            // Intelligent merge to preserve optimistic list additions
-            merge(existing = [], incoming = [], { readField }) {
+          shoppingListItems: {
+            keyArgs: ['shoppingListId'],
+            // Intelligent merge to properly update cache when mutations return
+            merge(existing, incoming, { readField }) {
               return mergeArrayByIdIntelligent(existing, incoming, {
                 readField,
               });
@@ -192,70 +246,6 @@ export function makeCache(): InMemoryCache {
           },
         },
       },
-      Unit: {
-        keyFields: ['id'],
-      },
-      ShoppingList: {
-        keyFields: ['id'],
-      },
-      Pantry: {
-        keyFields: ['id'],
-      },
     },
   });
-
-  // Simple restoration
-  try {
-    const saved = storage.getString(CACHE_KEY);
-    if (saved) {
-      cache.restore(JSON.parse(saved));
-    }
-  } catch (e) {
-    storage.delete(CACHE_KEY);
-  }
-
-  // Cache size management
-  const MAX_CACHE_SIZE = 50 * 1024 * 1024; // 50MB limit
-  let lastGcTime = Date.now();
-
-  const checkCacheSize = () => {
-    try {
-      const cacheData = JSON.stringify(cache.extract());
-      if (cacheData.length > MAX_CACHE_SIZE) {
-        console.log('🗑️ Cache size exceeded, running garbage collection');
-        cache.gc();
-        lastGcTime = Date.now();
-      }
-    } catch (e) {
-      console.warn('Cache size check failed:', e);
-    }
-  };
-
-  // Simple persistence - debounced with size check
-  let persistTimeout: NodeJS.Timeout;
-  const persist = () => {
-    clearTimeout(persistTimeout);
-    persistTimeout = setTimeout(() => {
-      try {
-        // Run GC if it's been more than 5 minutes since last check
-        if (Date.now() - lastGcTime > 5 * 60 * 1000) {
-          checkCacheSize();
-        }
-
-        storage.set(CACHE_KEY, JSON.stringify(cache.extract()));
-      } catch (e) {
-        console.warn('Cache persist failed:', e);
-      }
-    }, 500); // Debounce for 500ms
-  };
-
-  // Only persist on writes
-  const originalWrite = cache.write;
-  cache.write = function (...args) {
-    const result = originalWrite.apply(this, args);
-    persist();
-    return result;
-  };
-
-  return cache;
 }

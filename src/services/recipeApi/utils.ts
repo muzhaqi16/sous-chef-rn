@@ -4,7 +4,7 @@ import type { RecipeInformation, RecipeIngredient } from './types';
  * Transform Spoonacular recipe data to GraphQL CreateRecipeInput format
  */
 export const transformSpoonacularToRecipeInput = (
-  spoonacularRecipe: RecipeInformation
+  spoonacularRecipe: RecipeInformation,
 ) => {
   // Strip HTML tags from summary
   const stripHtml = (html: string): string => {
@@ -22,7 +22,7 @@ export const transformSpoonacularToRecipeInput = (
 
   // Extract calories from nutrition data
   const caloriesPerServing = spoonacularRecipe.nutrition?.nutrients?.find(
-    (n) => n.name === 'Calories'
+    n => n.name === 'Calories',
   )?.amount;
 
   // Transform instructions to JSON format
@@ -51,11 +51,13 @@ export const transformSpoonacularToRecipeInput = (
     sourceName: spoonacularRecipe.sourceName,
     spoonacularData: spoonacularRecipe, // Cache full response
 
-    visibility: 'PUBLIC' as const,
-    status: 'PUBLISHED' as const,
+    visibility: 'PUBLIC',
+    status: 'PUBLISHED',
 
     // Nutrition
-    caloriesPerServing: caloriesPerServing ? Math.round(caloriesPerServing) : null,
+    caloriesPerServing: caloriesPerServing
+      ? Math.round(caloriesPerServing)
+      : null,
     nutritionData: spoonacularRecipe.nutrition || null,
 
     // Tags
@@ -72,7 +74,7 @@ export const transformSpoonacularToRecipeInput = (
  */
 export const transformSpoonacularIngredient = (
   ingredient: RecipeIngredient,
-  index: number
+  index: number,
 ) => {
   return {
     name: ingredient.name,
@@ -108,7 +110,13 @@ export const getSpoonacularIngredientImageUrl = (imageName: string): string => {
  */
 export const getSpoonacularRecipeImageUrl = (
   recipeId: number,
-  size: '90x90' | '240x150' | '312x231' | '480x360' | '556x370' | '636x393' = '636x393'
+  size:
+    | '90x90'
+    | '240x150'
+    | '312x231'
+    | '480x360'
+    | '556x370'
+    | '636x393' = '636x393',
 ): string => {
   return `https://spoonacular.com/recipeImages/${recipeId}-${size}.jpg`;
 };
@@ -118,21 +126,22 @@ export const getSpoonacularRecipeImageUrl = (
  */
 export const matchPantryItemsToIngredients = (
   recipeIngredients: RecipeIngredient[],
-  pantryItems: Array<{ id: string; name: string }>
+  pantryItems: Array<{ id: string; name: string }>,
 ): Map<number, string[]> => {
   const matches = new Map<number, string[]>();
 
-  recipeIngredients.forEach((ingredient) => {
+  recipeIngredients.forEach(ingredient => {
     const ingredientNameLower = ingredient.name.toLowerCase();
-    const matchingPantryItems = pantryItems.filter((pantryItem) =>
-      ingredientNameLower.includes(pantryItem.name.toLowerCase()) ||
-      pantryItem.name.toLowerCase().includes(ingredientNameLower)
+    const matchingPantryItems = pantryItems.filter(
+      pantryItem =>
+        ingredientNameLower.includes(pantryItem.name.toLowerCase()) ||
+        pantryItem.name.toLowerCase().includes(ingredientNameLower),
     );
 
     if (matchingPantryItems.length > 0) {
       matches.set(
         ingredient.id,
-        matchingPantryItems.map((item) => item.id)
+        matchingPantryItems.map(item => item.id),
       );
     }
   });
@@ -145,7 +154,7 @@ export const matchPantryItemsToIngredients = (
  */
 export const calculateRecipeMatchPercentage = (
   totalIngredients: number,
-  matchedIngredients: number
+  matchedIngredients: number,
 ): number => {
   if (totalIngredients === 0) return 0;
   return Math.round((matchedIngredients / totalIngredients) * 100);
@@ -180,7 +189,7 @@ export const parseDietaryRestrictions = (restrictions: string[]): string => {
   };
 
   return restrictions
-    .map((restriction) => dietMap[restriction])
+    .map(restriction => dietMap[restriction])
     .filter(Boolean)
     .join(',');
 };
@@ -205,7 +214,7 @@ export const parseIntolerances = (intolerances: string[]): string => {
   };
 
   return intolerances
-    .map((intolerance) => intoleranceMap[intolerance])
+    .map(intolerance => intoleranceMap[intolerance])
     .filter(Boolean)
     .join(',');
 };

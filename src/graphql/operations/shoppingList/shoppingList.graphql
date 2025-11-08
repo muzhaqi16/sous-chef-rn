@@ -72,11 +72,11 @@ query GetShoppingList($id: ID!) {
       createdAt
       updatedAt
     }
+    ownerships {
+      ...ShoppingListOwnershipFragment
+    }
     collaborators {
-      id
-      email
-      role
-      status
+      ...ShoppingListCollaboratorFragment
       canEdit
       canAddItems
       canRemoveItems
@@ -115,10 +115,33 @@ query GetShoppingLists {
       id
       isPurchased
     }
+    ownerships {
+      id
+      userId
+      user {
+        id
+        email
+        profile {
+          displayName
+          avatar
+        }
+      }
+      createdAt
+    }
     collaborators {
       id
       email
       role
+      status
+      collaboratorId
+      collaborator {
+        id
+        email
+        profile {
+          displayName
+          avatar
+        }
+      }
     }
   }
 }
@@ -142,6 +165,12 @@ query GetDefaultShoppingList {
         imageUrl
       }
     }
+    ownerships {
+      ...ShoppingListOwnershipFragment
+    }
+    collaborators {
+      ...ShoppingListCollaboratorFragment
+    }
   }
 }
 
@@ -159,18 +188,8 @@ query GetShoppingListItem($id: ID!) {
 
 query GetShoppingListCollaborators($shoppingListId: ID!) {
   shoppingListCollaborators(shoppingListId: $shoppingListId) {
-    id
-    role
-    status
-    invitedAt
+    ...ShoppingListCollaboratorFragment
     statusChangedAt
-    email
-    collaborator {
-      email
-      role
-      emailVerified
-      id
-    }
   }
 }
 
@@ -201,21 +220,10 @@ mutation CreateShoppingList($input: CreateShoppingListInput!) {
       isPurchased
     }
     collaborators {
-      id
-      email
-      role
+      ...ShoppingListCollaboratorFragment
     }
     ownerships {
-      id
-      user {
-        id
-      }
-      shoppingList {
-        id
-      }
-      createdAt
-      transferredAt
-      transferredFrom
+      ...ShoppingListOwnershipFragment
     }
   }
 }
@@ -242,9 +250,10 @@ mutation UpdateShoppingList($id: ID!, $input: UpdateShoppingListInput!) {
       isPurchased
     }
     collaborators {
-      id
-      email
-      role
+      ...ShoppingListCollaboratorFragment
+    }
+    ownerships {
+      ...ShoppingListOwnershipFragment
     }
   }
 }
@@ -319,7 +328,9 @@ mutation UpdateShoppingListItem(
 }
 
 mutation RemoveItemFromShoppingList($id: ID!) {
-  removeItemFromShoppingList(id: $id)
+  removeItemFromShoppingList(id: $id) {
+    ...ShoppingListItemFragment
+  }
 }
 
 mutation markItemPurchased($id: ID!, $status: Boolean!) {
@@ -328,9 +339,152 @@ mutation markItemPurchased($id: ID!, $status: Boolean!) {
   }
 }
 
-mutation ReorderShoppingListItems($input: ReorderShoppingListItemsInput!) {
-  reorderShoppingListItems(input: $input) {
+mutation MoveShoppingListItem($input: MoveShoppingListItemInput!) {
+  moveShoppingListItem(input: $input) {
     ...ShoppingListItemFragment
+  }
+}
+
+# ============================================
+# SPECIALIZED PERFORMANCE MUTATIONS
+# ============================================
+
+mutation ToggleShoppingListItemPurchased(
+  $id: ID!
+  $purchased: Boolean!
+  $version: Int
+) {
+  toggleShoppingListItemPurchased(
+    id: $id
+    purchased: $purchased
+    version: $version
+  ) {
+    ...ShoppingListItemFragment
+  }
+}
+
+mutation UpdateShoppingListItemQuantity(
+  $itemId: ID!
+  $quantity: String!
+  $version: Int
+) {
+  updateShoppingListItemQuantity(
+    itemId: $itemId
+    quantity: $quantity
+    version: $version
+  ) {
+    ...ShoppingListItemFragment
+  }
+}
+
+mutation UpdateShoppingListItemNotes($id: ID!, $notes: String, $version: Int) {
+  updateShoppingListItemNotes(id: $id, notes: $notes, version: $version) {
+    ...ShoppingListItemFragment
+  }
+}
+
+mutation UpdateShoppingListItemPriority(
+  $id: ID!
+  $priority: Int!
+  $version: Int
+) {
+  updateShoppingListItemPriority(
+    id: $id
+    priority: $priority
+    version: $version
+  ) {
+    ...ShoppingListItemFragment
+  }
+}
+
+mutation UpdateCollaboratorRole(
+  $shoppingListId: ID!
+  $collaboratorId: ID!
+  $role: CollaboratorRole!
+) {
+  updateCollaboratorRole(
+    shoppingListId: $shoppingListId
+    collaboratorId: $collaboratorId
+    role: $role
+  )
+}
+
+# ============================================
+# OFFLINE SYNC MUTATIONS
+# ============================================
+
+mutation SyncShoppingListItem(
+  $clientId: ID!
+  $input: SyncShoppingListItemInput!
+) {
+  syncShoppingListItem(clientId: $clientId, input: $input) {
+    clientId
+    serverId
+    operation
+    wasCreated
+    item {
+      ...ShoppingListItemFragment
+    }
+    conflict {
+      clientVersion
+      serverVersion
+      message
+      serverItem {
+        id
+        version
+        sortOrder
+      }
+    }
+  }
+}
+
+mutation SyncDeleteShoppingListItem($clientId: ID!, $version: Int) {
+  syncDeleteShoppingListItem(clientId: $clientId, version: $version) {
+    clientId
+    serverId
+    operation
+    wasCreated
+    item {
+      id
+      itemName
+    }
+    conflict {
+      clientVersion
+      serverVersion
+      message
+    }
+  }
+}
+
+mutation SyncMoveShoppingListItem(
+  $clientId: ID!
+  $afterId: ID
+  $beforeId: ID
+  $version: Int
+) {
+  syncMoveShoppingListItem(
+    clientId: $clientId
+    afterId: $afterId
+    beforeId: $beforeId
+    version: $version
+  ) {
+    clientId
+    serverId
+    operation
+    wasCreated
+    item {
+      ...ShoppingListItemFragment
+    }
+    conflict {
+      clientVersion
+      serverVersion
+      message
+      serverItem {
+        id
+        version
+        sortOrder
+      }
+    }
   }
 }
 
@@ -457,6 +611,7 @@ subscription ShoppingListStatusChanged($listId: ID!) {
       email
       profile {
         displayName
+        avatar
       }
     }
     userId

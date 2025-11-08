@@ -22,7 +22,14 @@ export type PantryStackParamList = {
 const Stack = createNativeStackNavigator<PantryStackParamList>();
 
 export const PantryStack = () => (
-  <Stack.Navigator screenOptions={{headerShown: false}}>
+  <Stack.Navigator
+    screenOptions={{
+      headerShown: false,
+      animation: 'slide_from_right',
+      animationDuration: 250,
+      fullScreenGestureEnabled: true,
+    }}
+  >
     <Stack.Screen name="PantryMain" component={PantryMain} />
     <Stack.Screen name="PantryItem" component={PantryItemScreen} />
     <Stack.Screen name="PantryItemDetail" component={PantryItemDetail} />

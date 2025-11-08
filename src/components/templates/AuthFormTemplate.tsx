@@ -40,8 +40,8 @@ export function AuthFormTemplate<T extends FieldValues>({
 }: Props<T>) {
   const { theme } = useUnistyles();
   return (
-    <>
-      <View style={styles.header}>
+    <View style={styles.formContainer}>
+      <View>
         {onBackPress && (
           <IconButton
             name="chevron-left"
@@ -65,13 +65,7 @@ export function AuthFormTemplate<T extends FieldValues>({
       )}
 
       <View style={styles.action}>
-        <Button
-          title={submitText}
-          onPress={onSubmit}
-          btnStyle={styles.button}
-          txtStyle={styles.buttonText}
-          disabled={isLoading}
-        />
+        <Button title={submitText} onPress={onSubmit} disabled={isLoading} />
       </View>
 
       {footerText && footerLinkText && onFooterLinkPress && (
@@ -81,13 +75,14 @@ export function AuthFormTemplate<T extends FieldValues>({
           </Text>
         </TouchableOpacity>
       )}
-    </>
+    </View>
   );
 }
 
 const styles = StyleSheet.create(theme => ({
-  header: {
-    paddingHorizontal: 0,
+  formContainer: {
+    flex: 1,
+    justifyContent: 'space-around',
   },
   headerAction: {
     width: 40,
@@ -98,7 +93,6 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: 16,
     backgroundColor: 'transparent',
   },
-
   title: {
     fontSize: 24,
     fontWeight: '700',
@@ -114,20 +108,19 @@ const styles = StyleSheet.create(theme => ({
   },
   link: {
     textAlign: 'right',
-    marginHorizontal: 24,
     fontWeight: '600',
     color: theme.colors.primary,
     textDecorationLine: 'underline',
   },
   action: {
     marginVertical: 24,
-    paddingHorizontal: 24,
   },
   button: {
     backgroundColor: theme.colors.primary,
     paddingVertical: 16,
     borderRadius: 8,
     alignItems: 'center',
+    alignSelf: 'center',
   },
   buttonText: {
     color: theme.colors.onPrimary,
@@ -136,7 +129,7 @@ const styles = StyleSheet.create(theme => ({
   footer: {
     marginTop: 'auto',
     textAlign: 'center',
-    padding: 24,
+    paddingVertical: 24,
     color: theme.colors.textSecondary,
   },
 }));
