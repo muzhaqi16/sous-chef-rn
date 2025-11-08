@@ -1,11 +1,12 @@
-import {useEffect} from 'react';
-import {useColorScheme} from 'react-native';
-import {UnistylesRuntime} from 'react-native-unistyles';
-import {useStore} from '#/store';
+import { useEffect } from 'react';
+import { useColorScheme } from 'react-native';
+import { UnistylesRuntime } from 'react-native-unistyles';
+import { useStore } from '#/store';
+import { ThemePreference } from '#/store/slices/preferencesSlice';
 
 export const useTheme = () => {
   const systemColorScheme = useColorScheme();
-  const {theme: userThemePreference, setTheme} = useStore();
+  const { theme: userThemePreference, setTheme } = useStore();
 
   // Resolve the effective theme based on user preference and system
   const resolveEffectiveTheme = (): 'light' | 'dark' => {
@@ -60,8 +61,8 @@ export const useTheme = () => {
     setTheme,
 
     // Helper methods
-    setLightTheme: () => setTheme('LIGHT'),
-    setDarkTheme: () => setTheme('DARK'),
-    setSystemTheme: () => setTheme('SYSTEM'),
+    setLightTheme: () => setTheme(ThemePreference.LIGHT),
+    setDarkTheme: () => setTheme(ThemePreference.DARK),
+    setSystemTheme: () => setTheme(ThemePreference.SYSTEM),
   };
 };

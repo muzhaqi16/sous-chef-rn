@@ -136,6 +136,103 @@ mutation DeletePantryItem($id: ID!) {
   }
 }
 
+mutation CreatePantryItemUsage($input: RecordPantryItemUsageInput!) {
+  createPantryItemUsage(input: $input) {
+    id
+    quantityUsed
+    usedAt
+    purpose
+    notes
+    pantryItem {
+      id
+      currentQuantity
+      consumedQuantity
+      ...PantryItemFragment
+    }
+    usedBy {
+      id
+      email
+    }
+  }
+}
+
+mutation RecordPantryItemWaste(
+  $id: ID!
+  $wasteAmount: Float!
+  $wasteReason: WasteReason!
+  $isComposted: Boolean
+  $isRecycled: Boolean
+) {
+  recordPantryItemWaste(
+    id: $id
+    wasteAmount: $wasteAmount
+    wasteReason: $wasteReason
+    isComposted: $isComposted
+    isRecycled: $isRecycled
+  ) {
+    ...PantryItemFragment
+  }
+}
+
+mutation UpdatePantryItemQuantity(
+  $pantryItemId: ID!
+  $quantity: String!
+  $unitId: ID
+  $version: Int
+) {
+  updatePantryItemQuantity(
+    pantryItemId: $pantryItemId
+    quantity: $quantity
+    unitId: $unitId
+    version: $version
+  ) {
+    ...PantryItemFragment
+  }
+}
+
+# ============================================
+# OFFLINE SYNC MUTATIONS
+# ============================================
+
+mutation SyncPantryItem($clientId: ID!, $input: SyncPantryItemInput!) {
+  syncPantryItem(clientId: $clientId, input: $input) {
+    clientId
+    serverId
+    operation
+    wasCreated
+    item {
+      ...PantryItemFragment
+    }
+    conflict {
+      clientVersion
+      serverVersion
+      message
+      serverItem {
+        id
+        version
+      }
+    }
+  }
+}
+
+mutation SyncDeletePantryItem($clientId: ID!, $version: Int) {
+  syncDeletePantryItem(clientId: $clientId, version: $version) {
+    clientId
+    serverId
+    operation
+    wasCreated
+    item {
+      id
+      itemName
+    }
+    conflict {
+      clientVersion
+      serverVersion
+      message
+    }
+  }
+}
+
 # ============================================
 # SUBSCRIPTIONS
 # ============================================
@@ -198,33 +295,42 @@ subscription PantryActivityAdded($pantryId: ID!) {
 
 subscription PantryLowStockAlert($pantryId: ID!) {
   pantryLowStockAlert(pantryId: $pantryId) {
-    id
-    itemId
-    itemName
+    pantryId
     currentQuantity
-    autoReorderPoint
-    unitName
+    minimumQuantity
+    userId
+    timestamp
     item {
       id
-      name
-      imageUrl
+      itemId
+      itemName
+      unitName
+      item {
+        id
+        name
+        imageUrl
+      }
     }
   }
 }
 
 subscription PantryExpiringItemsAlert($pantryId: ID!) {
   pantryExpiringItemsAlert(pantryId: $pantryId) {
-    id
-    itemId
-    itemName
+    pantryId
     expiresAt
-    bestByDate
-    currentQuantity
-    unitName
+    daysUntilExpiration
+    userId
+    timestamp
     item {
       id
-      name
-      imageUrl
+      itemId
+      itemName
+      unitName
+      item {
+        id
+        name
+        imageUrl
+      }
     }
   }
 }

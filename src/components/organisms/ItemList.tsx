@@ -24,7 +24,10 @@ interface ItemListProps {
   onItemPress: (id: string) => void;
   onItemEdit?: (id: string) => void;
   onItemDelete?: (id: string) => void;
+  onItemConsume?: (id: string) => void;
+  onItemWaste?: (id: string) => void;
   onRefresh?: () => Promise<void>;
+  onSwipeableWillOpen?: (ref: any) => void;
   emptyState?: {
     icon: IconName;
     title: string;
@@ -41,7 +44,10 @@ export const ItemList: React.FC<ItemListProps> = ({
   onItemPress,
   onItemEdit,
   onItemDelete,
+  onItemConsume,
+  onItemWaste,
   onRefresh,
+  onSwipeableWillOpen,
   emptyState,
 }) => {
   const [refreshing, setRefreshing] = useState(false);
@@ -88,6 +94,9 @@ export const ItemList: React.FC<ItemListProps> = ({
           onPress={() => onItemPress(item.id)}
           onEdit={onItemEdit ? () => onItemEdit(item.id) : undefined}
           onDelete={onItemDelete ? () => onItemDelete(item.id) : undefined}
+          onConsume={onItemConsume ? () => onItemConsume(item.id) : undefined}
+          onWaste={onItemWaste ? () => onItemWaste(item.id) : undefined}
+          onSwipeableWillOpen={onSwipeableWillOpen}
         />
       ))}
     </ScrollView>

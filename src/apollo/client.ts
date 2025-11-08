@@ -3,6 +3,19 @@ import { createLink } from './links';
 import { makeCache } from './cache';
 import { apolloCachePersistence } from './offline/ApolloCachePersistence';
 
+// Load Apollo dev messages in development for better error reporting
+if (__DEV__) {
+  import('@apollo/client/dev')
+    .then(({ loadDevMessages, loadErrorMessages }) => {
+      loadDevMessages();
+      loadErrorMessages();
+    })
+    .catch(() => {
+      // Silently fail if dev messages can't be loaded
+      console.warn('Failed to load Apollo dev messages');
+    });
+}
+
 /**
  * Initialize Apollo Client with cache persistence
  */
@@ -27,20 +40,21 @@ function initializeClient() {
     link,
     cache,
     // Configure to watch cache changes from mutations
+    // Use cache-first for all queries - no network calls when offline
     defaultOptions: {
       query: {
-        fetchPolicy: 'cache-first',
-        errorPolicy: 'all',
+        fetchPolicy: 'cache-first', // Try cache first, network if cache miss
+        errorPolicy: 'ignore', // Return cached data on errors - crucial for offline
       },
       mutate: {
-        errorPolicy: 'all',
+        errorPolicy: 'all', // Mutations need full error info for handling
       },
       watchQuery: {
-        // Watch cache changes so queries re-emit when mutations update entities
-        fetchPolicy: 'cache-and-network',
-        // After initial fetch, use cache-first for performance
+        // cache-first prevents unnecessary network calls
+        // Especially important for offline - doesn't attempt network if cache has data
+        fetchPolicy: 'cache-first',
         nextFetchPolicy: 'cache-first',
-        errorPolicy: 'ignore',
+        errorPolicy: 'ignore', // Return cached data on errors - crucial for offline
       },
     },
     queryDeduplication: true,

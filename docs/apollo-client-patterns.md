@@ -173,6 +173,154 @@ update: (cache, { data }, { variables }) => {
 
 ---
 
+### Pattern 5: cache.modify() - For Simple Field Updates ⭐ RECOMMENDED
+
+**Use When**: Updating specific fields on an entity (e.g., toggling booleans, incrementing counters)
+
+**Benefits**:
+- Instant UI updates without optimistic response complexity
+- Eliminates "Missing field" warnings from partial fragments
+- Simpler code - no fragment reading or field extraction needed
+- Works perfectly offline (cache update is immediate)
+- Avoids cache corruption from `__ref` fields
+
+**When to Use This Instead of Optimistic Response**:
+- Simple field updates (boolean toggles, counters, timestamps)
+- When mutation fragment has many fields but you're only updating 1-2
+- When you're getting "Missing field" warnings from partial optimistic responses
+- When automatic normalization isn't sufficient (need immediate feedback)
+
+**Example - Toggle Boolean Field**:
+```typescript
+const [togglePurchasedMutation] = useToggleShoppingListItemPurchasedMutation({
+  errorPolicy: 'all',
+  // Use cache.modify in update function for instant UI updates
+  // This avoids "Missing field" warnings from partial fragments
+  update(cache, { data }, { variables }) {
+    if (!data?.toggleShoppingListItemPurchased || !variables) return;
+
+    const itemId = variables.id;
+    const newStatus = variables.purchased;
+
+    // Directly modify the cached item's fields
+    cache.modify({
+      id: cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
+      fields: {
+        isPurchased() {
+          return newStatus;
+        },
+        updatedAt() {
+          return new Date().toISOString();
+        },
+      },
+    });
+  },
+  onError: error => {
+    const { message } = handleApolloError(error, {
+      operation: 'Toggle Item Purchased',
+    });
+    Alert.alert('Error', message);
+  },
+});
+
+// Usage in the action function
+const toggleItem = async (itemId: string) => {
+  const currentItem = items.find(item => item.id === itemId);
+  if (!currentItem) return false;
+
+  const newStatus = !currentItem.isPurchased;
+
+  const result = await togglePurchasedMutation({
+    variables: {
+      id: itemId,
+      purchased: newStatus,
+      version: currentItem.version,
+    },
+    // No optimisticResponse - cache.modify handles instant UI
+  });
+
+  return result.data?.toggleShoppingListItemPurchased ?? false;
+};
+```
+
+**Example - Increment Counter**:
+```typescript
+const [incrementViewsMutation] = useIncrementViewsMutation({
+  errorPolicy: 'all',
+  update(cache, { data }, { variables }) {
+    if (!data?.incrementViews || !variables) return;
+
+    cache.modify({
+      id: cache.identify({ __typename: 'Recipe', id: variables.id }),
+      fields: {
+        viewCount(existingCount = 0) {
+          return existingCount + 1;
+        },
+        lastViewedAt() {
+          return new Date().toISOString();
+        },
+      },
+    });
+  },
+});
+```
+
+**Why This Pattern Works**:
+1. **Instant UI feedback**: cache.modify executes immediately, updating the UI before server responds
+2. **No fragment complexity**: Don't need to read full fragments or extract fields
+3. **No validation warnings**: Apollo doesn't validate field completeness in cache.modify
+4. **Offline-first**: Works seamlessly with offline queue (cache updates locally, mutation queues)
+5. **Type-safe field updates**: Modify only the fields that changed
+
+**Comparison with Optimistic Response Pattern**:
+
+❌ **Old Pattern (Optimistic Response)**:
+```typescript
+// Complex: Read fragment, extract fields, create optimistic response
+const fullItem = client.readFragment<any>({
+  id: cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
+  fragment: ShoppingListItemFragmentDoc,
+  fragmentName: 'ShoppingListItemFragment',
+});
+
+const coreFields: ShoppingListItemCoreFragment = {
+  __typename: 'ShoppingListItem',
+  id: fullItem.id,
+  itemName: fullItem.itemName,
+  // ... extract 8+ fields manually
+};
+
+await toggleMutation({
+  variables: { id: itemId, purchased: newStatus },
+  optimisticResponse: {
+    __typename: 'Mutation',
+    togglePurchased: {
+      ...coreFields,
+      isPurchased: newStatus,
+    } as any,
+  },
+});
+// Result: Works, but gets ~30 "Missing field" warnings
+```
+
+✅ **New Pattern (cache.modify)**:
+```typescript
+// Simple: Just call mutation, let cache.modify handle UI update
+await toggleMutation({
+  variables: { id: itemId, purchased: newStatus },
+  // No optimisticResponse needed!
+});
+// Result: Zero warnings, instant UI update, simpler code
+```
+
+**When NOT to Use This Pattern**:
+- Creating new entities (use optimistic response with `createOptimisticEntity`)
+- Complex updates involving multiple related entities (use optimistic response)
+- When mutation returns incomplete data and you need to preserve existing fields (use optimistic response)
+- Array operations (use cache.modify with `readField`/`toReference` pattern instead)
+
+---
+
 ### ❌ Anti-Pattern: refetchQueries
 
 **DON'T USE** `refetchQueries` unless absolutely necessary!
@@ -208,11 +356,13 @@ const [updateMutation] = useUpdateMutation({
 
 ### When to Use
 
-**Always provide optimistic responses** for mutations that:
-- Modify user data
+**Provide optimistic responses** for mutations that:
+- Create or update user data
 - Are frequently used
 - Need instant UI feedback
 - Work offline
+
+**For delete operations**: Optimistic responses are optional. The `update` function with manual cache updates (cache.modify + cache.evict + cache.gc) provides sufficient instant UI feedback for both online and offline scenarios. Using optimistic responses with deletes can cause cache normalization warnings when the response doesn't include all fragment fields.
 
 ### Pattern: New Entity (Create/Add)
 
@@ -288,6 +438,60 @@ optimisticResponse: variables => {
   };
 }
 ```
+
+### Pattern: Delete Entity (No Optimistic Response)
+
+**Recommended**: Use manual cache updates without optimistic response
+
+```typescript
+const [deleteItemMutation] = useDeleteItemMutation({
+  errorPolicy: 'all',
+  onError: (error: any) => {
+    const { message } = handleApolloError(error, {
+      operation: 'Delete Item',
+    });
+    Alert.alert('Error', message);
+  },
+  // No optimisticResponse - avoids cache normalization warnings
+  // The cache update below provides instant UI feedback
+  update: (cache: any, { data }: any, { variables }: any) => {
+    if (!data?.deleteItem || !variables) return;
+
+    try {
+      const itemId = variables.id;
+
+      // Step 1: Remove from parent array
+      cache.modify({
+        fields: {
+          items(existingItems = [], { readField }: any) {
+            return existingItems.filter(
+              (itemRef: any) => readField('id', itemRef) !== itemId,
+            );
+          },
+        },
+      });
+
+      // Step 2: Evict the entity from cache
+      cache.evict({
+        id: cache.identify({ __typename: 'Item', id: itemId }),
+      });
+
+      // Step 3: CRITICAL - Garbage collect orphaned data
+      cache.gc();
+    } catch (error) {
+      console.warn('Cache update failed, will refetch:', error);
+      refetch();
+    }
+  },
+});
+```
+
+**Why this works**:
+- Manual cache updates execute immediately (both online and offline)
+- Item disappears from UI instantly via cache.modify()
+- Entity is fully removed via cache.evict() + cache.gc()
+- Avoids cache normalization warnings from incomplete optimistic responses
+- Works seamlessly with offline queue (mutations are queued, cache updates happen immediately)
 
 ---
 
@@ -654,14 +858,18 @@ START
   ├─ Is this a DELETE operation?
   │   └─ YES → Use cache.evict() + cache.gc() + cache.modify()
   │
+  ├─ Is this a SIMPLE FIELD UPDATE (toggle, counter, timestamp)?
+  │   └─ YES → Use cache.modify() for specific fields (Pattern 5)
+  │               [Instant UI, zero warnings, no optimistic response needed]
+  │
   ├─ Is this adding/removing from an ARRAY?
-  │   └─ YES → Use cache.modify() with readField/toReference
+  │   └─ YES → Use cache.modify() with readField/toReference (Pattern 1)
   │
   ├─ Does mutation return FULL FRAGMENT with __typename + id?
-  │   └─ YES → Use AUTOMATIC NORMALIZATION (no update function!)
+  │   └─ YES → Use AUTOMATIC NORMALIZATION (Pattern 2 - no update function!)
   │
   ├─ Are you replacing an ENTIRE QUERY result?
-  │   └─ YES → Use cache.writeQuery()
+  │   └─ YES → Use cache.writeQuery() (Pattern 3)
   │
   └─ DEFAULT → Use cache.modify() (most flexible)
 ```
@@ -674,7 +882,14 @@ START
   ├─ Is this a READ-ONLY query?
   │   └─ YES → NO (queries don't have optimistic responses)
   │
-  ├─ Is this a frequently-used mutation?
+  ├─ Is this a SIMPLE FIELD UPDATE (toggle, counter)?
+  │   └─ YES → NO - Use cache.modify() instead (Pattern 5)
+  │               [Simpler, zero warnings, instant UI feedback]
+  │
+  ├─ Is this a DELETE operation?
+  │   └─ YES → NO - cache.modify + evict + gc provides instant UI
+  │
+  ├─ Is this a frequently-used mutation (create/update)?
   │   └─ YES → ADD OPTIMISTIC RESPONSE
   │
   ├─ Does this need to work offline?
@@ -875,5 +1090,5 @@ const [deleteItemMutation] = useDeleteItemMutation({
 
 ---
 
-**Last Updated**: 2025-10-28
+**Last Updated**: 2025-11-03
 **Maintainers**: Development Team

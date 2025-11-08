@@ -1,10 +1,16 @@
-import {StateCreator} from 'zustand';
-import {RootState} from '../index';
+import { StateCreator } from 'zustand';
+import { RootState } from '../index';
+
+export enum ThemePreference {
+  LIGHT = 'LIGHT',
+  DARK = 'DARK',
+  SYSTEM = 'SYSTEM',
+}
 
 export interface PreferencesState {
   // Theme
-  theme: 'LIGHT' | 'DARK' | 'SYSTEM';
-  setTheme: (theme: 'LIGHT' | 'DARK' | 'SYSTEM') => void;
+  theme: ThemePreference;
+  setTheme: (theme: ThemePreference) => void;
 
   // Language
   language?: string;
@@ -25,7 +31,7 @@ export interface PreferencesState {
 }
 
 const initialPreferencesState = {
-  theme: 'SYSTEM' as const,
+  theme: ThemePreference.SYSTEM,
   language: undefined,
   emailNotifications: false,
   pushNotifications: false,
@@ -40,11 +46,11 @@ export const createPreferencesSlice: StateCreator<
 > = set => ({
   ...initialPreferencesState,
 
-  setTheme: theme => set({theme}),
-  setLanguage: language => set({language}),
-  setEmailNotifications: enabled => set({emailNotifications: enabled}),
-  setNotificationsEnabled: enabled => set({pushNotifications: enabled}),
-  setRememberMe: remember => set({rememberMe: remember}),
+  setTheme: theme => set({ theme }),
+  setLanguage: language => set({ language }),
+  setEmailNotifications: enabled => set({ emailNotifications: enabled }),
+  setNotificationsEnabled: enabled => set({ pushNotifications: enabled }),
+  setRememberMe: remember => set({ rememberMe: remember }),
 
   resetPreferences: () => set(initialPreferencesState),
 });

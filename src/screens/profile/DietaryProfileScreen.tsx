@@ -8,45 +8,23 @@ import {
   TextInput,
 } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
 import { ProfileScreenWrapper } from '#components/templates';
 import { useDietaryProfile } from '#hooks/profile/useDietaryProfile';
-import { DietaryTag, RestrictionSeverity } from '#generated';
+import {
+  Diet,
+  Intolerance,
+  HealthGoal,
+  Cuisine,
+  RestrictionSeverity,
+} from '#generated';
 import { commonStyles } from '#/styles/commonStyles';
 import { Icon } from '#/utils';
 import { StringArrayManager } from '#/components/organisms';
 import { NumberInputModal } from '#/components/organisms/modal';
 import { InfoRow } from '#/components/molecules/InfoRow';
-
-const DIETARY_TAGS: { label: string; value: DietaryTag }[] = [
-  { label: 'Vegetarian', value: DietaryTag.Vegetarian },
-  { label: 'Vegan', value: DietaryTag.Vegan },
-  { label: 'Gluten Free', value: DietaryTag.GlutenFree },
-  { label: 'Dairy Free', value: DietaryTag.DairyFree },
-  { label: 'Nut Free', value: DietaryTag.NutFree },
-  { label: 'Soy Free', value: DietaryTag.SoyFree },
-  { label: 'Egg Free', value: DietaryTag.EggFree },
-  { label: 'Fish Free', value: DietaryTag.FishFree },
-  { label: 'Shellfish Free', value: DietaryTag.ShellfishFree },
-  { label: 'Low Carb', value: DietaryTag.LowCarb },
-  { label: 'Keto', value: DietaryTag.Keto },
-  { label: 'Paleo', value: DietaryTag.Paleo },
-  { label: 'Halal', value: DietaryTag.Halal },
-  { label: 'Kosher', value: DietaryTag.Kosher },
-  { label: 'Low Sodium', value: DietaryTag.LowSodium },
-  { label: 'Sugar Free', value: DietaryTag.SugarFree },
-  { label: 'Diabetic Friendly', value: DietaryTag.DiabeticFriendly },
-  { label: 'Heart Healthy', value: DietaryTag.HeartHealthy },
-];
-
-const SEVERITY_LABELS: Record<
-  RestrictionSeverity,
-  { label: string; color: string }
-> = {
-  [RestrictionSeverity.Allergy]: { label: 'Allergy', color: '#DC2626' },
-  [RestrictionSeverity.Intolerance]: { label: 'Intolerance', color: '#EA580C' },
-  [RestrictionSeverity.Preference]: { label: 'Preference', color: '#2563EB' },
-  [RestrictionSeverity.Goal]: { label: 'Goal', color: '#16A34A' },
-};
+import { CuisineSelector } from '#/components/organisms/CuisineSelector';
+import { DietaryRestrictionSelector } from '#/components/organisms/DietaryRestrictionSelector';
 
 export const DietaryProfileScreen: React.FC = () => {
   const { theme } = useUnistyles();
@@ -59,73 +37,10 @@ export const DietaryProfileScreen: React.FC = () => {
   } = useDietaryProfile();
 
   // State for modals and editing
-  const [showAddRestriction, setShowAddRestriction] = useState(false);
   const [editingMeals, setEditingMeals] = useState(false);
   const [editingSnacks, setEditingSnacks] = useState(false);
 
-  const handleAddRestriction = async (tag: DietaryTag) => {
-    Alert.alert('Add Dietary Restriction', 'Select the severity level:', [
-      {
-        text: 'Allergy',
-        onPress: async () => {
-          const success = await addDietaryRestriction(
-            tag,
-            RestrictionSeverity.Allergy,
-          );
-          if (success) {
-            setShowAddRestriction(false);
-          } else {
-            Alert.alert('Error', 'Failed to add restriction');
-          }
-        },
-      },
-      {
-        text: 'Intolerance',
-        onPress: async () => {
-          const success = await addDietaryRestriction(
-            tag,
-            RestrictionSeverity.Intolerance,
-          );
-          if (success) {
-            setShowAddRestriction(false);
-          } else {
-            Alert.alert('Error', 'Failed to add restriction');
-          }
-        },
-      },
-      {
-        text: 'Preference',
-        onPress: async () => {
-          const success = await addDietaryRestriction(
-            tag,
-            RestrictionSeverity.Preference,
-          );
-          if (success) {
-            setShowAddRestriction(false);
-          } else {
-            Alert.alert('Error', 'Failed to add restriction');
-          }
-        },
-      },
-      {
-        text: 'Goal',
-        onPress: async () => {
-          const success = await addDietaryRestriction(
-            tag,
-            RestrictionSeverity.Goal,
-          );
-          if (success) {
-            setShowAddRestriction(false);
-          } else {
-            Alert.alert('Error', 'Failed to add restriction');
-          }
-        },
-      },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
-  };
-
-  const handleRemoveRestriction = async (id: string) => {
+  const handleRemoveRestriction = (id: string) => {
     Alert.alert(
       'Remove Restriction',
       'Are you sure you want to remove this dietary restriction?',
@@ -145,7 +60,30 @@ export const DietaryProfileScreen: React.FC = () => {
     );
   };
 
+  // Batch add restrictions handler
+  const handleAddRestrictions = async (
+    restrictions: {
+      diet?: Diet;
+      intolerance?: Intolerance;
+      healthGoal?: HealthGoal;
+    }[],
+    severity: RestrictionSeverity,
+  ) => {
+    try {
+      // Add all restrictions in sequence
+      const results = await Promise.all(
+        restrictions.map(restriction =>
+          addDietaryRestriction(restriction, severity),
+        ),
+      );
 
+      // Check if all succeeded
+      return results.every(result => result === true);
+    } catch (error) {
+      console.error('Error adding restrictions:', error);
+      return false;
+    }
+  };
 
   // Cooking preferences handlers
   const [editingCookingPrefs, setEditingCookingPrefs] = useState(false);
@@ -303,236 +241,203 @@ export const DietaryProfileScreen: React.FC = () => {
     );
   }
 
-  const existingRestrictionTypes = profile.restrictions.map(r => r.type);
-  const availableTags = DIETARY_TAGS.filter(
-    tag => !existingRestrictionTypes.includes(tag.value),
-  );
-
   return (
     <ProfileScreenWrapper title="Dietary Profile">
       {/* Dietary Restrictions Section */}
-      <View style={styles.section}>
-        <View style={commonStyles.rowSpaceBetween}>
-          <Text style={commonStyles.h3}>Dietary Restrictions</Text>
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => setShowAddRestriction(!showAddRestriction)}
-          >
-            <Icon
-              library="Feather"
-              name={showAddRestriction ? 'x' : 'plus'}
-              size={20}
-              color="#EF8354"
-            />
-          </TouchableOpacity>
+      <Animated.View
+        entering={FadeIn.duration(300)}
+        layout={LinearTransition}
+        style={styles.sectionContainer}
+      >
+        <Text style={commonStyles.h3}>Dietary Restrictions</Text>
+        <View style={styles.sectionCard}>
+          <DietaryRestrictionSelector
+            existingRestrictions={profile.restrictions}
+            onAdd={handleAddRestrictions}
+            onRemove={handleRemoveRestriction}
+          />
         </View>
+      </Animated.View>
 
-        {showAddRestriction && (
-          <View style={styles.addRestrictionContainer}>
-            <Text style={commonStyles.subtitle}>
-              Select a restriction to add:
-            </Text>
-            <View style={styles.chipContainer}>
-              {availableTags.map(tag => (
-                <TouchableOpacity
-                  key={tag.value}
-                  style={[commonStyles.chip, styles.tagChip]}
-                  onPress={() => handleAddRestriction(tag.value)}
-                >
-                  <Text style={commonStyles.chipText}>{tag.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        )}
+      {/* Food Preferences Section */}
+      <Animated.View
+        entering={FadeIn.duration(300).delay(100)}
+        layout={LinearTransition}
+        style={styles.sectionContainer}
+      >
+        <Text style={commonStyles.h3}>Food Preferences</Text>
+        <View style={styles.sectionCard}>
+          <CuisineSelector
+            selectedCuisines={(profile.preferredCuisines || []) as Cuisine[]}
+            onAdd={async (cuisine: Cuisine) => {
+              const currentCuisines = (profile.preferredCuisines ||
+                []) as Cuisine[];
+              return await updateDietaryProfile({
+                preferredCuisines: [...currentCuisines, cuisine],
+              });
+            }}
+            onRemove={async (cuisine: Cuisine) => {
+              const currentCuisines = (profile.preferredCuisines ||
+                []) as Cuisine[];
+              await updateDietaryProfile({
+                preferredCuisines: currentCuisines.filter(c => c !== cuisine),
+              });
+            }}
+          />
 
-        {profile.restrictions.length === 0 ? (
-          <View style={styles.emptyRestrictions}>
-            <Text style={commonStyles.bodySecondary}>
-              No dietary restrictions added yet
-            </Text>
-          </View>
-        ) : (
-          <View style={styles.restrictionsList}>
-            {profile.restrictions.map(restriction => {
-              const tagLabel =
-                DIETARY_TAGS.find(t => t.value === restriction.type)?.label ||
-                restriction.type;
-              const severityInfo = SEVERITY_LABELS[restriction.severity];
+          <StringArrayManager
+            title="Favorite Ingredients"
+            items={profile.favoriteIngredients}
+            onAdd={async ingredient => {
+              return await updateDietaryProfile({
+                favoriteIngredients: [
+                  ...profile.favoriteIngredients,
+                  ingredient,
+                ],
+              });
+            }}
+            onRemove={async ingredient => {
+              await updateDietaryProfile({
+                favoriteIngredients: profile.favoriteIngredients.filter(
+                  i => i !== ingredient,
+                ),
+              });
+            }}
+            inputPlaceholder="e.g., Garlic, Basil, Chicken"
+            addButtonLabel="Add Favorite Ingredient"
+            emptyMessage="No favorite ingredients added yet"
+            chipColor={theme.colors.success + '20'}
+            containerStyle={{ marginTop: theme.spacing.md }}
+          />
 
-              return (
-                <View
-                  key={restriction.id}
-                  style={[commonStyles.card, styles.restrictionCard]}
-                >
-                  <View style={commonStyles.flex1}>
-                    <Text style={commonStyles.title}>{tagLabel}</Text>
-                    <View style={styles.severityBadge}>
-                      <View
-                        style={[
-                          commonStyles.badge,
-                          { backgroundColor: severityInfo.color },
-                        ]}
-                      >
-                        <Text style={commonStyles.badgeText}>
-                          {severityInfo.label}
-                        </Text>
-                      </View>
-                    </View>
-                    {restriction.notes && (
-                      <Text
-                        style={[commonStyles.caption, styles.restrictionNotes]}
-                      >
-                        {restriction.notes}
-                      </Text>
-                    )}
-                  </View>
-                  <TouchableOpacity
-                    style={styles.removeButton}
-                    onPress={() => handleRemoveRestriction(restriction.id)}
-                  >
-                    <Icon
-                      library="Feather"
-                      name="trash-2"
-                      size={18}
-                      color={theme.colors.danger}
-                    />
-                  </TouchableOpacity>
-                </View>
-              );
-            })}
-          </View>
-        )}
-      </View>
+          <StringArrayManager
+            title="Disliked Ingredients"
+            items={profile.dislikedIngredients}
+            onAdd={async ingredient => {
+              return await updateDietaryProfile({
+                dislikedIngredients: [
+                  ...profile.dislikedIngredients,
+                  ingredient,
+                ],
+              });
+            }}
+            onRemove={async ingredient => {
+              await updateDietaryProfile({
+                dislikedIngredients: profile.dislikedIngredients.filter(
+                  i => i !== ingredient,
+                ),
+              });
+            }}
+            inputPlaceholder="e.g., Cilantro, Mushrooms, Olives"
+            addButtonLabel="Add Disliked Ingredient"
+            emptyMessage="No disliked ingredients added yet"
+            chipColor={theme.colors.error + '20'}
+            containerStyle={{ marginTop: theme.spacing.md }}
+          />
+        </View>
+      </Animated.View>
 
       {/* Nutrition Goals Section */}
-      <View style={styles.section}>
+      <Animated.View
+        entering={FadeIn.duration(300).delay(200)}
+        layout={LinearTransition}
+        style={styles.sectionContainer}
+      >
         <Text style={commonStyles.h3}>Nutrition Goals</Text>
-        <View style={commonStyles.card}>
+        <View style={styles.sectionCard}>
           <TouchableOpacity onPress={() => setEditingMeals(true)}>
             <InfoRow label="Meals per day" value={profile.mealsPerDay} />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setEditingSnacks(true)}>
-            <InfoRow label="Snacks per day" value={profile.snacksPerDay} showBorder={false} />
+            <InfoRow
+              label="Snacks per day"
+              value={profile.snacksPerDay}
+              showBorder={false}
+            />
           </TouchableOpacity>
         </View>
-      </View>
-
-      {/* Food Preferences Section */}
-      <View style={styles.section}>
-        <Text style={commonStyles.h3}>Food Preferences</Text>
-
-        <StringArrayManager
-          title="Preferred Cuisines"
-          items={profile.preferredCuisines}
-          onAdd={async (cuisine) => {
-            return await updateDietaryProfile({
-              preferredCuisines: [...profile.preferredCuisines, cuisine],
-            });
-          }}
-          onRemove={async (cuisine) => {
-            await updateDietaryProfile({
-              preferredCuisines: profile.preferredCuisines.filter(c => c !== cuisine),
-            });
-          }}
-          inputPlaceholder="e.g., Italian, Mexican, Thai"
-          addButtonLabel="Add Cuisine"
-          emptyMessage="No cuisines added yet"
-          chipColor={theme.colors.primaryLight}
-          containerStyle={{ marginTop: theme.spacing.sm }}
-        />
-
-        <StringArrayManager
-          title="Favorite Ingredients"
-          items={profile.favoriteIngredients}
-          onAdd={async (ingredient) => {
-            return await updateDietaryProfile({
-              favoriteIngredients: [...profile.favoriteIngredients, ingredient],
-            });
-          }}
-          onRemove={async (ingredient) => {
-            await updateDietaryProfile({
-              favoriteIngredients: profile.favoriteIngredients.filter(i => i !== ingredient),
-            });
-          }}
-          inputPlaceholder="e.g., Garlic, Basil, Chicken"
-          addButtonLabel="Add Favorite Ingredient"
-          emptyMessage="No favorite ingredients added yet"
-          chipColor={theme.colors.success + '20'}
-          containerStyle={{ marginTop: theme.spacing.sm }}
-        />
-
-        <StringArrayManager
-          title="Disliked Ingredients"
-          items={profile.dislikedIngredients}
-          onAdd={async (ingredient) => {
-            return await updateDietaryProfile({
-              dislikedIngredients: [...profile.dislikedIngredients, ingredient],
-            });
-          }}
-          onRemove={async (ingredient) => {
-            await updateDietaryProfile({
-              dislikedIngredients: profile.dislikedIngredients.filter(i => i !== ingredient),
-            });
-          }}
-          inputPlaceholder="e.g., Cilantro, Mushrooms, Olives"
-          addButtonLabel="Add Disliked Ingredient"
-          emptyMessage="No disliked ingredients added yet"
-          chipColor={theme.colors.error + '20'}
-          containerStyle={{ marginTop: theme.spacing.sm }}
-        />
-      </View>
+      </Animated.View>
 
       {/* Cooking Preferences Section */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={commonStyles.h3}>Cooking Preferences</Text>
-          <TouchableOpacity
-            onPress={handleEditCookingPrefs}
-            style={styles.editButton}
-          >
-            <Icon library="Feather" name="edit" size={20} color={theme.colors.primary} />
-          </TouchableOpacity>
-        </View>
-        <View style={commonStyles.card}>
+      <Animated.View
+        entering={FadeIn.duration(300).delay(300)}
+        layout={LinearTransition}
+        style={styles.sectionContainer}
+      >
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={commonStyles.h3}>Cooking Preferences</Text>
+            <TouchableOpacity
+              onPress={handleEditCookingPrefs}
+              style={styles.editButton}
+            >
+              <Icon
+                library="Feather"
+                name="edit"
+                size={20}
+                color={theme.colors.primary}
+              />
+            </TouchableOpacity>
+          </View>
           {profile.cookingSkillLevel && (
             <InfoRow label="Skill Level" value={profile.cookingSkillLevel} />
           )}
           {profile.maxPrepTimeMinutes && (
-            <InfoRow label="Max Prep Time" value={profile.maxPrepTimeMinutes} unit="minutes" />
+            <InfoRow
+              label="Max Prep Time"
+              value={profile.maxPrepTimeMinutes}
+              unit="minutes"
+            />
           )}
           {profile.maxCookTimeMinutes && (
-            <InfoRow label="Max Cook Time" value={profile.maxCookTimeMinutes} unit="minutes" />
+            <InfoRow
+              label="Max Cook Time"
+              value={profile.maxCookTimeMinutes}
+              unit="minutes"
+            />
           )}
           {profile.budgetPerMeal && (
             <InfoRow
               label="Budget per Meal"
               value={profile.budgetPerMeal}
-              formatter={(val) => `$${val}`}
+              formatter={val => `$${val}`}
               showBorder={false}
             />
           )}
         </View>
-      </View>
+      </Animated.View>
 
       {/* Macro Targets Section (Advanced) */}
       {(profile.calorieTarget ||
         profile.proteinTarget ||
         profile.carbsTarget ||
         profile.fatTarget) && (
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={commonStyles.h3}>Macro Targets (Advanced)</Text>
-            <TouchableOpacity
-              onPress={handleEditMacros}
-              style={styles.editButton}
-            >
-              <Icon library="Feather" name="edit" size={20} color={theme.colors.primary} />
-            </TouchableOpacity>
-          </View>
-          <View style={commonStyles.card}>
+        <Animated.View
+          entering={FadeIn.duration(300).delay(400)}
+          layout={LinearTransition}
+          style={styles.sectionContainer}
+        >
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={commonStyles.h3}>Macro Targets (Advanced)</Text>
+              <TouchableOpacity
+                onPress={handleEditMacros}
+                style={styles.editButton}
+              >
+                <Icon
+                  library="Feather"
+                  name="edit"
+                  size={20}
+                  color={theme.colors.primary}
+                />
+              </TouchableOpacity>
+            </View>
             {profile.calorieTarget && (
-              <InfoRow label="Daily Calories" value={profile.calorieTarget} unit="kcal" />
+              <InfoRow
+                label="Daily Calories"
+                value={profile.calorieTarget}
+                unit="kcal"
+              />
             )}
             {profile.proteinTarget && (
               <InfoRow label="Protein" value={profile.proteinTarget} unit="g" />
@@ -541,10 +446,15 @@ export const DietaryProfileScreen: React.FC = () => {
               <InfoRow label="Carbs" value={profile.carbsTarget} unit="g" />
             )}
             {profile.fatTarget && (
-              <InfoRow label="Fat" value={profile.fatTarget} unit="g" showBorder={false} />
+              <InfoRow
+                label="Fat"
+                value={profile.fatTarget}
+                unit="g"
+                showBorder={false}
+              />
             )}
           </View>
-        </View>
+        </Animated.View>
       )}
 
       {/* Nutrition Goals Modals */}
@@ -552,7 +462,7 @@ export const DietaryProfileScreen: React.FC = () => {
         visible={editingMeals}
         title="Meals Per Day"
         value={profile.mealsPerDay}
-        onSave={async (value) => {
+        onSave={async value => {
           return await updateDietaryProfile({ mealsPerDay: value });
         }}
         onCancel={() => setEditingMeals(false)}
@@ -565,7 +475,7 @@ export const DietaryProfileScreen: React.FC = () => {
         visible={editingSnacks}
         title="Snacks Per Day"
         value={profile.snacksPerDay}
-        onSave={async (value) => {
+        onSave={async value => {
           return await updateDietaryProfile({ snacksPerDay: value });
         }}
         onCancel={() => setEditingSnacks(false)}
@@ -646,10 +556,21 @@ export const DietaryProfileScreen: React.FC = () => {
                 <Text style={commonStyles.buttonText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[commonStyles.button, commonStyles.buttonPrimary, styles.modalButton]}
+                style={[
+                  commonStyles.button,
+                  commonStyles.buttonPrimary,
+                  styles.modalButton,
+                ]}
                 onPress={handleSaveCookingPrefs}
               >
-                <Text style={[commonStyles.buttonText, commonStyles.buttonTextPrimary]}>Save</Text>
+                <Text
+                  style={[
+                    commonStyles.buttonText,
+                    commonStyles.buttonTextPrimary,
+                  ]}
+                >
+                  Save
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -722,10 +643,21 @@ export const DietaryProfileScreen: React.FC = () => {
                 <Text style={commonStyles.buttonText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[commonStyles.button, commonStyles.buttonPrimary, styles.modalButton]}
+                style={[
+                  commonStyles.button,
+                  commonStyles.buttonPrimary,
+                  styles.modalButton,
+                ]}
                 onPress={handleSaveMacros}
               >
-                <Text style={[commonStyles.buttonText, commonStyles.buttonTextPrimary]}>Save</Text>
+                <Text
+                  style={[
+                    commonStyles.buttonText,
+                    commonStyles.buttonTextPrimary,
+                  ]}
+                >
+                  Save
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -736,33 +668,24 @@ export const DietaryProfileScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create(theme => ({
-  section: {
+  sectionContainer: {
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.md,
-    marginBottom: theme.spacing.lg,
-  },
-  addButton: {
-    width: 36,
-    height: 36,
-    borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.primaryLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  addRestrictionContainer: {
-    marginTop: theme.spacing.md,
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.surfaceVariant,
-    borderRadius: theme.radii.md,
-  },
-  chipContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
     marginTop: theme.spacing.sm,
   },
-  tagChip: {
-    marginRight: 0,
+  sectionCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radii.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: theme.spacing.md,
+    marginTop: theme.spacing.sm,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing.sm,
   },
   emptyRestrictions: {
     padding: theme.spacing.lg,

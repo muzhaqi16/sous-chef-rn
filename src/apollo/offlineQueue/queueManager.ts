@@ -1,3 +1,4 @@
+import { gql } from '@apollo/client';
 import { client } from '../client';
 import { useStore } from '#store';
 import { queueStore } from './queueStore';
@@ -8,6 +9,14 @@ import {
   QueueConfig,
   QueueError,
 } from './types';
+import {
+  SyncPantryItemDocument,
+  SyncDeletePantryItemDocument,
+  SyncShoppingListItemDocument,
+  SyncDeleteShoppingListItemDocument,
+  SyncMoveShoppingListItemDocument,
+} from '#generated';
+import { generateId } from '#/utils/generateId';
 
 /**
  * Default configuration for the queue manager
@@ -35,6 +44,7 @@ export class QueueManager {
   private config: QueueConfig;
   private isProcessing = false;
   private processingPromise: Promise<void> | null = null;
+  private idMapping = new Map<string, string>(); // temp-ID → real-ID
 
   constructor(config: Partial<QueueConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -68,6 +78,7 @@ export class QueueManager {
     console.log(`🔄 Queue: Starting processing for user ${userId}`);
 
     this.isProcessing = true;
+    this.idMapping.clear(); // Reset ID mappings for fresh processing session
     this.processingPromise = this._processQueueInternal(userId);
 
     try {
@@ -175,9 +186,13 @@ export class QueueManager {
         batch.map(mutation => this.processMutation(mutation))
       );
 
-      // Log batch results
-      const succeeded = results.filter(r => r.status === 'fulfilled').length;
-      const failed = results.filter(r => r.status === 'rejected').length;
+      // Log batch results - check actual mutation success, not promise resolution
+      const succeeded = results.filter(
+        r => r.status === 'fulfilled' && r.value.success
+      ).length;
+      const failed = results.filter(
+        r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.success)
+      ).length;
       console.log(`📦 Queue: Batch complete - ${succeeded} succeeded, ${failed} failed`);
     }
 
@@ -231,24 +246,247 @@ export class QueueManager {
 
   /**
    * Execute a mutation via Apollo Client
+   * Uses sync mutations for offline-queued items to handle temp-IDs
    */
   private async executeMutation(mutation: QueuedMutation): Promise<any> {
+    const useSyncMutation = this.shouldUseSync(mutation);
+
+    if (useSyncMutation) {
+      return await this.executeSyncMutation(mutation);
+    }
+
+    // Fallback to regular mutation (shouldn't happen for offline-queued items)
     const result = await client.mutate({
       mutation: mutation.mutation,
       variables: mutation.variables,
       context: {
         ...mutation.context,
-        skipQueueLink: true, // Prevent re-queuing
+        skipQueueLink: true,
       },
       errorPolicy: 'all',
     });
 
-    // Check for GraphQL errors in the result
     if (result.error) {
       throw result.error;
     }
 
     return result.data;
+  }
+
+  /**
+   * Execute sync mutation and handle ID mapping
+   */
+  private async executeSyncMutation(mutation: QueuedMutation): Promise<any> {
+    const { syncMutation, syncVariables } = this.convertToSyncMutation(mutation);
+
+    console.log(`🔄 Queue: Using sync mutation for ${mutation.operationName}`);
+
+    const result = await client.mutate({
+      mutation: syncMutation,
+      variables: syncVariables,
+      context: {
+        ...mutation.context,
+        skipQueueLink: true,
+      },
+      errorPolicy: 'all',
+    });
+
+    if (result.error) {
+      throw result.error;
+    }
+
+    // Extract sync result (first field in response)
+    const syncResult = Object.values(result.data || {})[0] as any;
+
+    // Handle ID mapping for creates
+    if (syncResult.wasCreated && syncResult.serverId && syncResult.clientId) {
+      this.idMapping.set(syncResult.clientId, syncResult.serverId);
+      console.log(`🔗 Queue: Mapped ${syncResult.clientId} → ${syncResult.serverId}`);
+    }
+
+    // Handle conflicts
+    if (syncResult.conflict) {
+      console.warn(
+        `⚠️ Queue: Conflict detected for ${mutation.operationName}:`,
+        syncResult.conflict.message
+      );
+      // Server wins - return server's version (already in syncResult.item)
+    }
+
+    return result.data;
+  }
+
+  /**
+   * Convert regular mutation to sync mutation
+   */
+  private convertToSyncMutation(mutation: QueuedMutation): {
+    syncMutation: any;
+    syncVariables: any;
+  } {
+    const operationName = mutation.operationName;
+    const variables = this.resolveIds(mutation.variables);
+
+    // Determine clientId (temp-ID or real ID)
+    const clientId =
+      variables.id ||
+      variables.input?.id ||
+      `temp-${generateId()}`;
+
+    // PantryItem sync mutations
+    if (
+      operationName === 'CreatePantryItem' ||
+      operationName === 'UpdatePantryItem'
+    ) {
+      return {
+        syncMutation: SyncPantryItemDocument,
+        syncVariables: {
+          clientId,
+          input: variables.input,
+        },
+      };
+    }
+
+    if (operationName === 'DeletePantryItem') {
+      return {
+        syncMutation: SyncDeletePantryItemDocument,
+        syncVariables: {
+          clientId: variables.id,
+          version: variables.version,
+        },
+      };
+    }
+
+    // ShoppingListItem sync mutations
+    if (
+      operationName === 'AddItemToShoppingList' ||
+      operationName === 'UpdateShoppingListItem' ||
+      operationName === 'UpdateShoppingListItemQuantity' ||
+      operationName === 'ToggleShoppingListItemPurchased'
+    ) {
+      let input = variables.input;
+
+      // For specialized mutations like UpdateShoppingListItemQuantity and ToggleShoppingListItemPurchased
+      // that don't have input wrapper
+      if (!input) {
+        // Read item from cache to get shoppingListId (required by sync mutation)
+        const itemId = variables.id;
+        const itemData = client.cache.readFragment({
+          id: client.cache.identify({
+            __typename: 'ShoppingListItem',
+            id: itemId,
+          }),
+          fragment: gql`
+            fragment QueueItemData on ShoppingListItem {
+              id
+              shoppingList {
+                id
+              }
+            }
+          `,
+        }) as { id: string; shoppingList: { id: string } } | null;
+
+        if (!itemData?.shoppingList?.id) {
+          throw new Error(
+            `Cannot sync ${operationName}: shoppingListId not found in cache for item ${itemId}`,
+          );
+        }
+
+        // Construct input based on mutation type
+        if (operationName === 'UpdateShoppingListItemQuantity') {
+          input = {
+            shoppingListId: itemData.shoppingList.id,
+            quantity: variables.quantity,
+            version: variables.version,
+          };
+        } else if (operationName === 'ToggleShoppingListItemPurchased') {
+          input = {
+            shoppingListId: itemData.shoppingList.id,
+            isPurchased: variables.purchased,
+            version: variables.version,
+          };
+        }
+      }
+
+      return {
+        syncMutation: SyncShoppingListItemDocument,
+        syncVariables: {
+          clientId,
+          input,
+        },
+      };
+    }
+
+    if (operationName === 'RemoveItemFromShoppingList') {
+      return {
+        syncMutation: SyncDeleteShoppingListItemDocument,
+        syncVariables: {
+          clientId: variables.id,
+          version: variables.version,
+        },
+      };
+    }
+
+    if (operationName === 'MoveShoppingListItem') {
+      return {
+        syncMutation: SyncMoveShoppingListItemDocument,
+        syncVariables: {
+          clientId: variables.input?.itemId,
+          afterId: variables.input?.afterId,
+          beforeId: variables.input?.beforeId,
+          version: variables.input?.version,
+        },
+      };
+    }
+
+    // Fallback - shouldn't happen
+    throw new Error(`No sync mutation mapping for ${operationName}`);
+  }
+
+  /**
+   * Resolve temp-IDs to real IDs in variables
+   */
+  private resolveIds(variables: any): any {
+    if (!variables) return variables;
+
+    const resolved = JSON.parse(JSON.stringify(variables)); // Deep clone
+
+    // Recursively replace temp-IDs with real IDs
+    const replaceIds = (obj: any): any => {
+      if (!obj || typeof obj !== 'object') return obj;
+
+      if (Array.isArray(obj)) {
+        return obj.map(replaceIds);
+      }
+
+      for (const [key, value] of Object.entries(obj)) {
+        if (
+          (key === 'id' || key.endsWith('Id')) &&
+          typeof value === 'string' &&
+          value.startsWith('temp-')
+        ) {
+          const realId = this.idMapping.get(value);
+          if (realId) {
+            console.log(`🔄 Queue: Resolved ${value} → ${realId}`);
+            obj[key] = realId;
+          }
+        } else if (typeof value === 'object') {
+          obj[key] = replaceIds(value);
+        }
+      }
+
+      return obj;
+    };
+
+    return replaceIds(resolved);
+  }
+
+  /**
+   * Determine if mutation should use sync endpoint
+   */
+  private shouldUseSync(_mutation: QueuedMutation): boolean {
+    // Always use sync for offline-queued mutations
+    // The sync mutations handle temp-IDs, version conflicts, and idempotency
+    return true;
   }
 
   /**

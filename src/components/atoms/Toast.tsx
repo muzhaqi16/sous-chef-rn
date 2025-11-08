@@ -1,5 +1,6 @@
 import React, {useState, useRef, ReactNode} from 'react';
-import {Text, Platform, ToastAndroid, Animated} from 'react-native';
+import {Text, Platform, ToastAndroid} from 'react-native';
+import Animated, {SlideInDown, SlideOutUp} from 'react-native-reanimated';
 import {StyleSheet} from 'react-native-unistyles';
 import {ToastContext} from '../../hooks/useToast';
 
@@ -20,7 +21,7 @@ export const ToastProvider: React.FC<{children: ReactNode}> = ({children}) => {
     type: 'default',
   });
   const [visible, setVisible] = useState(false);
-  const opacity = useRef(new Animated.Value(0)).current;
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const showToast: ToastFn = ({
     message,
@@ -30,22 +31,19 @@ export const ToastProvider: React.FC<{children: ReactNode}> = ({children}) => {
     if (Platform.OS === 'android') {
       ToastAndroid.show(message, duration);
     } else {
+      // Clear any existing timeout
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+
       setOpts({message, duration, type});
       setVisible(true);
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }).start(() => {
-        const timeout = duration === ToastAndroid.LONG ? 3500 : 2000;
-        setTimeout(() => {
-          Animated.timing(opacity, {
-            toValue: 0,
-            duration: 300,
-            useNativeDriver: true,
-          }).start(() => setVisible(false));
-        }, timeout);
-      });
+
+      // Auto-dismiss
+      const timeout = duration === ToastAndroid.LONG ? 3500 : 2000;
+      timeoutRef.current = setTimeout(() => {
+        setVisible(false);
+      }, timeout);
     }
   };
 
@@ -62,10 +60,11 @@ export const ToastProvider: React.FC<{children: ReactNode}> = ({children}) => {
       {children}
       {visible && Platform.OS === 'ios' && (
         <Animated.View
+          entering={SlideInDown.springify().damping(20)}
+          exiting={SlideOutUp.duration(200)}
           style={[
             styles.toastContainer,
             {
-              opacity,
               backgroundColor: backgroundColors[opts.type || 'default'],
             },
           ]}>
@@ -79,18 +78,27 @@ export const ToastProvider: React.FC<{children: ReactNode}> = ({children}) => {
 const styles = StyleSheet.create(_theme => ({
   toastContainer: {
     position: 'absolute',
-    bottom: 80,
-    left: 40,
-    right: 40,
+    top: 60,
+    left: 16,
+    right: 16,
     backgroundColor: 'black',
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
+    paddingVertical: 12,
+    borderRadius: 12,
     alignItems: 'center',
     zIndex: 1000,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
   },
   toastText: {
     color: 'white',
     fontSize: 14,
+    fontWeight: '500',
   },
 }));

@@ -2,6 +2,7 @@ import React, { useRef, ReactNode, Ref } from 'react';
 import { Keyboard } from 'react-native';
 import {
   BottomSheetModal,
+  BottomSheetScrollView,
   BottomSheetView,
   BottomSheetBackdrop,
 } from '@gorhom/bottom-sheet';
@@ -15,6 +16,8 @@ interface BottomSheetActionProps {
   snapPoints?: string[] | number[];
   /** Optional ref so parent can control this sheet */
   sheetRef?: Ref<BottomSheetModal>;
+  /** Whether to wrap content in scrollable view (default: true). Set to false when children contain FlatList/SectionList */
+  scrollable?: boolean;
 }
 
 export const BottomSheetAction: React.FC<BottomSheetActionProps> = ({
@@ -22,11 +25,19 @@ export const BottomSheetAction: React.FC<BottomSheetActionProps> = ({
   sheetTitle,
   snapPoints = ['25%', '50%', '90%'],
   sheetRef,
+  scrollable = true,
 }) => {
   const { theme } = useUnistyles();
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
 
   const insets = useSafeAreaInsets();
+
+  const content = (
+    <>
+      {sheetTitle && <Title style={styles.sheetTitle}>{sheetTitle}</Title>}
+      {children}
+    </>
+  );
 
   return (
     <BottomSheetModal
@@ -52,17 +63,33 @@ export const BottomSheetAction: React.FC<BottomSheetActionProps> = ({
         />
       )}
     >
-      <BottomSheetView
-        style={[styles.sheetView, { paddingBottom: insets.bottom }]}
-      >
-        {sheetTitle && <Title style={styles.sheetTitle}>{sheetTitle}</Title>}
-        {children}
-      </BottomSheetView>
+      {scrollable ? (
+        <BottomSheetScrollView
+          style={styles.scrollView}
+          contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom }]}
+          showsVerticalScrollIndicator={false}
+        >
+          {content}
+        </BottomSheetScrollView>
+      ) : (
+        <BottomSheetView style={[styles.view, { paddingBottom: insets.bottom }]}>
+          {content}
+        </BottomSheetView>
+      )}
     </BottomSheetModal>
   );
 };
 
 const styles = StyleSheet.create(() => ({
+  scrollView: {
+    flex: 1, // Allow ScrollView to fill the bottom sheet
+  },
+  contentContainer: {
+    padding: 16, // Padding for content, no flex to allow scrolling
+  },
+  view: {
+    flex: 1, // Allow View to fill the bottom sheet
+    padding: 16,
+  },
   sheetTitle: {},
-  sheetView: { padding: 16, flex: 1 },
 }));

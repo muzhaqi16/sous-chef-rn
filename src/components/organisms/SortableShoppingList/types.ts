@@ -41,6 +41,9 @@ export interface SortableShoppingListProps extends Omit<ScrollViewProps, 'data' 
   groupByPurchased?: boolean;
   ListFooterComponent?: ReactElement<unknown, string | JSXElementConstructor<any>> | ComponentType<any> | null;
   onSwipeableWillOpen?: (ref: any) => void;
+  onSwipeableClose?: () => void;
+  onRefresh?: () => void | Promise<void>;
+  refreshing?: boolean;
 }
 
 // Sort order update for API calls

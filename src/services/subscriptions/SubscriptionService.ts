@@ -36,6 +36,7 @@ import {
   MutationType,
   LogLevel,
 } from './types';
+import { serializeError } from '#/utils/errorSerialization';
 
 export class SubscriptionService {
   private static instance: SubscriptionService;
@@ -195,7 +196,7 @@ export class SubscriptionService {
           config.customOnData(payload as TData, client);
         }
       } catch (error) {
-        this.log(config, LogLevel.ERROR, 'Error in onData handler', error);
+        this.log(config, LogLevel.ERROR, 'Error in onData handler', serializeError(error));
       }
     };
   }
@@ -210,11 +211,7 @@ export class SubscriptionService {
       this.stats.totalErrors++;
       this.updateSubscriptionStats(config, 'error');
 
-      this.log(config, LogLevel.ERROR, 'Subscription error', {
-        message: error?.message,
-        graphQLErrors: error?.graphQLErrors?.map((e: any) => e.message),
-        networkError: error?.networkError?.message,
-      });
+      this.log(config, LogLevel.ERROR, 'Subscription error', serializeError(error));
 
       // Call custom error handler if provided
       if (config.customOnError && typeof config.customOnError === 'function') {
@@ -387,10 +384,10 @@ export class SubscriptionService {
           subscriptionName: config.subscriptionName,
           mutation,
           itemId,
-          error,
+          error: serializeError(error),
         });
       }
-      this.log(config, LogLevel.ERROR, 'Cache update failed', error);
+      this.log(config, LogLevel.ERROR, 'Cache update failed', serializeError(error));
     }
   }
 

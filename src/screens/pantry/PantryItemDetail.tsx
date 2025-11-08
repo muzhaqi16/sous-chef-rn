@@ -23,8 +23,10 @@ export const PantryItemDetail: React.FC<{
   const { theme } = useUnistyles();
   const { selectedShoppingListId } = useStore();
 
+  // Use cache-first policy - offlineQueryLink will handle offline behavior automatically
   const { data } = useGetPantryItemQuery({
     variables: { id: itemId },
+    fetchPolicy: 'cache-first',
   });
 
   const [deleteItem] = useDeletePantryItemMutation();
@@ -177,7 +179,7 @@ export const PantryItemDetail: React.FC<{
               Consumed
             </Text>
             <Text style={styles.detailValue}>
-              {item?.consumedQuantity} {item?.unit?.symbol}
+              {item?.consumedQuantity ?? 0} {item?.unit?.symbol ?? ''}
             </Text>
           </View>
           <View style={styles.detailRow}>
@@ -185,7 +187,7 @@ export const PantryItemDetail: React.FC<{
               Minimum Stock
             </Text>
             <Text style={styles.detailValue}>
-              {item?.reservedQuantity} {item?.unit?.symbol}
+              {item?.reservedQuantity ?? 0} {item?.unit?.symbol ?? ''}
             </Text>
           </View>
           {item?.item?.netWeight && item?.item?.displayUnit && (
@@ -209,7 +211,7 @@ export const PantryItemDetail: React.FC<{
             <Text style={[commonStyles.caption, styles.detailLabel]}>
               Storage
             </Text>
-            <Text style={styles.detailValue}>{item?.storageState}</Text>
+            <Text style={styles.detailValue}>{item?.storageState || 'N/A'}</Text>
           </View>
           {item?.storageLocation && (
             <View style={styles.detailRow}>
@@ -255,7 +257,7 @@ export const PantryItemDetail: React.FC<{
                 Auto-Reorder
               </Text>
               <Text style={styles.detailValue}>
-                Enabled (at {item.autoReorderPoint} {item?.unit?.symbol})
+                Enabled (at {item.autoReorderPoint ?? 0} {item?.unit?.symbol ?? ''})
               </Text>
             </View>
           )}

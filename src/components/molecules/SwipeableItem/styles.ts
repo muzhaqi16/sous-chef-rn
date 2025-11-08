@@ -24,7 +24,8 @@ export const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.charade['950'],
     justifyContent: 'center',
     alignItems: 'center',
-    width: 120, // Fixed width for consistent spacing
+    width: 180, // Fixed width for two buttons (consume + waste)
+    gap: theme.spacing.sm, // Space between buttons
     borderTopRightRadius: 0, // Square connection to card
     borderBottomRightRadius: 0, // Square connection to card
     borderTopLeftRadius: 12, // Round the outer edge
@@ -32,16 +33,16 @@ export const styles = StyleSheet.create(theme => ({
   },
 
   actionButton: {
-    width: 60,
+    width: 50,
     ...commonStyles.center,
     height: '100%',
     zIndex: 100, // Ensure button is above other elements for touch priority
   },
 
   circularActionButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 45,
+    height: 45,
+    borderRadius: 28,
     ...commonStyles.center,
     marginHorizontal: 8,
     zIndex: 100, // Ensure button is above other elements for touch priority

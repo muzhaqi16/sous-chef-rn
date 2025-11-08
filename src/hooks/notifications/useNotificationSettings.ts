@@ -1,10 +1,12 @@
 import {useCallback} from 'react';
+import {Alert} from 'react-native';
 import {useStore} from '#store';
 import {
   useGetNotificationPreferencesQuery,
   useUpdateNotificationPreferencesMutation,
   ExpirationFrequency,
 } from '#generated';
+import {useErrorHandler} from '#/utils/errorHandling';
 
 export interface NotificationSettings {
   // Core toggles
@@ -43,12 +45,39 @@ export interface NotificationSettings {
 
 export const useNotificationSettings = () => {
   const user = useStore(state => state.user);
-  const {data, loading, refetch} = useGetNotificationPreferencesQuery({
+  const {handleApolloError} = useErrorHandler();
+
+  const {data, loading} = useGetNotificationPreferencesQuery({
     skip: !user?.id,
   });
-  const [updatePreferences] = useUpdateNotificationPreferencesMutation();
 
   const preferences = data?.myNotificationPreferences;
+
+  // Update notification preferences mutation
+  const [updatePreferences] = useUpdateNotificationPreferencesMutation({
+    errorPolicy: 'all',
+    // Uses automatic normalization - mutation returns full NotificationPreferences fragment
+    // No manual cache update needed (Pattern 2)
+    optimisticResponse: (variables, { IGNORE }) => {
+      if (!preferences) return IGNORE;
+
+      return {
+        __typename: 'Mutation',
+        updateNotificationPreferences: {
+          ...preferences,
+          ...variables.input,
+          __typename: 'NotificationPreferences',
+          updatedAt: new Date().toISOString(),
+        },
+      };
+    },
+    onError: error => {
+      const {message} = handleApolloError(error, {
+        operation: 'Update Notification Preferences',
+      });
+      Alert.alert('Error', message);
+    },
+  });
 
   const getNotificationSettings = useCallback((): NotificationSettings => {
     return {
@@ -90,22 +119,20 @@ export const useNotificationSettings = () => {
   const updateNotificationSetting = useCallback(
     async (key: keyof NotificationSettings, value: boolean | string | number | ExpirationFrequency) => {
       try {
-        await updatePreferences({
+        const result = await updatePreferences({
           variables: {
             input: {[key]: value},
           },
         });
 
-        // Refetch to ensure local state is updated
-        await refetch();
-
-        return true;
+        // No refetch needed - automatic normalization + optimistic response handle UI updates
+        return !!result.data;
       } catch (error) {
-        console.error('Failed to update notification setting:', error);
+        // Error handled by onError handler
         return false;
       }
     },
-    [updatePreferences, refetch],
+    [updatePreferences],
   );
 
   const updateMultipleSettings = useCallback(
@@ -116,25 +143,23 @@ export const useNotificationSettings = () => {
           Object.entries(updates).map(([key, value]) => [
             key,
             value === null ? undefined : value,
-          ])
+          ]),
         );
 
-        await updatePreferences({
+        const result = await updatePreferences({
           variables: {
             input: cleanedUpdates,
           },
         });
 
-        // Refetch to ensure local state is updated
-        await refetch();
-
-        return true;
+        // No refetch needed - automatic normalization + optimistic response handle UI updates
+        return !!result.data;
       } catch (error) {
-        console.error('Failed to update notification settings:', error);
+        // Error handled by onError handler
         return false;
       }
     },
-    [updatePreferences, refetch],
+    [updatePreferences],
   );
 
   const resetToDefaults = useCallback(async () => {
@@ -195,6 +220,5 @@ export const useNotificationSettings = () => {
     updateMultipleSettings,
     resetToDefaults,
     isQuietTime,
-    refetch,
   };
 };

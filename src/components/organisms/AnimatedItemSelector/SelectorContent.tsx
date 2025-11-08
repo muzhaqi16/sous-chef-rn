@@ -60,9 +60,10 @@ export const SelectorContent = <T extends SelectableItem>({
     );
   }
 
-  const renderItem = ({ item }: { item: T }) => (
+  const renderItem = ({ item, index }: { item: T; index: number }) => (
     <SelectorItem
       item={item}
+      index={index}
       isSelected={item.id === selectedId}
       onPress={() => onSelect(item.id, item)}
       displayProperty={displayProperty}

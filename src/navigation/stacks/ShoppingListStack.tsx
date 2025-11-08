@@ -37,7 +37,14 @@ export type ShoppingListStackParamList = {
 const Stack = createNativeStackNavigator<ShoppingListStackParamList>();
 
 export const ShoppingListStack = () => (
-  <Stack.Navigator screenOptions={{headerShown: false}}>
+  <Stack.Navigator
+    screenOptions={{
+      headerShown: false,
+      animation: 'slide_from_right',
+      animationDuration: 250,
+      fullScreenGestureEnabled: true,
+    }}
+  >
     <Stack.Screen name="ShoppingListMain" component={ShoppingListMain} />
     <Stack.Screen name="ListSettings" component={ListSettings} />
     <Stack.Screen name="ShareList" component={ShareList} />

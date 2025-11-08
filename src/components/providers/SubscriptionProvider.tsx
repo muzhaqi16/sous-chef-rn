@@ -1,12 +1,7 @@
 import React, { useEffect } from 'react';
 import { useAuth } from '#/hooks/auth/useAuth';
 import { subscriptionService } from '#/services/subscriptions';
-import {
-  useShoppingListSubscriptions,
-  usePantrySubscriptions,
-  useHomeSubscriptions,
-  useNotificationSubscriptions,
-} from '#/hooks/subscriptions';
+import { AuthenticatedSubscriptions } from './AuthenticatedSubscriptions';
 
 interface SubscriptionProviderProps {
   children: React.ReactNode;
@@ -49,14 +44,6 @@ interface SubscriptionProviderProps {
 export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ children }) => {
   const { user, isAuthenticated } = useAuth();
 
-  // Initialize domain-specific subscriptions
-  // These hooks register their subscriptions with the SubscriptionService
-  // and automatically handle cleanup when unmounted or when dependencies change
-  useShoppingListSubscriptions(user?.id);
-  usePantrySubscriptions(user?.id);
-  useHomeSubscriptions(user?.id);
-  useNotificationSubscriptions(user?.id);
-
   // Cleanup subscriptions on logout
   useEffect(() => {
     if (!isAuthenticated) {
@@ -64,8 +51,15 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
     }
   }, [isAuthenticated]);
 
-  // Return children immediately - subscriptions run in background
-  return <>{children}</>;
+  return (
+    <>
+      {/* Only initialize subscriptions when user is authenticated
+          This prevents WebSocket connection attempts without a valid JWT token,
+          eliminating "JWT token is required for WebSocket connections" errors on startup */}
+      {isAuthenticated && user?.id && <AuthenticatedSubscriptions userId={user.id} />}
+      {children}
+    </>
+  );
 };
 
 export default SubscriptionProvider;

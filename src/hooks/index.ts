@@ -23,3 +23,4 @@ export { useSelectableItems } from './useSelectableItems';
 export { useInviteUserModal } from './useInviteUserModal';
 export { useArrayManager } from './utils/useArrayManager';
 export { useModalManager } from './utils/useModalManager';
+export { useUnitConverter } from './useUnitConverter';

@@ -21,7 +21,7 @@ const TAB_BAR_HEIGHT = 65;
 export const ProfileScreen = () => {
   const { navigate, goBack } = useAppNavigation();
   const { profile, user, loading } = useProfileData();
-  const { sections, BiometricModal } = useConfigurableSettings(profile);
+  const { sections, BiometricModal, biometricLoading } = useConfigurableSettings(profile);
   const { bottom: safeBottom } = useSafeAreaInsets();
   const { setOverlayOpen } = useScanner();
   const { theme } = useUnistyles();
@@ -62,8 +62,8 @@ export const ProfileScreen = () => {
 
   // ✅ OPTIMIZED: Don't block render on loading
   // Show cached profile data immediately while loading fresh data in background
-  // Only show loading state if we have NO data at all
-  if (loading && !profile) {
+  // Only show loading state if we have NO data at all OR biometric data is still loading
+  if ((loading && !profile) || biometricLoading) {
     return null; // or loading component
   }
   return (

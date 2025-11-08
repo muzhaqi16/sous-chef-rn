@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,12 +9,17 @@ import {
   Alert,
   RefreshControl,
 } from 'react-native';
+import Animated, {
+  LinearTransition,
+  FadeInDown,
+} from 'react-native-reanimated';
 import { Icon } from '#utils';
 import { useAppNavigation } from '#hooks';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useHomeManagement } from '#/hooks';
 import { useInviteUserModal } from '#/hooks/useInviteUserModal';
 import { useAuth } from '#/hooks/auth/useAuth';
+import { AnimatedButton } from '#/components/atoms/AnimatedButton';
 import {
   HomeStats,
   CreateHomeForm,
@@ -26,6 +31,8 @@ import {
   getInvitableRoles,
   canInviteToHome,
 } from '#/utils/permissions/homePermissions';
+import { commonStyles } from '#/styles';
+import { formAnimationPreset } from '#/constants/animations';
 
 export const HomeManagement: React.FC = () => {
   const { goBack, navigate } = useAppNavigation();
@@ -38,6 +45,10 @@ export const HomeManagement: React.FC = () => {
   const [homeName, setHomeName] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [highlightedHomeId, setHighlightedHomeId] = useState<string | null>(
+    null,
+  );
+  const highlightTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const {
     homes,
@@ -138,7 +149,20 @@ export const HomeManagement: React.FC = () => {
   };
 
   const handleSetDefault = async (homeId: string) => {
+    // Clear any existing highlight timeout
+    if (highlightTimeoutRef.current) {
+      clearTimeout(highlightTimeoutRef.current);
+    }
+
     await setDefaultHome(homeId);
+
+    // Highlight the newly-set default home
+    setHighlightedHomeId(homeId);
+
+    // Auto-dismiss highlight after 2 seconds
+    highlightTimeoutRef.current = setTimeout(() => {
+      setHighlightedHomeId(null);
+    }, 2000);
   };
 
   const handleInviteMember = (homeId: string) => {
@@ -197,7 +221,10 @@ export const HomeManagement: React.FC = () => {
 
         {/* Create/Join Home Form */}
         {showCreateForm && (
-          <View style={styles.formContainer}>
+          <Animated.View
+            {...formAnimationPreset}
+            style={[commonStyles.shadow, styles.formContainer]}
+          >
             {/* Mode Switcher */}
             <View style={styles.modeSwitcher}>
               <TouchableOpacity
@@ -293,42 +320,39 @@ export const HomeManagement: React.FC = () => {
                   >
                     <Text style={styles.cancelButtonText}>Cancel</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.button,
-                      styles.submitButton,
-                      (!joinCode.trim() || joiningByCode) &&
-                        styles.buttonDisabled,
-                    ]}
+                  <AnimatedButton
+                    loading={joiningByCode}
+                    disabled={!joinCode.trim()}
                     onPress={handleJoinHome}
-                    disabled={!joinCode.trim() || joiningByCode}
+                    variant="primary"
+                    style={styles.button}
                   >
-                    {joiningByCode ? (
-                      <ActivityIndicator size="small" color={theme.colors.white} />
-                    ) : (
-                      <Text style={styles.submitButtonText}>Join Home</Text>
-                    )}
-                  </TouchableOpacity>
+                    Join Home
+                  </AnimatedButton>
                 </View>
               </View>
             )}
-          </View>
+          </Animated.View>
         )}
 
         {/* Homes List */}
-        <ScrollView
+        <Animated.View
+          layout={LinearTransition.duration(300)}
           style={styles.scrollView}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              tintColor={theme.colors.primary}
-              colors={[theme.colors.primary]}
-            />
-          }
         >
+          <ScrollView
+            style={{ flex: 1 }}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+                tintColor={theme.colors.primary}
+                colors={[theme.colors.primary]}
+              />
+            }
+          >
           {[...homes]
             .sort((a, b) => {
               // Put default home first, keep rest in original order
@@ -336,7 +360,7 @@ export const HomeManagement: React.FC = () => {
               if (b.id === defaultHomeId) return 1;
               return 0;
             })
-            .map(home => {
+            .map((home, index) => {
               // Calculate if user can invite to this home
               const membership = findUserMembership(home.members, user?.id);
               const userCanInvite = membership
@@ -344,19 +368,30 @@ export const HomeManagement: React.FC = () => {
                 : false;
 
               return (
-                <HomeCard
+                <Animated.View
                   key={home.id}
-                  home={home as PartialHome}
-                  isDefault={home.id === defaultHomeId}
-                  canInvite={userCanInvite}
-                  onPress={handleViewHomeDetail}
-                  onSetDefault={handleSetDefault}
-                  onInvite={handleInviteMember}
-                  onDelete={handleDeleteHome}
-                />
+                  entering={FadeInDown.delay(index * 50).springify()}
+                  layout={LinearTransition.duration(600)
+                    .springify()
+                    .damping(30)
+                    .stiffness(180)
+                    .mass(1.5)}
+                >
+                  <HomeCard
+                    home={home as PartialHome}
+                    isDefault={home.id === defaultHomeId}
+                    isHighlighted={home.id === highlightedHomeId}
+                    canInvite={userCanInvite}
+                    onPress={handleViewHomeDetail}
+                    onSetDefault={handleSetDefault}
+                    onInvite={handleInviteMember}
+                    onDelete={handleDeleteHome}
+                  />
+                </Animated.View>
               );
             })}
         </ScrollView>
+        </Animated.View>
       </View>
       {InviteModalComponent}
     </>
@@ -393,8 +428,9 @@ const styles = StyleSheet.create(theme => ({
   formContainer: {
     padding: 16,
     backgroundColor: theme.colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    marginHorizontal: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+    borderRadius: theme.radii.lg,
   },
   modeSwitcher: {
     flexDirection: 'row',

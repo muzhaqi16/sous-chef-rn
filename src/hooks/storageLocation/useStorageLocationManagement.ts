@@ -7,7 +7,6 @@ import {
   useUpdateStorageLocationMutation,
   useDeleteStorageLocationMutation,
   useSetDefaultStorageLocationMutation,
-  GetStorageLocationsDocument,
   CreateStorageLocationInput,
   UpdateStorageLocationInput,
 } from '#generated';
@@ -83,38 +82,29 @@ export function useStorageLocationManagement(homeId: string | undefined) {
   // Mutations
   const [createMutation, { loading: creating }] =
     useCreateStorageLocationMutation({
+      errorPolicy: 'all',
       update: (cache, { data }) => {
         if (!data?.createStorageLocation || !homeId) return;
 
         try {
-          const newLocation = data.createStorageLocation;
+          // Use cache.modify to add new location to the array (consistent with other hooks)
+          cache.modify({
+            fields: {
+              storageLocations(existingLocations = [], { readField, toReference }) {
+                const newLocationRef = toReference(data.createStorageLocation);
 
-          // Read the existing cached query for this homeId
-          const existingData = cache.readQuery({
-            query: GetStorageLocationsDocument,
-            variables: { homeId },
-          }) as { storageLocations: any[] } | null;
+                // Check if location already exists (avoid duplicates)
+                const exists = existingLocations.some(
+                  (locRef: any) => readField('id', locRef) === data.createStorageLocation.id,
+                );
 
-          if (existingData?.storageLocations) {
-            // Check if location already exists (avoid duplicates)
-            const exists = existingData.storageLocations.some(
-              (loc: any) => loc.id === newLocation.id,
-            );
+                if (exists) return existingLocations;
 
-            if (!exists) {
-              // Write back with the new location added
-              cache.writeQuery({
-                query: GetStorageLocationsDocument,
-                variables: { homeId },
-                data: {
-                  storageLocations: [
-                    ...existingData.storageLocations,
-                    newLocation,
-                  ],
-                },
-              });
-            }
-          }
+                // Add new location to the array
+                return [...existingLocations, newLocationRef];
+              },
+            },
+          });
         } catch (error) {
           console.warn('Cache update failed for createStorageLocation:', error);
           // Fallback: refetch on cache update failure
@@ -138,36 +128,31 @@ export function useStorageLocationManagement(homeId: string | undefined) {
     });
 
   const [deleteMutation] = useDeleteStorageLocationMutation({
+    errorPolicy: 'all',
     update: (cache, { data }, { variables }) => {
       if (!data?.deleteStorageLocation || !variables || !homeId) return;
 
       try {
         const deletedId = variables.id;
 
-        // Read the existing cached query for this homeId
-        const existingData = cache.readQuery({
-          query: GetStorageLocationsDocument,
-          variables: { homeId },
-        }) as { storageLocations: any[] } | null;
-
-        if (existingData?.storageLocations) {
-          // Filter out the deleted location
-          cache.writeQuery({
-            query: GetStorageLocationsDocument,
-            variables: { homeId },
-            data: {
-              storageLocations: existingData.storageLocations.filter(
-                (loc: any) => loc.id !== deletedId,
-              ),
+        // Use cache.modify to remove location from the array (consistent with other hooks)
+        cache.modify({
+          fields: {
+            storageLocations(existingLocations = [], { readField }) {
+              return existingLocations.filter(
+                (locRef: any) => readField('id', locRef) !== deletedId,
+              );
             },
-          });
-        }
+          },
+        });
 
         // Evict the deleted location from cache
         cache.evict({
           id: cache.identify({ __typename: 'StorageLocation', id: deletedId }),
         });
-        cache.gc(); // Garbage collect orphaned data
+
+        // Garbage collect orphaned data
+        cache.gc();
       } catch (error) {
         console.warn('Cache update failed for deleteStorageLocation:', error);
         refetch();

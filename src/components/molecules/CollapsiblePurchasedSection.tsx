@@ -1,5 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Alert } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  FadeIn,
+  FadeOut,
+} from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils';
 import type { SortableShoppingListItem } from '../organisms/SortableShoppingList';
@@ -7,6 +14,7 @@ import { SortableShoppingList } from '../organisms/SortableShoppingList';
 
 interface CollapsiblePurchasedSectionProps {
   purchasedItems: SortableShoppingListItem[];
+  unpurchasedCount?: number;
   onItemPress: (id: string) => void;
   onItemEdit?: (id: string) => void;
   onItemDelete?: (id: string) => void;
@@ -19,12 +27,14 @@ interface CollapsiblePurchasedSectionProps {
   onClearAll?: () => Promise<void>;
   disabled?: boolean;
   onSwipeableWillOpen?: (ref: any) => void;
+  onSwipeableClose?: () => void;
 }
 
 export const CollapsiblePurchasedSection: React.FC<
   CollapsiblePurchasedSectionProps
 > = ({
   purchasedItems,
+  unpurchasedCount = 0,
   onItemPress,
   onItemEdit,
   onItemDelete,
@@ -33,9 +43,29 @@ export const CollapsiblePurchasedSection: React.FC<
   onClearAll,
   disabled,
   onSwipeableWillOpen,
+  onSwipeableClose,
 }) => {
   const { theme } = useUnistyles();
-  const [isExpanded, setIsExpanded] = useState(false);
+  // Auto-expand when all items are purchased (no unpurchased items)
+  // This prevents the confusing "empty list" appearance when finishing shopping
+  const [isExpanded, setIsExpanded] = useState(unpurchasedCount === 0);
+
+  // Animated values for chevron rotation
+  const chevronRotation = useSharedValue(unpurchasedCount === 0 ? 180 : 0);
+
+  // Update chevron rotation when expanded state changes
+  useEffect(() => {
+    chevronRotation.value = withSpring(isExpanded ? 180 : 0, {
+      damping: 20,
+      stiffness: 200,
+    });
+  }, [isExpanded, chevronRotation]);
+
+  const animatedChevronStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ rotate: `${chevronRotation.value}deg` }],
+    };
+  });
 
   if (purchasedItems.length === 0) {
     return null;
@@ -106,17 +136,22 @@ export const CollapsiblePurchasedSection: React.FC<
               </Text>
             </TouchableOpacity>
           )}
-          <Icon
-            name={isExpanded ? 'expand-less' : 'expand-more'}
-            size={24}
-            color={theme.colors.textSecondary}
-          />
+          <Animated.View style={animatedChevronStyle}>
+            <Icon
+              name="expand-more"
+              size={24}
+              color={theme.colors.textSecondary}
+            />
+          </Animated.View>
         </View>
       </TouchableOpacity>
 
       {/* Expanded List */}
       {isExpanded && (
-        <View style={styles.listContainer}>
+        <Animated.View
+          entering={FadeIn.duration(200)}
+          exiting={FadeOut.duration(150)}
+        >
           <SortableShoppingList
             items={purchasedItems}
             onItemPress={onItemPress}
@@ -127,8 +162,9 @@ export const CollapsiblePurchasedSection: React.FC<
             disabled={disabled}
             showsVerticalScrollIndicator={false}
             onSwipeableWillOpen={onSwipeableWillOpen}
+            onSwipeableClose={onSwipeableClose}
           />
-        </View>
+        </Animated.View>
       )}
     </View>
   );
@@ -173,8 +209,5 @@ const styles = StyleSheet.create(() => ({
   clearButtonText: {
     fontSize: 14,
     fontWeight: '600',
-  },
-  listContainer: {
-    height: 400, // Fixed height for the list to render properly with flex: 1
   },
 }));

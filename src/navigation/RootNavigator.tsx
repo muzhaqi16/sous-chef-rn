@@ -131,7 +131,13 @@ function RootNavigator() {
   return (
     <>
       <NavigationErrorBoundary>
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Navigator
+          screenOptions={{
+            headerShown: false,
+            animation: 'slide_from_right',
+            animationDuration: 300,
+          }}
+        >
           {/* Auth Group */}
           {navigationState === 'auth' && (
             <Stack.Screen name="Auth">
@@ -177,7 +183,14 @@ function RootNavigator() {
                 )}
               </Stack.Screen>
               <Stack.Screen name="HomeManagement" component={HomeManagement} />
-              <Stack.Screen name="HomeDetail" component={HomeDetailScreen} />
+              <Stack.Screen
+                name="HomeDetail"
+                component={HomeDetailScreen}
+                options={{
+                  presentation: 'modal',
+                  animation: 'slide_from_bottom',
+                }}
+              />
               <Stack.Screen
                 name="StorageLocations"
                 component={StorageLocationsScreen}
@@ -190,13 +203,31 @@ function RootNavigator() {
               <Stack.Screen
                 name="ProfilePhotoUpload"
                 component={ProfilePhotoUploadScreen}
+                options={{
+                  presentation: 'modal',
+                  animation: 'slide_from_bottom',
+                }}
               />
-              <Stack.Screen name="ImageCrop" component={ImageCropScreen} />
+              <Stack.Screen
+                name="ImageCrop"
+                component={ImageCropScreen}
+                options={{
+                  presentation: 'modal',
+                  animation: 'slide_from_bottom',
+                }}
+              />
               <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
               <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
               <Stack.Screen name="DietaryProfile" component={DietaryProfileScreen} />
               <Stack.Screen name="PersonalInformation" component={PersonalInformationScreen} />
-              <Stack.Screen name="AppSettings" component={AppSettingsScreen} />
+              <Stack.Screen
+                name="AppSettings"
+                component={AppSettingsScreen}
+                options={{
+                  animation: 'fade',
+                  animationDuration: 200,
+                }}
+              />
             </>
           )}
 

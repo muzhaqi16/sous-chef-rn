@@ -1,8 +1,9 @@
 import React, { useCallback } from 'react';
-import { View, Vibration, Platform } from 'react-native';
+import { Vibration, Platform, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { SwipeableItem } from '#/components/molecules/SwipeableItem';
 import { ListItem } from '#/components/molecules/ListItem';
+import { DragHandle } from '#/components/atoms/DragHandle';
 import { commonStyles } from '#/styles';
 
 interface SimpleDraggableItemProps {
@@ -25,6 +26,7 @@ interface SimpleDraggableItemProps {
   drag?: () => void;
   isActive?: boolean;
   onSwipeableWillOpen?: (ref: any) => void;
+  onSwipeableClose?: () => void;
 }
 
 const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
@@ -36,6 +38,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
   drag,
   isActive,
   onSwipeableWillOpen,
+  onSwipeableClose,
 }) => {
   // Handle long press for drag activation with haptic feedback
   const handleLongPress = useCallback(() => {
@@ -50,20 +53,52 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
     }
   }, [drag]);
 
-  // Just use the original rightElement without drag handle
-  const rightElement = item.rightElement;
+  // Handle long press for purchase toggle (when drag handle is not available)
+  const handleToggleLongPress = useCallback(() => {
+    if (onTogglePurchase) {
+      // Provide haptic feedback for toggle action
+      if (Platform.OS === 'ios') {
+        Vibration.vibrate([0, 50]); // Short vibration for toggle
+      } else {
+        Vibration.vibrate(50);
+      }
+      onTogglePurchase(item.id);
+    }
+  }, [onTogglePurchase, item.id]);
+
+  // Clone rightElement if it's ShoppingListItemCounter and inject drag handle
+  const rightElement = React.useMemo(() => {
+    if (!drag || item.isPurchased) {
+      return item.rightElement;
+    }
+
+    // Clone the counter element and inject drag handle
+    if (React.isValidElement(item.rightElement)) {
+      return React.cloneElement(item.rightElement as React.ReactElement<any>, {
+        rightElement: (
+          <DragHandle
+            onLongPress={handleLongPress}
+            disabled={item.isPurchased}
+          />
+        ),
+      });
+    }
+
+    return item.rightElement;
+  }, [drag, item.isPurchased, item.rightElement, handleLongPress]);
 
   return (
     <View style={[styles.container, isActive && styles.activeContainer]}>
       <SwipeableItem
         onPress={() => onItemPress(item.id)}
-        onLongPress={drag ? handleLongPress : undefined}
+        onLongPress={!drag && onTogglePurchase ? handleToggleLongPress : undefined}
         onEdit={onItemEdit ? () => onItemEdit(item.id) : undefined}
         onDelete={onItemDelete ? () => onItemDelete(item.id) : undefined}
         onTogglePurchase={onTogglePurchase ? () => onTogglePurchase(item.id) : undefined}
         isPurchased={item.isPurchased}
         friction={1}
         onSwipeableWillOpen={onSwipeableWillOpen}
+        onSwipeableClose={onSwipeableClose}
       >
         <ListItem
           title={item.title}
@@ -72,6 +107,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
           rightElement={rightElement}
           leftElement={item.leftElement}
           rightIcon={undefined}
+          isPurchased={item.isPurchased}
         />
       </SwipeableItem>
     </View>

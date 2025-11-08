@@ -22,9 +22,14 @@ const NEVER_QUEUE_OPERATIONS = [
  *
  * Behavior:
  * - Online: Pass through mutations normally
- * - Offline: Queue mutations and return optimistic response
+ * - Offline: Queue mutations and complete without returning data
  * - Auth-aware: Associates mutations with current user
  * - Idempotent: Prevents re-queuing of mutations being replayed
+ *
+ * Offline Strategy:
+ * Mutations are queued when offline and completed immediately without observer.next().
+ * Optimistic responses (configured in each mutation hook) provide immediate UI feedback.
+ * When back online, the queue replays and real server responses update the cache.
  */
 export const createQueueLink = () => {
   return new ApolloLink((operation, forward) => {
@@ -70,7 +75,7 @@ export const createQueueLink = () => {
           operationName: operationName,
           mutation: operation.query,
           variables: operation.variables,
-          optimisticResponse: getOptimisticResponse(operation),
+          optimisticResponse: null, // Not needed - Apollo handles optimistic responses internally
           context: operation.getContext(),
           status: QueueStatus.PENDING,
           createdAt: Date.now(),
@@ -83,22 +88,16 @@ export const createQueueLink = () => {
         // Add to queue
         queueStore.addMutation(queuedMutation);
 
-        // Return optimistic response immediately
-        const optimisticResult = queuedMutation.optimisticResponse;
-        if (optimisticResult) {
-          observer.next({ data: optimisticResult });
-          observer.complete();
-        } else {
-          // If no optimistic response, return minimal success
-          const result: Record<string, any> = {
-            __typename: 'Mutation',
-          };
-          if (operationName) {
-            result[operationName] = true;
-          }
-          observer.next({ data: result });
-          observer.complete();
-        }
+        // Return empty success response to satisfy Observable contract
+        // Apollo has already applied the optimistic response to the cache
+        // Returning empty data signals successful queuing without overwriting anything
+        observer.next({
+          data: {},
+          errors: undefined,
+        });
+        observer.complete();
+
+        console.log(`✅ Queue Link: Queued ${operationName}, optimistic response preserved`);
       } catch (error) {
         observer.error(error);
       }
@@ -115,20 +114,4 @@ function isMutation(operation: Operation): boolean {
     definition.kind === 'OperationDefinition' &&
     definition.operation === 'mutation'
   );
-}
-
-/**
- * Extract optimistic response from operation context
- */
-function getOptimisticResponse(operation: Operation): any {
-  // Check if optimistic response was provided in mutation options
-  const context = operation.getContext();
-  if (context.optimisticResponse) {
-    return typeof context.optimisticResponse === 'function'
-      ? context.optimisticResponse(operation.variables)
-      : context.optimisticResponse;
-  }
-
-  // No optimistic response provided
-  return null;
 }

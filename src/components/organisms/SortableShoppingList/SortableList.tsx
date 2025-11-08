@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { View, Platform } from 'react-native';
+import { View } from 'react-native';
+import { RefreshControl } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
 import DraggableFlatList, {
@@ -16,6 +17,7 @@ import {
   findMovedItem,
   getNeighborIds,
 } from './SortableList.utils';
+import { DRAG_DISABLED_DISTANCE } from '#/constants/gestures';
 
 // Tab bar height constant (65px from FloatingTabBar)
 const TAB_BAR_HEIGHT = 65;
@@ -30,6 +32,8 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
   disabled = false,
   ListFooterComponent,
   onSwipeableWillOpen: externalOnSwipeableWillOpen,
+  onRefresh,
+  refreshing,
   ...flatListProps
 }) => {
   // Track local order for optimistic updates
@@ -38,6 +42,10 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
   const isUpdatingRef = useRef(false);
   // Track currently open swipeable item (only used if no external handler provided)
   const openSwipeableRef = useRef<any>(null);
+
+  // Track gesture states to prevent RefreshControl conflicts
+  const [isDragging, setIsDragging] = useState(false);
+  const [isSwipeActive, setIsSwipeActive] = useState(false);
 
   // Safe area insets for bottom padding
   const insets = useSafeAreaInsets();
@@ -51,8 +59,18 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
     }
   }, [items]);
 
-  // Handle swipeable item opening - close previously open item
+  // Drag gesture callbacks
+  const handleDragBegin = useCallback(() => {
+    setIsDragging(true);
+  }, []);
+
+  const handleDragRelease = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  // Handle swipeable item opening - close previously open item and track swipe state
   const handleSwipeableWillOpen = useCallback((ref: any) => {
+    setIsSwipeActive(true);
     // If external handler provided, use it (for coordinating across multiple lists)
     if (externalOnSwipeableWillOpen) {
       externalOnSwipeableWillOpen(ref);
@@ -66,6 +84,11 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
       openSwipeableRef.current = ref;
     }
   }, [externalOnSwipeableWillOpen]);
+
+  // Handle swipeable item closing - reset swipe active state
+  const handleSwipeableClose = useCallback(() => {
+    setIsSwipeActive(false);
+  }, []);
 
   // Handle drag end - called when user releases item
   const handleDragEnd = useCallback(
@@ -150,11 +173,12 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
             drag={disabled ? undefined : drag}
             isActive={isActive}
             onSwipeableWillOpen={handleSwipeableWillOpen}
+            onSwipeableClose={handleSwipeableClose}
           />
         </ScaleDecorator>
       );
     },
-    [onItemPress, onItemEdit, onItemDelete, onTogglePurchase, disabled, handleSwipeableWillOpen],
+    [onItemPress, onItemEdit, onItemDelete, onTogglePurchase, disabled, handleSwipeableWillOpen, handleSwipeableClose],
   );
 
   // Early validation
@@ -164,6 +188,17 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
   }
 
   if (items.length === 0) {
+    // If there's a footer (e.g., purchased items section), still render it
+    // This allows the CollapsiblePurchasedSection to display when all items are purchased
+    if (ListFooterComponent) {
+      return (
+        <View style={styles.container}>
+          {React.isValidElement(ListFooterComponent)
+            ? ListFooterComponent
+            : React.createElement(ListFooterComponent as React.ComponentType)}
+        </View>
+      );
+    }
     return null;
   }
 
@@ -173,17 +208,28 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
         data={localItems}
         renderItem={renderItem}
         keyExtractor={item => item.id}
-        onDragEnd={({ data }) => handleDragEnd(data)}
+        onDragBegin={handleDragBegin}
+        onDragEnd={({ data }) => {
+          handleDragRelease();
+          handleDragEnd(data);
+        }}
+        onRelease={handleDragRelease}
         showsVerticalScrollIndicator={
           flatListProps.showsVerticalScrollIndicator ?? true
         }
         contentContainerStyle={{
           paddingBottom: TAB_BAR_HEIGHT + insets.bottom + 16,
         }}
-        activationDistance={
-          disabled ? 999999 : Platform.OS === 'android' ? 10 : 5
-        }
+        activationDistance={DRAG_DISABLED_DISTANCE}
         ListFooterComponent={ListFooterComponent}
+        refreshControl={
+          onRefresh && !disabled && !isDragging && !isSwipeActive ? (
+            <RefreshControl
+              refreshing={refreshing || false}
+              onRefresh={onRefresh}
+            />
+          ) : undefined
+        }
       />
     </View>
   );

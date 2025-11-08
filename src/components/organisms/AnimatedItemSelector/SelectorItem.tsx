@@ -3,7 +3,7 @@ import { TouchableOpacity, Text } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import Animated, {
   LinearTransition,
-  FadeIn,
+  FadeInUp,
 } from 'react-native-reanimated';
 import { Icon } from '#utils';
 import type { SelectorItemProps, SelectableItem } from './types';
@@ -12,6 +12,7 @@ const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpaci
 
 export const SelectorItem = <T extends SelectableItem>({
   item,
+  index = 0,
   isSelected,
   onPress,
   displayProperty,
@@ -20,7 +21,7 @@ export const SelectorItem = <T extends SelectableItem>({
   if (renderCustomItem) {
     return (
       <Animated.View
-        entering={FadeIn}
+        entering={FadeInUp.delay(index * 40).springify()}
         layout={LinearTransition}
       >
         {renderCustomItem(item, isSelected, onPress)}
@@ -30,7 +31,7 @@ export const SelectorItem = <T extends SelectableItem>({
 
   return (
     <AnimatedTouchableOpacity
-      entering={FadeIn}
+      entering={FadeInUp.delay(index * 40).springify()}
       layout={LinearTransition}
       style={[
         styles.item,
@@ -48,7 +49,7 @@ export const SelectorItem = <T extends SelectableItem>({
       </Text>
       {isSelected && (
         <Animated.View
-          entering={FadeIn.duration(200)}
+          entering={FadeInUp.duration(200).springify()}
           style={styles.checkIcon}
         >
           <Icon name="check" size={18} color="#007AFF" />

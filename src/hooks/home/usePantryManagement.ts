@@ -258,15 +258,10 @@ export function usePantryManagement(pantryId: string | undefined) {
       });
       Alert.alert('Error', message);
     },
-    // Optimistic response for instant removal
-    optimisticResponse: (_variables: any) => ({
-      __typename: 'Mutation' as const,
-      deletePantryItem: {
-        __typename: 'PantryItem' as const,
-        // The mutation returns full PantryItemFragment, but we just need enough for removal
-        id: _variables?.id ?? '',
-      } as any,
-    }),
+    // No optimisticResponse - the mutation returns full PantryItemFragment (50+ fields)
+    // The cache update function below provides instant UI feedback for both online and offline scenarios
+    // This approach avoids cache normalization warnings and aligns with delete patterns used
+    // in useHomeManagement and useShoppingListManagement
     // Update cache to remove the item
     update: (cache: any, { data }: any, { variables }: any) => {
       if (!data?.deletePantryItem || !pantryId || !variables) return;

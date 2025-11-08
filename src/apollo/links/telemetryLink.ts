@@ -1,6 +1,7 @@
 import { ApolloLink, Operation, FetchResult, Observable } from '@apollo/client';
 import { Telemetry } from '#/services/telemetry';
 import { Environment } from '#/utils/environment';
+import { serializeError } from '#/utils/errorSerialization';
 
 interface GraphQLTiming {
   operationName: string;
@@ -99,11 +100,15 @@ export const createTelemetryLink = () => {
             const duration = Date.now() - timing.startTime;
             timings.delete(operationId);
 
+            // Serialize error to avoid circular reference issues from WebSocket timers
+            const serializedError = serializeError(error);
+
             Telemetry.error(`GraphQL Network Error in ${operationName}`, {
               operation_name: operationName,
               operation_type: operationType,
-              error_message: error.message,
-              error_stack: error.stack,
+              error_message: serializedError.message,
+              error_name: serializedError.name,
+              error_stack: serializedError.stack,
               duration_ms: duration,
               network_error: true,
             });

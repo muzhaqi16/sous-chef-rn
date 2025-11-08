@@ -7,8 +7,6 @@ import {
   useRemoveMemberMutation,
   useRevokeHomeInviteMutation,
   MembershipRole,
-  GetHomesDocument,
-  GetHomeDocument,
 } from '#generated';
 import { MESSAGES } from '#constants';
 import { formatRole } from '#utils/formatters';
@@ -26,7 +24,10 @@ export function useHomeDetailManagement(homeId: string) {
 
   // Mutations
   const [updateHomeMutation, { loading: updating }] = useUpdateHomeMutation({
-    refetchQueries: [{ query: GetHomesDocument }],
+    // No refetchQueries or update function needed!
+    // Mutation returns full HomeFragment, so Apollo automatically normalizes
+    // and updates the cache based on __typename + id
+    errorPolicy: 'all',
     onError: error => {
       Alert.alert(
         'Error',
@@ -36,7 +37,27 @@ export function useHomeDetailManagement(homeId: string) {
   });
 
   const [updateMembershipMutation] = useUpdateMembershipMutation({
-    refetchQueries: [{ query: GetHomesDocument }],
+    errorPolicy: 'all',
+    // Use cache.modify to update the membership role field
+    update(cache, { data }, { variables }) {
+      if (!data?.updateMembership || !variables) return;
+
+      const membershipId = variables.id;
+      const newRole = variables.input.role;
+
+      // Directly modify the cached membership's role field
+      cache.modify({
+        id: cache.identify({ __typename: 'Membership', id: membershipId }),
+        fields: {
+          role() {
+            return newRole;
+          },
+          updatedAt() {
+            return new Date().toISOString();
+          },
+        },
+      });
+    },
     onError: error => {
       Alert.alert(
         'Error',
@@ -46,17 +67,66 @@ export function useHomeDetailManagement(homeId: string) {
   });
 
   const [removeMemberMutation] = useRemoveMemberMutation({
-    refetchQueries: [{ query: GetHomesDocument }],
+    errorPolicy: 'all',
+    // Remove member from home's members array using cache.modify
+    update(cache, { data }, { variables }) {
+      if (!data?.removeMember || !variables) return;
+
+      const membershipId = variables.membershipId;
+
+      // Remove from home's members array
+      cache.modify({
+        id: cache.identify({ __typename: 'Home', id: homeId }),
+        fields: {
+          members(existingMembers = [], { readField }) {
+            return existingMembers.filter(
+              (memberRef: any) => readField('id', memberRef) !== membershipId,
+            );
+          },
+        },
+      });
+
+      // Evict the membership entity from cache
+      cache.evict({
+        id: cache.identify({ __typename: 'Membership', id: membershipId }),
+      });
+
+      // Garbage collect orphaned data
+      cache.gc();
+    },
     onError: error => {
       Alert.alert('Error', error.message || MESSAGES.errors.removeMemberFailed);
     },
   });
 
   const [revokeInviteMutation] = useRevokeHomeInviteMutation({
-    refetchQueries: [
-      { query: GetHomesDocument },
-      { query: GetHomeDocument, variables: { homeId } },
-    ],
+    errorPolicy: 'all',
+    // Remove invite from home's invites array using cache.modify
+    update(cache, { data }, { variables }) {
+      if (!data?.revokeHomeInvite || !variables) return;
+
+      const inviteId = variables.id;
+
+      // Remove from home's invites array
+      cache.modify({
+        id: cache.identify({ __typename: 'Home', id: homeId }),
+        fields: {
+          invites(existingInvites = [], { readField }) {
+            return existingInvites.filter(
+              (inviteRef: any) => readField('id', inviteRef) !== inviteId,
+            );
+          },
+        },
+      });
+
+      // Evict the invite entity from cache
+      cache.evict({
+        id: cache.identify({ __typename: 'HomeInvite', id: inviteId }),
+      });
+
+      // Garbage collect orphaned data
+      cache.gc();
+    },
     onError: error => {
       Alert.alert('Error', error.message || MESSAGES.errors.revokeInviteFailed);
     },

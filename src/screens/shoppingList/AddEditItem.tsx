@@ -1,7 +1,6 @@
 import React, {useState, useEffect} from 'react';
-import {Alert, View, Text} from 'react-native';
+import {Alert} from 'react-native';
 import {ApolloCache} from '@apollo/client';
-import {StyleSheet} from 'react-native-unistyles';
 import {
   useAddItemToShoppingListMutation,
   useUpdateShoppingListItemMutation,
@@ -16,7 +15,7 @@ import {Input} from '#components/base/Input';
 import {ItemAutocompleteInput} from '#components/molecules/ItemAutocompleteInput';
 import {UnitsAutocompleteInput} from '#components/molecules/UnitsAutocompleteInput';
 import {CategoryAutocompleteInput} from '#components/molecules/CategoryAutocompleteInput';
-import {Counter} from '#components/molecules/Counter';
+import {FractionInput} from '#components/molecules/FractionInput';
 import {useAppNavigation} from '#hooks';
 import {ShoppingListStackParamList} from '#navigation/stacks/ShoppingListStack';
 
@@ -33,7 +32,7 @@ export const AddEditItem: React.FC<{
 
   // Form state
   const [itemName, setItemName] = useState('');
-  const [quantity, setQuantity] = useState<number>(1);
+  const [quantityInput, setQuantityInput] = useState<string>('1');
   const [unit, setUnit] = useState('');
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
@@ -84,41 +83,7 @@ export const AddEditItem: React.FC<{
   });
 
   const [updateItem] = useUpdateShoppingListItemMutation({
-    // Update cache immediately for optimistic UI
-    update: (cache: ApolloCache, {data: mutationData}: any) => {
-      if (!mutationData?.updateShoppingListItem) return;
-
-      const updatedItem = mutationData.updateShoppingListItem;
-
-      try {
-        // Read the current shopping list items from cache
-        const existingData = cache.readQuery<{
-          shoppingListItems: ShoppingListItemFragment[];
-        }>({
-          query: GetShoppingListItemsDocument,
-          variables: {shoppingListId: listId},
-        });
-
-        if (existingData?.shoppingListItems) {
-          // Update the existing item in the list
-          const updatedItems = existingData.shoppingListItems.map(
-            (item: any) => (item.id === updatedItem.id ? updatedItem : item),
-          );
-
-          cache.writeQuery({
-            query: GetShoppingListItemsDocument,
-            variables: {shoppingListId: listId},
-            data: {
-              shoppingListItems: updatedItems,
-            },
-          });
-        }
-      } catch (error) {
-        console.warn('Cache update failed:', error);
-        // Cache update failed, but mutation still succeeded
-      }
-    },
-    onCompleted: () => {},
+    errorPolicy: 'all',
     onError: error => {
       console.error('Update item error:', error);
     },
@@ -129,10 +94,12 @@ export const AddEditItem: React.FC<{
     if (data?.shoppingListItem) {
       const item = data.shoppingListItem;
       setItemName(item.itemName || '');
-      setQuantity(item.quantity || 1);
+      // Use quantityInput if available (preserves fractions), otherwise use quantity
+      setQuantityInput(item.quantityInput || item.quantity?.toString() || '1');
       setUnit(item.unitName || '');
       setNotes(item.notes || '');
       setCategory(item.category || '');
+      setSelectedUnitId(item.unit?.id || null);
     }
   }, [data]);
 
@@ -149,15 +116,6 @@ export const AddEditItem: React.FC<{
     setSelectedUnitId(unitId);
   };
 
-  // Handle quantity increment/decrement
-  const handleIncrementQuantity = () => {
-    setQuantity(prev => prev + 1);
-  };
-
-  const handleDecrementQuantity = () => {
-    setQuantity(prev => Math.max(1, prev - 1));
-  };
-
   // Handle form submission
   const handleSave = async () => {
     if (!itemName.trim()) {
@@ -165,8 +123,47 @@ export const AddEditItem: React.FC<{
       return;
     }
 
+    if (!quantityInput.trim()) {
+      Alert.alert('Error', 'Please enter a quantity');
+      return;
+    }
+
     setSaving(true);
     try {
+      // Parse quantity input to number
+      // Backend accepts Float for now, will support String in future
+      let quantityValue: number;
+      try {
+        // Parse fractional input (e.g., "1 1/4" or "3/4" or "1.5")
+        const trimmed = quantityInput.trim();
+
+        // Check if it contains a fraction
+        if (trimmed.includes('/')) {
+          const parts = trimmed.split(/\s+/);
+          if (parts.length === 2) {
+            // Mixed number like "1 1/4"
+            const whole = parseInt(parts[0]);
+            const [num, den] = parts[1].split('/').map(Number);
+            quantityValue = whole + num / den;
+          } else {
+            // Simple fraction like "3/4"
+            const [num, den] = trimmed.split('/').map(Number);
+            quantityValue = num / den;
+          }
+        } else {
+          // Regular number
+          quantityValue = parseFloat(trimmed);
+        }
+
+        if (isNaN(quantityValue) || quantityValue <= 0) {
+          Alert.alert('Error', 'Please enter a valid quantity');
+          return;
+        }
+      } catch (err) {
+        Alert.alert('Error', 'Please enter a valid quantity');
+        return;
+      }
+
       // Prepare unit data - prioritize selected unit ID if available
       const unitData = {
         unitName: unit, // Always include the display name
@@ -180,7 +177,7 @@ export const AddEditItem: React.FC<{
             id: itemId,
             input: {
               itemName,
-              quantity,
+              quantity: quantityValue,
               ...unitData,
               notes,
               category,
@@ -193,7 +190,7 @@ export const AddEditItem: React.FC<{
             input: {
               shoppingListId: listId,
               itemName,
-              quantity,
+              quantity: quantityValue,
               ...unitData,
               notes,
               category,
@@ -253,16 +250,12 @@ export const AddEditItem: React.FC<{
       )}
 
       {/* Quantity */}
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Quantity *</Text>
-        <View style={styles.quantityContainer}>
-          <Counter
-            count={quantity}
-            onIncrement={handleIncrementQuantity}
-            onDecrement={handleDecrementQuantity}
-          />
-        </View>
-      </View>
+      <FractionInput
+        label="Quantity"
+        value={quantityInput}
+        onChangeText={setQuantityInput}
+        placeholder="e.g., 1 1/4, 2.5, or 3"
+      />
 
       {/* Unit */}
       <UnitsAutocompleteInput
@@ -295,20 +288,3 @@ export const AddEditItem: React.FC<{
     </FormModal>
   );
 };
-
-const styles = StyleSheet.create(theme => ({
-  inputGroup: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.colors.textSecondary,
-    marginBottom: 8,
-  },
-  quantityContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingVertical: 8,
-  },
-}));
