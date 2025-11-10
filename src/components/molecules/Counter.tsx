@@ -7,39 +7,47 @@ export const Counter = ({
   count,
   onIncrement,
   onDecrement,
+  disabled = false,
 }: {
   count: number;
   onIncrement: () => void;
   onDecrement: () => void;
+  disabled?: boolean;
 }) => {
   const handleDecrement = (e: any) => {
     e.stopPropagation();
-    onDecrement();
+    if (!disabled) {
+      onDecrement();
+    }
   };
 
   const handleIncrement = (e: any) => {
     e.stopPropagation();
-    onIncrement();
+    if (!disabled) {
+      onIncrement();
+    }
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, disabled && styles.containerDisabled]}>
       <Pressable
         onPress={handleDecrement}
+        disabled={disabled}
         style={({pressed}) => [
           styles.cardAdd,
-          pressed && styles.pressed,
+          pressed && !disabled && styles.pressed,
         ]}>
-        <Icon color="#1d1d1d" name="remove" size={11} />
+        <Icon color={disabled ? '#b0b0b0' : '#1d1d1d'} name="remove" size={11} />
       </Pressable>
-      <Text style={styles.counterActionText}>{count}</Text>
+      <Text style={[styles.counterActionText, disabled && styles.textDisabled]}>{count}</Text>
       <Pressable
         onPress={handleIncrement}
+        disabled={disabled}
         style={({pressed}) => [
           styles.cardMinus,
-          pressed && styles.pressed,
+          pressed && !disabled && styles.pressed,
         ]}>
-        <Icon color="#1d1d1d" name="add" size={11} />
+        <Icon color={disabled ? '#b0b0b0' : '#1d1d1d'} name="add" size={11} />
       </Pressable>
     </View>
   );
@@ -100,5 +108,11 @@ const styles = StyleSheet.create(theme => ({
   },
   pressed: {
     opacity: 0.7,
+  },
+  containerDisabled: {
+    borderColor: '#d0d0d0',
+  },
+  textDisabled: {
+    color: '#b0b0b0',
   },
 }));

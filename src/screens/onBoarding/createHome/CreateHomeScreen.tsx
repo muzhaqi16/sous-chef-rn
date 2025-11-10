@@ -4,7 +4,6 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { View, Text, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { formatRole } from '#utils/formatters';
-import { ApolloCache } from '@apollo/client';
 
 // Components
 import { FormContent, type FormValues } from './FormContent';
@@ -22,7 +21,6 @@ import {
   useGetHomesQuery,
   useGetPantriesQuery,
   GetHomesDocument,
-  GetHomesQuery,
   useGetMyPendingInvitesQuery,
   useAcceptHomeInviteMutation,
   useDeclineHomeInviteMutation,
@@ -35,6 +33,7 @@ import { useOnboardingNavigation } from '#hooks';
 // Validation & Helpers
 import { getCreateHomeSchema } from '#/utils';
 import { createPantryForHome, showPantryCreationError } from './helpers';
+import { normalizeHomes } from '#/utils/connectionUtils';
 
 export const CreateHomeScreen = () => {
   const { theme } = useUnistyles();
@@ -80,7 +79,7 @@ export const CreateHomeScreen = () => {
       fetchPolicy: 'cache-and-network',
     });
 
-  const homes = homesData?.homes || [];
+  const homes = normalizeHomes(homesData?.homes);
   const pantries = pantriesData?.pantries || [];
   const pendingInvites = pendingInvitesData?.myPendingInvites || [];
   const existingHome = homes[0];
@@ -92,40 +91,61 @@ export const CreateHomeScreen = () => {
   // GraphQL Mutations
   const [createHome] = useCreateHomeMutation();
   const [createPantry] = useCreatePantryMutation({
-    update: (cache: ApolloCache, { data }: any) => {
-      if (data?.createPantry) {
-        try {
-          const existingHomesData = cache.readQuery<GetHomesQuery>({
-            query: GetHomesDocument,
-          });
-
-          if (existingHomesData?.homes) {
-            const updatedHomes = existingHomesData.homes.map((home: any) => {
-              if (home.id === data.createPantry.homeId) {
-                return {
-                  ...home,
-                  pantries: [
-                    ...(home.pantries || []),
-                    {
-                      id: data.createPantry.id,
-                      name: data.createPantry.name,
-                      isDefault: data.createPantry.isDefault,
-                    },
-                  ],
-                };
-              }
-              return home;
-            });
-
-            cache.writeQuery<GetHomesQuery>({
-              query: GetHomesDocument,
-              data: { homes: updatedHomes },
-            });
-          }
-        } catch (error) {
-          console.log('Cache update failed, will rely on refetch:', error);
-        }
+    update: (cache, { data }) => {
+      const newPantry = data?.createPantry;
+      if (!newPantry?.homeId) {
+        return;
       }
+
+      const homeCacheId = cache.identify({
+        __typename: 'Home',
+        id: newPantry.homeId,
+      });
+
+      if (!homeCacheId) {
+        return;
+      }
+
+      cache.modify({
+        id: homeCacheId,
+        fields: {
+          pantries(existingPantries = []) {
+            return [
+              ...existingPantries,
+              {
+                __typename: 'Pantry',
+                id: newPantry.id,
+                name: newPantry.name,
+                isDefault: newPantry.isDefault,
+              },
+            ];
+          },
+          pantriesConnection(existingConnection = null) {
+            if (!existingConnection) {
+              return existingConnection;
+            }
+
+            const newEdge = {
+              __typename: 'PantryEdge',
+              cursor: newPantry.id,
+              node: {
+                __typename: 'Pantry',
+                ...newPantry,
+              },
+            };
+
+            const edges = [...(existingConnection.edges || []), newEdge];
+
+            return {
+              ...existingConnection,
+              edges,
+              totalCount:
+                (existingConnection.totalCount ?? edges.length) +
+                (existingConnection.edges?.length === edges.length ? 0 : 0),
+            };
+          },
+        },
+      });
     },
   });
 

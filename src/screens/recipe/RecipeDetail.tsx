@@ -38,6 +38,7 @@ import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { BottomSheetAction } from '#components';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { useAppNavigation } from '#/hooks';
+import { normalizeRecipes } from '#/utils/connectionUtils';
 
 type RecipeDetailRouteProp = RouteProp<RecipeStackParamList, 'RecipeDetail'>;
 
@@ -185,20 +186,30 @@ export const RecipeDetail: React.FC = () => {
     fetchRecipe();
   }, [externalSource, externalId, recipeId, backendLoading]);
 
+  // Normalize recipes data
+  const normalizedRecipes = useMemo(
+    () => normalizeRecipes(myRecipesData?.recipes),
+    [myRecipesData?.recipes],
+  );
+  const savedRecipes = useMemo(
+    () => normalizedRecipes?.recipes || [],
+    [normalizedRecipes],
+  );
+
   // Check if current external recipe is already saved
   useEffect(() => {
-    if (!externalSource || !externalId || !myRecipesData?.recipes?.recipes) {
+    if (!externalSource || !externalId || savedRecipes.length === 0) {
       setRecipeSaved(false);
       return;
     }
 
-    const isAlreadySaved = myRecipesData.recipes.recipes.some(
+    const isAlreadySaved = savedRecipes.some(
       (recipe: any) =>
         recipe.externalSource === externalSource &&
         recipe.externalId === externalId,
     );
     setRecipeSaved(isAlreadySaved);
-  }, [externalSource, externalId, myRecipesData]);
+  }, [externalSource, externalId, savedRecipes]);
 
   // Determine which recipe to display
   const isBackendRecipe = !!recipeId && !!backendRecipe;

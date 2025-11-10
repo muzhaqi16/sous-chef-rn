@@ -21,9 +21,8 @@ import {
   useGetPantryQuery,
   useGetUnitBySymbolLazyQuery,
   ItemSuggestion,
-  GetPantryItemsDocument,
-  PantryItemFragment,
 } from '#generated';
+import { normalizePantry } from '#/utils/connectionUtils';
 
 import { PantryItemFormHeader } from './PantryItemFormHeader';
 import { ItemInformationSection } from './ItemInformationSection';
@@ -104,28 +103,59 @@ export const AddPantryItemForm: React.FC<AddPantryItemFormProps> = ({
     fetchPolicy: 'cache-first',
   });
 
-  const storageLocations = pantryData?.pantry?.storageLocations || [];
+  const normalizedPantry = pantryData?.pantry
+    ? normalizePantry(pantryData.pantry)
+    : null;
+  const storageLocations = normalizedPantry?.storageLocations || [];
 
   const [addItem] = useCreatePantryItemMutation({
     update: (cache: ApolloCache, { data: mutationData }: any) => {
       if (!mutationData?.createPantryItem || !currentPantryId) return;
-      const newItem = mutationData.createPantryItem;
+
       try {
-        const existingData = cache.readQuery<{
-          pantryItems: PantryItemFragment[];
-        }>({
-          query: GetPantryItemsDocument,
-          variables: { pantryId: currentPantryId },
+        // Modify the Pantry.itemsConnection field in the cache
+        const pantryCacheId = cache.identify({
+          __typename: 'Pantry',
+          id: currentPantryId,
         });
-        if (existingData?.pantryItems) {
-          cache.writeQuery({
-            query: GetPantryItemsDocument,
-            variables: { pantryId: currentPantryId },
-            data: {
-              pantryItems: [newItem, ...existingData.pantryItems],
+
+        if (!pantryCacheId) return;
+
+        cache.modify({
+          id: pantryCacheId,
+          fields: {
+            itemsConnection(
+              existingConnection: any = {},
+              { readField, toReference }: any,
+            ) {
+              const newItemRef = toReference(mutationData.createPantryItem);
+              const existingEdges = existingConnection?.edges || [];
+
+              // Check if item already exists (avoid duplicates)
+              const exists = existingEdges.some(
+                (edge: any) =>
+                  readField('id', edge?.node) === mutationData.createPantryItem.id,
+              );
+
+              if (exists) {
+                return existingConnection;
+              }
+
+              // Add new item at the beginning of the list
+              const newEdge = {
+                __typename: 'PantryItemEdge',
+                node: newItemRef,
+                cursor: '', // Will be populated on next fetch
+              };
+
+              return {
+                ...existingConnection,
+                edges: [newEdge, ...existingEdges],
+                totalCount: (existingConnection?.totalCount || 0) + 1,
+              };
             },
-          });
-        }
+          },
+        });
       } catch (error) {
         console.warn('Cache update failed:', error);
       }

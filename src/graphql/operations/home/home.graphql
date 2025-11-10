@@ -16,31 +16,7 @@ query GetHomeBasic($homeId: ID!) {
 
 query GetHomes {
   homes {
-    id
-    name
-    joinCode
-    allowJoinCode
-    createdAt
-    updatedAt
-    pantries {
-      id
-      name
-      isDefault
-    }
-    members {
-      id
-      homeId
-      userId
-      role
-      status
-      displayName
-      user {
-        ...PartialUser
-      }
-    }
-    invites {
-      ...HomeInviteFragment
-    }
+    ...HomeFragment
   }
 }
 
@@ -68,26 +44,7 @@ query GetHomeByJoinCode($joinCode: String!) {
 
 mutation CreateHome($input: CreateHomeInput!) {
   createHome(input: $input) {
-    id
-    name
-    createdAt
-    updatedAt
-    pantries {
-      id
-      name
-      isDefault
-    }
-    members {
-      id
-      homeId
-      userId
-      role
-      status
-      displayName
-      user {
-        ...PartialUser
-      }
-    }
+    ...HomeFragment
   }
 }
 

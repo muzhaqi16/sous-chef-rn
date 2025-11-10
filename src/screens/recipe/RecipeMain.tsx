@@ -1,20 +1,25 @@
 import React, { useMemo, useCallback, useState } from 'react';
-import { View, Image, Alert } from 'react-native';
+import { View, Image, Alert, Text, ActivityIndicator } from 'react-native';
 import { useAppNavigation } from '#hooks';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
 import { ListTemplate, SearchBarAction, HeaderAction } from '#components';
-import { useMyRecipesQuery, useDeleteRecipeMutation } from '#generated';
+import { useDeleteRecipeMutation } from '#generated';
+import { useRecipeManagement } from '#/hooks/recipe/useRecipeManagement';
 
 export const RecipeMain: React.FC = () => {
   const { navigate } = useAppNavigation();
   const { theme } = useUnistyles();
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Fetch user's saved recipes from backend
-  const { data, loading, refetch } = useMyRecipesQuery({
-    fetchPolicy: 'cache-and-network',
-  });
-  const recipes = useMemo(() => data?.recipes?.recipes || [], [data]);
+  // Fetch user's saved recipes from backend with pagination
+  const {
+    recipes,
+    loading,
+    refetch,
+    loadMore,
+    hasMore,
+    isLoadingMore,
+  } = useRecipeManagement();
 
   // Filter recipes based on search query
   const filteredRecipes = useMemo(() => {
@@ -120,6 +125,26 @@ export const RecipeMain: React.FC = () => {
     },
   };
 
+  // Footer component for pagination
+  const ListFooter = useMemo(() => {
+    if (isLoadingMore) {
+      return (
+        <View style={styles.footerLoader}>
+          <ActivityIndicator size="small" color={theme.colors.primary} />
+          <Text style={styles.footerText}>Loading more recipes...</Text>
+        </View>
+      );
+    }
+    if (hasMore && !loading && recipes.length > 0) {
+      return (
+        <View style={styles.footerHint}>
+          <Text style={styles.footerHintText}>Scroll to load more</Text>
+        </View>
+      );
+    }
+    return null;
+  }, [isLoadingMore, hasMore, loading, recipes.length, theme.colors.primary]);
+
   return (
     <View style={styles.container}>
       <ListTemplate
@@ -136,6 +161,9 @@ export const RecipeMain: React.FC = () => {
         headerActions={headerActions}
         searchBarActions={searchBarActions}
         emptyState={emptyStateConfig}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={ListFooter}
       />
     </View>
   );
@@ -159,5 +187,24 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.md,
     resizeMode: 'cover',
     elevation: 2,
+  },
+  footerLoader: {
+    padding: theme.spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
+  },
+  footerText: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textSecondary,
+  },
+  footerHint: {
+    padding: theme.spacing.md,
+    alignItems: 'center',
+  },
+  footerHintText: {
+    fontSize: theme.fonts.size.xs,
+    color: theme.colors.textTertiary,
   },
 }));

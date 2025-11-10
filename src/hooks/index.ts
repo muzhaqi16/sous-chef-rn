@@ -8,6 +8,7 @@ export * from './home/usePantryManagement';
 export * from './home/useCategoryManagement';
 export * from './home/useHomeDetailManagement';
 export * from './storageLocation/useStorageLocationManagement';
+export * from './recipe/useRecipeManagement';
 export * from './useItemSelector';
 export * from './navigation';
 export { useSearchableList } from './useSearchableList';

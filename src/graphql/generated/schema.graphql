@@ -1086,6 +1086,7 @@ input CreatePantryItemInput {
   pantryId: ID!
   priority: Int
   purchaseId: String
+  quantityInput: String
   storageLocation: String
   storageNotes: String
   storageState: StorageState
@@ -1856,10 +1857,6 @@ type Home {
   deletedAt: DateTime
   description: String
   id: ID!
-  invites: [HomeInvite!]
-    @deprecated(
-      reason: "Use invitesConnection for pagination. Will be removed in v2.0"
-    )
   invitesConnection(
     after: String
     before: String
@@ -1869,10 +1866,6 @@ type Home {
   isPublic: Boolean!
   joinCode: String
   maxMembers: Int
-  members: [Membership!]!
-    @deprecated(
-      reason: "Use membersConnection for pagination. Will be removed in v2.0"
-    )
   membersConnection(
     after: String
     before: String
@@ -1882,10 +1875,6 @@ type Home {
   metadata: JSON
   myMembership: Membership
   name: String!
-  pantries: [Pantry!]
-    @deprecated(
-      reason: "Use pantriesConnection for pagination. Will be removed in v2.0"
-    )
   pantriesConnection(
     after: String
     before: String
@@ -2430,7 +2419,6 @@ type ItemUnitConversion {
 
 input ItemUnitInput {
   averagePricePerUnit: Float
-  conversionRatio: Float
   isDefault: Boolean
   isPreferred: Boolean
   packageDescription: String
@@ -3682,10 +3670,9 @@ type Pantry {
   homeId: String!
   id: ID!
   isDefault: Boolean!
-  items: [PantryItem!]
-    @deprecated(
-      reason: "Use itemsConnection for pagination. Will be removed in v2.0"
-    )
+  """
+  Paginated list of items in this pantry
+  """
   itemsConnection(
     after: String
     before: String
@@ -3695,14 +3682,6 @@ type Pantry {
   location: String
   metadata: JSON
   name: String!
-  """
-  Storage locations available for this pantry's home.
-  Useful for assigning pantry items to specific storage locations.
-  """
-  storageLocations: [StorageLocation!]!
-    @deprecated(
-      reason: "Use storageLocationsConnection for pagination. Will be removed in v2.0"
-    )
   storageLocationsConnection(
     after: String
     before: String
@@ -4342,14 +4321,21 @@ type Query {
   recentNotifications(limit: Int = 10): [Notification!]!
   recipe(id: ID!): Recipe
   recipeCookingLogs(limit: Int, offset: Int, recipeId: ID!): [CookingLog!]!
-  recipeSuggestions: [Recipe!]!
+  recipeSuggestions(
+    after: String
+    before: String
+    first: Int
+    last: Int
+  ): RecipeConnection!
   recipes(
+    after: String
+    before: String
     category: RecipeCategory
     difficulty: Difficulty
+    first: Int
     includeDeleted: Boolean
-    skip: Int
-    take: Int
-  ): RecipesResponse!
+    last: Int
+  ): RecipeConnection!
   recommendedItems(limit: Int, userId: String): [ItemSuggestion!]
   recommendedStores: [Store!]!
   relatedItems(itemId: ID!): RelatedItemsResponse
@@ -4363,7 +4349,13 @@ type Query {
     filters: LoginHistoryFiltersInput
     query: String!
   ): [LoginHistory!]!
-  searchRecipes(query: String!): [Recipe!]!
+  searchRecipes(
+    after: String
+    before: String
+    first: Int
+    last: Int
+    query: String!
+  ): RecipeConnection!
   searchShoppingLists(query: String!): [ShoppingList!]!
   searchStores(query: String!): [Store!]!
   searchUnits(query: String!, type: UnitType): [Unit!]!
@@ -4641,11 +4633,6 @@ enum RecipeStatus {
   PUBLISHED
 }
 
-type RecipesResponse {
-  recipes: [Recipe!]!
-  totalCount: Int!
-}
-
 input RecordPantryItemUsageInput {
   cookingLogId: String
   mealPlanItemId: String
@@ -4850,10 +4837,6 @@ type ShoppingList {
   isPublic: Boolean!
   isRecurring: Boolean!
   isTemplate: Boolean!
-  items: [ShoppingListItem!]!
-    @deprecated(
-      reason: "Use itemsConnection for pagination. Will be removed in v2.0"
-    )
   itemsConnection(
     after: String
     before: String
@@ -5548,6 +5531,7 @@ input SyncPantryItemInput {
   pantryId: ID!
   priority: Int
   purchaseId: String
+  quantityInput: String
   reservedQuantity: Float
   storageLocation: String
   storageNotes: String
@@ -6071,6 +6055,7 @@ input UpdatePantryItemInput {
   lowStockAlert: Boolean
   openedAt: String
   priority: Int
+  quantityInput: String
   reservedQuantity: Float
   storageLocation: String
   storageNotes: String

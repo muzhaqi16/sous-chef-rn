@@ -58,13 +58,33 @@ export const createTelemetryLink = () => {
 
             if (response.errors && response.errors.length > 0) {
               response.errors.forEach((error: any) => {
+                // Safely serialize error.path
+                let errorPath: string | undefined;
+                if (error.path) {
+                  try {
+                    errorPath = JSON.stringify(error.path);
+                  } catch {
+                    errorPath = 'Path contained circular references';
+                  }
+                }
+
+                // Safely serialize error.extensions
+                let errorExtensions: string | undefined;
+                if (error.extensions) {
+                  try {
+                    errorExtensions = JSON.stringify(error.extensions);
+                  } catch {
+                    errorExtensions = 'Extensions contained circular references';
+                  }
+                }
+
                 Telemetry.error(`GraphQL Error in ${operationName}`, {
                   operation_name: operationName,
                   operation_type: operationType,
                   error_message: error.message,
-                  error_path: error.path ? JSON.stringify(error.path) : undefined,
+                  error_path: errorPath,
                   duration_ms: duration,
-                  error_extensions: error.extensions ? JSON.stringify(error.extensions) : undefined,
+                  error_extensions: errorExtensions,
                 });
               });
 

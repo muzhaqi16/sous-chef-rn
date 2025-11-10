@@ -73,6 +73,8 @@ const ShoppingListContent: React.FC<{
   onClearAllPurchased?: () => Promise<void>;
   onSwipeableWillOpen?: (ref: any) => void;
   onSwipeableClose?: () => void;
+  purchasedSectionExpanded?: boolean;
+  onPurchasedSectionExpandedChange?: (expanded: boolean) => void;
 }> = ({
   items,
   onItemPress,
@@ -87,6 +89,8 @@ const ShoppingListContent: React.FC<{
   onClearAllPurchased,
   onSwipeableWillOpen,
   onSwipeableClose,
+  purchasedSectionExpanded,
+  onPurchasedSectionExpandedChange,
 }) => {
   // Separate items by purchased status
   const unpurchasedItems = items.filter(item => !item.isPurchased);
@@ -140,6 +144,8 @@ const ShoppingListContent: React.FC<{
             disabled={disabled}
             onSwipeableWillOpen={onSwipeableWillOpen}
             onSwipeableClose={onSwipeableClose}
+            isExpanded={purchasedSectionExpanded}
+            onExpandedChange={onPurchasedSectionExpandedChange}
           />
         }
       />
@@ -249,6 +255,8 @@ export const ShoppingListMain: React.FC = () => {
   });
 
   const [refreshing, setRefreshing] = useState(false);
+  const [purchasedSectionExpandedState, setPurchasedSectionExpandedState] =
+    useState<Record<string, boolean>>({});
 
   // Use cache-and-network like pantry and recipes - Apollo handles offline gracefully
   const { data, previousData } = useGetShoppingListsQuery({
@@ -267,6 +275,34 @@ export const ShoppingListMain: React.FC = () => {
   const currentListId = selectedShoppingListId || defaultList?.id;
   const currentList =
     lists.find(list => list.id === currentListId) || defaultList;
+
+  const purchasedPreferenceExists = Boolean(
+    currentListId && currentListId in purchasedSectionExpandedState,
+  );
+  const purchasedSectionExpanded = currentListId
+    ? purchasedSectionExpandedState[currentListId]
+    : undefined;
+  const controlledPurchasedSectionExpanded = purchasedPreferenceExists
+    ? purchasedSectionExpanded
+    : undefined;
+
+  const handlePurchasedSectionExpandedChange = useCallback(
+    (expanded: boolean) => {
+      if (!currentListId) return;
+
+      setPurchasedSectionExpandedState(prev => {
+        if (prev[currentListId] === expanded && currentListId in prev) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          [currentListId]: expanded,
+        };
+      });
+    },
+    [currentListId],
+  );
 
   // Auto-select the default list if none is selected or if selected list no longer exists
   useEffect(() => {
@@ -295,6 +331,10 @@ export const ShoppingListMain: React.FC = () => {
     toggleItem,
     removeItem,
     refetch: refetchItems,
+    loadMore,
+    hasMore,
+    isLoadingMore,
+    loading,
   } = useShoppingListManagement(currentListId);
 
   // Show swipe hint after items load (only once, only if there are unpurchased items)
@@ -453,20 +493,12 @@ export const ShoppingListMain: React.FC = () => {
   // Quantity update handlers using specialized mutation (80% payload reduction)
   const handleIncrementQuantity = useCallback(
     async (itemId: string) => {
-      // Find item from the items array (already available from hook)
-      const currentItem = items.find(item => item.id === itemId);
-
-      if (!currentItem) {
-        console.warn('Item not found:', itemId);
-        return;
-      }
-
-      const newQuantity = (currentItem.quantity || 1) + 1;
-
+      // Always read fresh data directly from Apollo cache
       const cacheId = client.cache.identify({
         __typename: 'ShoppingListItem',
         id: itemId,
       });
+
       const fullItem = cacheId
         ? client.readFragment<any>({
             id: cacheId,
@@ -474,7 +506,14 @@ export const ShoppingListMain: React.FC = () => {
             fragmentName: 'ShoppingListItemFragment',
           })
         : null;
-      const optimisticItem = fullItem ?? currentItem ?? null;
+
+      if (!fullItem) {
+        console.warn('Item not in cache, cannot increment:', itemId);
+        return;
+      }
+
+      // Use fresh quantity from cache, not stale items array
+      const newQuantity = (fullItem.quantity || 0) + 1;
 
       try {
         optimisticDataPersistence.save(
@@ -488,30 +527,19 @@ export const ShoppingListMain: React.FC = () => {
           variables: {
             itemId,
             quantity: newQuantity.toString(),
-            version: currentItem.version,
+            version: fullItem.version,
           },
-          optimisticResponse: optimisticItem
-            ? {
-                __typename: 'Mutation',
-                updateShoppingListItemQuantity: {
-                  ...optimisticItem,
-                  __typename: 'ShoppingListItem',
-                  quantity: newQuantity,
-                  // Keep current version; server response will deliver incremented version
-                  version: optimisticItem.version ?? currentItem.version,
-                  updatedAt: new Date().toISOString(),
-                },
-              }
-            : {
-                __typename: 'Mutation',
-                updateShoppingListItemQuantity: {
-                  __typename: 'ShoppingListItem',
-                  id: itemId,
-                  quantity: newQuantity,
-                  version: currentItem.version,
-                  updatedAt: new Date().toISOString(),
-                } as any,
-              },
+          optimisticResponse: {
+            __typename: 'Mutation',
+            updateShoppingListItemQuantity: {
+              ...fullItem,
+              __typename: 'ShoppingListItem',
+              quantity: newQuantity,
+              // Keep current version; server response will deliver incremented version
+              version: fullItem.version,
+              updatedAt: new Date().toISOString(),
+            },
+          },
           onCompleted: data => {
             if (data?.updateShoppingListItemQuantity) {
               optimisticDataPersistence.clear(
@@ -534,25 +562,17 @@ export const ShoppingListMain: React.FC = () => {
         Alert.alert('Error', 'Failed to update quantity');
       }
     },
-    [updateQuantity, refetchItems, items, client],
+    [updateQuantity, refetchItems, client],
   );
 
   const handleDecrementQuantity = useCallback(
     async (itemId: string) => {
-      // Find item from the items array (already available from hook)
-      const currentItem = items.find(item => item.id === itemId);
-
-      if (!currentItem) {
-        console.warn('Item not found:', itemId);
-        return;
-      }
-
-      const newQuantity = Math.max(0, (currentItem.quantity || 1) - 1);
-
+      // Always read fresh data directly from Apollo cache
       const cacheId = client.cache.identify({
         __typename: 'ShoppingListItem',
         id: itemId,
       });
+
       const fullItem = cacheId
         ? client.readFragment<any>({
             id: cacheId,
@@ -560,7 +580,14 @@ export const ShoppingListMain: React.FC = () => {
             fragmentName: 'ShoppingListItemFragment',
           })
         : null;
-      const optimisticItem = fullItem ?? currentItem ?? null;
+
+      if (!fullItem) {
+        console.warn('Item not in cache, cannot decrement:', itemId);
+        return;
+      }
+
+      // Use fresh quantity from cache, not stale items array
+      const newQuantity = Math.max(0, (fullItem.quantity || 0) - 1);
 
       try {
         optimisticDataPersistence.save(
@@ -574,29 +601,18 @@ export const ShoppingListMain: React.FC = () => {
           variables: {
             itemId,
             quantity: newQuantity.toString(),
-            version: currentItem.version,
+            version: fullItem.version,
           },
-          optimisticResponse: optimisticItem
-            ? {
-                __typename: 'Mutation',
-                updateShoppingListItemQuantity: {
-                  ...optimisticItem,
-                  __typename: 'ShoppingListItem',
-                  quantity: newQuantity,
-                  version: optimisticItem.version ?? currentItem.version,
-                  updatedAt: new Date().toISOString(),
-                },
-              }
-            : {
-                __typename: 'Mutation',
-                updateShoppingListItemQuantity: {
-                  __typename: 'ShoppingListItem',
-                  id: itemId,
-                  quantity: newQuantity,
-                  version: currentItem.version,
-                  updatedAt: new Date().toISOString(),
-                } as any,
-              },
+          optimisticResponse: {
+            __typename: 'Mutation',
+            updateShoppingListItemQuantity: {
+              ...fullItem,
+              __typename: 'ShoppingListItem',
+              quantity: newQuantity,
+              version: fullItem.version,
+              updatedAt: new Date().toISOString(),
+            },
+          },
           onCompleted: data => {
             if (data?.updateShoppingListItemQuantity) {
               optimisticDataPersistence.clear(
@@ -619,7 +635,7 @@ export const ShoppingListMain: React.FC = () => {
         Alert.alert('Error', 'Failed to update quantity');
       }
     },
-    [updateQuantity, refetchItems, items, client],
+    [updateQuantity, refetchItems, client],
   );
 
   // Transform shopping list items for SortableShoppingList
@@ -658,6 +674,7 @@ export const ShoppingListMain: React.FC = () => {
             unit={item.unit?.symbol || item.unitName}
             onIncrement={() => handleIncrementQuantity(item.id)}
             onDecrement={() => handleDecrementQuantity(item.id)}
+            disabled={item.isPurchased}
           />
         ),
         leftElement: imageUrl ? (
@@ -844,6 +861,25 @@ export const ShoppingListMain: React.FC = () => {
     };
   }, [setScannerProps, handleScanPress]);
 
+  // Footer component for pagination
+  const ListFooter = useMemo(() => {
+    if (isLoadingMore) {
+      return (
+        <View style={styles.footerLoader}>
+          <Text style={styles.footerText}>Loading more items...</Text>
+        </View>
+      );
+    }
+    if (hasMore && !loading && items.length > 0) {
+      return (
+        <View style={styles.footerHint}>
+          <Text style={styles.footerHintText}>Scroll to load more</Text>
+        </View>
+      );
+    }
+    return null;
+  }, [isLoadingMore, hasMore, loading, items.length]);
+
   // If no lists exist at all
   if (lists.length === 0) {
     const noListsEmptyState = {
@@ -912,7 +948,13 @@ export const ShoppingListMain: React.FC = () => {
           onClearAllPurchased: handleClearAllPurchased,
           onSwipeableWillOpen: handleSwipeableWillOpen,
           onSwipeableClose: handleSwipeableClose,
+          purchasedSectionExpanded: controlledPurchasedSectionExpanded,
+          onPurchasedSectionExpandedChange:
+            handlePurchasedSectionExpandedChange,
         }}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={ListFooter}
       />
 
       <AnimatedItemSelector
@@ -965,5 +1007,22 @@ const styles = StyleSheet.create(theme => ({
   selectorItemSubtext: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
+  },
+  footerLoader: {
+    padding: theme.spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  footerText: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textSecondary,
+  },
+  footerHint: {
+    padding: theme.spacing.md,
+    alignItems: 'center',
+  },
+  footerHintText: {
+    fontSize: theme.fonts.size.xs,
+    color: theme.colors.textTertiary,
   },
 }));

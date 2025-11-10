@@ -2,7 +2,11 @@
 # QUERIES
 # ============================================
 
-query GetShoppingList($id: ID!) {
+query GetShoppingList(
+  $id: ID!
+  $itemsCursor: String
+  $itemsFirst: Int = 25
+) {
   shoppingList(id: $id) {
     id
     name
@@ -24,53 +28,63 @@ query GetShoppingList($id: ID!) {
     completedItems
     createdAt
     updatedAt
-    items {
-      id
-      quantity
-      estimatedPrice
-      budgetPrice
-      isPurchased
-      purchasedQuantity
-      purchasedPrice
-      purchaseDate
-      itemName
-      itemBarcode
-      unitName
-      notes
-      priority
-      category
-      sortOrder
-      isAutoAdded
-      autoAddReason
-      isFromMealPlan
-      item {
-        id
-        name
-        description
-        imageUrl
-        type
-        storageState
+    itemsConnection(first: $itemsFirst, after: $itemsCursor) {
+      edges {
+        node {
+          id
+          quantity
+          estimatedPrice
+          budgetPrice
+          isPurchased
+          purchasedQuantity
+          purchasedPrice
+          purchaseDate
+          itemName
+          itemBarcode
+          unitName
+          notes
+          priority
+          category
+          sortOrder
+          isAutoAdded
+          autoAddReason
+          isFromMealPlan
+          item {
+            id
+            name
+            description
+            imageUrl
+            type
+            storageState
+          }
+          unit {
+            id
+            name
+            symbol
+          }
+          preferredStore {
+            id
+            name
+            address
+          }
+          purchasedBy {
+            id
+            email
+          }
+          addedBy {
+            id
+            email
+          }
+          createdAt
+          updatedAt
+        }
+        cursor
       }
-      unit {
-        id
-        name
-        symbol
+      pageInfo {
+        hasNextPage
+        endCursor
       }
-      preferredStore {
-        id
-        name
-        address
-      }
-      purchasedBy {
-        id
-        email
-      }
-      addedBy {
-        id
-        email
-      }
-      createdAt
-      updatedAt
+      totalCount
     }
     ownerships {
       ...ShoppingListOwnershipFragment
@@ -111,9 +125,19 @@ query GetShoppingLists {
     priority
     createdAt
     updatedAt
-    items {
-      id
-      isPurchased
+    itemsConnection(first: 25) {
+      edges {
+        node {
+          id
+          isPurchased
+        }
+        cursor
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      totalCount
     }
     ownerships {
       id
@@ -154,16 +178,26 @@ query GetDefaultShoppingList {
     isDefault
     totalItems
     completedItems
-    items {
-      id
-      itemName
-      quantity
-      isPurchased
-      item {
-        id
-        name
-        imageUrl
+    itemsConnection(first: 50) {
+      edges {
+        node {
+          id
+          itemName
+          quantity
+          isPurchased
+          item {
+            id
+            name
+            imageUrl
+          }
+        }
+        cursor
       }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      totalCount
     }
     ownerships {
       ...ShoppingListOwnershipFragment
@@ -215,9 +249,19 @@ mutation CreateShoppingList($input: CreateShoppingListInput!) {
     metadata
     createdAt
     updatedAt
-    items {
-      id
-      isPurchased
+    itemsConnection(first: 25) {
+      edges {
+        node {
+          id
+          isPurchased
+        }
+        cursor
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      totalCount
     }
     collaborators {
       ...ShoppingListCollaboratorFragment
@@ -245,9 +289,19 @@ mutation UpdateShoppingList($id: ID!, $input: UpdateShoppingListInput!) {
     priority
     createdAt
     updatedAt
-    items {
-      id
-      isPurchased
+    itemsConnection(first: 25) {
+      edges {
+        node {
+          id
+          isPurchased
+        }
+        cursor
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      totalCount
     }
     collaborators {
       ...ShoppingListCollaboratorFragment
@@ -506,12 +560,22 @@ subscription ShoppingListUpdated($listId: ID!) {
       completedAt
       budgetAmount
       totalCost
-      items {
-        id
-        itemName
-        quantity
-        isPurchased
-        estimatedPrice
+      itemsConnection(first: 25) {
+        edges {
+          node {
+            id
+            itemName
+            quantity
+            isPurchased
+            estimatedPrice
+          }
+          cursor
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        totalCount
       }
     }
     updatedFields

@@ -28,6 +28,9 @@ interface ItemListProps {
   onItemWaste?: (id: string) => void;
   onRefresh?: () => Promise<void>;
   onSwipeableWillOpen?: (ref: any) => void;
+  onEndReached?: () => void;
+  onEndReachedThreshold?: number;
+  ListFooterComponent?: React.ComponentType<any> | React.ReactElement | null;
   emptyState?: {
     icon: IconName;
     title: string;
@@ -48,10 +51,13 @@ export const ItemList: React.FC<ItemListProps> = ({
   onItemWaste,
   onRefresh,
   onSwipeableWillOpen,
+  onEndReached,
+  onEndReachedThreshold = 0.5,
+  ListFooterComponent,
   emptyState,
 }) => {
   const [refreshing, setRefreshing] = useState(false);
-  const { bottom: safeBottom } = useSafeAreaInsets();
+  const { bottom: safeBottom} = useSafeAreaInsets();
 
   // Dynamic content style with proper bottom padding for tab bar
   const contentStyle = useMemo(
@@ -69,6 +75,19 @@ export const ItemList: React.FC<ItemListProps> = ({
     }
   };
 
+  const handleScroll = (event: any) => {
+    if (!onEndReached) return;
+
+    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+    const paddingToBottom = contentSize.height * onEndReachedThreshold;
+    const isCloseToBottom =
+      layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
+
+    if (isCloseToBottom) {
+      onEndReached();
+    }
+  };
+
   if (items.length === 0 && emptyState) {
     return <EmptyState {...emptyState} />;
   }
@@ -81,6 +100,8 @@ export const ItemList: React.FC<ItemListProps> = ({
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         ) : undefined
       }
+      onScroll={handleScroll}
+      scrollEventThrottle={400}
     >
       {items.map(item => (
         <ItemCard
@@ -99,6 +120,12 @@ export const ItemList: React.FC<ItemListProps> = ({
           onSwipeableWillOpen={onSwipeableWillOpen}
         />
       ))}
+      {ListFooterComponent &&
+        (typeof ListFooterComponent === 'function' ? (
+          <ListFooterComponent />
+        ) : (
+          ListFooterComponent
+        ))}
     </ScrollView>
   );
 };

@@ -1,8 +1,8 @@
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { generateId } from '#/utils/generateId';
 import {
-  useGetPantryItemsQuery,
+  useGetPantryQuery,
   useCreatePantryItemMutation,
   useUpdatePantryItemMutation,
   useDeletePantryItemMutation,
@@ -11,7 +11,7 @@ import {
 import { useSearchableList } from '../useSearchableList';
 import { useAuth } from '#hooks/auth/useAuth';
 import { useErrorHandler } from '#/utils/errorHandling';
-import { usePreservedArrayData } from '#/hooks/apollo';
+import { normalizePantry } from '#/utils/connectionUtils';
 import {
   enhanceWithVersion,
   createOptimisticEntity,
@@ -50,9 +50,12 @@ export function usePantryManagement(pantryId: string | undefined) {
   const { handleApolloError } = useErrorHandler();
   const shouldSkip = !pantryId || isLoggedOut;
 
-  // Single source of truth: Apollo cache
-  const { data, loading, error, refetch } = useGetPantryItemsQuery({
-    variables: { pantryId: pantryId ?? '' },
+  // Single source of truth: Apollo cache - now using Connection-based query
+  const { data, loading, error, refetch, fetchMore } = useGetPantryQuery({
+    variables: {
+      id: pantryId ?? '',
+      itemsFirst: 25, // Initial page size
+    },
     skip: shouldSkip,
     fetchPolicy: 'cache-and-network', // Show cache immediately, then fetch fresh data with complete images
     notifyOnNetworkStatusChange: true,
@@ -65,8 +68,16 @@ export function usePantryManagement(pantryId: string | undefined) {
   // the full PantryItemFragment (after GraphQL fix) and Apollo automatically
   // updates the cache via normalization.
 
-  // Preserve pantry items even when query fails to prevent cascade failures
-  const pantryItems = usePreservedArrayData(data?.pantryItems);
+  // Normalize pantry data to flatten Connection pattern and preserve pagination metadata
+  const normalizedPantry = useMemo(
+    () => normalizePantry(data?.pantry),
+    [data?.pantry],
+  );
+
+  const pantryItems = useMemo(
+    () => normalizedPantry?.items || [],
+    [normalizedPantry],
+  );
 
   // Search functionality
   const {
@@ -120,6 +131,29 @@ export function usePantryManagement(pantryId: string | undefined) {
     };
   }, [pantryItems]);
 
+  // Pagination state
+  const hasMore = normalizedPantry?.itemsPageInfo?.hasNextPage || false;
+  const endCursor = normalizedPantry?.itemsPageInfo?.endCursor;
+
+  // Load more handler for infinite scroll
+  const loadMore = useCallback(async () => {
+    if (!hasMore || loading || !endCursor || !pantryId) {
+      return;
+    }
+
+    try {
+      await fetchMore({
+        variables: {
+          id: pantryId,
+          itemsCursor: endCursor,
+        },
+      });
+    } catch (error) {
+      console.error('Failed to load more pantry items:', error);
+      // Fail silently - user can try scrolling again
+    }
+  }, [hasMore, loading, endCursor, pantryId, fetchMore]);
+
   // Mutations with optimistic updates
   const [addItemMutation] = useCreatePantryItemMutation({
     errorPolicy: 'all',
@@ -163,24 +197,46 @@ export function usePantryManagement(pantryId: string | undefined) {
       if (!data?.createPantryItem || !pantryId) return;
 
       try {
-        // Modify the pantryItems field in the cache
+        // Modify the Pantry.itemsConnection field in the cache
+        const pantryCacheId = cache.identify({
+          __typename: 'Pantry',
+          id: pantryId,
+        });
+
+        if (!pantryCacheId) return;
+
         cache.modify({
+          id: pantryCacheId,
           fields: {
-            pantryItems(existingItems = [], { readField, toReference }: any) {
+            itemsConnection(
+              existingConnection: any = {},
+              { readField, toReference }: any,
+            ) {
               const newItemRef = toReference(data.createPantryItem);
+              const existingEdges = existingConnection?.edges || [];
 
               // Check if item already exists (avoid duplicates)
-              const exists = existingItems.some(
-                (itemRef: any) =>
-                  readField('id', itemRef) === data.createPantryItem.id,
+              const exists = existingEdges.some(
+                (edge: any) =>
+                  readField('id', edge?.node) === data.createPantryItem.id,
               );
 
               if (exists) {
-                return existingItems;
+                return existingConnection;
               }
 
-              // Add new item to the list
-              return [...existingItems, newItemRef];
+              // Add new item at the beginning of the list
+              const newEdge = {
+                __typename: 'PantryItemEdge',
+                node: newItemRef,
+                cursor: '', // Will be populated on next fetch
+              };
+
+              return {
+                ...existingConnection,
+                edges: [newEdge, ...existingEdges],
+                totalCount: (existingConnection?.totalCount || 0) + 1,
+              };
             },
           },
         });
@@ -367,6 +423,11 @@ export function usePantryManagement(pantryId: string | undefined) {
     loading,
     error,
     stats,
+
+    // Pagination
+    loadMore,
+    hasMore,
+    isLoadingMore: loading && pantryItems.length > 0,
 
     // Search
     searchQuery,

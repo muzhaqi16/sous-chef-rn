@@ -1,5 +1,5 @@
 import React, { useMemo, useEffect, useCallback, useRef, useState } from 'react';
-import { Alert, View, Image } from 'react-native';
+import { Alert, View, Image, Text, ActivityIndicator } from 'react-native';
 import { useAppNavigation } from '#hooks';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
 import { useDefaultHome, usePantryManagement } from '#hooks';
@@ -30,6 +30,7 @@ import type {
   SelectorConfig,
   ItemSelectorRef,
 } from '#components/organisms/AnimatedItemSelector';
+import { normalizeHome } from '#/utils/connectionUtils';
 
 export const PantryMain: React.FC = () => {
   const { navigate, navigateTo } = useAppNavigation();
@@ -69,9 +70,20 @@ export const PantryMain: React.FC = () => {
   });
 
   // Use home data from either source
+  const normalizedHomeResult = useMemo(() => {
+    if (!homeData?.home) {
+      return undefined;
+    }
+    const normalized = normalizeHome(homeData.home);
+    return normalized ? { home: normalized } : undefined;
+  }, [homeData]);
+
   const currentHomeData = useMemo(() => {
-    return homeFromList ? { home: homeFromList } : homeData;
-  }, [homeFromList, homeData]);
+    if (homeFromList) {
+      return { home: homeFromList };
+    }
+    return normalizedHomeResult;
+  }, [homeFromList, normalizedHomeResult]);
 
   // Use selected pantry from store or fall back to default pantry
   const defaultPantry = useMemo(
@@ -156,6 +168,9 @@ export const PantryMain: React.FC = () => {
     removeItem,
     refetch,
     loading,
+    loadMore,
+    hasMore,
+    isLoadingMore,
   } = usePantryManagement(pantry?.id);
 
   // Consume item mutation
@@ -550,6 +565,26 @@ export const PantryMain: React.FC = () => {
         },
       };
 
+  // Footer component for infinite scroll
+  const ListFooter = useMemo(() => {
+    if (isLoadingMore) {
+      return (
+        <View style={styles.footerLoader}>
+          <ActivityIndicator size="small" color={theme.colors.primary} />
+          <Text style={styles.footerText}>Loading more items...</Text>
+        </View>
+      );
+    }
+    if (hasMore && !loading && items.length > 0) {
+      return (
+        <View style={styles.footerHint}>
+          <Text style={styles.footerHintText}>Scroll to load more</Text>
+        </View>
+      );
+    }
+    return null;
+  }, [isLoadingMore, hasMore, loading, items.length, theme.colors.primary]);
+
   return (
     <View style={styles.container}>
       <ListTemplate
@@ -565,6 +600,9 @@ export const PantryMain: React.FC = () => {
         onItemWaste={handleWasteItem}
         onRefresh={handleRefresh}
         onSwipeableWillOpen={handleSwipeableWillOpen}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={ListFooter}
         loading={isLoadingInitial}
         hasNoData={!selectedHomeId}
         showHeader={true}
@@ -616,5 +654,22 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  footerLoader: {
+    padding: theme.spacing.lg,
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+  },
+  footerText: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textSecondary,
+  },
+  footerHint: {
+    padding: theme.spacing.md,
+    alignItems: 'center',
+  },
+  footerHintText: {
+    fontSize: theme.fonts.size.xs,
+    color: theme.colors.textTertiary,
   },
 }));

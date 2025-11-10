@@ -8,12 +8,22 @@ query GetPantries($homeId: ID!) {
     homeId
     name
     isDefault
-    items {
-      id
-      itemName
-      item {
-        name
+    itemsConnection(first: 50) {
+      edges {
+        node {
+          id
+          itemName
+          item {
+            name
+          }
+        }
+        cursor
       }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      totalCount
     }
     createdAt
     updatedAt
@@ -22,7 +32,13 @@ query GetPantries($homeId: ID!) {
   }
 }
 
-query GetPantry($id: ID!) {
+query GetPantry(
+  $id: ID!
+  $itemsCursor: String
+  $itemsFirst: Int = 25
+  $storageLocationsCursor: String
+  $storageLocationsFirst: Int = 50
+) {
   pantry(id: $id) {
     id
     homeId
@@ -36,30 +52,53 @@ query GetPantry($id: ID!) {
     version
     createdAt
     updatedAt
-    items {
-      id
-      itemName
-      item {
-        name
+    itemsConnection(first: $itemsFirst, after: $itemsCursor) {
+      edges {
+        node {
+          ...PantryItemFragment
+        }
+        cursor
       }
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        startCursor
+        endCursor
+      }
+      totalCount
     }
-    storageLocations {
-      id
-      name
-      type
-      icon
-      color
-      temperature
-      isDefault
-      sortOrder
-      parentLocation {
-        id
-        name
+    storageLocationsConnection(
+      first: $storageLocationsFirst
+      after: $storageLocationsCursor
+    ) {
+      edges {
+        node {
+          id
+          name
+          type
+          icon
+          color
+          temperature
+          isDefault
+          sortOrder
+          parentLocation {
+            id
+            name
+          }
+          childLocations {
+            id
+            name
+          }
+        }
+        cursor
       }
-      childLocations {
-        id
-        name
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        startCursor
+        endCursor
       }
+      totalCount
     }
   }
 }

@@ -573,8 +573,18 @@ fragment PantryFragment on Pantry {
   version
   createdAt
   updatedAt
-  items {
-    ...PantryItemFragment
+  itemsConnection(first: 50) {
+    edges {
+      node {
+        ...PantryItemFragment
+      }
+      cursor
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
   }
 }
 
@@ -610,16 +620,46 @@ fragment HomeWithPantriesFragment on Home {
   createdAt
   updatedAt
 
-  invites {
-    ...HomeInviteFragment
+  invitesConnection(first: 50) {
+    edges {
+      node {
+        ...HomeInviteFragment
+      }
+      cursor
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
   }
 
-  members {
-    ...MemberShipFragment
+  membersConnection(first: 100) {
+    edges {
+      node {
+        ...MemberShipFragment
+      }
+      cursor
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
   }
 
-  pantries {
-    ...BasicPantryFragment
+  pantriesConnection(first: 50) {
+    edges {
+      node {
+        ...BasicPantryFragment
+      }
+      cursor
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
   }
 }
 
@@ -640,16 +680,46 @@ fragment HomeFragment on Home {
   createdAt
   updatedAt
 
-  invites {
-    ...HomeInviteFragment
+  invitesConnection(first: 50) {
+    edges {
+      node {
+        ...HomeInviteFragment
+      }
+      cursor
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
   }
 
-  members {
-    ...MemberShipFragment
+  membersConnection(first: 100) {
+    edges {
+      node {
+        ...MemberShipFragment
+      }
+      cursor
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
   }
 
-  pantries {
-    ...PantryFragment
+  pantriesConnection(first: 50) {
+    edges {
+      node {
+        ...PantryFragment
+      }
+      cursor
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
   }
 }
 

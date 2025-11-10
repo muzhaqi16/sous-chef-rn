@@ -19,12 +19,14 @@ export const ShoppingListItemCounter = ({
   onIncrement,
   onDecrement,
   rightElement,
+  disabled = false,
 }: {
   quantity: number;
   unit?: string | null;
   onIncrement: () => void;
   onDecrement: () => void;
   rightElement?: React.ReactNode;
+  disabled?: boolean;
 }) => {
   const { theme } = useUnistyles();
 
@@ -36,6 +38,7 @@ export const ShoppingListItemCounter = ({
           count={quantity}
           onIncrement={onIncrement}
           onDecrement={onDecrement}
+          disabled={disabled}
         />
         {unit && (
           <Text

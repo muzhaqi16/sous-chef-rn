@@ -22,6 +22,7 @@ import {
 } from '#/utils/errors/versionConflict';
 import { usePreservedArrayData } from '#/hooks/apollo';
 import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
+import { normalizeHome, normalizeHomes } from '#/utils/connectionUtils';
 
 export function useHomeManagement() {
   const { selectedHomeId, setSelectedHomeId, setSelectedPantryId } = useStore();
@@ -77,7 +78,11 @@ export function useHomeManagement() {
   });
 
   // Preserve homes even when query fails to prevent cascade failures
-  const homes = usePreservedArrayData(data?.homes);
+  const preservedHomes = usePreservedArrayData(data?.homes);
+  const homes = useMemo(
+    () => normalizeHomes(preservedHomes),
+    [preservedHomes],
+  );
   const remoteDefaultHomeId = defaultHomeData?.getDefaultHome?.id;
 
   // NOTE: Remote sync logic removed from here to prevent infinite loop
@@ -196,8 +201,9 @@ export function useHomeManagement() {
           }
 
           // If a default pantry was created, set it as selected
-          if (newHome.pantries && newHome.pantries.length > 0) {
-            const defaultPantry = newHome.pantries.find(
+          const normalizedNewHome = normalizeHome(newHome);
+          if (normalizedNewHome?.pantries?.length) {
+            const defaultPantry = normalizedNewHome.pantries.find(
               (pantry: any) => pantry.isDefault,
             );
             if (defaultPantry) {
@@ -656,7 +662,7 @@ export function useHomeManagement() {
       (!homes && loading) || (!defaultHomeData && loadingDefaultHome),
     error,
     stats,
-    previewHome: previewData?.homeByJoinCode || null,
+    previewHome: previewData?.homeByJoinCode ? normalizeHome(previewData.homeByJoinCode) : null,
 
     // Search
     searchQuery: query,

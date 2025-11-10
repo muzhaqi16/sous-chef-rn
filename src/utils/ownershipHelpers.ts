@@ -39,6 +39,8 @@ interface ShoppingListWithOwnership {
   collaborators?: ShoppingListCollaborator[] | null;
 }
 
+import { extractNodes } from '#/utils/connectionUtils';
+
 /**
  * Home Types (matching GraphQL schema)
  */
@@ -60,7 +62,18 @@ interface HomeMember {
 
 interface HomeWithMembers {
   members?: HomeMember[] | null;
+  membersConnection?: {
+    edges?: Array<{ node?: HomeMember | null } | null> | null;
+  } | null;
 }
+
+const resolveHomeMembers = (home: HomeWithMembers): HomeMember[] => {
+  if (Array.isArray(home.members)) {
+    return home.members.filter(Boolean) as HomeMember[];
+  }
+
+  return extractNodes<HomeMember>(home.membersConnection);
+};
 
 /**
  * User Info Type
@@ -126,7 +139,7 @@ export function getShoppingListRole(
  * Get owner information for a home
  */
 export function getHomeOwnerInfo(home: HomeWithMembers): OwnerInfo | null {
-  const owner = home.members?.find(m => m.role === 'OWNER');
+  const owner = resolveHomeMembers(home).find(m => m.role === 'OWNER');
   if (!owner?.user) return null;
 
   return {
@@ -146,7 +159,7 @@ export function isHomeOwner(
 ): boolean {
   if (!currentUserId) return false;
   return (
-    home.members?.some(
+    resolveHomeMembers(home).some(
       m => m.userId && m.userId === currentUserId && m.role === 'OWNER',
     ) || false
   );
@@ -161,7 +174,9 @@ export function getHomeRole(
 ): string | null {
   if (!currentUserId) return null;
 
-  const member = home.members?.find(m => m.userId === currentUserId);
+  const member = resolveHomeMembers(home).find(
+    m => m.userId === currentUserId,
+  );
   return member?.role || null;
 }
 

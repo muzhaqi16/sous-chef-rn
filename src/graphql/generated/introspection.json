@@ -5444,6 +5444,14 @@
             "deprecationReason": null
           },
           {
+            "name": "quantityInput",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "storageLocation",
             "description": null,
             "type": { "kind": "SCALAR", "name": "String", "ofType": null },
@@ -11135,26 +11143,6 @@
             "deprecationReason": null
           },
           {
-            "name": "invites",
-            "description": null,
-            "args": [],
-            "type": {
-              "kind": "LIST",
-              "name": null,
-              "ofType": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "OBJECT",
-                  "name": "HomeInvite",
-                  "ofType": null
-                }
-              }
-            },
-            "isDeprecated": true,
-            "deprecationReason": "Use invitesConnection for pagination. Will be removed in v2.0"
-          },
-          {
             "name": "invitesConnection",
             "description": null,
             "args": [
@@ -11232,30 +11220,6 @@
             "deprecationReason": null
           },
           {
-            "name": "members",
-            "description": null,
-            "args": [],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "Membership",
-                    "ofType": null
-                  }
-                }
-              }
-            },
-            "isDeprecated": true,
-            "deprecationReason": "Use membersConnection for pagination. Will be removed in v2.0"
-          },
-          {
             "name": "membersConnection",
             "description": null,
             "args": [
@@ -11331,22 +11295,6 @@
             },
             "isDeprecated": false,
             "deprecationReason": null
-          },
-          {
-            "name": "pantries",
-            "description": null,
-            "args": [],
-            "type": {
-              "kind": "LIST",
-              "name": null,
-              "ofType": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": { "kind": "OBJECT", "name": "Pantry", "ofType": null }
-              }
-            },
-            "isDeprecated": true,
-            "deprecationReason": "Use pantriesConnection for pagination. Will be removed in v2.0"
           },
           {
             "name": "pantriesConnection",
@@ -16036,14 +15984,6 @@
         "inputFields": [
           {
             "name": "averagePricePerUnit",
-            "description": null,
-            "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
-            "defaultValue": null,
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "conversionRatio",
             "description": null,
             "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
             "defaultValue": null,
@@ -31415,28 +31355,8 @@
             "deprecationReason": null
           },
           {
-            "name": "items",
-            "description": null,
-            "args": [],
-            "type": {
-              "kind": "LIST",
-              "name": null,
-              "ofType": {
-                "kind": "NON_NULL",
-                "name": null,
-                "ofType": {
-                  "kind": "OBJECT",
-                  "name": "PantryItem",
-                  "ofType": null
-                }
-              }
-            },
-            "isDeprecated": true,
-            "deprecationReason": "Use itemsConnection for pagination. Will be removed in v2.0"
-          },
-          {
             "name": "itemsConnection",
-            "description": null,
+            "description": "Paginated list of items in this pantry",
             "args": [
               {
                 "name": "after",
@@ -31510,30 +31430,6 @@
             },
             "isDeprecated": false,
             "deprecationReason": null
-          },
-          {
-            "name": "storageLocations",
-            "description": "Storage locations available for this pantry's home.\nUseful for assigning pantry items to specific storage locations.",
-            "args": [],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "StorageLocation",
-                    "ofType": null
-                  }
-                }
-              }
-            },
-            "isDeprecated": true,
-            "deprecationReason": "Use storageLocationsConnection for pagination. Will be removed in v2.0"
           },
           {
             "name": "storageLocationsConnection",
@@ -39044,22 +38940,47 @@
           {
             "name": "recipeSuggestions",
             "description": null,
-            "args": [],
+            "args": [
+              {
+                "name": "after",
+                "description": null,
+                "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
+                "name": "before",
+                "description": null,
+                "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
+                "name": "first",
+                "description": null,
+                "type": { "kind": "SCALAR", "name": "Int", "ofType": null },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
+                "name": "last",
+                "description": null,
+                "type": { "kind": "SCALAR", "name": "Int", "ofType": null },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              }
+            ],
             "type": {
               "kind": "NON_NULL",
               "name": null,
               "ofType": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "Recipe",
-                    "ofType": null
-                  }
-                }
+                "kind": "OBJECT",
+                "name": "RecipeConnection",
+                "ofType": null
               }
             },
             "isDeprecated": false,
@@ -39069,6 +38990,22 @@
             "name": "recipes",
             "description": null,
             "args": [
+              {
+                "name": "after",
+                "description": null,
+                "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
+                "name": "before",
+                "description": null,
+                "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
               {
                 "name": "category",
                 "description": null,
@@ -39094,6 +39031,14 @@
                 "deprecationReason": null
               },
               {
+                "name": "first",
+                "description": null,
+                "type": { "kind": "SCALAR", "name": "Int", "ofType": null },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
                 "name": "includeDeleted",
                 "description": null,
                 "type": { "kind": "SCALAR", "name": "Boolean", "ofType": null },
@@ -39102,15 +39047,7 @@
                 "deprecationReason": null
               },
               {
-                "name": "skip",
-                "description": null,
-                "type": { "kind": "SCALAR", "name": "Int", "ofType": null },
-                "defaultValue": null,
-                "isDeprecated": false,
-                "deprecationReason": null
-              },
-              {
-                "name": "take",
+                "name": "last",
                 "description": null,
                 "type": { "kind": "SCALAR", "name": "Int", "ofType": null },
                 "defaultValue": null,
@@ -39123,7 +39060,7 @@
               "name": null,
               "ofType": {
                 "kind": "OBJECT",
-                "name": "RecipesResponse",
+                "name": "RecipeConnection",
                 "ofType": null
               }
             },
@@ -39450,6 +39387,38 @@
             "description": null,
             "args": [
               {
+                "name": "after",
+                "description": null,
+                "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
+                "name": "before",
+                "description": null,
+                "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
+                "name": "first",
+                "description": null,
+                "type": { "kind": "SCALAR", "name": "Int", "ofType": null },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
+                "name": "last",
+                "description": null,
+                "type": { "kind": "SCALAR", "name": "Int", "ofType": null },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
                 "name": "query",
                 "description": null,
                 "type": {
@@ -39470,17 +39439,9 @@
               "kind": "NON_NULL",
               "name": null,
               "ofType": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "Recipe",
-                    "ofType": null
-                  }
-                }
+                "kind": "OBJECT",
+                "name": "RecipeConnection",
+                "ofType": null
               }
             },
             "isDeprecated": false,
@@ -42697,54 +42658,6 @@
         "possibleTypes": null
       },
       {
-        "kind": "OBJECT",
-        "name": "RecipesResponse",
-        "description": null,
-        "isOneOf": null,
-        "fields": [
-          {
-            "name": "recipes",
-            "description": null,
-            "args": [],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "Recipe",
-                    "ofType": null
-                  }
-                }
-              }
-            },
-            "isDeprecated": false,
-            "deprecationReason": null
-          },
-          {
-            "name": "totalCount",
-            "description": null,
-            "args": [],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": { "kind": "SCALAR", "name": "Int", "ofType": null }
-            },
-            "isDeprecated": false,
-            "deprecationReason": null
-          }
-        ],
-        "inputFields": null,
-        "interfaces": [],
-        "enumValues": null,
-        "possibleTypes": null
-      },
-      {
         "kind": "INPUT_OBJECT",
         "name": "RecordPantryItemUsageInput",
         "description": null,
@@ -44407,30 +44320,6 @@
             },
             "isDeprecated": false,
             "deprecationReason": null
-          },
-          {
-            "name": "items",
-            "description": null,
-            "args": [],
-            "type": {
-              "kind": "NON_NULL",
-              "name": null,
-              "ofType": {
-                "kind": "LIST",
-                "name": null,
-                "ofType": {
-                  "kind": "NON_NULL",
-                  "name": null,
-                  "ofType": {
-                    "kind": "OBJECT",
-                    "name": "ShoppingListItem",
-                    "ofType": null
-                  }
-                }
-              }
-            },
-            "isDeprecated": true,
-            "deprecationReason": "Use itemsConnection for pagination. Will be removed in v2.0"
           },
           {
             "name": "itemsConnection",
@@ -50006,6 +49895,14 @@
             "deprecationReason": null
           },
           {
+            "name": "quantityInput",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "reservedQuantity",
             "description": null,
             "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
@@ -53749,6 +53646,14 @@
             "name": "priority",
             "description": null,
             "type": { "kind": "SCALAR", "name": "Int", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "quantityInput",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
             "defaultValue": null,
             "isDeprecated": false,
             "deprecationReason": null

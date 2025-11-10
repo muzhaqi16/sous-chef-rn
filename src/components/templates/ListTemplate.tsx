@@ -32,6 +32,11 @@ interface ListTemplateProps {
   onSwipeableWillOpen?: (ref: any) => void;
   emptyState?: any;
 
+  // Pagination
+  onEndReached?: () => void;
+  onEndReachedThreshold?: number;
+  ListFooterComponent?: React.ComponentType<any> | React.ReactElement | null;
+
   // State management
   loading?: boolean; // Is data currently loading?
   hasNoData?: boolean; // No baseline data exists (e.g., no home selected)
@@ -72,6 +77,11 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
   onRefresh = async () => {},
   onSwipeableWillOpen,
   emptyState,
+
+  // Pagination
+  onEndReached,
+  onEndReachedThreshold = 0.5,
+  ListFooterComponent,
 
   // State management
   loading = false,
@@ -164,6 +174,9 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
           onItemWaste={isLoading ? undefined : onItemWaste}
           onRefresh={onRefresh}
           onSwipeableWillOpen={onSwipeableWillOpen}
+          onEndReached={onEndReached}
+          onEndReachedThreshold={onEndReachedThreshold}
+          ListFooterComponent={ListFooterComponent}
           emptyState={effectiveEmptyState}
           {...customListProps}
         />
@@ -177,6 +190,9 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
           onItemWaste={isLoading ? undefined : onItemWaste}
           onRefresh={onRefresh}
           onSwipeableWillOpen={onSwipeableWillOpen}
+          onEndReached={onEndReached}
+          onEndReachedThreshold={onEndReachedThreshold}
+          ListFooterComponent={ListFooterComponent}
           emptyState={effectiveEmptyState}
         />
       )}

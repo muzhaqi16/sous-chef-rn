@@ -21,6 +21,7 @@ import {
   useGetPantryQuery,
   useGetUnitBySymbolLazyQuery,
 } from '#generated';
+import { normalizePantry } from '#/utils/connectionUtils';
 import {
   DynamicFormFields,
   FieldDef,
@@ -97,7 +98,8 @@ export const EditPantryItemForm: React.FC<EditPantryItemFormProps> = ({
     fetchPolicy: 'cache-first',
   });
 
-  const storageLocations = pantryData?.pantry?.storageLocations || [];
+  const normalizedPantry = pantryData?.pantry ? normalizePantry(pantryData.pantry) : null;
+  const storageLocations = normalizedPantry?.storageLocations || [];
 
   const [updateItem] = useUpdatePantryItemMutation();
 
@@ -255,8 +257,7 @@ export const EditPantryItemForm: React.FC<EditPantryItemFormProps> = ({
           id: itemId,
           input: {
             currentQuantity: quantityValue,
-            // Note: quantityInput is not supported in UpdatePantryItemInput yet
-            // Backend needs to be updated to accept quantityInput for edit operations
+            quantityInput: data.quantityInput.trim(), // Preserve user's fractional input
             actualNetWeight: data.itemWeight || undefined,
             actualNetWeightUnitId: unitId || undefined,
             reservedQuantity: parseFloat(data.reservedQuantity || '0') || 0,

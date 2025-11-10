@@ -4,31 +4,60 @@
 
 query SearchRecipes($query: String!) {
   searchRecipes(query: $query) {
-    ...BasicRecipeFragment
+    edges {
+      node {
+        ...BasicRecipeFragment
+      }
+      cursor
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
   }
 }
 
 query SuggestedRecipes {
   recipeSuggestions {
-    ...BasicRecipeFragment
+    edges {
+      node {
+        ...BasicRecipeFragment
+      }
+      cursor
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
   }
 }
 
 query MyRecipes(
-  $skip: Int
-  $take: Int
+  $cursor: String
+  $first: Int = 25
   $category: RecipeCategory
   $difficulty: Difficulty
 ) {
   recipes(
-    skip: $skip
-    take: $take
+    after: $cursor
+    first: $first
     category: $category
     difficulty: $difficulty
   ) {
-    recipes {
-      ...BasicRecipeFragment
-      cuisine
+    edges {
+      node {
+        ...BasicRecipeFragment
+        cuisine
+      }
+      cursor
+    }
+    pageInfo {
+      hasNextPage
+      hasPreviousPage
+      startCursor
+      endCursor
     }
     totalCount
   }
@@ -157,8 +186,12 @@ mutation AddRecipeToShoppingList(
     checkPantry: $checkPantry
   ) {
     id
-    items {
-      ...ShoppingListItemCore
+    itemsConnection(first: 100) {
+      edges {
+        node {
+          ...ShoppingListItemCore
+        }
+      }
     }
   }
 }

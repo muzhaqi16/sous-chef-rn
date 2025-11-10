@@ -10,6 +10,7 @@ import {
 } from '#generated';
 import { MESSAGES } from '#constants';
 import { formatRole } from '#utils/formatters';
+import { normalizeHome } from '#/utils/connectionUtils';
 
 /**
  * Custom hook for HomeDetailScreen business logic
@@ -74,10 +75,29 @@ export function useHomeDetailManagement(homeId: string) {
 
       const membershipId = variables.membershipId;
 
-      // Remove from home's members array
       cache.modify({
         id: cache.identify({ __typename: 'Home', id: homeId }),
         fields: {
+          membersConnection(existingConnection = {}, { readField }) {
+            if (!existingConnection?.edges) {
+              return existingConnection;
+            }
+
+            const filteredEdges = existingConnection.edges.filter((edge: any) => {
+              const nodeId = readField('id', edge?.node);
+              return nodeId !== membershipId;
+            });
+
+            return {
+              ...existingConnection,
+              edges: filteredEdges,
+              totalCount: Math.max(
+                0,
+                (existingConnection.totalCount ?? filteredEdges.length) -
+                  (filteredEdges.length < existingConnection.edges.length ? 1 : 0),
+              ),
+            };
+          },
           members(existingMembers = [], { readField }) {
             return existingMembers.filter(
               (memberRef: any) => readField('id', memberRef) !== membershipId,
@@ -111,6 +131,26 @@ export function useHomeDetailManagement(homeId: string) {
       cache.modify({
         id: cache.identify({ __typename: 'Home', id: homeId }),
         fields: {
+          invitesConnection(existingConnection = {}, { readField }) {
+            if (!existingConnection?.edges) {
+              return existingConnection;
+            }
+
+            const filteredEdges = existingConnection.edges.filter((edge: any) => {
+              const nodeId = readField('id', edge?.node);
+              return nodeId !== inviteId;
+            });
+
+            return {
+              ...existingConnection,
+              edges: filteredEdges,
+              totalCount: Math.max(
+                0,
+                (existingConnection.totalCount ?? filteredEdges.length) -
+                  (filteredEdges.length < existingConnection.edges.length ? 1 : 0),
+              ),
+            };
+          },
           invites(existingInvites = [], { readField }) {
             return existingInvites.filter(
               (inviteRef: any) => readField('id', inviteRef) !== inviteId,
@@ -132,7 +172,7 @@ export function useHomeDetailManagement(homeId: string) {
     },
   });
 
-  const home = data?.home;
+  const home = normalizeHome(data?.home);
 
   // Handler functions
   const saveName = useCallback(
