@@ -3,13 +3,6 @@ import { AppState } from 'react-native';
 import {
   useNotificationReceivedSubscription,
   useUrgentNotificationReceivedSubscription,
-  usePantryItemsChangedSubscription,
-  usePantryLowStockAlertSubscription,
-  usePantryExpiringItemsAlertSubscription,
-  useShoppingListItemsChangedSubscription,
-  useShoppingListCollaboratorsChangedSubscription,
-  useMyMembershipUpdatedSubscription,
-  useMemberJoinedSubscription,
   NotificationType,
 } from '#generated';
 import { useStore } from '#store';
@@ -28,6 +21,7 @@ import {
   handleSubscriptionError,
   clearAllRetryStates,
 } from '#utils/subscriptionErrorHandler';
+import { serializeError } from '#/utils/errorSerialization';
 import { useNotificationSettings } from './useNotificationSettings';
 
 interface NotificationConfig {
@@ -51,10 +45,7 @@ export const useNotifications = (config: NotificationConfig = {}) => {
   const getNotificationsByCategory = useStore(
     state => state.getNotificationsByCategory,
   );
-  const selectedHomeId = useStore(state => state.selectedHomeId);
-  const selectedShoppingListId = useStore(
-    state => state.selectedShoppingListId,
-  );
+
   const user = useStore(state => state.user);
 
   // Fetch user notification preferences
@@ -256,7 +247,7 @@ export const useNotifications = (config: NotificationConfig = {}) => {
       }
     },
     onError: error => {
-      console.error('❌ [NotificationReceived] Subscription error:', error);
+      console.error('❌ [NotificationReceived] Subscription error:', serializeError(error));
       handleError('NotificationReceived', error);
     },
   });
@@ -298,171 +289,9 @@ export const useNotifications = (config: NotificationConfig = {}) => {
       }
     },
     onError: error => {
-      console.error('❌ [UrgentNotification] Subscription error:', error);
+      console.error('❌ [UrgentNotification] Subscription error:', serializeError(error));
       handleError('UrgentNotificationReceived', error);
     },
-  });
-
-  // Pantry notifications
-  usePantryItemsChangedSubscription({
-    variables: { pantryId: selectedHomeId || '' },
-    skip:
-      !user?.id || !selectedHomeId || !finalConfig.enablePantryNotifications,
-    onData: ({ data }) => {
-      if (data.data?.pantryItemsChanged) {
-        const payload = data.data.pantryItemsChanged;
-        processNotification(
-          {
-            type: NotificationType.ItemUpdated,
-            title: 'Pantry Updated',
-            message: 'Items in your pantry have been updated',
-            payload: payload,
-            sentAt: new Date().toISOString(),
-          },
-          NotificationCategory.PANTRY,
-          payload.userId,
-        );
-      }
-    },
-    onError: error => handleError('PantryItemsChanged', error),
-  });
-
-  usePantryLowStockAlertSubscription({
-    variables: { pantryId: selectedHomeId || '' },
-    skip: !user?.id || !selectedHomeId || !finalConfig.enableLowStockAlerts,
-    onData: ({ data }) => {
-      if (data.data?.pantryLowStockAlert) {
-        processNotification(
-          {
-            type: NotificationType.LowStock,
-            title: 'Low Stock Alert',
-            message: 'Some items in your pantry are running low',
-            payload: data.data.pantryLowStockAlert,
-            sentAt: new Date().toISOString(),
-          },
-          NotificationCategory.PANTRY,
-        );
-      }
-    },
-    onError: error => handleError('PantryLowStockAlert', error),
-  });
-
-  usePantryExpiringItemsAlertSubscription({
-    variables: { pantryId: selectedHomeId || '' },
-    skip: !user?.id || !selectedHomeId || !finalConfig.enableExpirationAlerts,
-    onData: ({ data }) => {
-      if (data.data?.pantryExpiringItemsAlert) {
-        processNotification(
-          {
-            type: NotificationType.ExpiryReminder,
-            title: 'Items Expiring Soon',
-            message: 'Some items in your pantry will expire soon',
-            payload: data.data.pantryExpiringItemsAlert,
-            sentAt: new Date().toISOString(),
-          },
-          NotificationCategory.PANTRY,
-        );
-      }
-    },
-    onError: error => handleError('PantryExpiringItemsAlert', error),
-  });
-
-  // Shopping list notifications
-  useShoppingListItemsChangedSubscription({
-    variables: { listId: selectedShoppingListId || '' },
-    skip:
-      !user?.id ||
-      !selectedShoppingListId ||
-      !finalConfig.enableShoppingListNotifications,
-    onData: ({ data }) => {
-      if (data.data?.shoppingListItemsChanged) {
-        const payload = data.data.shoppingListItemsChanged;
-        processNotification(
-          {
-            type: NotificationType.ListUpdated,
-            title: 'Shopping List Updated',
-            message: 'Items in your shopping list have been updated',
-            payload: payload,
-            sentAt: new Date().toISOString(),
-          },
-          NotificationCategory.SHOPPING_LIST,
-          payload.userId,
-        );
-      }
-    },
-    onError: error => handleError('ShoppingListItemsChanged', error),
-  });
-
-  useShoppingListCollaboratorsChangedSubscription({
-    variables: { listId: selectedShoppingListId || '' },
-    skip:
-      !user?.id ||
-      !selectedShoppingListId ||
-      !finalConfig.enableCollaborationNotifications,
-    onData: ({ data }) => {
-      if (data.data?.shoppingListCollaboratorsChanged) {
-        const payload = data.data.shoppingListCollaboratorsChanged;
-        processNotification(
-          {
-            type: NotificationType.CollaborationInvite,
-            title: 'Collaborator Updated',
-            message: 'Collaborators on your shopping list have been updated',
-            payload: payload,
-            sentAt: new Date().toISOString(),
-          },
-          NotificationCategory.SHOPPING_LIST,
-          payload.userId,
-        );
-      }
-    },
-    onError: error => handleError('ShoppingListCollaboratorsChanged', error),
-  });
-
-  // Membership notifications
-  useMyMembershipUpdatedSubscription({
-    skip: !user?.id || !finalConfig.enableMembershipNotifications,
-    onData: ({ data }) => {
-      if (data.data?.myMembershipUpdated) {
-        const payload = data.data.myMembershipUpdated;
-        processNotification(
-          {
-            type: NotificationType.MembershipInvite,
-            title: 'Membership Updated',
-            message: 'Your membership status has been updated',
-            payload: payload,
-            sentAt: new Date().toISOString(),
-          },
-          NotificationCategory.MEMBERSHIP,
-          payload.userId,
-        );
-      }
-    },
-    onError: error => handleError('MyMembershipUpdated', error),
-  });
-
-  useMemberJoinedSubscription({
-    variables: { homeId: selectedHomeId || '' },
-    skip:
-      !user?.id ||
-      !selectedHomeId ||
-      !finalConfig.enableMembershipNotifications,
-    onData: ({ data }) => {
-      if (data.data?.memberJoined) {
-        const payload = data.data.memberJoined;
-        processNotification(
-          {
-            type: NotificationType.HomeJoined,
-            title: 'New Member',
-            message: 'A new member has joined your home',
-            payload: payload,
-            sentAt: new Date().toISOString(),
-          },
-          NotificationCategory.MEMBERSHIP,
-          payload.userId,
-        );
-      }
-    },
-    onError: error => handleError('MemberJoined', error),
   });
 
   // App state handling

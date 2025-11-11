@@ -1,4 +1,10 @@
-import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import React, {
+  useState,
+  useCallback,
+  useMemo,
+  useRef,
+  useEffect,
+} from 'react';
 import {
   View,
   Image,
@@ -9,6 +15,7 @@ import {
 } from 'react-native';
 import { useRoute, RouteProp } from '@react-navigation/native';
 import { useAppNavigation, useDefaultHome, usePantryManagement } from '#hooks';
+import { useDietaryProfile } from '#/hooks/profile/useDietaryProfile';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
 import {
   ListTemplate,
@@ -26,10 +33,13 @@ import type {
 } from '#/services/recipeApi/types';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
-import { useGetHomeQuery } from '#generated';
 import { useScreenTransition } from '#hooks/performance';
+import { useGetHomeQuery, Diet, ReligiousDiet } from '#generated';
 
-type RecipeSearchRouteProp = RouteProp<{ RecipeSearch: { initialQuery?: string } }, 'RecipeSearch'>;
+type RecipeSearchRouteProp = RouteProp<
+  { RecipeSearch: { initialQuery?: string } },
+  'RecipeSearch'
+>;
 
 // Wrapper component that shows skeleton screens during loading
 const RecipeSearchContent: React.FC<{
@@ -89,6 +99,9 @@ export const RecipeSearch: React.FC = () => {
   const defaultPantry = getDefaultPantry(homeData);
   const { allItems: pantryItems } = usePantryManagement(defaultPantry?.id);
 
+  // Get dietary profile for filter defaults
+  const { profile: dietaryProfile } = useDietaryProfile();
+
   const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [loading, setLoading] = useState(false);
   const [searchResults, setSearchResults] = useState<
@@ -99,8 +112,124 @@ export const RecipeSearch: React.FC = () => {
     new Set(),
   );
 
+  // Filter state
+  const [activeFilters, setActiveFilters] = useState<{
+    diet: string | null;
+    intolerances: string[];
+    mealType: string | null;
+    maxReadyTime: number | null;
+  }>({
+    diet: null,
+    intolerances: [],
+    mealType: null,
+    maxReadyTime: null,
+  });
+
   const ingredientSheetRef = useRef<BottomSheetModal>(null);
+  const filterSheetRef = useRef<BottomSheetModal>(null);
   const hasAutoSearchedRef = useRef(false);
+  const hasInitializedFiltersRef = useRef(false);
+
+  // Get excluded ingredients for Halal/Kosher restrictions
+  const getExcludedIngredientsForReligiousDiet = useCallback(
+    (restrictions: { diet?: Diet | null }[]): string[] => {
+      const excluded: string[] = [];
+
+      for (const restriction of restrictions) {
+        // Check if this restriction has a religious diet
+        const religionDiet =
+          restriction.diet as unknown as ReligiousDiet | null;
+
+        if (religionDiet === ReligiousDiet.Halal) {
+          excluded.push(
+            'pork',
+            'bacon',
+            'ham',
+            'sausage',
+            'pepperoni',
+            'prosciutto',
+            'alcohol',
+            'wine',
+            'beer',
+            'vodka',
+            'rum',
+            'whiskey',
+            'brandy',
+            'gelatin',
+            'lard',
+          );
+        } else if (religionDiet === ReligiousDiet.Kosher) {
+          excluded.push(
+            'pork',
+            'bacon',
+            'ham',
+            'sausage',
+            'pepperoni',
+            'shellfish',
+            'shrimp',
+            'crab',
+            'lobster',
+            'clam',
+            'oyster',
+            'squid',
+            'octopus',
+            'catfish',
+          );
+        }
+      }
+
+      return excluded;
+    },
+    [],
+  );
+
+  // Initialize filters from dietary profile
+  useEffect(() => {
+    if (!dietaryProfile || hasInitializedFiltersRef.current) {
+      return;
+    }
+
+    // Extract diet and intolerances from restrictions
+    const restrictions = dietaryProfile.restrictions || [];
+    let diet: string | null = null;
+    const intolerances: string[] = [];
+
+    for (const restriction of restrictions) {
+      // Take first diet restriction and convert to lowercase with spaces
+      if (restriction.diet && !diet) {
+        diet = restriction.diet.toLowerCase().replace(/_/g, ' ');
+      }
+
+      // Collect all intolerance restrictions
+      if (restriction.intolerance) {
+        intolerances.push(
+          restriction.intolerance.toLowerCase().replace(/_/g, ' '),
+        );
+      }
+    }
+
+    // Round maxCookTimeMinutes to nearest filter option (15, 30, 45, 60)
+    let maxReadyTime: number | null = null;
+    if (dietaryProfile.maxCookTimeMinutes) {
+      const cookTime = dietaryProfile.maxCookTimeMinutes;
+      if (cookTime <= 15) maxReadyTime = 15;
+      else if (cookTime <= 30) maxReadyTime = 30;
+      else if (cookTime <= 45) maxReadyTime = 45;
+      else if (cookTime <= 60) maxReadyTime = 60;
+    }
+
+    // Set filters if any were found
+    if (diet || intolerances.length > 0 || maxReadyTime) {
+      setActiveFilters({
+        diet,
+        intolerances,
+        mealType: null,
+        maxReadyTime,
+      });
+    }
+
+    hasInitializedFiltersRef.current = true;
+  }, [dietaryProfile]);
 
   // Text-based search
   const handleTextSearch = useCallback(async () => {
@@ -113,10 +242,27 @@ export const RecipeSearch: React.FC = () => {
     setSearchPerformed(true);
 
     try {
+      // Get excluded ingredients for Halal/Kosher restrictions
+      const excludedIngredients = getExcludedIngredientsForReligiousDiet(
+        dietaryProfile?.restrictions || [],
+      );
+
       const data = await spoonacularService.searchRecipes({
         query: searchQuery,
         number: 10,
         addRecipeInformation: true, // Get additional recipe metadata
+        // Add filter parameters
+        ...(activeFilters.diet && { diet: activeFilters.diet }),
+        ...(activeFilters.intolerances.length > 0 && {
+          intolerances: activeFilters.intolerances.join(','),
+        }),
+        ...(activeFilters.mealType && { type: activeFilters.mealType }),
+        ...(activeFilters.maxReadyTime && {
+          maxReadyTime: activeFilters.maxReadyTime,
+        }),
+        ...(excludedIngredients.length > 0 && {
+          excludeIngredients: excludedIngredients.join(','),
+        }),
       });
 
       setSearchResults(data.results || []);
@@ -142,7 +288,12 @@ export const RecipeSearch: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery]);
+  }, [
+    searchQuery,
+    activeFilters,
+    dietaryProfile,
+    getExcludedIngredientsForReligiousDiet,
+  ]);
 
   // Auto-trigger search if initialQuery is provided
   useEffect(() => {
@@ -169,9 +320,26 @@ export const RecipeSearch: React.FC = () => {
     ingredientSheetRef.current?.dismiss();
 
     try {
+      // Get excluded ingredients for Halal/Kosher restrictions
+      const excludedIngredients = getExcludedIngredientsForReligiousDiet(
+        dietaryProfile?.restrictions || [],
+      );
+
       const results = await spoonacularService.searchRecipesByIngredients({
         ingredients: ingredientString,
         number: 10,
+        // Add filter parameters
+        ...(activeFilters.diet && { diet: activeFilters.diet }),
+        ...(activeFilters.intolerances.length > 0 && {
+          intolerances: activeFilters.intolerances.join(','),
+        }),
+        ...(activeFilters.mealType && { type: activeFilters.mealType }),
+        ...(activeFilters.maxReadyTime && {
+          maxReadyTime: activeFilters.maxReadyTime,
+        }),
+        ...(excludedIngredients.length > 0 && {
+          excludeIngredients: excludedIngredients.join(','),
+        }),
       });
 
       // Keep the full RecipeSearchResult with ingredient matching data
@@ -198,7 +366,12 @@ export const RecipeSearch: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [selectedIngredients]);
+  }, [
+    selectedIngredients,
+    activeFilters,
+    dietaryProfile,
+    getExcludedIngredientsForReligiousDiet,
+  ]);
 
   // Open ingredient selector
   const openIngredientSelector = useCallback(() => {
@@ -225,20 +398,67 @@ export const RecipeSearch: React.FC = () => {
     });
   }, []);
 
+  // Open filter sheet
+  const openFilterSheet = useCallback(() => {
+    filterSheetRef.current?.present();
+  }, []);
+
+  // Clear all filters
+  const clearFilters = useCallback(() => {
+    setActiveFilters({
+      diet: null,
+      intolerances: [],
+      mealType: null,
+      maxReadyTime: null,
+    });
+  }, []);
+
+  // Apply filters and close sheet
+  const applyFilters = useCallback(() => {
+    filterSheetRef.current?.dismiss();
+    // Trigger search if there's a query or ingredients selected
+    if (searchQuery.trim()) {
+      handleTextSearch();
+    } else if (selectedIngredients.size > 0) {
+      handleIngredientSearch();
+    }
+  }, [
+    searchQuery,
+    selectedIngredients,
+    handleTextSearch,
+    handleIngredientSearch,
+  ]);
+
+  // Count active filters
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (activeFilters.diet) count++;
+    if (activeFilters.intolerances.length > 0)
+      count += activeFilters.intolerances.length;
+    if (activeFilters.mealType) count++;
+    if (activeFilters.maxReadyTime) count++;
+    return count;
+  }, [activeFilters]);
+
   // Transform results to list items with unified display
   const items = useMemo(() => {
     return searchResults.map(recipe => {
       // Check if this is an ingredient-based search result
       const hasIngredientData = 'usedIngredientCount' in recipe;
-      const recipeWithIngredients = hasIngredientData ? (recipe as RecipeSearchResult) : null;
+      const recipeWithIngredients = hasIngredientData
+        ? (recipe as RecipeSearchResult)
+        : null;
 
       // Build subtitle parts
       const subtitleParts: string[] = [];
 
       // Ingredient match info (ingredient search only)
       if (recipeWithIngredients) {
+        const totalIngredients =
+          recipeWithIngredients.usedIngredientCount +
+          recipeWithIngredients.missedIngredientCount;
         subtitleParts.push(
-          `✅ ${recipeWithIngredients.usedIngredientCount} ingredients • ❌ ${recipeWithIngredients.missedIngredientCount} missing`
+          `${recipeWithIngredients.usedIngredientCount}/${totalIngredients} ingredients`,
         );
       }
 
@@ -255,7 +475,8 @@ export const RecipeSearch: React.FC = () => {
 
       // Build likes badge (both search types)
       let badge;
-      const likes = recipeWithIngredients?.likes ?? textSearchRecipe.aggregateLikes;
+      const likes =
+        recipeWithIngredients?.likes ?? textSearchRecipe.aggregateLikes;
       if (likes && likes > 0) {
         badge = {
           text: `❤️ ${likes}`,
@@ -321,6 +542,12 @@ export const RecipeSearch: React.FC = () => {
               : undefined,
         },
         {
+          icon: 'options',
+          onPress: openFilterSheet,
+          color: theme.colors.white,
+          badge: activeFilterCount > 0 ? String(activeFilterCount) : undefined,
+        },
+        {
           icon: 'search',
           onPress: handleTextSearch,
           color: theme.colors.primary,
@@ -328,7 +555,14 @@ export const RecipeSearch: React.FC = () => {
         },
       ] as SearchBarAction[],
     }),
-    [handleTextSearch, openIngredientSelector, selectedIngredients.size, theme],
+    [
+      handleTextSearch,
+      openIngredientSelector,
+      openFilterSheet,
+      selectedIngredients.size,
+      activeFilterCount,
+      theme,
+    ],
   );
 
   const emptyStateConfig = searchPerformed
@@ -372,6 +606,7 @@ export const RecipeSearch: React.FC = () => {
           loading,
           searchPerformed,
         }}
+        showUserHeader={false}
       />
 
       {/* Ingredient Selector Bottom Sheet */}
@@ -379,6 +614,7 @@ export const RecipeSearch: React.FC = () => {
         sheetRef={ingredientSheetRef}
         sheetTitle="Select Ingredients"
         snapPoints={['50%', '75%', '90%']}
+        scrollable={false}
       >
         <FlatList
           data={pantryItems}
@@ -423,6 +659,200 @@ export const RecipeSearch: React.FC = () => {
             {selectedIngredients.size !== 1 ? 's' : ''}
           </Text>
         </TouchableOpacity>
+      </BottomSheetAction>
+
+      {/* Filter Bottom Sheet */}
+      <BottomSheetAction
+        sheetRef={filterSheetRef}
+        sheetTitle="Filters"
+        snapPoints={['75%', '90%']}
+      >
+        {/* Diet Filter Section */}
+        <View style={styles.filterSection}>
+          <Text style={styles.filterSectionTitle}>🍽️ Diet</Text>
+          <Text style={styles.filterSectionSubtitle}>Select one</Text>
+          <View style={styles.chipRow}>
+            {['Vegan', 'Vegetarian', 'Keto', 'Paleo', 'Whole30'].map(diet => (
+              <TouchableOpacity
+                key={diet}
+                style={[
+                  styles.filterChip,
+                  activeFilters.diet === diet.toLowerCase() &&
+                    styles.filterChipActive,
+                ]}
+                onPress={() =>
+                  setActiveFilters(prev => ({
+                    ...prev,
+                    diet:
+                      prev.diet === diet.toLowerCase()
+                        ? null
+                        : diet.toLowerCase(),
+                  }))
+                }
+              >
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    activeFilters.diet === diet.toLowerCase() &&
+                      styles.filterChipTextActive,
+                  ]}
+                >
+                  {diet}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Intolerances Filter Section */}
+        <View style={styles.filterSection}>
+          <Text style={styles.filterSectionTitle}>
+            ⚠️ Allergies & Intolerances
+          </Text>
+          <Text style={styles.filterSectionSubtitle}>
+            Select all that apply
+          </Text>
+          <View style={styles.checkboxGrid}>
+            {[
+              'Gluten',
+              'Dairy',
+              'Egg',
+              'Peanut',
+              'Tree Nut',
+              'Soy',
+              'Shellfish',
+              'Seafood',
+            ].map(intolerance => {
+              const isSelected = activeFilters.intolerances.includes(
+                intolerance.toLowerCase(),
+              );
+              return (
+                <TouchableOpacity
+                  key={intolerance}
+                  style={styles.checkboxItem}
+                  onPress={() =>
+                    setActiveFilters(prev => ({
+                      ...prev,
+                      intolerances: isSelected
+                        ? prev.intolerances.filter(
+                            i => i !== intolerance.toLowerCase(),
+                          )
+                        : [...prev.intolerances, intolerance.toLowerCase()],
+                    }))
+                  }
+                >
+                  <Ionicons
+                    name={isSelected ? 'checkbox' : 'square-outline'}
+                    size={24}
+                    color={
+                      isSelected
+                        ? theme.colors.primary
+                        : theme.colors.textSecondary
+                    }
+                  />
+                  <Text style={styles.checkboxText}>{intolerance}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* Meal Type Filter Section */}
+        <View style={styles.filterSection}>
+          <Text style={styles.filterSectionTitle}>🍳 Meal Type</Text>
+          <Text style={styles.filterSectionSubtitle}>Select one</Text>
+          <View style={styles.chipRow}>
+            {['Breakfast', 'Lunch', 'Dinner', 'Snack', 'Dessert'].map(type => (
+              <TouchableOpacity
+                key={type}
+                style={[
+                  styles.filterChip,
+                  activeFilters.mealType === type.toLowerCase() &&
+                    styles.filterChipActive,
+                ]}
+                onPress={() =>
+                  setActiveFilters(prev => ({
+                    ...prev,
+                    mealType:
+                      prev.mealType === type.toLowerCase()
+                        ? null
+                        : type.toLowerCase(),
+                  }))
+                }
+              >
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    activeFilters.mealType === type.toLowerCase() &&
+                      styles.filterChipTextActive,
+                  ]}
+                >
+                  {type}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Max Cook Time Filter Section */}
+        <View style={styles.filterSection}>
+          <Text style={styles.filterSectionTitle}>⏱️ Max Cook Time</Text>
+          <Text style={styles.filterSectionSubtitle}>Select one</Text>
+          <View style={styles.chipRow}>
+            {[
+              { label: '15 min', value: 15 },
+              { label: '30 min', value: 30 },
+              { label: '45 min', value: 45 },
+              { label: '60 min', value: 60 },
+            ].map(time => (
+              <TouchableOpacity
+                key={time.value}
+                style={[
+                  styles.filterChip,
+                  activeFilters.maxReadyTime === time.value &&
+                    styles.filterChipActive,
+                ]}
+                onPress={() =>
+                  setActiveFilters(prev => ({
+                    ...prev,
+                    maxReadyTime:
+                      prev.maxReadyTime === time.value ? null : time.value,
+                  }))
+                }
+              >
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    activeFilters.maxReadyTime === time.value &&
+                      styles.filterChipTextActive,
+                  ]}
+                >
+                  {time.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Action Buttons */}
+        <View style={styles.filterActions}>
+          <TouchableOpacity
+            style={[styles.filterActionButton, styles.clearButton]}
+            onPress={clearFilters}
+          >
+            <Text style={styles.clearButtonText}>Clear All</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.filterActionButton,
+              styles.applyButton,
+              { backgroundColor: theme.colors.primary },
+            ]}
+            onPress={applyFilters}
+          >
+            <Text style={styles.applyButtonText}>Apply Filters</Text>
+          </TouchableOpacity>
+        </View>
       </BottomSheetAction>
     </View>
   );
@@ -473,6 +903,97 @@ const styles = StyleSheet.create(theme => ({
     marginHorizontal: theme.spacing.md,
   },
   searchButtonText: {
+    color: '#fff',
+    fontSize: theme.fonts.size.md,
+    fontWeight: '600',
+  },
+  // Filter styles
+  filterContainer: {
+    padding: theme.spacing.md,
+  },
+  filterSection: {
+    marginBottom: theme.spacing.xl,
+  },
+  filterSectionTitle: {
+    fontSize: theme.fonts.size.lg,
+    fontWeight: '700',
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.xs,
+  },
+  filterSectionSubtitle: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.md,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: theme.spacing.sm,
+  },
+  filterChip: {
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.radii.full,
+    borderWidth: 1.5,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.background,
+  },
+  filterChipActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  filterChipText: {
+    fontSize: theme.fonts.size.sm,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
+  },
+  filterChipTextActive: {
+    color: theme.colors.white,
+  },
+  checkboxGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: theme.spacing.sm,
+  },
+  checkboxItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '48%',
+    padding: theme.spacing.sm,
+    borderRadius: theme.radii.md,
+    backgroundColor: theme.colors.surface,
+  },
+  checkboxText: {
+    marginLeft: theme.spacing.sm,
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textPrimary,
+  },
+  filterActions: {
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.sm,
+    marginBottom: theme.spacing.lg,
+  },
+  filterActionButton: {
+    flex: 1,
+    padding: theme.spacing.md,
+    borderRadius: theme.radii.md,
+    alignItems: 'center',
+  },
+  clearButton: {
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  clearButtonText: {
+    color: theme.colors.textPrimary,
+    fontSize: theme.fonts.size.md,
+    fontWeight: '600',
+  },
+  applyButton: {
+    // backgroundColor set inline with theme.colors.primary
+  },
+  applyButtonText: {
     color: '#fff',
     fontSize: theme.fonts.size.md,
     fontWeight: '600',

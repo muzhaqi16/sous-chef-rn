@@ -1,5 +1,10 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils';
 import { formatRole, getRoleBadgeStyle } from '#utils/formatters';
@@ -42,6 +47,7 @@ export type PartialHome = {
 interface HomeCardProps {
   home: PartialHome;
   isDefault: boolean;
+  isHighlighted?: boolean;
   canInvite?: boolean;
   onPress?: (homeId: string) => void;
   onSetDefault: (homeId: string) => void;
@@ -52,6 +58,7 @@ interface HomeCardProps {
 export const HomeCard: React.FC<HomeCardProps> = ({
   home,
   isDefault,
+  isHighlighted = false,
   canInvite,
   onPress,
   onSetDefault,
@@ -60,12 +67,70 @@ export const HomeCard: React.FC<HomeCardProps> = ({
 }) => {
   const { theme } = useUnistyles();
 
+  // Animated values for highlight effect
+  const highlightOpacity = useSharedValue(0);
+  const shadowOpacity = useSharedValue(0.05);
+  const scale = useSharedValue(1);
+
+  // Trigger highlight animation when isHighlighted changes
+  useEffect(() => {
+    if (isHighlighted) {
+      // Animate in
+      highlightOpacity.value = withSpring(1, {
+        damping: 25,
+        stiffness: 200,
+        mass: 1.2,
+      });
+      shadowOpacity.value = withSpring(0.2, {
+        damping: 25,
+        stiffness: 200,
+        mass: 1.2,
+      });
+      scale.value = withSpring(1.02, {
+        damping: 30,
+        stiffness: 180,
+        mass: 1.5,
+      });
+    } else {
+      // Animate out
+      highlightOpacity.value = withSpring(0, {
+        damping: 25,
+        stiffness: 200,
+        mass: 1.2,
+      });
+      shadowOpacity.value = withSpring(0.05, {
+        damping: 25,
+        stiffness: 200,
+        mass: 1.2,
+      });
+      scale.value = withSpring(1, {
+        damping: 30,
+        stiffness: 180,
+        mass: 1.5,
+      });
+    }
+  }, [isHighlighted, highlightOpacity, shadowOpacity, scale]);
+
+  const animatedCardStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: scale.value }],
+      shadowOpacity: shadowOpacity.value,
+    };
+  });
+
+  const animatedHighlightStyle = useAnimatedStyle(() => {
+    return {
+      opacity: highlightOpacity.value,
+    };
+  });
+
   const handleDelete = () => {
     onDelete(home.id, home.name);
   };
 
   return (
-    <View style={[commonStyles.shadow, styles.homeCard]}>
+    <Animated.View style={[commonStyles.shadow, styles.homeCard, animatedCardStyle]}>
+      <Animated.View style={[styles.highlightOverlay, animatedHighlightStyle]} />
       <TouchableOpacity
         style={styles.homeHeader}
         onPress={() => onPress?.(home.id)}
@@ -126,7 +191,7 @@ export const HomeCard: React.FC<HomeCardProps> = ({
       />
 
       <MembersList members={home.members || []} invites={home.invites || []} />
-    </View>
+    </Animated.View>
   );
 };
 
@@ -136,6 +201,18 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.md,
     marginHorizontal: theme.spacing.md,
     marginVertical: theme.spacing.sm,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  highlightOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: theme.colors.primary + '10',
+    borderRadius: theme.radii.md,
+    pointerEvents: 'none',
   },
   homeHeader: {
     flexDirection: 'row',

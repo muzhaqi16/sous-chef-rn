@@ -26,6 +26,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         name="arrow-left"
         onPress={onBack}
         color={theme.colors.textPrimary}
+        accessibilityLabel="Go back"
       />
       <TouchableOpacity onPress={onAvatarPress} style={styles.avatarContainer}>
         {avatarUrl ? (
@@ -49,7 +50,12 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
           </View>
         )}
         <View style={styles.profileAction}>
-          <Icon library="Feather" color="#fff" name="edit-3" size={15} />
+          <Icon
+            library="Feather"
+            color={theme.colors.iconOnPrimary}
+            name="edit-3"
+            size={15}
+          />
         </View>
       </TouchableOpacity>
       <IconButton
@@ -57,6 +63,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         library="Feather"
         onPress={onMore}
         color={theme.colors.textPrimary}
+        accessibilityLabel="More options"
       />
     </View>
   );

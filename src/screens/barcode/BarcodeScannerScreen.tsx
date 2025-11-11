@@ -206,15 +206,17 @@ export const BarcodeScannerScreen: React.FC<{
         <IconButton
           name="close"
           onPress={() => goBack()}
-          size={24}
+          size="md"
           style={styles.headerButton}
+          accessibilityLabel="Close scanner"
         />
         <Text style={styles.headerTitle}>Scan Barcode</Text>
         <IconButton
           name={flashEnabled ? 'flash-on' : 'flash-off'}
           onPress={toggleFlash}
-          size={24}
+          size="md"
           style={styles.headerButton}
+          accessibilityLabel={flashEnabled ? 'Turn flash off' : 'Turn flash on'}
         />
       </View>
 

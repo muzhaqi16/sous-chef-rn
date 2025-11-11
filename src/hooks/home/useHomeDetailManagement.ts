@@ -7,11 +7,12 @@ import {
   useRemoveMemberMutation,
   useRevokeHomeInviteMutation,
   MembershipRole,
-  GetHomesDocument,
-  GetHomeDocument,
 } from '#generated';
 import { MESSAGES } from '#constants';
 import { formatRole } from '#utils/formatters';
+import { normalizeHome } from '#/utils/connectionUtils';
+import { createRemoveFromParentConnectionUpdater } from '#/apollo/utils';
+import { useCrudOperations } from '#/hooks/utils';
 
 /**
  * Custom hook for HomeDetailScreen business logic
@@ -26,7 +27,10 @@ export function useHomeDetailManagement(homeId: string) {
 
   // Mutations
   const [updateHomeMutation, { loading: updating }] = useUpdateHomeMutation({
-    refetchQueries: [{ query: GetHomesDocument }],
+    // No refetchQueries or update function needed!
+    // Mutation returns full HomeFragment, so Apollo automatically normalizes
+    // and updates the cache based on __typename + id
+    errorPolicy: 'all',
     onError: error => {
       Alert.alert(
         'Error',
@@ -36,7 +40,27 @@ export function useHomeDetailManagement(homeId: string) {
   });
 
   const [updateMembershipMutation] = useUpdateMembershipMutation({
-    refetchQueries: [{ query: GetHomesDocument }],
+    errorPolicy: 'all',
+    // Use cache.modify to update the membership role field
+    update(cache, { data }, { variables }) {
+      if (!data?.updateMembership || !variables) return;
+
+      const membershipId = variables.id;
+      const newRole = variables.input.role;
+
+      // Directly modify the cached membership's role field
+      cache.modify({
+        id: cache.identify({ __typename: 'Membership', id: membershipId }),
+        fields: {
+          role() {
+            return newRole;
+          },
+          updatedAt() {
+            return new Date().toISOString();
+          },
+        },
+      });
+    },
     onError: error => {
       Alert.alert(
         'Error',
@@ -46,23 +70,51 @@ export function useHomeDetailManagement(homeId: string) {
   });
 
   const [removeMemberMutation] = useRemoveMemberMutation({
-    refetchQueries: [{ query: GetHomesDocument }],
+    errorPolicy: 'all',
+    update(cache, { data }, { variables }) {
+      if (!data?.removeMember || !variables) return;
+
+      try {
+        const removeFromMembersCache = createRemoveFromParentConnectionUpdater(
+          'Home',
+          'membersConnection',
+          'Membership',
+        );
+        removeFromMembersCache(cache, homeId, variables.membershipId, { evictItem: true });
+      } catch (error) {
+        console.warn('Cache update failed for removeMember:', error);
+      }
+    },
     onError: error => {
       Alert.alert('Error', error.message || MESSAGES.errors.removeMemberFailed);
     },
   });
 
   const [revokeInviteMutation] = useRevokeHomeInviteMutation({
-    refetchQueries: [
-      { query: GetHomesDocument },
-      { query: GetHomeDocument, variables: { homeId } },
-    ],
+    errorPolicy: 'all',
+    update(cache, { data }, { variables }) {
+      if (!data?.revokeHomeInvite || !variables) return;
+
+      try {
+        const removeFromInvitesCache = createRemoveFromParentConnectionUpdater(
+          'Home',
+          'invitesConnection',
+          'HomeInvite',
+        );
+        removeFromInvitesCache(cache, homeId, variables.id, { evictItem: true });
+      } catch (error) {
+        console.warn('Cache update failed for revokeInvite:', error);
+      }
+    },
     onError: error => {
       Alert.alert('Error', error.message || MESSAGES.errors.revokeInviteFailed);
     },
   });
 
-  const home = data?.home;
+  const home = normalizeHome(data?.home);
+
+  // CRUD operations utilities
+  const { createRemoveOperation } = useCrudOperations();
 
   // Handler functions
   const saveName = useCallback(
@@ -129,46 +181,30 @@ export function useHomeDetailManagement(homeId: string) {
 
   const removeMember = useCallback(
     (membershipId: string, memberName: string) => {
-      Alert.alert(
-        'Remove Member',
-        `Are you sure you want to remove ${memberName} from this home?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Remove',
-            style: 'destructive',
-            onPress: async () => {
-              await removeMemberMutation({
-                variables: { membershipId },
-              });
-            },
-          },
-        ],
-      );
+      const operation = createRemoveOperation({
+        mutation: removeMemberMutation,
+        itemId: membershipId,
+        confirmMessage: `Are you sure you want to remove {name} from this home?`,
+        itemName: memberName,
+        operationName: 'Remove Member',
+      });
+      return operation();
     },
-    [removeMemberMutation],
+    [removeMemberMutation, createRemoveOperation],
   );
 
   const revokeInvite = useCallback(
     (inviteId: string, inviteEmail: string) => {
-      Alert.alert(
-        'Revoke Invitation',
-        `Are you sure you want to revoke the invitation to ${inviteEmail}?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Revoke',
-            style: 'destructive',
-            onPress: async () => {
-              await revokeInviteMutation({
-                variables: { id: inviteId },
-              });
-            },
-          },
-        ],
-      );
+      const operation = createRemoveOperation({
+        mutation: revokeInviteMutation,
+        itemId: inviteId,
+        confirmMessage: `Are you sure you want to revoke the invitation to {name}?`,
+        itemName: inviteEmail,
+        operationName: 'Revoke Invitation',
+      });
+      return operation();
     },
-    [revokeInviteMutation],
+    [revokeInviteMutation, createRemoveOperation],
   );
 
   return {

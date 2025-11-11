@@ -1,6 +1,6 @@
 {
   "name": "sous-chef-app",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
@@ -17,6 +17,8 @@
     "adb:devices:count": "echo \"Connected devices: $(adb devices | tail -n +2 | grep device | wc -l)\"",
     "adb:kill": "adb kill-server",
     "adb:gql": "adb reverse tcp:4000 tcp:4000",
+    "adb:gql:remove": "adb reverse --remove tcp:4000",
+    "adb:gql:reset": "adb reverse --remove tcp:4000 && adb reverse tcp:4000 tcp:4000",
     "adb:gql:all": "for device in $(adb devices | tail -n +2 | cut -f1 | grep -v '^$'); do echo \"Setting up $device\" && adb -s \"$device\" reverse tcp:4000 tcp:4000; done",
     "adb:gql:emulator": "adb -e reverse tcp:4000 tcp:4000",
     "adb:gql:phone": "adb -d reverse tcp:4000 tcp:4000",
@@ -82,7 +84,6 @@
     "react-native-config": "^1.5.9",
     "react-native-device-info": "^14.1.1",
     "react-native-draggable-flatlist": "^4.0.3",
-    "react-native-edge-to-edge": "^1.7.0",
     "react-native-gesture-handler": "^2.28.0",
     "react-native-get-random-values": "^2.0.0",
     "react-native-image-picker": "^8.2.1",

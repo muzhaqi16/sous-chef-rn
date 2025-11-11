@@ -1,10 +1,11 @@
 import React from 'react';
 import { TouchableOpacity } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils';
 import type { AddButtonProps } from './types';
 
 export const AddButton: React.FC<AddButtonProps> = ({ onPress }) => {
+  const { theme } = useUnistyles();
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -14,7 +15,7 @@ export const AddButton: React.FC<AddButtonProps> = ({ onPress }) => {
       <Icon
         name="qr-code-scanner"
         size={24}
-        color="#FFFFFF"
+        color={theme.colors.iconOnPrimary}
         library="MaterialIcons"
       />
     </TouchableOpacity>

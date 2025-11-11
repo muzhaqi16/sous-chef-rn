@@ -1,7 +1,7 @@
-import {useCallback} from 'react';
-import {useNavigation} from '@react-navigation/native';
-import {useStore} from '#store';
-import {OnBoardingSteps} from '#store/slices/navigationSlice';
+import { useCallback } from 'react';
+import { useNavigation } from '@react-navigation/native';
+import { useStore } from '#store';
+import { OnBoardingSteps } from '#store/slices/navigationSlice';
 
 const ONBOARDING_STEPS = [
   'CreateHome',
@@ -11,7 +11,7 @@ const ONBOARDING_STEPS = [
   'InviteMembers',
   'BiometricSetup',
   'OnboardingComplete',
-] as const;
+];
 
 const STEP_TO_ENUM: Record<string, OnBoardingSteps> = {
   CreateHome: OnBoardingSteps.createHome,

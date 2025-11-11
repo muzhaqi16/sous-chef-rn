@@ -1,3 +1,5 @@
+import { serializeError } from './errorSerialization';
+
 // Define a simple error interface instead of importing ApolloError
 interface SubscriptionError {
   message?: string;
@@ -28,7 +30,7 @@ export const handleSubscriptionError = (
 
   if (!isServerResolverError) {
     // For non-resolver errors, don't retry
-    console.error(`Subscription ${operationName} failed with non-resolver error:`, error);
+    console.error(`Subscription ${operationName} failed with non-resolver error:`, serializeError(error));
     return false;
   }
 

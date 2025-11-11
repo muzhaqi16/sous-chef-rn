@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ScrollView, Text } from 'react-native';
+import { View, ScrollView, Text, RefreshControl } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils';
 import { Header } from '../molecules/Header';
@@ -20,6 +20,8 @@ interface DetailTemplateProps {
     icon?: React.ComponentProps<typeof Icon>['name'];
     onPress: () => void;
   };
+  refreshing?: boolean;
+  onRefresh?: () => void | Promise<void>;
 }
 
 export const DetailTemplate: React.FC<DetailTemplateProps> = ({
@@ -28,6 +30,8 @@ export const DetailTemplate: React.FC<DetailTemplateProps> = ({
   headerActions = [],
   sections,
   primaryAction,
+  refreshing,
+  onRefresh,
 }) => {
   const { theme } = useUnistyles();
   return (
@@ -40,7 +44,15 @@ export const DetailTemplate: React.FC<DetailTemplateProps> = ({
       />
       <ScrollView
         style={styles.content}
-        contentContainerStyle={{ paddingVertical: theme.spacing.md }}
+        contentContainerStyle={{ paddingVertical: theme.spacing.sm }}
+        refreshControl={
+          onRefresh ? (
+            <RefreshControl
+              refreshing={refreshing ?? false}
+              onRefresh={onRefresh}
+            />
+          ) : undefined
+        }
       >
         {sections.map((section, index) => (
           <View key={index} style={styles.section}>
@@ -64,6 +76,7 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+    gap: theme.spacing.md,
   },
   content: {
     paddingHorizontal: theme.spacing.md,

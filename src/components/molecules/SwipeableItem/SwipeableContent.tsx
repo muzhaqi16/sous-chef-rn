@@ -38,7 +38,7 @@ export const SwipeableContent: React.FC<SwipeableContentProps> = ({
         onPress={onPress}
         onLongPress={onLongPress}
         delayLongPress={150}
-        activeOpacity={0.7}
+        activeOpacity={1}
         style={styles.touchable}
       >
         {children}

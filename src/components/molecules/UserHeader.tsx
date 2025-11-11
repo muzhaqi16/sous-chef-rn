@@ -12,12 +12,13 @@ export const UserHeader: React.FC = () => {
   return (
     <View style={styles.header}>
       <Text style={styles.headerTitle}>
-        Hello{' '}
+        Hello,{' '}
         <Text style={{ fontWeight: 'bold' }}>
           {profile?.displayName
             ? profile.displayName.split(' ')[0]
             : profile?.firstName || 'User'}
         </Text>
+        !
       </Text>
 
       <View style={styles.headerActions}>
@@ -60,12 +61,11 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'space-between',
     marginHorizontal: theme.spacing.sm,
     marginTop: theme.spacing.md,
-    marginBottom: theme.spacing.sm,
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: theme.fonts.size['2xl'],
     fontWeight: '400',
-    color: theme.colors.textPrimary,
+    color: theme.colors.textOnSurfaceVariant,
   },
   headerActions: {
     flexDirection: 'row',

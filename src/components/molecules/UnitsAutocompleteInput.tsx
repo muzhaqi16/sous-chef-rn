@@ -1,8 +1,8 @@
-import React, {useState, useEffect} from 'react';
-import {View, Text, TouchableOpacity} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
-import {useGetUnitsQuery} from '#generated';
-import {useStore} from '#store';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, Text, TouchableOpacity } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { useSearchUnitsQuery } from '#generated';
+import { useStore } from '#store';
 import { BottomSheetAutocompleteInput } from './BottomSheetAutocompleteInput';
 
 interface Unit {
@@ -32,33 +32,50 @@ export const UnitsAutocompleteInput: React.FC<UnitsAutocompleteInputProps> = ({
   onUnitSelected,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
 
   // Get cached units from store
   const cachedUnits = useStore(state => state.cachedUnits);
-  const setCachedUnits = useStore(state => state.setCachedUnits);
 
-  // Fetch common units and cache them
-  const {data: commonUnitsData, loading} = useGetUnitsQuery({
-    skip: cachedUnits.length > 0,
+  // Debounce search term to avoid excessive API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Use SearchUnits query for server-side filtering when user types
+  // Only search if we have a search term, otherwise show cached common units
+  const { data: searchData, loading: searchLoading } = useSearchUnitsQuery({
+    variables: { query: debouncedSearchTerm },
+    skip: !debouncedSearchTerm || debouncedSearchTerm.length < 2,
     fetchPolicy: 'cache-first',
   });
 
-  // Cache units in store when fetched
-  useEffect(() => {
-    if (commonUnitsData?.units && cachedUnits.length === 0) {
-      setCachedUnits(commonUnitsData.units);
+  // Show search results when available, otherwise show cached common units
+  const units = useMemo(() => {
+    if (debouncedSearchTerm && debouncedSearchTerm.length >= 2) {
+      return searchData?.searchUnits || [];
     }
-  }, [commonUnitsData?.units, cachedUnits.length, setCachedUnits]);
+    // Default to cached common units when no search term
+    return cachedUnits;
+  }, [debouncedSearchTerm, searchData?.searchUnits, cachedUnits]);
 
-  const units =
-    cachedUnits.length > 0 ? cachedUnits : commonUnitsData?.units || [];
+  // Filter cached units client-side for short search terms (< 2 chars)
+  const filteredUnits = useMemo(() => {
+    if (!searchTerm || searchTerm.length < 2) {
+      return units.filter(
+        unit =>
+          unit.symbol.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          unit.name.toLowerCase().includes(searchTerm.toLowerCase()),
+      );
+    }
+    return units;
+  }, [units, searchTerm]);
 
-  // Filter units based on search term
-  const filteredUnits = units.filter(
-    unit =>
-      unit.symbol.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      unit.name.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
+  const loading = searchLoading;
 
   const handleTextChange = (text: string) => {
     onChangeText(text);
@@ -76,7 +93,8 @@ export const UnitsAutocompleteInput: React.FC<UnitsAutocompleteInputProps> = ({
     <TouchableOpacity
       onPress={() => handleSelectUnit(unit)}
       style={styles.unitItem}
-      activeOpacity={0.7}>
+      activeOpacity={0.7}
+    >
       <View style={styles.unitContent}>
         <Text style={styles.unitSymbol}>{unit.symbol}</Text>
         <Text style={styles.unitName}>{unit.name}</Text>

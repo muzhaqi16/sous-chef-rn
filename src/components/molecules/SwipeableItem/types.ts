@@ -7,12 +7,15 @@ export interface SwipeableItemProps {
   onDelete?: () => void;
   onEdit?: () => void;
   onTogglePurchase?: () => void;
+  onConsume?: () => void;
+  onWaste?: () => void;
   isPurchased?: boolean;
   enableSwipeToDelete?: boolean;
   leftThreshold?: number;
   rightThreshold?: number;
   friction?: number;
   onSwipeableWillOpen?: (ref: any) => void;
+  onSwipeableClose?: () => void;
 }
 
 export interface ActionButtonProps {
@@ -28,6 +31,8 @@ export interface SwipeActionsProps {
   onEdit?: () => void;
   onDelete?: () => void;
   onTogglePurchase?: () => void;
+  onConsume?: () => void;
+  onWaste?: () => void;
   isPurchased?: boolean;
   onActionPress?: (action: 'edit' | 'delete') => void;
   swipeableRef?: React.RefObject<any>;

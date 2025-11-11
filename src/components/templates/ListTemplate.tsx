@@ -26,8 +26,16 @@ interface ListTemplateProps {
   onItemPress?: (id: string) => void;
   onItemEdit?: (id: string) => void;
   onItemDelete?: (id: string) => void;
+  onItemConsume?: (id: string) => void;
+  onItemWaste?: (id: string) => void;
   onRefresh?: () => Promise<void>;
+  onSwipeableWillOpen?: (ref: any) => void;
   emptyState?: any;
+
+  // Pagination
+  onEndReached?: () => void;
+  onEndReachedThreshold?: number;
+  ListFooterComponent?: React.ComponentType<any> | React.ReactElement | null;
 
   // State management
   loading?: boolean; // Is data currently loading?
@@ -64,8 +72,16 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
   onItemPress = () => {},
   onItemEdit = () => {},
   onItemDelete = () => {},
+  onItemConsume,
+  onItemWaste,
   onRefresh = async () => {},
+  onSwipeableWillOpen,
   emptyState,
+
+  // Pagination
+  onEndReached,
+  onEndReachedThreshold = 0.5,
+  ListFooterComponent,
 
   // State management
   loading = false,
@@ -154,7 +170,13 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
           onItemPress={isLoading ? () => {} : onItemPress}
           onItemEdit={isLoading ? () => {} : onItemEdit}
           onItemDelete={isLoading ? () => {} : onItemDelete}
+          onItemConsume={isLoading ? undefined : onItemConsume}
+          onItemWaste={isLoading ? undefined : onItemWaste}
           onRefresh={onRefresh}
+          onSwipeableWillOpen={onSwipeableWillOpen}
+          onEndReached={onEndReached}
+          onEndReachedThreshold={onEndReachedThreshold}
+          ListFooterComponent={ListFooterComponent}
           emptyState={effectiveEmptyState}
           {...customListProps}
         />
@@ -164,7 +186,13 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
           onItemPress={isLoading ? () => {} : onItemPress}
           onItemEdit={isLoading ? () => {} : onItemEdit}
           onItemDelete={isLoading ? () => {} : onItemDelete}
+          onItemConsume={isLoading ? undefined : onItemConsume}
+          onItemWaste={isLoading ? undefined : onItemWaste}
           onRefresh={onRefresh}
+          onSwipeableWillOpen={onSwipeableWillOpen}
+          onEndReached={onEndReached}
+          onEndReachedThreshold={onEndReachedThreshold}
+          ListFooterComponent={ListFooterComponent}
           emptyState={effectiveEmptyState}
         />
       )}

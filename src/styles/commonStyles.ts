@@ -162,7 +162,6 @@ export const commonStyles = StyleSheet.create(theme => ({
     justifyContent: 'space-between',
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
-    // Add safe area padding on tablets/desktop
     paddingTop: {
       xs: theme.spacing.sm,
       md: theme.spacing.md,
@@ -176,7 +175,6 @@ export const commonStyles = StyleSheet.create(theme => ({
       md: theme.spacing.md,
       lg: theme.spacing.lg,
     },
-    backgroundColor: theme.colors.background,
   },
 
   headerTitle: {

@@ -2,7 +2,9 @@
 # QUERIES
 # ============================================
 
-query GetShoppingList($id: ID!) {
+query GetShoppingList(
+  $id: ID!
+) {
   shoppingList(id: $id) {
     id
     name
@@ -24,67 +26,29 @@ query GetShoppingList($id: ID!) {
     completedItems
     createdAt
     updatedAt
-    items {
-      id
-      quantity
-      estimatedPrice
-      budgetPrice
-      isPurchased
-      purchasedQuantity
-      purchasedPrice
-      purchaseDate
-      itemName
-      itemBarcode
-      unitName
-      notes
-      priority
-      category
-      sortOrder
-      isAutoAdded
-      autoAddReason
-      isFromMealPlan
-      item {
-        id
-        name
-        description
-        imageUrl
-        type
-        storageState
-      }
-      unit {
-        id
-        name
-        symbol
-      }
-      preferredStore {
-        id
-        name
-        address
-      }
-      purchasedBy {
-        id
-        email
-      }
-      addedBy {
-        id
-        email
-      }
-      createdAt
-      updatedAt
-    }
     ownerships {
       ...ShoppingListOwnershipFragment
     }
-    collaborators {
-      ...ShoppingListCollaboratorFragment
-      canEdit
-      canAddItems
-      canRemoveItems
-      canEditItems
-      canMarkPurchased
-      canInviteOthers
-      invitedAt
-      lastViewedAt
+    collaboratorsConnection(first: 20) {
+      edges {
+        cursor
+        node {
+          ...ShoppingListCollaboratorFragment
+          canEdit
+          canAddItems
+          canRemoveItems
+          canEditItems
+          canMarkPurchased
+          canInviteOthers
+          invitedAt
+          lastViewedAt
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      totalCount
     }
     targetStore {
       id
@@ -111,30 +75,10 @@ query GetShoppingLists {
     priority
     createdAt
     updatedAt
-    items {
-      id
-      isPurchased
-    }
     ownerships {
       id
       userId
       user {
-        id
-        email
-        profile {
-          displayName
-          avatar
-        }
-      }
-      createdAt
-    }
-    collaborators {
-      id
-      email
-      role
-      status
-      collaboratorId
-      collaborator {
         id
         email
         profile {
@@ -154,22 +98,42 @@ query GetDefaultShoppingList {
     isDefault
     totalItems
     completedItems
-    items {
-      id
-      itemName
-      quantity
-      isPurchased
-      item {
-        id
-        name
-        imageUrl
+    itemsConnection(first: 50) {
+      edges {
+        node {
+          id
+          itemName
+          quantity
+          isPurchased
+          item {
+            id
+            name
+            imageUrl
+          }
+        }
+        cursor
       }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      totalCount
     }
     ownerships {
       ...ShoppingListOwnershipFragment
     }
-    collaborators {
-      ...ShoppingListCollaboratorFragment
+    collaboratorsConnection(first: 20) {
+      edges {
+        cursor
+        node {
+          ...ShoppingListCollaboratorFragment
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      totalCount
     }
   }
 }
@@ -215,12 +179,32 @@ mutation CreateShoppingList($input: CreateShoppingListInput!) {
     metadata
     createdAt
     updatedAt
-    items {
-      id
-      isPurchased
+    itemsConnection(first: 25) {
+      edges {
+        node {
+          id
+          isPurchased
+        }
+        cursor
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      totalCount
     }
-    collaborators {
-      ...ShoppingListCollaboratorFragment
+    collaboratorsConnection(first: 20) {
+      edges {
+        cursor
+        node {
+          ...ShoppingListCollaboratorFragment
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      totalCount
     }
     ownerships {
       ...ShoppingListOwnershipFragment
@@ -245,12 +229,32 @@ mutation UpdateShoppingList($id: ID!, $input: UpdateShoppingListInput!) {
     priority
     createdAt
     updatedAt
-    items {
-      id
-      isPurchased
+    itemsConnection(first: 25) {
+      edges {
+        node {
+          id
+          isPurchased
+        }
+        cursor
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      totalCount
     }
-    collaborators {
-      ...ShoppingListCollaboratorFragment
+    collaboratorsConnection(first: 20) {
+      edges {
+        cursor
+        node {
+          ...ShoppingListCollaboratorFragment
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      totalCount
     }
     ownerships {
       ...ShoppingListOwnershipFragment
@@ -364,12 +368,12 @@ mutation ToggleShoppingListItemPurchased(
 }
 
 mutation UpdateShoppingListItemQuantity(
-  $id: ID!
-  $quantity: Float!
+  $itemId: ID!
+  $quantity: String!
   $version: Int
 ) {
   updateShoppingListItemQuantity(
-    id: $id
+    itemId: $itemId
     quantity: $quantity
     version: $version
   ) {
@@ -377,16 +381,8 @@ mutation UpdateShoppingListItemQuantity(
   }
 }
 
-mutation UpdateShoppingListItemNotes(
-  $id: ID!
-  $notes: String
-  $version: Int
-) {
-  updateShoppingListItemNotes(
-    id: $id
-    notes: $notes
-    version: $version
-  ) {
+mutation UpdateShoppingListItemNotes($id: ID!, $notes: String, $version: Int) {
+  updateShoppingListItemNotes(id: $id, notes: $notes, version: $version) {
     ...ShoppingListItemFragment
   }
 }
@@ -418,6 +414,85 @@ mutation UpdateCollaboratorRole(
 }
 
 # ============================================
+# OFFLINE SYNC MUTATIONS
+# ============================================
+
+mutation SyncShoppingListItem(
+  $clientId: ID!
+  $input: SyncShoppingListItemInput!
+) {
+  syncShoppingListItem(clientId: $clientId, input: $input) {
+    clientId
+    serverId
+    operation
+    wasCreated
+    item {
+      ...ShoppingListItemFragment
+    }
+    conflict {
+      clientVersion
+      serverVersion
+      message
+      serverItem {
+        id
+        version
+        sortOrder
+      }
+    }
+  }
+}
+
+mutation SyncDeleteShoppingListItem($clientId: ID!, $version: Int) {
+  syncDeleteShoppingListItem(clientId: $clientId, version: $version) {
+    clientId
+    serverId
+    operation
+    wasCreated
+    item {
+      id
+      itemName
+    }
+    conflict {
+      clientVersion
+      serverVersion
+      message
+    }
+  }
+}
+
+mutation SyncMoveShoppingListItem(
+  $clientId: ID!
+  $afterId: ID
+  $beforeId: ID
+  $version: Int
+) {
+  syncMoveShoppingListItem(
+    clientId: $clientId
+    afterId: $afterId
+    beforeId: $beforeId
+    version: $version
+  ) {
+    clientId
+    serverId
+    operation
+    wasCreated
+    item {
+      ...ShoppingListItemFragment
+    }
+    conflict {
+      clientVersion
+      serverVersion
+      message
+      serverItem {
+        id
+        version
+        sortOrder
+      }
+    }
+  }
+}
+
+# ============================================
 # SUBSCRIPTIONS
 # ============================================
 
@@ -435,12 +510,22 @@ subscription ShoppingListUpdated($listId: ID!) {
       completedAt
       budgetAmount
       totalCost
-      items {
-        id
-        itemName
-        quantity
-        isPurchased
-        estimatedPrice
+      itemsConnection(first: 25) {
+        edges {
+          node {
+            id
+            itemName
+            quantity
+            isPurchased
+            estimatedPrice
+          }
+          cursor
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        totalCount
       }
     }
     updatedFields

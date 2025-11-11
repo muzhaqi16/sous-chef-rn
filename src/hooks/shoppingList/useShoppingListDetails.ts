@@ -1,8 +1,8 @@
 import { useGetShoppingListQuery } from '#generated';
 
 export function useShoppingListDetails(listId: string | undefined) {
-  const {data, loading, error, refetch} = useGetShoppingListQuery({
-    variables: {id: listId ?? ''},
+  const { data, loading, error, refetch } = useGetShoppingListQuery({
+    variables: { id: listId ?? '' },
     skip: !listId,
     fetchPolicy: 'cache-and-network',
   });
@@ -21,7 +21,8 @@ export function useShoppingListDetails(listId: string | undefined) {
     // Convenience properties
     name: shoppingList?.name || '',
     isDefault: shoppingList?.isDefault || false,
-    collaborators: shoppingList?.collaborators || [],
-    isShared: (shoppingList?.collaborators?.length || 0) > 0,
+    collaborators:
+      shoppingList?.collaboratorsConnection?.edges.map(edge => edge.node) || [],
+    isShared: (shoppingList?.collaboratorsConnection?.edges.length || 0) > 0,
   };
 }

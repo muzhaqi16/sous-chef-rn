@@ -1,26 +1,54 @@
 import React from 'react';
 import Icon from '@react-native-vector-icons/ionicons';
-import {Text, View, TouchableOpacity} from 'react-native';
+import {Text, View, Pressable} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
 
 export const Counter = ({
   count,
   onIncrement,
   onDecrement,
+  disabled = false,
 }: {
   count: number;
   onIncrement: () => void;
   onDecrement: () => void;
+  disabled?: boolean;
 }) => {
+  const handleDecrement = (e: any) => {
+    e.stopPropagation();
+    if (!disabled) {
+      onDecrement();
+    }
+  };
+
+  const handleIncrement = (e: any) => {
+    e.stopPropagation();
+    if (!disabled) {
+      onIncrement();
+    }
+  };
+
   return (
-    <View style={styles.container}>
-      <TouchableOpacity onPress={onDecrement} style={styles.cardAdd}>
-        <Icon color="#1d1d1d" name="remove" size={11} />
-      </TouchableOpacity>
-      <Text style={styles.counterActionText}>{count}</Text>
-      <TouchableOpacity onPress={onIncrement} style={styles.cardMinus}>
-        <Icon color="#1d1d1d" name="add" size={11} />
-      </TouchableOpacity>
+    <View style={[styles.container, disabled && styles.containerDisabled]}>
+      <Pressable
+        onPress={handleDecrement}
+        disabled={disabled}
+        style={({pressed}) => [
+          styles.cardAdd,
+          pressed && !disabled && styles.pressed,
+        ]}>
+        <Icon color={disabled ? '#b0b0b0' : '#1d1d1d'} name="remove" size={11} />
+      </Pressable>
+      <Text style={[styles.counterActionText, disabled && styles.textDisabled]}>{count}</Text>
+      <Pressable
+        onPress={handleIncrement}
+        disabled={disabled}
+        style={({pressed}) => [
+          styles.cardMinus,
+          pressed && !disabled && styles.pressed,
+        ]}>
+        <Icon color={disabled ? '#b0b0b0' : '#1d1d1d'} name="add" size={11} />
+      </Pressable>
     </View>
   );
 };
@@ -77,5 +105,14 @@ const styles = StyleSheet.create(theme => ({
     shadowOpacity: 0.23,
     shadowRadius: 2.62,
     elevation: 4,
+  },
+  pressed: {
+    opacity: 0.7,
+  },
+  containerDisabled: {
+    borderColor: '#d0d0d0',
+  },
+  textDisabled: {
+    color: '#b0b0b0',
   },
 }));

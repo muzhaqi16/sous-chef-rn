@@ -124,6 +124,168 @@ function mergeArrayByIdIntelligent<T extends { id: string; __ref?: string }>(
 export function makeCache(): InMemoryCache {
   return new InMemoryCache({
     typePolicies: {
+      ShoppingListItem: {
+        keyFields: ['id'],
+        merge: true, // Enable automatic field-level merging for partial data
+      },
+      ShoppingList: {
+        keyFields: ['id'],
+        merge: true, // Enable automatic field-level merging for partial data
+        fields: {
+          items: {
+            // Merge shopping list items intelligently to prevent cache data loss
+            // Uses same version-based conflict resolution as Query.shoppingListItems
+            merge(existing, incoming, { readField }) {
+              return mergeArrayByIdIntelligent(existing, incoming, {
+                readField,
+              });
+            },
+          },
+          itemsConnection: {
+            keyArgs: false,
+            merge(existing, incoming, { args, readField }) {
+              if (!incoming) return existing;
+              if (!existing || !args?.itemsCursor) return incoming;
+
+              // Pagination - merge edges with deduplication
+              const existingEdges = existing.edges || [];
+              const incomingEdges = incoming.edges || [];
+              const edgeMap = new Map();
+
+              [...existingEdges, ...incomingEdges].forEach((edge: any) => {
+                const id = readField('id', edge?.node);
+                if (id && !edgeMap.has(id)) {
+                  edgeMap.set(id, edge);
+                }
+              });
+
+              return {
+                ...incoming,
+                edges: Array.from(edgeMap.values()),
+              };
+            },
+          },
+        },
+      },
+      Home: {
+        keyFields: ['id'],
+        fields: {
+          membersConnection: {
+            keyArgs: false,
+            merge(existing, incoming, { args, readField }) {
+              if (!incoming) return existing;
+              if (!existing || !args?.membersCursor) return incoming;
+
+              // Deduplicate by node ID
+              const edgeMap = new Map();
+              [...(existing.edges || []), ...(incoming.edges || [])].forEach(
+                (edge: any) => {
+                  const id = readField('id', edge?.node);
+                  if (id && !edgeMap.has(id)) {
+                    edgeMap.set(id, edge);
+                  }
+                },
+              );
+
+              return {
+                ...incoming,
+                edges: Array.from(edgeMap.values()),
+              };
+            },
+          },
+          invitesConnection: {
+            keyArgs: false,
+            merge(existing, incoming, { args }) {
+              if (!incoming) return existing;
+              if (!existing || !args?.invitesCursor) return incoming;
+
+              return {
+                ...incoming,
+                edges: [...(existing.edges || []), ...(incoming.edges || [])],
+              };
+            },
+          },
+          pantriesConnection: {
+            keyArgs: false,
+            merge(existing, incoming, { args }) {
+              if (!incoming) return existing;
+              if (!existing || !args?.pantriesCursor) return incoming;
+
+              return {
+                ...incoming,
+                edges: [...(existing.edges || []), ...(incoming.edges || [])],
+              };
+            },
+          },
+        },
+      },
+      Pantry: {
+        keyFields: ['id'],
+        fields: {
+          items: {
+            // Merge pantry items intelligently to prevent cache data loss
+            // Uses same version-based conflict resolution as Query.pantryItems
+            merge(existing, incoming, { readField }) {
+              return mergeArrayByIdIntelligent(existing, incoming, {
+                readField,
+              });
+            },
+          },
+          itemsConnection: {
+            // No keyArgs - cursor-based pagination uses the cursor, not cache key
+            keyArgs: false,
+            merge(existing, incoming, { args, readField }) {
+              // If no incoming data, preserve existing
+              if (!incoming) return existing;
+
+              // If no existing data or this is an initial load (no cursor), return incoming
+              if (!existing || !args?.itemsCursor) {
+                return incoming;
+              }
+
+              // This is pagination (cursor provided) - merge edges
+              const existingEdges = existing.edges || [];
+              const incomingEdges = incoming.edges || [];
+
+              // Deduplicate by node ID to prevent duplicates
+              const edgeMap = new Map();
+
+              [...existingEdges, ...incomingEdges].forEach((edge: any) => {
+                const id = readField('id', edge?.node);
+                if (id && !edgeMap.has(id)) {
+                  edgeMap.set(id, edge);
+                }
+              });
+
+              return {
+                ...incoming,
+                edges: Array.from(edgeMap.values()),
+              };
+            },
+          },
+          storageLocationsConnection: {
+            keyArgs: false,
+            merge(existing, incoming, { args }) {
+              if (!incoming) return existing;
+              if (!existing || !args?.storageLocationsCursor) return incoming;
+
+              // Pagination - append edges
+              return {
+                ...incoming,
+                edges: [...(existing.edges || []), ...(incoming.edges || [])],
+              };
+            },
+          },
+        },
+      },
+      PantryItem: {
+        keyFields: ['id'],
+        merge: true, // Enable automatic field-level merging for partial data
+      },
+      Recipe: {
+        keyFields: ['id'],
+        merge: true, // Enable automatic field-level merging for partial data
+      },
       Query: {
         fields: {
           // List-level queries (return collections of lists/homes)
@@ -205,6 +367,30 @@ export function makeCache(): InMemoryCache {
               return mergeArrayByIdIntelligent(existing, incoming, {
                 readField,
               });
+            },
+          },
+          recipes: {
+            keyArgs: ['category', 'difficulty'],
+            merge(existing, incoming, { args, readField }) {
+              if (!incoming) return existing;
+              if (!existing || !args?.cursor) return incoming;
+
+              // Pagination - merge edges with deduplication
+              const existingEdges = existing.edges || [];
+              const incomingEdges = incoming.edges || [];
+              const edgeMap = new Map();
+
+              [...existingEdges, ...incomingEdges].forEach((edge: any) => {
+                const id = readField('id', edge?.node);
+                if (id && !edgeMap.has(id)) {
+                  edgeMap.set(id, edge);
+                }
+              });
+
+              return {
+                ...incoming,
+                edges: Array.from(edgeMap.values()),
+              };
             },
           },
         },

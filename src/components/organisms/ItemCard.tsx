@@ -12,6 +12,9 @@ interface ItemCardProps {
   onPress: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
+  onConsume?: () => void;
+  onWaste?: () => void;
+  onSwipeableWillOpen?: (ref: any) => void;
   badge?: {
     text: string;
     variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger';
@@ -26,13 +29,23 @@ const ItemCardComponent: React.FC<ItemCardProps> = ({
   onPress,
   onEdit,
   onDelete,
+  onConsume,
+  onWaste,
+  onSwipeableWillOpen,
   badge,
   rightElement,
   leftElement,
 }) => {
   const innerContent =
-    onEdit || onDelete ? (
-      <SwipeableItem onPress={onPress} onEdit={onEdit} onDelete={onDelete}>
+    onEdit || onDelete || onConsume || onWaste ? (
+      <SwipeableItem
+        onPress={onPress}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        onConsume={onConsume}
+        onWaste={onWaste}
+        onSwipeableWillOpen={onSwipeableWillOpen}
+      >
         <ListItem
           title={title}
           subtitle={subtitle}
@@ -62,6 +75,7 @@ export const ItemCard = React.memo(ItemCardComponent);
 
 const styles = StyleSheet.create(theme => ({
   container: {
+    opacity: 1, // Prevent TouchableOpacity transparency inheritance
     // Horizontal margin for shadow visibility
     marginHorizontal: theme.spacing.sm,
     // Half vertical margin so stacked items merge to full spacing (md/2 + md/2 = md)

@@ -7,11 +7,15 @@ import {
   useUpdateStorageLocationMutation,
   useDeleteStorageLocationMutation,
   useSetDefaultStorageLocationMutation,
-  GetStorageLocationsDocument,
   CreateStorageLocationInput,
   UpdateStorageLocationInput,
 } from '#generated';
 import { usePreservedArrayData } from '#/hooks/apollo';
+import { useCrudOperations } from '#/hooks/utils';
+import {
+  createAddToQueryFieldUpdater,
+  createRemoveFromQueryFieldUpdater,
+} from '#/apollo/utils';
 
 /**
  * Build a tree structure from a flat list of locations using parentLocation references
@@ -80,44 +84,21 @@ export function useStorageLocationManagement(homeId: string | undefined) {
     errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
   });
 
+  // CRUD operations utilities
+  const { createAddOperation } = useCrudOperations();
+
   // Mutations
   const [createMutation, { loading: creating }] =
     useCreateStorageLocationMutation({
+      errorPolicy: 'all',
       update: (cache, { data }) => {
         if (!data?.createStorageLocation || !homeId) return;
 
         try {
-          const newLocation = data.createStorageLocation;
-
-          // Read the existing cached query for this homeId
-          const existingData = cache.readQuery({
-            query: GetStorageLocationsDocument,
-            variables: { homeId },
-          }) as { storageLocations: any[] } | null;
-
-          if (existingData?.storageLocations) {
-            // Check if location already exists (avoid duplicates)
-            const exists = existingData.storageLocations.some(
-              (loc: any) => loc.id === newLocation.id,
-            );
-
-            if (!exists) {
-              // Write back with the new location added
-              cache.writeQuery({
-                query: GetStorageLocationsDocument,
-                variables: { homeId },
-                data: {
-                  storageLocations: [
-                    ...existingData.storageLocations,
-                    newLocation,
-                  ],
-                },
-              });
-            }
-          }
+          const addToStorageLocationsCache = createAddToQueryFieldUpdater('storageLocations');
+          addToStorageLocationsCache(cache, data.createStorageLocation, { position: 'end' });
         } catch (error) {
           console.warn('Cache update failed for createStorageLocation:', error);
-          // Fallback: refetch on cache update failure
           refetch();
         }
       },
@@ -138,36 +119,16 @@ export function useStorageLocationManagement(homeId: string | undefined) {
     });
 
   const [deleteMutation] = useDeleteStorageLocationMutation({
+    errorPolicy: 'all',
     update: (cache, { data }, { variables }) => {
       if (!data?.deleteStorageLocation || !variables || !homeId) return;
 
       try {
-        const deletedId = variables.id;
-
-        // Read the existing cached query for this homeId
-        const existingData = cache.readQuery({
-          query: GetStorageLocationsDocument,
-          variables: { homeId },
-        }) as { storageLocations: any[] } | null;
-
-        if (existingData?.storageLocations) {
-          // Filter out the deleted location
-          cache.writeQuery({
-            query: GetStorageLocationsDocument,
-            variables: { homeId },
-            data: {
-              storageLocations: existingData.storageLocations.filter(
-                (loc: any) => loc.id !== deletedId,
-              ),
-            },
-          });
-        }
-
-        // Evict the deleted location from cache
-        cache.evict({
-          id: cache.identify({ __typename: 'StorageLocation', id: deletedId }),
-        });
-        cache.gc(); // Garbage collect orphaned data
+        const removeFromStorageLocationsCache = createRemoveFromQueryFieldUpdater(
+          'storageLocations',
+          'StorageLocation',
+        );
+        removeFromStorageLocationsCache(cache, variables.id, { evictItem: true });
       } catch (error) {
         console.warn('Cache update failed for deleteStorageLocation:', error);
         refetch();
@@ -189,29 +150,17 @@ export function useStorageLocationManagement(homeId: string | undefined) {
     },
   });
 
-  // Action handlers
-  const createLocation = useCallback(
-    async (input: Omit<CreateStorageLocationInput, 'homeId'>) => {
-      if (!homeId) return false;
-
-      try {
-        const result = await createMutation({
-          variables: {
-            input: {
-              ...input,
-              homeId,
-            },
-          },
-        });
-
-        return result.data?.createStorageLocation ?? false;
-      } catch (error) {
-        console.error('Create storage location error:', error);
-        return false;
-      }
-    },
-    [homeId, createMutation],
-  );
+  // Action handlers using CRUD utilities
+  const createLocation = createAddOperation({
+    mutation: createMutation,
+    parentId: homeId,
+    transformInput: (input: Omit<CreateStorageLocationInput, 'homeId'>) => ({
+      ...input,
+      homeId,
+    }),
+    onSuccess: (data: any) => data?.createStorageLocation,
+    operationName: 'Create Storage Location',
+  });
 
   const updateLocation = useCallback(
     async (id: string, input: UpdateStorageLocationInput) => {

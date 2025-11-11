@@ -1,4 +1,4 @@
-import { ErrorLink } from '@apollo/client/link/error';
+import { onError } from '@apollo/client/link/error';
 import { CombinedGraphQLErrors, CombinedProtocolErrors } from '@apollo/client/errors';
 import { isKnownServerError } from '#utils/subscriptionErrorHandler';
 import { LogoutCleanup } from '../logoutCleanup';
@@ -16,7 +16,7 @@ const isApiKeyError = (code: string, msg: string) =>
 const isSubscription = (op: any) =>
   op.query.definitions.some((def: any) => def.kind === 'OperationDefinition' && def.operation === 'subscription');
 
-export const errorLink = new ErrorLink(({ error, operation, forward }) => {
+export const errorLink = onError(({ error, operation, forward }) => {
   if (operation.getContext().skipErrorLink || LogoutCleanup.isInLogoutProcess()) return;
 
   if (CombinedGraphQLErrors.is(error)) {
@@ -55,15 +55,14 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
       'websocket',      // Generic WebSocket errors
     ].some(issue => message.includes(issue));
 
-    // For network/WebSocket errors, log and allow errorPolicy to handle
+    // For network errors, just log and let Apollo's errorPolicy handle it
+    // With cache-first + errorPolicy: 'ignore', Apollo will use cached data automatically
     if (isNetworkIssue) {
       console.warn(
-        `Network error for ${operation.operationName}, preserving cache:`,
+        `Network error for ${operation.operationName}:`,
         error.message
       );
-      // Return undefined to let errorPolicy handle the error
-      // errorPolicy: 'ignore' will suppress error and return cached data
-      return;
+      return; // Let Apollo's errorPolicy handle it
     }
 
     // Only log non-network errors as these are unexpected

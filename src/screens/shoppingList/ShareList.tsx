@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
-  ScrollView,
+  FlatList,
   TextInput,
   TouchableOpacity,
   Alert,
@@ -134,8 +134,10 @@ export const ShareList: React.FC = () => {
 
       <View style={styles.membersSection}>
         <Text style={styles.sectionTitle}>Current Members</Text>
-        <ScrollView>
-          {collaborators.map((member: any) => {
+        <FlatList
+          data={collaborators}
+          keyExtractor={(member) => member.id}
+          renderItem={({ item: member }) => {
             const getStatusColor = (status: string) => {
               switch (status?.toUpperCase()) {
                 case 'ACCEPTED':
@@ -173,7 +175,6 @@ export const ShareList: React.FC = () => {
 
             return (
               <TouchableOpacity
-                key={member.id}
                 style={styles.memberCard}
                 onPress={() => permissionsBottomSheetRef.current?.open(member)}
                 activeOpacity={0.7}
@@ -181,15 +182,14 @@ export const ShareList: React.FC = () => {
                 <View style={styles.memberInfo}>
                   <View style={styles.avatar}>
                     <Text style={styles.avatarText}>
-                      {member.name?.[0]?.toUpperCase() ||
-                        member.email[0].toUpperCase()}
+                      {member.email?.[0]?.toUpperCase() || '?'}
                     </Text>
                   </View>
                   <View style={styles.memberDetails}>
                     <Text style={styles.memberName}>
-                      {member.name || member.email}
+                      {member.email || 'Unknown'}
                     </Text>
-                    <Text style={styles.memberEmail}>{member.email}</Text>
+                    <Text style={styles.memberEmail}>{member.email || ''}</Text>
                     <View style={styles.statusContainer}>
                       <View
                         style={[
@@ -218,15 +218,17 @@ export const ShareList: React.FC = () => {
                 <TouchableOpacity
                   onPress={(e) => {
                     e?.stopPropagation?.();
-                    handleRemoveMember(member.email);
+                    if (member.email) {
+                      handleRemoveMember(member.email);
+                    }
                   }}
                 >
                   <Icon name="close" size={20} color={theme.colors.error} />
                 </TouchableOpacity>
               </TouchableOpacity>
             );
-          })}
-        </ScrollView>
+          }}
+        />
       </View>
 
       <CollaboratorPermissionsBottomSheet

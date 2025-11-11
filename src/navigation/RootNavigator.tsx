@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { useStore } from '#store';
+import { useAppStore, selectHydrated, selectUser } from '#store/useAppStore';
 import { useAuth } from '#hooks/auth/useAuth';
 import { SplashScreen } from '#screens';
 import {
@@ -68,14 +68,12 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function RootNavigator() {
-  const {
-    isHydrated,
-    navigationState,
-    showBiometricSetup,
-    postLoginCredentials,
-    setNavigationState,
-    user,
-  } = useStore();
+  const isHydrated = useAppStore(selectHydrated);
+  const navigationState = useAppStore(state => state.navigationState);
+  const showBiometricSetup = useAppStore(state => state.showBiometricSetup);
+  const postLoginCredentials = useAppStore(state => state.postLoginCredentials);
+  const setNavigationState = useAppStore(state => state.setNavigationState);
+  const user = useAppStore(selectUser);
   const { handlePostLoginBiometricComplete } = useAuth();
 
   // Initialize deep link router for handling URL-based navigation
@@ -133,7 +131,13 @@ function RootNavigator() {
   return (
     <>
       <NavigationErrorBoundary>
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Navigator
+          screenOptions={{
+            headerShown: false,
+            animation: 'slide_from_right',
+            animationDuration: 300,
+          }}
+        >
           {/* Auth Group */}
           {navigationState === 'auth' && (
             <Stack.Screen name="Auth">
@@ -155,7 +159,6 @@ function RootNavigator() {
               )}
             </Stack.Screen>
           )}
-
 
           {/* Onboarding Group */}
           {navigationState === 'onboarding' && (
@@ -179,7 +182,14 @@ function RootNavigator() {
                 )}
               </Stack.Screen>
               <Stack.Screen name="HomeManagement" component={HomeManagement} />
-              <Stack.Screen name="HomeDetail" component={HomeDetailScreen} />
+              <Stack.Screen
+                name="HomeDetail"
+                component={HomeDetailScreen}
+                options={{
+                  presentation: 'modal',
+                  animation: 'slide_from_bottom',
+                }}
+              />
               <Stack.Screen
                 name="StorageLocations"
                 component={StorageLocationsScreen}
@@ -192,14 +202,47 @@ function RootNavigator() {
               <Stack.Screen
                 name="ProfilePhotoUpload"
                 component={ProfilePhotoUploadScreen}
+                options={{
+                  presentation: 'modal',
+                  animation: 'slide_from_bottom',
+                }}
               />
-              <Stack.Screen name="ImageCrop" component={ImageCropScreen} />
-              <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
-              <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
-              <Stack.Screen name="DietaryProfile" component={DietaryProfileScreen} />
-              <Stack.Screen name="PersonalInformation" component={PersonalInformationScreen} />
-              <Stack.Screen name="AppSettings" component={AppSettingsScreen} />
-              <Stack.Screen name="PerformanceDashboard" component={PerformanceDashboard} />
+              <Stack.Screen
+                name="ImageCrop"
+                component={ImageCropScreen}
+                options={{
+                  presentation: 'modal',
+                  animation: 'slide_from_bottom',
+                }}
+              />
+              <Stack.Screen
+                name="DeleteAccount"
+                component={DeleteAccountScreen}
+              />
+              <Stack.Screen
+                name="NotificationSettings"
+                component={NotificationSettingsScreen}
+              />
+              <Stack.Screen
+                name="DietaryProfile"
+                component={DietaryProfileScreen}
+              />
+              <Stack.Screen
+                name="PersonalInformation"
+                component={PersonalInformationScreen}
+              />
+              <Stack.Screen
+                name="PerformanceDashboard"
+                component={PerformanceDashboard}
+              />
+              <Stack.Screen
+                name="AppSettings"
+                component={AppSettingsScreen}
+                options={{
+                  animation: 'fade',
+                  animationDuration: 200,
+                }}
+              />
             </>
           )}
 
@@ -224,16 +267,14 @@ function RootNavigator() {
       </NavigationErrorBoundary>
 
       {/* Global Biometric Setup Modal - shows on auth screen when triggered */}
-      {showBiometricSetup &&
-        user &&
-        postLoginCredentials && (
-          <PostLoginBiometricPrompt
-            visible={showBiometricSetup}
-            onComplete={handlePostLoginBiometricComplete}
-            userEmail={postLoginCredentials.email}
-            userPassword={postLoginCredentials.password}
-          />
-        )}
+      {showBiometricSetup && user && postLoginCredentials && (
+        <PostLoginBiometricPrompt
+          visible={showBiometricSetup}
+          onComplete={handlePostLoginBiometricComplete}
+          userEmail={postLoginCredentials.email}
+          userPassword={postLoginCredentials.password}
+        />
+      )}
     </>
   );
 }

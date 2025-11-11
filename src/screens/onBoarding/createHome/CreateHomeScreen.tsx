@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { View, Text, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, Alert, FlatList } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { formatRole } from '#utils/formatters';
-import { ApolloCache } from '@apollo/client';
 
 // Components
 import { FormContent, type FormValues } from './FormContent';
@@ -21,28 +20,29 @@ import {
   useCreatePantryMutation,
   useGetHomesQuery,
   useGetPantriesQuery,
-  GetHomesDocument,
-  GetHomesQuery,
   useGetMyPendingInvitesQuery,
   useAcceptHomeInviteMutation,
   useDeclineHomeInviteMutation,
 } from '#generated';
 
 // Store & Navigation
-import { useStore } from '#store';
+import { useAppStore, selectUser, selectSelectedHomeId } from '#store/useAppStore';
 import { useOnboardingNavigation } from '#hooks';
 
 // Validation & Helpers
 import { getCreateHomeSchema } from '#/utils';
 import { createPantryForHome, showPantryCreationError } from './helpers';
+import { normalizeHomes } from '#/utils/connectionUtils';
 
 export const CreateHomeScreen = () => {
   const { theme } = useUnistyles();
   const { navigateToNextStep, setUserNavigationState, skipToStep } =
     useOnboardingNavigation();
 
-  const { user, selectedHomeId, setSelectedHomeId, setSelectedPantryId } =
-    useStore();
+  const user = useAppStore(selectUser);
+  const selectedHomeId = useAppStore(selectSelectedHomeId);
+  const setSelectedHomeId = useAppStore(state => state.setSelectedHomeId);
+  const setSelectedPantryId = useAppStore(state => state.setSelectedPantryId);
 
   // State
   const [graphqlError, setGraphqlError] = useState<string | null>(null);
@@ -80,7 +80,7 @@ export const CreateHomeScreen = () => {
       fetchPolicy: 'cache-and-network',
     });
 
-  const homes = homesData?.homes || [];
+  const homes = normalizeHomes(homesData?.homes);
   const pantries = pantriesData?.pantries || [];
   const pendingInvites = pendingInvitesData?.myPendingInvites || [];
   const existingHome = homes[0];
@@ -92,46 +92,112 @@ export const CreateHomeScreen = () => {
   // GraphQL Mutations
   const [createHome] = useCreateHomeMutation();
   const [createPantry] = useCreatePantryMutation({
-    update: (cache: ApolloCache, { data }: any) => {
-      if (data?.createPantry) {
-        try {
-          const existingHomesData = cache.readQuery<GetHomesQuery>({
-            query: GetHomesDocument,
-          });
-
-          if (existingHomesData?.homes) {
-            const updatedHomes = existingHomesData.homes.map((home: any) => {
-              if (home.id === data.createPantry.homeId) {
-                return {
-                  ...home,
-                  pantries: [
-                    ...(home.pantries || []),
-                    {
-                      id: data.createPantry.id,
-                      name: data.createPantry.name,
-                      isDefault: data.createPantry.isDefault,
-                    },
-                  ],
-                };
-              }
-              return home;
-            });
-
-            cache.writeQuery<GetHomesQuery>({
-              query: GetHomesDocument,
-              data: { homes: updatedHomes },
-            });
-          }
-        } catch (error) {
-          console.log('Cache update failed, will rely on refetch:', error);
-        }
+    update: (cache, { data }) => {
+      const newPantry = data?.createPantry;
+      if (!newPantry?.homeId) {
+        return;
       }
+
+      const homeCacheId = cache.identify({
+        __typename: 'Home',
+        id: newPantry.homeId,
+      });
+
+      if (!homeCacheId) {
+        return;
+      }
+
+      cache.modify({
+        id: homeCacheId,
+        fields: {
+          pantries(existingPantries = []) {
+            return [
+              ...existingPantries,
+              {
+                __typename: 'Pantry',
+                id: newPantry.id,
+                name: newPantry.name,
+                isDefault: newPantry.isDefault,
+              },
+            ];
+          },
+          pantriesConnection(existingConnection = null) {
+            if (!existingConnection) {
+              return existingConnection;
+            }
+
+            const newEdge = {
+              __typename: 'PantryEdge',
+              cursor: newPantry.id,
+              node: {
+                __typename: 'Pantry',
+                ...newPantry,
+              },
+            };
+
+            const edges = [...(existingConnection.edges || []), newEdge];
+
+            return {
+              ...existingConnection,
+              edges,
+              totalCount:
+                (existingConnection.totalCount ?? edges.length) +
+                (existingConnection.edges?.length === edges.length ? 0 : 0),
+            };
+          },
+        },
+      });
     },
   });
 
   const [acceptHomeInvite, { loading: accepting }] =
     useAcceptHomeInviteMutation({
-      refetchQueries: [{ query: GetHomesDocument }],
+      // Manual cache update instead of refetchQueries for better performance
+      // The mutation returns a Membership object with homeId; the Home entity
+      // should already exist in cache from the invite query
+      update: (cache, { data }) => {
+        if (!data?.acceptHomeInvite?.homeId || !user?.id) return;
+
+        try {
+          const homeId = data.acceptHomeInvite.homeId;
+
+          // The Home entity should already be cached from the invite query
+          // We just need to ensure it's in the GetHomes query result
+          const userCacheId = cache.identify({
+            __typename: 'User',
+            id: user.id,
+          });
+
+          if (!userCacheId) return;
+
+          // Update the user's homes field to include the new home
+          cache.modify({
+            id: userCacheId,
+            fields: {
+              homes(existingHomes = [], { readField, toReference }) {
+                const homeRef = toReference({
+                  __typename: 'Home',
+                  id: homeId,
+                });
+
+                // Check if home already exists in the list
+                const exists = existingHomes.some(
+                  (ref: any) => readField('id', ref) === homeId,
+                );
+
+                if (exists) {
+                  return existingHomes;
+                }
+
+                return [...existingHomes, homeRef];
+              },
+            },
+          });
+        } catch (error) {
+          console.warn('Cache update failed for acceptHomeInvite:', error);
+          // UI will still work via optimistic/onCompleted handlers
+        }
+      },
       onCompleted: data => {
         if (data.acceptHomeInvite?.homeId) {
           setSelectedHomeId(data.acceptHomeInvite.homeId);
@@ -144,7 +210,8 @@ export const CreateHomeScreen = () => {
     });
 
   const [declineHomeInvite] = useDeclineHomeInviteMutation({
-    refetchQueries: [{ query: GetHomesDocument }],
+    // Note: Declining an invite doesn't add or remove homes from the list,
+    // it just changes the invite status. No cache update needed.
     onError: error => {
       Alert.alert('Error', error.message || 'Failed to decline invitation');
     },
@@ -327,50 +394,54 @@ export const CreateHomeScreen = () => {
       >
         <View style={styles.invitesContainer}>
           <Text style={styles.invitesSectionTitle}>Pending Invitations</Text>
-          {pendingInvites.map(invite => {
-            const inviterName = invite.inviter?.profile?.displayName || invite.inviter?.email || 'Someone';
-            const inviteHomeName = invite.home?.name || 'Unknown Home';
+          <FlatList
+            data={pendingInvites}
+            keyExtractor={(invite) => invite.id}
+            renderItem={({ item: invite }) => {
+              const inviterName = invite.inviter?.profile?.displayName || invite.inviter?.email || 'Someone';
+              const inviteHomeName = invite.home?.name || 'Unknown Home';
 
-            return (
-              <View key={invite.id} style={styles.inviteCard}>
-                {/* Home name - prominent */}
-                <Text style={styles.inviteHomeName}>{inviteHomeName}</Text>
+              return (
+                <View style={styles.inviteCard}>
+                  {/* Home name - prominent */}
+                  <Text style={styles.inviteHomeName}>{inviteHomeName}</Text>
 
-                {/* Invitation details */}
-                <View style={styles.inviteDetailsContainer}>
-                  <Text style={styles.inviteDetail}>
-                    <Text style={styles.inviteDetailLabel}>From: </Text>
-                    <Text style={styles.inviteDetailValue}>{inviterName}</Text>
-                  </Text>
+                  {/* Invitation details */}
+                  <View style={styles.inviteDetailsContainer}>
+                    <Text style={styles.inviteDetail}>
+                      <Text style={styles.inviteDetailLabel}>From: </Text>
+                      <Text style={styles.inviteDetailValue}>{inviterName}</Text>
+                    </Text>
 
-                  <Text style={styles.inviteDetail}>
-                    <Text style={styles.inviteDetailLabel}>Role: </Text>
-                    <Text style={styles.inviteRoleText}>{formatRole(invite.role)}</Text>
-                  </Text>
+                    <Text style={styles.inviteDetail}>
+                      <Text style={styles.inviteDetailLabel}>Role: </Text>
+                      <Text style={styles.inviteRoleText}>{formatRole(invite.role)}</Text>
+                    </Text>
+                  </View>
+
+                  {/* Actions */}
+                  <View style={styles.inviteActions}>
+                    <TouchableOpacity
+                      style={[styles.button, styles.inviteDeclineButton]}
+                      onPress={() => handleDeclineInvite(invite.token, inviteHomeName)}
+                      disabled={accepting}>
+                      <Text style={styles.inviteDeclineButtonText}>Decline</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.button, styles.inviteAcceptButton]}
+                      onPress={() => handleAcceptInvite(invite.token)}
+                      disabled={accepting}>
+                      {accepting ? (
+                        <ActivityIndicator size="small" color={theme.colors.white} />
+                      ) : (
+                        <Text style={styles.inviteAcceptButtonText}>Accept</Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
                 </View>
-
-                {/* Actions */}
-                <View style={styles.inviteActions}>
-                  <TouchableOpacity
-                    style={[styles.button, styles.inviteDeclineButton]}
-                    onPress={() => handleDeclineInvite(invite.token, inviteHomeName)}
-                    disabled={accepting}>
-                    <Text style={styles.inviteDeclineButtonText}>Decline</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.button, styles.inviteAcceptButton]}
-                    onPress={() => handleAcceptInvite(invite.token)}
-                    disabled={accepting}>
-                    {accepting ? (
-                      <ActivityIndicator size="small" color={theme.colors.white} />
-                    ) : (
-                      <Text style={styles.inviteAcceptButtonText}>Accept</Text>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              </View>
-            );
-          })}
+              );
+            }}
+          />
         </View>
 
         <View style={styles.orDivider}>

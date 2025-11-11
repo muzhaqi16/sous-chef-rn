@@ -1,20 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
-  ScrollView,
+  FlatList,
   TouchableOpacity,
   ActivityIndicator,
   TextInput,
-  Alert,
   RefreshControl,
+  ListRenderItem,
 } from 'react-native';
+import Animated, {
+  LinearTransition,
+  FadeInDown,
+} from 'react-native-reanimated';
 import { Icon } from '#utils';
 import { useAppNavigation } from '#hooks';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useHomeManagement } from '#/hooks';
 import { useInviteUserModal } from '#/hooks/useInviteUserModal';
 import { useAuth } from '#/hooks/auth/useAuth';
+import { AnimatedButton } from '#/components/atoms/AnimatedButton';
+import { toastService } from '#/services/toastService';
 import {
   HomeStats,
   CreateHomeForm,
@@ -26,6 +32,8 @@ import {
   getInvitableRoles,
   canInviteToHome,
 } from '#/utils/permissions/homePermissions';
+import { commonStyles } from '#/styles';
+import { formAnimationPreset } from '#/constants/animations';
 
 export const HomeManagement: React.FC = () => {
   const { goBack, navigate } = useAppNavigation();
@@ -38,6 +46,10 @@ export const HomeManagement: React.FC = () => {
   const [homeName, setHomeName] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [highlightedHomeId, setHighlightedHomeId] = useState<string | null>(
+    null,
+  );
+  const highlightTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const {
     homes,
@@ -62,43 +74,45 @@ export const HomeManagement: React.FC = () => {
   // Mutations (create, delete, update) automatically update the cache
 
   const { show, InviteModalComponent } = useInviteUserModal();
-  const inviteUserPrompt = (homeId: string) => {
-    // Find the home and user's membership
-    const home = homes?.find(h => h.id === homeId);
-    if (!home) {
-      Alert.alert('Error', 'Home not found');
-      return;
-    }
+  const inviteUserPrompt = useCallback(
+    (homeId: string) => {
+      // Find the home and user's membership
+      const home = homes?.find(h => h.id === homeId);
+      if (!home) {
+        toastService.error('Home not found');
+        return;
+      }
 
-    const membership = findUserMembership(home.members, user?.id);
-    if (!membership) {
-      Alert.alert('Error', 'You are not a member of this home');
-      return;
-    }
+      const membership = findUserMembership(home.members, user?.id);
+      if (!membership) {
+        toastService.error('You are not a member of this home');
+        return;
+      }
 
-    // Check if user has permission to invite
-    if (!canInviteToHome(membership.role)) {
-      Alert.alert(
-        'Permission Denied',
-        'You do not have permission to invite members to this home',
-      );
-      return;
-    }
+      // Check if user has permission to invite
+      if (!canInviteToHome(membership.role)) {
+        toastService.error(
+          'You do not have permission to invite members to this home',
+        );
+        return;
+      }
 
-    // Get the roles this user can invite
-    const allowedRoles = getInvitableRoles(membership.role);
+      // Get the roles this user can invite
+      const allowedRoles = getInvitableRoles(membership.role);
 
-    show({
-      title: 'Invite Member to Home',
-      allowedRoles,
-      onSubmit: async (email, role) => {
-        // Just call the function and let any errors bubble up to the modal
-        // The modal will handle displaying the error and keeping itself open
-        await inviteUserToHome(homeId, email, role);
-        // If we reach here, the invitation was successful and the modal will close
-      },
-    });
-  };
+      show({
+        title: 'Invite Member to Home',
+        allowedRoles,
+        onSubmit: async (email, role) => {
+          // Just call the function and let any errors bubble up to the modal
+          // The modal will handle displaying the error and keeping itself open
+          await inviteUserToHome(homeId, email, role);
+          // If we reach here, the invitation was successful and the modal will close
+        },
+      });
+    },
+    [homes, user, show, inviteUserToHome],
+  );
 
   const handleCreateHome = async () => {
     if (!homeName.trim()) return;
@@ -133,21 +147,46 @@ export const HomeManagement: React.FC = () => {
     }
   };
 
-  const handleDeleteHome = async (homeId: string, name: string) => {
-    await deleteHome(homeId, name);
-  };
+  const handleDeleteHome = useCallback(
+    async (homeId: string, name: string) => {
+      await deleteHome(homeId, name);
+    },
+    [deleteHome],
+  );
 
-  const handleSetDefault = async (homeId: string) => {
-    await setDefaultHome(homeId);
-  };
+  const handleSetDefault = useCallback(
+    async (homeId: string) => {
+      // Clear any existing highlight timeout
+      if (highlightTimeoutRef.current) {
+        clearTimeout(highlightTimeoutRef.current);
+      }
 
-  const handleInviteMember = (homeId: string) => {
-    inviteUserPrompt(homeId);
-  };
+      await setDefaultHome(homeId);
 
-  const handleViewHomeDetail = (homeId: string) => {
-    navigate('HomeDetail', { homeId });
-  };
+      // Highlight the newly-set default home
+      setHighlightedHomeId(homeId);
+
+      // Auto-dismiss highlight after 2 seconds
+      highlightTimeoutRef.current = setTimeout(() => {
+        setHighlightedHomeId(null);
+      }, 2000);
+    },
+    [setDefaultHome],
+  );
+
+  const handleInviteMember = useCallback(
+    (homeId: string) => {
+      inviteUserPrompt(homeId);
+    },
+    [inviteUserPrompt],
+  );
+
+  const handleViewHomeDetail = useCallback(
+    (homeId: string) => {
+      navigate('HomeDetail', { homeId });
+    },
+    [navigate],
+  );
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -159,6 +198,58 @@ export const HomeManagement: React.FC = () => {
       setRefreshing(false);
     }
   };
+
+  // Sort homes with default home first
+  const sortedHomes = useMemo(() => {
+    if (!homes) return [];
+    return [...homes].sort((a, b) => {
+      if (a.id === defaultHomeId) return -1;
+      if (b.id === defaultHomeId) return 1;
+      return 0;
+    });
+  }, [homes, defaultHomeId]);
+
+  // Render individual home item
+  const renderHomeItem: ListRenderItem<(typeof sortedHomes)[0]> = useCallback(
+    ({ item: home, index }) => {
+      const membership = findUserMembership(home.members, user?.id);
+      const userCanInvite = membership
+        ? canInviteToHome(membership.role)
+        : false;
+
+      return (
+        <Animated.View
+          key={home.id}
+          entering={FadeInDown.delay(index * 50).springify()}
+          layout={LinearTransition.duration(600)
+            .springify()
+            .damping(30)
+            .stiffness(180)
+            .mass(1.5)}
+        >
+          <HomeCard
+            home={home as PartialHome}
+            isDefault={home.id === defaultHomeId}
+            isHighlighted={home.id === highlightedHomeId}
+            canInvite={userCanInvite}
+            onPress={handleViewHomeDetail}
+            onSetDefault={handleSetDefault}
+            onInvite={handleInviteMember}
+            onDelete={handleDeleteHome}
+          />
+        </Animated.View>
+      );
+    },
+    [
+      defaultHomeId,
+      highlightedHomeId,
+      user,
+      handleViewHomeDetail,
+      handleSetDefault,
+      handleInviteMember,
+      handleDeleteHome,
+    ],
+  );
 
   // Only show loading screen on initial load (no cached data)
   // Once we have data, show it immediately even if refetching
@@ -197,7 +288,10 @@ export const HomeManagement: React.FC = () => {
 
         {/* Create/Join Home Form */}
         {showCreateForm && (
-          <View style={styles.formContainer}>
+          <Animated.View
+            {...formAnimationPreset}
+            style={[commonStyles.shadow, styles.formContainer]}
+          >
             {/* Mode Switcher */}
             <View style={styles.modeSwitcher}>
               <TouchableOpacity
@@ -293,70 +387,48 @@ export const HomeManagement: React.FC = () => {
                   >
                     <Text style={styles.cancelButtonText}>Cancel</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.button,
-                      styles.submitButton,
-                      (!joinCode.trim() || joiningByCode) &&
-                        styles.buttonDisabled,
-                    ]}
+                  <AnimatedButton
+                    loading={joiningByCode}
+                    disabled={!joinCode.trim()}
                     onPress={handleJoinHome}
-                    disabled={!joinCode.trim() || joiningByCode}
+                    variant="primary"
+                    style={styles.button}
                   >
-                    {joiningByCode ? (
-                      <ActivityIndicator size="small" color={theme.colors.white} />
-                    ) : (
-                      <Text style={styles.submitButtonText}>Join Home</Text>
-                    )}
-                  </TouchableOpacity>
+                    Join Home
+                  </AnimatedButton>
                 </View>
               </View>
             )}
-          </View>
+          </Animated.View>
         )}
 
-        {/* Homes List */}
-        <ScrollView
+        {/* Homes List - Virtualized */}
+        <Animated.View
+          layout={LinearTransition.duration(300)}
           style={styles.scrollView}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              tintColor={theme.colors.primary}
-              colors={[theme.colors.primary]}
-            />
-          }
         >
-          {[...homes]
-            .sort((a, b) => {
-              // Put default home first, keep rest in original order
-              if (a.id === defaultHomeId) return -1;
-              if (b.id === defaultHomeId) return 1;
-              return 0;
-            })
-            .map(home => {
-              // Calculate if user can invite to this home
-              const membership = findUserMembership(home.members, user?.id);
-              const userCanInvite = membership
-                ? canInviteToHome(membership.role)
-                : false;
-
-              return (
-                <HomeCard
-                  key={home.id}
-                  home={home as PartialHome}
-                  isDefault={home.id === defaultHomeId}
-                  canInvite={userCanInvite}
-                  onPress={handleViewHomeDetail}
-                  onSetDefault={handleSetDefault}
-                  onInvite={handleInviteMember}
-                  onDelete={handleDeleteHome}
-                />
-              );
-            })}
-        </ScrollView>
+          <FlatList
+            data={sortedHomes}
+            keyExtractor={item => item.id}
+            renderItem={renderHomeItem}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+                tintColor={theme.colors.primary}
+                colors={[theme.colors.primary]}
+              />
+            }
+            contentContainerStyle={{ flexGrow: 1 }}
+            removeClippedSubviews={true}
+            maxToRenderPerBatch={10}
+            updateCellsBatchingPeriod={50}
+            initialNumToRender={10}
+            windowSize={5}
+          />
+        </Animated.View>
       </View>
       {InviteModalComponent}
     </>
@@ -378,7 +450,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
+    padding: theme.spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
@@ -391,23 +463,24 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   formContainer: {
-    padding: 16,
+    padding: theme.spacing.md,
     backgroundColor: theme.colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    marginHorizontal: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+    borderRadius: theme.radii.lg,
   },
   modeSwitcher: {
     flexDirection: 'row',
     backgroundColor: theme.colors.surfaceVariant,
-    borderRadius: 8,
-    padding: 4,
-    marginBottom: 16,
+    borderRadius: theme.radii.md,
+    padding: theme.spacing.xs,
+    marginBottom: theme.spacing.md,
   },
   modeButton: {
     flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 6,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.radii.sm,
     alignItems: 'center',
   },
   modeButtonActive: {
@@ -422,7 +495,7 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.white,
   },
   joinForm: {
-    gap: 16,
+    gap: theme.spacing.md,
   },
   joinFormTitle: {
     fontSize: 18,
@@ -432,10 +505,10 @@ const styles = StyleSheet.create(theme => ({
   joinFormSubtitle: {
     fontSize: 14,
     color: theme.colors.textSecondary,
-    marginTop: -8,
+    marginTop: -theme.spacing.sm,
   },
   inputContainer: {
-    gap: 8,
+    gap: theme.spacing.sm,
   },
   inputLabel: {
     fontSize: 14,
@@ -445,20 +518,20 @@ const styles = StyleSheet.create(theme => ({
   textInput: {
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: theme.radii.md,
+    padding: theme.spacing.md,
     fontSize: 16,
     color: theme.colors.textPrimary,
     backgroundColor: theme.colors.surface,
   },
   previewLoader: {
-    marginVertical: 8,
+    marginVertical: theme.spacing.sm,
   },
   previewCard: {
-    padding: 16,
+    padding: theme.spacing.md,
     backgroundColor: theme.colors.surfaceVariant,
-    borderRadius: 8,
-    gap: 4,
+    borderRadius: theme.radii.md,
+    gap: theme.spacing.xs,
   },
   previewTitle: {
     fontSize: 16,
@@ -472,18 +545,18 @@ const styles = StyleSheet.create(theme => ({
   previewDescription: {
     fontSize: 14,
     color: theme.colors.textPrimary,
-    marginTop: 4,
+    marginTop: theme.spacing.xs,
   },
   formActions: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
+    gap: theme.spacing.md,
+    marginTop: theme.spacing.sm,
   },
   button: {
     flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.radii.md,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -15,6 +15,7 @@ import { useStore } from '#store';
 import {
   useShoppingListItemsChangedSubscription,
   useShoppingListUpdatedSubscription,
+  useShoppingListCollaboratorsChangedSubscription,
 } from '#generated';
 import { subscriptionService } from '#/services/subscriptions';
 import { CacheStrategy } from '#/services/subscriptions/types';
@@ -74,8 +75,27 @@ export function useShoppingListSubscriptions(userId?: string) {
     ...metadataHandlers,
   });
 
+  //
+  // Shopping List Collaborators Changed Subscription
+  // Handles collaborator add/remove/update operations
+  //
+  const collaboratorsHandlers = subscriptionService.register({
+    subscriptionName: 'ShoppingListCollaboratorsChanged',
+    entityType: 'ShoppingListCollaborator',
+    enableDeduplication: true,
+    userId,
+    cacheUpdateStrategy: CacheStrategy.AUTOMATIC,
+    enableLogging: true,
+    entityId: selectedShoppingListId,
+  });
+
+  useShoppingListCollaboratorsChangedSubscription({
+    variables: { listId: selectedShoppingListId || '' },
+    skip: !selectedShoppingListId,
+    ...collaboratorsHandlers,
+  });
+
   // Additional shopping list subscriptions can be added here:
-  // - ShoppingListCollaboratorsChanged
   // - ShoppingListStatusChanged
   // - etc.
 }

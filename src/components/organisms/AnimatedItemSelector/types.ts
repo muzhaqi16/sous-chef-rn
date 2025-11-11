@@ -50,6 +50,7 @@ export interface ItemSelectorRef {
 
 export interface SelectorItemProps<T extends SelectableItem> {
   item: T;
+  index?: number;
   isSelected: boolean;
   onPress: () => void;
   displayProperty: keyof T;

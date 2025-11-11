@@ -12,19 +12,32 @@ import {
   useSetDefaultHomeMutation,
   useJoinHomeByCodeMutation,
   useGetHomeByJoinCodeLazyQuery,
-  GetDefaultHomeDocument,
 } from '#generated';
 import { useSearchableList } from '../useSearchableList';
-import { useStore } from '#store';
+import { useAppStore, selectSelectedHomeId } from '#store/useAppStore';
 import { useErrorHandler } from '#/utils/errorHandling';
 import {
   handleVersionConflict,
   getVersionConflictMessage,
 } from '#/utils/errors/versionConflict';
 import { usePreservedArrayData } from '#/hooks/apollo';
+import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
+import { normalizeHome, normalizeHomes } from '#/utils/connectionUtils';
+import {
+  createAddToQueryFieldUpdater,
+  createRemoveFromQueryFieldUpdater,
+} from '#/apollo/utils';
+import { homeSearch } from '#/utils/searchUtils';
+import { useCrudOperations } from '#/hooks/utils';
+
+// Cache updater utilities for homes
+const addToHomesCache = createAddToQueryFieldUpdater('homes');
+const removeFromHomesCache = createRemoveFromQueryFieldUpdater('homes', 'Home');
 
 export function useHomeManagement() {
-  const { selectedHomeId, setSelectedHomeId, setSelectedPantryId } = useStore();
+  const selectedHomeId = useAppStore(selectSelectedHomeId);
+  const setSelectedHomeId = useAppStore(state => state.setSelectedHomeId);
+  const setSelectedPantryId = useAppStore(state => state.setSelectedPantryId);
   const { handleApolloError } = useErrorHandler();
 
   // Ref to track if initial home auto-selection has been attempted
@@ -47,34 +60,41 @@ export function useHomeManagement() {
   });
 
   const [setDefaultHomeMutation] = useSetDefaultHomeMutation({
-    // Update cache directly instead of refetching
-    update: (cache, { data }) => {
-      if (!data?.setDefaultHome) return;
+    errorPolicy: 'all',
 
-      try {
-        // Find the home that was set as default
-        const homeId = data.setDefaultHome.id;
-        const home = homes?.find(h => h.id === homeId);
+    // Optimistic response for instant UI updates (especially offline)
+    optimisticResponse: variables => ({
+      __typename: 'Mutation',
+      setDefaultHome: {
+        __typename: 'UserSettings',
+        id: variables.homeId,
+      },
+    }),
 
-        if (home) {
-          // Write the default home query result to cache
-          cache.writeQuery({
-            query: GetDefaultHomeDocument,
-            data: {
-              getDefaultHome: home,
-            },
-          });
-        }
-      } catch (error) {
-        console.warn('Cache update failed for setDefaultHome:', error);
-        // Fallback: refetch only on error
-        refetchDefaultHome();
-      }
+    // Update Apollo cache to keep GetDefaultHomeQuery in sync
+    // Uses existing Home reference from cache to avoid "Missing fields" errors
+    update: (cache, _result, { variables }) => {
+      if (!variables?.homeId) return;
+
+      // Get reference to the Home object already in cache
+      const homeRef = cache.identify({ __typename: 'Home', id: variables.homeId });
+      if (!homeRef) return;
+
+      // Update the getDefaultHome field to point to this Home reference
+      cache.modify({
+        fields: {
+          getDefaultHome: () => homeRef,
+        },
+      });
     },
   });
 
   // Preserve homes even when query fails to prevent cascade failures
-  const homes = usePreservedArrayData(data?.homes);
+  const preservedHomes = usePreservedArrayData(data?.homes);
+  const homes = useMemo(
+    () => normalizeHomes(preservedHomes),
+    [preservedHomes],
+  );
   const remoteDefaultHomeId = defaultHomeData?.getDefaultHome?.id;
 
   // NOTE: Remote sync logic removed from here to prevent infinite loop
@@ -116,45 +136,28 @@ export function useHomeManagement() {
     setSelectedHomeId,
   ]);
 
-  // Search functionality for homes
-  const { query, setQuery, filtered } = useSearchableList(
-    homes,
-    (home: any, q: string) =>
-      home?.name?.toLowerCase().includes(q.toLowerCase()),
-  );
+  // Search functionality - using reusable search utility
+  const { query, setQuery, filtered } = useSearchableList(homes, homeSearch);
+
+  // CRUD operations utilities
+  const { createAddOperation, createRemoveOperation } = useCrudOperations();
 
   const [createHomeMutation, { loading: creating, client }] =
     useCreateHomeMutation({
-      // Note: No optimisticResponse - the mutation returns complex nested types
-      // (members, myMembership with 15+ fields, pantries, membershipStats, etc.)
-      // Cache update provides instant UI feedback when server responds (~100-200ms)
-      // Update cache directly instead of refetching
+      errorPolicy: 'all',
+      // Note: No optimisticResponse - the mutation returns complex nested types that are difficult to predict:
+      // - Home object with 20+ fields (members, myMembership, pantries, membershipStats, etc.)
+      // - Nested objects like default pantry (if createDefaultPantry=true)
+      // - Server-generated IDs, timestamps, and computed fields
+      // Creating accurate optimistic response would require duplicating complex server logic
+      // Instead, cache update provides feedback within ~100-200ms which is acceptable UX
+      // (See docs/apollo-client-patterns.md - acceptable to skip optimistic response for complex creates)
+      // Update cache using generic utility
       update: (cache, { data }) => {
         if (!data?.createHome) return;
 
         try {
-          const newHome = data.createHome;
-
-          // Add new home to the homes list in cache
-          cache.modify({
-            fields: {
-              homes(existingHomes = [], { toReference }) {
-                const newHomeRef = toReference(newHome);
-
-                // Check if home already exists (avoid duplicates)
-                const exists = existingHomes.some((homeRef: any) => {
-                  const id = cache.identify(homeRef);
-                  return id === cache.identify(newHome);
-                });
-
-                if (exists) {
-                  return existingHomes;
-                }
-
-                return [...existingHomes, newHomeRef];
-              },
-            },
-          });
+          addToHomesCache(cache, data.createHome, { position: 'end' });
         } catch (error) {
           console.warn('Cache update failed for createHome:', error);
           // Fallback: refetch if cache update fails
@@ -188,8 +191,9 @@ export function useHomeManagement() {
           }
 
           // If a default pantry was created, set it as selected
-          if (newHome.pantries && newHome.pantries.length > 0) {
-            const defaultPantry = newHome.pantries.find(
+          const normalizedNewHome = normalizeHome(newHome);
+          if (normalizedNewHome?.pantries?.length) {
+            const defaultPantry = normalizedNewHome.pantries.find(
               (pantry: any) => pantry.isDefault,
             );
             if (defaultPantry) {
@@ -207,6 +211,18 @@ export function useHomeManagement() {
     });
 
   const [updateHomeMutation, { loading: updating }] = useUpdateHomeMutation({
+    errorPolicy: 'all',
+    // Uses automatic normalization - mutation returns full Home fragment
+    // No manual cache update needed (Pattern 2)
+    optimisticResponse: (variables, { IGNORE }) => {
+      const currentHome = homes?.find((h: any) => h.id === variables.id);
+      if (!currentHome) return IGNORE;
+
+      return {
+        __typename: 'Mutation',
+        updateHome: enhanceWithVersion(currentHome as any, variables.input),
+      };
+    },
     onCompleted: data => {
       if (data?.updateHome) {
         Alert.alert('Success', 'Home updated successfully');
@@ -233,29 +249,13 @@ export function useHomeManagement() {
     useDeleteHomeMutation({
       // Note: No optimisticResponse - the mutation returns full HomeFragment (20+ fields)
       // Cache update provides instant UI feedback when server responds (~100-200ms)
-      // Update cache to remove the home
+      // Update cache using generic utility
       update: (cache, { data }, { variables }) => {
         if (!data?.deleteHome || !variables) return;
 
         try {
           const deletedHomeId = variables.id;
-
-          // Remove the home from the homes list in cache
-          cache.modify({
-            fields: {
-              homes(existingHomes = [], { readField }) {
-                return existingHomes.filter(
-                  (homeRef: any) => readField('id', homeRef) !== deletedHomeId,
-                );
-              },
-            },
-          });
-
-          // Evict the removed home from cache
-          cache.evict({
-            id: cache.identify({ __typename: 'Home', id: deletedHomeId }),
-          });
-          cache.gc(); // Garbage collect orphaned data
+          removeFromHomesCache(cache, deletedHomeId, { evictItem: true });
         } catch (error) {
           console.warn('Cache update failed for deleteHome:', error);
           refetch();
@@ -303,33 +303,33 @@ export function useHomeManagement() {
 
   // Invite user to home mutation
   const [inviteUserMutation, { loading: inviting }] = useInviteToHomeMutation({
-    // Cache update to add the new invite/member
+    errorPolicy: 'all',
+    // Note: No cache update or optimistic response needed
+    // The cache update returns existingMembers unchanged because:
+    // 1. Invites don't immediately add members (requires acceptance)
+    // 2. Real-time subscription handles all updates when invite is sent/accepted
+    // 3. This pattern avoids UI flickering from optimistic updates that may not match server state
+    // Following subscription-based update pattern for real-time features (see docs/apollo-client-patterns.md)
     update: (cache, { data }, { variables }) => {
       if (!data?.inviteToHome || !variables) return;
 
       try {
         const homeId = variables.input.homeId;
 
-        // Update the home's members list if the invite data includes member info
+        // Empty cache.modify - subscription handles the actual update
         if (data.inviteToHome) {
           cache.modify({
             id: cache.identify({ __typename: 'Home', id: homeId }),
             fields: {
-              members(existingMembers = [], { toReference: _toReference }) {
-                // Note: The invite might not immediately add a member until accepted
-                // This depends on your backend implementation
-                // For now, we'll just let the subscription handle the update
+              members(existingMembers = []) {
+                // Return unchanged - subscription will handle the update when invite is accepted
                 return existingMembers;
               },
             },
           });
         }
-
-        // Note: We don't need to manually update homeInvites query
-        // because the subscription should handle that automatically
       } catch (error) {
         console.warn('Cache update failed for inviteUser:', error);
-        // No need to refetch - subscription will update
       }
     },
 
@@ -344,16 +344,20 @@ export function useHomeManagement() {
   // Join home by code mutation
   const [joinHomeByCodeMutation, { loading: joiningByCode }] =
     useJoinHomeByCodeMutation({
+      errorPolicy: 'all',
+      // Note: No optimistic response or manual cache update
+      // The mutation returns only Membership data (not the full Home object)
+      // We refetch GetHomesQuery to get the complete home with all fields (members, pantries, etc.)
+      // This is acceptable because join-home is an infrequent action (~100-200ms refetch time)
+      // Alternative approach would require a subscription or separate query for the joined home
       update: (_cache, { data }) => {
         if (!data?.joinHomeByCode) return;
 
         try {
-          // The home should now be in the homes list
-          // We need to refetch to get the full home data with pantries, etc.
+          // Refetch homes list to get the newly joined home with all fields
           refetch();
         } catch (error) {
-          console.warn('Cache update failed for joinHomeByCode:', error);
-          refetch();
+          console.warn('Failed to refetch homes after join:', error);
         }
       },
       onCompleted: data => {
@@ -391,30 +395,32 @@ export function useHomeManagement() {
       fetchPolicy: 'network-only', // Always fetch fresh data
     });
 
-  // Helper functions
+  // Helper functions using CRUD utilities
+  const createHomeOperation = createAddOperation({
+    mutation: createHomeMutation,
+    transformInput: (input: { name: string; createDefaultPantry?: boolean }) => ({
+      name: input.name.trim(),
+      createDefaultPantry: input.createDefaultPantry ?? true,
+    }),
+    validateInput: (input: { name: string }) => {
+      if (!input.name?.trim()) {
+        return 'Please enter a home name';
+      }
+      return true;
+    },
+    onSuccess: (data: any) => data?.createHome,
+    operationName: 'Create Home',
+  });
+
+  // Wrapper to support both string and object signatures
   const createHome = async (
-    name: string,
-    createDefaultPantry: boolean = true,
+    nameOrInput: string | { name: string; createDefaultPantry?: boolean },
   ) => {
-    if (!name.trim()) {
-      Alert.alert('Error', 'Please enter a home name');
-      return false;
-    }
-
-    try {
-      const result = await createHomeMutation({
-        variables: {
-          input: {
-            name: name.trim(),
-            createDefaultPantry,
-          },
-        },
-      });
-
-      return result.data?.createHome || false;
-    } catch (error: any) {
-      return false;
-    }
+    const input =
+      typeof nameOrInput === 'string'
+        ? { name: nameOrInput, createDefaultPantry: true }
+        : nameOrInput;
+    return createHomeOperation(input);
   };
 
   const updateHome = async (
@@ -445,34 +451,15 @@ export function useHomeManagement() {
     }
   };
 
-  const deleteHome = async (homeId: string, homeName: string) => {
-    return new Promise<boolean>(resolve => {
-      Alert.alert(
-        'Delete Home',
-        `Are you sure you want to delete "${homeName}"?`,
-        [
-          {
-            text: 'Cancel',
-            style: 'cancel',
-            onPress: () => resolve(false),
-          },
-          {
-            text: 'Delete',
-            style: 'destructive',
-            onPress: async () => {
-              try {
-                await deleteHomeMutation({
-                  variables: { id: homeId },
-                });
-                resolve(true);
-              } catch (error: any) {
-                resolve(false);
-              }
-            },
-          },
-        ],
-      );
+  const deleteHome = (homeId: string, homeName: string) => {
+    const operation = createRemoveOperation({
+      mutation: deleteHomeMutation,
+      itemId: homeId,
+      confirmMessage: 'Are you sure you want to delete "{name}"?',
+      itemName: homeName,
+      operationName: 'Delete Home',
     });
+    return operation();
   };
 
   const setDefaultHome = async (homeId: string) => {
@@ -495,14 +482,14 @@ export function useHomeManagement() {
     }
 
     try {
-      // Call mutation first - the useDefaultHome sync effect will update local state
-      // when Apollo cache is updated by the mutation response
+      // Call mutation first to update backend and Apollo cache
       const result = await setDefaultHomeMutation({
         variables: { homeId },
       });
 
       if (result.data) {
-        // No need to manually update local state - useDefaultHome's sync effect handles it
+        // Immediately update local state for instant UI feedback
+        setSelectedHomeId(homeId);
         return true;
       }
 
@@ -628,10 +615,11 @@ export function useHomeManagement() {
     remoteDefaultHomeId,
     isSynced,
     loading: loading || loadingDefaultHome,
-    initialLoading: (!homes && loading) || (!defaultHomeData && loadingDefaultHome),
+    initialLoading:
+      (!homes && loading) || (!defaultHomeData && loadingDefaultHome),
     error,
     stats,
-    previewHome: previewData?.homeByJoinCode || null,
+    previewHome: previewData?.homeByJoinCode ? normalizeHome(previewData.homeByJoinCode) : null,
 
     // Search
     searchQuery: query,

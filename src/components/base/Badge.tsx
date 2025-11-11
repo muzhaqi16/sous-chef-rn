@@ -35,13 +35,13 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.primary + '20',
   },
   success: {
-    backgroundColor: '#4CAF5020',
+    backgroundColor: theme.colors.successLight,
   },
   warning: {
-    backgroundColor: '#FFB84D20',
+    backgroundColor: theme.colors.warningLight,
   },
   danger: {
-    backgroundColor: '#FF6B6B20',
+    backgroundColor: theme.colors.errorLight,
   },
   small: {
     paddingHorizontal: 6,
@@ -62,12 +62,12 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.primary,
   },
   successText: {
-    color: '#4CAF50',
+    color: theme.colors.success,
   },
   warningText: {
-    color: '#FFB84D',
+    color: theme.colors.warning,
   },
   dangerText: {
-    color: '#FF6B6B',
+    color: theme.colors.danger,
   },
 }));

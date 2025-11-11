@@ -21,9 +21,10 @@ export const ShoppingListItemDetail: React.FC<{
   const { navigate, goBack } = useAppNavigation();
   const { listId, itemId } = route.params;
 
+  // Use cache-first policy - offlineQueryLink will handle offline behavior automatically
   const { data } = useGetShoppingListItemQuery({
     variables: { id: itemId },
-    fetchPolicy: 'cache-and-network',
+    fetchPolicy: 'cache-first',
   });
 
   const item = data?.shoppingListItem;
@@ -84,6 +85,9 @@ export const ShoppingListItemDetail: React.FC<{
             <View style={styles.itemDescription}>
               <FormattedItemSubtitle
                 quantity={item.quantity}
+                quantityInput={item.quantityInput}
+                displayFormat={item.displayFormat}
+                displayAsFraction={item.unit?.displayAsFraction}
                 netWeight={item.item?.netWeight}
                 unitSymbol={item.item?.displayUnit?.symbol || item.unitName}
               />
@@ -110,6 +114,9 @@ export const ShoppingListItemDetail: React.FC<{
             <View>
               <FormattedItemSubtitle
                 quantity={item.quantity}
+                quantityInput={item.quantityInput}
+                displayFormat={item.displayFormat}
+                displayAsFraction={item.unit?.displayAsFraction}
                 netWeight={item.item?.netWeight}
                 unitSymbol={item.item?.displayUnit?.symbol || item.unitName}
               />
@@ -148,8 +155,10 @@ export const ShoppingListItemDetail: React.FC<{
   ];
 
   // Purchase History section - Clickable panel
-  const purchases = item.purchases || [];
-  const hasPurchases = purchases.length > 0;
+  // Extract purchases from paginated connection
+  const purchases = item.purchasesConnection?.edges?.map(edge => edge.node) || [];
+  const purchaseCount = item.purchasesConnection?.totalCount || 0;
+  const hasPurchases = purchaseCount > 0;
 
   const handleViewHistory = () => {
     navigate('PurchaseHistory', {
@@ -163,11 +172,11 @@ export const ShoppingListItemDetail: React.FC<{
     ? [
         {
           label: 'Times Purchased',
-          value: purchases.length,
+          value: purchaseCount,
         },
         {
           label: 'Most Recent Purchase',
-          value: formatDate(purchases[0].purchaseDate),
+          value: purchases[0] ? formatDate(purchases[0].purchaseDate) : 'N/A',
         },
       ]
     : [];

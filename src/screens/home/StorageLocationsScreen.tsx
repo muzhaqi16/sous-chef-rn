@@ -6,7 +6,8 @@ import {
   ActivityIndicator,
   TouchableOpacity,
 } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import Animated from 'react-native-reanimated';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks';
 import { DetailTemplate } from '#components/templates/DetailTemplate';
 import { useStorageLocationManagement } from '#hooks';
@@ -16,6 +17,7 @@ import {
 } from '#components/organisms/storageLocation';
 import { commonStyles } from '#styles';
 import { Icon } from '#utils';
+import { formAnimationPreset } from '#/constants/animations';
 
 type RouteParams = {
   homeId: string;
@@ -26,9 +28,11 @@ export const StorageLocationsScreen: React.FC<{
 }> = ({ route }) => {
   const { homeId } = route.params;
   const { goBack } = useAppNavigation();
+  const { theme } = useUnistyles();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'flat' | 'tree'>('flat');
+  const [refreshing, setRefreshing] = useState(false);
 
   const {
     locations,
@@ -40,6 +44,7 @@ export const StorageLocationsScreen: React.FC<{
     setDefaultLocation,
     createLocation,
     error,
+    refetch,
   } = useStorageLocationManagement(homeId);
 
   // Recursive component to render tree structure
@@ -97,6 +102,15 @@ export const StorageLocationsScreen: React.FC<{
     ? locations.find(loc => loc.id === editingId)
     : null;
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   if (initialLoading) {
     return (
       <DetailTemplate
@@ -122,12 +136,7 @@ export const StorageLocationsScreen: React.FC<{
   const sections = [
     {
       content: (
-        <View style={styles.contentContainer}>
-          {/* Title and count */}
-          <Text style={styles.sectionTitle}>
-            Storage Locations ({locations.length})
-          </Text>
-
+        <>
           {/* Error Message */}
           {error && (
             <View style={styles.errorCard}>
@@ -138,7 +147,7 @@ export const StorageLocationsScreen: React.FC<{
           )}
 
           {/* View Mode Toggle */}
-          {locations.length > 0 && !showCreateForm && !editingId && (
+          {locations.length > 0 && (
             <View style={styles.viewModeToggle}>
               <TouchableOpacity
                 style={[
@@ -177,28 +186,13 @@ export const StorageLocationsScreen: React.FC<{
             </View>
           )}
 
-          {showCreateForm && (
-            <StorageLocationForm
-              onSubmit={handleCreate}
-              onCancel={() => setShowCreateForm(false)}
-              isSubmitting={creating}
-              availableLocations={locations}
-            />
-          )}
-
-          {editingLocation && (
-            <StorageLocationForm
-              initialData={editingLocation}
-              onSubmit={data => handleUpdate(editingLocation.id, data)}
-              onCancel={() => setEditingId(null)}
-              isSubmitting={false}
-              availableLocations={locations}
-            />
-          )}
-
-          {locations.length === 0 && !showCreateForm ? (
+          {locations.length === 0 ? (
             <View style={commonStyles.emptyState}>
-              <Text style={styles.emptyIcon}>📦</Text>
+              <Icon
+                name="storage"
+                size={64}
+                color={theme.colors.textSecondary}
+              />
               <Text style={commonStyles.emptyStateTitle}>
                 No Storage Locations
               </Text>
@@ -223,34 +217,65 @@ export const StorageLocationsScreen: React.FC<{
               />
             ))
           )}
-        </View>
+        </>
       ),
     },
   ];
 
   return (
-    <DetailTemplate
-      title="Storage Locations"
-      onBack={goBack}
-      headerActions={[
-        {
-          icon: 'add',
-          onPress: () => {
-            setEditingId(null);
-            setShowCreateForm(true);
+    <>
+      <DetailTemplate
+        title="Storage Locations"
+        onBack={goBack}
+        headerActions={[
+          {
+            icon: 'add',
+            onPress: () => {
+              setEditingId(null);
+              setShowCreateForm(true);
+            },
           },
-        },
-      ]}
-      sections={sections}
-    />
+        ]}
+        sections={sections}
+        refreshing={refreshing}
+        onRefresh={handleRefresh}
+      />
+
+      {/* Create Form Overlay */}
+      {showCreateForm && (
+        <Animated.View
+          {...formAnimationPreset}
+          style={[commonStyles.shadow, styles.formOverlay]}
+        >
+          <StorageLocationForm
+            onSubmit={handleCreate}
+            onCancel={() => setShowCreateForm(false)}
+            isSubmitting={creating}
+            availableLocations={locations}
+          />
+        </Animated.View>
+      )}
+
+      {/* Edit Form Overlay */}
+      {editingLocation && (
+        <Animated.View
+          {...formAnimationPreset}
+          style={[commonStyles.shadow, styles.formOverlay]}
+        >
+          <StorageLocationForm
+            initialData={editingLocation}
+            onSubmit={data => handleUpdate(editingLocation.id, data)}
+            onCancel={() => setEditingId(null)}
+            isSubmitting={false}
+            availableLocations={locations}
+          />
+        </Animated.View>
+      )}
+    </>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  contentContainer: {
-    margin: -16, // Negate DetailTemplate section padding
-    padding: 0,
-  },
   sectionTitle: {
     fontSize: theme.fonts.size.lg,
     fontWeight: theme.fonts.weight.semibold,
@@ -263,20 +288,24 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.errorLight,
     padding: theme.spacing.md,
     borderRadius: theme.radii.md,
-    marginHorizontal: theme.spacing.md,
     marginBottom: theme.spacing.md,
   },
   errorText: {
     color: theme.colors.error,
     fontSize: theme.fonts.size.sm,
   },
-  emptyIcon: {
-    fontSize: 64,
-    marginBottom: theme.spacing.md,
+  formOverlay: {
+    position: 'absolute',
+    top: 80,
+    left: theme.spacing.md,
+    right: theme.spacing.md,
+    borderRadius: theme.radii.lg,
+    backgroundColor: theme.colors.background,
+    zIndex: 1000,
+    maxHeight: '80%',
   },
   viewModeToggle: {
     flexDirection: 'row',
-    marginHorizontal: theme.spacing.md,
     marginBottom: theme.spacing.md,
     gap: theme.spacing.sm,
   },

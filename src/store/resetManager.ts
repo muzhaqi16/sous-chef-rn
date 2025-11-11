@@ -36,7 +36,7 @@ export const RESET_SCENARIOS = {
     preferences: true,
     clearApolloCache: false,
   },
-} as const;
+};
 
 // Simplified reset manager
 export const createResetManager = (

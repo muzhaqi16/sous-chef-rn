@@ -3,9 +3,10 @@ import { useGetHomesQuery, useGetDefaultHomeQuery } from '#generated';
 import { useStore } from '#store';
 import { useAuth } from '#hooks/auth/useAuth';
 import { usePreservedArrayData } from '#/hooks/apollo';
+import { normalizeHome, normalizeHomes } from '#/utils/connectionUtils';
 
 export const useDefaultHome = () => {
-  const { selectedHomeId, setSelectedHomeId } = useStore();
+  const { selectedHomeId, setSelectedHomeId, selectedPantryId, setSelectedPantryId } = useStore();
   const { canAttemptQueries } = useAuth();
 
   // Always fetch homes when authenticated (needed for UI and getDefaultPantry)
@@ -23,7 +24,7 @@ export const useDefaultHome = () => {
   });
 
   // Preserve homes data even when query fails - prevents cascade failures
-  const homesList = usePreservedArrayData(homes?.homes);
+  const homesList = normalizeHomes(usePreservedArrayData(homes?.homes));
 
   const { data: defaultHomeData, loading: loadingDefaultHome } =
     useGetDefaultHomeQuery({
@@ -35,32 +36,51 @@ export const useDefaultHome = () => {
 
   const remoteDefaultHomeId = defaultHomeData?.getDefaultHome?.id;
 
-  // Sync remote default home to local store when available and different
-  // This ensures backend's default home is auto-selected on new device login
+  // Sync remote default home and pantry to local store
+  // This ensures backend's defaults are auto-selected on new device login
   useEffect(() => {
-    if (remoteDefaultHomeId && remoteDefaultHomeId !== selectedHomeId) {
+    // Only sync remote → local when no local selection exists
+    // This prevents interference with user-initiated setDefaultHome actions
+    if (!selectedHomeId && remoteDefaultHomeId) {
       setSelectedHomeId(remoteDefaultHomeId);
+      console.log('🏠 Auto-selected default home:', remoteDefaultHomeId);
     }
-  }, [remoteDefaultHomeId, selectedHomeId, setSelectedHomeId]);
+
+    // Auto-select default pantry when home data loads (for returning users on new devices)
+    // This ensures users see their pantry immediately after login, matching onboarding behavior
+    if (remoteDefaultHomeId && !selectedPantryId) {
+      const defaultPantry = getDefaultPantry(defaultHomeData);
+      if (defaultPantry?.id) {
+        setSelectedPantryId(defaultPantry.id);
+        console.log('🏠 Auto-selected default pantry:', defaultPantry.id);
+      }
+    }
+  }, [
+    remoteDefaultHomeId,
+    selectedHomeId,
+    setSelectedHomeId,
+    selectedPantryId,
+    defaultHomeData,
+    setSelectedPantryId,
+  ]);
 
   // Helper function to get the default pantry from a home
   const getDefaultPantry = (homeData: any) => {
-    if (!homeData?.home?.pantries) return null;
-
-    // First try to find a pantry marked as default
-    const defaultPantry = homeData.home.pantries.find(
-      (pantry: any) => pantry.isDefault,
-    );
-    if (defaultPantry) {
-      return defaultPantry;
+    const normalizedHome = normalizeHome(homeData?.home ?? homeData);
+    if (!normalizedHome?.pantries?.length) {
+      return null;
     }
 
-    // If no default pantry, return the first one
-    return homeData.home.pantries.length > 0 ? homeData.home.pantries[0] : null;
+    return (
+      normalizedHome.pantries.find((pantry: any) => pantry.isDefault) ||
+      normalizedHome.pantries[0] ||
+      null
+    );
   };
 
-  // Provide the most appropriate home ID (prefer remote default, fallback to store value)
-  const currentHomeId = remoteDefaultHomeId || selectedHomeId;
+  // Provide the most appropriate home ID (prefer Zustand store, fallback to remote default)
+  // This ensures instant UI updates after mutations while still syncing from server on initial load
+  const currentHomeId = selectedHomeId ?? remoteDefaultHomeId;
 
   return {
     selectedHomeId: currentHomeId,
@@ -70,5 +90,7 @@ export const useDefaultHome = () => {
     hasDefaultHome: !!currentHomeId,
     getDefaultPantry,
     remoteDefaultHomeId,
+    selectedPantryId,
+    setSelectedPantryId,
   };
 };

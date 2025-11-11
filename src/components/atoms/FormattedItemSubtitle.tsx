@@ -1,9 +1,14 @@
 import React from 'react';
 import { Text, View } from 'react-native';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
+import { QuantityDisplay } from '#/components/molecules/QuantityDisplay';
+import { DisplayFormat } from '#/graphql/generated';
 
 interface FormattedItemSubtitleProps {
   quantity?: number | null;
+  quantityInput?: string | null;
+  displayFormat?: DisplayFormat | null;
+  displayAsFraction?: boolean | null;
   netWeight?: number | null;
   unitSymbol?: string | null;
   additionalInfo?: string; // For storage state, category, etc.
@@ -15,6 +20,9 @@ interface FormattedItemSubtitleProps {
  */
 export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
   quantity,
+  quantityInput,
+  displayFormat,
+  displayAsFraction,
   netWeight,
   unitSymbol,
   additionalInfo,
@@ -30,9 +38,14 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
   if (hasQuantity && hasWeight && hasUnit) {
     return (
       <View style={styles.container}>
-        <Text style={[styles.quantity, { color: theme.colors.textPrimary }]}>
-          {quantity}
-        </Text>
+        <QuantityDisplay
+          quantity={quantity}
+          quantityInput={quantityInput}
+          displayFormat={displayFormat}
+          displayAsFraction={displayAsFraction}
+          showUnit={false}
+          style={{ ...styles.quantity, color: theme.colors.textPrimary }}
+        />
         <Text style={[styles.separator, { color: theme.colors.textSecondary }]}>
           {' × '}
         </Text>
@@ -57,9 +70,14 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
   if (hasQuantity && hasUnit && !hasWeight) {
     return (
       <View style={styles.container}>
-        <Text style={[styles.quantity, { color: theme.colors.textPrimary }]}>
-          {quantity} {unitSymbol}
-        </Text>
+        <QuantityDisplay
+          quantity={quantity}
+          quantityInput={quantityInput}
+          displayFormat={displayFormat}
+          unitSymbol={unitSymbol}
+          displayAsFraction={displayAsFraction}
+          style={{ ...styles.quantity, color: theme.colors.textPrimary }}
+        />
         {additionalInfo && (
           <>
             <Text style={[styles.separator, { color: theme.colors.textSecondary }]}>
@@ -99,9 +117,14 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
   if (hasQuantity) {
     return (
       <View style={styles.container}>
-        <Text style={[styles.quantity, { color: theme.colors.textPrimary }]}>
-          {quantity}
-        </Text>
+        <QuantityDisplay
+          quantity={quantity}
+          quantityInput={quantityInput}
+          displayFormat={displayFormat}
+          displayAsFraction={displayAsFraction}
+          showUnit={false}
+          style={{ ...styles.quantity, color: theme.colors.textPrimary }}
+        />
         {additionalInfo && (
           <>
             <Text style={[styles.separator, { color: theme.colors.textSecondary }]}>

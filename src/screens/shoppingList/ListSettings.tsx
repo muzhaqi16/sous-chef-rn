@@ -18,9 +18,11 @@ import {
   GetShoppingListsDocument,
   ShoppingList,
 } from '#generated';
-import { useStore } from '#store';
+import { createRemoveFromQueryFieldUpdater } from '#/apollo/utils';
+import { useAppStore } from '#store/useAppStore';
 import { useErrorHandler } from '#/utils/errorHandling';
 import { useAuth } from '#/hooks/auth/useAuth';
+import { toastService } from '#/services/toastService';
 import {
   isShoppingListOwner,
   getShoppingListRole,
@@ -36,23 +38,29 @@ export const ListSettings: React.FC<{
   const { theme } = useUnistyles();
   const listId = route.params?.listId;
   const { navigate, goBack, navigateTo } = useAppNavigation();
-  const setSelectedShoppingListId = useStore(state => state.setSelectedShoppingListId);
+  const setSelectedShoppingListId = useAppStore(
+    state => state.setSelectedShoppingListId,
+  );
   const { handleApolloError } = useErrorHandler();
 
   const [name, setName] = useState('');
   const [isDefault, setIsDefault] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const { shoppingList, isShared } = useShoppingListDetails(listId);
+  const { shoppingList, isShared, collaborators } =
+    useShoppingListDetails(listId);
   const { user } = useAuth();
 
   // Check if current user is the owner
-  const isOwner = listId && shoppingList
-    ? isShoppingListOwner(shoppingList, user?.id)
-    : true; // For new lists, user is always the owner
-  const role = shoppingList ? getShoppingListRole(shoppingList, user?.id) : null;
+  const isOwner =
+    listId && shoppingList ? isShoppingListOwner(shoppingList, user?.id) : true; // For new lists, user is always the owner
+  const role = shoppingList
+    ? getShoppingListRole(shoppingList, user?.id)
+    : null;
   const roleDisplay = formatRoleDisplay(role);
-  const ownerInfo = shoppingList ? getShoppingListOwnerInfo(shoppingList) : null;
+  const ownerInfo = shoppingList
+    ? getShoppingListOwnerInfo(shoppingList)
+    : null;
 
   const [updateList] = useUpdateShoppingListMutation();
   const [deleteList] = useDeleteShoppingListMutation({
@@ -61,12 +69,26 @@ export const ListSettings: React.FC<{
       const { message } = handleApolloError(error, {
         operation: 'Delete Shopping List',
       });
-      Alert.alert('Error', message);
+      toastService.error(message);
     },
-    refetchQueries: ['GetShoppingLists'],
-    awaitRefetchQueries: true,
+    update: (cache, { data }, { variables }) => {
+      if (!data?.deleteShoppingList || !variables) return;
+
+      try {
+        const removeFromShoppingListsCache = createRemoveFromQueryFieldUpdater(
+          'shoppingLists',
+          'ShoppingList',
+        );
+        removeFromShoppingListsCache(cache, variables.id, { evictItem: true });
+      } catch (error) {
+        console.warn('Cache update failed for deleteList:', error);
+      }
+    },
   });
   const [createList] = useCreateShoppingListMutation({
+    errorPolicy: 'all',
+    // TODO: Add optimistic response with all required fields (description, tags, totalItems, etc.)
+    // See ShoppingList fragment for complete type definition
     // Update the cache when a new list is created
     update(cache, { data }) {
       if (data?.createShoppingList) {
@@ -107,7 +129,7 @@ export const ListSettings: React.FC<{
       }
     },
     onError: () => {
-      Alert.alert('Error', 'Failed to create list');
+      toastService.error('Failed to create list');
     },
   });
 
@@ -124,7 +146,7 @@ export const ListSettings: React.FC<{
 
   const handleSave = async () => {
     if (!name.trim()) {
-      Alert.alert('Error', 'List name cannot be empty');
+      toastService.error('List name cannot be empty');
       return;
     }
 
@@ -152,8 +174,7 @@ export const ListSettings: React.FC<{
         });
       }
     } catch (error) {
-      Alert.alert(
-        'Error',
+      toastService.error(
         listId ? 'Failed to create list' : 'Failed to save settings',
       );
     } finally {
@@ -192,8 +213,8 @@ export const ListSettings: React.FC<{
           {!listId
             ? 'Create New List'
             : isOwner
-              ? 'List Settings'
-              : 'List Info'}
+            ? 'List Settings'
+            : 'List Info'}
         </Text>
         {isOwner && (
           <TouchableOpacity onPress={handleSave} disabled={saving}>
@@ -202,7 +223,7 @@ export const ListSettings: React.FC<{
             </Text>
           </TouchableOpacity>
         )}
-        {!isOwner && <View style={{width: 60}} />}
+        {!isOwner && <View style={{ width: 60 }} />}
       </View>
 
       <ScrollView style={styles.content}>
@@ -220,7 +241,9 @@ export const ListSettings: React.FC<{
               <Text style={styles.infoLabel}>Your Role</Text>
               <View style={styles.roleBadgeContainer}>
                 <View style={styles.collaboratorBadge}>
-                  <Text style={styles.collaboratorBadgeText}>{roleDisplay}</Text>
+                  <Text style={styles.collaboratorBadgeText}>
+                    {roleDisplay}
+                  </Text>
                 </View>
               </View>
             </View>
@@ -238,7 +261,7 @@ export const ListSettings: React.FC<{
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Shared With</Text>
                 <Text style={styles.infoValue}>
-                  {shoppingList?.collaborators?.length || 0} members
+                  {collaborators.length} members
                 </Text>
               </View>
             )}
@@ -295,8 +318,7 @@ export const ListSettings: React.FC<{
 
             {isShared && (
               <Text style={styles.sharedInfo}>
-                This list is shared with {shoppingList?.collaborators?.length}{' '}
-                members
+                This list is shared with {collaborators.length} members
               </Text>
             )}
           </View>

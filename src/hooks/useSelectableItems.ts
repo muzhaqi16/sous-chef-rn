@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 export interface SelectableItem {
   id: string;
@@ -36,6 +36,11 @@ export function useSelectableItems<T extends SelectableItem>({
   maxSelection,
 }: UseSelectableItemsOptions<T>): UseSelectableItemsReturn<T> {
   const [items, setItems] = useState<T[]>(initialItems);
+
+  // Sync internal state when initialItems prop changes
+  useEffect(() => {
+    setItems(initialItems);
+  }, [initialItems]);
 
   // Memoized toggle function to prevent unnecessary re-renders
   const toggleItem = useCallback(

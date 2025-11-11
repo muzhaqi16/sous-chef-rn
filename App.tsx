@@ -1,12 +1,12 @@
 import React, { useEffect } from 'react';
-import { StatusBar, AppState, Platform } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { AppState, StatusBar } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { ApolloProvider } from '@apollo/client/react';
 import { enableScreens } from 'react-native-screens';
-import { useStore } from '#store';
+import { useAppStore, selectHydrated } from '#store/useAppStore';
 import { client } from './src/apollo/client';
 import { Navigation } from '#/navigation';
 import { hasCredentials } from '#storage/keychain';
@@ -26,15 +26,13 @@ import { SubscriptionProvider } from '#/components/providers/SubscriptionProvide
 enableScreens();
 
 const App = () => {
-  const isHydrated = useStore(state => state.isHydrated);
-  const isOnline = useStore(state => state.isOnline);
-  const setHasStoredCredentials = useStore(
+  const isHydrated = useAppStore(selectHydrated);
+  const isOnline = useAppStore(state => state.isOnline);
+  const setHasStoredCredentials = useAppStore(
     state => state.setHasStoredCredentials,
   );
-  const getTelemetryConfig = useStore(state => state.getTelemetryConfig);
+  const getTelemetryConfig = useAppStore(state => state.getTelemetryConfig);
   const { theme } = useTheme();
-  const { theme: themeStyles } = useUnistyles();
-  const isDark = theme === 'dark';
 
   // Initialize network monitoring
   useNetworkStatus();
@@ -110,17 +108,9 @@ const App = () => {
             <SubscriptionProvider>
               <SafeAreaProvider>
                 <StatusBar
-                  //  translucent on android
-                  {...Platform.select({
-                    android: {
-                      translucent: true,
-                      backgroundColor: themeStyles.colors.background,
-                    },
-                    ios: {},
-                  })}
-                  hidden={false}
-                  animated={true}
-                  barStyle={isDark ? 'light-content' : 'dark-content'}
+                  translucent
+                  backgroundColor="transparent"
+                  barStyle={theme === 'dark' ? 'light-content' : 'dark-content'}
                 />
                 <SafeAreaView style={styles.container}>
                   <ToastProvider>

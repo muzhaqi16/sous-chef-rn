@@ -2,8 +2,35 @@
 # FRAGMENTS
 # ============================================
 
-fragment ShoppingListItemFragment on ShoppingListItem {
+# Core fragment for optimistic updates and list views
+# Contains only essential fields needed for basic operations
+fragment ShoppingListItemCore on ShoppingListItem {
   id
+  itemName
+  quantity
+  quantityInput
+  displayFormat
+  isPurchased
+  version
+  updatedAt
+  category
+  notes
+  unitName
+  unit {
+    id
+    name
+    symbol
+    displayAsFraction
+    minPrecision
+    autoConvertThreshold
+  }
+}
+
+# Full fragment for detail views and complete data
+# Spreads Core and adds all extended fields
+fragment ShoppingListItemFragment on ShoppingListItem {
+  ...ShoppingListItemCore
+  # Extended fields not in Core
   shoppingList {
     id
     totalItems
@@ -33,10 +60,8 @@ fragment ShoppingListItemFragment on ShoppingListItem {
       }
     }
   }
+  # Extended unit fields (Core has id, name, symbol, displayAsFraction, minPrecision, autoConvertThreshold)
   unit {
-    id
-    name
-    symbol
     type
     isMetric
     baseUnitId
@@ -47,45 +72,53 @@ fragment ShoppingListItemFragment on ShoppingListItem {
     createdAt
     updatedAt
   }
-  quantity
+  # Price fields
   estimatedPrice
   budgetPrice
   lastKnownPrice
   lowestPrice
   highestPrice
   priceLastUpdated
-  isPurchased
+  # Purchase fields
   purchasedQuantity
   purchasedPrice
   purchaseDate
+  # Location fields
   aisle
   storeSection
+  # History fields
   previouslyPurchased
   lastPurchaseDate
   purchaseCount
-  itemName
-  unitName
-  notes
+  # Metadata fields
   priority
-  category
   sortOrder
   isAutoAdded
   autoAddReason
   isFromMealPlan
   mealPlanReference
   createdAt
-  updatedAt
   deletedAt
-  version
-  # Add these fields if they're missing and causing the TypeScript errors
+  # User references
   addedBy {
     ...PartialUser
   }
   purchasedBy {
     ...PartialUser
   }
-  purchases {
-    ...PurchaseFragment
+  # Purchase history (paginated connection for performance)
+  purchasesConnection(first: 10) {
+    edges {
+      cursor
+      node {
+        ...PurchaseFragment
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
   }
 }
 
@@ -262,8 +295,6 @@ fragment UnitFragment on ItemUnit {
   isDefault
   isPreferred
   isCommon
-  conversionRatio
-  conversionNote
   packageSize
   packageDescription
   retailUnit
@@ -341,6 +372,13 @@ fragment ItemFragment on Item {
   deletedAt
   version
   netWeight
+  density
+  preferredTrackingUnitId
+  preferredTrackingUnit {
+    id
+    name
+    symbol
+  }
   displayUnit {
     id
     name
@@ -414,6 +452,9 @@ fragment PantryItemFragment on PantryItem {
     baseUnitId
     conversionFactor
     isCommon
+    displayAsFraction
+    minPrecision
+    autoConvertThreshold
   }
   expiresAt
   storageLocation {
@@ -425,6 +466,15 @@ fragment PantryItemFragment on PantryItem {
   storageNotes
   initialQuantity
   currentQuantity
+  quantityInput
+  normalizedQuantity
+  normalizedUnitId
+  normalizedUnit {
+    id
+    name
+    symbol
+  }
+  displayFormat
   consumedQuantity
   reservedQuantity
   autoReorderPoint
@@ -533,8 +583,18 @@ fragment PantryFragment on Pantry {
   version
   createdAt
   updatedAt
-  items {
-    ...PantryItemFragment
+  itemsConnection(first: 50) {
+    edges {
+      node {
+        ...PantryItemFragment
+      }
+      cursor
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
   }
 }
 
@@ -570,16 +630,46 @@ fragment HomeWithPantriesFragment on Home {
   createdAt
   updatedAt
 
-  invites {
-    ...HomeInviteFragment
+  invitesConnection(first: 50) {
+    edges {
+      node {
+        ...HomeInviteFragment
+      }
+      cursor
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
   }
 
-  members {
-    ...MemberShipFragment
+  membersConnection(first: 100) {
+    edges {
+      node {
+        ...MemberShipFragment
+      }
+      cursor
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
   }
 
-  pantries {
-    ...BasicPantryFragment
+  pantriesConnection(first: 50) {
+    edges {
+      node {
+        ...BasicPantryFragment
+      }
+      cursor
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
   }
 }
 
@@ -600,16 +690,46 @@ fragment HomeFragment on Home {
   createdAt
   updatedAt
 
-  invites {
-    ...HomeInviteFragment
+  invitesConnection(first: 50) {
+    edges {
+      node {
+        ...HomeInviteFragment
+      }
+      cursor
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
   }
 
-  members {
-    ...MemberShipFragment
+  membersConnection(first: 100) {
+    edges {
+      node {
+        ...MemberShipFragment
+      }
+      cursor
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
   }
 
-  pantries {
-    ...PantryFragment
+  pantriesConnection(first: 50) {
+    edges {
+      node {
+        ...PantryFragment
+      }
+      cursor
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
   }
 }
 
@@ -714,7 +834,6 @@ fragment RecipeFragment on Recipe {
   nutritionData
 
   # Tags and metadata
-  dietaryTags
   tags
   visibility
   isPublished
