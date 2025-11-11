@@ -4,7 +4,7 @@ import {
   View,
   TextInput,
   TouchableOpacity,
-  ScrollView,
+  FlatList,
   Alert,
 } from 'react-native';
 import { OnBoardingWrapper } from '#components/templates';
@@ -211,11 +211,12 @@ export const InviteMembersScreen = () => {
           </TouchableOpacity>
         </View>
 
-        <ScrollView
+        <FlatList
           style={styles.invitesList}
+          data={invites}
+          keyExtractor={(invite) => invite.id}
           showsVerticalScrollIndicator={false}
-        >
-          {invites.length === 0 ? (
+          ListEmptyComponent={
             <View style={styles.emptyState}>
               <Text style={styles.emptyStateText}>
                 No invitations added yet
@@ -224,36 +225,37 @@ export const InviteMembersScreen = () => {
                 Add email addresses above to invite members
               </Text>
             </View>
-          ) : (
-            <>
+          }
+          ListHeaderComponent={
+            invites.length > 0 ? (
               <Text style={styles.listHeader}>
                 Inviting {invites.length}{' '}
                 {invites.length === 1 ? 'person' : 'people'}:
               </Text>
-              {invites.map(invite => (
-                <View key={invite.id} style={styles.inviteItem}>
-                  <View style={styles.inviteInfo}>
-                    <Text style={styles.inviteEmail}>{invite.email}</Text>
-                    <TouchableOpacity
-                      onPress={() => toggleInviteType(invite.id)}
-                      style={styles.typeButton}
-                    >
-                      <Text style={styles.typeText}>
-                        {getInviteTypeLabel(invite.type)}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                  <TouchableOpacity
-                    onPress={() => removeInvite(invite.id)}
-                    style={styles.removeButton}
-                  >
-                    <Text style={styles.removeButtonText}>✕</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </>
+            ) : null
+          }
+          renderItem={({ item: invite }) => (
+            <View style={styles.inviteItem}>
+              <View style={styles.inviteInfo}>
+                <Text style={styles.inviteEmail}>{invite.email}</Text>
+                <TouchableOpacity
+                  onPress={() => toggleInviteType(invite.id)}
+                  style={styles.typeButton}
+                >
+                  <Text style={styles.typeText}>
+                    {getInviteTypeLabel(invite.type)}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity
+                onPress={() => removeInvite(invite.id)}
+                style={styles.removeButton}
+              >
+                <Text style={styles.removeButtonText}>✕</Text>
+              </TouchableOpacity>
+            </View>
           )}
-        </ScrollView>
+        />
 
         <View style={styles.infoBox}>
           <Text style={styles.infoText}>

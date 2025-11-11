@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { RefreshControl, ScrollView } from 'react-native';
+import { RefreshControl, FlatList } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState } from '../base/EmptyState';
 import { ItemCard } from './ItemCard';
@@ -28,6 +28,9 @@ interface ItemListProps {
   onItemWaste?: (id: string) => void;
   onRefresh?: () => Promise<void>;
   onSwipeableWillOpen?: (ref: any) => void;
+  onEndReached?: () => void;
+  onEndReachedThreshold?: number;
+  ListFooterComponent?: React.ComponentType<any> | React.ReactElement | null;
   emptyState?: {
     icon: IconName;
     title: string;
@@ -48,10 +51,13 @@ export const ItemList: React.FC<ItemListProps> = ({
   onItemWaste,
   onRefresh,
   onSwipeableWillOpen,
+  onEndReached,
+  onEndReachedThreshold = 0.5,
+  ListFooterComponent,
   emptyState,
 }) => {
   const [refreshing, setRefreshing] = useState(false);
-  const { bottom: safeBottom } = useSafeAreaInsets();
+  const { bottom: safeBottom} = useSafeAreaInsets();
 
   // Dynamic content style with proper bottom padding for tab bar
   const contentStyle = useMemo(
@@ -69,22 +75,37 @@ export const ItemList: React.FC<ItemListProps> = ({
     }
   };
 
+  const handleScroll = (event: any) => {
+    if (!onEndReached) return;
+
+    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+    const paddingToBottom = contentSize.height * onEndReachedThreshold;
+    const isCloseToBottom =
+      layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom;
+
+    if (isCloseToBottom) {
+      onEndReached();
+    }
+  };
+
   if (items.length === 0 && emptyState) {
     return <EmptyState {...emptyState} />;
   }
 
   return (
-    <ScrollView
+    <FlatList
+      data={items}
+      keyExtractor={(item) => item.id}
       contentContainerStyle={contentStyle}
       refreshControl={
         onRefresh ? (
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         ) : undefined
       }
-    >
-      {items.map(item => (
+      onScroll={handleScroll}
+      scrollEventThrottle={400}
+      renderItem={({ item }) => (
         <ItemCard
-          key={item.id}
           id={item.id}
           title={item.title}
           subtitle={item.subtitle}
@@ -98,7 +119,15 @@ export const ItemList: React.FC<ItemListProps> = ({
           onWaste={onItemWaste ? () => onItemWaste(item.id) : undefined}
           onSwipeableWillOpen={onSwipeableWillOpen}
         />
-      ))}
-    </ScrollView>
+      )}
+      ListFooterComponent={
+        ListFooterComponent &&
+        (typeof ListFooterComponent === 'function' ? (
+          <ListFooterComponent />
+        ) : (
+          ListFooterComponent
+        ))
+      }
+    />
   );
 };

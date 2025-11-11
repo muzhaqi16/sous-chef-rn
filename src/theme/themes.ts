@@ -75,7 +75,14 @@ export const lightTheme = {
     chipText: colors.neutral[700],
     chipSelectedBackground: colors.jaffa[300],
     chipSelectedText: colors.neutral[0],
+
+    // Icon colors - semantic tokens for consistent icon styling
     iconPrimary: colors.jaffa[500],
+    iconSecondary: colors.neutral[600],
+    iconTertiary: colors.neutral[500],
+    iconDisabled: colors.neutral[400],
+    iconOnPrimary: colors.neutral[0],
+    iconOnSurface: colors.neutral[900],
 
     // Status colors - for invites, tasks, etc.
     status: colors.status,
@@ -150,7 +157,14 @@ export const darkTheme = {
     chipText: colors.neutral[200],
     chipSelectedBackground: colors.jaffa[400],
     chipSelectedText: colors.neutral[900],
+
+    // Icon colors - semantic tokens for consistent icon styling
     iconPrimary: colors.jaffa[400],
+    iconSecondary: colors.neutral[300],
+    iconTertiary: colors.neutral[400],
+    iconDisabled: colors.neutral[500],
+    iconOnPrimary: colors.neutral[900],
+    iconOnSurface: colors.neutral[50],
 
     // Status colors - for invites, tasks, etc.
     status: colors.status,

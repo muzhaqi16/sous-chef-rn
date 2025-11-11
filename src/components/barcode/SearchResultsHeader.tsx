@@ -18,10 +18,20 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   return (
     <View style={styles.header}>
-      <IconButton name="arrow-back" onPress={onBackPress} size={24} />
+      <IconButton
+        name="arrow-back"
+        onPress={onBackPress}
+        size="md"
+        accessibilityLabel="Go back"
+      />
       <Text style={styles.headerTitle}>{title}</Text>
       {showScanButton ? (
-        <IconButton name="qr-code-scanner" onPress={onScanPress} size={24} />
+        <IconButton
+          name="qr-code-scanner"
+          onPress={onScanPress}
+          size="md"
+          accessibilityLabel="Scan barcode"
+        />
       ) : (
         <View style={styles.placeholder} />
       )}

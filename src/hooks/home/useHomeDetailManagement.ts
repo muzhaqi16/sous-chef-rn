@@ -10,6 +10,9 @@ import {
 } from '#generated';
 import { MESSAGES } from '#constants';
 import { formatRole } from '#utils/formatters';
+import { normalizeHome } from '#/utils/connectionUtils';
+import { createRemoveFromParentConnectionUpdater } from '#/apollo/utils';
+import { useCrudOperations } from '#/hooks/utils';
 
 /**
  * Custom hook for HomeDetailScreen business logic
@@ -68,31 +71,19 @@ export function useHomeDetailManagement(homeId: string) {
 
   const [removeMemberMutation] = useRemoveMemberMutation({
     errorPolicy: 'all',
-    // Remove member from home's members array using cache.modify
     update(cache, { data }, { variables }) {
       if (!data?.removeMember || !variables) return;
 
-      const membershipId = variables.membershipId;
-
-      // Remove from home's members array
-      cache.modify({
-        id: cache.identify({ __typename: 'Home', id: homeId }),
-        fields: {
-          members(existingMembers = [], { readField }) {
-            return existingMembers.filter(
-              (memberRef: any) => readField('id', memberRef) !== membershipId,
-            );
-          },
-        },
-      });
-
-      // Evict the membership entity from cache
-      cache.evict({
-        id: cache.identify({ __typename: 'Membership', id: membershipId }),
-      });
-
-      // Garbage collect orphaned data
-      cache.gc();
+      try {
+        const removeFromMembersCache = createRemoveFromParentConnectionUpdater(
+          'Home',
+          'membersConnection',
+          'Membership',
+        );
+        removeFromMembersCache(cache, homeId, variables.membershipId, { evictItem: true });
+      } catch (error) {
+        console.warn('Cache update failed for removeMember:', error);
+      }
     },
     onError: error => {
       Alert.alert('Error', error.message || MESSAGES.errors.removeMemberFailed);
@@ -101,38 +92,29 @@ export function useHomeDetailManagement(homeId: string) {
 
   const [revokeInviteMutation] = useRevokeHomeInviteMutation({
     errorPolicy: 'all',
-    // Remove invite from home's invites array using cache.modify
     update(cache, { data }, { variables }) {
       if (!data?.revokeHomeInvite || !variables) return;
 
-      const inviteId = variables.id;
-
-      // Remove from home's invites array
-      cache.modify({
-        id: cache.identify({ __typename: 'Home', id: homeId }),
-        fields: {
-          invites(existingInvites = [], { readField }) {
-            return existingInvites.filter(
-              (inviteRef: any) => readField('id', inviteRef) !== inviteId,
-            );
-          },
-        },
-      });
-
-      // Evict the invite entity from cache
-      cache.evict({
-        id: cache.identify({ __typename: 'HomeInvite', id: inviteId }),
-      });
-
-      // Garbage collect orphaned data
-      cache.gc();
+      try {
+        const removeFromInvitesCache = createRemoveFromParentConnectionUpdater(
+          'Home',
+          'invitesConnection',
+          'HomeInvite',
+        );
+        removeFromInvitesCache(cache, homeId, variables.id, { evictItem: true });
+      } catch (error) {
+        console.warn('Cache update failed for revokeInvite:', error);
+      }
     },
     onError: error => {
       Alert.alert('Error', error.message || MESSAGES.errors.revokeInviteFailed);
     },
   });
 
-  const home = data?.home;
+  const home = normalizeHome(data?.home);
+
+  // CRUD operations utilities
+  const { createRemoveOperation } = useCrudOperations();
 
   // Handler functions
   const saveName = useCallback(
@@ -199,46 +181,30 @@ export function useHomeDetailManagement(homeId: string) {
 
   const removeMember = useCallback(
     (membershipId: string, memberName: string) => {
-      Alert.alert(
-        'Remove Member',
-        `Are you sure you want to remove ${memberName} from this home?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Remove',
-            style: 'destructive',
-            onPress: async () => {
-              await removeMemberMutation({
-                variables: { membershipId },
-              });
-            },
-          },
-        ],
-      );
+      const operation = createRemoveOperation({
+        mutation: removeMemberMutation,
+        itemId: membershipId,
+        confirmMessage: `Are you sure you want to remove {name} from this home?`,
+        itemName: memberName,
+        operationName: 'Remove Member',
+      });
+      return operation();
     },
-    [removeMemberMutation],
+    [removeMemberMutation, createRemoveOperation],
   );
 
   const revokeInvite = useCallback(
     (inviteId: string, inviteEmail: string) => {
-      Alert.alert(
-        'Revoke Invitation',
-        `Are you sure you want to revoke the invitation to ${inviteEmail}?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Revoke',
-            style: 'destructive',
-            onPress: async () => {
-              await revokeInviteMutation({
-                variables: { id: inviteId },
-              });
-            },
-          },
-        ],
-      );
+      const operation = createRemoveOperation({
+        mutation: revokeInviteMutation,
+        itemId: inviteId,
+        confirmMessage: `Are you sure you want to revoke the invitation to {name}?`,
+        itemName: inviteEmail,
+        operationName: 'Revoke Invitation',
+      });
+      return operation();
     },
-    [revokeInviteMutation],
+    [revokeInviteMutation, createRemoveOperation],
   );
 
   return {

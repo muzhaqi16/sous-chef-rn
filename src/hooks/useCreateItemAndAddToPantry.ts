@@ -1,6 +1,5 @@
 import {useState} from 'react';
 import {Alert} from 'react-native';
-import type {ApolloCache} from '@apollo/client';
 import {
   useCreateItemMutation,
   useCreatePantryItemMutation,
@@ -11,6 +10,7 @@ import {
 import {useDefaultHome} from './home/useDefaultHome';
 import {CreateItemFormData as FormData} from '#utils/validation';
 import { useErrorHandler } from '#/utils/errorHandling';
+import { createAddToParentConnectionUpdater } from '#/apollo/utils';
 
 interface CreateItemAndAddToPantryInput {
   // Item creation data
@@ -41,37 +41,21 @@ export const useCreateItemAndAddToPantry = () => {
   
   const [addToPantry] = useCreatePantryItemMutation({
     errorPolicy: 'all',
-    // Update cache using cache.modify for consistency
-    update: (cache: ApolloCache, {data: mutationData}, {variables}) => {
+    update: (cache, {data: mutationData}, {variables}) => {
       if (!mutationData?.createPantryItem || !variables?.input.pantryId) return;
 
-      const newItem = mutationData.createPantryItem;
-
       try {
-        // Use cache.modify with toReference and duplicate checking (consistent with other hooks)
-        cache.modify({
-          fields: {
-            pantryItems: (existingItems = [], { readField, toReference }) => {
-              const newItemRef = toReference(newItem);
-
-              // Check if item already exists (avoid duplicates)
-              const exists = existingItems.some(
-                (itemRef: any) => readField('id', itemRef) === newItem.id,
-              );
-
-              if (exists) return existingItems;
-
-              // Add new item to the list
-              return [...existingItems, newItemRef];
-            },
-          },
-        });
+        const addToPantryItemsCache = createAddToParentConnectionUpdater(
+          'Pantry',
+          'itemsConnection',
+          'PantryItem',
+        );
+        addToPantryItemsCache(cache, variables.input.pantryId, mutationData.createPantryItem);
       } catch (error) {
         const { message } = handleApolloError(error, {
           operation: 'Add Item to Pantry Cache Update',
         });
         console.warn('Cache update failed:', message);
-        // Cache update failed, but mutation still succeeded
       }
     },
     onError: (error) => {

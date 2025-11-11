@@ -6,7 +6,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { ApolloProvider } from '@apollo/client/react';
 import { enableScreens } from 'react-native-screens';
-import { useStore } from '#store';
+import { useAppStore, selectHydrated } from '#store/useAppStore';
 import { client } from './src/apollo/client';
 import { Navigation } from '#/navigation';
 import { hasCredentials } from '#storage/keychain';
@@ -25,8 +25,10 @@ import { SubscriptionProvider } from '#/components/providers/SubscriptionProvide
 enableScreens();
 
 const App = () => {
-  const { isHydrated, isOnline, setHasStoredCredentials, getTelemetryConfig } =
-    useStore();
+  const isHydrated = useAppStore(selectHydrated);
+  const isOnline = useAppStore(state => state.isOnline);
+  const setHasStoredCredentials = useAppStore(state => state.setHasStoredCredentials);
+  const getTelemetryConfig = useAppStore(state => state.getTelemetryConfig);
   const { theme } = useTheme();
 
   // Initialize network monitoring
@@ -90,7 +92,11 @@ const App = () => {
           <DataProvider>
             <SubscriptionProvider>
               <SafeAreaProvider>
-                <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
+                <StatusBar
+                  translucent
+                  backgroundColor="transparent"
+                  barStyle={theme === 'dark' ? 'light-content' : 'dark-content'}
+                />
             <SafeAreaView style={styles.container}>
               <ToastProvider>
                 <NotificationProvider>

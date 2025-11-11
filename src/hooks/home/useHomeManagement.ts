@@ -14,7 +14,7 @@ import {
   useGetHomeByJoinCodeLazyQuery,
 } from '#generated';
 import { useSearchableList } from '../useSearchableList';
-import { useStore } from '#store';
+import { useAppStore, selectSelectedHomeId } from '#store/useAppStore';
 import { useErrorHandler } from '#/utils/errorHandling';
 import {
   handleVersionConflict,
@@ -22,9 +22,22 @@ import {
 } from '#/utils/errors/versionConflict';
 import { usePreservedArrayData } from '#/hooks/apollo';
 import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
+import { normalizeHome, normalizeHomes } from '#/utils/connectionUtils';
+import {
+  createAddToQueryFieldUpdater,
+  createRemoveFromQueryFieldUpdater,
+} from '#/apollo/utils';
+import { homeSearch } from '#/utils/searchUtils';
+import { useCrudOperations } from '#/hooks/utils';
+
+// Cache updater utilities for homes
+const addToHomesCache = createAddToQueryFieldUpdater('homes');
+const removeFromHomesCache = createRemoveFromQueryFieldUpdater('homes', 'Home');
 
 export function useHomeManagement() {
-  const { selectedHomeId, setSelectedHomeId, setSelectedPantryId } = useStore();
+  const selectedHomeId = useAppStore(selectSelectedHomeId);
+  const setSelectedHomeId = useAppStore(state => state.setSelectedHomeId);
+  const setSelectedPantryId = useAppStore(state => state.setSelectedPantryId);
   const { handleApolloError } = useErrorHandler();
 
   // Ref to track if initial home auto-selection has been attempted
@@ -77,7 +90,11 @@ export function useHomeManagement() {
   });
 
   // Preserve homes even when query fails to prevent cascade failures
-  const homes = usePreservedArrayData(data?.homes);
+  const preservedHomes = usePreservedArrayData(data?.homes);
+  const homes = useMemo(
+    () => normalizeHomes(preservedHomes),
+    [preservedHomes],
+  );
   const remoteDefaultHomeId = defaultHomeData?.getDefaultHome?.id;
 
   // NOTE: Remote sync logic removed from here to prevent infinite loop
@@ -119,12 +136,11 @@ export function useHomeManagement() {
     setSelectedHomeId,
   ]);
 
-  // Search functionality for homes
-  const { query, setQuery, filtered } = useSearchableList(
-    homes,
-    (home: any, q: string) =>
-      home?.name?.toLowerCase().includes(q.toLowerCase()),
-  );
+  // Search functionality - using reusable search utility
+  const { query, setQuery, filtered } = useSearchableList(homes, homeSearch);
+
+  // CRUD operations utilities
+  const { createAddOperation, createRemoveOperation } = useCrudOperations();
 
   const [createHomeMutation, { loading: creating, client }] =
     useCreateHomeMutation({
@@ -136,33 +152,12 @@ export function useHomeManagement() {
       // Creating accurate optimistic response would require duplicating complex server logic
       // Instead, cache update provides feedback within ~100-200ms which is acceptable UX
       // (See docs/apollo-client-patterns.md - acceptable to skip optimistic response for complex creates)
-      // Update cache directly instead of refetching
+      // Update cache using generic utility
       update: (cache, { data }) => {
         if (!data?.createHome) return;
 
         try {
-          const newHome = data.createHome;
-
-          // Add new home to the homes list in cache
-          cache.modify({
-            fields: {
-              homes(existingHomes = [], { toReference }) {
-                const newHomeRef = toReference(newHome);
-
-                // Check if home already exists (avoid duplicates)
-                const exists = existingHomes.some((homeRef: any) => {
-                  const id = cache.identify(homeRef);
-                  return id === cache.identify(newHome);
-                });
-
-                if (exists) {
-                  return existingHomes;
-                }
-
-                return [...existingHomes, newHomeRef];
-              },
-            },
-          });
+          addToHomesCache(cache, data.createHome, { position: 'end' });
         } catch (error) {
           console.warn('Cache update failed for createHome:', error);
           // Fallback: refetch if cache update fails
@@ -196,8 +191,9 @@ export function useHomeManagement() {
           }
 
           // If a default pantry was created, set it as selected
-          if (newHome.pantries && newHome.pantries.length > 0) {
-            const defaultPantry = newHome.pantries.find(
+          const normalizedNewHome = normalizeHome(newHome);
+          if (normalizedNewHome?.pantries?.length) {
+            const defaultPantry = normalizedNewHome.pantries.find(
               (pantry: any) => pantry.isDefault,
             );
             if (defaultPantry) {
@@ -253,29 +249,13 @@ export function useHomeManagement() {
     useDeleteHomeMutation({
       // Note: No optimisticResponse - the mutation returns full HomeFragment (20+ fields)
       // Cache update provides instant UI feedback when server responds (~100-200ms)
-      // Update cache to remove the home
+      // Update cache using generic utility
       update: (cache, { data }, { variables }) => {
         if (!data?.deleteHome || !variables) return;
 
         try {
           const deletedHomeId = variables.id;
-
-          // Remove the home from the homes list in cache
-          cache.modify({
-            fields: {
-              homes(existingHomes = [], { readField }) {
-                return existingHomes.filter(
-                  (homeRef: any) => readField('id', homeRef) !== deletedHomeId,
-                );
-              },
-            },
-          });
-
-          // Evict the removed home from cache
-          cache.evict({
-            id: cache.identify({ __typename: 'Home', id: deletedHomeId }),
-          });
-          cache.gc(); // Garbage collect orphaned data
+          removeFromHomesCache(cache, deletedHomeId, { evictItem: true });
         } catch (error) {
           console.warn('Cache update failed for deleteHome:', error);
           refetch();
@@ -415,30 +395,32 @@ export function useHomeManagement() {
       fetchPolicy: 'network-only', // Always fetch fresh data
     });
 
-  // Helper functions
+  // Helper functions using CRUD utilities
+  const createHomeOperation = createAddOperation({
+    mutation: createHomeMutation,
+    transformInput: (input: { name: string; createDefaultPantry?: boolean }) => ({
+      name: input.name.trim(),
+      createDefaultPantry: input.createDefaultPantry ?? true,
+    }),
+    validateInput: (input: { name: string }) => {
+      if (!input.name?.trim()) {
+        return 'Please enter a home name';
+      }
+      return true;
+    },
+    onSuccess: (data: any) => data?.createHome,
+    operationName: 'Create Home',
+  });
+
+  // Wrapper to support both string and object signatures
   const createHome = async (
-    name: string,
-    createDefaultPantry: boolean = true,
+    nameOrInput: string | { name: string; createDefaultPantry?: boolean },
   ) => {
-    if (!name.trim()) {
-      Alert.alert('Error', 'Please enter a home name');
-      return false;
-    }
-
-    try {
-      const result = await createHomeMutation({
-        variables: {
-          input: {
-            name: name.trim(),
-            createDefaultPantry,
-          },
-        },
-      });
-
-      return result.data?.createHome || false;
-    } catch (error: any) {
-      return false;
-    }
+    const input =
+      typeof nameOrInput === 'string'
+        ? { name: nameOrInput, createDefaultPantry: true }
+        : nameOrInput;
+    return createHomeOperation(input);
   };
 
   const updateHome = async (
@@ -469,34 +451,15 @@ export function useHomeManagement() {
     }
   };
 
-  const deleteHome = async (homeId: string, homeName: string) => {
-    return new Promise<boolean>(resolve => {
-      Alert.alert(
-        'Delete Home',
-        `Are you sure you want to delete "${homeName}"?`,
-        [
-          {
-            text: 'Cancel',
-            style: 'cancel',
-            onPress: () => resolve(false),
-          },
-          {
-            text: 'Delete',
-            style: 'destructive',
-            onPress: async () => {
-              try {
-                await deleteHomeMutation({
-                  variables: { id: homeId },
-                });
-                resolve(true);
-              } catch (error: any) {
-                resolve(false);
-              }
-            },
-          },
-        ],
-      );
+  const deleteHome = (homeId: string, homeName: string) => {
+    const operation = createRemoveOperation({
+      mutation: deleteHomeMutation,
+      itemId: homeId,
+      confirmMessage: 'Are you sure you want to delete "{name}"?',
+      itemName: homeName,
+      operationName: 'Delete Home',
     });
+    return operation();
   };
 
   const setDefaultHome = async (homeId: string) => {
@@ -656,7 +619,7 @@ export function useHomeManagement() {
       (!homes && loading) || (!defaultHomeData && loadingDefaultHome),
     error,
     stats,
-    previewHome: previewData?.homeByJoinCode || null,
+    previewHome: previewData?.homeByJoinCode ? normalizeHome(previewData.homeByJoinCode) : null,
 
     // Search
     searchQuery: query,

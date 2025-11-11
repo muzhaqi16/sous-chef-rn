@@ -438,8 +438,13 @@ export class QueueManager {
       };
     }
 
-    // Fallback - shouldn't happen
-    throw new Error(`No sync mutation mapping for ${operationName}`);
+    // Fallback: For mutations without Sync versions, replay the original mutation
+    // This allows all queued mutations to be replayed when coming back online
+    console.log(`ℹ️ Queue: No sync mutation for ${operationName}, using original mutation`);
+    return {
+      syncMutation: mutation.mutation,
+      syncVariables: variables,
+    };
   }
 
   /**

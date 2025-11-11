@@ -78,10 +78,25 @@ export const ShoppingListItem: React.FC<ShoppingListItemProps> = ({
                 count={localQuantity}
                 onIncrement={() => setLocalQuantity(q => q + 1)}
                 onDecrement={() => setLocalQuantity(q => Math.max(1, q - 1))}
+                disabled={isPurchased}
               />
-              <TouchableOpacity onPress={handleQuantityUpdate}>
+              <TouchableOpacity onPress={handleQuantityUpdate} disabled={isPurchased}>
                 <Icon name="check" size={20} color={theme.colors.primary} />
               </TouchableOpacity>
+            </View>
+          ) : isPurchased ? (
+            <View style={styles.quantityContainer}>
+              <QuantityDisplay
+                quantity={quantity}
+                quantityInput={quantityInput}
+                displayFormat={displayFormat}
+                unitSymbol={unit}
+                displayAsFraction={displayAsFraction}
+                style={{
+                  ...styles.quantityText,
+                  ...styles.purchasedText,
+                }}
+              />
             </View>
           ) : (
             <TouchableOpacity
@@ -94,10 +109,7 @@ export const ShoppingListItem: React.FC<ShoppingListItemProps> = ({
                 displayFormat={displayFormat}
                 unitSymbol={unit}
                 displayAsFraction={displayAsFraction}
-                style={{
-                  ...styles.quantityText,
-                  ...(isPurchased ? styles.purchasedText : {}),
-                }}
+                style={styles.quantityText}
               />
               <Icon name="edit" size={14} color={theme.colors.textSecondary} />
             </TouchableOpacity>

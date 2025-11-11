@@ -45,7 +45,6 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
 
   // Track gesture states to prevent RefreshControl conflicts
   const [isDragging, setIsDragging] = useState(false);
-  const [isSwipeActive, setIsSwipeActive] = useState(false);
 
   // Safe area insets for bottom padding
   const insets = useSafeAreaInsets();
@@ -68,9 +67,8 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
     setIsDragging(false);
   }, []);
 
-  // Handle swipeable item opening - close previously open item and track swipe state
+  // Handle swipeable item opening - close previously open item
   const handleSwipeableWillOpen = useCallback((ref: any) => {
-    setIsSwipeActive(true);
     // If external handler provided, use it (for coordinating across multiple lists)
     if (externalOnSwipeableWillOpen) {
       externalOnSwipeableWillOpen(ref);
@@ -85,9 +83,9 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
     }
   }, [externalOnSwipeableWillOpen]);
 
-  // Handle swipeable item closing - reset swipe active state
+  // Handle swipeable item closing
   const handleSwipeableClose = useCallback(() => {
-    setIsSwipeActive(false);
+    // No-op: swipe state tracking removed to prevent first-swipe re-render issue
   }, []);
 
   // Handle drag end - called when user releases item
@@ -223,7 +221,7 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
         activationDistance={DRAG_DISABLED_DISTANCE}
         ListFooterComponent={ListFooterComponent}
         refreshControl={
-          onRefresh && !disabled && !isDragging && !isSwipeActive ? (
+          onRefresh && !disabled && !isDragging ? (
             <RefreshControl
               refreshing={refreshing || false}
               onRefresh={onRefresh}

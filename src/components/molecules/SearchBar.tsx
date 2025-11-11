@@ -10,9 +10,10 @@ export interface SearchBarAction {
   color?: string;
   backgroundColor?: string;
   badge?: number;
-  size?: number;
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
   library?: 'MaterialDesignIcons' | 'Ionicons' | 'FontAwesome' | string;
   style?: StyleProp<ViewStyle>;
+  accessibilityLabel?: string;
 }
 
 type SearchBarProps = Omit<TextInputProps, 'style'> & {
@@ -62,6 +63,7 @@ export const SearchBar: FC<SearchBarProps> = ({
             ]}
             color={action.color || '#fff'}
             size={action.size}
+            accessibilityLabel={action.accessibilityLabel || `${action.icon} button`}
           />
         ))}
       </View>

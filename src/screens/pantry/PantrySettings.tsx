@@ -16,10 +16,11 @@ import {
   useDeletePantryMutation,
   useCreatePantryMutation,
 } from '#generated';
-import { useStore } from '#store';
+import { useAppStore, selectSelectedHomeId } from '#store/useAppStore';
 import { useAppNavigation } from '#hooks';
 import { PantryStackParamList } from '#navigation/stacks/PantryStack';
 import { useErrorHandler } from '#/utils/errorHandling';
+import { normalizePantry } from '#/utils/connectionUtils';
 
 export const PantrySettings: React.FC<{
   route: { params?: PantryStackParamList['PantrySettings'] };
@@ -28,8 +29,8 @@ export const PantrySettings: React.FC<{
   const { theme } = useUnistyles();
   const pantryId = route.params?.pantryId;
 
-  const { selectedHomeId } = useStore();
-  const setSelectedPantryId = useStore(state => state.setSelectedPantryId);
+  const selectedHomeId = useAppStore(selectSelectedHomeId);
+  const setSelectedPantryId = useAppStore(state => state.setSelectedPantryId);
   const { handleApolloError } = useErrorHandler();
 
   const [name, setName] = useState('');
@@ -47,7 +48,7 @@ export const PantrySettings: React.FC<{
     skip: !pantryId,
   });
 
-  const pantry = pantryData?.pantry;
+  const pantry = normalizePantry(pantryData?.pantry);
 
   const [updatePantry] = useUpdatePantryMutation({
     // Update cache directly - Apollo automatically merges the Pantry entity
@@ -69,14 +70,42 @@ export const PantrySettings: React.FC<{
         const deletedPantryId = variables.id;
 
         // Remove pantry from home's pantries array
+        const homeCacheId = cache.identify({
+          __typename: 'Home',
+          id: selectedHomeId,
+        });
+
+        if (!homeCacheId) {
+          return;
+        }
+
         cache.modify({
-          id: cache.identify({ __typename: 'Home', id: selectedHomeId }),
+          id: homeCacheId,
           fields: {
             pantries(existingPantries = [], { readField }) {
               return existingPantries.filter(
                 (pantryRef: any) =>
                   readField('id', pantryRef) !== deletedPantryId,
               );
+            },
+            pantriesConnection(existingConnection = null, { readField }) {
+              if (!existingConnection?.edges) {
+                return existingConnection;
+              }
+
+              const filteredEdges = existingConnection.edges.filter(
+                (edge: any) => readField('id', edge?.node) !== deletedPantryId,
+              );
+
+              return {
+                ...existingConnection,
+                edges: filteredEdges,
+                totalCount: Math.max(
+                  0,
+                  (existingConnection.totalCount ?? filteredEdges.length) -
+                    (filteredEdges.length < existingConnection.edges.length ? 1 : 0),
+                ),
+              };
             },
           },
         });
@@ -102,13 +131,20 @@ export const PantrySettings: React.FC<{
         const newPantry = data.createPantry;
 
         // Add new pantry to home's pantries array
+        const homeCacheId = cache.identify({
+          __typename: 'Home',
+          id: selectedHomeId,
+        });
+
+        if (!homeCacheId) {
+          return;
+        }
+
         cache.modify({
-          id: cache.identify({ __typename: 'Home', id: selectedHomeId }),
+          id: homeCacheId,
           fields: {
             pantries(existingPantries = [], { readField, toReference }) {
               const newPantryRef = toReference(newPantry);
-
-              // Check if pantry already exists (avoid duplicates)
               const exists = existingPantries.some(
                 (pantryRef: any) => readField('id', pantryRef) === newPantry.id,
               );
@@ -117,8 +153,29 @@ export const PantrySettings: React.FC<{
                 return existingPantries;
               }
 
-              // Add new pantry to the list
               return [...existingPantries, newPantryRef];
+            },
+            pantriesConnection(existingConnection = null) {
+              if (!existingConnection) {
+                return existingConnection;
+              }
+
+              const newEdge = {
+                __typename: 'PantryEdge',
+                cursor: newPantry.id,
+                node: {
+                  __typename: 'Pantry',
+                  ...newPantry,
+                },
+              };
+
+              return {
+                ...existingConnection,
+                edges: [...(existingConnection.edges || []), newEdge],
+                totalCount:
+                  (existingConnection.totalCount ??
+                    (existingConnection.edges?.length || 0)) + 1,
+              };
             },
           },
         });
@@ -326,7 +383,7 @@ export const PantrySettings: React.FC<{
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Items in pantry</Text>
               <Text style={styles.infoValue}>
-                {pantry.items?.length || 0} items
+                {pantry?.items?.length || 0} items
               </Text>
             </View>
 

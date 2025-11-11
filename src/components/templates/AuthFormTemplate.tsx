@@ -46,9 +46,10 @@ export function AuthFormTemplate<T extends FieldValues>({
           <IconButton
             name="chevron-left"
             onPress={onBackPress}
-            size={24}
+            size="md"
             style={styles.headerAction}
             color={theme.colors.textOnSurfaceVariant}
+            accessibilityLabel="Go back"
           />
         )}
 

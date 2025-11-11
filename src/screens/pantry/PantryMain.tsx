@@ -1,9 +1,10 @@
 import React, { useMemo, useEffect, useCallback, useRef, useState } from 'react';
 import { Alert, View, Image } from 'react-native';
+import { PaginationFooter } from '#/components/organisms/PaginationFooter';
 import { useAppNavigation } from '#hooks';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
 import { useDefaultHome, usePantryManagement } from '#hooks';
-import { useStore } from '#store';
+import { useAppStore, selectSelectedPantryId } from '#store/useAppStore';
 import {
   useGetHomeBasicQuery,
   useCreatePantryItemUsageMutation,
@@ -30,6 +31,7 @@ import type {
   SelectorConfig,
   ItemSelectorRef,
 } from '#components/organisms/AnimatedItemSelector';
+import { normalizeHome } from '#/utils/connectionUtils';
 
 export const PantryMain: React.FC = () => {
   const { navigate, navigateTo } = useAppNavigation();
@@ -42,8 +44,8 @@ export const PantryMain: React.FC = () => {
     showOnMount: false, // We'll manually trigger when appropriate
   });
 
-  const setSelectedPantryId = useStore(state => state.setSelectedPantryId);
-  const selectedPantryId = useStore(state => state.selectedPantryId);
+  const setSelectedPantryId = useAppStore(state => state.setSelectedPantryId);
+  const selectedPantryId = useAppStore(selectSelectedPantryId);
   const selectorRef = useRef<ItemSelectorRef>(null);
   const openSwipeableRef = useRef<any>(null);
 
@@ -69,9 +71,20 @@ export const PantryMain: React.FC = () => {
   });
 
   // Use home data from either source
+  const normalizedHomeResult = useMemo(() => {
+    if (!homeData?.home) {
+      return undefined;
+    }
+    const normalized = normalizeHome(homeData.home);
+    return normalized ? { home: normalized } : undefined;
+  }, [homeData]);
+
   const currentHomeData = useMemo(() => {
-    return homeFromList ? { home: homeFromList } : homeData;
-  }, [homeFromList, homeData]);
+    if (homeFromList) {
+      return { home: homeFromList };
+    }
+    return normalizedHomeResult;
+  }, [homeFromList, normalizedHomeResult]);
 
   // Use selected pantry from store or fall back to default pantry
   const defaultPantry = useMemo(
@@ -156,6 +169,9 @@ export const PantryMain: React.FC = () => {
     removeItem,
     refetch,
     loading,
+    loadMore,
+    hasMore,
+    isLoadingMore,
   } = usePantryManagement(pantry?.id);
 
   // Consume item mutation
@@ -565,6 +581,16 @@ export const PantryMain: React.FC = () => {
         onItemWaste={handleWasteItem}
         onRefresh={handleRefresh}
         onSwipeableWillOpen={handleSwipeableWillOpen}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={
+          <PaginationFooter
+            isLoadingMore={isLoadingMore}
+            hasMore={hasMore}
+            loading={loading}
+            itemCount={items.length}
+          />
+        }
         loading={isLoadingInitial}
         hasNoData={!selectedHomeId}
         showHeader={true}

@@ -6,9 +6,11 @@ import React, {
   useState,
 } from 'react';
 import { Alert, Image, View, Text, TouchableOpacity } from 'react-native';
+import { PaginationFooter } from '#/components/organisms/PaginationFooter';
 import { ScrollView, RefreshControl } from 'react-native-gesture-handler';
 import { useApolloClient } from '@apollo/client/react';
 import { useAppNavigation } from '#hooks';
+import { toastService } from '#/services/toastService';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
   ShoppingListItemFragmentDoc,
@@ -38,7 +40,7 @@ import type {
 } from '#components/organisms/AnimatedItemSelector';
 import type { SortableShoppingListItem } from '#components/organisms/SortableShoppingList';
 import { useShoppingListManagement } from '#/hooks';
-import { useStore } from '#/store';
+import { useAppStore, selectSelectedShoppingListId } from '#store/useAppStore';
 import { IconLibrary } from '#/utils/iconUtils';
 import { ShoppingListItemCounter } from '#/components/molecules/ShoppingListItemCounter';
 import { commonStyles } from '#/styles';
@@ -73,6 +75,8 @@ const ShoppingListContent: React.FC<{
   onClearAllPurchased?: () => Promise<void>;
   onSwipeableWillOpen?: (ref: any) => void;
   onSwipeableClose?: () => void;
+  purchasedSectionExpanded?: boolean;
+  onPurchasedSectionExpandedChange?: (expanded: boolean) => void;
 }> = ({
   items,
   onItemPress,
@@ -87,6 +91,8 @@ const ShoppingListContent: React.FC<{
   onClearAllPurchased,
   onSwipeableWillOpen,
   onSwipeableClose,
+  purchasedSectionExpanded,
+  onPurchasedSectionExpandedChange,
 }) => {
   // Separate items by purchased status
   const unpurchasedItems = items.filter(item => !item.isPurchased);
@@ -140,6 +146,8 @@ const ShoppingListContent: React.FC<{
             disabled={disabled}
             onSwipeableWillOpen={onSwipeableWillOpen}
             onSwipeableClose={onSwipeableClose}
+            isExpanded={purchasedSectionExpanded}
+            onExpandedChange={onPurchasedSectionExpandedChange}
           />
         }
       />
@@ -164,7 +172,10 @@ export const ShoppingListMain: React.FC = () => {
   } = useUnistyles();
   const { primary: primaryColor, primaryLight: primaryLightColor } = colors;
   // Step 2: Use the extracted variables INSIDE useMemo
-  const { selectedShoppingListId, setSelectedShoppingListId } = useStore();
+  const selectedShoppingListId = useAppStore(selectSelectedShoppingListId);
+  const setSelectedShoppingListId = useAppStore(
+    state => state.setSelectedShoppingListId,
+  );
   const { user } = useAuth();
   const selectorRef = useRef<ItemSelectorRef>(null);
   const { setScannerProps, setOverlayOpen } = useScanner();
@@ -177,7 +188,15 @@ export const ShoppingListMain: React.FC = () => {
       // Find the moved item
       const movedItem = items.find(item => item.id === variables.input.itemId);
       if (!movedItem) {
-        return { __typename: 'Mutation', moveShoppingListItem: null as any };
+        // Return the first item as a fallback - the real mutation will handle errors
+        // This prevents type errors while still allowing the mutation to proceed
+        return {
+          __typename: 'Mutation',
+          moveShoppingListItem: items[0] || {
+            __typename: 'ShoppingListItem',
+            id: variables.input.itemId,
+          },
+        };
       }
 
       // Calculate optimistic sortOrder using fractional indexing
@@ -249,6 +268,8 @@ export const ShoppingListMain: React.FC = () => {
   });
 
   const [refreshing, setRefreshing] = useState(false);
+  const [purchasedSectionExpandedState, setPurchasedSectionExpandedState] =
+    useState<Record<string, boolean>>({});
 
   // Use cache-and-network like pantry and recipes - Apollo handles offline gracefully
   const { data, previousData } = useGetShoppingListsQuery({
@@ -267,6 +288,34 @@ export const ShoppingListMain: React.FC = () => {
   const currentListId = selectedShoppingListId || defaultList?.id;
   const currentList =
     lists.find(list => list.id === currentListId) || defaultList;
+
+  const purchasedPreferenceExists = Boolean(
+    currentListId && currentListId in purchasedSectionExpandedState,
+  );
+  const purchasedSectionExpanded = currentListId
+    ? purchasedSectionExpandedState[currentListId]
+    : undefined;
+  const controlledPurchasedSectionExpanded = purchasedPreferenceExists
+    ? purchasedSectionExpanded
+    : undefined;
+
+  const handlePurchasedSectionExpandedChange = useCallback(
+    (expanded: boolean) => {
+      if (!currentListId) return;
+
+      setPurchasedSectionExpandedState(prev => {
+        if (prev[currentListId] === expanded && currentListId in prev) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          [currentListId]: expanded,
+        };
+      });
+    },
+    [currentListId],
+  );
 
   // Auto-select the default list if none is selected or if selected list no longer exists
   useEffect(() => {
@@ -295,6 +344,10 @@ export const ShoppingListMain: React.FC = () => {
     toggleItem,
     removeItem,
     refetch: refetchItems,
+    loadMore,
+    hasMore,
+    isLoadingMore,
+    loading,
   } = useShoppingListManagement(currentListId);
 
   // Show swipe hint after items load (only once, only if there are unpurchased items)
@@ -444,7 +497,7 @@ export const ShoppingListMain: React.FC = () => {
         });
       } catch (error) {
         console.error('Failed to move item:', error);
-        Alert.alert('Error', 'Failed to reorder items');
+        toastService.error('Failed to reorder items');
       }
     },
     [currentListId, moveItem, items],
@@ -453,20 +506,12 @@ export const ShoppingListMain: React.FC = () => {
   // Quantity update handlers using specialized mutation (80% payload reduction)
   const handleIncrementQuantity = useCallback(
     async (itemId: string) => {
-      // Find item from the items array (already available from hook)
-      const currentItem = items.find(item => item.id === itemId);
-
-      if (!currentItem) {
-        console.warn('Item not found:', itemId);
-        return;
-      }
-
-      const newQuantity = (currentItem.quantity || 1) + 1;
-
+      // Always read fresh data directly from Apollo cache
       const cacheId = client.cache.identify({
         __typename: 'ShoppingListItem',
         id: itemId,
       });
+
       const fullItem = cacheId
         ? client.readFragment<any>({
             id: cacheId,
@@ -474,7 +519,14 @@ export const ShoppingListMain: React.FC = () => {
             fragmentName: 'ShoppingListItemFragment',
           })
         : null;
-      const optimisticItem = fullItem ?? currentItem ?? null;
+
+      if (!fullItem) {
+        console.warn('Item not in cache, cannot increment:', itemId);
+        return;
+      }
+
+      // Use fresh quantity from cache, not stale items array
+      const newQuantity = (fullItem.quantity || 0) + 1;
 
       try {
         optimisticDataPersistence.save(
@@ -488,30 +540,19 @@ export const ShoppingListMain: React.FC = () => {
           variables: {
             itemId,
             quantity: newQuantity.toString(),
-            version: currentItem.version,
+            version: fullItem.version,
           },
-          optimisticResponse: optimisticItem
-            ? {
-                __typename: 'Mutation',
-                updateShoppingListItemQuantity: {
-                  ...optimisticItem,
-                  __typename: 'ShoppingListItem',
-                  quantity: newQuantity,
-                  // Keep current version; server response will deliver incremented version
-                  version: optimisticItem.version ?? currentItem.version,
-                  updatedAt: new Date().toISOString(),
-                },
-              }
-            : {
-                __typename: 'Mutation',
-                updateShoppingListItemQuantity: {
-                  __typename: 'ShoppingListItem',
-                  id: itemId,
-                  quantity: newQuantity,
-                  version: currentItem.version,
-                  updatedAt: new Date().toISOString(),
-                } as any,
-              },
+          optimisticResponse: {
+            __typename: 'Mutation',
+            updateShoppingListItemQuantity: {
+              ...fullItem,
+              __typename: 'ShoppingListItem',
+              quantity: newQuantity,
+              // Keep current version; server response will deliver incremented version
+              version: fullItem.version,
+              updatedAt: new Date().toISOString(),
+            },
+          },
           onCompleted: data => {
             if (data?.updateShoppingListItemQuantity) {
               optimisticDataPersistence.clear(
@@ -531,28 +572,20 @@ export const ShoppingListMain: React.FC = () => {
           return;
         }
         console.error('Failed to update quantity:', error);
-        Alert.alert('Error', 'Failed to update quantity');
+        toastService.error('Failed to update quantity');
       }
     },
-    [updateQuantity, refetchItems, items, client],
+    [updateQuantity, refetchItems, client],
   );
 
   const handleDecrementQuantity = useCallback(
     async (itemId: string) => {
-      // Find item from the items array (already available from hook)
-      const currentItem = items.find(item => item.id === itemId);
-
-      if (!currentItem) {
-        console.warn('Item not found:', itemId);
-        return;
-      }
-
-      const newQuantity = Math.max(0, (currentItem.quantity || 1) - 1);
-
+      // Always read fresh data directly from Apollo cache
       const cacheId = client.cache.identify({
         __typename: 'ShoppingListItem',
         id: itemId,
       });
+
       const fullItem = cacheId
         ? client.readFragment<any>({
             id: cacheId,
@@ -560,7 +593,14 @@ export const ShoppingListMain: React.FC = () => {
             fragmentName: 'ShoppingListItemFragment',
           })
         : null;
-      const optimisticItem = fullItem ?? currentItem ?? null;
+
+      if (!fullItem) {
+        console.warn('Item not in cache, cannot decrement:', itemId);
+        return;
+      }
+
+      // Use fresh quantity from cache, not stale items array
+      const newQuantity = Math.max(0, (fullItem.quantity || 0) - 1);
 
       try {
         optimisticDataPersistence.save(
@@ -574,29 +614,18 @@ export const ShoppingListMain: React.FC = () => {
           variables: {
             itemId,
             quantity: newQuantity.toString(),
-            version: currentItem.version,
+            version: fullItem.version,
           },
-          optimisticResponse: optimisticItem
-            ? {
-                __typename: 'Mutation',
-                updateShoppingListItemQuantity: {
-                  ...optimisticItem,
-                  __typename: 'ShoppingListItem',
-                  quantity: newQuantity,
-                  version: optimisticItem.version ?? currentItem.version,
-                  updatedAt: new Date().toISOString(),
-                },
-              }
-            : {
-                __typename: 'Mutation',
-                updateShoppingListItemQuantity: {
-                  __typename: 'ShoppingListItem',
-                  id: itemId,
-                  quantity: newQuantity,
-                  version: currentItem.version,
-                  updatedAt: new Date().toISOString(),
-                } as any,
-              },
+          optimisticResponse: {
+            __typename: 'Mutation',
+            updateShoppingListItemQuantity: {
+              ...fullItem,
+              __typename: 'ShoppingListItem',
+              quantity: newQuantity,
+              version: fullItem.version,
+              updatedAt: new Date().toISOString(),
+            },
+          },
           onCompleted: data => {
             if (data?.updateShoppingListItemQuantity) {
               optimisticDataPersistence.clear(
@@ -616,10 +645,10 @@ export const ShoppingListMain: React.FC = () => {
           return;
         }
         console.error('Failed to update quantity:', error);
-        Alert.alert('Error', 'Failed to update quantity');
+        toastService.error('Failed to update quantity');
       }
     },
-    [updateQuantity, refetchItems, items, client],
+    [updateQuantity, refetchItems, client],
   );
 
   // Transform shopping list items for SortableShoppingList
@@ -658,6 +687,7 @@ export const ShoppingListMain: React.FC = () => {
             unit={item.unit?.symbol || item.unitName}
             onIncrement={() => handleIncrementQuantity(item.id)}
             onDecrement={() => handleDecrementQuantity(item.id)}
+            disabled={item.isPurchased}
           />
         ),
         leftElement: imageUrl ? (
@@ -698,7 +728,7 @@ export const ShoppingListMain: React.FC = () => {
   const handleAddItemFromSearch = useCallback(
     async (itemName: string) => {
       if (!currentListId) {
-        Alert.alert('Error', 'Please select a shopping list first');
+        toastService.error('Please select a shopping list first');
         return;
       }
 
@@ -711,10 +741,10 @@ export const ShoppingListMain: React.FC = () => {
         if (result) {
           setSearchQuery(''); // Clear search after adding
         } else {
-          Alert.alert('Error', 'Failed to add item');
+          toastService.error('Failed to add item');
         }
       } catch (error) {
-        Alert.alert('Error', 'Failed to add item');
+        toastService.error('Failed to add item');
       }
     },
     [currentListId, addItem, setSearchQuery],
@@ -726,7 +756,7 @@ export const ShoppingListMain: React.FC = () => {
       // OPTIMIZATION: No refetch needed - removeItem updates cache via cache.modify
       // Cache automatically updates via Apollo's normalized cache
     } catch (error) {
-      Alert.alert('Error', 'Failed to delete item');
+      toastService.error('Failed to delete item');
     }
   };
 
@@ -742,7 +772,7 @@ export const ShoppingListMain: React.FC = () => {
       // OPTIMIZATION: No refetch needed - each removeItem updates cache via cache.modify
       // Cache automatically updates via Apollo's normalized cache
     } catch (error) {
-      Alert.alert('Error', 'Failed to clear purchased items');
+      toastService.error('Failed to clear purchased items');
     }
   }, [items, removeItem]);
 
@@ -912,7 +942,20 @@ export const ShoppingListMain: React.FC = () => {
           onClearAllPurchased: handleClearAllPurchased,
           onSwipeableWillOpen: handleSwipeableWillOpen,
           onSwipeableClose: handleSwipeableClose,
+          purchasedSectionExpanded: controlledPurchasedSectionExpanded,
+          onPurchasedSectionExpandedChange:
+            handlePurchasedSectionExpandedChange,
         }}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={
+          <PaginationFooter
+            isLoadingMore={isLoadingMore}
+            hasMore={hasMore}
+            loading={loading}
+            itemCount={items.length}
+          />
+        }
       />
 
       <AnimatedItemSelector
@@ -949,8 +992,7 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.border,
   },
   selectorItemSelected: {
-    backgroundColor:
-      (theme.colors as any).primaryLight || theme.colors.primary + '10',
+    backgroundColor: theme.colors.primaryLight,
     borderColor: theme.colors.primary,
   },
   selectorItemInfo: {

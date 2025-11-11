@@ -5,7 +5,7 @@ import Animated, {
   withSpring,
   interpolate,
 } from 'react-native-reanimated';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import type { FloatingTabItemProps } from './types';
 
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
@@ -20,6 +20,7 @@ export const FloatingTabItem: React.FC<FloatingTabItemProps> = ({
   accessibilityLabel,
   isActive,
 }) => {
+  const { theme } = useUnistyles();
   const animatedStyle = useAnimatedStyle(() => {
     const isActiveTab = activeIndex.value === index;
 
@@ -57,7 +58,7 @@ export const FloatingTabItem: React.FC<FloatingTabItemProps> = ({
       {IconComponent && (
         <IconComponent
           focused={isActive}
-          color={isActive ? '#FFFFFF' : '#CCCCCC'}
+          color={isActive ? theme.colors.iconOnPrimary : theme.colors.iconDisabled}
           size={24}
         />
       )}
