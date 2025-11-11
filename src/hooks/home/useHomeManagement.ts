@@ -22,7 +22,14 @@ import {
 } from '#/utils/errors/versionConflict';
 import { usePreservedArrayData } from '#/hooks/apollo';
 import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
-import { normalizeHome, normalizeHomes } from '#/utils/connectionUtils';
+import { createEntityNormalizer, normalizeHomes } from '#/utils/connectionUtils';
+
+// Create home normalizer
+const normalizeHome = createEntityNormalizer([
+  { connectionField: 'membersConnection', arrayName: 'members', includePageInfo: true },
+  { connectionField: 'invitesConnection', arrayName: 'invites', includePageInfo: true },
+  { connectionField: 'pantriesConnection', arrayName: 'pantries', includePageInfo: true },
+]);
 import {
   createAddToQueryFieldUpdater,
   createRemoveFromQueryFieldUpdater,

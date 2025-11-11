@@ -10,7 +10,14 @@ import {
 } from '#generated';
 import { MESSAGES } from '#constants';
 import { formatRole } from '#utils/formatters';
-import { normalizeHome } from '#/utils/connectionUtils';
+import { createEntityNormalizer } from '#/utils/connectionUtils';
+
+// Create home normalizer
+const normalizeHome = createEntityNormalizer([
+  { connectionField: 'membersConnection', arrayName: 'members', includePageInfo: true },
+  { connectionField: 'invitesConnection', arrayName: 'invites', includePageInfo: true },
+  { connectionField: 'pantriesConnection', arrayName: 'pantries', includePageInfo: true },
+]);
 import { createRemoveFromParentConnectionUpdater } from '#/apollo/utils';
 import { useCrudOperations } from '#/hooks/utils';
 

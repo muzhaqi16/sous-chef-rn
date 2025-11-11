@@ -21,7 +21,6 @@ const config = {
       /android\/app\/build\/.*/,
       /android\/build\/.*/,
       /ios\/build\/.*/,
-      /node_modules\/.*/,
     ].concat(defaultConfig.resolver.blockList || []),
   },
 };

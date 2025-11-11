@@ -1,4 +1,10 @@
-import React, { useMemo, useEffect, useCallback, useRef, useState } from 'react';
+import React, {
+  useMemo,
+  useEffect,
+  useCallback,
+  useRef,
+  useState,
+} from 'react';
 import { Alert, View } from 'react-native';
 import { PaginationFooter } from '#/components/organisms/PaginationFooter';
 import { useAppNavigation } from '#hooks';
@@ -34,10 +40,27 @@ import {
 import { PantryContent } from '#components/pantry';
 import { ConsumePantryItemModal } from '#components/modals/ConsumePantryItemModal';
 import { RecordWastePantryItemModal } from '#components/modals/RecordWastePantryItemModal';
-import type {
-  ItemSelectorRef,
-} from '#components/organisms/AnimatedItemSelector';
-import { normalizeHome } from '#/utils/connectionUtils';
+import type { ItemSelectorRef } from '#components/organisms/AnimatedItemSelector';
+import { createEntityNormalizer } from '#/utils/connectionUtils';
+
+// Create home normalizer
+const normalizeHome = createEntityNormalizer([
+  {
+    connectionField: 'membersConnection',
+    arrayName: 'members',
+    includePageInfo: true,
+  },
+  {
+    connectionField: 'invitesConnection',
+    arrayName: 'invites',
+    includePageInfo: true,
+  },
+  {
+    connectionField: 'pantriesConnection',
+    arrayName: 'pantries',
+    includePageInfo: true,
+  },
+]);
 
 export const PantryMain: React.FC = () => {
   const { navigate, navigateTo } = useAppNavigation();
@@ -61,7 +84,8 @@ export const PantryMain: React.FC = () => {
 
   // Consume item state
   const [consumeModalVisible, setConsumeModalVisible] = useState(false);
-  const [selectedItemForConsume, setSelectedItemForConsume] = useState<any>(null);
+  const [selectedItemForConsume, setSelectedItemForConsume] =
+    useState<any>(null);
 
   // Waste item state
   const [wasteModalVisible, setWasteModalVisible] = useState(false);
@@ -177,7 +201,10 @@ export const PantryMain: React.FC = () => {
     errorPolicy: 'all',
     onError: error => {
       console.error('Failed to create pantry item usage:', error);
-      Alert.alert('Error', 'Failed to record item consumption. Please try again.');
+      Alert.alert(
+        'Error',
+        'Failed to record item consumption. Please try again.',
+      );
     },
   });
 
@@ -191,45 +218,51 @@ export const PantryMain: React.FC = () => {
   });
 
   // Handler to open consume modal
-  const handleConsumeItem = useCallback((itemId: string) => {
-    const item = pantryItems.find(p => p.id === itemId);
-    if (item) {
-      setSelectedItemForConsume(item);
-      setConsumeModalVisible(true);
-    }
-  }, [pantryItems]);
+  const handleConsumeItem = useCallback(
+    (itemId: string) => {
+      const item = pantryItems.find(p => p.id === itemId);
+      if (item) {
+        setSelectedItemForConsume(item);
+        setConsumeModalVisible(true);
+      }
+    },
+    [pantryItems],
+  );
 
   // Handler to confirm consumption
-  const handleConfirmConsume = useCallback(async (
-    quantityUsed: number,
-    quantityInput: string,
-    purpose: UsagePurpose,
-    notes: string,
-  ) => {
-    if (!selectedItemForConsume) return;
+  const handleConfirmConsume = useCallback(
+    async (
+      quantityUsed: number,
+      quantityInput: string,
+      purpose: UsagePurpose,
+      notes: string,
+    ) => {
+      if (!selectedItemForConsume) return;
 
-    try {
-      await createPantryItemUsage({
-        variables: {
-          input: {
-            pantryItemId: selectedItemForConsume.id,
-            quantityUsed,
-            purpose,
-            notes: notes || undefined,
+      try {
+        await createPantryItemUsage({
+          variables: {
+            input: {
+              pantryItemId: selectedItemForConsume.id,
+              quantityUsed,
+              purpose,
+              notes: notes || undefined,
+            },
           },
-        },
-      });
+        });
 
-      // Reset state
-      setConsumeModalVisible(false);
-      setSelectedItemForConsume(null);
+        // Reset state
+        setConsumeModalVisible(false);
+        setSelectedItemForConsume(null);
 
-      // Refetch to get updated quantities
-      await refetch();
-    } catch (error) {
-      console.error('Error consuming pantry item:', error);
-    }
-  }, [selectedItemForConsume, createPantryItemUsage, refetch]);
+        // Refetch to get updated quantities
+        await refetch();
+      } catch (error) {
+        console.error('Error consuming pantry item:', error);
+      }
+    },
+    [selectedItemForConsume, createPantryItemUsage, refetch],
+  );
 
   // Handler to close consume modal
   const handleCloseConsumeModal = useCallback(() => {
@@ -238,45 +271,51 @@ export const PantryMain: React.FC = () => {
   }, []);
 
   // Handler to open waste modal
-  const handleWasteItem = useCallback((itemId: string) => {
-    const item = pantryItems.find(p => p.id === itemId);
-    if (item) {
-      setSelectedItemForWaste(item);
-      setWasteModalVisible(true);
-    }
-  }, [pantryItems]);
+  const handleWasteItem = useCallback(
+    (itemId: string) => {
+      const item = pantryItems.find(p => p.id === itemId);
+      if (item) {
+        setSelectedItemForWaste(item);
+        setWasteModalVisible(true);
+      }
+    },
+    [pantryItems],
+  );
 
   // Handler to confirm waste recording
-  const handleConfirmWaste = useCallback(async (
-    wasteAmount: number,
-    wasteReason: WasteReason,
-    isComposted: boolean,
-    isRecycled: boolean,
-    _notes: string,
-  ) => {
-    if (!selectedItemForWaste) return;
+  const handleConfirmWaste = useCallback(
+    async (
+      wasteAmount: number,
+      wasteReason: WasteReason,
+      isComposted: boolean,
+      isRecycled: boolean,
+      _notes: string,
+    ) => {
+      if (!selectedItemForWaste) return;
 
-    try {
-      await recordPantryItemWaste({
-        variables: {
-          id: selectedItemForWaste.id,
-          wasteAmount,
-          wasteReason,
-          isComposted,
-          isRecycled,
-        },
-      });
+      try {
+        await recordPantryItemWaste({
+          variables: {
+            id: selectedItemForWaste.id,
+            wasteAmount,
+            wasteReason,
+            isComposted,
+            isRecycled,
+          },
+        });
 
-      // Reset state
-      setWasteModalVisible(false);
-      setSelectedItemForWaste(null);
+        // Reset state
+        setWasteModalVisible(false);
+        setSelectedItemForWaste(null);
 
-      // Refetch to get updated quantities
-      await refetch();
-    } catch (error) {
-      console.error('Error recording pantry item waste:', error);
-    }
-  }, [selectedItemForWaste, recordPantryItemWaste, refetch]);
+        // Refetch to get updated quantities
+        await refetch();
+      } catch (error) {
+        console.error('Error recording pantry item waste:', error);
+      }
+    },
+    [selectedItemForWaste, recordPantryItemWaste, refetch],
+  );
 
   // Handler to close waste modal
   const handleCloseWasteModal = useCallback(() => {
@@ -335,7 +374,12 @@ export const PantryMain: React.FC = () => {
       return () => clearTimeout(timer);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items.length, selectedHomeId, homeSwitchHint.hasBeenShown, homeSwitchHint.show]);
+  }, [
+    items.length,
+    selectedHomeId,
+    homeSwitchHint.hasBeenShown,
+    homeSwitchHint.show,
+  ]);
 
   const handleAddItem = useCallback(() => {
     if (!selectedHomeId) {
@@ -551,7 +595,8 @@ export const PantryMain: React.FC = () => {
         <FeatureHintOverlay
           config={{
             title: 'Tap to manage homes',
-            subtitle: 'Click the home icon to switch between homes or manage home settings',
+            subtitle:
+              'Click the home icon to switch between homes or manage home settings',
             icon: {
               name: 'home-switch-outline',
               library: 'MaterialDesignIcons',

@@ -91,8 +91,8 @@ export function useQuantityManagement(
       try {
         await updateQuantity({
           variables: {
-            id: itemId,
-            quantity: newQuantity,
+            itemId,
+            quantity: newQuantity.toString(),
             version,
           },
         });
