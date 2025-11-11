@@ -28,26 +28,28 @@ const isDefined = <T>(value: T | null | undefined): value is T => value != null;
 /**
  * Extracts nodes from a Relay-style connection, filtering out null edges/nodes.
  */
-export const extractNodes = <T>(connection?: {
-  edges?: Array<Edge<T>> | null;
-} | null): T[] => {
+export const extractNodes = <T>(
+  connection?: {
+    edges?: Array<Edge<T>> | null;
+  } | null,
+): T[] => {
   if (!connection?.edges) {
     return [];
   }
 
-  return connection.edges
-    .map(edge => edge?.node)
-    .filter(isDefined);
+  return connection.edges.map(edge => edge?.node).filter(isDefined);
 };
 
 /**
  * Returns the reported totalCount for a connection, falling back to the
  * number of extracted nodes when totalCount is unavailable.
  */
-export const getConnectionTotalCount = (connection?: {
-  totalCount?: number | null;
-  edges?: Array<Edge<any>> | null;
-} | null): number => {
+export const getConnectionTotalCount = (
+  connection?: {
+    totalCount?: number | null;
+    edges?: Array<Edge<any>> | null;
+  } | null,
+): number => {
   if (typeof connection?.totalCount === 'number') {
     return connection.totalCount;
   }
@@ -97,7 +99,8 @@ export function normalizeConnectionField<T extends Record<string, any>>(
   };
 
   if (config.includeTotalCount) {
-    result[`${config.arrayName}TotalCount`] = getConnectionTotalCount(connection);
+    result[`${config.arrayName}TotalCount`] =
+      getConnectionTotalCount(connection);
   }
 
   if (config.includePageInfo) {
@@ -169,7 +172,7 @@ export function normalizeConnection<T = any>(
 }
 
 // =============================================================================
-// Legacy Type Definitions (maintained for backward compatibility)
+// Typed Normalizer Functions
 // =============================================================================
 
 type HomeLike = {
@@ -200,6 +203,20 @@ type PantryLike = {
   } | null;
 };
 
+type ShoppingListLike = {
+  itemsConnection?: {
+    edges?: Array<Edge<any>> | null;
+    totalCount?: number | null;
+    pageInfo?: PageInfo | null;
+  } | null;
+};
+
+type RecipesConnectionLike = {
+  edges?: Array<Edge<any>> | null;
+  totalCount?: number | null;
+  pageInfo?: PageInfo | null;
+};
+
 export type NormalizedHome<T extends HomeLike> = T & {
   members: any[];
   invites: any[];
@@ -209,18 +226,52 @@ export type NormalizedHome<T extends HomeLike> = T & {
   pantriesPageInfo?: PageInfo;
 };
 
+export type NormalizedPantry<T extends PantryLike> = T & {
+  items: any[];
+  storageLocations: any[];
+  itemsTotalCount: number;
+  storageLocationsTotalCount: number;
+  itemsPageInfo?: PageInfo;
+  storageLocationsPageInfo?: PageInfo;
+};
+
+export type NormalizedShoppingList<T extends ShoppingListLike> = T & {
+  items: any[];
+  itemsTotalCount: number;
+  itemsPageInfo?: PageInfo;
+};
+
+export type NormalizedRecipes = {
+  recipes: any[];
+  totalCount: number;
+  pageInfo?: PageInfo;
+};
+
 /**
  * Normalizes a Home object by flattening Connection edges to arrays
  * and preserving pagination metadata for future fetchMore operations.
- *
- * @deprecated Use createEntityNormalizer instead for new code
  */
 export const normalizeHome = createEntityNormalizer<HomeLike>([
-  { connectionField: 'membersConnection', arrayName: 'members', includePageInfo: true },
-  { connectionField: 'invitesConnection', arrayName: 'invites', includePageInfo: true },
-  { connectionField: 'pantriesConnection', arrayName: 'pantries', includePageInfo: true },
+  {
+    connectionField: 'membersConnection',
+    arrayName: 'members',
+    includePageInfo: true,
+  },
+  {
+    connectionField: 'invitesConnection',
+    arrayName: 'invites',
+    includePageInfo: true,
+  },
+  {
+    connectionField: 'pantriesConnection',
+    arrayName: 'pantries',
+    includePageInfo: true,
+  },
 ]) as <T extends HomeLike>(home?: T | null) => NormalizedHome<T> | null;
 
+/**
+ * Normalizes an array of Home objects
+ */
 export const normalizeHomes = <T extends HomeLike>(
   homes?: Array<T | null | undefined>,
 ): NormalizedHome<T>[] => {
@@ -233,85 +284,49 @@ export const normalizeHomes = <T extends HomeLike>(
     .filter(isDefined) as NormalizedHome<T>[];
 };
 
-export type NormalizedPantry<T extends PantryLike> = T & {
-  items: any[];
-  storageLocations: any[];
-  itemsTotalCount: number;
-  storageLocationsTotalCount: number;
-  itemsPageInfo?: PageInfo;
-  storageLocationsPageInfo?: PageInfo;
-};
-
 /**
  * Normalizes a Pantry object by flattening Connection edges to arrays
  * and preserving pagination metadata for future fetchMore operations.
- *
- * @deprecated Use createEntityNormalizer instead for new code
  */
 export const normalizePantry = createEntityNormalizer<PantryLike>([
   {
     connectionField: 'itemsConnection',
     arrayName: 'items',
     includeTotalCount: true,
-    includePageInfo: true
+    includePageInfo: true,
   },
   {
     connectionField: 'storageLocationsConnection',
     arrayName: 'storageLocations',
     includeTotalCount: true,
-    includePageInfo: true
+    includePageInfo: true,
   },
 ]) as <T extends PantryLike>(pantry?: T | null) => NormalizedPantry<T> | null;
-
-type ShoppingListLike = {
-  itemsConnection?: {
-    edges?: Array<Edge<any>> | null;
-    totalCount?: number | null;
-    pageInfo?: PageInfo | null;
-  } | null;
-};
-
-export type NormalizedShoppingList<T extends ShoppingListLike> = T & {
-  items: any[];
-  itemsTotalCount: number;
-  itemsPageInfo?: PageInfo;
-};
 
 /**
  * Normalizes a ShoppingList object by flattening Connection edges to arrays
  * and preserving pagination metadata for future fetchMore operations.
- *
- * @deprecated Use createEntityNormalizer instead for new code
  */
 export const normalizeShoppingList = createEntityNormalizer<ShoppingListLike>([
   {
     connectionField: 'itemsConnection',
     arrayName: 'items',
     includeTotalCount: true,
-    includePageInfo: true
+    includePageInfo: true,
   },
-]) as <T extends ShoppingListLike>(shoppingList?: T | null) => NormalizedShoppingList<T> | null;
-
-type RecipesConnectionLike = {
-  edges?: Array<Edge<any>> | null;
-  totalCount?: number | null;
-  pageInfo?: PageInfo | null;
-};
-
-export type NormalizedRecipes = {
-  recipes: any[];
-  totalCount: number;
-  pageInfo?: PageInfo;
-};
+]) as <T extends ShoppingListLike>(
+  shoppingList?: T | null,
+) => NormalizedShoppingList<T> | null;
 
 /**
  * Normalizes a RecipesConnection object by flattening Connection edges to arrays
  * and preserving pagination metadata for future fetchMore operations.
- *
- * @deprecated Use normalizeConnection instead for new code
  */
 export const normalizeRecipes = (
   recipesConnection?: RecipesConnectionLike | null,
 ): NormalizedRecipes | null => {
-  return normalizeConnection(recipesConnection, 'recipes') as NormalizedRecipes | null;
+  return normalizeConnection(
+    recipesConnection,
+    'recipes',
+  ) as NormalizedRecipes | null;
 };

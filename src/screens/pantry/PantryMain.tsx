@@ -41,26 +41,7 @@ import { PantryContent } from '#components/pantry';
 import { ConsumePantryItemModal } from '#components/modals/ConsumePantryItemModal';
 import { RecordWastePantryItemModal } from '#components/modals/RecordWastePantryItemModal';
 import type { ItemSelectorRef } from '#components/organisms/AnimatedItemSelector';
-import { createEntityNormalizer } from '#/utils/connectionUtils';
-
-// Create home normalizer
-const normalizeHome = createEntityNormalizer([
-  {
-    connectionField: 'membersConnection',
-    arrayName: 'members',
-    includePageInfo: true,
-  },
-  {
-    connectionField: 'invitesConnection',
-    arrayName: 'invites',
-    includePageInfo: true,
-  },
-  {
-    connectionField: 'pantriesConnection',
-    arrayName: 'pantries',
-    includePageInfo: true,
-  },
-]);
+import { normalizeHome } from '#/utils/connectionUtils';
 
 export const PantryMain: React.FC = () => {
   const { navigate, navigateTo } = useAppNavigation();

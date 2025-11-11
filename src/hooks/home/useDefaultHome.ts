@@ -3,14 +3,7 @@ import { useGetHomesQuery, useGetDefaultHomeQuery } from '#generated';
 import { useStore } from '#store';
 import { useAuth } from '#hooks/auth/useAuth';
 import { usePreservedArrayData } from '#/hooks/apollo';
-import { createEntityNormalizer, normalizeHomes } from '#/utils/connectionUtils';
-
-// Create home normalizer
-const normalizeHome = createEntityNormalizer([
-  { connectionField: 'membersConnection', arrayName: 'members', includePageInfo: true },
-  { connectionField: 'invitesConnection', arrayName: 'invites', includePageInfo: true },
-  { connectionField: 'pantriesConnection', arrayName: 'pantries', includePageInfo: true },
-]);
+import { normalizeHome, normalizeHomes } from '#/utils/connectionUtils';
 
 export const useDefaultHome = () => {
   const { selectedHomeId, setSelectedHomeId, selectedPantryId, setSelectedPantryId } = useStore();
