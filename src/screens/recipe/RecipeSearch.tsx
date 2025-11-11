@@ -23,13 +23,17 @@ import {
   HeaderAction,
   BottomSheetAction,
 } from '#components';
+import { ItemList } from '#components/organisms/ItemList';
+import { RecipeCardSkeleton } from '#components/base/Skeleton';
 import { spoonacularService } from '#/services/recipeApi';
+import { ScrollView } from 'react-native-gesture-handler';
 import type {
   SearchRecipesResult,
   RecipeSearchResult,
 } from '#/services/recipeApi/types';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
+import { useScreenTransition } from '#hooks/performance';
 import { useGetHomeQuery, Diet, ReligiousDiet } from '#generated';
 
 type RecipeSearchRouteProp = RouteProp<
@@ -37,12 +41,53 @@ type RecipeSearchRouteProp = RouteProp<
   'RecipeSearch'
 >;
 
+// Wrapper component that shows skeleton screens during loading
+const RecipeSearchContent: React.FC<{
+  items: any[];
+  loading?: boolean;
+  searchPerformed?: boolean;
+  onItemPress: (id: string) => void;
+  onRefresh?: () => Promise<void>;
+  emptyState?: any;
+}> = ({
+  items,
+  loading,
+  searchPerformed,
+  onItemPress,
+  onRefresh,
+  emptyState,
+}) => {
+  // Show skeleton screens during search
+  if (loading && searchPerformed) {
+    return (
+      <ScrollView contentContainerStyle={{ padding: 16, gap: 8 }}>
+        {[1, 2, 3, 4, 5].map(key => (
+          <RecipeCardSkeleton key={key} />
+        ))}
+      </ScrollView>
+    );
+  }
+
+  // Otherwise show the normal ItemList
+  return (
+    <ItemList
+      items={items}
+      onItemPress={onItemPress}
+      onRefresh={onRefresh}
+      emptyState={emptyState}
+    />
+  );
+};
+
 export const RecipeSearch: React.FC = () => {
   const { navigate } = useAppNavigation();
   const { theme } = useUnistyles();
   const { selectedHomeId, getDefaultPantry } = useDefaultHome();
   const route = useRoute<RecipeSearchRouteProp>();
   const initialQuery = route.params?.initialQuery || '';
+
+  // Track screen performance
+  useScreenTransition('RecipeSearch');
 
   // Fetch home data to get pantries
   const { data: homeData } = useGetHomeQuery({
@@ -556,6 +601,11 @@ export const RecipeSearch: React.FC = () => {
         headerActions={headerActions}
         searchBarActions={searchBarActions}
         emptyState={emptyStateConfig}
+        customListComponent={RecipeSearchContent}
+        customListProps={{
+          loading,
+          searchPerformed,
+        }}
         showUserHeader={false}
       />
 

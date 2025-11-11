@@ -17,6 +17,7 @@ import {
   findMovedItem,
   getNeighborIds,
 } from './SortableList.utils';
+import { useRenderTime } from '#hooks/performance';
 import { DRAG_DISABLED_DISTANCE } from '#/constants/gestures';
 
 // Tab bar height constant (65px from FloatingTabBar)
@@ -36,6 +37,9 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
   refreshing,
   ...flatListProps
 }) => {
+  // Track render performance
+  useRenderTime('SortableShoppingList');
+
   // Track local order for optimistic updates
   const [localItems, setLocalItems] = useState(items);
   // Track if we're currently updating the sort order
@@ -68,20 +72,23 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
   }, []);
 
   // Handle swipeable item opening - close previously open item
-  const handleSwipeableWillOpen = useCallback((ref: any) => {
-    // If external handler provided, use it (for coordinating across multiple lists)
-    if (externalOnSwipeableWillOpen) {
-      externalOnSwipeableWillOpen(ref);
-    } else {
-      // Otherwise, handle locally within this list
-      if (openSwipeableRef.current && openSwipeableRef.current !== ref) {
-        // Close the previously open swipeable
-        openSwipeableRef.current.current?.close();
+  const handleSwipeableWillOpen = useCallback(
+    (ref: any) => {
+      // If external handler provided, use it (for coordinating across multiple lists)
+      if (externalOnSwipeableWillOpen) {
+        externalOnSwipeableWillOpen(ref);
+      } else {
+        // Otherwise, handle locally within this list
+        if (openSwipeableRef.current && openSwipeableRef.current !== ref) {
+          // Close the previously open swipeable
+          openSwipeableRef.current.current?.close();
+        }
+        // Update to track the newly opening swipeable
+        openSwipeableRef.current = ref;
       }
-      // Update to track the newly opening swipeable
-      openSwipeableRef.current = ref;
-    }
-  }, [externalOnSwipeableWillOpen]);
+    },
+    [externalOnSwipeableWillOpen],
+  );
 
   // Handle swipeable item closing
   const handleSwipeableClose = useCallback(() => {
@@ -123,7 +130,10 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
         const { itemId: movedItemId, newIndex } = movedItemInfo;
 
         // Calculate afterItemId and beforeItemId based on new position
-        const { afterId: afterItemId, beforeId: beforeItemId } = getNeighborIds(data, newIndex);
+        const { afterId: afterItemId, beforeId: beforeItemId } = getNeighborIds(
+          data,
+          newIndex,
+        );
 
         if (__DEV__) {
           console.log('Moving item:', {
@@ -176,7 +186,15 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
         </ScaleDecorator>
       );
     },
-    [onItemPress, onItemEdit, onItemDelete, onTogglePurchase, disabled, handleSwipeableWillOpen, handleSwipeableClose],
+    [
+      onItemPress,
+      onItemEdit,
+      onItemDelete,
+      onTogglePurchase,
+      disabled,
+      handleSwipeableWillOpen,
+      handleSwipeableClose,
+    ],
   );
 
   // Early validation

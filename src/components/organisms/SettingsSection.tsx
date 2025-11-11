@@ -13,7 +13,7 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
   items,
 }) => {
   return (
-    <View style={styles.section}>
+    <View style={[styles.section]}>
       <Text style={styles.sectionTitle}>{title}</Text>
       <View style={styles.sectionBody}>
         {items.map((item, idx) => (

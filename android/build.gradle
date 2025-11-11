@@ -18,4 +18,39 @@ buildscript {
     }
 }
 
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+        maven {
+            // Detox local Maven repository
+            url "$rootDir/../node_modules/detox/Detox-android"
+        }
+    }
+
+    afterEvaluate { project ->
+        if (project.hasProperty('android')) {
+            project.android {
+                if (project.android.hasProperty('defaultConfig')) {
+                    project.android.defaultConfig {
+                        minSdkVersion rootProject.ext.minSdkVersion
+                    }
+                }
+
+                // Add packaging options for all modules to handle duplicate native libraries
+                packagingOptions {
+                    pickFirst '**/libc++_shared.so'
+                    pickFirst '**/libfbjni.so'
+                    pickFirst '**/libhermesvm.so'
+                    pickFirst '**/libfolly_runtime.so'
+                    pickFirst '**/libjsi.so'
+                    pickFirst '**/libreactnativejni.so'
+                    pickFirst '**/libhermestooling.so'
+                    pickFirst '**/libreactnativeutilsjni.so'
+                }
+            }
+        }
+    }
+}
+
 apply plugin: "com.facebook.react.rootproject"

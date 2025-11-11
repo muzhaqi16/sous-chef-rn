@@ -1,7 +1,5 @@
-/**
- * Centralized constants barrel file
- * Import constants from here in your components
- */
-
-export { MESSAGES } from './messages';
-export { PLACEHOLDERS } from './placeholders';
+export * from './shoppingList';
+export * from './messages';
+export * from './pagination';
+export * from './placeholders';
+export * from './languages';

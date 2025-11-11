@@ -1,0 +1,177 @@
+import { useCallback } from 'react';
+import { Alert } from 'react-native';
+import { useMoveShoppingListItemMutation } from '#generated';
+import { generatePosition } from '#/utils/fractionalIndexing';
+import {
+  GetShoppingListItemsDocument,
+  GetShoppingListItemsQuery,
+} from '#generated';
+
+interface ShoppingListItem {
+  id: string;
+  sortOrder?: string | null;
+  [key: string]: any;
+}
+
+interface UseItemReorderingOptions<T extends ShoppingListItem> {
+  /**
+   * Current shopping list ID
+   */
+  listId?: string;
+
+  /**
+   * Array of shopping list items
+   */
+  items: T[];
+}
+
+/**
+ * Hook to manage shopping list item reordering
+ *
+ * Provides optimistic reordering with fractional indexing for instant
+ * UI feedback while coordinating with the server. Handles:
+ * - Fractional index generation for new positions
+ * - Optimistic UI updates
+ * - Apollo cache management
+ * - Error handling with user feedback
+ *
+ * @param options - Configuration options
+ * @returns Object with sort order update handler
+ *
+ * @example
+ * ```typescript
+ * const { handleSortOrderUpdate } = useItemReordering({
+ *   listId: currentListId,
+ *   items: shoppingListItems,
+ * });
+ *
+ * <SortableList
+ *   onReorder={(itemId, afterId, beforeId) =>
+ *     handleSortOrderUpdate(itemId, afterId, beforeId)
+ *   }
+ * />
+ * ```
+ */
+export function useItemReordering<T extends ShoppingListItem>(
+  options: UseItemReorderingOptions<T>,
+) {
+  const { listId, items } = options;
+
+  const [moveItem] = useMoveShoppingListItemMutation({
+    errorPolicy: 'all',
+    // Optimistic response for instant UI feedback
+    optimisticResponse: variables => {
+      // Find the moved item
+      const movedItem = items.find(
+        item => item.id === variables.input.itemId,
+      );
+      if (!movedItem) {
+        return { __typename: 'Mutation', moveShoppingListItem: null as any };
+      }
+
+      // Calculate optimistic sortOrder using fractional indexing
+      const afterItem = variables.input.afterItemId
+        ? items.find(item => item.id === variables.input.afterItemId)
+        : null;
+      const beforeItem = variables.input.beforeItemId
+        ? items.find(item => item.id === variables.input.beforeItemId)
+        : null;
+
+      // Generate new position between neighbors
+      const optimisticSortOrder = generatePosition(
+        afterItem?.sortOrder ?? null,
+        beforeItem?.sortOrder ?? null,
+      );
+
+      // Return updated item with new sortOrder
+      return {
+        __typename: 'Mutation' as const,
+        moveShoppingListItem: {
+          ...movedItem,
+          sortOrder: optimisticSortOrder,
+          updatedAt: new Date().toISOString(),
+          __typename: 'ShoppingListItem' as const,
+        } as any,
+      };
+    },
+    // Update cache to reflect new order
+    update(cache, { data }) {
+      if (!data?.moveShoppingListItem || !listId) return;
+
+      try {
+        // Read the current shopping list items query
+        const queryResult = cache.readQuery<GetShoppingListItemsQuery>({
+          query: GetShoppingListItemsDocument,
+          variables: { shoppingListId: listId },
+        });
+
+        if (!queryResult?.shoppingListItems) return;
+
+        // Create new array with updated item
+        const updatedItems = queryResult.shoppingListItems.map(item =>
+          item.id === data.moveShoppingListItem.id
+            ? { ...item, sortOrder: data.moveShoppingListItem.sortOrder }
+            : item,
+        );
+
+        // Sort by sortOrder (server returns them sorted, so we should too)
+        const sortedItems = [...updatedItems].sort((a, b) =>
+          a.sortOrder.localeCompare(b.sortOrder),
+        );
+
+        // Write back to cache
+        cache.writeQuery({
+          query: GetShoppingListItemsDocument,
+          variables: { shoppingListId: listId },
+          data: { shoppingListItems: sortedItems },
+        });
+      } catch (error) {
+        console.warn('Cache update failed for moveItem:', error);
+        // Don't throw - let mutation succeed even if cache update fails
+      }
+    },
+  });
+
+  /**
+   * Handle sort order update when an item is moved
+   *
+   * @param itemId - ID of the item being moved
+   * @param afterItemId - ID of the item that comes before the new position
+   * @param beforeItemId - ID of the item that comes after the new position
+   */
+  const handleSortOrderUpdate = useCallback(
+    async (
+      itemId: string,
+      afterItemId: string | null,
+      beforeItemId: string | null,
+    ) => {
+      if (!listId) return;
+
+      try {
+        // Find the current item from cache to preserve all fields
+        const currentItem = items.find(item => item.id === itemId);
+        if (!currentItem) {
+          console.error('Item not found in cache:', itemId);
+          return;
+        }
+
+        // Execute mutation with optimistic response and cache update
+        await moveItem({
+          variables: {
+            input: {
+              itemId,
+              afterItemId: afterItemId ?? undefined,
+              beforeItemId: beforeItemId ?? undefined,
+            },
+          },
+        });
+      } catch (error) {
+        console.error('Failed to move item:', error);
+        Alert.alert('Error', 'Failed to reorder items');
+      }
+    },
+    [listId, moveItem, items],
+  );
+
+  return { handleSortOrderUpdate };
+}
