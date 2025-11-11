@@ -8,14 +8,16 @@ type ActionButtonProps = {
   name?: string; // Optional name prop for the icon
   style?: StyleProp<ViewStyle>; // Optional style prop for additional styling
   color?: string; // Optional color prop for the icon
-  size?: number; // Optional size prop for the icon
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl'; // Optional size variant for the icon
+  accessibilityLabel?: string; // Accessibility label for screen readers
 };
 export const ActionButton: React.FC<ActionButtonProps> = ({
   onPress,
   name,
   style,
   color,
-  size = 24, // Default size for the icon
+  size = 'md', // Default size variant for the icon
+  accessibilityLabel,
 }) => {
   const { theme } = useUnistyles();
   return (
@@ -26,6 +28,7 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
         color={color || theme.colors.primary}
         onPress={onPress}
         library={'Ionicons'}
+        accessibilityLabel={accessibilityLabel || `${name || 'Add'} button`}
       />
     </View>
   );

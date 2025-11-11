@@ -92,7 +92,11 @@ const App = () => {
           <DataProvider>
             <SubscriptionProvider>
               <SafeAreaProvider>
-                <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
+                <StatusBar
+                  translucent
+                  backgroundColor="transparent"
+                  barStyle={theme === 'dark' ? 'light-content' : 'dark-content'}
+                />
             <SafeAreaView style={styles.container}>
               <ToastProvider>
                 <NotificationProvider>

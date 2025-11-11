@@ -91,7 +91,9 @@ export const HomeManagement: React.FC = () => {
 
       // Check if user has permission to invite
       if (!canInviteToHome(membership.role)) {
-        toastService.error('You do not have permission to invite members to this home');
+        toastService.error(
+          'You do not have permission to invite members to this home',
+        );
         return;
       }
 
@@ -208,10 +210,12 @@ export const HomeManagement: React.FC = () => {
   }, [homes, defaultHomeId]);
 
   // Render individual home item
-  const renderHomeItem: ListRenderItem<typeof sortedHomes[0]> = useCallback(
+  const renderHomeItem: ListRenderItem<(typeof sortedHomes)[0]> = useCallback(
     ({ item: home, index }) => {
       const membership = findUserMembership(home.members, user?.id);
-      const userCanInvite = membership ? canInviteToHome(membership.role) : false;
+      const userCanInvite = membership
+        ? canInviteToHome(membership.role)
+        : false;
 
       return (
         <Animated.View
@@ -446,7 +450,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
+    padding: theme.spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
@@ -459,7 +463,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   formContainer: {
-    padding: 16,
+    padding: theme.spacing.md,
     backgroundColor: theme.colors.background,
     marginHorizontal: theme.spacing.md,
     marginBottom: theme.spacing.sm,
@@ -468,15 +472,15 @@ const styles = StyleSheet.create(theme => ({
   modeSwitcher: {
     flexDirection: 'row',
     backgroundColor: theme.colors.surfaceVariant,
-    borderRadius: 8,
-    padding: 4,
-    marginBottom: 16,
+    borderRadius: theme.radii.md,
+    padding: theme.spacing.xs,
+    marginBottom: theme.spacing.md,
   },
   modeButton: {
     flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 6,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.radii.sm,
     alignItems: 'center',
   },
   modeButtonActive: {
@@ -491,7 +495,7 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.white,
   },
   joinForm: {
-    gap: 16,
+    gap: theme.spacing.md,
   },
   joinFormTitle: {
     fontSize: 18,
@@ -501,10 +505,10 @@ const styles = StyleSheet.create(theme => ({
   joinFormSubtitle: {
     fontSize: 14,
     color: theme.colors.textSecondary,
-    marginTop: -8,
+    marginTop: -theme.spacing.sm,
   },
   inputContainer: {
-    gap: 8,
+    gap: theme.spacing.sm,
   },
   inputLabel: {
     fontSize: 14,
@@ -514,20 +518,20 @@ const styles = StyleSheet.create(theme => ({
   textInput: {
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: theme.radii.md,
+    padding: theme.spacing.md,
     fontSize: 16,
     color: theme.colors.textPrimary,
     backgroundColor: theme.colors.surface,
   },
   previewLoader: {
-    marginVertical: 8,
+    marginVertical: theme.spacing.sm,
   },
   previewCard: {
-    padding: 16,
+    padding: theme.spacing.md,
     backgroundColor: theme.colors.surfaceVariant,
-    borderRadius: 8,
-    gap: 4,
+    borderRadius: theme.radii.md,
+    gap: theme.spacing.xs,
   },
   previewTitle: {
     fontSize: 16,
@@ -541,18 +545,18 @@ const styles = StyleSheet.create(theme => ({
   previewDescription: {
     fontSize: 14,
     color: theme.colors.textPrimary,
-    marginTop: 4,
+    marginTop: theme.spacing.xs,
   },
   formActions: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
+    gap: theme.spacing.md,
+    marginTop: theme.spacing.sm,
   },
   button: {
     flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.radii.md,
     alignItems: 'center',
     justifyContent: 'center',
   },

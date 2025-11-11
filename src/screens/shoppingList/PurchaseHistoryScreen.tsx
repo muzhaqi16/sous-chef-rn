@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { View, Text, FlatList, TouchableOpacity, ListRenderItem } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks';
 import { Icon } from '#utils';
 import { commonStyles } from '#styles';
@@ -27,6 +27,7 @@ export const PurchaseHistoryScreen: React.FC<{
   route: { params: RouteParams };
 }> = ({ route }) => {
   const { goBack } = useAppNavigation();
+  const { theme } = useUnistyles();
   const { itemName, purchases } = route.params;
 
   const formatDate = useCallback((dateString: string) => {
@@ -60,7 +61,7 @@ export const PurchaseHistoryScreen: React.FC<{
               name="cube-outline"
               size={18}
               library="Ionicons"
-              color="#666"
+              color={theme.colors.iconSecondary}
             />
             <Text style={styles.purchaseDetailLabel}>Quantity:</Text>
             <Text style={styles.purchaseDetailValue}>
@@ -70,7 +71,11 @@ export const PurchaseHistoryScreen: React.FC<{
 
           {purchase.user && (
             <View style={styles.purchaseDetailRow}>
-              <Icon name="person-outline" size={18} color="#666" />
+              <Icon
+                name="person-outline"
+                size={18}
+                color={theme.colors.iconSecondary}
+              />
               <Text style={styles.purchaseDetailLabel}>
                 Purchased by:
               </Text>
@@ -83,7 +88,7 @@ export const PurchaseHistoryScreen: React.FC<{
         </View>
       </View>
     ),
-    [purchases.length, formatDate],
+    [purchases.length, formatDate, theme.colors.iconSecondary],
   );
 
   const renderListHeader = () => (
@@ -100,7 +105,7 @@ export const PurchaseHistoryScreen: React.FC<{
       <Icon
         name="receipt-outline"
         size={64}
-        color="#ccc"
+        color={theme.colors.iconDisabled}
         library="Ionicons"
       />
       <Text style={styles.emptyText}>No purchase history</Text>
@@ -115,7 +120,7 @@ export const PurchaseHistoryScreen: React.FC<{
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={goBack} style={styles.backButton}>
-          <Icon name="arrow-back" size={24} color="#000" />
+          <Icon name="arrow-back" size={24} color={theme.colors.textPrimary} />
         </TouchableOpacity>
         <View style={styles.headerContent}>
           <Text style={styles.headerTitle}>Purchase History</Text>

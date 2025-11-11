@@ -62,6 +62,7 @@ export const DeleteAccountScreen: React.FC = () => {
           name="arrow-left"
           onPress={goBack}
           color={theme.colors.textPrimary}
+          accessibilityLabel="Go back"
         />
         <Text style={styles.headerTitle}>Delete Account</Text>
         <View style={{ width: 40 }} />
@@ -206,15 +207,15 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   contentContainer: {
-    padding: 24,
+    padding: theme.spacing.lg,
     paddingBottom: 100,
   },
   warningContainer: {
     alignItems: 'center',
-    padding: 24,
+    padding: theme.spacing.lg,
     backgroundColor: `${theme.colors.error}10`,
     borderRadius: theme.radii.md,
-    marginBottom: 24,
+    marginBottom: theme.spacing.lg,
   },
   warningTitle: {
     fontSize: theme.fonts.size.xl,
@@ -265,29 +266,29 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 2,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.md,
-    padding: 16,
+    padding: theme.spacing.md,
     fontSize: theme.fonts.size.md,
     color: theme.colors.textPrimary,
     backgroundColor: theme.colors.surface,
   },
   deleteButton: {
     backgroundColor: theme.colors.error,
-    padding: 16,
+    padding: theme.spacing.md,
     borderRadius: theme.radii.md,
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: theme.spacing.md,
   },
   deleteButtonDisabled: {
     backgroundColor: theme.colors.border,
     opacity: 0.5,
   },
   deleteButtonText: {
-    color: '#FFFFFF',
+    color: theme.colors.white,
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.semibold,
   },
   cancelButton: {
-    padding: 16,
+    padding: theme.spacing.md,
     borderRadius: theme.radii.md,
     alignItems: 'center',
     borderWidth: 1,
