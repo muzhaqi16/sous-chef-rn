@@ -4,8 +4,6 @@
 
 query GetShoppingList(
   $id: ID!
-  $itemsCursor: String
-  $itemsFirst: Int = 25
 ) {
   shoppingList(id: $id) {
     id
@@ -28,77 +26,29 @@ query GetShoppingList(
     completedItems
     createdAt
     updatedAt
-    itemsConnection(first: $itemsFirst, after: $itemsCursor) {
+    ownerships {
+      ...ShoppingListOwnershipFragment
+    }
+    collaboratorsConnection(first: 20) {
       edges {
-        node {
-          id
-          quantity
-          estimatedPrice
-          budgetPrice
-          isPurchased
-          purchasedQuantity
-          purchasedPrice
-          purchaseDate
-          itemName
-          itemBarcode
-          unitName
-          notes
-          priority
-          category
-          sortOrder
-          isAutoAdded
-          autoAddReason
-          isFromMealPlan
-          item {
-            id
-            name
-            description
-            imageUrl
-            type
-            storageState
-          }
-          unit {
-            id
-            name
-            symbol
-          }
-          preferredStore {
-            id
-            name
-            address
-          }
-          purchasedBy {
-            id
-            email
-          }
-          addedBy {
-            id
-            email
-          }
-          createdAt
-          updatedAt
-        }
         cursor
+        node {
+          ...ShoppingListCollaboratorFragment
+          canEdit
+          canAddItems
+          canRemoveItems
+          canEditItems
+          canMarkPurchased
+          canInviteOthers
+          invitedAt
+          lastViewedAt
+        }
       }
       pageInfo {
         hasNextPage
         endCursor
       }
       totalCount
-    }
-    ownerships {
-      ...ShoppingListOwnershipFragment
-    }
-    collaborators {
-      ...ShoppingListCollaboratorFragment
-      canEdit
-      canAddItems
-      canRemoveItems
-      canEditItems
-      canMarkPurchased
-      canInviteOthers
-      invitedAt
-      lastViewedAt
     }
     targetStore {
       id
@@ -125,40 +75,10 @@ query GetShoppingLists {
     priority
     createdAt
     updatedAt
-    itemsConnection(first: 25) {
-      edges {
-        node {
-          id
-          isPurchased
-        }
-        cursor
-      }
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
-      totalCount
-    }
     ownerships {
       id
       userId
       user {
-        id
-        email
-        profile {
-          displayName
-          avatar
-        }
-      }
-      createdAt
-    }
-    collaborators {
-      id
-      email
-      role
-      status
-      collaboratorId
-      collaborator {
         id
         email
         profile {
@@ -202,8 +122,18 @@ query GetDefaultShoppingList {
     ownerships {
       ...ShoppingListOwnershipFragment
     }
-    collaborators {
-      ...ShoppingListCollaboratorFragment
+    collaboratorsConnection(first: 20) {
+      edges {
+        cursor
+        node {
+          ...ShoppingListCollaboratorFragment
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      totalCount
     }
   }
 }
@@ -263,8 +193,18 @@ mutation CreateShoppingList($input: CreateShoppingListInput!) {
       }
       totalCount
     }
-    collaborators {
-      ...ShoppingListCollaboratorFragment
+    collaboratorsConnection(first: 20) {
+      edges {
+        cursor
+        node {
+          ...ShoppingListCollaboratorFragment
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      totalCount
     }
     ownerships {
       ...ShoppingListOwnershipFragment
@@ -303,8 +243,18 @@ mutation UpdateShoppingList($id: ID!, $input: UpdateShoppingListInput!) {
       }
       totalCount
     }
-    collaborators {
-      ...ShoppingListCollaboratorFragment
+    collaboratorsConnection(first: 20) {
+      edges {
+        cursor
+        node {
+          ...ShoppingListCollaboratorFragment
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      totalCount
     }
     ownerships {
       ...ShoppingListOwnershipFragment

@@ -1,7 +1,6 @@
 import React from 'react';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import { AddPantryItemForm } from '#components/forms/AddPantryItemForm';
-import { EditPantryItemForm } from '#components/forms/EditPantryItemForm';
+import { PantryItemForm } from '#components/forms/PantryItemForm';
 
 type PantryItemScreenParams = {
   itemId?: string;
@@ -16,12 +15,12 @@ export const PantryItemScreen: React.FC = () => {
     navigation.goBack();
   };
 
-  // Render the appropriate form based on whether itemId is present
-  if (params?.itemId) {
-    return (
-      <EditPantryItemForm itemId={params.itemId} onSuccess={handleSuccess} />
-    );
-  }
-
-  return <AddPantryItemForm onSuccess={handleSuccess} />;
+  // Render the unified form in add or edit mode based on whether itemId is present
+  return (
+    <PantryItemForm
+      mode={params?.itemId ? 'edit' : 'add'}
+      itemId={params?.itemId}
+      onSuccess={handleSuccess}
+    />
+  );
 };

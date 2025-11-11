@@ -16,7 +16,7 @@ import {
   useDeletePantryMutation,
   useCreatePantryMutation,
 } from '#generated';
-import { useStore } from '#store';
+import { useAppStore, selectSelectedHomeId } from '#store/useAppStore';
 import { useAppNavigation } from '#hooks';
 import { PantryStackParamList } from '#navigation/stacks/PantryStack';
 import { useErrorHandler } from '#/utils/errorHandling';
@@ -29,8 +29,8 @@ export const PantrySettings: React.FC<{
   const { theme } = useUnistyles();
   const pantryId = route.params?.pantryId;
 
-  const { selectedHomeId } = useStore();
-  const setSelectedPantryId = useStore(state => state.setSelectedPantryId);
+  const selectedHomeId = useAppStore(selectSelectedHomeId);
+  const setSelectedPantryId = useAppStore(state => state.setSelectedPantryId);
   const { handleApolloError } = useErrorHandler();
 
   const [name, setName] = useState('');

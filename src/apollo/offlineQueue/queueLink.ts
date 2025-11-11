@@ -67,6 +67,10 @@ export const createQueueLink = () => {
           return;
         }
 
+        // Get optimistic response from operation context
+        const operationContext = operation.getContext();
+        const optimisticResponse = operationContext.optimisticResponse;
+
         // Create queued mutation
         const operationName = operation.operationName || 'UnknownMutation';
         const queuedMutation: QueuedMutation = {
@@ -75,8 +79,8 @@ export const createQueueLink = () => {
           operationName: operationName,
           mutation: operation.query,
           variables: operation.variables,
-          optimisticResponse: null, // Not needed - Apollo handles optimistic responses internally
-          context: operation.getContext(),
+          optimisticResponse: optimisticResponse || null,
+          context: operationContext,
           status: QueueStatus.PENDING,
           createdAt: Date.now(),
           updatedAt: Date.now(),
@@ -88,16 +92,19 @@ export const createQueueLink = () => {
         // Add to queue
         queueStore.addMutation(queuedMutation);
 
-        // Return empty success response to satisfy Observable contract
-        // Apollo has already applied the optimistic response to the cache
-        // Returning empty data signals successful queuing without overwriting anything
+        // Return optimistic response if available, otherwise null
+        // This ensures cache updaters receive the optimistic data and can update the cache
+        // The 'queued' extension marker allows components to show pending UI states
         observer.next({
-          data: {},
+          data: optimisticResponse ?? null,
           errors: undefined,
+          extensions: { queued: true },
         });
         observer.complete();
 
-        console.log(`✅ Queue Link: Queued ${operationName}, optimistic response preserved`);
+        console.log(
+          `✅ Queue Link: Queued ${operationName}, ${optimisticResponse ? 'with optimistic response' : 'without optimistic response'}`
+        );
       } catch (error) {
         observer.error(error);
       }

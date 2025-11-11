@@ -6,9 +6,11 @@ import React, {
   useState,
 } from 'react';
 import { Alert, Image, View, Text, TouchableOpacity } from 'react-native';
+import { PaginationFooter } from '#/components/organisms/PaginationFooter';
 import { ScrollView, RefreshControl } from 'react-native-gesture-handler';
 import { useApolloClient } from '@apollo/client/react';
 import { useAppNavigation } from '#hooks';
+import { toastService } from '#/services/toastService';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
   ShoppingListItemFragmentDoc,
@@ -38,7 +40,7 @@ import type {
 } from '#components/organisms/AnimatedItemSelector';
 import type { SortableShoppingListItem } from '#components/organisms/SortableShoppingList';
 import { useShoppingListManagement } from '#/hooks';
-import { useStore } from '#/store';
+import { useAppStore, selectSelectedShoppingListId } from '#store/useAppStore';
 import { IconLibrary } from '#/utils/iconUtils';
 import { ShoppingListItemCounter } from '#/components/molecules/ShoppingListItemCounter';
 import { commonStyles } from '#/styles';
@@ -170,7 +172,10 @@ export const ShoppingListMain: React.FC = () => {
   } = useUnistyles();
   const { primary: primaryColor, primaryLight: primaryLightColor } = colors;
   // Step 2: Use the extracted variables INSIDE useMemo
-  const { selectedShoppingListId, setSelectedShoppingListId } = useStore();
+  const selectedShoppingListId = useAppStore(selectSelectedShoppingListId);
+  const setSelectedShoppingListId = useAppStore(
+    state => state.setSelectedShoppingListId,
+  );
   const { user } = useAuth();
   const selectorRef = useRef<ItemSelectorRef>(null);
   const { setScannerProps, setOverlayOpen } = useScanner();
@@ -183,7 +188,15 @@ export const ShoppingListMain: React.FC = () => {
       // Find the moved item
       const movedItem = items.find(item => item.id === variables.input.itemId);
       if (!movedItem) {
-        return { __typename: 'Mutation', moveShoppingListItem: null as any };
+        // Return the first item as a fallback - the real mutation will handle errors
+        // This prevents type errors while still allowing the mutation to proceed
+        return {
+          __typename: 'Mutation',
+          moveShoppingListItem: items[0] || {
+            __typename: 'ShoppingListItem',
+            id: variables.input.itemId,
+          },
+        };
       }
 
       // Calculate optimistic sortOrder using fractional indexing
@@ -484,7 +497,7 @@ export const ShoppingListMain: React.FC = () => {
         });
       } catch (error) {
         console.error('Failed to move item:', error);
-        Alert.alert('Error', 'Failed to reorder items');
+        toastService.error('Failed to reorder items');
       }
     },
     [currentListId, moveItem, items],
@@ -559,7 +572,7 @@ export const ShoppingListMain: React.FC = () => {
           return;
         }
         console.error('Failed to update quantity:', error);
-        Alert.alert('Error', 'Failed to update quantity');
+        toastService.error('Failed to update quantity');
       }
     },
     [updateQuantity, refetchItems, client],
@@ -632,7 +645,7 @@ export const ShoppingListMain: React.FC = () => {
           return;
         }
         console.error('Failed to update quantity:', error);
-        Alert.alert('Error', 'Failed to update quantity');
+        toastService.error('Failed to update quantity');
       }
     },
     [updateQuantity, refetchItems, client],
@@ -715,7 +728,7 @@ export const ShoppingListMain: React.FC = () => {
   const handleAddItemFromSearch = useCallback(
     async (itemName: string) => {
       if (!currentListId) {
-        Alert.alert('Error', 'Please select a shopping list first');
+        toastService.error('Please select a shopping list first');
         return;
       }
 
@@ -728,10 +741,10 @@ export const ShoppingListMain: React.FC = () => {
         if (result) {
           setSearchQuery(''); // Clear search after adding
         } else {
-          Alert.alert('Error', 'Failed to add item');
+          toastService.error('Failed to add item');
         }
       } catch (error) {
-        Alert.alert('Error', 'Failed to add item');
+        toastService.error('Failed to add item');
       }
     },
     [currentListId, addItem, setSearchQuery],
@@ -743,7 +756,7 @@ export const ShoppingListMain: React.FC = () => {
       // OPTIMIZATION: No refetch needed - removeItem updates cache via cache.modify
       // Cache automatically updates via Apollo's normalized cache
     } catch (error) {
-      Alert.alert('Error', 'Failed to delete item');
+      toastService.error('Failed to delete item');
     }
   };
 
@@ -759,7 +772,7 @@ export const ShoppingListMain: React.FC = () => {
       // OPTIMIZATION: No refetch needed - each removeItem updates cache via cache.modify
       // Cache automatically updates via Apollo's normalized cache
     } catch (error) {
-      Alert.alert('Error', 'Failed to clear purchased items');
+      toastService.error('Failed to clear purchased items');
     }
   }, [items, removeItem]);
 
@@ -861,25 +874,6 @@ export const ShoppingListMain: React.FC = () => {
     };
   }, [setScannerProps, handleScanPress]);
 
-  // Footer component for pagination
-  const ListFooter = useMemo(() => {
-    if (isLoadingMore) {
-      return (
-        <View style={styles.footerLoader}>
-          <Text style={styles.footerText}>Loading more items...</Text>
-        </View>
-      );
-    }
-    if (hasMore && !loading && items.length > 0) {
-      return (
-        <View style={styles.footerHint}>
-          <Text style={styles.footerHintText}>Scroll to load more</Text>
-        </View>
-      );
-    }
-    return null;
-  }, [isLoadingMore, hasMore, loading, items.length]);
-
   // If no lists exist at all
   if (lists.length === 0) {
     const noListsEmptyState = {
@@ -954,7 +948,14 @@ export const ShoppingListMain: React.FC = () => {
         }}
         onEndReached={loadMore}
         onEndReachedThreshold={0.5}
-        ListFooterComponent={ListFooter}
+        ListFooterComponent={
+          <PaginationFooter
+            isLoadingMore={isLoadingMore}
+            hasMore={hasMore}
+            loading={loading}
+            itemCount={items.length}
+          />
+        }
       />
 
       <AnimatedItemSelector
@@ -991,8 +992,7 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.border,
   },
   selectorItemSelected: {
-    backgroundColor:
-      (theme.colors as any).primaryLight || theme.colors.primary + '10',
+    backgroundColor: theme.colors.primaryLight,
     borderColor: theme.colors.primary,
   },
   selectorItemInfo: {
@@ -1007,22 +1007,5 @@ const styles = StyleSheet.create(theme => ({
   selectorItemSubtext: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-  },
-  footerLoader: {
-    padding: theme.spacing.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  footerText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-  },
-  footerHint: {
-    padding: theme.spacing.md,
-    alignItems: 'center',
-  },
-  footerHintText: {
-    fontSize: theme.fonts.size.xs,
-    color: theme.colors.textTertiary,
   },
 }));

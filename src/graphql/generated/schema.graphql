@@ -685,6 +685,15 @@ enum CategoryType {
   SYSTEM
 }
 
+"""
+Order by options for collaborators
+"""
+input CollaboratorOrderBy {
+  invitedAt: SortOrder
+  itemsAdded: SortOrder
+  lastViewedAt: SortOrder
+}
+
 enum CollaboratorRole {
   ADMIN
   CONTRIBUTOR
@@ -3329,6 +3338,10 @@ type Mutation {
   updatePurchase(id: ID!, input: UpdatePurchaseInput!): Purchase!
   updatePushToken(id: ID!, pushToken: String!): Device!
   updateRecipe(id: ID!, input: UpdateRecipeInput!): Recipe!
+  updateRecipeIngredients(
+    ingredients: [RecipeIngredientInput!]!
+    recipeId: ID!
+  ): Recipe!
   updateRestriction(input: UpdateRestrictionInput!): DietaryRestriction!
   updateRiskScore(riskScore: Float!, userId: ID!): UserModeration!
   updateSettings(input: UpdateUserSettingsInput!): UserSettings!
@@ -3678,6 +3691,7 @@ type Pantry {
     before: String
     first: Int
     last: Int
+    orderBy: PantryItemOrderBy
   ): PantryItemConnection!
   location: String
   metadata: JSON
@@ -3687,6 +3701,7 @@ type Pantry {
     before: String
     first: Int
     last: Int
+    orderBy: StorageLocationOrderBy
   ): StorageLocationConnection!
   tags: [String!]!
   temperature: String
@@ -3858,6 +3873,16 @@ input PantryItemFilters {
   search: String
   storageState: StorageState
   tags: [String!]
+}
+
+"""
+Order by options for pantry items
+"""
+input PantryItemOrderBy {
+  createdAt: SortOrder
+  currentQuantity: SortOrder
+  expiresAt: SortOrder
+  priority: SortOrder
 }
 
 type PantryItemPhoto {
@@ -4068,6 +4093,15 @@ Purchase connection for pagination
 type PurchaseEdge {
   cursor: String!
   node: Purchase!
+}
+
+"""
+Order by options for purchases
+"""
+input PurchaseOrderBy {
+  createdAt: SortOrder
+  purchaseDate: SortOrder
+  totalPrice: SortOrder
 }
 
 type PurchaseStats {
@@ -4818,11 +4852,31 @@ input ShareShoppingListInput {
 
 type ShoppingList {
   activities: [ShoppingListActivity!]
+    @deprecated(
+      reason: "Use activitiesConnection for pagination to reduce query complexity"
+    )
+  activitiesConnection(
+    after: String
+    before: String
+    first: Int
+    last: Int
+    orderBy: ShoppingListActivityOrderBy
+  ): ShoppingListActivityConnection!
   autoAddSuggestions: Boolean!
   basedOnTemplate: ShoppingList
   budgetAmount: Float
   category: String
   collaborators: [ShoppingListCollaborator!]
+    @deprecated(
+      reason: "Use collaboratorsConnection for pagination to reduce query complexity"
+    )
+  collaboratorsConnection(
+    after: String
+    before: String
+    first: Int
+    last: Int
+    orderBy: CollaboratorOrderBy
+  ): ShoppingListCollaboratorConnection!
   completedAt: DateTime
   completedItems: Int!
   completedShopDate: DateTime
@@ -4837,11 +4891,16 @@ type ShoppingList {
   isPublic: Boolean!
   isRecurring: Boolean!
   isTemplate: Boolean!
+  items: [ShoppingListItem!]
+    @deprecated(
+      reason: "Use itemsConnection for pagination to reduce query complexity"
+    )
   itemsConnection(
     after: String
     before: String
     first: Int
     last: Int
+    orderBy: ShoppingListItemOrderBy
   ): ShoppingListItemConnection!
   lastRecurredAt: DateTime
   lastReminderSent: DateTime
@@ -4854,6 +4913,9 @@ type ShoppingList {
   priceTracking: Boolean!
   priority: Int!
   purchases: [Purchase!]
+    @deprecated(
+      reason: "Query purchases separately by list ID to reduce query complexity"
+    )
   recurringInterval: Int
   recurringPattern: RecurringPattern
   reminderDate: DateTime
@@ -4868,6 +4930,9 @@ type ShoppingList {
   targetStoreId: String
   templateName: String
   templatesCreated: [ShoppingList!]
+    @deprecated(
+      reason: "Query templates separately to avoid circular references"
+    )
   totalCollaborators: Int!
   totalCost: Float!
   totalItems: Int!
@@ -4892,6 +4957,28 @@ type ShoppingListActivity {
   user: User!
   userAgent: String
   userId: String!
+}
+
+type ShoppingListActivityConnection {
+  edges: [ShoppingListActivityEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+"""
+Shopping list activity connection for pagination
+"""
+type ShoppingListActivityEdge {
+  cursor: String!
+  node: ShoppingListActivity!
+}
+
+"""
+Order by options for shopping list activities
+"""
+input ShoppingListActivityOrderBy {
+  createdAt: SortOrder
+  timestamp: SortOrder
 }
 
 type ShoppingListCollaborator {
@@ -4930,6 +5017,20 @@ type ShoppingListCollaboratorChangedPayload {
   mutation: MutationType!
   timestamp: DateTime!
   userId: ID!
+}
+
+type ShoppingListCollaboratorConnection {
+  edges: [ShoppingListCollaboratorEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+"""
+Shopping list collaborator connection for pagination
+"""
+type ShoppingListCollaboratorEdge {
+  cursor: String!
+  node: ShoppingListCollaborator!
 }
 
 type ShoppingListConnection {
@@ -5003,6 +5104,16 @@ type ShoppingListItem {
   purchasedPrice: Float
   purchasedQuantity: Float
   purchases: [Purchase!]
+    @deprecated(
+      reason: "Use purchasesConnection for pagination to reduce query complexity"
+    )
+  purchasesConnection(
+    after: String
+    before: String
+    first: Int
+    last: Int
+    orderBy: PurchaseOrderBy
+  ): PurchaseConnection!
   quantity: Float
   quantityInput: String
   recipe: Recipe
@@ -5039,6 +5150,16 @@ Shopping list item connection for pagination
 type ShoppingListItemEdge {
   cursor: String!
   node: ShoppingListItem!
+}
+
+"""
+Order by options for shopping list items
+"""
+input ShoppingListItemOrderBy {
+  createdAt: SortOrder
+  priority: SortOrder
+  sortOrder: SortOrder
+  updatedAt: SortOrder
 }
 
 type ShoppingListItemPreviousValues {
@@ -5095,6 +5216,9 @@ type SkippedItem {
   reason: String!
 }
 
+"""
+Sort order for ordering results
+"""
 enum SortOrder {
   ASC
   DESC
@@ -5211,6 +5335,14 @@ Storage location connection for pagination
 type StorageLocationEdge {
   cursor: String!
   node: StorageLocation!
+}
+
+"""
+Order by options for storage locations
+"""
+input StorageLocationOrderBy {
+  createdAt: SortOrder
+  name: SortOrder
 }
 
 """

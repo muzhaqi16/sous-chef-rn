@@ -352,6 +352,13 @@ export enum CategoryType {
   System = 'SYSTEM',
 }
 
+/** Order by options for collaborators */
+export type CollaboratorOrderBy = {
+  invitedAt?: InputMaybe<SortOrder>;
+  itemsAdded?: InputMaybe<SortOrder>;
+  lastViewedAt?: InputMaybe<SortOrder>;
+};
+
 export enum CollaboratorRole {
   Admin = 'ADMIN',
   Contributor = 'CONTRIBUTOR',
@@ -2854,6 +2861,7 @@ export type Mutation = {
   updatePurchase: Purchase;
   updatePushToken: Device;
   updateRecipe: Recipe;
+  updateRecipeIngredients: Recipe;
   updateRestriction: DietaryRestriction;
   updateRiskScore: UserModeration;
   updateSettings: UserSettings;
@@ -3922,6 +3930,11 @@ export type MutationUpdateRecipeArgs = {
   input: UpdateRecipeInput;
 };
 
+export type MutationUpdateRecipeIngredientsArgs = {
+  ingredients: Array<RecipeIngredientInput>;
+  recipeId: Scalars['ID']['input'];
+};
+
 export type MutationUpdateRestrictionArgs = {
   input: UpdateRestrictionInput;
 };
@@ -4343,6 +4356,7 @@ export type PantryItemsConnectionArgs = {
   before?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
+  orderBy?: InputMaybe<PantryItemOrderBy>;
 };
 
 export type PantryStorageLocationsConnectionArgs = {
@@ -4350,6 +4364,7 @@ export type PantryStorageLocationsConnectionArgs = {
   before?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
+  orderBy?: InputMaybe<StorageLocationOrderBy>;
 };
 
 export type PantryActivity = {
@@ -4519,6 +4534,14 @@ export type PantryItemFilters = {
   search?: InputMaybe<Scalars['String']['input']>;
   storageState?: InputMaybe<StorageState>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
+};
+
+/** Order by options for pantry items */
+export type PantryItemOrderBy = {
+  createdAt?: InputMaybe<SortOrder>;
+  currentQuantity?: InputMaybe<SortOrder>;
+  expiresAt?: InputMaybe<SortOrder>;
+  priority?: InputMaybe<SortOrder>;
 };
 
 export type PantryItemPhoto = {
@@ -4742,6 +4765,13 @@ export type PurchaseEdge = {
   __typename?: 'PurchaseEdge';
   cursor: Scalars['String']['output'];
   node: Purchase;
+};
+
+/** Order by options for purchases */
+export type PurchaseOrderBy = {
+  createdAt?: InputMaybe<SortOrder>;
+  purchaseDate?: InputMaybe<SortOrder>;
+  totalPrice?: InputMaybe<SortOrder>;
 };
 
 export type PurchaseStats = {
@@ -6053,12 +6083,16 @@ export type ShareShoppingListInput = {
 
 export type ShoppingList = {
   __typename?: 'ShoppingList';
+  /** @deprecated Use activitiesConnection for pagination to reduce query complexity */
   activities: Maybe<Array<ShoppingListActivity>>;
+  activitiesConnection: ShoppingListActivityConnection;
   autoAddSuggestions: Scalars['Boolean']['output'];
   basedOnTemplate: Maybe<ShoppingList>;
   budgetAmount: Maybe<Scalars['Float']['output']>;
   category: Maybe<Scalars['String']['output']>;
+  /** @deprecated Use collaboratorsConnection for pagination to reduce query complexity */
   collaborators: Maybe<Array<ShoppingListCollaborator>>;
+  collaboratorsConnection: ShoppingListCollaboratorConnection;
   completedAt: Maybe<Scalars['DateTime']['output']>;
   completedItems: Scalars['Int']['output'];
   completedShopDate: Maybe<Scalars['DateTime']['output']>;
@@ -6073,6 +6107,8 @@ export type ShoppingList = {
   isPublic: Scalars['Boolean']['output'];
   isRecurring: Scalars['Boolean']['output'];
   isTemplate: Scalars['Boolean']['output'];
+  /** @deprecated Use itemsConnection for pagination to reduce query complexity */
+  items: Maybe<Array<ShoppingListItem>>;
   itemsConnection: ShoppingListItemConnection;
   lastRecurredAt: Maybe<Scalars['DateTime']['output']>;
   lastReminderSent: Maybe<Scalars['DateTime']['output']>;
@@ -6084,6 +6120,7 @@ export type ShoppingList = {
   plannedShopDate: Maybe<Scalars['DateTime']['output']>;
   priceTracking: Scalars['Boolean']['output'];
   priority: Scalars['Int']['output'];
+  /** @deprecated Query purchases separately by list ID to reduce query complexity */
   purchases: Maybe<Array<Purchase>>;
   recurringInterval: Maybe<Scalars['Int']['output']>;
   recurringPattern: Maybe<RecurringPattern>;
@@ -6098,6 +6135,7 @@ export type ShoppingList = {
   targetStore: Maybe<Store>;
   targetStoreId: Maybe<Scalars['String']['output']>;
   templateName: Maybe<Scalars['String']['output']>;
+  /** @deprecated Query templates separately to avoid circular references */
   templatesCreated: Maybe<Array<ShoppingList>>;
   totalCollaborators: Scalars['Int']['output'];
   totalCost: Scalars['Float']['output'];
@@ -6107,11 +6145,28 @@ export type ShoppingList = {
   viewCount: Scalars['Int']['output'];
 };
 
+export type ShoppingListActivitiesConnectionArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
+  orderBy?: InputMaybe<ShoppingListActivityOrderBy>;
+};
+
+export type ShoppingListCollaboratorsConnectionArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
+  orderBy?: InputMaybe<CollaboratorOrderBy>;
+};
+
 export type ShoppingListItemsConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
+  orderBy?: InputMaybe<ShoppingListItemOrderBy>;
 };
 
 export type ShoppingListActivity = {
@@ -6131,6 +6186,26 @@ export type ShoppingListActivity = {
   user: User;
   userAgent: Maybe<Scalars['String']['output']>;
   userId: Scalars['String']['output'];
+};
+
+export type ShoppingListActivityConnection = {
+  __typename?: 'ShoppingListActivityConnection';
+  edges: Array<ShoppingListActivityEdge>;
+  pageInfo: PageInfo;
+  totalCount: Scalars['Int']['output'];
+};
+
+/** Shopping list activity connection for pagination */
+export type ShoppingListActivityEdge = {
+  __typename?: 'ShoppingListActivityEdge';
+  cursor: Scalars['String']['output'];
+  node: ShoppingListActivity;
+};
+
+/** Order by options for shopping list activities */
+export type ShoppingListActivityOrderBy = {
+  createdAt?: InputMaybe<SortOrder>;
+  timestamp?: InputMaybe<SortOrder>;
 };
 
 export type ShoppingListCollaborator = {
@@ -6171,6 +6246,20 @@ export type ShoppingListCollaboratorChangedPayload = {
   mutation: MutationType;
   timestamp: Scalars['DateTime']['output'];
   userId: Scalars['ID']['output'];
+};
+
+export type ShoppingListCollaboratorConnection = {
+  __typename?: 'ShoppingListCollaboratorConnection';
+  edges: Array<ShoppingListCollaboratorEdge>;
+  pageInfo: PageInfo;
+  totalCount: Scalars['Int']['output'];
+};
+
+/** Shopping list collaborator connection for pagination */
+export type ShoppingListCollaboratorEdge = {
+  __typename?: 'ShoppingListCollaboratorEdge';
+  cursor: Scalars['String']['output'];
+  node: ShoppingListCollaborator;
 };
 
 export type ShoppingListConnection = {
@@ -6244,7 +6333,9 @@ export type ShoppingListItem = {
   purchasedById: Maybe<Scalars['String']['output']>;
   purchasedPrice: Maybe<Scalars['Float']['output']>;
   purchasedQuantity: Maybe<Scalars['Float']['output']>;
+  /** @deprecated Use purchasesConnection for pagination to reduce query complexity */
   purchases: Maybe<Array<Purchase>>;
+  purchasesConnection: PurchaseConnection;
   quantity: Maybe<Scalars['Float']['output']>;
   quantityInput: Maybe<Scalars['String']['output']>;
   recipe: Maybe<Recipe>;
@@ -6257,6 +6348,14 @@ export type ShoppingListItem = {
   unitName: Maybe<Scalars['String']['output']>;
   updatedAt: Scalars['DateTime']['output'];
   version: Scalars['Int']['output'];
+};
+
+export type ShoppingListItemPurchasesConnectionArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
+  orderBy?: InputMaybe<PurchaseOrderBy>;
 };
 
 export type ShoppingListItemChangedPayload = {
@@ -6282,6 +6381,14 @@ export type ShoppingListItemEdge = {
   __typename?: 'ShoppingListItemEdge';
   cursor: Scalars['String']['output'];
   node: ShoppingListItem;
+};
+
+/** Order by options for shopping list items */
+export type ShoppingListItemOrderBy = {
+  createdAt?: InputMaybe<SortOrder>;
+  priority?: InputMaybe<SortOrder>;
+  sortOrder?: InputMaybe<SortOrder>;
+  updatedAt?: InputMaybe<SortOrder>;
 };
 
 export type ShoppingListItemPreviousValues = {
@@ -6344,6 +6451,7 @@ export type SkippedItem = {
   reason: Scalars['String']['output'];
 };
 
+/** Sort order for ordering results */
 export enum SortOrder {
   Asc = 'ASC',
   Desc = 'DESC',
@@ -6415,6 +6523,12 @@ export type StorageLocationEdge = {
   __typename?: 'StorageLocationEdge';
   cursor: Scalars['String']['output'];
   node: StorageLocation;
+};
+
+/** Order by options for storage locations */
+export type StorageLocationOrderBy = {
+  createdAt?: InputMaybe<SortOrder>;
+  name?: InputMaybe<SortOrder>;
 };
 
 /** Temperature state of a storage location */
@@ -8863,10 +8977,20 @@ export type ShoppingListItemFragment = {
     | ({ __typename?: 'User' } & PartialUserFragment)
     | null
     | undefined;
-  purchases:
-    | Array<{ __typename?: 'Purchase' } & PurchaseFragment>
-    | null
-    | undefined;
+  purchasesConnection: {
+    __typename?: 'PurchaseConnection';
+    totalCount: number;
+    edges: Array<{
+      __typename?: 'PurchaseEdge';
+      cursor: string;
+      node: { __typename?: 'Purchase' } & PurchaseFragment;
+    }>;
+    pageInfo: {
+      __typename?: 'PageInfo';
+      hasNextPage: boolean;
+      endCursor: string | null | undefined;
+    };
+  };
 } & ShoppingListItemCoreFragment;
 
 export type ShoppingListOwnershipFragment = {
@@ -10983,25 +11107,6 @@ export type GetPantriesQuery = {
     updatedAt: string;
     version: number;
     tags: Array<string>;
-    itemsConnection: {
-      __typename?: 'PantryItemConnection';
-      totalCount: number;
-      edges: Array<{
-        __typename?: 'PantryItemEdge';
-        cursor: string;
-        node: {
-          __typename?: 'PantryItem';
-          id: string;
-          itemName: string;
-          item: { __typename?: 'Item'; name: string };
-        };
-      }>;
-      pageInfo: {
-        __typename?: 'PageInfo';
-        hasNextPage: boolean;
-        endCursor: string | null | undefined;
-      };
-    };
   }>;
 };
 
@@ -12128,8 +12233,6 @@ export type PurchaseDeletedSubscription = {
 
 export type GetShoppingListQueryVariables = Exact<{
   id: Scalars['ID']['input'];
-  itemsCursor?: InputMaybe<Scalars['String']['input']>;
-  itemsFirst?: InputMaybe<Scalars['Int']['input']>;
 }>;
 
 export type GetShoppingListQuery = {
@@ -12157,80 +12260,6 @@ export type GetShoppingListQuery = {
         completedItems: number;
         createdAt: string;
         updatedAt: string;
-        itemsConnection: {
-          __typename?: 'ShoppingListItemConnection';
-          totalCount: number;
-          edges: Array<{
-            __typename?: 'ShoppingListItemEdge';
-            cursor: string;
-            node: {
-              __typename?: 'ShoppingListItem';
-              id: string;
-              quantity: number | null | undefined;
-              estimatedPrice: number | null | undefined;
-              budgetPrice: number | null | undefined;
-              isPurchased: boolean;
-              purchasedQuantity: number | null | undefined;
-              purchasedPrice: number | null | undefined;
-              purchaseDate: string | null | undefined;
-              itemName: string | null | undefined;
-              itemBarcode: string | null | undefined;
-              unitName: string | null | undefined;
-              notes: string | null | undefined;
-              priority: number;
-              category: string | null | undefined;
-              sortOrder: string;
-              isAutoAdded: boolean;
-              autoAddReason: string | null | undefined;
-              isFromMealPlan: boolean;
-              createdAt: string;
-              updatedAt: string;
-              item:
-                | {
-                    __typename?: 'Item';
-                    id: string;
-                    name: string;
-                    description: string | null | undefined;
-                    imageUrl: string | null | undefined;
-                    type: ItemType;
-                    storageState: StorageState;
-                  }
-                | null
-                | undefined;
-              unit:
-                | {
-                    __typename?: 'Unit';
-                    id: string;
-                    name: string;
-                    symbol: string;
-                  }
-                | null
-                | undefined;
-              preferredStore:
-                | {
-                    __typename?: 'Store';
-                    id: string;
-                    name: string;
-                    address: string | null | undefined;
-                  }
-                | null
-                | undefined;
-              purchasedBy:
-                | { __typename?: 'User'; id: string; email: string }
-                | null
-                | undefined;
-              addedBy:
-                | { __typename?: 'User'; id: string; email: string }
-                | null
-                | undefined;
-            };
-          }>;
-          pageInfo: {
-            __typename?: 'PageInfo';
-            hasNextPage: boolean;
-            endCursor: string | null | undefined;
-          };
-        };
         ownerships:
           | Array<
               {
@@ -12239,22 +12268,30 @@ export type GetShoppingListQuery = {
             >
           | null
           | undefined;
-        collaborators:
-          | Array<
-              {
-                __typename?: 'ShoppingListCollaborator';
-                canEdit: boolean;
-                canAddItems: boolean;
-                canRemoveItems: boolean;
-                canEditItems: boolean;
-                canMarkPurchased: boolean;
-                canInviteOthers: boolean;
-                invitedAt: string;
-                lastViewedAt: string | null | undefined;
-              } & ShoppingListCollaboratorFragment
-            >
-          | null
-          | undefined;
+        collaboratorsConnection: {
+          __typename?: 'ShoppingListCollaboratorConnection';
+          totalCount: number;
+          edges: Array<{
+            __typename?: 'ShoppingListCollaboratorEdge';
+            cursor: string;
+            node: {
+              __typename?: 'ShoppingListCollaborator';
+              canEdit: boolean;
+              canAddItems: boolean;
+              canRemoveItems: boolean;
+              canEditItems: boolean;
+              canMarkPurchased: boolean;
+              canInviteOthers: boolean;
+              invitedAt: string;
+              lastViewedAt: string | null | undefined;
+            } & ShoppingListCollaboratorFragment;
+          }>;
+          pageInfo: {
+            __typename?: 'PageInfo';
+            hasNextPage: boolean;
+            endCursor: string | null | undefined;
+          };
+        };
         targetStore:
           | {
               __typename?: 'Store';
@@ -12290,30 +12327,11 @@ export type GetShoppingListsQuery = {
     priority: number;
     createdAt: string;
     updatedAt: string;
-    itemsConnection: {
-      __typename?: 'ShoppingListItemConnection';
-      totalCount: number;
-      edges: Array<{
-        __typename?: 'ShoppingListItemEdge';
-        cursor: string;
-        node: {
-          __typename?: 'ShoppingListItem';
-          id: string;
-          isPurchased: boolean;
-        };
-      }>;
-      pageInfo: {
-        __typename?: 'PageInfo';
-        hasNextPage: boolean;
-        endCursor: string | null | undefined;
-      };
-    };
     ownerships:
       | Array<{
           __typename?: 'ShoppingListOwnership';
           id: string;
           userId: string;
-          createdAt: string;
           user: {
             __typename?: 'User';
             id: string;
@@ -12327,33 +12345,6 @@ export type GetShoppingListsQuery = {
               | null
               | undefined;
           };
-        }>
-      | null
-      | undefined;
-    collaborators:
-      | Array<{
-          __typename?: 'ShoppingListCollaborator';
-          id: string;
-          email: string | null | undefined;
-          role: CollaboratorRole;
-          status: CollaboratorStatus;
-          collaboratorId: string | null | undefined;
-          collaborator:
-            | {
-                __typename?: 'User';
-                id: string;
-                email: string;
-                profile:
-                  | {
-                      __typename?: 'UserProfile';
-                      displayName: string | null | undefined;
-                      avatar: string | null | undefined;
-                    }
-                  | null
-                  | undefined;
-              }
-            | null
-            | undefined;
         }>
       | null
       | undefined;
@@ -12412,14 +12403,22 @@ export type GetDefaultShoppingListQuery = {
             >
           | null
           | undefined;
-        collaborators:
-          | Array<
-              {
-                __typename?: 'ShoppingListCollaborator';
-              } & ShoppingListCollaboratorFragment
-            >
-          | null
-          | undefined;
+        collaboratorsConnection: {
+          __typename?: 'ShoppingListCollaboratorConnection';
+          totalCount: number;
+          edges: Array<{
+            __typename?: 'ShoppingListCollaboratorEdge';
+            cursor: string;
+            node: {
+              __typename?: 'ShoppingListCollaborator';
+            } & ShoppingListCollaboratorFragment;
+          }>;
+          pageInfo: {
+            __typename?: 'PageInfo';
+            hasNextPage: boolean;
+            endCursor: string | null | undefined;
+          };
+        };
       }
     | null
     | undefined;
@@ -12504,14 +12503,22 @@ export type CreateShoppingListMutation = {
         endCursor: string | null | undefined;
       };
     };
-    collaborators:
-      | Array<
-          {
-            __typename?: 'ShoppingListCollaborator';
-          } & ShoppingListCollaboratorFragment
-        >
-      | null
-      | undefined;
+    collaboratorsConnection: {
+      __typename?: 'ShoppingListCollaboratorConnection';
+      totalCount: number;
+      edges: Array<{
+        __typename?: 'ShoppingListCollaboratorEdge';
+        cursor: string;
+        node: {
+          __typename?: 'ShoppingListCollaborator';
+        } & ShoppingListCollaboratorFragment;
+      }>;
+      pageInfo: {
+        __typename?: 'PageInfo';
+        hasNextPage: boolean;
+        endCursor: string | null | undefined;
+      };
+    };
     ownerships:
       | Array<
           {
@@ -12565,14 +12572,22 @@ export type UpdateShoppingListMutation = {
         endCursor: string | null | undefined;
       };
     };
-    collaborators:
-      | Array<
-          {
-            __typename?: 'ShoppingListCollaborator';
-          } & ShoppingListCollaboratorFragment
-        >
-      | null
-      | undefined;
+    collaboratorsConnection: {
+      __typename?: 'ShoppingListCollaboratorConnection';
+      totalCount: number;
+      edges: Array<{
+        __typename?: 'ShoppingListCollaboratorEdge';
+        cursor: string;
+        node: {
+          __typename?: 'ShoppingListCollaborator';
+        } & ShoppingListCollaboratorFragment;
+      }>;
+      pageInfo: {
+        __typename?: 'PageInfo';
+        hasNextPage: boolean;
+        endCursor: string | null | undefined;
+      };
+    };
     ownerships:
       | Array<
           {
@@ -13833,14 +13848,61 @@ export const ShoppingListItemFragmentDoc = {
           },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'purchases' },
+            name: { kind: 'Name', value: 'purchasesConnection' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'first' },
+                value: { kind: 'IntValue', value: '10' },
+              },
+            ],
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
                 {
-                  kind: 'FragmentSpread',
-                  name: { kind: 'Name', value: 'PurchaseFragment' },
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'edges' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'cursor' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'node' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'FragmentSpread',
+                              name: { kind: 'Name', value: 'PurchaseFragment' },
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
                 },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'pageInfo' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'hasNextPage' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'endCursor' },
+                      },
+                    ],
+                  },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalCount' } },
               ],
             },
           },
@@ -38425,86 +38487,6 @@ export const GetPantriesDocument = {
                 { kind: 'Field', name: { kind: 'Name', value: 'homeId' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'name' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'isDefault' } },
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'itemsConnection' },
-                  arguments: [
-                    {
-                      kind: 'Argument',
-                      name: { kind: 'Name', value: 'first' },
-                      value: { kind: 'IntValue', value: '50' },
-                    },
-                  ],
-                  selectionSet: {
-                    kind: 'SelectionSet',
-                    selections: [
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'edges' },
-                        selectionSet: {
-                          kind: 'SelectionSet',
-                          selections: [
-                            {
-                              kind: 'Field',
-                              name: { kind: 'Name', value: 'node' },
-                              selectionSet: {
-                                kind: 'SelectionSet',
-                                selections: [
-                                  {
-                                    kind: 'Field',
-                                    name: { kind: 'Name', value: 'id' },
-                                  },
-                                  {
-                                    kind: 'Field',
-                                    name: { kind: 'Name', value: 'itemName' },
-                                  },
-                                  {
-                                    kind: 'Field',
-                                    name: { kind: 'Name', value: 'item' },
-                                    selectionSet: {
-                                      kind: 'SelectionSet',
-                                      selections: [
-                                        {
-                                          kind: 'Field',
-                                          name: { kind: 'Name', value: 'name' },
-                                        },
-                                      ],
-                                    },
-                                  },
-                                ],
-                              },
-                            },
-                            {
-                              kind: 'Field',
-                              name: { kind: 'Name', value: 'cursor' },
-                            },
-                          ],
-                        },
-                      },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'pageInfo' },
-                        selectionSet: {
-                          kind: 'SelectionSet',
-                          selections: [
-                            {
-                              kind: 'Field',
-                              name: { kind: 'Name', value: 'hasNextPage' },
-                            },
-                            {
-                              kind: 'Field',
-                              name: { kind: 'Name', value: 'endCursor' },
-                            },
-                          ],
-                        },
-                      },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'totalCount' },
-                      },
-                    ],
-                  },
-                },
                 { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'version' } },
@@ -50684,23 +50666,6 @@ export const GetShoppingListDocument = {
             type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
           },
         },
-        {
-          kind: 'VariableDefinition',
-          variable: {
-            kind: 'Variable',
-            name: { kind: 'Name', value: 'itemsCursor' },
-          },
-          type: { kind: 'NamedType', name: { kind: 'Name', value: 'String' } },
-        },
-        {
-          kind: 'VariableDefinition',
-          variable: {
-            kind: 'Variable',
-            name: { kind: 'Name', value: 'itemsFirst' },
-          },
-          type: { kind: 'NamedType', name: { kind: 'Name', value: 'Int' } },
-          defaultValue: { kind: 'IntValue', value: '25' },
-        },
       ],
       selectionSet: {
         kind: 'SelectionSet',
@@ -50752,23 +50717,28 @@ export const GetShoppingListDocument = {
                 { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
                 {
                   kind: 'Field',
-                  name: { kind: 'Name', value: 'itemsConnection' },
+                  name: { kind: 'Name', value: 'ownerships' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'FragmentSpread',
+                        name: {
+                          kind: 'Name',
+                          value: 'ShoppingListOwnershipFragment',
+                        },
+                      },
+                    ],
+                  },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'collaboratorsConnection' },
                   arguments: [
                     {
                       kind: 'Argument',
                       name: { kind: 'Name', value: 'first' },
-                      value: {
-                        kind: 'Variable',
-                        name: { kind: 'Name', value: 'itemsFirst' },
-                      },
-                    },
-                    {
-                      kind: 'Argument',
-                      name: { kind: 'Name', value: 'after' },
-                      value: {
-                        kind: 'Variable',
-                        name: { kind: 'Name', value: 'itemsCursor' },
-                      },
+                      value: { kind: 'IntValue', value: '20' },
                     },
                   ],
                   selectionSet: {
@@ -50782,262 +50752,73 @@ export const GetShoppingListDocument = {
                           selections: [
                             {
                               kind: 'Field',
+                              name: { kind: 'Name', value: 'cursor' },
+                            },
+                            {
+                              kind: 'Field',
                               name: { kind: 'Name', value: 'node' },
                               selectionSet: {
                                 kind: 'SelectionSet',
                                 selections: [
                                   {
-                                    kind: 'Field',
-                                    name: { kind: 'Name', value: 'id' },
-                                  },
-                                  {
-                                    kind: 'Field',
-                                    name: { kind: 'Name', value: 'quantity' },
-                                  },
-                                  {
-                                    kind: 'Field',
+                                    kind: 'FragmentSpread',
                                     name: {
                                       kind: 'Name',
-                                      value: 'estimatedPrice',
+                                      value: 'ShoppingListCollaboratorFragment',
                                     },
                                   },
                                   {
                                     kind: 'Field',
+                                    name: { kind: 'Name', value: 'canEdit' },
+                                  },
+                                  {
+                                    kind: 'Field',
                                     name: {
                                       kind: 'Name',
-                                      value: 'budgetPrice',
+                                      value: 'canAddItems',
                                     },
                                   },
                                   {
                                     kind: 'Field',
                                     name: {
                                       kind: 'Name',
-                                      value: 'isPurchased',
+                                      value: 'canRemoveItems',
                                     },
                                   },
                                   {
                                     kind: 'Field',
                                     name: {
                                       kind: 'Name',
-                                      value: 'purchasedQuantity',
+                                      value: 'canEditItems',
                                     },
                                   },
                                   {
                                     kind: 'Field',
                                     name: {
                                       kind: 'Name',
-                                      value: 'purchasedPrice',
+                                      value: 'canMarkPurchased',
                                     },
                                   },
                                   {
                                     kind: 'Field',
                                     name: {
                                       kind: 'Name',
-                                      value: 'purchaseDate',
+                                      value: 'canInviteOthers',
                                     },
                                   },
                                   {
                                     kind: 'Field',
-                                    name: { kind: 'Name', value: 'itemName' },
+                                    name: { kind: 'Name', value: 'invitedAt' },
                                   },
                                   {
                                     kind: 'Field',
                                     name: {
                                       kind: 'Name',
-                                      value: 'itemBarcode',
+                                      value: 'lastViewedAt',
                                     },
-                                  },
-                                  {
-                                    kind: 'Field',
-                                    name: { kind: 'Name', value: 'unitName' },
-                                  },
-                                  {
-                                    kind: 'Field',
-                                    name: { kind: 'Name', value: 'notes' },
-                                  },
-                                  {
-                                    kind: 'Field',
-                                    name: { kind: 'Name', value: 'priority' },
-                                  },
-                                  {
-                                    kind: 'Field',
-                                    name: { kind: 'Name', value: 'category' },
-                                  },
-                                  {
-                                    kind: 'Field',
-                                    name: { kind: 'Name', value: 'sortOrder' },
-                                  },
-                                  {
-                                    kind: 'Field',
-                                    name: {
-                                      kind: 'Name',
-                                      value: 'isAutoAdded',
-                                    },
-                                  },
-                                  {
-                                    kind: 'Field',
-                                    name: {
-                                      kind: 'Name',
-                                      value: 'autoAddReason',
-                                    },
-                                  },
-                                  {
-                                    kind: 'Field',
-                                    name: {
-                                      kind: 'Name',
-                                      value: 'isFromMealPlan',
-                                    },
-                                  },
-                                  {
-                                    kind: 'Field',
-                                    name: { kind: 'Name', value: 'item' },
-                                    selectionSet: {
-                                      kind: 'SelectionSet',
-                                      selections: [
-                                        {
-                                          kind: 'Field',
-                                          name: { kind: 'Name', value: 'id' },
-                                        },
-                                        {
-                                          kind: 'Field',
-                                          name: { kind: 'Name', value: 'name' },
-                                        },
-                                        {
-                                          kind: 'Field',
-                                          name: {
-                                            kind: 'Name',
-                                            value: 'description',
-                                          },
-                                        },
-                                        {
-                                          kind: 'Field',
-                                          name: {
-                                            kind: 'Name',
-                                            value: 'imageUrl',
-                                          },
-                                        },
-                                        {
-                                          kind: 'Field',
-                                          name: { kind: 'Name', value: 'type' },
-                                        },
-                                        {
-                                          kind: 'Field',
-                                          name: {
-                                            kind: 'Name',
-                                            value: 'storageState',
-                                          },
-                                        },
-                                      ],
-                                    },
-                                  },
-                                  {
-                                    kind: 'Field',
-                                    name: { kind: 'Name', value: 'unit' },
-                                    selectionSet: {
-                                      kind: 'SelectionSet',
-                                      selections: [
-                                        {
-                                          kind: 'Field',
-                                          name: { kind: 'Name', value: 'id' },
-                                        },
-                                        {
-                                          kind: 'Field',
-                                          name: { kind: 'Name', value: 'name' },
-                                        },
-                                        {
-                                          kind: 'Field',
-                                          name: {
-                                            kind: 'Name',
-                                            value: 'symbol',
-                                          },
-                                        },
-                                      ],
-                                    },
-                                  },
-                                  {
-                                    kind: 'Field',
-                                    name: {
-                                      kind: 'Name',
-                                      value: 'preferredStore',
-                                    },
-                                    selectionSet: {
-                                      kind: 'SelectionSet',
-                                      selections: [
-                                        {
-                                          kind: 'Field',
-                                          name: { kind: 'Name', value: 'id' },
-                                        },
-                                        {
-                                          kind: 'Field',
-                                          name: { kind: 'Name', value: 'name' },
-                                        },
-                                        {
-                                          kind: 'Field',
-                                          name: {
-                                            kind: 'Name',
-                                            value: 'address',
-                                          },
-                                        },
-                                      ],
-                                    },
-                                  },
-                                  {
-                                    kind: 'Field',
-                                    name: {
-                                      kind: 'Name',
-                                      value: 'purchasedBy',
-                                    },
-                                    selectionSet: {
-                                      kind: 'SelectionSet',
-                                      selections: [
-                                        {
-                                          kind: 'Field',
-                                          name: { kind: 'Name', value: 'id' },
-                                        },
-                                        {
-                                          kind: 'Field',
-                                          name: {
-                                            kind: 'Name',
-                                            value: 'email',
-                                          },
-                                        },
-                                      ],
-                                    },
-                                  },
-                                  {
-                                    kind: 'Field',
-                                    name: { kind: 'Name', value: 'addedBy' },
-                                    selectionSet: {
-                                      kind: 'SelectionSet',
-                                      selections: [
-                                        {
-                                          kind: 'Field',
-                                          name: { kind: 'Name', value: 'id' },
-                                        },
-                                        {
-                                          kind: 'Field',
-                                          name: {
-                                            kind: 'Name',
-                                            value: 'email',
-                                          },
-                                        },
-                                      ],
-                                    },
-                                  },
-                                  {
-                                    kind: 'Field',
-                                    name: { kind: 'Name', value: 'createdAt' },
-                                  },
-                                  {
-                                    kind: 'Field',
-                                    name: { kind: 'Name', value: 'updatedAt' },
                                   },
                                 ],
                               },
-                            },
-                            {
-                              kind: 'Field',
-                              name: { kind: 'Name', value: 'cursor' },
                             },
                           ],
                         },
@@ -51062,70 +50843,6 @@ export const GetShoppingListDocument = {
                       {
                         kind: 'Field',
                         name: { kind: 'Name', value: 'totalCount' },
-                      },
-                    ],
-                  },
-                },
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'ownerships' },
-                  selectionSet: {
-                    kind: 'SelectionSet',
-                    selections: [
-                      {
-                        kind: 'FragmentSpread',
-                        name: {
-                          kind: 'Name',
-                          value: 'ShoppingListOwnershipFragment',
-                        },
-                      },
-                    ],
-                  },
-                },
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'collaborators' },
-                  selectionSet: {
-                    kind: 'SelectionSet',
-                    selections: [
-                      {
-                        kind: 'FragmentSpread',
-                        name: {
-                          kind: 'Name',
-                          value: 'ShoppingListCollaboratorFragment',
-                        },
-                      },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'canEdit' },
-                      },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'canAddItems' },
-                      },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'canRemoveItems' },
-                      },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'canEditItems' },
-                      },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'canMarkPurchased' },
-                      },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'canInviteOthers' },
-                      },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'invitedAt' },
-                      },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'lastViewedAt' },
                       },
                     ],
                   },
@@ -51284,8 +51001,6 @@ export const GetShoppingListDocument = {
  * const { data, loading, error } = useGetShoppingListQuery({
  *   variables: {
  *      id: // value for 'id'
- *      itemsCursor: // value for 'itemsCursor'
- *      itemsFirst: // value for 'itemsFirst'
  *   },
  * });
  */
@@ -51391,76 +51106,6 @@ export const GetShoppingListsDocument = {
                 { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
                 {
                   kind: 'Field',
-                  name: { kind: 'Name', value: 'itemsConnection' },
-                  arguments: [
-                    {
-                      kind: 'Argument',
-                      name: { kind: 'Name', value: 'first' },
-                      value: { kind: 'IntValue', value: '25' },
-                    },
-                  ],
-                  selectionSet: {
-                    kind: 'SelectionSet',
-                    selections: [
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'edges' },
-                        selectionSet: {
-                          kind: 'SelectionSet',
-                          selections: [
-                            {
-                              kind: 'Field',
-                              name: { kind: 'Name', value: 'node' },
-                              selectionSet: {
-                                kind: 'SelectionSet',
-                                selections: [
-                                  {
-                                    kind: 'Field',
-                                    name: { kind: 'Name', value: 'id' },
-                                  },
-                                  {
-                                    kind: 'Field',
-                                    name: {
-                                      kind: 'Name',
-                                      value: 'isPurchased',
-                                    },
-                                  },
-                                ],
-                              },
-                            },
-                            {
-                              kind: 'Field',
-                              name: { kind: 'Name', value: 'cursor' },
-                            },
-                          ],
-                        },
-                      },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'pageInfo' },
-                        selectionSet: {
-                          kind: 'SelectionSet',
-                          selections: [
-                            {
-                              kind: 'Field',
-                              name: { kind: 'Name', value: 'hasNextPage' },
-                            },
-                            {
-                              kind: 'Field',
-                              name: { kind: 'Name', value: 'endCursor' },
-                            },
-                          ],
-                        },
-                      },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'totalCount' },
-                      },
-                    ],
-                  },
-                },
-                {
-                  kind: 'Field',
                   name: { kind: 'Name', value: 'ownerships' },
                   selectionSet: {
                     kind: 'SelectionSet',
@@ -51473,67 +51118,6 @@ export const GetShoppingListsDocument = {
                       {
                         kind: 'Field',
                         name: { kind: 'Name', value: 'user' },
-                        selectionSet: {
-                          kind: 'SelectionSet',
-                          selections: [
-                            {
-                              kind: 'Field',
-                              name: { kind: 'Name', value: 'id' },
-                            },
-                            {
-                              kind: 'Field',
-                              name: { kind: 'Name', value: 'email' },
-                            },
-                            {
-                              kind: 'Field',
-                              name: { kind: 'Name', value: 'profile' },
-                              selectionSet: {
-                                kind: 'SelectionSet',
-                                selections: [
-                                  {
-                                    kind: 'Field',
-                                    name: {
-                                      kind: 'Name',
-                                      value: 'displayName',
-                                    },
-                                  },
-                                  {
-                                    kind: 'Field',
-                                    name: { kind: 'Name', value: 'avatar' },
-                                  },
-                                ],
-                              },
-                            },
-                          ],
-                        },
-                      },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'createdAt' },
-                      },
-                    ],
-                  },
-                },
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'collaborators' },
-                  selectionSet: {
-                    kind: 'SelectionSet',
-                    selections: [
-                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'email' } },
-                      { kind: 'Field', name: { kind: 'Name', value: 'role' } },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'status' },
-                      },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'collaboratorId' },
-                      },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'collaborator' },
                         selectionSet: {
                           kind: 'SelectionSet',
                           selections: [
@@ -51799,16 +51383,66 @@ export const GetDefaultShoppingListDocument = {
                 },
                 {
                   kind: 'Field',
-                  name: { kind: 'Name', value: 'collaborators' },
+                  name: { kind: 'Name', value: 'collaboratorsConnection' },
+                  arguments: [
+                    {
+                      kind: 'Argument',
+                      name: { kind: 'Name', value: 'first' },
+                      value: { kind: 'IntValue', value: '20' },
+                    },
+                  ],
                   selectionSet: {
                     kind: 'SelectionSet',
                     selections: [
                       {
-                        kind: 'FragmentSpread',
-                        name: {
-                          kind: 'Name',
-                          value: 'ShoppingListCollaboratorFragment',
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'edges' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'cursor' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'node' },
+                              selectionSet: {
+                                kind: 'SelectionSet',
+                                selections: [
+                                  {
+                                    kind: 'FragmentSpread',
+                                    name: {
+                                      kind: 'Name',
+                                      value: 'ShoppingListCollaboratorFragment',
+                                    },
+                                  },
+                                ],
+                              },
+                            },
+                          ],
                         },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'pageInfo' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'hasNextPage' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'endCursor' },
+                            },
+                          ],
+                        },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'totalCount' },
                       },
                     ],
                   },
@@ -52289,14 +51923,61 @@ export const GetShoppingListItemsDocument = {
           },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'purchases' },
+            name: { kind: 'Name', value: 'purchasesConnection' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'first' },
+                value: { kind: 'IntValue', value: '10' },
+              },
+            ],
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
                 {
-                  kind: 'FragmentSpread',
-                  name: { kind: 'Name', value: 'PurchaseFragment' },
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'edges' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'cursor' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'node' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'FragmentSpread',
+                              name: { kind: 'Name', value: 'PurchaseFragment' },
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
                 },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'pageInfo' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'hasNextPage' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'endCursor' },
+                      },
+                    ],
+                  },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalCount' } },
               ],
             },
           },
@@ -52734,14 +52415,61 @@ export const GetShoppingListItemDocument = {
           },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'purchases' },
+            name: { kind: 'Name', value: 'purchasesConnection' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'first' },
+                value: { kind: 'IntValue', value: '10' },
+              },
+            ],
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
                 {
-                  kind: 'FragmentSpread',
-                  name: { kind: 'Name', value: 'PurchaseFragment' },
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'edges' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'cursor' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'node' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'FragmentSpread',
+                              name: { kind: 'Name', value: 'PurchaseFragment' },
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
                 },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'pageInfo' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'hasNextPage' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'endCursor' },
+                      },
+                    ],
+                  },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalCount' } },
               ],
             },
           },
@@ -53254,16 +52982,66 @@ export const CreateShoppingListDocument = {
                 },
                 {
                   kind: 'Field',
-                  name: { kind: 'Name', value: 'collaborators' },
+                  name: { kind: 'Name', value: 'collaboratorsConnection' },
+                  arguments: [
+                    {
+                      kind: 'Argument',
+                      name: { kind: 'Name', value: 'first' },
+                      value: { kind: 'IntValue', value: '20' },
+                    },
+                  ],
                   selectionSet: {
                     kind: 'SelectionSet',
                     selections: [
                       {
-                        kind: 'FragmentSpread',
-                        name: {
-                          kind: 'Name',
-                          value: 'ShoppingListCollaboratorFragment',
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'edges' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'cursor' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'node' },
+                              selectionSet: {
+                                kind: 'SelectionSet',
+                                selections: [
+                                  {
+                                    kind: 'FragmentSpread',
+                                    name: {
+                                      kind: 'Name',
+                                      value: 'ShoppingListCollaboratorFragment',
+                                    },
+                                  },
+                                ],
+                              },
+                            },
+                          ],
                         },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'pageInfo' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'hasNextPage' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'endCursor' },
+                            },
+                          ],
+                        },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'totalCount' },
                       },
                     ],
                   },
@@ -53604,16 +53382,66 @@ export const UpdateShoppingListDocument = {
                 },
                 {
                   kind: 'Field',
-                  name: { kind: 'Name', value: 'collaborators' },
+                  name: { kind: 'Name', value: 'collaboratorsConnection' },
+                  arguments: [
+                    {
+                      kind: 'Argument',
+                      name: { kind: 'Name', value: 'first' },
+                      value: { kind: 'IntValue', value: '20' },
+                    },
+                  ],
                   selectionSet: {
                     kind: 'SelectionSet',
                     selections: [
                       {
-                        kind: 'FragmentSpread',
-                        name: {
-                          kind: 'Name',
-                          value: 'ShoppingListCollaboratorFragment',
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'edges' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'cursor' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'node' },
+                              selectionSet: {
+                                kind: 'SelectionSet',
+                                selections: [
+                                  {
+                                    kind: 'FragmentSpread',
+                                    name: {
+                                      kind: 'Name',
+                                      value: 'ShoppingListCollaboratorFragment',
+                                    },
+                                  },
+                                ],
+                              },
+                            },
+                          ],
                         },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'pageInfo' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'hasNextPage' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'endCursor' },
+                            },
+                          ],
+                        },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'totalCount' },
                       },
                     ],
                   },
@@ -54613,14 +54441,61 @@ export const AddItemToShoppingListDocument = {
           },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'purchases' },
+            name: { kind: 'Name', value: 'purchasesConnection' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'first' },
+                value: { kind: 'IntValue', value: '10' },
+              },
+            ],
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
                 {
-                  kind: 'FragmentSpread',
-                  name: { kind: 'Name', value: 'PurchaseFragment' },
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'edges' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'cursor' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'node' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'FragmentSpread',
+                              name: { kind: 'Name', value: 'PurchaseFragment' },
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
                 },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'pageInfo' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'hasNextPage' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'endCursor' },
+                      },
+                    ],
+                  },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalCount' } },
               ],
             },
           },
@@ -55045,14 +54920,61 @@ export const UpdateShoppingListItemDocument = {
           },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'purchases' },
+            name: { kind: 'Name', value: 'purchasesConnection' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'first' },
+                value: { kind: 'IntValue', value: '10' },
+              },
+            ],
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
                 {
-                  kind: 'FragmentSpread',
-                  name: { kind: 'Name', value: 'PurchaseFragment' },
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'edges' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'cursor' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'node' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'FragmentSpread',
+                              name: { kind: 'Name', value: 'PurchaseFragment' },
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
                 },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'pageInfo' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'hasNextPage' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'endCursor' },
+                      },
+                    ],
+                  },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalCount' } },
               ],
             },
           },
@@ -55456,14 +55378,61 @@ export const RemoveItemFromShoppingListDocument = {
           },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'purchases' },
+            name: { kind: 'Name', value: 'purchasesConnection' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'first' },
+                value: { kind: 'IntValue', value: '10' },
+              },
+            ],
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
                 {
-                  kind: 'FragmentSpread',
-                  name: { kind: 'Name', value: 'PurchaseFragment' },
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'edges' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'cursor' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'node' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'FragmentSpread',
+                              name: { kind: 'Name', value: 'PurchaseFragment' },
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
                 },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'pageInfo' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'hasNextPage' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'endCursor' },
+                      },
+                    ],
+                  },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalCount' } },
               ],
             },
           },
@@ -55888,14 +55857,61 @@ export const MarkItemPurchasedDocument = {
           },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'purchases' },
+            name: { kind: 'Name', value: 'purchasesConnection' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'first' },
+                value: { kind: 'IntValue', value: '10' },
+              },
+            ],
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
                 {
-                  kind: 'FragmentSpread',
-                  name: { kind: 'Name', value: 'PurchaseFragment' },
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'edges' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'cursor' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'node' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'FragmentSpread',
+                              name: { kind: 'Name', value: 'PurchaseFragment' },
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
                 },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'pageInfo' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'hasNextPage' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'endCursor' },
+                      },
+                    ],
+                  },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalCount' } },
               ],
             },
           },
@@ -56304,14 +56320,61 @@ export const MoveShoppingListItemDocument = {
           },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'purchases' },
+            name: { kind: 'Name', value: 'purchasesConnection' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'first' },
+                value: { kind: 'IntValue', value: '10' },
+              },
+            ],
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
                 {
-                  kind: 'FragmentSpread',
-                  name: { kind: 'Name', value: 'PurchaseFragment' },
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'edges' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'cursor' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'node' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'FragmentSpread',
+                              name: { kind: 'Name', value: 'PurchaseFragment' },
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
                 },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'pageInfo' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'hasNextPage' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'endCursor' },
+                      },
+                    ],
+                  },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalCount' } },
               ],
             },
           },
@@ -56751,14 +56814,61 @@ export const ToggleShoppingListItemPurchasedDocument = {
           },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'purchases' },
+            name: { kind: 'Name', value: 'purchasesConnection' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'first' },
+                value: { kind: 'IntValue', value: '10' },
+              },
+            ],
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
                 {
-                  kind: 'FragmentSpread',
-                  name: { kind: 'Name', value: 'PurchaseFragment' },
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'edges' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'cursor' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'node' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'FragmentSpread',
+                              name: { kind: 'Name', value: 'PurchaseFragment' },
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
                 },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'pageInfo' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'hasNextPage' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'endCursor' },
+                      },
+                    ],
+                  },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalCount' } },
               ],
             },
           },
@@ -57204,14 +57314,61 @@ export const UpdateShoppingListItemQuantityDocument = {
           },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'purchases' },
+            name: { kind: 'Name', value: 'purchasesConnection' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'first' },
+                value: { kind: 'IntValue', value: '10' },
+              },
+            ],
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
                 {
-                  kind: 'FragmentSpread',
-                  name: { kind: 'Name', value: 'PurchaseFragment' },
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'edges' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'cursor' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'node' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'FragmentSpread',
+                              name: { kind: 'Name', value: 'PurchaseFragment' },
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
                 },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'pageInfo' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'hasNextPage' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'endCursor' },
+                      },
+                    ],
+                  },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalCount' } },
               ],
             },
           },
@@ -57648,14 +57805,61 @@ export const UpdateShoppingListItemNotesDocument = {
           },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'purchases' },
+            name: { kind: 'Name', value: 'purchasesConnection' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'first' },
+                value: { kind: 'IntValue', value: '10' },
+              },
+            ],
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
                 {
-                  kind: 'FragmentSpread',
-                  name: { kind: 'Name', value: 'PurchaseFragment' },
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'edges' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'cursor' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'node' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'FragmentSpread',
+                              name: { kind: 'Name', value: 'PurchaseFragment' },
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
                 },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'pageInfo' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'hasNextPage' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'endCursor' },
+                      },
+                    ],
+                  },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalCount' } },
               ],
             },
           },
@@ -58095,14 +58299,61 @@ export const UpdateShoppingListItemPriorityDocument = {
           },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'purchases' },
+            name: { kind: 'Name', value: 'purchasesConnection' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'first' },
+                value: { kind: 'IntValue', value: '10' },
+              },
+            ],
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
                 {
-                  kind: 'FragmentSpread',
-                  name: { kind: 'Name', value: 'PurchaseFragment' },
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'edges' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'cursor' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'node' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'FragmentSpread',
+                              name: { kind: 'Name', value: 'PurchaseFragment' },
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
                 },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'pageInfo' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'hasNextPage' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'endCursor' },
+                      },
+                    ],
+                  },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalCount' } },
               ],
             },
           },
@@ -58717,14 +58968,61 @@ export const SyncShoppingListItemDocument = {
           },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'purchases' },
+            name: { kind: 'Name', value: 'purchasesConnection' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'first' },
+                value: { kind: 'IntValue', value: '10' },
+              },
+            ],
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
                 {
-                  kind: 'FragmentSpread',
-                  name: { kind: 'Name', value: 'PurchaseFragment' },
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'edges' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'cursor' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'node' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'FragmentSpread',
+                              name: { kind: 'Name', value: 'PurchaseFragment' },
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
                 },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'pageInfo' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'hasNextPage' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'endCursor' },
+                      },
+                    ],
+                  },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalCount' } },
               ],
             },
           },
@@ -59384,14 +59682,61 @@ export const SyncMoveShoppingListItemDocument = {
           },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'purchases' },
+            name: { kind: 'Name', value: 'purchasesConnection' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'first' },
+                value: { kind: 'IntValue', value: '10' },
+              },
+            ],
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
                 {
-                  kind: 'FragmentSpread',
-                  name: { kind: 'Name', value: 'PurchaseFragment' },
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'edges' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'cursor' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'node' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'FragmentSpread',
+                              name: { kind: 'Name', value: 'PurchaseFragment' },
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
                 },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'pageInfo' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'hasNextPage' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'endCursor' },
+                      },
+                    ],
+                  },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalCount' } },
               ],
             },
           },
@@ -60212,14 +60557,61 @@ export const ShoppingListItemsChangedDocument = {
           },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'purchases' },
+            name: { kind: 'Name', value: 'purchasesConnection' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'first' },
+                value: { kind: 'IntValue', value: '10' },
+              },
+            ],
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
                 {
-                  kind: 'FragmentSpread',
-                  name: { kind: 'Name', value: 'PurchaseFragment' },
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'edges' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'cursor' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'node' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'FragmentSpread',
+                              name: { kind: 'Name', value: 'PurchaseFragment' },
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
                 },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'pageInfo' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'hasNextPage' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'endCursor' },
+                      },
+                    ],
+                  },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalCount' } },
               ],
             },
           },
@@ -60915,14 +61307,61 @@ export const ShoppingListItemAddedDocument = {
           },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'purchases' },
+            name: { kind: 'Name', value: 'purchasesConnection' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'first' },
+                value: { kind: 'IntValue', value: '10' },
+              },
+            ],
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
                 {
-                  kind: 'FragmentSpread',
-                  name: { kind: 'Name', value: 'PurchaseFragment' },
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'edges' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'cursor' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'node' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'FragmentSpread',
+                              name: { kind: 'Name', value: 'PurchaseFragment' },
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
                 },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'pageInfo' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'hasNextPage' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'endCursor' },
+                      },
+                    ],
+                  },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalCount' } },
               ],
             },
           },
@@ -61324,14 +61763,61 @@ export const ShoppingListItemUpdatedDocument = {
           },
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'purchases' },
+            name: { kind: 'Name', value: 'purchasesConnection' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'first' },
+                value: { kind: 'IntValue', value: '10' },
+              },
+            ],
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
                 {
-                  kind: 'FragmentSpread',
-                  name: { kind: 'Name', value: 'PurchaseFragment' },
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'edges' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'cursor' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'node' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'FragmentSpread',
+                              name: { kind: 'Name', value: 'PurchaseFragment' },
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                  },
                 },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'pageInfo' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'hasNextPage' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'endCursor' },
+                      },
+                    ],
+                  },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalCount' } },
               ],
             },
           },

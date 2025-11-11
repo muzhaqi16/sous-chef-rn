@@ -6,7 +6,6 @@ import { createTelemetryLink } from './telemetryLink';
 import { errorLink } from './errorLink';
 import { httpLink } from './httpLink';
 import { wsLink } from './wsLink';
-import { deduplicationLink } from './deduplicationLink';
 import { createQueueLink } from '../offlineQueue';
 
 // Simplified HTTP transport (let Apollo handle retries naturally)
@@ -50,10 +49,10 @@ export function createLink() {
   // Link chain - ordered by priority
   // Offline support is handled by:
   // 1. errorLink - catches network failures, returns cached data
-  // 2. fetch policies (cache-first) - try cache before network
+  // 2. fetch policies (cache-and-network → cache-first) - immediate cache, then network
   // 3. queueLink - queues mutations when offline
+  // Note: Query deduplication is handled by Apollo Client's built-in queryDeduplication: true
   return ApolloLink.from([
-    deduplicationLink, // Prevent duplicate requests
     telemetryLink, // Track operations for monitoring
     errorLink, // Handle/log errors + return cached data on network failures
     authLink, // Authentication headers

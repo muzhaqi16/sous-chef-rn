@@ -1,3 +1,29 @@
+/**
+ * Zustand Store - Application-wide state management
+ *
+ * Persistence Strategy:
+ * ====================
+ * The store is split into PERSISTENT and TRANSIENT state:
+ *
+ * PERSISTENT (saved to MMKV):
+ * - Auth tokens, user data (authSlice)
+ * - User preferences, theme, language (preferencesSlice)
+ * - Selected IDs (home, pantry, shopping list)
+ * - User navigation history and progress
+ * - Telemetry settings
+ * - Notification preferences
+ *
+ * TRANSIENT (session-only, not persisted):
+ * - Network state (isOnline, networkType) - always detect fresh
+ * - UI state (modals, forms, toasts, loading flags)
+ * - Current onboarding step - restart flow on app restart
+ * - Pending deep link actions - temporary
+ * - isLoggingOut flag - session-only
+ *
+ * This split prevents unnecessary disk writes and ensures fresh
+ * state for ephemeral UI concerns while preserving user data.
+ */
+
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import {
@@ -146,25 +172,44 @@ export const useStore = create<RootState>()(
         skipHydration: false,
         partialize: state => {
           // Filter out non-persisted state slices here
-          // Do not persist UI state or navigation state
+          // Split state into persistent and transient parts
 
           /* eslint-disable @typescript-eslint/no-unused-vars */
           const {
-            // Exclude network state (always detect fresh on app start)
+            // ========== TRANSIENT STATE (do not persist) ==========
+
+            // Network state (always detect fresh on app start)
             isOnline,
             isInternetReachable,
             networkType,
             lastOnlineTime,
             lastOfflineTime,
-            // Exclude UI state that should not persist (intentionally unused)
+
+            // UI state (temporary, session-only)
             bottomSheetVisible,
             bottomSheetIndex,
             globalLoading,
             isLoading,
             isError,
             isFetching,
+            activeFormId,
+            formData,
+            globalSearchQuery,
+            activeFilters,
+            toastMessage,
+            toastType,
+
+            // Navigation transient state
+            onBoardingStep,           // Restart onboarding flow on app restart
+            pendingDeepLinkAction,    // Deep link actions should not persist
+
+            // Logout state (session-only flag)
+            isLoggingOut,
+
+            // ========== PERSISTENT STATE (everything else) ==========
             ...persistedState
           } = state;
+          /* eslint-enable @typescript-eslint/no-unused-vars */
 
           return persistedState;
         },

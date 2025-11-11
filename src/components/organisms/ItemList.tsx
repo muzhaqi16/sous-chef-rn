@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { RefreshControl, ScrollView } from 'react-native';
+import { RefreshControl, FlatList } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState } from '../base/EmptyState';
 import { ItemCard } from './ItemCard';
@@ -93,7 +93,9 @@ export const ItemList: React.FC<ItemListProps> = ({
   }
 
   return (
-    <ScrollView
+    <FlatList
+      data={items}
+      keyExtractor={(item) => item.id}
       contentContainerStyle={contentStyle}
       refreshControl={
         onRefresh ? (
@@ -102,10 +104,8 @@ export const ItemList: React.FC<ItemListProps> = ({
       }
       onScroll={handleScroll}
       scrollEventThrottle={400}
-    >
-      {items.map(item => (
+      renderItem={({ item }) => (
         <ItemCard
-          key={item.id}
           id={item.id}
           title={item.title}
           subtitle={item.subtitle}
@@ -119,13 +119,15 @@ export const ItemList: React.FC<ItemListProps> = ({
           onWaste={onItemWaste ? () => onItemWaste(item.id) : undefined}
           onSwipeableWillOpen={onSwipeableWillOpen}
         />
-      ))}
-      {ListFooterComponent &&
+      )}
+      ListFooterComponent={
+        ListFooterComponent &&
         (typeof ListFooterComponent === 'function' ? (
           <ListFooterComponent />
         ) : (
           ListFooterComponent
-        ))}
-    </ScrollView>
+        ))
+      }
+    />
   );
 };

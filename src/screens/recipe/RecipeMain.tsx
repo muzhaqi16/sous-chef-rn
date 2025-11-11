@@ -1,10 +1,12 @@
 import React, { useMemo, useCallback, useState } from 'react';
-import { View, Image, Alert, Text, ActivityIndicator } from 'react-native';
+import { View, Image, Alert } from 'react-native';
 import { useAppNavigation } from '#hooks';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
 import { ListTemplate, SearchBarAction, HeaderAction } from '#components';
 import { useDeleteRecipeMutation } from '#generated';
 import { useRecipeManagement } from '#/hooks/recipe/useRecipeManagement';
+import { PaginationFooter } from '#/components/organisms/PaginationFooter';
+import { createRemoveFromQueryFieldUpdater } from '#/apollo/utils';
 
 export const RecipeMain: React.FC = () => {
   const { navigate } = useAppNavigation();
@@ -35,8 +37,19 @@ export const RecipeMain: React.FC = () => {
 
   // Delete recipe mutation
   const [deleteRecipeMutation] = useDeleteRecipeMutation({
-    refetchQueries: ['MyRecipes'],
-    awaitRefetchQueries: true,
+    update: (cache, { data }, { variables }) => {
+      if (!data?.deleteRecipe || !variables) return;
+
+      try {
+        const removeFromRecipesCache = createRemoveFromQueryFieldUpdater(
+          'recipes',
+          'Recipe',
+        );
+        removeFromRecipesCache(cache, variables.id, { evictItem: true });
+      } catch (error) {
+        console.warn('Cache update failed for deleteRecipe:', error);
+      }
+    },
   });
 
   // Transform filtered recipes to list items format
@@ -126,25 +139,6 @@ export const RecipeMain: React.FC = () => {
   };
 
   // Footer component for pagination
-  const ListFooter = useMemo(() => {
-    if (isLoadingMore) {
-      return (
-        <View style={styles.footerLoader}>
-          <ActivityIndicator size="small" color={theme.colors.primary} />
-          <Text style={styles.footerText}>Loading more recipes...</Text>
-        </View>
-      );
-    }
-    if (hasMore && !loading && recipes.length > 0) {
-      return (
-        <View style={styles.footerHint}>
-          <Text style={styles.footerHintText}>Scroll to load more</Text>
-        </View>
-      );
-    }
-    return null;
-  }, [isLoadingMore, hasMore, loading, recipes.length, theme.colors.primary]);
-
   return (
     <View style={styles.container}>
       <ListTemplate
@@ -163,7 +157,15 @@ export const RecipeMain: React.FC = () => {
         emptyState={emptyStateConfig}
         onEndReached={loadMore}
         onEndReachedThreshold={0.5}
-        ListFooterComponent={ListFooter}
+        ListFooterComponent={
+          <PaginationFooter
+            isLoadingMore={isLoadingMore}
+            hasMore={hasMore}
+            loading={loading}
+            itemCount={recipes.length}
+            loadingText="Loading more recipes..."
+          />
+        }
       />
     </View>
   );
@@ -187,24 +189,5 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.md,
     resizeMode: 'cover',
     elevation: 2,
-  },
-  footerLoader: {
-    padding: theme.spacing.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: theme.spacing.sm,
-  },
-  footerText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-  },
-  footerHint: {
-    padding: theme.spacing.md,
-    alignItems: 'center',
-  },
-  footerHintText: {
-    fontSize: theme.fonts.size.xs,
-    color: theme.colors.textTertiary,
   },
 }));

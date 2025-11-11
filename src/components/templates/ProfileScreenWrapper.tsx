@@ -31,6 +31,7 @@ export const ProfileScreenWrapper: React.FC<ProfileScreenWrapperProps> = ({
             name="arrow-left"
             onPress={goBack}
             color={theme.colors.textPrimary}
+            accessibilityLabel="Go back"
           />
           {title && <Text style={styles.title}>{title}</Text>}
           <View style={styles.headerSpacer} />
