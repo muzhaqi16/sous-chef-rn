@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   TextInput,
-  Alert,
   RefreshControl,
   ListRenderItem,
 } from 'react-native';
@@ -21,6 +20,7 @@ import { useHomeManagement } from '#/hooks';
 import { useInviteUserModal } from '#/hooks/useInviteUserModal';
 import { useAuth } from '#/hooks/auth/useAuth';
 import { AnimatedButton } from '#/components/atoms/AnimatedButton';
+import { toastService } from '#/services/toastService';
 import {
   HomeStats,
   CreateHomeForm,
@@ -79,22 +79,19 @@ export const HomeManagement: React.FC = () => {
       // Find the home and user's membership
       const home = homes?.find(h => h.id === homeId);
       if (!home) {
-        Alert.alert('Error', 'Home not found');
+        toastService.error('Home not found');
         return;
       }
 
       const membership = findUserMembership(home.members, user?.id);
       if (!membership) {
-        Alert.alert('Error', 'You are not a member of this home');
+        toastService.error('You are not a member of this home');
         return;
       }
 
       // Check if user has permission to invite
       if (!canInviteToHome(membership.role)) {
-        Alert.alert(
-          'Permission Denied',
-          'You do not have permission to invite members to this home',
-        );
+        toastService.error('You do not have permission to invite members to this home');
         return;
       }
 

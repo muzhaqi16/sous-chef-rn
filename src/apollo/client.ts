@@ -39,22 +39,26 @@ function initializeClient() {
   const client = new ApolloClient({
     link,
     cache,
-    // Configure to watch cache changes from mutations
-    // Use cache-first for all queries - no network calls when offline
+    // Client identification (name/version/connectToDevTools) requires Apollo Client v4.1+
+    // Current version: 4.0.5 - upgrade to enable GraphOS tracking and dev tools integration
+    // Configure Apollo Client with best practices for offline-first apps
     defaultOptions: {
       query: {
-        fetchPolicy: 'cache-first', // Try cache first, network if cache miss
-        errorPolicy: 'ignore', // Return cached data on errors - crucial for offline
+        fetchPolicy: 'network-only', // Always fetch fresh data for one-time queries
+        errorPolicy: 'all', // Return both data and errors for observability
       },
       mutate: {
         errorPolicy: 'all', // Mutations need full error info for handling
       },
       watchQuery: {
-        // cache-first prevents unnecessary network calls
-        // Especially important for offline - doesn't attempt network if cache has data
-        fetchPolicy: 'cache-first',
+        // cache-and-network: Fetch from cache immediately, then update from network
+        // Provides instant UI while ensuring data freshness
+        fetchPolicy: 'cache-and-network',
+        // After first fetch, use cache-first to reduce network calls
         nextFetchPolicy: 'cache-first',
-        errorPolicy: 'ignore', // Return cached data on errors - crucial for offline
+        errorPolicy: 'all', // Return both cached data and errors for observability
+        // Return partial data from cache even if some fields are missing
+        returnPartialData: true,
       },
     },
     queryDeduplication: true,
@@ -75,7 +79,9 @@ function initializeClient() {
  */
 function setupCachePersistence(client: ApolloClient) {
   let persistTimeout: NodeJS.Timeout | null = null;
-  const DEBOUNCE_MS = 1000;
+  // Increased from 1000ms to 3000ms to reduce persistence frequency
+  // This minimizes JSON serialization overhead on the JS thread
+  const DEBOUNCE_MS = 3000;
 
   // Helper to schedule cache persistence (debounced)
   const schedulePersistence = () => {

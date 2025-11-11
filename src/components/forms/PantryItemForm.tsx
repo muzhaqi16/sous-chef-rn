@@ -15,7 +15,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { commonStyles } from '#/styles/commonStyles';
 import { useDefaultHome } from '#hooks';
-import { useStore } from '#store';
+import { useAppStore, selectSelectedPantryId } from '#store/useAppStore';
 import {
   StorageState,
   useCreatePantryItemMutation,
@@ -122,7 +122,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     null,
   );
 
-  const { selectedPantryId } = useStore();
+  const selectedPantryId = useAppStore(selectSelectedPantryId);
   const { selectedHomeId, getDefaultPantry } = useDefaultHome();
 
   const { data: homeData } = useGetHomeQuery({

@@ -24,7 +24,8 @@ export function useOfflineAwareFetchPolicy(
   onlinePolicy: WatchQueryFetchPolicy = 'cache-and-network',
   offlinePolicy: WatchQueryFetchPolicy = 'cache-only'
 ): WatchQueryFetchPolicy {
-  const { isOnline } = useStore();
+  // Use selector to prevent re-renders on unrelated store changes
+  const isOnline = useStore(state => state.isOnline);
   return isOnline ? onlinePolicy : offlinePolicy;
 }
 

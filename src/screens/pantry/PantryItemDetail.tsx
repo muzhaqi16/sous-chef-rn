@@ -7,7 +7,7 @@ import {
 } from '#generated';
 import { DetailTemplate } from '#components/templates/DetailTemplate';
 import { FormattedItemSubtitle } from '#components';
-import { useStore } from '#/store';
+import { useAppStore, selectSelectedShoppingListId } from '#store/useAppStore';
 import { commonStyles } from '#styles';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks';
@@ -21,7 +21,7 @@ export const PantryItemDetail: React.FC<{
   const itemId = route.params.itemId;
   const { goBack, navigateTo } = useAppNavigation();
   const { theme } = useUnistyles();
-  const { selectedShoppingListId } = useStore();
+  const selectedShoppingListId = useAppStore(selectSelectedShoppingListId);
 
   // Use cache-first policy - offlineQueryLink will handle offline behavior automatically
   const { data } = useGetPantryItemQuery({

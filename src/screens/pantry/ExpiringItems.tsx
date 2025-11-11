@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
-  ScrollView,
+  FlatList,
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
@@ -74,9 +74,11 @@ export const ExpiringItems: React.FC = () => {
         <View style={styles.placeholder} />
       </View>
 
-      <ScrollView
+      <FlatList
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
+        data={expiringItems}
+        keyExtractor={(item) => item.id}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -85,58 +87,57 @@ export const ExpiringItems: React.FC = () => {
             tintColor={theme.colors.primary}
           />
         }
-      >
-        {loading || !items ? (
-          <View style={[commonStyles.center, styles.loadingContainer]}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
-          </View>
-        ) : expiringItems.length === 0 ? (
-          <View style={[commonStyles.center, styles.emptyState]}>
-            <Icon name="check-circle" size={64} color={theme.colors.success} />
-            <Text style={[commonStyles.body, styles.emptyText]}>
-              No items expiring in the next 30 days
-            </Text>
-          </View>
-        ) : (
-          expiringItems.map(item => {
-            const daysUntil = getDaysUntilExpiration(item?.expiresAt || '');
-            const statusColor =
-              daysUntil < 0
-                ? theme.colors.error
-                : daysUntil <= 7
-                  ? theme.colors.warning
-                  : theme.colors.success;
+        ListEmptyComponent={
+          loading || !items ? (
+            <View style={[commonStyles.center, styles.loadingContainer]}>
+              <ActivityIndicator size="large" color={theme.colors.primary} />
+            </View>
+          ) : (
+            <View style={[commonStyles.center, styles.emptyState]}>
+              <Icon name="check-circle" size={64} color={theme.colors.success} />
+              <Text style={[commonStyles.body, styles.emptyText]}>
+                No items expiring in the next 30 days
+              </Text>
+            </View>
+          )
+        }
+        renderItem={({ item }) => {
+          const daysUntil = getDaysUntilExpiration(item?.expiresAt || '');
+          const statusColor =
+            daysUntil < 0
+              ? theme.colors.error
+              : daysUntil <= 7
+                ? theme.colors.warning
+                : theme.colors.success;
 
-            return (
-              <SwipeableItem
-                key={item.id}
-                onPress={() =>
-                  navigateTo.pantryItemDetail({
-                    itemId: item.id,
-                  })
-                }
-              >
-                <View style={[commonStyles.card, styles.itemCard]}>
-                  <View style={styles.itemInfo}>
-                    <Text style={styles.itemName}>{item.item?.name}</Text>
-                    <Text style={[commonStyles.caption, styles.itemDetails]}>
-                      {item.currentQuantity} {item.unit?.symbol} •{' '}
-                      {item.storageState}
-                    </Text>
-                    <Text style={[styles.statusText, { color: statusColor }]}>
-                      {daysUntil < 0
-                        ? `Expired ${Math.abs(daysUntil)} days ago`
-                        : daysUntil === 0
-                          ? 'Expires today'
-                          : `Expires in ${daysUntil} days`}
-                    </Text>
-                  </View>
+          return (
+            <SwipeableItem
+              onPress={() =>
+                navigateTo.pantryItemDetail({
+                  itemId: item.id,
+                })
+              }
+            >
+              <View style={[commonStyles.card, styles.itemCard]}>
+                <View style={styles.itemInfo}>
+                  <Text style={styles.itemName}>{item.item?.name}</Text>
+                  <Text style={[commonStyles.caption, styles.itemDetails]}>
+                    {item.currentQuantity} {item.unit?.symbol} •{' '}
+                    {item.storageState}
+                  </Text>
+                  <Text style={[styles.statusText, { color: statusColor }]}>
+                    {daysUntil < 0
+                      ? `Expired ${Math.abs(daysUntil)} days ago`
+                      : daysUntil === 0
+                        ? 'Expires today'
+                        : `Expires in ${daysUntil} days`}
+                  </Text>
                 </View>
-              </SwipeableItem>
-            );
-          })
-        )}
-      </ScrollView>
+              </View>
+            </SwipeableItem>
+          );
+        }}
+      />
     </View>
   );
 };

@@ -348,6 +348,13 @@ export enum CategoryType {
   System = 'SYSTEM',
 }
 
+/** Order by options for collaborators */
+export type CollaboratorOrderBy = {
+  invitedAt?: InputMaybe<SortOrder>;
+  itemsAdded?: InputMaybe<SortOrder>;
+  lastViewedAt?: InputMaybe<SortOrder>;
+};
+
 export enum CollaboratorRole {
   Admin = 'ADMIN',
   Contributor = 'CONTRIBUTOR',
@@ -4345,6 +4352,7 @@ export type PantryItemsConnectionArgs = {
   before?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
+  orderBy?: InputMaybe<PantryItemOrderBy>;
 };
 
 export type PantryStorageLocationsConnectionArgs = {
@@ -4352,6 +4360,7 @@ export type PantryStorageLocationsConnectionArgs = {
   before?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
+  orderBy?: InputMaybe<StorageLocationOrderBy>;
 };
 
 export type PantryActivity = {
@@ -4521,6 +4530,14 @@ export type PantryItemFilters = {
   search?: InputMaybe<Scalars['String']['input']>;
   storageState?: InputMaybe<StorageState>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
+};
+
+/** Order by options for pantry items */
+export type PantryItemOrderBy = {
+  createdAt?: InputMaybe<SortOrder>;
+  currentQuantity?: InputMaybe<SortOrder>;
+  expiresAt?: InputMaybe<SortOrder>;
+  priority?: InputMaybe<SortOrder>;
 };
 
 export type PantryItemPhoto = {
@@ -4744,6 +4761,13 @@ export type PurchaseEdge = {
   __typename?: 'PurchaseEdge';
   cursor: Scalars['String']['output'];
   node: Purchase;
+};
+
+/** Order by options for purchases */
+export type PurchaseOrderBy = {
+  createdAt?: InputMaybe<SortOrder>;
+  purchaseDate?: InputMaybe<SortOrder>;
+  totalPrice?: InputMaybe<SortOrder>;
 };
 
 export type PurchaseStats = {
@@ -6055,12 +6079,16 @@ export type ShareShoppingListInput = {
 
 export type ShoppingList = {
   __typename?: 'ShoppingList';
+  /** @deprecated Use activitiesConnection for pagination to reduce query complexity */
   activities?: Maybe<Array<ShoppingListActivity>>;
+  activitiesConnection: ShoppingListActivityConnection;
   autoAddSuggestions: Scalars['Boolean']['output'];
   basedOnTemplate?: Maybe<ShoppingList>;
   budgetAmount?: Maybe<Scalars['Float']['output']>;
   category?: Maybe<Scalars['String']['output']>;
+  /** @deprecated Use collaboratorsConnection for pagination to reduce query complexity */
   collaborators?: Maybe<Array<ShoppingListCollaborator>>;
+  collaboratorsConnection: ShoppingListCollaboratorConnection;
   completedAt?: Maybe<Scalars['DateTime']['output']>;
   completedItems: Scalars['Int']['output'];
   completedShopDate?: Maybe<Scalars['DateTime']['output']>;
@@ -6075,6 +6103,8 @@ export type ShoppingList = {
   isPublic: Scalars['Boolean']['output'];
   isRecurring: Scalars['Boolean']['output'];
   isTemplate: Scalars['Boolean']['output'];
+  /** @deprecated Use itemsConnection for pagination to reduce query complexity */
+  items?: Maybe<Array<ShoppingListItem>>;
   itemsConnection: ShoppingListItemConnection;
   lastRecurredAt?: Maybe<Scalars['DateTime']['output']>;
   lastReminderSent?: Maybe<Scalars['DateTime']['output']>;
@@ -6086,6 +6116,7 @@ export type ShoppingList = {
   plannedShopDate?: Maybe<Scalars['DateTime']['output']>;
   priceTracking: Scalars['Boolean']['output'];
   priority: Scalars['Int']['output'];
+  /** @deprecated Query purchases separately by list ID to reduce query complexity */
   purchases?: Maybe<Array<Purchase>>;
   recurringInterval?: Maybe<Scalars['Int']['output']>;
   recurringPattern?: Maybe<RecurringPattern>;
@@ -6100,6 +6131,7 @@ export type ShoppingList = {
   targetStore?: Maybe<Store>;
   targetStoreId?: Maybe<Scalars['String']['output']>;
   templateName?: Maybe<Scalars['String']['output']>;
+  /** @deprecated Query templates separately to avoid circular references */
   templatesCreated?: Maybe<Array<ShoppingList>>;
   totalCollaborators: Scalars['Int']['output'];
   totalCost: Scalars['Float']['output'];
@@ -6109,11 +6141,28 @@ export type ShoppingList = {
   viewCount: Scalars['Int']['output'];
 };
 
+export type ShoppingListActivitiesConnectionArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
+  orderBy?: InputMaybe<ShoppingListActivityOrderBy>;
+};
+
+export type ShoppingListCollaboratorsConnectionArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
+  orderBy?: InputMaybe<CollaboratorOrderBy>;
+};
+
 export type ShoppingListItemsConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
+  orderBy?: InputMaybe<ShoppingListItemOrderBy>;
 };
 
 export type ShoppingListActivity = {
@@ -6133,6 +6182,26 @@ export type ShoppingListActivity = {
   user: User;
   userAgent?: Maybe<Scalars['String']['output']>;
   userId: Scalars['String']['output'];
+};
+
+export type ShoppingListActivityConnection = {
+  __typename?: 'ShoppingListActivityConnection';
+  edges: Array<ShoppingListActivityEdge>;
+  pageInfo: PageInfo;
+  totalCount: Scalars['Int']['output'];
+};
+
+/** Shopping list activity connection for pagination */
+export type ShoppingListActivityEdge = {
+  __typename?: 'ShoppingListActivityEdge';
+  cursor: Scalars['String']['output'];
+  node: ShoppingListActivity;
+};
+
+/** Order by options for shopping list activities */
+export type ShoppingListActivityOrderBy = {
+  createdAt?: InputMaybe<SortOrder>;
+  timestamp?: InputMaybe<SortOrder>;
 };
 
 export type ShoppingListCollaborator = {
@@ -6173,6 +6242,20 @@ export type ShoppingListCollaboratorChangedPayload = {
   mutation: MutationType;
   timestamp: Scalars['DateTime']['output'];
   userId: Scalars['ID']['output'];
+};
+
+export type ShoppingListCollaboratorConnection = {
+  __typename?: 'ShoppingListCollaboratorConnection';
+  edges: Array<ShoppingListCollaboratorEdge>;
+  pageInfo: PageInfo;
+  totalCount: Scalars['Int']['output'];
+};
+
+/** Shopping list collaborator connection for pagination */
+export type ShoppingListCollaboratorEdge = {
+  __typename?: 'ShoppingListCollaboratorEdge';
+  cursor: Scalars['String']['output'];
+  node: ShoppingListCollaborator;
 };
 
 export type ShoppingListConnection = {
@@ -6246,7 +6329,9 @@ export type ShoppingListItem = {
   purchasedById?: Maybe<Scalars['String']['output']>;
   purchasedPrice?: Maybe<Scalars['Float']['output']>;
   purchasedQuantity?: Maybe<Scalars['Float']['output']>;
+  /** @deprecated Use purchasesConnection for pagination to reduce query complexity */
   purchases?: Maybe<Array<Purchase>>;
+  purchasesConnection: PurchaseConnection;
   quantity?: Maybe<Scalars['Float']['output']>;
   quantityInput?: Maybe<Scalars['String']['output']>;
   recipe?: Maybe<Recipe>;
@@ -6259,6 +6344,14 @@ export type ShoppingListItem = {
   unitName?: Maybe<Scalars['String']['output']>;
   updatedAt: Scalars['DateTime']['output'];
   version: Scalars['Int']['output'];
+};
+
+export type ShoppingListItemPurchasesConnectionArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
+  orderBy?: InputMaybe<PurchaseOrderBy>;
 };
 
 export type ShoppingListItemChangedPayload = {
@@ -6284,6 +6377,14 @@ export type ShoppingListItemEdge = {
   __typename?: 'ShoppingListItemEdge';
   cursor: Scalars['String']['output'];
   node: ShoppingListItem;
+};
+
+/** Order by options for shopping list items */
+export type ShoppingListItemOrderBy = {
+  createdAt?: InputMaybe<SortOrder>;
+  priority?: InputMaybe<SortOrder>;
+  sortOrder?: InputMaybe<SortOrder>;
+  updatedAt?: InputMaybe<SortOrder>;
 };
 
 export type ShoppingListItemPreviousValues = {
@@ -6346,6 +6447,7 @@ export type SkippedItem = {
   reason: Scalars['String']['output'];
 };
 
+/** Sort order for ordering results */
 export enum SortOrder {
   Asc = 'ASC',
   Desc = 'DESC',
@@ -6417,6 +6519,12 @@ export type StorageLocationEdge = {
   __typename?: 'StorageLocationEdge';
   cursor: Scalars['String']['output'];
   node: StorageLocation;
+};
+
+/** Order by options for storage locations */
+export type StorageLocationOrderBy = {
+  createdAt?: InputMaybe<SortOrder>;
+  name?: InputMaybe<SortOrder>;
 };
 
 /** Temperature state of a storage location */
@@ -9101,8 +9209,13 @@ export type ShoppingListItemFragmentFragment = {
       }
     | null
     | undefined;
-  purchases?:
-    | Array<{
+  purchasesConnection: {
+    __typename?: 'PurchaseConnection';
+    totalCount: number;
+    edges: Array<{
+      __typename?: 'PurchaseEdge';
+      cursor: string;
+      node: {
         __typename?: 'Purchase';
         id: string;
         purchaseDate: string;
@@ -9111,9 +9224,14 @@ export type ShoppingListItemFragmentFragment = {
         totalPrice: number;
         itemName: string;
         unitSymbol: string;
-      }>
-    | null
-    | undefined;
+      };
+    }>;
+    pageInfo: {
+      __typename?: 'PageInfo';
+      hasNextPage: boolean;
+      endCursor?: string | null | undefined;
+    };
+  };
 };
 
 export type ShoppingListOwnershipFragmentFragment = {
@@ -19215,8 +19333,13 @@ export type GetShoppingListQuery = {
             }>
           | null
           | undefined;
-        collaborators?:
-          | Array<{
+        collaboratorsConnection: {
+          __typename?: 'ShoppingListCollaboratorConnection';
+          totalCount: number;
+          edges: Array<{
+            __typename?: 'ShoppingListCollaboratorEdge';
+            cursor: string;
+            node: {
               __typename?: 'ShoppingListCollaborator';
               canEdit: boolean;
               canAddItems: boolean;
@@ -19262,9 +19385,14 @@ export type GetShoppingListQuery = {
                   }
                 | null
                 | undefined;
-            }>
-          | null
-          | undefined;
+            };
+          }>;
+          pageInfo: {
+            __typename?: 'PageInfo';
+            hasNextPage: boolean;
+            endCursor?: string | null | undefined;
+          };
+        };
         targetStore?:
           | {
               __typename?: 'Store';
@@ -19340,8 +19468,13 @@ export type GetShoppingListsQuery = {
         }>
       | null
       | undefined;
-    collaborators?:
-      | Array<{
+    collaboratorsConnection: {
+      __typename?: 'ShoppingListCollaboratorConnection';
+      totalCount: number;
+      edges: Array<{
+        __typename?: 'ShoppingListCollaboratorEdge';
+        cursor: string;
+        node: {
           __typename?: 'ShoppingListCollaborator';
           id: string;
           email?: string | null | undefined;
@@ -19364,9 +19497,14 @@ export type GetShoppingListsQuery = {
               }
             | null
             | undefined;
-        }>
-      | null
-      | undefined;
+        };
+      }>;
+      pageInfo: {
+        __typename?: 'PageInfo';
+        hasNextPage: boolean;
+        endCursor?: string | null | undefined;
+      };
+    };
   }>;
 };
 
@@ -19439,8 +19577,13 @@ export type GetDefaultShoppingListQuery = {
             }>
           | null
           | undefined;
-        collaborators?:
-          | Array<{
+        collaboratorsConnection: {
+          __typename?: 'ShoppingListCollaboratorConnection';
+          totalCount: number;
+          edges: Array<{
+            __typename?: 'ShoppingListCollaboratorEdge';
+            cursor: string;
+            node: {
               __typename?: 'ShoppingListCollaborator';
               id: string;
               email?: string | null | undefined;
@@ -19478,9 +19621,14 @@ export type GetDefaultShoppingListQuery = {
                   }
                 | null
                 | undefined;
-            }>
-          | null
-          | undefined;
+            };
+          }>;
+          pageInfo: {
+            __typename?: 'PageInfo';
+            hasNextPage: boolean;
+            endCursor?: string | null | undefined;
+          };
+        };
       }
     | null
     | undefined;
@@ -19654,8 +19802,13 @@ export type GetShoppingListItemsQuery = {
         }
       | null
       | undefined;
-    purchases?:
-      | Array<{
+    purchasesConnection: {
+      __typename?: 'PurchaseConnection';
+      totalCount: number;
+      edges: Array<{
+        __typename?: 'PurchaseEdge';
+        cursor: string;
+        node: {
           __typename?: 'Purchase';
           id: string;
           purchaseDate: string;
@@ -19664,9 +19817,14 @@ export type GetShoppingListItemsQuery = {
           totalPrice: number;
           itemName: string;
           unitSymbol: string;
-        }>
-      | null
-      | undefined;
+        };
+      }>;
+      pageInfo: {
+        __typename?: 'PageInfo';
+        hasNextPage: boolean;
+        endCursor?: string | null | undefined;
+      };
+    };
   }>;
 };
 
@@ -19848,8 +20006,13 @@ export type GetShoppingListItemQuery = {
             }
           | null
           | undefined;
-        purchases?:
-          | Array<{
+        purchasesConnection: {
+          __typename?: 'PurchaseConnection';
+          totalCount: number;
+          edges: Array<{
+            __typename?: 'PurchaseEdge';
+            cursor: string;
+            node: {
               __typename?: 'Purchase';
               id: string;
               purchaseDate: string;
@@ -19858,9 +20021,14 @@ export type GetShoppingListItemQuery = {
               totalPrice: number;
               itemName: string;
               unitSymbol: string;
-            }>
-          | null
-          | undefined;
+            };
+          }>;
+          pageInfo: {
+            __typename?: 'PageInfo';
+            hasNextPage: boolean;
+            endCursor?: string | null | undefined;
+          };
+        };
       }
     | null
     | undefined;
@@ -19956,8 +20124,13 @@ export type CreateShoppingListMutation = {
         endCursor?: string | null | undefined;
       };
     };
-    collaborators?:
-      | Array<{
+    collaboratorsConnection: {
+      __typename?: 'ShoppingListCollaboratorConnection';
+      totalCount: number;
+      edges: Array<{
+        __typename?: 'ShoppingListCollaboratorEdge';
+        cursor: string;
+        node: {
           __typename?: 'ShoppingListCollaborator';
           id: string;
           email?: string | null | undefined;
@@ -19995,9 +20168,14 @@ export type CreateShoppingListMutation = {
               }
             | null
             | undefined;
-        }>
-      | null
-      | undefined;
+        };
+      }>;
+      pageInfo: {
+        __typename?: 'PageInfo';
+        hasNextPage: boolean;
+        endCursor?: string | null | undefined;
+      };
+    };
     ownerships?:
       | Array<{
           __typename?: 'ShoppingListOwnership';
@@ -20068,8 +20246,13 @@ export type UpdateShoppingListMutation = {
         endCursor?: string | null | undefined;
       };
     };
-    collaborators?:
-      | Array<{
+    collaboratorsConnection: {
+      __typename?: 'ShoppingListCollaboratorConnection';
+      totalCount: number;
+      edges: Array<{
+        __typename?: 'ShoppingListCollaboratorEdge';
+        cursor: string;
+        node: {
           __typename?: 'ShoppingListCollaborator';
           id: string;
           email?: string | null | undefined;
@@ -20107,9 +20290,14 @@ export type UpdateShoppingListMutation = {
               }
             | null
             | undefined;
-        }>
-      | null
-      | undefined;
+        };
+      }>;
+      pageInfo: {
+        __typename?: 'PageInfo';
+        hasNextPage: boolean;
+        endCursor?: string | null | undefined;
+      };
+    };
     ownerships?:
       | Array<{
           __typename?: 'ShoppingListOwnership';
@@ -20389,8 +20577,13 @@ export type AddItemToShoppingListMutation = {
         }
       | null
       | undefined;
-    purchases?:
-      | Array<{
+    purchasesConnection: {
+      __typename?: 'PurchaseConnection';
+      totalCount: number;
+      edges: Array<{
+        __typename?: 'PurchaseEdge';
+        cursor: string;
+        node: {
           __typename?: 'Purchase';
           id: string;
           purchaseDate: string;
@@ -20399,9 +20592,14 @@ export type AddItemToShoppingListMutation = {
           totalPrice: number;
           itemName: string;
           unitSymbol: string;
-        }>
-      | null
-      | undefined;
+        };
+      }>;
+      pageInfo: {
+        __typename?: 'PageInfo';
+        hasNextPage: boolean;
+        endCursor?: string | null | undefined;
+      };
+    };
   };
 };
 
@@ -20574,8 +20772,13 @@ export type UpdateShoppingListItemMutation = {
         }
       | null
       | undefined;
-    purchases?:
-      | Array<{
+    purchasesConnection: {
+      __typename?: 'PurchaseConnection';
+      totalCount: number;
+      edges: Array<{
+        __typename?: 'PurchaseEdge';
+        cursor: string;
+        node: {
           __typename?: 'Purchase';
           id: string;
           purchaseDate: string;
@@ -20584,9 +20787,14 @@ export type UpdateShoppingListItemMutation = {
           totalPrice: number;
           itemName: string;
           unitSymbol: string;
-        }>
-      | null
-      | undefined;
+        };
+      }>;
+      pageInfo: {
+        __typename?: 'PageInfo';
+        hasNextPage: boolean;
+        endCursor?: string | null | undefined;
+      };
+    };
   };
 };
 
@@ -20758,8 +20966,13 @@ export type RemoveItemFromShoppingListMutation = {
         }
       | null
       | undefined;
-    purchases?:
-      | Array<{
+    purchasesConnection: {
+      __typename?: 'PurchaseConnection';
+      totalCount: number;
+      edges: Array<{
+        __typename?: 'PurchaseEdge';
+        cursor: string;
+        node: {
           __typename?: 'Purchase';
           id: string;
           purchaseDate: string;
@@ -20768,9 +20981,14 @@ export type RemoveItemFromShoppingListMutation = {
           totalPrice: number;
           itemName: string;
           unitSymbol: string;
-        }>
-      | null
-      | undefined;
+        };
+      }>;
+      pageInfo: {
+        __typename?: 'PageInfo';
+        hasNextPage: boolean;
+        endCursor?: string | null | undefined;
+      };
+    };
   };
 };
 
@@ -20943,8 +21161,13 @@ export type MarkItemPurchasedMutation = {
         }
       | null
       | undefined;
-    purchases?:
-      | Array<{
+    purchasesConnection: {
+      __typename?: 'PurchaseConnection';
+      totalCount: number;
+      edges: Array<{
+        __typename?: 'PurchaseEdge';
+        cursor: string;
+        node: {
           __typename?: 'Purchase';
           id: string;
           purchaseDate: string;
@@ -20953,9 +21176,14 @@ export type MarkItemPurchasedMutation = {
           totalPrice: number;
           itemName: string;
           unitSymbol: string;
-        }>
-      | null
-      | undefined;
+        };
+      }>;
+      pageInfo: {
+        __typename?: 'PageInfo';
+        hasNextPage: boolean;
+        endCursor?: string | null | undefined;
+      };
+    };
   };
 };
 
@@ -21127,8 +21355,13 @@ export type MoveShoppingListItemMutation = {
         }
       | null
       | undefined;
-    purchases?:
-      | Array<{
+    purchasesConnection: {
+      __typename?: 'PurchaseConnection';
+      totalCount: number;
+      edges: Array<{
+        __typename?: 'PurchaseEdge';
+        cursor: string;
+        node: {
           __typename?: 'Purchase';
           id: string;
           purchaseDate: string;
@@ -21137,9 +21370,14 @@ export type MoveShoppingListItemMutation = {
           totalPrice: number;
           itemName: string;
           unitSymbol: string;
-        }>
-      | null
-      | undefined;
+        };
+      }>;
+      pageInfo: {
+        __typename?: 'PageInfo';
+        hasNextPage: boolean;
+        endCursor?: string | null | undefined;
+      };
+    };
   };
 };
 
@@ -21313,8 +21551,13 @@ export type ToggleShoppingListItemPurchasedMutation = {
         }
       | null
       | undefined;
-    purchases?:
-      | Array<{
+    purchasesConnection: {
+      __typename?: 'PurchaseConnection';
+      totalCount: number;
+      edges: Array<{
+        __typename?: 'PurchaseEdge';
+        cursor: string;
+        node: {
           __typename?: 'Purchase';
           id: string;
           purchaseDate: string;
@@ -21323,9 +21566,14 @@ export type ToggleShoppingListItemPurchasedMutation = {
           totalPrice: number;
           itemName: string;
           unitSymbol: string;
-        }>
-      | null
-      | undefined;
+        };
+      }>;
+      pageInfo: {
+        __typename?: 'PageInfo';
+        hasNextPage: boolean;
+        endCursor?: string | null | undefined;
+      };
+    };
   };
 };
 
@@ -21499,8 +21747,13 @@ export type UpdateShoppingListItemQuantityMutation = {
         }
       | null
       | undefined;
-    purchases?:
-      | Array<{
+    purchasesConnection: {
+      __typename?: 'PurchaseConnection';
+      totalCount: number;
+      edges: Array<{
+        __typename?: 'PurchaseEdge';
+        cursor: string;
+        node: {
           __typename?: 'Purchase';
           id: string;
           purchaseDate: string;
@@ -21509,9 +21762,14 @@ export type UpdateShoppingListItemQuantityMutation = {
           totalPrice: number;
           itemName: string;
           unitSymbol: string;
-        }>
-      | null
-      | undefined;
+        };
+      }>;
+      pageInfo: {
+        __typename?: 'PageInfo';
+        hasNextPage: boolean;
+        endCursor?: string | null | undefined;
+      };
+    };
   };
 };
 
@@ -21685,8 +21943,13 @@ export type UpdateShoppingListItemNotesMutation = {
         }
       | null
       | undefined;
-    purchases?:
-      | Array<{
+    purchasesConnection: {
+      __typename?: 'PurchaseConnection';
+      totalCount: number;
+      edges: Array<{
+        __typename?: 'PurchaseEdge';
+        cursor: string;
+        node: {
           __typename?: 'Purchase';
           id: string;
           purchaseDate: string;
@@ -21695,9 +21958,14 @@ export type UpdateShoppingListItemNotesMutation = {
           totalPrice: number;
           itemName: string;
           unitSymbol: string;
-        }>
-      | null
-      | undefined;
+        };
+      }>;
+      pageInfo: {
+        __typename?: 'PageInfo';
+        hasNextPage: boolean;
+        endCursor?: string | null | undefined;
+      };
+    };
   };
 };
 
@@ -21871,8 +22139,13 @@ export type UpdateShoppingListItemPriorityMutation = {
         }
       | null
       | undefined;
-    purchases?:
-      | Array<{
+    purchasesConnection: {
+      __typename?: 'PurchaseConnection';
+      totalCount: number;
+      edges: Array<{
+        __typename?: 'PurchaseEdge';
+        cursor: string;
+        node: {
           __typename?: 'Purchase';
           id: string;
           purchaseDate: string;
@@ -21881,9 +22154,14 @@ export type UpdateShoppingListItemPriorityMutation = {
           totalPrice: number;
           itemName: string;
           unitSymbol: string;
-        }>
-      | null
-      | undefined;
+        };
+      }>;
+      pageInfo: {
+        __typename?: 'PageInfo';
+        hasNextPage: boolean;
+        endCursor?: string | null | undefined;
+      };
+    };
   };
 };
 
@@ -22083,8 +22361,13 @@ export type SyncShoppingListItemMutation = {
               }
             | null
             | undefined;
-          purchases?:
-            | Array<{
+          purchasesConnection: {
+            __typename?: 'PurchaseConnection';
+            totalCount: number;
+            edges: Array<{
+              __typename?: 'PurchaseEdge';
+              cursor: string;
+              node: {
                 __typename?: 'Purchase';
                 id: string;
                 purchaseDate: string;
@@ -22093,9 +22376,14 @@ export type SyncShoppingListItemMutation = {
                 totalPrice: number;
                 itemName: string;
                 unitSymbol: string;
-              }>
-            | null
-            | undefined;
+              };
+            }>;
+            pageInfo: {
+              __typename?: 'PageInfo';
+              hasNextPage: boolean;
+              endCursor?: string | null | undefined;
+            };
+          };
         }
       | null
       | undefined;
@@ -22337,8 +22625,13 @@ export type SyncMoveShoppingListItemMutation = {
               }
             | null
             | undefined;
-          purchases?:
-            | Array<{
+          purchasesConnection: {
+            __typename?: 'PurchaseConnection';
+            totalCount: number;
+            edges: Array<{
+              __typename?: 'PurchaseEdge';
+              cursor: string;
+              node: {
                 __typename?: 'Purchase';
                 id: string;
                 purchaseDate: string;
@@ -22347,9 +22640,14 @@ export type SyncMoveShoppingListItemMutation = {
                 totalPrice: number;
                 itemName: string;
                 unitSymbol: string;
-              }>
-            | null
-            | undefined;
+              };
+            }>;
+            pageInfo: {
+              __typename?: 'PageInfo';
+              hasNextPage: boolean;
+              endCursor?: string | null | undefined;
+            };
+          };
         }
       | null
       | undefined;
@@ -22672,8 +22970,13 @@ export type ShoppingListItemsChangedSubscription = {
                   }
                 | null
                 | undefined;
-              purchases?:
-                | Array<{
+              purchasesConnection: {
+                __typename?: 'PurchaseConnection';
+                totalCount: number;
+                edges: Array<{
+                  __typename?: 'PurchaseEdge';
+                  cursor: string;
+                  node: {
                     __typename?: 'Purchase';
                     id: string;
                     purchaseDate: string;
@@ -22682,9 +22985,14 @@ export type ShoppingListItemsChangedSubscription = {
                     totalPrice: number;
                     itemName: string;
                     unitSymbol: string;
-                  }>
-                | null
-                | undefined;
+                  };
+                }>;
+                pageInfo: {
+                  __typename?: 'PageInfo';
+                  hasNextPage: boolean;
+                  endCursor?: string | null | undefined;
+                };
+              };
             }
           | null
           | undefined;
@@ -22958,8 +23266,13 @@ export type ShoppingListItemAddedSubscription = {
         }
       | null
       | undefined;
-    purchases?:
-      | Array<{
+    purchasesConnection: {
+      __typename?: 'PurchaseConnection';
+      totalCount: number;
+      edges: Array<{
+        __typename?: 'PurchaseEdge';
+        cursor: string;
+        node: {
           __typename?: 'Purchase';
           id: string;
           purchaseDate: string;
@@ -22968,9 +23281,14 @@ export type ShoppingListItemAddedSubscription = {
           totalPrice: number;
           itemName: string;
           unitSymbol: string;
-        }>
-      | null
-      | undefined;
+        };
+      }>;
+      pageInfo: {
+        __typename?: 'PageInfo';
+        hasNextPage: boolean;
+        endCursor?: string | null | undefined;
+      };
+    };
   };
 };
 
@@ -23142,8 +23460,13 @@ export type ShoppingListItemUpdatedSubscription = {
         }
       | null
       | undefined;
-    purchases?:
-      | Array<{
+    purchasesConnection: {
+      __typename?: 'PurchaseConnection';
+      totalCount: number;
+      edges: Array<{
+        __typename?: 'PurchaseEdge';
+        cursor: string;
+        node: {
           __typename?: 'Purchase';
           id: string;
           purchaseDate: string;
@@ -23152,9 +23475,14 @@ export type ShoppingListItemUpdatedSubscription = {
           totalPrice: number;
           itemName: string;
           unitSymbol: string;
-        }>
-      | null
-      | undefined;
+        };
+      }>;
+      pageInfo: {
+        __typename?: 'PageInfo';
+        hasNextPage: boolean;
+        endCursor?: string | null | undefined;
+      };
+    };
   };
 };
 

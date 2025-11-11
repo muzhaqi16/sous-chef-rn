@@ -9,7 +9,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
   FlatList,
 } from 'react-native';
@@ -43,6 +42,7 @@ import {
   createAddToParentConnectionUpdater,
   createAddToQueryFieldUpdater,
 } from '#/apollo/utils';
+import { toastService } from '#/services/toastService';
 
 type RecipeDetailRouteProp = RouteProp<RecipeStackParamList, 'RecipeDetail'>;
 
@@ -343,7 +343,7 @@ export const RecipeDetail: React.FC = () => {
       setRecipeSaved(true);
     } catch (err: any) {
       console.error('Failed to save recipe:', err);
-      Alert.alert('Error', 'Failed to save recipe. Please try again.');
+      toastService.error('Failed to save recipe. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -354,7 +354,7 @@ export const RecipeDetail: React.FC = () => {
     async (ingredient: any) => {
       const defaultShoppingList = getDefaultShoppingList();
       if (!defaultShoppingList) {
-        Alert.alert('No Shopping List', 'Please create a shopping list first.');
+        toastService.error('Please create a shopping list first.');
         return;
       }
 
@@ -392,7 +392,7 @@ export const RecipeDetail: React.FC = () => {
         setAddedIngredients(prev => new Set(prev).add(ingredient.id));
       } catch (error) {
         console.error('Failed to add ingredient:', error);
-        Alert.alert('Error', 'Failed to add ingredient to shopping list.');
+        toastService.error('Failed to add ingredient to shopping list.');
       }
     },
     [
@@ -408,7 +408,7 @@ export const RecipeDetail: React.FC = () => {
   const handleAddAllIngredientsToList = useCallback(async () => {
     const defaultShoppingList = getDefaultShoppingList();
     if (!defaultShoppingList) {
-      Alert.alert('No Shopping List', 'Please create a shopping list first.');
+      toastService.error('Please create a shopping list first.');
       return;
     }
 
@@ -471,11 +471,11 @@ export const RecipeDetail: React.FC = () => {
           return next;
         });
       } else {
-        Alert.alert('Error', 'No ingredients available to add.');
+        toastService.error('No ingredients available to add.');
       }
     } catch (error) {
       console.error('Failed to add ingredients:', error);
-      Alert.alert('Error', 'Failed to add ingredients to shopping list.');
+      toastService.error('Failed to add ingredients to shopping list.');
     } finally {
       setAddingToList(false);
     }
@@ -492,16 +492,13 @@ export const RecipeDetail: React.FC = () => {
 
   const handleAddAllIngredients = useCallback(async () => {
     if (!backendRecipe || !recipeId) {
-      Alert.alert(
-        'Error',
-        'Cannot add ingredients from external recipes yet. Please save the recipe first.',
-      );
+      toastService.error('Cannot add ingredients from external recipes yet. Please save the recipe first.');
       return;
     }
 
     const defaultShoppingList = getDefaultShoppingList();
     if (!defaultShoppingList) {
-      Alert.alert('No Shopping List', 'Please create a shopping list first.');
+      toastService.error('Please create a shopping list first.');
       return;
     }
 
@@ -519,8 +516,7 @@ export const RecipeDetail: React.FC = () => {
 
       const data = result.data?.createShoppingListItemsFromRecipe;
       if (data) {
-        Alert.alert(
-          'Success!',
+        toastService.success(
           `Added ${data.totalAdded} items, updated ${data.totalUpdated} items${
             data.totalSkipped > 0 ? `, skipped ${data.totalSkipped} items` : ''
           }`,
@@ -528,7 +524,7 @@ export const RecipeDetail: React.FC = () => {
       }
     } catch (error) {
       console.error('Failed to add ingredients:', error);
-      Alert.alert('Error', 'Failed to add ingredients to shopping list.');
+      toastService.error('Failed to add ingredients to shopping list.');
     } finally {
       setAddingToList(false);
     }
@@ -562,16 +558,13 @@ export const RecipeDetail: React.FC = () => {
   const handleAddSelectedIngredients = useCallback(async () => {
     if (!backendRecipe || !recipeId) return;
     if (selectedIngredients.size === 0) {
-      Alert.alert(
-        'No Ingredients Selected',
-        'Please select at least one ingredient.',
-      );
+      toastService.error('Please select at least one ingredient.');
       return;
     }
 
     const defaultShoppingList = getDefaultShoppingList();
     if (!defaultShoppingList) {
-      Alert.alert('No Shopping List', 'Please create a shopping list first.');
+      toastService.error('Please create a shopping list first.');
       return;
     }
 
@@ -602,14 +595,13 @@ export const RecipeDetail: React.FC = () => {
         }
       }
 
-      Alert.alert(
-        'Success!',
+      toastService.success(
         `Added ${addedCount} new items, updated ${updatedCount} existing items`,
       );
       setSelectedIngredients(new Set());
     } catch (error) {
       console.error('Failed to add selected ingredients:', error);
-      Alert.alert('Error', 'Failed to add ingredients to shopping list.');
+      toastService.error('Failed to add ingredients to shopping list.');
     } finally {
       setAddingToList(false);
     }

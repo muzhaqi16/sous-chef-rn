@@ -10,6 +10,7 @@ import { PaginationFooter } from '#/components/organisms/PaginationFooter';
 import { ScrollView, RefreshControl } from 'react-native-gesture-handler';
 import { useApolloClient } from '@apollo/client/react';
 import { useAppNavigation } from '#hooks';
+import { toastService } from '#/services/toastService';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
   ShoppingListItemFragmentDoc,
@@ -185,7 +186,15 @@ export const ShoppingListMain: React.FC = () => {
       // Find the moved item
       const movedItem = items.find(item => item.id === variables.input.itemId);
       if (!movedItem) {
-        return { __typename: 'Mutation', moveShoppingListItem: null as any };
+        // Return the first item as a fallback - the real mutation will handle errors
+        // This prevents type errors while still allowing the mutation to proceed
+        return {
+          __typename: 'Mutation',
+          moveShoppingListItem: items[0] || {
+            __typename: 'ShoppingListItem',
+            id: variables.input.itemId,
+          },
+        };
       }
 
       // Calculate optimistic sortOrder using fractional indexing
@@ -486,7 +495,7 @@ export const ShoppingListMain: React.FC = () => {
         });
       } catch (error) {
         console.error('Failed to move item:', error);
-        Alert.alert('Error', 'Failed to reorder items');
+        toastService.error('Failed to reorder items');
       }
     },
     [currentListId, moveItem, items],
@@ -561,7 +570,7 @@ export const ShoppingListMain: React.FC = () => {
           return;
         }
         console.error('Failed to update quantity:', error);
-        Alert.alert('Error', 'Failed to update quantity');
+        toastService.error('Failed to update quantity');
       }
     },
     [updateQuantity, refetchItems, client],
@@ -634,7 +643,7 @@ export const ShoppingListMain: React.FC = () => {
           return;
         }
         console.error('Failed to update quantity:', error);
-        Alert.alert('Error', 'Failed to update quantity');
+        toastService.error('Failed to update quantity');
       }
     },
     [updateQuantity, refetchItems, client],
@@ -717,7 +726,7 @@ export const ShoppingListMain: React.FC = () => {
   const handleAddItemFromSearch = useCallback(
     async (itemName: string) => {
       if (!currentListId) {
-        Alert.alert('Error', 'Please select a shopping list first');
+        toastService.error('Please select a shopping list first');
         return;
       }
 
@@ -730,10 +739,10 @@ export const ShoppingListMain: React.FC = () => {
         if (result) {
           setSearchQuery(''); // Clear search after adding
         } else {
-          Alert.alert('Error', 'Failed to add item');
+          toastService.error('Failed to add item');
         }
       } catch (error) {
-        Alert.alert('Error', 'Failed to add item');
+        toastService.error('Failed to add item');
       }
     },
     [currentListId, addItem, setSearchQuery],
@@ -745,7 +754,7 @@ export const ShoppingListMain: React.FC = () => {
       // OPTIMIZATION: No refetch needed - removeItem updates cache via cache.modify
       // Cache automatically updates via Apollo's normalized cache
     } catch (error) {
-      Alert.alert('Error', 'Failed to delete item');
+      toastService.error('Failed to delete item');
     }
   };
 
@@ -761,7 +770,7 @@ export const ShoppingListMain: React.FC = () => {
       // OPTIMIZATION: No refetch needed - each removeItem updates cache via cache.modify
       // Cache automatically updates via Apollo's normalized cache
     } catch (error) {
-      Alert.alert('Error', 'Failed to clear purchased items');
+      toastService.error('Failed to clear purchased items');
     }
   }, [items, removeItem]);
 
@@ -981,8 +990,7 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.border,
   },
   selectorItemSelected: {
-    backgroundColor:
-      (theme.colors as any).primaryLight || theme.colors.primary + '10',
+    backgroundColor: theme.colors.primaryLight,
     borderColor: theme.colors.primary,
   },
   selectorItemInfo: {

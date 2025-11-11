@@ -82,7 +82,7 @@ const styles = StyleSheet.create(theme => ({
   iconContainer: {
     marginBottom: theme.spacing.md,
     padding: theme.spacing.md,
-    backgroundColor: (theme.colors as any).primaryLight || theme.colors.primary + '20',
+    backgroundColor: theme.colors.primaryLight,
     borderRadius: theme.radii.full,
   },
 }));

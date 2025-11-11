@@ -106,9 +106,19 @@ fragment ShoppingListItemFragment on ShoppingListItem {
   purchasedBy {
     ...PartialUser
   }
-  # Purchase history
-  purchases {
-    ...PurchaseFragment
+  # Purchase history (paginated connection for performance)
+  purchasesConnection(first: 10) {
+    edges {
+      cursor
+      node {
+        ...PurchaseFragment
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
   }
 }
 

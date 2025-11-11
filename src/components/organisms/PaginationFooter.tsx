@@ -52,7 +52,6 @@ export const PaginationFooter: React.FC<PaginationFooterProps> = ({
   showActivityIndicator = true,
 }) => {
   const { theme } = useUnistyles();
-  const styles = stylesheet(theme);
 
   // Show loading indicator when loading more items
   if (isLoadingMore) {
@@ -83,7 +82,7 @@ export const PaginationFooter: React.FC<PaginationFooterProps> = ({
   return null;
 };
 
-const stylesheet = (theme: any) => StyleSheet.create({
+const styles = StyleSheet.create(theme => ({
   footerLoader: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -95,7 +94,7 @@ const stylesheet = (theme: any) => StyleSheet.create({
     marginRight: theme.spacing.xs,
   },
   footerText: {
-    fontSize: theme.fontSize.sm,
+    fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
   },
   footerHint: {
@@ -103,8 +102,8 @@ const stylesheet = (theme: any) => StyleSheet.create({
     alignItems: 'center',
   },
   footerHintText: {
-    fontSize: theme.fontSize.xs,
+    fontSize: theme.typography.fontSize.xs,
     color: theme.colors.textTertiary,
     fontStyle: 'italic',
   },
-});
+}));

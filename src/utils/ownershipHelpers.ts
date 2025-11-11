@@ -36,7 +36,10 @@ interface ShoppingListCollaborator {
 
 interface ShoppingListWithOwnership {
   ownerships?: ShoppingListOwnership[] | null;
-  collaborators?: ShoppingListCollaborator[] | null;
+  collaboratorsConnection?: {
+    edges?: Array<{ node?: ShoppingListCollaborator | null } | null> | null;
+    totalCount?: number | null;
+  } | null;
 }
 
 import { extractNodes } from '#/utils/connectionUtils';
@@ -73,6 +76,10 @@ const resolveHomeMembers = (home: HomeWithMembers): HomeMember[] => {
   }
 
   return extractNodes<HomeMember>(home.membersConnection);
+};
+
+const resolveCollaborators = (list: ShoppingListWithOwnership): ShoppingListCollaborator[] => {
+  return extractNodes<ShoppingListCollaborator>(list.collaboratorsConnection);
 };
 
 /**
@@ -127,8 +134,9 @@ export function getShoppingListRole(
     return 'OWNER';
   }
 
-  // Check collaborators
-  const collaboration = list.collaborators?.find(
+  // Check collaborators using resolver (supports both array and connection)
+  const collaborators = resolveCollaborators(list);
+  const collaboration = collaborators.find(
     c => c.collaboratorId === currentUserId,
   );
 

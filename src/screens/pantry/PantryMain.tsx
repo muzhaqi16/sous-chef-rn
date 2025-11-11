@@ -4,7 +4,7 @@ import { PaginationFooter } from '#/components/organisms/PaginationFooter';
 import { useAppNavigation } from '#hooks';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
 import { useDefaultHome, usePantryManagement } from '#hooks';
-import { useStore } from '#store';
+import { useAppStore, selectSelectedPantryId } from '#store/useAppStore';
 import {
   useGetHomeBasicQuery,
   useCreatePantryItemUsageMutation,
@@ -44,8 +44,8 @@ export const PantryMain: React.FC = () => {
     showOnMount: false, // We'll manually trigger when appropriate
   });
 
-  const setSelectedPantryId = useStore(state => state.setSelectedPantryId);
-  const selectedPantryId = useStore(state => state.selectedPantryId);
+  const setSelectedPantryId = useAppStore(state => state.setSelectedPantryId);
+  const selectedPantryId = useAppStore(selectSelectedPantryId);
   const selectorRef = useRef<ItemSelectorRef>(null);
   const openSwipeableRef = useRef<any>(null);
 

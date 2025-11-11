@@ -89,16 +89,26 @@ query GetShoppingList(
     ownerships {
       ...ShoppingListOwnershipFragment
     }
-    collaborators {
-      ...ShoppingListCollaboratorFragment
-      canEdit
-      canAddItems
-      canRemoveItems
-      canEditItems
-      canMarkPurchased
-      canInviteOthers
-      invitedAt
-      lastViewedAt
+    collaboratorsConnection(first: 20) {
+      edges {
+        cursor
+        node {
+          ...ShoppingListCollaboratorFragment
+          canEdit
+          canAddItems
+          canRemoveItems
+          canEditItems
+          canMarkPurchased
+          canInviteOthers
+          invitedAt
+          lastViewedAt
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      totalCount
     }
     targetStore {
       id
@@ -152,20 +162,30 @@ query GetShoppingLists {
       }
       createdAt
     }
-    collaborators {
-      id
-      email
-      role
-      status
-      collaboratorId
-      collaborator {
-        id
-        email
-        profile {
-          displayName
-          avatar
+    collaboratorsConnection(first: 20) {
+      edges {
+        cursor
+        node {
+          id
+          email
+          role
+          status
+          collaboratorId
+          collaborator {
+            id
+            email
+            profile {
+              displayName
+              avatar
+            }
+          }
         }
       }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      totalCount
     }
   }
 }
@@ -202,8 +222,18 @@ query GetDefaultShoppingList {
     ownerships {
       ...ShoppingListOwnershipFragment
     }
-    collaborators {
-      ...ShoppingListCollaboratorFragment
+    collaboratorsConnection(first: 20) {
+      edges {
+        cursor
+        node {
+          ...ShoppingListCollaboratorFragment
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      totalCount
     }
   }
 }
@@ -263,8 +293,18 @@ mutation CreateShoppingList($input: CreateShoppingListInput!) {
       }
       totalCount
     }
-    collaborators {
-      ...ShoppingListCollaboratorFragment
+    collaboratorsConnection(first: 20) {
+      edges {
+        cursor
+        node {
+          ...ShoppingListCollaboratorFragment
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      totalCount
     }
     ownerships {
       ...ShoppingListOwnershipFragment
@@ -303,8 +343,18 @@ mutation UpdateShoppingList($id: ID!, $input: UpdateShoppingListInput!) {
       }
       totalCount
     }
-    collaborators {
-      ...ShoppingListCollaboratorFragment
+    collaboratorsConnection(first: 20) {
+      edges {
+        cursor
+        node {
+          ...ShoppingListCollaboratorFragment
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      totalCount
     }
     ownerships {
       ...ShoppingListOwnershipFragment
