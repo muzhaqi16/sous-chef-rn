@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo } from 'react';
 import { Alert } from 'react-native';
 import { generateId } from '#/utils/generateId';
 import {
@@ -20,6 +20,25 @@ import {
   handleVersionConflict,
   getVersionConflictMessage,
 } from '#/utils/errors/versionConflict';
+import { usePagination, useCrudOperations } from '#/hooks/utils';
+import {
+  createAddToParentConnectionUpdater,
+  createRemoveFromParentConnectionUpdater,
+} from '#/apollo/utils';
+import { pantryItemSearch } from '#/utils/searchUtils';
+
+// Cache updater utilities for pantry items
+const addToPantryItemsCache = createAddToParentConnectionUpdater(
+  'Pantry',
+  'itemsConnection',
+  'PantryItem',
+);
+
+const removeFromPantryItemsCache = createRemoveFromParentConnectionUpdater(
+  'Pantry',
+  'itemsConnection',
+  'PantryItem',
+);
 
 export interface PantryItemInput {
   itemName: string;
@@ -79,18 +98,12 @@ export function usePantryManagement(pantryId: string | undefined) {
     [normalizedPantry],
   );
 
-  // Search functionality
+  // Search functionality - using reusable search utility
   const {
     query: searchQuery,
     setQuery: setSearchQuery,
     filtered: filteredItems,
-  } = useSearchableList(pantryItems, (item, q) => {
-    const searchTerm = q.toLowerCase();
-    return (
-      item?.item?.name?.toLowerCase().includes(searchTerm) ||
-      item?.itemName?.toLowerCase().includes(searchTerm)
-    );
-  });
+  } = useSearchableList(pantryItems, pantryItemSearch);
 
   // Simple stats calculation
   const stats = useMemo(() => {
@@ -131,28 +144,19 @@ export function usePantryManagement(pantryId: string | undefined) {
     };
   }, [pantryItems]);
 
-  // Pagination state
-  const hasMore = normalizedPantry?.itemsPageInfo?.hasNextPage || false;
-  const endCursor = normalizedPantry?.itemsPageInfo?.endCursor;
+  // Pagination using generic utility hook
+  const { hasMore, loadMore, isLoadingMore } = usePagination({
+    pageInfo: normalizedPantry?.itemsPageInfo,
+    loading,
+    itemCount: pantryItems.length,
+    fetchMore,
+    fetchMoreVariables: { id: pantryId },
+    cursorVariableName: 'itemsCursor',
+  });
 
-  // Load more handler for infinite scroll
-  const loadMore = useCallback(async () => {
-    if (!hasMore || loading || !endCursor || !pantryId) {
-      return;
-    }
-
-    try {
-      await fetchMore({
-        variables: {
-          id: pantryId,
-          itemsCursor: endCursor,
-        },
-      });
-    } catch (error) {
-      console.error('Failed to load more pantry items:', error);
-      // Fail silently - user can try scrolling again
-    }
-  }, [hasMore, loading, endCursor, pantryId, fetchMore]);
+  // CRUD operations utilities
+  const { createAddOperation, createUpdateOperation, createRemoveOperation } =
+    useCrudOperations();
 
   // Mutations with optimistic updates
   const [addItemMutation] = useCreatePantryItemMutation({
@@ -192,54 +196,12 @@ export function usePantryManagement(pantryId: string | undefined) {
         } as any, // Optimistic response - will be replaced by server response
       };
     },
-    // Update Apollo cache directly instead of refetching
+    // Update Apollo cache using generic utility
     update: (cache: any, { data }: any) => {
       if (!data?.createPantryItem || !pantryId) return;
 
       try {
-        // Modify the Pantry.itemsConnection field in the cache
-        const pantryCacheId = cache.identify({
-          __typename: 'Pantry',
-          id: pantryId,
-        });
-
-        if (!pantryCacheId) return;
-
-        cache.modify({
-          id: pantryCacheId,
-          fields: {
-            itemsConnection(
-              existingConnection: any = {},
-              { readField, toReference }: any,
-            ) {
-              const newItemRef = toReference(data.createPantryItem);
-              const existingEdges = existingConnection?.edges || [];
-
-              // Check if item already exists (avoid duplicates)
-              const exists = existingEdges.some(
-                (edge: any) =>
-                  readField('id', edge?.node) === data.createPantryItem.id,
-              );
-
-              if (exists) {
-                return existingConnection;
-              }
-
-              // Add new item at the beginning of the list
-              const newEdge = {
-                __typename: 'PantryItemEdge',
-                node: newItemRef,
-                cursor: '', // Will be populated on next fetch
-              };
-
-              return {
-                ...existingConnection,
-                edges: [newEdge, ...existingEdges],
-                totalCount: (existingConnection?.totalCount || 0) + 1,
-              };
-            },
-          },
-        });
+        addToPantryItemsCache(cache, pantryId, data.createPantryItem);
       } catch (error) {
         console.warn('Cache update failed for addItem, will refetch:', error);
         // Fallback: refetch if cache update fails
@@ -318,29 +280,13 @@ export function usePantryManagement(pantryId: string | undefined) {
     // The cache update function below provides instant UI feedback for both online and offline scenarios
     // This approach avoids cache normalization warnings and aligns with delete patterns used
     // in useHomeManagement and useShoppingListManagement
-    // Update cache to remove the item
+    // Update cache using generic utility
     update: (cache: any, { data }: any, { variables }: any) => {
       if (!data?.deletePantryItem || !pantryId || !variables) return;
 
       try {
         const itemId = variables.id;
-
-        // Remove the item from the cache
-        cache.modify({
-          fields: {
-            pantryItems(existingItems = [], { readField }: any) {
-              return existingItems.filter(
-                (itemRef: any) => readField('id', itemRef) !== itemId,
-              );
-            },
-          },
-        });
-
-        // Evict the removed item from cache
-        cache.evict({
-          id: cache.identify({ __typename: 'PantryItem', id: itemId }),
-        });
-        cache.gc(); // Garbage collect orphaned data
+        removeFromPantryItemsCache(cache, pantryId, itemId, { evictItem: true });
       } catch (error) {
         console.warn(
           'Cache update failed for removeItem, will refetch:',
@@ -351,69 +297,49 @@ export function usePantryManagement(pantryId: string | undefined) {
     },
   });
 
-  // Simplified add item
-  const addItem = async (input: PantryItemInput) => {
-    if (!pantryId) return false;
+  // Simplified add item using CRUD utilities
+  const addItem = createAddOperation({
+    mutation: addItemMutation,
+    parentId: pantryId,
+    transformInput: (input: PantryItemInput) => ({
+      pantryId,
+      initialQuantity: input.quantity,
+      itemName: input.itemName,
+      unitId: input.unitId,
+      storageState: input.storageState,
+      ...(input.brand && { itemBrand: input.brand }),
+      ...(input.location && { storageLocation: input.location }),
+      ...(input.expirationDate && { expiresAt: input.expirationDate }),
+      ...(input.notes && { storageNotes: input.notes }),
+      ...(input.category && { itemCategory: input.category }),
+      ...(input.barcode && { itemUpc: input.barcode }),
+    }),
+    onSuccess: (data: any) => data?.createPantryItem,
+    operationName: 'Add Pantry Item',
+  });
 
-    try {
-      const result = await addItemMutation({
-        variables: {
-          input: {
-            pantryId,
-            initialQuantity: input.quantity,
-            itemName: input.itemName,
-            unitId: input.unitId,
-            storageState: input.storageState,
-            ...(input.brand && { itemBrand: input.brand }),
-            ...(input.location && { storageLocation: input.location }),
-            ...(input.expirationDate && { expiresAt: input.expirationDate }),
-            ...(input.notes && { storageNotes: input.notes }),
-            ...(input.category && { itemCategory: input.category }),
-            ...(input.barcode && { itemUpc: input.barcode }),
-          },
-        },
-      });
-
-      return result.data?.createPantryItem ?? false;
-    } catch (error) {
-      console.error('Add pantry item error:', error);
-      return false;
-    }
-  };
-
-  // Simplified update item
+  // Simplified update item using CRUD utilities
   const updateItem = async (itemId: string, updates: PantryItemUpdate) => {
-    if (!pantryId) return false;
-
-    try {
-      const result = await updateItemMutation({
-        variables: {
-          id: itemId,
-          input: updates,
-        },
-      });
-
-      return result.data?.updatePantryItem ?? false;
-    } catch (error) {
-      console.error('Update pantry item error:', error);
-      return false;
-    }
+    const operation = createUpdateOperation({
+      mutation: updateItemMutation,
+      parentId: pantryId,
+      itemId,
+      onSuccess: (data: any) => data?.updatePantryItem,
+      onVersionConflict: refetch,
+      operationName: 'Update Pantry Item',
+    });
+    return operation(updates);
   };
 
-  // Simplified remove item
+  // Simplified remove item using CRUD utilities
   const removeItem = async (itemId: string) => {
-    if (!pantryId) return false;
-
-    try {
-      await removeItemMutation({
-        variables: { id: itemId },
-      });
-
-      return true;
-    } catch (error) {
-      console.error('Remove pantry item error:', error);
-      return false;
-    }
+    const operation = createRemoveOperation({
+      mutation: removeItemMutation,
+      parentId: pantryId,
+      itemId,
+      operationName: 'Delete Pantry Item',
+    });
+    return operation();
   };
 
   return {
@@ -427,7 +353,7 @@ export function usePantryManagement(pantryId: string | undefined) {
     // Pagination
     loadMore,
     hasMore,
-    isLoadingMore: loading && pantryItems.length > 0,
+    isLoadingMore,
 
     // Search
     searchQuery,

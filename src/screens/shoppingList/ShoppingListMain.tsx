@@ -6,6 +6,7 @@ import React, {
   useState,
 } from 'react';
 import { Alert, Image, View, Text, TouchableOpacity } from 'react-native';
+import { PaginationFooter } from '#/components/organisms/PaginationFooter';
 import { ScrollView, RefreshControl } from 'react-native-gesture-handler';
 import { useApolloClient } from '@apollo/client/react';
 import { useAppNavigation } from '#hooks';
@@ -38,7 +39,7 @@ import type {
 } from '#components/organisms/AnimatedItemSelector';
 import type { SortableShoppingListItem } from '#components/organisms/SortableShoppingList';
 import { useShoppingListManagement } from '#/hooks';
-import { useStore } from '#/store';
+import { useAppStore, selectSelectedShoppingListId } from '#store/useAppStore';
 import { IconLibrary } from '#/utils/iconUtils';
 import { ShoppingListItemCounter } from '#/components/molecules/ShoppingListItemCounter';
 import { commonStyles } from '#/styles';
@@ -170,7 +171,8 @@ export const ShoppingListMain: React.FC = () => {
   } = useUnistyles();
   const { primary: primaryColor, primaryLight: primaryLightColor } = colors;
   // Step 2: Use the extracted variables INSIDE useMemo
-  const { selectedShoppingListId, setSelectedShoppingListId } = useStore();
+  const selectedShoppingListId = useAppStore(selectSelectedShoppingListId);
+  const setSelectedShoppingListId = useAppStore(state => state.setSelectedShoppingListId);
   const { user } = useAuth();
   const selectorRef = useRef<ItemSelectorRef>(null);
   const { setScannerProps, setOverlayOpen } = useScanner();
@@ -861,25 +863,6 @@ export const ShoppingListMain: React.FC = () => {
     };
   }, [setScannerProps, handleScanPress]);
 
-  // Footer component for pagination
-  const ListFooter = useMemo(() => {
-    if (isLoadingMore) {
-      return (
-        <View style={styles.footerLoader}>
-          <Text style={styles.footerText}>Loading more items...</Text>
-        </View>
-      );
-    }
-    if (hasMore && !loading && items.length > 0) {
-      return (
-        <View style={styles.footerHint}>
-          <Text style={styles.footerHintText}>Scroll to load more</Text>
-        </View>
-      );
-    }
-    return null;
-  }, [isLoadingMore, hasMore, loading, items.length]);
-
   // If no lists exist at all
   if (lists.length === 0) {
     const noListsEmptyState = {
@@ -954,7 +937,14 @@ export const ShoppingListMain: React.FC = () => {
         }}
         onEndReached={loadMore}
         onEndReachedThreshold={0.5}
-        ListFooterComponent={ListFooter}
+        ListFooterComponent={
+          <PaginationFooter
+            isLoadingMore={isLoadingMore}
+            hasMore={hasMore}
+            loading={loading}
+            itemCount={items.length}
+          />
+        }
       />
 
       <AnimatedItemSelector
@@ -1007,22 +997,5 @@ const styles = StyleSheet.create(theme => ({
   selectorItemSubtext: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-  },
-  footerLoader: {
-    padding: theme.spacing.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  footerText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-  },
-  footerHint: {
-    padding: theme.spacing.md,
-    alignItems: 'center',
-  },
-  footerHintText: {
-    fontSize: theme.fonts.size.xs,
-    color: theme.colors.textTertiary,
   },
 }));

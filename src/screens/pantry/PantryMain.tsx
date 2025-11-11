@@ -1,5 +1,6 @@
 import React, { useMemo, useEffect, useCallback, useRef, useState } from 'react';
-import { Alert, View, Image, Text, ActivityIndicator } from 'react-native';
+import { Alert, View, Image } from 'react-native';
+import { PaginationFooter } from '#/components/organisms/PaginationFooter';
 import { useAppNavigation } from '#hooks';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
 import { useDefaultHome, usePantryManagement } from '#hooks';
@@ -565,26 +566,6 @@ export const PantryMain: React.FC = () => {
         },
       };
 
-  // Footer component for infinite scroll
-  const ListFooter = useMemo(() => {
-    if (isLoadingMore) {
-      return (
-        <View style={styles.footerLoader}>
-          <ActivityIndicator size="small" color={theme.colors.primary} />
-          <Text style={styles.footerText}>Loading more items...</Text>
-        </View>
-      );
-    }
-    if (hasMore && !loading && items.length > 0) {
-      return (
-        <View style={styles.footerHint}>
-          <Text style={styles.footerHintText}>Scroll to load more</Text>
-        </View>
-      );
-    }
-    return null;
-  }, [isLoadingMore, hasMore, loading, items.length, theme.colors.primary]);
-
   return (
     <View style={styles.container}>
       <ListTemplate
@@ -602,7 +583,14 @@ export const PantryMain: React.FC = () => {
         onSwipeableWillOpen={handleSwipeableWillOpen}
         onEndReached={loadMore}
         onEndReachedThreshold={0.5}
-        ListFooterComponent={ListFooter}
+        ListFooterComponent={
+          <PaginationFooter
+            isLoadingMore={isLoadingMore}
+            hasMore={hasMore}
+            loading={loading}
+            itemCount={items.length}
+          />
+        }
         loading={isLoadingInitial}
         hasNoData={!selectedHomeId}
         showHeader={true}
@@ -654,22 +642,5 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-  },
-  footerLoader: {
-    padding: theme.spacing.lg,
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-  },
-  footerText: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
-  },
-  footerHint: {
-    padding: theme.spacing.md,
-    alignItems: 'center',
-  },
-  footerHintText: {
-    fontSize: theme.fonts.size.xs,
-    color: theme.colors.textTertiary,
   },
 }));

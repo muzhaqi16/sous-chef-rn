@@ -22,6 +22,23 @@ import { generateId } from '#/utils/generateId';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { useOfflineAwareFetchPolicy, OFFLINE_FETCH_POLICIES } from '#/apollo/policies/offlineFetchPolicies';
 import { normalizeShoppingList } from '#/utils/connectionUtils';
+import {
+  createAddToKeyedQueryFieldUpdater,
+  createRemoveFromQueryFieldUpdater,
+} from '#/apollo/utils';
+import { shoppingListItemSearch } from '#/utils/searchUtils';
+import { useCrudOperations } from '#/hooks/utils';
+
+// Cache updater utilities for shopping list items
+const addToShoppingListItemsCache = createAddToKeyedQueryFieldUpdater<any>(
+  'shoppingListItems',
+  'shoppingListId',
+);
+
+const removeFromShoppingListItemsCache = createRemoveFromQueryFieldUpdater(
+  'shoppingListItems',
+  'ShoppingListItem',
+);
 
 export interface ShoppingListItemInput {
   itemName: string;
@@ -82,18 +99,12 @@ export function useShoppingListManagement(listId: string | undefined) {
     [normalizedShoppingList],
   );
 
-  // Search functionality
+  // Search functionality - using reusable search utility
   const {
     query: searchQuery,
     setQuery: setSearchQuery,
     filtered: filteredItems,
-  } = useSearchableList(items, (item, q) => {
-    const searchTerm = q.toLowerCase();
-    return !!(
-      item?.itemName?.toLowerCase().includes(searchTerm) ||
-      item?.category?.toLowerCase().includes(searchTerm)
-    );
-  });
+  } = useSearchableList(items, shoppingListItemSearch);
 
   // Simple stats calculation
   const stats = useMemo(() => {
@@ -113,6 +124,9 @@ export function useShoppingListManagement(listId: string | undefined) {
   // Pagination state
   const hasMore = normalizedShoppingList?.itemsPageInfo?.hasNextPage || false;
   const endCursor = normalizedShoppingList?.itemsPageInfo?.endCursor;
+
+  // CRUD operations utilities
+  const { createAddOperation, createRemoveOperation } = useCrudOperations();
 
   // Load more handler for infinite scroll
   const loadMore = useCallback(async () => {
@@ -230,34 +244,8 @@ export function useShoppingListManagement(listId: string | undefined) {
       if (!data?.addItemToShoppingList || !listId) return;
 
       try {
-        // Modify the shoppingListItems field in the cache
-        cache.modify({
-          fields: {
-            shoppingListItems(existingItems = [], helpers: any) {
-              const { readField, toReference, args } = helpers;
-
-              // Only modify if this field belongs to the current shopping list
-              if (args?.shoppingListId !== listId) {
-                return existingItems;
-              }
-
-              const newItemRef = toReference(data.addItemToShoppingList);
-
-              // Check if item already exists (avoid duplicates)
-              const exists = existingItems.some(
-                (itemRef: any) =>
-                  readField('id', itemRef) === data.addItemToShoppingList.id,
-              );
-
-              if (exists) {
-                return existingItems;
-              }
-
-              // Add new item to the top of the list
-              return [newItemRef, ...existingItems];
-            },
-          },
-        });
+        // Add to cache using generic utility
+        addToShoppingListItemsCache(cache, data.addItemToShoppingList, listId);
       } catch (error) {
         console.warn('Cache update failed for addItem, will refetch:', error);
         // Fallback: refetch if cache update fails
@@ -314,28 +302,8 @@ export function useShoppingListManagement(listId: string | undefined) {
         // Save to optimistic persistence before removing
         optimisticDataPersistence.save('ShoppingListItem', itemId, '__deleted', true);
 
-        // Remove the item from the cache using cache.modify (proper approach)
-        cache.modify({
-          fields: {
-            shoppingListItems(existingItems = [], helpers: any) {
-              const { readField, args } = helpers;
-              // Only modify if this field belongs to the current shopping list
-              if (args?.shoppingListId !== listId) {
-                return existingItems;
-              }
-
-              return existingItems.filter(
-                (itemRef: any) => readField('id', itemRef) !== itemId,
-              );
-            },
-          },
-        });
-
-        // Evict the removed item from cache
-        cache.evict({
-          id: cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
-        });
-        cache.gc(); // Garbage collect orphaned data
+        // Remove from cache using generic utility (handles filter + evict + gc)
+        removeFromShoppingListItemsCache(cache, itemId, { evictItem: true });
       } catch (error) {
         console.warn(
           'Cache update failed for removeItem, will refetch:',
@@ -433,31 +401,22 @@ export function useShoppingListManagement(listId: string | undefined) {
     },
   });
 
-  // Simplified add item
-  const addItem = async (input: ShoppingListItemInput) => {
-    if (!listId) return false;
-
-    try {
-      const result = await addItemMutation({
-        variables: {
-          input: {
-            shoppingListId: listId,
-            itemName: input.itemName,
-            quantity: input.quantity ?? 1,
-            ...(input.unitName && { unitName: input.unitName }),
-            ...(input.unitId && { unitId: input.unitId }),
-            ...(input.notes && { notes: input.notes }),
-            ...(input.category && { category: input.category }),
-          },
-        },
-      });
-
-      return result.data?.addItemToShoppingList ?? false;
-    } catch (error) {
-      console.error('Add shopping list item error:', error);
-      return false;
-    }
-  };
+  // Simplified add item using CRUD utilities
+  const addItem = createAddOperation({
+    mutation: addItemMutation,
+    parentId: listId,
+    transformInput: (input: ShoppingListItemInput) => ({
+      shoppingListId: listId,
+      itemName: input.itemName,
+      quantity: input.quantity ?? 1,
+      ...(input.unitName && { unitName: input.unitName }),
+      ...(input.unitId && { unitId: input.unitId }),
+      ...(input.notes && { notes: input.notes }),
+      ...(input.category && { category: input.category }),
+    }),
+    onSuccess: (data: any) => data?.addItemToShoppingList,
+    operationName: 'Add Shopping List Item',
+  });
 
   // Simplified update item
   const updateItem = async (
@@ -558,20 +517,15 @@ export function useShoppingListManagement(listId: string | undefined) {
     }
   };
 
-  // Simplified remove item
+  // Simplified remove item using CRUD utilities
   const removeItem = async (itemId: string) => {
-    if (!listId) return false;
-
-    try {
-      await removeItemMutation({
-        variables: { id: itemId },
-      });
-
-      return true;
-    } catch (error) {
-      console.error('Remove shopping list item error:', error);
-      return false;
-    }
+    const operation = createRemoveOperation({
+      mutation: removeItemMutation,
+      parentId: listId,
+      itemId,
+      operationName: 'Delete Shopping List Item',
+    });
+    return operation();
   };
 
   // Toggle item purchased status

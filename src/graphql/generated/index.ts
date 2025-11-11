@@ -2854,6 +2854,7 @@ export type Mutation = {
   updatePurchase: Purchase;
   updatePushToken: Device;
   updateRecipe: Recipe;
+  updateRecipeIngredients: Recipe;
   updateRestriction: DietaryRestriction;
   updateRiskScore: UserModeration;
   updateSettings: UserSettings;
@@ -3920,6 +3921,11 @@ export type MutationUpdatePushTokenArgs = {
 export type MutationUpdateRecipeArgs = {
   id: Scalars['ID']['input'];
   input: UpdateRecipeInput;
+};
+
+export type MutationUpdateRecipeIngredientsArgs = {
+  ingredients: Array<RecipeIngredientInput>;
+  recipeId: Scalars['ID']['input'];
 };
 
 export type MutationUpdateRestrictionArgs = {

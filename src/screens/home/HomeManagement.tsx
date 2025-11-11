@@ -1,13 +1,14 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
-  ScrollView,
+  FlatList,
   TouchableOpacity,
   ActivityIndicator,
   TextInput,
   Alert,
   RefreshControl,
+  ListRenderItem,
 } from 'react-native';
 import Animated, {
   LinearTransition,
@@ -73,43 +74,46 @@ export const HomeManagement: React.FC = () => {
   // Mutations (create, delete, update) automatically update the cache
 
   const { show, InviteModalComponent } = useInviteUserModal();
-  const inviteUserPrompt = (homeId: string) => {
-    // Find the home and user's membership
-    const home = homes?.find(h => h.id === homeId);
-    if (!home) {
-      Alert.alert('Error', 'Home not found');
-      return;
-    }
+  const inviteUserPrompt = useCallback(
+    (homeId: string) => {
+      // Find the home and user's membership
+      const home = homes?.find(h => h.id === homeId);
+      if (!home) {
+        Alert.alert('Error', 'Home not found');
+        return;
+      }
 
-    const membership = findUserMembership(home.members, user?.id);
-    if (!membership) {
-      Alert.alert('Error', 'You are not a member of this home');
-      return;
-    }
+      const membership = findUserMembership(home.members, user?.id);
+      if (!membership) {
+        Alert.alert('Error', 'You are not a member of this home');
+        return;
+      }
 
-    // Check if user has permission to invite
-    if (!canInviteToHome(membership.role)) {
-      Alert.alert(
-        'Permission Denied',
-        'You do not have permission to invite members to this home',
-      );
-      return;
-    }
+      // Check if user has permission to invite
+      if (!canInviteToHome(membership.role)) {
+        Alert.alert(
+          'Permission Denied',
+          'You do not have permission to invite members to this home',
+        );
+        return;
+      }
 
-    // Get the roles this user can invite
-    const allowedRoles = getInvitableRoles(membership.role);
+      // Get the roles this user can invite
+      const allowedRoles = getInvitableRoles(membership.role);
 
-    show({
-      title: 'Invite Member to Home',
-      allowedRoles,
-      onSubmit: async (email, role) => {
-        // Just call the function and let any errors bubble up to the modal
-        // The modal will handle displaying the error and keeping itself open
-        await inviteUserToHome(homeId, email, role);
-        // If we reach here, the invitation was successful and the modal will close
-      },
-    });
-  };
+      show({
+        title: 'Invite Member to Home',
+        allowedRoles,
+        onSubmit: async (email, role) => {
+          // Just call the function and let any errors bubble up to the modal
+          // The modal will handle displaying the error and keeping itself open
+          await inviteUserToHome(homeId, email, role);
+          // If we reach here, the invitation was successful and the modal will close
+        },
+      });
+    },
+    [homes, user, show, inviteUserToHome],
+  );
 
   const handleCreateHome = async () => {
     if (!homeName.trim()) return;
@@ -144,34 +148,46 @@ export const HomeManagement: React.FC = () => {
     }
   };
 
-  const handleDeleteHome = async (homeId: string, name: string) => {
-    await deleteHome(homeId, name);
-  };
+  const handleDeleteHome = useCallback(
+    async (homeId: string, name: string) => {
+      await deleteHome(homeId, name);
+    },
+    [deleteHome],
+  );
 
-  const handleSetDefault = async (homeId: string) => {
-    // Clear any existing highlight timeout
-    if (highlightTimeoutRef.current) {
-      clearTimeout(highlightTimeoutRef.current);
-    }
+  const handleSetDefault = useCallback(
+    async (homeId: string) => {
+      // Clear any existing highlight timeout
+      if (highlightTimeoutRef.current) {
+        clearTimeout(highlightTimeoutRef.current);
+      }
 
-    await setDefaultHome(homeId);
+      await setDefaultHome(homeId);
 
-    // Highlight the newly-set default home
-    setHighlightedHomeId(homeId);
+      // Highlight the newly-set default home
+      setHighlightedHomeId(homeId);
 
-    // Auto-dismiss highlight after 2 seconds
-    highlightTimeoutRef.current = setTimeout(() => {
-      setHighlightedHomeId(null);
-    }, 2000);
-  };
+      // Auto-dismiss highlight after 2 seconds
+      highlightTimeoutRef.current = setTimeout(() => {
+        setHighlightedHomeId(null);
+      }, 2000);
+    },
+    [setDefaultHome],
+  );
 
-  const handleInviteMember = (homeId: string) => {
-    inviteUserPrompt(homeId);
-  };
+  const handleInviteMember = useCallback(
+    (homeId: string) => {
+      inviteUserPrompt(homeId);
+    },
+    [inviteUserPrompt],
+  );
 
-  const handleViewHomeDetail = (homeId: string) => {
-    navigate('HomeDetail', { homeId });
-  };
+  const handleViewHomeDetail = useCallback(
+    (homeId: string) => {
+      navigate('HomeDetail', { homeId });
+    },
+    [navigate],
+  );
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -183,6 +199,56 @@ export const HomeManagement: React.FC = () => {
       setRefreshing(false);
     }
   };
+
+  // Sort homes with default home first
+  const sortedHomes = useMemo(() => {
+    if (!homes) return [];
+    return [...homes].sort((a, b) => {
+      if (a.id === defaultHomeId) return -1;
+      if (b.id === defaultHomeId) return 1;
+      return 0;
+    });
+  }, [homes, defaultHomeId]);
+
+  // Render individual home item
+  const renderHomeItem: ListRenderItem<typeof sortedHomes[0]> = useCallback(
+    ({ item: home, index }) => {
+      const membership = findUserMembership(home.members, user?.id);
+      const userCanInvite = membership ? canInviteToHome(membership.role) : false;
+
+      return (
+        <Animated.View
+          key={home.id}
+          entering={FadeInDown.delay(index * 50).springify()}
+          layout={LinearTransition.duration(600)
+            .springify()
+            .damping(30)
+            .stiffness(180)
+            .mass(1.5)}
+        >
+          <HomeCard
+            home={home as PartialHome}
+            isDefault={home.id === defaultHomeId}
+            isHighlighted={home.id === highlightedHomeId}
+            canInvite={userCanInvite}
+            onPress={handleViewHomeDetail}
+            onSetDefault={handleSetDefault}
+            onInvite={handleInviteMember}
+            onDelete={handleDeleteHome}
+          />
+        </Animated.View>
+      );
+    },
+    [
+      defaultHomeId,
+      highlightedHomeId,
+      user,
+      handleViewHomeDetail,
+      handleSetDefault,
+      handleInviteMember,
+      handleDeleteHome,
+    ],
+  );
 
   // Only show loading screen on initial load (no cached data)
   // Once we have data, show it immediately even if refetching
@@ -335,13 +401,15 @@ export const HomeManagement: React.FC = () => {
           </Animated.View>
         )}
 
-        {/* Homes List */}
+        {/* Homes List - Virtualized */}
         <Animated.View
           layout={LinearTransition.duration(300)}
           style={styles.scrollView}
         >
-          <ScrollView
-            style={{ flex: 1 }}
+          <FlatList
+            data={sortedHomes}
+            keyExtractor={item => item.id}
+            renderItem={renderHomeItem}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
             refreshControl={
@@ -352,45 +420,13 @@ export const HomeManagement: React.FC = () => {
                 colors={[theme.colors.primary]}
               />
             }
-          >
-          {[...homes]
-            .sort((a, b) => {
-              // Put default home first, keep rest in original order
-              if (a.id === defaultHomeId) return -1;
-              if (b.id === defaultHomeId) return 1;
-              return 0;
-            })
-            .map((home, index) => {
-              // Calculate if user can invite to this home
-              const membership = findUserMembership(home.members, user?.id);
-              const userCanInvite = membership
-                ? canInviteToHome(membership.role)
-                : false;
-
-              return (
-                <Animated.View
-                  key={home.id}
-                  entering={FadeInDown.delay(index * 50).springify()}
-                  layout={LinearTransition.duration(600)
-                    .springify()
-                    .damping(30)
-                    .stiffness(180)
-                    .mass(1.5)}
-                >
-                  <HomeCard
-                    home={home as PartialHome}
-                    isDefault={home.id === defaultHomeId}
-                    isHighlighted={home.id === highlightedHomeId}
-                    canInvite={userCanInvite}
-                    onPress={handleViewHomeDetail}
-                    onSetDefault={handleSetDefault}
-                    onInvite={handleInviteMember}
-                    onDelete={handleDeleteHome}
-                  />
-                </Animated.View>
-              );
-            })}
-        </ScrollView>
+            contentContainerStyle={{ flexGrow: 1 }}
+            removeClippedSubviews={true}
+            maxToRenderPerBatch={10}
+            updateCellsBatchingPeriod={50}
+            initialNumToRender={10}
+            windowSize={5}
+          />
         </Animated.View>
       </View>
       {InviteModalComponent}

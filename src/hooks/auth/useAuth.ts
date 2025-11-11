@@ -5,7 +5,7 @@ import { useRememberMe, type RememberMeCredentials } from './useRememberMe';
 import { useBiometricPrompting } from './useBiometricPrompting';
 import { useAuthOperations, type LoginCredentials } from './useAuthOperations';
 import { useUserPreferences } from '#/hooks/navigation/useUserPreferences';
-import { useStore } from '#store';
+import { useAppStore } from '#store/useAppStore';
 
 /**
  * Main authentication hook that composes all auth-related functionality.
@@ -17,7 +17,9 @@ export const useAuth = () => {
   const authState = useAuthState();
 
   // Store for registration password
-  const { registrationPassword, setRegistrationPassword, clearRegistrationPassword } = useStore();
+  const registrationPassword = useAppStore(state => state.registrationPassword);
+  const setRegistrationPassword = useAppStore(state => state.setRegistrationPassword);
+  const clearRegistrationPassword = useAppStore(state => state.clearRegistrationPassword);
 
   // Credential storage operations
   const credentialStorage = useCredentialStorage();

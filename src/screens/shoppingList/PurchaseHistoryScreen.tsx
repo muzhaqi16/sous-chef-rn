@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useCallback } from 'react';
+import { View, Text, FlatList, TouchableOpacity, ListRenderItem } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks';
 import { Icon } from '#utils';
@@ -29,7 +29,7 @@ export const PurchaseHistoryScreen: React.FC<{
   const { goBack } = useAppNavigation();
   const { itemName, purchases } = route.params;
 
-  const formatDate = (dateString: string) => {
+  const formatDate = useCallback((dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
       month: 'short',
@@ -38,7 +38,77 @@ export const PurchaseHistoryScreen: React.FC<{
       hour: 'numeric',
       minute: '2-digit',
     });
-  };
+  }, []);
+
+  const renderPurchaseItem: ListRenderItem<RouteParams['purchases'][0]> = useCallback(
+    ({ item: purchase, index }) => (
+      <View key={purchase.id} style={styles.purchaseCard}>
+        <View style={styles.purchaseHeader}>
+          <View style={styles.purchaseNumber}>
+            <Text style={styles.purchaseNumberText}>
+              #{purchases.length - index}
+            </Text>
+          </View>
+          <Text style={styles.purchaseDate}>
+            {formatDate(purchase.purchaseDate)}
+          </Text>
+        </View>
+
+        <View style={styles.purchaseDetails}>
+          <View style={styles.purchaseDetailRow}>
+            <Icon
+              name="cube-outline"
+              size={18}
+              library="Ionicons"
+              color="#666"
+            />
+            <Text style={styles.purchaseDetailLabel}>Quantity:</Text>
+            <Text style={styles.purchaseDetailValue}>
+              {purchase.quantity} {purchase.unitSymbol}
+            </Text>
+          </View>
+
+          {purchase.user && (
+            <View style={styles.purchaseDetailRow}>
+              <Icon name="person-outline" size={18} color="#666" />
+              <Text style={styles.purchaseDetailLabel}>
+                Purchased by:
+              </Text>
+              <Text style={styles.purchaseDetailValue}>
+                {purchase.user.profile?.displayName ||
+                  purchase.user.email}
+              </Text>
+            </View>
+          )}
+        </View>
+      </View>
+    ),
+    [purchases.length, formatDate],
+  );
+
+  const renderListHeader = () => (
+    <View style={styles.statsContainer}>
+      <Text style={styles.statsText}>
+        Total Purchases:{' '}
+        <Text style={styles.statsValue}>{purchases.length}</Text>
+      </Text>
+    </View>
+  );
+
+  const renderEmptyComponent = () => (
+    <View style={styles.emptyContainer}>
+      <Icon
+        name="receipt-outline"
+        size={64}
+        color="#ccc"
+        library="Ionicons"
+      />
+      <Text style={styles.emptyText}>No purchase history</Text>
+      <Text style={styles.emptySubtext}>
+        Mark this item as purchased to start tracking history
+      </Text>
+    </View>
+  );
 
   return (
     <View style={styles.container}>
@@ -55,77 +125,20 @@ export const PurchaseHistoryScreen: React.FC<{
       </View>
 
       {/* Purchase List */}
-      <ScrollView
-        style={styles.scrollView}
+      <FlatList
+        data={purchases}
+        keyExtractor={item => item.id}
+        renderItem={renderPurchaseItem}
+        ListHeaderComponent={purchases.length > 0 ? renderListHeader : null}
+        ListEmptyComponent={renderEmptyComponent}
         contentContainerStyle={styles.content}
-      >
-        {purchases.length > 0 ? (
-          <>
-            <View style={styles.statsContainer}>
-              <Text style={styles.statsText}>
-                Total Purchases:{' '}
-                <Text style={styles.statsValue}>{purchases.length}</Text>
-              </Text>
-            </View>
-
-            {purchases.map((purchase, index) => (
-              <View key={purchase.id} style={styles.purchaseCard}>
-                <View style={styles.purchaseHeader}>
-                  <View style={styles.purchaseNumber}>
-                    <Text style={styles.purchaseNumberText}>
-                      #{purchases.length - index}
-                    </Text>
-                  </View>
-                  <Text style={styles.purchaseDate}>
-                    {formatDate(purchase.purchaseDate)}
-                  </Text>
-                </View>
-
-                <View style={styles.purchaseDetails}>
-                  <View style={styles.purchaseDetailRow}>
-                    <Icon
-                      name="cube-outline"
-                      size={18}
-                      library="Ionicons"
-                      color="#666"
-                    />
-                    <Text style={styles.purchaseDetailLabel}>Quantity:</Text>
-                    <Text style={styles.purchaseDetailValue}>
-                      {purchase.quantity} {purchase.unitSymbol}
-                    </Text>
-                  </View>
-
-                  {purchase.user && (
-                    <View style={styles.purchaseDetailRow}>
-                      <Icon name="person-outline" size={18} color="#666" />
-                      <Text style={styles.purchaseDetailLabel}>
-                        Purchased by:
-                      </Text>
-                      <Text style={styles.purchaseDetailValue}>
-                        {purchase.user.profile?.displayName ||
-                          purchase.user.email}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-              </View>
-            ))}
-          </>
-        ) : (
-          <View style={styles.emptyContainer}>
-            <Icon
-              name="receipt-outline"
-              size={64}
-              color="#ccc"
-              library="Ionicons"
-            />
-            <Text style={styles.emptyText}>No purchase history</Text>
-            <Text style={styles.emptySubtext}>
-              Mark this item as purchased to start tracking history
-            </Text>
-          </View>
-        )}
-      </ScrollView>
+        style={styles.scrollView}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        updateCellsBatchingPeriod={50}
+        initialNumToRender={10}
+        windowSize={5}
+      />
     </View>
   );
 };
@@ -169,6 +182,7 @@ const styles = StyleSheet.create(theme => ({
   },
   content: {
     padding: theme.spacing.md,
+    flexGrow: 1,
   },
   statsContainer: {
     backgroundColor: theme.colors.infoLight,

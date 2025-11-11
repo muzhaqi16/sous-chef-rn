@@ -3329,6 +3329,10 @@ type Mutation {
   updatePurchase(id: ID!, input: UpdatePurchaseInput!): Purchase!
   updatePushToken(id: ID!, pushToken: String!): Device!
   updateRecipe(id: ID!, input: UpdateRecipeInput!): Recipe!
+  updateRecipeIngredients(
+    ingredients: [RecipeIngredientInput!]!
+    recipeId: ID!
+  ): Recipe!
   updateRestriction(input: UpdateRestrictionInput!): DietaryRestriction!
   updateRiskScore(riskScore: Float!, userId: ID!): UserModeration!
   updateSettings(input: UpdateUserSettingsInput!): UserSettings!

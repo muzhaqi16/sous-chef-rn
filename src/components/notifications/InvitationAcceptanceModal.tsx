@@ -14,8 +14,8 @@ import {
   useAcceptShoppingListInviteMutation,
   useDeclineHomeInviteMutation,
   useDeclineShoppingListInviteMutation,
-  GetHomesDocument,
 } from '#generated';
+import { createAddToQueryFieldUpdater } from '#/apollo/utils';
 
 export interface InvitationData {
   type: 'HOME_INVITE' | 'SHOPPING_LIST_INVITE';
@@ -43,14 +43,25 @@ export const InvitationAcceptanceModal: React.FC<
   const [rejecting, setRejecting] = useState(false);
 
   const [acceptHomeInvite] = useAcceptHomeInviteMutation({
-    refetchQueries: [{query: GetHomesDocument}],
+    // Note: This mutation returns a Membership object with homeId.
+    // The Home is already in the cache from the invite, so no manual update needed.
+    // Apollo will automatically update the membership status via normalization.
   });
   const [acceptShoppingListInvite] = useAcceptShoppingListInviteMutation({
-    refetchQueries: ['GetShoppingLists'],
-    awaitRefetchQueries: true,
+    update: (cache, { data }) => {
+      if (!data?.acceptShoppingListInvite) return;
+
+      try {
+        const addToShoppingListsCache = createAddToQueryFieldUpdater('shoppingLists');
+        addToShoppingListsCache(cache, data.acceptShoppingListInvite, { position: 'end' });
+      } catch (error) {
+        console.warn('Cache update failed for acceptShoppingListInvite:', error);
+      }
+    },
   });
   const [declineHomeInvite] = useDeclineHomeInviteMutation({
-    refetchQueries: [{query: GetHomesDocument}],
+    // Note: Declining an invite doesn't add or remove homes, just changes invite status.
+    // No cache update needed.
   });
   const [declineShoppingListInvite] = useDeclineShoppingListInviteMutation();
 

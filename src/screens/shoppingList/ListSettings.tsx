@@ -18,6 +18,7 @@ import {
   GetShoppingListsDocument,
   ShoppingList,
 } from '#generated';
+import { createRemoveFromQueryFieldUpdater } from '#/apollo/utils';
 import { useStore } from '#store';
 import { useErrorHandler } from '#/utils/errorHandling';
 import { useAuth } from '#/hooks/auth/useAuth';
@@ -63,8 +64,19 @@ export const ListSettings: React.FC<{
       });
       Alert.alert('Error', message);
     },
-    refetchQueries: ['GetShoppingLists'],
-    awaitRefetchQueries: true,
+    update: (cache, { data }, { variables }) => {
+      if (!data?.deleteShoppingList || !variables) return;
+
+      try {
+        const removeFromShoppingListsCache = createRemoveFromQueryFieldUpdater(
+          'shoppingLists',
+          'ShoppingList',
+        );
+        removeFromShoppingListsCache(cache, variables.id, { evictItem: true });
+      } catch (error) {
+        console.warn('Cache update failed for deleteList:', error);
+      }
+    },
   });
   const [createList] = useCreateShoppingListMutation({
     // Update the cache when a new list is created

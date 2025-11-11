@@ -1,8 +1,29 @@
+// =============================================================================
+// Core Types
+// =============================================================================
+
 type Edge<T> = {
   node?: T | null;
 } | null;
 
+type PageInfo = {
+  hasNextPage?: boolean;
+  hasPreviousPage?: boolean;
+  startCursor?: string | null | undefined;
+  endCursor?: string | null | undefined;
+};
+
+type Connection<T = any> = {
+  edges?: Array<Edge<T>> | null;
+  totalCount?: number | null;
+  pageInfo?: PageInfo | null;
+};
+
 const isDefined = <T>(value: T | null | undefined): value is T => value != null;
+
+// =============================================================================
+// Core Utilities
+// =============================================================================
 
 /**
  * Extracts nodes from a Relay-style connection, filtering out null edges/nodes.
@@ -34,12 +55,122 @@ export const getConnectionTotalCount = (connection?: {
   return extractNodes(connection).length;
 };
 
-type PageInfo = {
-  hasNextPage?: boolean;
-  hasPreviousPage?: boolean;
-  startCursor?: string | null | undefined;
-  endCursor?: string | null | undefined;
-};
+// =============================================================================
+// Generic Normalization Utilities
+// =============================================================================
+
+/**
+ * Configuration for normalizing a single connection field
+ */
+export interface ConnectionFieldConfig {
+  /** Name of the connection field (e.g., 'itemsConnection') */
+  connectionField: string;
+  /** Name for the normalized array (e.g., 'items') */
+  arrayName: string;
+  /** Whether to include totalCount (default: false) */
+  includeTotalCount?: boolean;
+  /** Whether to include pageInfo (default: false) */
+  includePageInfo?: boolean;
+}
+
+/**
+ * Generic function to normalize a single Connection field within an entity
+ *
+ * @example
+ * const config: ConnectionFieldConfig = {
+ *   connectionField: 'itemsConnection',
+ *   arrayName: 'items',
+ *   includeTotalCount: true,
+ *   includePageInfo: true,
+ * };
+ * const result = normalizeConnectionField(pantry, config);
+ * // Returns: { items: [...], itemsTotalCount: 10, itemsPageInfo: {...} }
+ */
+export function normalizeConnectionField<T extends Record<string, any>>(
+  entity: T,
+  config: ConnectionFieldConfig,
+): Record<string, any> {
+  const connection = entity[config.connectionField] as Connection | undefined;
+
+  const result: Record<string, any> = {
+    [config.arrayName]: extractNodes(connection),
+  };
+
+  if (config.includeTotalCount) {
+    result[`${config.arrayName}TotalCount`] = getConnectionTotalCount(connection);
+  }
+
+  if (config.includePageInfo) {
+    result[`${config.arrayName}PageInfo`] = connection?.pageInfo || undefined;
+  }
+
+  return result;
+}
+
+/**
+ * Creates a normalization function for entities with multiple Connection fields
+ *
+ * This factory function eliminates the need for separate normalize functions
+ * for each entity type. It generates a type-safe normalizer based on configuration.
+ *
+ * @example
+ * // Create a pantry normalizer
+ * const normalizePantry = createEntityNormalizer<PantryLike>([
+ *   { connectionField: 'itemsConnection', arrayName: 'items', includeTotalCount: true, includePageInfo: true },
+ *   { connectionField: 'storageLocationsConnection', arrayName: 'storageLocations', includeTotalCount: true, includePageInfo: true },
+ * ]);
+ *
+ * const normalized = normalizePantry(pantry);
+ * // Returns: { ...pantry, items: [...], itemsTotalCount: 10, itemsPageInfo: {...}, storageLocations: [...], ... }
+ */
+export function createEntityNormalizer<T extends Record<string, any>>(
+  configs: ConnectionFieldConfig[],
+) {
+  return (entity?: T | null): (T & Record<string, any>) | null => {
+    if (!entity) {
+      return null;
+    }
+
+    const normalized: Record<string, any> = { ...entity };
+
+    configs.forEach(config => {
+      const fields = normalizeConnectionField(entity, config);
+      Object.assign(normalized, fields);
+    });
+
+    return normalized as T & Record<string, any>;
+  };
+}
+
+/**
+ * Normalizes a standalone Connection (not nested in an entity)
+ *
+ * Use this for query results that return Connection directly:
+ * - Query.recipes (returns RecipeConnection)
+ * - Any paginated query returning Connection at root level
+ *
+ * @example
+ * const result = normalizeConnection(recipesConnection, 'recipes');
+ * // Returns: { recipes: [...], totalCount: 25, pageInfo: {...} }
+ */
+export function normalizeConnection<T = any>(
+  connection?: Connection<T> | null,
+  arrayName: string = 'items',
+): { [key: string]: any; totalCount: number; pageInfo?: PageInfo } | null {
+  if (!connection) {
+    return null;
+  }
+
+  return {
+    [arrayName]: extractNodes(connection),
+    totalCount: getConnectionTotalCount(connection),
+    pageInfo: connection.pageInfo || undefined,
+  };
+}
+
+// =============================================================================
+// Legacy Type Definitions (maintained for backward compatibility)
+// =============================================================================
 
 type HomeLike = {
   membersConnection?: {
@@ -81,24 +212,14 @@ export type NormalizedHome<T extends HomeLike> = T & {
 /**
  * Normalizes a Home object by flattening Connection edges to arrays
  * and preserving pagination metadata for future fetchMore operations.
+ *
+ * @deprecated Use createEntityNormalizer instead for new code
  */
-export const normalizeHome = <T extends HomeLike>(
-  home?: T | null,
-): NormalizedHome<T> | null => {
-  if (!home) {
-    return null;
-  }
-
-  return {
-    ...home,
-    members: extractNodes(home.membersConnection),
-    invites: extractNodes(home.invitesConnection),
-    pantries: extractNodes(home.pantriesConnection),
-    membersPageInfo: home.membersConnection?.pageInfo || undefined,
-    invitesPageInfo: home.invitesConnection?.pageInfo || undefined,
-    pantriesPageInfo: home.pantriesConnection?.pageInfo || undefined,
-  };
-};
+export const normalizeHome = createEntityNormalizer<HomeLike>([
+  { connectionField: 'membersConnection', arrayName: 'members', includePageInfo: true },
+  { connectionField: 'invitesConnection', arrayName: 'invites', includePageInfo: true },
+  { connectionField: 'pantriesConnection', arrayName: 'pantries', includePageInfo: true },
+]) as <T extends HomeLike>(home?: T | null) => NormalizedHome<T> | null;
 
 export const normalizeHomes = <T extends HomeLike>(
   homes?: Array<T | null | undefined>,
@@ -124,27 +245,23 @@ export type NormalizedPantry<T extends PantryLike> = T & {
 /**
  * Normalizes a Pantry object by flattening Connection edges to arrays
  * and preserving pagination metadata for future fetchMore operations.
+ *
+ * @deprecated Use createEntityNormalizer instead for new code
  */
-export const normalizePantry = <T extends PantryLike>(
-  pantry?: T | null,
-): NormalizedPantry<T> | null => {
-  if (!pantry) {
-    return null;
-  }
-
-  return {
-    ...pantry,
-    items: extractNodes(pantry.itemsConnection),
-    storageLocations: extractNodes(pantry.storageLocationsConnection),
-    itemsTotalCount: getConnectionTotalCount(pantry.itemsConnection),
-    storageLocationsTotalCount: getConnectionTotalCount(
-      pantry.storageLocationsConnection,
-    ),
-    itemsPageInfo: pantry.itemsConnection?.pageInfo || undefined,
-    storageLocationsPageInfo:
-      pantry.storageLocationsConnection?.pageInfo || undefined,
-  };
-};
+export const normalizePantry = createEntityNormalizer<PantryLike>([
+  {
+    connectionField: 'itemsConnection',
+    arrayName: 'items',
+    includeTotalCount: true,
+    includePageInfo: true
+  },
+  {
+    connectionField: 'storageLocationsConnection',
+    arrayName: 'storageLocations',
+    includeTotalCount: true,
+    includePageInfo: true
+  },
+]) as <T extends PantryLike>(pantry?: T | null) => NormalizedPantry<T> | null;
 
 type ShoppingListLike = {
   itemsConnection?: {
@@ -163,21 +280,17 @@ export type NormalizedShoppingList<T extends ShoppingListLike> = T & {
 /**
  * Normalizes a ShoppingList object by flattening Connection edges to arrays
  * and preserving pagination metadata for future fetchMore operations.
+ *
+ * @deprecated Use createEntityNormalizer instead for new code
  */
-export const normalizeShoppingList = <T extends ShoppingListLike>(
-  shoppingList?: T | null,
-): NormalizedShoppingList<T> | null => {
-  if (!shoppingList) {
-    return null;
-  }
-
-  return {
-    ...shoppingList,
-    items: extractNodes(shoppingList.itemsConnection),
-    itemsTotalCount: getConnectionTotalCount(shoppingList.itemsConnection),
-    itemsPageInfo: shoppingList.itemsConnection?.pageInfo || undefined,
-  };
-};
+export const normalizeShoppingList = createEntityNormalizer<ShoppingListLike>([
+  {
+    connectionField: 'itemsConnection',
+    arrayName: 'items',
+    includeTotalCount: true,
+    includePageInfo: true
+  },
+]) as <T extends ShoppingListLike>(shoppingList?: T | null) => NormalizedShoppingList<T> | null;
 
 type RecipesConnectionLike = {
   edges?: Array<Edge<any>> | null;
@@ -194,17 +307,11 @@ export type NormalizedRecipes = {
 /**
  * Normalizes a RecipesConnection object by flattening Connection edges to arrays
  * and preserving pagination metadata for future fetchMore operations.
+ *
+ * @deprecated Use normalizeConnection instead for new code
  */
 export const normalizeRecipes = (
   recipesConnection?: RecipesConnectionLike | null,
 ): NormalizedRecipes | null => {
-  if (!recipesConnection) {
-    return null;
-  }
-
-  return {
-    recipes: extractNodes(recipesConnection),
-    totalCount: getConnectionTotalCount(recipesConnection),
-    pageInfo: recipesConnection.pageInfo || undefined,
-  };
+  return normalizeConnection(recipesConnection, 'recipes') as NormalizedRecipes | null;
 };

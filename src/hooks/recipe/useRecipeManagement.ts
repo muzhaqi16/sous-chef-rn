@@ -1,7 +1,8 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo } from 'react';
 import { useMyRecipesQuery, RecipeCategory, Difficulty } from '#generated';
 import { useAuth } from '#hooks/auth/useAuth';
 import { normalizeRecipes } from '#/utils/connectionUtils';
+import { usePagination } from '#/hooks/utils';
 
 export interface RecipeFilters {
   category?: RecipeCategory;
@@ -40,28 +41,16 @@ export function useRecipeManagement(filters?: RecipeFilters) {
     [normalizedRecipes],
   );
 
-  // Pagination state
-  const hasMore = normalizedRecipes?.pageInfo?.hasNextPage || false;
-  const endCursor = normalizedRecipes?.pageInfo?.endCursor;
   const totalCount = normalizedRecipes?.totalCount || 0;
 
-  // Load more handler for infinite scroll
-  const loadMore = useCallback(async () => {
-    if (!hasMore || loading || !endCursor) {
-      return;
-    }
-
-    try {
-      await fetchMore({
-        variables: {
-          cursor: endCursor,
-        },
-      });
-    } catch (error) {
-      console.error('Failed to load more recipes:', error);
-      // Fail silently - user can try scrolling again
-    }
-  }, [hasMore, loading, endCursor, fetchMore]);
+  // Pagination using generic utility hook
+  const { hasMore, loadMore, isLoadingMore } = usePagination({
+    pageInfo: normalizedRecipes?.pageInfo,
+    loading,
+    itemCount: recipes.length,
+    fetchMore,
+    cursorVariableName: 'cursor',
+  });
 
   return {
     // Data
@@ -73,7 +62,7 @@ export function useRecipeManagement(filters?: RecipeFilters) {
     // Pagination
     loadMore,
     hasMore,
-    isLoadingMore: loading && recipes.length > 0,
+    isLoadingMore,
 
     // Actions
     refetch,

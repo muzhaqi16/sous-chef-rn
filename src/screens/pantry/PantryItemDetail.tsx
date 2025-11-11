@@ -4,7 +4,6 @@ import {
   useGetPantryItemQuery,
   useDeletePantryItemMutation,
   useAddItemToShoppingListMutation,
-  GetShoppingListItemsDocument,
 } from '#generated';
 import { DetailTemplate } from '#components/templates/DetailTemplate';
 import { FormattedItemSubtitle } from '#components';
@@ -14,6 +13,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks';
 import { PantryStackParamList } from '#navigation/stacks/PantryStack';
 import { getItemImageUrl } from '#utils/imageUtils';
+import { createAddToParentConnectionUpdater } from '#/apollo/utils';
 
 export const PantryItemDetail: React.FC<{
   route: { params: PantryStackParamList['PantryItemDetail'] };
@@ -31,15 +31,20 @@ export const PantryItemDetail: React.FC<{
 
   const [deleteItem] = useDeletePantryItemMutation();
   const [addToShoppingList] = useAddItemToShoppingListMutation({
-    refetchQueries: selectedShoppingListId
-      ? [
-          {
-            query: GetShoppingListItemsDocument,
-            variables: { shoppingListId: selectedShoppingListId },
-          },
-        ]
-      : [],
-    awaitRefetchQueries: false,
+    update: (cache, { data }) => {
+      if (!data?.addItemToShoppingList || !selectedShoppingListId) return;
+
+      try {
+        const addToShoppingListItemsCache = createAddToParentConnectionUpdater(
+          'ShoppingList',
+          'itemsConnection',
+          'ShoppingListItem',
+        );
+        addToShoppingListItemsCache(cache, selectedShoppingListId, data.addItemToShoppingList);
+      } catch (error) {
+        console.warn('Cache update failed for addToShoppingList:', error);
+      }
+    },
   });
 
   const handleDelete = () => {

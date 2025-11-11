@@ -39,6 +39,10 @@ import { BottomSheetAction } from '#components';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { useAppNavigation } from '#/hooks';
 import { normalizeRecipes } from '#/utils/connectionUtils';
+import {
+  createAddToParentConnectionUpdater,
+  createAddToQueryFieldUpdater,
+} from '#/apollo/utils';
 
 type RecipeDetailRouteProp = RouteProp<RecipeStackParamList, 'RecipeDetail'>;
 
@@ -109,19 +113,85 @@ export const RecipeDetail: React.FC = () => {
 
   // Mutations
   const [saveRecipeMutation] = useCreateRecipeMutation({
-    refetchQueries: ['MyRecipes'],
-    awaitRefetchQueries: true,
+    update: (cache, { data }) => {
+      if (!data?.createRecipe) return;
+
+      try {
+        // Add the new recipe to the recipes connection
+        const addToRecipesCache = createAddToQueryFieldUpdater('recipes');
+        addToRecipesCache(cache, data.createRecipe, { position: 'start' });
+      } catch (error) {
+        console.warn('Cache update failed for saveRecipe:', error);
+      }
+    },
   });
   const [addRecipeToShoppingListMutation] =
     useCreateShoppingListItemsFromRecipeMutation({
-      refetchQueries: ['GetShoppingList'],
+      update: (cache, { data }, { variables }) => {
+        if (!data?.createShoppingListItemsFromRecipe || !variables) return;
+
+        try {
+          // The mutation returns AddRecipeToShoppingListResult with addedItems and updatedItems arrays
+          const result = data.createShoppingListItemsFromRecipe;
+          const shoppingListId = variables.shoppingListId;
+          const addToShoppingListItemsCache = createAddToParentConnectionUpdater(
+            'ShoppingList',
+            'itemsConnection',
+            'ShoppingListItem',
+          );
+
+          // Add newly added items to the cache
+          result.addedItems.forEach((item: any) => {
+            addToShoppingListItemsCache(cache, shoppingListId, item);
+          });
+          // Updated items are already in cache via normalization, no manual update needed
+        } catch (error) {
+          console.warn('Cache update failed for addRecipeToShoppingList:', error);
+        }
+      },
     });
   const [addRecipeIngredientMutation] =
     useCreateShoppingListItemFromRecipeIngredientMutation({
-      refetchQueries: ['GetShoppingList'],
+      update: (cache, { data }, { variables }) => {
+        if (!data?.createShoppingListItemFromRecipeIngredient || !variables) return;
+
+        try {
+          // The mutation returns AddIngredientResult with a shoppingListItem
+          const result = data.createShoppingListItemFromRecipeIngredient;
+          const shoppingListId = variables.shoppingListId;
+
+          // Only add to cache if it's a new item (not an update)
+          if (!result.wasUpdated) {
+            const addToShoppingListItemsCache = createAddToParentConnectionUpdater(
+              'ShoppingList',
+              'itemsConnection',
+              'ShoppingListItem',
+            );
+            addToShoppingListItemsCache(cache, shoppingListId, result.shoppingListItem);
+          }
+          // If wasUpdated=true, the item is already in cache via normalization
+        } catch (error) {
+          console.warn('Cache update failed for addRecipeIngredient:', error);
+        }
+      },
     });
   const [addItemToShoppingListMutation] = useAddItemToShoppingListMutation({
-    refetchQueries: ['GetShoppingList'],
+    update: (cache, { data }, { variables }) => {
+      if (!data?.addItemToShoppingList || !variables) return;
+
+      try {
+        const item = data.addItemToShoppingList;
+        const shoppingListId = variables.input.shoppingListId;
+        const addToShoppingListItemsCache = createAddToParentConnectionUpdater(
+          'ShoppingList',
+          'itemsConnection',
+          'ShoppingListItem',
+        );
+        addToShoppingListItemsCache(cache, shoppingListId, item);
+      } catch (error) {
+        console.warn('Cache update failed for addItemToShoppingList:', error);
+      }
+    },
   });
 
   // Fetch backend recipe if recipeId is provided

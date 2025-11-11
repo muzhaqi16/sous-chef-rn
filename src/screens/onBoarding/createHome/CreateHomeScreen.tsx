@@ -20,7 +20,6 @@ import {
   useCreatePantryMutation,
   useGetHomesQuery,
   useGetPantriesQuery,
-  GetHomesDocument,
   useGetMyPendingInvitesQuery,
   useAcceptHomeInviteMutation,
   useDeclineHomeInviteMutation,
@@ -151,7 +150,9 @@ export const CreateHomeScreen = () => {
 
   const [acceptHomeInvite, { loading: accepting }] =
     useAcceptHomeInviteMutation({
-      refetchQueries: [{ query: GetHomesDocument }],
+      // Note: This mutation returns a Membership object with homeId.
+      // The Home should be refetched via GetHomesQuery to get the full home data.
+      refetchQueries: ['GetHomes'],
       onCompleted: data => {
         if (data.acceptHomeInvite?.homeId) {
           setSelectedHomeId(data.acceptHomeInvite.homeId);
@@ -164,7 +165,8 @@ export const CreateHomeScreen = () => {
     });
 
   const [declineHomeInvite] = useDeclineHomeInviteMutation({
-    refetchQueries: [{ query: GetHomesDocument }],
+    // Note: Declining an invite doesn't add or remove homes from the list,
+    // it just changes the invite status. No cache update needed.
     onError: error => {
       Alert.alert('Error', error.message || 'Failed to decline invitation');
     },
