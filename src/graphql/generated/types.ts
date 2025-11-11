@@ -15435,25 +15435,6 @@ export type GetPantriesQuery = {
     updatedAt: string;
     version: number;
     tags: Array<string>;
-    itemsConnection: {
-      __typename?: 'PantryItemConnection';
-      totalCount: number;
-      edges: Array<{
-        __typename?: 'PantryItemEdge';
-        cursor: string;
-        node: {
-          __typename?: 'PantryItem';
-          id: string;
-          itemName: string;
-          item: { __typename?: 'Item'; name: string };
-        };
-      }>;
-      pageInfo: {
-        __typename?: 'PageInfo';
-        hasNextPage: boolean;
-        endCursor?: string | null | undefined;
-      };
-    };
   }>;
 };
 
@@ -19205,8 +19186,6 @@ export type PurchaseDeletedSubscription = {
 
 export type GetShoppingListQueryVariables = Exact<{
   id: Scalars['ID']['input'];
-  itemsCursor?: InputMaybe<Scalars['String']['input']>;
-  itemsFirst?: InputMaybe<Scalars['Int']['input']>;
 }>;
 
 export type GetShoppingListQuery = {
@@ -19234,80 +19213,6 @@ export type GetShoppingListQuery = {
         completedItems: number;
         createdAt: string;
         updatedAt: string;
-        itemsConnection: {
-          __typename?: 'ShoppingListItemConnection';
-          totalCount: number;
-          edges: Array<{
-            __typename?: 'ShoppingListItemEdge';
-            cursor: string;
-            node: {
-              __typename?: 'ShoppingListItem';
-              id: string;
-              quantity?: number | null | undefined;
-              estimatedPrice?: number | null | undefined;
-              budgetPrice?: number | null | undefined;
-              isPurchased: boolean;
-              purchasedQuantity?: number | null | undefined;
-              purchasedPrice?: number | null | undefined;
-              purchaseDate?: string | null | undefined;
-              itemName?: string | null | undefined;
-              itemBarcode?: string | null | undefined;
-              unitName?: string | null | undefined;
-              notes?: string | null | undefined;
-              priority: number;
-              category?: string | null | undefined;
-              sortOrder: string;
-              isAutoAdded: boolean;
-              autoAddReason?: string | null | undefined;
-              isFromMealPlan: boolean;
-              createdAt: string;
-              updatedAt: string;
-              item?:
-                | {
-                    __typename?: 'Item';
-                    id: string;
-                    name: string;
-                    description?: string | null | undefined;
-                    imageUrl?: string | null | undefined;
-                    type: ItemType;
-                    storageState: StorageState;
-                  }
-                | null
-                | undefined;
-              unit?:
-                | {
-                    __typename?: 'Unit';
-                    id: string;
-                    name: string;
-                    symbol: string;
-                  }
-                | null
-                | undefined;
-              preferredStore?:
-                | {
-                    __typename?: 'Store';
-                    id: string;
-                    name: string;
-                    address?: string | null | undefined;
-                  }
-                | null
-                | undefined;
-              purchasedBy?:
-                | { __typename?: 'User'; id: string; email: string }
-                | null
-                | undefined;
-              addedBy?:
-                | { __typename?: 'User'; id: string; email: string }
-                | null
-                | undefined;
-            };
-          }>;
-          pageInfo: {
-            __typename?: 'PageInfo';
-            hasNextPage: boolean;
-            endCursor?: string | null | undefined;
-          };
-        };
         ownerships?:
           | Array<{
               __typename?: 'ShoppingListOwnership';
@@ -19428,30 +19333,11 @@ export type GetShoppingListsQuery = {
     priority: number;
     createdAt: string;
     updatedAt: string;
-    itemsConnection: {
-      __typename?: 'ShoppingListItemConnection';
-      totalCount: number;
-      edges: Array<{
-        __typename?: 'ShoppingListItemEdge';
-        cursor: string;
-        node: {
-          __typename?: 'ShoppingListItem';
-          id: string;
-          isPurchased: boolean;
-        };
-      }>;
-      pageInfo: {
-        __typename?: 'PageInfo';
-        hasNextPage: boolean;
-        endCursor?: string | null | undefined;
-      };
-    };
     ownerships?:
       | Array<{
           __typename?: 'ShoppingListOwnership';
           id: string;
           userId: string;
-          createdAt: string;
           user: {
             __typename?: 'User';
             id: string;
@@ -19468,43 +19354,6 @@ export type GetShoppingListsQuery = {
         }>
       | null
       | undefined;
-    collaboratorsConnection: {
-      __typename?: 'ShoppingListCollaboratorConnection';
-      totalCount: number;
-      edges: Array<{
-        __typename?: 'ShoppingListCollaboratorEdge';
-        cursor: string;
-        node: {
-          __typename?: 'ShoppingListCollaborator';
-          id: string;
-          email?: string | null | undefined;
-          role: CollaboratorRole;
-          status: CollaboratorStatus;
-          collaboratorId?: string | null | undefined;
-          collaborator?:
-            | {
-                __typename?: 'User';
-                id: string;
-                email: string;
-                profile?:
-                  | {
-                      __typename?: 'UserProfile';
-                      displayName?: string | null | undefined;
-                      avatar?: string | null | undefined;
-                    }
-                  | null
-                  | undefined;
-              }
-            | null
-            | undefined;
-        };
-      }>;
-      pageInfo: {
-        __typename?: 'PageInfo';
-        hasNextPage: boolean;
-        endCursor?: string | null | undefined;
-      };
-    };
   }>;
 };
 

@@ -8,23 +8,6 @@ query GetPantries($homeId: ID!) {
     homeId
     name
     isDefault
-    itemsConnection(first: 50) {
-      edges {
-        node {
-          id
-          itemName
-          item {
-            name
-          }
-        }
-        cursor
-      }
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
-      totalCount
-    }
     createdAt
     updatedAt
     version

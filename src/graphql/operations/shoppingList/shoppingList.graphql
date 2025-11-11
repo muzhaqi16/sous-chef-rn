@@ -4,8 +4,6 @@
 
 query GetShoppingList(
   $id: ID!
-  $itemsCursor: String
-  $itemsFirst: Int = 25
 ) {
   shoppingList(id: $id) {
     id
@@ -28,64 +26,6 @@ query GetShoppingList(
     completedItems
     createdAt
     updatedAt
-    itemsConnection(first: $itemsFirst, after: $itemsCursor) {
-      edges {
-        node {
-          id
-          quantity
-          estimatedPrice
-          budgetPrice
-          isPurchased
-          purchasedQuantity
-          purchasedPrice
-          purchaseDate
-          itemName
-          itemBarcode
-          unitName
-          notes
-          priority
-          category
-          sortOrder
-          isAutoAdded
-          autoAddReason
-          isFromMealPlan
-          item {
-            id
-            name
-            description
-            imageUrl
-            type
-            storageState
-          }
-          unit {
-            id
-            name
-            symbol
-          }
-          preferredStore {
-            id
-            name
-            address
-          }
-          purchasedBy {
-            id
-            email
-          }
-          addedBy {
-            id
-            email
-          }
-          createdAt
-          updatedAt
-        }
-        cursor
-      }
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
-      totalCount
-    }
     ownerships {
       ...ShoppingListOwnershipFragment
     }
@@ -135,20 +75,6 @@ query GetShoppingLists {
     priority
     createdAt
     updatedAt
-    itemsConnection(first: 25) {
-      edges {
-        node {
-          id
-          isPurchased
-        }
-        cursor
-      }
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
-      totalCount
-    }
     ownerships {
       id
       userId
@@ -160,32 +86,6 @@ query GetShoppingLists {
           avatar
         }
       }
-      createdAt
-    }
-    collaboratorsConnection(first: 20) {
-      edges {
-        cursor
-        node {
-          id
-          email
-          role
-          status
-          collaboratorId
-          collaborator {
-            id
-            email
-            profile {
-              displayName
-              avatar
-            }
-          }
-        }
-      }
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
-      totalCount
     }
   }
 }

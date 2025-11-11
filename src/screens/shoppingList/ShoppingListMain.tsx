@@ -173,7 +173,9 @@ export const ShoppingListMain: React.FC = () => {
   const { primary: primaryColor, primaryLight: primaryLightColor } = colors;
   // Step 2: Use the extracted variables INSIDE useMemo
   const selectedShoppingListId = useAppStore(selectSelectedShoppingListId);
-  const setSelectedShoppingListId = useAppStore(state => state.setSelectedShoppingListId);
+  const setSelectedShoppingListId = useAppStore(
+    state => state.setSelectedShoppingListId,
+  );
   const { user } = useAuth();
   const selectorRef = useRef<ItemSelectorRef>(null);
   const { setScannerProps, setOverlayOpen } = useScanner();

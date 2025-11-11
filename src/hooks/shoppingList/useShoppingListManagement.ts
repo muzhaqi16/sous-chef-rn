@@ -2,7 +2,7 @@ import { useMemo, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { useApolloClient } from '@apollo/client/react';
 import {
-  useGetShoppingListQuery,
+  useGetShoppingListItemsQuery,
   useAddItemToShoppingListMutation,
   useUpdateShoppingListItemMutation,
   useRemoveItemFromShoppingListMutation,
@@ -21,7 +21,6 @@ import { createOptimisticEntity } from '#/apollo/utils/createOptimisticResponse'
 import { generateId } from '#/utils/generateId';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { useOfflineAwareFetchPolicy, OFFLINE_FETCH_POLICIES } from '#/apollo/policies/offlineFetchPolicies';
-import { normalizeShoppingList } from '#/utils/connectionUtils';
 import {
   createAddToKeyedQueryFieldUpdater,
   createRemoveFromQueryFieldUpdater,
@@ -73,10 +72,14 @@ export function useShoppingListManagement(listId: string | undefined) {
   );
 
   // Watch cache for updates from mutations and subscriptions
-  const { data, loading, error, refetch, fetchMore } = useGetShoppingListQuery({
+  const {
+    data,
+    loading,
+    error,
+    refetch,
+  } = useGetShoppingListItemsQuery({
     variables: {
-      id: listId ?? '',
-      itemsFirst: 25, // Initial page size
+      shoppingListId: listId ?? '',
     },
     skip: shouldSkip,
     fetchPolicy,
@@ -88,15 +91,9 @@ export function useShoppingListManagement(listId: string | undefined) {
   // This eliminates duplicate subscription code and provides consistent behavior
   // across all subscriptions (deduplication, error handling, logging)
 
-  // Normalize shopping list data to flatten Connection pattern and preserve pagination metadata
-  const normalizedShoppingList = useMemo(
-    () => normalizeShoppingList(data?.shoppingList),
-    [data?.shoppingList],
-  );
-
   const items = useMemo(
-    () => normalizedShoppingList?.items || [],
-    [normalizedShoppingList],
+    () => data?.shoppingListItems || [],
+    [data?.shoppingListItems],
   );
 
   // Search functionality - using reusable search utility
@@ -121,31 +118,14 @@ export function useShoppingListManagement(listId: string | undefined) {
     };
   }, [items]);
 
-  // Pagination state
-  const hasMore = normalizedShoppingList?.itemsPageInfo?.hasNextPage || false;
-  const endCursor = normalizedShoppingList?.itemsPageInfo?.endCursor;
-
   // CRUD operations utilities
   const { createAddOperation, createRemoveOperation } = useCrudOperations();
 
-  // Load more handler for infinite scroll
+  // Pagination helpers (shoppingListItems returns full list; no pagination)
   const loadMore = useCallback(async () => {
-    if (!hasMore || loading || !endCursor || !listId) {
-      return;
-    }
-
-    try {
-      await fetchMore({
-        variables: {
-          id: listId,
-          itemsCursor: endCursor,
-        },
-      });
-    } catch (error) {
-      console.error('Failed to load more shopping list items:', error);
-      // Fail silently - user can try scrolling again
-    }
-  }, [hasMore, loading, endCursor, listId, fetchMore]);
+    return;
+  }, []);
+  const hasMore = false;
 
   // Mutations - Apollo handles cache updates automatically
   const [addItemMutation] = useAddItemToShoppingListMutation({
