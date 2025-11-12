@@ -55,6 +55,7 @@ import { useHaptic } from '#hooks/haptic';
 import { useScreenTransition } from '#hooks/performance';
 import { useSelectorManagement } from '#hooks/ui';
 import { getItemImageUrl } from '#utils/imageUtils';
+import { Telemetry } from '#/services/telemetry';
 
 // Wrapper component that conditionally renders EmptyState or SortableShoppingList
 const ShoppingListContent: React.FC<{
@@ -714,6 +715,7 @@ export const ShoppingListMain: React.FC = () => {
 
   const handleAddItem = useCallback(() => {
     if (!currentListId) {
+      Telemetry.trackEvent('add_item_no_list_selected');
       Alert.alert(
         'No List Selected',
         'Please select or create a shopping list first.',
@@ -721,12 +723,16 @@ export const ShoppingListMain: React.FC = () => {
           { text: 'Cancel', style: 'cancel' },
           {
             text: 'Create List',
-            onPress: () => navigate('ListSettings'),
+            onPress: () => {
+              Telemetry.trackEvent('create_list_from_add_item');
+              navigate('ListSettings');
+            },
           },
         ],
       );
       return;
     }
+    Telemetry.trackEvent('add_item_clicked', { list_id: currentListId });
     navigate('AddItem', { listId: currentListId });
   }, [currentListId, navigate]);
 
@@ -737,6 +743,11 @@ export const ShoppingListMain: React.FC = () => {
         return;
       }
 
+      Telemetry.trackEvent('add_item_from_search', {
+        list_id: currentListId,
+        item_name_length: itemName.trim().length,
+      });
+
       try {
         const result = await addItem({
           itemName: itemName.trim(),
@@ -744,13 +755,19 @@ export const ShoppingListMain: React.FC = () => {
         });
 
         if (result) {
+          Telemetry.trackEvent('add_item_success', { source: 'search' });
           haptic.success(); // Haptic feedback on successful add
           setSearchQuery(''); // Clear search after adding
         } else {
+          Telemetry.trackEvent('add_item_failed', { source: 'search' });
           haptic.error(); // Error haptic on failure
           toastService.error('Failed to add item');
         }
       } catch (error) {
+        Telemetry.trackError(
+          error instanceof Error ? error : 'Failed to add item from search',
+          { component: 'ShoppingListMain', operation: 'addItemFromSearch' },
+        );
         haptic.error(); // Error haptic on exception
         toastService.error('Failed to add item');
       }
@@ -760,10 +777,16 @@ export const ShoppingListMain: React.FC = () => {
 
   const handleTogglePurchase = useCallback(
     async (itemId: string) => {
+      Telemetry.trackEvent('toggle_item_purchase', { item_id: itemId });
       try {
         haptic.selection(); // Haptic feedback on toggle
         await toggleItem(itemId);
+        Telemetry.trackEvent('toggle_item_purchase_success');
       } catch (error) {
+        Telemetry.trackError(
+          error instanceof Error ? error : 'Failed to toggle item purchase',
+          { component: 'ShoppingListMain', operation: 'togglePurchase' },
+        );
         haptic.error(); // Error haptic on failure
         toastService.error('Failed to toggle item');
       }
@@ -772,12 +795,18 @@ export const ShoppingListMain: React.FC = () => {
   );
 
   const handleDeleteItem = async (itemId: string) => {
+    Telemetry.trackEvent('delete_item', { item_id: itemId });
     try {
       haptic.warning(); // Haptic feedback on delete
       await removeItem(itemId);
+      Telemetry.trackEvent('delete_item_success');
       // OPTIMIZATION: No refetch needed - removeItem updates cache via cache.modify
       // Cache automatically updates via Apollo's normalized cache
     } catch (error) {
+      Telemetry.trackError(
+        error instanceof Error ? error : 'Failed to delete item',
+        { component: 'ShoppingListMain', operation: 'deleteItem' },
+      );
       haptic.error(); // Error haptic on failure
       toastService.error('Failed to delete item');
     }
@@ -879,9 +908,20 @@ export const ShoppingListMain: React.FC = () => {
     currentListIdRef.current = currentListId;
   }, [currentListId]);
 
-  // Set up scanner button when component mounts
+  // Set up scanner button when component mounts and track screen view
   useEffect(() => {
+    Telemetry.trackScreen('ShoppingListMain', {
+      list_id: currentListId,
+      item_count: items.length,
+      purchased_count: items.filter(item => item.isPurchased).length,
+      has_lists: lists.length > 0,
+    });
+
     const handleScanPress = () => {
+      Telemetry.trackEvent('barcode_scanner_opened', {
+        source: 'shopping_list',
+        list_id: currentListIdRef.current,
+      });
       navigateTo.barcode({
         source: 'shoppingList',
         shoppingListId: currentListIdRef.current,
@@ -894,7 +934,7 @@ export const ShoppingListMain: React.FC = () => {
     return () => {
       setScannerProps(undefined, false);
     };
-  }, [setScannerProps, navigateTo]);
+  }, [setScannerProps, navigateTo, currentListId, items, lists.length]);
 
   // If no lists exist at all
   if (lists.length === 0) {

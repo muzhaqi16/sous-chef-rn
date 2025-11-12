@@ -30,6 +30,7 @@ import {
 import { useScanner } from '#context';
 import { useFeatureHint } from '#/hooks/useFeatureHint';
 import { FeatureHintOverlay } from '#/components/organisms/FeatureHintOverlay';
+import { Telemetry } from '#/services/telemetry';
 
 import {
   ListTemplate,
@@ -345,6 +346,21 @@ export const PantryMain: React.FC = () => {
     theme,
   });
 
+  // Track screen view on mount
+  useEffect(() => {
+    Telemetry.trackScreen('PantryMain', {
+      home_id: selectedHomeId,
+      pantry_id: pantry?.id,
+      item_count: items.length,
+      has_pantries: (currentHomeData?.home?.pantries?.length || 0) > 0,
+    });
+  }, [
+    selectedHomeId,
+    pantry?.id,
+    items.length,
+    currentHomeData?.home?.pantries?.length,
+  ]);
+
   // Show home switch hint when user has items and home is selected
   useEffect(() => {
     if (selectedHomeId && items.length > 0 && !homeSwitchHint.hasBeenShown) {
@@ -364,6 +380,7 @@ export const PantryMain: React.FC = () => {
 
   const handleAddItem = useCallback(() => {
     if (!selectedHomeId) {
+      Telemetry.trackEvent('add_pantry_item_no_home_selected');
       Alert.alert(
         'No Home Selected',
         'You need to be a member of a home to add pantry items.',
@@ -371,21 +388,35 @@ export const PantryMain: React.FC = () => {
           { text: 'Cancel', style: 'cancel' },
           {
             text: 'Manage Homes',
-            onPress: () => navigate('HomeManagement'),
+            onPress: () => {
+              Telemetry.trackEvent('manage_homes_from_pantry');
+              navigate('HomeManagement');
+            },
             style: 'default',
           },
         ],
       );
       return;
     }
+    Telemetry.trackEvent('add_pantry_item_clicked', {
+      home_id: selectedHomeId,
+      pantry_id: pantry?.id,
+    });
     navigateTo.pantryItem({});
-  }, [selectedHomeId, navigate, navigateTo]);
+  }, [selectedHomeId, navigate, navigateTo, pantry?.id]);
 
   const handleDeleteItem = async (itemId: string) => {
+    Telemetry.trackEvent('delete_pantry_item', { item_id: itemId });
     try {
       haptic.warning(); // Haptic feedback on delete
-      return await removeItem(itemId);
+      const result = await removeItem(itemId);
+      Telemetry.trackEvent('delete_pantry_item_success');
+      return result;
     } catch (error) {
+      Telemetry.trackError(
+        error instanceof Error ? error : 'Failed to delete pantry item',
+        { component: 'PantryMain', operation: 'deleteItem' },
+      );
       haptic.error(); // Error haptic on failure
       throw error;
     }

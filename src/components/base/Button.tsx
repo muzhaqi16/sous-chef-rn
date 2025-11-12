@@ -16,6 +16,8 @@ interface ButtonProps {
   style?: any; // For custom styling
   btnStyle?: any; // For backwards compatibility
   txtStyle?: any; // For backwards compatibility
+  accessibilityLabel?: string;
+  accessibilityHint?: string;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -31,7 +33,12 @@ export const Button: React.FC<ButtonProps> = ({
   style,
   btnStyle,
   txtStyle,
+  accessibilityLabel,
+  accessibilityHint,
 }) => {
+  // Use title/children as fallback for accessibility label
+  const buttonLabel = accessibilityLabel || title || (typeof children === 'string' ? children : undefined);
+
   return (
     <TouchableOpacity
       style={[
@@ -45,6 +52,10 @@ export const Button: React.FC<ButtonProps> = ({
       ]}
       onPress={onPress}
       disabled={disabled || loading}
+      accessibilityRole="button"
+      accessibilityLabel={buttonLabel}
+      accessibilityHint={accessibilityHint}
+      accessibilityState={{ disabled: disabled || loading, busy: loading }}
     >
       {loading ? (
         <ActivityIndicator

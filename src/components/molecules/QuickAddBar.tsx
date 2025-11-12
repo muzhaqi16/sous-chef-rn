@@ -38,6 +38,8 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
           placeholderTextColor={theme.colors.textSecondary}
           returnKeyType="done"
           onSubmitEditing={handleAdd}
+          accessibilityLabel="Item name"
+          accessibilityHint="Enter the name of the item to add"
         />
         <TextInput
           style={styles.quantityInput}
@@ -46,11 +48,17 @@ export const QuickAddBar: React.FC<QuickAddBarProps> = ({
           onChangeText={setQuantity}
           keyboardType="numeric"
           placeholderTextColor={theme.colors.textSecondary}
+          accessibilityLabel="Quantity"
+          accessibilityHint="Enter the quantity"
         />
         <TouchableOpacity
           style={styles.addButton}
           onPress={handleAdd}
           disabled={!itemName.trim()}
+          accessibilityRole="button"
+          accessibilityLabel="Add item"
+          accessibilityHint={itemName.trim() ? `Add ${itemName} to list` : 'Enter item name first'}
+          accessibilityState={{ disabled: !itemName.trim() }}
         >
           <Icon name="add" size={24} color="white" />
         </TouchableOpacity>

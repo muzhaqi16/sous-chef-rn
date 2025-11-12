@@ -1,4 +1,5 @@
 import { Observable } from '@apollo/client';
+import { logger } from '#/utils/environment';
 import { useStore } from '#store';
 import { RefreshTokenDocument, RefreshTokenMutation } from '#generated';
 import { reconnectWebSocket, isWebSocketReconnecting } from './wsLink';
@@ -37,7 +38,7 @@ const processQueue = (token: string | null) => {
     try {
       callback(token);
     } catch (error) {
-      console.error('Error processing refresh queue callback:', error);
+      logger.error('Error processing refresh queue callback:', error);
     }
   });
 };
@@ -57,13 +58,13 @@ const canAttemptRefresh = (): boolean => {
 
   // Prevent too frequent refresh attempts
   if (timeSinceLastRefresh < REFRESH_CONFIG.MIN_REFRESH_INTERVAL) {
-    console.warn('Token refresh attempted too soon, throttling');
+    logger.warn('Token refresh attempted too soon, throttling');
     return false;
   }
 
   // Check retry limit
   if (refreshState.retryCount >= REFRESH_CONFIG.MAX_RETRIES) {
-    console.error('Max token refresh retries exceeded');
+    logger.error('Max token refresh retries exceeded');
     return false;
   }
 
@@ -104,7 +105,7 @@ const performTokenRefresh = async (): Promise<string | null> => {
   const refreshToken = state.refreshToken;
 
   if (!refreshToken) {
-    console.error('Token refresh failed: No refresh token available');
+    logger.error('Token refresh failed: No refresh token available');
     state.tokenRefreshFailed(false); // No refresh token = don't clear cache (might be temporary state)
     throw new Error('No refresh token available');
   }
@@ -113,7 +114,7 @@ const performTokenRefresh = async (): Promise<string | null> => {
   refreshState.retryCount++;
 
   try {
-    console.log(`Attempting token refresh (attempt ${refreshState.retryCount}/${REFRESH_CONFIG.MAX_RETRIES})`);
+    logger.info(`Attempting token refresh (attempt ${refreshState.retryCount}/${REFRESH_CONFIG.MAX_RETRIES})`);
 
     const response = await client.mutate({
       mutation: RefreshTokenDocument,
@@ -137,25 +138,25 @@ const performTokenRefresh = async (): Promise<string | null> => {
       try {
         reconnectWebSocket();
       } catch (wsError) {
-        console.warn('WebSocket reconnection failed:', wsError);
+        logger.warn('WebSocket reconnection failed:', wsError);
         // Don't fail the entire refresh for WebSocket issues
       }
     }
 
     // Reset retry count on successful refresh
     refreshState.retryCount = 0;
-    console.log('Token refresh successful');
+    logger.info('Token refresh successful');
 
     return newToken;
   } catch (error: any) {
-    console.error(`Token refresh failed (attempt ${refreshState.retryCount}):`, error);
+    logger.error(`Token refresh failed (attempt ${refreshState.retryCount}):`, error);
 
     // IMPORTANT: Check network errors FIRST before auth errors
     // This prevents offline scenarios from incorrectly clearing the cache
     const isNetworkFailure = isNetworkError(error);
 
     if (isNetworkFailure) {
-      console.warn(
+      logger.warn(
         `Token refresh failed due to network error (attempt ${refreshState.retryCount}/${REFRESH_CONFIG.MAX_RETRIES}), cache will be preserved:`,
         error.message
       );
@@ -163,14 +164,14 @@ const performTokenRefresh = async (): Promise<string | null> => {
       // For network errors, we retry but DON'T trigger logout after max retries
       if (refreshState.retryCount < REFRESH_CONFIG.MAX_RETRIES) {
         const delay = calculateRetryDelay(refreshState.retryCount - 1);
-        console.log(`Will retry token refresh in ${delay}ms`);
+        logger.info(`Will retry token refresh in ${delay}ms`);
 
         await new Promise(resolve => setTimeout(resolve, delay));
         return performTokenRefresh(); // Recursive retry
       }
 
       // Max retries exceeded - preserve cache, don't logout
-      console.warn('Token refresh failed due to network error after max retries, preserving cache for offline usage');
+      logger.warn('Token refresh failed due to network error after max retries, preserving cache for offline usage');
       throw error; // Just fail the operation, don't trigger session expiry
     }
 
@@ -183,13 +184,13 @@ const performTokenRefresh = async (): Promise<string | null> => {
       );
 
     if (isTokenExpiredError) {
-      console.log('Refresh token expired (genuine auth error), triggering logout with cache clear');
+      logger.info('Refresh token expired (genuine auth error), triggering logout with cache clear');
       state.tokenRefreshFailed(true); // Clear cache for auth failures
       throw new Error('Refresh token expired');
     }
 
     // Unknown error after max retries - trigger logout without clearing cache
-    console.error('Max token refresh retries exceeded for unknown error, triggering session expiry');
+    logger.error('Max token refresh retries exceeded for unknown error, triggering session expiry');
     state.tokenRefreshFailed(false); // Don't clear cache for unknown errors
     throw error;
   }
@@ -269,11 +270,11 @@ export const clearRefreshState = () => {
  * @returns The new access token on success, null on failure
  */
 export const proactiveTokenRefresh = async (): Promise<string | null> => {
-  console.log('[ProactiveRefresh] Starting proactive token refresh');
+  logger.info('[ProactiveRefresh] Starting proactive token refresh');
 
   // Check if already refreshing (shouldn't happen with proactive, but safety check)
   if (refreshState.isRefreshing && refreshState.refreshPromise) {
-    console.log('[ProactiveRefresh] Already refreshing, returning existing promise');
+    logger.info('[ProactiveRefresh] Already refreshing, returning existing promise');
     return refreshState.refreshPromise;
   }
 
@@ -284,11 +285,11 @@ export const proactiveTokenRefresh = async (): Promise<string | null> => {
   try {
     const newToken = await refreshState.refreshPromise;
     processQueue(newToken);
-    console.log('[ProactiveRefresh] Successfully completed');
+    logger.info('[ProactiveRefresh] Successfully completed');
     return newToken;
   } catch (error) {
     processQueue(null);
-    console.error('[ProactiveRefresh] Failed:', error);
+    logger.error('[ProactiveRefresh] Failed:', error);
     // Don't rethrow - reactive refresh will handle it if needed
     return null;
   } finally {

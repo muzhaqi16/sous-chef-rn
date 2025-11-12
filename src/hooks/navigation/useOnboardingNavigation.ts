@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useNavigation } from '@react-navigation/native';
-import { useStore } from '#store';
+import { useAppStore } from '#store/useAppStore';
 import { OnBoardingSteps } from '#store/slices/navigationSlice';
 
 const ONBOARDING_STEPS = [
@@ -25,13 +25,11 @@ const STEP_TO_ENUM: Record<string, OnBoardingSteps> = {
 
 export function useOnboardingNavigation() {
   const navigation = useNavigation();
-  const {
-    setOnBoardingStep,
-    setOnboarded,
-    setUserNavigationState,
-    getUserNavigationState,
-    user,
-  } = useStore();
+  const setOnBoardingStep = useAppStore(state => state.setOnBoardingStep);
+  const setOnboarded = useAppStore(state => state.setOnboarded);
+  const setUserNavigationState = useAppStore(state => state.setUserNavigationState);
+  const getUserNavigationState = useAppStore(state => state.getUserNavigationState);
+  const user = useAppStore(state => state.user);
 
   const getCurrentStepIndex = useCallback((screenName: string) => {
     return ONBOARDING_STEPS.indexOf(screenName as any);

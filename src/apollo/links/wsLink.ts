@@ -3,7 +3,7 @@ import { createClient, Client } from 'graphql-ws';
 import { Platform } from 'react-native';
 import Config from 'react-native-config';
 import { useStore } from '#store';
-import { Environment } from '#/utils/environment';
+import { Environment, logger } from '#/utils/environment';
 
 // pick the right WebSocket constructor
 const webSocketImpl =
@@ -48,7 +48,7 @@ const createWsClient = () => {
       connected: () => {
         isReconnecting = false;
         if (__DEV__) {
-          console.log('🔌 WebSocket connected:', {
+          logger.info('🔌 WebSocket connected:', {
             url: WS_URL,
             timestamp: new Date().toISOString(),
           });
@@ -57,7 +57,7 @@ const createWsClient = () => {
       closed: (event: any) => {
         isReconnecting = false;
         if (__DEV__) {
-          console.log('🔌 WebSocket closed:', {
+          logger.info('🔌 WebSocket closed:', {
             code: event?.code,
             reason: event?.reason,
             wasClean: event?.wasClean,
@@ -67,14 +67,14 @@ const createWsClient = () => {
       },
       error: (error: any) => {
         isReconnecting = false;
-        console.warn('❌ WebSocket error:', {
+        logger.warn('❌ WebSocket error:', {
           error: error?.message || 'Unknown error',
           timestamp: new Date().toISOString(),
         });
       },
       connecting: () => {
         if (__DEV__) {
-          console.log('🔌 WebSocket connecting...', {
+          logger.info('🔌 WebSocket connecting...', {
             url: WS_URL,
             timestamp: new Date().toISOString(),
           });
@@ -82,12 +82,12 @@ const createWsClient = () => {
       },
       ping: () => {
         if (__DEV__) {
-          // console.log('🏓 WebSocket ping sent');
+          // logger.info('🏓 WebSocket ping sent');
         }
       },
       pong: () => {
         if (__DEV__) {
-          // console.log('🏓 WebSocket pong received');
+          // logger.info('🏓 WebSocket pong received');
         }
       },
     },
@@ -105,6 +105,7 @@ export const reconnectWebSocket = () => {
 
   // Debounce reconnection attempts
   if (isReconnecting || now - lastReconnectTime < RECONNECT_DEBOUNCE_MS) {
+    logger.info('🔌 WebSocket reconnection debounced or already in progress');
     return;
   }
 
@@ -112,18 +113,36 @@ export const reconnectWebSocket = () => {
   lastReconnectTime = now;
 
   try {
+    logger.info('🔄 WebSocket reconnecting with new token...');
+
     // Dispose the old client
-    wsClient.dispose();
+    if (wsClient) {
+      wsClient.dispose();
+    }
 
     // Create a new client (this will call connectionParams with the new token)
     wsClient = createWsClient();
 
     // Update the wsLink to use the new client
-    // Note: GraphQLWsLink doesn't have a public method to update the client,
-    // so we need to access the private property
-    (wsLink as any).client = wsClient;
+    // Note: GraphQLWsLink doesn't have a public method to update the client.
+    // This is a known limitation of the library. The workaround is to access
+    // the internal client property. This is safe as long as we handle errors.
+    // Alternative: Recreate the entire Apollo Client (too expensive).
+    if (wsLink && typeof (wsLink as any).client !== 'undefined') {
+      (wsLink as any).client = wsClient;
+      logger.info('✅ WebSocket reconnection successful');
+    } else {
+      throw new Error('Unable to update GraphQLWsLink client - missing client property');
+    }
+
+    isReconnecting = false;
   } catch (error) {
     isReconnecting = false;
+    logger.error('❌ WebSocket reconnection failed:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    });
+    // Don't throw - allow app to continue with degraded functionality (no real-time updates)
   }
 };
 
@@ -134,13 +153,13 @@ export const isWebSocketReconnecting = () => isReconnecting;
 export const disposeWebSocket = () => {
   try {
     if (wsClient) {
-      console.log('🔌 Disposing WebSocket client for logout');
+      logger.info('🔌 Disposing WebSocket client for logout');
       wsClient.dispose();
       isReconnecting = false;
       lastReconnectTime = 0;
     }
   } catch (error) {
-    console.warn('Error disposing WebSocket:', error);
+    logger.warn('Error disposing WebSocket:', error);
   }
 };
 

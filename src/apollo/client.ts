@@ -1,4 +1,5 @@
 import { ApolloClient } from '@apollo/client';
+import { logger } from '#/utils/environment';
 import { createLink } from './links';
 import { makeCache } from './cache';
 import { apolloCachePersistence } from './offline/ApolloCachePersistence';
@@ -12,7 +13,7 @@ if (__DEV__) {
     })
     .catch(() => {
       // Silently fail if dev messages can't be loaded
-      console.warn('Failed to load Apollo dev messages');
+      logger.warn('Failed to load Apollo dev messages');
     });
 }
 
@@ -20,7 +21,7 @@ if (__DEV__) {
  * Initialize Apollo Client with cache persistence
  */
 function initializeClient() {
-  console.log('🚀 Apollo: Initializing client with cache persistence');
+  logger.info('🚀 Apollo: Initializing client with cache persistence');
 
   // Create cache instance
   const cache = makeCache();
@@ -28,7 +29,7 @@ function initializeClient() {
   // Restore persisted cache if available
   const persistedCache = apolloCachePersistence.load();
   if (persistedCache) {
-    console.log('📦 Apollo: Restoring cache from storage');
+    logger.info('📦 Apollo: Restoring cache from storage');
     cache.restore(persistedCache);
   }
 
@@ -67,8 +68,23 @@ function initializeClient() {
   // Set up cache persistence
   setupCachePersistence(client);
 
-  console.log('✅ Apollo: Client initialized with cache persistence');
+  logger.info('✅ Apollo: Client initialized with cache persistence');
   return client;
+}
+
+// Global reference to persistence timer for cleanup
+let persistTimeout: NodeJS.Timeout | null = null;
+
+/**
+ * Cancel any pending cache persistence
+ * Important: Call this during logout to prevent writing stale cache data
+ */
+export function cancelCachePersistence() {
+  if (persistTimeout) {
+    clearTimeout(persistTimeout);
+    persistTimeout = null;
+    logger.info('🛑 Apollo: Cache persistence timer cancelled');
+  }
 }
 
 /**
@@ -78,7 +94,6 @@ function initializeClient() {
  * Approach from apollo3-cache-persist - cleanest way to persist cache
  */
 function setupCachePersistence(client: ApolloClient) {
-  let persistTimeout: NodeJS.Timeout | null = null;
   // Increased from 1000ms to 3000ms to reduce persistence frequency
   // This minimizes JSON serialization overhead on the JS thread
   const DEBOUNCE_MS = 3000;
@@ -92,19 +107,20 @@ function setupCachePersistence(client: ApolloClient) {
     persistTimeout = setTimeout(() => {
       const extracted = client.cache.extract() as any;
       apolloCachePersistence.save(extracted);
+      persistTimeout = null; // Clear reference after execution
     }, DEBOUNCE_MS);
   };
 
   // Listen for cache resets (e.g., logout, clearStore)
   client.onResetStore(() => {
-    console.log('🔄 Apollo: Cache reset, persisting...');
+    logger.info('🔄 Apollo: Cache reset, persisting...');
     schedulePersistence();
     return Promise.resolve();
   });
 
   // Listen for cache clears (e.g., logout with full wipe)
   client.onClearStore(() => {
-    console.log('🧹 Apollo: Cache cleared');
+    logger.info('🧹 Apollo: Cache cleared');
     apolloCachePersistence.clear();
     return Promise.resolve();
   });
@@ -142,7 +158,7 @@ function setupCachePersistence(client: ApolloClient) {
     };
   }
 
-  console.log('✅ Apollo: Cache persistence enabled');
+  logger.info('✅ Apollo: Cache persistence enabled');
 }
 
 // Initialize client synchronously

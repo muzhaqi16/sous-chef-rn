@@ -13,7 +13,7 @@ import {
   ItemSortField,
   SortOrder,
 } from '#generated';
-import { useStore } from '#store';
+import { useAppStore } from '#store/useAppStore';
 import { Button } from '#components';
 import { AnimatedChip } from '#components/atoms/AnimatedChip';
 
@@ -21,7 +21,7 @@ export const SelectPantryItems = () => {
   const { navigateToNextStep, navigateToPreviousStep } =
     useOnboardingNavigation();
 
-  const { selectedPantryId } = useStore();
+  const selectedPantryId = useAppStore(state => state.selectedPantryId);
 
   const {
     data,

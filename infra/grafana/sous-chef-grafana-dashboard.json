@@ -811,6 +811,435 @@
         "type": "prometheus",
         "uid": "${prometheus_datasource}"
       },
+      "description": "Login attempts vs successes by authentication method",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 36
+      },
+      "id": 24,
+      "options": {
+        "legend": {
+          "calcs": ["sum", "mean"],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "pluginVersion": "9.0.0",
+      "targets": [
+        {
+          "expr": "sum(rate(app_events_total{job=\"sous-chef-app\",event_name=\"login_attempt\"}[5m])) by (method)",
+          "refId": "A",
+          "legendFormat": "Login Attempts ({{method}})"
+        },
+        {
+          "expr": "sum(rate(app_events_total{job=\"sous-chef-app\",event_name=\"login_success\"}[5m])) by (method)",
+          "refId": "B",
+          "legendFormat": "Login Success ({{method}})"
+        }
+      ],
+      "title": "Authentication Funnel",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus_datasource}"
+      },
+      "description": "Shopping list item operations (add, delete, toggle purchase)",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 36
+      },
+      "id": 25,
+      "options": {
+        "legend": {
+          "calcs": ["sum"],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "pluginVersion": "9.0.0",
+      "targets": [
+        {
+          "expr": "sum(rate(app_events_total{job=\"sous-chef-app\",event_name=\"add_item_success\"}[5m]))",
+          "refId": "A",
+          "legendFormat": "Items Added"
+        },
+        {
+          "expr": "sum(rate(app_events_total{job=\"sous-chef-app\",event_name=\"delete_item_success\"}[5m]))",
+          "refId": "B",
+          "legendFormat": "Items Deleted"
+        },
+        {
+          "expr": "sum(rate(app_events_total{job=\"sous-chef-app\",event_name=\"toggle_item_purchase_success\"}[5m]))",
+          "refId": "C",
+          "legendFormat": "Items Toggled"
+        }
+      ],
+      "title": "Shopping List Actions",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus_datasource}"
+      },
+      "description": "Pantry item operations and management actions",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 44
+      },
+      "id": 26,
+      "options": {
+        "legend": {
+          "calcs": ["sum"],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "pluginVersion": "9.0.0",
+      "targets": [
+        {
+          "expr": "sum(rate(app_events_total{job=\"sous-chef-app\",event_name=\"add_pantry_item_clicked\"}[5m]))",
+          "refId": "A",
+          "legendFormat": "Pantry Items Added"
+        },
+        {
+          "expr": "sum(rate(app_events_total{job=\"sous-chef-app\",event_name=\"delete_pantry_item_success\"}[5m]))",
+          "refId": "B",
+          "legendFormat": "Pantry Items Deleted"
+        }
+      ],
+      "title": "Pantry Actions",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus_datasource}"
+      },
+      "description": "Feature usage: barcode scanner, avatar uploads, etc.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 44
+      },
+      "id": 27,
+      "options": {
+        "legend": {
+          "calcs": ["sum"],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "pluginVersion": "9.0.0",
+      "targets": [
+        {
+          "expr": "sum(rate(app_events_total{job=\"sous-chef-app\",event_name=\"barcode_scanner_opened\"}[5m]))",
+          "refId": "A",
+          "legendFormat": "Barcode Scanner Opens"
+        },
+        {
+          "expr": "sum(rate(app_events_total{job=\"sous-chef-app\",event_name=\"avatar_upload_clicked\"}[5m]))",
+          "refId": "B",
+          "legendFormat": "Avatar Uploads"
+        },
+        {
+          "expr": "sum(rate(app_events_total{job=\"sous-chef-app\",event_name=\"logout_clicked\"}[5m]))",
+          "refId": "C",
+          "legendFormat": "Logouts"
+        }
+      ],
+      "title": "Feature Usage",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus_datasource}"
+      },
+      "description": "Top 15 user actions by frequency in the last hour",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "displayMode": "auto"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 52
+      },
+      "id": 28,
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Count"
+          }
+        ]
+      },
+      "pluginVersion": "9.0.0",
+      "targets": [
+        {
+          "expr": "topk(15, sum by (event_name) (increase(app_events_total{job=\"sous-chef-app\"}[1h])))",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Top User Actions (1h)",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "renameByName": {
+              "event_name": "Action",
+              "Value": "Count"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus_datasource}"
+      },
+      "description": "Login success rate by authentication method",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "green", "value": 90 }
+            ]
+          },
+          "unit": "percent"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 52
+      },
+      "id": 29,
+      "options": {
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "text": {}
+      },
+      "pluginVersion": "9.0.0",
+      "targets": [
+        {
+          "expr": "(sum(rate(app_events_total{job=\"sous-chef-app\",event_name=\"login_success\",method=\"email_password\"}[5m])) / sum(rate(app_events_total{job=\"sous-chef-app\",event_name=\"login_attempt\",method=\"email_password\"}[5m]))) * 100",
+          "refId": "A",
+          "legendFormat": "Email/Password Success Rate"
+        },
+        {
+          "expr": "(sum(rate(app_events_total{job=\"sous-chef-app\",event_name=\"login_success\",method=\"biometric\"}[5m])) / sum(rate(app_events_total{job=\"sous-chef-app\",event_name=\"login_attempt\",method=\"biometric\"}[5m]))) * 100",
+          "refId": "B",
+          "legendFormat": "Biometric Success Rate"
+        }
+      ],
+      "title": "Login Success Rate",
+      "type": "gauge"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${prometheus_datasource}"
+      },
       "description": "Environment distribution of app usage",
       "fieldConfig": {
         "defaults": {
@@ -831,9 +1260,9 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 36
+        "y": 60
       },
-      "id": 14,
+      "id": 30,
       "options": {
         "legend": {
           "displayMode": "list",
@@ -907,9 +1336,9 @@
         "h": 8,
         "w": 16,
         "x": 8,
-        "y": 36
+        "y": 60
       },
-      "id": 15,
+      "id": 31,
       "options": {
         "legend": {
           "calcs": ["mean", "lastNotNull"],
@@ -941,9 +1370,9 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 44
+        "y": 68
       },
-      "id": 16,
+      "id": 32,
       "options": {
         "showTime": true,
         "sortOrder": "Descending",
@@ -969,9 +1398,9 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 52
+        "y": 76
       },
-      "id": 17,
+      "id": 33,
       "options": {
         "showTime": true,
         "sortOrder": "Descending",
@@ -1036,9 +1465,9 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 52
+        "y": 76
       },
-      "id": 18,
+      "id": 34,
       "options": {
         "legend": {
           "calcs": [],
@@ -1116,7 +1545,7 @@
         "h": 4,
         "w": 4,
         "x": 0,
-        "y": 60
+        "y": 84
       },
       "id": 19,
       "options": {
@@ -1170,7 +1599,7 @@
         "h": 4,
         "w": 5,
         "x": 4,
-        "y": 60
+        "y": 84
       },
       "id": 20,
       "options": {
@@ -1221,7 +1650,7 @@
         "h": 4,
         "w": 5,
         "x": 9,
-        "y": 60
+        "y": 84
       },
       "id": 21,
       "options": {
@@ -1272,7 +1701,7 @@
         "h": 4,
         "w": 5,
         "x": 14,
-        "y": 60
+        "y": 84
       },
       "id": 22,
       "options": {
@@ -1325,7 +1754,7 @@
         "h": 4,
         "w": 5,
         "x": 19,
-        "y": 60
+        "y": 84
       },
       "id": 23,
       "options": {

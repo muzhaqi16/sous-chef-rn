@@ -1,12 +1,15 @@
 import { useEffect } from 'react';
 import { useGetHomesQuery, useGetDefaultHomeQuery } from '#generated';
-import { useStore } from '#store';
+import { useAppStore } from '#store/useAppStore';
 import { useAuth } from '#hooks/auth/useAuth';
 import { usePreservedArrayData } from '#/hooks/apollo';
 import { normalizeHome, normalizeHomes } from '#/utils/connectionUtils';
 
 export const useDefaultHome = () => {
-  const { selectedHomeId, setSelectedHomeId, selectedPantryId, setSelectedPantryId } = useStore();
+  const selectedHomeId = useAppStore(state => state.selectedHomeId);
+  const setSelectedHomeId = useAppStore(state => state.setSelectedHomeId);
+  const selectedPantryId = useAppStore(state => state.selectedPantryId);
+  const setSelectedPantryId = useAppStore(state => state.setSelectedPantryId);
   const { canAttemptQueries } = useAuth();
 
   // Always fetch homes when authenticated (needed for UI and getDefaultPantry)

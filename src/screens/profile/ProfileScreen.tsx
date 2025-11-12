@@ -14,6 +14,8 @@ import {
 import { ActionTray, ActionTrayRef } from '#/components/templates/ActionTray';
 import { useScanner } from '#/context/ScannerContext';
 import { Icon } from '#/utils';
+import { Telemetry } from '#/services/telemetry';
+import { useEffect } from 'react';
 
 // Tab bar height constant (65px from FloatingTabBar)
 const TAB_BAR_HEIGHT = 65;
@@ -21,17 +23,28 @@ const TAB_BAR_HEIGHT = 65;
 export const ProfileScreen = () => {
   const { navigate, goBack } = useAppNavigation();
   const { profile, user, loading } = useProfileData();
-  const { sections, BiometricModal, biometricLoading } = useConfigurableSettings(profile);
+  const { sections, BiometricModal, biometricLoading } =
+    useConfigurableSettings(profile);
   const { bottom: safeBottom } = useSafeAreaInsets();
   const { setOverlayOpen } = useScanner();
   const { theme } = useUnistyles();
   const actionTrayRef = useRef<ActionTrayRef>(null);
 
+  // Track screen view on mount
+  useEffect(() => {
+    Telemetry.trackScreen('ProfileScreen', {
+      has_profile: !!profile,
+      has_avatar: !!profile?.avatar,
+    });
+  }, [profile]);
+
   const handleAvatarPress = () => {
+    Telemetry.trackEvent('avatar_upload_clicked', { source: 'ProfileScreen' });
     navigate('ProfilePhotoUpload');
   };
 
   const handleLogout = () => {
+    Telemetry.trackEvent('logout_clicked', { source: 'ProfileScreen' });
     // Find and execute logout action
     const logoutSection = sections.find(s => s.title === '');
     const logoutItem = logoutSection?.items.find(
@@ -44,10 +57,12 @@ export const ProfileScreen = () => {
   };
 
   const handleMorePress = useCallback(() => {
+    Telemetry.trackEvent('profile_more_menu_opened');
     actionTrayRef.current?.open();
   }, []);
 
   const handleDeleteAccount = useCallback(() => {
+    Telemetry.trackEvent('delete_account_clicked');
     actionTrayRef.current?.close();
     navigate('DeleteAccount');
   }, [navigate]);

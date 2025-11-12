@@ -1,6 +1,6 @@
 import {useEffect, useRef, useCallback, useState} from 'react';
 import {AppState, AppStateStatus} from 'react-native';
-import {useStore} from '#store';
+import {useAppStore} from '#store/useAppStore';
 import {client} from '#/apollo/client';
 import {RefreshTokenDocument, RefreshTokenMutation} from '#generated';
 import {jwtDecode} from 'jwt-decode';
@@ -11,7 +11,9 @@ interface DecodedToken {
 }
 
 export const useTokenManager = () => {
-  const {accessToken, refreshToken, setTokens} = useStore();
+  const accessToken = useAppStore(state => state.accessToken);
+  const refreshToken = useAppStore(state => state.refreshToken);
+  const setTokens = useAppStore(state => state.setTokens);
   const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const refreshPromiseRef = useRef<Promise<boolean> | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);

@@ -1,9 +1,10 @@
 import {useState} from 'react';
-import {useStore} from '#store';
+import {useAppStore} from '#store/useAppStore';
 import {LANGUAGE_OPTIONS} from '../../constants/languages';
 
 export const useLanguagePicker = () => {
-  const {language, setLanguage} = useStore();
+  const language = useAppStore(state => state.language);
+  const setLanguage = useAppStore(state => state.setLanguage);
   const [langPickerVisible, setLangPickerVisible] = useState(false);
 
   const showLanguagePicker = () => setLangPickerVisible(true);
