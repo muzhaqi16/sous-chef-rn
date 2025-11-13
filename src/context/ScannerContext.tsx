@@ -29,7 +29,7 @@ export const ScannerProvider: React.FC<ScannerProviderProps> = ({ children }) =>
     setOnScanPress(prev => {
       // Compare function references - only update if different
       if (prev === scanPress) return prev;
-      return scanPress ? () => scanPress : undefined;
+      return scanPress || undefined;
     });
     setShowScannerButton(prev => {
       // Only update if showButton value has changed

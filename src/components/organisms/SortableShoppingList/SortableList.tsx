@@ -315,11 +315,10 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
           paddingBottom: TAB_BAR_HEIGHT + insets.bottom + 16,
         }}
         ListFooterComponent={ListFooterComponent}
-        // NOTE: RefreshControl disabled due to gesture conflicts with DraggableFlatList + TabView
-        // Pull-to-refresh is incompatible with the gesture coordination required for:
-        // - Normal vertical scroll
-        // - Horizontal tab swipe
-        // - Drag-to-reorder
+        // NOTE: RefreshControl disabled due to fundamental gesture conflicts
+        // All approaches attempted (RNGH, native, ScrollView wrapper, NestableScrollContainer)
+        // Either break normal scroll or cause VirtualizedList nesting warnings
+        // Alternative: Add manual refresh button to tab bar or header
         // OPTIMIZATION: Performance props to reduce initial render work
         initialNumToRender={10}
         maxToRenderPerBatch={5}

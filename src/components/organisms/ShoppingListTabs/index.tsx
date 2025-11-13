@@ -193,15 +193,6 @@ export const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     );
   }
 
-  // Debug: Check why tab swipe might be disabled
-  if (__DEV__) {
-    console.log('🔍 TabView swipeEnabled debug:', {
-      disabled,
-      isDragging,
-      swipeEnabled: !disabled && !isDragging,
-    });
-  }
-
   return (
     <TabView
       routes={routes}
@@ -211,6 +202,8 @@ export const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
       lazyPreloadDistance={0}
       onIndexChange={handleIndexChange}
       swipeEnabled={!disabled && !isDragging}
+      onRefresh={onRefresh}
+      refreshing={refreshing}
     />
   );
 };
