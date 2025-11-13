@@ -16,7 +16,7 @@ import {
 } from '#components/barcode';
 import AddItemForm from '#components/organisms/AddItemForm';
 import { type BarcodeStackParamList } from '#navigation/stacks/BarcodeStack';
-import { useStore } from '#store';
+import { useAppStore } from '#store/useAppStore';
 import { useSearchResults } from '#hooks';
 
 export const SearchResultsScreen: React.FC<{
@@ -28,14 +28,12 @@ export const SearchResultsScreen: React.FC<{
 
   const bottomSheetRef = useRef<BottomSheet>(null);
 
-  const {
-    bottomSheetVisible,
-    searchError,
-    bottomSheetIndex,
-    isSearching,
-    hideBottomSheet,
-    showBottomSheet,
-  } = useStore();
+  const bottomSheetVisible = useAppStore(state => state.bottomSheetVisible);
+  const searchError = useAppStore(state => state.searchError);
+  const bottomSheetIndex = useAppStore(state => state.bottomSheetIndex);
+  const isSearching = useAppStore(state => state.isSearching);
+  const hideBottomSheet = useAppStore(state => state.hideBottomSheet);
+  const showBottomSheet = useAppStore(state => state.showBottomSheet);
 
   const {
     searchResults,

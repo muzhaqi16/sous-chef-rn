@@ -14,6 +14,8 @@ interface FormInputProps extends Omit<TextInputProps, 'style'> {
   required?: boolean;
   containerStyle?: any;
   inputStyle?: any;
+  accessibilityLabel?: string;
+  accessibilityHint?: string;
 }
 
 export const FormInput: React.FC<FormInputProps> = ({
@@ -22,6 +24,8 @@ export const FormInput: React.FC<FormInputProps> = ({
   required = false,
   containerStyle,
   inputStyle,
+  accessibilityLabel,
+  accessibilityHint,
   ...textInputProps
 }) => {
   const { theme } = useUnistyles();
@@ -58,6 +62,13 @@ export const FormInput: React.FC<FormInputProps> = ({
     },
   });
 
+  // Generate accessibility label with required indicator if needed
+  const inputLabel = accessibilityLabel || label;
+  const fullLabel = required ? `${inputLabel}, required` : inputLabel;
+  const fullHint = error
+    ? `${accessibilityHint || ''}${accessibilityHint ? '. ' : ''}Error: ${error}`
+    : accessibilityHint;
+
   return (
     <View style={styles.container}>
       <Text style={styles.label}>
@@ -67,9 +78,23 @@ export const FormInput: React.FC<FormInputProps> = ({
       <TextInput
         style={styles.input}
         placeholderTextColor={theme.colors.textSecondary}
+        accessible={true}
+        accessibilityLabel={fullLabel}
+        accessibilityHint={fullHint}
+        accessibilityState={{
+          disabled: textInputProps.editable === false,
+        }}
         {...textInputProps}
       />
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {error && (
+        <Text
+          style={styles.errorText}
+          accessibilityRole="alert"
+          accessibilityLiveRegion="polite"
+        >
+          {error}
+        </Text>
+      )}
     </View>
   );
 };

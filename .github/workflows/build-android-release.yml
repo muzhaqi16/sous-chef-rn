@@ -1,0 +1,154 @@
+name: Build Android .apk (Production)
+run-name: Building production .apk triggered by @${{ github.actor }}
+permissions:
+  contents: write
+
+on:
+  push:
+    tags:
+      - "release-v*"
+
+jobs:
+  build:
+    runs-on: self-hosted
+    timeout-minutes: 30
+
+    environment: prod
+
+    env:
+      ANDROID_HOME: /opt/android-sdk
+      ANDROID_SDK_ROOT: /opt/android-sdk
+      JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
+      GRADLE_OPTS: -Xmx4096m -Dorg.gradle.daemon=false -Dorg.gradle.parallel=true
+      NODE_OPTIONS: --max-old-space-size=4096
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          clean: true
+
+      - name: Display build environment
+        run: |
+          echo "🔧 Building for environment: production"
+          echo "📦 Tag/Ref: ${{ github.ref }}"
+          echo "Node version: $(node -v)"
+          echo "Java version: $(java -version 2>&1 | head -n 1)"
+          echo "Android SDK: $ANDROID_HOME"
+
+      - name: Setup Android local.properties
+        run: |
+          echo "sdk.dir=/opt/android-sdk" > android/local.properties
+          echo "✅ Created android/local.properties"
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v3
+
+      - name: Setup gradlew as executable
+        run: chmod +x ./android/gradlew
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-node-modules-
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            android/.gradle
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Run Yarn Install
+        run: yarn install --frozen-lockfile --network-timeout 100000
+
+      - name: Clean Android build
+        run: |
+          cd android
+          ./gradlew clean
+          cd ..
+
+      - name: Generate .env file from production environment
+        run: |
+          echo "API_URL=${{ vars.API_URL }}" > .env.production
+          echo "API_KEY=${{ secrets.API_KEY }}" >> .env.production
+          echo "WEB_SOCKET_URL=${{ vars.WEB_SOCKET_URL }}" >> .env.production
+          echo "LOKI_ENDPOINT=${{ vars.LOKI_ENDPOINT }}" >> .env.production
+          echo "PROMETHEUS_ENDPOINT=${{ vars.PROMETHEUS_ENDPOINT }}" >> .env.production
+          echo "TELEMETRY_AUTH_USERNAME=${{ secrets.TELEMETRY_AUTH_USERNAME }}" >> .env.production
+          echo "TELEMETRY_AUTH_PASSWORD=${{ secrets.TELEMETRY_AUTH_PASSWORD }}" >> .env.production
+          echo "SPOONACULAR_API_KEY=${{ secrets.SPOONACULAR_API_KEY }}" >> .env.production
+
+      - name: Prepare .env for react-native-config
+        run: cp .env.production .env
+
+      - name: Build production apk
+        run: |
+          echo -n "$PROD_KEYSTORE_BASE64" | base64 --decode > ./android/app/prod-release.keystore
+          cd android
+          ./gradlew assembleRelease
+        env:
+          PROD_KEYSTORE_BASE64: ${{ secrets.PROD_KEYSTORE_BASE64 }}
+          MYAPP_UPLOAD_STORE_FILE: "prod-release.keystore"
+          MYAPP_UPLOAD_STORE_PASSWORD: ${{ secrets.PROD_KEYSTORE_PASSWORD }}
+          MYAPP_UPLOAD_KEY_ALIAS: "prod-release"
+          MYAPP_UPLOAD_KEY_PASSWORD: ${{ secrets.PROD_KEY_PASSWORD }}
+
+      - name: List the .apks compiled
+        run: ls ./android/app/build/outputs/apk/release/ -hal
+
+      - name: Rename the .apk production files
+        run: |
+          TAG_NAME="${{ github.ref_name }}"
+
+          # Rename universal APK
+          if [ -f "./android/app/build/outputs/apk/release/app-universal-release.apk" ]; then
+            mv "./android/app/build/outputs/apk/release/app-universal-release.apk" \
+              "./android/app/build/outputs/apk/release/sous-chef-prod-${TAG_NAME}-universal.apk"
+          fi
+
+          # Rename architecture-specific APKs
+          if [ -f "./android/app/build/outputs/apk/release/app-armeabi-v7a-release.apk" ]; then
+            mv "./android/app/build/outputs/apk/release/app-armeabi-v7a-release.apk" \
+              "./android/app/build/outputs/apk/release/sous-chef-prod-${TAG_NAME}-armeabi-v7a.apk"
+          fi
+
+          if [ -f "./android/app/build/outputs/apk/release/app-arm64-v8a-release.apk" ]; then
+            mv "./android/app/build/outputs/apk/release/app-arm64-v8a-release.apk" \
+              "./android/app/build/outputs/apk/release/sous-chef-prod-${TAG_NAME}-arm64-v8a.apk"
+          fi
+
+          if [ -f "./android/app/build/outputs/apk/release/app-x86-release.apk" ]; then
+            mv "./android/app/build/outputs/apk/release/app-x86-release.apk" \
+              "./android/app/build/outputs/apk/release/sous-chef-prod-${TAG_NAME}-x86.apk"
+          fi
+
+          if [ -f "./android/app/build/outputs/apk/release/app-x86_64-release.apk" ]; then
+            mv "./android/app/build/outputs/apk/release/app-x86_64-release.apk" \
+              "./android/app/build/outputs/apk/release/sous-chef-prod-${TAG_NAME}-x86_64.apk"
+          fi
+
+      - name: Create Release and Upload Files
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          name: Production Release ${{ github.ref_name }}
+          files: |
+            android/app/build/outputs/apk/release/sous-chef-*.apk
+          generate_release_notes: true
+          prerelease: false
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f ./android/app/prod-release.keystore
+          rm -f android/local.properties
+          rm -f .env.production .env
+          cd android && ./gradlew --stop || true

@@ -16,7 +16,7 @@ import {
   CollaboratorRole,
   MembershipRole,
 } from '#generated';
-import { useStore } from '#store';
+import { useAppStore } from '#store/useAppStore';
 import { useOnboardingNavigation, useAuth } from '#hooks';
 
 type InviteEntry = {
@@ -29,7 +29,8 @@ export const InviteMembersScreen = () => {
   const { navigateToNextStep } = useOnboardingNavigation();
   const { user } = useAuth();
 
-  const { selectedHomeId, selectedShoppingListId } = useStore();
+  const selectedHomeId = useAppStore(state => state.selectedHomeId);
+  const selectedShoppingListId = useAppStore(state => state.selectedShoppingListId);
 
   const [invites, setInvites] = useState<InviteEntry[]>([]);
   const [currentEmail, setCurrentEmail] = useState('');

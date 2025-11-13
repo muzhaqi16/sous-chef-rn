@@ -73,17 +73,27 @@ export function findMovedItem(
 }
 
 /**
- * Get the IDs of items that should be before and after a given position
+ * Get the IDs and sortOrder values of items that should be before and after a given position
  * @param items - Array of items
  * @param index - Index position to get neighbors for
- * @returns Object with afterId (item before) and beforeId (item after)
+ * @returns Object with afterId, afterSortOrder (item before) and beforeId, beforeSortOrder (item after)
  */
 export function getNeighborIds(
   items: SortableShoppingListItem[],
   index: number,
-): { afterId: string | null; beforeId: string | null } {
-  const afterId = index > 0 ? items[index - 1].id : null;
-  const beforeId = index < items.length - 1 ? items[index + 1].id : null;
+): {
+  afterId: string | null;
+  afterSortOrder: string | null;
+  beforeId: string | null;
+  beforeSortOrder: string | null;
+} {
+  const afterItem = index > 0 ? items[index - 1] : null;
+  const beforeItem = index < items.length - 1 ? items[index + 1] : null;
 
-  return { afterId, beforeId };
+  return {
+    afterId: afterItem?.id ?? null,
+    afterSortOrder: afterItem?.sortOrder ?? null,
+    beforeId: beforeItem?.id ?? null,
+    beforeSortOrder: beforeItem?.sortOrder ?? null,
+  };
 }

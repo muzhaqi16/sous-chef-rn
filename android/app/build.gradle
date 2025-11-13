@@ -42,11 +42,11 @@ android {
         applicationId "dev.souschef.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 17
-        versionName "1.6.7"
+        versionCode 18
+        versionName "1.7.1"
         testBuildType System.getProperty('testBuildType', 'debug')
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-      
+
     }
     
     signingConfigs {
@@ -56,18 +56,43 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
-        
-        release {
-            // Environment variables (CI/Play Store) override gradle.properties (local/GitHub CI)
-            def keystoreFilePath = System.getenv("MYAPP_UPLOAD_STORE_FILE") ?: 
+
+        staging {
+            // Staging uses same dev keystore as debug builds
+            def keystoreFilePath = System.getenv("MYAPP_UPLOAD_STORE_FILE") ?:
                                   (project.hasProperty("MYAPP_UPLOAD_STORE_FILE") ? MYAPP_UPLOAD_STORE_FILE : null)
-            def keystoreStorePassword = System.getenv("MYAPP_UPLOAD_STORE_PASSWORD") ?: 
+            def keystoreStorePassword = System.getenv("MYAPP_UPLOAD_STORE_PASSWORD") ?:
                                         (project.hasProperty("MYAPP_UPLOAD_STORE_PASSWORD") ? MYAPP_UPLOAD_STORE_PASSWORD : null)
-            def keystoreKeyAlias = System.getenv("MYAPP_UPLOAD_KEY_ALIAS") ?: 
+            def keystoreKeyAlias = System.getenv("MYAPP_UPLOAD_KEY_ALIAS") ?:
                                   (project.hasProperty("MYAPP_UPLOAD_KEY_ALIAS") ? MYAPP_UPLOAD_KEY_ALIAS : null)
-            def keystoreKeyPassword = System.getenv("MYAPP_UPLOAD_KEY_PASSWORD") ?: 
+            def keystoreKeyPassword = System.getenv("MYAPP_UPLOAD_KEY_PASSWORD") ?:
                                       (project.hasProperty("MYAPP_UPLOAD_KEY_PASSWORD") ? MYAPP_UPLOAD_KEY_PASSWORD : null)
-            
+
+            if (keystoreFilePath && keystoreStorePassword && keystoreKeyAlias && keystoreKeyPassword) {
+                storeFile file(keystoreFilePath)
+                storePassword keystoreStorePassword
+                keyAlias keystoreKeyAlias
+                keyPassword keystoreKeyPassword
+            } else {
+                println "Warning: Staging signing configuration not found, using debug."
+                storeFile file('debug.keystore')
+                storePassword 'android'
+                keyAlias 'androiddebugkey'
+                keyPassword 'android'
+            }
+        }
+
+        release {
+            // Production release uses separate production keystore
+            def keystoreFilePath = System.getenv("MYAPP_UPLOAD_STORE_FILE") ?:
+                                  (project.hasProperty("MYAPP_UPLOAD_STORE_FILE") ? MYAPP_UPLOAD_STORE_FILE : null)
+            def keystoreStorePassword = System.getenv("MYAPP_UPLOAD_STORE_PASSWORD") ?:
+                                        (project.hasProperty("MYAPP_UPLOAD_STORE_PASSWORD") ? MYAPP_UPLOAD_STORE_PASSWORD : null)
+            def keystoreKeyAlias = System.getenv("MYAPP_UPLOAD_KEY_ALIAS") ?:
+                                  (project.hasProperty("MYAPP_UPLOAD_KEY_ALIAS") ? MYAPP_UPLOAD_KEY_ALIAS : null)
+            def keystoreKeyPassword = System.getenv("MYAPP_UPLOAD_KEY_PASSWORD") ?:
+                                      (project.hasProperty("MYAPP_UPLOAD_KEY_PASSWORD") ? MYAPP_UPLOAD_KEY_PASSWORD : null)
+
             if (keystoreFilePath && keystoreStorePassword && keystoreKeyAlias && keystoreKeyPassword) {
                 storeFile file(keystoreFilePath)
                 storePassword keystoreStorePassword
@@ -95,7 +120,7 @@ android {
         staging {
             initWith release
             manifestPlaceholders = [usesCleartextTraffic: "true"]
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.staging
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
             resValue "string", "build_config_package", "dev.souschef.app"

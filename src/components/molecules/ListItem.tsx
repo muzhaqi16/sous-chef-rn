@@ -70,9 +70,20 @@ const ListItemComponent: React.FC<ListItemProps> = ({
   );
 
   if (onPress) {
+    // Build accessible label from content
+    const subtitleText = typeof subtitle === 'string' ? subtitle : '';
+    const accessibilityLabel = [title, subtitleText, badge?.text].filter(Boolean).join(', ');
+
     return (
       <View style={styles.container}>
-        <TouchableOpacity style={styles.contentContainer} onPress={onPress}>
+        <TouchableOpacity
+          style={styles.contentContainer}
+          onPress={onPress}
+          accessibilityRole="button"
+          accessibilityLabel={accessibilityLabel}
+          accessibilityHint="Tap to view details"
+          accessibilityState={{ disabled: isPurchased }}
+        >
           {content}
         </TouchableOpacity>
       </View>

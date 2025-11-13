@@ -3,11 +3,12 @@ import {Text, View, ActivityIndicator} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
 import {OnBoardingWrapper} from '#components/templates';
 import {Button} from '#components';
-import {useStore} from '#store';
+import {useAppStore} from '#store/useAppStore';
 import {useCompleteOnboardingMutation} from '#generated';
 
 export const OnboardingCompleteScreen = () => {
-  const {user, updateUser} = useStore();
+  const user = useAppStore(state => state.user);
+  const updateUser = useAppStore(state => state.updateUser);
   const [isCompleting, setIsCompleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

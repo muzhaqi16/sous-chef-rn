@@ -17,7 +17,11 @@ const Chip: React.FC<ChipProps> = ({label, selected, onPress, style}) => {
         selected ? styles.selected : styles.unselected,
         style,
       ]}
-      onPress={onPress}>
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityHint={selected ? `${label} filter selected, tap to deselect` : `${label} filter not selected, tap to select`}
+      accessibilityState={{selected}}>
       <Text
         style={[
           styles.chipText,

@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { Alert } from 'react-native';
-import { useStore } from '#store';
+import { useAppStore } from '#store/useAppStore';
 import { useTheme, useAuth } from '#hooks';
 import {
   useUpdateUserProfileMutation,
@@ -15,8 +15,11 @@ import { BiometricSetupModal } from '#components/organisms/BiometricSetupModal';
 import { useUserPreferences } from '#hooks/navigation/useUserPreferences';
 
 export const useConfigurableSettings = (profile: any) => {
-  const store = useStore();
-  const { user, logout, getUserNavigationState } = useStore();
+  const user = useAppStore(state => state.user);
+  const logout = useAppStore(state => state.logout);
+  const getUserNavigationState = useAppStore(state => state.getUserNavigationState);
+  const language = useAppStore(state => state.language);
+  const setLanguage = useAppStore(state => state.setLanguage);
   const { userThemePreference, setTheme } = useTheme();
   const { checkStoredCredentials, getBiometricInfo, removeCredentials } =
     useAuth();
@@ -313,14 +316,14 @@ export const useConfigurableSettings = (profile: any) => {
 
         case 'language':
           if (config.type === 'modal') {
-            baseItem.value = store.language || 'en';
+            baseItem.value = language || 'en';
             baseItem.options = config.options || [
               { label: 'English', value: 'en' },
               { label: 'Spanish', value: 'es' },
               { label: 'French', value: 'fr' },
             ];
             baseItem.onSave = (value: string) => {
-              store.setLanguage(value);
+              setLanguage(value);
               updateUserPreferences({ language: value });
             };
           }
@@ -423,8 +426,9 @@ export const useConfigurableSettings = (profile: any) => {
     },
     [
       profile,
-      store,
       user,
+      language,
+      setLanguage,
       updateProfile,
       updateUserPreferences,
       userThemePreference,

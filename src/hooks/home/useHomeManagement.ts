@@ -13,7 +13,6 @@ import {
   useJoinHomeByCodeMutation,
   useGetHomeByJoinCodeLazyQuery,
 } from '#generated';
-import { useSearchableList } from '../useSearchableList';
 import { useAppStore, selectSelectedHomeId } from '#store/useAppStore';
 import { useErrorHandler } from '#/utils/errorHandling';
 import {
@@ -27,7 +26,6 @@ import {
   createAddToQueryFieldUpdater,
   createRemoveFromQueryFieldUpdater,
 } from '#/apollo/utils';
-import { homeSearch } from '#/utils/searchUtils';
 import { useCrudOperations } from '#/hooks/utils';
 
 // Cache updater utilities for homes
@@ -135,9 +133,6 @@ export function useHomeManagement() {
     handleApolloError,
     setSelectedHomeId,
   ]);
-
-  // Search functionality - using reusable search utility
-  const { query, setQuery, filtered } = useSearchableList(homes, homeSearch);
 
   // CRUD operations utilities
   const { createAddOperation, createRemoveOperation } = useCrudOperations();
@@ -608,7 +603,7 @@ export function useHomeManagement() {
 
   return {
     // Data
-    homes: filtered,
+    homes,
     allHomes: homes,
     defaultHome,
     defaultHomeId: selectedHomeId,
@@ -620,10 +615,6 @@ export function useHomeManagement() {
     error,
     stats,
     previewHome: previewData?.homeByJoinCode ? normalizeHome(previewData.homeByJoinCode) : null,
-
-    // Search
-    searchQuery: query,
-    setSearchQuery: setQuery,
 
     // Loading states
     creating,

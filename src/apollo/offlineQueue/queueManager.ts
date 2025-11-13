@@ -17,6 +17,7 @@ import {
   SyncMoveShoppingListItemDocument,
 } from '#generated';
 import { generateId } from '#/utils/generateId';
+import { logger } from '#/utils/environment';
 
 /**
  * Default configuration for the queue manager
@@ -56,7 +57,7 @@ export class QueueManager {
   async processQueue(): Promise<void> {
     // Prevent concurrent processing
     if (this.isProcessing) {
-      console.log('⏳ Queue: Already processing, waiting...');
+      logger.debug('⏳ Queue: Already processing, waiting...');
       return this.processingPromise || Promise.resolve();
     }
 
@@ -64,18 +65,18 @@ export class QueueManager {
 
     // Check if user is authenticated
     if (!state.user || !state.accessToken) {
-      console.log('⚠️ Queue: No authenticated user, skipping processing');
+      logger.info('⚠️ Queue: No authenticated user, skipping processing');
       return;
     }
 
     // Check if online
     if (!state.isOnline) {
-      console.log('📴 Queue: Offline, skipping processing');
+      logger.debug('📴 Queue: Offline, skipping processing');
       return;
     }
 
     const userId = state.user.id;
-    console.log(`🔄 Queue: Starting processing for user ${userId}`);
+    logger.info(`🔄 Queue: Starting processing for user ${userId}`);
 
     this.isProcessing = true;
     this.idMapping.clear(); // Reset ID mappings for fresh processing session
@@ -110,7 +111,7 @@ export class QueueManager {
           const existing = moveMutations.get(itemId);
           if (existing) {
             removedIds.push(existing.id);
-            console.log(`🔄 Queue: Merging move mutation ${existing.id} into ${mutation.id} for item ${itemId}`);
+            logger.info(`🔄 Queue: Merging move mutation ${existing.id} into ${mutation.id} for item ${itemId}`);
           }
 
           // Keep only the latest move for each item
@@ -123,7 +124,7 @@ export class QueueManager {
         // Legacy mutation - keep for backward compatibility during migration
         const listId = mutation.variables?.input?.shoppingListId;
         if (listId) {
-          console.log(`⚠️ Queue: Found legacy ReorderShoppingListItems mutation ${mutation.id} - consider migrating to MoveShoppingListItem`);
+          logger.info(`⚠️ Queue: Found legacy ReorderShoppingListItems mutation ${mutation.id} - consider migrating to MoveShoppingListItem`);
         }
         otherMutations.push(mutation);
       } else {
@@ -144,7 +145,7 @@ export class QueueManager {
     // Validate token before processing
     const hasValidToken = await this.validateTokenBeforeReplay();
     if (!hasValidToken) {
-      console.error('❌ Queue: Token validation failed, cannot process');
+      logger.error('❌ Queue: Token validation failed, cannot process');
       return;
     }
 
@@ -152,11 +153,11 @@ export class QueueManager {
     const mutations = queueStore.getPendingMutationsForUser(userId);
 
     if (mutations.length === 0) {
-      console.log('✅ Queue: No pending mutations');
+      logger.info('✅ Queue: No pending mutations');
       return;
     }
 
-    console.log(`📊 Queue: Found ${mutations.length} pending mutations`);
+    logger.info(`📊 Queue: Found ${mutations.length} pending mutations`);
 
     // Merge multiple move mutations for the same item
     const { merged: mergedMutations, removed: removedIds } = this.mergeMoveItemMutations(mutations);
@@ -167,7 +168,7 @@ export class QueueManager {
     });
 
     if (removedIds.length > 0) {
-      console.log(`🔄 Queue: Merged ${removedIds.length} duplicate move mutations, processing ${mergedMutations.length} mutations`);
+      logger.info(`🔄 Queue: Merged ${removedIds.length} duplicate move mutations, processing ${mergedMutations.length} mutations`);
     }
 
     // Process mutations in batches (use merged mutations)
@@ -177,7 +178,7 @@ export class QueueManager {
       // Check if still online before each batch
       const state = useStore.getState();
       if (!state.isOnline) {
-        console.log('📴 Queue: Went offline during processing, pausing');
+        logger.info('📴 Queue: Went offline during processing, pausing');
         break;
       }
 
@@ -193,13 +194,13 @@ export class QueueManager {
       const failed = results.filter(
         r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.success)
       ).length;
-      console.log(`📦 Queue: Batch complete - ${succeeded} succeeded, ${failed} failed`);
+      logger.info(`📦 Queue: Batch complete - ${succeeded} succeeded, ${failed} failed`);
     }
 
     // Cleanup old successful mutations
     queueStore.cleanupSuccessful();
 
-    console.log('✅ Queue: Processing complete');
+    logger.info('✅ Queue: Processing complete');
   }
 
   /**
@@ -214,7 +215,7 @@ export class QueueManager {
         status: QueueStatus.PROCESSING,
       });
 
-      console.log(`⚡ Queue: Processing ${mutation.operationName} (${mutationId})`);
+      logger.info(`⚡ Queue: Processing ${mutation.operationName} (${mutationId})`);
 
       // Execute mutation with timeout
       const result = await Promise.race([
@@ -231,7 +232,7 @@ export class QueueManager {
       // Remove after short delay (allows for reconciliation)
       setTimeout(() => queueStore.removeMutation(mutationId), 5000);
 
-      console.log(`✅ Queue: Mutation ${mutationId} processed successfully`);
+      logger.info(`✅ Queue: Mutation ${mutationId} processed successfully`);
 
       return {
         success: true,
@@ -239,7 +240,7 @@ export class QueueManager {
         serverResponse: result,
       };
     } catch (error: any) {
-      console.error(`❌ Queue: Mutation ${mutationId} failed:`, error.message);
+      logger.error(`❌ Queue: Mutation ${mutationId} failed:`, error.message);
       return await this.handleMutationError(mutation, error);
     }
   }
@@ -279,7 +280,7 @@ export class QueueManager {
   private async executeSyncMutation(mutation: QueuedMutation): Promise<any> {
     const { syncMutation, syncVariables } = this.convertToSyncMutation(mutation);
 
-    console.log(`🔄 Queue: Using sync mutation for ${mutation.operationName}`);
+    logger.info(`🔄 Queue: Using sync mutation for ${mutation.operationName}`);
 
     const result = await client.mutate({
       mutation: syncMutation,
@@ -301,12 +302,12 @@ export class QueueManager {
     // Handle ID mapping for creates
     if (syncResult.wasCreated && syncResult.serverId && syncResult.clientId) {
       this.idMapping.set(syncResult.clientId, syncResult.serverId);
-      console.log(`🔗 Queue: Mapped ${syncResult.clientId} → ${syncResult.serverId}`);
+      logger.info(`🔗 Queue: Mapped ${syncResult.clientId} → ${syncResult.serverId}`);
     }
 
     // Handle conflicts
     if (syncResult.conflict) {
-      console.warn(
+      logger.warn(
         `⚠️ Queue: Conflict detected for ${mutation.operationName}:`,
         syncResult.conflict.message
       );
@@ -440,7 +441,7 @@ export class QueueManager {
 
     // Fallback: For mutations without Sync versions, replay the original mutation
     // This allows all queued mutations to be replayed when coming back online
-    console.log(`ℹ️ Queue: No sync mutation for ${operationName}, using original mutation`);
+    logger.info(`ℹ️ Queue: No sync mutation for ${operationName}, using original mutation`);
     return {
       syncMutation: mutation.mutation,
       syncVariables: variables,
@@ -471,7 +472,7 @@ export class QueueManager {
         ) {
           const realId = this.idMapping.get(value);
           if (realId) {
-            console.log(`🔄 Queue: Resolved ${value} → ${realId}`);
+            logger.info(`🔄 Queue: Resolved ${value} → ${realId}`);
             obj[key] = realId;
           }
         } else if (typeof value === 'object') {
@@ -510,7 +511,7 @@ export class QueueManager {
 
     // Handle retryable errors
     if (queueError.retryable && mutation.retryCount < mutation.maxRetries) {
-      console.log(
+      logger.info(
         `🔄 Queue: Scheduling retry for ${mutation.id} (attempt ${mutation.retryCount + 1}/${mutation.maxRetries})`
       );
 
@@ -545,19 +546,19 @@ export class QueueManager {
     mutation: QueuedMutation,
     error: QueueError
   ): Promise<ProcessingResult> {
-    console.log(`🔐 Queue: Auth error for ${mutation.id}, attempting token refresh`);
+    logger.info(`🔐 Queue: Auth error for ${mutation.id}, attempting token refresh`);
 
     // Try token refresh one more time
     const refreshed = await this.validateTokenBeforeReplay();
 
     if (refreshed) {
-      console.log(`✅ Queue: Token refreshed, retrying ${mutation.id}`);
+      logger.info(`✅ Queue: Token refreshed, retrying ${mutation.id}`);
       // Retry mutation with fresh token
       return await this.processMutation(mutation);
     }
 
     // Token refresh failed - mark as auth error
-    console.error(`❌ Queue: Token refresh failed for ${mutation.id}`);
+    logger.error(`❌ Queue: Token refresh failed for ${mutation.id}`);
     queueStore.markMutationFailed(mutation.id, {
       ...error,
       type: 'auth',
@@ -578,7 +579,7 @@ export class QueueManager {
 
     // Check if token exists
     if (!state.accessToken) {
-      console.log('⚠️ Queue: No access token available');
+      logger.info('⚠️ Queue: No access token available');
       return false;
     }
 
@@ -680,9 +681,9 @@ export class QueueManager {
    * Event: User went online
    */
   onOnline(): void {
-    console.log('📡 Queue: Network online, starting queue processing');
+    logger.info('📡 Queue: Network online, starting queue processing');
     this.processQueue().catch(error => {
-      console.error('Failed to process queue on online:', error);
+      logger.error('Failed to process queue on online:', error);
     });
   }
 
@@ -690,7 +691,7 @@ export class QueueManager {
    * Event: User went offline
    */
   onOffline(): void {
-    console.log('📴 Queue: Network offline, queue processing paused');
+    logger.info('📴 Queue: Network offline, queue processing paused');
   }
 
   /**
@@ -698,7 +699,7 @@ export class QueueManager {
    */
   onUserChange(newUserId: string | null, previousUserId: string | null): void {
     if (previousUserId && previousUserId !== newUserId) {
-      console.log(`🔄 Queue: User changed from ${previousUserId} to ${newUserId}, clearing old queue`);
+      logger.info(`🔄 Queue: User changed from ${previousUserId} to ${newUserId}, clearing old queue`);
       queueStore.clearQueueForUser(previousUserId);
     }
 
@@ -717,7 +718,7 @@ export class QueueManager {
    * Event: User logged out
    */
   onLogout(userId: string): void {
-    console.log(`👋 Queue: User ${userId} logged out, clearing queue`);
+    logger.info(`👋 Queue: User ${userId} logged out, clearing queue`);
     queueStore.clearQueueForUser(userId);
     queueStore.clearCurrentUserId();
   }

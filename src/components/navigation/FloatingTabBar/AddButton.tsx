@@ -11,6 +11,9 @@ export const AddButton: React.FC<AddButtonProps> = ({ onPress }) => {
       onPress={onPress}
       style={styles.addButton}
       activeOpacity={0.8}
+      accessibilityRole="button"
+      accessibilityLabel="Scan barcode"
+      accessibilityHint="Opens camera to scan product barcodes and add items"
     >
       <Icon
         name="qr-code-scanner"

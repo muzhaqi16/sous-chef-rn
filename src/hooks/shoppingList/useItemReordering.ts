@@ -6,6 +6,7 @@ import {
   GetShoppingListItemsDocument,
   GetShoppingListItemsQuery,
 } from '#generated';
+import { SubscriptionService } from '#/services/subscriptions/SubscriptionService';
 
 interface ShoppingListItem {
   id: string;
@@ -138,16 +139,39 @@ export function useItemReordering<T extends ShoppingListItem>(
    * @param itemId - ID of the item being moved
    * @param afterItemId - ID of the item that comes before the new position
    * @param beforeItemId - ID of the item that comes after the new position
+   * @param afterSortOrder - sortOrder value of the item before the new position
+   * @param beforeSortOrder - sortOrder value of the item after the new position
    */
   const handleSortOrderUpdate = useCallback(
     async (
       itemId: string,
       afterItemId: string | null,
       beforeItemId: string | null,
+      afterSortOrder: string | null,
+      beforeSortOrder: string | null,
     ) => {
       if (!listId) return;
 
       try {
+        // DEFENSIVE CHECK: Detect duplicate sortOrder values
+        if (
+          afterSortOrder !== null &&
+          beforeSortOrder !== null &&
+          afterSortOrder === beforeSortOrder
+        ) {
+          console.error('❌ Duplicate sortOrder detected:', {
+            afterItemId,
+            afterSortOrder,
+            beforeItemId,
+            beforeSortOrder,
+          });
+          Alert.alert(
+            'Error',
+            'Item positions are out of sync. Please refresh the list.',
+          );
+          return;
+        }
+
         // Find the current item from cache to preserve all fields
         const currentItem = items.find(item => item.id === itemId);
         if (!currentItem) {
@@ -165,6 +189,9 @@ export function useItemReordering<T extends ShoppingListItem>(
             },
           },
         });
+
+        // Mark this item as recently reordered to ignore subscription echo
+        SubscriptionService.getInstance().markItemReordered(itemId);
       } catch (error) {
         console.error('Failed to move item:', error);
         Alert.alert('Error', 'Failed to reorder items');

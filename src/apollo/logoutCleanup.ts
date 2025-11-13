@@ -1,9 +1,11 @@
-import { client } from './client';
+import { client, cancelCachePersistence } from './client';
 import { InMemoryCache } from '@apollo/client';
 import { useStore } from '#store';
 import { storage } from '#/storage/mmkv';
 import { apolloCachePersistence } from './offline/ApolloCachePersistence';
 import { optimisticDataPersistence } from './offline/OptimisticDataPersistence';
+import { cancelTokenRefresh } from './links/tokenScheduler';
+import { logger } from '#/utils/environment';
 
 interface LogoutCleanupOptions {
   clearCache?: boolean;
@@ -54,30 +56,36 @@ export class LogoutCleanup {
       suppressErrors = true,
     } = options;
 
-    console.log('🧹 Starting Apollo logout cleanup...');
+    logger.info('🧹 Starting Apollo logout cleanup...');
     LogoutCleanup.isLoggingOut = true;
 
     try {
-      // 1. Cancel all active subscriptions
+      // 1. Cancel scheduled token refresh
+      cancelTokenRefresh();
+
+      // 2. Cancel pending cache persistence
+      cancelCachePersistence();
+
+      // 3. Cancel all active subscriptions
       if (cancelSubscriptions) {
         LogoutCleanup.cancelAllSubscriptions();
       }
 
-      // 2. Stop all in-flight queries
+      // 4. Stop all in-flight queries
       await LogoutCleanup.stopInFlightQueries();
 
-      // 3. Clear Apollo cache (only cache we need now)
+      // 5. Clear Apollo cache (only cache we need now)
       if (clearCache) {
         await LogoutCleanup.clearApolloCache();
       }
 
-      console.log('✅ Apollo logout cleanup completed');
+      logger.info('✅ Apollo logout cleanup completed');
     } catch (error) {
       if (!suppressErrors) {
-        console.error('❌ Error during Apollo logout cleanup:', error);
+        logger.error('❌ Error during Apollo logout cleanup:', error);
         throw error;
       } else {
-        console.warn('⚠️ Suppressed error during logout cleanup:', error);
+        logger.warn('⚠️ Suppressed error during logout cleanup:', error);
       }
     }
   }
@@ -88,14 +96,14 @@ export class LogoutCleanup {
   static completeLogout(): void {
     LogoutCleanup.isLoggingOut = false;
     LogoutCleanup.activeSubscriptions.clear();
-    console.log('🏁 Apollo logout process completed');
+    logger.info('🏁 Apollo logout process completed');
   }
 
   /**
    * Cancel all active subscriptions
    */
   private static cancelAllSubscriptions(): void {
-    console.log(
+    logger.info(
       `🔌 Cancelling ${LogoutCleanup.activeSubscriptions.size} active subscriptions`,
     );
 
@@ -107,7 +115,7 @@ export class LogoutCleanup {
           subscription(); // For React Navigation listeners
         }
       } catch (error) {
-        console.warn('Failed to unsubscribe:', error);
+        logger.warn('Failed to unsubscribe:', error);
       }
     });
 
@@ -126,14 +134,14 @@ export class LogoutCleanup {
       try {
         const { disposeWebSocket } = await import('./links/wsLink');
         disposeWebSocket();
-        console.log('🔌 WebSocket connection disposed');
+        logger.info('🔌 WebSocket connection disposed');
       } catch (wsError) {
-        console.warn('Failed to dispose WebSocket:', wsError);
+        logger.warn('Failed to dispose WebSocket:', wsError);
       }
 
-      console.log('🛑 Stopped all in-flight queries and connections');
+      logger.info('🛑 Stopped all in-flight queries and connections');
     } catch (error) {
-      console.warn('Failed to stop in-flight queries:', error);
+      logger.warn('Failed to stop in-flight queries:', error);
     }
   }
 
@@ -148,7 +156,7 @@ export class LogoutCleanup {
       // Per Apollo docs: "call gc() after evict() operations"
       const cache = client.cache as InMemoryCache;
       const removedIds = cache.gc({ resetResultCache: true });
-      console.log(`🗑️ Garbage collected ${removedIds.length} unreachable cache objects`);
+      logger.info(`🗑️ Garbage collected ${removedIds.length} unreachable cache objects`);
 
       // Clear new cache persistence
       apolloCachePersistence.clear();
@@ -174,12 +182,12 @@ export class LogoutCleanup {
         secureStorage.remove('apollo-mutation-queue');
         secureStorage.remove('apollo-queue-current-user');
       } catch (storageError) {
-        console.warn('Failed to clear secure storage:', storageError);
+        logger.warn('Failed to clear secure storage:', storageError);
       }
 
-      console.log('🗑️ Apollo cache, navigation state, and mutation queue cleared');
+      logger.info('🗑️ Apollo cache, navigation state, and mutation queue cleared');
     } catch (error) {
-      console.warn('Failed to clear Apollo cache:', error);
+      logger.warn('Failed to clear Apollo cache:', error);
     }
   }
 
@@ -215,7 +223,7 @@ export class LogoutCleanup {
     );
 
     if (shouldSuppress) {
-      console.log(
+      logger.info(
         `🔇 Suppressed logout error for ${operationName}: ${errorMessage}`,
       );
       return true;

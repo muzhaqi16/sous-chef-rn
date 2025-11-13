@@ -174,19 +174,21 @@ export const useDeviceRegistration = () => {
   /**
    * Silently registers device in background (non-blocking)
    */
-  const registerDeviceInBackground = useCallback(async (): Promise<void> => {
-    try {
-      // Don't block the calling function
-      registerDeviceWithRetry(3).then(success => {
+  const registerDeviceInBackground = useCallback((): void => {
+    // Fire and forget - don't block the calling function
+    // Properly handle promise to prevent unhandled rejection warnings
+    registerDeviceWithRetry(3)
+      .then(success => {
         if (success) {
           logger.info('Background device registration completed successfully');
         } else {
           logger.warn('Background device registration failed - will retry on next login');
         }
+      })
+      .catch(error => {
+        // Log but don't throw - device registration is optional and shouldn't block auth
+        logger.error('Background device registration error:', error);
       });
-    } catch (error) {
-      logger.error('Error starting background device registration:', error);
-    }
   }, [registerDeviceWithRetry]);
 
   /**

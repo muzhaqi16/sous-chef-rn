@@ -25,7 +25,7 @@ export const DragHandle: React.FC<DragHandleProps> = ({
   return (
     <TouchableOpacity
       onLongPress={onLongPress}
-      delayLongPress={150}
+      delayLongPress={200}
       style={styles.container}
       hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       activeOpacity={0.6}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, TouchableOpacity, Alert } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -73,13 +73,16 @@ export const CollapsiblePurchasedSection: React.FC<
   );
 
   // Preserve expansion state and only auto-expand when completing all shopping
+  // OPTIMIZATION: Use ref to detect threshold crossing, prevent effect on every count change
+  const prevUnpurchasedRef = useRef(unpurchasedCount);
   useEffect(() => {
-    // Only auto-expand when transitioning from "items remaining" to "all done"
+    // Only auto-expand when crossing the zero threshold (items remaining -> all done)
     // Don't trigger on every purchase, only when last item is marked purchased
-    // Check !isExpanded to prevent unnecessary re-renders
-    if (unpurchasedCount === 0 && purchasedItems.length > 0 && !expanded) {
+    const crossedZeroThreshold = prevUnpurchasedRef.current > 0 && unpurchasedCount === 0;
+    if (crossedZeroThreshold && purchasedItems.length > 0 && !expanded) {
       setExpanded(true);
     }
+    prevUnpurchasedRef.current = unpurchasedCount;
     // Don't auto-collapse - preserve user's manual choice
   }, [unpurchasedCount, purchasedItems.length, expanded, setExpanded]);
 

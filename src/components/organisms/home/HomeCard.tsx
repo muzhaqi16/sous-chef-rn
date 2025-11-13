@@ -135,6 +135,10 @@ export const HomeCard: React.FC<HomeCardProps> = ({
         style={styles.homeHeader}
         onPress={() => onPress?.(home.id)}
         activeOpacity={onPress ? 0.7 : 1}
+        accessibilityRole="button"
+        accessibilityLabel={`${home.name}, ${home.members?.length || 0} members, ${home.pantries?.length || 0} pantries${isDefault ? ', default home' : ''}`}
+        accessibilityHint="Tap to view home details"
+        disabled={!onPress}
       >
         <View style={styles.homeInfo}>
           <Text style={styles.homeName}>{home.name}</Text>

@@ -19,6 +19,8 @@ interface AnimatedButtonProps extends TouchableOpacityProps {
   loading?: boolean;
   variant?: 'primary' | 'secondary' | 'danger';
   fullWidth?: boolean;
+  accessibilityLabel?: string;
+  accessibilityHint?: string;
 }
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
@@ -30,6 +32,8 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
   fullWidth = false,
   disabled,
   style,
+  accessibilityLabel,
+  accessibilityHint,
   ...props
 }) => {
   const { theme } = useUnistyles();
@@ -109,6 +113,9 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
     }
   };
 
+  // Generate default accessibility label from children if not provided
+  const defaultLabel = typeof children === 'string' ? children : accessibilityLabel;
+
   return (
     <AnimatedTouchable
       {...props}
@@ -120,6 +127,14 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
         (disabled || loading) && styles.disabled,
         style,
       ]}
+      accessible={true}
+      accessibilityRole="button"
+      accessibilityLabel={loading ? `Loading ${defaultLabel}` : defaultLabel}
+      accessibilityHint={accessibilityHint}
+      accessibilityState={{
+        disabled: disabled || loading,
+        busy: loading,
+      }}
     >
       {loading ? (
         <ActivityIndicator size="small" color={getTextColor()} />

@@ -1,8 +1,10 @@
 import { useCallback } from 'react';
-import { useStore } from '#store';
+import { useAppStore } from '#store/useAppStore';
 
 export const useUserPreferences = () => {
-  const { user, getUserNavigationState, setUserNavigationState } = useStore();
+  const user = useAppStore(state => state.user);
+  const getUserNavigationState = useAppStore(state => state.getUserNavigationState);
+  const setUserNavigationState = useAppStore(state => state.setUserNavigationState);
 
   const shouldShowCredentialPrompt = useCallback((userId?: string): boolean => {
     const targetUserId = userId || user?.id;

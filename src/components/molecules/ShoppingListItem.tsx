@@ -55,6 +55,10 @@ export const ShoppingListItem: React.FC<ShoppingListItemProps> = ({
         <TouchableOpacity
           style={styles.checkboxContainer}
           onPress={() => onToggle(id)}
+          accessibilityRole="checkbox"
+          accessibilityLabel={`${name} ${isPurchased ? 'purchased' : 'not purchased'}`}
+          accessibilityHint={isPurchased ? 'Tap to mark as not purchased' : 'Tap to mark as purchased'}
+          accessibilityState={{ checked: isPurchased }}
         >
           <View
             style={[styles.checkbox, isPurchased && styles.checkboxChecked]}
@@ -80,7 +84,13 @@ export const ShoppingListItem: React.FC<ShoppingListItemProps> = ({
                 onDecrement={() => setLocalQuantity(q => Math.max(1, q - 1))}
                 disabled={isPurchased}
               />
-              <TouchableOpacity onPress={handleQuantityUpdate} disabled={isPurchased}>
+              <TouchableOpacity
+                onPress={handleQuantityUpdate}
+                disabled={isPurchased}
+                accessibilityRole="button"
+                accessibilityLabel="Confirm quantity"
+                accessibilityHint={`Save new quantity of ${localQuantity}`}
+              >
                 <Icon name="check" size={20} color={theme.colors.primary} />
               </TouchableOpacity>
             </View>
@@ -102,6 +112,9 @@ export const ShoppingListItem: React.FC<ShoppingListItemProps> = ({
             <TouchableOpacity
               style={styles.quantityContainer}
               onPress={() => setIsEditingQuantity(true)}
+              accessibilityRole="button"
+              accessibilityLabel={`Edit quantity: ${quantity} ${unit || ''}`}
+              accessibilityHint="Tap to change the quantity"
             >
               <QuantityDisplay
                 quantity={quantity}

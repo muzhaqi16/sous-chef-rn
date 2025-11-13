@@ -12,6 +12,8 @@ interface FABProps {
   icon?: IconName;
   library?: IconLibrary;
   position?: { bottom?: number; right?: number; left?: number; top?: number };
+  accessibilityLabel?: string;
+  accessibilityHint?: string;
 }
 
 export const FAB: React.FC<FABProps> = ({
@@ -19,6 +21,8 @@ export const FAB: React.FC<FABProps> = ({
   icon = 'add',
   library = 'MaterialIcons',
   position = { bottom: 20, right: 20 },
+  accessibilityLabel = 'Add',
+  accessibilityHint = 'Tap to add a new item',
 }) => {
   const { bottom: safeBottom } = useSafeAreaInsets();
 
@@ -30,7 +34,13 @@ export const FAB: React.FC<FABProps> = ({
 
   return (
     <View style={[styles.fab, fabPosition]}>
-      <TouchableOpacity style={styles.fabButton} onPress={onPress}>
+      <TouchableOpacity
+        style={styles.fabButton}
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel}
+        accessibilityHint={accessibilityHint}
+      >
         <Icon name={icon} size={24} color="white" library={library} />
       </TouchableOpacity>
     </View>

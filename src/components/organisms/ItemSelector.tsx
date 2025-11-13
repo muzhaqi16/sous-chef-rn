@@ -55,12 +55,18 @@ export function ItemSelector<T extends SelectableItem>({
       return renderCustomItem(item, isSelected, () => handleItemSelect(item));
     }
 
+    const itemName = String(item[displayProperty]);
+
     return (
       <TouchableOpacity
         style={[styles.item, isSelected && styles.selectedItem]}
-        onPress={() => handleItemSelect(item)}>
+        onPress={() => handleItemSelect(item)}
+        accessibilityRole="button"
+        accessibilityLabel={itemName}
+        accessibilityHint={isSelected ? `${itemName} selected` : `Select ${itemName}`}
+        accessibilityState={{selected: isSelected}}>
         <Text style={[styles.itemText, isSelected && styles.selectedItemText]}>
-          {String(item[displayProperty])}
+          {itemName}
         </Text>
       </TouchableOpacity>
     );

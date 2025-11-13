@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { RefreshControl, FlatList } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState } from '../base/EmptyState';
@@ -7,6 +7,10 @@ import { IconName } from '#/utils/iconUtils';
 
 // Tab bar height constant (65px from FloatingTabBar)
 const TAB_BAR_HEIGHT = 65;
+
+// ItemCard height constant for getItemLayout optimization
+// Measured from actual ItemCard component (height + marginBottom)
+const ITEM_HEIGHT = 72;
 interface Item {
   id: string;
   title: string;
@@ -88,6 +92,38 @@ export const ItemList: React.FC<ItemListProps> = ({
     }
   };
 
+  // Performance optimization: getItemLayout for known item heights
+  // Avoids expensive layout measurement for better scroll performance
+  const getItemLayout = useCallback(
+    (_data: ArrayLike<Item> | null | undefined, index: number) => ({
+      length: ITEM_HEIGHT,
+      offset: ITEM_HEIGHT * index,
+      index,
+    }),
+    [],
+  );
+
+  // Performance optimization: memoize renderItem
+  const renderItem = useCallback(
+    ({ item }: { item: Item }) => (
+      <ItemCard
+        id={item.id}
+        title={item.title}
+        subtitle={item.subtitle}
+        badge={item.badge}
+        leftElement={item.leftElement}
+        rightElement={item.rightElement}
+        onPress={() => onItemPress(item.id)}
+        onEdit={onItemEdit ? () => onItemEdit(item.id) : undefined}
+        onDelete={onItemDelete ? () => onItemDelete(item.id) : undefined}
+        onConsume={onItemConsume ? () => onItemConsume(item.id) : undefined}
+        onWaste={onItemWaste ? () => onItemWaste(item.id) : undefined}
+        onSwipeableWillOpen={onSwipeableWillOpen}
+      />
+    ),
+    [onItemPress, onItemEdit, onItemDelete, onItemConsume, onItemWaste, onSwipeableWillOpen],
+  );
+
   if (items.length === 0 && emptyState) {
     return <EmptyState {...emptyState} />;
   }
@@ -104,22 +140,14 @@ export const ItemList: React.FC<ItemListProps> = ({
       }
       onScroll={handleScroll}
       scrollEventThrottle={400}
-      renderItem={({ item }) => (
-        <ItemCard
-          id={item.id}
-          title={item.title}
-          subtitle={item.subtitle}
-          badge={item.badge}
-          leftElement={item.leftElement}
-          rightElement={item.rightElement}
-          onPress={() => onItemPress(item.id)}
-          onEdit={onItemEdit ? () => onItemEdit(item.id) : undefined}
-          onDelete={onItemDelete ? () => onItemDelete(item.id) : undefined}
-          onConsume={onItemConsume ? () => onItemConsume(item.id) : undefined}
-          onWaste={onItemWaste ? () => onItemWaste(item.id) : undefined}
-          onSwipeableWillOpen={onSwipeableWillOpen}
-        />
-      )}
+      renderItem={renderItem}
+      // Performance optimizations for large lists
+      getItemLayout={getItemLayout}
+      initialNumToRender={10}
+      maxToRenderPerBatch={10}
+      updateCellsBatchingPeriod={50}
+      windowSize={5}
+      removeClippedSubviews={true}
       ListFooterComponent={
         ListFooterComponent &&
         (typeof ListFooterComponent === 'function' ? (
