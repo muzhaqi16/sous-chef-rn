@@ -12,6 +12,23 @@ export interface GroupBoundary {
   endY: number;
 }
 
+// Configuration for counter element (avoids creating React elements in useMemo)
+// Callbacks are retrieved from ShoppingListActionsContext for stable references
+export interface CounterElementConfig {
+  type: 'counter';
+  quantity: number;
+  unit?: string;
+  itemId: string;
+  disabled: boolean;
+}
+
+// Configuration for image element (avoids creating React elements in useMemo)
+export interface ImageElementConfig {
+  type: 'image';
+  url: string;
+  isPurchased?: boolean;
+}
+
 // Shopping list item interface for sorting
 export interface SortableShoppingListItem {
   id: string;
@@ -24,7 +41,9 @@ export interface SortableShoppingListItem {
     variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger';
   };
   rightElement?: ReactNode;
+  rightElementConfig?: CounterElementConfig; // Config-based element creation (performance)
   leftElement?: ReactNode;
+  leftElementConfig?: ImageElementConfig; // Config-based element creation (performance)
 }
 
 // Props for the main sortable list component
@@ -35,7 +54,13 @@ export interface SortableShoppingListProps extends Omit<ScrollViewProps, 'data' 
   onItemDelete?: (id: string) => void;
   onTogglePurchase?: (id: string) => void;
   onDragEnd?: (reorderedItems: SortableShoppingListItem[]) => void;
-  onSortOrderUpdate?: (itemId: string, afterItemId: string | null, beforeItemId: string | null) => Promise<void>;
+  onSortOrderUpdate?: (
+    itemId: string,
+    afterItemId: string | null,
+    beforeItemId: string | null,
+    afterSortOrder: string | null,
+    beforeSortOrder: string | null,
+  ) => Promise<void>;
   itemHeight?: number;
   disabled?: boolean;
   groupByPurchased?: boolean;
@@ -44,6 +69,8 @@ export interface SortableShoppingListProps extends Omit<ScrollViewProps, 'data' 
   onSwipeableClose?: () => void;
   onRefresh?: () => void | Promise<void>;
   refreshing?: boolean;
+  onDragBegin?: () => void;
+  onDragRelease?: () => void;
 }
 
 // Sort order update for API calls

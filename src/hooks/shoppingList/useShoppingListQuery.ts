@@ -39,10 +39,27 @@ export function useShoppingListQuery(listId: string | undefined) {
   // This eliminates duplicate subscription code and provides consistent behavior
   // across all subscriptions (deduplication, error handling, logging)
 
-  const items = useMemo(
-    () => data?.shoppingListItems || [],
-    [data?.shoppingListItems],
-  );
+  const items = useMemo(() => {
+    const rawItems = data?.shoppingListItems || [];
+
+    // Sort items to ensure consistent order across reloads
+    // Server should return items sorted, but we enforce it client-side as well
+    // Sort by: isPurchased ASC -> sortOrder ASC -> createdAt ASC
+    return [...rawItems].sort((a, b) => {
+      // First by purchased status (unpurchased items first)
+      if (a.isPurchased !== b.isPurchased) {
+        return a.isPurchased ? 1 : -1;
+      }
+
+      // Then by sortOrder (fractional indexing strings)
+      if (a.sortOrder && b.sortOrder) {
+        return a.sortOrder.localeCompare(b.sortOrder);
+      }
+
+      // Fallback to createdAt for items without sortOrder
+      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    });
+  }, [data?.shoppingListItems]);
 
   return {
     items,
