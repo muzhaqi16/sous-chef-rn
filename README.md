@@ -5,12 +5,36 @@ A React Native application for managing your home kitchen, pantry items, shoppin
 ## Quick Start
 
 ### Development
+
 ```bash
 npm install
 npm start
 ```
 
+## Running Android with Production Env Vars
+
+The Android build reads environment variables via `react-native-config`. To launch with the production `.env` file:
+
+- **macOS/Linux (bash/zsh):**
+
+```bash
+ENVFILE=.env.production npm run android
+```
+
+- **Windows Command Prompt:**
+
+```cmd
+set ENVFILE=.env.production && npm run android
+```
+
+- **Windows PowerShell:**
+
+```powershell
+env:ENVFILE=".env.production"; npm run android
+```
+
 ### Clean Build (Android)
+
 ```bash
 npx react-native clean
 rm -rf android/app/build
@@ -20,6 +44,7 @@ rm -rf android/app/.cxx
 ## Architecture Overview
 
 ### State Management
+
 This app uses a hybrid state management approach for optimal performance:
 
 - **Zustand Store** (`useAppStore`): Global app state, user data, navigation state
@@ -28,6 +53,7 @@ This app uses a hybrid state management approach for optimal performance:
 #### ⚠️ Important: Use Selective Subscriptions
 
 **❌ Bad Pattern** (causes unnecessary re-renders):
+
 ```typescript
 import { useStore } from '#store';
 const { user, accessToken, setSelectedHomeId } = useStore();
@@ -35,6 +61,7 @@ const { user, accessToken, setSelectedHomeId } = useStore();
 ```
 
 **✅ Good Pattern** (selective re-renders):
+
 ```typescript
 import { useAppStore, selectUser, selectAccessToken } from '#store/useAppStore';
 const user = useAppStore(selectUser);
@@ -44,10 +71,12 @@ const setSelectedHomeId = useAppStore(state => state.setSelectedHomeId);
 ```
 
 #### When to Use Each:
+
 - **useAppStore**: UI state, selections, user preferences, navigation state, biometric settings
 - **Apollo Client** (useQuery/useMutation): GraphQL queries/mutations, server data, cache management
 
 ### Offline-First Architecture
+
 The app is designed for offline-first operation with automatic sync:
 
 - Apollo cache persists data locally
@@ -56,11 +85,13 @@ The app is designed for offline-first operation with automatic sync:
 - Query data preservation prevents cascade failures
 
 **Key Patterns:**
+
 - Use `usePreservedArrayData` for array queries with `errorPolicy: 'ignore'`
 - Use offline fetch policies from `apollo/policies/offlineFetchPolicies.ts`
 - Prefer cache updates over `refetchQueries` for better performance
 
 See `docs/apollo-client-patterns.md` for comprehensive documentation on:
+
 - Cache update patterns (5 recommended patterns)
 - Optimistic response patterns
 - Error handling with version conflicts
@@ -68,6 +99,7 @@ See `docs/apollo-client-patterns.md` for comprehensive documentation on:
 - Fetch policy decision trees
 
 ### Pagination
+
 Reusable pagination is handled via the `PaginationFooter` component:
 
 ```typescript
@@ -95,19 +127,22 @@ const { hasMore, loadMore, isLoadingMore } = usePagination({
       itemCount={items.length}
     />
   }
-/>
+/>;
 ```
 
 ### Performance Optimization
 
 #### List Virtualization
+
 **Always use `FlatList` for dynamic lists:**
+
 - ✅ Use `FlatList` for any list with unbounded/dynamic items (shopping lists, pantry items, recipes)
 - ✅ Use `SortableShoppingList` for drag-and-drop lists
 - ✅ Use `ScrollView` only for static, bounded content (settings screens, forms)
 - ❌ Never use `.map()` inside `ScrollView` for lists that can grow
 
 **Example Conversions:**
+
 ```typescript
 // ❌ Bad: Unbounded list in ScrollView
 <ScrollView>
@@ -123,6 +158,7 @@ const { hasMore, loadMore, isLoadingMore } = usePagination({
 ```
 
 #### Query Optimization
+
 - Use `useCrudOperations` hook for standardized create/update/delete patterns
 - Use generic cache updaters from `apollo/utils/cacheUpdaters.ts`
 - Leverage `usePagination` hook for infinite scroll lists
@@ -136,24 +172,30 @@ const { hasMore, loadMore, isLoadingMore } = usePagination({
 ## Development Guidelines
 
 ### Before Committing
+
 Always run these commands to ensure code quality:
+
 ```bash
 npm run typecheck  # Ensure no TypeScript errors
 npm run lint       # Ensure code quality standards
 ```
 
 ### GraphQL Schema
+
 To regenerate TypeScript types after backend schema changes:
+
 ```bash
 npm run codegen
 ```
 
 **Important Notes:**
+
 - Type casting `__typename: 'Mutation' as any` is **never needed** with proper typing
 - Use `theme.typography.fontSize.*` or `theme.fonts.size.*` (not `theme.fontSize.*`)
 - Follow the patterns in `apollo-client-patterns.md` for cache updates
 
 ### Common Commands
+
 ```bash
 npm start          # Start Metro bundler
 npm run ios        # Run on iOS simulator
@@ -163,6 +205,7 @@ npm run lint:fix   # Auto-fix linting issues
 ```
 
 ## Project Structure
+
 ```
 src/
 ├── components/     # Reusable UI components (atoms, molecules, organisms)
@@ -177,6 +220,7 @@ src/
 ```
 
 ## Key Technologies
+
 - **React Native** - Cross-platform mobile framework
 - **TypeScript** - Type safety and better DX
 - **Apollo Client** - GraphQL client with caching
@@ -186,6 +230,7 @@ src/
 - **Reanimated** - Smooth animations and gestures
 
 ## Contributing
+
 1. Follow the patterns documented in `docs/apollo-client-patterns.md`
 2. Use `useAppStore` with selectors (not `useStore()`)
 3. Use `FlatList` for dynamic lists
@@ -193,4 +238,5 @@ src/
 5. Add proper TypeScript types (avoid `any`)
 
 ## License
+
 [Your License Here]
