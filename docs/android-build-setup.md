@@ -7,7 +7,7 @@ This project uses separate GitHub Actions workflows for different build environm
 | Command | Tag Pattern | Workflow | Environment | Keystore | Output |
 |---------|-------------|----------|-------------|----------|--------|
 | `npm run tag:dev` | `v*` | build-android.yml | dev | Dev keystore | APK (dev) |
-| `npm run tag:stg` | `stg-v*` | build-android-staging.yml | staging | Dev keystore | APK (staging) |
+| `npm run tag:stg` | `stg-v*` | build-android-staging.yml | stg | Dev keystore | APK (staging) |
 | `npm run tag:release` | `release-v*` | build-android-release.yml | prod | Prod keystore | APK (prod) |
 | `npm run tag:playstore` | `playstore-v*` | playstore-release.yml | prod | Play Store keystore | AAB (prod) |
 
@@ -114,7 +114,7 @@ Secrets:
 - SPOONACULAR_API_KEY
 ```
 
-#### 2. staging
+#### 2. stg
 ```
 Environment variables:
 - API_URL: https://stg-api.souschef.dev/graphql
@@ -248,7 +248,7 @@ app-release.aab  # Android App Bundle for Play Store
 
 **Solution:**
 1. Go to GitHub → Settings → Environments
-2. Ensure environment exists (dev, staging, or prod)
+2. Ensure environment exists (dev, stg, or prod)
 3. Add required variables to that environment
 4. Workflow must use correct `environment:` declaration
 
@@ -258,7 +258,7 @@ app-release.aab  # Android App Bundle for Play Store
 
 **Solution:** Check tag pattern matches workflow:
 - `v1.7.1` → triggers `build-android.yml` (dev)
-- `stg-v1.7.1` → triggers `build-android-staging.yml` (staging)
+- `stg-v1.7.1` → triggers `build-android-staging.yml` (stg)
 - `release-v1.7.1` → triggers `build-android-release.yml` (prod APK)
 - `playstore-v1.7.1` → triggers `playstore-release.yml` (prod AAB)
 
@@ -344,7 +344,7 @@ ls -hal android/app/build/outputs/apk/
 
 1. ✅ Generate production keystore (`prod-release.keystore`)
 2. ✅ Convert to Base64 and add to GitHub secrets
-3. ✅ Create GitHub Environments (dev, staging, prod) with variables
+3. ✅ Create GitHub Environments (dev, stg, prod) with variables
 4. ✅ Test each workflow by pushing appropriate tags
 5. ✅ Verify APKs install correctly on test devices
 6. ✅ Document keystore details in secure password manager
