@@ -14,7 +14,7 @@ import {
   useCreateShoppingListMutation,
   useGetShoppingListsQuery,
 } from '#generated';
-import { useStore } from '#store';
+import { useAppStore, selectUser } from '#store/useAppStore';
 import { useOnboardingNavigation } from '#hooks';
 import { createShoppingListSchema } from '#utils';
 
@@ -25,7 +25,8 @@ type FormValues = {
 export const CreateShoppingListScreen = () => {
   const { navigateToNextStep, skipToStep } = useOnboardingNavigation();
 
-  const { setSelectedShoppingListId, user } = useStore();
+  const setSelectedShoppingListId = useAppStore(state => state.setSelectedShoppingListId);
+  const user = useAppStore(selectUser);
 
   // State management
   const [graphqlError, setGraphqlError] = useState<string | null>(null);

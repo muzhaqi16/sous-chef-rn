@@ -48,11 +48,15 @@ export class SubscriptionService {
   private processedMutations = new Set<string>();
   private readonly MAX_PROCESSED_MUTATIONS = 100;
 
+  // Recent reorder tracking (for ignoring subscription echoes)
+  private recentReorders = new Map<string, number>(); // itemId -> timestamp
+
   // Statistics
   private stats = {
     totalUpdates: 0,
     totalErrors: 0,
     dedupedUpdates: 0,
+    filteredSortOrderUpdates: 0,
   };
 
   private constructor() {
@@ -239,10 +243,44 @@ export class SubscriptionService {
   }
 
   /**
+   * Mark an item as recently reordered to ignore subscription echoes
+   * Call this after a successful drag-and-drop mutation
+   */
+  markItemReordered(itemId: string): void {
+    this.recentReorders.set(itemId, Date.now());
+    // Clean up after 200ms
+    setTimeout(() => this.recentReorders.delete(itemId), 200);
+  }
+
+  /**
+   * Check if subscription update is ONLY for sortOrder changes
+   * These should be ignored since we handle reordering optimistically
+   */
+  private isSortOrderOnlyUpdate(payload: SubscriptionPayload<any>): boolean {
+    // Only filter ITEM_UPDATED mutations
+    if (payload.mutation !== 'ITEM_UPDATED') {
+      return false;
+    }
+
+    // If no updatedFields, process the update (can't tell what changed)
+    if (!payload.updatedFields || payload.updatedFields.length === 0) {
+      return false;
+    }
+
+    // Check if ONLY sortOrder was updated
+    const onlySortOrder =
+      payload.updatedFields.length === 1 &&
+      payload.updatedFields[0] === 'sortOrder';
+
+    return onlySortOrder;
+  }
+
+  /**
    * Unified deduplication logic
    *
    * Filters out:
    * 1. Duplicate updates (same timestamp + mutation)
+   * 2. SortOrder-only updates (handled optimistically)
    *
    * Note: Self-echo filtering (userId check) has been removed to support
    * multi-device scenarios where the same user may be on multiple devices.
@@ -251,9 +289,30 @@ export class SubscriptionService {
    */
   private shouldProcessUpdate<TData>(
     payload: SubscriptionPayload<TData>,
-    _config: SubscriptionConfig<TData>,
+    config: SubscriptionConfig<TData>,
   ): boolean {
     if (!payload) return false;
+
+    // Filter sortOrder-only updates (handled by optimistic mutations)
+    if (this.isSortOrderOnlyUpdate(payload)) {
+      const itemId = (payload.item as any)?.id || (payload.node as any)?.id;
+
+      // Check if we recently reordered this item
+      if (itemId) {
+        const reorderTime = this.recentReorders.get(itemId);
+        const isRecentReorder = reorderTime && Date.now() - reorderTime < 200;
+
+        if (isRecentReorder || this.recentReorders.size > 0) {
+          this.stats.filteredSortOrderUpdates++;
+          this.log(config, LogLevel.DEBUG, 'Filtered sortOrder-only update', {
+            itemId,
+            updatedFields: payload.updatedFields,
+            recentReorder: isRecentReorder,
+          });
+          return false;
+        }
+      }
+    }
 
     // Duplicate prevention using timestamp + mutation type as deduplication key
     // This prevents the same subscription event from being processed multiple times
@@ -481,10 +540,12 @@ export class SubscriptionService {
   cleanup(): void {
     this.subscriptions.clear();
     this.processedMutations.clear();
+    this.recentReorders.clear();
     this.stats = {
       totalUpdates: 0,
       totalErrors: 0,
       dedupedUpdates: 0,
+      filteredSortOrderUpdates: 0,
     };
   }
 

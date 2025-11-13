@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useGetCommonUnitsQuery } from '#generated';
-import { useStore } from '#store';
+import { useAppStore } from '#store/useAppStore';
 import { useAuth } from './auth/useAuth';
 
 /**
@@ -17,7 +17,8 @@ import { useAuth } from './auth/useAuth';
  */
 export function useDataPreloading() {
   const { isAuthenticated } = useAuth();
-  const { cachedUnits, setCachedUnits } = useStore();
+  const cachedUnits = useAppStore(state => state.cachedUnits);
+  const setCachedUnits = useAppStore(state => state.setCachedUnits);
 
   // Preload common units data when authenticated
   // Uses cache-and-network to show cached data immediately while fetching fresh data

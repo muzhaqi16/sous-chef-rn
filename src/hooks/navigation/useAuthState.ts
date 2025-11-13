@@ -1,12 +1,10 @@
-import {useStore} from '#store';
+import {useAppStore} from '#store/useAppStore';
 
 export const useAuthState = () => {
-  const {
-    user,
-    isHydrated,
-    navigationState,
-    showBiometricSetup,
-  } = useStore();
+  const user = useAppStore(state => state.user);
+  const isHydrated = useAppStore(state => state.isHydrated);
+  const navigationState = useAppStore(state => state.navigationState);
+  const showBiometricSetup = useAppStore(state => state.showBiometricSetup);
 
   // New simplified state based on navigation state machine
   return {

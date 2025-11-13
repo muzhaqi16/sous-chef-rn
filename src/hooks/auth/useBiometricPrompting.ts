@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useStore } from '#store';
+import { useAppStore } from '#store/useAppStore';
 import { hasCredentialsForAccount, getBiometricCapability } from '#/storage/keychain';
 
 interface BiometricPromptDecision {
@@ -8,7 +8,9 @@ interface BiometricPromptDecision {
 }
 
 export const useBiometricPrompting = () => {
-  const { user, setUserNavigationState, getUserNavigationState } = useStore();
+  const user = useAppStore(state => state.user);
+  const setUserNavigationState = useAppStore(state => state.setUserNavigationState);
+  const getUserNavigationState = useAppStore(state => state.getUserNavigationState);
 
   const shouldShowPostLoginBiometricPrompt = useCallback(async (targetUser?: { id: string; email: string }): Promise<BiometricPromptDecision> => {
     const checkUser = targetUser || user;

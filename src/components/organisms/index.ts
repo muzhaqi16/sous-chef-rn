@@ -14,4 +14,6 @@ export * from './BiometricSetupModal';
 export * from './PostLoginBiometricPrompt';
 export * from './AnimatedItemSelector';
 export * from './SortableShoppingList';
+export * from './ShoppingListContent';
+export * from './ShoppingListTabs';
 export * from './StringArrayManager';

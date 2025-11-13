@@ -1,10 +1,13 @@
 import {useNavigation} from '@react-navigation/native'; // Use the hook instead
 import {useCallback} from 'react';
+import {useAppStore} from '#store/useAppStore';
 import {useStore} from '#store';
 
 export function useAuthNavigation() {
   const navigation = useNavigation(); // Get navigation from the hook
-  const {setAuth, setRememberMe, setUserNavigationState} = useStore();
+  const setAuth = useAppStore(state => state.setAuth);
+  const setRememberMe = useAppStore(state => state.setRememberMe);
+  const setUserNavigationState = useAppStore(state => state.setUserNavigationState);
 
   const handleSuccessfulLogin = useCallback(
     (authData: any, rememberMe?: boolean) => {
@@ -49,8 +52,8 @@ export function useAuthNavigation() {
 
   const handleLogout = useCallback(async () => {
     // Use the store's logout method which handles everything
-    const store = useStore.getState();
-    await store.logout();
+    const logout = useStore.getState().logout;
+    await logout();
     // Navigation to auth screen happens automatically
   }, []);
 

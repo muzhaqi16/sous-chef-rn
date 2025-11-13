@@ -1,12 +1,13 @@
 import { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
 import { UnistylesRuntime } from 'react-native-unistyles';
-import { useStore } from '#/store';
+import { useAppStore } from '#/store/useAppStore';
 import { ThemePreference } from '#/store/slices/preferencesSlice';
 
 export const useTheme = () => {
   const systemColorScheme = useColorScheme();
-  const { theme: userThemePreference, setTheme } = useStore();
+  const userThemePreference = useAppStore(state => state.theme);
+  const setTheme = useAppStore(state => state.setTheme);
 
   // Resolve the effective theme based on user preference and system
   const resolveEffectiveTheme = (): 'light' | 'dark' => {

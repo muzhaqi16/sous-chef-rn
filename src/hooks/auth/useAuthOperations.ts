@@ -12,6 +12,7 @@ import { useDeviceRegistration } from '#/hooks/useDeviceRegistration';
 import { useUserPreferences } from '#/hooks/navigation/useUserPreferences';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
+import { LogoutCleanup } from '#/apollo/logoutCleanup';
 
 // Simple credential representation - doesn't know about internal storage structure
 export interface LoginCredentials {
@@ -423,13 +424,19 @@ export const useAuthOperations = ({
         const currentUserEmail = user?.email;
         const currentUserId = user?.id;
 
+        // Perform comprehensive Apollo cleanup (includes cancelTokenRefresh)
+        await LogoutCleanup.performLogoutCleanup();
+
         // Notify queue manager about logout (clears queue for this user)
         if (currentUserId) {
           queueManager.onLogout(currentUserId);
         }
 
-        // Clear auth state first
+        // Clear auth state (this also calls cancelTokenRefresh as a safety net)
         authState.onClearAuth();
+
+        // Complete logout process and reset flags
+        LogoutCleanup.completeLogout();
 
         // Reset navigation state to auth after logout
         navigation.onNavigate('auth');

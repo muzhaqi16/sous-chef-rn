@@ -1,0 +1,203 @@
+name: E2E Nightly Tests
+
+# Run comprehensive E2E tests every night
+on:
+  schedule:
+    # Run at 2 AM UTC every day
+    - cron: '0 2 * * *'
+  workflow_dispatch: # Allow manual triggers
+
+jobs:
+  # Run all test suites on iOS
+  full-suite-ios:
+    name: Full E2E Suite (iOS)
+    runs-on: macos-14
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        suite:
+          - auth
+          - shoppingList
+          - pantry
+          - recipe
+          - profile
+          - onboarding
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+
+      - name: Install CocoaPods dependencies
+        run: |
+          cd ios
+          pod install --repo-update
+
+      - name: Setup Detox
+        run: |
+          brew tap wix/brew
+          brew install applesimutils
+
+      - name: Build iOS app for testing
+        run: npm run test:e2e:build
+        env:
+          NODE_ENV: test
+
+      - name: Run ${{ matrix.suite }} tests
+        run: detox test e2e/tests/${{ matrix.suite }} --configuration ios.sim.debug --record-logs all --record-videos failing
+        env:
+          NODE_ENV: test
+
+      - name: Upload test artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-ios-${{ matrix.suite }}-artifacts
+          path: |
+            artifacts/
+            **/*.log
+            **/*.mp4
+          retention-days: 14
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-ios-${{ matrix.suite }}-results
+          path: e2e/test-results/
+          retention-days: 14
+
+  # Run all test suites on Android
+  full-suite-android:
+    name: Full E2E Suite (Android)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        suite:
+          - auth
+          - shoppingList
+          - pantry
+          - recipe
+          - profile
+          - onboarding
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: AVD cache
+        uses: actions/cache@v4
+        id: avd-cache
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-34-nightly
+
+      - name: Create AVD
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          disable-animations: true
+          script: echo "Generated AVD snapshot."
+
+      - name: Build Android app for testing
+        run: npm run test:e2e:build:android
+        env:
+          NODE_ENV: test
+
+      - name: Run ${{ matrix.suite }} tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          disable-animations: true
+          script: detox test e2e/tests/${{ matrix.suite }} --configuration android.emu.debug --record-logs all
+
+      - name: Upload test artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-android-${{ matrix.suite }}-artifacts
+          path: |
+            artifacts/
+            **/*.log
+          retention-days: 14
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-android-${{ matrix.suite }}-results
+          path: e2e/test-results/
+          retention-days: 14
+
+  # Report results
+  report-results:
+    name: Report Nightly Results
+    runs-on: ubuntu-latest
+    needs: [full-suite-ios, full-suite-android]
+    if: always()
+
+    steps:
+      - name: Check results
+        run: |
+          echo "## Nightly E2E Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### iOS Test Suites" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: ${{ needs.full-suite-ios.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Android Test Suites" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: ${{ needs.full-suite-android.result }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "❌ Nightly E2E tests failed!"
+          echo "Check the workflow run for details and artifacts."
+          exit 1

@@ -5,7 +5,7 @@ import {
   useCreateItemMutation,
   CreateItemMutation,
 } from '#generated';
-import { useStore } from '../store';
+import { useAppStore } from '#store/useAppStore';
 import { ScannedItem } from '../store/slices/barcodeScannerSlice';
 import { Alert } from 'react-native';
 import { useImageUpload } from './useImageUpload';
@@ -35,17 +35,15 @@ const convertToScannedItem = (
 });
 
 export const useSearchResults = (barcode: string) => {
-  const {
-    searchResults,
-    setSearching,
-    addToRecentlyScanned,
-    hideBottomSheet,
-    clearSearch,
-    setSearchError,
-    showBottomSheet,
-    setSearchResults,
-    // selectedPantryId: _selectedPantryId, // TODO: Use for context-aware search
-  } = useStore();
+  const searchResults = useAppStore(state => state.searchResults);
+  const setSearching = useAppStore(state => state.setSearching);
+  const addToRecentlyScanned = useAppStore(state => state.addToRecentlyScanned);
+  const hideBottomSheet = useAppStore(state => state.hideBottomSheet);
+  const clearSearch = useAppStore(state => state.clearSearch);
+  const setSearchError = useAppStore(state => state.setSearchError);
+  const showBottomSheet = useAppStore(state => state.showBottomSheet);
+  const setSearchResults = useAppStore(state => state.setSearchResults);
+  // const selectedPantryId = useAppStore(state => state.selectedPantryId); // TODO: Use for context-aware search
 
   const { uploadItemImage } = useImageUpload();
   // const _client = useApolloClient(); // TODO: Use for direct Apollo operations if needed

@@ -155,8 +155,10 @@ export const ShoppingListItemDetail: React.FC<{
   ];
 
   // Purchase History section - Clickable panel
-  const purchases = item.purchases || [];
-  const hasPurchases = purchases.length > 0;
+  // Extract purchases from paginated connection
+  const purchases = item.purchasesConnection?.edges?.map(edge => edge.node) || [];
+  const purchaseCount = item.purchasesConnection?.totalCount || 0;
+  const hasPurchases = purchaseCount > 0;
 
   const handleViewHistory = () => {
     navigate('PurchaseHistory', {
@@ -170,11 +172,11 @@ export const ShoppingListItemDetail: React.FC<{
     ? [
         {
           label: 'Times Purchased',
-          value: purchases.length,
+          value: purchaseCount,
         },
         {
           label: 'Most Recent Purchase',
-          value: formatDate(purchases[0].purchaseDate),
+          value: purchases[0] ? formatDate(purchases[0].purchaseDate) : 'N/A',
         },
       ]
     : [];

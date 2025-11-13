@@ -1,6 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { View } from 'react-native';
-import { RefreshControl } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
 import DraggableFlatList, {
@@ -17,7 +16,8 @@ import {
   findMovedItem,
   getNeighborIds,
 } from './SortableList.utils';
-import { DRAG_DISABLED_DISTANCE } from '#/constants/gestures';
+import { useRenderTime } from '#hooks/performance';
+import { SubscriptionService } from '#/services/subscriptions/SubscriptionService';
 
 // Tab bar height constant (65px from FloatingTabBar)
 const TAB_BAR_HEIGHT = 65;
@@ -32,62 +32,101 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
   disabled = false,
   ListFooterComponent,
   onSwipeableWillOpen: externalOnSwipeableWillOpen,
-  onRefresh,
-  refreshing,
+  onRefresh: _onRefresh,
+  refreshing: _refreshing,
+  onDragBegin: externalOnDragBegin,
+  onDragRelease: externalOnDragRelease,
+  isDragging = false,
   ...flatListProps
 }) => {
+  // Track render performance
+  useRenderTime('SortableShoppingList');
+
   // Track local order for optimistic updates
   const [localItems, setLocalItems] = useState(items);
   // Track if we're currently updating the sort order
   const isUpdatingRef = useRef(false);
   // Track currently open swipeable item (only used if no external handler provided)
   const openSwipeableRef = useRef<any>(null);
-
-  // Track gesture states to prevent RefreshControl conflicts
-  const [isDragging, setIsDragging] = useState(false);
-  const [isSwipeActive, setIsSwipeActive] = useState(false);
+  // Track latest items prop to avoid stale closure in callbacks
+  const itemsRef = useRef(items);
 
   // Safe area insets for bottom padding
   const insets = useSafeAreaInsets();
 
-  // Update local items when props change, but not during our own updates
+  // Keep itemsRef in sync with latest items prop
   useEffect(() => {
-    if (!isUpdatingRef.current) {
-      // Always update localItems when items prop changes
-      // This ensures item property updates (like quantity) are reflected in the UI
-      setLocalItems(items);
-    }
+    itemsRef.current = items;
   }, [items]);
 
-  // Drag gesture callbacks
+  // Update local items when props change, but not during our own updates
+  // OPTIMIZATION: Sync on structural changes (add/remove/reorder) or data changes (quantity)
+  useEffect(() => {
+    if (!isUpdatingRef.current) {
+      // Check for structural changes: items added, removed, or reordered
+      const hasStructuralChange =
+        localItems.length !== items.length ||
+        localItems.some((item, idx) => item.id !== items[idx]?.id);
+
+      // Check for data changes in quantity or other important fields
+      const hasDataChange = localItems.some((localItem, idx) => {
+        const newItem = items[idx];
+        if (!newItem || localItem.id !== newItem.id) return false;
+
+        // Check quantity changes
+        const quantityChanged =
+          localItem.rightElementConfig?.quantity !==
+          newItem.rightElementConfig?.quantity;
+
+        // Check purchased status changes
+        const purchasedChanged = localItem.isPurchased !== newItem.isPurchased;
+
+        return quantityChanged || purchasedChanged;
+      });
+
+      if (hasStructuralChange || hasDataChange) {
+        setLocalItems(items);
+      }
+    }
+  }, [items, localItems]);
+
+  // Drag gesture callbacks - gate RefreshControl during drag
+  // Per GitHub issues #135, #189, #467: RefreshControl conflicts with drag gesture
+  // Solution: Conditionally remove RefreshControl from tree during drag
+  // Note: DraggableFlatList manages scrollEnabled internally (sets scrollEnabled={!activeKey})
+  // Manual setNativeProps can leave scroll stuck if drag aborts - let library handle it
   const handleDragBegin = useCallback(() => {
-    setIsDragging(true);
-  }, []);
+    if (__DEV__) console.log('📱 DraggableFlatList: Drag BEGIN');
+    externalOnDragBegin?.();
+  }, [externalOnDragBegin]);
 
   const handleDragRelease = useCallback(() => {
-    setIsDragging(false);
-  }, []);
+    if (__DEV__) console.log('📱 DraggableFlatList: Drag RELEASE');
+    externalOnDragRelease?.();
+  }, [externalOnDragRelease]);
 
-  // Handle swipeable item opening - close previously open item and track swipe state
-  const handleSwipeableWillOpen = useCallback((ref: any) => {
-    setIsSwipeActive(true);
-    // If external handler provided, use it (for coordinating across multiple lists)
-    if (externalOnSwipeableWillOpen) {
-      externalOnSwipeableWillOpen(ref);
-    } else {
-      // Otherwise, handle locally within this list
-      if (openSwipeableRef.current && openSwipeableRef.current !== ref) {
-        // Close the previously open swipeable
-        openSwipeableRef.current.current?.close();
+  // Handle swipeable item opening - close previously open item
+  const handleSwipeableWillOpen = useCallback(
+    (ref: any) => {
+      // If external handler provided, use it (for coordinating across multiple lists)
+      if (externalOnSwipeableWillOpen) {
+        externalOnSwipeableWillOpen(ref);
+      } else {
+        // Otherwise, handle locally within this list
+        if (openSwipeableRef.current && openSwipeableRef.current !== ref) {
+          // Close the previously open swipeable
+          openSwipeableRef.current.current?.close();
+        }
+        // Update to track the newly opening swipeable
+        openSwipeableRef.current = ref;
       }
-      // Update to track the newly opening swipeable
-      openSwipeableRef.current = ref;
-    }
-  }, [externalOnSwipeableWillOpen]);
+    },
+    [externalOnSwipeableWillOpen],
+  );
 
-  // Handle swipeable item closing - reset swipe active state
+  // Handle swipeable item closing
   const handleSwipeableClose = useCallback(() => {
-    setIsSwipeActive(false);
+    // No-op: swipe state tracking removed to prevent first-swipe re-render issue
   }, []);
 
   // Handle drag end - called when user releases item
@@ -98,8 +137,11 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
         return;
       }
 
+      // Use latest items from ref to avoid stale closure
+      const currentItems = itemsRef.current;
+
       // Check if order actually changed - skip API call if no change
-      if (!hasOrderChanged(items, data)) {
+      if (!hasOrderChanged(currentItems, data)) {
         if (__DEV__) {
           console.log('✓ Drag ended - order unchanged, skipping API call');
         }
@@ -112,7 +154,7 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
 
       try {
         // Find which item was moved by comparing positions
-        const movedItemInfo = findMovedItem(items, data);
+        const movedItemInfo = findMovedItem(currentItems, data);
 
         if (!movedItemInfo) {
           if (__DEV__) {
@@ -124,23 +166,43 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
 
         const { itemId: movedItemId, newIndex } = movedItemInfo;
 
-        // Calculate afterItemId and beforeItemId based on new position
-        const { afterId: afterItemId, beforeId: beforeItemId } = getNeighborIds(data, newIndex);
+        // Calculate afterItemId/beforeItemId and their sortOrder values based on new position
+        const {
+          afterId: afterItemId,
+          afterSortOrder,
+          beforeId: beforeItemId,
+          beforeSortOrder,
+        } = getNeighborIds(data, newIndex);
 
         if (__DEV__) {
           console.log('Moving item:', {
             itemId: movedItemId,
             newIndex,
             afterItemId,
+            afterSortOrder,
             beforeItemId,
+            beforeSortOrder,
           });
         }
 
-        // Wait for the mutation to complete and server to respond
-        await onSortOrderUpdate(movedItemId, afterItemId, beforeItemId);
+        // Mark item as reordered IMMEDIATELY (before mutation fires)
+        // This ensures subscription filtering works during the await period
+        // The 200ms window covers the mutation completion time
+        SubscriptionService.getInstance().markItemReordered(movedItemId);
 
-        // Release the lock - local order will persist until items are added/removed
-        // The useEffect will only sync when IDs change (items added/removed), not when order changes
+        // Wait for mutation to complete before releasing lock
+        // This prevents subscription from overwriting optimistic update
+        // Optimistic update already applied (line 147) so UI is instant
+        await onSortOrderUpdate(
+          movedItemId,
+          afterItemId,
+          beforeItemId,
+          afterSortOrder,
+          beforeSortOrder,
+        );
+
+        // Release lock AFTER mutation completes
+        // This ensures subscription updates don't interfere with our optimistic update
         isUpdatingRef.current = false;
 
         if (__DEV__) {
@@ -151,11 +213,11 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
           console.error('Failed to update sort order:', error);
         }
         // Revert to original order on error
-        setLocalItems(items);
+        setLocalItems(currentItems);
         isUpdatingRef.current = false;
       }
     },
-    [disabled, onSortOrderUpdate, items],
+    [disabled, onSortOrderUpdate],
   );
 
   // Render item with ScaleDecorator for drag feedback
@@ -164,7 +226,6 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
       return (
         <ScaleDecorator>
           <SimpleDraggableItem
-            key={`${item.id}-${item.isPurchased ? 'purchased' : 'unpurchased'}`}
             item={item}
             onItemPress={onItemPress}
             onItemEdit={onItemEdit}
@@ -178,7 +239,15 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
         </ScaleDecorator>
       );
     },
-    [onItemPress, onItemEdit, onItemDelete, onTogglePurchase, disabled, handleSwipeableWillOpen, handleSwipeableClose],
+    [
+      onItemPress,
+      onItemEdit,
+      onItemDelete,
+      onTogglePurchase,
+      disabled,
+      handleSwipeableWillOpen,
+      handleSwipeableClose,
+    ],
   );
 
   // Early validation
@@ -202,12 +271,37 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
     return null;
   }
 
+  /**
+   * Gesture Coordination Strategy (following react-native-draggable-flatlist best practices):
+   *
+   * - Scroll: Automatic (DraggableFlatList manages scrollEnabled internally)
+   * - Swipe (horizontal): Automatic (ReanimatedSwipeable in SwipeableItem)
+   * - Pull-to-Refresh: Conditionally rendered (RNGH RefreshControl)
+   * - Drag (vertical): Manual activation via onLongPress on DragHandle
+   *
+   * activationDistance: Uses library default (0) - no threshold needed for manual drag.
+   * When using manual drag activation via onLongPress, activationDistance is unnecessary.
+   * The drag() function is called explicitly, bypassing gesture detection entirely.
+   * Setting activationDistance > 0 creates a dead zone that BLOCKS normal scroll gestures.
+   * Per official examples: manual drag handles work with activationDistance={0} (default).
+   *
+   * RefreshControl Conflict Prevention (per GitHub issues #135, #189, #467):
+   * - Known issue: PanGestureHandler wrapping FlatList conflicts with RefreshControl
+   * - Solution: Conditionally remove RefreshControl from tree during drag
+   * - isDraggingLocally state tracks drag operation (set in onDragBegin/onDragRelease)
+   * - RefreshControl only rendered when !isDraggingLocally
+   * - This completely eliminates gesture conflict during drag operations
+   *
+   * Note: DraggableFlatList manages scrollEnabled internally (sets scrollEnabled={!activeKey})
+   * Manual setNativeProps({ scrollEnabled }) can leave scroll stuck if drag aborts - avoid it.
+   */
   return (
     <View style={styles.container}>
       <DraggableFlatList
         data={localItems}
         renderItem={renderItem}
         keyExtractor={item => item.id}
+        activationDistance={isDragging ? 1 : 20}
         onDragBegin={handleDragBegin}
         onDragEnd={({ data }) => {
           handleDragRelease();
@@ -220,16 +314,16 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
         contentContainerStyle={{
           paddingBottom: TAB_BAR_HEIGHT + insets.bottom + 16,
         }}
-        activationDistance={DRAG_DISABLED_DISTANCE}
         ListFooterComponent={ListFooterComponent}
-        refreshControl={
-          onRefresh && !disabled && !isDragging && !isSwipeActive ? (
-            <RefreshControl
-              refreshing={refreshing || false}
-              onRefresh={onRefresh}
-            />
-          ) : undefined
-        }
+        // NOTE: RefreshControl disabled due to fundamental gesture conflicts
+        // All approaches attempted (RNGH, native, ScrollView wrapper, NestableScrollContainer)
+        // Either break normal scroll or cause VirtualizedList nesting warnings
+        // Alternative: Add manual refresh button to tab bar or header
+        // OPTIMIZATION: Performance props to reduce initial render work
+        initialNumToRender={10}
+        maxToRenderPerBatch={5}
+        windowSize={5}
+        removeClippedSubviews={false}
       />
     </View>
   );

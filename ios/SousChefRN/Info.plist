@@ -35,7 +35,13 @@
 		<true/>
 	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string></string>
+	<string>Sous Chef needs your location to suggest nearby stores for shopping list items and help you find products more easily.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Take photos of your pantry items and scan barcodes to quickly add products to your inventory.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Choose photos from your library to add images to your pantry items and recipes.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Save photos of your items to your photo library.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Use Face ID to securely access your saved login credentials</string>
 	<key>UILaunchStoryboardName</key>

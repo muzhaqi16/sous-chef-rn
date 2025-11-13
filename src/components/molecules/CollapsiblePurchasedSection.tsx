@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, TouchableOpacity, Alert } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -28,6 +28,8 @@ interface CollapsiblePurchasedSectionProps {
   disabled?: boolean;
   onSwipeableWillOpen?: (ref: any) => void;
   onSwipeableClose?: () => void;
+  isExpanded?: boolean;
+  onExpandedChange?: (expanded: boolean) => void;
 }
 
 export const CollapsiblePurchasedSection: React.FC<
@@ -44,22 +46,56 @@ export const CollapsiblePurchasedSection: React.FC<
   disabled,
   onSwipeableWillOpen,
   onSwipeableClose,
+  isExpanded: controlledIsExpanded,
+  onExpandedChange,
 }) => {
   const { theme } = useUnistyles();
   // Auto-expand when all items are purchased (no unpurchased items)
   // This prevents the confusing "empty list" appearance when finishing shopping
-  const [isExpanded, setIsExpanded] = useState(unpurchasedCount === 0);
+  const [internalExpanded, setInternalExpanded] = useState(
+    unpurchasedCount === 0,
+  );
+  const isControlled = typeof controlledIsExpanded === 'boolean';
+  const expanded = isControlled
+    ? (controlledIsExpanded as boolean)
+    : internalExpanded;
+
+  const setExpanded = useCallback(
+    (next: boolean) => {
+      if (isControlled) {
+        onExpandedChange?.(next);
+      } else {
+        setInternalExpanded(next);
+        onExpandedChange?.(next);
+      }
+    },
+    [isControlled, onExpandedChange],
+  );
+
+  // Preserve expansion state and only auto-expand when completing all shopping
+  // OPTIMIZATION: Use ref to detect threshold crossing, prevent effect on every count change
+  const prevUnpurchasedRef = useRef(unpurchasedCount);
+  useEffect(() => {
+    // Only auto-expand when crossing the zero threshold (items remaining -> all done)
+    // Don't trigger on every purchase, only when last item is marked purchased
+    const crossedZeroThreshold = prevUnpurchasedRef.current > 0 && unpurchasedCount === 0;
+    if (crossedZeroThreshold && purchasedItems.length > 0 && !expanded) {
+      setExpanded(true);
+    }
+    prevUnpurchasedRef.current = unpurchasedCount;
+    // Don't auto-collapse - preserve user's manual choice
+  }, [unpurchasedCount, purchasedItems.length, expanded, setExpanded]);
 
   // Animated values for chevron rotation
-  const chevronRotation = useSharedValue(unpurchasedCount === 0 ? 180 : 0);
+  const chevronRotation = useSharedValue(expanded ? 180 : 0);
 
   // Update chevron rotation when expanded state changes
   useEffect(() => {
-    chevronRotation.value = withSpring(isExpanded ? 180 : 0, {
+    chevronRotation.value = withSpring(expanded ? 180 : 0, {
       damping: 20,
       stiffness: 200,
     });
-  }, [isExpanded, chevronRotation]);
+  }, [expanded, chevronRotation]);
 
   const animatedChevronStyle = useAnimatedStyle(() => {
     return {
@@ -102,8 +138,8 @@ export const CollapsiblePurchasedSection: React.FC<
           },
         ]}
         onPress={() => {
-          console.log('Toggling purchased section:', !isExpanded);
-          setIsExpanded(!isExpanded);
+          console.log('Toggling purchased section:', !expanded);
+          setExpanded(!expanded);
         }}
         activeOpacity={0.7}
       >
@@ -147,7 +183,7 @@ export const CollapsiblePurchasedSection: React.FC<
       </TouchableOpacity>
 
       {/* Expanded List */}
-      {isExpanded && (
+      {expanded && (
         <Animated.View
           entering={FadeIn.duration(200)}
           exiting={FadeOut.duration(150)}

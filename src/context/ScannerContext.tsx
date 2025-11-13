@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react';
 
 interface ScannerContextType {
   onScanPress?: () => void;
@@ -25,8 +25,17 @@ export const ScannerProvider: React.FC<ScannerProviderProps> = ({ children }) =>
   const allowedTabs = ['Pantry', 'ShoppingList'];
 
   const setScannerProps = useCallback((scanPress?: () => void, showButton: boolean = false) => {
-    setOnScanPress(() => scanPress);
-    setShowScannerButton(showButton);
+    // Only update if values have changed to prevent unnecessary re-renders
+    setOnScanPress(prev => {
+      // Compare function references - only update if different
+      if (prev === scanPress) return prev;
+      return scanPress || undefined;
+    });
+    setShowScannerButton(prev => {
+      // Only update if showButton value has changed
+      if (prev === showButton) return prev;
+      return showButton;
+    });
   }, []);
 
   const setOverlayOpen = useCallback((isOpen: boolean) => {
@@ -40,15 +49,18 @@ export const ScannerProvider: React.FC<ScannerProviderProps> = ({ children }) =>
   // Only show scanner button if the current tab is in the allowed list and scanner is enabled
   const shouldShowScanner = showScannerButton && allowedTabs.includes(activeTab);
 
+  // Memoize context value to prevent unnecessary re-renders of consumers
+  const contextValue = useMemo(() => ({
+    onScanPress,
+    showScannerButton: shouldShowScanner,
+    setScannerProps,
+    setActiveTab: handleSetActiveTab,
+    isOverlayOpen,
+    setOverlayOpen,
+  }), [onScanPress, shouldShowScanner, setScannerProps, handleSetActiveTab, isOverlayOpen, setOverlayOpen]);
+
   return (
-    <ScannerContext.Provider value={{
-      onScanPress,
-      showScannerButton: shouldShowScanner,
-      setScannerProps,
-      setActiveTab: handleSetActiveTab,
-      isOverlayOpen,
-      setOverlayOpen,
-    }}>
+    <ScannerContext.Provider value={contextValue}>
       {children}
     </ScannerContext.Provider>
   );

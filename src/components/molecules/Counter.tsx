@@ -7,39 +7,90 @@ export const Counter = ({
   count,
   onIncrement,
   onDecrement,
+  disabled = false,
+  label = 'quantity',
 }: {
   count: number;
   onIncrement: () => void;
   onDecrement: () => void;
+  disabled?: boolean;
+  label?: string;
 }) => {
   const handleDecrement = (e: any) => {
     e.stopPropagation();
-    onDecrement();
+    if (!disabled) {
+      onDecrement();
+    }
   };
 
   const handleIncrement = (e: any) => {
     e.stopPropagation();
-    onIncrement();
+    if (!disabled) {
+      onIncrement();
+    }
   };
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[styles.container, disabled && styles.containerDisabled]}
+      accessible={true}
+      accessibilityRole="adjustable"
+      accessibilityLabel={`${label}, ${count}`}
+      accessibilityValue={{
+        min: 0,
+        now: count,
+        text: String(count),
+      }}
+      accessibilityActions={[
+        { name: 'increment', label: `Increase ${label}` },
+        { name: 'decrement', label: `Decrease ${label}` },
+      ]}
+      onAccessibilityAction={(event) => {
+        switch (event.nativeEvent.actionName) {
+          case 'increment':
+            if (!disabled) onIncrement();
+            break;
+          case 'decrement':
+            if (!disabled) onDecrement();
+            break;
+        }
+      }}
+    >
       <Pressable
         onPress={handleDecrement}
+        disabled={disabled}
         style={({pressed}) => [
           styles.cardAdd,
-          pressed && styles.pressed,
-        ]}>
-        <Icon color="#1d1d1d" name="remove" size={11} />
+          pressed && !disabled && styles.pressed,
+        ]}
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityLabel={`Decrease ${label}`}
+        accessibilityHint={`Current ${label} is ${count}`}
+        accessibilityState={{ disabled }}
+      >
+        <Icon color={disabled ? '#b0b0b0' : '#1d1d1d'} name="remove" size={11} />
       </Pressable>
-      <Text style={styles.counterActionText}>{count}</Text>
+      <Text
+        style={[styles.counterActionText, disabled && styles.textDisabled]}
+        accessibilityLabel={`${label} count: ${count}`}
+      >
+        {count}
+      </Text>
       <Pressable
         onPress={handleIncrement}
+        disabled={disabled}
         style={({pressed}) => [
           styles.cardMinus,
-          pressed && styles.pressed,
-        ]}>
-        <Icon color="#1d1d1d" name="add" size={11} />
+          pressed && !disabled && styles.pressed,
+        ]}
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityLabel={`Increase ${label}`}
+        accessibilityHint={`Current ${label} is ${count}`}
+        accessibilityState={{ disabled }}
+      >
+        <Icon color={disabled ? '#b0b0b0' : '#1d1d1d'} name="add" size={11} />
       </Pressable>
     </View>
   );
@@ -100,5 +151,11 @@ const styles = StyleSheet.create(theme => ({
   },
   pressed: {
     opacity: 0.7,
+  },
+  containerDisabled: {
+    borderColor: '#d0d0d0',
+  },
+  textDisabled: {
+    color: '#b0b0b0',
   },
 }));

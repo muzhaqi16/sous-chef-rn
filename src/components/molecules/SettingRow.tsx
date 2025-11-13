@@ -92,6 +92,33 @@ export const SettingRow: React.FC<SettingRowProps> = ({
   const inputLabel = getInputLabelForField(item.key);
   const placeholder = getPlaceholderForField(item.key);
 
+  // Build accessibility label based on setting type
+  const getAccessibilityLabel = () => {
+    const baseLabel = item.label;
+    if (item.type === 'switch') {
+      return `${baseLabel}, ${item.value ? 'enabled' : 'disabled'}`;
+    } else if (item.type === 'modal' && item.options) {
+      const selectedOption = item.options?.find((opt: any) => opt.value === item.value)?.label || 'Select';
+      return `${baseLabel}, currently ${selectedOption}`;
+    } else if (item.type === 'text') {
+      return `${baseLabel}, ${item.value || 'not set'}`;
+    }
+    return baseLabel;
+  };
+
+  const getAccessibilityHint = () => {
+    if (item.type === 'switch') {
+      return `Tap to ${item.value ? 'disable' : 'enable'} ${item.label}`;
+    } else if (item.type === 'modal') {
+      return 'Tap to select an option';
+    } else if (item.type === 'text') {
+      return 'Tap to edit';
+    } else if (item.type === 'navigation' || item.type === 'action') {
+      return 'Tap to open';
+    }
+    return undefined;
+  };
+
   return (
     <>
       <TouchableOpacity
@@ -102,6 +129,10 @@ export const SettingRow: React.FC<SettingRowProps> = ({
           isFirst && styles.rowFirst,
           isLast && styles.rowLast,
         ]}
+        accessibilityRole="button"
+        accessibilityLabel={getAccessibilityLabel()}
+        accessibilityHint={getAccessibilityHint()}
+        accessibilityState={{ disabled: item.disabled }}
       >
         <View style={styles.row}>
           {item.icon}
@@ -110,7 +141,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
 
           {item.type === 'text' && (
             <>
-              <ValueText>{item.value as string}</ValueText>
+              <ValueText>d{item.value as string}</ValueText>
               <Icon
                 library="Feather"
                 name="edit-2"
@@ -193,6 +224,9 @@ export const SettingRow: React.FC<SettingRowProps> = ({
             <TouchableOpacity
               onPress={handleTextCancel}
               style={styles.modalCloseButton}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel"
+              accessibilityHint="Discard changes and close"
             >
               <Text style={styles.modalCancelText}>Cancel</Text>
             </TouchableOpacity>
@@ -200,6 +234,9 @@ export const SettingRow: React.FC<SettingRowProps> = ({
             <TouchableOpacity
               onPress={form.handleSubmit(handleTextSave)}
               style={styles.modalSaveButton}
+              accessibilityRole="button"
+              accessibilityLabel="Save"
+              accessibilityHint={`Save changes to ${inputLabel}`}
             >
               <Text style={styles.modalSaveText}>Save</Text>
             </TouchableOpacity>
@@ -233,6 +270,9 @@ export const SettingRow: React.FC<SettingRowProps> = ({
               <TouchableOpacity
                 onPress={() => setModalVisible(false)}
                 style={styles.modalCloseButton}
+                accessibilityRole="button"
+                accessibilityLabel="Close"
+                accessibilityHint="Close selection modal"
               >
                 <Icon
                   library="Feather"
@@ -251,6 +291,10 @@ export const SettingRow: React.FC<SettingRowProps> = ({
                   key={opt.value}
                   style={styles.modalOption}
                   onPress={handleModalOptionPress(opt.value)}
+                  accessibilityRole="button"
+                  accessibilityLabel={opt.label}
+                  accessibilityHint={`Select ${opt.label}`}
+                  accessibilityState={{ selected: item.value === opt.value }}
                 >
                   <Text style={styles.modalOptionText}>{opt.label}</Text>
                   {item.value === opt.value && (

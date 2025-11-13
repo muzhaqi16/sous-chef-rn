@@ -1,5 +1,5 @@
 import React, {useMemo} from 'react';
-import {View, Text, ScrollView, TouchableOpacity} from 'react-native';
+import {View, Text, FlatList, TouchableOpacity} from 'react-native';
 import {Icon} from '#utils';
 import {useNavigation} from '@react-navigation/native';
 import {usePantryManagement, useDefaultHome} from '#hooks';
@@ -47,12 +47,13 @@ export const CategoryManagement: React.FC = () => {
         <View style={styles.placeholder} />
       </View>
 
-      <ScrollView
+      <FlatList
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}>
-        {categories.map(category => (
+        contentContainerStyle={styles.scrollContent}
+        data={categories}
+        keyExtractor={(category) => category}
+        renderItem={({ item: category }) => (
           <TouchableOpacity
-            key={category}
             style={[commonStyles.card, styles.categoryCard]}
             onPress={() => {}}>
             <View style={styles.categoryInfo}>
@@ -67,8 +68,8 @@ export const CategoryManagement: React.FC = () => {
               color={theme.colors.textSecondary}
             />
           </TouchableOpacity>
-        ))}
-      </ScrollView>
+        )}
+      />
     </View>
   );
 };

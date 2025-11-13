@@ -11,6 +11,8 @@ interface SwipeableContentProps {
   onPress?: () => void;
   onLongPress?: () => void;
   dragX?: SharedValue<number>;
+  accessibilityLabel?: string;
+  accessibilityHint?: string;
 }
 
 export const SwipeableContent: React.FC<SwipeableContentProps> = ({
@@ -18,6 +20,8 @@ export const SwipeableContent: React.FC<SwipeableContentProps> = ({
   onPress,
   onLongPress,
   dragX,
+  accessibilityLabel,
+  accessibilityHint,
 }) => {
   const animatedStyle = useAnimatedStyle(() => {
     if (!dragX) return {};
@@ -40,6 +44,9 @@ export const SwipeableContent: React.FC<SwipeableContentProps> = ({
         delayLongPress={150}
         activeOpacity={1}
         style={styles.touchable}
+        accessibilityRole={onPress ? 'button' : undefined}
+        accessibilityLabel={accessibilityLabel}
+        accessibilityHint={accessibilityHint || 'Swipe left or right for more actions'}
       >
         {children}
       </TouchableOpacity>

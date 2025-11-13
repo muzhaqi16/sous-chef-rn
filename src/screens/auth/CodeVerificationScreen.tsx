@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { Text } from 'react-native';
 import { GraphQLError } from 'graphql';
 import { AuthWrapper, AuthFormTemplate, CodeInputAdapter } from '#components';
-import { useStore } from '#store';
+import { useAppStore } from '#store/useAppStore';
 import {
   useVerifyEmailMutation,
   useResendVerificationEmailMutation,
@@ -14,7 +14,8 @@ type CodeVerificationValues = {
 };
 
 export function CodeVerificationScreen() {
-  const { user, updateUser } = useStore();
+  const user = useAppStore(state => state.user);
+  const updateUser = useAppStore(state => state.updateUser);
   const [verifyEmail] = useVerifyEmailMutation();
   const [resendVerificationEmail] = useResendVerificationEmailMutation();
 

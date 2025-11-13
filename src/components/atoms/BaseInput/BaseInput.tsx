@@ -1,4 +1,4 @@
-import React, {ReactNode, useState} from 'react';
+import React, { ReactNode, useState } from 'react';
 import {
   View,
   Text,
@@ -8,9 +8,9 @@ import {
   ViewStyle,
   TouchableOpacity,
 } from 'react-native';
-import {useUnistyles} from 'react-native-unistyles';
+import { useUnistyles } from 'react-native-unistyles';
 import styles from './BaseInput.styles';
-import {Icon} from '#/utils/iconUtils';
+import { Icon } from '#/utils/iconUtils';
 
 export interface BaseInputProps extends TextInputProps {
   label?: string;
@@ -34,7 +34,8 @@ export const BaseInput: React.FC<BaseInputProps> = ({
   value,
   ...textInputProps
 }) => {
-  const {theme} = useUnistyles();
+  const { theme } = useUnistyles();
+  // Subscribe to theme from store to trigger re-renders when theme changes
   const [isFocused, setIsFocused] = useState(false);
   const hasError = Boolean(errorMessage);
   const showClear = showClearIcon && Boolean(value && value.length > 0);
@@ -51,9 +52,7 @@ export const BaseInput: React.FC<BaseInputProps> = ({
 
   return (
     <View style={[styles.container, containerStyle]}>
-      {label != null && (
-        <Text style={styles.label}>{label}</Text>
-      )}
+      {label != null && <Text style={styles.label}>{label}</Text>}
       <View style={styles.inputContainer(isFocused, hasError)}>
         <TextInput
           style={[styles.input, style]}
@@ -67,12 +66,9 @@ export const BaseInput: React.FC<BaseInputProps> = ({
           <TouchableOpacity
             style={styles.iconWrapper}
             onPress={onClear}
-            hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
-            <Icon
-              name="close"
-              size={18}
-              color={theme.colors.textSecondary}
-            />
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Icon name="close" size={18} color={theme.colors.textSecondary} />
           </TouchableOpacity>
         )}
         {rightIcon != null && (
@@ -80,9 +76,7 @@ export const BaseInput: React.FC<BaseInputProps> = ({
         )}
       </View>
       {hasError && (
-        <Text style={styles.errorText(hasError)}>
-          {errorMessage}
-        </Text>
+        <Text style={styles.errorText(hasError)}>{errorMessage}</Text>
       )}
     </View>
   );

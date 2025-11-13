@@ -23,8 +23,16 @@ export const NavigationRow: React.FC<NavigationRowProps> = ({
   subtitle,
   onPress,
 }) => {
+  const accessibilityLabel = subtitle ? `${title}, ${subtitle}` : title;
+
   return (
-    <TouchableOpacity style={styles.navigationRow} onPress={onPress}>
+    <TouchableOpacity
+      style={styles.navigationRow}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityHint={`Navigate to ${title}`}
+    >
       <View style={styles.navigationContent}>
         <Icon name={icon} size={24} color={iconColor} />
         <View style={styles.navigationText}>

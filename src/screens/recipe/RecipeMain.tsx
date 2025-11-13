@@ -3,18 +3,25 @@ import { View, Image, Alert } from 'react-native';
 import { useAppNavigation } from '#hooks';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
 import { ListTemplate, SearchBarAction, HeaderAction } from '#components';
-import { useMyRecipesQuery, useDeleteRecipeMutation } from '#generated';
+import { useDeleteRecipeMutation } from '#generated';
+import { useRecipeManagement } from '#/hooks/recipe/useRecipeManagement';
+import { PaginationFooter } from '#/components/organisms/PaginationFooter';
+import { createRemoveFromQueryFieldUpdater } from '#/apollo/utils';
 
 export const RecipeMain: React.FC = () => {
   const { navigate } = useAppNavigation();
   const { theme } = useUnistyles();
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Fetch user's saved recipes from backend
-  const { data, loading, refetch } = useMyRecipesQuery({
-    fetchPolicy: 'cache-and-network',
-  });
-  const recipes = useMemo(() => data?.recipes?.recipes || [], [data]);
+  // Fetch user's saved recipes from backend with pagination
+  const {
+    recipes,
+    loading,
+    refetch,
+    loadMore,
+    hasMore,
+    isLoadingMore,
+  } = useRecipeManagement();
 
   // Filter recipes based on search query
   const filteredRecipes = useMemo(() => {
@@ -30,8 +37,19 @@ export const RecipeMain: React.FC = () => {
 
   // Delete recipe mutation
   const [deleteRecipeMutation] = useDeleteRecipeMutation({
-    refetchQueries: ['MyRecipes'],
-    awaitRefetchQueries: true,
+    update: (cache, { data }, { variables }) => {
+      if (!data?.deleteRecipe || !variables) return;
+
+      try {
+        const removeFromRecipesCache = createRemoveFromQueryFieldUpdater(
+          'recipes',
+          'Recipe',
+        );
+        removeFromRecipesCache(cache, variables.id, { evictItem: true });
+      } catch (error) {
+        console.warn('Cache update failed for deleteRecipe:', error);
+      }
+    },
   });
 
   // Transform filtered recipes to list items format
@@ -120,6 +138,7 @@ export const RecipeMain: React.FC = () => {
     },
   };
 
+  // Footer component for pagination
   return (
     <View style={styles.container}>
       <ListTemplate
@@ -136,6 +155,17 @@ export const RecipeMain: React.FC = () => {
         headerActions={headerActions}
         searchBarActions={searchBarActions}
         emptyState={emptyStateConfig}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={
+          <PaginationFooter
+            isLoadingMore={isLoadingMore}
+            hasMore={hasMore}
+            loading={loading}
+            itemCount={recipes.length}
+            loadingText="Loading more recipes..."
+          />
+        }
       />
     </View>
   );

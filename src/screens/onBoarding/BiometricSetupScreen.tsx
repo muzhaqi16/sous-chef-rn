@@ -6,11 +6,12 @@ import { Icon } from '#utils';
 import { useAuth } from '#hooks';
 import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
 import { useUserPreferences } from '#hooks/navigation/useUserPreferences';
-import { useStore } from '#store';
+import { useAppStore, selectUser } from '#store/useAppStore';
 
 export const BiometricSetupScreen = () => {
   const { navigateToNextStep } = useOnboardingNavigation();
-  const { user, setUserNavigationState } = useStore();
+  const user = useAppStore(selectUser);
+  const setUserNavigationState = useAppStore(state => state.setUserNavigationState);
   const {
     registrationPassword,
     clearRegistrationPassword,

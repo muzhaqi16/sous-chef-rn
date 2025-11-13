@@ -7,8 +7,6 @@ import { ApolloCache } from '@apollo/client';
 import {
   useCreatePantryItemMutation,
   useAddItemToShoppingListMutation,
-  GetPantryItemsDocument,
-  GetPantryItemsQuery,
   GetShoppingListItemsDocument,
   GetShoppingListItemsQuery,
 } from '#generated';
@@ -35,21 +33,52 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   const [addToPantry] = useCreatePantryItemMutation({
     update: (cache: ApolloCache, { data }: any) => {
       if (data?.createPantryItem && pantryId) {
-        // Read the existing pantry items from cache
-        const existingData = cache.readQuery<GetPantryItemsQuery>({
-          query: GetPantryItemsDocument,
-          variables: { pantryId },
-        });
+        try {
+          // Modify the Pantry.itemsConnection field in the cache
+          const pantryCacheId = cache.identify({
+            __typename: 'Pantry',
+            id: pantryId,
+          });
 
-        if (existingData?.pantryItems) {
-          // Add the new item to the cache
-          cache.writeQuery<GetPantryItemsQuery>({
-            query: GetPantryItemsDocument,
-            variables: { pantryId },
-            data: {
-              pantryItems: [...existingData.pantryItems, data.createPantryItem],
+          if (!pantryCacheId) return;
+
+          cache.modify({
+            id: pantryCacheId,
+            fields: {
+              itemsConnection(
+                existingConnection: any = {},
+                { readField, toReference }: any,
+              ) {
+                const newItemRef = toReference(data.createPantryItem);
+                const existingEdges = existingConnection?.edges || [];
+
+                // Check if item already exists (avoid duplicates)
+                const exists = existingEdges.some(
+                  (edge: any) =>
+                    readField('id', edge?.node) === data.createPantryItem.id,
+                );
+
+                if (exists) {
+                  return existingConnection;
+                }
+
+                // Add new item at the beginning of the list
+                const newEdge = {
+                  __typename: 'PantryItemEdge',
+                  node: newItemRef,
+                  cursor: '', // Will be populated on next fetch
+                };
+
+                return {
+                  ...existingConnection,
+                  edges: [newEdge, ...existingEdges],
+                  totalCount: (existingConnection?.totalCount || 0) + 1,
+                };
+              },
             },
           });
+        } catch (error) {
+          console.warn('Cache update failed:', error);
         }
       }
     },

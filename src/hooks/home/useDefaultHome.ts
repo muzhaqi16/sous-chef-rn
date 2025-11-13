@@ -1,11 +1,15 @@
 import { useEffect } from 'react';
 import { useGetHomesQuery, useGetDefaultHomeQuery } from '#generated';
-import { useStore } from '#store';
+import { useAppStore } from '#store/useAppStore';
 import { useAuth } from '#hooks/auth/useAuth';
 import { usePreservedArrayData } from '#/hooks/apollo';
+import { normalizeHome, normalizeHomes } from '#/utils/connectionUtils';
 
 export const useDefaultHome = () => {
-  const { selectedHomeId, setSelectedHomeId, selectedPantryId, setSelectedPantryId } = useStore();
+  const selectedHomeId = useAppStore(state => state.selectedHomeId);
+  const setSelectedHomeId = useAppStore(state => state.setSelectedHomeId);
+  const selectedPantryId = useAppStore(state => state.selectedPantryId);
+  const setSelectedPantryId = useAppStore(state => state.setSelectedPantryId);
   const { canAttemptQueries } = useAuth();
 
   // Always fetch homes when authenticated (needed for UI and getDefaultPantry)
@@ -23,7 +27,7 @@ export const useDefaultHome = () => {
   });
 
   // Preserve homes data even when query fails - prevents cascade failures
-  const homesList = usePreservedArrayData(homes?.homes);
+  const homesList = normalizeHomes(usePreservedArrayData(homes?.homes));
 
   const { data: defaultHomeData, loading: loadingDefaultHome } =
     useGetDefaultHomeQuery({
@@ -65,18 +69,16 @@ export const useDefaultHome = () => {
 
   // Helper function to get the default pantry from a home
   const getDefaultPantry = (homeData: any) => {
-    if (!homeData?.home?.pantries) return null;
-
-    // First try to find a pantry marked as default
-    const defaultPantry = homeData.home.pantries.find(
-      (pantry: any) => pantry.isDefault,
-    );
-    if (defaultPantry) {
-      return defaultPantry;
+    const normalizedHome = normalizeHome(homeData?.home ?? homeData);
+    if (!normalizedHome?.pantries?.length) {
+      return null;
     }
 
-    // If no default pantry, return the first one
-    return homeData.home.pantries.length > 0 ? homeData.home.pantries[0] : null;
+    return (
+      normalizedHome.pantries.find((pantry: any) => pantry.isDefault) ||
+      normalizedHome.pantries[0] ||
+      null
+    );
   };
 
   // Provide the most appropriate home ID (prefer Zustand store, fallback to remote default)

@@ -1,10 +1,40 @@
+/**
+ * Zustand Store - Application-wide state management
+ *
+ * Persistence Strategy:
+ * ====================
+ * The store is split into PERSISTENT and TRANSIENT state:
+ *
+ * PERSISTENT (saved to MMKV):
+ * - Auth tokens, user data (authSlice)
+ * - User preferences, theme, language (preferencesSlice)
+ * - Selected IDs (home, pantry, shopping list)
+ * - User navigation history and progress
+ * - Telemetry settings
+ * - Notification preferences
+ *
+ * TRANSIENT (session-only, not persisted):
+ * - Network state (isOnline, networkType) - always detect fresh
+ * - UI state (modals, forms, toasts, loading flags)
+ * - Current onboarding step - restart flow on app restart
+ * - Pending deep link actions - temporary
+ * - isLoggingOut flag - session-only
+ *
+ * This split prevents unnecessary disk writes and ensures fresh
+ * state for ephemeral UI concerns while preserving user data.
+ */
+
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
+import { enableMapSet } from 'immer';
 import {
   createJSONStorage,
   persist,
   subscribeWithSelector,
 } from 'zustand/middleware';
+
+// Enable Immer MapSet plugin for performance slice
+enableMapSet();
 import { createAuthSlice, AuthState } from './slices/authSlice';
 import {
   createPreferencesSlice,
@@ -32,6 +62,8 @@ import {
 } from './slices/navigationSlice';
 import { createTelemetrySlice, TelemetryState } from './slices/telemetrySlice';
 import { createNetworkSlice, NetworkState } from './slices/networkSlice';
+// Performance slice moved to separate store (performanceStore.ts) to prevent re-render loops
+// import { createPerformanceSlice, PerformanceState } from './slices/performanceSlice';
 // import {logger} from './logger';
 import { zustandStorage, STORAGE_KEY } from '#/storage/mmkv';
 
@@ -62,6 +94,7 @@ export type RootState = AuthState &
   UIState &
   TelemetryState &
   NetworkState &
+  // PerformanceState moved to separate store
   ResetManagerState &
   NavigationStateManagerState;
 
@@ -101,6 +134,7 @@ export const useStore = create<RootState>()(
             ...createUISlice(set, get, store),
             ...createTelemetrySlice(set, get, store),
             ...createNetworkSlice(set, get, store),
+            // createPerformanceSlice moved to separate store (performanceStore.ts)
             // Add reset manager methods to the store
             ...resetManager,
             // Add navigation state manager methods
@@ -146,25 +180,43 @@ export const useStore = create<RootState>()(
         skipHydration: false,
         partialize: state => {
           // Filter out non-persisted state slices here
-          // Do not persist UI state or navigation state
+          // Split state into persistent and transient parts
 
           /* eslint-disable @typescript-eslint/no-unused-vars */
           const {
-            // Exclude network state (always detect fresh on app start)
+            // ========== TRANSIENT STATE (do not persist) ==========
+
+            // Network state (always detect fresh on app start)
             isOnline,
             isInternetReachable,
             networkType,
             lastOnlineTime,
             lastOfflineTime,
-            // Exclude UI state that should not persist (intentionally unused)
+
+            // UI state (temporary, session-only)
             bottomSheetVisible,
             bottomSheetIndex,
             globalLoading,
             isLoading,
             isError,
             isFetching,
+            activeFormId,
+            formData,
+            globalSearchQuery,
+            activeFilters,
+            toastMessage,
+            toastType,
+
+            // Navigation transient state
+            onBoardingStep, // Restart onboarding flow on app restart
+            pendingDeepLinkAction, // Deep link actions should not persist
+
+            // Logout state (session-only flag)
+            isLoggingOut,
+
             ...persistedState
           } = state;
+          // ========== PERSISTENT STATE (everything else) ==========
 
           return persistedState;
         },

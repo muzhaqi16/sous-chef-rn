@@ -1,8 +1,9 @@
-import React, {useState, useRef, ReactNode} from 'react';
+import React, {useState, useRef, ReactNode, useEffect} from 'react';
 import {Text, Platform, ToastAndroid} from 'react-native';
 import Animated, {SlideInDown, SlideOutUp} from 'react-native-reanimated';
 import {StyleSheet} from 'react-native-unistyles';
 import {ToastContext} from '../../hooks/useToast';
+import {toastService} from '#/services/toastService';
 
 // Define toast types
 export type ToastType = 'default' | 'success' | 'error' | 'info';
@@ -46,6 +47,13 @@ export const ToastProvider: React.FC<{children: ReactNode}> = ({children}) => {
       }, timeout);
     }
   };
+
+  // Initialize toast service with bridge to existing toast provider
+  useEffect(() => {
+    toastService.init((message, type) => {
+      showToast({ message, type: type === 'warning' ? 'error' : type });
+    });
+  }, []);
 
   // Background colors per type for iOS fallback
   const backgroundColors: Record<ToastType, string> = {

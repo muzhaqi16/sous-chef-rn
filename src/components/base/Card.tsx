@@ -73,6 +73,12 @@ export interface CardProps {
 
   /** Test ID for testing */
   testID?: string;
+
+  /** Accessibility label */
+  accessibilityLabel?: string;
+
+  /** Accessibility hint */
+  accessibilityHint?: string;
 }
 
 export const Card: React.FC<CardProps> = ({
@@ -95,6 +101,8 @@ export const Card: React.FC<CardProps> = ({
   imageStyle,
   titleStyle,
   testID,
+  accessibilityLabel,
+  accessibilityHint,
 }) => {
   const { theme } = useUnistyles();
 
@@ -246,11 +254,18 @@ export const Card: React.FC<CardProps> = ({
   );
 
   if (onPress && !disabled) {
+    // Build accessible label from card content if not explicitly provided
+    const cardLabel = accessibilityLabel || [title, subtitle, description].filter(Boolean).join(', ');
+
     return (
       <TouchableOpacity
         onPress={onPress}
         activeOpacity={0.7}
         disabled={disabled}
+        accessibilityRole="button"
+        accessibilityLabel={cardLabel}
+        accessibilityHint={accessibilityHint || 'Tap to view details'}
+        accessibilityState={{ disabled }}
       >
         {cardContent}
       </TouchableOpacity>

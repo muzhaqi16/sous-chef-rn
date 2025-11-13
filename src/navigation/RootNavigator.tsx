@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { useStore } from '#store';
+import { useAppStore, selectHydrated, selectUser } from '#store/useAppStore';
 import { useAuth } from '#hooks/auth/useAuth';
 import { SplashScreen } from '#screens';
 import {
@@ -29,6 +29,7 @@ import {
   DietaryProfileScreen,
   AppSettingsScreen,
   PersonalInformationScreen,
+  PerformanceDashboard,
 } from '#screens/profile';
 import { NotificationSettingsScreen } from '#screens/notifications';
 import { linkingConfig } from './linking';
@@ -60,20 +61,19 @@ export type RootStackParamList = {
   DietaryProfile: undefined;
   PersonalInformation: undefined;
   AppSettings: undefined;
+  PerformanceDashboard: undefined;
   NotFound: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function RootNavigator() {
-  const {
-    isHydrated,
-    navigationState,
-    showBiometricSetup,
-    postLoginCredentials,
-    setNavigationState,
-    user,
-  } = useStore();
+  const isHydrated = useAppStore(selectHydrated);
+  const navigationState = useAppStore(state => state.navigationState);
+  const showBiometricSetup = useAppStore(state => state.showBiometricSetup);
+  const postLoginCredentials = useAppStore(state => state.postLoginCredentials);
+  const setNavigationState = useAppStore(state => state.setNavigationState);
+  const user = useAppStore(selectUser);
   const { handlePostLoginBiometricComplete } = useAuth();
 
   // Initialize deep link router for handling URL-based navigation
@@ -160,7 +160,6 @@ function RootNavigator() {
             </Stack.Screen>
           )}
 
-
           {/* Onboarding Group */}
           {navigationState === 'onboarding' && (
             <Stack.Screen name="Onboarding">
@@ -216,10 +215,26 @@ function RootNavigator() {
                   animation: 'slide_from_bottom',
                 }}
               />
-              <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
-              <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
-              <Stack.Screen name="DietaryProfile" component={DietaryProfileScreen} />
-              <Stack.Screen name="PersonalInformation" component={PersonalInformationScreen} />
+              <Stack.Screen
+                name="DeleteAccount"
+                component={DeleteAccountScreen}
+              />
+              <Stack.Screen
+                name="NotificationSettings"
+                component={NotificationSettingsScreen}
+              />
+              <Stack.Screen
+                name="DietaryProfile"
+                component={DietaryProfileScreen}
+              />
+              <Stack.Screen
+                name="PersonalInformation"
+                component={PersonalInformationScreen}
+              />
+              <Stack.Screen
+                name="PerformanceDashboard"
+                component={PerformanceDashboard}
+              />
               <Stack.Screen
                 name="AppSettings"
                 component={AppSettingsScreen}
@@ -252,16 +267,14 @@ function RootNavigator() {
       </NavigationErrorBoundary>
 
       {/* Global Biometric Setup Modal - shows on auth screen when triggered */}
-      {showBiometricSetup &&
-        user &&
-        postLoginCredentials && (
-          <PostLoginBiometricPrompt
-            visible={showBiometricSetup}
-            onComplete={handlePostLoginBiometricComplete}
-            userEmail={postLoginCredentials.email}
-            userPassword={postLoginCredentials.password}
-          />
-        )}
+      {showBiometricSetup && user && postLoginCredentials && (
+        <PostLoginBiometricPrompt
+          visible={showBiometricSetup}
+          onComplete={handlePostLoginBiometricComplete}
+          userEmail={postLoginCredentials.email}
+          userPassword={postLoginCredentials.password}
+        />
+      )}
     </>
   );
 }

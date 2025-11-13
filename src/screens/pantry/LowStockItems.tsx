@@ -2,20 +2,20 @@ import React, { useMemo } from 'react';
 import {
   View,
   Text,
-  ScrollView,
+  FlatList,
   TouchableOpacity,
   RefreshControl,
   Alert,
-  ActivityIndicator,
 } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { Icon } from '#utils';
 import { SwipeableItem, ScreenHeader } from '#components';
+import { PantryItemSkeleton } from '#components/base/Skeleton';
 import { usePantryManagement, useDefaultHome, useAppNavigation } from '#hooks';
 import { useGetHomeQuery, useAddItemToShoppingListMutation } from '#generated';
 import { commonStyles } from '#styles';
-import { useStore } from '#store';
+import { useAppStore } from '#store/useAppStore';
 
 export const LowStockItems: React.FC = () => {
   const { theme } = useUnistyles();
@@ -25,7 +25,7 @@ export const LowStockItems: React.FC = () => {
   const [refreshing, setRefreshing] = React.useState(false);
 
   const { selectedHomeId, getDefaultPantry } = useDefaultHome();
-  const isLoggingOut = useStore(state => state.isLoggingOut);
+  const isLoggingOut = useAppStore(state => state.isLoggingOut);
   const { data: homeData } = useGetHomeQuery({
     variables: { homeId: selectedHomeId ?? '' },
     skip: !selectedHomeId || isLoggingOut,
@@ -64,9 +64,11 @@ export const LowStockItems: React.FC = () => {
     <View style={commonStyles.container}>
       <ScreenHeader title="Low Stock Items" onBack={goBack} />
 
-      <ScrollView
+      <FlatList
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
+        data={lowStockItems}
+        keyExtractor={(item) => item.id}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -75,47 +77,48 @@ export const LowStockItems: React.FC = () => {
             tintColor={theme.colors.primary}
           />
         }
-      >
-        {loading || !items ? (
-          <View style={[commonStyles.center, styles.loadingContainer]}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
-          </View>
-        ) : lowStockItems.length === 0 ? (
-          <View style={[commonStyles.center, styles.emptyState]}>
-            <Icon name="inventory" size={64} color={theme.colors.success} />
-            <Text style={[commonStyles.body, styles.emptyText]}>
-              All items are above minimum stock levels
-            </Text>
-          </View>
-        ) : (
-          lowStockItems.map(item => (
-            <SwipeableItem
-              key={item.id}
-              onPress={() => navigateTo.pantryItemDetail({ itemId: item.id })}
-            >
-              <View style={[commonStyles.card, styles.itemCard]}>
-                <View style={styles.itemInfo}>
-                  <Text style={styles.itemName}>{item.item?.name}</Text>
-                  <Text style={[commonStyles.caption, styles.itemDetails]}>
-                    {item.currentQuantity} / {item.reservedQuantity}{' '}
-                    {item.unit?.symbol}
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  onPress={() => handleAddToList(item.id)}
-                  style={styles.actionButton}
-                >
-                  <Icon
-                    name="add-shopping-cart"
-                    size={20}
-                    color={theme.colors.primary}
-                  />
-                </TouchableOpacity>
+        ListEmptyComponent={
+          loading || !items ? (
+            <View style={styles.skeletonContainer}>
+              {[1, 2, 3, 4, 5].map(key => (
+                <PantryItemSkeleton key={key} />
+              ))}
+            </View>
+          ) : (
+            <View style={[commonStyles.center, styles.emptyState]}>
+              <Icon name="inventory" size={64} color={theme.colors.success} />
+              <Text style={[commonStyles.body, styles.emptyText]}>
+                All items are above minimum stock levels
+              </Text>
+            </View>
+          )
+        }
+        renderItem={({ item }) => (
+          <SwipeableItem
+            onPress={() => navigateTo.pantryItemDetail({ itemId: item.id })}
+          >
+            <View style={[commonStyles.card, styles.itemCard]}>
+              <View style={styles.itemInfo}>
+                <Text style={styles.itemName}>{item.item?.name}</Text>
+                <Text style={[commonStyles.caption, styles.itemDetails]}>
+                  {item.currentQuantity} / {item.reservedQuantity}{' '}
+                  {item.unit?.symbol}
+                </Text>
               </View>
-            </SwipeableItem>
-          ))
+              <TouchableOpacity
+                onPress={() => handleAddToList(item.id)}
+                style={styles.actionButton}
+              >
+                <Icon
+                  name="add-shopping-cart"
+                  size={20}
+                  color={theme.colors.primary}
+                />
+              </TouchableOpacity>
+            </View>
+          </SwipeableItem>
         )}
-      </ScrollView>
+      />
     </View>
   );
 };
@@ -137,6 +140,9 @@ const styles = StyleSheet.create(theme => ({
   },
   loadingContainer: {
     padding: theme.spacing['2xl'],
+  },
+  skeletonContainer: {
+    gap: theme.spacing.sm,
   },
   itemCard: {
     ...commonStyles.rowSpaceBetween,

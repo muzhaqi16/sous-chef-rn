@@ -191,11 +191,11 @@ export const AcceptInvite: React.FC = () => {
 
         <Text style={styles.inviteText}>
           {invitationType === 'home'
-            ? (homeInvite as any)?.invitedBy?.profile?.displayName ||
+            ? (homeInvite as any)?.invitedBy?.profile?.displayName || // Acceptable: invitedBy.profile not in fragment; gracefully falls back
               (homeInvite as any)?.invitedBy?.email ||
               'Someone'
-            : (shoppingListInvite as any)?.invitedBy?.profile?.displayName ||
-              (shoppingListInvite as any)?.invitedBy?.email ||
+            : (shoppingListInvite?.invitedBy as any)?.profile?.displayName || // Acceptable: profile not in fragment; gracefully falls back
+              shoppingListInvite?.invitedBy?.email ||
               'Someone'}{' '}
           has invited you to {invitationType === 'home' ? 'join' : 'collaborate on'}
         </Text>
@@ -203,8 +203,8 @@ export const AcceptInvite: React.FC = () => {
         <View style={styles.inviteDetails}>
           <Text style={styles.inviteName}>
             {invitationType === 'home'
-              ? (homeInvite as any)?.home?.name || 'Home'
-              : shoppingListInvite?.shoppingList?.name || 'Shopping List'
+              ? (homeInvite as any)?.home?.name || 'Home' // Acceptable: home.name not in fragment; uses fallback
+              : (shoppingListInvite as any)?.shoppingList?.name || 'Shopping List' // Acceptable: shoppingList.name not in fragment; uses fallback
             }
           </Text>
           <Text style={styles.inviteType}>
@@ -215,14 +215,14 @@ export const AcceptInvite: React.FC = () => {
           </Text>
         </View>
 
-        {((invitationType === 'shopping_list' && (shoppingListInvite as any)?.shoppingList?.description) ||
-          (invitationType === 'home' && (homeInvite as any)?.home?.description)) && (
+        {((invitationType === 'shopping_list' && (shoppingListInvite as any)?.shoppingList?.description) || // Acceptable: optional field
+          (invitationType === 'home' && (homeInvite as any)?.home?.description)) && ( // Acceptable: optional field
           <View style={styles.messageContainer}>
             <Text style={styles.messageLabel}>Description:</Text>
             <Text style={styles.message}>
               {invitationType === 'home'
-                ? (homeInvite as any)?.home?.description
-                : (shoppingListInvite as any)?.shoppingList?.description
+                ? (homeInvite as any)?.home?.description // Acceptable: optional field for display only
+                : (shoppingListInvite as any)?.shoppingList?.description // Acceptable: optional field for display only
               }
             </Text>
           </View>

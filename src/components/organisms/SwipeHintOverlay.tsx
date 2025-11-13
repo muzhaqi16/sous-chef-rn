@@ -27,9 +27,9 @@ export const SwipeHintOverlay: React.FC<SwipeHintOverlayProps> = ({
   return (
     <FeatureHintOverlay
       config={{
-        title: 'Swipe left to mark as purchased',
-        subtitle: 'Try swiping any item to the left',
-        animatedElement: <AnimatedSwipeIcon direction="left" />,
+        title: 'Swipe right to mark as purchased',
+        subtitle: 'Try swiping any item to the right',
+        animatedElement: <AnimatedSwipeIcon direction="right" />,
         onDismiss,
       }}
     />

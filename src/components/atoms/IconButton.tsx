@@ -10,41 +10,63 @@ export interface IconButtonProps {
   name: string;
   /** tap handler */
   onPress: () => void;
-  /** icon size (default 24) */
-  size?: number;
+  /** Accessibility label (required for screen readers) */
+  accessibilityLabel: string;
+  /** Additional context for screen readers */
+  accessibilityHint?: string;
+  /** Accessibility role (defaults to 'button') */
+  accessibilityRole?: 'button' | 'imagebutton';
+  /** icon size variant (default 'md') */
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
   /** icon color (defaults to theme.colors.iconPrimary) */
   color?: string;
   /** extra styling on the Touchable */
   style?: StyleProp<ViewStyle>;
   /** override default library—pass Ionicons, MaterialIcons, etc. */
   library?: IconLibrary;
+  /** whether button is disabled */
+  disabled?: boolean;
 }
 
 export const IconButton: React.FC<IconButtonProps> = ({
   name,
   onPress,
-  size = 24,
+  accessibilityLabel,
+  accessibilityHint,
+  accessibilityRole = 'button',
+  size = 'md',
   color,
   style,
   library = 'MaterialIcons',
+  disabled = false,
 }) => {
   return (
     <TouchableOpacity
       style={[styles.button, style]}
       onPress={onPress}
-      hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+      disabled={disabled}
+      accessibilityRole={accessibilityRole}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityHint={accessibilityHint}
+      accessibilityState={{disabled}}>
       <UniIcon
         library={library}
         name={name}
-        size={size}
-        uniProps={theme => ({color: color ?? theme.colors.iconPrimary})}
+        uniProps={theme => ({
+          size: theme.sizes.icon[size],
+          color: disabled
+            ? theme.colors.iconDisabled
+            : color ?? theme.colors.iconPrimary,
+        })}
       />
     </TouchableOpacity>
   );
 };
 
-const styles = StyleSheet.create(_theme => ({
+const styles = StyleSheet.create(theme => ({
   button: {
+    minWidth: theme.sizes.touchTarget.min,
+    minHeight: theme.sizes.touchTarget.min,
     justifyContent: 'center',
     alignItems: 'center',
   },

@@ -1,6 +1,7 @@
 export * from './auth';
 export * from './notifications';
 export * from './shoppingList';
+export * from './pantry';
 export * from './invitations';
 export * from './profile';
 export * from './home/useHomeManagement';
@@ -8,6 +9,7 @@ export * from './home/usePantryManagement';
 export * from './home/useCategoryManagement';
 export * from './home/useHomeDetailManagement';
 export * from './storageLocation/useStorageLocationManagement';
+export * from './recipe/useRecipeManagement';
 export * from './useItemSelector';
 export * from './navigation';
 export { useSearchableList } from './useSearchableList';

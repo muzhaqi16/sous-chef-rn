@@ -1,10 +1,83 @@
 import { useEffect, useCallback } from 'react';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
-import { useStore } from '#store';
+import { jwtDecode } from 'jwt-decode';
+import { useAppStore } from '#store/useAppStore';
 import { useAuth } from '#hooks/auth/useAuth';
 import { logger } from '#/utils/environment';
 import { DeepLinkAction } from '#store/slices/navigationSlice';
 import { RootStackParamList } from '#navigation/RootNavigator';
+import { toastService } from '#/services/toastService';
+
+interface DeepLinkTokenPayload {
+  exp: number;
+  iat: number;
+  type?: string;
+  [key: string]: any;
+}
+
+/**
+ * Validates a JWT token for deep links
+ *
+ * @param token - JWT token string
+ * @param expectedType - Optional expected token type for additional validation
+ * @returns { valid: boolean, payload?: DeepLinkTokenPayload, error?: string }
+ */
+const validateDeepLinkToken = (
+  token: string,
+  expectedType?: string
+): { valid: boolean; payload?: DeepLinkTokenPayload; error?: string } => {
+  try {
+    // Basic format validation
+    if (!token || typeof token !== 'string') {
+      return { valid: false, error: 'Invalid token format' };
+    }
+
+    // JWT should have 3 parts separated by dots
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      return { valid: false, error: 'Malformed JWT token' };
+    }
+
+    // Decode the token
+    const decoded = jwtDecode<DeepLinkTokenPayload>(token);
+
+    // Check expiration
+    if (decoded.exp) {
+      const now = Math.floor(Date.now() / 1000); // Current time in seconds
+      if (decoded.exp < now) {
+        return { valid: false, error: 'Token has expired', payload: decoded };
+      }
+    } else {
+      logger.warn('Token does not have expiration field');
+    }
+
+    // Check issued at time (token shouldn't be from the future)
+    if (decoded.iat) {
+      const now = Math.floor(Date.now() / 1000);
+      const fiveMinutesFromNow = now + 300; // Allow 5 minute clock skew
+      if (decoded.iat > fiveMinutesFromNow) {
+        return { valid: false, error: 'Token issued in the future', payload: decoded };
+      }
+    }
+
+    // Validate token type if specified
+    if (expectedType && decoded.type && decoded.type !== expectedType) {
+      return {
+        valid: false,
+        error: `Invalid token type. Expected ${expectedType}, got ${decoded.type}`,
+        payload: decoded,
+      };
+    }
+
+    return { valid: true, payload: decoded };
+  } catch (error) {
+    logger.error('Token validation error:', error);
+    return {
+      valid: false,
+      error: error instanceof Error ? error.message : 'Failed to decode token',
+    };
+  }
+};
 
 /**
  * Hook for handling deep link routing and integration with navigation state machine.
@@ -12,21 +85,27 @@ import { RootStackParamList } from '#navigation/RootNavigator';
  */
 export const useDeepLinkRouter = () => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
-  const { isHydrated } = useStore();
+  const isHydrated = useAppStore(state => state.isHydrated);
   const { isAuthenticated } = useAuth();
 
   // Queue for deep link actions that arrive before app is ready
-  const {
-    pendingDeepLinkAction,
-    setPendingDeepLinkAction,
-    clearPendingDeepLinkAction,
-  } = useStore();
+  const pendingDeepLinkAction = useAppStore(state => state.pendingDeepLinkAction);
+  const setPendingDeepLinkAction = useAppStore(state => state.setPendingDeepLinkAction);
+  const clearPendingDeepLinkAction = useAppStore(state => state.clearPendingDeepLinkAction);
 
   const handleEmailVerification = useCallback(
     (token: string) => {
       logger.info('Handling email verification deep link', {
         token: token.substring(0, 8) + '...',
       });
+
+      // Validate token before proceeding
+      const validation = validateDeepLinkToken(token, 'email_verification');
+      if (!validation.valid) {
+        logger.error('Invalid email verification token:', validation.error);
+        toastService.error(`Invalid or expired verification link: ${validation.error}`);
+        return;
+      }
 
       if (!isAuthenticated) {
         // Store token and redirect to auth for login first
@@ -51,6 +130,14 @@ export const useDeepLinkRouter = () => {
         token: token.substring(0, 8) + '...',
       });
 
+      // Validate token before proceeding
+      const validation = validateDeepLinkToken(token, 'password_reset');
+      if (!validation.valid) {
+        logger.error('Invalid password reset token:', validation.error);
+        toastService.error(`Invalid or expired reset link: ${validation.error}`);
+        return;
+      }
+
       // Always redirect to auth stack for password reset
       // This will clear any existing auth state
       navigation.navigate('ResetPassword', { token });
@@ -63,6 +150,14 @@ export const useDeepLinkRouter = () => {
       logger.info('Handling accept invitation deep link', {
         token: token.substring(0, 8) + '...',
       });
+
+      // Validate token before proceeding
+      const validation = validateDeepLinkToken(token, 'invitation');
+      if (!validation.valid) {
+        logger.error('Invalid invitation token:', validation.error);
+        toastService.error(`Invalid or expired invitation: ${validation.error}`);
+        return;
+      }
 
       if (!isAuthenticated) {
         // Store token and redirect to auth for login first

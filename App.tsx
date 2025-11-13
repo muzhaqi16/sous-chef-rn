@@ -6,7 +6,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { ApolloProvider } from '@apollo/client/react';
 import { enableScreens } from 'react-native-screens';
-import { useStore } from '#store';
+import { useAppStore, selectHydrated } from '#store/useAppStore';
 import { client } from './src/apollo/client';
 import { Navigation } from '#/navigation';
 import { hasCredentials } from '#storage/keychain';
@@ -14,6 +14,7 @@ import { SplashScreen } from '#screens';
 import { ToastProvider } from '#/components/atoms';
 import { useTheme } from '#/hooks/useTheme';
 import { Telemetry } from '#/services/telemetry';
+import { MemoryMonitor } from '#/services/performance';
 import { AppErrorBoundary } from '#/components/providers/ErrorBoundary';
 import { useNetworkStatus } from '#/hooks/useNetworkStatus';
 import { queueManager } from '#/apollo/offlineQueue';
@@ -25,8 +26,12 @@ import { SubscriptionProvider } from '#/components/providers/SubscriptionProvide
 enableScreens();
 
 const App = () => {
-  const { isHydrated, isOnline, setHasStoredCredentials, getTelemetryConfig } =
-    useStore();
+  const isHydrated = useAppStore(selectHydrated);
+  const isOnline = useAppStore(state => state.isOnline);
+  const setHasStoredCredentials = useAppStore(
+    state => state.setHasStoredCredentials,
+  );
+  const getTelemetryConfig = useAppStore(state => state.getTelemetryConfig);
   const { theme } = useTheme();
 
   // Initialize network monitoring
@@ -52,12 +57,24 @@ const App = () => {
       Telemetry.updateConfig(getTelemetryConfig());
       Telemetry.initialize();
 
+      // Start memory monitoring (only in dev or if enabled in settings)
+      if (__DEV__) {
+        MemoryMonitor.start(10000); // Sample every 10 seconds
+      }
+
       // Track app launch
       Telemetry.trackEvent('app_launched', {
         theme,
         timestamp: new Date().toISOString(),
       });
     }
+
+    return () => {
+      // Cleanup memory monitor on unmount
+      if (__DEV__) {
+        MemoryMonitor.stop();
+      }
+    };
   }, [isHydrated, setHasStoredCredentials, getTelemetryConfig, theme]);
 
   useEffect(() => {
@@ -90,17 +107,21 @@ const App = () => {
           <DataProvider>
             <SubscriptionProvider>
               <SafeAreaProvider>
-                <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
-            <SafeAreaView style={styles.container}>
-              <ToastProvider>
-                <NotificationProvider>
-                  <BottomSheetModalProvider>
-                    <Navigation />
-                  </BottomSheetModalProvider>
-                </NotificationProvider>
-              </ToastProvider>
-            </SafeAreaView>
-          </SafeAreaProvider>
+                <StatusBar
+                  translucent
+                  backgroundColor="transparent"
+                  barStyle={theme === 'dark' ? 'light-content' : 'dark-content'}
+                />
+                <SafeAreaView style={styles.container}>
+                  <ToastProvider>
+                    <NotificationProvider>
+                      <BottomSheetModalProvider>
+                        <Navigation />
+                      </BottomSheetModalProvider>
+                    </NotificationProvider>
+                  </ToastProvider>
+                </SafeAreaView>
+              </SafeAreaProvider>
             </SubscriptionProvider>
           </DataProvider>
         </ApolloProvider>

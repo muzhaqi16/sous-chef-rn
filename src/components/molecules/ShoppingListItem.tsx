@@ -55,6 +55,10 @@ export const ShoppingListItem: React.FC<ShoppingListItemProps> = ({
         <TouchableOpacity
           style={styles.checkboxContainer}
           onPress={() => onToggle(id)}
+          accessibilityRole="checkbox"
+          accessibilityLabel={`${name} ${isPurchased ? 'purchased' : 'not purchased'}`}
+          accessibilityHint={isPurchased ? 'Tap to mark as not purchased' : 'Tap to mark as purchased'}
+          accessibilityState={{ checked: isPurchased }}
         >
           <View
             style={[styles.checkbox, isPurchased && styles.checkboxChecked]}
@@ -78,16 +82,20 @@ export const ShoppingListItem: React.FC<ShoppingListItemProps> = ({
                 count={localQuantity}
                 onIncrement={() => setLocalQuantity(q => q + 1)}
                 onDecrement={() => setLocalQuantity(q => Math.max(1, q - 1))}
+                disabled={isPurchased}
               />
-              <TouchableOpacity onPress={handleQuantityUpdate}>
+              <TouchableOpacity
+                onPress={handleQuantityUpdate}
+                disabled={isPurchased}
+                accessibilityRole="button"
+                accessibilityLabel="Confirm quantity"
+                accessibilityHint={`Save new quantity of ${localQuantity}`}
+              >
                 <Icon name="check" size={20} color={theme.colors.primary} />
               </TouchableOpacity>
             </View>
-          ) : (
-            <TouchableOpacity
-              style={styles.quantityContainer}
-              onPress={() => setIsEditingQuantity(true)}
-            >
+          ) : isPurchased ? (
+            <View style={styles.quantityContainer}>
               <QuantityDisplay
                 quantity={quantity}
                 quantityInput={quantityInput}
@@ -96,8 +104,25 @@ export const ShoppingListItem: React.FC<ShoppingListItemProps> = ({
                 displayAsFraction={displayAsFraction}
                 style={{
                   ...styles.quantityText,
-                  ...(isPurchased ? styles.purchasedText : {}),
+                  ...styles.purchasedText,
                 }}
+              />
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={styles.quantityContainer}
+              onPress={() => setIsEditingQuantity(true)}
+              accessibilityRole="button"
+              accessibilityLabel={`Edit quantity: ${quantity} ${unit || ''}`}
+              accessibilityHint="Tap to change the quantity"
+            >
+              <QuantityDisplay
+                quantity={quantity}
+                quantityInput={quantityInput}
+                displayFormat={displayFormat}
+                unitSymbol={unit}
+                displayAsFraction={displayAsFraction}
+                style={styles.quantityText}
               />
               <Icon name="edit" size={14} color={theme.colors.textSecondary} />
             </TouchableOpacity>

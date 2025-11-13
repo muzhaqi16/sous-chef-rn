@@ -11,6 +11,7 @@ import { RememberMeModal } from '#components/organisms/RememberMeModal';
 import { getLoginValidationSchema } from '#/utils';
 import { type LoginInput } from '#generated';
 import { useAuth, useAuthNavigation } from '#hooks';
+import { Telemetry } from '#/services/telemetry';
 
 export function LoginScreen() {
   const { navigateToForgotPassword, navigateToSignUp } = useAuthNavigation();
@@ -41,7 +42,7 @@ export function LoginScreen() {
     defaultValues: { email: '', password: '' },
   });
 
-  // Load stored credentials and biometric info on mount
+  // Track screen view and load stored credentials and biometric info on mount
   useEffect(() => {
     const loadAuthInfo = async () => {
       try {
@@ -53,6 +54,13 @@ export function LoginScreen() {
         setBiometricInfo(biometric);
         setHasStoredCreds(hasCredentials);
 
+        // Track screen view after loading auth info
+        Telemetry.trackScreen('LoginScreen', {
+          has_stored_credentials: hasCredentials,
+          biometric_available: biometric.isAvailable,
+          biometric_type: biometric.biometryType,
+        });
+
         // Only show biometric button if:
         // 1. Biometric is available on device
         // 2. User has stored credentials (meaning they've previously enabled biometric)
@@ -60,6 +68,10 @@ export function LoginScreen() {
         setShouldShowBiometricButton(shouldShow);
       } catch (error) {
         console.error('Error loading auth info:', error);
+        Telemetry.trackError(
+          error instanceof Error ? error : 'Failed to load auth info',
+          { component: 'LoginScreen', operation: 'loadAuthInfo' },
+        );
         setHasStoredCreds(false);
         setShouldShowBiometricButton(false);
       }
@@ -70,9 +82,16 @@ export function LoginScreen() {
 
   // Simple form submission - directly use login with default rememberMe=true
   const onSubmit = async (input: LoginInput) => {
+    Telemetry.trackEvent('login_attempt', { method: 'email_password' });
+
     try {
       await login(input); // Uses default rememberMe=true
+      Telemetry.trackEvent('login_success', { method: 'email_password' });
     } catch (err: any) {
+      Telemetry.trackError(err instanceof Error ? err : 'Login failed', {
+        component: 'LoginScreen',
+        operation: 'email_password_login',
+      });
       handleAuthError(err, 'Login failed. Please try again.');
     }
   };
@@ -80,6 +99,11 @@ export function LoginScreen() {
   // Biometric authentication handler
   const handleBiometricLogin = async () => {
     if (isBiometricLoading) return;
+
+    Telemetry.trackEvent('login_attempt', {
+      method: 'biometric',
+      biometric_type: biometricInfo.biometryType,
+    });
 
     try {
       setIsBiometricLoading(true);
@@ -94,8 +118,20 @@ export function LoginScreen() {
           },
           false,
         );
+        Telemetry.trackEvent('login_success', {
+          method: 'biometric',
+          biometric_type: biometricInfo.biometryType,
+        });
       }
     } catch (error: any) {
+      Telemetry.trackError(
+        error instanceof Error ? error : 'Biometric authentication failed',
+        {
+          component: 'LoginScreen',
+          operation: 'biometric_login',
+          biometric_type: biometricInfo.biometryType,
+        },
+      );
       handleAuthError(error, 'Biometric authentication failed');
     } finally {
       setIsBiometricLoading(false);
@@ -151,6 +187,9 @@ export function LoginScreen() {
         errors={form.formState.errors}
         linkText="Forgot password?"
         onLinkPress={() => {
+          Telemetry.trackEvent('forgot_password_clicked', {
+            source: 'LoginScreen',
+          });
           navigateToForgotPassword();
         }}
         submitText={isLoggingIn ? 'Logging in…' : 'Log In'}
@@ -158,6 +197,9 @@ export function LoginScreen() {
         footerText="Don't have an account?"
         footerLinkText="Sign Up"
         onFooterLinkPress={() => {
+          Telemetry.trackEvent('signup_navigation_clicked', {
+            source: 'LoginScreen',
+          });
           navigateToSignUp();
         }}
         isLoading={isLoggingIn}
@@ -171,6 +213,13 @@ export function LoginScreen() {
             style={styles.biometricButton}
             onPress={() => handleBiometricLogin()}
             disabled={isBiometricLoading || isLoggingIn}
+            accessibilityRole="button"
+            accessibilityLabel={getBiometricButtonText()}
+            accessibilityHint="Log in using biometric authentication"
+            accessibilityState={{
+              disabled: isBiometricLoading || isLoggingIn,
+              busy: isBiometricLoading,
+            }}
           >
             <Icon
               name={getBiometricIcon()}

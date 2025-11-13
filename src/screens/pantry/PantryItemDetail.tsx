@@ -4,16 +4,16 @@ import {
   useGetPantryItemQuery,
   useDeletePantryItemMutation,
   useAddItemToShoppingListMutation,
-  GetShoppingListItemsDocument,
 } from '#generated';
 import { DetailTemplate } from '#components/templates/DetailTemplate';
 import { FormattedItemSubtitle } from '#components';
-import { useStore } from '#/store';
+import { useAppStore, selectSelectedShoppingListId } from '#store/useAppStore';
 import { commonStyles } from '#styles';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks';
 import { PantryStackParamList } from '#navigation/stacks/PantryStack';
 import { getItemImageUrl } from '#utils/imageUtils';
+import { createAddToParentConnectionUpdater } from '#/apollo/utils';
 
 export const PantryItemDetail: React.FC<{
   route: { params: PantryStackParamList['PantryItemDetail'] };
@@ -21,7 +21,7 @@ export const PantryItemDetail: React.FC<{
   const itemId = route.params.itemId;
   const { goBack, navigateTo } = useAppNavigation();
   const { theme } = useUnistyles();
-  const { selectedShoppingListId } = useStore();
+  const selectedShoppingListId = useAppStore(selectSelectedShoppingListId);
 
   // Use cache-first policy - offlineQueryLink will handle offline behavior automatically
   const { data } = useGetPantryItemQuery({
@@ -31,15 +31,24 @@ export const PantryItemDetail: React.FC<{
 
   const [deleteItem] = useDeletePantryItemMutation();
   const [addToShoppingList] = useAddItemToShoppingListMutation({
-    refetchQueries: selectedShoppingListId
-      ? [
-          {
-            query: GetShoppingListItemsDocument,
-            variables: { shoppingListId: selectedShoppingListId },
-          },
-        ]
-      : [],
-    awaitRefetchQueries: false,
+    update: (cache, { data }) => {
+      if (!data?.addItemToShoppingList || !selectedShoppingListId) return;
+
+      try {
+        const addToShoppingListItemsCache = createAddToParentConnectionUpdater(
+          'ShoppingList',
+          'itemsConnection',
+          'ShoppingListItem',
+        );
+        addToShoppingListItemsCache(
+          cache,
+          selectedShoppingListId,
+          data.addItemToShoppingList,
+        );
+      } catch (error) {
+        console.warn('Cache update failed for addToShoppingList:', error);
+      }
+    },
   });
 
   const handleDelete = () => {
@@ -158,7 +167,9 @@ export const PantryItemDetail: React.FC<{
               <FormattedItemSubtitle
                 quantity={item?.currentQuantity}
                 netWeight={item?.item?.netWeight}
-                unitSymbol={item?.item?.displayUnit?.symbol || item?.unit?.symbol}
+                unitSymbol={
+                  item?.item?.displayUnit?.symbol || item?.unit?.symbol
+                }
               />
             </View>
           </View>
@@ -170,7 +181,9 @@ export const PantryItemDetail: React.FC<{
               <FormattedItemSubtitle
                 quantity={item?.initialQuantity}
                 netWeight={item?.item?.netWeight}
-                unitSymbol={item?.item?.displayUnit?.symbol || item?.unit?.symbol}
+                unitSymbol={
+                  item?.item?.displayUnit?.symbol || item?.unit?.symbol
+                }
               />
             </View>
           </View>
@@ -211,7 +224,9 @@ export const PantryItemDetail: React.FC<{
             <Text style={[commonStyles.caption, styles.detailLabel]}>
               Storage
             </Text>
-            <Text style={styles.detailValue}>{item?.storageState || 'N/A'}</Text>
+            <Text style={styles.detailValue}>
+              {item?.storageState || 'N/A'}
+            </Text>
           </View>
           {item?.storageLocation && (
             <View style={styles.detailRow}>
@@ -257,7 +272,8 @@ export const PantryItemDetail: React.FC<{
                 Auto-Reorder
               </Text>
               <Text style={styles.detailValue}>
-                Enabled (at {item.autoReorderPoint ?? 0} {item?.unit?.symbol ?? ''})
+                Enabled (at {item.autoReorderPoint ?? 0}{' '}
+                {item?.unit?.symbol ?? ''})
               </Text>
             </View>
           )}

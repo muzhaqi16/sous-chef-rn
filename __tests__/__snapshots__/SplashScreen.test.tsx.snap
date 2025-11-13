@@ -1,0 +1,27 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`SplashScreen renders the splash screen 1`] = `
+<View>
+  <View>
+    <Image
+      resizeMode="contain"
+      source={
+        {
+          "testUri": "../../../src/assets/images/logo.png",
+        }
+      }
+    />
+  </View>
+  <View>
+    <View>
+      <ActivityIndicator
+        color="#000"
+        size="small"
+      />
+    </View>
+    <Text>
+      Loading...
+    </Text>
+  </View>
+</View>
+`;
