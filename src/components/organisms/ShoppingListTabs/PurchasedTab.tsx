@@ -20,6 +20,7 @@ interface PurchasedTabProps {
   ) => Promise<void>;
   onClearAll?: () => Promise<void>;
   disabled?: boolean;
+  isDragging?: boolean;
   onSwipeableWillOpen?: (ref: any) => void;
   onSwipeableClose?: () => void;
   onDragBegin?: () => void;
@@ -36,6 +37,7 @@ export const PurchasedTab: React.FC<PurchasedTabProps> = React.memo(
     onSortOrderUpdate,
     onClearAll,
     disabled,
+    isDragging,
     onSwipeableWillOpen,
     onSwipeableClose,
     onDragBegin,
@@ -102,6 +104,7 @@ export const PurchasedTab: React.FC<PurchasedTabProps> = React.memo(
           onTogglePurchase={onTogglePurchase}
           onSortOrderUpdate={onSortOrderUpdate}
           disabled={disabled}
+          isDragging={isDragging}
           showsVerticalScrollIndicator={true}
           onSwipeableWillOpen={onSwipeableWillOpen}
           onSwipeableClose={onSwipeableClose}

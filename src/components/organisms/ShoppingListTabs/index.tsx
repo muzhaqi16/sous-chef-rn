@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useRef } from 'react';
+import React, { useMemo, useCallback, useRef, useState } from 'react';
 import { RefreshControl } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { TabView, TabRoute } from '#/components/molecules/TabView';
@@ -46,8 +46,7 @@ export const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   const openSwipeableRef = useRef<any>(null);
 
   // Track drag state to disable tab swipe during drag
-  // NOTE: Temporarily disabled for testing - tab swipe set to false
-  // const [isDragging, setIsDragging] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   // Separate items by purchased status
   const unpurchasedItems = useMemo(
@@ -98,13 +97,14 @@ export const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   );
 
   // Handle drag events - disable tab swipe during drag
-  // NOTE: Temporarily disabled for testing
   const handleDragBegin = useCallback(() => {
-    // setIsDragging(true);
+    if (__DEV__) console.log('🎯 Drag BEGIN - disabling tab swipe');
+    setIsDragging(true);
   }, []);
 
   const handleDragRelease = useCallback(() => {
-    // setIsDragging(false);
+    if (__DEV__) console.log('🎯 Drag RELEASE - enabling tab swipe');
+    setIsDragging(false);
   }, []);
 
   // Render scene for each tab
@@ -117,6 +117,7 @@ export const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
               items={unpurchasedItems}
               onItemPress={onItemPress}
               onItemEdit={onItemEdit}
+              isDragging={isDragging}
               onItemDelete={onItemDelete}
               onTogglePurchase={onTogglePurchase}
               onSortOrderUpdate={onSortOrderUpdate}
@@ -141,6 +142,7 @@ export const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
               onSortOrderUpdate={onSortOrderUpdate}
               onClearAll={onClearAllPurchased}
               disabled={disabled}
+              isDragging={isDragging}
               onSwipeableWillOpen={handleSwipeableWillOpen}
               onSwipeableClose={onSwipeableClose}
               onDragBegin={handleDragBegin}
@@ -168,6 +170,7 @@ export const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
       onSwipeableClose,
       handleDragBegin,
       handleDragRelease,
+      isDragging,
     ],
   );
 
@@ -190,6 +193,15 @@ export const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     );
   }
 
+  // Debug: Check why tab swipe might be disabled
+  if (__DEV__) {
+    console.log('🔍 TabView swipeEnabled debug:', {
+      disabled,
+      isDragging,
+      swipeEnabled: !disabled && !isDragging,
+    });
+  }
+
   return (
     <TabView
       routes={routes}
@@ -198,7 +210,7 @@ export const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
       lazy={true}
       lazyPreloadDistance={0}
       onIndexChange={handleIndexChange}
-      swipeEnabled={false}  // TEST: Disable tab swipe to diagnose scroll issue
+      swipeEnabled={!disabled && !isDragging}
     />
   );
 };

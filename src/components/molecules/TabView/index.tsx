@@ -113,6 +113,7 @@ export const TabView: React.FC<TabViewProps> = ({
       onIndexChange={handleIndexChange}
       initialLayout={{ width: layout.width }}
       swipeEnabled={swipeEnabled}
+      overScrollMode="never"
     />
   );
 };

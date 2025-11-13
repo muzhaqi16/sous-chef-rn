@@ -18,6 +18,7 @@ interface ShoppingTabProps {
   onRefresh?: () => void | Promise<void>;
   refreshing?: boolean;
   disabled?: boolean;
+  isDragging?: boolean;
   onSwipeableWillOpen?: (ref: any) => void;
   onSwipeableClose?: () => void;
   onDragBegin?: () => void;
@@ -34,6 +35,7 @@ export const ShoppingTab: React.FC<ShoppingTabProps> = React.memo(({
   onRefresh,
   refreshing,
   disabled,
+  isDragging,
   onSwipeableWillOpen,
   onSwipeableClose,
   onDragBegin,
@@ -48,6 +50,7 @@ export const ShoppingTab: React.FC<ShoppingTabProps> = React.memo(({
       onTogglePurchase={onTogglePurchase}
       onSortOrderUpdate={onSortOrderUpdate}
       disabled={disabled}
+      isDragging={isDragging}
       showsVerticalScrollIndicator={true}
       onSwipeableWillOpen={onSwipeableWillOpen}
       onSwipeableClose={onSwipeableClose}

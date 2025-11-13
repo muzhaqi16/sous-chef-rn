@@ -1,6 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { View } from 'react-native';
-import { RefreshControl } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
 import DraggableFlatList, {
@@ -33,10 +32,11 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
   disabled = false,
   ListFooterComponent,
   onSwipeableWillOpen: externalOnSwipeableWillOpen,
-  onRefresh,
-  refreshing,
+  onRefresh: _onRefresh,
+  refreshing: _refreshing,
   onDragBegin: externalOnDragBegin,
   onDragRelease: externalOnDragRelease,
+  isDragging = false,
   ...flatListProps
 }) => {
   // Track render performance
@@ -44,8 +44,6 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
 
   // Track local order for optimistic updates
   const [localItems, setLocalItems] = useState(items);
-  // Track if we're currently dragging (for disabling RefreshControl)
-  const [isDraggingLocally, setIsDraggingLocally] = useState(false);
   // Track if we're currently updating the sort order
   const isUpdatingRef = useRef(false);
   // Track currently open swipeable item (only used if no external handler provided)
@@ -98,12 +96,12 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
   // Note: DraggableFlatList manages scrollEnabled internally (sets scrollEnabled={!activeKey})
   // Manual setNativeProps can leave scroll stuck if drag aborts - let library handle it
   const handleDragBegin = useCallback(() => {
-    setIsDraggingLocally(true);
+    if (__DEV__) console.log('📱 DraggableFlatList: Drag BEGIN');
     externalOnDragBegin?.();
   }, [externalOnDragBegin]);
 
   const handleDragRelease = useCallback(() => {
-    setIsDraggingLocally(false);
+    if (__DEV__) console.log('📱 DraggableFlatList: Drag RELEASE');
     externalOnDragRelease?.();
   }, [externalOnDragRelease]);
 
@@ -281,10 +279,11 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
    * - Pull-to-Refresh: Conditionally rendered (RNGH RefreshControl)
    * - Drag (vertical): Manual activation via onLongPress on DragHandle
    *
-   * activationDistance={10} allows scroll gestures to work properly.
-   * Per GitHub issues #184, #535: activationDistance={0} blocks ALL scroll gestures.
-   * With activationDistance={10}, normal scrolling works while manual drag activation
-   * via onLongPress still functions correctly regardless of distance threshold.
+   * activationDistance: Uses library default (0) - no threshold needed for manual drag.
+   * When using manual drag activation via onLongPress, activationDistance is unnecessary.
+   * The drag() function is called explicitly, bypassing gesture detection entirely.
+   * Setting activationDistance > 0 creates a dead zone that BLOCKS normal scroll gestures.
+   * Per official examples: manual drag handles work with activationDistance={0} (default).
    *
    * RefreshControl Conflict Prevention (per GitHub issues #135, #189, #467):
    * - Known issue: PanGestureHandler wrapping FlatList conflicts with RefreshControl
@@ -302,7 +301,7 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
         data={localItems}
         renderItem={renderItem}
         keyExtractor={item => item.id}
-        activationDistance={10}
+        activationDistance={isDragging ? 1 : 20}
         onDragBegin={handleDragBegin}
         onDragEnd={({ data }) => {
           handleDragRelease();
@@ -316,14 +315,11 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
           paddingBottom: TAB_BAR_HEIGHT + insets.bottom + 16,
         }}
         ListFooterComponent={ListFooterComponent}
-        refreshControl={
-          !isDraggingLocally && onRefresh && !disabled ? (
-            <RefreshControl
-              refreshing={refreshing || false}
-              onRefresh={onRefresh}
-            />
-          ) : undefined
-        }
+        // NOTE: RefreshControl disabled due to gesture conflicts with DraggableFlatList + TabView
+        // Pull-to-refresh is incompatible with the gesture coordination required for:
+        // - Normal vertical scroll
+        // - Horizontal tab swipe
+        // - Drag-to-reorder
         // OPTIMIZATION: Performance props to reduce initial render work
         initialNumToRender={10}
         maxToRenderPerBatch={5}

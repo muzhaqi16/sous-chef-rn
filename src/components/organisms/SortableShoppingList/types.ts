@@ -71,6 +71,7 @@ export interface SortableShoppingListProps extends Omit<ScrollViewProps, 'data' 
   refreshing?: boolean;
   onDragBegin?: () => void;
   onDragRelease?: () => void;
+  isDragging?: boolean;
 }
 
 // Sort order update for API calls
