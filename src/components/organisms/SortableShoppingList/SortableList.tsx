@@ -18,7 +18,6 @@ import {
   getNeighborIds,
 } from './SortableList.utils';
 import { useRenderTime } from '#hooks/performance';
-import { DRAG_DISABLED_DISTANCE } from '#/constants/gestures';
 import { SubscriptionService } from '#/services/subscriptions/SubscriptionService';
 
 // Tab bar height constant (65px from FloatingTabBar)
@@ -45,6 +44,8 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
 
   // Track local order for optimistic updates
   const [localItems, setLocalItems] = useState(items);
+  // Track if we're currently dragging (for disabling RefreshControl)
+  const [isDraggingLocally, setIsDraggingLocally] = useState(false);
   // Track if we're currently updating the sort order
   const isUpdatingRef = useRef(false);
   // Track currently open swipeable item (only used if no external handler provided)
@@ -76,7 +77,8 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
 
         // Check quantity changes
         const quantityChanged =
-          localItem.rightElementConfig?.quantity !== newItem.rightElementConfig?.quantity;
+          localItem.rightElementConfig?.quantity !==
+          newItem.rightElementConfig?.quantity;
 
         // Check purchased status changes
         const purchasedChanged = localItem.isPurchased !== newItem.isPurchased;
@@ -90,13 +92,18 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
     }
   }, [items, localItems]);
 
-  // Drag gesture callbacks - pass through without state management
-  // No state = no re-renders = no scroll position reset
+  // Drag gesture callbacks - gate RefreshControl during drag
+  // Per GitHub issues #135, #189, #467: RefreshControl conflicts with drag gesture
+  // Solution: Conditionally remove RefreshControl from tree during drag
+  // Note: DraggableFlatList manages scrollEnabled internally (sets scrollEnabled={!activeKey})
+  // Manual setNativeProps can leave scroll stuck if drag aborts - let library handle it
   const handleDragBegin = useCallback(() => {
+    setIsDraggingLocally(true);
     externalOnDragBegin?.();
   }, [externalOnDragBegin]);
 
   const handleDragRelease = useCallback(() => {
+    setIsDraggingLocally(false);
     externalOnDragRelease?.();
   }, [externalOnDragRelease]);
 
@@ -266,12 +273,36 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
     return null;
   }
 
+  /**
+   * Gesture Coordination Strategy (following react-native-draggable-flatlist best practices):
+   *
+   * - Scroll: Automatic (DraggableFlatList manages scrollEnabled internally)
+   * - Swipe (horizontal): Automatic (ReanimatedSwipeable in SwipeableItem)
+   * - Pull-to-Refresh: Conditionally rendered (RNGH RefreshControl)
+   * - Drag (vertical): Manual activation via onLongPress on DragHandle
+   *
+   * activationDistance={10} allows scroll gestures to work properly.
+   * Per GitHub issues #184, #535: activationDistance={0} blocks ALL scroll gestures.
+   * With activationDistance={10}, normal scrolling works while manual drag activation
+   * via onLongPress still functions correctly regardless of distance threshold.
+   *
+   * RefreshControl Conflict Prevention (per GitHub issues #135, #189, #467):
+   * - Known issue: PanGestureHandler wrapping FlatList conflicts with RefreshControl
+   * - Solution: Conditionally remove RefreshControl from tree during drag
+   * - isDraggingLocally state tracks drag operation (set in onDragBegin/onDragRelease)
+   * - RefreshControl only rendered when !isDraggingLocally
+   * - This completely eliminates gesture conflict during drag operations
+   *
+   * Note: DraggableFlatList manages scrollEnabled internally (sets scrollEnabled={!activeKey})
+   * Manual setNativeProps({ scrollEnabled }) can leave scroll stuck if drag aborts - avoid it.
+   */
   return (
     <View style={styles.container}>
       <DraggableFlatList
         data={localItems}
         renderItem={renderItem}
         keyExtractor={item => item.id}
+        activationDistance={10}
         onDragBegin={handleDragBegin}
         onDragEnd={({ data }) => {
           handleDragRelease();
@@ -284,10 +315,9 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
         contentContainerStyle={{
           paddingBottom: TAB_BAR_HEIGHT + insets.bottom + 16,
         }}
-        activationDistance={DRAG_DISABLED_DISTANCE}
         ListFooterComponent={ListFooterComponent}
         refreshControl={
-          onRefresh && !disabled ? (
+          !isDraggingLocally && onRefresh && !disabled ? (
             <RefreshControl
               refreshing={refreshing || false}
               onRefresh={onRefresh}

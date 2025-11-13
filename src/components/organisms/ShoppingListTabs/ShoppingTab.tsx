@@ -12,6 +12,8 @@ interface ShoppingTabProps {
     itemId: string,
     afterItemId: string | null,
     beforeItemId: string | null,
+    afterSortOrder: string | null,
+    beforeSortOrder: string | null,
   ) => Promise<void>;
   onRefresh?: () => void | Promise<void>;
   refreshing?: boolean;

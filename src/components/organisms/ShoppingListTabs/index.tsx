@@ -1,5 +1,6 @@
-import React, { useMemo, useCallback, useRef, useState } from 'react';
-import { ScrollView, RefreshControl } from 'react-native-gesture-handler';
+import React, { useMemo, useCallback, useRef } from 'react';
+import { RefreshControl } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
 import { TabView, TabRoute } from '#/components/molecules/TabView';
 import { ShoppingTab } from './ShoppingTab';
 import { PurchasedTab } from './PurchasedTab';
@@ -45,7 +46,8 @@ export const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   const openSwipeableRef = useRef<any>(null);
 
   // Track drag state to disable tab swipe during drag
-  const [isDragging, setIsDragging] = useState(false);
+  // NOTE: Temporarily disabled for testing - tab swipe set to false
+  // const [isDragging, setIsDragging] = useState(false);
 
   // Separate items by purchased status
   const unpurchasedItems = useMemo(
@@ -96,12 +98,13 @@ export const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   );
 
   // Handle drag events - disable tab swipe during drag
+  // NOTE: Temporarily disabled for testing
   const handleDragBegin = useCallback(() => {
-    setIsDragging(true);
+    // setIsDragging(true);
   }, []);
 
   const handleDragRelease = useCallback(() => {
-    setIsDragging(false);
+    // setIsDragging(false);
   }, []);
 
   // Render scene for each tab
@@ -195,7 +198,7 @@ export const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
       lazy={true}
       lazyPreloadDistance={0}
       onIndexChange={handleIndexChange}
-      swipeEnabled={!disabled && !isDragging}
+      swipeEnabled={false}  // TEST: Disable tab swipe to diagnose scroll issue
     />
   );
 };

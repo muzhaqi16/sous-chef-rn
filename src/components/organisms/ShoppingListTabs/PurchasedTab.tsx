@@ -15,6 +15,8 @@ interface PurchasedTabProps {
     itemId: string,
     afterItemId: string | null,
     beforeItemId: string | null,
+    afterSortOrder: string | null,
+    beforeSortOrder: string | null,
   ) => Promise<void>;
   onClearAll?: () => Promise<void>;
   disabled?: boolean;
