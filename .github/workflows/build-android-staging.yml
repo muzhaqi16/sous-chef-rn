@@ -78,13 +78,20 @@ jobs:
       - name: Generate .env file from staging environment
         run: |
           echo "API_URL=${{ vars.API_URL }}" > .env.staging
-          echo "API_KEY=${{ secrets.API_KEY }}" >> .env.staging
           echo "WEB_SOCKET_URL=${{ vars.WEB_SOCKET_URL }}" >> .env.staging
-          echo "LOKI_ENDPOINT=${{ vars.LOKI_ENDPOINT }}" >> .env.staging
+          echo "API_KEY=${{ secrets.API_KEY }}" >> .env.staging
+          echo "NODE_ENV=staging" >> .env.staging
+          echo "WEB_APP_URL=${{ vars.WEB_APP_URL }}" >> .env.staging
+          echo "" >> .env.staging
+          echo "# Spoonacular API" >> .env.staging
+          echo "SPOONACULAR_API_KEY=${{ secrets.SPOONACULAR_API_KEY }}" >> .env.staging
+          echo "" >> .env.staging
+          echo "# Telemetry Configuration (Required for production)" >> .env.staging
           echo "PROMETHEUS_ENDPOINT=${{ vars.PROMETHEUS_ENDPOINT }}" >> .env.staging
+          echo "LOKI_ENDPOINT=${{ vars.LOKI_ENDPOINT }}" >> .env.staging
+          echo "# Basic Auth credentials for telemetry endpoints in production" >> .env.staging
           echo "TELEMETRY_AUTH_USERNAME=${{ secrets.TELEMETRY_AUTH_USERNAME }}" >> .env.staging
           echo "TELEMETRY_AUTH_PASSWORD=${{ secrets.TELEMETRY_AUTH_PASSWORD }}" >> .env.staging
-          echo "SPOONACULAR_API_KEY=${{ secrets.SPOONACULAR_API_KEY }}" >> .env.staging
 
       - name: Prepare .env for react-native-config
         run: cp .env.staging .env
