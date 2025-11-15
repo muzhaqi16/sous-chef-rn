@@ -91,15 +91,15 @@ jobs:
 
       - name: Build production apk
         run: |
-          echo -n "$PROD_KEYSTORE_BASE64" | base64 --decode > ./android/app/prod-release.keystore
+          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode > ./android/app/prod-release.keystore
           cd android
           ./gradlew assembleRelease
         env:
-          PROD_KEYSTORE_BASE64: ${{ secrets.PROD_KEYSTORE_BASE64 }}
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
           MYAPP_UPLOAD_STORE_FILE: "prod-release.keystore"
-          MYAPP_UPLOAD_STORE_PASSWORD: ${{ secrets.PROD_KEYSTORE_PASSWORD }}
+          MYAPP_UPLOAD_STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           MYAPP_UPLOAD_KEY_ALIAS: "prod-release"
-          MYAPP_UPLOAD_KEY_PASSWORD: ${{ secrets.PROD_KEY_PASSWORD }}
+          MYAPP_UPLOAD_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
       - name: List the .apks compiled
         run: ls ./android/app/build/outputs/apk/release/ -hal
