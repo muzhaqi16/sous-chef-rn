@@ -13,11 +13,24 @@
 -keep class com.reactnativecommunity.netinfo.** { *; }
 
 # React Native Config - Environment variables native module
+# Keep all classes in both possible package names
 -keep class com.lugg.ReactNativeConfig.** { *; }
+-keep class com.lugg.RNCConfig.** { *; }
+
+# Keep the native module class and all its methods
+-keepclassmembers class com.lugg.ReactNativeConfig.ReactNativeConfigModule {
+    <methods>;
+}
+
+# Keep React Native TurboModule interface for react-native-config
+-keep interface com.lugg.ReactNativeConfig.** { *; }
 
 # React Native Config - BuildConfig class (contains all .env variables)
 # CRITICAL: Without this, ProGuard renames BuildConfig and env vars are inaccessible
 -keep class dev.souschef.app.BuildConfig { *; }
+-keepclassmembers class dev.souschef.app.BuildConfig {
+    public static <fields>;
+}
 
 # ============================================================================
 # REACT NATIVE CORE - Essential rules for RN with New Architecture
