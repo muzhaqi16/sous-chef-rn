@@ -32,6 +32,16 @@
     public static <fields>;
 }
 
+# R8-specific aggressive rules for react-native-config
+# Prevent any shrinking, optimization, or obfuscation of these classes
+-keepnames class com.lugg.ReactNativeConfig.** { *; }
+-keepnames class com.lugg.RNCConfig.** { *; }
+-keepnames class dev.souschef.app.BuildConfig { *; }
+
+# Suppress warnings for react-native-config
+-dontwarn com.lugg.ReactNativeConfig.**
+-dontwarn com.lugg.RNCConfig.**
+
 # ============================================================================
 # REACT NATIVE CORE - Essential rules for RN with New Architecture
 # ============================================================================
