@@ -18,3 +18,46 @@
 # React Native Config - BuildConfig class (contains all .env variables)
 # CRITICAL: Without this, ProGuard renames BuildConfig and env vars are inaccessible
 -keep class dev.souschef.app.BuildConfig { *; }
+
+# ============================================================================
+# REACT NATIVE CORE - Essential rules for RN with New Architecture
+# ============================================================================
+
+# JSI (JavaScript Interface) - Critical for New Architecture
+-keep class com.facebook.jni.** { *; }
+-keep class com.facebook.react.jsi.** { *; }
+
+# TurboModules (New Architecture Native Modules)
+-keep class com.facebook.react.turbomodule.** { *; }
+-keep interface com.facebook.react.turbomodule.** { *; }
+
+# Fabric (New Architecture Renderer)
+-keep class com.facebook.react.fabric.** { *; }
+-keep interface com.facebook.react.fabric.** { *; }
+
+# Hermes Engine
+-keep class com.facebook.hermes.** { *; }
+
+# React Native ProGuard annotations - DO NOT STRIP
+-keepclassmembers class * {
+    @com.facebook.proguard.annotations.DoNotStrip *;
+    @com.facebook.proguard.annotations.KeepGettersAndSetters *;
+}
+-keep @com.facebook.proguard.annotations.DoNotStrip class *
+-keep @com.facebook.proguard.annotations.KeepGettersAndSetters class *
+
+# Keep native methods (standard Android rule)
+-keepclassmembers class * {
+    native <methods>;
+}
+
+# Prevent obfuscation of classes with native methods
+-keepclasseswithmembernames class * {
+    native <methods>;
+}
+
+# ============================================================================
+# Note: Most React Native libraries (Reanimated, Vision Camera, MMKV, etc.)
+# auto-include their ProGuard rules via consumerProguardFiles.
+# Only add library-specific rules here if you encounter crashes.
+# ============================================================================
