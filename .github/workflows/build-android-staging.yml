@@ -69,12 +69,6 @@ jobs:
       - name: Run Yarn Install
         run: yarn install --frozen-lockfile --network-timeout 100000
 
-      - name: Clean Android build
-        run: |
-          cd android
-          ./gradlew clean
-          cd ..
-
       - name: Generate .env file from staging environment
         run: |
           echo "API_URL=${{ vars.API_URL }}" > .env.staging
@@ -115,6 +109,12 @@ jobs:
             echo "⚠️ WARNING: Found spaces around '=' signs"
           fi
           echo "✅ .env file format looks valid"
+
+      - name: Clean Android build
+        run: |
+          cd android
+          ./gradlew clean
+          cd ..
 
       - name: Build staging apk
         run: |
