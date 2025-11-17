@@ -112,6 +112,7 @@ jobs:
         if: env.IS_PLAYSTORE == 'true'
         run: |
           echo -n "${{ secrets.PLAYSTORE_KEYSTORE_BASE64 }}" | base64 --decode > ./android/app/upload-key.keystore
+          echo "" >> android/gradle.properties
           echo "MYAPP_UPLOAD_STORE_FILE=upload-key.keystore" >> android/gradle.properties
           echo "MYAPP_UPLOAD_KEY_ALIAS=upload" >> android/gradle.properties
           echo "MYAPP_UPLOAD_STORE_PASSWORD=${{ secrets.PLAYSTORE_KEYSTORE_PASSWORD }}" >> android/gradle.properties
@@ -121,6 +122,7 @@ jobs:
         if: env.IS_PLAYSTORE != 'true'
         run: |
           echo -n "${{ secrets.BUILD_CERTIFICATE_BASE64 }}" | base64 --decode > ./android/app/release.keystore
+          echo "" >> android/gradle.properties
           echo "MYAPP_UPLOAD_STORE_FILE=release.keystore" >> android/gradle.properties
           echo "MYAPP_UPLOAD_KEY_ALIAS=github" >> android/gradle.properties
           echo "MYAPP_UPLOAD_STORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> android/gradle.properties
