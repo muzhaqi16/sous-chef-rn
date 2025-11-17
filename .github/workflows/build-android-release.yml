@@ -149,6 +149,6 @@ jobs:
         if: always()
         run: |
           rm -f ./android/app/release.keystore
-          rm -f android/local.properties
+          rm -f android/local.propertiess
           rm -f .env.production .env
           cd android && ./gradlew --stop || true
