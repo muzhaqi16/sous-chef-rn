@@ -50,11 +50,11 @@
     "audit:theme": "node scripts/audit-theme-tokens.js",
     "audit:theme:detailed": "node scripts/audit-theme-tokens.js --detailed",
     "postinstall": "patch-package",
-    "tag:dev": "node -e \"const v=require('./package.json').version; const t='dev-v'+v; require('child_process').execSync('git tag -a '+t+' -m \\\"Dev release '+t+'\\\"', {stdio:'inherit'}); require('child_process').execSync('git push origin '+t, {stdio:'inherit'})\"",
-    "tag:stg": "node -e \"const v=require('./package.json').version; const t='stg-v'+v; require('child_process').execSync('git tag -a '+t+' -m \\\"Production release '+t+'\\\"', {stdio:'inherit'}); require('child_process').execSync('git push origin '+t, {stdio:'inherit'})\"",
-    "tag:prod": "node -e \"const v=require('./package.json').version; const t='prod-v'+v; require('child_process').execSync('git tag -a '+t+' -m \\\"Production release '+t+'\\\"', {stdio:'inherit'}); require('child_process').execSync('git push origin '+t, {stdio:'inherit'})\"",
-    "tag:release": "node -e \"const v=require('./package.json').version; const t='release-v'+v; require('child_process').execSync('git tag -a '+t+' -m \\\"Release '+t+'\\\"', {stdio:'inherit'}); require('child_process').execSync('git push origin '+t, {stdio:'inherit'})\"",
-    "tag:playstore": "node -e \"const v=require('./package.json').version; const t='playstore-v'+v; require('child_process').execSync('git tag -a '+t+' -m \\\"Play Store release '+t+'\\\"', {stdio:'inherit'}); require('child_process').execSync('git push origin '+t, {stdio:'inherit'})\""
+    "tag:dev": "node scripts/create-tag.mjs dev",
+    "tag:stg": "node scripts/create-tag.mjs stg",
+    "tag:prod": "node scripts/create-tag.mjs prod",
+    "tag:release": "node scripts/create-tag.mjs release",
+    "tag:playstore": "node scripts/create-tag.mjs playstore"
   },
   "dependencies": {
     "@apollo/client": "^4.0.5",
