@@ -1,15 +1,16 @@
-name: Build Android .apk
-run-name: Building ${{ github.event_name == 'workflow_dispatch' && inputs.environment || (contains(github.ref, 'prod') && 'prod' || 'dev') }} .apk triggered by @${{ github.actor }}
+name: Build Android
+run-name: "Building ${{ github.event_name == 'workflow_dispatch' && format('{0} ({1})', inputs.build_type, inputs.environment) || github.ref_name }} triggered by @${{ github.actor }}"
 permissions:
   contents: write
 
 on:
   push:
     tags:
-      - "v*"
+      - "dev-v*"
+      - "stg-v*"
       - "prod-v*"
-      - "android-v*"
       - "release-v*"
+      - "playstore-v*"
   workflow_dispatch:
     inputs:
       environment:
@@ -19,14 +20,28 @@ on:
         type: choice
         options:
           - dev
+          - stg
           - prod
+      build_type:
+        description: "Build type"
+        required: true
+        default: "apk"
+        type: choice
+        options:
+          - apk
+          - playstore
 
 jobs:
   build:
     runs-on: self-hosted
     timeout-minutes: 30
 
-    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || (contains(github.ref, 'prod') || contains(github.ref, 'release')) && 'prod' || 'dev' }}
+    environment: ${{
+      github.event_name == 'workflow_dispatch' && inputs.environment ||
+      startsWith(github.ref_name, 'dev-v') && 'dev' ||
+      startsWith(github.ref_name, 'stg-v') && 'stg' ||
+      'prod'
+      }}
 
     env:
       ANDROID_HOME: /opt/android-sdk
@@ -34,7 +49,16 @@ jobs:
       JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
       GRADLE_OPTS: -Xmx4096m -Dorg.gradle.daemon=false -Dorg.gradle.parallel=true
       NODE_OPTIONS: --max-old-space-size=4096
-      BUILD_ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || (contains(github.ref, 'prod') || contains(github.ref, 'release')) && 'prod' || 'dev' }}
+      BUILD_ENV: ${{
+        github.event_name == 'workflow_dispatch' && inputs.environment ||
+        startsWith(github.ref_name, 'dev-v') && 'dev' ||
+        startsWith(github.ref_name, 'stg-v') && 'stg' ||
+        'prod'
+        }}
+      IS_PLAYSTORE: ${{
+        (github.event_name == 'workflow_dispatch' && inputs.build_type == 'playstore') ||
+        startsWith(github.ref_name, 'playstore-v')
+        }}
 
     steps:
       - name: Checkout repository
@@ -44,8 +68,9 @@ jobs:
 
       - name: Display build environment
         run: |
-          echo "🔧 Building for environment: ${{ env.BUILD_ENV }}"
-          echo "📦 Tag/Ref: ${{ github.ref }}"
+          echo "Building for environment: ${{ env.BUILD_ENV }}"
+          echo "Play Store build: ${{ env.IS_PLAYSTORE }}"
+          echo "Tag/Ref: ${{ github.ref }}"
           echo "Node version: $(node -v)"
           echo "Java version: $(java -version 2>&1 | head -n 1)"
           echo "Android SDK: $ANDROID_HOME"
@@ -53,7 +78,7 @@ jobs:
       - name: Setup Android local.properties
         run: |
           echo "sdk.dir=/opt/android-sdk" > android/local.properties
-          echo "✅ Created android/local.properties"
+          echo "Created android/local.properties"
 
       - name: Validate Gradle wrapper
         uses: gradle/actions/wrapper-validation@v3
@@ -65,7 +90,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: node_modules
-          key: ${{ runner.os }}-node-modules-${{ hashFiles('yarn.lock') }}
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-modules-
 
@@ -80,8 +105,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - name: Run Yarn Install
-        run: yarn install --frozen-lockfile --network-timeout 100000
+      - name: Install dependencies
+        run: npm ci
 
       - name: Clean Android build
         run: |
@@ -91,93 +116,152 @@ jobs:
 
       - name: Generate .env file
         run: |
-          if [ "${{ env.BUILD_ENV }}" = "prod" ]; then
-            echo "API_URL=${{ vars.API_URL }}" > .env.production
-            echo "API_KEY=${{ secrets.API_KEY }}" >> .env.production
-            echo "WEB_SOCKET_URL=${{ vars.WEB_SOCKET_URL }}" >> .env.production
-            echo "LOKI_ENDPOINT=${{ vars.LOKI_ENDPOINT }}" >> .env.production
-            echo "PROMETHEUS_ENDPOINT=${{ vars.PROMETHEUS_ENDPOINT }}" >> .env.production
-            echo "TELEMETRY_AUTH_USERNAME=${{ secrets.TELEMETRY_AUTH_USERNAME }}" >> .env.production
-            echo "TELEMETRY_AUTH_PASSWORD=${{ secrets.TELEMETRY_AUTH_PASSWORD }}" >> .env.production
-            echo "SPOONACULAR_API_KEY=${{ secrets.SPOONACULAR_API_KEY }}" >> .env.production
-          else
-            echo "API_URL=${{ vars.API_URL }}" > .env.dev
-            echo "API_KEY=${{ secrets.API_KEY }}" >> .env.dev
-            echo "WEB_SOCKET_URL=${{ vars.WEB_SOCKET_URL }}" >> .env.dev
-            echo "LOKI_ENDPOINT=${{ vars.LOKI_ENDPOINT }}" >> .env.dev
-            echo "PROMETHEUS_ENDPOINT=${{ vars.PROMETHEUS_ENDPOINT }}" >> .env.dev
-            echo "SPOONACULAR_API_KEY=${{ secrets.SPOONACULAR_API_KEY }}" >> .env.dev
+          ENV_FILE=".env.${{ env.BUILD_ENV }}"
+
+          # Common variables for all environments
+          echo "API_URL=${{ vars.API_URL }}" > "$ENV_FILE"
+          echo "API_KEY=${{ secrets.API_KEY }}" >> "$ENV_FILE"
+          echo "WEB_SOCKET_URL=${{ vars.WEB_SOCKET_URL }}" >> "$ENV_FILE"
+          echo "LOKI_ENDPOINT=${{ vars.LOKI_ENDPOINT }}" >> "$ENV_FILE"
+          echo "PROMETHEUS_ENDPOINT=${{ vars.PROMETHEUS_ENDPOINT }}" >> "$ENV_FILE"
+          echo "SPOONACULAR_API_KEY=${{ secrets.SPOONACULAR_API_KEY }}" >> "$ENV_FILE"
+
+          # Environment-specific variables
+          if [ "${{ env.BUILD_ENV }}" = "stg" ]; then
+            echo "NODE_ENV=staging" >> "$ENV_FILE"
+            echo "WEB_APP_URL=${{ vars.WEB_APP_URL }}" >> "$ENV_FILE"
+            echo "TELEMETRY_AUTH_USERNAME=${{ secrets.TELEMETRY_AUTH_USERNAME }}" >> "$ENV_FILE"
+            echo "TELEMETRY_AUTH_PASSWORD=${{ secrets.TELEMETRY_AUTH_PASSWORD }}" >> "$ENV_FILE"
+          elif [ "${{ env.BUILD_ENV }}" = "prod" ]; then
+            echo "TELEMETRY_AUTH_USERNAME=${{ secrets.TELEMETRY_AUTH_USERNAME }}" >> "$ENV_FILE"
+            echo "TELEMETRY_AUTH_PASSWORD=${{ secrets.TELEMETRY_AUTH_PASSWORD }}" >> "$ENV_FILE"
           fi
 
-      - name: Prepare .env for react-native-config
-        run: |
-          if [ "${{ env.BUILD_ENV }}" = "prod" ]; then
-            cp .env.production .env
-          else
-            cp .env.dev .env
-          fi
+          # Copy to .env for react-native-config
+          cp "$ENV_FILE" .env
+          echo "Generated $ENV_FILE and copied to .env"
 
-      - name: Build application apk
+      - name: Setup Play Store keystore
+        if: env.IS_PLAYSTORE == 'true'
         run: |
-          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode > ./android/app/releases.keystore
-          cd android
-          ./gradlew assembleRelease
+          echo -n "${{ secrets.PLAYSTORE_KEYSTORE_BASE64 }}" | base64 --decode > ./android/app/upload-key.keystore
         env:
-          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
-          MYAPP_UPLOAD_STORE_FILE: "releases.keystore"
+          MYAPP_UPLOAD_STORE_FILE: "upload-key.keystore"
+          MYAPP_UPLOAD_STORE_PASSWORD: ${{ secrets.PLAYSTORE_KEYSTORE_PASSWORD }}
+          MYAPP_UPLOAD_KEY_ALIAS: "upload"
+          MYAPP_UPLOAD_KEY_PASSWORD: ${{ secrets.PLAYSTORE_KEY_PASSWORD }}
+
+      - name: Setup regular keystore
+        if: env.IS_PLAYSTORE != 'true'
+        run: |
+          echo -n "${{ secrets.BUILD_CERTIFICATE_BASE64 }}" | base64 --decode > ./android/app/release.keystore
+
+      - name: Build Play Store AAB
+        if: env.IS_PLAYSTORE == 'true'
+        run: |
+          cd android
+          ./gradlew bundleRelease
+        env:
+          MYAPP_UPLOAD_STORE_FILE: "upload-key.keystore"
+          MYAPP_UPLOAD_STORE_PASSWORD: ${{ secrets.PLAYSTORE_KEYSTORE_PASSWORD }}
+          MYAPP_UPLOAD_KEY_ALIAS: "upload"
+          MYAPP_UPLOAD_KEY_PASSWORD: ${{ secrets.PLAYSTORE_KEY_PASSWORD }}
+
+      - name: Build APK
+        if: env.IS_PLAYSTORE != 'true'
+        run: |
+          cd android
+          if [ "${{ env.BUILD_ENV }}" = "stg" ]; then
+            ./gradlew assembleStaging
+          else
+            ./gradlew assembleRelease
+          fi
+        env:
+          MYAPP_UPLOAD_STORE_FILE: "release.keystore"
           MYAPP_UPLOAD_STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           MYAPP_UPLOAD_KEY_ALIAS: "github"
           MYAPP_UPLOAD_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
-      - name: List the .apks compiled
-        run: ls ./android/app/build/outputs/apk/release/ -hal
-
-      - name: Rename the .apk release files
+      - name: List build outputs
         run: |
-          ENV_SUFFIX="${{ env.BUILD_ENV }}"
+          if [ "${{ env.IS_PLAYSTORE }}" = "true" ]; then
+            ls -hal ./android/app/build/outputs/bundle/release/ || echo "No AAB outputs found"
+          elif [ "${{ env.BUILD_ENV }}" = "stg" ]; then
+            ls -hal ./android/app/build/outputs/apk/staging/ || echo "No staging APK outputs found"
+          else
+            ls -hal ./android/app/build/outputs/apk/release/ || echo "No release APK outputs found"
+          fi
+
+      - name: Rename APK files
+        if: env.IS_PLAYSTORE != 'true'
+        run: |
           TAG_NAME="${{ github.ref_name }}"
 
+          if [ "${{ env.BUILD_ENV }}" = "stg" ]; then
+            APK_DIR="./android/app/build/outputs/apk/staging"
+            SUFFIX="staging"
+          else
+            APK_DIR="./android/app/build/outputs/apk/release"
+            SUFFIX="${{ env.BUILD_ENV }}"
+          fi
+
           # Rename universal APK
-          if [ -f "./android/app/build/outputs/apk/release/app-universal-release.apk" ]; then
-            mv "./android/app/build/outputs/apk/release/app-universal-release.apk" \
-              "./android/app/build/outputs/apk/release/sous-chef-${ENV_SUFFIX}-${TAG_NAME}-universal.apk"
+          if [ -f "${APK_DIR}/app-universal-${SUFFIX}.apk" ]; then
+            mv "${APK_DIR}/app-universal-${SUFFIX}.apk" \
+              "${APK_DIR}/sous-chef-${SUFFIX}-${TAG_NAME}-universal.apk"
           fi
 
           # Rename architecture-specific APKs
-          if [ -f "./android/app/build/outputs/apk/release/app-armeabi-v7a-release.apk" ]; then
-            mv "./android/app/build/outputs/apk/release/app-armeabi-v7a-release.apk" \
-              "./android/app/build/outputs/apk/release/sous-chef-${ENV_SUFFIX}-${TAG_NAME}-armeabi-v7a.apk"
-          fi
+          for ARCH in armeabi-v7a arm64-v8a x86 x86_64; do
+            if [ -f "${APK_DIR}/app-${ARCH}-${SUFFIX}.apk" ]; then
+              mv "${APK_DIR}/app-${ARCH}-${SUFFIX}.apk" \
+                "${APK_DIR}/sous-chef-${SUFFIX}-${TAG_NAME}-${ARCH}.apk"
+            fi
+          done
 
-          if [ -f "./android/app/build/outputs/apk/release/app-arm64-v8a-release.apk" ]; then
-            mv "./android/app/build/outputs/apk/release/app-arm64-v8a-release.apk" \
-              "./android/app/build/outputs/apk/release/sous-chef-${ENV_SUFFIX}-${TAG_NAME}-arm64-v8a.apk"
-          fi
-
-          if [ -f "./android/app/build/outputs/apk/release/app-x86-release.apk" ]; then
-            mv "./android/app/build/outputs/apk/release/app-x86-release.apk" \
-              "./android/app/build/outputs/apk/release/sous-chef-${ENV_SUFFIX}-${TAG_NAME}-x86.apk"
-          fi
-
-          if [ -f "./android/app/build/outputs/apk/release/app-x86_64-release.apk" ]; then
-            mv "./android/app/build/outputs/apk/release/app-x86_64-release.apk" \
-              "./android/app/build/outputs/apk/release/sous-chef-${ENV_SUFFIX}-${TAG_NAME}-x86_64.apk"
-          fi
-
-      - name: Create Release and Upload Files
-        uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Upload Play Store AAB artifact
+        if: env.IS_PLAYSTORE == 'true'
+        uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.BUILD_ENV == 'prod' && 'Production' || 'Development' }} Release ${{ github.ref_name }}
+          name: playstore-bundle-${{ github.ref_name }}
+          path: android/app/build/outputs/bundle/release/app-release.aab
+          retention-days: 90
+
+      - name: Create GitHub Release (Play Store)
+        if: env.IS_PLAYSTORE == 'true' && startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Play Store Release ${{ github.ref_name }}
+          body: |
+            Official Play Store release bundle.
+            This AAB is signed with the Play Store upload certificate and ready for Google Play Console upload.
+          files: android/app/build/outputs/bundle/release/app-release.aab
+          prerelease: false
+
+      - name: Create GitHub Release (APK)
+        if: env.IS_PLAYSTORE != 'true' && startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "${{ env.BUILD_ENV == 'prod' && 'Production' || env.BUILD_ENV == 'stg' && 'Staging' || 'Development' }} Release ${{ github.ref_name }}"
           files: |
-            android/app/build/outputs/apk/release/sous-chef-*.apk
+            android/app/build/outputs/apk/${{ env.BUILD_ENV == 'stg' && 'staging' || 'release' }}/sous-chef-*.apk
           generate_release_notes: true
           prerelease: ${{ env.BUILD_ENV != 'prod' }}
 
       - name: Cleanup
         if: always()
         run: |
-          rm -f ./android/app/releases.keystore
+          # Remove sensitive files
+          rm -f ./android/app/release.keystore
+          rm -f ./android/app/upload-key.keystore
           rm -f android/local.properties
-          rm -f .env.production .env.prod .env.dev .env
+          rm -f .env.dev .env.stg .env.prod .env.production .env.staging .env
+
+          # Clean Gradle caches to prevent stale build issues on self-hosted runner
+          rm -rf android/app/build/
+          rm -rf android/.gradle/
+          rm -rf ~/.gradle/caches/journal-*
+          rm -rf ~/.gradle/caches/*/executionHistory/
+
+          # Stop Gradle daemon
           cd android && ./gradlew --stop || true
