@@ -33,7 +33,7 @@ android {
         abi {
             reset()
             enable !gradle.startParameter.taskNames.any { it.toLowerCase().contains('debug') }
-            universalApk false
+            universalApk true
             include "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
         }
     }
@@ -42,8 +42,8 @@ android {
         applicationId "dev.souschef.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 18
-        versionName "1.7.1"
+        versionCode 20
+        versionName "1.7.17"
         testBuildType System.getProperty('testBuildType', 'debug')
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
