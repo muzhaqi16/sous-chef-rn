@@ -48,7 +48,10 @@ adb -s <device_id> install -r android/app/build/outputs/apk/staging/app-universa
 adb logcat -c
 
 # Monitor for crashes (filtered for relevant tags)
-adb logcat *:E | grep -E "(FATAL|AndroidRuntime|souschef|ReactNative)"
+adb logcat '*:E' | grep -E "(FATAL|AndroidRuntime|souschef|ReactNative)"
+
+adb logcat '\*:E' | grep -E "(FATAL|AndroidRuntime|souschef|ReactNative)"
+
 ```
 
 ### Alternative: Full crash log

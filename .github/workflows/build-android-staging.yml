@@ -96,6 +96,26 @@ jobs:
       - name: Prepare .env for react-native-config
         run: cp .env.staging .env
 
+      - name: Verify .env file format
+        run: |
+          echo "📄 Checking .env file:"
+          echo "Number of lines: $(wc -l < .env)"
+          echo "Non-empty, non-comment lines:"
+          grep -v '^#' .env | grep -v '^$' | wc -l
+          echo ""
+          echo "Variables defined (keys only):"
+          grep -v '^#' .env | grep -v '^$' | cut -d'=' -f1
+          echo ""
+          echo "Checking for malformed lines..."
+          if grep -E '^\s+\w' .env; then
+            echo "❌ ERROR: Found lines with leading spaces!"
+            exit 1
+          fi
+          if grep -E '\w\s+=|=\s+\w' .env; then
+            echo "⚠️ WARNING: Found spaces around '=' signs"
+          fi
+          echo "✅ .env file format looks valid"
+
       - name: Build staging apk
         run: |
           echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode > ./android/app/releases.keystore
