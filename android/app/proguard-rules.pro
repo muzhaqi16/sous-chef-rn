@@ -42,6 +42,28 @@
 -dontwarn com.lugg.ReactNativeConfig.**
 -dontwarn com.lugg.RNCConfig.**
 
+# React Native Config - Complete Protection for Reflection
+# CRITICAL: The RNCConfigModule uses reflection to load BuildConfig at runtime
+# These specific method signatures MUST be preserved or the module returns null
+-keep class com.lugg.RNCConfig.RNCConfigPackage {
+    public <init>();
+    public java.util.List createNativeModules(com.facebook.react.bridge.ReactApplicationContext);
+}
+
+-keep class com.lugg.RNCConfig.RNCConfigModule {
+    public <init>(com.facebook.react.bridge.ReactApplicationContext);
+    public java.lang.String getName();
+    public java.util.Map getConstants();
+}
+
+# Keep BuildConfig field names for reflection access in getConstants()
+# Without this, Class.forName().getDeclaredFields() fails silently
+-keepclassmembers class dev.souschef.app.BuildConfig {
+    public static final java.lang.String *;
+    public static final int *;
+    public static final boolean *;
+}
+
 # ============================================================================
 # REACT NATIVE CORE - Essential rules for RN with New Architecture
 # ============================================================================
