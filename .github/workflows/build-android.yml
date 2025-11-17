@@ -108,6 +108,24 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Setup Play Store keystore
+        if: env.IS_PLAYSTORE == 'true'
+        run: |
+          echo -n "${{ secrets.PLAYSTORE_KEYSTORE_BASE64 }}" | base64 --decode > ./android/app/upload-key.keystore
+          echo "MYAPP_UPLOAD_STORE_FILE=upload-key.keystore" >> android/gradle.properties
+          echo "MYAPP_UPLOAD_KEY_ALIAS=upload" >> android/gradle.properties
+          echo "MYAPP_UPLOAD_STORE_PASSWORD=${{ secrets.PLAYSTORE_KEYSTORE_PASSWORD }}" >> android/gradle.properties
+          echo "MYAPP_UPLOAD_KEY_PASSWORD=${{ secrets.PLAYSTORE_KEY_PASSWORD }}" >> android/gradle.properties
+
+      - name: Setup regular keystore
+        if: env.IS_PLAYSTORE != 'true'
+        run: |
+          echo -n "${{ secrets.BUILD_CERTIFICATE_BASE64 }}" | base64 --decode > ./android/app/release.keystore
+          echo "MYAPP_UPLOAD_STORE_FILE=release.keystore" >> android/gradle.properties
+          echo "MYAPP_UPLOAD_KEY_ALIAS=github" >> android/gradle.properties
+          echo "MYAPP_UPLOAD_STORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> android/gradle.properties
+          echo "MYAPP_UPLOAD_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> android/gradle.properties
+
       - name: Clean Android build
         run: |
           cd android
@@ -140,24 +158,6 @@ jobs:
           # Copy to .env for react-native-config
           cp "$ENV_FILE" .env
           echo "Generated $ENV_FILE and copied to .env"
-
-      - name: Setup Play Store keystore
-        if: env.IS_PLAYSTORE == 'true'
-        run: |
-          echo -n "${{ secrets.PLAYSTORE_KEYSTORE_BASE64 }}" | base64 --decode > ./android/app/upload-key.keystore
-          echo "MYAPP_UPLOAD_STORE_FILE=upload-key.keystore" >> android/gradle.properties
-          echo "MYAPP_UPLOAD_KEY_ALIAS=upload" >> android/gradle.properties
-          echo "MYAPP_UPLOAD_STORE_PASSWORD=${{ secrets.PLAYSTORE_KEYSTORE_PASSWORD }}" >> android/gradle.properties
-          echo "MYAPP_UPLOAD_KEY_PASSWORD=${{ secrets.PLAYSTORE_KEY_PASSWORD }}" >> android/gradle.properties
-
-      - name: Setup regular keystore
-        if: env.IS_PLAYSTORE != 'true'
-        run: |
-          echo -n "${{ secrets.BUILD_CERTIFICATE_BASE64 }}" | base64 --decode > ./android/app/release.keystore
-          echo "MYAPP_UPLOAD_STORE_FILE=release.keystore" >> android/gradle.properties
-          echo "MYAPP_UPLOAD_KEY_ALIAS=github" >> android/gradle.properties
-          echo "MYAPP_UPLOAD_STORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> android/gradle.properties
-          echo "MYAPP_UPLOAD_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> android/gradle.properties
 
       - name: Build Play Store AAB
         if: env.IS_PLAYSTORE == 'true'
