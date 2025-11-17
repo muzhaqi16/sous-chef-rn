@@ -51,7 +51,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: node_modules
-          key: ${{ runner.os }}-node-modules-${{ hashFiles('yarn.lock') }}
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-modules-
 
@@ -66,8 +66,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - name: Run Yarn Install
-        run: yarn install --frozen-lockfile --network-timeout 100000
+      - name: Install dependencies
+        run: npm ci
 
       - name: Generate .env file from staging environment
         run: |
