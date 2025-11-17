@@ -87,6 +87,7 @@ jobs:
         run: chmod +x ./android/gradlew
 
       - name: Cache node_modules
+        if: runner.environment != 'self-hosted'
         uses: actions/cache@v4
         with:
           path: node_modules
@@ -95,6 +96,7 @@ jobs:
             ${{ runner.os }}-node-modules-
 
       - name: Cache Gradle
+        if: runner.environment != 'self-hosted'
         uses: actions/cache@v4
         with:
           path: |
