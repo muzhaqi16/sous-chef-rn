@@ -82,4 +82,5 @@ yarn-error.log
 # react-native-config codegen
 ios/tmp.xcconfig
 .claude
-.vscode/
+.vscode/android/gradle.properties
+android/gradle.properties

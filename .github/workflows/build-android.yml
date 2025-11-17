@@ -145,27 +145,25 @@ jobs:
         if: env.IS_PLAYSTORE == 'true'
         run: |
           echo -n "${{ secrets.PLAYSTORE_KEYSTORE_BASE64 }}" | base64 --decode > ./android/app/upload-key.keystore
-        env:
-          MYAPP_UPLOAD_STORE_FILE: "upload-key.keystore"
-          MYAPP_UPLOAD_STORE_PASSWORD: ${{ secrets.PLAYSTORE_KEYSTORE_PASSWORD }}
-          MYAPP_UPLOAD_KEY_ALIAS: "upload"
-          MYAPP_UPLOAD_KEY_PASSWORD: ${{ secrets.PLAYSTORE_KEY_PASSWORD }}
+          echo "MYAPP_UPLOAD_STORE_FILE=upload-key.keystore" >> android/gradle.properties
+          echo "MYAPP_UPLOAD_KEY_ALIAS=upload" >> android/gradle.properties
+          echo "MYAPP_UPLOAD_STORE_PASSWORD=${{ secrets.PLAYSTORE_KEYSTORE_PASSWORD }}" >> android/gradle.properties
+          echo "MYAPP_UPLOAD_KEY_PASSWORD=${{ secrets.PLAYSTORE_KEY_PASSWORD }}" >> android/gradle.properties
 
       - name: Setup regular keystore
         if: env.IS_PLAYSTORE != 'true'
         run: |
           echo -n "${{ secrets.BUILD_CERTIFICATE_BASE64 }}" | base64 --decode > ./android/app/release.keystore
+          echo "MYAPP_UPLOAD_STORE_FILE=release.keystore" >> android/gradle.properties
+          echo "MYAPP_UPLOAD_KEY_ALIAS=github" >> android/gradle.properties
+          echo "MYAPP_UPLOAD_STORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> android/gradle.properties
+          echo "MYAPP_UPLOAD_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> android/gradle.properties
 
       - name: Build Play Store AAB
         if: env.IS_PLAYSTORE == 'true'
         run: |
           cd android
           ./gradlew bundleRelease
-        env:
-          MYAPP_UPLOAD_STORE_FILE: "upload-key.keystore"
-          MYAPP_UPLOAD_STORE_PASSWORD: ${{ secrets.PLAYSTORE_KEYSTORE_PASSWORD }}
-          MYAPP_UPLOAD_KEY_ALIAS: "upload"
-          MYAPP_UPLOAD_KEY_PASSWORD: ${{ secrets.PLAYSTORE_KEY_PASSWORD }}
 
       - name: Build APK
         if: env.IS_PLAYSTORE != 'true'
@@ -176,11 +174,6 @@ jobs:
           else
             ./gradlew assembleRelease
           fi
-        env:
-          MYAPP_UPLOAD_STORE_FILE: "release.keystore"
-          MYAPP_UPLOAD_STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          MYAPP_UPLOAD_KEY_ALIAS: "github"
-          MYAPP_UPLOAD_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
       - name: List build outputs
         run: |
