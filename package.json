@@ -4,9 +4,9 @@
   "private": true,
   "scripts": {
     "android": "react-native run-android",
-    "android:dev": "react-native run-android --mode=debug",
-    "android:stg": "npm run adb:gql && npm run codegen && npx react-native run-android --mode=staging",
-    "android:prod": "npx react-native run-android --mode=production",
+    "android:dev": "react-native run-android",
+    "android:stg": "ENVFILE=.env.staging react-native run-android",
+    "android:prod": "ENVFILE=.env.production react-native run-android",
     "android:release": "npx react-native run-android --mode=release",
     "android:build:release": "cd android && ./gradlew assembleRelease",
     "android:build:bundle": "cd android && ./gradlew bundleRelease",
