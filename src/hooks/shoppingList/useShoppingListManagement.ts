@@ -8,6 +8,7 @@ import {
   useRemoveItemFromShoppingListMutation,
   useToggleShoppingListItemPurchasedMutation,
   ShoppingListItemFragmentDoc,
+  DisplayFormat,
 } from '#generated';
 import type { ShoppingListItemCoreFragment } from '#/graphql/generated/types';
 import { useSearchableList } from '../useSearchableList';
@@ -142,6 +143,8 @@ export function useShoppingListManagement(listId: string | undefined) {
             // Core fields from mutation input
             itemName: variables.input.itemName,
             quantity: variables.input.quantity ?? 1,
+            quantityInput: variables.input.quantityInput || null,
+            displayFormat: DisplayFormat.Auto,
             unitName: variables.input.unitName || null,
             notes: variables.input.notes || null,
             category: variables.input.category || null,
@@ -215,6 +218,16 @@ export function useShoppingListManagement(listId: string | undefined) {
             createdAt: null,
             deletedAt: null,
             addedBy: null,
+            purchasesConnection: {
+              __typename: 'PurchaseConnection',
+              totalCount: 0,
+              edges: [],
+              pageInfo: {
+                __typename: 'PageInfo',
+                hasNextPage: false,
+                endCursor: null,
+              },
+            },
           }),
           __typename: 'ShoppingListItem',
         } as any, // Cast to any (like PantryItem) to bypass TypeScript validation
@@ -384,7 +397,7 @@ export function useShoppingListManagement(listId: string | undefined) {
   // Simplified add item using CRUD utilities
   const addItem = createAddOperation({
     mutation: addItemMutation,
-    parentId: listId,
+    parentId: () => listId,
     transformInput: (input: ShoppingListItemInput) => ({
       shoppingListId: listId,
       itemName: input.itemName,

@@ -153,7 +153,7 @@ export function useStorageLocationManagement(homeId: string | undefined) {
   // Action handlers using CRUD utilities
   const createLocation = createAddOperation({
     mutation: createMutation,
-    parentId: homeId,
+    parentId: () => homeId,
     transformInput: (input: Omit<CreateStorageLocationInput, 'homeId'>) => ({
       ...input,
       homeId,

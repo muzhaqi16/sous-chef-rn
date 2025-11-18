@@ -300,7 +300,7 @@ export function usePantryManagement(pantryId: string | undefined) {
   // Simplified add item using CRUD utilities
   const addItem = createAddOperation({
     mutation: addItemMutation,
-    parentId: pantryId,
+    parentId: () => pantryId,
     transformInput: (input: PantryItemInput) => ({
       pantryId,
       initialQuantity: input.quantity,
@@ -322,7 +322,7 @@ export function usePantryManagement(pantryId: string | undefined) {
   const updateItem = async (itemId: string, updates: PantryItemUpdate) => {
     const operation = createUpdateOperation({
       mutation: updateItemMutation,
-      parentId: pantryId,
+      parentId: () => pantryId,
       itemId,
       onSuccess: (data: any) => data?.updatePantryItem,
       onVersionConflict: refetch,
@@ -335,7 +335,7 @@ export function usePantryManagement(pantryId: string | undefined) {
   const removeItem = async (itemId: string) => {
     const operation = createRemoveOperation({
       mutation: removeItemMutation,
-      parentId: pantryId,
+      parentId: () => pantryId,
       itemId,
       operationName: 'Delete Pantry Item',
     });

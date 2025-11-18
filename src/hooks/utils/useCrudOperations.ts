@@ -32,7 +32,7 @@ import {
  */
 export interface CreateOperationConfig<TInput, TResult> {
   mutation: (variables: any) => Promise<{ data?: TResult }>;
-  parentId?: string | null;
+  parentId?: string | null | (() => string | null | undefined);
   transformInput?: (input: TInput) => any;
   validateInput?: (input: TInput) => boolean | string;
   onSuccess?: (data: TResult) => void;
@@ -45,7 +45,7 @@ export interface CreateOperationConfig<TInput, TResult> {
  */
 export interface UpdateOperationConfig<TInput, TResult> {
   mutation: (variables: any) => Promise<{ data?: TResult }>;
-  parentId?: string | null;
+  parentId?: string | null | (() => string | null | undefined);
   itemId: string;
   transformInput?: (input: TInput) => any;
   validateInput?: (input: TInput) => boolean | string;
@@ -63,7 +63,7 @@ export interface UpdateOperationConfig<TInput, TResult> {
  */
 export interface RemoveOperationConfig<TResult> {
   mutation: (variables: any) => Promise<{ data?: TResult }>;
-  parentId?: string | null;
+  parentId?: string | null | (() => string | null | undefined);
   itemId: string;
   confirmMessage?: string;
   itemName?: string;
@@ -108,7 +108,8 @@ export function useCrudOperations() {
         } = config;
 
         // Validate parent ID if required
-        if (parentId === null || parentId === undefined) {
+        const resolvedParentId = typeof parentId === 'function' ? parentId() : parentId;
+        if (resolvedParentId === null || resolvedParentId === undefined) {
           Alert.alert('Error', 'Parent context is required');
           return false;
         }
@@ -132,7 +133,7 @@ export function useCrudOperations() {
             ? { input: transformInput(input) }
             : { input };
 
-          const result = await mutation(variables);
+          const result = await mutation({ variables });
 
           if (result.data) {
             onSuccess?.(result.data);
@@ -188,7 +189,8 @@ export function useCrudOperations() {
         } = config;
 
         // Validate parent ID if required
-        if (parentId !== undefined && (parentId === null || parentId === '')) {
+        const resolvedParentId = typeof parentId === 'function' ? parentId() : parentId;
+        if (resolvedParentId !== undefined && (resolvedParentId === null || resolvedParentId === '')) {
           Alert.alert('Error', 'Parent context is required');
           return false;
         }
@@ -227,8 +229,10 @@ export function useCrudOperations() {
           }
 
           const result = await mutation({
-            id: itemId,
-            input: transformedInput,
+            variables: {
+              id: itemId,
+              input: transformedInput,
+            },
           });
 
           if (result.data) {
@@ -290,7 +294,8 @@ export function useCrudOperations() {
         } = config;
 
         // Validate parent ID if required
-        if (parentId !== undefined && (parentId === null || parentId === '')) {
+        const resolvedParentId = typeof parentId === 'function' ? parentId() : parentId;
+        if (resolvedParentId !== undefined && (resolvedParentId === null || resolvedParentId === '')) {
           Alert.alert('Error', 'Parent context is required');
           return false;
         }

@@ -1503,6 +1503,10 @@ export enum HealthGoal {
   SugarFree = 'SUGAR_FREE',
 }
 
+/**
+ * Home/household for managing pantries and shopping lists
+ * Cache: 5 minutes - metadata changes occasionally
+ */
 export type Home = {
   __typename?: 'Home';
   allowJoinCode: Scalars['Boolean']['output'];
@@ -1527,6 +1531,10 @@ export type Home = {
   version: Scalars['Int']['output'];
 };
 
+/**
+ * Home/household for managing pantries and shopping lists
+ * Cache: 5 minutes - metadata changes occasionally
+ */
 export type HomeInvitesConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
@@ -1534,6 +1542,10 @@ export type HomeInvitesConnectionArgs = {
   last?: InputMaybe<Scalars['Int']['input']>;
 };
 
+/**
+ * Home/household for managing pantries and shopping lists
+ * Cache: 5 minutes - metadata changes occasionally
+ */
 export type HomeMembersConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
@@ -1541,6 +1553,10 @@ export type HomeMembersConnectionArgs = {
   last?: InputMaybe<Scalars['Int']['input']>;
 };
 
+/**
+ * Home/household for managing pantries and shopping lists
+ * Cache: 5 minutes - metadata changes occasionally
+ */
 export type HomePantriesConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
@@ -2368,6 +2384,10 @@ export enum MatchType {
   Partial = 'PARTIAL',
 }
 
+/**
+ * Meal plan for organizing meals over a period
+ * Cache: 5 minutes - plans change occasionally
+ */
 export type MealPlan = {
   __typename?: 'MealPlan';
   actualCost: Scalars['Float']['output'];
@@ -2388,6 +2408,10 @@ export type MealPlan = {
   version: Scalars['Int']['output'];
 };
 
+/**
+ * Meal plan item linking recipes to meals
+ * Cache: 5 minutes - meal plans change occasionally
+ */
 export type MealPlanItem = {
   __typename?: 'MealPlanItem';
   actualCost: Maybe<Scalars['Float']['output']>;
@@ -4331,6 +4355,10 @@ export type PaginationInput = {
   take?: InputMaybe<Scalars['Int']['input']>;
 };
 
+/**
+ * Pantry/storage location for a home
+ * Cache: 5 minutes - updated when items added/removed
+ */
 export type Pantry = {
   __typename?: 'Pantry';
   createdAt: Scalars['DateTime']['output'];
@@ -4351,6 +4379,10 @@ export type Pantry = {
   version: Scalars['Int']['output'];
 };
 
+/**
+ * Pantry/storage location for a home
+ * Cache: 5 minutes - updated when items added/removed
+ */
 export type PantryItemsConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
@@ -4359,6 +4391,10 @@ export type PantryItemsConnectionArgs = {
   orderBy?: InputMaybe<PantryItemOrderBy>;
 };
 
+/**
+ * Pantry/storage location for a home
+ * Cache: 5 minutes - updated when items added/removed
+ */
 export type PantryStorageLocationsConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
@@ -6081,6 +6117,10 @@ export type ShareShoppingListInput = {
   shareCode?: InputMaybe<Scalars['String']['input']>;
 };
 
+/**
+ * Shopping list for a home
+ * Cache: 1 minute - frequently updated by collaborators
+ */
 export type ShoppingList = {
   __typename?: 'ShoppingList';
   /** @deprecated Use activitiesConnection for pagination to reduce query complexity */
@@ -6145,6 +6185,10 @@ export type ShoppingList = {
   viewCount: Scalars['Int']['output'];
 };
 
+/**
+ * Shopping list for a home
+ * Cache: 1 minute - frequently updated by collaborators
+ */
 export type ShoppingListActivitiesConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
@@ -6153,6 +6197,10 @@ export type ShoppingListActivitiesConnectionArgs = {
   orderBy?: InputMaybe<ShoppingListActivityOrderBy>;
 };
 
+/**
+ * Shopping list for a home
+ * Cache: 1 minute - frequently updated by collaborators
+ */
 export type ShoppingListCollaboratorsConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
@@ -6161,6 +6209,10 @@ export type ShoppingListCollaboratorsConnectionArgs = {
   orderBy?: InputMaybe<CollaboratorOrderBy>;
 };
 
+/**
+ * Shopping list for a home
+ * Cache: 1 minute - frequently updated by collaborators
+ */
 export type ShoppingListItemsConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;

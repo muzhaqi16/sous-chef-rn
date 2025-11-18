@@ -780,6 +780,8 @@ export const ShoppingListMain: React.FC = () => {
         onPress: () => handleAddItemFromSearch(searchQuery),
         color: primaryColor,
         backgroundColor: primaryLightColor,
+        animated: true,
+        isHighlighted: true,
       });
     } else {
       rightActions.unshift({
@@ -787,6 +789,8 @@ export const ShoppingListMain: React.FC = () => {
         onPress: handleAddItem,
         color: primaryColor,
         backgroundColor: colors.surface,
+        animated: true,
+        isHighlighted: false,
       });
     }
 
