@@ -30,6 +30,7 @@ import {
   AppSettingsScreen,
   PersonalInformationScreen,
   PerformanceDashboard,
+  DebugInfo,
 } from '#screens/profile';
 import { NotificationSettingsScreen } from '#screens/notifications';
 import { linkingConfig } from './linking';
@@ -62,6 +63,7 @@ export type RootStackParamList = {
   PersonalInformation: undefined;
   AppSettings: undefined;
   PerformanceDashboard: undefined;
+  DebugInfo: undefined;
   NotFound: undefined;
 };
 
@@ -234,6 +236,10 @@ function RootNavigator() {
               <Stack.Screen
                 name="PerformanceDashboard"
                 component={PerformanceDashboard}
+              />
+              <Stack.Screen
+                name="DebugInfo"
+                component={DebugInfo}
               />
               <Stack.Screen
                 name="AppSettings"

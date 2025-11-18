@@ -58,6 +58,7 @@ export const HomeTabs = () => {
         return {
           title: 'Pantry',
           tabBarStyle: routeName !== 'PantryMain' ? {display: 'none'} : undefined,
+          freezeOnBlur: true, // Prevent re-renders when tab is not active
         };
       }}
     />
@@ -69,6 +70,7 @@ export const HomeTabs = () => {
         return {
           title: 'Shopping List',
           tabBarStyle: routeName !== 'ShoppingListMain' ? {display: 'none'} : undefined,
+          freezeOnBlur: true, // Prevent re-renders when tab is not active
         };
       }}
     />
@@ -80,13 +82,17 @@ export const HomeTabs = () => {
         return {
           title: 'Recipes',
           tabBarStyle: routeName !== 'RecipeMain' ? {display: 'none'} : undefined,
+          freezeOnBlur: true, // Prevent re-renders when tab is not active
         };
       }}
     />
     <Screen
       name="Profile"
       component={ProfileScreen}
-      options={{title: 'Profile'}}
+      options={{
+        title: 'Profile',
+        freezeOnBlur: true, // Prevent re-renders when tab is not active
+      }}
     />
   </Navigator>
   );

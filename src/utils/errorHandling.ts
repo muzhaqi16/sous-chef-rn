@@ -7,6 +7,7 @@ import {
 } from '@apollo/client/errors';
 import { isQueryComplexityError, getQueryComplexityMessage } from './errors/queryComplexity';
 import { isVersionConflictError, getVersionConflictMessage } from './errors/versionConflict';
+import { serializeError } from '#/utils/errorSerialization';
 
 export interface ApiErrorResponse {
   success: boolean;
@@ -261,7 +262,7 @@ export class ErrorHandler {
           code: errorCode,
           message: errorMessage,
           category,
-          originalError: error,
+          originalError: serializeError(error),
         });
       }
 
@@ -319,7 +320,7 @@ export class ErrorHandler {
         code: errorCode,
         message: errorMessage,
         category,
-        originalError: error,
+        originalError: serializeError(error),
       });
     }
 

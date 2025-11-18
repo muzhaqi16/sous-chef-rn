@@ -16,6 +16,7 @@ import { useScanner } from '#/context/ScannerContext';
 import { Icon } from '#/utils';
 import { Telemetry } from '#/services/telemetry';
 import { useEffect } from 'react';
+import { Environment } from '#/utils/environment';
 
 // Tab bar height constant (65px from FloatingTabBar)
 const TAB_BAR_HEIGHT = 65;
@@ -98,7 +99,15 @@ export const ProfileScreen = () => {
           { paddingBottom: TAB_BAR_HEIGHT + safeBottom + 16 },
         ]}
       >
-        {sections.map((section, index) => (
+        {sections
+          .filter((section) => {
+            // Filter out Developer section if debug features are not enabled
+            if (section.title === 'Developer') {
+              return Environment.shouldEnableDebugFeatures();
+            }
+            return true;
+          })
+          .map((section, index) => (
           <SettingsSection
             key={`section-${index}`}
             title={section.title}
@@ -123,6 +132,10 @@ export const ProfileScreen = () => {
                       navigate('DietaryProfile');
                     } else if (item.key === 'appSettings') {
                       navigate('AppSettings');
+                    } else if (item.key === 'debugInfo') {
+                      navigate('DebugInfo');
+                    } else if (item.key === 'performanceDashboard') {
+                      navigate('PerformanceDashboard');
                     }
                   },
                 };

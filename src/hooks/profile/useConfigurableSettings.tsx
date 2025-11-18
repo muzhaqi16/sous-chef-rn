@@ -399,6 +399,8 @@ export const useConfigurableSettings = (profile: any) => {
         case 'notifications':
         case 'dietaryProfile':
         case 'appSettings':
+        case 'debugInfo':
+        case 'performanceDashboard':
           if (config.type === 'navigation') {
             baseItem.onPress = () => {
               // Navigation will be handled in ProfileScreen

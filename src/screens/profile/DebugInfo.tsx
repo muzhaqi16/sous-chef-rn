@@ -1,0 +1,239 @@
+import React, { useCallback, useMemo } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { ProfileScreenWrapper } from '#components/templates';
+import { Environment } from '#/utils/environment';
+import Config from 'react-native-config';
+import { Platform } from 'react-native';
+import DeviceInfo from 'react-native-device-info';
+import Clipboard from '@react-native-clipboard/clipboard';
+
+export const DebugInfo: React.FC = () => {
+  const config = Environment.getConfig();
+  const apiConfig = Environment.getApiConfig();
+
+  // Get actual API URL being used
+  const actualApiUrl = Config.API_URL || apiConfig.baseUrl;
+  const actualWsUrl = Config.WEB_SOCKET_URL || apiConfig.wsUrl;
+
+  const debugData = useMemo(() => ({
+    'Environment': {
+      'Build Mode': config.buildMode,
+      'Is Development': config.isDevelopment ? 'Yes' : 'No',
+      'Is Staging': config.isStaging ? 'Yes' : 'No',
+      'Is Production': config.isProduction ? 'Yes' : 'No',
+      'Is Testing': config.isTesting ? 'Yes' : 'No',
+    },
+    'API Configuration': {
+      'API URL': actualApiUrl,
+      'WebSocket URL': actualWsUrl,
+      'API Key': Config.API_KEY ? `${Config.API_KEY.substring(0, 20)}...` : 'Not set',
+      'Timeout': `${apiConfig.timeout}ms`,
+      'Max Retries': apiConfig.retries.toString(),
+    },
+    'Telemetry': {
+      'Prometheus Endpoint': Config.PROMETHEUS_ENDPOINT || 'Not set',
+      'Loki Endpoint': Config.LOKI_ENDPOINT || 'Not set',
+      'Auth Username': Config.TELEMETRY_AUTH_USERNAME || 'Not set',
+    },
+    'Device Info': {
+      'Platform': Platform.OS,
+      'Version': Platform.Version.toString(),
+      'App Version': DeviceInfo.getVersion(),
+      'Build Number': DeviceInfo.getBuildNumber(),
+      'Bundle ID': DeviceInfo.getBundleId(),
+      'Device Brand': DeviceInfo.getBrand(),
+      'Device Model': DeviceInfo.getModel(),
+    },
+    'Build Configuration': {
+      'NODE_ENV': Config.NODE_ENV || 'Not set',
+      'Web App URL': Config.WEB_APP_URL || 'Not set',
+    },
+  }), [config, apiConfig, actualApiUrl, actualWsUrl]);
+
+  const handleCopyAll = useCallback(() => {
+    const allDebugInfo = Object.entries(debugData)
+      .map(([section, data]) => {
+        const items = Object.entries(data)
+          .map(([key, value]) => `${key}: ${value}`)
+          .join('\n');
+        return `=== ${section} ===\n${items}`;
+      })
+      .join('\n\n');
+
+    Clipboard.setString(allDebugInfo);
+    Alert.alert('Copied', 'Debug information copied to clipboard');
+  }, [debugData]);
+
+  const handleCopySection = useCallback((sectionName: string, data: Record<string, string>) => {
+    const sectionInfo = Object.entries(data)
+      .map(([key, value]) => `${key}: ${value}`)
+      .join('\n');
+
+    Clipboard.setString(sectionInfo);
+    Alert.alert('Copied', `${sectionName} copied to clipboard`);
+  }, []);
+
+  // Only show in development, local, or staging builds
+  if (!Environment.shouldEnableDebugFeatures()) {
+    return (
+      <ProfileScreenWrapper title="Debug Info">
+        <View style={styles.notAvailableContainer}>
+          <Text style={styles.notAvailableText}>
+            Debug info is only available in development and staging builds.
+          </Text>
+        </View>
+      </ProfileScreenWrapper>
+    );
+  }
+
+  return (
+    <ProfileScreenWrapper title="Debug Info">
+      <ScrollView style={styles.scrollView}>
+        <View style={styles.header}>
+          <Text style={styles.headerText}>
+            Detailed debug information for troubleshooting API connections and app configuration.
+          </Text>
+          <TouchableOpacity style={styles.copyAllButton} onPress={handleCopyAll}>
+            <Text style={styles.copyAllButtonText}>Copy All Info</Text>
+          </TouchableOpacity>
+        </View>
+
+        {Object.entries(debugData).map(([sectionName, sectionData]) => (
+          <View key={sectionName} style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>{sectionName}</Text>
+              <TouchableOpacity
+                style={styles.copySectionButton}
+                onPress={() => handleCopySection(sectionName, sectionData)}
+              >
+                <Text style={styles.copySectionButtonText}>Copy</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.infoContainer}>
+              {Object.entries(sectionData).map(([key, value]) => (
+                <View key={key} style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>{key}</Text>
+                  <Text style={styles.infoValue} selectable>
+                    {value}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        ))}
+
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>
+            This information is useful when debugging API connection issues or reporting bugs.
+          </Text>
+        </View>
+      </ScrollView>
+    </ProfileScreenWrapper>
+  );
+};
+
+const styles = StyleSheet.create(theme => ({
+  scrollView: {
+    flex: 1,
+  },
+  notAvailableContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  notAvailableText: {
+    fontSize: 16,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+  },
+  header: {
+    padding: 16,
+    backgroundColor: theme.colors.backgroundSecondary,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  headerText: {
+    fontSize: 14,
+    color: theme.colors.textSecondary,
+    marginBottom: 12,
+    lineHeight: 20,
+  },
+  copyAllButton: {
+    backgroundColor: theme.colors.primary,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  copyAllButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  section: {
+    marginVertical: 12,
+    paddingHorizontal: 16,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
+  },
+  copySectionButton: {
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+  },
+  copySectionButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.primary,
+  },
+  infoContainer: {
+    backgroundColor: theme.colors.backgroundSecondary,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    overflow: 'hidden',
+  },
+  infoRow: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  infoLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.textSecondary,
+    marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  infoValue: {
+    fontSize: 14,
+    color: theme.colors.textPrimary,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  footer: {
+    padding: 16,
+    marginTop: 8,
+    marginBottom: 24,
+  },
+  footerText: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+}));

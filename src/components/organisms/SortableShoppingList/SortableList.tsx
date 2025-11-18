@@ -61,6 +61,7 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
 
   // Update local items when props change, but not during our own updates
   // OPTIMIZATION: Sync on structural changes (add/remove/reorder) or data changes (quantity)
+  // PERFORMANCE FIX: Only depend on items, not localItems, to prevent feedback loop
   useEffect(() => {
     if (!isUpdatingRef.current) {
       // Check for structural changes: items added, removed, or reordered
@@ -88,7 +89,8 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
         setLocalItems(items);
       }
     }
-  }, [items, localItems]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items]);
 
   // Drag gesture callbacks - gate RefreshControl during drag
   // Per GitHub issues #135, #189, #467: RefreshControl conflicts with drag gesture
@@ -319,11 +321,13 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
         // All approaches attempted (RNGH, native, ScrollView wrapper, NestableScrollContainer)
         // Either break normal scroll or cause VirtualizedList nesting warnings
         // Alternative: Add manual refresh button to tab bar or header
-        // OPTIMIZATION: Performance props to reduce initial render work
-        initialNumToRender={10}
-        maxToRenderPerBatch={5}
-        windowSize={5}
-        removeClippedSubviews={false}
+        // PERFORMANCE: Optimized for faster initial render and smoother scrolling
+        // Balance between performance and UX - render enough items to fill most screens
+        initialNumToRender={8} // Fills most phone screens without blank space
+        maxToRenderPerBatch={5} // Batch size for incremental rendering
+        windowSize={3} // Balance between performance and smooth scrolling
+        updateCellsBatchingPeriod={50} // Batch cell updates for smoother animations
+        removeClippedSubviews={true} // Reduce memory on large lists
       />
     </View>
   );

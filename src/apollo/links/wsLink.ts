@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 import Config from 'react-native-config';
 import { useStore } from '#store';
 import { Environment, logger } from '#/utils/environment';
+import { serializeError } from '#/utils/errorSerialization';
 
 // pick the right WebSocket constructor
 const webSocketImpl =
@@ -159,7 +160,7 @@ export const disposeWebSocket = () => {
       lastReconnectTime = 0;
     }
   } catch (error) {
-    logger.warn('Error disposing WebSocket:', error);
+    logger.warn('Error disposing WebSocket:', serializeError(error));
   }
 };
 

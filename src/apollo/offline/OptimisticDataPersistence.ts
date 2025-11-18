@@ -37,8 +37,11 @@ interface OptimisticFieldUpdate {
  * ```
  */
 class OptimisticDataPersistence {
+  private batchTimeout: NodeJS.Timeout | null = null;
+  private pendingUpdates: Record<string, any> = {};
+
   /**
-   * Save an optimistic field update
+   * Save an optimistic field update (batched for performance)
    *
    * @param entityType - Type of entity (e.g., 'ShoppingListItem', 'ShoppingList')
    * @param entityId - ID of the entity
@@ -47,10 +50,10 @@ class OptimisticDataPersistence {
    */
   save(entityType: string, entityId: string, field: string, value: any): void {
     try {
-      const existing = this.loadAll();
       const key = `${entityType}:${entityId}:${field}`;
 
-      existing[key] = {
+      // Add to pending batch
+      this.pendingUpdates[key] = {
         entityType,
         entityId,
         field,
@@ -58,10 +61,40 @@ class OptimisticDataPersistence {
         timestamp: Date.now(),
       };
 
-      storage.set(OPTIMISTIC_DATA_KEY, JSON.stringify(existing));
-      console.log(`💾 Optimistic: Saved ${entityType}.${field} for ${entityId}`, { value });
+      console.log(`💾 Optimistic: Queued ${entityType}.${field} for ${entityId}`, { value });
+
+      // PERFORMANCE: Batch multiple saves into single storage write
+      // Schedule flush after 100ms of inactivity
+      if (this.batchTimeout) {
+        clearTimeout(this.batchTimeout);
+      }
+
+      this.batchTimeout = setTimeout(() => {
+        this.flushPendingUpdates();
+      }, 100);
     } catch (error) {
       console.error('Failed to save optimistic data:', error);
+    }
+  }
+
+  /**
+   * Flush pending updates to storage
+   * @private
+   */
+  private flushPendingUpdates(): void {
+    try {
+      if (Object.keys(this.pendingUpdates).length === 0) return;
+
+      const existing = this.loadAll();
+      const merged = { ...existing, ...this.pendingUpdates };
+
+      storage.set(OPTIMISTIC_DATA_KEY, JSON.stringify(merged));
+      console.log(`💾 Optimistic: Flushed ${Object.keys(this.pendingUpdates).length} updates`);
+
+      this.pendingUpdates = {};
+      this.batchTimeout = null;
+    } catch (error) {
+      console.error('Failed to flush optimistic data:', error);
     }
   }
 

@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useRef, useState } from 'react';
+import React, { useMemo, useCallback, useRef, useState, useEffect } from 'react';
 import { RefreshControl } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { TabView, TabRoute } from '#/components/molecules/TabView';
@@ -20,6 +20,7 @@ interface ShoppingListTabsProps {
   ) => Promise<void>;
   onRefresh?: () => void | Promise<void>;
   refreshing?: boolean;
+  loading?: boolean;
   disabled?: boolean;
   emptyState?: any;
   onClearAllPurchased?: () => Promise<void>;
@@ -36,6 +37,7 @@ export const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   onSortOrderUpdate,
   onRefresh,
   refreshing,
+  loading,
   disabled,
   emptyState,
   onClearAllPurchased,
@@ -48,16 +50,48 @@ export const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   // Track drag state to disable tab swipe during drag
   const [isDragging, setIsDragging] = useState(false);
 
-  // Separate items by purchased status
-  const unpurchasedItems = useMemo(
-    () => items.filter(item => !item.isPurchased),
-    [items],
-  );
+  // PERFORMANCE: Use refs for callbacks to prevent renderScene recreation
+  // This avoids expensive scene re-creation when parent callbacks change
+  const callbacksRef = useRef({
+    onItemPress,
+    onItemEdit,
+    onItemDelete,
+    onTogglePurchase,
+    onSortOrderUpdate,
+    onRefresh,
+    onClearAllPurchased,
+    onSwipeableClose,
+  });
 
-  const purchasedItems = useMemo(
-    () => items.filter(item => item.isPurchased),
-    [items],
-  );
+  // Keep ref updated with latest callbacks
+  useEffect(() => {
+    callbacksRef.current = {
+      onItemPress,
+      onItemEdit,
+      onItemDelete,
+      onTogglePurchase,
+      onSortOrderUpdate,
+      onRefresh,
+      onClearAllPurchased,
+      onSwipeableClose,
+    };
+  });
+
+  // Separate items by purchased status (single-pass for performance)
+  const { unpurchasedItems, purchasedItems } = useMemo(() => {
+    const unpurchased: SortableShoppingListItem[] = [];
+    const purchased: SortableShoppingListItem[] = [];
+
+    for (const item of items) {
+      if (item.isPurchased) {
+        purchased.push(item);
+      } else {
+        unpurchased.push(item);
+      }
+    }
+
+    return { unpurchasedItems: unpurchased, purchasedItems: purchased };
+  }, [items]);
 
   // Tab routes with badge counts
   const routes: TabRoute[] = useMemo(
@@ -108,24 +142,30 @@ export const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   }, []);
 
   // Render scene for each tab
+  // PERFORMANCE: Use refs for callbacks to prevent scene recreation on every parent re-render
+  // Only recreate scene when truly static props change (loading, disabled, refreshing, isDragging)
   const renderScene = useCallback(
     ({ route }: { route: TabRoute }) => {
+      // Access latest callbacks from ref to avoid stale closures
+      const callbacks = callbacksRef.current;
+
       switch (route.key) {
         case 'shopping':
           return (
             <ShoppingTab
               items={unpurchasedItems}
-              onItemPress={onItemPress}
-              onItemEdit={onItemEdit}
+              onItemPress={callbacks.onItemPress}
+              onItemEdit={callbacks.onItemEdit}
               isDragging={isDragging}
-              onItemDelete={onItemDelete}
-              onTogglePurchase={onTogglePurchase}
-              onSortOrderUpdate={onSortOrderUpdate}
-              onRefresh={onRefresh}
+              onItemDelete={callbacks.onItemDelete}
+              onTogglePurchase={callbacks.onTogglePurchase}
+              onSortOrderUpdate={callbacks.onSortOrderUpdate}
+              onRefresh={callbacks.onRefresh}
               refreshing={refreshing}
+              loading={loading}
               disabled={disabled}
               onSwipeableWillOpen={handleSwipeableWillOpen}
-              onSwipeableClose={onSwipeableClose}
+              onSwipeableClose={callbacks.onSwipeableClose}
               onDragBegin={handleDragBegin}
               onDragRelease={handleDragRelease}
             />
@@ -135,16 +175,17 @@ export const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
           return (
             <PurchasedTab
               items={purchasedItems}
-              onItemPress={onItemPress}
-              onItemEdit={onItemEdit}
-              onItemDelete={onItemDelete}
-              onTogglePurchase={onTogglePurchase}
-              onSortOrderUpdate={onSortOrderUpdate}
-              onClearAll={onClearAllPurchased}
+              onItemPress={callbacks.onItemPress}
+              onItemEdit={callbacks.onItemEdit}
+              onItemDelete={callbacks.onItemDelete}
+              onTogglePurchase={callbacks.onTogglePurchase}
+              onSortOrderUpdate={callbacks.onSortOrderUpdate}
+              onClearAll={callbacks.onClearAllPurchased}
               disabled={disabled}
+              loading={loading}
               isDragging={isDragging}
               onSwipeableWillOpen={handleSwipeableWillOpen}
-              onSwipeableClose={onSwipeableClose}
+              onSwipeableClose={callbacks.onSwipeableClose}
               onDragBegin={handleDragBegin}
               onDragRelease={handleDragRelease}
             />
@@ -154,23 +195,18 @@ export const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
           return null;
       }
     },
+    // PERFORMANCE: Only depend on truly static props
+    // Callbacks accessed via ref to avoid recreation
     [
-      unpurchasedItems,
-      purchasedItems,
-      onItemPress,
-      onItemEdit,
-      onItemDelete,
-      onTogglePurchase,
-      onSortOrderUpdate,
-      onRefresh,
-      refreshing,
+      loading,
       disabled,
-      onClearAllPurchased,
+      refreshing,
+      isDragging,
       handleSwipeableWillOpen,
-      onSwipeableClose,
       handleDragBegin,
       handleDragRelease,
-      isDragging,
+      unpurchasedItems,
+      purchasedItems,
     ],
   );
 

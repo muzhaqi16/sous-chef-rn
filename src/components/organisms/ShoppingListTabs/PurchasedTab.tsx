@@ -4,6 +4,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { SortableShoppingList } from '../SortableShoppingList';
 import type { SortableShoppingListItem } from '../SortableShoppingList';
 import { Icon } from '#utils';
+import { LoadingInline } from '#components/base/Loading';
 
 interface PurchasedTabProps {
   items: SortableShoppingListItem[];
@@ -19,6 +20,7 @@ interface PurchasedTabProps {
     beforeSortOrder: string | null,
   ) => Promise<void>;
   onClearAll?: () => Promise<void>;
+  loading?: boolean;
   disabled?: boolean;
   isDragging?: boolean;
   onSwipeableWillOpen?: (ref: any) => void;
@@ -36,6 +38,7 @@ export const PurchasedTab: React.FC<PurchasedTabProps> = React.memo(
     onTogglePurchase,
     onSortOrderUpdate,
     onClearAll,
+    loading,
     disabled,
     isDragging,
     onSwipeableWillOpen,
@@ -66,6 +69,11 @@ export const PurchasedTab: React.FC<PurchasedTabProps> = React.memo(
         ],
       );
     }, [items.length, onClearAll]);
+
+    // Show loading placeholder when switching lists (loading with no cached items)
+    if (loading && items.length === 0) {
+      return <LoadingInline message="Loading items..." />;
+    }
 
     // Empty state for purchased tab
     if (items.length === 0) {

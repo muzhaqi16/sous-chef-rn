@@ -48,7 +48,6 @@ export const PerformanceDashboard: React.FC = () => {
           style: 'destructive',
           onPress: () => {
             clearPerformanceData();
-            Alert.alert('Success', 'Performance data has been cleared.');
           },
         },
       ],

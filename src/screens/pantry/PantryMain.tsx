@@ -45,7 +45,7 @@ import type { ItemSelectorRef } from '#components/organisms/AnimatedItemSelector
 import { normalizeHome } from '#/utils/connectionUtils';
 
 export const PantryMain: React.FC = () => {
-  const { navigate, navigateTo } = useAppNavigation();
+  const { navigate, navigateTo, isFocused } = useAppNavigation();
   const { theme } = useUnistyles();
   const { setOverlayOpen } = useScanner();
   const haptic = useHaptic();
@@ -85,11 +85,12 @@ export const PantryMain: React.FC = () => {
   // Try to get home data from homes list first to avoid extra query
   const homeFromList = homes.find((home: any) => home.id === selectedHomeId);
 
+  // PERFORMANCE: Skip query when tab is not focused to prevent wasted network requests
   const { data: homeData, refetch: refetchHome } = useGetHomeBasicQuery({
     variables: { homeId: selectedHomeId ?? '' },
-    fetchPolicy: 'cache-and-network', // Always check network for fresh data after token refresh
+    fetchPolicy: isFocused ? 'cache-and-network' : 'cache-only', // Only fetch when focused
     nextFetchPolicy: 'cache-first', // Subsequent fetches use cache to avoid unnecessary refetches
-    skip: !selectedHomeId,
+    skip: !selectedHomeId || !isFocused,
     errorPolicy: 'all', // Allow partial data and cache on errors
   });
 
@@ -164,6 +165,7 @@ export const PantryMain: React.FC = () => {
     },
   });
 
+  // PERFORMANCE: Pass undefined when not focused to skip pantry items query
   const {
     items: pantryItems,
     allItems,
@@ -176,7 +178,7 @@ export const PantryMain: React.FC = () => {
     loadMore,
     hasMore,
     isLoadingMore,
-  } = usePantryManagement(pantry?.id);
+  } = usePantryManagement(isFocused ? pantry?.id : undefined);
 
   // Consume item mutation
   const [createPantryItemUsage] = useCreatePantryItemUsageMutation({
