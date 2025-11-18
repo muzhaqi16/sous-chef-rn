@@ -14,6 +14,7 @@ export interface SwipeableItemProps {
   leftThreshold?: number;
   rightThreshold?: number;
   friction?: number;
+  failOffsetY?: number | [number, number];
   onSwipeableWillOpen?: (ref: any) => void;
   onSwipeableClose?: () => void;
 }

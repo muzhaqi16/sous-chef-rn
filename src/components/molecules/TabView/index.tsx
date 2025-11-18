@@ -114,7 +114,6 @@ export const TabView: React.FC<TabViewProps> = ({
               shadowOpacity: 0,
               borderBottomWidth: 1,
               borderBottomColor: theme.colors.border,
-              paddingRight: onRefresh ? 56 : 0, // Make room for refresh button
             }}
             activeColor={theme.colors.primary}
             inactiveColor={theme.colors.textSecondary}
