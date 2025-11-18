@@ -1,6 +1,15 @@
 apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
+
+// Configure environment files for different build types
+project.ext.envConfigFiles = [
+    debug: ".env.development",
+    production: ".env.production",
+    staging: ".env.staging",
+    release: ".env.production"
+]
+
 apply from: project(':react-native-config').projectDir.getPath() + "/dotenv.gradle" 
 
 react {
@@ -109,6 +118,14 @@ android {
             manifestPlaceholders = [usesCleartextTraffic: "true"]
             signingConfig signingConfigs.debug
             resValue "string", "build_config_package", "dev.souschef.app"
+        }
+        production {
+            // Debug build with production environment variables
+            initWith debug
+            manifestPlaceholders = [usesCleartextTraffic: "true"]
+            signingConfig signingConfigs.debug
+            resValue "string", "build_config_package", "dev.souschef.app"
+            matchingFallbacks = ['debug']
         }
         release {
             manifestPlaceholders = [usesCleartextTraffic: "false"]
