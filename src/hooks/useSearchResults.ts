@@ -191,7 +191,7 @@ export const useSearchResults = (barcode: string) => {
       const processedInput = {
         name: formData.name,
         description: formData.description || undefined,
-        upc: formData.upc || barcode,
+        primaryUpc: formData.upc || barcode,
         sku: formData.sku || undefined,
 
         // Classification
