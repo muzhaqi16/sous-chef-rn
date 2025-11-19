@@ -67,15 +67,18 @@ export interface PantryItemUpdate extends Partial<PantryItemInput> {
 export function usePantryManagement(pantryId: string | undefined) {
   const { isLoggedOut } = useAuth();
   const { handleApolloError } = useErrorHandler();
-  const shouldSkip = !pantryId || isLoggedOut;
+
+  // Explicit validation - only execute query when pantryId is genuinely valid
+  const hasValidPantryId = !!pantryId?.trim() && !isLoggedOut;
 
   // Single source of truth: Apollo cache - now using Connection-based query
   const { data, loading, error, refetch, fetchMore } = useGetPantryQuery({
-    variables: {
-      id: pantryId ?? '',
+    variables: hasValidPantryId ? {
+      id: pantryId,
       itemsFirst: 25, // Initial page size
-    },
-    skip: shouldSkip,
+      storageLocationsFirst: 50,
+    } : undefined as any,
+    skip: !hasValidPantryId, // Query only executes when pantryId is valid
     fetchPolicy: 'cache-and-network', // Show cache immediately, then fetch fresh data with complete images
     notifyOnNetworkStatusChange: true,
     errorPolicy: 'ignore', // Return cached data on network errors instead of empty array

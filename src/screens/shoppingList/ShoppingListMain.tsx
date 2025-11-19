@@ -641,6 +641,9 @@ export const ShoppingListMain: React.FC = () => {
     return [...unpurchased, ...purchased];
   }, [items]);
 
+  // Determine loading state - only show loading if we have no data at all
+  const isLoadingInitial = loading && sortableItems.length === 0;
+
   const handleAddItem = useCallback(() => {
     if (!currentListId) {
       Telemetry.trackEvent('add_item_no_list_selected');
@@ -926,6 +929,7 @@ export const ShoppingListMain: React.FC = () => {
       <View style={styles.container}>
         <ListTemplate
           items={sortableItems}
+          loading={isLoadingInitial}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
         onItemPress={id =>
@@ -945,7 +949,7 @@ export const ShoppingListMain: React.FC = () => {
         emptyState={emptyStateConfig}
         customListComponent={ShoppingListTabs}
         customListProps={{
-          loading,
+          loading: isLoadingInitial,
           onSortOrderUpdate: searchQuery.trim()
             ? undefined
             : handleSortOrderUpdate,

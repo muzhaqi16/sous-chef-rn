@@ -98,6 +98,14 @@ query GetPantryItem($id: ID!) {
   }
 }
 
+query GetDefaultPantry($homeId: ID!) {
+  defaultPantry(homeId: $homeId) {
+    id
+    name
+    isDefault
+  }
+}
+
 # ============================================
 # MUTATIONS
 # ============================================
@@ -138,6 +146,15 @@ mutation UpdatePantry($id: ID!, $input: UpdatePantryInput!) {
 
 mutation DeletePantry($id: ID!) {
   deletePantry(id: $id)
+}
+
+mutation SetDefaultPantry($pantryId: ID!) {
+  setDefaultPantry(id: $pantryId) {
+    id
+    name
+    isDefault
+    homeId
+  }
 }
 
 mutation CreatePantryItem($input: CreatePantryItemInput!) {
@@ -273,10 +290,6 @@ subscription PantryUpdated($pantryId: ID!) {
       metadata
       version
       updatedAt
-      home {
-        id
-        name
-      }
     }
     previousValues {
       name

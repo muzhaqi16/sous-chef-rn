@@ -4226,6 +4226,7 @@ type Query {
   currencies(isActive: Boolean): [Currency!]!
   currency(id: ID!): Currency
   currencyByCode(code: String!): Currency
+  defaultPantry(homeId: ID!): Pantry
   defaultShoppingList: ShoppingList
   device(id: ID!): Device
   deviceByDeviceId(deviceId: String!): Device

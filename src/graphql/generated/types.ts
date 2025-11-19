@@ -4886,6 +4886,7 @@ export type Query = {
   currencies: Array<Currency>;
   currency?: Maybe<Currency>;
   currencyByCode?: Maybe<Currency>;
+  defaultPantry?: Maybe<Pantry>;
   defaultShoppingList?: Maybe<ShoppingList>;
   device?: Maybe<Device>;
   deviceByDeviceId?: Maybe<Device>;
@@ -5154,6 +5155,10 @@ export type QueryCurrencyArgs = {
 
 export type QueryCurrencyByCodeArgs = {
   code: Scalars['String']['input'];
+};
+
+export type QueryDefaultPantryArgs = {
+  homeId: Scalars['ID']['input'];
 };
 
 export type QueryDeviceArgs = {
@@ -16240,6 +16245,18 @@ export type GetPantryItemQuery = {
   };
 };
 
+export type GetDefaultPantryQueryVariables = Exact<{
+  homeId: Scalars['ID']['input'];
+}>;
+
+export type GetDefaultPantryQuery = {
+  __typename?: 'Query';
+  defaultPantry?:
+    | { __typename?: 'Pantry'; id: string; name: string; isDefault: boolean }
+    | null
+    | undefined;
+};
+
 export type CreatePantryMutationVariables = Exact<{
   input: CreatePantryInput;
 }>;
@@ -16294,6 +16311,21 @@ export type DeletePantryMutationVariables = Exact<{
 export type DeletePantryMutation = {
   __typename?: 'Mutation';
   deletePantry: boolean;
+};
+
+export type SetDefaultPantryMutationVariables = Exact<{
+  pantryId: Scalars['ID']['input'];
+}>;
+
+export type SetDefaultPantryMutation = {
+  __typename?: 'Mutation';
+  setDefaultPantry: {
+    __typename?: 'Pantry';
+    id: string;
+    name: string;
+    isDefault: boolean;
+    homeId: string;
+  };
 };
 
 export type CreatePantryItemMutationVariables = Exact<{
@@ -17940,7 +17972,6 @@ export type PantryUpdatedSubscription = {
           metadata?: any | null | undefined;
           version: number;
           updatedAt: string;
-          home: { __typename?: 'Home'; id: string; name: string };
         }
       | null
       | undefined;

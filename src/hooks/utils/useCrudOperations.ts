@@ -108,9 +108,9 @@ export function useCrudOperations() {
           operationName = 'Create Item',
         } = config;
 
-        // Validate parent ID if required
+        // Validate parent ID only if it was explicitly provided in config
         const resolvedParentId = typeof parentId === 'function' ? parentId() : parentId;
-        if (resolvedParentId === null || resolvedParentId === undefined) {
+        if (parentId !== undefined && (resolvedParentId === null || resolvedParentId === '')) {
           Alert.alert('Error', 'Parent context is required');
           return false;
         }
