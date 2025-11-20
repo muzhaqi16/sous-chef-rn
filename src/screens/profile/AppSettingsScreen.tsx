@@ -7,7 +7,7 @@ import { useAppSettings } from '#hooks/profile/useAppSettings';
 import { UnitSystem } from '#generated';
 import { Picker } from '@react-native-picker/picker';
 import { commonStyles } from '#/styles/commonStyles';
-import { useStore } from '#/store';
+import { useAppStore } from '#/store/useAppStore';
 
 export const AppSettingsScreen: React.FC = () => {
   const [updating, setUpdating] = useState<string | null>(null);
@@ -19,9 +19,9 @@ export const AppSettingsScreen: React.FC = () => {
     resetToDefaults,
   } = useAppSettings();
 
-  // Haptic feedback preference from store
-  const hapticFeedbackEnabled = useStore(state => state.hapticFeedbackEnabled);
-  const setHapticFeedbackEnabled = useStore(state => state.setHapticFeedbackEnabled);
+  // PERFORMANCE: Use selective selectors instead of inline functions
+  const hapticFeedbackEnabled = useAppStore(state => state.hapticFeedbackEnabled);
+  const setHapticFeedbackEnabled = useAppStore(state => state.setHapticFeedbackEnabled);
 
   const handleSettingChange = async (key: string, value: any) => {
     setUpdating(key);

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { AppState, StatusBar } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
@@ -34,6 +34,9 @@ const App = () => {
   const getTelemetryConfig = useAppStore(state => state.getTelemetryConfig);
   const { theme } = useTheme();
 
+  // PERFORMANCE: Track if hydration init has run to prevent restarting on theme changes
+  const hydrationInitializedRef = useRef(false);
+
   // Initialize network monitoring
   useNetworkStatus();
 
@@ -46,8 +49,12 @@ const App = () => {
     }
   }, [isOnline]);
 
+  // PERFORMANCE: One-time hydration init - run only once after hydration completes
+  // This prevents restarting heavy services (telemetry, keychain, memory monitor) on theme changes
   useEffect(() => {
-    if (isHydrated) {
+    if (isHydrated && !hydrationInitializedRef.current) {
+      hydrationInitializedRef.current = true;
+
       // Check for stored credentials
       hasCredentials().then(result => {
         setHasStoredCredentials(result);
@@ -61,12 +68,6 @@ const App = () => {
       if (__DEV__) {
         MemoryMonitor.start(10000); // Sample every 10 seconds
       }
-
-      // Track app launch
-      Telemetry.trackEvent('app_launched', {
-        theme,
-        timestamp: new Date().toISOString(),
-      });
     }
 
     return () => {
@@ -75,7 +76,18 @@ const App = () => {
         MemoryMonitor.stop();
       }
     };
-  }, [isHydrated, setHasStoredCredentials, getTelemetryConfig, theme]);
+  }, [isHydrated, setHasStoredCredentials, getTelemetryConfig]);
+
+  // PERFORMANCE: Lightweight theme-specific tracking - separate from heavy init
+  useEffect(() => {
+    if (isHydrated && hydrationInitializedRef.current) {
+      // Track app launch with current theme (lightweight)
+      Telemetry.trackEvent('app_launched', {
+        theme,
+        timestamp: new Date().toISOString(),
+      });
+    }
+  }, [isHydrated, theme]);
 
   useEffect(() => {
     const handleAppStateChange = (nextAppState: string) => {
