@@ -17,6 +17,8 @@ interface ShoppingListTabsProps {
     itemId: string,
     afterItemId: string | null,
     beforeItemId: string | null,
+    afterSortOrder: string | null,
+    beforeSortOrder: string | null,
   ) => Promise<void>;
   onRefresh?: () => void | Promise<void>;
   refreshing?: boolean;
@@ -77,7 +79,9 @@ export const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     };
   });
 
-  // Separate items by purchased status (single-pass for performance)
+  // PERFORMANCE: Split items by purchased status
+  // WeakMap caching in ShoppingListMain maintains object identity for individual items,
+  // preventing expensive re-renders at the item level even though arrays are recreated
   const { unpurchasedItems, purchasedItems } = useMemo(() => {
     const unpurchased: SortableShoppingListItem[] = [];
     const purchased: SortableShoppingListItem[] = [];
@@ -94,6 +98,7 @@ export const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   }, [items]);
 
   // Tab routes with badge counts
+  // PERFORMANCE: Only recreate when badge counts actually change
   const routes: TabRoute[] = useMemo(
     () => [
       {
@@ -210,8 +215,9 @@ export const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     ],
   );
 
-  // If no items at all, show empty state
-  if (items.length === 0 && emptyState) {
+  // If no items at all AND not loading, show empty state
+  // Don't show empty state while loading - that's when skeletons should appear
+  if (items.length === 0 && emptyState && !loading) {
     return (
       <ScrollView
         contentContainerStyle={{ flex: 1 }}

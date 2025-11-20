@@ -61,32 +61,37 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
 
   // Update local items when props change, but not during our own updates
   // OPTIMIZATION: Sync on structural changes (add/remove/reorder) or data changes (quantity)
-  // PERFORMANCE FIX: Only depend on items, not localItems, to prevent feedback loop
+  // PERFORMANCE: Single-pass check for both structural and data changes
   useEffect(() => {
     if (!isUpdatingRef.current) {
-      // Check for structural changes: items added, removed, or reordered
-      const hasStructuralChange =
-        localItems.length !== items.length ||
-        localItems.some((item, idx) => item.id !== items[idx]?.id);
+      // Fast path: length change means structural change
+      if (localItems.length !== items.length) {
+        setLocalItems(items);
+        return;
+      }
 
-      // Check for data changes in quantity or other important fields
-      const hasDataChange = localItems.some((localItem, idx) => {
+      // Single-pass check for structural changes (reorder) OR data changes
+      // Combines two separate iterations into one for better performance
+      for (let idx = 0; idx < localItems.length; idx++) {
+        const localItem = localItems[idx];
         const newItem = items[idx];
-        if (!newItem || localItem.id !== newItem.id) return false;
 
-        // Check quantity changes
+        // Structural change: item reordered
+        if (!newItem || localItem.id !== newItem.id) {
+          setLocalItems(items);
+          return;
+        }
+
+        // Data change: quantity or purchased status changed
         const quantityChanged =
           localItem.rightElementConfig?.quantity !==
           newItem.rightElementConfig?.quantity;
-
-        // Check purchased status changes
         const purchasedChanged = localItem.isPurchased !== newItem.isPurchased;
 
-        return quantityChanged || purchasedChanged;
-      });
-
-      if (hasStructuralChange || hasDataChange) {
-        setLocalItems(items);
+        if (quantityChanged || purchasedChanged) {
+          setLocalItems(items);
+          return;
+        }
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -303,6 +308,11 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
         data={localItems}
         renderItem={renderItem}
         keyExtractor={item => item.id}
+        getItemLayout={(_, index) => ({
+          length: 103, // 87px item height + 16px margin (8px top + 8px bottom)
+          offset: 103 * index,
+          index,
+        })}
         activationDistance={isDragging ? 1 : 20}
         onDragBegin={handleDragBegin}
         onDragEnd={({ data }) => {

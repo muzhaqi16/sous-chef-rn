@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Vibration, Platform } from 'react-native';
 import Reanimated from 'react-native-reanimated';
 import { ActionButton } from './ActionButton';
@@ -18,13 +18,6 @@ export const LeftActions: React.FC<LeftActionsProps> = React.memo(({
   isPurchased,
   swipeableRef,
 }) => {
-  // Use local state to track purchase status for UI updates
-  const [localIsPurchased, setLocalIsPurchased] = useState(isPurchased);
-
-  // Update local state when prop changes
-  useEffect(() => {
-    setLocalIsPurchased(isPurchased);
-  }, [isPurchased]);
 
   // Show both consume and waste buttons if both are provided
   if (onConsume && onWaste) {
@@ -113,9 +106,9 @@ export const LeftActions: React.FC<LeftActionsProps> = React.memo(({
     return null;
   }
 
-  // Dynamic styling based on LOCAL purchase status
-  const iconName = localIsPurchased ? 'close-circle' : 'checkmark-circle';
-  const bgColor = localIsPurchased ? '#FF9800' : '#4CAF50'; // Orange for unpurchase, Green for purchase
+  // Dynamic styling based on actual purchase status from props
+  const iconName = isPurchased ? 'close-circle' : 'checkmark-circle';
+  const bgColor = isPurchased ? '#FF9800' : '#4CAF50'; // Orange for unpurchase, Green for purchase
 
   const handlePress = () => {
     // Provide haptic feedback for purchase toggle
@@ -125,11 +118,9 @@ export const LeftActions: React.FC<LeftActionsProps> = React.memo(({
       Vibration.vibrate(40);
     }
 
-    // Optimistically update UI immediately
-    setLocalIsPurchased(!localIsPurchased);
     // Close the swipeable
     swipeableRef?.current?.close();
-    // Then call the actual toggle function
+    // Call the toggle function (mutation handles optimistic update in Apollo cache)
     onTogglePurchase();
   };
 

@@ -436,6 +436,10 @@ export function useShoppingListManagement(listId: string | undefined) {
             },
           },
         });
+
+        // PERFORMANCE: Removed cache.evict() and cache.gc() which caused 5-6 second delay
+        // The cache.modify() above is sufficient - Apollo's normalization handles updates
+        // automatically and the optimistic response provides instant UI feedback
       } catch (error) {
         console.warn('Cache update failed for togglePurchased:', error);
         // Don't throw - automatic normalization should still work

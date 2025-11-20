@@ -54,7 +54,16 @@ module.exports = {
         root: 'src',
       },
     ],
+    // PERFORMANCE: Remove console.log/info in production to prevent JS thread blocking
+    // Each console call can block the JS thread for 10-50ms
+    // Keep error and warn for crash reporting
+    process.env.NODE_ENV === 'production' && [
+      'transform-remove-console',
+      {
+        exclude: ['error', 'warn'],
+      },
+    ],
     // react-native-worklets/plugin has to be listed last.
     'react-native-worklets/plugin',
-  ],
+  ].filter(Boolean),
 };

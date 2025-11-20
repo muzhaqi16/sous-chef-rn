@@ -50,11 +50,53 @@ export const selectAuthState = (state: RootState) => ({
   refreshToken: state.refreshToken,
 });
 
+// PERFORMANCE: Grouped auth state selector for useAuthState hook
+// Reduces 16+ individual subscriptions to 3 grouped subscriptions
+export const selectAuthTokens = (state: RootState) => ({
+  user: state.user,
+  accessToken: state.accessToken,
+  refreshToken: state.refreshToken,
+  isAutoLoggingIn: state.isAutoLoggingIn,
+  isLoggingOut: state.isLoggingOut,
+});
+
+export const selectAuthActions = (state: RootState) => ({
+  setAuth: state.setAuth,
+  clearAuth: state.clearAuth,
+  setTokens: state.setTokens,
+  updateUser: state.updateUser,
+  setEmailVerified: state.setEmailVerified,
+  setOnboarded: state.setOnboarded,
+  setRememberMe: state.setRememberMe,
+  setIsAutoLoggingIn: state.setIsAutoLoggingIn,
+  setUserNavigationState: state.setUserNavigationState,
+});
+
+export const selectPostLoginState = (state: RootState) => ({
+  navigationState: state.navigationState,
+  showBiometricSetup: state.showBiometricSetup,
+  postLoginCredentials: state.postLoginCredentials,
+  setNavigationState: state.setNavigationState,
+  setShowBiometricSetup: state.setShowBiometricSetup,
+  setPostLoginCredentials: state.setPostLoginCredentials,
+});
+
 // Navigation-related selectors
 export const selectNavigationState = (state: RootState) => ({
   selectedHomeId: state.selectedHomeId,
   selectedPantryId: state.selectedPantryId,
   selectedShoppingListId: state.selectedShoppingListId,
+});
+
+// PERFORMANCE: Bottom sheet state selector for SearchResultsScreen
+// Reduces 6 individual subscriptions to 1 grouped subscription
+export const selectBottomSheetState = (state: RootState) => ({
+  bottomSheetVisible: state.bottomSheetVisible,
+  searchError: state.searchError,
+  bottomSheetIndex: state.bottomSheetIndex,
+  isSearching: state.isSearching,
+  hideBottomSheet: state.hideBottomSheet,
+  showBottomSheet: state.showBottomSheet,
 });
 
 // Actions (non-selector exports for setting state)
@@ -65,4 +107,40 @@ export const selectSetters = (state: RootState) => ({
   setSelectedPantryId: state.setSelectedPantryId,
   setSelectedShoppingListId: state.setSelectedShoppingListId,
   logout: state.logout,
+});
+
+// PERFORMANCE: Pantry state selector - reduces multiple subscriptions to 1
+export const selectPantryState = (state: RootState) => ({
+  selectedPantryId: state.selectedPantryId,
+  setSelectedPantryId: state.setSelectedPantryId,
+  selectedHomeId: state.selectedHomeId,
+  setSelectedHomeId: state.setSelectedHomeId,
+});
+
+// PERFORMANCE: Shopping list state selector - reduces multiple subscriptions to 1
+export const selectShoppingListState = (state: RootState) => ({
+  selectedShoppingListId: state.selectedShoppingListId,
+  setSelectedShoppingListId: state.setSelectedShoppingListId,
+  selectedHomeId: state.selectedHomeId,
+});
+
+// PERFORMANCE: Home state selector - reduces multiple subscriptions to 1
+export const selectHomeState = (state: RootState) => ({
+  selectedHomeId: state.selectedHomeId,
+  setSelectedHomeId: state.setSelectedHomeId,
+});
+
+// PERFORMANCE: Theme/preferences selector - reduces multiple subscriptions to 1
+export const selectPreferences = (state: RootState) => ({
+  theme: state.theme,
+  language: state.language,
+  setTheme: state.setTheme,
+  setLanguage: state.setLanguage,
+});
+
+// PERFORMANCE: Token manager selector - reduces multiple subscriptions to 1
+export const selectTokenState = (state: RootState) => ({
+  accessToken: state.accessToken,
+  refreshToken: state.refreshToken,
+  setTokens: state.setTokens,
 });

@@ -16,8 +16,9 @@ import {
 } from '#components/barcode';
 import AddItemForm from '#components/organisms/AddItemForm';
 import { type BarcodeStackParamList } from '#navigation/stacks/BarcodeStack';
-import { useAppStore } from '#store/useAppStore';
+import { useAppStore, selectBottomSheetState } from '#store/useAppStore';
 import { useSearchResults } from '#hooks';
+import { shallow } from 'zustand/shallow';
 
 export const SearchResultsScreen: React.FC<{
   route: { params: BarcodeStackParamList['SearchResults'] };
@@ -28,12 +29,15 @@ export const SearchResultsScreen: React.FC<{
 
   const bottomSheetRef = useRef<BottomSheet>(null);
 
-  const bottomSheetVisible = useAppStore(state => state.bottomSheetVisible);
-  const searchError = useAppStore(state => state.searchError);
-  const bottomSheetIndex = useAppStore(state => state.bottomSheetIndex);
-  const isSearching = useAppStore(state => state.isSearching);
-  const hideBottomSheet = useAppStore(state => state.hideBottomSheet);
-  const showBottomSheet = useAppStore(state => state.showBottomSheet);
+  // PERFORMANCE: Group bottom sheet state into single subscription (6 fields)
+  const {
+    bottomSheetVisible,
+    searchError,
+    bottomSheetIndex,
+    isSearching,
+    hideBottomSheet,
+    showBottomSheet,
+  } = useAppStore(selectBottomSheetState, shallow);
 
   const {
     searchResults,

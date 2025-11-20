@@ -19,7 +19,7 @@ import { useHaptic } from '#hooks/haptic';
 import { useScreenTransition } from '#hooks/performance';
 import { useScannerSetup } from '#hooks/scanner';
 import { useSelectorManagement } from '#hooks/ui';
-import { useAppStore, selectSelectedPantryId } from '#store/useAppStore';
+import { useAppStore, selectPantryState } from '#store/useAppStore';
 import {
   useGetHomeBasicQuery,
   useCreatePantryItemUsageMutation,
@@ -43,8 +43,10 @@ import { ConsumePantryItemModal } from '#components/modals/ConsumePantryItemModa
 import { RecordWastePantryItemModal } from '#components/modals/RecordWastePantryItemModal';
 import type { ItemSelectorRef } from '#components/organisms/AnimatedItemSelector';
 import { normalizeHome } from '#/utils/connectionUtils';
+import { PantryErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
 
-export const PantryMain: React.FC = () => {
+// PERFORMANCE: Memoize screen component to prevent unnecessary re-renders
+const PantryMainScreen: React.FC = React.memo(() => {
   const { navigate, navigateTo, isFocused } = useAppNavigation();
   const { theme } = useUnistyles();
   const { setOverlayOpen } = useScanner();
@@ -59,8 +61,8 @@ export const PantryMain: React.FC = () => {
     showOnMount: false, // We'll manually trigger when appropriate
   });
 
-  const setSelectedPantryId = useAppStore(state => state.setSelectedPantryId);
-  const selectedPantryId = useAppStore(selectSelectedPantryId);
+  // PERFORMANCE: Use grouped selector to reduce subscriptions
+  const { selectedPantryId, setSelectedPantryId } = useAppStore(selectPantryState);
   const selectorRef = useRef<ItemSelectorRef>(null);
   const openSwipeableRef = useRef<any>(null);
 
@@ -622,7 +624,14 @@ export const PantryMain: React.FC = () => {
       )}
     </View>
   );
-};
+});
+
+// PERFORMANCE: Screen-level error boundary prevents full app reset on mutation failures
+export const PantryMain: React.FC = () => (
+  <PantryErrorBoundary>
+    <PantryMainScreen />
+  </PantryErrorBoundary>
+);
 
 const styles = StyleSheet.create(theme => ({
   container: {

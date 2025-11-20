@@ -190,9 +190,11 @@ class ApolloCachePersistence {
 
   /**
    * Check if cache is valid and can be restored
+   * PERFORMANCE: Single-pass validation - already optimized (reads both in one go)
    */
   isValid(): boolean {
     try {
+      // PERFORMANCE: Read both version and cache in single pass
       const storedVersion = storage.getString(CACHE_VERSION_KEY);
       const cacheString = storage.getString(CACHE_STORAGE_KEY);
 

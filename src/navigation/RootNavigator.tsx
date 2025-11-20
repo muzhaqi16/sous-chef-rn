@@ -1,7 +1,12 @@
 import React, { useEffect, useRef } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { useAppStore, selectHydrated, selectUser } from '#store/useAppStore';
+import {
+  useAppStore,
+  selectHydrated,
+  selectUser,
+  selectPostLoginState,
+} from '#store/useAppStore';
 import { useAuth } from '#hooks/auth/useAuth';
 import { SplashScreen } from '#screens';
 import {
@@ -70,12 +75,15 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function RootNavigator() {
+  // PERFORMANCE: Use grouped selectors to reduce subscriptions
   const isHydrated = useAppStore(selectHydrated);
-  const navigationState = useAppStore(state => state.navigationState);
-  const showBiometricSetup = useAppStore(state => state.showBiometricSetup);
-  const postLoginCredentials = useAppStore(state => state.postLoginCredentials);
-  const setNavigationState = useAppStore(state => state.setNavigationState);
   const user = useAppStore(selectUser);
+  const {
+    navigationState,
+    showBiometricSetup,
+    postLoginCredentials,
+    setNavigationState,
+  } = useAppStore(selectPostLoginState);
   const { handlePostLoginBiometricComplete } = useAuth();
 
   // Initialize deep link router for handling URL-based navigation

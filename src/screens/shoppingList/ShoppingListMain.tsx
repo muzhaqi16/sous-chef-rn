@@ -34,7 +34,7 @@ import type {
 } from '#components/organisms/AnimatedItemSelector';
 import type { SortableShoppingListItem } from '#components/organisms/SortableShoppingList';
 import { useShoppingListManagement } from '#/hooks';
-import { useAppStore, selectSelectedShoppingListId } from '#store/useAppStore';
+import { useAppStore, selectShoppingListState } from '#store/useAppStore';
 import { IconLibrary } from '#/utils/iconUtils';
 import { useOptimisticDataRestorationMultiple } from '#/hooks/offline/useOptimisticDataRestoration';
 import {
@@ -48,6 +48,7 @@ import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersis
 import { useFeatureHint } from '#/hooks/useFeatureHint';
 import { SwipeHintOverlay } from '#/components/organisms/SwipeHintOverlay';
 import { useHaptic } from '#hooks/haptic';
+import { ShoppingListErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
 import { useScreenTransition } from '#hooks/performance';
 import { useSelectorManagement } from '#hooks/ui';
 import { getItemImageUrl } from '#utils/imageUtils';
@@ -55,7 +56,8 @@ import { Telemetry } from '#/services/telemetry';
 import { ShoppingListTabs } from '#/components/organisms/ShoppingListTabs';
 import { ShoppingListActionsProvider } from '#context/ShoppingListActionsContext';
 
-export const ShoppingListMain: React.FC = () => {
+// PERFORMANCE: Memoize screen component to prevent unnecessary re-renders
+const ShoppingListMainScreen: React.FC = React.memo(() => {
   // Restore optimistic data on mount (offline changes that haven't synced)
   useOptimisticDataRestorationMultiple(['ShoppingList', 'ShoppingListItem']);
 
@@ -71,9 +73,9 @@ export const ShoppingListMain: React.FC = () => {
     theme: { colors },
   } = useUnistyles();
   const { primary: primaryColor, primaryLight: primaryLightColor } = colors;
-  const selectedShoppingListId = useAppStore(selectSelectedShoppingListId);
-  const setSelectedShoppingListId = useAppStore(
-    state => state.setSelectedShoppingListId,
+  // PERFORMANCE: Use grouped selector to reduce subscriptions
+  const { selectedShoppingListId, setSelectedShoppingListId } = useAppStore(
+    selectShoppingListState,
   );
   const { user } = useAuth();
   const selectorRef = useRef<ItemSelectorRef>(null);
@@ -161,6 +163,12 @@ export const ShoppingListMain: React.FC = () => {
         console.warn('Cache update failed for moveItem:', error);
         // Don't throw - let mutation succeed even if cache update fails
       }
+    },
+    onError: error => {
+      console.error('Move item error:', error);
+      const errorMessage =
+        error.message || 'Failed to reorder item. Please try again.';
+      Alert.alert('Error', `Could not reorder item: ${errorMessage}`);
     },
   });
   const [updateQuantity] = useUpdateShoppingListItemQuantityMutation({
@@ -375,7 +383,13 @@ export const ShoppingListMain: React.FC = () => {
       renderCustomItem: renderListItem,
       actions: listActions,
     }),
-    [listDataWithOwnership, currentListId, setSelectedShoppingListId, renderListItem, listActions],
+    [
+      listDataWithOwnership,
+      currentListId,
+      setSelectedShoppingListId,
+      renderListItem,
+      listActions,
+    ],
   );
 
   const handleSortOrderUpdate = useCallback(
@@ -584,7 +598,7 @@ export const ShoppingListMain: React.FC = () => {
 
   // Transform shopping list items for SortableShoppingList
   // PERFORMANCE: Single-pass transformation (no separate filter/spread/map)
-  // Reduces 3 array allocations to 1 for significant performance improvement
+  // Apollo's normalized cache provides stable references for unchanged items
   const sortableItems = useMemo((): SortableShoppingListItem[] => {
     // Server returns items sorted by: isPurchased ASC, sortOrder ASC, createdAt ASC
     // Separate unpurchased and purchased in single pass, preserving server sort order
@@ -932,63 +946,70 @@ export const ShoppingListMain: React.FC = () => {
           loading={isLoadingInitial}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
-        onItemPress={id =>
-          navigate('ItemDetail', { listId: currentListId, itemId: id })
-        }
-        onItemEdit={id =>
-          navigate('EditItem', { listId: currentListId, itemId: id })
-        }
-        onItemDelete={handleDeleteItem}
-        onRefresh={handleRefresh}
-        searchPlaceholder="Search shopping list..."
-        listName={currentList?.name || 'Shopping List'}
-        completedCount={sortableItems.filter(item => item.isPurchased).length}
-        showUserHeader={true}
-        showSearchBar={true}
-        searchBarActions={searchBarActions}
-        emptyState={emptyStateConfig}
-        customListComponent={ShoppingListTabs}
-        customListProps={{
-          loading: isLoadingInitial,
-          onSortOrderUpdate: searchQuery.trim()
-            ? undefined
-            : handleSortOrderUpdate,
-          onTogglePurchase: handleTogglePurchase,
-          onRefresh: handleRefresh,
-          refreshing,
-          disabled: !!searchQuery.trim(),
-          onClearAllPurchased: handleClearAllPurchased,
-          onSwipeableWillOpen: handleSwipeableWillOpen,
-          onSwipeableClose: handleSwipeableClose,
-        }}
-        onEndReached={loadMore}
-        onEndReachedThreshold={0.5}
-        ListFooterComponent={
-          <PaginationFooter
-            isLoadingMore={isLoadingMore}
-            hasMore={hasMore}
-            loading={loading}
-            itemCount={items.length}
-          />
-        }
-      />
+          onItemPress={id =>
+            navigate('ItemDetail', { listId: currentListId, itemId: id })
+          }
+          onItemEdit={id =>
+            navigate('EditItem', { listId: currentListId, itemId: id })
+          }
+          onItemDelete={handleDeleteItem}
+          onRefresh={handleRefresh}
+          searchPlaceholder="Search shopping list..."
+          listName={currentList?.name || 'Shopping List'}
+          completedCount={sortableItems.filter(item => item.isPurchased).length}
+          showUserHeader={true}
+          showSearchBar={true}
+          searchBarActions={searchBarActions}
+          emptyState={emptyStateConfig}
+          customListComponent={ShoppingListTabs}
+          customListProps={{
+            loading: isLoadingInitial,
+            onSortOrderUpdate: searchQuery.trim()
+              ? undefined
+              : handleSortOrderUpdate,
+            onTogglePurchase: handleTogglePurchase,
+            onRefresh: handleRefresh,
+            refreshing,
+            disabled: !!searchQuery.trim(),
+            onClearAllPurchased: handleClearAllPurchased,
+            onSwipeableWillOpen: handleSwipeableWillOpen,
+            onSwipeableClose: handleSwipeableClose,
+          }}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={
+            <PaginationFooter
+              isLoadingMore={isLoadingMore}
+              hasMore={hasMore}
+              loading={loading}
+              itemCount={items.length}
+            />
+          }
+        />
 
-      <AnimatedItemSelector
-        ref={selectorRef}
-        config={listConfig}
-        maxHeight={600}
-        onOpen={handleOverlayOpen}
-        onClose={handleOverlayClose}
-      />
+        <AnimatedItemSelector
+          ref={selectorRef}
+          config={listConfig}
+          maxHeight={600}
+          onOpen={handleOverlayOpen}
+          onClose={handleOverlayClose}
+        />
 
-      {/* Swipe gesture hint overlay */}
-      {swipeHint.isVisible && (
-        <SwipeHintOverlay onDismiss={swipeHint.dismiss} />
-      )}
+        {/* Swipe gesture hint overlay */}
+        {swipeHint.isVisible && (
+          <SwipeHintOverlay onDismiss={swipeHint.dismiss} />
+        )}
       </View>
     </ShoppingListActionsProvider>
   );
-};
+});
+
+// PERFORMANCE: Screen-level error boundary prevents full app reset on mutation failures
+export const ShoppingListMain: React.FC = () => (
+  <ShoppingListErrorBoundary>
+    <ShoppingListMainScreen />
+  </ShoppingListErrorBoundary>
+);
 
 const styles = StyleSheet.create(theme => ({
   container: {

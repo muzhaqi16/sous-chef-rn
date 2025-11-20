@@ -4,6 +4,7 @@ import { useAppStore } from '#store/useAppStore';
 import { useAuth } from '#hooks/auth/useAuth';
 import { usePreservedArrayData } from '#/hooks/apollo';
 import { normalizeHome, normalizeHomes } from '#/utils/connectionUtils';
+import { useOfflinePresetPolicy } from '#/apollo/policies/offlineFetchPolicies';
 
 export const useDefaultHome = () => {
   const selectedHomeId = useAppStore(state => state.selectedHomeId);
@@ -15,12 +16,15 @@ export const useDefaultHome = () => {
   // Always fetch homes when authenticated (needed for UI and getDefaultPantry)
   const shouldSkip = !canAttemptQueries;
 
+  // PERFORMANCE: Use offline-aware fetch policy preset for consistency
+  const fetchPolicy = useOfflinePresetPolicy('LIST');
+
   const {
     data: homes,
     loading,
     error,
   } = useGetHomesQuery({
-    fetchPolicy: 'cache-and-network', // Ensure fresh data after token refresh
+    fetchPolicy,
     nextFetchPolicy: 'cache-first', // Subsequent fetches use cache to avoid unnecessary refetches
     skip: shouldSkip,
     errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
@@ -31,7 +35,7 @@ export const useDefaultHome = () => {
 
   const { data: defaultHomeData, loading: loadingDefaultHome } =
     useGetDefaultHomeQuery({
-      fetchPolicy: 'cache-and-network',
+      fetchPolicy,
       nextFetchPolicy: 'cache-first', // Subsequent fetches use cache to avoid unnecessary refetches
       skip: !canAttemptQueries,
       errorPolicy: 'ignore', // Return cached data on network errors instead of empty array

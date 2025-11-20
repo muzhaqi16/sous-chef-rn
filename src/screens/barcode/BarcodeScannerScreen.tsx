@@ -50,6 +50,10 @@ export const BarcodeScannerScreen: React.FC<{
 
   // barcode state/hooks
   const hasNavigatedRef = useRef(false);
+  // PERFORMANCE: Frame rate limiting for barcode scanning
+  const lastScanTimeRef = useRef(0);
+  const SCAN_THROTTLE_MS = 500; // Minimum time between scans
+
   const { setScannedBarcode, setScanning, resetScanner, isScanning } =
     useBarcodeScanner();
 
@@ -104,22 +108,24 @@ export const BarcodeScannerScreen: React.FC<{
   );
 
   // 3) Set up the VisionCamera code‐scanner callback
+  // PERFORMANCE: Limited to most common barcode types for grocery items
+  // QR codes (quick response codes), EAN-13 (European), UPC-A/E (US standard)
   const codeScanner = useCodeScanner({
     codeTypes: [
-      'qr',
-      'ean-13',
-      'ean-8',
-      'code-128',
-      'code-39',
-      'code-93',
-      'codabar',
-      'upc-a',
-      'upc-e',
-      'pdf-417',
-      'data-matrix',
+      'qr',        // QR codes - common for product info, coupons
+      'ean-13',    // European Article Number - most common grocery barcode
+      'upc-a',     // Universal Product Code - US standard
+      'upc-e',     // UPC compressed format
     ],
     onCodeScanned: codes => {
       if (!isActive || hasNavigatedRef.current || !codes.length) return;
+
+      // PERFORMANCE: Throttle scan callbacks to max 2 per second
+      const now = Date.now();
+      if (now - lastScanTimeRef.current < SCAN_THROTTLE_MS) {
+        return;
+      }
+      lastScanTimeRef.current = now;
 
       const { value, type } = codes[0];
       if (value) {
@@ -148,6 +154,7 @@ export const BarcodeScannerScreen: React.FC<{
     resetScanner();
     setScanning(true);
     hasNavigatedRef.current = false;
+    lastScanTimeRef.current = 0; // Reset throttle
   };
 
   // --- RENDER FALLBACKS ---

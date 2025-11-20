@@ -101,14 +101,12 @@ export const createAuthSlice: StateCreator<
     });
 
     // Schedule proactive token refresh whenever tokens are updated
-    // Skip if offline to prevent cache clearing on app startup when API is down
+    // The tokenScheduler has built-in offline protection, so we always schedule
+    // This ensures refresh is scheduled even after offline->online transitions
     if (accessToken) {
-      const state = get();
-      if (state.isOnline) {
-        scheduleTokenRefresh(accessToken, async () => {
-          await proactiveTokenRefresh();
-        });
-      }
+      scheduleTokenRefresh(accessToken, async () => {
+        await proactiveTokenRefresh();
+      });
     }
   },
 

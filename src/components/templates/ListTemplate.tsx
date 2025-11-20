@@ -109,7 +109,8 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
 }) => {
   const { theme } = useUnistyles();
   // Determine the actual display state
-  const isLoading = loading && items.length === 0;
+  // Don't show loading state if custom component exists - let it handle its own loading
+  const isLoading = loading && items.length === 0 && !CustomListComponent;
 
   // Use appropriate empty state based on context
   const effectiveEmptyState = hasNoData

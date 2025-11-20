@@ -28,6 +28,7 @@ import {
   createRemoveFromQueryFieldUpdater,
 } from '#/apollo/utils';
 import { useCrudOperations } from '#/hooks/utils';
+import { useOfflinePresetPolicy } from '#/apollo/policies/offlineFetchPolicies';
 
 // Cache updater utilities for homes
 const addToHomesCache = createAddToQueryFieldUpdater('homes');
@@ -42,8 +43,11 @@ export function useHomeManagement() {
   // Ref to track if initial home auto-selection has been attempted
   const hasInitializedDefaultHome = useRef(false);
 
+  // PERFORMANCE: Use offline-aware fetch policy preset for consistency
+  const fetchPolicy = useOfflinePresetPolicy('LIST');
+
   const { data, loading, error, refetch } = useGetHomesQuery({
-    fetchPolicy: 'cache-and-network',
+    fetchPolicy,
     nextFetchPolicy: 'cache-first', // Subsequent fetches use cache to avoid unnecessary refetches
     errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
   });
@@ -53,7 +57,7 @@ export function useHomeManagement() {
     loading: loadingDefaultHome,
     refetch: refetchDefaultHome,
   } = useGetDefaultHomeQuery({
-    fetchPolicy: 'cache-and-network',
+    fetchPolicy,
     nextFetchPolicy: 'cache-first', // Subsequent fetches use cache to avoid unnecessary refetches
     errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
   });
@@ -388,12 +392,12 @@ export function useHomeManagement() {
   // Preview home by join code query
   const [getHomeByJoinCode, { loading: loadingPreview, data: previewData }] =
     useGetHomeByJoinCodeLazyQuery({
-      fetchPolicy: 'network-only', // Always fetch fresh data
+      fetchPolicy: 'network-only', // Always fetch fresh data (one-time operation)
     });
 
   // Get default pantry for a home
   const [getDefaultPantry] = useGetDefaultPantryLazyQuery({
-    fetchPolicy: 'network-only', // Always fetch fresh default pantry
+    fetchPolicy: 'network-only', // Always fetch fresh default pantry (one-time operation)
   });
 
   // Helper functions using CRUD utilities

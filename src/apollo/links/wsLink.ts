@@ -57,7 +57,10 @@ const createWsClient = () => {
       },
       closed: (event: any) => {
         isReconnecting = false;
-        if (__DEV__) {
+        // Error 4500 is "Invalid or expired JWT token" - expected during token expiration
+        // Suppress this specific error to reduce log noise during normal token refresh cycles
+        const isAuthError = event?.code === 4500;
+        if (__DEV__ && !isAuthError) {
           logger.info('🔌 WebSocket closed:', {
             code: event?.code,
             reason: event?.reason,

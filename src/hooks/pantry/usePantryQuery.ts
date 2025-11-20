@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useGetPantryQuery } from '#generated';
 import { useAuth } from '#hooks/auth/useAuth';
 import { normalizePantry } from '#/utils/connectionUtils';
+import { useOfflinePresetPolicy } from '#/apollo/policies/offlineFetchPolicies';
 
 /**
  * Hook for querying pantry items with Connection-based pagination
@@ -13,6 +14,9 @@ export function usePantryQuery(pantryId: string | undefined) {
   // Explicit validation - only execute query when pantryId is genuinely valid
   const hasValidPantryId = !!pantryId?.trim() && !isLoggedOut;
 
+  // PERFORMANCE: Use offline-aware fetch policy preset for consistency
+  const fetchPolicy = useOfflinePresetPolicy('LIST');
+
   // Single source of truth: Apollo cache - Connection-based query
   const { data, loading, error, refetch, fetchMore } = useGetPantryQuery({
     variables: hasValidPantryId ? {
@@ -21,7 +25,7 @@ export function usePantryQuery(pantryId: string | undefined) {
       storageLocationsFirst: 50,
     } : undefined as any,
     skip: !hasValidPantryId, // Query only executes when pantryId is valid
-    fetchPolicy: 'cache-and-network', // Show cache immediately, then fetch fresh data
+    fetchPolicy,
     notifyOnNetworkStatusChange: true,
     errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
   });

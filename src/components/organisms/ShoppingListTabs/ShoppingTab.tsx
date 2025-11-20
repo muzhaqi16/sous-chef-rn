@@ -1,7 +1,8 @@
 import React from 'react';
+import { ScrollView } from 'react-native';
 import { SortableShoppingList } from '../SortableShoppingList';
 import type { SortableShoppingListItem } from '../SortableShoppingList';
-import { LoadingInline } from '#components/base/Loading';
+import { ShoppingListItemSkeleton } from '#components/base/Skeleton/ShoppingListItemSkeleton';
 
 interface ShoppingTabProps {
   items: SortableShoppingListItem[];
@@ -44,9 +45,16 @@ export const ShoppingTab: React.FC<ShoppingTabProps> = React.memo(({
   onDragBegin,
   onDragRelease,
 }) => {
-  // Show loading placeholder when switching lists (loading with no cached items)
-  if (loading && items.length === 0) {
-    return <LoadingInline message="Loading items..." />;
+  // Skeleton-first approach: Show skeletons whenever loading, regardless of cached items
+  // This ensures smooth UX when switching between lists
+  if (loading) {
+    return (
+      <ScrollView contentContainerStyle={{ padding: 16, gap: 8 }}>
+        {[1, 2, 3, 4, 5].map(key => (
+          <ShoppingListItemSkeleton key={key} />
+        ))}
+      </ScrollView>
+    );
   }
 
   return (

@@ -448,8 +448,9 @@ export function makeCache(): InMemoryCache {
     }
   };
 
-  // Start monitoring in production and development
-  gcInterval = setInterval(monitorCacheSize, 5 * 60 * 1000); // Every 5 minutes
+  // PERFORMANCE: Monitor cache more frequently to prevent unbounded growth
+  // Reduced from 5 minutes to 2 minutes for more aggressive cleanup
+  gcInterval = setInterval(monitorCacheSize, 2 * 60 * 1000); // Every 2 minutes
 
   // Expose cleanup function for testing/logout
   (cache as any).__stopMonitoring = () => {

@@ -2,7 +2,7 @@ import { onError } from '@apollo/client/link/error';
 import { CombinedGraphQLErrors, CombinedProtocolErrors } from '@apollo/client/errors';
 import { isKnownServerError } from '#utils/subscriptionErrorHandler';
 import { LogoutCleanup } from '../logoutCleanup';
-import { attemptTokenRefresh } from './refreshToken';
+import { attemptTokenRefresh, getRefreshState } from './refreshToken';
 
 // Utility functions for error detection
 const isAuthError = (code: string, msg: string) =>
@@ -19,6 +19,9 @@ const isSubscription = (op: any) =>
 export const errorLink = onError(({ error, operation, forward }) => {
   if (operation.getContext().skipErrorLink || LogoutCleanup.isInLogoutProcess()) return;
 
+  // Check if token refresh is in progress to suppress cascade of auth errors
+  const { isRefreshing } = getRefreshState();
+
   if (CombinedGraphQLErrors.is(error)) {
     for (const err of error.errors) {
       const code = String(err.extensions?.code || '');
@@ -30,6 +33,10 @@ export const errorLink = onError(({ error, operation, forward }) => {
       }
 
       if (isAuthError(code, message) && operation.operationName !== 'RefreshToken') {
+        // Suppress logging if refresh already in progress to avoid cascade
+        if (!isRefreshing) {
+          console.warn(`Auth error detected for ${operation.operationName}, initiating token refresh`);
+        }
         return attemptTokenRefresh(operation, forward);
       }
     }

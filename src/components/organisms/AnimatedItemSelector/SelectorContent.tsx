@@ -71,6 +71,17 @@ export const SelectorContent = <T extends SelectableItem>({
     />
   );
 
+  // PERFORMANCE: getItemLayout for better scroll performance
+  // Item height = paddingVertical (32) + text (~24) + border (2) + marginBottom (8) ≈ 66px
+  // Only use when renderCustomItem is not provided (standard items have fixed height)
+  const getItemLayout = !renderCustomItem
+    ? (_data: ArrayLike<T> | null | undefined, index: number) => ({
+        length: 66,
+        offset: 66 * index,
+        index,
+      })
+    : undefined;
+
   return (
     <Animated.View
       layout={LinearTransition}
@@ -88,6 +99,7 @@ export const SelectorContent = <T extends SelectableItem>({
           showsVerticalScrollIndicator={false}
           bounces={false}
           contentContainerStyle={styles.listContent}
+          getItemLayout={getItemLayout}
           // Performance optimizations
           maxToRenderPerBatch={10}
           windowSize={5}

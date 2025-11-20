@@ -8,6 +8,29 @@ interface LocalNotificationParams {
   priority?: 'high' | 'default' | 'low';
 }
 
+// PERFORMANCE: Cache channel creation result to avoid repeated synchronous native calls
+let defaultChannelCreated = false;
+
+/**
+ * Ensures the default Android notification channel is created.
+ * Cached per session to avoid redundant native calls.
+ */
+const ensureDefaultChannel = async (): Promise<void> => {
+  if (Platform.OS !== 'android' || defaultChannelCreated) {
+    return;
+  }
+
+  await notifee.createChannel({
+    id: 'default',
+    name: 'Default Channel',
+    importance: AndroidImportance.HIGH,
+    vibration: true,
+    lights: true,
+  });
+
+  defaultChannelCreated = true;
+};
+
 export const showLocalNotification = async ({
   id,
   title,
@@ -15,16 +38,8 @@ export const showLocalNotification = async ({
   priority: _priority = 'default',
 }: LocalNotificationParams) => {
   try {
-    // Create channel for Android
-    if (Platform.OS === 'android') {
-      await notifee.createChannel({
-        id: 'default',
-        name: 'Default Channel',
-        importance: AndroidImportance.HIGH,
-        vibration: true,
-        lights: true,
-      });
-    }
+    // Create channel for Android (cached, only runs once per session)
+    await ensureDefaultChannel();
 
     // Display the notification
     await notifee.displayNotification({

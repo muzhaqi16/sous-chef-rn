@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, startTransition } from 'react';
 import { client } from '#/apollo/client';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { useAuth } from '#/hooks/auth/useAuth';
@@ -39,35 +39,39 @@ export function useOptimisticDataRestoration(
   useEffect(() => {
     if (!user?.id || !enabled) return;
 
-    // Load all optimistic updates for this entity type
-    const allUpdates = optimisticDataPersistence.getAllForType(entityType);
+    // Defer restoration to avoid blocking navigation/initial render
+    // Using startTransition marks this as non-urgent work
+    startTransition(() => {
+      // Load all optimistic updates for this entity type
+      const allUpdates = optimisticDataPersistence.getAllForType(entityType);
 
-    if (allUpdates.size === 0) {
-      // No persisted data to restore
-      return;
-    }
-
-    // Apply all updates to Apollo cache using cache.batch() for better performance
-    // This broadcasts changes once instead of after each modify
-    client.cache.batch({
-      update: (cache) => {
-        allUpdates.forEach((fields, entityId) => {
-          // Build field update functions
-          const fieldUpdates = Object.keys(fields).reduce((acc, field) => {
-            acc[field] = () => fields[field];
-            return acc;
-          }, {} as Record<string, () => any>);
-
-          // Apply to cache
-          cache.modify({
-            id: cache.identify({
-              __typename: entityType,
-              id: entityId,
-            }),
-            fields: fieldUpdates,
-          });
-        });
+      if (allUpdates.size === 0) {
+        // No persisted data to restore
+        return;
       }
+
+      // Apply all updates to Apollo cache using cache.batch() for better performance
+      // This broadcasts changes once instead of after each modify
+      client.cache.batch({
+        update: (cache) => {
+          allUpdates.forEach((fields, entityId) => {
+            // Build field update functions
+            const fieldUpdates = Object.keys(fields).reduce((acc, field) => {
+              acc[field] = () => fields[field];
+              return acc;
+            }, {} as Record<string, () => any>);
+
+            // Apply to cache
+            cache.modify({
+              id: cache.identify({
+                __typename: entityType,
+                id: entityId,
+              }),
+              fields: fieldUpdates,
+            });
+          });
+        }
+      });
     });
   }, [user?.id, entityType, enabled]);
 }
@@ -95,61 +99,65 @@ export function useOptimisticDataRestorationMultiple(
   useEffect(() => {
     if (!user?.id || !enabled || entityTypes.length === 0) return;
 
-    // Batch all cache modifications for better performance
-    client.cache.batch({
-      update: (cache) => {
-        // Process all entity types
-        entityTypes.forEach(entityType => {
-          const allUpdates = optimisticDataPersistence.getAllForType(entityType);
+    // Defer restoration to avoid blocking navigation/initial render
+    // Using startTransition marks this as non-urgent work that won't block the UI
+    startTransition(() => {
+      // Batch all cache modifications for better performance
+      client.cache.batch({
+        update: (cache) => {
+          // Process all entity types
+          entityTypes.forEach(entityType => {
+            const allUpdates = optimisticDataPersistence.getAllForType(entityType);
 
-          if (allUpdates.size === 0) return;
+            if (allUpdates.size === 0) return;
 
-          // Apply updates to cache
-          allUpdates.forEach((fields, entityId) => {
-            const cacheId = cache.identify({
-              __typename: entityType,
-              id: entityId,
-            });
-
-            // Version guard: Only restore if cache version < persisted version
-            // This ensures API data (source of truth) is never overwritten by stale optimistic data
-            if (cacheId && fields.version) {
-              // Read the current version directly from cache
-              let currentVersion: number | undefined;
-              cache.modify({
-                id: cacheId,
-                fields: {
-                  version(existingVersion) {
-                    currentVersion = existingVersion;
-                    return existingVersion; // Don't modify, just read
-                  },
-                },
-                optimistic: false,
+            // Apply updates to cache
+            allUpdates.forEach((fields, entityId) => {
+              const cacheId = cache.identify({
+                __typename: entityType,
+                id: entityId,
               });
 
-              // If cache has newer or equal version, skip restoration
-              if (currentVersion !== undefined && currentVersion >= fields.version) {
-                // Cache has newer or equal version - skip restoration
-                // This means API data is more recent than our optimistic update
-                if (__DEV__) {
-                  console.log(`Skipping optimistic restoration for ${entityType}:${entityId} - cache version (${currentVersion}) >= persisted version (${fields.version})`);
+              // Version guard: Only restore if cache version < persisted version
+              // This ensures API data (source of truth) is never overwritten by stale optimistic data
+              if (cacheId && fields.version) {
+                // Read the current version directly from cache
+                let currentVersion: number | undefined;
+                cache.modify({
+                  id: cacheId,
+                  fields: {
+                    version(existingVersion) {
+                      currentVersion = existingVersion;
+                      return existingVersion; // Don't modify, just read
+                    },
+                  },
+                  optimistic: false,
+                });
+
+                // If cache has newer or equal version, skip restoration
+                if (currentVersion !== undefined && currentVersion >= fields.version) {
+                  // Cache has newer or equal version - skip restoration
+                  // This means API data is more recent than our optimistic update
+                  if (__DEV__) {
+                    console.log(`Skipping optimistic restoration for ${entityType}:${entityId} - cache version (${currentVersion}) >= persisted version (${fields.version})`);
+                  }
+                  return;
                 }
-                return;
               }
-            }
 
-            const fieldUpdates = Object.keys(fields).reduce((acc, field) => {
-              acc[field] = () => fields[field];
-              return acc;
-            }, {} as Record<string, () => any>);
+              const fieldUpdates = Object.keys(fields).reduce((acc, field) => {
+                acc[field] = () => fields[field];
+                return acc;
+              }, {} as Record<string, () => any>);
 
-            cache.modify({
-              id: cacheId,
-              fields: fieldUpdates,
+              cache.modify({
+                id: cacheId,
+                fields: fieldUpdates,
+              });
             });
           });
-        });
-      }
+        }
+      });
     });
   }, [user?.id, entityTypes, enabled]);
 }

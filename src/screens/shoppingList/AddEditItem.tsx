@@ -208,14 +208,41 @@ export const AddEditItem: React.FC<{
         if (mutationData) {
           navigation.goBack();
         } else {
-          Alert.alert('Error', `Failed to ${isEdit ? 'update' : 'add'} item. Please try again.`);
+          // PERFORMANCE: Specific error message - server returned success but no data
+          Alert.alert(
+            'Error',
+            `Server error: Item was not ${isEdit ? 'updated' : 'added'}. The server may be experiencing issues. Please try again.`
+          );
         }
       } else {
-        Alert.alert('Error', `Failed to ${isEdit ? 'update' : 'add'} item. Please try again.`);
+        // PERFORMANCE: Specific error message - mutation failed without data
+        Alert.alert(
+          'Error',
+          `Failed to ${isEdit ? 'update' : 'add'} item. Check your internet connection and try again.`
+        );
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Save error:', error);
-      Alert.alert('Error', `Failed to ${isEdit ? 'update' : 'add'} item. Please try again.`);
+
+      // PERFORMANCE: Specific error messages based on error type
+      let errorMessage = `Failed to ${isEdit ? 'update' : 'add'} item. `;
+
+      if (error.networkError) {
+        errorMessage += 'Network error - check your internet connection.';
+      } else if (error.graphQLErrors?.length) {
+        const graphQLError = error.graphQLErrors[0];
+        if (graphQLError.extensions?.code === 'VALIDATION_ERROR') {
+          errorMessage += 'Invalid input - please check your item details.';
+        } else if (graphQLError.extensions?.code === 'UNAUTHENTICATED') {
+          errorMessage += 'Session expired - please log in again.';
+        } else {
+          errorMessage += graphQLError.message || 'Please try again.';
+        }
+      } else {
+        errorMessage += 'Please try again.';
+      }
+
+      Alert.alert('Error', errorMessage);
     } finally {
       setSaving(false);
     }
