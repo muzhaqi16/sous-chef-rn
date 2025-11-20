@@ -8,6 +8,7 @@
  * - Navigation after logout
  */
 
+import { launchAppWithFabricWorkaround } from '../../init';
 import {
   LoginScreen,
   ShoppingListScreen,
@@ -21,7 +22,7 @@ describe('Logout Flow', () => {
   const profileScreen = new ProfileScreen();
 
   beforeAll(async () => {
-    await device.launchApp({
+    await launchAppWithFabricWorkaround({
       newInstance: true,
       permissions: { notifications: 'YES' },
     });

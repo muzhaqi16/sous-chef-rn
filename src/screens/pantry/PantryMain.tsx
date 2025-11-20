@@ -555,7 +555,7 @@ const PantryMainScreen: React.FC = React.memo(() => {
       };
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} testID="pantry-screen">
       <ListTemplate
         title={selectedHomeId ? currentHomeData?.home?.name || 'Pantry' : ''}
         subtitle={selectedHomeId ? pantry?.name || 'Your Pantry' : ''}

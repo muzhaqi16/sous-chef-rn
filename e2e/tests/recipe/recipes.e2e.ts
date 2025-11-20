@@ -10,6 +10,7 @@
  * - Viewing recipe details
  */
 
+import { launchAppWithFabricWorkaround } from '../../init';
 import { LoginScreen, RecipesScreen, ShoppingListScreen } from '../../screens';
 import { TEST_USER } from '../../fixtures/testData';
 
@@ -19,7 +20,7 @@ describe('Recipe Search and Browsing', () => {
   const shoppingListScreen = new ShoppingListScreen();
 
   beforeAll(async () => {
-    await device.launchApp({
+    await launchAppWithFabricWorkaround({
       newInstance: true,
       permissions: { notifications: 'YES' },
     });

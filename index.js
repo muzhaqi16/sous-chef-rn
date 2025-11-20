@@ -6,6 +6,21 @@
 import 'react-native-get-random-values';
 
 /**
+ * Configure Reanimated logger BEFORE any Reanimated code runs
+ * This prevents "Cannot read property 'level' of undefined" errors
+ * Must be called before any imports that use Reanimated animations
+ */
+import {
+  configureReanimatedLogger,
+  ReanimatedLogLevel,
+} from 'react-native-reanimated';
+
+configureReanimatedLogger({
+  level: ReanimatedLogLevel.warn,
+  strict: false,
+});
+
+/**
  * Configure Apollo Client memory management
  * Per Apollo docs: Set before loading @apollo/client
  * This must be imported before App.tsx (which imports apollo/client)

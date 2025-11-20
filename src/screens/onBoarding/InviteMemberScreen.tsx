@@ -25,7 +25,7 @@ type InviteEntry = {
   type: 'home' | 'shopping' | 'both';
 };
 
-export const InviteMembersScreen = () => {
+export const InviteMemberScreen = () => {
   const { navigateToNextStep } = useOnboardingNavigation();
   const { user } = useAuth();
 

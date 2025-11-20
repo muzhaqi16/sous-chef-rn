@@ -120,9 +120,10 @@ android {
         }
         release {
             manifestPlaceholders = [usesCleartextTraffic: "false"]
+            // Use release signing config for production builds
             signingConfig signingConfigs.release
             minifyEnabled enableProguardInReleaseBuilds
-            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro", "${rootProject.projectDir}/../node_modules/detox/android/detox/proguard-rules-app.pro"
             resValue "string", "build_config_package", "dev.souschef.app"
         }
         staging {

@@ -14,6 +14,7 @@ interface Props<T extends FieldValues> {
   control: Control<T>;
   errors: FieldErrors<T>;
   submitText: string;
+  submitButtonTestID?: string;
   onSubmit: () => void;
   footerText?: string;
   footerLinkText?: string;
@@ -30,6 +31,7 @@ export function AuthFormTemplate<T extends FieldValues>({
   control,
   errors,
   submitText,
+  submitButtonTestID,
   onSubmit,
   footerText,
   footerLinkText,
@@ -66,7 +68,12 @@ export function AuthFormTemplate<T extends FieldValues>({
       )}
 
       <View style={styles.action}>
-        <Button title={submitText} onPress={onSubmit} disabled={isLoading} />
+        <Button
+          title={submitText}
+          onPress={onSubmit}
+          disabled={isLoading}
+          testID={submitButtonTestID}
+        />
       </View>
 
       {footerText && footerLinkText && onFooterLinkPress && (

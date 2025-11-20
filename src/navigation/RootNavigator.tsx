@@ -29,7 +29,7 @@ import {
   EmailVerificationDeepLinkScreen,
   ResetPasswordScreen,
 } from '#screens/auth';
-import { AcceptInvite } from '#screens/shoppingList/AcceptInvite';
+import { AcceptInvite } from '#screens/shoppingList';
 import {
   DeleteAccountScreen,
   DietaryProfileScreen,

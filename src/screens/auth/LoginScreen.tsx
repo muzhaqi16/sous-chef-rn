@@ -166,7 +166,7 @@ export function LoginScreen() {
   };
 
   return (
-    <AuthWrapper>
+    <AuthWrapper testID="login-screen">
       <AuthFormTemplate<LoginInput>
         title="Sign in to Sous Chef"
         subtitle="Access your pantry and more"
@@ -175,12 +175,13 @@ export function LoginScreen() {
             name: 'email',
             label: 'Email address',
             component: EmailInput,
+            props: { testID: 'login-email-input' },
           },
           {
             name: 'password',
             label: 'Password',
             component: PasswordInput,
-            props: { showToggle: true },
+            props: { showToggle: true, testID: 'login-password-input' },
           },
         ]}
         control={form.control}
@@ -193,6 +194,7 @@ export function LoginScreen() {
           navigateToForgotPassword();
         }}
         submitText={isLoggingIn ? 'Logging in…' : 'Log In'}
+        submitButtonTestID="login-submit-button"
         onSubmit={form.handleSubmit(onSubmit)}
         footerText="Don't have an account?"
         footerLinkText="Sign Up"
