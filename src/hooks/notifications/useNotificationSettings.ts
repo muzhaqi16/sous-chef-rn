@@ -1,4 +1,4 @@
-import {useCallback, useMemo} from 'react';
+import {useCallback, useMemo, useEffect} from 'react';
 import {Alert} from 'react-native';
 import {useStore} from '#store';
 import {
@@ -7,6 +7,7 @@ import {
   ExpirationFrequency,
 } from '#generated';
 import {useErrorHandler} from '#/utils/errorHandling';
+import {useOfflineAwareFetchPolicy, OFFLINE_FETCH_POLICIES} from '#/apollo/policies/offlineFetchPolicies';
 
 export interface NotificationSettings {
   // Core toggles
@@ -47,11 +48,26 @@ export const useNotificationSettings = () => {
   const user = useStore(state => state.user);
   const {handleApolloError} = useErrorHandler();
 
-  const {data, loading} = useGetNotificationPreferencesQuery({
+  // Use offline-aware fetch policy for settings
+  const fetchPolicy = useOfflineAwareFetchPolicy(
+    OFFLINE_FETCH_POLICIES.DETAIL.online,   // 'cache-first' when online
+    OFFLINE_FETCH_POLICIES.DETAIL.offline   // 'cache-only' when offline
+  );
+
+  const {data, loading, error} = useGetNotificationPreferencesQuery({
     skip: !user?.id,
+    fetchPolicy,
+    errorPolicy: 'all', // Return partial data on errors
   });
 
   const preferences = data?.myNotificationPreferences;
+
+  // Log partial errors in development
+  useEffect(() => {
+    if (__DEV__ && error) {
+      console.warn('⚠️ Partial error loading notification preferences:', error);
+    }
+  }, [error]);
 
   // Update notification preferences mutation
   const [updatePreferences] = useUpdateNotificationPreferencesMutation({

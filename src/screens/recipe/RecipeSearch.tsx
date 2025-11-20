@@ -34,7 +34,8 @@ import type {
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { useScreenTransition } from '#hooks/performance';
-import { useGetHomeQuery, Diet, ReligiousDiet } from '#generated';
+import { useGetHomeQuery, ReligiousDiet } from '#generated';
+import { transformRecipeForDisplay } from '#/utils/recipeTransform';
 
 type RecipeSearchRouteProp = RouteProp<
   { RecipeSearch: { initialQuery?: string } },
@@ -93,6 +94,8 @@ export const RecipeSearch: React.FC = () => {
   const { data: homeData } = useGetHomeQuery({
     variables: { homeId: selectedHomeId ?? '' },
     skip: !selectedHomeId,
+    fetchPolicy: 'cache-and-network', // Fresh data with instant UI
+    errorPolicy: 'all', // Return cached data on network error
   });
 
   // Get pantry for ingredient selection
@@ -130,58 +133,56 @@ export const RecipeSearch: React.FC = () => {
   const hasAutoSearchedRef = useRef(false);
   const hasInitializedFiltersRef = useRef(false);
 
-  // Get excluded ingredients for Halal/Kosher restrictions
-  const getExcludedIngredientsForReligiousDiet = useCallback(
-    (restrictions: { diet?: Diet | null }[]): string[] => {
-      const excluded: string[] = [];
+  // PERFORMANCE: Memoize excluded ingredients to avoid recalculating on every search
+  // This computation runs on both text and ingredient searches
+  const excludedIngredients = useMemo(() => {
+    const restrictions = dietaryProfile?.restrictions || [];
+    const excluded: string[] = [];
 
-      for (const restriction of restrictions) {
-        // Check if this restriction has a religious diet
-        const religionDiet =
-          restriction.diet as unknown as ReligiousDiet | null;
+    for (const restriction of restrictions) {
+      // Check if this restriction has a religious diet
+      const religionDiet = restriction.diet as unknown as ReligiousDiet | null;
 
-        if (religionDiet === ReligiousDiet.Halal) {
-          excluded.push(
-            'pork',
-            'bacon',
-            'ham',
-            'sausage',
-            'pepperoni',
-            'prosciutto',
-            'alcohol',
-            'wine',
-            'beer',
-            'vodka',
-            'rum',
-            'whiskey',
-            'brandy',
-            'gelatin',
-            'lard',
-          );
-        } else if (religionDiet === ReligiousDiet.Kosher) {
-          excluded.push(
-            'pork',
-            'bacon',
-            'ham',
-            'sausage',
-            'pepperoni',
-            'shellfish',
-            'shrimp',
-            'crab',
-            'lobster',
-            'clam',
-            'oyster',
-            'squid',
-            'octopus',
-            'catfish',
-          );
-        }
+      if (religionDiet === ReligiousDiet.Halal) {
+        excluded.push(
+          'pork',
+          'bacon',
+          'ham',
+          'sausage',
+          'pepperoni',
+          'prosciutto',
+          'alcohol',
+          'wine',
+          'beer',
+          'vodka',
+          'rum',
+          'whiskey',
+          'brandy',
+          'gelatin',
+          'lard',
+        );
+      } else if (religionDiet === ReligiousDiet.Kosher) {
+        excluded.push(
+          'pork',
+          'bacon',
+          'ham',
+          'sausage',
+          'pepperoni',
+          'shellfish',
+          'shrimp',
+          'crab',
+          'lobster',
+          'clam',
+          'oyster',
+          'squid',
+          'octopus',
+          'catfish',
+        );
       }
+    }
 
-      return excluded;
-    },
-    [],
-  );
+    return excluded;
+  }, [dietaryProfile?.restrictions]);
 
   // Initialize filters from dietary profile
   useEffect(() => {
@@ -242,11 +243,6 @@ export const RecipeSearch: React.FC = () => {
     setSearchPerformed(true);
 
     try {
-      // Get excluded ingredients for Halal/Kosher restrictions
-      const excludedIngredients = getExcludedIngredientsForReligiousDiet(
-        dietaryProfile?.restrictions || [],
-      );
-
       const data = await spoonacularService.searchRecipes({
         query: searchQuery,
         number: 10,
@@ -288,12 +284,7 @@ export const RecipeSearch: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [
-    searchQuery,
-    activeFilters,
-    dietaryProfile,
-    getExcludedIngredientsForReligiousDiet,
-  ]);
+  }, [searchQuery, activeFilters, excludedIngredients]);
 
   // Auto-trigger search if initialQuery is provided
   useEffect(() => {
@@ -320,11 +311,6 @@ export const RecipeSearch: React.FC = () => {
     ingredientSheetRef.current?.dismiss();
 
     try {
-      // Get excluded ingredients for Halal/Kosher restrictions
-      const excludedIngredients = getExcludedIngredientsForReligiousDiet(
-        dietaryProfile?.restrictions || [],
-      );
-
       const results = await spoonacularService.searchRecipesByIngredients({
         ingredients: ingredientString,
         number: 10,
@@ -366,12 +352,7 @@ export const RecipeSearch: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [
-    selectedIngredients,
-    activeFilters,
-    dietaryProfile,
-    getExcludedIngredientsForReligiousDiet,
-  ]);
+  }, [selectedIngredients, activeFilters, excludedIngredients]);
 
   // Open ingredient selector
   const openIngredientSelector = useCallback(() => {
@@ -441,60 +422,20 @@ export const RecipeSearch: React.FC = () => {
   }, [activeFilters]);
 
   // Transform results to list items with unified display
+  // PERFORMANCE: Use optimized transform function to reduce object allocations
   const items = useMemo(() => {
     return searchResults.map(recipe => {
-      // Check if this is an ingredient-based search result
-      const hasIngredientData = 'usedIngredientCount' in recipe;
-      const recipeWithIngredients = hasIngredientData
-        ? (recipe as RecipeSearchResult)
-        : null;
-
-      // Build subtitle parts
-      const subtitleParts: string[] = [];
-
-      // Ingredient match info (ingredient search only)
-      if (recipeWithIngredients) {
-        const totalIngredients =
-          recipeWithIngredients.usedIngredientCount +
-          recipeWithIngredients.missedIngredientCount;
-        subtitleParts.push(
-          `${recipeWithIngredients.usedIngredientCount}/${totalIngredients} ingredients`,
-        );
-      }
-
-      // Cook time (both search types)
-      const textSearchRecipe = recipe as SearchRecipesResult;
-      if (textSearchRecipe.readyInMinutes) {
-        subtitleParts.push(`⏱ ${textSearchRecipe.readyInMinutes} min`);
-      }
-
-      // Servings (both search types)
-      if (textSearchRecipe.servings) {
-        subtitleParts.push(`${textSearchRecipe.servings} servings`);
-      }
-
-      // Build likes badge (both search types)
-      let badge;
-      const likes =
-        recipeWithIngredients?.likes ?? textSearchRecipe.aggregateLikes;
-      if (likes && likes > 0) {
-        badge = {
-          text: `❤️ ${likes}`,
-          variant: 'info' as const,
-        };
-      }
-
+      const transformed = transformRecipeForDisplay(recipe);
       return {
-        id: `spoonacular-${recipe.id}`,
-        title: recipe.title,
-        subtitle: subtitleParts.join(' • ') || 'From Spoonacular',
-        badge,
-        leftElement: recipe.image ? (
+        ...transformed,
+        leftElement: transformed.imageUrl ? (
           <View style={styles.imageContainer}>
-            <Image source={{ uri: recipe.image }} style={styles.leftImage} />
+            <Image
+              source={{ uri: transformed.imageUrl }}
+              style={styles.leftImage}
+            />
           </View>
         ) : undefined,
-        spoonacularId: recipe.id,
       };
     });
   }, [searchResults]);

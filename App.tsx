@@ -79,16 +79,28 @@ const App = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isHydrated]);
 
-  // PERFORMANCE: Lightweight theme-specific tracking - separate from heavy init
+  // PERFORMANCE: Track app launch once on hydration
   useEffect(() => {
     if (isHydrated && hydrationInitializedRef.current) {
-      // Track app launch with current theme (lightweight)
       Telemetry.trackEvent('app_launched', {
         theme,
         timestamp: new Date().toISOString(),
       });
     }
-  }, [isHydrated, theme]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isHydrated]); // Only track on hydration, not theme changes
+
+  // Track theme changes separately
+  const prevThemeRef = useRef(theme);
+  useEffect(() => {
+    if (isHydrated && prevThemeRef.current !== theme) {
+      Telemetry.trackEvent('theme_changed', {
+        from: prevThemeRef.current,
+        to: theme,
+      });
+      prevThemeRef.current = theme;
+    }
+  }, [theme, isHydrated]);
 
   useEffect(() => {
     const handleAppStateChange = (nextAppState: string) => {

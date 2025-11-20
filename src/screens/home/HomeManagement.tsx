@@ -427,6 +427,11 @@ export const HomeManagement: React.FC = () => {
             updateCellsBatchingPeriod={50}
             initialNumToRender={10}
             windowSize={5}
+            getItemLayout={(data, index) => ({
+              length: 128, // HomeCard height (~120px) + marginVertical (8px)
+              offset: 128 * index,
+              index,
+            })}
           />
         </Animated.View>
       </View>

@@ -896,6 +896,20 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
     };
   }, [setScannerProps, navigateTo, currentListId, items, lists.length]);
 
+  // PERFORMANCE: Memoize footer to prevent unnecessary re-renders
+  // Must be before early returns to satisfy React Hooks rules
+  const footerComponent = useMemo(
+    () => (
+      <PaginationFooter
+        isLoadingMore={isLoadingMore}
+        hasMore={hasMore}
+        loading={loading}
+        itemCount={items.length}
+      />
+    ),
+    [isLoadingMore, hasMore, loading, items.length],
+  );
+
   // If no lists exist at all
   if (lists.length === 0) {
     const noListsEmptyState = {
@@ -978,14 +992,7 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
           }}
           onEndReached={loadMore}
           onEndReachedThreshold={0.5}
-          ListFooterComponent={
-            <PaginationFooter
-              isLoadingMore={isLoadingMore}
-              hasMore={hasMore}
-              loading={loading}
-              itemCount={items.length}
-            />
-          }
+          ListFooterComponent={footerComponent}
         />
 
         <AnimatedItemSelector

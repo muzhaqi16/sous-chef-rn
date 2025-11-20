@@ -41,16 +41,30 @@ export function useAllPendingInvites(userId?: string) {
   const processedRef = useRef(false);
 
   // Query pending shopping list invites
-  const {data: shoppingListData} = useMyShoppingListInvitesQuery({
+  const {data: shoppingListData, error: shoppingListError} = useMyShoppingListInvitesQuery({
     skip: !userId,
     fetchPolicy: 'cache-and-network',
+    errorPolicy: 'all', // Return partial data on errors
   });
 
   // Query pending home invites
-  const {data: homeData} = useGetMyPendingInvitesQuery({
+  const {data: homeData, error: homeError} = useGetMyPendingInvitesQuery({
     skip: !userId,
     fetchPolicy: 'cache-and-network',
+    errorPolicy: 'all', // Return partial data on errors
   });
+
+  // Log partial errors in development
+  useEffect(() => {
+    if (__DEV__) {
+      if (shoppingListError) {
+        console.warn('⚠️ Partial error loading shopping list invites:', shoppingListError);
+      }
+      if (homeError) {
+        console.warn('⚠️ Partial error loading home invites:', homeError);
+      }
+    }
+  }, [shoppingListError, homeError]);
 
   // Process and add all pending invites to notification store
   useEffect(() => {

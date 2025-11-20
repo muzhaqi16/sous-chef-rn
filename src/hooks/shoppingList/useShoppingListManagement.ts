@@ -416,35 +416,10 @@ export function useShoppingListManagement(listId: string | undefined) {
         } as any,
       };
     },
-    // Explicit cache update for reliability (Pattern 5 from docs)
-    // While automatic normalization should work, explicit updates ensure consistency
-    update(cache, { data }, { variables }) {
-      if (!data?.toggleShoppingListItemPurchased || !variables) return;
-
-      try {
-        cache.modify({
-          id: cache.identify({
-            __typename: 'ShoppingListItem',
-            id: variables.id,
-          }),
-          fields: {
-            isPurchased() {
-              return variables.purchased;
-            },
-            updatedAt() {
-              return new Date().toISOString();
-            },
-          },
-        });
-
-        // PERFORMANCE: Removed cache.evict() and cache.gc() which caused 5-6 second delay
-        // The cache.modify() above is sufficient - Apollo's normalization handles updates
-        // automatically and the optimistic response provides instant UI feedback
-      } catch (error) {
-        console.warn('Cache update failed for togglePurchased:', error);
-        // Don't throw - automatic normalization should still work
-      }
-    },
+    // PERFORMANCE: Removed redundant update function
+    // The comprehensive optimisticResponse (lines 361-418) provides instant UI feedback
+    // Apollo's automatic normalization merges the server response into the cache
+    // No manual cache.modify needed - this was causing unnecessary complexity
     onCompleted: (data) => {
       // Clear optimistic data after successful sync
       if (data?.toggleShoppingListItemPurchased) {
