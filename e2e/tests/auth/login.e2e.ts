@@ -9,22 +9,32 @@
  * - Navigation flows
  */
 
-import { LoginScreen, ShoppingListScreen } from '../../screens';
+import { launchAppWithFabricWorkaround } from '../../init';
+import { LandingAuthScreen, LoginScreen, PantryScreen } from '../../screens';
 import { TEST_USER, ERROR_MESSAGES } from '../../fixtures/testData';
 
 describe('Login Flow', () => {
+  const landingScreen = new LandingAuthScreen();
   const loginScreen = new LoginScreen();
-  const shoppingListScreen = new ShoppingListScreen();
+  const pantryScreen = new PantryScreen();
 
   beforeAll(async () => {
-    await device.launchApp({
+    await launchAppWithFabricWorkaround({
       newInstance: true,
       permissions: { notifications: 'YES' },
     });
   });
 
   beforeEach(async () => {
-    await device.reloadReactNative();
+    // Reinstall app to clear auth state and start fresh
+    await launchAppWithFabricWorkaround({
+      newInstance: true,
+      delete: true, // Clear all app data including logged-in user
+    });
+
+    // Navigate from landing screen to login form
+    await landingScreen.waitForScreen();
+    await landingScreen.tapLogin();
     await loginScreen.waitForScreen();
   });
 
@@ -38,27 +48,27 @@ describe('Login Flow', () => {
       await loginScreen.enterPassword(TEST_USER.password);
       await loginScreen.submit();
 
-      // Assert - should navigate to shopping list screen
-      await shoppingListScreen.waitForScreen(10000);
-      await shoppingListScreen.expectScreenVisible();
+      // Assert - should navigate to pantry screen (first tab after login)
+      await pantryScreen.waitForScreen(10000);
+      await pantryScreen.expectScreenVisible();
     });
 
     it('should login using quick helper method', async () => {
       // Act - use helper method
       await loginScreen.loginAsTestUser();
 
-      // Assert - should be logged in
-      await shoppingListScreen.waitForScreen(10000);
-      await shoppingListScreen.expectScreenVisible();
+      // Assert - should be logged in and on pantry screen
+      await pantryScreen.waitForScreen(10000);
+      await pantryScreen.expectScreenVisible();
     });
 
     it('should login and wait for home screen', async () => {
       // Act - complete login flow
       await loginScreen.loginAndWaitForHome(TEST_USER.email, TEST_USER.password);
 
-      // Assert - login screen should be gone
+      // Assert - login screen should be gone, should be on pantry
       await loginScreen.expectNotVisible(loginScreen['screenID']);
-      await shoppingListScreen.expectScreenVisible();
+      await pantryScreen.expectScreenVisible();
     });
 
     it('should show loading indicator during login', async () => {
@@ -78,8 +88,8 @@ describe('Login Flow', () => {
         console.log('Loading finished too quickly to verify');
       }
 
-      // Should eventually navigate to home
-      await shoppingListScreen.waitForScreen(10000);
+      // Should eventually navigate to pantry screen
+      await pantryScreen.waitForScreen(10000);
     });
   });
 
@@ -226,8 +236,8 @@ describe('Login Flow', () => {
 
       // Keyboard should be dismissed
       // This is handled in the submit() method
-      // If successful, should navigate
-      await shoppingListScreen.waitForScreen(10000);
+      // If successful, should navigate to pantry
+      await pantryScreen.waitForScreen(10000);
     });
   });
 
@@ -240,8 +250,8 @@ describe('Login Flow', () => {
 
       // Second attempt - success
       await loginScreen.loginWith(TEST_USER.email, TEST_USER.password);
-      await shoppingListScreen.waitForScreen(10000);
-      await shoppingListScreen.expectScreenVisible();
+      await pantryScreen.waitForScreen(10000);
+      await pantryScreen.expectScreenVisible();
     });
 
     it('should clear error message when editing fields', async () => {
@@ -279,7 +289,7 @@ describe('Login Flow', () => {
       }
 
       // Should complete eventually
-      await shoppingListScreen.waitForScreen(10000);
+      await pantryScreen.waitForScreen(10000);
     });
 
     it('should hide loading indicator after login completes', async () => {

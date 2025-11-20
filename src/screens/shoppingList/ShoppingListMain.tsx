@@ -959,7 +959,7 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
       onIncrementQuantity={handleIncrementQuantity}
       onDecrementQuantity={handleDecrementQuantity}
     >
-      <View style={styles.container}>
+      <View style={styles.container} testID="shopping-list-screen">
         <ListTemplate
           items={sortableItems}
           loading={isLoadingInitial}

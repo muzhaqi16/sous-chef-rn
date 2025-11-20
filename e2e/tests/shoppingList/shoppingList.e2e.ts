@@ -10,6 +10,7 @@
  * - List operations
  */
 
+import { launchAppWithFabricWorkaround } from '../../init';
 import { LoginScreen, ShoppingListScreen } from '../../screens';
 import { TEST_USER, TEST_SHOPPING_ITEMS } from '../../fixtures/testData';
 
@@ -18,7 +19,7 @@ describe('Shopping List', () => {
   const shoppingListScreen = new ShoppingListScreen();
 
   beforeAll(async () => {
-    await device.launchApp({
+    await launchAppWithFabricWorkaround({
       newInstance: true,
       permissions: { notifications: 'YES' },
     });

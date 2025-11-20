@@ -9,6 +9,7 @@
  * - Swipe gestures
  */
 
+import { launchAppWithFabricWorkaround } from '../../init';
 import { OnboardingScreen, LoginScreen } from '../../screens';
 
 describe('Onboarding Flow', () => {
@@ -19,7 +20,7 @@ describe('Onboarding Flow', () => {
   const TOTAL_PAGES = 3;
 
   beforeAll(async () => {
-    await device.launchApp({
+    await launchAppWithFabricWorkaround({
       newInstance: true,
       permissions: { notifications: 'YES' },
       delete: true, // Clear app data to trigger onboarding
@@ -28,7 +29,7 @@ describe('Onboarding Flow', () => {
 
   beforeEach(async () => {
     // Reinstall to see onboarding each time
-    await device.launchApp({
+    await launchAppWithFabricWorkaround({
       newInstance: true,
       delete: true,
     });
@@ -258,7 +259,7 @@ describe('Onboarding Flow', () => {
       await loginScreen.waitForScreen(5000);
 
       // Act - restart app
-      await device.launchApp({ newInstance: true });
+      await launchAppWithFabricWorkaround({ newInstance: true });
 
       // Assert - should go straight to login (not onboarding)
       try {

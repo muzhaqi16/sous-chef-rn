@@ -12,29 +12,29 @@ module.exports = {
   apps: {
     'ios.debug': {
       type: 'ios.app',
-      binaryPath: 'ios/build/Build/Products/Debug-iphonesimulator/SousChef.app',
+      binaryPath: 'ios/build/Build/Products/Debug-iphonesimulator/SousChefRN.app',
       build:
-        'xcodebuild -workspace ios/SousChef.xcworkspace -scheme SousChef -configuration Debug -sdk iphonesimulator -derivedDataPath ios/build',
+        'xcodebuild -workspace ios/SousChefRN.xcworkspace -scheme SousChefRN -configuration Debug -sdk iphonesimulator -derivedDataPath ios/build',
     },
     'ios.release': {
       type: 'ios.app',
       binaryPath:
-        'ios/build/Build/Products/Release-iphonesimulator/SousChef.app',
+        'ios/build/Build/Products/Release-iphonesimulator/SousChefRN.app',
       build:
-        'xcodebuild -workspace ios/SousChef.xcworkspace -scheme SousChef -configuration Release -sdk iphonesimulator -derivedDataPath ios/build',
+        'xcodebuild -workspace ios/SousChefRN.xcworkspace -scheme SousChefRN -configuration Release -sdk iphonesimulator -derivedDataPath ios/build',
     },
     'android.debug': {
       type: 'android.apk',
       binaryPath: 'android/app/build/outputs/apk/debug/app-debug.apk',
       build:
         'cd android && ./gradlew assembleDebug assembleAndroidTest -DtestBuildType=debug',
-      reversePorts: [8081],
     },
     'android.release': {
       type: 'android.apk',
-      binaryPath: 'android/app/build/outputs/apk/release/app-release.apk',
+      binaryPath: 'android/app/build/outputs/apk/release/app-universal-release.apk',
+      testBinaryPath: 'android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk',
       build:
-        'cd android && ./gradlew assembleRelease assembleAndroidTest -DtestBuildType=release',
+        'cd android && ./gradlew assembleRelease :app:assembleDebugAndroidTest',
     },
   },
   devices: {
@@ -53,7 +53,7 @@ module.exports = {
     emulator: {
       type: 'android.emulator',
       device: {
-        avdName: 'Pixel_7_API_36',
+        avdName: 'Pixel_7a_PennyHarmonRt77478',
       },
     },
   },

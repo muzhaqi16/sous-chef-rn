@@ -11,6 +11,7 @@
  * - Barcode scanning
  */
 
+import { launchAppWithFabricWorkaround } from '../../init';
 import { LoginScreen, PantryScreen } from '../../screens';
 import { TEST_USER, TEST_PANTRY_ITEMS, generateFutureDate, generatePastDate } from '../../fixtures/testData';
 
@@ -19,7 +20,7 @@ describe('Pantry Management', () => {
   const pantryScreen = new PantryScreen();
 
   beforeAll(async () => {
-    await device.launchApp({
+    await launchAppWithFabricWorkaround({
       newInstance: true,
       permissions: { notifications: 'YES', camera: 'YES' },
     });

@@ -14,6 +14,7 @@
  */
 
 export { BaseScreen } from './BaseScreen';
+export { LandingAuthScreen } from './LandingAuthScreen';
 export { LoginScreen } from './LoginScreen';
 export { ShoppingListScreen } from './ShoppingListScreen';
 export { PantryScreen } from './PantryScreen';

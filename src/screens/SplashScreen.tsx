@@ -5,7 +5,7 @@ import Loader from '../components/atoms/Loader';
 
 export const SplashScreen = () => {
   return (
-    <View style={styles.container}>
+    <View style={styles.container} testID="splash-screen">
       <View style={styles.imageWrapper}>
         <Image
           source={require('../assets/images/logo.png')}
