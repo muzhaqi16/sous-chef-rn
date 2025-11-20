@@ -120,8 +120,8 @@ android {
         }
         release {
             manifestPlaceholders = [usesCleartextTraffic: "false"]
-            // For E2E testing, use debug signing config temporarily
-            signingConfig signingConfigs.debug
+            // Use release signing config for production builds
+            signingConfig signingConfigs.release
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro", "${rootProject.projectDir}/../node_modules/detox/android/detox/proguard-rules-app.pro"
             resValue "string", "build_config_package", "dev.souschef.app"
