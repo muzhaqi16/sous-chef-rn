@@ -255,7 +255,7 @@ export const HomeManagement: React.FC = () => {
   // Once we have data, show it immediately even if refetching
   if (initialLoading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={commonStyles.loadingContainer}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
       </View>
     );
@@ -263,9 +263,9 @@ export const HomeManagement: React.FC = () => {
 
   return (
     <>
-      <View style={styles.container}>
+      <View style={commonStyles.container}>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={commonStyles.header}>
           <TouchableOpacity onPress={goBack}>
             <Icon
               name="arrow-back"
@@ -273,7 +273,7 @@ export const HomeManagement: React.FC = () => {
               color={theme.colors.textPrimary}
             />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>My Homes</Text>
+          <Text style={commonStyles.headerTitle}>My Homes</Text>
           <TouchableOpacity onPress={() => setShowCreateForm(true)}>
             <Icon name="add" size={24} color={theme.colors.primary} />
           </TouchableOpacity>
@@ -290,7 +290,7 @@ export const HomeManagement: React.FC = () => {
         {showCreateForm && (
           <Animated.View
             {...formAnimationPreset}
-            style={[commonStyles.shadow, styles.formContainer]}
+            style={[commonStyles.cardWithShadow, styles.formContainer]}
           >
             {/* Mode Switcher */}
             <View style={styles.modeSwitcher}>
@@ -347,7 +347,7 @@ export const HomeManagement: React.FC = () => {
                 <View style={styles.inputContainer}>
                   <Text style={styles.inputLabel}>Join Code</Text>
                   <TextInput
-                    style={styles.textInput}
+                    style={[commonStyles.input, styles.textInput]}
                     placeholder="Enter code here..."
                     placeholderTextColor={theme.colors.textSecondary}
                     value={joinCode}
@@ -441,38 +441,12 @@ export const HomeManagement: React.FC = () => {
 };
 
 const styles = StyleSheet.create(theme => ({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: theme.colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: theme.colors.textPrimary,
-  },
   scrollView: {
     flex: 1,
   },
   formContainer: {
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.background,
     marginHorizontal: theme.spacing.md,
     marginBottom: theme.spacing.sm,
-    borderRadius: theme.radii.lg,
   },
   modeSwitcher: {
     flexDirection: 'row',
@@ -492,8 +466,8 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.primary,
   },
   modeButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: theme.fonts.size.sm,
+    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textSecondary,
   },
   modeButtonTextActive: {
@@ -503,12 +477,12 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.md,
   },
   joinFormTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: theme.fonts.size.lg,
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
   },
   joinFormSubtitle: {
-    fontSize: 14,
+    fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
     marginTop: -theme.spacing.sm,
   },
@@ -516,18 +490,12 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.sm,
   },
   inputLabel: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: theme.fonts.size.sm,
+    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
   },
   textInput: {
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radii.md,
-    padding: theme.spacing.md,
-    fontSize: 16,
-    color: theme.colors.textPrimary,
-    backgroundColor: theme.colors.surface,
+    textTransform: 'uppercase',
   },
   previewLoader: {
     marginVertical: theme.spacing.sm,
@@ -539,16 +507,16 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.xs,
   },
   previewTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: theme.fonts.size.lg,
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
   },
   previewSubtitle: {
-    fontSize: 14,
+    fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
   },
   previewDescription: {
-    fontSize: 14,
+    fontSize: theme.fonts.size.sm,
     color: theme.colors.textPrimary,
     marginTop: theme.spacing.xs,
   },
@@ -569,16 +537,16 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surfaceVariant,
   },
   cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
+    fontSize: theme.fonts.size.md,
+    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
   },
   submitButton: {
     backgroundColor: theme.colors.primary,
   },
   submitButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
+    fontSize: theme.fonts.size.md,
+    fontWeight: theme.fonts.weight.medium,
     color: theme.colors.white,
   },
   buttonDisabled: {
