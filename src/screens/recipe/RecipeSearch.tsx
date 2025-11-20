@@ -42,6 +42,38 @@ type RecipeSearchRouteProp = RouteProp<
   'RecipeSearch'
 >;
 
+const INGREDIENT_ITEM_HEIGHT = 56;
+
+const IngredientItem = React.memo(
+  ({
+    name,
+    selected,
+    onToggle,
+    primaryColor,
+    textSecondary,
+  }: {
+    name: string;
+    selected: boolean;
+    onToggle: (name: string) => void;
+    primaryColor: string;
+    textSecondary: string;
+  }) => {
+    const handlePress = useCallback(() => onToggle(name), [name, onToggle]);
+
+    return (
+      <TouchableOpacity style={styles.ingredientItem} onPress={handlePress}>
+        <Ionicons
+          name={selected ? 'checkbox' : 'square-outline'}
+          size={24}
+          color={selected ? primaryColor : textSecondary}
+        />
+        <Text style={styles.ingredientText}>{name}</Text>
+      </TouchableOpacity>
+    );
+  },
+);
+IngredientItem.displayName = 'IngredientItem';
+
 // Wrapper component that shows skeleton screens during loading
 const RecipeSearchContent: React.FC<{
   items: any[];
@@ -440,6 +472,29 @@ export const RecipeSearch: React.FC = () => {
     });
   }, [searchResults]);
 
+  const ingredientKeyExtractor = useCallback((item: any) => item.id, []);
+
+  const renderIngredientItem = useCallback(
+    ({ item }: { item: any }) => {
+      const itemName = item.item?.name || item.itemName || '';
+      return (
+        <IngredientItem
+          name={itemName}
+          selected={selectedIngredients.has(itemName)}
+          onToggle={toggleIngredient}
+          primaryColor={theme.colors.primary}
+          textSecondary={theme.colors.textSecondary}
+        />
+      );
+    },
+    [
+      selectedIngredients,
+      toggleIngredient,
+      theme.colors.primary,
+      theme.colors.textSecondary,
+    ],
+  );
+
   const handleItemPress = useCallback(
     (id: string) => {
       const item = items.find(i => i.id === id);
@@ -559,29 +614,16 @@ export const RecipeSearch: React.FC = () => {
       >
         <FlatList
           data={pantryItems}
-          keyExtractor={item => item.id}
-          renderItem={({ item }) => {
-            const itemName = item.item?.name || item.itemName || '';
-            const isSelected = selectedIngredients.has(itemName);
-
-            return (
-              <TouchableOpacity
-                style={styles.ingredientItem}
-                onPress={() => toggleIngredient(itemName)}
-              >
-                <Ionicons
-                  name={isSelected ? 'checkbox' : 'square-outline'}
-                  size={24}
-                  color={
-                    isSelected
-                      ? theme.colors.primary
-                      : theme.colors.textSecondary
-                  }
-                />
-                <Text style={styles.ingredientText}>{itemName}</Text>
-              </TouchableOpacity>
-            );
-          }}
+          keyExtractor={ingredientKeyExtractor}
+          renderItem={renderIngredientItem}
+          getItemLayout={(_data, index) => ({
+            length: INGREDIENT_ITEM_HEIGHT,
+            offset: INGREDIENT_ITEM_HEIGHT * index,
+            index,
+          })}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          removeClippedSubviews
           ListEmptyComponent={
             <Text style={styles.emptyText}>No pantry items available</Text>
           }

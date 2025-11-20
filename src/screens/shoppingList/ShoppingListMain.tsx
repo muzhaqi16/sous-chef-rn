@@ -8,6 +8,7 @@ import React, {
   startTransition,
 } from 'react';
 import { Alert, View, Text, TouchableOpacity } from 'react-native';
+import type { Swipeable } from 'react-native-gesture-handler';
 import { PaginationFooter } from '#/components/organisms/PaginationFooter';
 import { useApolloClient } from '@apollo/client/react';
 import { useAppNavigation } from '#hooks';
@@ -94,7 +95,7 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
     });
 
   // Track currently open swipeable across both unpurchased and purchased lists
-  const openSwipeableRef = useRef<any>(null);
+  const openSwipeableRef = useRef<React.RefObject<Swipeable> | null>(null);
   const [moveItem] = useMoveShoppingListItemMutation({
     errorPolicy: 'all',
     // Optimistic response for instant UI feedback
@@ -794,14 +795,17 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
   }, [refetchItems]);
 
   // Handle swipeable item opening - ensure only one item is open at a time across both lists
-  const handleSwipeableWillOpen = useCallback((ref: any) => {
+  const handleSwipeableWillOpen = useCallback(
+    (ref: React.RefObject<Swipeable>) => {
     if (openSwipeableRef.current && openSwipeableRef.current !== ref) {
       // Close the previously open swipeable
       openSwipeableRef.current.current?.close();
     }
     // Update to track the newly opening swipeable
     openSwipeableRef.current = ref;
-  }, []);
+  },
+    [],
+  );
 
   // Handle swipeable item closing - clear the reference
   const handleSwipeableClose = useCallback(() => {

@@ -6,6 +6,7 @@ import React, {
   useState,
 } from 'react';
 import { Alert, View } from 'react-native';
+import type { Swipeable } from 'react-native-gesture-handler';
 import { PaginationFooter } from '#/components/organisms/PaginationFooter';
 import { useAppNavigation } from '#hooks';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
@@ -65,7 +66,7 @@ const PantryMainScreen: React.FC = React.memo(() => {
   // PERFORMANCE: Use grouped selector with useShallow to prevent infinite loops (Zustand v5)
   const { selectedPantryId, setSelectedPantryId } = useAppStore(useShallow(selectPantryState));
   const selectorRef = useRef<ItemSelectorRef>(null);
-  const openSwipeableRef = useRef<any>(null);
+  const openSwipeableRef = useRef<React.RefObject<Swipeable> | null>(null);
 
   // Consume item state
   const [consumeModalVisible, setConsumeModalVisible] = useState(false);
@@ -311,14 +312,17 @@ const PantryMainScreen: React.FC = React.memo(() => {
   }, []);
 
   // Handle swipeable item opening - ensure only one item is open at a time
-  const handleSwipeableWillOpen = useCallback((ref: any) => {
+  const handleSwipeableWillOpen = useCallback(
+    (ref: React.RefObject<Swipeable>) => {
     if (openSwipeableRef.current && openSwipeableRef.current !== ref) {
       // Close the previously open swipeable
       openSwipeableRef.current.current?.close();
     }
     // Update to track the newly opening swipeable
     openSwipeableRef.current = ref;
-  }, []);
+  },
+    [],
+  );
 
   // Refetch pantry items when switching between pantries
   const prevPantryIdRef = useRef<string | undefined>(pantry?.id);
