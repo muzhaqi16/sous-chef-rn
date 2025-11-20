@@ -15,8 +15,6 @@
       "#config": ["./src/config"],
       "#context": ["./src/context"],
       "#context/*": ["./src/context/*"],
-      "#contexts": ["src/context"],
-      "#contexts/*": ["src/context/*"],
       "#generated": ["./src/graphql/generated"],
       "#graphql": ["./src/graphql"],
       "#hooks": ["./src/hooks"],

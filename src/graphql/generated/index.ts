@@ -1503,6 +1503,10 @@ export enum HealthGoal {
   SugarFree = 'SUGAR_FREE',
 }
 
+/**
+ * Home/household for managing pantries and shopping lists
+ * Cache: 5 minutes - metadata changes occasionally
+ */
 export type Home = {
   __typename?: 'Home';
   allowJoinCode: Scalars['Boolean']['output'];
@@ -1527,6 +1531,10 @@ export type Home = {
   version: Scalars['Int']['output'];
 };
 
+/**
+ * Home/household for managing pantries and shopping lists
+ * Cache: 5 minutes - metadata changes occasionally
+ */
 export type HomeInvitesConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
@@ -1534,6 +1542,10 @@ export type HomeInvitesConnectionArgs = {
   last?: InputMaybe<Scalars['Int']['input']>;
 };
 
+/**
+ * Home/household for managing pantries and shopping lists
+ * Cache: 5 minutes - metadata changes occasionally
+ */
 export type HomeMembersConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
@@ -1541,6 +1553,10 @@ export type HomeMembersConnectionArgs = {
   last?: InputMaybe<Scalars['Int']['input']>;
 };
 
+/**
+ * Home/household for managing pantries and shopping lists
+ * Cache: 5 minutes - metadata changes occasionally
+ */
 export type HomePantriesConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
@@ -2368,6 +2384,10 @@ export enum MatchType {
   Partial = 'PARTIAL',
 }
 
+/**
+ * Meal plan for organizing meals over a period
+ * Cache: 5 minutes - plans change occasionally
+ */
 export type MealPlan = {
   __typename?: 'MealPlan';
   actualCost: Scalars['Float']['output'];
@@ -2388,6 +2408,10 @@ export type MealPlan = {
   version: Scalars['Int']['output'];
 };
 
+/**
+ * Meal plan item linking recipes to meals
+ * Cache: 5 minutes - meal plans change occasionally
+ */
 export type MealPlanItem = {
   __typename?: 'MealPlanItem';
   actualCost: Maybe<Scalars['Float']['output']>;
@@ -4331,6 +4355,10 @@ export type PaginationInput = {
   take?: InputMaybe<Scalars['Int']['input']>;
 };
 
+/**
+ * Pantry/storage location for a home
+ * Cache: 5 minutes - updated when items added/removed
+ */
 export type Pantry = {
   __typename?: 'Pantry';
   createdAt: Scalars['DateTime']['output'];
@@ -4351,6 +4379,10 @@ export type Pantry = {
   version: Scalars['Int']['output'];
 };
 
+/**
+ * Pantry/storage location for a home
+ * Cache: 5 minutes - updated when items added/removed
+ */
 export type PantryItemsConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
@@ -4359,6 +4391,10 @@ export type PantryItemsConnectionArgs = {
   orderBy?: InputMaybe<PantryItemOrderBy>;
 };
 
+/**
+ * Pantry/storage location for a home
+ * Cache: 5 minutes - updated when items added/removed
+ */
 export type PantryStorageLocationsConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
@@ -4854,6 +4890,7 @@ export type Query = {
   currencies: Array<Currency>;
   currency: Maybe<Currency>;
   currencyByCode: Maybe<Currency>;
+  defaultPantry: Maybe<Pantry>;
   defaultShoppingList: Maybe<ShoppingList>;
   device: Maybe<Device>;
   deviceByDeviceId: Maybe<Device>;
@@ -5052,8 +5089,6 @@ export type QueryBrandArgs = {
 };
 
 export type QueryBrandsArgs = {
-  country?: InputMaybe<Scalars['String']['input']>;
-  isActive?: InputMaybe<Scalars['Boolean']['input']>;
   parentId?: InputMaybe<Scalars['String']['input']>;
   search?: InputMaybe<Scalars['String']['input']>;
   skip?: InputMaybe<Scalars['Int']['input']>;
@@ -5122,6 +5157,10 @@ export type QueryCurrencyArgs = {
 
 export type QueryCurrencyByCodeArgs = {
   code: Scalars['String']['input'];
+};
+
+export type QueryDefaultPantryArgs = {
+  homeId: Scalars['ID']['input'];
 };
 
 export type QueryDeviceArgs = {
@@ -6081,6 +6120,10 @@ export type ShareShoppingListInput = {
   shareCode?: InputMaybe<Scalars['String']['input']>;
 };
 
+/**
+ * Shopping list for a home
+ * Cache: 1 minute - frequently updated by collaborators
+ */
 export type ShoppingList = {
   __typename?: 'ShoppingList';
   /** @deprecated Use activitiesConnection for pagination to reduce query complexity */
@@ -6145,6 +6188,10 @@ export type ShoppingList = {
   viewCount: Scalars['Int']['output'];
 };
 
+/**
+ * Shopping list for a home
+ * Cache: 1 minute - frequently updated by collaborators
+ */
 export type ShoppingListActivitiesConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
@@ -6153,6 +6200,10 @@ export type ShoppingListActivitiesConnectionArgs = {
   orderBy?: InputMaybe<ShoppingListActivityOrderBy>;
 };
 
+/**
+ * Shopping list for a home
+ * Cache: 1 minute - frequently updated by collaborators
+ */
 export type ShoppingListCollaboratorsConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
@@ -6161,6 +6212,10 @@ export type ShoppingListCollaboratorsConnectionArgs = {
   orderBy?: InputMaybe<CollaboratorOrderBy>;
 };
 
+/**
+ * Shopping list for a home
+ * Cache: 1 minute - frequently updated by collaborators
+ */
 export type ShoppingListItemsConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
@@ -10694,12 +10749,14 @@ export type ItemBySkuQuery = {
 export type GetOnboardingItemsQueryVariables = Exact<{
   filters?: InputMaybe<ItemFilters>;
   sort?: InputMaybe<ItemSortInput>;
+  pagination?: InputMaybe<PaginationInput>;
 }>;
 
 export type GetOnboardingItemsQuery = {
   __typename?: 'Query';
   items: {
     __typename?: 'ItemsResponse';
+    totalCount: number;
     items:
       | Array<{
           __typename?: 'Item';
@@ -11209,6 +11266,18 @@ export type GetPantryItemQuery = {
   pantryItem: { __typename?: 'PantryItem' } & PantryItemFragment;
 };
 
+export type GetDefaultPantryQueryVariables = Exact<{
+  homeId: Scalars['ID']['input'];
+}>;
+
+export type GetDefaultPantryQuery = {
+  __typename?: 'Query';
+  defaultPantry:
+    | { __typename?: 'Pantry'; id: string; name: string; isDefault: boolean }
+    | null
+    | undefined;
+};
+
 export type CreatePantryMutationVariables = Exact<{
   input: CreatePantryInput;
 }>;
@@ -11263,6 +11332,21 @@ export type DeletePantryMutationVariables = Exact<{
 export type DeletePantryMutation = {
   __typename?: 'Mutation';
   deletePantry: boolean;
+};
+
+export type SetDefaultPantryMutationVariables = Exact<{
+  pantryId: Scalars['ID']['input'];
+}>;
+
+export type SetDefaultPantryMutation = {
+  __typename?: 'Mutation';
+  setDefaultPantry: {
+    __typename?: 'Pantry';
+    id: string;
+    name: string;
+    isDefault: boolean;
+    homeId: string;
+  };
 };
 
 export type CreatePantryItemMutationVariables = Exact<{
@@ -11429,7 +11513,6 @@ export type PantryUpdatedSubscription = {
           metadata: any | null | undefined;
           version: number;
           updatedAt: string;
-          home: { __typename?: 'Home'; id: string; name: string };
         }
       | null
       | undefined;
@@ -35790,6 +35873,17 @@ export const GetOnboardingItemsDocument = {
             name: { kind: 'Name', value: 'ItemSortInput' },
           },
         },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'pagination' },
+          },
+          type: {
+            kind: 'NamedType',
+            name: { kind: 'Name', value: 'PaginationInput' },
+          },
+        },
       ],
       selectionSet: {
         kind: 'SelectionSet',
@@ -35812,6 +35906,14 @@ export const GetOnboardingItemsDocument = {
                 value: {
                   kind: 'Variable',
                   name: { kind: 'Name', value: 'sort' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'pagination' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'pagination' },
                 },
               },
             ],
@@ -35854,6 +35956,7 @@ export const GetOnboardingItemsDocument = {
                     ],
                   },
                 },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalCount' } },
               ],
             },
           },
@@ -35877,6 +35980,7 @@ export const GetOnboardingItemsDocument = {
  *   variables: {
  *      filters: // value for 'filters'
  *      sort: // value for 'sort'
+ *      pagination: // value for 'pagination'
  *   },
  * });
  */
@@ -36229,11 +36333,6 @@ export const SearchBrandsDocument = {
                   kind: 'Variable',
                   name: { kind: 'Name', value: 'limit' },
                 },
-              },
-              {
-                kind: 'Argument',
-                name: { kind: 'Name', value: 'isActive' },
-                value: { kind: 'BooleanValue', value: true },
               },
             ],
             selectionSet: {
@@ -40601,6 +40700,136 @@ export function refetchGetPantryItemQuery(
 ) {
   return { query: GetPantryItemDocument, variables: variables };
 }
+export const GetDefaultPantryDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'query',
+      name: { kind: 'Name', value: 'GetDefaultPantry' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'homeId' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'defaultPantry' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'homeId' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'homeId' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'isDefault' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+
+/**
+ * __useGetDefaultPantryQuery__
+ *
+ * To run a query within a React component, call `useGetDefaultPantryQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetDefaultPantryQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetDefaultPantryQuery({
+ *   variables: {
+ *      homeId: // value for 'homeId'
+ *   },
+ * });
+ */
+export function useGetDefaultPantryQuery(
+  baseOptions: ApolloReactHooks.QueryHookOptions<
+    GetDefaultPantryQuery,
+    GetDefaultPantryQueryVariables
+  > &
+    (
+      | { variables: GetDefaultPantryQueryVariables; skip?: boolean }
+      | { skip: boolean }
+    ),
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useQuery<
+    GetDefaultPantryQuery,
+    GetDefaultPantryQueryVariables
+  >(GetDefaultPantryDocument, options);
+}
+export function useGetDefaultPantryLazyQuery(
+  baseOptions?: ApolloReactHooks.LazyQueryHookOptions<
+    GetDefaultPantryQuery,
+    GetDefaultPantryQueryVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useLazyQuery<
+    GetDefaultPantryQuery,
+    GetDefaultPantryQueryVariables
+  >(GetDefaultPantryDocument, options);
+}
+export function useGetDefaultPantrySuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetDefaultPantryQuery,
+        GetDefaultPantryQueryVariables
+      >,
+) {
+  const options =
+    baseOptions === ApolloReactHooks.skipToken
+      ? baseOptions
+      : { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useSuspenseQuery<
+    GetDefaultPantryQuery,
+    GetDefaultPantryQueryVariables
+  >(GetDefaultPantryDocument, options);
+}
+export type GetDefaultPantryQueryHookResult = ReturnType<
+  typeof useGetDefaultPantryQuery
+>;
+export type GetDefaultPantryLazyQueryHookResult = ReturnType<
+  typeof useGetDefaultPantryLazyQuery
+>;
+export type GetDefaultPantrySuspenseQueryHookResult = ReturnType<
+  typeof useGetDefaultPantrySuspenseQuery
+>;
+export type GetDefaultPantryQueryResult = ApolloReactCommon.QueryResult<
+  GetDefaultPantryQuery,
+  GetDefaultPantryQueryVariables
+>;
+export function refetchGetDefaultPantryQuery(
+  variables: GetDefaultPantryQueryVariables,
+) {
+  return { query: GetDefaultPantryDocument, variables: variables };
+}
 export const CreatePantryDocument = {
   kind: 'Document',
   definitions: [
@@ -40910,6 +41139,101 @@ export type DeletePantryMutationOptions = ApolloReactCommon.BaseMutationOptions<
   DeletePantryMutation,
   DeletePantryMutationVariables
 >;
+export const SetDefaultPantryDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'mutation',
+      name: { kind: 'Name', value: 'SetDefaultPantry' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'pantryId' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'setDefaultPantry' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'id' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'pantryId' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'isDefault' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'homeId' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+export type SetDefaultPantryMutationFn = ApolloReactCommon.MutationFunction<
+  SetDefaultPantryMutation,
+  SetDefaultPantryMutationVariables
+>;
+
+/**
+ * __useSetDefaultPantryMutation__
+ *
+ * To run a mutation, you first call `useSetDefaultPantryMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useSetDefaultPantryMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [setDefaultPantryMutation, { data, loading, error }] = useSetDefaultPantryMutation({
+ *   variables: {
+ *      pantryId: // value for 'pantryId'
+ *   },
+ * });
+ */
+export function useSetDefaultPantryMutation(
+  baseOptions?: ApolloReactHooks.MutationHookOptions<
+    SetDefaultPantryMutation,
+    SetDefaultPantryMutationVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useMutation<
+    SetDefaultPantryMutation,
+    SetDefaultPantryMutationVariables
+  >(SetDefaultPantryDocument, options);
+}
+export type SetDefaultPantryMutationHookResult = ReturnType<
+  typeof useSetDefaultPantryMutation
+>;
+export type SetDefaultPantryMutationResult =
+  ApolloReactCommon.MutationResult<SetDefaultPantryMutation>;
+export type SetDefaultPantryMutationOptions =
+  ApolloReactCommon.BaseMutationOptions<
+    SetDefaultPantryMutation,
+    SetDefaultPantryMutationVariables
+  >;
 export const CreatePantryItemDocument = {
   kind: 'Document',
   definitions: [
@@ -45237,23 +45561,6 @@ export const PantryUpdatedDocument = {
                       {
                         kind: 'Field',
                         name: { kind: 'Name', value: 'updatedAt' },
-                      },
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'home' },
-                        selectionSet: {
-                          kind: 'SelectionSet',
-                          selections: [
-                            {
-                              kind: 'Field',
-                              name: { kind: 'Name', value: 'id' },
-                            },
-                            {
-                              kind: 'Field',
-                              name: { kind: 'Name', value: 'name' },
-                            },
-                          ],
-                        },
                       },
                     ],
                   },

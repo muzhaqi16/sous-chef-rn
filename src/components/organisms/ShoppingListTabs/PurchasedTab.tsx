@@ -1,9 +1,10 @@
-import React, { useCallback } from 'react';
-import { View, Text, TouchableOpacity, Alert } from 'react-native';
+import React, { useCallback, useMemo } from 'react';
+import { View, Text, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { SortableShoppingList } from '../SortableShoppingList';
 import type { SortableShoppingListItem } from '../SortableShoppingList';
 import { Icon } from '#utils';
+import { ShoppingListItemSkeleton } from '#components/base/Skeleton/ShoppingListItemSkeleton';
 
 interface PurchasedTabProps {
   items: SortableShoppingListItem[];
@@ -19,6 +20,7 @@ interface PurchasedTabProps {
     beforeSortOrder: string | null,
   ) => Promise<void>;
   onClearAll?: () => Promise<void>;
+  loading?: boolean;
   disabled?: boolean;
   isDragging?: boolean;
   onSwipeableWillOpen?: (ref: any) => void;
@@ -36,6 +38,7 @@ export const PurchasedTab: React.FC<PurchasedTabProps> = React.memo(
     onTogglePurchase,
     onSortOrderUpdate,
     onClearAll,
+    loading,
     disabled,
     isDragging,
     onSwipeableWillOpen,
@@ -44,6 +47,12 @@ export const PurchasedTab: React.FC<PurchasedTabProps> = React.memo(
     onDragRelease,
   }) => {
     const { theme } = useUnistyles();
+
+    // PERFORMANCE: Memoize inline styles to avoid object recreation on every render
+    const clearButtonStyle = useMemo(
+      () => [styles.clearButton, { backgroundColor: theme.colors.warning }],
+      [theme.colors.warning],
+    );
 
     const handleClearAll = useCallback(() => {
       if (items.length === 0) return;
@@ -66,6 +75,18 @@ export const PurchasedTab: React.FC<PurchasedTabProps> = React.memo(
         ],
       );
     }, [items.length, onClearAll]);
+
+    // Skeleton-first approach: Show skeletons whenever loading, regardless of cached items
+    // This ensures smooth UX when switching between lists
+    if (loading) {
+      return (
+        <ScrollView contentContainerStyle={{ padding: 16, gap: 8 }}>
+          {[1, 2, 3, 4, 5].map(key => (
+            <ShoppingListItemSkeleton key={key} />
+          ))}
+        </ScrollView>
+      );
+    }
 
     // Empty state for purchased tab
     if (items.length === 0) {
@@ -114,10 +135,7 @@ export const PurchasedTab: React.FC<PurchasedTabProps> = React.memo(
             onClearAll ? (
               <View style={styles.footer}>
                 <TouchableOpacity
-                  style={[
-                    styles.clearButton,
-                    { backgroundColor: theme.colors.warning },
-                  ]}
+                  style={clearButtonStyle}
                   onPress={handleClearAll}
                 >
                   <Icon

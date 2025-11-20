@@ -61,34 +61,41 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
 
   // Update local items when props change, but not during our own updates
   // OPTIMIZATION: Sync on structural changes (add/remove/reorder) or data changes (quantity)
+  // PERFORMANCE: Single-pass check for both structural and data changes
   useEffect(() => {
     if (!isUpdatingRef.current) {
-      // Check for structural changes: items added, removed, or reordered
-      const hasStructuralChange =
-        localItems.length !== items.length ||
-        localItems.some((item, idx) => item.id !== items[idx]?.id);
+      // Fast path: length change means structural change
+      if (localItems.length !== items.length) {
+        setLocalItems(items);
+        return;
+      }
 
-      // Check for data changes in quantity or other important fields
-      const hasDataChange = localItems.some((localItem, idx) => {
+      // Single-pass check for structural changes (reorder) OR data changes
+      // Combines two separate iterations into one for better performance
+      for (let idx = 0; idx < localItems.length; idx++) {
+        const localItem = localItems[idx];
         const newItem = items[idx];
-        if (!newItem || localItem.id !== newItem.id) return false;
 
-        // Check quantity changes
+        // Structural change: item reordered
+        if (!newItem || localItem.id !== newItem.id) {
+          setLocalItems(items);
+          return;
+        }
+
+        // Data change: quantity or purchased status changed
         const quantityChanged =
           localItem.rightElementConfig?.quantity !==
           newItem.rightElementConfig?.quantity;
-
-        // Check purchased status changes
         const purchasedChanged = localItem.isPurchased !== newItem.isPurchased;
 
-        return quantityChanged || purchasedChanged;
-      });
-
-      if (hasStructuralChange || hasDataChange) {
-        setLocalItems(items);
+        if (quantityChanged || purchasedChanged) {
+          setLocalItems(items);
+          return;
+        }
       }
     }
-  }, [items, localItems]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items]);
 
   // Drag gesture callbacks - gate RefreshControl during drag
   // Per GitHub issues #135, #189, #467: RefreshControl conflicts with drag gesture
@@ -301,6 +308,11 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
         data={localItems}
         renderItem={renderItem}
         keyExtractor={item => item.id}
+        getItemLayout={(_, index) => ({
+          length: 103, // 87px item height + 16px margin (8px top + 8px bottom)
+          offset: 103 * index,
+          index,
+        })}
         activationDistance={isDragging ? 1 : 20}
         onDragBegin={handleDragBegin}
         onDragEnd={({ data }) => {
@@ -319,11 +331,13 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
         // All approaches attempted (RNGH, native, ScrollView wrapper, NestableScrollContainer)
         // Either break normal scroll or cause VirtualizedList nesting warnings
         // Alternative: Add manual refresh button to tab bar or header
-        // OPTIMIZATION: Performance props to reduce initial render work
-        initialNumToRender={10}
-        maxToRenderPerBatch={5}
-        windowSize={5}
-        removeClippedSubviews={false}
+        // PERFORMANCE: Optimized for faster initial render and smoother scrolling
+        // Balance between performance and UX - render enough items to fill most screens
+        initialNumToRender={8} // Fills most phone screens without blank space
+        maxToRenderPerBatch={5} // Batch size for incremental rendering
+        windowSize={3} // Balance between performance and smooth scrolling
+        updateCellsBatchingPeriod={50} // Batch cell updates for smoother animations
+        removeClippedSubviews={true} // Reduce memory on large lists
       />
     </View>
   );

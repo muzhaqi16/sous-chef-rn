@@ -16,6 +16,7 @@ interface ButtonProps {
   style?: any; // For custom styling
   btnStyle?: any; // For backwards compatibility
   txtStyle?: any; // For backwards compatibility
+  testID?: string;
   accessibilityLabel?: string;
   accessibilityHint?: string;
 }
@@ -33,6 +34,7 @@ export const Button: React.FC<ButtonProps> = ({
   style,
   btnStyle,
   txtStyle,
+  testID,
   accessibilityLabel,
   accessibilityHint,
 }) => {
@@ -41,6 +43,7 @@ export const Button: React.FC<ButtonProps> = ({
 
   return (
     <TouchableOpacity
+      testID={testID}
       style={[
         styles.button,
         styles[variant],

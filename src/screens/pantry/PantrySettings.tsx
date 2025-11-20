@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import {
   useUpdatePantryMutation,
   useDeletePantryMutation,
   useCreatePantryMutation,
+  useSetDefaultPantryMutation,
 } from '#generated';
 import { useAppStore, selectSelectedHomeId } from '#store/useAppStore';
 import { useAppNavigation } from '#hooks';
@@ -38,22 +39,46 @@ export const PantrySettings: React.FC<{
   const [isDefault, setIsDefault] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // Explicit validation - only execute query when pantryId is genuinely valid
+  const hasValidPantryId = !!pantryId?.trim();
+
   // Simplified query configuration - let Apollo handle caching naturally
   const {
     data: pantryData,
     loading: loadingPantry,
     error: pantryError,
   } = useGetPantryQuery({
-    variables: { id: pantryId ?? '' },
-    skip: !pantryId,
+    variables: hasValidPantryId ? {
+      id: pantryId,
+      itemsFirst: 25,
+      storageLocationsFirst: 50,
+    } : undefined as any,
+    skip: !hasValidPantryId, // Query only executes when pantryId is valid
   });
 
-  const pantry = normalizePantry(pantryData?.pantry);
+  // Memoize normalized pantry to prevent re-creating on every render
+  const pantry = useMemo(
+    () => normalizePantry(pantryData?.pantry),
+    [pantryData?.pantry],
+  );
 
   const [updatePantry] = useUpdatePantryMutation({
     // Update cache directly - Apollo automatically merges the Pantry entity
     // No need to update home's pantries array since the pantry is just updated, not added/removed
   });
+
+  const [setDefaultPantry] = useSetDefaultPantryMutation({
+    errorPolicy: 'all',
+    onError: (error: any) => {
+      const { message } = handleApolloError(error, {
+        operation: 'Set Default Pantry',
+      });
+      Alert.alert('Error', message);
+      // Revert the toggle on error
+      setIsDefault(!isDefault);
+    },
+  });
+
   const [deletePantry] = useDeletePantryMutation({
     errorPolicy: 'all',
     onError: (error: any) => {
@@ -223,6 +248,28 @@ export const PantrySettings: React.FC<{
     }
   }, [pantry, pantryId, pantryError]);
 
+  const handleToggleDefault = async (newValue: boolean) => {
+    // Only call mutation if editing existing pantry
+    if (!pantryId) {
+      setIsDefault(newValue);
+      return;
+    }
+
+    // Optimistically update UI
+    setIsDefault(newValue);
+
+    try {
+      await setDefaultPantry({
+        variables: {
+          pantryId,
+        },
+      });
+    } catch (error) {
+      // Error handler will revert the toggle
+      console.error('Failed to set default pantry:', error);
+    }
+  };
+
   const handleSave = async () => {
     if (!name.trim()) {
       Alert.alert('Error', 'Pantry name cannot be empty');
@@ -250,14 +297,13 @@ export const PantrySettings: React.FC<{
           },
         });
       } else {
-        // Update existing pantry
+        // Update existing pantry (isDefault is handled separately via handleToggleDefault)
         await updatePantry({
           variables: {
             id: pantryId,
             input: {
               name: name.trim(),
               description: description.trim(),
-              isDefault,
             },
           },
         });
@@ -372,7 +418,7 @@ export const PantrySettings: React.FC<{
             </View>
             <Switch
               value={isDefault}
-              onValueChange={setIsDefault}
+              onValueChange={handleToggleDefault}
               trackColor={{ true: theme.colors.primary }}
             />
           </View>

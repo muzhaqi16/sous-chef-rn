@@ -8,6 +8,7 @@ import React, {
   startTransition,
 } from 'react';
 import { Alert, View, Text, TouchableOpacity } from 'react-native';
+import type { Swipeable } from 'react-native-gesture-handler';
 import { PaginationFooter } from '#/components/organisms/PaginationFooter';
 import { useApolloClient } from '@apollo/client/react';
 import { useAppNavigation } from '#hooks';
@@ -34,7 +35,8 @@ import type {
 } from '#components/organisms/AnimatedItemSelector';
 import type { SortableShoppingListItem } from '#components/organisms/SortableShoppingList';
 import { useShoppingListManagement } from '#/hooks';
-import { useAppStore, selectSelectedShoppingListId } from '#store/useAppStore';
+import { useAppStore, selectShoppingListState } from '#store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import { IconLibrary } from '#/utils/iconUtils';
 import { useOptimisticDataRestorationMultiple } from '#/hooks/offline/useOptimisticDataRestoration';
 import {
@@ -48,6 +50,7 @@ import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersis
 import { useFeatureHint } from '#/hooks/useFeatureHint';
 import { SwipeHintOverlay } from '#/components/organisms/SwipeHintOverlay';
 import { useHaptic } from '#hooks/haptic';
+import { ShoppingListErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
 import { useScreenTransition } from '#hooks/performance';
 import { useSelectorManagement } from '#hooks/ui';
 import { getItemImageUrl } from '#utils/imageUtils';
@@ -55,7 +58,8 @@ import { Telemetry } from '#/services/telemetry';
 import { ShoppingListTabs } from '#/components/organisms/ShoppingListTabs';
 import { ShoppingListActionsProvider } from '#context/ShoppingListActionsContext';
 
-export const ShoppingListMain: React.FC = () => {
+// PERFORMANCE: Memoize screen component to prevent unnecessary re-renders
+const ShoppingListMainScreen: React.FC = React.memo(() => {
   // Restore optimistic data on mount (offline changes that haven't synced)
   useOptimisticDataRestorationMultiple(['ShoppingList', 'ShoppingListItem']);
 
@@ -65,15 +69,15 @@ export const ShoppingListMain: React.FC = () => {
     showOnMount: false, // We'll manually trigger when items are available
   });
 
-  const { navigate, navigateTo } = useAppNavigation();
+  const { navigate, navigateTo, isFocused } = useAppNavigation();
   const client = useApolloClient();
   const {
     theme: { colors },
   } = useUnistyles();
   const { primary: primaryColor, primaryLight: primaryLightColor } = colors;
-  const selectedShoppingListId = useAppStore(selectSelectedShoppingListId);
-  const setSelectedShoppingListId = useAppStore(
-    state => state.setSelectedShoppingListId,
+  // PERFORMANCE: Use grouped selector with useShallow to prevent infinite loops (Zustand v5)
+  const { selectedShoppingListId, setSelectedShoppingListId } = useAppStore(
+    useShallow(selectShoppingListState),
   );
   const { user } = useAuth();
   const selectorRef = useRef<ItemSelectorRef>(null);
@@ -91,7 +95,7 @@ export const ShoppingListMain: React.FC = () => {
     });
 
   // Track currently open swipeable across both unpurchased and purchased lists
-  const openSwipeableRef = useRef<any>(null);
+  const openSwipeableRef = useRef<React.RefObject<Swipeable> | null>(null);
   const [moveItem] = useMoveShoppingListItemMutation({
     errorPolicy: 'all',
     // Optimistic response for instant UI feedback
@@ -142,28 +146,31 @@ export const ShoppingListMain: React.FC = () => {
 
         if (!queryResult?.shoppingListItems) return;
 
-        // Create new array with updated item
+        // Update single item with new sortOrder
+        // PERFORMANCE: No sort needed - server returns pre-sorted by (isPurchased, sortOrder, createdAt)
+        // Map only updates one item's sortOrder, doesn't change array order
         const updatedItems = queryResult.shoppingListItems.map(item =>
           item.id === data.moveShoppingListItem.id
             ? { ...item, sortOrder: data.moveShoppingListItem.sortOrder }
             : item,
         );
 
-        // Sort by sortOrder (server returns them sorted, so we should too)
-        const sortedItems = [...updatedItems].sort((a, b) =>
-          a.sortOrder.localeCompare(b.sortOrder),
-        );
-
         // Write back to cache
         cache.writeQuery({
           query: GetShoppingListItemsDocument,
           variables: { shoppingListId: currentListId },
-          data: { shoppingListItems: sortedItems },
+          data: { shoppingListItems: updatedItems },
         });
       } catch (error) {
         console.warn('Cache update failed for moveItem:', error);
         // Don't throw - let mutation succeed even if cache update fails
       }
+    },
+    onError: error => {
+      console.error('Move item error:', error);
+      const errorMessage =
+        error.message || 'Failed to reorder item. Please try again.';
+      Alert.alert('Error', `Could not reorder item: ${errorMessage}`);
     },
   });
   const [updateQuantity] = useUpdateShoppingListItemQuantityMutation({
@@ -175,8 +182,10 @@ export const ShoppingListMain: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
 
   // Use cache-and-network like pantry and recipes - Apollo handles offline gracefully
+  // PERFORMANCE: Skip query when tab is not focused to prevent wasted network requests
   const { data, previousData } = useGetShoppingListsQuery({
-    fetchPolicy: 'cache-and-network',
+    skip: !isFocused,
+    fetchPolicy: isFocused ? 'cache-and-network' : 'cache-only',
     errorPolicy: 'all',
   });
 
@@ -186,34 +195,23 @@ export const ShoppingListMain: React.FC = () => {
     [data?.shoppingLists, previousData?.shoppingLists],
   );
 
-  // Get the default list or the first list if none is default
-  const defaultList = lists.find(list => list.isDefault) || lists[0];
-  const currentListId = selectedShoppingListId || defaultList?.id;
-  const currentList =
-    lists.find(list => list.id === currentListId) || defaultList;
+  // PERFORMANCE: Derive default list ID without waiting for full lists load
+  // This allows items query to start in parallel with lists query
+  const defaultListId = useMemo(() => {
+    const defaultList = lists.find(list => list.isDefault);
+    const firstList = lists[0];
+    return defaultList?.id || firstList?.id || '';
+  }, [lists]);
 
-  // Auto-select the default list if none is selected or if selected list no longer exists
-  // OPTIMIZATION: Use startTransition to batch this state update with subsequent renders
-  useEffect(() => {
-    const selectedListExists =
-      selectedShoppingListId &&
-      lists.some(list => list.id === selectedShoppingListId);
+  // PERFORMANCE: Use selectedShoppingListId directly for items query
+  // Don't block on lists query - let both queries run in parallel
+  const listIdForQuery = useMemo(
+    () => selectedShoppingListId || defaultListId,
+    [selectedShoppingListId, defaultListId],
+  );
 
-    if (!selectedShoppingListId || !selectedListExists) {
-      if (defaultList?.id) {
-        startTransition(() => {
-          setSelectedShoppingListId(defaultList.id);
-        });
-      }
-    }
-  }, [
-    selectedShoppingListId,
-    defaultList?.id,
-    setSelectedShoppingListId,
-    lists,
-  ]);
-
-  // Use the shopping list hook for both data and mutations to ensure consistency
+  // Use the shopping list hook - can start immediately without waiting for lists
+  // PERFORMANCE: Pass undefined when not focused to skip items query
   const {
     items,
     loading,
@@ -226,7 +224,39 @@ export const ShoppingListMain: React.FC = () => {
     loadMore,
     hasMore,
     isLoadingMore,
-  } = useShoppingListManagement(currentListId);
+  } = useShoppingListManagement(isFocused ? listIdForQuery : undefined);
+
+  // Derive current list info AFTER queries are running
+  const defaultList = lists.find(list => list.isDefault) || lists[0];
+  const currentListId = selectedShoppingListId || defaultList?.id;
+  const currentList =
+    lists.find(list => list.id === currentListId) || defaultList;
+
+  // Auto-select the default list if none is selected or if selected list no longer exists
+  // PERFORMANCE: Check list existence without depending on entire lists array
+  const selectedListExists = useMemo(
+    () =>
+      selectedShoppingListId
+        ? lists.some(list => list.id === selectedShoppingListId)
+        : false,
+    [selectedShoppingListId, lists],
+  );
+
+  useEffect(() => {
+    // Only auto-select if no list selected OR selected list doesn't exist
+    if (!selectedShoppingListId || !selectedListExists) {
+      if (defaultList?.id) {
+        startTransition(() => {
+          setSelectedShoppingListId(defaultList.id);
+        });
+      }
+    }
+  }, [
+    selectedShoppingListId,
+    selectedListExists,
+    defaultList?.id,
+    setSelectedShoppingListId,
+  ]);
 
   // Refs for stable callbacks (avoid recreating callbacks on items change)
   const updateQuantityRef = useRef(updateQuantity);
@@ -255,18 +285,95 @@ export const ShoppingListMain: React.FC = () => {
 
   // Let Apollo handle all data management - no manual optimization needed
 
-  // Create selector configuration for shopping lists with owner info
+  // PERFORMANCE: Memoize list data with ownership info separately
+  const listDataWithOwnership = useMemo(
+    () =>
+      lists.map(list => ({
+        ...list,
+        _isOwner: isShoppingListOwner(list, user?.id),
+      })),
+    [lists, user?.id],
+  );
+
+  // PERFORMANCE: Memoize render function to prevent recreation
+  const renderListItem = useCallback(
+    (list: any, isSelected: boolean, onPress: () => void) => (
+      <TouchableOpacity
+        style={[
+          styles.selectorItemContainer,
+          isSelected && styles.selectorItemSelected,
+        ]}
+        onPress={onPress}
+      >
+        <ShoppingListAvatar list={list} size={40} />
+        <View style={styles.selectorItemInfo}>
+          <Text style={styles.selectorItemName}>{list.name}</Text>
+          <Text style={styles.selectorItemSubtext}>
+            {list._isOwner
+              ? 'You own this list'
+              : `Shared by ${
+                  list.ownerships?.[0]?.user?.profile?.displayName ||
+                  list.ownerships?.[0]?.user?.email ||
+                  'someone'
+                }`}
+          </Text>
+        </View>
+        {isSelected && (
+          <Icon
+            name="check"
+            size={20}
+            color={colors.primary}
+            library="MaterialIcons"
+          />
+        )}
+      </TouchableOpacity>
+    ),
+    [colors],
+  );
+
+  // PERFORMANCE: Memoize actions array separately
+  const listActions = useMemo(
+    () => [
+      {
+        icon: 'add',
+        label: 'Create New List',
+        onPress: () => {
+          selectorRef.current?.close();
+          navigate('ListSettings');
+        },
+        iconLibrary: 'MaterialIcons' as IconLibrary,
+      },
+      ...(currentListId
+        ? [
+            {
+              icon: 'share',
+              label: 'Share Current List',
+              onPress: () => {
+                selectorRef.current?.close();
+                navigate('ShareList', { listId: currentListId });
+              },
+              iconLibrary: 'MaterialIcons' as IconLibrary,
+            },
+            {
+              icon: 'settings',
+              label: 'List Settings',
+              onPress: () => {
+                selectorRef.current?.close();
+                navigate('ListSettings', { listId: currentListId });
+              },
+              iconLibrary: 'MaterialIcons' as IconLibrary,
+            },
+          ]
+        : []),
+    ],
+    [currentListId, navigate],
+  );
+
+  // PERFORMANCE: Combine memoized parts into final config
   const listConfig: SelectorConfig<any> = useMemo(
     () => ({
       title: 'Select Shopping List',
-      data: lists.map(list => {
-        const isOwner = isShoppingListOwner(list, user?.id);
-        return {
-          ...list,
-          // Add computed properties for display
-          _isOwner: isOwner,
-        };
-      }),
+      data: listDataWithOwnership,
       selectedId: currentListId,
       onSelect: (id: string) => {
         setSelectedShoppingListId(id);
@@ -275,85 +382,15 @@ export const ShoppingListMain: React.FC = () => {
       displayProperty: 'name',
       loading: false,
       emptyMessage: 'No shopping lists available',
-      // Custom render for list items with avatar and role badge
-      renderCustomItem: (
-        list: any,
-        isSelected: boolean,
-        onPress: () => void,
-      ) => (
-        <TouchableOpacity
-          style={[
-            styles.selectorItemContainer,
-            isSelected && styles.selectorItemSelected,
-          ]}
-          onPress={onPress}
-        >
-          <ShoppingListAvatar list={list} size={40} />
-          <View style={styles.selectorItemInfo}>
-            <Text style={styles.selectorItemName}>{list.name}</Text>
-            <Text style={styles.selectorItemSubtext}>
-              {list._isOwner
-                ? 'You own this list'
-                : `Shared by ${
-                    list.ownerships?.[0]?.user?.profile?.displayName ||
-                    list.ownerships?.[0]?.user?.email ||
-                    'someone'
-                  }`}
-            </Text>
-          </View>
-          {isSelected && (
-            <Icon
-              name="check"
-              size={20}
-              color={colors.primary}
-              library="MaterialIcons"
-            />
-          )}
-        </TouchableOpacity>
-      ),
-      actions: [
-        {
-          icon: 'add',
-          label: 'Create New List',
-          onPress: () => {
-            selectorRef.current?.close();
-            navigate('ListSettings');
-          },
-          iconLibrary: 'MaterialIcons' as IconLibrary,
-        },
-        ...(currentListId
-          ? [
-              {
-                icon: 'share',
-                label: 'Share Current List',
-                onPress: () => {
-                  selectorRef.current?.close();
-                  navigate('ShareList', { listId: currentListId });
-                },
-                iconLibrary: 'MaterialIcons' as IconLibrary,
-              },
-              {
-                icon: 'settings',
-                label: 'List Settings',
-                onPress: () => {
-                  selectorRef.current?.close();
-                  navigate('ListSettings', {
-                    listId: currentListId,
-                  });
-                },
-                iconLibrary: 'MaterialIcons' as IconLibrary,
-              },
-            ]
-          : []),
-      ],
+      renderCustomItem: renderListItem,
+      actions: listActions,
     }),
     [
-      lists,
+      listDataWithOwnership,
       currentListId,
-      user?.id,
       setSelectedShoppingListId,
-      navigate,
-      colors,
+      renderListItem,
+      listActions,
     ],
   );
 
@@ -562,19 +599,15 @@ export const ShoppingListMain: React.FC = () => {
   );
 
   // Transform shopping list items for SortableShoppingList
-  // PERFORMANCE: Use config-based element creation instead of creating React elements
-  // OPTIMIZATION: Memoize based on structural changes only, not data changes like quantity
+  // PERFORMANCE: Single-pass transformation (no separate filter/spread/map)
+  // Apollo's normalized cache provides stable references for unchanged items
   const sortableItems = useMemo((): SortableShoppingListItem[] => {
-    // Server already returns items sorted by: isPurchased ASC, sortOrder ASC, createdAt ASC
-    // No need to re-sort on client - just separate by purchased status for UI
-    const unpurchasedItems = items.filter((item: any) => !item.isPurchased);
-    const purchasedItems = items.filter((item: any) => item.isPurchased);
+    // Server returns items sorted by: isPurchased ASC, sortOrder ASC, createdAt ASC
+    // Separate unpurchased and purchased in single pass, preserving server sort order
+    const unpurchased: SortableShoppingListItem[] = [];
+    const purchased: SortableShoppingListItem[] = [];
 
-    // Unpurchased first, then purchased (already sorted within each group by server)
-    const sortedItems = [...unpurchasedItems, ...purchasedItems];
-
-    // Map to SortableShoppingListItem format
-    return sortedItems.map((item: any) => {
+    for (const item of items) {
       const imageUrl = getItemImageUrl(item.item);
 
       // Get primary category from item.item.categories
@@ -586,9 +619,9 @@ export const ShoppingListMain: React.FC = () => {
         item.item?.categories?.[0]?.category?.name ||
         item.category;
 
-      return {
+      const sortableItem: SortableShoppingListItem = {
         id: item.id,
-        title: item.itemName,
+        title: item.itemName || '',
         subtitle: categoryName || undefined,
         sortOrder: item.sortOrder ?? 'zzz', // String fallback for fractional indexing
         isPurchased: item.isPurchased,
@@ -598,7 +631,7 @@ export const ShoppingListMain: React.FC = () => {
         rightElementConfig: {
           type: 'counter' as const,
           quantity: item.quantity || 0,
-          unit: item.unit?.symbol || item.unitName,
+          unit: item.unit?.symbol || item.unitName || undefined,
           itemId: item.id,
           disabled: item.isPurchased,
         },
@@ -611,12 +644,21 @@ export const ShoppingListMain: React.FC = () => {
             }
           : undefined,
       };
-    });
-  }, [
-    // OPTIMIZATION: Only items dependency - callbacks from context are stable
-    // This prevents useMemo from breaking when callback references change
-    items,
-  ]);
+
+      // Separate by purchased status (unpurchased first, then purchased)
+      if (item.isPurchased) {
+        purchased.push(sortableItem);
+      } else {
+        unpurchased.push(sortableItem);
+      }
+    }
+
+    // Return unpurchased items first, then purchased (single array allocation)
+    return [...unpurchased, ...purchased];
+  }, [items]);
+
+  // Determine loading state - only show loading if we have no data at all
+  const isLoadingInitial = loading && sortableItems.length === 0;
 
   const handleAddItem = useCallback(() => {
     if (!currentListId) {
@@ -653,6 +695,9 @@ export const ShoppingListMain: React.FC = () => {
         item_name_length: itemName.trim().length,
       });
 
+      // Clear search input immediately for instant feedback
+      setSearchQuery('');
+
       try {
         const result = await addItem({
           itemName: itemName.trim(),
@@ -662,11 +707,12 @@ export const ShoppingListMain: React.FC = () => {
         if (result) {
           Telemetry.trackEvent('add_item_success', { source: 'search' });
           haptic.success(); // Haptic feedback on successful add
-          setSearchQuery(''); // Clear search after adding
         } else {
           Telemetry.trackEvent('add_item_failed', { source: 'search' });
           haptic.error(); // Error haptic on failure
           toastService.error('Failed to add item');
+          // Restore search query on failure so user can retry
+          setSearchQuery(itemName.trim());
         }
       } catch (error) {
         Telemetry.trackError(
@@ -675,6 +721,8 @@ export const ShoppingListMain: React.FC = () => {
         );
         haptic.error(); // Error haptic on exception
         toastService.error('Failed to add item');
+        // Restore search query on error so user can retry
+        setSearchQuery(itemName.trim());
       }
     },
     [currentListId, addItem, setSearchQuery, haptic],
@@ -747,14 +795,17 @@ export const ShoppingListMain: React.FC = () => {
   }, [refetchItems]);
 
   // Handle swipeable item opening - ensure only one item is open at a time across both lists
-  const handleSwipeableWillOpen = useCallback((ref: any) => {
+  const handleSwipeableWillOpen = useCallback(
+    (ref: React.RefObject<Swipeable>) => {
     if (openSwipeableRef.current && openSwipeableRef.current !== ref) {
       // Close the previously open swipeable
       openSwipeableRef.current.current?.close();
     }
     // Update to track the newly opening swipeable
     openSwipeableRef.current = ref;
-  }, []);
+  },
+    [],
+  );
 
   // Handle swipeable item closing - clear the reference
   const handleSwipeableClose = useCallback(() => {
@@ -780,6 +831,8 @@ export const ShoppingListMain: React.FC = () => {
         onPress: () => handleAddItemFromSearch(searchQuery),
         color: primaryColor,
         backgroundColor: primaryLightColor,
+        animated: true,
+        isHighlighted: true,
       });
     } else {
       rightActions.unshift({
@@ -787,6 +840,8 @@ export const ShoppingListMain: React.FC = () => {
         onPress: handleAddItem,
         color: primaryColor,
         backgroundColor: colors.surface,
+        animated: true,
+        isHighlighted: false,
       });
     }
 
@@ -845,6 +900,20 @@ export const ShoppingListMain: React.FC = () => {
     };
   }, [setScannerProps, navigateTo, currentListId, items, lists.length]);
 
+  // PERFORMANCE: Memoize footer to prevent unnecessary re-renders
+  // Must be before early returns to satisfy React Hooks rules
+  const footerComponent = useMemo(
+    () => (
+      <PaginationFooter
+        isLoadingMore={isLoadingMore}
+        hasMore={hasMore}
+        loading={loading}
+        itemCount={items.length}
+      />
+    ),
+    [isLoadingMore, hasMore, loading, items.length],
+  );
+
   // If no lists exist at all
   if (lists.length === 0) {
     const noListsEmptyState = {
@@ -890,68 +959,69 @@ export const ShoppingListMain: React.FC = () => {
       onIncrementQuantity={handleIncrementQuantity}
       onDecrementQuantity={handleDecrementQuantity}
     >
-      <View style={styles.container}>
+      <View style={styles.container} testID="shopping-list-screen">
         <ListTemplate
           items={sortableItems}
+          loading={isLoadingInitial}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
-        onItemPress={id =>
-          navigate('ItemDetail', { listId: currentListId, itemId: id })
-        }
-        onItemEdit={id =>
-          navigate('EditItem', { listId: currentListId, itemId: id })
-        }
-        onItemDelete={handleDeleteItem}
-        onRefresh={handleRefresh}
-        searchPlaceholder="Search shopping list..."
-        listName={currentList?.name || 'Shopping List'}
-        completedCount={sortableItems.filter(item => item.isPurchased).length}
-        showUserHeader={true}
-        showSearchBar={true}
-        searchBarActions={searchBarActions}
-        emptyState={emptyStateConfig}
-        customListComponent={ShoppingListTabs}
-        customListProps={{
-          loading,
-          onSortOrderUpdate: searchQuery.trim()
-            ? undefined
-            : handleSortOrderUpdate,
-          onTogglePurchase: handleTogglePurchase,
-          onRefresh: handleRefresh,
-          refreshing,
-          disabled: !!searchQuery.trim(),
-          onClearAllPurchased: handleClearAllPurchased,
-          onSwipeableWillOpen: handleSwipeableWillOpen,
-          onSwipeableClose: handleSwipeableClose,
-        }}
-        onEndReached={loadMore}
-        onEndReachedThreshold={0.5}
-        ListFooterComponent={
-          <PaginationFooter
-            isLoadingMore={isLoadingMore}
-            hasMore={hasMore}
-            loading={loading}
-            itemCount={items.length}
-          />
-        }
-      />
+          onItemPress={id =>
+            navigate('ItemDetail', { listId: currentListId, itemId: id })
+          }
+          onItemEdit={id =>
+            navigate('EditItem', { listId: currentListId, itemId: id })
+          }
+          onItemDelete={handleDeleteItem}
+          onRefresh={handleRefresh}
+          searchPlaceholder="Search shopping list..."
+          listName={currentList?.name || 'Shopping List'}
+          completedCount={sortableItems.filter(item => item.isPurchased).length}
+          showUserHeader={true}
+          showSearchBar={true}
+          searchBarActions={searchBarActions}
+          emptyState={emptyStateConfig}
+          customListComponent={ShoppingListTabs}
+          customListProps={{
+            loading: isLoadingInitial,
+            onSortOrderUpdate: searchQuery.trim()
+              ? undefined
+              : handleSortOrderUpdate,
+            onTogglePurchase: handleTogglePurchase,
+            onRefresh: handleRefresh,
+            refreshing,
+            disabled: !!searchQuery.trim(),
+            onClearAllPurchased: handleClearAllPurchased,
+            onSwipeableWillOpen: handleSwipeableWillOpen,
+            onSwipeableClose: handleSwipeableClose,
+          }}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={footerComponent}
+        />
 
-      <AnimatedItemSelector
-        ref={selectorRef}
-        config={listConfig}
-        maxHeight={600}
-        onOpen={handleOverlayOpen}
-        onClose={handleOverlayClose}
-      />
+        <AnimatedItemSelector
+          ref={selectorRef}
+          config={listConfig}
+          maxHeight={600}
+          onOpen={handleOverlayOpen}
+          onClose={handleOverlayClose}
+        />
 
-      {/* Swipe gesture hint overlay */}
-      {swipeHint.isVisible && (
-        <SwipeHintOverlay onDismiss={swipeHint.dismiss} />
-      )}
+        {/* Swipe gesture hint overlay */}
+        {swipeHint.isVisible && (
+          <SwipeHintOverlay onDismiss={swipeHint.dismiss} />
+        )}
       </View>
     </ShoppingListActionsProvider>
   );
-};
+});
+
+// PERFORMANCE: Screen-level error boundary prevents full app reset on mutation failures
+export const ShoppingListMain: React.FC = () => (
+  <ShoppingListErrorBoundary>
+    <ShoppingListMainScreen />
+  </ShoppingListErrorBoundary>
+);
 
 const styles = StyleSheet.create(theme => ({
   container: {

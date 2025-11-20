@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useRef, useState, useEffect } from 'react';
 import { Alert } from 'react-native';
 import { useApolloClient } from '@apollo/client/react';
 import {
@@ -8,6 +8,7 @@ import {
   useRemoveItemFromShoppingListMutation,
   useToggleShoppingListItemPurchasedMutation,
   ShoppingListItemFragmentDoc,
+  DisplayFormat,
 } from '#generated';
 import type { ShoppingListItemCoreFragment } from '#/graphql/generated/types';
 import { useSearchableList } from '../useSearchableList';
@@ -83,6 +84,7 @@ export function useShoppingListManagement(listId: string | undefined) {
     },
     skip: shouldSkip,
     fetchPolicy,
+    nextFetchPolicy: 'cache-first', // After first fetch, use cache-first to prevent refetch on tab switch
     notifyOnNetworkStatusChange: true,
     errorPolicy: 'all', // Return both data and errors for better debugging
   });
@@ -91,9 +93,29 @@ export function useShoppingListManagement(listId: string | undefined) {
   // This eliminates duplicate subscription code and provides consistent behavior
   // across all subscriptions (deduplication, error handling, logging)
 
+  // PERFORMANCE FIX: Clear items immediately when list changes to prevent showing stale data
+  // Track previous listId to detect list changes
+  const prevListIdRef = useRef<string | null | undefined>(null);
+  const [isListChanging, setIsListChanging] = useState(false);
+
+  useEffect(() => {
+    if (prevListIdRef.current !== null && prevListIdRef.current !== listId) {
+      // List changed - temporarily show empty state until new data arrives
+      setIsListChanging(true);
+    }
+    prevListIdRef.current = listId;
+  }, [listId]);
+
+  useEffect(() => {
+    // Reset changing flag when new data arrives
+    if (isListChanging && data?.shoppingListItems) {
+      setIsListChanging(false);
+    }
+  }, [data?.shoppingListItems, isListChanging]);
+
   const items = useMemo(
-    () => data?.shoppingListItems || [],
-    [data?.shoppingListItems],
+    () => (isListChanging ? [] : data?.shoppingListItems || []),
+    [data?.shoppingListItems, isListChanging],
   );
 
   // Search functionality - using reusable search utility
@@ -142,6 +164,8 @@ export function useShoppingListManagement(listId: string | undefined) {
             // Core fields from mutation input
             itemName: variables.input.itemName,
             quantity: variables.input.quantity ?? 1,
+            quantityInput: variables.input.quantityInput || null,
+            displayFormat: DisplayFormat.Auto,
             unitName: variables.input.unitName || null,
             notes: variables.input.notes || null,
             category: variables.input.category || null,
@@ -215,6 +239,16 @@ export function useShoppingListManagement(listId: string | undefined) {
             createdAt: null,
             deletedAt: null,
             addedBy: null,
+            purchasesConnection: {
+              __typename: 'PurchaseConnection',
+              totalCount: 0,
+              edges: [],
+              pageInfo: {
+                __typename: 'PageInfo',
+                hasNextPage: false,
+                endCursor: null,
+              },
+            },
           }),
           __typename: 'ShoppingListItem',
         } as any, // Cast to any (like PantryItem) to bypass TypeScript validation
@@ -244,6 +278,21 @@ export function useShoppingListManagement(listId: string | undefined) {
     errorPolicy: 'all',
     // No optimisticResponse here - will be passed at call site with fresh cache data
     // This avoids stale closure issues as per Apollo best practices
+    onCompleted: (data) => {
+      // Clear all optimistic data for this item after successful sync
+      // This ensures offline edits are cleared once synced with server
+      if (data?.updateShoppingListItem) {
+        const itemId = data.updateShoppingListItem.id;
+        // Clear common fields that might be updated
+        optimisticDataPersistence.clear('ShoppingListItem', itemId, 'quantity');
+        optimisticDataPersistence.clear('ShoppingListItem', itemId, 'quantityInput');
+        optimisticDataPersistence.clear('ShoppingListItem', itemId, 'itemName');
+        optimisticDataPersistence.clear('ShoppingListItem', itemId, 'notes');
+        optimisticDataPersistence.clear('ShoppingListItem', itemId, 'category');
+        optimisticDataPersistence.clear('ShoppingListItem', itemId, 'unitName');
+        optimisticDataPersistence.clear('ShoppingListItem', itemId, 'unitId');
+      }
+    },
     onError: error => {
       const { message } = handleApolloError(error, {
         operation: 'Update Shopping List Item',
@@ -367,6 +416,10 @@ export function useShoppingListManagement(listId: string | undefined) {
         } as any,
       };
     },
+    // PERFORMANCE: Removed redundant update function
+    // The comprehensive optimisticResponse (lines 361-418) provides instant UI feedback
+    // Apollo's automatic normalization merges the server response into the cache
+    // No manual cache.modify needed - this was causing unnecessary complexity
     onCompleted: (data) => {
       // Clear optimistic data after successful sync
       if (data?.toggleShoppingListItemPurchased) {
@@ -384,7 +437,7 @@ export function useShoppingListManagement(listId: string | undefined) {
   // Simplified add item using CRUD utilities
   const addItem = createAddOperation({
     mutation: addItemMutation,
-    parentId: listId,
+    parentId: () => listId,
     transformInput: (input: ShoppingListItemInput) => ({
       shoppingListId: listId,
       itemName: input.itemName,
@@ -458,6 +511,15 @@ export function useShoppingListManagement(listId: string | undefined) {
             }
           : null,
       };
+
+      // Persist optimistic updates before mutation
+      // This ensures changes survive app restart if offline
+      Object.keys(updates).forEach(field => {
+        const value = updates[field as keyof ShoppingListItemUpdate];
+        if (value !== undefined) {
+          optimisticDataPersistence.save('ShoppingListItem', itemId, field, value);
+        }
+      });
 
       const result = await updateItemMutation({
         variables: {
@@ -545,7 +607,7 @@ export function useShoppingListManagement(listId: string | undefined) {
     // Data
     items: filteredItems,
     allItems: items,
-    loading,
+    loading: loading || isListChanging, // Show loading during list transition
     error,
     stats,
 

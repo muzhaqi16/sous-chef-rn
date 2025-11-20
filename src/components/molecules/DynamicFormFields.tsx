@@ -16,13 +16,16 @@ import { BrandAutocompleteInput } from './BrandAutocompleteInput';
 import { UnitsAutocompleteInput } from './UnitsAutocompleteInput';
 import { CategoryAutocompleteInput } from './CategoryAutocompleteInput';
 import { StorageLocationAutocompleteInput } from './StorageLocationAutocompleteInput';
+import { FormInput } from './FormInput';
 
 // Create memoized versions to prevent re-renders
 const MemoizedItemAutocomplete = React.memo(ItemAutocompleteInput);
 const MemoizedBrandAutocomplete = React.memo(BrandAutocompleteInput);
 const MemoizedUnitsAutocomplete = React.memo(UnitsAutocompleteInput);
 const MemoizedCategoryAutocomplete = React.memo(CategoryAutocompleteInput);
-const MemoizedStorageLocationAutocomplete = React.memo(StorageLocationAutocompleteInput);
+const MemoizedStorageLocationAutocomplete = React.memo(
+  StorageLocationAutocompleteInput,
+);
 
 export type FieldDef<T extends FieldValues> = {
   name: Path<T>;
@@ -50,7 +53,10 @@ export type FieldDef<T extends FieldValues> = {
   onSelectItem?: (item: any) => void;
   onUnitSelected?: (unitId: string | null) => void;
   onCategorySelected?: (categoryId: string | null) => void;
-  onStorageLocationSelected?: (locationId: string | null, location: any) => void;
+  onStorageLocationSelected?: (
+    locationId: string | null,
+    location: any,
+  ) => void;
   storageLocations?: any[];
 };
 
@@ -299,15 +305,16 @@ export function DynamicFormFields<T extends FieldValues>({
               }}
             />
             {errors[name] &&
-             props?.componentType !== 'checkbox' &&
-             Input !== 'itemAutocomplete' &&
-             Input !== 'brandAutocomplete' &&
-             Input !== 'unitAutocomplete' &&
-             Input !== 'categoryAutocomplete' && (
-              <Text style={styles.errorText}>
-                {errors[name]?.message?.toString()}
-              </Text>
-            )}
+              props?.componentType !== 'checkbox' &&
+              Input !== FormInput &&
+              Input !== 'itemAutocomplete' &&
+              Input !== 'brandAutocomplete' &&
+              Input !== 'unitAutocomplete' &&
+              Input !== 'categoryAutocomplete' && (
+                <Text style={styles.errorText}>
+                  {errors[name]?.message?.toString()}
+                </Text>
+              )}
           </React.Fragment>
         ),
       )}

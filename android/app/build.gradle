@@ -1,7 +1,7 @@
 apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
-apply from: project(':react-native-config').projectDir.getPath() + "/dotenv.gradle" 
+apply from: project(':react-native-config').projectDir.getPath() + "/dotenv.gradle"
 
 react {
     autolinkLibrariesWithApp()
@@ -110,11 +110,20 @@ android {
             signingConfig signingConfigs.debug
             resValue "string", "build_config_package", "dev.souschef.app"
         }
+        production {
+            // Debug build with production environment variables
+            initWith debug
+            manifestPlaceholders = [usesCleartextTraffic: "true"]
+            signingConfig signingConfigs.debug
+            resValue "string", "build_config_package", "dev.souschef.app"
+            matchingFallbacks = ['debug']
+        }
         release {
             manifestPlaceholders = [usesCleartextTraffic: "false"]
+            // Use release signing config for production builds
             signingConfig signingConfigs.release
             minifyEnabled enableProguardInReleaseBuilds
-            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro", "${rootProject.projectDir}/../node_modules/detox/android/detox/proguard-rules-app.pro"
             resValue "string", "build_config_package", "dev.souschef.app"
         }
         staging {
@@ -136,7 +145,6 @@ dependencies {
     } else {
         implementation jscFlavor
     }
-    implementation project(':react-native-config')
 
     // Detox dependencies
     androidTestImplementation('com.wix:detox:+')

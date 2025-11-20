@@ -1,5 +1,11 @@
 import React, { useState, useCallback } from 'react';
-import { View, useWindowDimensions, ActivityIndicator, Text, TouchableOpacity } from 'react-native';
+import {
+  View,
+  useWindowDimensions,
+  ActivityIndicator,
+  Text,
+  TouchableOpacity,
+} from 'react-native';
 import {
   TabView as RNTabView,
   TabBar,
@@ -18,7 +24,9 @@ export interface TabRoute extends Route {
 
 export interface TabViewProps {
   routes: TabRoute[];
-  renderScene: (props: SceneRendererProps & { route: TabRoute }) => React.ReactNode;
+  renderScene: (
+    props: SceneRendererProps & { route: TabRoute },
+  ) => React.ReactNode;
   initialTabIndex?: number;
   lazy?: boolean;
   lazyPreloadDistance?: number;
@@ -35,7 +43,9 @@ const DefaultLazyPlaceholder: React.FC<{ route: TabRoute }> = ({ route }) => {
   return (
     <View style={styles.placeholder}>
       <ActivityIndicator size="large" color={theme.colors.primary} />
-      <Text style={[styles.placeholderText, { color: theme.colors.textSecondary }]}>
+      <Text
+        style={[styles.placeholderText, { color: theme.colors.textSecondary }]}
+      >
         Loading {route.title}...
       </Text>
     </View>
@@ -75,19 +85,28 @@ export const TabView: React.FC<TabViewProps> = ({
       // Format labels with badge counts
       const routesWithLabels = props.navigationState.routes.map(route => ({
         ...route,
-        title: route.badge !== undefined && route.badge > 0
-          ? `${route.title} (${route.badge})`
-          : route.title,
+        title:
+          route.badge !== undefined && route.badge > 0
+            ? `${route.title} (${route.badge})`
+            : route.title,
       }));
 
       return (
         <View style={styles.tabBarContainer}>
           <TabBar
             {...props}
-            navigationState={{ ...props.navigationState, routes: routesWithLabels }}
+            navigationState={{
+              ...props.navigationState,
+              routes: routesWithLabels,
+            }}
             indicatorStyle={{
               backgroundColor: theme.colors.primary,
               height: 3,
+            }}
+            scrollEnabled={true}
+            bounces={true}
+            tabStyle={{
+              flex: 1,
             }}
             style={{
               backgroundColor: theme.colors.surface,
@@ -95,7 +114,6 @@ export const TabView: React.FC<TabViewProps> = ({
               shadowOpacity: 0,
               borderBottomWidth: 1,
               borderBottomColor: theme.colors.border,
-              paddingRight: onRefresh ? 56 : 0, // Make room for refresh button
             }}
             activeColor={theme.colors.primary}
             inactiveColor={theme.colors.textSecondary}
@@ -109,7 +127,10 @@ export const TabView: React.FC<TabViewProps> = ({
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
                 {refreshing ? (
-                  <ActivityIndicator size="small" color={theme.colors.primary} />
+                  <ActivityIndicator
+                    size="small"
+                    color={theme.colors.primary}
+                  />
                 ) : (
                   <Icon
                     name="refresh"
@@ -135,9 +156,11 @@ export const TabView: React.FC<TabViewProps> = ({
       renderScene={renderScene}
       renderTabBar={renderTabBar}
       renderLazyPlaceholder={(props: { route: TabRoute }) =>
-        renderLazyPlaceholder
-          ? renderLazyPlaceholder(props)
-          : <DefaultLazyPlaceholder {...props} />
+        renderLazyPlaceholder ? (
+          renderLazyPlaceholder(props)
+        ) : (
+          <DefaultLazyPlaceholder {...props} />
+        )
       }
       onIndexChange={handleIndexChange}
       initialLayout={{ width: layout.width }}

@@ -8,7 +8,8 @@ import { useRecipeManagement } from '#/hooks/recipe/useRecipeManagement';
 import { PaginationFooter } from '#/components/organisms/PaginationFooter';
 import { createRemoveFromQueryFieldUpdater } from '#/apollo/utils';
 
-export const RecipeMain: React.FC = () => {
+// PERFORMANCE: Memoize screen component to prevent unnecessary re-renders
+export const RecipeMain: React.FC = React.memo(() => {
   const { navigate } = useAppNavigation();
   const { theme } = useUnistyles();
   const [searchQuery, setSearchQuery] = useState('');
@@ -169,7 +170,7 @@ export const RecipeMain: React.FC = () => {
       />
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create(theme => ({
   container: {

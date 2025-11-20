@@ -11115,7 +11115,7 @@
       {
         "kind": "OBJECT",
         "name": "Home",
-        "description": null,
+        "description": "Home/household for managing pantries and shopping lists\nCache: 5 minutes - metadata changes occasionally",
         "isOneOf": null,
         "fields": [
           {
@@ -18121,7 +18121,7 @@
       {
         "kind": "OBJECT",
         "name": "MealPlan",
-        "description": null,
+        "description": "Meal plan for organizing meals over a period\nCache: 5 minutes - plans change occasionally",
         "isOneOf": null,
         "fields": [
           {
@@ -18341,7 +18341,7 @@
       {
         "kind": "OBJECT",
         "name": "MealPlanItem",
-        "description": null,
+        "description": "Meal plan item linking recipes to meals\nCache: 5 minutes - meal plans change occasionally",
         "isOneOf": null,
         "fields": [
           {
@@ -31368,7 +31368,7 @@
       {
         "kind": "OBJECT",
         "name": "Pantry",
-        "description": null,
+        "description": "Pantry/storage location for a home\nCache: 5 minutes - updated when items added/removed",
         "isOneOf": null,
         "fields": [
           {
@@ -35439,22 +35439,6 @@
             "description": null,
             "args": [
               {
-                "name": "country",
-                "description": null,
-                "type": { "kind": "SCALAR", "name": "String", "ofType": null },
-                "defaultValue": null,
-                "isDeprecated": false,
-                "deprecationReason": null
-              },
-              {
-                "name": "isActive",
-                "description": null,
-                "type": { "kind": "SCALAR", "name": "Boolean", "ofType": null },
-                "defaultValue": null,
-                "isDeprecated": false,
-                "deprecationReason": null
-              },
-              {
                 "name": "parentId",
                 "description": null,
                 "type": { "kind": "SCALAR", "name": "String", "ofType": null },
@@ -36021,6 +36005,27 @@
               }
             ],
             "type": { "kind": "OBJECT", "name": "Currency", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "defaultPantry",
+            "description": null,
+            "args": [
+              {
+                "name": "homeId",
+                "description": null,
+                "type": {
+                  "kind": "NON_NULL",
+                  "name": null,
+                  "ofType": { "kind": "SCALAR", "name": "ID", "ofType": null }
+                },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              }
+            ],
+            "type": { "kind": "OBJECT", "name": "Pantry", "ofType": null },
             "isDeprecated": false,
             "deprecationReason": null
           },
@@ -44275,7 +44280,7 @@
       {
         "kind": "OBJECT",
         "name": "ShoppingList",
-        "description": null,
+        "description": "Shopping list for a home\nCache: 1 minute - frequently updated by collaborators",
         "isOneOf": null,
         "fields": [
           {

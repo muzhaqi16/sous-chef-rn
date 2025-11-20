@@ -7,6 +7,10 @@ import {
   GetShoppingListItemsQuery,
 } from '#generated';
 import { SubscriptionService } from '#/services/subscriptions/SubscriptionService';
+import {
+  handleVersionConflict,
+  getVersionConflictMessage,
+} from '#/utils/errors/versionConflict';
 
 interface ShoppingListItem {
   id: string;
@@ -24,6 +28,11 @@ interface UseItemReorderingOptions<T extends ShoppingListItem> {
    * Array of shopping list items
    */
   items: T[];
+
+  /**
+   * Optional refetch function for version conflict recovery
+   */
+  refetch?: () => void;
 }
 
 /**
@@ -56,7 +65,7 @@ interface UseItemReorderingOptions<T extends ShoppingListItem> {
 export function useItemReordering<T extends ShoppingListItem>(
   options: UseItemReorderingOptions<T>,
 ) {
-  const { listId, items } = options;
+  const { listId, items, refetch } = options;
 
   const [moveItem] = useMoveShoppingListItemMutation({
     errorPolicy: 'all',
@@ -192,12 +201,23 @@ export function useItemReordering<T extends ShoppingListItem>(
 
         // Mark this item as recently reordered to ignore subscription echo
         SubscriptionService.getInstance().markItemReordered(itemId);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Failed to move item:', error);
-        Alert.alert('Error', 'Failed to reorder items');
+
+        // PERFORMANCE: Handle version conflict errors with user-friendly message
+        if (handleVersionConflict(error)) {
+          Alert.alert('Item Updated', getVersionConflictMessage(error), [
+            { text: 'Refresh', onPress: () => refetch?.() },
+            { text: 'Cancel', style: 'cancel' },
+          ]);
+          return;
+        }
+
+        // Generic error fallback
+        Alert.alert('Error', 'Failed to reorder items. Please try again.');
       }
     },
-    [listId, moveItem, items],
+    [listId, moveItem, items, refetch],
   );
 
   return { handleSortOrderUpdate };

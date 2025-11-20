@@ -33,6 +33,7 @@ export function createAnimatedTabNavigator<
         <View style={styles.container}>
           <Tab.Navigator
           initialRouteName={initialRouteName}
+          detachInactiveScreens={true}
           screenOptions={typeof screenOptions === 'function'
             ? (props) => ({
                 headerShown: false,

@@ -50,6 +50,7 @@ export const BarcodeScannerScreen: React.FC<{
 
   // barcode state/hooks
   const hasNavigatedRef = useRef(false);
+
   const { setScannedBarcode, setScanning, resetScanner, isScanning } =
     useBarcodeScanner();
 
@@ -60,9 +61,6 @@ export const BarcodeScannerScreen: React.FC<{
 
   // 1) On mount, ask for camera permission if we don't have it yet
   useEffect(() => {
-    // Hide status bar for immersive camera experience
-    StatusBar.setHidden(true, 'slide');
-
     if (!hasPermission) {
       requestPermission().catch(err => {
         console.error('requestPermission error', err);
@@ -72,8 +70,7 @@ export const BarcodeScannerScreen: React.FC<{
 
     // Cleanup on unmount
     return () => {
-      StatusBar.setHidden(false, 'slide');
-      // Don't set barStyle - let App.tsx handle theme-aware styling
+      // Don't adjust StatusBar here; focus effect handles lifecycle
     };
   }, [hasPermission, requestPermission]);
 
@@ -104,19 +101,14 @@ export const BarcodeScannerScreen: React.FC<{
   );
 
   // 3) Set up the VisionCamera code‐scanner callback
+  // PERFORMANCE: Limited to most common barcode types for grocery items
+  // QR codes (quick response codes), EAN-13 (European), UPC-A/E (US standard)
   const codeScanner = useCodeScanner({
     codeTypes: [
-      'qr',
-      'ean-13',
-      'ean-8',
-      'code-128',
-      'code-39',
-      'code-93',
-      'codabar',
-      'upc-a',
-      'upc-e',
-      'pdf-417',
-      'data-matrix',
+      'qr', // QR codes - common for product info, coupons
+      'ean-13', // European Article Number - most common grocery barcode
+      'upc-a', // Universal Product Code - US standard
+      'upc-e', // UPC compressed format
     ],
     onCodeScanned: codes => {
       if (!isActive || hasNavigatedRef.current || !codes.length) return;
@@ -189,6 +181,8 @@ export const BarcodeScannerScreen: React.FC<{
         device={device}
         isActive={isActive}
         codeScanner={codeScanner}
+        // Reduce CPU by limiting camera FPS instead of per-frame JS throttling
+        fps={2}
         torch={flashEnabled ? 'on' : 'off'}
         enableZoomGesture
       />

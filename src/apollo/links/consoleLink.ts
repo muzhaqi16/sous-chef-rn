@@ -1,5 +1,5 @@
 import {ApolloLink, Observable} from '@apollo/client';
-import {serializeError} from '#/utils/errorSerialization';
+import {serializeError, safeStringifyError} from '#/utils/errorSerialization';
 
 // Enable detailed logging only in development
 const isDevelopment = __DEV__;
@@ -70,10 +70,20 @@ export const createConsoleLink = (
             console.log('   📤 Variables:', operation.variables);
           }
 
-          // Log errors as expandable objects
+          // Log errors as JSON strings to prevent React Native console serialization issues
           if (hasErrors) {
             const safeErrors = result.errors?.map(serializeError);
-            console.error('   ❌ Errors:', safeErrors);
+            const {stringified, isCircular} = safeStringifyError(safeErrors);
+
+            if (isCircular) {
+              // Circular structure errors are expected during WebSocket reconnection - log as warning
+              console.warn(
+                '   ⚠️ GraphQL errors (circular structure - expected during reconnection)',
+              );
+              console.warn('   Error count:', safeErrors?.length || 0);
+            } else {
+              console.error('   ❌ Errors:', stringified);
+            }
           }
 
           // Log response data as expandable object

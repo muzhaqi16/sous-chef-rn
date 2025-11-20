@@ -1499,6 +1499,10 @@ export enum HealthGoal {
   SugarFree = 'SUGAR_FREE',
 }
 
+/**
+ * Home/household for managing pantries and shopping lists
+ * Cache: 5 minutes - metadata changes occasionally
+ */
 export type Home = {
   __typename?: 'Home';
   allowJoinCode: Scalars['Boolean']['output'];
@@ -1523,6 +1527,10 @@ export type Home = {
   version: Scalars['Int']['output'];
 };
 
+/**
+ * Home/household for managing pantries and shopping lists
+ * Cache: 5 minutes - metadata changes occasionally
+ */
 export type HomeInvitesConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
@@ -1530,6 +1538,10 @@ export type HomeInvitesConnectionArgs = {
   last?: InputMaybe<Scalars['Int']['input']>;
 };
 
+/**
+ * Home/household for managing pantries and shopping lists
+ * Cache: 5 minutes - metadata changes occasionally
+ */
 export type HomeMembersConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
@@ -1537,6 +1549,10 @@ export type HomeMembersConnectionArgs = {
   last?: InputMaybe<Scalars['Int']['input']>;
 };
 
+/**
+ * Home/household for managing pantries and shopping lists
+ * Cache: 5 minutes - metadata changes occasionally
+ */
 export type HomePantriesConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
@@ -2364,6 +2380,10 @@ export enum MatchType {
   Partial = 'PARTIAL',
 }
 
+/**
+ * Meal plan for organizing meals over a period
+ * Cache: 5 minutes - plans change occasionally
+ */
 export type MealPlan = {
   __typename?: 'MealPlan';
   actualCost: Scalars['Float']['output'];
@@ -2384,6 +2404,10 @@ export type MealPlan = {
   version: Scalars['Int']['output'];
 };
 
+/**
+ * Meal plan item linking recipes to meals
+ * Cache: 5 minutes - meal plans change occasionally
+ */
 export type MealPlanItem = {
   __typename?: 'MealPlanItem';
   actualCost?: Maybe<Scalars['Float']['output']>;
@@ -4327,6 +4351,10 @@ export type PaginationInput = {
   take?: InputMaybe<Scalars['Int']['input']>;
 };
 
+/**
+ * Pantry/storage location for a home
+ * Cache: 5 minutes - updated when items added/removed
+ */
 export type Pantry = {
   __typename?: 'Pantry';
   createdAt: Scalars['DateTime']['output'];
@@ -4347,6 +4375,10 @@ export type Pantry = {
   version: Scalars['Int']['output'];
 };
 
+/**
+ * Pantry/storage location for a home
+ * Cache: 5 minutes - updated when items added/removed
+ */
 export type PantryItemsConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
@@ -4355,6 +4387,10 @@ export type PantryItemsConnectionArgs = {
   orderBy?: InputMaybe<PantryItemOrderBy>;
 };
 
+/**
+ * Pantry/storage location for a home
+ * Cache: 5 minutes - updated when items added/removed
+ */
 export type PantryStorageLocationsConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
@@ -4850,6 +4886,7 @@ export type Query = {
   currencies: Array<Currency>;
   currency?: Maybe<Currency>;
   currencyByCode?: Maybe<Currency>;
+  defaultPantry?: Maybe<Pantry>;
   defaultShoppingList?: Maybe<ShoppingList>;
   device?: Maybe<Device>;
   deviceByDeviceId?: Maybe<Device>;
@@ -5048,8 +5085,6 @@ export type QueryBrandArgs = {
 };
 
 export type QueryBrandsArgs = {
-  country?: InputMaybe<Scalars['String']['input']>;
-  isActive?: InputMaybe<Scalars['Boolean']['input']>;
   parentId?: InputMaybe<Scalars['String']['input']>;
   search?: InputMaybe<Scalars['String']['input']>;
   skip?: InputMaybe<Scalars['Int']['input']>;
@@ -5118,6 +5153,10 @@ export type QueryCurrencyArgs = {
 
 export type QueryCurrencyByCodeArgs = {
   code: Scalars['String']['input'];
+};
+
+export type QueryDefaultPantryArgs = {
+  homeId: Scalars['ID']['input'];
 };
 
 export type QueryDeviceArgs = {
@@ -6077,6 +6116,10 @@ export type ShareShoppingListInput = {
   shareCode?: InputMaybe<Scalars['String']['input']>;
 };
 
+/**
+ * Shopping list for a home
+ * Cache: 1 minute - frequently updated by collaborators
+ */
 export type ShoppingList = {
   __typename?: 'ShoppingList';
   /** @deprecated Use activitiesConnection for pagination to reduce query complexity */
@@ -6141,6 +6184,10 @@ export type ShoppingList = {
   viewCount: Scalars['Int']['output'];
 };
 
+/**
+ * Shopping list for a home
+ * Cache: 1 minute - frequently updated by collaborators
+ */
 export type ShoppingListActivitiesConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
@@ -6149,6 +6196,10 @@ export type ShoppingListActivitiesConnectionArgs = {
   orderBy?: InputMaybe<ShoppingListActivityOrderBy>;
 };
 
+/**
+ * Shopping list for a home
+ * Cache: 1 minute - frequently updated by collaborators
+ */
 export type ShoppingListCollaboratorsConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
@@ -6157,6 +6208,10 @@ export type ShoppingListCollaboratorsConnectionArgs = {
   orderBy?: InputMaybe<CollaboratorOrderBy>;
 };
 
+/**
+ * Shopping list for a home
+ * Cache: 1 minute - frequently updated by collaborators
+ */
 export type ShoppingListItemsConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
@@ -14940,12 +14995,14 @@ export type ItemBySkuQuery = {
 export type GetOnboardingItemsQueryVariables = Exact<{
   filters?: InputMaybe<ItemFilters>;
   sort?: InputMaybe<ItemSortInput>;
+  pagination?: InputMaybe<PaginationInput>;
 }>;
 
 export type GetOnboardingItemsQuery = {
   __typename?: 'Query';
   items: {
     __typename?: 'ItemsResponse';
+    totalCount: number;
     items?:
       | Array<{
           __typename?: 'Item';
@@ -16188,6 +16245,18 @@ export type GetPantryItemQuery = {
   };
 };
 
+export type GetDefaultPantryQueryVariables = Exact<{
+  homeId: Scalars['ID']['input'];
+}>;
+
+export type GetDefaultPantryQuery = {
+  __typename?: 'Query';
+  defaultPantry?:
+    | { __typename?: 'Pantry'; id: string; name: string; isDefault: boolean }
+    | null
+    | undefined;
+};
+
 export type CreatePantryMutationVariables = Exact<{
   input: CreatePantryInput;
 }>;
@@ -16242,6 +16311,21 @@ export type DeletePantryMutationVariables = Exact<{
 export type DeletePantryMutation = {
   __typename?: 'Mutation';
   deletePantry: boolean;
+};
+
+export type SetDefaultPantryMutationVariables = Exact<{
+  pantryId: Scalars['ID']['input'];
+}>;
+
+export type SetDefaultPantryMutation = {
+  __typename?: 'Mutation';
+  setDefaultPantry: {
+    __typename?: 'Pantry';
+    id: string;
+    name: string;
+    isDefault: boolean;
+    homeId: string;
+  };
 };
 
 export type CreatePantryItemMutationVariables = Exact<{
@@ -17888,7 +17972,6 @@ export type PantryUpdatedSubscription = {
           metadata?: any | null | undefined;
           version: number;
           updatedAt: string;
-          home: { __typename?: 'Home'; id: string; name: string };
         }
       | null
       | undefined;

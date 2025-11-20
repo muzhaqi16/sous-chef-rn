@@ -77,7 +77,7 @@ export const Header: React.FC<HeaderProps> = ({
               color={action.color || styles.title.color}
             />
             {action.badge !== undefined && action.badge > 0 && (
-              <View style={styles.badge}>
+              <View style={[commonStyles.badge, styles.badge]}>
                 <Text style={commonStyles.badgeText}>{action.badge}</Text>
               </View>
             )}
@@ -113,7 +113,6 @@ const styles = StyleSheet.create(theme => ({
   },
 
   badge: {
-    ...commonStyles.badge,
     position: 'absolute',
     top: -4,
     right: -4,

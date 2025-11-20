@@ -6,9 +6,10 @@ import { StyleSheet } from 'react-native-unistyles';
 
 interface AuthWrapperProps {
   children: ReactNode;
+  testID?: string;
 }
 
-export const AuthWrapper = ({ children }: AuthWrapperProps) => {
+export const AuthWrapper = ({ children, testID }: AuthWrapperProps) => {
   const keyboardVerticalOffset = Platform.select({ ios: 64, android: 0 });
 
   return (
@@ -22,7 +23,9 @@ export const AuthWrapper = ({ children }: AuthWrapperProps) => {
           contentContainerStyle={styles.scrollContainer}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.inner}>{children}</View>
+          <View style={styles.inner} testID={testID}>
+            {children}
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

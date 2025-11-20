@@ -6,20 +6,21 @@ interface NotificationProviderProps {
 }
 
 /**
- * NotificationProvider - Wraps the app to enable real-time notifications
- * This component should be placed high in the component tree to ensure
- * notifications are active throughout the app lifecycle.
+ * NotificationListener - Handles all notification subscriptions as side effects.
+ * Returns null to prevent rendering, ensuring re-renders don't cascade to app tree.
+ *
+ * PERFORMANCE: This pattern eliminates cascade re-renders. When NotificationListener
+ * re-renders due to notification/auth state changes, it doesn't affect siblings
+ * since it returns null (no React elements to reconcile).
  */
-export const NotificationProvider: React.FC<NotificationProviderProps> = ({
-  children,
-}) => {
+const NotificationListener: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
-
-  // Get notification settings to configure the real-time system
   const { settings } = useNotificationSettings();
 
   // Initialize real-time notifications with user settings
+  // skip when not authenticated to prevent unnecessary subscription attempts
   useNotifications({
+    skip: !isAuthenticated || !user,
     enablePantryNotifications: settings.pantryChanges,
     enableShoppingListNotifications: settings.shoppingListUpdates,
     enableMembershipNotifications: settings.homeInvites,
@@ -30,12 +31,26 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
     showPushNotifications: settings.pushEnabled,
   });
 
-  // Only initialize notifications if user is authenticated
-  if (!isAuthenticated || !user) {
-    return <>{children}</>;
-  }
+  // Returns null - no rendering, just side effects
+  return null;
+};
 
-  return <>{children}</>;
+/**
+ * NotificationProvider - Wraps app to enable notifications without re-rendering children.
+ *
+ * PERFORMANCE: Provider itself is static (no state/props), so it never re-renders.
+ * NotificationListener handles all subscriptions and returns null, preventing
+ * cascade re-renders to Navigation + all screens + BottomSheetModalProvider.
+ */
+export const NotificationProvider: React.FC<NotificationProviderProps> = ({
+  children,
+}) => {
+  return (
+    <>
+      <NotificationListener />
+      {children}
+    </>
+  );
 };
 
 export default NotificationProvider;

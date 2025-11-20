@@ -94,8 +94,32 @@ export const AcceptInvite: React.FC = () => {
       } else {
         Alert.alert('Error', 'Unknown invitation type');
       }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to accept invitation');
+    } catch (error: any) {
+      console.error('Accept invitation error:', error);
+
+      // PERFORMANCE: Specific error messages based on error type
+      let errorMessage = 'Failed to accept invitation. ';
+
+      if (error.networkError) {
+        errorMessage += 'Network error - check your internet connection and try again.';
+      } else if (error.graphQLErrors?.length) {
+        const graphQLError = error.graphQLErrors[0];
+        if (graphQLError.extensions?.code === 'INVITATION_EXPIRED') {
+          errorMessage += 'This invitation has expired. Please ask for a new one.';
+        } else if (graphQLError.extensions?.code === 'INVITATION_ALREADY_ACCEPTED') {
+          errorMessage += 'This invitation has already been accepted.';
+        } else if (graphQLError.extensions?.code === 'UNAUTHENTICATED') {
+          errorMessage += 'Session expired - please log in again.';
+        } else if (graphQLError.extensions?.code === 'NOT_FOUND') {
+          errorMessage += 'Invitation not found - it may have been revoked.';
+        } else {
+          errorMessage += graphQLError.message || 'Please try again.';
+        }
+      } else {
+        errorMessage += 'Please try again.';
+      }
+
+      Alert.alert('Error', errorMessage);
     } finally {
       setProcessing(false);
     }

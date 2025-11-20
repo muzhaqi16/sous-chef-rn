@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 import Config from 'react-native-config';
 import { useStore } from '#store';
 import { Environment, logger } from '#/utils/environment';
+import { serializeError } from '#/utils/errorSerialization';
 
 // pick the right WebSocket constructor
 const webSocketImpl =
@@ -56,7 +57,10 @@ const createWsClient = () => {
       },
       closed: (event: any) => {
         isReconnecting = false;
-        if (__DEV__) {
+        // Error 4500 is "Invalid or expired JWT token" - expected during token expiration
+        // Suppress this specific error to reduce log noise during normal token refresh cycles
+        const isAuthError = event?.code === 4500;
+        if (__DEV__ && !isAuthError) {
           logger.info('🔌 WebSocket closed:', {
             code: event?.code,
             reason: event?.reason,
@@ -159,7 +163,7 @@ export const disposeWebSocket = () => {
       lastReconnectTime = 0;
     }
   } catch (error) {
-    logger.warn('Error disposing WebSocket:', error);
+    logger.warn('Error disposing WebSocket:', serializeError(error));
   }
 };
 

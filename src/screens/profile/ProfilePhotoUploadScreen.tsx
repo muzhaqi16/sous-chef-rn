@@ -122,14 +122,32 @@ export const ProfilePhotoUploadScreen: React.FC<{
       );
       if (result === RESULTS.GRANTED) {
         launchCamera(DEFAULT_OPTIONS, handleImageResponse);
+      } else if (result === RESULTS.DENIED) {
+        // PERFORMANCE: Specific error message - permission denied
+        Alert.alert(
+          'Camera Permission Denied',
+          'Camera permission is required to take photos. Please enable it in your device settings.',
+        );
+      } else if (result === RESULTS.BLOCKED) {
+        // PERFORMANCE: Specific error message - permission permanently blocked
+        Alert.alert(
+          'Camera Permission Blocked',
+          'Camera access is blocked. Please go to Settings > Apps > Sous Chef > Permissions to enable camera access.',
+        );
       } else {
+        // PERFORMANCE: Specific error message - other permission states
         Alert.alert(
           'Camera Permission',
           'Camera permission is required to take photos. Please enable it in your device settings.',
         );
       }
     } catch (error) {
-      launchCamera(DEFAULT_OPTIONS, handleImageResponse);
+      console.error('Camera permission error:', error);
+      // PERFORMANCE: Specific error message - permission request failed
+      Alert.alert(
+        'Permission Error',
+        'Failed to request camera permission. Please try again or check your device settings.',
+      );
     }
   }, [handleImageResponse]);
 
@@ -141,11 +159,32 @@ export const ProfilePhotoUploadScreen: React.FC<{
       );
       if (result === RESULTS.GRANTED || result === RESULTS.LIMITED) {
         launchImageLibrary(DEFAULT_OPTIONS, handleImageResponse);
+      } else if (result === RESULTS.DENIED) {
+        // PERFORMANCE: Specific error message - permission denied
+        Alert.alert(
+          'Photo Library Permission Denied',
+          'Photo library access is required to select photos. Please enable it in your device settings.',
+        );
+      } else if (result === RESULTS.BLOCKED) {
+        // PERFORMANCE: Specific error message - permission permanently blocked
+        Alert.alert(
+          'Photo Library Permission Blocked',
+          'Photo library access is blocked. Please go to Settings > Apps > Sous Chef > Permissions to enable photo access.',
+        );
       } else {
-        launchImageLibrary(DEFAULT_OPTIONS, handleImageResponse);
+        // PERFORMANCE: Specific error message - other permission states
+        Alert.alert(
+          'Photo Library Permission',
+          'Photo library access is required to select photos. Please enable it in your device settings.',
+        );
       }
     } catch (error) {
-      launchImageLibrary(DEFAULT_OPTIONS, handleImageResponse);
+      console.error('Photo library permission error:', error);
+      // PERFORMANCE: Specific error message - permission request failed
+      Alert.alert(
+        'Permission Error',
+        'Failed to request photo library permission. Please try again or check your device settings.',
+      );
     }
   }, [handleImageResponse]);
 

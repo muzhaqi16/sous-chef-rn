@@ -13,16 +13,24 @@ import { formatRole } from '#utils/formatters';
 import { normalizeHome } from '#/utils/connectionUtils';
 import { createRemoveFromParentConnectionUpdater } from '#/apollo/utils';
 import { useCrudOperations } from '#/hooks/utils';
+import { useOfflinePresetPolicy } from '#/apollo/policies/offlineFetchPolicies';
+import {
+  handleVersionConflict,
+  getVersionConflictMessage,
+} from '#/utils/errors/versionConflict';
 
 /**
  * Custom hook for HomeDetailScreen business logic
  * Manages home details, members, and invites
  */
 export function useHomeDetailManagement(homeId: string) {
+  // PERFORMANCE: Use offline-aware fetch policy preset for consistency
+  const fetchPolicy = useOfflinePresetPolicy('DETAIL');
+
   // Query
-  const { data, loading } = useGetHomeQuery({
+  const { data, loading, refetch } = useGetHomeQuery({
     variables: { homeId },
-    fetchPolicy: 'cache-and-network',
+    fetchPolicy,
   });
 
   // Mutations
@@ -86,6 +94,15 @@ export function useHomeDetailManagement(homeId: string) {
       }
     },
     onError: error => {
+      // PERFORMANCE: Handle version conflict errors with user-friendly message
+      if (handleVersionConflict(error)) {
+        Alert.alert('Member Updated', getVersionConflictMessage(error), [
+          { text: 'Refresh', onPress: () => refetch() },
+          { text: 'Cancel', style: 'cancel' },
+        ]);
+        return;
+      }
+
       Alert.alert('Error', error.message || MESSAGES.errors.removeMemberFailed);
     },
   });
@@ -107,6 +124,15 @@ export function useHomeDetailManagement(homeId: string) {
       }
     },
     onError: error => {
+      // PERFORMANCE: Handle version conflict errors with user-friendly message
+      if (handleVersionConflict(error)) {
+        Alert.alert('Invite Updated', getVersionConflictMessage(error), [
+          { text: 'Refresh', onPress: () => refetch() },
+          { text: 'Cancel', style: 'cancel' },
+        ]);
+        return;
+      }
+
       Alert.alert('Error', error.message || MESSAGES.errors.revokeInviteFailed);
     },
   });

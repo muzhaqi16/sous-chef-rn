@@ -98,7 +98,9 @@ export const SettingRow: React.FC<SettingRowProps> = ({
     if (item.type === 'switch') {
       return `${baseLabel}, ${item.value ? 'enabled' : 'disabled'}`;
     } else if (item.type === 'modal' && item.options) {
-      const selectedOption = item.options?.find((opt: any) => opt.value === item.value)?.label || 'Select';
+      const selectedOption =
+        item.options?.find((opt: any) => opt.value === item.value)?.label ||
+        'Select';
       return `${baseLabel}, currently ${selectedOption}`;
     } else if (item.type === 'text') {
       return `${baseLabel}, ${item.value || 'not set'}`;
@@ -141,7 +143,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
 
           {item.type === 'text' && (
             <>
-              <ValueText>d{item.value as string}</ValueText>
+              <ValueText>{item.value as string}</ValueText>
               <Icon
                 library="Feather"
                 name="edit-2"

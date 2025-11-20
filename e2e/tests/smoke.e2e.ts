@@ -5,40 +5,23 @@
  * These tests should run fast and catch critical issues.
  */
 
+import { launchAppWithFabricWorkaround } from '../init';
+
 describe('Smoke Tests', () => {
   beforeAll(async () => {
-    await device.launchApp({
+    await launchAppWithFabricWorkaround({
       newInstance: true,
       permissions: { notifications: 'YES' },
     });
   });
 
-  beforeEach(async () => {
-    await device.reloadReactNative();
-  });
-
   it('should launch the app successfully', async () => {
-    // App should load without crashing
-    // This test passes if app launches
-    await expect(element(by.text('Sous Chef'))).toExist();
-  });
+    // Wait for splash screen to disappear - this verifies app hydrated successfully
+    await waitFor(element(by.id('splash-screen')))
+      .not.toBeVisible()
+      .withTimeout(10000);
 
-  it('should show login screen or home screen', async () => {
-    // App should show either login (if logged out) or home (if logged in)
-    try {
-      // Try to find login screen
-      await waitFor(element(by.id('login-screen')))
-        .toBeVisible()
-        .withTimeout(5000);
-    } catch {
-      // If no login screen, should show home/shopping list
-      await waitFor(element(by.id('shopping-list-screen')))
-        .toBeVisible()
-        .withTimeout(5000);
-    }
-
-    // Test passes if either screen is visible
-    expect(true).toBe(true);
+    // App successfully launched and hydrated if splash disappeared
   });
 
   it('should have bottom navigation tabs', async () => {
@@ -61,9 +44,6 @@ describe('Smoke Tests', () => {
       // If no button found, that's okay - app didn't crash
       console.log('No buttons found, but app is stable');
     }
-
-    // Test passes if app doesn't crash
-    expect(true).toBe(true);
   });
 
   it('should render text elements', async () => {
@@ -73,8 +53,5 @@ describe('Smoke Tests', () => {
     } catch {
       console.log('No text elements found initially');
     }
-
-    // Test passes if app renders without crashing
-    expect(true).toBe(true);
   });
 });

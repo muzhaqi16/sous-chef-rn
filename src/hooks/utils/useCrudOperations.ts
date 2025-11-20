@@ -22,6 +22,7 @@ import { useCallback } from 'react';
 import { Alert } from 'react-native';
 import { useApolloClient } from '@apollo/client/react';
 import { DocumentNode } from 'graphql';
+import { serializeError } from '#/utils/errorSerialization';
 import {
   handleVersionConflictAlert,
   handleMutationErrorAlert,
@@ -32,7 +33,7 @@ import {
  */
 export interface CreateOperationConfig<TInput, TResult> {
   mutation: (variables: any) => Promise<{ data?: TResult }>;
-  parentId?: string | null;
+  parentId?: string | null | (() => string | null | undefined);
   transformInput?: (input: TInput) => any;
   validateInput?: (input: TInput) => boolean | string;
   onSuccess?: (data: TResult) => void;
@@ -45,7 +46,7 @@ export interface CreateOperationConfig<TInput, TResult> {
  */
 export interface UpdateOperationConfig<TInput, TResult> {
   mutation: (variables: any) => Promise<{ data?: TResult }>;
-  parentId?: string | null;
+  parentId?: string | null | (() => string | null | undefined);
   itemId: string;
   transformInput?: (input: TInput) => any;
   validateInput?: (input: TInput) => boolean | string;
@@ -63,7 +64,7 @@ export interface UpdateOperationConfig<TInput, TResult> {
  */
 export interface RemoveOperationConfig<TResult> {
   mutation: (variables: any) => Promise<{ data?: TResult }>;
-  parentId?: string | null;
+  parentId?: string | null | (() => string | null | undefined);
   itemId: string;
   confirmMessage?: string;
   itemName?: string;
@@ -107,8 +108,9 @@ export function useCrudOperations() {
           operationName = 'Create Item',
         } = config;
 
-        // Validate parent ID if required
-        if (parentId === null || parentId === undefined) {
+        // Validate parent ID only if it was explicitly provided in config
+        const resolvedParentId = typeof parentId === 'function' ? parentId() : parentId;
+        if (parentId !== undefined && (resolvedParentId === null || resolvedParentId === '')) {
           Alert.alert('Error', 'Parent context is required');
           return false;
         }
@@ -132,7 +134,7 @@ export function useCrudOperations() {
             ? { input: transformInput(input) }
             : { input };
 
-          const result = await mutation(variables);
+          const result = await mutation({ variables });
 
           if (result.data) {
             onSuccess?.(result.data);
@@ -142,7 +144,7 @@ export function useCrudOperations() {
           Alert.alert('Error', `Failed to ${operationName.toLowerCase()}`);
           return false;
         } catch (error: any) {
-          console.error(`${operationName} error:`, error);
+          console.error(`${operationName} error:`, serializeError(error));
           onError?.(error);
           handleMutationErrorAlert(error, { operation: operationName });
           return false;
@@ -188,7 +190,8 @@ export function useCrudOperations() {
         } = config;
 
         // Validate parent ID if required
-        if (parentId !== undefined && (parentId === null || parentId === '')) {
+        const resolvedParentId = typeof parentId === 'function' ? parentId() : parentId;
+        if (resolvedParentId !== undefined && (resolvedParentId === null || resolvedParentId === '')) {
           Alert.alert('Error', 'Parent context is required');
           return false;
         }
@@ -227,8 +230,10 @@ export function useCrudOperations() {
           }
 
           const result = await mutation({
-            id: itemId,
-            input: transformedInput,
+            variables: {
+              id: itemId,
+              input: transformedInput,
+            },
           });
 
           if (result.data) {
@@ -290,7 +295,8 @@ export function useCrudOperations() {
         } = config;
 
         // Validate parent ID if required
-        if (parentId !== undefined && (parentId === null || parentId === '')) {
+        const resolvedParentId = typeof parentId === 'function' ? parentId() : parentId;
+        if (resolvedParentId !== undefined && (resolvedParentId === null || resolvedParentId === '')) {
           Alert.alert('Error', 'Parent context is required');
           return false;
         }
@@ -402,7 +408,7 @@ export function useCrudOperations() {
           Alert.alert('Error', `Failed to ${operationName.toLowerCase()}`);
           return false;
         } catch (error: any) {
-          console.error(`${operationName} error:`, error);
+          console.error(`${operationName} error:`, serializeError(error));
           onError?.(error);
           handleMutationErrorAlert(error, { operation: operationName });
           return false;

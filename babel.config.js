@@ -1,7 +1,6 @@
 module.exports = {
   presets: ['module:@react-native/babel-preset'],
   plugins: [
-    ['react-native-worklets-core/plugin'],
     [
       'module-resolver',
       {
@@ -25,7 +24,6 @@ module.exports = {
           '#config': './src/config',
           '#context': './src/context',
           '#context/*': './src/context/*',
-          '#contexts': './src/contexts',
           '#generated': './src/graphql/generated',
           '#graphql': './src/graphql',
           '#hooks': './src/hooks',
@@ -44,17 +42,14 @@ module.exports = {
         },
       },
     ],
-    [
-      'react-native-unistyles/plugin',
-      {
-        // pass root folder of your application
-        // all files under this folder will be processed by the Babel plugin
-        // if you need to include more folders, or customize discovery process
-        // check available babel options
-        root: 'src',
-      },
+
+    ['react-native-unistyles/plugin', { root: 'src' }],
+
+    process.env.NODE_ENV === 'production' && [
+      'transform-remove-console',
+      { exclude: ['error', 'warn'] },
     ],
     // react-native-worklets/plugin has to be listed last.
     'react-native-worklets/plugin',
-  ],
+  ].filter(Boolean),
 };

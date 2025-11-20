@@ -45,12 +45,19 @@ export function scheduleTokenRefresh(
     const expiresAt = decoded.exp * 1000; // Convert to milliseconds
     const now = Date.now();
 
-    // Refresh 5 minutes (300 seconds) before expiration
+    // Refresh 10 minutes (600 seconds) before expiration
     // Configuration: Can be adjusted based on security requirements
     // - 2 minutes: Very conservative (high security apps)
-    // - 5 minutes: Recommended (industry standard) ← DEFAULT
-    // - 10 minutes: Aggressive (better UX, slightly less secure)
-    const REFRESH_BUFFER_MS = 5 * 60 * 1000;
+    // - 5 minutes: Standard (industry baseline)
+    // - 10 minutes: Recommended (better UX with margin for delays) ← DEFAULT
+    // - 15 minutes: Aggressive (maximum UX, less secure)
+    //
+    // Increased to 10 minutes to provide more margin for:
+    // - Network delays and latency
+    // - App being backgrounded
+    // - Device wake-up latency
+    // - Offline->online transitions
+    const REFRESH_BUFFER_MS = 10 * 60 * 1000;
     const refreshAt = expiresAt - REFRESH_BUFFER_MS;
     const delay = refreshAt - now;
 

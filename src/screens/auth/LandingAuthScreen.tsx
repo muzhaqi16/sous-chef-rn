@@ -9,7 +9,7 @@ export function LandingAuthScreen() {
   const { navigation } = useSafeNavigation();
 
   return (
-    <AuthWrapper>
+    <AuthWrapper testID="landing-auth-screen">
       {/* 1. Hero image flex-zone */}
       <View style={styles.heroContainer}>
         <Image
@@ -31,6 +31,7 @@ export function LandingAuthScreen() {
 
         <View style={styles.buttons}>
           <Button
+            testID="landing-login-button"
             title="Log In"
             onPress={() => navigation.navigate('Login')}
             variant="secondary"
@@ -38,6 +39,7 @@ export function LandingAuthScreen() {
             txtStyle={styles.txt}
           />
           <Button
+            testID="landing-signup-button"
             title="Sign Up"
             onPress={() => navigation.navigate('SignUp')}
             fullWidth

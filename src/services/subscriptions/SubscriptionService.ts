@@ -36,7 +36,7 @@ import {
   MutationType,
   LogLevel,
 } from './types';
-import { serializeError } from '#/utils/errorSerialization';
+import { serializeError, isCircularStructureError } from '#/utils/errorSerialization';
 
 export class SubscriptionService {
   private static instance: SubscriptionService;
@@ -470,26 +470,43 @@ export class SubscriptionService {
       return;
     }
 
+    // Check if this is a circular structure error - downgrade to warning
+    const isCircular =
+      level === LogLevel.ERROR &&
+      data &&
+      (isCircularStructureError(data) ||
+        (typeof data === 'object' &&
+          data.message &&
+          isCircularStructureError(data.message)));
+
+    const actualLevel = isCircular ? LogLevel.WARN : level;
+    const actualMessage = isCircular
+      ? `${message} (circular structure - expected during reconnection)`
+      : message;
+
+    // For circular errors, only log brief message without full data object
+    const actualData = isCircular ? '' : data || '';
+
     const emoji = {
       [LogLevel.DEBUG]: '🔍',
       [LogLevel.INFO]: '🔔',
       [LogLevel.WARN]: '⚠️',
       [LogLevel.ERROR]: '❌',
-    }[level];
+    }[actualLevel];
 
     const prefix = `${emoji} [${config.subscriptionName}]`;
 
-    switch (level) {
+    switch (actualLevel) {
       case LogLevel.ERROR:
-        console.error(prefix, message, data || '');
+        console.error(prefix, actualMessage, actualData);
         break;
       case LogLevel.WARN:
-        console.warn(prefix, message, data || '');
+        console.warn(prefix, actualMessage, actualData);
         break;
       case LogLevel.DEBUG:
       case LogLevel.INFO:
       default:
-        console.log(prefix, message, data || '');
+        console.log(prefix, actualMessage, actualData);
     }
   }
 

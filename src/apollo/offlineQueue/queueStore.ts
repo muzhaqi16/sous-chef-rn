@@ -9,21 +9,49 @@ const CURRENT_USER_KEY = 'apollo-queue-current-user';
  * Provides user-scoped mutation queuing with atomic operations
  */
 export class QueueStore {
+  // PERFORMANCE: In-memory cache to avoid repeated MMKV reads and JSON parsing
+  // Write-through pattern: cache is updated on every write and invalidated on user change
+  private cache: QueuedMutation[] | null = null;
+  private cacheHits = 0;
+  private cacheMisses = 0;
+
   /**
    * Load all mutations from storage
+   * Uses in-memory cache with write-through pattern
    */
   private loadQueue(): QueuedMutation[] {
     try {
+      // Return cached queue if available
+      if (this.cache !== null) {
+        this.cacheHits++;
+        if (__DEV__ && this.cacheHits % 50 === 0) {
+          console.log(
+            `⚡ Queue cache stats: ${this.cacheHits} hits, ${this.cacheMisses} misses (${((this.cacheHits / (this.cacheHits + this.cacheMisses)) * 100).toFixed(1)}% hit rate)`,
+          );
+        }
+        return this.cache;
+      }
+
+      // Cache miss - load from storage
+      this.cacheMisses++;
       const queueJson = storage.getString(QUEUE_STORAGE_KEY);
-      if (!queueJson) return [];
+      if (!queueJson) {
+        this.cache = [];
+        return [];
+      }
 
       const parsed = JSON.parse(queueJson);
 
       // Reconstruct DocumentNode from serialized string
-      return parsed.map((item: any) => ({
+      const queue = parsed.map((item: any) => ({
         ...item,
         mutation: JSON.parse(item.mutation), // Restore the mutation DocumentNode
       }));
+
+      // Populate cache for future reads
+      this.cache = queue;
+
+      return queue;
     } catch (error) {
       console.error('Failed to load queue from storage:', error);
       return [];
@@ -32,6 +60,7 @@ export class QueueStore {
 
   /**
    * Save queue to storage
+   * Uses write-through caching: updates both cache and storage
    */
   private saveQueue(mutations: QueuedMutation[]): void {
     try {
@@ -46,6 +75,9 @@ export class QueueStore {
       }));
 
       storage.set(QUEUE_STORAGE_KEY, JSON.stringify(serialized));
+
+      // Write-through: update cache immediately
+      this.cache = mutations;
     } catch (error) {
       console.error('Failed to save queue to storage:', error);
     }
@@ -217,6 +249,7 @@ export class QueueStore {
    */
   clearAllQueues(): void {
     storage.remove(QUEUE_STORAGE_KEY);
+    this.cache = null; // Invalidate cache
     console.log('🧹 Queue: Cleared all mutations');
   }
 
@@ -306,6 +339,28 @@ export class QueueStore {
     }
 
     return initialLength - filtered.length;
+  }
+
+  /**
+   * Invalidate cache (useful when switching users or debugging)
+   */
+  invalidateCache(): void {
+    this.cache = null;
+    if (__DEV__) {
+      console.log('🔄 Queue: Cache invalidated');
+    }
+  }
+
+  /**
+   * Get cache statistics for monitoring
+   */
+  getCacheStats(): { hits: number; misses: number; hitRate: number } {
+    const total = this.cacheHits + this.cacheMisses;
+    return {
+      hits: this.cacheHits,
+      misses: this.cacheMisses,
+      hitRate: total > 0 ? (this.cacheHits / total) * 100 : 0,
+    };
   }
 }
 

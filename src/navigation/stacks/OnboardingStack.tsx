@@ -4,7 +4,7 @@ import {
   CreateShoppingListScreen,
   SelectPantryItems,
   ProfilePictureUploadScreen,
-  InviteMembersScreen,
+  InviteMemberScreen,
   OnboardingCompleteScreen,
   BiometricSetupScreen,
 } from '#screens/onBoarding';
@@ -41,7 +41,7 @@ export const OnboardingStack = () => (
       component={ProfilePictureUploadScreen}
     />
     <Stack.Screen name="ImageCrop" component={ImageCropScreen} />
-    <Stack.Screen name="InviteMembers" component={InviteMembersScreen} />
+    <Stack.Screen name="InviteMembers" component={InviteMemberScreen} />
     <Stack.Screen
       name="OnboardingComplete"
       component={OnboardingCompleteScreen}

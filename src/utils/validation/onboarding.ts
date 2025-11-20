@@ -72,7 +72,7 @@ export const inviteMembersSchema = yup.object({
 
 export const getInviteMembersSchema = () => inviteMembersSchema;
 
-// usage in InviteMembersScreen (for individual email validation):
+// usage in InviteMemberScreen (for individual email validation):
 // const validateEmail = (email: string) => {
 //   try {
 //     inviteMembersSchema.validateSync({ email });

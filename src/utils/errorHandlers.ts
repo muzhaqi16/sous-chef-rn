@@ -16,6 +16,7 @@
  */
 
 import { Alert } from 'react-native';
+import { serializeError } from '#/utils/errorSerialization';
 import {
   handleVersionConflict,
   getVersionConflictMessage,
@@ -119,7 +120,7 @@ export const withMutationErrorHandling =
         Alert.alert('Error', errorMessage);
       }
 
-      console.error(`${operation} error:`, error);
+      console.error(`${operation} error:`, serializeError(error));
       return false as TReturn;
     }
   };
@@ -152,7 +153,7 @@ export const withGenericErrorHandling =
       return await fn(...args);
     } catch (error: any) {
       Alert.alert('Error', errorMessage);
-      console.error(logMessage || errorMessage, error);
+      console.error(logMessage || errorMessage, serializeError(error));
       return false as TReturn;
     }
   };
@@ -258,5 +259,5 @@ export const handleMutationErrorAlert = (
     Alert.alert('Error', errorMessage);
   }
 
-  console.error(`${operation} error:`, error);
+  console.error(`${operation} error:`, serializeError(error));
 };

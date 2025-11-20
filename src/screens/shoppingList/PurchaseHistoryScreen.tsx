@@ -91,28 +91,35 @@ export const PurchaseHistoryScreen: React.FC<{
     [purchases.length, formatDate, theme.colors.iconSecondary],
   );
 
-  const renderListHeader = () => (
-    <View style={styles.statsContainer}>
-      <Text style={styles.statsText}>
-        Total Purchases:{' '}
-        <Text style={styles.statsValue}>{purchases.length}</Text>
-      </Text>
-    </View>
+  // PERFORMANCE: Memoize render functions to avoid recreation on every render
+  const renderListHeader = useCallback(
+    () => (
+      <View style={styles.statsContainer}>
+        <Text style={styles.statsText}>
+          Total Purchases:{' '}
+          <Text style={styles.statsValue}>{purchases.length}</Text>
+        </Text>
+      </View>
+    ),
+    [purchases.length],
   );
 
-  const renderEmptyComponent = () => (
-    <View style={styles.emptyContainer}>
-      <Icon
-        name="receipt-outline"
-        size={64}
-        color={theme.colors.iconDisabled}
-        library="Ionicons"
-      />
-      <Text style={styles.emptyText}>No purchase history</Text>
-      <Text style={styles.emptySubtext}>
-        Mark this item as purchased to start tracking history
-      </Text>
-    </View>
+  const renderEmptyComponent = useCallback(
+    () => (
+      <View style={styles.emptyContainer}>
+        <Icon
+          name="receipt-outline"
+          size={64}
+          color={theme.colors.iconDisabled}
+          library="Ionicons"
+        />
+        <Text style={styles.emptyText}>No purchase history</Text>
+        <Text style={styles.emptySubtext}>
+          Mark this item as purchased to start tracking history
+        </Text>
+      </View>
+    ),
+    [theme.colors.iconDisabled],
   );
 
   return (

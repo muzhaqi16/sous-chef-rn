@@ -6,6 +6,7 @@ import React, {
   useState,
 } from 'react';
 import { Alert, View } from 'react-native';
+import type { Swipeable } from 'react-native-gesture-handler';
 import { PaginationFooter } from '#/components/organisms/PaginationFooter';
 import { useAppNavigation } from '#hooks';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
@@ -19,7 +20,8 @@ import { useHaptic } from '#hooks/haptic';
 import { useScreenTransition } from '#hooks/performance';
 import { useScannerSetup } from '#hooks/scanner';
 import { useSelectorManagement } from '#hooks/ui';
-import { useAppStore, selectSelectedPantryId } from '#store/useAppStore';
+import { useAppStore, selectPantryState } from '#store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import {
   useGetHomeBasicQuery,
   useCreatePantryItemUsageMutation,
@@ -43,9 +45,11 @@ import { ConsumePantryItemModal } from '#components/modals/ConsumePantryItemModa
 import { RecordWastePantryItemModal } from '#components/modals/RecordWastePantryItemModal';
 import type { ItemSelectorRef } from '#components/organisms/AnimatedItemSelector';
 import { normalizeHome } from '#/utils/connectionUtils';
+import { PantryErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
 
-export const PantryMain: React.FC = () => {
-  const { navigate, navigateTo } = useAppNavigation();
+// PERFORMANCE: Memoize screen component to prevent unnecessary re-renders
+const PantryMainScreen: React.FC = React.memo(() => {
+  const { navigate, navigateTo, isFocused } = useAppNavigation();
   const { theme } = useUnistyles();
   const { setOverlayOpen } = useScanner();
   const haptic = useHaptic();
@@ -59,10 +63,10 @@ export const PantryMain: React.FC = () => {
     showOnMount: false, // We'll manually trigger when appropriate
   });
 
-  const setSelectedPantryId = useAppStore(state => state.setSelectedPantryId);
-  const selectedPantryId = useAppStore(selectSelectedPantryId);
+  // PERFORMANCE: Use grouped selector with useShallow to prevent infinite loops (Zustand v5)
+  const { selectedPantryId, setSelectedPantryId } = useAppStore(useShallow(selectPantryState));
   const selectorRef = useRef<ItemSelectorRef>(null);
-  const openSwipeableRef = useRef<any>(null);
+  const openSwipeableRef = useRef<React.RefObject<Swipeable> | null>(null);
 
   // Consume item state
   const [consumeModalVisible, setConsumeModalVisible] = useState(false);
@@ -85,11 +89,12 @@ export const PantryMain: React.FC = () => {
   // Try to get home data from homes list first to avoid extra query
   const homeFromList = homes.find((home: any) => home.id === selectedHomeId);
 
+  // PERFORMANCE: Skip query when tab is not focused to prevent wasted network requests
   const { data: homeData, refetch: refetchHome } = useGetHomeBasicQuery({
     variables: { homeId: selectedHomeId ?? '' },
-    fetchPolicy: 'cache-and-network', // Always check network for fresh data after token refresh
+    fetchPolicy: isFocused ? 'cache-and-network' : 'cache-only', // Only fetch when focused
     nextFetchPolicy: 'cache-first', // Subsequent fetches use cache to avoid unnecessary refetches
-    skip: !selectedHomeId,
+    skip: !selectedHomeId || !isFocused,
     errorPolicy: 'all', // Allow partial data and cache on errors
   });
 
@@ -164,6 +169,7 @@ export const PantryMain: React.FC = () => {
     },
   });
 
+  // PERFORMANCE: Pass undefined when not focused to skip pantry items query
   const {
     items: pantryItems,
     allItems,
@@ -176,7 +182,7 @@ export const PantryMain: React.FC = () => {
     loadMore,
     hasMore,
     isLoadingMore,
-  } = usePantryManagement(pantry?.id);
+  } = usePantryManagement(isFocused ? pantry?.id : undefined);
 
   // Consume item mutation
   const [createPantryItemUsage] = useCreatePantryItemUsageMutation({
@@ -306,14 +312,17 @@ export const PantryMain: React.FC = () => {
   }, []);
 
   // Handle swipeable item opening - ensure only one item is open at a time
-  const handleSwipeableWillOpen = useCallback((ref: any) => {
+  const handleSwipeableWillOpen = useCallback(
+    (ref: React.RefObject<Swipeable>) => {
     if (openSwipeableRef.current && openSwipeableRef.current !== ref) {
       // Close the previously open swipeable
       openSwipeableRef.current.current?.close();
     }
     // Update to track the newly opening swipeable
     openSwipeableRef.current = ref;
-  }, []);
+  },
+    [],
+  );
 
   // Refetch pantry items when switching between pantries
   const prevPantryIdRef = useRef<string | undefined>(pantry?.id);
@@ -546,7 +555,7 @@ export const PantryMain: React.FC = () => {
       };
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} testID="pantry-screen">
       <ListTemplate
         title={selectedHomeId ? currentHomeData?.home?.name || 'Pantry' : ''}
         subtitle={selectedHomeId ? pantry?.name || 'Your Pantry' : ''}
@@ -620,7 +629,14 @@ export const PantryMain: React.FC = () => {
       )}
     </View>
   );
-};
+});
+
+// PERFORMANCE: Screen-level error boundary prevents full app reset on mutation failures
+export const PantryMain: React.FC = () => (
+  <PantryErrorBoundary>
+    <PantryMainScreen />
+  </PantryErrorBoundary>
+);
 
 const styles = StyleSheet.create(theme => ({
   container: {

@@ -10,6 +10,7 @@
  * - App information
  */
 
+import { launchAppWithFabricWorkaround } from '../../init';
 import {
   LoginScreen,
   ProfileScreen,
@@ -23,7 +24,7 @@ describe('Profile and Settings', () => {
   const settingsScreen = new SettingsScreen();
 
   beforeAll(async () => {
-    await device.launchApp({
+    await launchAppWithFabricWorkaround({
       newInstance: true,
       permissions: { notifications: 'YES' },
     });

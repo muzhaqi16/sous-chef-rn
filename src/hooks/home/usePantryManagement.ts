@@ -26,6 +26,7 @@ import {
   createRemoveFromParentConnectionUpdater,
 } from '#/apollo/utils';
 import { pantryItemSearch } from '#/utils/searchUtils';
+import { useOfflinePresetPolicy } from '#/apollo/policies/offlineFetchPolicies';
 
 // Cache updater utilities for pantry items
 const addToPantryItemsCache = createAddToParentConnectionUpdater(
@@ -67,16 +68,22 @@ export interface PantryItemUpdate extends Partial<PantryItemInput> {
 export function usePantryManagement(pantryId: string | undefined) {
   const { isLoggedOut } = useAuth();
   const { handleApolloError } = useErrorHandler();
-  const shouldSkip = !pantryId || isLoggedOut;
+
+  // Explicit validation - only execute query when pantryId is genuinely valid
+  const hasValidPantryId = !!pantryId?.trim() && !isLoggedOut;
+
+  // PERFORMANCE: Use offline-aware fetch policy preset for consistency
+  const fetchPolicy = useOfflinePresetPolicy('LIST');
 
   // Single source of truth: Apollo cache - now using Connection-based query
   const { data, loading, error, refetch, fetchMore } = useGetPantryQuery({
-    variables: {
-      id: pantryId ?? '',
+    variables: hasValidPantryId ? {
+      id: pantryId,
       itemsFirst: 25, // Initial page size
-    },
-    skip: shouldSkip,
-    fetchPolicy: 'cache-and-network', // Show cache immediately, then fetch fresh data with complete images
+      storageLocationsFirst: 50,
+    } : undefined as any,
+    skip: !hasValidPantryId, // Query only executes when pantryId is valid
+    fetchPolicy,
     notifyOnNetworkStatusChange: true,
     errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
   });
@@ -300,7 +307,7 @@ export function usePantryManagement(pantryId: string | undefined) {
   // Simplified add item using CRUD utilities
   const addItem = createAddOperation({
     mutation: addItemMutation,
-    parentId: pantryId,
+    parentId: () => pantryId,
     transformInput: (input: PantryItemInput) => ({
       pantryId,
       initialQuantity: input.quantity,
@@ -322,7 +329,7 @@ export function usePantryManagement(pantryId: string | undefined) {
   const updateItem = async (itemId: string, updates: PantryItemUpdate) => {
     const operation = createUpdateOperation({
       mutation: updateItemMutation,
-      parentId: pantryId,
+      parentId: () => pantryId,
       itemId,
       onSuccess: (data: any) => data?.updatePantryItem,
       onVersionConflict: refetch,
@@ -335,7 +342,7 @@ export function usePantryManagement(pantryId: string | undefined) {
   const removeItem = async (itemId: string) => {
     const operation = createRemoveOperation({
       mutation: removeItemMutation,
-      parentId: pantryId,
+      parentId: () => pantryId,
       itemId,
       operationName: 'Delete Pantry Item',
     });

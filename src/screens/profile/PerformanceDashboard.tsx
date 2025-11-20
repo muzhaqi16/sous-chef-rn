@@ -4,6 +4,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { SettingSwitch, SettingSection } from '#components/settings';
 import { ProfileScreenWrapper } from '#components/templates';
 import { usePerformanceStore } from '#/store/performanceStore';
+import { Environment } from '#/utils/environment';
 
 export const PerformanceDashboard: React.FC = () => {
   // Performance state (from isolated performance store)
@@ -48,7 +49,6 @@ export const PerformanceDashboard: React.FC = () => {
           style: 'destructive',
           onPress: () => {
             clearPerformanceData();
-            Alert.alert('Success', 'Performance data has been cleared.');
           },
         },
       ],
@@ -72,12 +72,12 @@ export const PerformanceDashboard: React.FC = () => {
     return date.toLocaleTimeString();
   };
 
-  if (!__DEV__) {
+  if (!Environment.shouldEnableDebugFeatures()) {
     return (
       <ProfileScreenWrapper title="Performance Dashboard">
         <View style={styles.notAvailableContainer}>
           <Text style={styles.notAvailableText}>
-            Performance dashboard is only available in development mode.
+            Performance dashboard is only available in development and staging builds.
           </Text>
         </View>
       </ProfileScreenWrapper>

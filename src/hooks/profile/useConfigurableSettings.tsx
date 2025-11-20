@@ -1,6 +1,7 @@
 import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import { Alert } from 'react-native';
-import { useAppStore } from '#store/useAppStore';
+import { useShallow } from 'zustand/shallow';
+import { useAppStore, selectUser, selectSetters, selectNavigationUtils, selectPreferences } from '#store/useAppStore';
 import { useTheme, useAuth } from '#hooks';
 import {
   useUpdateUserProfileMutation,
@@ -15,11 +16,10 @@ import { BiometricSetupModal } from '#components/organisms/BiometricSetupModal';
 import { useUserPreferences } from '#hooks/navigation/useUserPreferences';
 
 export const useConfigurableSettings = (profile: any) => {
-  const user = useAppStore(state => state.user);
-  const logout = useAppStore(state => state.logout);
-  const getUserNavigationState = useAppStore(state => state.getUserNavigationState);
-  const language = useAppStore(state => state.language);
-  const setLanguage = useAppStore(state => state.setLanguage);
+  const user = useAppStore(selectUser);
+  const {logout} = useAppStore(useShallow(selectSetters));
+  const {getUserNavigationState} = useAppStore(useShallow(selectNavigationUtils));
+  const {language, setLanguage} = useAppStore(useShallow(selectPreferences));
   const { userThemePreference, setTheme } = useTheme();
   const { checkStoredCredentials, getBiometricInfo, removeCredentials } =
     useAuth();
@@ -399,6 +399,8 @@ export const useConfigurableSettings = (profile: any) => {
         case 'notifications':
         case 'dietaryProfile':
         case 'appSettings':
+        case 'debugInfo':
+        case 'performanceDashboard':
           if (config.type === 'navigation') {
             baseItem.onPress = () => {
               // Navigation will be handled in ProfileScreen

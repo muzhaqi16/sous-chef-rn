@@ -88,6 +88,17 @@ export function ItemSelectorWithActions<T extends SelectableItem>({
     );
   };
 
+  // PERFORMANCE: getItemLayout for better scroll performance
+  // Item height = paddingVertical (32) + text (~24) + border (2) + separator (8) ≈ 66px
+  // Only use when renderCustomItem is not provided (standard items have fixed height)
+  const getItemLayout = !renderCustomItem
+    ? (_data: ArrayLike<T> | null | undefined, index: number) => ({
+        length: 66,
+        offset: 66 * index,
+        index,
+      })
+    : undefined;
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -111,6 +122,7 @@ export function ItemSelectorWithActions<T extends SelectableItem>({
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContent}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
+          getItemLayout={getItemLayout}
           // Performance optimizations
           maxToRenderPerBatch={10}
           windowSize={5}

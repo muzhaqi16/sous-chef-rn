@@ -78,6 +78,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = React.memo(({
   return (
     <Animated.View
       style={[containerStyle, styles.container, animatedStyle]}
+      testID="tab-bar"
     >
       {state.routes.map((route, index) => {
         const { options } = descriptors[route.key];
@@ -121,6 +122,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = React.memo(({
         return (
           <TouchableOpacity
             key={route.key}
+            testID={`tab-${route.name.toLowerCase().replace(/\s+/g, '-')}`}
             accessibilityRole="button"
             accessibilityState={isFocused ? { selected: true } : {}}
             accessibilityLabel={options.tabBarAccessibilityLabel}

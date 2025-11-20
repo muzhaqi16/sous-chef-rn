@@ -35,7 +35,7 @@ interface AnimatedSwipeIconProps {
  * Reusable animated swipe icon component for feature hints
  */
 export const AnimatedSwipeIcon: React.FC<AnimatedSwipeIconProps> = ({
-  icon = 'arrow-back',
+  icon,
   library = 'MaterialIcons',
   size = 32,
   color,
@@ -47,6 +47,9 @@ export const AnimatedSwipeIcon: React.FC<AnimatedSwipeIconProps> = ({
   const { theme } = useUnistyles();
   const translateX = useSharedValue(0);
   const iconColor = color || theme.colors.primary;
+
+  // Use direction-appropriate arrow if no custom icon provided
+  const iconName = icon || (direction === 'left' ? 'arrow-back' : 'arrow-forward');
 
   useEffect(() => {
     const swipeDistance = direction === 'left' ? -distance : distance;
@@ -73,7 +76,7 @@ export const AnimatedSwipeIcon: React.FC<AnimatedSwipeIconProps> = ({
 
   return (
     <Animated.View style={[styles.iconContainer, animatedStyle]}>
-      <Icon name={icon} size={size} color={iconColor} library={library} />
+      <Icon name={iconName} size={size} color={iconColor} library={library} />
     </Animated.View>
   );
 };

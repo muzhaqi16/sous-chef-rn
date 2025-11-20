@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { AppState, StatusBar } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
@@ -7,16 +7,16 @@ import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { ApolloProvider } from '@apollo/client/react';
 import { enableScreens } from 'react-native-screens';
 import { useAppStore, selectHydrated } from '#store/useAppStore';
-import { client } from './src/apollo/client';
-import { Navigation } from '#/navigation';
+import { client } from '#/apollo/client';
+import { Navigation } from '#navigation';
 import { hasCredentials } from '#storage/keychain';
-import { SplashScreen } from '#screens';
-import { ToastProvider } from '#/components/atoms';
-import { useTheme } from '#/hooks/useTheme';
-import { Telemetry } from '#/services/telemetry';
-import { MemoryMonitor } from '#/services/performance';
-import { AppErrorBoundary } from '#/components/providers/ErrorBoundary';
-import { useNetworkStatus } from '#/hooks/useNetworkStatus';
+import { SplashScreen } from '#screens/SplashScreen';
+import { ToastProvider } from '#components/atoms/Toast';
+import { useTheme } from '#hooks/useTheme';
+import { Telemetry } from '#services/telemetry';
+import { MemoryMonitor } from '#services/performance';
+import { AppErrorBoundary } from '#components/providers/ErrorBoundary';
+import { useNetworkStatus } from '#hooks/useNetworkStatus';
 import { queueManager } from '#/apollo/offlineQueue';
 import { NotificationProvider } from '#/components/notifications/NotificationProvider';
 import { DataProvider } from '#/components/providers/DataProvider';
@@ -34,6 +34,9 @@ const App = () => {
   const getTelemetryConfig = useAppStore(state => state.getTelemetryConfig);
   const { theme } = useTheme();
 
+  // PERFORMANCE: Track if hydration init has run to prevent restarting on theme changes
+  const hydrationInitializedRef = useRef(false);
+
   // Initialize network monitoring
   useNetworkStatus();
 
@@ -46,8 +49,12 @@ const App = () => {
     }
   }, [isOnline]);
 
+  // PERFORMANCE: One-time hydration init - run only once after hydration completes
+  // This prevents restarting heavy services (telemetry, keychain, memory monitor) on theme changes
   useEffect(() => {
-    if (isHydrated) {
+    if (isHydrated && !hydrationInitializedRef.current) {
+      hydrationInitializedRef.current = true;
+
       // Check for stored credentials
       hasCredentials().then(result => {
         setHasStoredCredentials(result);
@@ -61,12 +68,6 @@ const App = () => {
       if (__DEV__) {
         MemoryMonitor.start(10000); // Sample every 10 seconds
       }
-
-      // Track app launch
-      Telemetry.trackEvent('app_launched', {
-        theme,
-        timestamp: new Date().toISOString(),
-      });
     }
 
     return () => {
@@ -75,7 +76,31 @@ const App = () => {
         MemoryMonitor.stop();
       }
     };
-  }, [isHydrated, setHasStoredCredentials, getTelemetryConfig, theme]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isHydrated]);
+
+  // PERFORMANCE: Track app launch once on hydration
+  useEffect(() => {
+    if (isHydrated && hydrationInitializedRef.current) {
+      Telemetry.trackEvent('app_launched', {
+        theme,
+        timestamp: new Date().toISOString(),
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isHydrated]); // Only track on hydration, not theme changes
+
+  // Track theme changes separately
+  const prevThemeRef = useRef(theme);
+  useEffect(() => {
+    if (isHydrated && prevThemeRef.current !== theme) {
+      Telemetry.trackEvent('theme_changed', {
+        from: prevThemeRef.current,
+        to: theme,
+      });
+      prevThemeRef.current = theme;
+    }
+  }, [theme, isHydrated]);
 
   useEffect(() => {
     const handleAppStateChange = (nextAppState: string) => {
