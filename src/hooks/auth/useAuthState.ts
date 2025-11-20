@@ -1,5 +1,6 @@
+import { useMemo } from 'react';
 import { useAppStore, selectAuthTokens, selectAuthActions, selectPostLoginState } from '#store/useAppStore';
-import { shallow } from 'zustand/shallow';
+import { useShallow } from 'zustand/react/shallow';
 
 /**
  * Hook for managing core authentication state from Zustand store.
@@ -8,11 +9,11 @@ import { shallow } from 'zustand/shallow';
  * PERFORMANCE: Uses grouped selectors to reduce subscriptions from 16+ to 3
  */
 export const useAuthState = () => {
-  // PERFORMANCE: Group auth tokens into single subscription (5 fields)
+  // PERFORMANCE: Group auth tokens into single subscription with useShallow (Zustand v5 API)
   const { user, accessToken, refreshToken, isLoggingOut, isAutoLoggingIn } =
-    useAppStore(selectAuthTokens, shallow);
+    useAppStore(useShallow(selectAuthTokens));
 
-  // PERFORMANCE: Group auth actions into single subscription (9 fields)
+  // PERFORMANCE: Group auth actions into single subscription with useShallow (Zustand v5 API)
   const {
     setAuth,
     clearAuth,
@@ -23,9 +24,9 @@ export const useAuthState = () => {
     setRememberMe,
     setIsAutoLoggingIn,
     setUserNavigationState,
-  } = useAppStore(selectAuthActions, shallow);
+  } = useAppStore(useShallow(selectAuthActions));
 
-  // PERFORMANCE: Group post-login state into single subscription (6 fields)
+  // PERFORMANCE: Group post-login state into single subscription with useShallow (Zustand v5 API)
   const {
     navigationState,
     showBiometricSetup,
@@ -33,7 +34,7 @@ export const useAuthState = () => {
     setNavigationState,
     setShowBiometricSetup,
     setPostLoginCredentials,
-  } = useAppStore(selectPostLoginState, shallow);
+  } = useAppStore(useShallow(selectPostLoginState));
 
   // Computed properties
   const isAuthenticated = !!(user && accessToken);
@@ -42,38 +43,69 @@ export const useAuthState = () => {
   const isTokenRefreshing = !accessToken && !!refreshToken;
   const canAttemptQueries = hasAnyToken && !isLoggingOut;
 
-  return {
-    // Core auth state
-    user,
-    accessToken,
-    refreshToken,
-    isLoggingOut,
-    isAutoLoggingIn,
+  // PERFORMANCE: Memoize return object to prevent infinite re-renders
+  // Without memoization, every render creates a new object reference causing cascade re-renders
+  return useMemo(
+    () => ({
+      // Core auth state
+      user,
+      accessToken,
+      refreshToken,
+      isLoggingOut,
+      isAutoLoggingIn,
 
-    // Computed properties
-    isAuthenticated,
-    hasAnyToken,
-    isLoggedOut,
-    isTokenRefreshing,
-    canAttemptQueries,
+      // Computed properties
+      isAuthenticated,
+      hasAnyToken,
+      isLoggedOut,
+      isTokenRefreshing,
+      canAttemptQueries,
 
-    // Auth state actions
-    setAuth,
-    clearAuth,
-    setTokens,
-    updateUser,
-    setEmailVerified,
-    setOnboarded,
-    setRememberMe,
-    setIsAutoLoggingIn,
-    setUserNavigationState,
+      // Auth state actions
+      setAuth,
+      clearAuth,
+      setTokens,
+      updateUser,
+      setEmailVerified,
+      setOnboarded,
+      setRememberMe,
+      setIsAutoLoggingIn,
+      setUserNavigationState,
 
-    // Navigation state machine
-    navigationState,
-    showBiometricSetup,
-    postLoginCredentials,
-    setNavigationState,
-    setShowBiometricSetup,
-    setPostLoginCredentials,
-  };
+      // Navigation state machine
+      navigationState,
+      showBiometricSetup,
+      postLoginCredentials,
+      setNavigationState,
+      setShowBiometricSetup,
+      setPostLoginCredentials,
+    }),
+    [
+      user,
+      accessToken,
+      refreshToken,
+      isLoggingOut,
+      isAutoLoggingIn,
+      isAuthenticated,
+      hasAnyToken,
+      isLoggedOut,
+      isTokenRefreshing,
+      canAttemptQueries,
+      setAuth,
+      clearAuth,
+      setTokens,
+      updateUser,
+      setEmailVerified,
+      setOnboarded,
+      setRememberMe,
+      setIsAutoLoggingIn,
+      setUserNavigationState,
+      navigationState,
+      showBiometricSetup,
+      postLoginCredentials,
+      setNavigationState,
+      setShowBiometricSetup,
+      setPostLoginCredentials,
+    ],
+  );
 };

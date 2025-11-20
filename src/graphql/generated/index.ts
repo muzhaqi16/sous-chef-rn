@@ -5089,8 +5089,6 @@ export type QueryBrandArgs = {
 };
 
 export type QueryBrandsArgs = {
-  country?: InputMaybe<Scalars['String']['input']>;
-  isActive?: InputMaybe<Scalars['Boolean']['input']>;
   parentId?: InputMaybe<Scalars['String']['input']>;
   search?: InputMaybe<Scalars['String']['input']>;
   skip?: InputMaybe<Scalars['Int']['input']>;
@@ -10751,12 +10749,14 @@ export type ItemBySkuQuery = {
 export type GetOnboardingItemsQueryVariables = Exact<{
   filters?: InputMaybe<ItemFilters>;
   sort?: InputMaybe<ItemSortInput>;
+  pagination?: InputMaybe<PaginationInput>;
 }>;
 
 export type GetOnboardingItemsQuery = {
   __typename?: 'Query';
   items: {
     __typename?: 'ItemsResponse';
+    totalCount: number;
     items:
       | Array<{
           __typename?: 'Item';
@@ -35873,6 +35873,17 @@ export const GetOnboardingItemsDocument = {
             name: { kind: 'Name', value: 'ItemSortInput' },
           },
         },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'pagination' },
+          },
+          type: {
+            kind: 'NamedType',
+            name: { kind: 'Name', value: 'PaginationInput' },
+          },
+        },
       ],
       selectionSet: {
         kind: 'SelectionSet',
@@ -35895,6 +35906,14 @@ export const GetOnboardingItemsDocument = {
                 value: {
                   kind: 'Variable',
                   name: { kind: 'Name', value: 'sort' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'pagination' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'pagination' },
                 },
               },
             ],
@@ -35937,6 +35956,7 @@ export const GetOnboardingItemsDocument = {
                     ],
                   },
                 },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalCount' } },
               ],
             },
           },
@@ -35960,6 +35980,7 @@ export const GetOnboardingItemsDocument = {
  *   variables: {
  *      filters: // value for 'filters'
  *      sort: // value for 'sort'
+ *      pagination: // value for 'pagination'
  *   },
  * });
  */
@@ -36312,11 +36333,6 @@ export const SearchBrandsDocument = {
                   kind: 'Variable',
                   name: { kind: 'Name', value: 'limit' },
                 },
-              },
-              {
-                kind: 'Argument',
-                name: { kind: 'Name', value: 'isActive' },
-                value: { kind: 'BooleanValue', value: true },
               },
             ],
             selectionSet: {

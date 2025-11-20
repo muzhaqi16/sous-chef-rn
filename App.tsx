@@ -76,7 +76,8 @@ const App = () => {
         MemoryMonitor.stop();
       }
     };
-  }, [isHydrated, setHasStoredCredentials, getTelemetryConfig]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isHydrated]);
 
   // PERFORMANCE: Lightweight theme-specific tracking - separate from heavy init
   useEffect(() => {

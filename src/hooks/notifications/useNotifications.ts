@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useMemo, useCallback, useRef } from 'react';
 import { AppState } from 'react-native';
 import {
   useNotificationReceivedSubscription,
@@ -6,7 +6,7 @@ import {
   NotificationType,
 } from '#generated';
 import { useStore } from '#store';
-import { NotificationCategory as StoreNotificationCategory } from '#store/slices/notificationSlice';
+import { useShallow } from 'zustand/react/shallow';
 import { showLocalNotification } from '#utils/notifications/localNotificationHelper';
 import {
   getNotificationTitle,
@@ -24,7 +24,22 @@ import {
 import { serializeError } from '#/utils/errorSerialization';
 import { useNotificationSettings } from './useNotificationSettings';
 
+// PERFORMANCE: Grouped selectors to reduce subscriptions from 7 to 2
+const selectNotificationState = (state: any) => ({
+  notifications: state.notifications,
+  user: state.user,
+});
+
+const selectNotificationActions = (state: any) => ({
+  addNotification: state.addNotification,
+  markAsRead: state.markAsRead,
+  removeNotification: state.removeNotification,
+  clearAll: state.clearAll,
+  getNotificationsByCategory: state.getNotificationsByCategory,
+});
+
 interface NotificationConfig {
+  skip?: boolean;
   enablePantryNotifications?: boolean;
   enableShoppingListNotifications?: boolean;
   enableMembershipNotifications?: boolean;
@@ -36,17 +51,19 @@ interface NotificationConfig {
 }
 
 export const useNotifications = (config: NotificationConfig = {}) => {
-  const [appState, setAppState] = useState(AppState.currentState);
-  const notifications = useStore(state => state.notifications);
-  const addNotification = useStore(state => state.addNotification);
-  const markAsRead = useStore(state => state.markAsRead);
-  const removeNotification = useStore(state => state.removeNotification);
-  const clearAll = useStore(state => state.clearAll);
-  const getNotificationsByCategory = useStore(
-    state => state.getNotificationsByCategory,
-  );
+  // PERFORMANCE: Use ref instead of state for AppState to avoid re-renders
+  // AppState is only needed in side effect (push notification check), not for rendering
+  const appStateRef = useRef(AppState.currentState);
 
-  const user = useStore(state => state.user);
+  // PERFORMANCE: Use grouped selectors with useShallow to reduce subscriptions (7 → 2)
+  const { notifications, user } = useStore(useShallow(selectNotificationState));
+  const {
+    addNotification,
+    markAsRead,
+    removeNotification,
+    clearAll,
+    getNotificationsByCategory,
+  } = useStore(useShallow(selectNotificationActions));
 
   // Fetch user notification preferences
   const { settings: userPreferences, isQuietTime } = useNotificationSettings();
@@ -179,7 +196,7 @@ export const useNotifications = (config: NotificationConfig = {}) => {
       // Show push notification if enabled, app is not active, and not quiet time
       if (
         finalConfig.showPushNotifications &&
-        appState !== 'active' &&
+        appStateRef.current !== 'active' &&
         !isQuietTime()
       ) {
         showLocalNotification({
@@ -191,7 +208,6 @@ export const useNotifications = (config: NotificationConfig = {}) => {
     },
     [
       finalConfig,
-      appState,
       addNotification,
       getPriorityFromType,
       user,
@@ -208,7 +224,7 @@ export const useNotifications = (config: NotificationConfig = {}) => {
 
   // General notifications
   useNotificationReceivedSubscription({
-    skip: !user?.id,
+    skip: config.skip || !user?.id,
     onData: ({ data }) => {
       console.log(
         '🔔 [NotificationReceived] Raw subscription data received:',
@@ -253,7 +269,7 @@ export const useNotifications = (config: NotificationConfig = {}) => {
   });
 
   useUrgentNotificationReceivedSubscription({
-    skip: !user?.id,
+    skip: config.skip || !user?.id,
     onData: ({ data }) => {
       console.log(
         '🚨 [UrgentNotification] Raw subscription data received:',
@@ -294,9 +310,11 @@ export const useNotifications = (config: NotificationConfig = {}) => {
     },
   });
 
-  // App state handling
+  // PERFORMANCE: App state handling - store in ref to avoid re-renders
   useEffect(() => {
-    const subscription = AppState.addEventListener('change', setAppState);
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      appStateRef.current = nextAppState;
+    });
     return () => subscription.remove();
   }, []);
 
@@ -321,49 +339,25 @@ export const useNotifications = (config: NotificationConfig = {}) => {
     }
   }, [user?.id]);
 
-  // Notification management handlers
-  const handleMarkAsRead = useCallback(
-    async (notificationId: string) => {
-      markAsRead(notificationId);
-    },
-    [markAsRead],
-  );
-
+  // PERFORMANCE: Use store getter instead of stale notifications array in closure
   const handleMarkAllAsRead = useCallback(async () => {
-    notifications.forEach(notification => {
+    const currentNotifications = useStore.getState().notifications;
+    currentNotifications.forEach(notification => {
       if (!notification.isRead) {
         markAsRead(notification.id);
       }
     });
-  }, [notifications, markAsRead]);
+  }, [markAsRead]);
 
-  const handleRemoveNotification = useCallback(
-    async (notificationId: string) => {
-      removeNotification(notificationId);
-    },
-    [removeNotification],
-  );
-
-  const handleClearAll = useCallback(async () => {
-    clearAll();
-  }, [clearAll]);
-
-  const handleGetNotificationsByCategory = useCallback(
-    (category: StoreNotificationCategory) => {
-      return getNotificationsByCategory(category);
-    },
-    [getNotificationsByCategory],
-  );
-
+  // PERFORMANCE: Optimize callback references - remove unnecessary wrappers
   return {
-    appState,
     config: finalConfig,
     notifications,
-    handleMarkAsRead,
+    handleMarkAsRead: markAsRead, // Direct reference instead of wrapper
     handleMarkAllAsRead,
-    handleRemoveNotification,
-    clearAll: handleClearAll,
-    getNotificationsByCategory: handleGetNotificationsByCategory,
+    handleRemoveNotification: removeNotification, // Direct reference instead of wrapper
+    clearAll, // Direct reference instead of wrapper
+    getNotificationsByCategory, // Direct reference instead of wrapper
     updateConfig: (newConfig: Partial<NotificationConfig>) => {
       // This would typically update stored preferences
       console.log('Updating notification config:', newConfig);

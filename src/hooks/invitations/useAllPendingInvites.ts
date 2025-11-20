@@ -8,7 +8,7 @@
  * that open the InvitationAcceptanceModal when tapped.
  */
 
-import {useEffect} from 'react';
+import {useEffect, useRef} from 'react';
 import {
   useMyShoppingListInvitesQuery,
   useGetMyPendingInvitesQuery,
@@ -37,6 +37,9 @@ export function useAllPendingInvites(userId?: string) {
     state => state.addMultipleNotifications,
   );
 
+  // Track if we've already processed invites to prevent duplicate additions
+  const processedRef = useRef(false);
+
   // Query pending shopping list invites
   const {data: shoppingListData} = useMyShoppingListInvitesQuery({
     skip: !userId,
@@ -51,6 +54,10 @@ export function useAllPendingInvites(userId?: string) {
 
   // Process and add all pending invites to notification store
   useEffect(() => {
+    // Skip if already processed or no data
+    if (processedRef.current || (!shoppingListData && !homeData)) {
+      return;
+    }
     const allInviteNotifications = [];
 
     // Process Shopping List Invites
@@ -132,6 +139,7 @@ export function useAllPendingInvites(userId?: string) {
     // Add all pending invite notifications to store if any found
     if (allInviteNotifications.length > 0) {
       addMultipleNotifications(allInviteNotifications);
+      processedRef.current = true; // Mark as processed to prevent re-runs
 
       if (__DEV__) {
         console.log(

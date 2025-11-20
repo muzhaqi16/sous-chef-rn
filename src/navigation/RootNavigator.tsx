@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useShallow } from 'zustand/shallow';
 import {
   useAppStore,
   selectHydrated,
@@ -83,7 +84,7 @@ function RootNavigator() {
     showBiometricSetup,
     postLoginCredentials,
     setNavigationState,
-  } = useAppStore(selectPostLoginState);
+  } = useAppStore(useShallow(selectPostLoginState));
   const { handlePostLoginBiometricComplete } = useAuth();
 
   // Initialize deep link router for handling URL-based navigation

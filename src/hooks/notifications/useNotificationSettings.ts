@@ -1,4 +1,4 @@
-import {useCallback} from 'react';
+import {useCallback, useMemo} from 'react';
 import {Alert} from 'react-native';
 import {useStore} from '#store';
 import {
@@ -79,7 +79,8 @@ export const useNotificationSettings = () => {
     },
   });
 
-  const getNotificationSettings = useCallback((): NotificationSettings => {
+  // PERFORMANCE: Memoize settings object to prevent recreating on every render
+  const settings = useMemo((): NotificationSettings => {
     return {
       // Core toggles
       emailEnabled: preferences?.emailEnabled ?? true,
@@ -189,18 +190,17 @@ export const useNotificationSettings = () => {
     return updateMultipleSettings(defaultSettings);
   }, [updateMultipleSettings]);
 
+  // PERFORMANCE: Use memoized settings instead of calling function
   const isQuietTime = useCallback((): boolean => {
-    const currentSettings = getNotificationSettings();
-
-    if (!currentSettings.quietHoursEnabled || !currentSettings.quietHoursStart || !currentSettings.quietHoursEnd) {
+    if (!settings.quietHoursEnabled || !settings.quietHoursStart || !settings.quietHoursEnd) {
       return false;
     }
 
     const now = new Date();
     const currentTime = now.getHours() * 60 + now.getMinutes();
 
-    const [startHour, startMin] = currentSettings.quietHoursStart.split(':').map(Number);
-    const [endHour, endMin] = currentSettings.quietHoursEnd.split(':').map(Number);
+    const [startHour, startMin] = settings.quietHoursStart.split(':').map(Number);
+    const [endHour, endMin] = settings.quietHoursEnd.split(':').map(Number);
 
     const startTime = startHour * 60 + startMin;
     const endTime = endHour * 60 + endMin;
@@ -211,10 +211,10 @@ export const useNotificationSettings = () => {
     } else {
       return currentTime >= startTime && currentTime <= endTime;
     }
-  }, [getNotificationSettings]);
+  }, [settings]);
 
   return {
-    settings: getNotificationSettings(),
+    settings,
     loading,
     updateNotificationSetting,
     updateMultipleSettings,

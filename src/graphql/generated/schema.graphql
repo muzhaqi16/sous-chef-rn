@@ -4181,8 +4181,6 @@ type Query {
   autocompleteItems(input: AutocompleteInput!): AutocompleteResponse
   brand(id: ID!): Brand
   brands(
-    country: String
-    isActive: Boolean
     parentId: String
     search: String
     skip: Int = 0

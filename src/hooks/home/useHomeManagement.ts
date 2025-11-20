@@ -14,7 +14,8 @@ import {
   useGetHomeByJoinCodeLazyQuery,
   useGetDefaultPantryLazyQuery,
 } from '#generated';
-import { useAppStore, selectSelectedHomeId } from '#store/useAppStore';
+import { useShallow } from 'zustand/shallow';
+import { useAppStore, selectSelectedHomeId, selectHomeState } from '#store/useAppStore';
 import { useErrorHandler } from '#/utils/errorHandling';
 import {
   handleVersionConflict,
@@ -36,7 +37,7 @@ const removeFromHomesCache = createRemoveFromQueryFieldUpdater('homes', 'Home');
 
 export function useHomeManagement() {
   const selectedHomeId = useAppStore(selectSelectedHomeId);
-  const setSelectedHomeId = useAppStore(state => state.setSelectedHomeId);
+  const {setSelectedHomeId} = useAppStore(useShallow(selectHomeState));
   const setSelectedPantryId = useAppStore(state => state.setSelectedPantryId);
   const { handleApolloError } = useErrorHandler();
 

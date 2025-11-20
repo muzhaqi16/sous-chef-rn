@@ -20,6 +20,7 @@ import { useScreenTransition } from '#hooks/performance';
 import { useScannerSetup } from '#hooks/scanner';
 import { useSelectorManagement } from '#hooks/ui';
 import { useAppStore, selectPantryState } from '#store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import {
   useGetHomeBasicQuery,
   useCreatePantryItemUsageMutation,
@@ -61,8 +62,8 @@ const PantryMainScreen: React.FC = React.memo(() => {
     showOnMount: false, // We'll manually trigger when appropriate
   });
 
-  // PERFORMANCE: Use grouped selector to reduce subscriptions
-  const { selectedPantryId, setSelectedPantryId } = useAppStore(selectPantryState);
+  // PERFORMANCE: Use grouped selector with useShallow to prevent infinite loops (Zustand v5)
+  const { selectedPantryId, setSelectedPantryId } = useAppStore(useShallow(selectPantryState));
   const selectorRef = useRef<ItemSelectorRef>(null);
   const openSwipeableRef = useRef<any>(null);
 

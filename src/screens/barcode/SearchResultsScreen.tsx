@@ -18,7 +18,7 @@ import AddItemForm from '#components/organisms/AddItemForm';
 import { type BarcodeStackParamList } from '#navigation/stacks/BarcodeStack';
 import { useAppStore, selectBottomSheetState } from '#store/useAppStore';
 import { useSearchResults } from '#hooks';
-import { shallow } from 'zustand/shallow';
+import { useShallow } from 'zustand/react/shallow';
 
 export const SearchResultsScreen: React.FC<{
   route: { params: BarcodeStackParamList['SearchResults'] };
@@ -29,7 +29,7 @@ export const SearchResultsScreen: React.FC<{
 
   const bottomSheetRef = useRef<BottomSheet>(null);
 
-  // PERFORMANCE: Group bottom sheet state into single subscription (6 fields)
+  // PERFORMANCE: Group bottom sheet state with useShallow (Zustand v5 API)
   const {
     bottomSheetVisible,
     searchError,
@@ -37,7 +37,7 @@ export const SearchResultsScreen: React.FC<{
     isSearching,
     hideBottomSheet,
     showBottomSheet,
-  } = useAppStore(selectBottomSheetState, shallow);
+  } = useAppStore(useShallow(selectBottomSheetState));
 
   const {
     searchResults,

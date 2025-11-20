@@ -1,10 +1,10 @@
 import {useState} from 'react';
-import {useAppStore} from '#store/useAppStore';
+import {useShallow} from 'zustand/shallow';
+import {useAppStore, selectPreferences} from '#store/useAppStore';
 import {LANGUAGE_OPTIONS} from '../../constants/languages';
 
 export const useLanguagePicker = () => {
-  const language = useAppStore(state => state.language);
-  const setLanguage = useAppStore(state => state.setLanguage);
+  const {language, setLanguage} = useAppStore(useShallow(selectPreferences));
   const [langPickerVisible, setLangPickerVisible] = useState(false);
 
   const showLanguagePicker = () => setLangPickerVisible(true);

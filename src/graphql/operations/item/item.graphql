@@ -81,8 +81,8 @@ query ItemBySku($sku: String!, $storeId: String) {
   }
 }
 
-query GetOnboardingItems($filters: ItemFilters, $sort: ItemSortInput) {
-  items(filters: $filters, sort: $sort) {
+query GetOnboardingItems($filters: ItemFilters, $sort: ItemSortInput, $pagination: PaginationInput) {
+  items(filters: $filters, sort: $sort, pagination: $pagination) {
     items {
       id
       name
@@ -93,6 +93,7 @@ query GetOnboardingItems($filters: ItemFilters, $sort: ItemSortInput) {
         name
       }
     }
+    totalCount
   }
 }
 
@@ -130,7 +131,7 @@ query AutocompleteItems($input: AutocompleteInput!) {
 }
 
 query SearchBrands($search: String!, $limit: Int) {
-  brands(search: $search, take: $limit, isActive: true) {
+  brands(search: $search, take: $limit) {
     id
     name
   }

@@ -403,61 +403,85 @@ export function makeCache(): InMemoryCache {
     },
   });
 
-  // Monitor cache size and trigger garbage collection when approaching limit
-  // This prevents unbounded growth and OOM errors on long-running sessions
-  const MAX_CACHE_SIZE_MB = 100;
-  const GC_THRESHOLD = 0.8; // Trigger GC at 80% capacity
+  // PERFORMANCE: Only monitor cache in development to avoid production overhead
+  // Cache monitoring uses object counting for size estimation to avoid expensive JSON.stringify
+  if (__DEV__) {
+    const MAX_CACHE_SIZE_MB = 100;
+    const GC_THRESHOLD = 0.8; // Trigger GC at 80% capacity
 
-  // Check cache size periodically (every 5 minutes)
-  let gcInterval: NodeJS.Timeout;
+    // Check cache size periodically (every 2 minutes)
+    let gcInterval: NodeJS.Timeout;
 
-  const monitorCacheSize = () => {
-    try {
-      const cacheData = cache.extract();
-      const estimatedSize = JSON.stringify(cacheData).length;
-      const maxSizeBytes = MAX_CACHE_SIZE_MB * 1024 * 1024;
-      const usageRatio = estimatedSize / maxSizeBytes;
+    // Lightweight cache size estimator using object/array counting
+    // Avoids expensive JSON.stringify that blocks JS thread for 200-500ms
+    const estimateCacheSize = (obj: any): number => {
+      let count = 0;
+      const queue = [obj];
 
-      if (usageRatio > GC_THRESHOLD) {
-        console.warn(
-          `⚠️ Apollo Cache at ${(usageRatio * 100).toFixed(1)}% capacity (${(estimatedSize / 1024 / 1024).toFixed(2)}MB). Running garbage collection...`
-        );
+      while (queue.length > 0) {
+        const current = queue.shift();
 
-        // Run garbage collection with result cache reset
-        // This removes unreachable objects and orphaned data
-        const removedIds = cache.gc({ resetResultCache: true });
+        if (current && typeof current === 'object') {
+          count++;
+          if (Array.isArray(current)) {
+            queue.push(...current);
+          } else {
+            queue.push(...Object.values(current));
+          }
+        }
+      }
 
-        console.log(`🗑️ Garbage collected ${removedIds.length} unreachable cache objects`);
+      // Rough estimate: ~1KB per object on average
+      return count * 1024;
+    };
 
-        // If still over threshold after GC, log warning
-        const newSize = JSON.stringify(cache.extract()).length;
-        const newRatio = newSize / maxSizeBytes;
+    const monitorCacheSize = () => {
+      try {
+        const cacheData = cache.extract();
+        const estimatedSize = estimateCacheSize(cacheData);
+        const maxSizeBytes = MAX_CACHE_SIZE_MB * 1024 * 1024;
+        const usageRatio = estimatedSize / maxSizeBytes;
 
-        if (newRatio > GC_THRESHOLD) {
-          console.error(
-            `❌ Cache still at ${(newRatio * 100).toFixed(1)}% after GC. Consider increasing MAX_CACHE_SIZE_MB or reviewing data retention policies.`
+        if (usageRatio > GC_THRESHOLD) {
+          console.warn(
+            `⚠️ Apollo Cache at ${(usageRatio * 100).toFixed(1)}% capacity (~${(estimatedSize / 1024 / 1024).toFixed(2)}MB). Running garbage collection...`
+          );
+
+          // Run garbage collection with result cache reset
+          // This removes unreachable objects and orphaned data
+          const removedIds = cache.gc({ resetResultCache: true });
+
+          console.log(`🗑️ Garbage collected ${removedIds.length} unreachable cache objects`);
+
+          // If still over threshold after GC, log warning
+          const newSize = estimateCacheSize(cache.extract());
+          const newRatio = newSize / maxSizeBytes;
+
+          if (newRatio > GC_THRESHOLD) {
+            console.error(
+              `❌ Cache still at ${(newRatio * 100).toFixed(1)}% after GC. Consider increasing MAX_CACHE_SIZE_MB or reviewing data retention policies.`
+            );
+          }
+        } else {
+          console.log(
+            `📊 Apollo Cache: ${(usageRatio * 100).toFixed(1)}% used (~${(estimatedSize / 1024 / 1024).toFixed(2)}MB / ${MAX_CACHE_SIZE_MB}MB)`
           );
         }
-      } else if (__DEV__) {
-        console.log(
-          `📊 Apollo Cache: ${(usageRatio * 100).toFixed(1)}% used (${(estimatedSize / 1024 / 1024).toFixed(2)}MB / ${MAX_CACHE_SIZE_MB}MB)`
-        );
+      } catch (error) {
+        console.error('Error monitoring cache size:', error);
       }
-    } catch (error) {
-      console.error('Error monitoring cache size:', error);
-    }
-  };
+    };
 
-  // PERFORMANCE: Monitor cache more frequently to prevent unbounded growth
-  // Reduced from 5 minutes to 2 minutes for more aggressive cleanup
-  gcInterval = setInterval(monitorCacheSize, 2 * 60 * 1000); // Every 2 minutes
+    // Monitor cache every 2 minutes in development
+    gcInterval = setInterval(monitorCacheSize, 2 * 60 * 1000);
 
-  // Expose cleanup function for testing/logout
-  (cache as any).__stopMonitoring = () => {
-    if (gcInterval) {
-      clearInterval(gcInterval);
-    }
-  };
+    // Expose cleanup function for testing/logout
+    (cache as any).__stopMonitoring = () => {
+      if (gcInterval) {
+        clearInterval(gcInterval);
+      }
+    };
+  }
 
   return cache;
 }

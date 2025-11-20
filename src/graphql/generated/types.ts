@@ -5085,8 +5085,6 @@ export type QueryBrandArgs = {
 };
 
 export type QueryBrandsArgs = {
-  country?: InputMaybe<Scalars['String']['input']>;
-  isActive?: InputMaybe<Scalars['Boolean']['input']>;
   parentId?: InputMaybe<Scalars['String']['input']>;
   search?: InputMaybe<Scalars['String']['input']>;
   skip?: InputMaybe<Scalars['Int']['input']>;
@@ -14997,12 +14995,14 @@ export type ItemBySkuQuery = {
 export type GetOnboardingItemsQueryVariables = Exact<{
   filters?: InputMaybe<ItemFilters>;
   sort?: InputMaybe<ItemSortInput>;
+  pagination?: InputMaybe<PaginationInput>;
 }>;
 
 export type GetOnboardingItemsQuery = {
   __typename?: 'Query';
   items: {
     __typename?: 'ItemsResponse';
+    totalCount: number;
     items?:
       | Array<{
           __typename?: 'Item';

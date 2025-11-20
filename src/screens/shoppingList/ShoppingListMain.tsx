@@ -35,6 +35,7 @@ import type {
 import type { SortableShoppingListItem } from '#components/organisms/SortableShoppingList';
 import { useShoppingListManagement } from '#/hooks';
 import { useAppStore, selectShoppingListState } from '#store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import { IconLibrary } from '#/utils/iconUtils';
 import { useOptimisticDataRestorationMultiple } from '#/hooks/offline/useOptimisticDataRestoration';
 import {
@@ -73,9 +74,9 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
     theme: { colors },
   } = useUnistyles();
   const { primary: primaryColor, primaryLight: primaryLightColor } = colors;
-  // PERFORMANCE: Use grouped selector to reduce subscriptions
+  // PERFORMANCE: Use grouped selector with useShallow to prevent infinite loops (Zustand v5)
   const { selectedShoppingListId, setSelectedShoppingListId } = useAppStore(
-    selectShoppingListState,
+    useShallow(selectShoppingListState),
   );
   const { user } = useAuth();
   const selectorRef = useRef<ItemSelectorRef>(null);

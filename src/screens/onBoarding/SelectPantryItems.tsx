@@ -1,6 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { Text, View, ActivityIndicator } from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import React, { useState, useMemo, useCallback } from 'react';
+import { Text, ActivityIndicator, FlatList, ListRenderItemInfo } from 'react-native';
 import { OnBoardingWrapper } from '#components/templates';
 import { StyleSheet } from 'react-native-unistyles';
 import { useOnboardingNavigation, useSelectableItems } from '#hooks';
@@ -36,6 +35,9 @@ export const SelectPantryItems = () => {
         field: ItemSortField.Popularity,
         order: SortOrder.Asc,
       },
+      pagination: {
+        take: 150,
+      },
     },
     fetchPolicy: 'cache-and-network',
   });
@@ -61,6 +63,29 @@ export const SelectPantryItems = () => {
       initialItems: selectableItems,
       maxSelection: 100,
     },
+  );
+
+  // PERFORMANCE: Memoized callbacks for FlatList - must be before early returns
+  const renderItem = useCallback(
+    ({ item }: ListRenderItemInfo<typeof items[0]>) => (
+      <AnimatedChip
+        label={item.name}
+        selected={item.selected}
+        onPress={() => toggleItem(item.id)}
+        disabled={!item.selected && isMaxReached}
+        imageUrl={item.imageUrl}
+      />
+    ),
+    [toggleItem, isMaxReached],
+  );
+
+  const keyExtractor = useCallback((item: typeof items[0]) => item.id, []);
+
+  const ListHeaderComponent = useCallback(
+    () => (
+      <Text style={styles.helperText}>{selectedItems.length} selected</Text>
+    ),
+    [selectedItems.length],
   );
 
   if (loading) {
@@ -136,21 +161,20 @@ export const SelectPantryItems = () => {
       onBack={() => navigateToPreviousStep('CreateShoppingList')}
       onSkip={() => navigateToNextStep('SelectPantryItems')}
     >
-      <KeyboardAwareScrollView style={styles.form}>
-        <Text style={styles.helperText}>{selectedItems.length} selected</Text>
-        <View style={styles.picker}>
-          {items.map(item => (
-            <AnimatedChip
-              key={item.id}
-              label={item.name}
-              selected={item.selected}
-              onPress={() => toggleItem(item.id)}
-              disabled={!item.selected && isMaxReached}
-              imageUrl={item.imageUrl}
-            />
-          ))}
-        </View>
-      </KeyboardAwareScrollView>
+      <FlatList
+        data={items}
+        renderItem={renderItem}
+        keyExtractor={keyExtractor}
+        ListHeaderComponent={ListHeaderComponent}
+        numColumns={3}
+        columnWrapperStyle={styles.columnWrapper}
+        contentContainerStyle={styles.listContent}
+        initialNumToRender={15}
+        maxToRenderPerBatch={10}
+        windowSize={5}
+        removeClippedSubviews={true}
+        style={styles.form}
+      />
 
       <Button
         title={
@@ -180,11 +204,13 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: 16,
     textAlign: 'center',
   },
-  picker: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  listContent: {
+    paddingBottom: 16,
+  },
+  columnWrapper: {
     justifyContent: 'center',
     gap: 8,
+    marginBottom: 8,
   },
   nextButton: {
     backgroundColor: theme.colors.primary,

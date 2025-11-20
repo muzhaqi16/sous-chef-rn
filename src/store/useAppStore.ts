@@ -144,3 +144,26 @@ export const selectTokenState = (state: RootState) => ({
   refreshToken: state.refreshToken,
   setTokens: state.setTokens,
 });
+
+// PERFORMANCE: Navigation utilities selector - for getUserNavigationState usage
+export const selectNavigationUtils = (state: RootState) => ({
+  getUserNavigationState: state.getUserNavigationState,
+  setUserNavigationState: state.setUserNavigationState,
+  setOnBoardingStep: state.setOnBoardingStep,
+  setOnboarded: state.setOnboarded,
+});
+
+// PERFORMANCE: Search state selector - comprehensive search functionality
+export const selectSearchState = (state: RootState) => ({
+  searchResults: state.searchResults,
+  isSearching: state.isSearching,
+  searchError: state.searchError,
+  setSearchResults: state.setSearchResults,
+  setSearching: state.setSearching,
+  setSearchError: state.setSearchError,
+  clearSearch: state.clearSearch,
+  addToRecentlyScanned: state.addToRecentlyScanned,
+});
+
+// Single property selector for network status
+export const selectIsOnline = (state: RootState) => state.isOnline;
