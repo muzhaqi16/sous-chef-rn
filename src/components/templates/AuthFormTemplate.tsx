@@ -18,9 +18,11 @@ interface Props<T extends FieldValues> {
   onSubmit: () => void;
   footerText?: string;
   footerLinkText?: string;
+  footerLinkTestID?: string;
   onFooterLinkPress?: () => void;
   onLinkPress?: () => void;
   linkText?: string;
+  linkTestID?: string;
   isLoading?: boolean;
 }
 export function AuthFormTemplate<T extends FieldValues>({
@@ -35,8 +37,10 @@ export function AuthFormTemplate<T extends FieldValues>({
   onSubmit,
   footerText,
   footerLinkText,
+  footerLinkTestID,
   onFooterLinkPress,
   linkText,
+  linkTestID,
   onLinkPress,
   isLoading = false,
 }: Props<T>) {
@@ -62,7 +66,7 @@ export function AuthFormTemplate<T extends FieldValues>({
       <DynamicFormFields<T> fields={fields} control={control} errors={errors} />
 
       {linkText && onLinkPress && (
-        <TouchableOpacity onPress={onLinkPress}>
+        <TouchableOpacity onPress={onLinkPress} testID={linkTestID}>
           <Text style={styles.link}>{linkText}</Text>
         </TouchableOpacity>
       )}
@@ -77,7 +81,7 @@ export function AuthFormTemplate<T extends FieldValues>({
       </View>
 
       {footerText && footerLinkText && onFooterLinkPress && (
-        <TouchableOpacity onPress={onFooterLinkPress}>
+        <TouchableOpacity onPress={onFooterLinkPress} testID={footerLinkTestID}>
           <Text style={styles.footer}>
             {footerText} <Text style={styles.link}>{footerLinkText}</Text>
           </Text>

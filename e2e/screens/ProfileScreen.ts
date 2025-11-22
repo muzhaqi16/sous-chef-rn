@@ -119,8 +119,12 @@ export class ProfileScreen extends BaseScreen {
    * Logout from the app
    */
   async logout() {
-    // Scroll to bottom to find logout button
-    await this.scrollTo(this.scrollView, 'bottom');
+    // Scroll down until logout button is visible using whileElement pattern
+    await waitFor(element(by.id(this.logoutButton)))
+      .toBeVisible()
+      .whileElement(by.id(this.scrollView))
+      .scroll(200, 'down');
+
     await this.tapByID(this.logoutButton);
 
     // Wait for confirmation dialog
@@ -133,10 +137,17 @@ export class ProfileScreen extends BaseScreen {
       // No confirmation dialog
     }
 
-    // Wait for login screen
-    await waitFor(element(by.id('login-screen')))
-      .toBeVisible()
-      .withTimeout(5000);
+    // Wait for either landing or login screen after logout
+    try {
+      await waitFor(element(by.id('landing-auth-screen')))
+        .toBeVisible()
+        .withTimeout(5000);
+    } catch {
+      // Might go directly to login screen
+      await waitFor(element(by.id('login-screen')))
+        .toBeVisible()
+        .withTimeout(5000);
+    }
   }
 
   /**

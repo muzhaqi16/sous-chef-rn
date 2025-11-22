@@ -8,18 +8,23 @@
  * - Navigation after logout
  */
 
+import { element, by, waitFor } from 'detox';
 import { launchAppWithFabricWorkaround } from '../../init';
 import {
+  LandingAuthScreen,
   LoginScreen,
-  ShoppingListScreen,
+  PantryScreen,
   ProfileScreen,
+  CreateHomeScreen,
 } from '../../screens';
 import { TEST_USER } from '../../fixtures/testData';
 
 describe('Logout Flow', () => {
+  const landingScreen = new LandingAuthScreen();
   const loginScreen = new LoginScreen();
-  const shoppingListScreen = new ShoppingListScreen();
+  const pantryScreen = new PantryScreen();
   const profileScreen = new ProfileScreen();
+  const createHomeScreen = new CreateHomeScreen();
 
   beforeAll(async () => {
     await launchAppWithFabricWorkaround({
@@ -30,18 +35,49 @@ describe('Logout Flow', () => {
 
   beforeEach(async () => {
     await device.reloadReactNative();
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     // Ensure logged in before each test
     try {
-      // If already on shopping list, we're logged in
-      await shoppingListScreen.waitForScreen(3000);
+      // If tab bar is visible, we're logged in
+      await waitFor(element(by.id('tab-bar'))).toBeVisible().withTimeout(3000);
+      // We're logged in - navigate to pantry tab to ensure consistent state
+      await pantryScreen.navigateToTab();
     } catch {
-      // Not logged in, login first
-      await loginScreen.waitForScreen();
+      // Not logged in, need to login
+      // Check if on landing screen first
+      try {
+        await landingScreen.waitForScreen(3000);
+        await landingScreen.tapLogin();
+      } catch {
+        // Check if on onboarding
+        try {
+          await createHomeScreen.waitForScreen(2000);
+          await createHomeScreen.tapSkip();
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          await landingScreen.waitForScreen(3000);
+          await landingScreen.tapLogin();
+        } catch {
+          // Already on login screen
+        }
+      }
+
+      await loginScreen.waitForScreen(5000);
       await loginScreen.loginAsTestUser();
-      await shoppingListScreen.waitForScreen();
+      await pantryScreen.waitForScreen(10000);
     }
   });
+
+  // Helper to navigate to login screen after logout (handles landing screen)
+  async function navigateToLoginAfterLogout() {
+    try {
+      await landingScreen.waitForScreen(3000);
+      await landingScreen.tapLogin();
+    } catch {
+      // Already on login screen
+    }
+    await loginScreen.waitForScreen(5000);
+  }
 
   describe('Successful Logout', () => {
     it('should logout from profile screen', async () => {
@@ -52,8 +88,8 @@ describe('Logout Flow', () => {
       // Act - logout
       await profileScreen.logout();
 
-      // Assert - should return to login screen
-      await loginScreen.waitForScreen(5000);
+      // Assert - should return to landing or login screen
+      await navigateToLoginAfterLogout();
       await loginScreen.expectScreenVisible();
     });
 
@@ -131,8 +167,8 @@ describe('Logout Flow', () => {
       await loginScreen.loginAsTestUser();
 
       // Assert - should be able to login successfully
-      await shoppingListScreen.waitForScreen();
-      await shoppingListScreen.expectScreenVisible();
+      await pantryScreen.waitForScreen();
+      await pantryScreen.expectScreenVisible();
     });
 
     it('should clear user data from profile after logout', async () => {
@@ -146,7 +182,7 @@ describe('Logout Flow', () => {
 
       // Login again
       await loginScreen.loginAsTestUser();
-      await shoppingListScreen.waitForScreen();
+      await pantryScreen.waitForScreen();
 
       // Navigate to profile - should still show correct user data
       await profileScreen.navigateToTab();
@@ -234,17 +270,17 @@ describe('Logout Flow', () => {
       await profileScreen.logout();
       await loginScreen.waitForScreen();
       await loginScreen.loginAsTestUser();
-      await shoppingListScreen.waitForScreen();
+      await pantryScreen.waitForScreen();
 
       // Cycle 2
       await profileScreen.navigateToTab();
       await profileScreen.logout();
       await loginScreen.waitForScreen();
       await loginScreen.loginAsTestUser();
-      await shoppingListScreen.waitForScreen();
+      await pantryScreen.waitForScreen();
 
       // Assert - app should be stable after multiple cycles
-      await shoppingListScreen.expectScreenVisible();
+      await pantryScreen.expectScreenVisible();
     });
   });
 

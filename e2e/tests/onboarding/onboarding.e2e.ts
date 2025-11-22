@@ -1,18 +1,29 @@
 /**
  * Onboarding E2E Tests
  *
- * Tests onboarding flow including:
- * - Viewing onboarding pages
- * - Navigation through pages
- * - Skipping onboarding
- * - Completing onboarding
- * - Swipe gestures
+ * ⚠️ STATUS: DEPRECATED - USE onboarding-wizard.e2e.ts INSTEAD
+ *
+ * These tests were written for a carousel-style onboarding (swipeable pages),
+ * but the app implements a multi-step wizard with separate screens.
+ *
+ * The new tests are in: e2e/tests/onboarding/onboarding-wizard.e2e.ts
+ *
+ * Actual implementation:
+ * 1. CreateHome - Create or join a home
+ * 2. CreateShoppingList - Set up shopping list
+ * 3. SelectPantryItems - Add initial pantry items
+ * 4. ProfilePictureUpload - Upload profile photo
+ * 5. InviteMembers - Invite household members
+ * 6. OnboardingComplete - Completion screen
+ * 7. BiometricSetup - Configure biometric auth
+ *
+ * See: e2e/tests/onboarding/onboarding-wizard.e2e.ts for working tests
  */
 
 import { launchAppWithFabricWorkaround } from '../../init';
 import { OnboardingScreen, LoginScreen } from '../../screens';
 
-describe('Onboarding Flow', () => {
+describe.skip('Onboarding Flow (DEPRECATED - See onboarding-wizard.e2e.ts)', () => {
   const onboardingScreen = new OnboardingScreen();
   const loginScreen = new LoginScreen();
 

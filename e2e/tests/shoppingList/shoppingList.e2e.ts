@@ -11,10 +11,15 @@
  */
 
 import { launchAppWithFabricWorkaround } from '../../init';
-import { LoginScreen, ShoppingListScreen } from '../../screens';
+import {
+  LandingAuthScreen,
+  LoginScreen,
+  ShoppingListScreen,
+} from '../../screens';
 import { TEST_USER, TEST_SHOPPING_ITEMS } from '../../fixtures/testData';
 
 describe('Shopping List', () => {
+  const landingScreen = new LandingAuthScreen();
   const loginScreen = new LoginScreen();
   const shoppingListScreen = new ShoppingListScreen();
 
@@ -32,6 +37,14 @@ describe('Shopping List', () => {
     try {
       await shoppingListScreen.waitForScreen(3000);
     } catch {
+      // Check if on landing screen first
+      try {
+        await landingScreen.waitForScreen(2000);
+        await landingScreen.tapLogin();
+      } catch {
+        // Not on landing screen, continue
+      }
+
       await loginScreen.waitForScreen();
       await loginScreen.loginAsTestUser();
       await shoppingListScreen.waitForScreen();

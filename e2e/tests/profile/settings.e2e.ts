@@ -12,6 +12,7 @@
 
 import { launchAppWithFabricWorkaround } from '../../init';
 import {
+  LandingAuthScreen,
   LoginScreen,
   ProfileScreen,
   SettingsScreen,
@@ -19,6 +20,7 @@ import {
 import { TEST_USER } from '../../fixtures/testData';
 
 describe('Profile and Settings', () => {
+  const landingScreen = new LandingAuthScreen();
   const loginScreen = new LoginScreen();
   const profileScreen = new ProfileScreen();
   const settingsScreen = new SettingsScreen();
@@ -37,6 +39,14 @@ describe('Profile and Settings', () => {
     try {
       await profileScreen.waitForScreen(3000);
     } catch {
+      // Check if on landing screen first
+      try {
+        await landingScreen.waitForScreen(2000);
+        await landingScreen.tapLogin();
+      } catch {
+        // Not on landing screen, continue
+      }
+
       await loginScreen.waitForScreen();
       await loginScreen.loginAsTestUser();
       await profileScreen.navigateToTab();

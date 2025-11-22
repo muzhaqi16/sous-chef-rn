@@ -522,10 +522,13 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     },
   ];
 
+  const formTestID = mode === 'add' ? 'add-pantry-item-modal' : 'edit-pantry-item-modal';
+
   return (
     <KeyboardAvoidingView
       style={commonStyles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      testID={formTestID}
     >
       <PantryItemFormHeader
         title={mode === 'add' ? 'Add Pantry Item' : 'Edit Pantry Item'}

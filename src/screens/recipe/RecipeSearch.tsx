@@ -582,7 +582,7 @@ export const RecipeSearch: React.FC = () => {
       };
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} testID="recipe-search-screen">
       <ListTemplate
         title="Search Recipes"
         subtitle="Find recipes"

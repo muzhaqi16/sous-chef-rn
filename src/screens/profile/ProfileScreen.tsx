@@ -83,7 +83,7 @@ export const ProfileScreen = () => {
     return null; // or loading component
   }
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} testID="profile-screen">
       <ProfileHeader
         avatarUrl={profile?.avatar}
         name={`${profile?.firstName || ''} ${profile?.lastName || ''}`.trim()}
@@ -94,6 +94,7 @@ export const ProfileScreen = () => {
       />
 
       <ScrollView
+        testID="profile-scroll-view"
         contentContainerStyle={[
           styles.scrollContent,
           { paddingBottom: TAB_BAR_HEIGHT + safeBottom + 16 },
@@ -116,6 +117,7 @@ export const ProfileScreen = () => {
               if (item.key === 'logout') {
                 return {
                   ...item,
+                  testID: 'profile-logout-button',
                   onPress: handleLogout,
                 };
               }
@@ -123,6 +125,7 @@ export const ProfileScreen = () => {
               if (item.type === 'navigation') {
                 return {
                   ...item,
+                  testID: `profile-menu-${item.key}`,
                   onPress: () => {
                     if (item.key === 'personalInformation') {
                       navigate('PersonalInformation');

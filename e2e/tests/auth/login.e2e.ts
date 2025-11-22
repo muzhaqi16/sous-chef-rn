@@ -9,33 +9,120 @@
  * - Navigation flows
  */
 
+import { element, by, waitFor } from 'detox';
 import { launchAppWithFabricWorkaround } from '../../init';
-import { LandingAuthScreen, LoginScreen, PantryScreen } from '../../screens';
+import {
+  LandingAuthScreen,
+  LoginScreen,
+  PantryScreen,
+  ProfileScreen,
+  CreateHomeScreen,
+} from '../../screens';
 import { TEST_USER, ERROR_MESSAGES } from '../../fixtures/testData';
 
 describe('Login Flow', () => {
   const landingScreen = new LandingAuthScreen();
   const loginScreen = new LoginScreen();
   const pantryScreen = new PantryScreen();
+  const profileScreen = new ProfileScreen();
+  const createHomeScreen = new CreateHomeScreen();
 
   beforeAll(async () => {
+    // Launch app once at the start of the test suite
     await launchAppWithFabricWorkaround({
       newInstance: true,
       permissions: { notifications: 'YES' },
     });
   });
 
-  beforeEach(async () => {
-    // Reinstall app to clear auth state and start fresh
-    await launchAppWithFabricWorkaround({
-      newInstance: true,
-      delete: true, // Clear all app data including logged-in user
-    });
+  /**
+   * Helper to complete post-login flow (handles onboarding if needed)
+   * After login, user may go to onboarding or directly to main app
+   */
+  async function completePostLoginFlow() {
+    // Wait a moment for navigation to settle
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
-    // Navigate from landing screen to login form
-    await landingScreen.waitForScreen();
-    await landingScreen.tapLogin();
-    await loginScreen.waitForScreen();
+    // Check if we're on onboarding (CreateHome screen)
+    try {
+      await createHomeScreen.waitForScreen(3000);
+      // On onboarding - skip it
+      await createHomeScreen.tapSkip();
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    } catch {
+      // Not on onboarding - might already be on main app
+    }
+
+    // Now wait for pantry screen (main app)
+    await pantryScreen.waitForScreen(10000);
+  }
+
+  /**
+   * Logout helper - scrolls to logout button and taps it
+   */
+  async function performLogout() {
+    // Ensure we're on the main app screen first
+    await waitFor(element(by.id('tab-bar'))).toBeVisible().withTimeout(5000);
+
+    // Navigate to profile tab
+    await element(by.id('tab-profile')).tap();
+
+    // Wait for profile scroll view to be visible
+    await waitFor(element(by.id('profile-scroll-view'))).toBeVisible().withTimeout(3000);
+
+    // Scroll to logout button using multiple scrolls
+    // Parameters: pixels to scroll, direction, start position ratio, end position ratio
+    await element(by.id('profile-scroll-view')).scroll(500, 'down', 0.7, 0.2);
+    await element(by.id('profile-scroll-view')).scroll(500, 'down', 0.7, 0.2);
+
+    // Tap logout button
+    await element(by.id('profile-logout-button')).tap();
+
+    // Handle confirmation dialog if present
+    try {
+      await waitFor(element(by.id('logout-confirmation-modal')))
+        .toBeVisible()
+        .withTimeout(1000);
+      await element(by.id('confirm-logout-button')).tap();
+    } catch {
+      // No confirmation dialog
+    }
+
+    // Wait for navigation to complete
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+
+  beforeEach(async () => {
+    // State 1: Check if on onboarding (logged in but not onboarded)
+    try {
+      await createHomeScreen.waitForScreen(1000);
+      await createHomeScreen.tapSkip();
+    } catch {
+      // Not on onboarding
+    }
+
+    // State 2: Check if on main_app (logged in) - if so, logout
+    try {
+      await waitFor(element(by.id('tab-bar'))).toBeVisible().withTimeout(2000);
+      // We're on main app - perform logout
+      await performLogout();
+      // Navigate to login screen
+      await landingScreen.tapLogin();
+      await loginScreen.waitForScreen(5000);
+      return; // Done - we're on login screen
+    } catch {
+      // Not on main app (either on landing or login screen)
+    }
+
+    // State 3: Navigate to login screen from landing if we're there
+    try {
+      await landingScreen.waitForScreen(2000);
+      await landingScreen.tapLogin();
+      await loginScreen.waitForScreen(5000);
+    } catch {
+      // Already on login screen or somewhere else
+      await loginScreen.waitForScreen(5000);
+    }
   });
 
   describe('Successful Login', () => {
@@ -48,8 +135,8 @@ describe('Login Flow', () => {
       await loginScreen.enterPassword(TEST_USER.password);
       await loginScreen.submit();
 
-      // Assert - should navigate to pantry screen (first tab after login)
-      await pantryScreen.waitForScreen(10000);
+      // Assert - should navigate to pantry (may go through onboarding first)
+      await completePostLoginFlow();
       await pantryScreen.expectScreenVisible();
     });
 
@@ -57,8 +144,8 @@ describe('Login Flow', () => {
       // Act - use helper method
       await loginScreen.loginAsTestUser();
 
-      // Assert - should be logged in and on pantry screen
-      await pantryScreen.waitForScreen(10000);
+      // Assert - should be logged in and on pantry screen (may go through onboarding)
+      await completePostLoginFlow();
       await pantryScreen.expectScreenVisible();
     });
 
@@ -66,8 +153,9 @@ describe('Login Flow', () => {
       // Act - complete login flow
       await loginScreen.loginAndWaitForHome(TEST_USER.email, TEST_USER.password);
 
-      // Assert - login screen should be gone, should be on pantry
+      // Assert - login screen should be gone, complete post-login flow
       await loginScreen.expectNotVisible(loginScreen['screenID']);
+      await completePostLoginFlow();
       await pantryScreen.expectScreenVisible();
     });
 
@@ -88,8 +176,8 @@ describe('Login Flow', () => {
         console.log('Loading finished too quickly to verify');
       }
 
-      // Should eventually navigate to pantry screen
-      await pantryScreen.waitForScreen(10000);
+      // Should eventually navigate to pantry screen (may go through onboarding)
+      await completePostLoginFlow();
     });
   });
 
@@ -236,8 +324,8 @@ describe('Login Flow', () => {
 
       // Keyboard should be dismissed
       // This is handled in the submit() method
-      // If successful, should navigate to pantry
-      await pantryScreen.waitForScreen(10000);
+      // If successful, should navigate to pantry (may go through onboarding)
+      await completePostLoginFlow();
     });
   });
 
@@ -250,7 +338,7 @@ describe('Login Flow', () => {
 
       // Second attempt - success
       await loginScreen.loginWith(TEST_USER.email, TEST_USER.password);
-      await pantryScreen.waitForScreen(10000);
+      await completePostLoginFlow();
       await pantryScreen.expectScreenVisible();
     });
 
@@ -288,8 +376,8 @@ describe('Login Flow', () => {
         console.log('Loading state too fast to verify');
       }
 
-      // Should complete eventually
-      await pantryScreen.waitForScreen(10000);
+      // Should complete eventually (may go through onboarding)
+      await completePostLoginFlow();
     });
 
     it('should hide loading indicator after login completes', async () => {

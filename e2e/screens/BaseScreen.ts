@@ -169,7 +169,14 @@ export abstract class BaseScreen {
         await this.screen.tap();
       }
     } else {
-      await device.pressBack();
+      // On Android, tap outside the input field to dismiss keyboard
+      // Using pressBack() can navigate away from the screen
+      try {
+        await this.screen.tap({ x: 10, y: 10 });
+      } catch {
+        // Fallback: use pressBack but only if necessary
+        await device.pressBack();
+      }
     }
   }
 

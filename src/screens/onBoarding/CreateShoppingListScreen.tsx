@@ -155,6 +155,7 @@ export const CreateShoppingListScreen = () => {
       step={2}
       totalSteps={7}
       onSkip={() => skipToStep('SelectPantryItems')}
+      testID="onboarding-create-shopping-list-screen"
     >
       {existingList ? (
         <>

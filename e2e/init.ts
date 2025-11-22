@@ -5,6 +5,7 @@
  */
 
 import { device, element, by, waitFor, expect } from 'detox';
+import { execSync } from 'child_process';
 
 // Make Detox utilities globally available
 global.device = device;
@@ -15,6 +16,24 @@ global.expect = expect;
 
 // Global test timeout
 jest.setTimeout(120000);
+
+/**
+ * Setup ADB reverse for local API testing
+ * This is required when running tests against localhost API
+ * Not needed for staging/production environments which use .env variables
+ */
+function setupAdbReverseForLocalTesting() {
+  try {
+    // Check if we're running on Android
+    if (device.getPlatform() === 'android') {
+      console.log('🔧 Setting up ADB reverse for local API (port 4000)...');
+      execSync('adb reverse tcp:4000 tcp:4000', { stdio: 'pipe' });
+      console.log('✅ ADB reverse setup complete');
+    }
+  } catch (error) {
+    console.log('⚠️ Could not setup ADB reverse (this is expected for iOS or if no emulator is connected)');
+  }
+}
 
 /**
  * Workaround for Detox + React Native Fabric compatibility issue
@@ -52,6 +71,9 @@ export async function launchAppWithFabricWorkaround(options: any = {}) {
 beforeAll(async () => {
   console.log('🚀 Starting Detox E2E Test Suite');
   console.log(`Platform: ${device.getPlatform()}`);
+
+  // Setup ADB reverse for local API testing (Android only)
+  setupAdbReverseForLocalTesting();
 });
 
 // Global teardown runs once after all tests

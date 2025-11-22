@@ -64,7 +64,7 @@ export function useShoppingListItemForm(initialState?: Partial<FormState>) {
       if (trimmed.includes('/')) {
         const parts = trimmed.split(/\s+/);
         if (parts.length === 2) {
-          const whole = parseInt(parts[0], 10);
+          const whole = parseInt(parts[0]);
           const [num, den] = parts[1].split('/').map(Number);
           quantityValue = whole + num / den;
         } else {

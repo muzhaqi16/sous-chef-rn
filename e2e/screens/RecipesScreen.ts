@@ -52,9 +52,10 @@ export class RecipesScreen extends BaseScreen {
 
   /**
    * Navigate to recipes tab
+   * Note: Tab testID is 'tab-recipe' (singular) based on route name 'Recipe'
    */
   async navigateToTab() {
-    await this.tapByID('tab-recipes');
+    await this.tapByID('tab-recipe');
     await this.waitForScreen();
   }
 

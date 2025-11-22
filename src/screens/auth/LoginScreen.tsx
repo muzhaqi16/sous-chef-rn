@@ -187,6 +187,7 @@ export function LoginScreen() {
         control={form.control}
         errors={form.formState.errors}
         linkText="Forgot password?"
+        linkTestID="login-forgot-password-link"
         onLinkPress={() => {
           Telemetry.trackEvent('forgot_password_clicked', {
             source: 'LoginScreen',
@@ -198,6 +199,7 @@ export function LoginScreen() {
         onSubmit={form.handleSubmit(onSubmit)}
         footerText="Don't have an account?"
         footerLinkText="Sign Up"
+        footerLinkTestID="login-signup-link"
         onFooterLinkPress={() => {
           Telemetry.trackEvent('signup_navigation_clicked', {
             source: 'LoginScreen',

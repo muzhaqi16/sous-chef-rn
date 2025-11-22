@@ -11,10 +11,16 @@
  */
 
 import { launchAppWithFabricWorkaround } from '../../init';
-import { LoginScreen, RecipesScreen, ShoppingListScreen } from '../../screens';
+import {
+  LandingAuthScreen,
+  LoginScreen,
+  RecipesScreen,
+  ShoppingListScreen,
+} from '../../screens';
 import { TEST_USER } from '../../fixtures/testData';
 
 describe('Recipe Search and Browsing', () => {
+  const landingScreen = new LandingAuthScreen();
   const loginScreen = new LoginScreen();
   const recipesScreen = new RecipesScreen();
   const shoppingListScreen = new ShoppingListScreen();
@@ -33,6 +39,15 @@ describe('Recipe Search and Browsing', () => {
     try {
       await recipesScreen.waitForScreen(3000);
     } catch {
+      // Check if on landing screen first
+      try {
+        await landingScreen.waitForScreen(2000);
+        await landingScreen.tapLogin();
+      } catch {
+        // Not on landing screen, continue
+      }
+
+      // Now wait for login screen and login
       await loginScreen.waitForScreen();
       await loginScreen.loginAsTestUser();
       await recipesScreen.navigateToTab();

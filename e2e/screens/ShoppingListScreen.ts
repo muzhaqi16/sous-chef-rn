@@ -58,9 +58,10 @@ export class ShoppingListScreen extends BaseScreen {
 
   /**
    * Navigate to tab (assuming bottom tab navigation)
+   * Note: Tab testID is 'tab-shoppinglist' (no dash) based on route name 'ShoppingList'
    */
   async navigateToTab() {
-    await this.tapByID('tab-shopping-list');
+    await this.tapByID('tab-shoppinglist');
     await this.waitForScreen();
   }
 

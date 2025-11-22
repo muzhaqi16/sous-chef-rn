@@ -12,10 +12,11 @@
  */
 
 import { launchAppWithFabricWorkaround } from '../../init';
-import { LoginScreen, PantryScreen } from '../../screens';
+import { LandingAuthScreen, LoginScreen, PantryScreen } from '../../screens';
 import { TEST_USER, TEST_PANTRY_ITEMS, generateFutureDate, generatePastDate } from '../../fixtures/testData';
 
 describe('Pantry Management', () => {
+  const landingScreen = new LandingAuthScreen();
   const loginScreen = new LoginScreen();
   const pantryScreen = new PantryScreen();
 
@@ -33,6 +34,14 @@ describe('Pantry Management', () => {
     try {
       await pantryScreen.waitForScreen(3000);
     } catch {
+      // Check if on landing screen first
+      try {
+        await landingScreen.waitForScreen(2000);
+        await landingScreen.tapLogin();
+      } catch {
+        // Not on landing screen, continue
+      }
+
       await loginScreen.waitForScreen();
       await loginScreen.loginAsTestUser();
       await pantryScreen.navigateToTab();

@@ -9,6 +9,7 @@ interface ProfileScreenWrapperProps {
   children: React.ReactNode;
   title?: string;
   showBackButton?: boolean;
+  testID?: string;
 }
 
 /**
@@ -19,12 +20,13 @@ export const ProfileScreenWrapper: React.FC<ProfileScreenWrapperProps> = ({
   children,
   title,
   showBackButton = true,
+  testID,
 }) => {
   const { goBack } = useAppNavigation();
   const { theme } = useUnistyles();
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView style={styles.container} edges={['bottom']} testID={testID}>
       {showBackButton && (
         <View style={styles.header}>
           <IconButton
