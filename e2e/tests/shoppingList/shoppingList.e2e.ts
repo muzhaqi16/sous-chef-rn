@@ -31,27 +31,21 @@ describe('Shopping List', () => {
   });
 
   beforeEach(async () => {
-    await device.reloadReactNative();
+    // Clear app data and launch fresh
+    await launchAppWithFabricWorkaround({
+      delete: true,
+      permissions: { notifications: 'YES' },
+    });
 
     // Login and navigate to shopping list
-    try {
-      await shoppingListScreen.waitForScreen(3000);
-    } catch {
-      // Check if on landing screen first
-      try {
-        await landingScreen.waitForScreen(2000);
-        await landingScreen.tapLogin();
-      } catch {
-        // Not on landing screen, continue
-      }
+    await landingScreen.waitForScreen(5000);
+    await landingScreen.tapLogin();
+    await loginScreen.waitForScreen(5000);
+    await loginScreen.loginAsTestUser();
 
-      await loginScreen.waitForScreen();
-      await loginScreen.loginAsTestUser();
-      await shoppingListScreen.waitForScreen();
-    }
-
-    // Ensure we're on the shopping list screen
+    // Navigate to shopping list tab
     await shoppingListScreen.navigateToTab();
+    await shoppingListScreen.waitForScreen(5000);
   });
 
   describe('Adding Items', () => {

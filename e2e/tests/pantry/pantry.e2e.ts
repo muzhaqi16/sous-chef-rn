@@ -28,27 +28,20 @@ describe('Pantry Management', () => {
   });
 
   beforeEach(async () => {
-    await device.reloadReactNative();
+    // Clear app data and launch fresh
+    await launchAppWithFabricWorkaround({
+      delete: true,
+      permissions: { notifications: 'YES', camera: 'YES' },
+    });
 
     // Login and navigate to pantry
-    try {
-      await pantryScreen.waitForScreen(3000);
-    } catch {
-      // Check if on landing screen first
-      try {
-        await landingScreen.waitForScreen(2000);
-        await landingScreen.tapLogin();
-      } catch {
-        // Not on landing screen, continue
-      }
+    await landingScreen.waitForScreen(5000);
+    await landingScreen.tapLogin();
+    await loginScreen.waitForScreen(5000);
+    await loginScreen.loginAsTestUser();
 
-      await loginScreen.waitForScreen();
-      await loginScreen.loginAsTestUser();
-      await pantryScreen.navigateToTab();
-    }
-
-    // Ensure we're on pantry screen
-    await pantryScreen.waitForScreen();
+    // Wait for pantry screen (main app landing)
+    await pantryScreen.waitForScreen(10000);
   });
 
   describe('Adding Items', () => {

@@ -34,38 +34,20 @@ describe('Logout Flow', () => {
   });
 
   beforeEach(async () => {
-    await device.reloadReactNative();
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Clear app data and launch fresh
+    await launchAppWithFabricWorkaround({
+      delete: true,
+      permissions: { notifications: 'YES' },
+    });
 
-    // Ensure logged in before each test
-    try {
-      // If tab bar is visible, we're logged in
-      await waitFor(element(by.id('tab-bar'))).toBeVisible().withTimeout(3000);
-      // We're logged in - navigate to pantry tab to ensure consistent state
-      await pantryScreen.navigateToTab();
-    } catch {
-      // Not logged in, need to login
-      // Check if on landing screen first
-      try {
-        await landingScreen.waitForScreen(3000);
-        await landingScreen.tapLogin();
-      } catch {
-        // Check if on onboarding
-        try {
-          await createHomeScreen.waitForScreen(2000);
-          await createHomeScreen.tapSkip();
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          await landingScreen.waitForScreen(3000);
-          await landingScreen.tapLogin();
-        } catch {
-          // Already on login screen
-        }
-      }
+    // Navigate to login screen and login
+    await landingScreen.waitForScreen(5000);
+    await landingScreen.tapLogin();
+    await loginScreen.waitForScreen(5000);
+    await loginScreen.loginAsTestUser();
 
-      await loginScreen.waitForScreen(5000);
-      await loginScreen.loginAsTestUser();
-      await pantryScreen.waitForScreen(10000);
-    }
+    // Wait for main app and ensure we're on pantry
+    await pantryScreen.waitForScreen(10000);
   });
 
   // Helper to navigate to login screen after logout (handles landing screen)
