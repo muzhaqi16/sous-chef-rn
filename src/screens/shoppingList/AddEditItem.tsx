@@ -198,8 +198,8 @@ export const AddEditItem: React.FC<{
   };
 
   const modalTestID = isEdit
-    ? 'edit-shopping-item-modal'
-    : 'add-shopping-item-modal';
+    ? 'edit-item-modal'
+    : 'add-item-modal';
 
   return (
     <FormModal
@@ -208,6 +208,7 @@ export const AddEditItem: React.FC<{
       onSave={handleSave}
       loading={saving}
       testID={modalTestID}
+      submitButtonTestID={isEdit ? 'edit-item-submit-button' : 'add-item-submit-button'}
     >
       {/* Item Name Field - Use autocomplete for new items only */}
       {isEdit ? (
@@ -228,6 +229,7 @@ export const AddEditItem: React.FC<{
           placeholder="e.g., Milk, Bread"
           required
           autoFocus
+          testID="add-item-name-input"
         />
       )}
 
@@ -237,6 +239,7 @@ export const AddEditItem: React.FC<{
         value={quantityInput}
         onChangeText={text => updateField('quantityInput', text)}
         placeholder="e.g., 1 1/4, 2.5, or 3"
+        testID={isEdit ? 'edit-item-quantity-input' : 'add-item-quantity-input'}
       />
 
       {/* Unit */}
@@ -246,6 +249,7 @@ export const AddEditItem: React.FC<{
         onChangeText={text => updateField('unit', text)}
         onUnitSelected={handleUnitSelect}
         placeholder="kg, lbs, pcs, etc."
+        testID={isEdit ? 'edit-item-unit-picker' : 'add-item-unit-picker'}
       />
 
       {/* Category Field */}

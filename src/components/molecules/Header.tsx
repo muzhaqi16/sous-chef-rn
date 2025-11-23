@@ -11,6 +11,7 @@ export interface HeaderAction {
   size?: number;
   color?: string;
   library?: IconLibrary;
+  testID?: string;
 }
 
 interface HeaderProps {
@@ -42,6 +43,7 @@ export const Header: React.FC<HeaderProps> = ({
             key={index}
             style={styles.action}
             onPress={action.onPress}
+            testID={action.testID}
           >
             <Icon
               name={action.icon}
@@ -70,6 +72,7 @@ export const Header: React.FC<HeaderProps> = ({
             key={index}
             style={styles.action}
             onPress={action.onPress}
+            testID={action.testID}
           >
             <Icon
               name={action.icon}

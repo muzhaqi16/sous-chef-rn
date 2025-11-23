@@ -57,72 +57,17 @@ describe('Login Flow', () => {
     await pantryScreen.waitForScreen(10000);
   }
 
-  /**
-   * Logout helper - scrolls to logout button and taps it
-   */
-  async function performLogout() {
-    // Ensure we're on the main app screen first
-    await waitFor(element(by.id('tab-bar'))).toBeVisible().withTimeout(5000);
-
-    // Navigate to profile tab
-    await element(by.id('tab-profile')).tap();
-
-    // Wait for profile scroll view to be visible
-    await waitFor(element(by.id('profile-scroll-view'))).toBeVisible().withTimeout(3000);
-
-    // Scroll to logout button using multiple scrolls
-    // Parameters: pixels to scroll, direction, start position ratio, end position ratio
-    await element(by.id('profile-scroll-view')).scroll(500, 'down', 0.7, 0.2);
-    await element(by.id('profile-scroll-view')).scroll(500, 'down', 0.7, 0.2);
-
-    // Tap logout button
-    await element(by.id('profile-logout-button')).tap();
-
-    // Handle confirmation dialog if present
-    try {
-      await waitFor(element(by.id('logout-confirmation-modal')))
-        .toBeVisible()
-        .withTimeout(1000);
-      await element(by.id('confirm-logout-button')).tap();
-    } catch {
-      // No confirmation dialog
-    }
-
-    // Wait for navigation to complete
-    await new Promise(resolve => setTimeout(resolve, 500));
-  }
-
   beforeEach(async () => {
-    // State 1: Check if on onboarding (logged in but not onboarded)
-    try {
-      await createHomeScreen.waitForScreen(1000);
-      await createHomeScreen.tapSkip();
-    } catch {
-      // Not on onboarding
-    }
+    // Clear app data and launch fresh - this ensures clean state for login tests
+    await launchAppWithFabricWorkaround({
+      delete: true,
+      permissions: { notifications: 'YES' },
+    });
 
-    // State 2: Check if on main_app (logged in) - if so, logout
-    try {
-      await waitFor(element(by.id('tab-bar'))).toBeVisible().withTimeout(2000);
-      // We're on main app - perform logout
-      await performLogout();
-      // Navigate to login screen
-      await landingScreen.tapLogin();
-      await loginScreen.waitForScreen(5000);
-      return; // Done - we're on login screen
-    } catch {
-      // Not on main app (either on landing or login screen)
-    }
-
-    // State 3: Navigate to login screen from landing if we're there
-    try {
-      await landingScreen.waitForScreen(2000);
-      await landingScreen.tapLogin();
-      await loginScreen.waitForScreen(5000);
-    } catch {
-      // Already on login screen or somewhere else
-      await loginScreen.waitForScreen(5000);
-    }
+    // Navigate to login screen
+    await landingScreen.waitForScreen(5000);
+    await landingScreen.tapLogin();
+    await loginScreen.waitForScreen(10000);
   });
 
   describe('Successful Login', () => {
@@ -186,10 +131,7 @@ describe('Login Flow', () => {
       // Act
       await loginScreen.loginWith('invalid@email.com', 'wrongpassword');
 
-      // Wait a bit for error to appear
-      await loginScreen.waitForElement(loginScreen['errorMessage'], 5000);
-
-      // Assert - should show error message
+      // Assert - should show error message (includes wait)
       await loginScreen.expectErrorMessage();
 
       // Should still be on login screen
@@ -200,10 +142,7 @@ describe('Login Flow', () => {
       // Act - valid email but wrong password
       await loginScreen.loginWith(TEST_USER.email, 'WrongPassword123!');
 
-      // Wait for error
-      await loginScreen.waitForElement(loginScreen['errorMessage'], 5000);
-
-      // Assert
+      // Assert (includes wait)
       await loginScreen.expectErrorMessage();
       await loginScreen.expectScreenVisible();
     });
@@ -304,8 +243,8 @@ describe('Login Flow', () => {
       // Act - login with wrong credentials
       await loginScreen.loginWith('test@example.com', 'wrongpassword');
 
-      // Wait for error
-      await loginScreen.waitForElement(loginScreen['errorMessage'], 5000);
+      // Wait for error to appear
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
       // Assert - password field should be cleared for security
       // (This is a common UX pattern but might not be implemented)
@@ -333,7 +272,6 @@ describe('Login Flow', () => {
     it('should allow retry after failed login', async () => {
       // First attempt - fail
       await loginScreen.loginWith('wrong@email.com', 'wrongpass');
-      await loginScreen.waitForElement(loginScreen['errorMessage'], 5000);
       await loginScreen.expectErrorMessage();
 
       // Second attempt - success
@@ -345,7 +283,6 @@ describe('Login Flow', () => {
     it('should clear error message when editing fields', async () => {
       // Arrange - cause an error
       await loginScreen.loginWith('invalid@email.com', 'wrong');
-      await loginScreen.waitForElement(loginScreen['errorMessage'], 5000);
       await loginScreen.expectErrorMessage();
 
       // Act - start editing field

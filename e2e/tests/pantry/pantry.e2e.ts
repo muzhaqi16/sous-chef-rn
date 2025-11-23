@@ -12,13 +12,57 @@
  */
 
 import { launchAppWithFabricWorkaround } from '../../init';
-import { LandingAuthScreen, LoginScreen, PantryScreen } from '../../screens';
+import { LandingAuthScreen, LoginScreen, PantryScreen, CreateHomeScreen, CreateShoppingListScreen, SelectPantryItemsScreen } from '../../screens';
 import { TEST_USER, TEST_PANTRY_ITEMS, generateFutureDate, generatePastDate } from '../../fixtures/testData';
+import { element, by } from 'detox';
 
 describe('Pantry Management', () => {
   const landingScreen = new LandingAuthScreen();
   const loginScreen = new LoginScreen();
   const pantryScreen = new PantryScreen();
+  const createHomeScreen = new CreateHomeScreen();
+  const createShoppingListScreen = new CreateShoppingListScreen();
+  const selectPantryItemsScreen = new SelectPantryItemsScreen();
+
+  /**
+   * Helper to skip through onboarding screens after login
+   */
+  const skipOnboardingIfPresent = async () => {
+    // Try to skip through onboarding screens if they appear
+    try {
+      // Check if Create Home screen appears
+      await createHomeScreen.waitForScreen(3000);
+      await createHomeScreen.tapSkip();
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    } catch {
+      // Not on create home screen
+    }
+
+    try {
+      // Check if Create Shopping List screen appears
+      await createShoppingListScreen.waitForScreen(3000);
+      await createShoppingListScreen.tapSkip();
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    } catch {
+      // Not on create shopping list screen
+    }
+
+    try {
+      // Check if Select Pantry Items screen appears
+      await selectPantryItemsScreen.waitForScreen(3000);
+      await selectPantryItemsScreen.tapSkip();
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    } catch {
+      // Not on select pantry items screen
+    }
+
+    // Wait for either tab-bar or pantry screen to appear
+    try {
+      await element(by.id('tab-bar')).waitFor().toBeVisible().withTimeout(5000);
+    } catch {
+      // Tab bar might not appear immediately
+    }
+  };
 
   beforeAll(async () => {
     await launchAppWithFabricWorkaround({
@@ -39,6 +83,9 @@ describe('Pantry Management', () => {
     await landingScreen.tapLogin();
     await loginScreen.waitForScreen(5000);
     await loginScreen.loginAsTestUser();
+
+    // Skip onboarding if it appears
+    await skipOnboardingIfPresent();
 
     // Wait for pantry screen (main app landing)
     await pantryScreen.waitForScreen(10000);

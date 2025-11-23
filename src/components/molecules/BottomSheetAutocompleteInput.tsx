@@ -19,6 +19,7 @@ interface BottomSheetAutocompleteInputProps<T> {
   placeholder?: string;
   required?: boolean;
   error?: string;
+  testID?: string;
 
   // Modal configuration
   title: string;
@@ -53,6 +54,7 @@ export function BottomSheetAutocompleteInput<T>({
   placeholder,
   required,
   error,
+  testID,
 
   // Modal props
   title,
@@ -167,6 +169,7 @@ export function BottomSheetAutocompleteInput<T>({
         placeholder={placeholder}
         required={required}
         error={error}
+        testID={testID}
       />
 
       <BottomSheetModal
@@ -212,6 +215,7 @@ export function BottomSheetAutocompleteInput<T>({
                 placeholder={searchPlaceholder}
                 autoFocus={showAutocomplete}
                 returnKeyType="search"
+                testID={testID ? `${testID}-search` : undefined}
               />
             </View>
           }

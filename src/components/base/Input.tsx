@@ -13,6 +13,7 @@ interface InputProps {
   keyboardType?: 'default' | 'numeric' | 'email-address';
   autoFocus?: boolean;
   required?: boolean;
+  testID?: string;
 }
 
 export const Input: React.FC<InputProps> = ({
@@ -26,6 +27,7 @@ export const Input: React.FC<InputProps> = ({
   keyboardType = 'default',
   autoFocus = false,
   required = false,
+  testID,
 }) => {
   const {theme} = useUnistyles();
   return (
@@ -49,6 +51,7 @@ export const Input: React.FC<InputProps> = ({
         keyboardType={keyboardType}
         autoFocus={autoFocus}
         placeholderTextColor={theme.colors.textSecondary}
+        testID={testID}
       />
       {error && <Text style={styles.errorText}>{error}</Text>}
     </View>

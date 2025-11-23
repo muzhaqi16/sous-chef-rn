@@ -10,6 +10,7 @@ interface FormModalProps {
   loading?: boolean;
   children: React.ReactNode;
   testID?: string;
+  submitButtonTestID?: string;
 }
 
 export const FormModal: React.FC<FormModalProps> = ({
@@ -19,6 +20,7 @@ export const FormModal: React.FC<FormModalProps> = ({
   loading = false,
   children,
   testID,
+  submitButtonTestID,
 }) => {
   const {theme} = useUnistyles();
   if (loading) {
@@ -44,6 +46,7 @@ export const FormModal: React.FC<FormModalProps> = ({
           {
             icon: 'check',
             onPress: onSave,
+            testID: submitButtonTestID,
           },
         ]}
       />

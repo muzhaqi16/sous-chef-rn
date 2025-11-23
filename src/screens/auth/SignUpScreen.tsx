@@ -38,7 +38,7 @@ export const SignUpScreen = () => {
   };
 
   return (
-    <AuthWrapper>
+    <AuthWrapper testID="signup-screen">
       <AuthFormTemplate<SignUpValues>
         title="Create account"
         subtitle="Join Sous Chef App today"

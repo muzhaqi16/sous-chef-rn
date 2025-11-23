@@ -10,6 +10,7 @@ type ActionButtonProps = {
   color?: string; // Optional color prop for the icon
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl'; // Optional size variant for the icon
   accessibilityLabel?: string; // Accessibility label for screen readers
+  testID?: string; // Optional testID for E2E testing
 };
 export const ActionButton: React.FC<ActionButtonProps> = ({
   onPress,
@@ -18,10 +19,11 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
   color,
   size = 'md', // Default size variant for the icon
   accessibilityLabel,
+  testID,
 }) => {
   const { theme } = useUnistyles();
   return (
-    <View style={[styles.button, style]}>
+    <View style={[styles.button, style]} testID={testID}>
       <IconButton
         name={name || 'add'}
         size={size}

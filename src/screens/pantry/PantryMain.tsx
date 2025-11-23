@@ -512,6 +512,7 @@ const PantryMainScreen: React.FC = React.memo(() => {
           onPress: handleAddItem,
           color: theme.colors.primary,
           backgroundColor: theme.colors.surface,
+          testID: 'pantry-add-button',
         },
         {
           icon: 'list',
@@ -585,6 +586,7 @@ const PantryMainScreen: React.FC = React.memo(() => {
         showSearchBar={true}
         headerActions={headerActions}
         searchBarActions={searchBarActions}
+        testIDPrefix="pantry-item"
         emptyState={emptyStateConfig}
         customListComponent={PantryContent}
         customListProps={{

@@ -58,6 +58,7 @@ export type FieldDef<T extends FieldValues> = {
     location: any,
   ) => void;
   storageLocations?: any[];
+  testID?: string;
 };
 
 interface DynamicFormFieldsProps<T extends FieldValues> {
@@ -91,6 +92,7 @@ export function DynamicFormFields<T extends FieldValues>({
           onCategorySelected,
           onStorageLocationSelected,
           storageLocations,
+          testID,
         },
         idx,
       ) => ({
@@ -109,6 +111,7 @@ export function DynamicFormFields<T extends FieldValues>({
         onCategorySelected,
         onStorageLocationSelected,
         storageLocations,
+        testID,
         key: `${String(name)}-${idx}`,
       }),
     );
@@ -132,6 +135,7 @@ export function DynamicFormFields<T extends FieldValues>({
           onCategorySelected,
           onStorageLocationSelected,
           storageLocations,
+          testID,
           key,
         }) => (
           <React.Fragment key={key}>
@@ -171,6 +175,7 @@ export function DynamicFormFields<T extends FieldValues>({
                       required={props?.required}
                       error={errors[name]?.message?.toString()}
                       onSelectItem={onSelectItem}
+                      testID={testID}
                       {...props}
                     />
                   );
@@ -198,6 +203,7 @@ export function DynamicFormFields<T extends FieldValues>({
                       onChangeText={handleChange}
                       placeholder={placeholder}
                       onUnitSelected={onUnitSelected}
+                      testID={testID}
                       {...props}
                     />
                   );

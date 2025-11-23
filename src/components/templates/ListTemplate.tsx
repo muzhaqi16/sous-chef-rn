@@ -57,6 +57,9 @@ interface ListTemplateProps {
   listName?: string; // Override for SearchBar listName (defaults to title)
   completedCount?: number; // Override for SearchBar completedCount
 
+  // Test IDs
+  testIDPrefix?: string; // Prefix for item testIDs (e.g., 'pantry-item', 'shopping-list-item')
+
   // Custom list component
   customListComponent?: React.ComponentType<any>;
   customListProps?: any;
@@ -102,6 +105,9 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
   showTopSeparator = false,
   listName,
   completedCount,
+
+  // Test IDs
+  testIDPrefix,
 
   // Custom list component
   customListComponent: CustomListComponent,
@@ -178,6 +184,7 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
           onEndReached={onEndReached}
           onEndReachedThreshold={onEndReachedThreshold}
           ListFooterComponent={ListFooterComponent}
+          testIDPrefix={testIDPrefix}
           emptyState={effectiveEmptyState}
           {...customListProps}
         />
@@ -194,6 +201,7 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
           onEndReached={onEndReached}
           onEndReachedThreshold={onEndReachedThreshold}
           ListFooterComponent={ListFooterComponent}
+          testIDPrefix={testIDPrefix}
           emptyState={effectiveEmptyState}
         />
       )}

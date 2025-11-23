@@ -534,6 +534,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
         title={mode === 'add' ? 'Add Pantry Item' : 'Edit Pantry Item'}
         onSave={handleSubmit(handleSave)}
         saving={saving}
+        testID={mode === 'add' ? 'add-pantry-item-submit-button' : 'edit-pantry-item-submit-button'}
       />
 
       <ScrollView
@@ -548,6 +549,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
               errors={errors}
               mode="add"
               onSelectItem={handleItemSelect}
+              testID="add-pantry-item-name-input"
             />
           ) : (
             <View style={styles.section}>
@@ -578,6 +580,8 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
               setValue('unit', unit);
               setSelectedUnitId(null);
             }}
+            testID={mode === 'add' ? 'add-pantry-item-quantity-input' : 'edit-pantry-item-quantity-input'}
+            unitTestID={mode === 'add' ? 'add-pantry-item-unit-picker' : 'edit-pantry-item-unit-picker'}
           />
 
           {/* Storage Details Section */}

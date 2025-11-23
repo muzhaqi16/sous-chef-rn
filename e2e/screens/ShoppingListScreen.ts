@@ -89,17 +89,28 @@ export class ShoppingListScreen extends BaseScreen {
     }
 
     if (unit) {
-      await this.tapByID('add-item-unit-picker');
-      await this.tapByText(unit);
+      // Type into the unit picker input - this will trigger the autocomplete bottom sheet to open
+      // when text length >= 2 (minSearchLength)
+      await this.clearAndType('add-item-unit-picker', unit);
+
+      // The bottom sheet should now be open with the search input
+      // Wait a moment for the bottom sheet animation
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Press enter to confirm the unit
+      await element(by.id('add-item-unit-picker')).tapReturnKey();
+
+      // Wait for the bottom sheet to fully dismiss
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
 
     // Submit
     await this.tapByID('add-item-submit-button');
 
-    // Wait for modal to close
+    // Wait for modal to close (increased timeout for GraphQL mutation)
     await waitFor(element(by.id('add-item-modal')))
       .not.toBeVisible()
-      .withTimeout(3000);
+      .withTimeout(10000);
   }
 
   /**

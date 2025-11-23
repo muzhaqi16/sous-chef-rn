@@ -17,6 +17,7 @@ export interface SwipeableItemProps {
   failOffsetY?: number | [number, number];
   onSwipeableWillOpen?: (ref: any) => void;
   onSwipeableClose?: () => void;
+  testIDPrefix?: string;
 }
 
 export interface ActionButtonProps {
@@ -26,6 +27,7 @@ export interface ActionButtonProps {
   label?: string;
   circular?: boolean;
   library?: 'MaterialIcons' | 'MaterialDesignIcons' | 'Ionicons' | 'Feather';
+  testID?: string;
 }
 
 export interface SwipeActionsProps {
@@ -37,4 +39,5 @@ export interface SwipeActionsProps {
   isPurchased?: boolean;
   onActionPress?: (action: 'edit' | 'delete') => void;
   swipeableRef?: React.RefObject<any>;
+  testIDPrefix?: string;
 }

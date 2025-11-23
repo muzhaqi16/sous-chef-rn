@@ -76,8 +76,22 @@ export class PantryScreen extends BaseScreen {
 
   /**
    * Tap add button to add new item
+   * Also handles dismissing the feature hint overlay if it appears
    */
   async tapAddButton() {
+    // Try to dismiss feature hint overlay if it exists (appears once per session when items exist)
+    try {
+      await waitFor(element(by.id('feature-hint-overlay-dismiss')))
+        .toBeVisible()
+        .withTimeout(1000);
+      await element(by.id('feature-hint-overlay-dismiss')).tap();
+      await waitFor(element(by.id('feature-hint-overlay')))
+        .not.toBeVisible()
+        .withTimeout(2000);
+    } catch {
+      // Overlay not present, continue
+    }
+
     await this.tapByID(this.addButton);
   }
 
@@ -109,18 +123,48 @@ export class PantryScreen extends BaseScreen {
       .withTimeout(3000);
 
     // Fill in item details
+    // Type item name - this will trigger item autocomplete bottom sheet
     await this.clearAndType('add-pantry-item-name-input', name);
 
+    // Wait for autocomplete bottom sheet to open
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Press enter to confirm and close the autocomplete
+    await element(by.id('add-pantry-item-name-input')).tapReturnKey();
+
+    // Wait for autocomplete to dismiss
+    await new Promise(resolve => setTimeout(resolve, 800));
+
     if (quantity !== undefined) {
+      // Tap into the quantity field first to ensure it has focus
+      await this.tapByID('add-pantry-item-quantity-input');
+
+      // Wait a moment for focus
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      // Now type the quantity
       await this.clearAndType(
         'add-pantry-item-quantity-input',
         quantity.toString(),
       );
+      // Wait a moment to ensure quantity is committed before moving to unit field
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
 
     if (unit) {
-      await this.tapByID('add-pantry-item-unit-picker');
-      await this.tapByText(unit);
+      // Type into the unit picker input - this will trigger the autocomplete bottom sheet to open
+      // when text length >= 2 (minSearchLength)
+      await this.clearAndType('add-pantry-item-unit-picker', unit);
+
+      // The bottom sheet should now be open with the search input
+      // Wait a moment for the bottom sheet animation
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Press enter to confirm the unit
+      await element(by.id('add-pantry-item-unit-picker')).tapReturnKey();
+
+      // Wait for the bottom sheet to fully dismiss
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
 
     if (expirationDate) {
@@ -132,10 +176,10 @@ export class PantryScreen extends BaseScreen {
     // Submit
     await this.tapByID('add-pantry-item-submit-button');
 
-    // Wait for modal to close
-    await waitFor(element(by.id('add-pantry-item-modal')))
-      .not.toBeVisible()
-      .withTimeout(3000);
+    // Wait for screen to navigate back to pantry main (increased timeout for GraphQL mutation + navigation)
+    await waitFor(element(by.id('pantry-screen')))
+      .toBeVisible()
+      .withTimeout(15000);
   }
 
   /**

@@ -833,6 +833,7 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
         backgroundColor: primaryLightColor,
         animated: true,
         isHighlighted: true,
+        testID: 'shopping-list-add-button',
       });
     } else {
       rightActions.unshift({
@@ -842,6 +843,7 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
         backgroundColor: colors.surface,
         animated: true,
         isHighlighted: false,
+        testID: 'shopping-list-add-button',
       });
     }
 
@@ -979,6 +981,7 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
           showUserHeader={true}
           showSearchBar={true}
           searchBarActions={searchBarActions}
+          testIDPrefix="shopping-list-item"
           emptyState={emptyStateConfig}
           customListComponent={ShoppingListTabs}
           customListProps={{

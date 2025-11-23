@@ -9,12 +9,14 @@ interface PantryItemFormHeaderProps {
   title: string;
   onSave: () => void;
   saving?: boolean;
+  testID?: string;
 }
 
 export const PantryItemFormHeader: React.FC<PantryItemFormHeaderProps> = ({
   title,
   onSave,
   saving = false,
+  testID,
 }) => {
   const navigation = useNavigation();
   const {theme} = useUnistyles();
@@ -30,7 +32,8 @@ export const PantryItemFormHeader: React.FC<PantryItemFormHeaderProps> = ({
       <TouchableOpacity
         style={commonStyles.iconButton}
         onPress={onSave}
-        disabled={saving}>
+        disabled={saving}
+        testID={testID}>
         {saving ? (
           <ActivityIndicator size="small" color={theme.colors.primary} />
         ) : (

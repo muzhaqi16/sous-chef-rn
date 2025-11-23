@@ -30,6 +30,7 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({
   failOffsetY = [-20, 20],
   onSwipeableWillOpen,
   onSwipeableClose,
+  testIDPrefix,
 }) => {
   const dragX = useSharedValue(0);
 
@@ -62,9 +63,10 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({
         onEdit={onEdit}
         onDelete={onDelete}
         onActionPress={handleActionPress}
+        testIDPrefix={testIDPrefix}
       />
     );
-  }, [onEdit, onDelete, handleActionPress]);
+  }, [onEdit, onDelete, handleActionPress, testIDPrefix]);
 
   const renderLeftActions = useCallback((
     progress: SharedValue<number>,
