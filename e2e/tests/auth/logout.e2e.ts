@@ -18,6 +18,7 @@ import {
   CreateHomeScreen,
 } from '../../screens';
 import { TEST_USER } from '../../fixtures/testData';
+import { dismissBiometricPromptIfPresent } from '../../helpers/auth';
 
 describe('Logout Flow', () => {
   const landingScreen = new LandingAuthScreen();
@@ -27,27 +28,49 @@ describe('Logout Flow', () => {
   const createHomeScreen = new CreateHomeScreen();
 
   beforeAll(async () => {
+    // Install app once with fresh state
     await launchAppWithFabricWorkaround({
       newInstance: true,
-      permissions: { notifications: 'YES' },
-    });
-  });
-
-  beforeEach(async () => {
-    // Clear app data and launch fresh
-    await launchAppWithFabricWorkaround({
       delete: true,
       permissions: { notifications: 'YES' },
     });
 
-    // Navigate to login screen and login
+    // Login once for the entire test suite
     await landingScreen.waitForScreen(5000);
     await landingScreen.tapLogin();
     await loginScreen.waitForScreen(5000);
     await loginScreen.loginAsTestUser();
 
-    // Wait for main app and ensure we're on pantry
+    // Dismiss biometric prompt if it appears
+    await dismissBiometricPromptIfPresent();
+
+    // Wait for main app
     await pantryScreen.waitForScreen(10000);
+  });
+
+  beforeEach(async () => {
+    // Reuse app installation without deleting
+    await launchAppWithFabricWorkaround({
+      newInstance: false,
+      permissions: { notifications: 'YES' },
+    });
+
+    // Check if already logged in
+    try {
+      await pantryScreen.waitForScreen(2000);
+      // Already logged in, good to go
+    } catch {
+      // Not logged in (previous test logged out), need to login
+      await landingScreen.waitForScreen(5000);
+      await landingScreen.tapLogin();
+      await loginScreen.waitForScreen(5000);
+      await loginScreen.loginAsTestUser();
+
+      // Dismiss biometric prompt if it appears
+      await dismissBiometricPromptIfPresent();
+
+      await pantryScreen.waitForScreen(10000);
+    }
   });
 
   // Helper to navigate to login screen after logout (handles landing screen)

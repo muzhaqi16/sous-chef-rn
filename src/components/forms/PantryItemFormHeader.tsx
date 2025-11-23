@@ -25,7 +25,9 @@ export const PantryItemFormHeader: React.FC<PantryItemFormHeaderProps> = ({
     <View style={commonStyles.header}>
       <TouchableOpacity
         style={commonStyles.iconButton}
-        onPress={() => navigation.goBack()}>
+        onPress={() => navigation.goBack()}
+        testID="pantry-item-form-close-button"
+        accessible={false}>
         <Icon name="close" size={24} color={theme.colors.textPrimary} />
       </TouchableOpacity>
       <Text style={commonStyles.headerTitle}>{title}</Text>
@@ -33,7 +35,8 @@ export const PantryItemFormHeader: React.FC<PantryItemFormHeaderProps> = ({
         style={commonStyles.iconButton}
         onPress={onSave}
         disabled={saving}
-        testID={testID}>
+        testID={testID}
+        hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
         {saving ? (
           <ActivityIndicator size="small" color={theme.colors.primary} />
         ) : (

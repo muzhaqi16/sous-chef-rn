@@ -65,6 +65,7 @@ const PantryMainScreen: React.FC = React.memo(() => {
 
   // PERFORMANCE: Use grouped selector with useShallow to prevent infinite loops (Zustand v5)
   const { selectedPantryId, setSelectedPantryId } = useAppStore(useShallow(selectPantryState));
+  const showBiometricSetup = useAppStore(state => state.showBiometricSetup);
   const selectorRef = useRef<ItemSelectorRef>(null);
   const openSwipeableRef = useRef<React.RefObject<Swipeable> | null>(null);
 
@@ -371,8 +372,9 @@ const PantryMainScreen: React.FC = React.memo(() => {
   ]);
 
   // Show home switch hint when user has items and home is selected
+  // BUT only if biometric setup modal is not showing (prevent modal overlap)
   useEffect(() => {
-    if (selectedHomeId && items.length > 0 && !homeSwitchHint.hasBeenShown) {
+    if (selectedHomeId && items.length > 0 && !homeSwitchHint.hasBeenShown && !showBiometricSetup) {
       // Show hint after a delay to let UI settle
       const timer = setTimeout(() => {
         homeSwitchHint.show();
@@ -385,6 +387,7 @@ const PantryMainScreen: React.FC = React.memo(() => {
     selectedHomeId,
     homeSwitchHint.hasBeenShown,
     homeSwitchHint.show,
+    showBiometricSetup,
   ]);
 
   const handleAddItem = useCallback(() => {

@@ -18,6 +18,8 @@ import {
   SettingsScreen,
 } from '../../screens';
 import { TEST_USER } from '../../fixtures/testData';
+import { dismissBiometricPromptIfPresent } from '../../helpers/auth';
+import { element, by } from 'detox';
 
 describe('Profile and Settings', () => {
   const landingScreen = new LandingAuthScreen();
@@ -26,28 +28,42 @@ describe('Profile and Settings', () => {
   const settingsScreen = new SettingsScreen();
 
   beforeAll(async () => {
+    // Launch once and login for entire test suite
     await launchAppWithFabricWorkaround({
       newInstance: true,
-      permissions: { notifications: 'YES' },
-    });
-  });
-
-  beforeEach(async () => {
-    // Clear app data and launch fresh
-    await launchAppWithFabricWorkaround({
       delete: true,
       permissions: { notifications: 'YES' },
     });
 
-    // Login and navigate to profile
+    // Login
     await landingScreen.waitForScreen(5000);
     await landingScreen.tapLogin();
     await loginScreen.waitForScreen(5000);
     await loginScreen.loginAsTestUser();
 
+    // Dismiss biometric prompt and skip onboarding if present
+    await dismissBiometricPromptIfPresent();
+
     // Navigate to profile tab
     await profileScreen.navigateToTab();
     await profileScreen.waitForScreen(5000);
+  });
+
+  beforeEach(async () => {
+    // Reuse app installation without clearing data
+    await launchAppWithFabricWorkaround({
+      newInstance: false,
+      permissions: { notifications: 'YES' },
+    });
+
+    // Navigate to profile tab
+    try {
+      await element(by.id('tab-profile')).tap();
+      await profileScreen.waitForScreen(5000);
+    } catch {
+      // Already on profile screen
+      await profileScreen.waitForScreen(5000);
+    }
   });
 
   describe('Profile Display', () => {

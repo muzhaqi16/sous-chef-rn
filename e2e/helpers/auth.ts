@@ -4,6 +4,7 @@
  * Provides utilities for login/logout and auth state management
  */
 
+import { element, by, waitFor } from 'detox';
 import { waitForScreen, waitForElementToBeVisible } from './waitFor';
 import { typeIntoField, tapByID } from './actions';
 import { TEST_USER } from '../fixtures/testData';
@@ -31,6 +32,88 @@ export async function loginWithCredentials(email: string, password: string) {
 
   // Wait for home screen to load
   await waitForScreen('shopping-list-screen', 10000);
+}
+
+/**
+ * Dismiss biometric prompt if it appears after login or during onboarding
+ * Handles both the post-login modal and the onboarding biometric setup screen
+ */
+export async function dismissBiometricPromptIfPresent() {
+  // Try to dismiss post-login biometric modal (appears after login)
+  try {
+    await waitFor(element(by.id('post-login-biometric-prompt')))
+      .toBeVisible()
+      .withTimeout(1000);
+
+    // Disable synchronization for modal interactions (Android compatibility)
+    await device.disableSynchronization();
+
+    // Tap "Not now" button - try by.id first, fallback to by.label
+    try {
+      await element(by.id('biometric-prompt-decline')).tap();
+    } catch {
+      // Fallback to by.label if by.id doesn't work
+      await element(by.label('Not now')).tap();
+    }
+
+    // Re-enable synchronization
+    await device.enableSynchronization();
+
+    // Wait for the prompt to disappear
+    await waitFor(element(by.id('post-login-biometric-prompt')))
+      .not.toBeVisible()
+      .withTimeout(1000);
+
+    return; // Successfully dismissed post-login modal
+  } catch {
+    // Not the post-login modal, try onboarding screen
+  }
+
+  // Try to dismiss onboarding biometric setup screen
+  try {
+    await waitFor(element(by.id('biometric-setup-screen')))
+      .toBeVisible()
+      .withTimeout(1000);
+
+    // Disable synchronization for modal interactions (Android compatibility)
+    await device.disableSynchronization();
+
+    // Tap "Set up later" button to skip
+    await tapByID('biometric-setup-skip');
+
+    // Re-enable synchronization
+    await device.enableSynchronization();
+
+    // Wait for the screen to disappear
+    await waitFor(element(by.id('biometric-setup-screen')))
+      .not.toBeVisible()
+      .withTimeout(1000);
+  } catch {
+    // No biometric prompt present at all, continue
+  }
+
+  // Try to dismiss helper overlay if it appears (2 second delay in PantryMain)
+  try {
+    await waitFor(element(by.id('feature-hint-overlay-dismiss')))
+      .toBeVisible()
+      .withTimeout(2500); // 2.5s to account for 2s delay in PantryMain
+
+    // Disable synchronization for overlay interactions (Android compatibility)
+    await device.disableSynchronization();
+
+    // Tap dismiss button
+    await element(by.id('feature-hint-overlay-dismiss')).tap();
+
+    // Re-enable synchronization
+    await device.enableSynchronization();
+
+    // Wait for the overlay to disappear
+    await waitFor(element(by.id('feature-hint-overlay')))
+      .not.toBeVisible()
+      .withTimeout(1000);
+  } catch {
+    // No helper overlay present
+  }
 }
 
 /**

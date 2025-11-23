@@ -19,6 +19,7 @@ import {
   CreateHomeScreen,
 } from '../../screens';
 import { TEST_USER, ERROR_MESSAGES } from '../../fixtures/testData';
+import { dismissBiometricPromptIfPresent } from '../../helpers/auth';
 
 describe('Login Flow', () => {
   const landingScreen = new LandingAuthScreen();
@@ -42,6 +43,9 @@ describe('Login Flow', () => {
   async function completePostLoginFlow() {
     // Wait a moment for navigation to settle
     await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Dismiss biometric prompt if it appears
+    await dismissBiometricPromptIfPresent();
 
     // Check if we're on onboarding (CreateHome screen)
     try {

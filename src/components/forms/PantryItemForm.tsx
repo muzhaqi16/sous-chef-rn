@@ -525,11 +525,11 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   const formTestID = mode === 'add' ? 'add-pantry-item-modal' : 'edit-pantry-item-modal';
 
   return (
-    <KeyboardAvoidingView
-      style={commonStyles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      testID={formTestID}
-    >
+    <View testID={formTestID} style={{flex: 1}}>
+      <KeyboardAvoidingView
+        style={commonStyles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
       <PantryItemFormHeader
         title={mode === 'add' ? 'Add Pantry Item' : 'Edit Pantry Item'}
         onSave={handleSubmit(handleSave)}
@@ -617,6 +617,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+    </View>
   );
 };
 

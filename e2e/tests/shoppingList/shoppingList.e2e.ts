@@ -17,6 +17,8 @@ import {
   ShoppingListScreen,
 } from '../../screens';
 import { TEST_USER, TEST_SHOPPING_ITEMS } from '../../fixtures/testData';
+import { dismissBiometricPromptIfPresent } from '../../helpers/auth';
+import { element, by } from 'detox';
 
 describe('Shopping List', () => {
   const landingScreen = new LandingAuthScreen();
@@ -24,28 +26,42 @@ describe('Shopping List', () => {
   const shoppingListScreen = new ShoppingListScreen();
 
   beforeAll(async () => {
+    // Launch once and login for entire test suite
     await launchAppWithFabricWorkaround({
       newInstance: true,
-      permissions: { notifications: 'YES' },
-    });
-  });
-
-  beforeEach(async () => {
-    // Clear app data and launch fresh
-    await launchAppWithFabricWorkaround({
       delete: true,
       permissions: { notifications: 'YES' },
     });
 
-    // Login and navigate to shopping list
+    // Login
     await landingScreen.waitForScreen(5000);
     await landingScreen.tapLogin();
     await loginScreen.waitForScreen(5000);
     await loginScreen.loginAsTestUser();
 
+    // Dismiss biometric prompt and skip onboarding if present
+    await dismissBiometricPromptIfPresent();
+
     // Navigate to shopping list tab
     await shoppingListScreen.navigateToTab();
     await shoppingListScreen.waitForScreen(5000);
+  });
+
+  beforeEach(async () => {
+    // Reuse app installation without clearing data
+    await launchAppWithFabricWorkaround({
+      newInstance: false,
+      permissions: { notifications: 'YES' },
+    });
+
+    // Navigate to shopping list tab
+    try {
+      await element(by.id('tab-shopping-list')).tap();
+      await shoppingListScreen.waitForScreen(5000);
+    } catch {
+      // Already on shopping list screen
+      await shoppingListScreen.waitForScreen(5000);
+    }
   });
 
   describe('Adding Items', () => {

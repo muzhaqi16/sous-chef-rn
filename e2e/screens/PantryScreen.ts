@@ -173,8 +173,9 @@ export class PantryScreen extends BaseScreen {
       await this.tapByText(expirationDate);
     }
 
-    // Submit
-    await this.tapByID('add-pantry-item-submit-button');
+    // Submit - use regular tap now that KeyboardAvoidingView testID is fixed
+    await element(by.id('add-pantry-item-submit-button')).tap();
+    await expect(element(by.id('add-pantry-item-submit-button'))).toBeVisible();
 
     // Wait for screen to navigate back to pantry main (increased timeout for GraphQL mutation + navigation)
     await waitFor(element(by.id('pantry-screen')))

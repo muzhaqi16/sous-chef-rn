@@ -62,6 +62,22 @@ export class SelectPantryItemsScreen extends BaseScreen {
 }
 
 /**
+ * BiometricSetupScreen
+ * Step 7: Set up biometric authentication (optional)
+ */
+export class BiometricSetupScreen extends BaseScreen {
+  protected screenID = 'biometric-setup-screen';
+
+  async tapSkip() {
+    await this.tapByID('biometric-setup-skip');
+  }
+
+  async tapEnable() {
+    await this.tapByID('biometric-setup-enable');
+  }
+}
+
+/**
  * OnboardingCompleteScreen
  * Final step: Completion screen
  */

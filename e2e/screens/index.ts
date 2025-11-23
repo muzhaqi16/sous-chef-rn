@@ -26,5 +26,6 @@ export {
   CreateHomeScreen,
   CreateShoppingListScreen,
   SelectPantryItemsScreen,
+  BiometricSetupScreen,
   OnboardingCompleteScreen,
 } from './OnboardingScreens';

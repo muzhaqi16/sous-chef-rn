@@ -12,8 +12,9 @@
  */
 
 import { launchAppWithFabricWorkaround } from '../../init';
-import { LandingAuthScreen, LoginScreen, PantryScreen, CreateHomeScreen, CreateShoppingListScreen, SelectPantryItemsScreen } from '../../screens';
+import { LandingAuthScreen, LoginScreen, PantryScreen, CreateHomeScreen, CreateShoppingListScreen, SelectPantryItemsScreen, BiometricSetupScreen } from '../../screens';
 import { TEST_USER, TEST_PANTRY_ITEMS, generateFutureDate, generatePastDate } from '../../fixtures/testData';
+import { dismissBiometricPromptIfPresent } from '../../helpers/auth';
 import { element, by } from 'detox';
 
 describe('Pantry Management', () => {
@@ -23,11 +24,18 @@ describe('Pantry Management', () => {
   const createHomeScreen = new CreateHomeScreen();
   const createShoppingListScreen = new CreateShoppingListScreen();
   const selectPantryItemsScreen = new SelectPantryItemsScreen();
+  const biometricSetupScreen = new BiometricSetupScreen();
 
   /**
    * Helper to skip through onboarding screens after login
    */
   const skipOnboardingIfPresent = async () => {
+    // Wait a moment for any post-login modals to appear
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Dismiss biometric prompt if it appears post-login
+    await dismissBiometricPromptIfPresent();
+
     // Try to skip through onboarding screens if they appear
     try {
       // Check if Create Home screen appears
@@ -56,6 +64,15 @@ describe('Pantry Management', () => {
       // Not on select pantry items screen
     }
 
+    try {
+      // Check if Biometric Setup screen appears
+      await biometricSetupScreen.waitForScreen(3000);
+      await biometricSetupScreen.tapSkip();
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    } catch {
+      // Not on biometric setup screen
+    }
+
     // Wait for either tab-bar or pantry screen to appear
     try {
       await element(by.id('tab-bar')).waitFor().toBeVisible().withTimeout(5000);
@@ -65,15 +82,9 @@ describe('Pantry Management', () => {
   };
 
   beforeAll(async () => {
+    // Launch once and login for entire test suite
     await launchAppWithFabricWorkaround({
       newInstance: true,
-      permissions: { notifications: 'YES', camera: 'YES' },
-    });
-  });
-
-  beforeEach(async () => {
-    // Clear app data and launch fresh
-    await launchAppWithFabricWorkaround({
       delete: true,
       permissions: { notifications: 'YES', camera: 'YES' },
     });
@@ -89,6 +100,30 @@ describe('Pantry Management', () => {
 
     // Wait for pantry screen (main app landing)
     await pantryScreen.waitForScreen(10000);
+  });
+
+  beforeEach(async () => {
+    // Reuse app installation without clearing data
+    await launchAppWithFabricWorkaround({
+      newInstance: false,
+      permissions: { notifications: 'YES', camera: 'YES' },
+    });
+
+    // Wait for app to settle
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Dismiss any modals that might have appeared
+    await dismissBiometricPromptIfPresent();
+
+    // Navigate to pantry tab
+    try {
+      await element(by.id('tab-pantry')).tap();
+      await pantryScreen.waitForScreen(5000);
+    } catch {
+      // Already on pantry screen or need to wait longer
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      await pantryScreen.waitForScreen(5000);
+    }
   });
 
   describe('Adding Items', () => {
