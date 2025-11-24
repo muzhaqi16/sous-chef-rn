@@ -24,6 +24,7 @@ import {
 } from './waitFor';
 import { typeIntoField, tapByID } from './actions';
 import { TEST_USER } from '../fixtures/testData';
+import { launchAppWithFabricWorkaround } from '../init';
 
 /**
  * ⭐ ENHANCED: Login with test user credentials
@@ -247,17 +248,17 @@ export async function signUpWithCredentials(
 }
 
 /**
- * Skip to login from landing screen
+ * Navigate to login from landing screen
  */
 export async function skipToLogin() {
   await waitIfPresent(
-    element(by.id('skip-to-login-button')),
+    element(by.id('landing-login-button')),
     async () => {
-      console.log('Skipping to login...');
-      await tapByID('skip-to-login-button');
+      console.log('Navigating to login from landing screen...');
+      await tapByID('landing-login-button');
       await waitForScreen('login-screen', TIMEOUTS.DEFAULT);
     },
-    2000,
+    5000, // Increased timeout to account for splash screen
   );
 }
 
@@ -351,6 +352,9 @@ export async function resetAppState() {
  */
 export async function bootstrapAuthenticatedSession() {
   console.log('🚀 Bootstrapping authenticated session...');
+
+  // Launch the app first (required before any UI interactions)
+  await launchAppWithFabricWorkaround();
 
   // Ensure we start from logged out state
   const loggedIn = await isLoggedIn();
