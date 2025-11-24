@@ -3,6 +3,24 @@ import { usePantryQuery } from '../../../src/hooks/pantry/usePantryQuery';
 import type { PantryItem } from '#/graphql/generated/types';
 
 // Mock dependencies
+jest.mock('react-native-config', () => ({
+  default: {},
+}));
+
+jest.mock('react-native-mmkv', () => {
+  const mockStorage = {
+    set: jest.fn(),
+    getString: jest.fn(),
+    delete: jest.fn(),
+    remove: jest.fn(),
+    clearAll: jest.fn(),
+  };
+  return {
+    MMKV: jest.fn(() => mockStorage),
+    createMMKV: jest.fn(() => mockStorage),
+  };
+});
+
 jest.mock('#generated', () => ({
   useGetPantryQuery: jest.fn(),
 }));
@@ -13,6 +31,20 @@ jest.mock('#hooks/auth/useAuth', () => ({
 
 jest.mock('#/utils/connectionUtils', () => ({
   normalizePantry: jest.fn(),
+}));
+
+// Mock the entire offlineQueue to avoid dynamic import issues
+jest.mock('#/apollo/offlineQueue', () => ({
+  queueStore: {
+    getQueue: jest.fn(() => []),
+    addToQueue: jest.fn(),
+    removeFromQueue: jest.fn(),
+  },
+  queueManager: {
+    processQueue: jest.fn(),
+    clearQueue: jest.fn(),
+  },
+  createQueueLink: jest.fn(() => ({ request: jest.fn() })),
 }));
 
 import { useGetPantryQuery } from '#generated';
@@ -343,6 +375,7 @@ describe('usePantryQuery', () => {
           variables: {
             id: mockPantryId,
             itemsFirst: 25,
+            storageLocationsFirst: 50,
           },
         }),
       );
@@ -655,7 +688,7 @@ describe('usePantryQuery', () => {
 
       expect(mockUseGetPantryQuery).toHaveBeenCalledWith(
         expect.objectContaining({
-          variables: { id: 'pantry-1', itemsFirst: 25 },
+          variables: { id: 'pantry-1', itemsFirst: 25, storageLocationsFirst: 50 },
         }),
       );
 
@@ -663,7 +696,7 @@ describe('usePantryQuery', () => {
 
       expect(mockUseGetPantryQuery).toHaveBeenCalledWith(
         expect.objectContaining({
-          variables: { id: 'pantry-2', itemsFirst: 25 },
+          variables: { id: 'pantry-2', itemsFirst: 25, storageLocationsFirst: 50 },
         }),
       );
     });

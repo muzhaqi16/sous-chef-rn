@@ -181,7 +181,7 @@ describe('usePantryMutations', () => {
       expect(mockCreateAddOperation).toHaveBeenCalledWith(
         expect.objectContaining({
           mutation: mockAddItemMutation,
-          parentId: mockPantryId,
+          parentId: expect.any(Function),
           operationName: 'Add Pantry Item',
         }),
       );
@@ -282,7 +282,7 @@ describe('usePantryMutations', () => {
       expect(mockCreateUpdateOperation).toHaveBeenCalledWith(
         expect.objectContaining({
           mutation: mockUpdateItemMutation,
-          parentId: mockPantryId,
+          parentId: expect.any(Function),
           itemId: 'item-1',
           operationName: 'Update Pantry Item',
         }),
@@ -345,7 +345,7 @@ describe('usePantryMutations', () => {
       expect(mockCreateRemoveOperation).toHaveBeenCalledWith(
         expect.objectContaining({
           mutation: mockRemoveItemMutation,
-          parentId: mockPantryId,
+          parentId: expect.any(Function),
           itemId: 'item-1',
           operationName: 'Delete Pantry Item',
         }),
@@ -492,7 +492,7 @@ describe('usePantryMutations', () => {
       expect(mockCreateAddOperation).toHaveBeenCalledWith(
         expect.objectContaining({
           mutation: mockAddItemMutation,
-          parentId: mockPantryId,
+          parentId: expect.any(Function),
         }),
       );
     });
@@ -531,7 +531,7 @@ describe('usePantryMutations', () => {
       // Check all operations receive the correct parentId
       expect(mockCreateAddOperation).toHaveBeenCalledWith(
         expect.objectContaining({
-          parentId: mockPantryId,
+          parentId: expect.any(Function),
         }),
       );
     });

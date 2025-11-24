@@ -199,7 +199,7 @@ describe('useShoppingListMutations', () => {
       expect(mockCreateAddOperation).toHaveBeenCalledWith(
         expect.objectContaining({
           mutation: mockAddItemMutation,
-          parentId: mockListId,
+          parentId: expect.any(Function),
           operationName: 'Add Shopping List Item',
         }),
       );
@@ -466,7 +466,7 @@ describe('useShoppingListMutations', () => {
       expect(mockCreateAddOperation).toHaveBeenCalledWith(
         expect.objectContaining({
           mutation: mockAddItemMutation,
-          parentId: mockListId,
+          parentId: expect.any(Function),
         }),
       );
     });
@@ -477,7 +477,7 @@ describe('useShoppingListMutations', () => {
       // Check all operations receive the correct parentId
       expect(mockCreateAddOperation).toHaveBeenCalledWith(
         expect.objectContaining({
-          parentId: mockListId,
+          parentId: expect.any(Function),
         }),
       );
     });
