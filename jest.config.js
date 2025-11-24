@@ -28,6 +28,6 @@ module.exports = {
       'immer|' +
       'zustand|' +
       'uuid' +
-    ')/)',
+      ')/)',
   ],
 };

@@ -67,10 +67,14 @@ import { useCrudOperations } from '#/hooks/utils';
 import { generateId } from '#/utils/generateId';
 
 const mockUseApolloClient = useApolloClient as jest.Mock;
-const mockUseAddItemToShoppingListMutation = useAddItemToShoppingListMutation as jest.Mock;
-const mockUseUpdateShoppingListItemMutation = useUpdateShoppingListItemMutation as jest.Mock;
-const mockUseRemoveItemFromShoppingListMutation = useRemoveItemFromShoppingListMutation as jest.Mock;
-const mockUseToggleShoppingListItemPurchasedMutation = useToggleShoppingListItemPurchasedMutation as jest.Mock;
+const mockUseAddItemToShoppingListMutation =
+  useAddItemToShoppingListMutation as jest.Mock;
+const mockUseUpdateShoppingListItemMutation =
+  useUpdateShoppingListItemMutation as jest.Mock;
+const mockUseRemoveItemFromShoppingListMutation =
+  useRemoveItemFromShoppingListMutation as jest.Mock;
+const mockUseToggleShoppingListItemPurchasedMutation =
+  useToggleShoppingListItemPurchasedMutation as jest.Mock;
 const mockUseErrorHandler = useErrorHandler as jest.Mock;
 const mockUseCrudOperations = useCrudOperations as jest.Mock;
 const mockGenerateId = generateId as jest.Mock;
@@ -135,7 +139,7 @@ describe('useShoppingListMutations', () => {
 
     // Mock error handler
     mockUseErrorHandler.mockReturnValue({
-      handleApolloError: jest.fn((error) => ({ message: error.message })),
+      handleApolloError: jest.fn(error => ({ message: error.message })),
     });
 
     // Mock Apollo client
@@ -145,10 +149,22 @@ describe('useShoppingListMutations', () => {
     mockGenerateId.mockReturnValue('mock-id-123');
 
     // Mock mutations
-    mockUseAddItemToShoppingListMutation.mockReturnValue([mockAddItemMutation, {}]);
-    mockUseUpdateShoppingListItemMutation.mockReturnValue([mockUpdateItemMutation, {}]);
-    mockUseRemoveItemFromShoppingListMutation.mockReturnValue([mockRemoveItemMutation, {}]);
-    mockUseToggleShoppingListItemPurchasedMutation.mockReturnValue([mockTogglePurchasedMutation, {}]);
+    mockUseAddItemToShoppingListMutation.mockReturnValue([
+      mockAddItemMutation,
+      {},
+    ]);
+    mockUseUpdateShoppingListItemMutation.mockReturnValue([
+      mockUpdateItemMutation,
+      {},
+    ]);
+    mockUseRemoveItemFromShoppingListMutation.mockReturnValue([
+      mockRemoveItemMutation,
+      {},
+    ]);
+    mockUseToggleShoppingListItemPurchasedMutation.mockReturnValue([
+      mockTogglePurchasedMutation,
+      {},
+    ]);
 
     // Mock CRUD operations
     mockCreateAddOperation.mockReturnValue(jest.fn());
@@ -179,7 +195,9 @@ describe('useShoppingListMutations', () => {
     });
 
     it('returns all mutation functions', () => {
-      const { result } = renderHook(() => useShoppingListMutations(defaultProps));
+      const { result } = renderHook(() =>
+        useShoppingListMutations(defaultProps),
+      );
 
       expect(result.current).toHaveProperty('addItem');
       expect(result.current).toHaveProperty('updateItem');
@@ -237,7 +255,9 @@ describe('useShoppingListMutations', () => {
       const mockAddOperation = jest.fn().mockResolvedValue(mockCreatedItem);
       mockCreateAddOperation.mockReturnValue(mockAddOperation);
 
-      const { result } = renderHook(() => useShoppingListMutations(defaultProps));
+      const { result } = renderHook(() =>
+        useShoppingListMutations(defaultProps),
+      );
 
       expect(typeof result.current.addItem).toBe('function');
     });
@@ -255,16 +275,26 @@ describe('useShoppingListMutations', () => {
 
   describe('updateItem', () => {
     it('is a custom implementation with cache read', async () => {
-      mockApolloClient.cache.identify.mockReturnValue('ShoppingListItem:item-1');
-      mockApolloClient.readFragment.mockReturnValue(createMockItem('item-1', 'Milk'));
+      mockApolloClient.cache.identify.mockReturnValue(
+        'ShoppingListItem:item-1',
+      );
+      mockApolloClient.readFragment.mockReturnValue(
+        createMockItem('item-1', 'Milk'),
+      );
       mockUpdateItemMutation.mockResolvedValue({
-        data: { updateShoppingListItem: createMockItem('item-1', 'Updated Milk') },
+        data: {
+          updateShoppingListItem: createMockItem('item-1', 'Updated Milk'),
+        },
       });
 
-      const { result } = renderHook(() => useShoppingListMutations(defaultProps));
+      const { result } = renderHook(() =>
+        useShoppingListMutations(defaultProps),
+      );
 
       const success = await act(async () => {
-        return await result.current.updateItem('item-1', { itemName: 'Updated Milk' });
+        return await result.current.updateItem('item-1', {
+          itemName: 'Updated Milk',
+        });
       });
 
       expect(mockUpdateItemMutation).toHaveBeenCalled();
@@ -282,15 +312,21 @@ describe('useShoppingListMutations', () => {
     });
 
     it('handles item not in cache', async () => {
-      mockApolloClient.cache.identify.mockReturnValue('ShoppingListItem:item-1');
+      mockApolloClient.cache.identify.mockReturnValue(
+        'ShoppingListItem:item-1',
+      );
       mockApolloClient.readFragment.mockReturnValue(null);
       mockUpdateItemMutation.mockResolvedValue({
         data: { updateShoppingListItem: createMockItem('item-1', 'Updated') },
       });
 
-      const { result } = renderHook(() => useShoppingListMutations(defaultProps));
+      const { result } = renderHook(() =>
+        useShoppingListMutations(defaultProps),
+      );
 
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const consoleSpy = jest
+        .spyOn(console, 'warn')
+        .mockImplementation(() => {});
 
       await act(async () => {
         await result.current.updateItem('item-1', { itemName: 'Updated' });
@@ -310,7 +346,9 @@ describe('useShoppingListMutations', () => {
       const mockRemoveOperation = jest.fn();
       mockCreateRemoveOperation.mockReturnValue(mockRemoveOperation);
 
-      const { result } = renderHook(() => useShoppingListMutations(defaultProps));
+      const { result } = renderHook(() =>
+        useShoppingListMutations(defaultProps),
+      );
 
       await act(async () => {
         await result.current.removeItem('item-1');
@@ -345,7 +383,9 @@ describe('useShoppingListMutations', () => {
         createToggleOperation: jest.fn().mockReturnValue(mockToggleOperation),
       });
 
-      const { result } = renderHook(() => useShoppingListMutations(defaultProps));
+      const { result } = renderHook(() =>
+        useShoppingListMutations(defaultProps),
+      );
 
       // toggleItem should be available
       expect(typeof result.current.toggleItem).toBe('function');
@@ -354,7 +394,9 @@ describe('useShoppingListMutations', () => {
     it('uses errorPolicy: all for toggle mutation', () => {
       renderHook(() => useShoppingListMutations(defaultProps));
 
-      expect(mockUseToggleShoppingListItemPurchasedMutation).toHaveBeenCalledWith(
+      expect(
+        mockUseToggleShoppingListItemPurchasedMutation,
+      ).toHaveBeenCalledWith(
         expect.objectContaining({
           errorPolicy: 'all',
         }),
@@ -365,7 +407,10 @@ describe('useShoppingListMutations', () => {
   describe('error handling', () => {
     it('shows alert on add error', () => {
       const mockError = new Error('Add failed');
-      mockUseAddItemToShoppingListMutation.mockReturnValue([mockAddItemMutation, { error: mockError }]);
+      mockUseAddItemToShoppingListMutation.mockReturnValue([
+        mockAddItemMutation,
+        { error: mockError },
+      ]);
 
       renderHook(() => useShoppingListMutations(defaultProps));
 
@@ -391,7 +436,8 @@ describe('useShoppingListMutations', () => {
 
       renderHook(() => useShoppingListMutations(defaultProps));
 
-      const callArgs = mockUseRemoveItemFromShoppingListMutation.mock.calls[0][0];
+      const callArgs =
+        mockUseRemoveItemFromShoppingListMutation.mock.calls[0][0];
       callArgs.onError(mockError);
 
       expect(Alert.alert).toHaveBeenCalledWith('Error', 'Remove failed');
@@ -402,7 +448,8 @@ describe('useShoppingListMutations', () => {
 
       renderHook(() => useShoppingListMutations(defaultProps));
 
-      const callArgs = mockUseToggleShoppingListItemPurchasedMutation.mock.calls[0][0];
+      const callArgs =
+        mockUseToggleShoppingListItemPurchasedMutation.mock.calls[0][0];
       callArgs.onError(mockError);
 
       expect(Alert.alert).toHaveBeenCalledWith('Error', 'Toggle failed');
@@ -416,7 +463,9 @@ describe('useShoppingListMutations', () => {
         listId: undefined,
       };
 
-      const { result } = renderHook(() => useShoppingListMutations(propsWithoutListId));
+      const { result } = renderHook(() =>
+        useShoppingListMutations(propsWithoutListId),
+      );
 
       expect(result.current).toHaveProperty('addItem');
       expect(result.current).toHaveProperty('updateItem');
@@ -430,14 +479,17 @@ describe('useShoppingListMutations', () => {
         items: [],
       };
 
-      const { result } = renderHook(() => useShoppingListMutations(propsWithEmptyItems));
+      const { result } = renderHook(() =>
+        useShoppingListMutations(propsWithEmptyItems),
+      );
 
       expect(result.current).toHaveProperty('addItem');
     });
 
     it('handles props changes', () => {
       const { rerender } = renderHook(
-        ({ listId, items, refetch }) => useShoppingListMutations({ listId, items, refetch }),
+        ({ listId, items, refetch }) =>
+          useShoppingListMutations({ listId, items, refetch }),
         { initialProps: defaultProps },
       );
 
@@ -484,12 +536,14 @@ describe('useShoppingListMutations', () => {
 
   describe('real-world scenarios', () => {
     it('handles complete add item flow', async () => {
-      const mockAddOperation = jest.fn().mockResolvedValue(
-        createMockItem('new-item', 'Eggs'),
-      );
+      const mockAddOperation = jest
+        .fn()
+        .mockResolvedValue(createMockItem('new-item', 'Eggs'));
       mockCreateAddOperation.mockReturnValue(mockAddOperation);
 
-      const { result } = renderHook(() => useShoppingListMutations(defaultProps));
+      const { result } = renderHook(() =>
+        useShoppingListMutations(defaultProps),
+      );
 
       const newItem = {
         itemName: 'Eggs',
@@ -506,13 +560,23 @@ describe('useShoppingListMutations', () => {
     });
 
     it('handles update item with partial data', async () => {
-      mockApolloClient.cache.identify.mockReturnValue('ShoppingListItem:item-1');
-      mockApolloClient.readFragment.mockReturnValue(createMockItem('item-1', 'Milk'));
+      mockApolloClient.cache.identify.mockReturnValue(
+        'ShoppingListItem:item-1',
+      );
+      mockApolloClient.readFragment.mockReturnValue(
+        createMockItem('item-1', 'Milk'),
+      );
       mockUpdateItemMutation.mockResolvedValue({
-        data: { updateShoppingListItem: createMockItem('item-1', 'Milk', { quantity: 2 }) },
+        data: {
+          updateShoppingListItem: createMockItem('item-1', 'Milk', {
+            quantity: 2,
+          }),
+        },
       });
 
-      const { result } = renderHook(() => useShoppingListMutations(defaultProps));
+      const { result } = renderHook(() =>
+        useShoppingListMutations(defaultProps),
+      );
 
       await act(async () => {
         await result.current.updateItem('item-1', { quantity: 2 });
@@ -537,7 +601,9 @@ describe('useShoppingListMutations', () => {
         },
       });
 
-      const { result } = renderHook(() => useShoppingListMutations(defaultProps));
+      const { result } = renderHook(() =>
+        useShoppingListMutations(defaultProps),
+      );
 
       await act(async () => {
         const success = await result.current.toggleItem('item-1');
@@ -555,34 +621,53 @@ describe('useShoppingListMutations', () => {
     });
 
     it('returns false when toggling non-existent item', async () => {
-      const { result } = renderHook(() => useShoppingListMutations(defaultProps));
+      const { result } = renderHook(() =>
+        useShoppingListMutations(defaultProps),
+      );
 
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const consoleSpy = jest
+        .spyOn(console, 'warn')
+        .mockImplementation(() => {});
 
       await act(async () => {
         const success = await result.current.toggleItem('non-existent-id');
         expect(success).toBe(false);
       });
 
-      expect(consoleSpy).toHaveBeenCalledWith('Item not found:', 'non-existent-id');
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'Item not found:',
+        'non-existent-id',
+      );
 
       consoleSpy.mockRestore();
     });
 
     it('handles sequential mutations', async () => {
-      const mockAddOperation = jest.fn().mockResolvedValue(createMockItem('new-item', 'Eggs'));
+      const mockAddOperation = jest
+        .fn()
+        .mockResolvedValue(createMockItem('new-item', 'Eggs'));
       const mockRemoveOperation = jest.fn().mockResolvedValue({});
 
       mockCreateAddOperation.mockReturnValue(mockAddOperation);
       mockCreateRemoveOperation.mockReturnValue(mockRemoveOperation);
 
-      mockApolloClient.cache.identify.mockReturnValue('ShoppingListItem:item-1');
-      mockApolloClient.readFragment.mockReturnValue(createMockItem('item-1', 'Milk'));
+      mockApolloClient.cache.identify.mockReturnValue(
+        'ShoppingListItem:item-1',
+      );
+      mockApolloClient.readFragment.mockReturnValue(
+        createMockItem('item-1', 'Milk'),
+      );
       mockUpdateItemMutation.mockResolvedValue({
-        data: { updateShoppingListItem: createMockItem('item-1', 'Milk', { quantity: 2 }) },
+        data: {
+          updateShoppingListItem: createMockItem('item-1', 'Milk', {
+            quantity: 2,
+          }),
+        },
       });
 
-      const { result } = renderHook(() => useShoppingListMutations(defaultProps));
+      const { result } = renderHook(() =>
+        useShoppingListMutations(defaultProps),
+      );
 
       // Add item
       await act(async () => {

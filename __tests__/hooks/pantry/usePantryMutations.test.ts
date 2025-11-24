@@ -54,13 +54,19 @@ import {
   useDeletePantryItemMutation,
 } from '#generated';
 import { useErrorHandler } from '#/utils/errorHandling';
-import { handleVersionConflict, getVersionConflictMessage } from '#/utils/errors/versionConflict';
+import {
+  handleVersionConflict,
+  getVersionConflictMessage,
+} from '#/utils/errors/versionConflict';
 import { useCrudOperations } from '#/hooks/utils';
 import { generateId } from '#/utils/generateId';
 
-const mockUseCreatePantryItemMutation = useCreatePantryItemMutation as jest.Mock;
-const mockUseUpdatePantryItemMutation = useUpdatePantryItemMutation as jest.Mock;
-const mockUseDeletePantryItemMutation = useDeletePantryItemMutation as jest.Mock;
+const mockUseCreatePantryItemMutation =
+  useCreatePantryItemMutation as jest.Mock;
+const mockUseUpdatePantryItemMutation =
+  useUpdatePantryItemMutation as jest.Mock;
+const mockUseDeletePantryItemMutation =
+  useDeletePantryItemMutation as jest.Mock;
 const mockUseErrorHandler = useErrorHandler as jest.Mock;
 const mockHandleVersionConflict = handleVersionConflict as jest.Mock;
 const mockGetVersionConflictMessage = getVersionConflictMessage as jest.Mock;
@@ -72,26 +78,27 @@ const createMockPantryItem = (
   id: string,
   itemName: string,
   overrides?: Partial<PantryItem>,
-): PantryItem => ({
-  __typename: 'PantryItem',
-  id,
-  itemName,
-  currentQuantity: 5,
-  storageState: 'FRESH',
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-  version: 1,
-  storageLocation: null,
-  storageNotes: null,
-  expiresAt: null,
-  autoReorderPoint: null,
-  pantry: {
-    __typename: 'Pantry',
-    id: 'pantry-1',
-  },
-  unit: null,
-  ...overrides,
-} as PantryItem);
+): PantryItem =>
+  ({
+    __typename: 'PantryItem',
+    id,
+    itemName,
+    currentQuantity: 5,
+    storageState: 'FRESH',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    version: 1,
+    storageLocation: null,
+    storageNotes: null,
+    expiresAt: null,
+    autoReorderPoint: null,
+    pantry: {
+      __typename: 'Pantry',
+      id: 'pantry-1',
+    },
+    unit: null,
+    ...overrides,
+  } as PantryItem);
 
 describe('usePantryMutations', () => {
   const mockPantryId = 'pantry-123';
@@ -120,7 +127,7 @@ describe('usePantryMutations', () => {
 
     // Mock error handler
     mockUseErrorHandler.mockReturnValue({
-      handleApolloError: jest.fn((error) => ({ message: error.message })),
+      handleApolloError: jest.fn(error => ({ message: error.message })),
     });
 
     // Mock generateId
@@ -128,8 +135,14 @@ describe('usePantryMutations', () => {
 
     // Mock mutations
     mockUseCreatePantryItemMutation.mockReturnValue([mockAddItemMutation, {}]);
-    mockUseUpdatePantryItemMutation.mockReturnValue([mockUpdateItemMutation, {}]);
-    mockUseDeletePantryItemMutation.mockReturnValue([mockRemoveItemMutation, {}]);
+    mockUseUpdatePantryItemMutation.mockReturnValue([
+      mockUpdateItemMutation,
+      {},
+    ]);
+    mockUseDeletePantryItemMutation.mockReturnValue([
+      mockRemoveItemMutation,
+      {},
+    ]);
 
     // Mock CRUD operations
     mockCreateAddOperation.mockReturnValue(jest.fn());
@@ -144,7 +157,9 @@ describe('usePantryMutations', () => {
 
     // Mock version conflict handlers
     mockHandleVersionConflict.mockReturnValue(false);
-    mockGetVersionConflictMessage.mockReturnValue('Item was updated by another user');
+    mockGetVersionConflictMessage.mockReturnValue(
+      'Item was updated by another user',
+    );
   });
 
   describe('initialization', () => {
@@ -384,7 +399,9 @@ describe('usePantryMutations', () => {
     it('shows version conflict alert with refresh option', () => {
       const mockError = new Error('Version conflict');
       mockHandleVersionConflict.mockReturnValue(true);
-      mockGetVersionConflictMessage.mockReturnValue('Item was updated by another user');
+      mockGetVersionConflictMessage.mockReturnValue(
+        'Item was updated by another user',
+      );
 
       renderHook(() => usePantryMutations(defaultProps));
 
@@ -442,7 +459,9 @@ describe('usePantryMutations', () => {
         pantryId: undefined,
       };
 
-      const { result } = renderHook(() => usePantryMutations(propsWithoutPantryId));
+      const { result } = renderHook(() =>
+        usePantryMutations(propsWithoutPantryId),
+      );
 
       expect(result.current).toHaveProperty('addItem');
       expect(result.current).toHaveProperty('updateItem');
@@ -455,14 +474,17 @@ describe('usePantryMutations', () => {
         items: [],
       };
 
-      const { result } = renderHook(() => usePantryMutations(propsWithEmptyItems));
+      const { result } = renderHook(() =>
+        usePantryMutations(propsWithEmptyItems),
+      );
 
       expect(result.current).toHaveProperty('addItem');
     });
 
     it('handles props changes', () => {
       const { rerender } = renderHook(
-        ({ pantryId, items, refetch }) => usePantryMutations({ pantryId, items, refetch }),
+        ({ pantryId, items, refetch }) =>
+          usePantryMutations({ pantryId, items, refetch }),
         { initialProps: defaultProps },
       );
 
@@ -529,9 +551,9 @@ describe('usePantryMutations', () => {
 
   describe('real-world scenarios', () => {
     it('handles complete add item flow', async () => {
-      const mockAddOperation = jest.fn().mockResolvedValue(
-        createMockPantryItem('new-item', 'Eggs'),
-      );
+      const mockAddOperation = jest
+        .fn()
+        .mockResolvedValue(createMockPantryItem('new-item', 'Eggs'));
       mockCreateAddOperation.mockReturnValue(mockAddOperation);
 
       const { result } = renderHook(() => usePantryMutations(defaultProps));
@@ -568,7 +590,9 @@ describe('usePantryMutations', () => {
     });
 
     it('handles sequential mutations', async () => {
-      const mockAddOperation = jest.fn().mockResolvedValue(createMockPantryItem('new-item', 'Eggs'));
+      const mockAddOperation = jest
+        .fn()
+        .mockResolvedValue(createMockPantryItem('new-item', 'Eggs'));
       const mockUpdateOperation = jest.fn().mockResolvedValue({});
       const mockRemoveOperation = jest.fn().mockResolvedValue({});
 
@@ -621,9 +645,9 @@ describe('usePantryMutations', () => {
     });
 
     it('handles add item with all optional fields', async () => {
-      const mockAddOperation = jest.fn().mockResolvedValue(
-        createMockPantryItem('new-item', 'Premium Milk'),
-      );
+      const mockAddOperation = jest
+        .fn()
+        .mockResolvedValue(createMockPantryItem('new-item', 'Premium Milk'));
       mockCreateAddOperation.mockReturnValue(mockAddOperation);
 
       const { result } = renderHook(() => usePantryMutations(defaultProps));

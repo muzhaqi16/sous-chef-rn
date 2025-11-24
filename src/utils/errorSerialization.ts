@@ -165,6 +165,43 @@ export function safeStringifyError(error: any): {
   isCircular: boolean;
   message: string;
 } {
+  // Short-circuit when the error message already indicates a circular structure
+  const hasCircularMessage =
+    isCircularStructureError(error) ||
+    (Array.isArray(error) &&
+      error.some(item => isCircularStructureError(item)));
+
+  if (hasCircularMessage) {
+    const message = (() => {
+      if (Array.isArray(error)) {
+        const circularError = error.find(item =>
+          isCircularStructureError(item),
+        );
+        if (typeof circularError === 'string') {
+          return circularError;
+        }
+        if (
+          circularError &&
+          typeof circularError === 'object' &&
+          (circularError as any).message
+        ) {
+          return (circularError as any).message;
+        }
+      } else if (typeof error === 'string') {
+        return error;
+      } else if (error && typeof error === 'object' && (error as any).message) {
+        return (error as any).message;
+      }
+      return 'Unknown error';
+    })();
+
+    return {
+      stringified: `[Circular structure detected] ${message}`,
+      isCircular: true,
+      message,
+    };
+  }
+
   try {
     const stringified =
       typeof error === 'string' ? error : JSON.stringify(error, null, 2);
