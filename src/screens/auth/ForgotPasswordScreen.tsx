@@ -43,7 +43,7 @@ export function ForgotPasswordScreen() {
   };
 
   return (
-    <AuthWrapper>
+    <AuthWrapper testID="forgot-password-screen">
       <AuthFormTemplate<ForgotPasswordValues>
         title="Forgot password"
         subtitle="Enter your email to reset"

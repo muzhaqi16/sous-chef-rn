@@ -46,11 +46,13 @@ export const FeatureHintOverlay: React.FC<FeatureHintOverlayProps> = ({
       style={styles.overlay}
       entering={FadeIn.duration(300)}
       exiting={FadeOut.duration(200)}
+      testID="feature-hint-overlay"
     >
       <TouchableOpacity
         style={styles.backdrop}
         activeOpacity={1}
         onPress={onDismiss}
+        testID="feature-hint-overlay-backdrop"
       >
         <Animated.View
           style={styles.hintContainer}
@@ -75,7 +77,11 @@ export const FeatureHintOverlay: React.FC<FeatureHintOverlayProps> = ({
             {subtitle && <Text style={styles.hintSubtitle}>{subtitle}</Text>}
           </View>
 
-          <TouchableOpacity style={styles.dismissButton} onPress={onDismiss}>
+          <TouchableOpacity
+            style={styles.dismissButton}
+            onPress={onDismiss}
+            testID="feature-hint-overlay-dismiss"
+          >
             <Text style={styles.dismissButtonText}>{dismissText}</Text>
           </TouchableOpacity>
         </Animated.View>

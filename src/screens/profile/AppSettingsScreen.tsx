@@ -74,11 +74,12 @@ export const AppSettingsScreen: React.FC = () => {
   }
 
   return (
-    <ProfileScreenWrapper title="App Settings">
+    <ProfileScreenWrapper title="App Settings" testID="settings-screen">
       <SettingSection title="Units & Measurements">
         <View style={styles.pickerContainer}>
           <Text style={commonStyles.subtitle}>Preferred Unit System</Text>
           <Picker
+            testID="settings-unit-system-picker"
             selectedValue={settings.preferredUnitSystem}
             onValueChange={(value) => handleSettingChange('preferredUnitSystem', value)}
             style={styles.picker}
@@ -156,6 +157,7 @@ export const AppSettingsScreen: React.FC = () => {
 
       <SettingSection title="Experience">
         <SettingSwitch
+          testID="settings-haptic-feedback-switch"
           title="Haptic Feedback"
           description="Vibration feedback for interactions and alerts"
           value={hapticFeedbackEnabled}

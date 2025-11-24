@@ -1,6 +1,6 @@
 {
   "name": "sous-chef-app",
-  "version": "1.7.24",
+  "version": "1.7.25",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
@@ -42,9 +42,13 @@
     "codegen": "graphql-codegen --config codegen.ts",
     "codegen:watch": "graphql-codegen --watch --config codegen.ts",
     "typecheck": "tsc --noEmit",
+    "typecheck:tests": "tsc --project tsconfig.test.json --noEmit",
     "watchman": "watchman watch-del-all && watchman shutdown-server",
     "test": "jest",
     "test:e2e": "detox test --configuration ios.sim.debug",
+    "test:e2e:android:device": "detox test --configuration android.att.debug",
+    "test:e2e:android:device:reuse": "detox test --configuration android.att.debug --reuse",
+    "test:e2e:build:android:device": "watchman watch-del-all && rm -rf /tmp/metro-* /tmp/haste-map-* /tmp/react-* && detox build --configuration android.att.debug",
     "test:e2e:android": "detox test --configuration android.emu.debug",
     "test:e2e:build": "detox build --configuration ios.sim.debug",
     "test:e2e:build:android": "watchman watch-del-all && rm -rf /tmp/metro-* /tmp/haste-map-* /tmp/react-* && detox build --configuration android.emu.debug",

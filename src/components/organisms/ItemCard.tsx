@@ -21,6 +21,7 @@ interface ItemCardProps {
   };
   rightElement?: React.ReactNode;
   leftElement?: React.ReactNode; // Optional left element for image or icon
+  testID?: string;
 }
 
 const ItemCardComponent: React.FC<ItemCardProps> = ({
@@ -35,6 +36,7 @@ const ItemCardComponent: React.FC<ItemCardProps> = ({
   badge,
   rightElement,
   leftElement,
+  testID,
 }) => {
   const innerContent =
     onEdit || onDelete || onConsume || onWaste ? (
@@ -45,6 +47,7 @@ const ItemCardComponent: React.FC<ItemCardProps> = ({
         onConsume={onConsume}
         onWaste={onWaste}
         onSwipeableWillOpen={onSwipeableWillOpen}
+        testIDPrefix={testID}
       >
         <ListItem
           title={title}
@@ -66,7 +69,7 @@ const ItemCardComponent: React.FC<ItemCardProps> = ({
     );
 
   return (
-    <View style={[commonStyles.shadow, styles.container]}>{innerContent}</View>
+    <View style={[commonStyles.shadow, styles.container]} testID={testID}>{innerContent}</View>
   );
 };
 

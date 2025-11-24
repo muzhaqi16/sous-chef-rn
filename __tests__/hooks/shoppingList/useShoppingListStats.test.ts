@@ -5,24 +5,25 @@ import type { ShoppingListItemCoreFragment } from '#/graphql/generated/types';
 // Helper to create mock shopping list items
 const createMockItem = (
   overrides?: Partial<ShoppingListItemCoreFragment>,
-): ShoppingListItemCoreFragment => ({
-  __typename: 'ShoppingListItem',
-  id: Math.random().toString(),
-  itemName: 'Test Item',
-  quantity: 1,
-  isPurchased: false,
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-  version: 1,
-  // Add required fields from fragment
-  unit: null,
-  shoppingList: {
-    __typename: 'ShoppingList',
-    id: 'list-1',
-  },
-  pantryItem: null,
-  ...overrides,
-});
+): ShoppingListItemCoreFragment =>
+  ({
+    __typename: 'ShoppingListItem',
+    id: Math.random().toString(),
+    itemName: 'Test Item',
+    quantity: 1,
+    isPurchased: false,
+    updatedAt: new Date().toISOString(),
+    version: 1,
+    // Add required fields from fragment
+    unit: null,
+    displayFormat: 'DECIMAL',
+    shoppingList: {
+      __typename: 'ShoppingList',
+      id: 'list-1',
+    },
+    pantryItem: null,
+    ...overrides,
+  }) as unknown as ShoppingListItemCoreFragment;
 
 describe('useShoppingListStats', () => {
   describe('with empty list', () => {
@@ -194,7 +195,8 @@ describe('useShoppingListStats', () => {
       ];
 
       const { result, rerender } = renderHook(
-        ({ listItems }) => useShoppingListStats(listItems),
+        (props: { listItems: ShoppingListItemCoreFragment[] }) =>
+          useShoppingListStats(props.listItems),
         { initialProps: { listItems: items } },
       );
 
@@ -212,7 +214,8 @@ describe('useShoppingListStats', () => {
       ];
 
       const { result, rerender } = renderHook(
-        ({ items }) => useShoppingListStats(items),
+        (props: { items: ShoppingListItemCoreFragment[] }) =>
+          useShoppingListStats(props.items),
         { initialProps: { items: items1 } },
       );
 

@@ -169,8 +169,9 @@ export const BiometricSetupScreen = () => {
       subtitle="Secure your account"
       step={7}
       totalSteps={7}
+      testID="biometric-setup-screen"
     >
-      <View style={styles.container}>
+      <View style={styles.container} testID="biometric-setup-container">
         <View style={styles.iconContainer}>
           <View style={styles.iconBackground}>
             <Icon name={getBiometricIcon()} size={48} color="#007AFF" />
@@ -199,6 +200,7 @@ export const BiometricSetupScreen = () => {
             style={[styles.button, styles.primaryButton]}
             onPress={handleEnableBiometric}
             disabled={isEnabling}
+            testID="biometric-setup-enable"
           >
             <Text style={[styles.buttonText, styles.primaryButtonText]}>
               {isEnabling ? 'Setting up...' : 'Enable Now'}
@@ -209,6 +211,7 @@ export const BiometricSetupScreen = () => {
             style={[styles.button, styles.secondaryButton]}
             onPress={handleSkip}
             disabled={isEnabling}
+            testID="biometric-setup-skip"
           >
             <Text style={[styles.buttonText, styles.secondaryButtonText]}>
               Set up later

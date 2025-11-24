@@ -15,6 +15,7 @@ interface ItemAutocompleteInputProps {
   error?: string;
   onSelectItem?: (item: ItemSuggestion) => void;
   autoFocus?: boolean;
+  testID?: string;
 }
 
 export const ItemAutocompleteInput: React.FC<ItemAutocompleteInputProps> = ({
@@ -25,6 +26,7 @@ export const ItemAutocompleteInput: React.FC<ItemAutocompleteInputProps> = ({
   required,
   error,
   onSelectItem,
+  testID,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -133,6 +135,7 @@ export const ItemAutocompleteInput: React.FC<ItemAutocompleteInputProps> = ({
           : 'Type at least 2 characters to search'
       }
       onSearchChange={setSearchTerm}
+      testID={testID}
     />
   );
 };

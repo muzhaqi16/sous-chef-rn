@@ -522,15 +522,19 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     },
   ];
 
+  const formTestID = mode === 'add' ? 'add-pantry-item-modal' : 'edit-pantry-item-modal';
+
   return (
-    <KeyboardAvoidingView
-      style={commonStyles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
+    <View testID={formTestID} style={{flex: 1}}>
+      <KeyboardAvoidingView
+        style={commonStyles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
       <PantryItemFormHeader
         title={mode === 'add' ? 'Add Pantry Item' : 'Edit Pantry Item'}
         onSave={handleSubmit(handleSave)}
         saving={saving}
+        testID={mode === 'add' ? 'add-pantry-item-submit-button' : 'edit-pantry-item-submit-button'}
       />
 
       <ScrollView
@@ -545,6 +549,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
               errors={errors}
               mode="add"
               onSelectItem={handleItemSelect}
+              testID="add-pantry-item-name-input"
             />
           ) : (
             <View style={styles.section}>
@@ -575,6 +580,8 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
               setValue('unit', unit);
               setSelectedUnitId(null);
             }}
+            testID={mode === 'add' ? 'add-pantry-item-quantity-input' : 'edit-pantry-item-quantity-input'}
+            unitTestID={mode === 'add' ? 'add-pantry-item-unit-picker' : 'edit-pantry-item-unit-picker'}
           />
 
           {/* Storage Details Section */}
@@ -610,6 +617,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+    </View>
   );
 };
 

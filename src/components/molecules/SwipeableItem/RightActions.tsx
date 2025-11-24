@@ -11,7 +11,7 @@ interface RightActionsProps extends SwipeActionsProps {
 }
 
 export const RightActions: React.FC<RightActionsProps> = React.memo(
-  ({ onEdit, onDelete, onActionPress }) => {
+  ({ onEdit, onDelete, onActionPress, testIDPrefix }) => {
     const { theme } = useUnistyles();
     return (
       <Reanimated.View style={styles.actionsContainer} pointerEvents="box-none">
@@ -21,6 +21,7 @@ export const RightActions: React.FC<RightActionsProps> = React.memo(
             icon="edit"
             backgroundColor={theme.colors.info}
             circular={true}
+            testID={testIDPrefix ? `${testIDPrefix}-edit` : undefined}
           />
         )}
         {onDelete && (
@@ -29,6 +30,7 @@ export const RightActions: React.FC<RightActionsProps> = React.memo(
             icon="delete"
             backgroundColor={theme.colors.danger}
             circular={true}
+            testID={testIDPrefix ? `${testIDPrefix}-delete` : undefined}
           />
         )}
       </Reanimated.View>

@@ -7,12 +7,17 @@ module.exports = {
     },
     jest: {
       setupTimeout: 120000,
+      // Increase timeout for slower physical devices
+      testTimeout: 180000, // 3 minutes per test
+      // Retry failed tests once automatically
+      retryTimes: 1,
     },
   },
   apps: {
     'ios.debug': {
       type: 'ios.app',
-      binaryPath: 'ios/build/Build/Products/Debug-iphonesimulator/SousChefRN.app',
+      binaryPath:
+        'ios/build/Build/Products/Debug-iphonesimulator/SousChefRN.app',
       build:
         'xcodebuild -workspace ios/SousChefRN.xcworkspace -scheme SousChefRN -configuration Debug -sdk iphonesimulator -derivedDataPath ios/build',
     },
@@ -26,13 +31,17 @@ module.exports = {
     'android.debug': {
       type: 'android.apk',
       binaryPath: 'android/app/build/outputs/apk/debug/app-debug.apk',
+      testBinaryPath:
+        'android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk',
       build:
         'cd android && ./gradlew assembleDebug assembleAndroidTest -DtestBuildType=debug',
     },
     'android.release': {
       type: 'android.apk',
-      binaryPath: 'android/app/build/outputs/apk/release/app-universal-release.apk',
-      testBinaryPath: 'android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk',
+      binaryPath:
+        'android/app/build/outputs/apk/release/app-universal-release.apk',
+      testBinaryPath:
+        'android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk',
       build:
         'cd android && ./gradlew assembleRelease :app:assembleDebugAndroidTest',
     },
@@ -47,14 +56,16 @@ module.exports = {
     attached: {
       type: 'android.attached',
       device: {
-        adbName: '.*',
+        adbName: '.*', // Matches any attached device
       },
     },
     emulator: {
       type: 'android.emulator',
       device: {
-        avdName: 'Pixel_7a_API_34',
+        avdName: 'Pixel_9a',
       },
+      // Boot emulator automatically if not running
+      bootArgs: '-no-snapshot-save',
     },
   },
   configurations: {
@@ -69,18 +80,172 @@ module.exports = {
     'android.att.debug': {
       device: 'attached',
       app: 'android.debug',
+      // ⭐ OPTIMIZED FOR ANDROID DEVICE WITH APP REUSE
+      behavior: {
+        init: {
+          // Don't reinstall app (for app reuse)
+          reinstallApp: false,
+          // Keep app data between test runs
+          launchApp: true,
+        },
+        launchApp: 'auto',
+        cleanup: {
+          // Don't uninstall after tests (for app reuse)
+          shutdownDevice: false,
+        },
+      },
+      artifacts: {
+        // Record artifacts only on test failure
+        rootDir: 'e2e/artifacts/android-device',
+        plugins: {
+          log: {
+            enabled: true,
+            keepOnlyFailedTestsArtifacts: true,
+          },
+          screenshot: {
+            enabled: true,
+            shouldTakeAutomaticSnapshots: false, // Manual only
+            takeWhen: {
+              testStart: false,
+              testDone: false,
+              testFailure: true, // On failure only
+            },
+            keepOnlyFailedTestsArtifacts: true,
+          },
+          video: {
+            enabled: true,
+            keepOnlyFailedTestsArtifacts: true,
+            android: {
+              bitRate: 4000000, // Optimize quality/size
+              size: '1080x1920',
+            },
+          },
+        },
+      },
+      session: {
+        // Detox session configuration for stability
+        autoStart: true,
+        debugSynchronization: 10000, // Log if waiting >10s
+        server: 'ws://localhost:8099',
+        sessionId: 'sous-chef-e2e',
+      },
     },
     'android.att.release': {
       device: 'attached',
       app: 'android.release',
+      behavior: {
+        init: {
+          reinstallApp: false,
+          launchApp: true,
+        },
+        launchApp: 'auto',
+        cleanup: {
+          shutdownDevice: false,
+        },
+      },
+      artifacts: {
+        rootDir: 'e2e/artifacts/android-device-release',
+        plugins: {
+          log: {
+            enabled: true,
+            keepOnlyFailedTestsArtifacts: true,
+          },
+          screenshot: {
+            enabled: true,
+            shouldTakeAutomaticSnapshots: false,
+            takeWhen: {
+              testFailure: true,
+            },
+            keepOnlyFailedTestsArtifacts: true,
+          },
+          video: {
+            enabled: true,
+            keepOnlyFailedTestsArtifacts: true,
+            android: {
+              bitRate: 4000000,
+              size: '1080x1920',
+            },
+          },
+        },
+      },
     },
     'android.emu.debug': {
       device: 'emulator',
       app: 'android.debug',
+      behavior: {
+        init: {
+          reinstallApp: true, // Emulator can reinstall faster
+          launchApp: true,
+        },
+        launchApp: 'auto',
+        cleanup: {
+          shutdownDevice: false,
+        },
+      },
+      artifacts: {
+        rootDir: 'e2e/artifacts/android-emulator',
+        plugins: {
+          log: {
+            enabled: true,
+            keepOnlyFailedTestsArtifacts: true,
+          },
+          screenshot: {
+            enabled: true,
+            shouldTakeAutomaticSnapshots: false,
+            takeWhen: {
+              testFailure: true,
+            },
+            keepOnlyFailedTestsArtifacts: true,
+          },
+          video: {
+            enabled: false, // Disable for emulator (slower)
+          },
+        },
+      },
     },
     'android.emu.release': {
       device: 'emulator',
       app: 'android.release',
+      behavior: {
+        init: {
+          reinstallApp: true,
+          launchApp: true,
+        },
+        launchApp: 'auto',
+        cleanup: {
+          shutdownDevice: false,
+        },
+      },
+      artifacts: {
+        rootDir: 'e2e/artifacts/android-emulator-release',
+        plugins: {
+          log: {
+            enabled: true,
+            keepOnlyFailedTestsArtifacts: true,
+          },
+          screenshot: {
+            enabled: true,
+            shouldTakeAutomaticSnapshots: false,
+            takeWhen: {
+              testFailure: true,
+            },
+            keepOnlyFailedTestsArtifacts: true,
+          },
+          video: {
+            enabled: false,
+          },
+        },
+      },
+    },
+  },
+  // Global settings for all configurations
+  logger: {
+    level: 'info', // trace | debug | info | warn | error
+    overrideConsole: false,
+    options: {
+      showLoggerName: true,
+      showTimestamp: true,
+      useUTC: false,
     },
   },
 };

@@ -124,6 +124,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
   return (
     <>
       <TouchableOpacity
+        testID={item.testID || `profile-${item.key}-button`}
         activeOpacity={0.7}
         onPress={handlePress}
         style={[
@@ -155,6 +156,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
 
           {item.type === 'switch' && (
             <Switch
+              testID={`profile-${item.key}-switch`}
               value={item.value as boolean}
               onValueChange={handleSwitchChange}
             />

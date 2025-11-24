@@ -14,6 +14,7 @@ interface ItemInformationSectionProps {
   onSelectItem?: (item: ItemSuggestion) => void;
   mode: 'add' | 'edit';
   currentItemName?: string;
+  testID?: string;
 }
 
 const createReadOnlyComponent = (itemName: string) => {
@@ -31,6 +32,7 @@ export const ItemInformationSection: React.FC<ItemInformationSectionProps> = ({
   onSelectItem,
   mode,
   currentItemName,
+  testID,
 }) => {
   const readOnlyComponent = useMemo(
     () =>
@@ -48,6 +50,7 @@ export const ItemInformationSection: React.FC<ItemInformationSectionProps> = ({
           component: 'itemAutocomplete',
           props: { required: true },
           onSelectItem,
+          testID,
         },
         {
           name: 'brand',

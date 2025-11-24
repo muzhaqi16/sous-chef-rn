@@ -6,7 +6,7 @@
  */
 
 import { BaseScreen } from './BaseScreen';
-import { element, by, waitFor } from 'detox';
+import { element, by, waitFor, expect } from 'detox';
 
 export class PantryScreen extends BaseScreen {
   protected screenID = 'pantry-screen';
@@ -76,8 +76,22 @@ export class PantryScreen extends BaseScreen {
 
   /**
    * Tap add button to add new item
+   * Also handles dismissing the feature hint overlay if it appears
    */
   async tapAddButton() {
+    // Try to dismiss feature hint overlay if it exists (appears once per session when items exist)
+    try {
+      await waitFor(element(by.id('feature-hint-overlay-dismiss')))
+        .toBeVisible()
+        .withTimeout(1000);
+      await element(by.id('feature-hint-overlay-dismiss')).tap();
+      await waitFor(element(by.id('feature-hint-overlay')))
+        .not.toBeVisible()
+        .withTimeout(2000);
+    } catch {
+      // Overlay not present, continue
+    }
+
     await this.tapByID(this.addButton);
   }
 
@@ -94,10 +108,11 @@ export class PantryScreen extends BaseScreen {
 
   /**
    * Add new item to pantry
+   * @param quantity - Can be number, fraction (e.g., "1 1/4"), or decimal (e.g., "0.25")
    */
   async addItem(
     name: string,
-    quantity?: number,
+    quantity?: string | number,
     unit?: string,
     expirationDate?: string,
   ) {
@@ -109,18 +124,37 @@ export class PantryScreen extends BaseScreen {
       .withTimeout(3000);
 
     // Fill in item details
-    await this.clearAndType('add-pantry-item-name-input', name);
+    // Use replaceText for item name to avoid Android stylus popup
+    const nameInput = element(by.id('add-pantry-item-name-input'));
+    await nameInput.replaceText(name);
+
+    // Wait for autocomplete bottom sheet animation
+    await waitFor(element(by.id('add-pantry-item-name-input')))
+      .toBeVisible()
+      .withTimeout(1000);
+
+    // Press enter to confirm and close the autocomplete
+    await element(by.id('add-pantry-item-name-input')).tapReturnKey();
 
     if (quantity !== undefined) {
-      await this.clearAndType(
-        'add-pantry-item-quantity-input',
-        quantity.toString(),
-      );
+      // Type the quantity (supports fractions like "1 1/4" or "0.25")
+      const quantityStr = typeof quantity === 'number' ? quantity.toString() : quantity;
+      const quantityInput = element(by.id('add-pantry-item-quantity-input'));
+
+      // Use replaceText instead of clearAndType for better reliability
+      await quantityInput.replaceText(quantityStr);
     }
 
     if (unit) {
-      await this.tapByID('add-pantry-item-unit-picker');
-      await this.tapByText(unit);
+      // Use replaceText for unit to avoid Android stylus popup
+      const unitInput = element(by.id('add-pantry-item-unit-picker'));
+      await unitInput.replaceText(unit);
+
+      // Press enter to confirm the unit
+      await element(by.id('add-pantry-item-unit-picker')).tapReturnKey();
+
+      // Wait a moment for autocomplete to process the selection and keyboard to dismiss
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
     if (expirationDate) {
@@ -129,13 +163,39 @@ export class PantryScreen extends BaseScreen {
       await this.tapByText(expirationDate);
     }
 
-    // Submit
+    // Submit - tap Return should have dismissed keyboard already
     await this.tapByID('add-pantry-item-submit-button');
 
-    // Wait for modal to close
+    // Check if error modal appeared (e.g., "Please enter a valid quantity")
+    try {
+      await waitFor(element(by.text('Please enter a valid quantity')))
+        .toBeVisible()
+        .withTimeout(2000);
+
+      // Error modal appeared - dismiss it and throw error
+      await element(by.text('OK')).tap();
+      throw new Error(
+        `Failed to add pantry item: Invalid quantity "${quantity}". ` +
+        `Expected formats: "1", "1.5", "1/4", or "1 1/4"`
+      );
+    } catch (error) {
+      // If it's our thrown error, re-throw it
+      if (error instanceof Error && error.message.includes('Failed to add pantry item')) {
+        throw error;
+      }
+      // Otherwise, error modal didn't appear (good!), continue
+    }
+
+    // Wait for add item modal to disappear first (navigation started)
+    // Increased timeout to 15s to account for GraphQL mutation + Apollo cache updates
     await waitFor(element(by.id('add-pantry-item-modal')))
       .not.toBeVisible()
-      .withTimeout(3000);
+      .withTimeout(15000);
+
+    // Wait for screen to navigate back to pantry main
+    await waitFor(element(by.id('pantry-screen')))
+      .toBeVisible()
+      .withTimeout(5000);
   }
 
   /**

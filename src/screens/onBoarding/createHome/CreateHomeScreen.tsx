@@ -518,6 +518,7 @@ const CreateHomeScreenComponent = () => {
       step={1}
       totalSteps={7}
       onSkip={() => skipToStep('CreateShoppingList')}
+      testID="onboarding-create-home-screen"
     >
       {existingHome && (
         <View style={styles.existingResourcesContainer}>

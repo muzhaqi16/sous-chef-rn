@@ -160,6 +160,7 @@ export const SelectPantryItems = () => {
       totalSteps={7}
       onBack={() => navigateToPreviousStep('CreateShoppingList')}
       onSkip={() => navigateToNextStep('SelectPantryItems')}
+      testID="onboarding-select-pantry-items-screen"
     >
       <FlatList
         data={items}

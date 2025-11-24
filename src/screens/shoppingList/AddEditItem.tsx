@@ -1,5 +1,5 @@
-import React, {useEffect, useMemo, useState} from 'react';
-import {Alert} from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Alert } from 'react-native';
 import {
   useAddItemToShoppingListMutation,
   useUpdateShoppingListItemMutation,
@@ -8,30 +8,30 @@ import {
   ShoppingListItemFragment,
   CategoryType,
 } from '#generated';
-import {FormModal} from '#components/organisms/FormModal';
-import {Input} from '#components/base/Input';
-import {ItemAutocompleteInput} from '#components/molecules/ItemAutocompleteInput';
-import {UnitsAutocompleteInput} from '#components/molecules/UnitsAutocompleteInput';
-import {CategoryAutocompleteInput} from '#components/molecules/CategoryAutocompleteInput';
-import {FractionInput} from '#components/molecules/FractionInput';
-import {useAppNavigation} from '#hooks';
-import {ShoppingListStackParamList} from '#navigation/stacks/ShoppingListStack';
-import {createAddToKeyedQueryFieldUpdater} from '#/apollo/utils';
-import {useShoppingListItemForm} from '#/hooks/shoppingList/useShoppingListItemForm';
+import { FormModal } from '#components/organisms/FormModal';
+import { Input } from '#components/base/Input';
+import { ItemAutocompleteInput } from '#components/molecules/ItemAutocompleteInput';
+import { UnitsAutocompleteInput } from '#components/molecules/UnitsAutocompleteInput';
+import { CategoryAutocompleteInput } from '#components/molecules/CategoryAutocompleteInput';
+import { FractionInput } from '#components/molecules/FractionInput';
+import { useAppNavigation } from '#hooks';
+import { ShoppingListStackParamList } from '#navigation/stacks/ShoppingListStack';
+import { createAddToKeyedQueryFieldUpdater } from '#/apollo/utils';
+import { useShoppingListItemForm } from '#/hooks/shoppingList/useShoppingListItemForm';
 
 type RouteParams = ShoppingListStackParamList['AddItem' | 'EditItem'] & {
   itemId?: string;
 };
 
 export const AddEditItem: React.FC<{
-  route: {params: RouteParams};
-}> = ({route}) => {
+  route: { params: RouteParams };
+}> = ({ route }) => {
   const navigation = useAppNavigation();
-  const {listId, itemId} = route.params;
+  const { listId, itemId } = route.params;
   const isEdit = !!itemId;
 
   const {
-    formState: {itemName, quantityInput, unit, selectedUnitId, notes, category},
+    formState: { itemName, quantityInput, unit, notes, category },
     updateField,
     parseQuantityInput,
     setFromItem,
@@ -49,14 +49,14 @@ export const AddEditItem: React.FC<{
   );
 
   // GraphQL hooks
-  const {data} = useGetShoppingListItemQuery({
-    variables: {id: itemId || ''},
+  const { data } = useGetShoppingListItemQuery({
+    variables: { id: itemId || '' },
     skip: !isEdit,
   });
 
   const [addItem] = useAddItemToShoppingListMutation({
     // Update cache immediately for optimistic UI
-    update: (cache, {data: mutationData}) => {
+    update: (cache, { data: mutationData }) => {
       if (!mutationData?.addItemToShoppingList) return;
 
       addToShoppingListItems(cache, mutationData.addItemToShoppingList, listId);
@@ -143,8 +143,12 @@ export const AddEditItem: React.FC<{
       // Only navigate back if mutation succeeded
       if (result.data) {
         const mutationData = isEdit
-          ? ('updateShoppingListItem' in result.data ? result.data.updateShoppingListItem : null)
-          : ('addItemToShoppingList' in result.data ? result.data.addItemToShoppingList : null);
+          ? 'updateShoppingListItem' in result.data
+            ? result.data.updateShoppingListItem
+            : null
+          : 'addItemToShoppingList' in result.data
+          ? result.data.addItemToShoppingList
+          : null;
 
         if (mutationData) {
           navigation.goBack();
@@ -152,14 +156,18 @@ export const AddEditItem: React.FC<{
           // PERFORMANCE: Specific error message - server returned success but no data
           Alert.alert(
             'Error',
-            `Server error: Item was not ${isEdit ? 'updated' : 'added'}. The server may be experiencing issues. Please try again.`
+            `Server error: Item was not ${
+              isEdit ? 'updated' : 'added'
+            }. The server may be experiencing issues. Please try again.`,
           );
         }
       } else {
         // PERFORMANCE: Specific error message - mutation failed without data
         Alert.alert(
           'Error',
-          `Failed to ${isEdit ? 'update' : 'add'} item. Check your internet connection and try again.`
+          `Failed to ${
+            isEdit ? 'update' : 'add'
+          } item. Check your internet connection and try again.`,
         );
       }
     } catch (error: any) {
@@ -189,12 +197,19 @@ export const AddEditItem: React.FC<{
     }
   };
 
+  const modalTestID = isEdit
+    ? 'edit-item-modal'
+    : 'add-item-modal';
+
   return (
     <FormModal
       title={isEdit ? 'Edit Item' : 'Add Item'}
       onClose={() => navigation.goBack()}
       onSave={handleSave}
-      loading={saving}>
+      loading={saving}
+      testID={modalTestID}
+      submitButtonTestID={isEdit ? 'edit-item-submit-button' : 'add-item-submit-button'}
+    >
       {/* Item Name Field - Use autocomplete for new items only */}
       {isEdit ? (
         <Input
@@ -214,6 +229,7 @@ export const AddEditItem: React.FC<{
           placeholder="e.g., Milk, Bread"
           required
           autoFocus
+          testID="add-item-name-input"
         />
       )}
 
@@ -223,6 +239,7 @@ export const AddEditItem: React.FC<{
         value={quantityInput}
         onChangeText={text => updateField('quantityInput', text)}
         placeholder="e.g., 1 1/4, 2.5, or 3"
+        testID={isEdit ? 'edit-item-quantity-input' : 'add-item-quantity-input'}
       />
 
       {/* Unit */}
@@ -232,6 +249,7 @@ export const AddEditItem: React.FC<{
         onChangeText={text => updateField('unit', text)}
         onUnitSelected={handleUnitSelect}
         placeholder="kg, lbs, pcs, etc."
+        testID={isEdit ? 'edit-item-unit-picker' : 'add-item-unit-picker'}
       />
 
       {/* Category Field */}

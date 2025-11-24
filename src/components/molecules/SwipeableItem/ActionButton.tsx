@@ -15,6 +15,7 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
   label,
   circular = false,
   library,
+  testID,
 }) => {
   const { theme } = useUnistyles();
 
@@ -41,6 +42,7 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
     <GestureDetector gesture={tapGesture}>
       <Animated.View
         style={[buttonStyle, { backgroundColor: backgroundColor }]}
+        testID={testID}
       >
         <Icon name={icon} size={iconSize} color={iconColor} library={library} />
         {label && <Text style={styles.deleteText}>{label}</Text>}

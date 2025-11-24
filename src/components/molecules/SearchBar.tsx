@@ -16,6 +16,7 @@ export interface SearchBarAction {
   accessibilityLabel?: string;
   animated?: boolean;
   isHighlighted?: boolean;
+  testID?: string; // Optional testID for E2E testing
 }
 
 type SearchBarProps = Omit<TextInputProps, 'style'> & {
@@ -69,6 +70,7 @@ export const SearchBar: FC<SearchBarProps> = ({
                 size={action.size}
                 accessibilityLabel={action.accessibilityLabel || `${action.icon} button`}
                 isHighlighted={action.isHighlighted}
+                testID={action.testID}
               />
             );
           }
@@ -88,6 +90,7 @@ export const SearchBar: FC<SearchBarProps> = ({
               color={action.color || '#fff'}
               size={action.size}
               accessibilityLabel={action.accessibilityLabel || `${action.icon} button`}
+              testID={action.testID}
             />
           );
         })}

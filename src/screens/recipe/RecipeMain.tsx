@@ -141,7 +141,7 @@ export const RecipeMain: React.FC = React.memo(() => {
 
   // Footer component for pagination
   return (
-    <View style={styles.container}>
+    <View style={styles.container} testID="recipes-screen">
       <ListTemplate
         items={items}
         searchQuery={searchQuery}

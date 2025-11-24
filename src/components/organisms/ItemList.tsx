@@ -35,6 +35,7 @@ interface ItemListProps {
   onEndReached?: () => void;
   onEndReachedThreshold?: number;
   ListFooterComponent?: React.ComponentType<any> | React.ReactElement | null;
+  testIDPrefix?: string;
   emptyState?: {
     icon: IconName;
     title: string;
@@ -58,6 +59,7 @@ export const ItemList: React.FC<ItemListProps> = ({
   onEndReached,
   onEndReachedThreshold = 0.5,
   ListFooterComponent,
+  testIDPrefix,
   emptyState,
 }) => {
   const [refreshing, setRefreshing] = useState(false);
@@ -105,7 +107,7 @@ export const ItemList: React.FC<ItemListProps> = ({
 
   // Performance optimization: memoize renderItem
   const renderItem = useCallback(
-    ({ item }: { item: Item }) => (
+    ({ item, index }: { item: Item; index: number }) => (
       <ItemCard
         id={item.id}
         title={item.title}
@@ -119,9 +121,10 @@ export const ItemList: React.FC<ItemListProps> = ({
         onConsume={onItemConsume ? () => onItemConsume(item.id) : undefined}
         onWaste={onItemWaste ? () => onItemWaste(item.id) : undefined}
         onSwipeableWillOpen={onSwipeableWillOpen}
+        testID={testIDPrefix ? `${testIDPrefix}-${index}` : undefined}
       />
     ),
-    [onItemPress, onItemEdit, onItemDelete, onItemConsume, onItemWaste, onSwipeableWillOpen],
+    [onItemPress, onItemEdit, onItemDelete, onItemConsume, onItemWaste, onSwipeableWillOpen, testIDPrefix],
   );
 
   if (items.length === 0 && emptyState) {

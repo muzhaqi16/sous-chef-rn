@@ -424,6 +424,54 @@ export const useConfigurableSettings = (profile: any) => {
           console.warn(`Unhandled setting key: ${config.key}`);
       }
 
+      // ==== TEST IDs for Detox ====
+      switch (config.key) {
+        case 'personalInformation':
+          baseItem.testID = 'profile-menu-personalInformation';
+          break;
+
+        case 'notifications':
+          baseItem.testID = 'profile-menu-notifications';
+          break;
+
+        case 'dietaryProfile':
+          baseItem.testID = 'profile-menu-dietaryProfile';
+          break;
+
+        case 'appSettings':
+          baseItem.testID = 'profile-menu-appSettings';
+          break;
+
+        case 'debugInfo':
+          baseItem.testID = 'profile-menu-debugInfo';
+          break;
+
+        case 'performanceDashboard':
+          baseItem.testID = 'profile-menu-performanceDashboard';
+          break;
+
+        case 'logout':
+          baseItem.testID = 'profile-logout-button';
+          break;
+
+        // Optional menu/test cases
+        case 'privacy':
+          baseItem.testID = 'profile-menu-privacy';
+          break;
+
+        case 'help':
+          baseItem.testID = 'profile-menu-help';
+          break;
+
+        case 'about':
+          baseItem.testID = 'profile-menu-about';
+          break;
+
+        case 'feedback':
+          baseItem.testID = 'profile-menu-feedback';
+          break;
+      }
+
       return baseItem;
     },
     [

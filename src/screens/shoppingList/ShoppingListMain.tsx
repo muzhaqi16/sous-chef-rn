@@ -8,7 +8,7 @@ import React, {
   startTransition,
 } from 'react';
 import { Alert, View, Text, TouchableOpacity } from 'react-native';
-import type { Swipeable } from 'react-native-gesture-handler';
+import type { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { PaginationFooter } from '#/components/organisms/PaginationFooter';
 import { useApolloClient } from '@apollo/client/react';
 import { useAppNavigation } from '#hooks';
@@ -95,7 +95,8 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
     });
 
   // Track currently open swipeable across both unpurchased and purchased lists
-  const openSwipeableRef = useRef<React.RefObject<Swipeable> | null>(null);
+  const openSwipeableRef =
+    useRef<React.RefObject<SwipeableMethods | null> | null>(null);
   const [moveItem] = useMoveShoppingListItemMutation({
     errorPolicy: 'all',
     // Optimistic response for instant UI feedback
@@ -796,14 +797,12 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
 
   // Handle swipeable item opening - ensure only one item is open at a time across both lists
   const handleSwipeableWillOpen = useCallback(
-    (ref: React.RefObject<Swipeable>) => {
-    if (openSwipeableRef.current && openSwipeableRef.current !== ref) {
-      // Close the previously open swipeable
-      openSwipeableRef.current.current?.close();
-    }
-    // Update to track the newly opening swipeable
-    openSwipeableRef.current = ref;
-  },
+    (ref: React.RefObject<SwipeableMethods | null>) => {
+      if (openSwipeableRef.current && openSwipeableRef.current !== ref) {
+        openSwipeableRef.current.current?.close();
+      }
+      openSwipeableRef.current = ref;
+    },
     [],
   );
 
@@ -833,6 +832,7 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
         backgroundColor: primaryLightColor,
         animated: true,
         isHighlighted: true,
+        testID: 'shopping-list-add-button',
       });
     } else {
       rightActions.unshift({
@@ -842,6 +842,7 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
         backgroundColor: colors.surface,
         animated: true,
         isHighlighted: false,
+        testID: 'shopping-list-add-button',
       });
     }
 
@@ -979,6 +980,7 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
           showUserHeader={true}
           showSearchBar={true}
           searchBarActions={searchBarActions}
+          testIDPrefix="shopping-list-item"
           emptyState={emptyStateConfig}
           customListComponent={ShoppingListTabs}
           customListProps={{
