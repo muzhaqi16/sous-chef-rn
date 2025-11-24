@@ -2,6 +2,7 @@ import { renderHook, act } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import { usePantryMutations } from '../../../src/hooks/pantry/usePantryMutations';
 import type { PantryItem } from '#/graphql/generated/types';
+import { StorageState } from '#generated';
 
 // Mock dependencies
 jest.mock('react-native', () => ({
@@ -15,9 +16,10 @@ jest.mock('#generated', () => ({
   useUpdatePantryItemMutation: jest.fn(),
   useDeletePantryItemMutation: jest.fn(),
   StorageState: {
-    FRESH: 'FRESH',
-    FROZEN: 'FROZEN',
-    PANTRY: 'PANTRY',
+    Ambient: 'AMBIENT',
+    Frozen: 'FROZEN',
+    None: 'NONE',
+    Refrigerated: 'REFRIGERATED',
   },
 }));
 
@@ -54,13 +56,19 @@ import {
   useDeletePantryItemMutation,
 } from '#generated';
 import { useErrorHandler } from '#/utils/errorHandling';
-import { handleVersionConflict, getVersionConflictMessage } from '#/utils/errors/versionConflict';
+import {
+  handleVersionConflict,
+  getVersionConflictMessage,
+} from '#/utils/errors/versionConflict';
 import { useCrudOperations } from '#/hooks/utils';
 import { generateId } from '#/utils/generateId';
 
-const mockUseCreatePantryItemMutation = useCreatePantryItemMutation as jest.Mock;
-const mockUseUpdatePantryItemMutation = useUpdatePantryItemMutation as jest.Mock;
-const mockUseDeletePantryItemMutation = useDeletePantryItemMutation as jest.Mock;
+const mockUseCreatePantryItemMutation =
+  useCreatePantryItemMutation as jest.Mock;
+const mockUseUpdatePantryItemMutation =
+  useUpdatePantryItemMutation as jest.Mock;
+const mockUseDeletePantryItemMutation =
+  useDeletePantryItemMutation as jest.Mock;
 const mockUseErrorHandler = useErrorHandler as jest.Mock;
 const mockHandleVersionConflict = handleVersionConflict as jest.Mock;
 const mockGetVersionConflictMessage = getVersionConflictMessage as jest.Mock;
@@ -72,26 +80,27 @@ const createMockPantryItem = (
   id: string,
   itemName: string,
   overrides?: Partial<PantryItem>,
-): PantryItem => ({
-  __typename: 'PantryItem',
-  id,
-  itemName,
-  currentQuantity: 5,
-  storageState: 'FRESH',
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-  version: 1,
-  storageLocation: null,
-  storageNotes: null,
-  expiresAt: null,
-  autoReorderPoint: null,
-  pantry: {
-    __typename: 'Pantry',
-    id: 'pantry-1',
-  },
-  unit: null,
-  ...overrides,
-} as PantryItem);
+): PantryItem =>
+  ({
+    __typename: 'PantryItem',
+    id,
+    itemName,
+    currentQuantity: 5,
+    storageState: 'REFRIGERATED',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    version: 1,
+    storageLocation: null,
+    storageNotes: null,
+    expiresAt: null,
+    autoReorderPoint: null,
+    pantry: {
+      __typename: 'Pantry',
+      id: 'pantry-1',
+    },
+    unit: null,
+    ...overrides,
+  } as PantryItem);
 
 describe('usePantryMutations', () => {
   const mockPantryId = 'pantry-123';
@@ -120,7 +129,7 @@ describe('usePantryMutations', () => {
 
     // Mock error handler
     mockUseErrorHandler.mockReturnValue({
-      handleApolloError: jest.fn((error) => ({ message: error.message })),
+      handleApolloError: jest.fn(error => ({ message: error.message })),
     });
 
     // Mock generateId
@@ -128,8 +137,14 @@ describe('usePantryMutations', () => {
 
     // Mock mutations
     mockUseCreatePantryItemMutation.mockReturnValue([mockAddItemMutation, {}]);
-    mockUseUpdatePantryItemMutation.mockReturnValue([mockUpdateItemMutation, {}]);
-    mockUseDeletePantryItemMutation.mockReturnValue([mockRemoveItemMutation, {}]);
+    mockUseUpdatePantryItemMutation.mockReturnValue([
+      mockUpdateItemMutation,
+      {},
+    ]);
+    mockUseDeletePantryItemMutation.mockReturnValue([
+      mockRemoveItemMutation,
+      {},
+    ]);
 
     // Mock CRUD operations
     mockCreateAddOperation.mockReturnValue(jest.fn());
@@ -144,7 +159,9 @@ describe('usePantryMutations', () => {
 
     // Mock version conflict handlers
     mockHandleVersionConflict.mockReturnValue(false);
-    mockGetVersionConflictMessage.mockReturnValue('Item was updated by another user');
+    mockGetVersionConflictMessage.mockReturnValue(
+      'Item was updated by another user',
+    );
   });
 
   describe('initialization', () => {
@@ -178,13 +195,11 @@ describe('usePantryMutations', () => {
     it('creates add operation with correct configuration', () => {
       renderHook(() => usePantryMutations(defaultProps));
 
-      expect(mockCreateAddOperation).toHaveBeenCalledWith(
-        expect.objectContaining({
-          mutation: mockAddItemMutation,
-          parentId: expect.any(Function),
-          operationName: 'Add Pantry Item',
-        }),
-      );
+      const callArgs = mockCreateAddOperation.mock.calls[0][0];
+      expect(callArgs.mutation).toBe(mockAddItemMutation);
+      expect(typeof callArgs.parentId).toBe('function');
+      expect(callArgs.parentId()).toBe(mockPantryId);
+      expect(callArgs.operationName).toBe('Add Pantry Item');
     });
 
     it('transforms input correctly', () => {
@@ -197,7 +212,7 @@ describe('usePantryMutations', () => {
         itemName: 'Milk',
         quantity: 2,
         unitId: 'unit-1',
-        storageState: 'FRESH' as const,
+        storageState: StorageState.Refrigerated,
         brand: 'Organic Valley',
         location: 'Fridge',
         expirationDate: '2025-12-31',
@@ -213,7 +228,7 @@ describe('usePantryMutations', () => {
         initialQuantity: 2,
         itemName: 'Milk',
         unitId: 'unit-1',
-        storageState: 'FRESH',
+        storageState: 'REFRIGERATED',
         itemBrand: 'Organic Valley',
         storageLocation: 'Fridge',
         expiresAt: '2025-12-31',
@@ -233,7 +248,7 @@ describe('usePantryMutations', () => {
         itemName: 'Milk',
         quantity: 2,
         unitId: 'unit-1',
-        storageState: 'FRESH' as const,
+        storageState: StorageState.Refrigerated,
       };
 
       const transformed = transformInput(input);
@@ -243,7 +258,7 @@ describe('usePantryMutations', () => {
         initialQuantity: 2,
         itemName: 'Milk',
         unitId: 'unit-1',
-        storageState: 'FRESH',
+        storageState: 'REFRIGERATED',
       });
       expect(transformed).not.toHaveProperty('itemBrand');
       expect(transformed).not.toHaveProperty('storageLocation');
@@ -279,14 +294,12 @@ describe('usePantryMutations', () => {
         await result.current.updateItem('item-1', { itemName: 'Updated Milk' });
       });
 
-      expect(mockCreateUpdateOperation).toHaveBeenCalledWith(
-        expect.objectContaining({
-          mutation: mockUpdateItemMutation,
-          parentId: expect.any(Function),
-          itemId: 'item-1',
-          operationName: 'Update Pantry Item',
-        }),
-      );
+      const callArgs = mockCreateUpdateOperation.mock.calls[0][0];
+      expect(callArgs.mutation).toBe(mockUpdateItemMutation);
+      expect(typeof callArgs.parentId).toBe('function');
+      expect(callArgs.parentId()).toBe(mockPantryId);
+      expect(callArgs.itemId).toBe('item-1');
+      expect(callArgs.operationName).toBe('Update Pantry Item');
     });
 
     it('uses errorPolicy: all for update mutation', () => {
@@ -342,14 +355,12 @@ describe('usePantryMutations', () => {
         await result.current.removeItem('item-1');
       });
 
-      expect(mockCreateRemoveOperation).toHaveBeenCalledWith(
-        expect.objectContaining({
-          mutation: mockRemoveItemMutation,
-          parentId: expect.any(Function),
-          itemId: 'item-1',
-          operationName: 'Delete Pantry Item',
-        }),
-      );
+      const callArgs = mockCreateRemoveOperation.mock.calls[0][0];
+      expect(callArgs.mutation).toBe(mockRemoveItemMutation);
+      expect(typeof callArgs.parentId).toBe('function');
+      expect(callArgs.parentId()).toBe(mockPantryId);
+      expect(callArgs.itemId).toBe('item-1');
+      expect(callArgs.operationName).toBe('Delete Pantry Item');
     });
 
     it('uses errorPolicy: all for remove mutation', () => {
@@ -390,7 +401,9 @@ describe('usePantryMutations', () => {
     it('shows version conflict alert with refresh option', () => {
       const mockError = new Error('Version conflict');
       mockHandleVersionConflict.mockReturnValue(true);
-      mockGetVersionConflictMessage.mockReturnValue('Item was updated by another user');
+      mockGetVersionConflictMessage.mockReturnValue(
+        'Item was updated by another user',
+      );
 
       renderHook(() => usePantryMutations(defaultProps));
 
@@ -448,7 +461,9 @@ describe('usePantryMutations', () => {
         pantryId: undefined,
       };
 
-      const { result } = renderHook(() => usePantryMutations(propsWithoutPantryId));
+      const { result } = renderHook(() =>
+        usePantryMutations(propsWithoutPantryId),
+      );
 
       expect(result.current).toHaveProperty('addItem');
       expect(result.current).toHaveProperty('updateItem');
@@ -461,14 +476,17 @@ describe('usePantryMutations', () => {
         items: [],
       };
 
-      const { result } = renderHook(() => usePantryMutations(propsWithEmptyItems));
+      const { result } = renderHook(() =>
+        usePantryMutations(propsWithEmptyItems),
+      );
 
       expect(result.current).toHaveProperty('addItem');
     });
 
     it('handles props changes', () => {
       const { rerender } = renderHook(
-        ({ pantryId, items, refetch }) => usePantryMutations({ pantryId, items, refetch }),
+        (props: typeof defaultProps) =>
+          usePantryMutations(props),
         { initialProps: defaultProps },
       );
 
@@ -489,12 +507,10 @@ describe('usePantryMutations', () => {
     it('uses createAddOperation for addItem', () => {
       renderHook(() => usePantryMutations(defaultProps));
 
-      expect(mockCreateAddOperation).toHaveBeenCalledWith(
-        expect.objectContaining({
-          mutation: mockAddItemMutation,
-          parentId: expect.any(Function),
-        }),
-      );
+      const callArgs = mockCreateAddOperation.mock.calls[0][0];
+      expect(callArgs.mutation).toBe(mockAddItemMutation);
+      expect(typeof callArgs.parentId).toBe('function');
+      expect(callArgs.parentId()).toBe(mockPantryId);
     });
 
     it('uses createUpdateOperation for updateItem', async () => {
@@ -529,19 +545,17 @@ describe('usePantryMutations', () => {
       renderHook(() => usePantryMutations(defaultProps));
 
       // Check all operations receive the correct parentId
-      expect(mockCreateAddOperation).toHaveBeenCalledWith(
-        expect.objectContaining({
-          parentId: expect.any(Function),
-        }),
-      );
+      const callArgs = mockCreateAddOperation.mock.calls[0][0];
+      expect(typeof callArgs.parentId).toBe('function');
+      expect(callArgs.parentId()).toBe(mockPantryId);
     });
   });
 
   describe('real-world scenarios', () => {
     it('handles complete add item flow', async () => {
-      const mockAddOperation = jest.fn().mockResolvedValue(
-        createMockPantryItem('new-item', 'Eggs'),
-      );
+      const mockAddOperation = jest
+        .fn()
+        .mockResolvedValue(createMockPantryItem('new-item', 'Eggs'));
       mockCreateAddOperation.mockReturnValue(mockAddOperation);
 
       const { result } = renderHook(() => usePantryMutations(defaultProps));
@@ -550,7 +564,7 @@ describe('usePantryMutations', () => {
         itemName: 'Eggs',
         quantity: 12,
         unitId: 'unit-dozen',
-        storageState: 'FRESH' as const,
+        storageState: StorageState.Refrigerated,
         expirationDate: '2025-12-31',
         notes: 'Free range',
       };
@@ -578,7 +592,9 @@ describe('usePantryMutations', () => {
     });
 
     it('handles sequential mutations', async () => {
-      const mockAddOperation = jest.fn().mockResolvedValue(createMockPantryItem('new-item', 'Eggs'));
+      const mockAddOperation = jest
+        .fn()
+        .mockResolvedValue(createMockPantryItem('new-item', 'Eggs'));
       const mockUpdateOperation = jest.fn().mockResolvedValue({});
       const mockRemoveOperation = jest.fn().mockResolvedValue({});
 
@@ -594,7 +610,7 @@ describe('usePantryMutations', () => {
           itemName: 'Eggs',
           quantity: 12,
           unitId: 'unit-1',
-          storageState: 'FRESH' as const,
+          storageState: StorageState.Refrigerated,
         });
       });
 
@@ -631,9 +647,9 @@ describe('usePantryMutations', () => {
     });
 
     it('handles add item with all optional fields', async () => {
-      const mockAddOperation = jest.fn().mockResolvedValue(
-        createMockPantryItem('new-item', 'Premium Milk'),
-      );
+      const mockAddOperation = jest
+        .fn()
+        .mockResolvedValue(createMockPantryItem('new-item', 'Premium Milk'));
       mockCreateAddOperation.mockReturnValue(mockAddOperation);
 
       const { result } = renderHook(() => usePantryMutations(defaultProps));
@@ -642,7 +658,7 @@ describe('usePantryMutations', () => {
         itemName: 'Premium Milk',
         quantity: 2,
         unitId: 'unit-gallon',
-        storageState: 'FRESH' as const,
+        storageState: StorageState.Refrigerated,
         brand: 'Organic Valley',
         location: 'Top shelf',
         expirationDate: '2025-12-31',
@@ -667,7 +683,7 @@ describe('usePantryMutations', () => {
 
       await act(async () => {
         await result.current.updateItem('item-1', {
-          storageState: 'FROZEN' as const,
+          storageState: StorageState.Frozen,
           location: 'Freezer',
         });
       });

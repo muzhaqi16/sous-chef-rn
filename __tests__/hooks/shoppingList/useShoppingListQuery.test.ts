@@ -34,23 +34,24 @@ const createMockItem = (
   id: string,
   itemName: string,
   overrides?: Partial<ShoppingListItemCoreFragment>,
-): ShoppingListItemCoreFragment => ({
-  __typename: 'ShoppingListItem',
-  id,
-  itemName,
-  quantity: 1,
-  isPurchased: false,
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-  version: 1,
-  unit: null,
-  shoppingList: {
-    __typename: 'ShoppingList',
-    id: 'list-1',
-  },
-  pantryItem: null,
-  ...overrides,
-});
+): ShoppingListItemCoreFragment =>
+  ({
+    __typename: 'ShoppingListItem',
+    id,
+    itemName,
+    quantity: 1,
+    isPurchased: false,
+    updatedAt: new Date().toISOString(),
+    version: 1,
+    unit: null,
+    displayFormat: 'DECIMAL',
+    shoppingList: {
+      __typename: 'ShoppingList',
+      id: 'list-1',
+    },
+    pantryItem: null,
+    ...overrides,
+  }) as unknown as ShoppingListItemCoreFragment;
 
 describe('useShoppingListQuery', () => {
   const mockListId = 'list-123';
@@ -152,8 +153,9 @@ describe('useShoppingListQuery', () => {
         refetch: mockRefetch,
       });
 
-      const { result, rerender } = renderHook(() =>
-        useShoppingListQuery(mockListId),
+      const { result, rerender } = renderHook(
+        (props: { listId: string }) => useShoppingListQuery(props.listId),
+        { initialProps: { listId: mockListId } },
       );
 
       expect(result.current.loading).toBe(true);
@@ -167,7 +169,7 @@ describe('useShoppingListQuery', () => {
         refetch: mockRefetch,
       });
 
-      rerender();
+      rerender({ listId: mockListId });
 
       expect(result.current.loading).toBe(false);
       expect(result.current.items).toEqual(mockItems);
@@ -355,12 +357,13 @@ describe('useShoppingListQuery', () => {
         refetch: mockRefetch,
       });
 
-      const { result, rerender } = renderHook(() =>
-        useShoppingListQuery(mockListId),
+      const { result, rerender } = renderHook(
+        (props: { listId: string }) => useShoppingListQuery(props.listId),
+        { initialProps: { listId: mockListId } },
       );
 
       const firstItems = result.current.items;
-      rerender();
+      rerender({ listId: mockListId });
       const secondItems = result.current.items;
 
       expect(firstItems).toBe(secondItems); // Same reference
@@ -377,8 +380,9 @@ describe('useShoppingListQuery', () => {
         refetch: mockRefetch,
       });
 
-      const { result, rerender } = renderHook(() =>
-        useShoppingListQuery(mockListId),
+      const { result, rerender } = renderHook(
+        (props: { listId: string }) => useShoppingListQuery(props.listId),
+        { initialProps: { listId: mockListId } },
       );
 
       const firstItems = result.current.items;
@@ -392,7 +396,7 @@ describe('useShoppingListQuery', () => {
         refetch: mockRefetch,
       });
 
-      rerender();
+      rerender({ listId: mockListId });
 
       const secondItems = result.current.items;
       expect(secondItems).toEqual(mockItems2);
@@ -427,7 +431,7 @@ describe('useShoppingListQuery', () => {
       });
 
       const { rerender } = renderHook(
-        ({ listId }) => useShoppingListQuery(listId),
+        (props: { listId: string }) => useShoppingListQuery(props.listId),
         { initialProps: { listId: 'list-1' } },
       );
 

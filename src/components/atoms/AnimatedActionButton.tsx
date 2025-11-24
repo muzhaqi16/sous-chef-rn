@@ -20,6 +20,7 @@ type AnimatedActionButtonProps = {
   accessibilityLabel?: string;
   backgroundColor?: string;
   isHighlighted?: boolean; // Triggers animation when true
+  testID?: string;
 };
 
 export const AnimatedActionButton: React.FC<AnimatedActionButtonProps> = ({
@@ -31,6 +32,7 @@ export const AnimatedActionButton: React.FC<AnimatedActionButtonProps> = ({
   accessibilityLabel,
   backgroundColor,
   isHighlighted = false,
+  testID,
 }) => {
   const { theme } = useUnistyles();
   const scale = useSharedValue(1);
@@ -64,7 +66,7 @@ export const AnimatedActionButton: React.FC<AnimatedActionButtonProps> = ({
   });
 
   return (
-    <Animated.View style={[styles.button, animatedStyle, style]}>
+    <Animated.View style={[styles.button, animatedStyle, style]} testID={testID}>
       <IconButton
         name={name || 'add'}
         size={size}

@@ -4,22 +4,42 @@ import type { PantryItem } from '#/graphql/generated/types';
 
 // Mock dependencies
 jest.mock('react-native-config', () => ({
-  default: {},
+  API_URL: 'http://localhost:4000',
+  ENABLE_OFFLINE_MODE: 'true',
 }));
 
-jest.mock('react-native-mmkv', () => {
-  const mockStorage = {
+// Mock Apollo client to prevent initialization and resource creation
+jest.mock('#/apollo/client', () => ({
+  client: {
+    cache: {
+      write: jest.fn(),
+      evict: jest.fn(),
+      modify: jest.fn(),
+      extract: jest.fn(() => ({})),
+      restore: jest.fn(),
+    },
+    onResetStore: jest.fn(() => Promise.resolve()),
+    onClearStore: jest.fn(() => Promise.resolve()),
+  },
+  cancelCachePersistence: jest.fn(),
+}));
+
+jest.mock('react-native-mmkv', () => ({
+  MMKV: jest.fn().mockImplementation(() => ({
     set: jest.fn(),
     getString: jest.fn(),
     delete: jest.fn(),
     remove: jest.fn(),
     clearAll: jest.fn(),
-  };
-  return {
-    MMKV: jest.fn(() => mockStorage),
-    createMMKV: jest.fn(() => mockStorage),
-  };
-});
+  })),
+  createMMKV: jest.fn().mockReturnValue({
+    set: jest.fn(),
+    getString: jest.fn(),
+    delete: jest.fn(),
+    remove: jest.fn(),
+    clearAll: jest.fn(),
+  }),
+}));
 
 jest.mock('#generated', () => ({
   useGetPantryQuery: jest.fn(),
@@ -33,18 +53,36 @@ jest.mock('#/utils/connectionUtils', () => ({
   normalizePantry: jest.fn(),
 }));
 
-// Mock the entire offlineQueue to avoid dynamic import issues
+// Mock the entire offline queue module to avoid dynamic import
 jest.mock('#/apollo/offlineQueue', () => ({
-  queueStore: {
-    getQueue: jest.fn(() => []),
-    addToQueue: jest.fn(),
-    removeFromQueue: jest.fn(),
-  },
-  queueManager: {
+  offlineQueueManager: {
+    enqueue: jest.fn(),
     processQueue: jest.fn(),
     clearQueue: jest.fn(),
   },
-  createQueueLink: jest.fn(() => ({ request: jest.fn() })),
+  createQueueLink: jest.fn(() => ({
+    request: (operation: any, forward: any) => forward(operation),
+  })),
+}));
+
+// Mock WebSocket to prevent connection
+jest.mock('#/apollo/links/wsLink', () => ({
+  wsLink: {},
+  reconnectWebSocket: jest.fn(),
+  disposeWebSocket: jest.fn(),
+  isWebSocketReconnecting: jest.fn(() => false),
+  getWebSocketState: jest.fn(() => ({
+    isReconnecting: false,
+    lastReconnectTime: 0,
+    hasClient: false,
+  })),
+}));
+
+// Mock token scheduler to prevent timer creation
+jest.mock('#/apollo/links/tokenScheduler', () => ({
+  scheduleTokenRefresh: jest.fn(),
+  cancelTokenRefresh: jest.fn(),
+  getScheduleState: jest.fn(() => ({ isScheduled: false })),
 }));
 
 import { useGetPantryQuery } from '#generated';
@@ -56,28 +94,25 @@ const mockUseAuth = useAuth as jest.Mock;
 const mockNormalizePantry = normalizePantry as jest.Mock;
 
 // Helper to create mock pantry items
-const createMockPantryItem = (
-  id: string,
-  itemName: string,
-): PantryItem => ({
-  __typename: 'PantryItem',
-  id,
-  itemName,
-  currentQuantity: 5,
-  storageState: 'FRESH',
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-  version: 1,
-  storageLocation: null,
-  storageNotes: null,
-  expiresAt: null,
-  autoReorderPoint: null,
-  pantry: {
-    __typename: 'Pantry',
-    id: 'pantry-1',
-  },
-  unit: null,
-} as PantryItem);
+const createMockPantryItem = (id: string, itemName: string): PantryItem =>
+  ({
+    __typename: 'PantryItem',
+    id,
+    itemName,
+    currentQuantity: 5,
+    storageState: 'REFRIGERATED',
+    updatedAt: new Date().toISOString(),
+    version: 1,
+    storageLocation: null,
+    storageNotes: null,
+    expiresAt: null,
+    autoReorderPoint: null,
+    pantry: {
+      __typename: 'Pantry',
+      id: 'pantry-1',
+    },
+    unit: null,
+  } as unknown as PantryItem);
 
 describe('usePantryQuery', () => {
   const mockPantryId = 'pantry-123';
@@ -89,6 +124,12 @@ describe('usePantryQuery', () => {
 
     // Default mocks
     mockUseAuth.mockReturnValue({ isLoggedOut: false });
+  });
+
+  afterAll(() => {
+    // Clean up timers to allow Jest to exit cleanly
+    jest.useRealTimers();
+    jest.clearAllTimers();
   });
 
   describe('successful data fetching', () => {
@@ -219,8 +260,9 @@ describe('usePantryQuery', () => {
         itemsPageInfo: undefined,
       });
 
-      const { result, rerender } = renderHook(() =>
-        usePantryQuery(mockPantryId),
+      const { result, rerender } = renderHook(
+        (props: { id: string }) => usePantryQuery(props.id),
+        { initialProps: { id: mockPantryId } },
       );
 
       expect(result.current.loading).toBe(true);
@@ -249,7 +291,7 @@ describe('usePantryQuery', () => {
         itemsPageInfo: mockPageInfo,
       });
 
-      rerender();
+      rerender({ id: mockPantryId });
 
       expect(result.current.loading).toBe(false);
       expect(result.current.items).toEqual(mockItems);
@@ -484,7 +526,9 @@ describe('usePantryQuery', () => {
       };
 
       mockUseGetPantryQuery.mockReturnValue({
-        data: { pantry: { itemsConnection: { edges: [], pageInfo: mockPageInfo } } },
+        data: {
+          pantry: { itemsConnection: { edges: [], pageInfo: mockPageInfo } },
+        },
         loading: false,
         error: undefined,
         refetch: mockRefetch,
@@ -525,7 +569,10 @@ describe('usePantryQuery', () => {
     it('memoizes normalized pantry when data reference unchanged', () => {
       const mockPantryData = {
         id: mockPantryId,
-        itemsConnection: { edges: [], pageInfo: { hasNextPage: false, endCursor: null } },
+        itemsConnection: {
+          edges: [],
+          pageInfo: { hasNextPage: false, endCursor: null },
+        },
       };
 
       mockUseGetPantryQuery.mockReturnValue({
@@ -541,10 +588,13 @@ describe('usePantryQuery', () => {
         itemsPageInfo: { hasNextPage: false, endCursor: null },
       });
 
-      const { rerender } = renderHook(() => usePantryQuery(mockPantryId));
+      const { rerender } = renderHook(
+        (props: { id: string }) => usePantryQuery(props.id),
+        { initialProps: { id: mockPantryId } },
+      );
 
       const firstCallCount = mockNormalizePantry.mock.calls.length;
-      rerender();
+      rerender({ id: mockPantryId });
       const secondCallCount = mockNormalizePantry.mock.calls.length;
 
       // Should not call normalizePantry again if data reference unchanged
@@ -569,12 +619,13 @@ describe('usePantryQuery', () => {
 
       mockNormalizePantry.mockReturnValue(mockNormalizedPantry);
 
-      const { result, rerender } = renderHook(() =>
-        usePantryQuery(mockPantryId),
+      const { result, rerender } = renderHook(
+        (props: { id: string }) => usePantryQuery(props.id),
+        { initialProps: { id: mockPantryId } },
       );
 
       const firstItems = result.current.items;
-      rerender();
+      rerender({ id: mockPantryId });
       const secondItems = result.current.items;
 
       expect(firstItems).toBe(secondItems); // Same reference
@@ -587,8 +638,8 @@ describe('usePantryQuery', () => {
       const mockPantryData1 = {
         pantry: {
           id: mockPantryId,
-          itemsConnection: { edges: [], pageInfo: null }
-        }
+          itemsConnection: { edges: [], pageInfo: null },
+        },
       };
 
       const mockPantryData2 = {
@@ -596,9 +647,9 @@ describe('usePantryQuery', () => {
           id: mockPantryId,
           itemsConnection: {
             edges: mockItems2.map(item => ({ node: item })),
-            pageInfo: { hasNextPage: false, endCursor: null }
-          }
-        }
+            pageInfo: { hasNextPage: false, endCursor: null },
+          },
+        },
       };
 
       mockUseGetPantryQuery.mockReturnValueOnce({
@@ -614,8 +665,9 @@ describe('usePantryQuery', () => {
         itemsPageInfo: undefined,
       });
 
-      const { result, rerender } = renderHook(() =>
-        usePantryQuery(mockPantryId),
+      const { result, rerender } = renderHook(
+        (props: { id: string }) => usePantryQuery(props.id),
+        { initialProps: { id: mockPantryId } },
       );
 
       const firstItems = result.current.items;
@@ -635,7 +687,7 @@ describe('usePantryQuery', () => {
         itemsPageInfo: undefined,
       });
 
-      rerender();
+      rerender({ id: mockPantryId });
 
       const secondItems = result.current.items;
       expect(secondItems).toEqual(mockItems2);
@@ -682,13 +734,17 @@ describe('usePantryQuery', () => {
       });
 
       const { rerender } = renderHook(
-        ({ pantryId }) => usePantryQuery(pantryId),
+        (props: { pantryId: string }) => usePantryQuery(props.pantryId),
         { initialProps: { pantryId: 'pantry-1' } },
       );
 
       expect(mockUseGetPantryQuery).toHaveBeenCalledWith(
         expect.objectContaining({
-          variables: { id: 'pantry-1', itemsFirst: 25, storageLocationsFirst: 50 },
+          variables: {
+            id: 'pantry-1',
+            itemsFirst: 25,
+            storageLocationsFirst: 50,
+          },
         }),
       );
 
@@ -696,7 +752,11 @@ describe('usePantryQuery', () => {
 
       expect(mockUseGetPantryQuery).toHaveBeenCalledWith(
         expect.objectContaining({
-          variables: { id: 'pantry-2', itemsFirst: 25, storageLocationsFirst: 50 },
+          variables: {
+            id: 'pantry-2',
+            itemsFirst: 25,
+            storageLocationsFirst: 50,
+          },
         }),
       );
     });
@@ -780,8 +840,9 @@ describe('usePantryQuery', () => {
         itemsPageInfo: undefined,
       });
 
-      const { result, rerender } = renderHook(() =>
-        usePantryQuery(mockPantryId),
+      const { result, rerender } = renderHook(
+        (props: { id: string }) => usePantryQuery(props.id),
+        { initialProps: { id: mockPantryId } },
       );
 
       expect(result.current.loading).toBe(true);
@@ -812,7 +873,7 @@ describe('usePantryQuery', () => {
         itemsPageInfo: mockPageInfo,
       });
 
-      rerender();
+      rerender({ id: mockPantryId });
 
       expect(result.current.loading).toBe(false);
       expect(result.current.items).toEqual(mockItems);
@@ -859,7 +920,9 @@ describe('usePantryQuery', () => {
       const { result } = renderHook(() => usePantryQuery(mockPantryId));
 
       expect(result.current.items).toEqual(mockItems);
-      expect(result.current.pageInfo).toEqual(mockConnectionData.itemsConnection.pageInfo);
+      expect(result.current.pageInfo).toEqual(
+        mockConnectionData.itemsConnection.pageInfo,
+      );
     });
   });
 });

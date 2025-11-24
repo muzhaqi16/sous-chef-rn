@@ -25,9 +25,9 @@ module.exports = {
       '@react-native-community|' +
       '@react-navigation|' +
       '@notifee/react-native|' +
-      'zustand|' +
       'immer|' +
+      'zustand|' +
       'uuid' +
-    ')/)',
+      ')/)',
   ],
 };

@@ -6,7 +6,7 @@
  *
  * Updated to use specific testIDs instead of generic selectors.
  */
-
+import { element, by, waitFor, expect } from 'detox';
 import { launchAppWithFabricWorkaround } from '../init';
 import { LandingAuthScreen, LoginScreen } from '../screens';
 
@@ -15,8 +15,9 @@ describe('Smoke Tests', () => {
   const loginScreen = new LoginScreen();
 
   beforeAll(async () => {
+    // Use app reuse for faster test execution
     await launchAppWithFabricWorkaround({
-      newInstance: true,
+      newInstance: false,
       permissions: { notifications: 'YES' },
     });
   });

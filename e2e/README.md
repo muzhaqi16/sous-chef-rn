@@ -98,6 +98,13 @@ detox test --configuration android.att.debug
 
 ## 📝 Writing Tests
 
+### Test strategy
+
+- Keep the suite lean. Focus on the high-traffic, happy-path flows (login, pantry, shopping list, recipes) and avoid duplicating coverage across multiple files.
+- Prefer a single core flow file (`e2e/tests/core-flows.e2e.ts`) instead of many narrowly scoped suites. This keeps runtime low and makes failures easier to diagnose.
+- Reuse helpers from `e2e/helpers/flows.ts` to log in and bypass onboarding so each spec starts from a consistent state.
+- Add new tests only when they validate a distinct user journey or guard against a regression we have seen in production.
+
 ### Basic Test Structure
 
 ```typescript

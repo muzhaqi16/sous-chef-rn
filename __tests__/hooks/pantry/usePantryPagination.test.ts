@@ -225,7 +225,8 @@ describe('usePantryPagination', () => {
   describe('prop changes', () => {
     it('updates when pantryId changes', () => {
       const { rerender } = renderHook(
-        ({ pantryId }) => usePantryPagination({ ...defaultProps, pantryId }),
+        (props: { pantryId: string }) =>
+          usePantryPagination({ ...defaultProps, pantryId: props.pantryId }),
         { initialProps: { pantryId: 'pantry-1' } },
       );
 
@@ -249,7 +250,8 @@ describe('usePantryPagination', () => {
       const pageInfo2 = { hasNextPage: true, endCursor: 'cursor-2' };
 
       const { rerender } = renderHook(
-        ({ pageInfo }) => usePantryPagination({ ...defaultProps, pageInfo }),
+        (props: { pageInfo: typeof pageInfo1 }) =>
+          usePantryPagination({ ...defaultProps, pageInfo: props.pageInfo }),
         { initialProps: { pageInfo: pageInfo1 } },
       );
 
@@ -270,7 +272,8 @@ describe('usePantryPagination', () => {
 
     it('updates when loading changes', () => {
       const { rerender } = renderHook(
-        ({ loading }) => usePantryPagination({ ...defaultProps, loading }),
+        (props: { loading: boolean }) =>
+          usePantryPagination({ ...defaultProps, loading: props.loading }),
         { initialProps: { loading: false } },
       );
 
@@ -291,7 +294,8 @@ describe('usePantryPagination', () => {
 
     it('updates when itemCount changes', () => {
       const { rerender } = renderHook(
-        ({ itemCount }) => usePantryPagination({ ...defaultProps, itemCount }),
+        (props: { itemCount: number }) =>
+          usePantryPagination({ ...defaultProps, itemCount: props.itemCount }),
         { initialProps: { itemCount: 10 } },
       );
 
@@ -350,8 +354,9 @@ describe('usePantryPagination', () => {
         isLoadingMore: false,
       });
 
-      const { result, rerender } = renderHook(() =>
-        usePantryPagination(defaultProps),
+      const { result, rerender } = renderHook(
+        (_props: Record<string, never>) => usePantryPagination(defaultProps),
+        { initialProps: {} as Record<string, never> },
       );
 
       expect(result.current.hasMore).toBe(true);
@@ -372,7 +377,7 @@ describe('usePantryPagination', () => {
         isLoadingMore: true,
       });
 
-      rerender();
+      rerender({} as Record<string, never>);
 
       expect(result.current.isLoadingMore).toBe(true);
 
@@ -384,7 +389,7 @@ describe('usePantryPagination', () => {
         isLoadingMore: false,
       });
 
-      rerender();
+      rerender({} as Record<string, never>);
 
       expect(result.current.hasMore).toBe(true);
       expect(result.current.isLoadingMore).toBe(false);
