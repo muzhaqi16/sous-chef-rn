@@ -8,6 +8,22 @@ jest.mock('react-native-config', () => ({
   ENABLE_OFFLINE_MODE: 'true',
 }));
 
+// Mock Apollo client to prevent initialization and resource creation
+jest.mock('#/apollo/client', () => ({
+  client: {
+    cache: {
+      write: jest.fn(),
+      evict: jest.fn(),
+      modify: jest.fn(),
+      extract: jest.fn(() => ({})),
+      restore: jest.fn(),
+    },
+    onResetStore: jest.fn(() => Promise.resolve()),
+    onClearStore: jest.fn(() => Promise.resolve()),
+  },
+  cancelCachePersistence: jest.fn(),
+}));
+
 jest.mock('react-native-mmkv', () => ({
   MMKV: jest.fn().mockImplementation(() => ({
     set: jest.fn(),
@@ -45,6 +61,22 @@ jest.mock('#/apollo/offlineQueue', () => ({
     clearQueue: jest.fn(),
   },
   createQueueLink: jest.fn(() => ({ request: (operation: any, forward: any) => forward(operation) })),
+}));
+
+// Mock WebSocket to prevent connection
+jest.mock('#/apollo/links/wsLink', () => ({
+  wsLink: {},
+  reconnectWebSocket: jest.fn(),
+  disposeWebSocket: jest.fn(),
+  isWebSocketReconnecting: jest.fn(() => false),
+  getWebSocketState: jest.fn(() => ({ isReconnecting: false, lastReconnectTime: 0, hasClient: false })),
+}));
+
+// Mock token scheduler to prevent timer creation
+jest.mock('#/apollo/links/tokenScheduler', () => ({
+  scheduleTokenRefresh: jest.fn(),
+  cancelTokenRefresh: jest.fn(),
+  getScheduleState: jest.fn(() => ({ isScheduled: false })),
 }));
 
 import { useGetPantryQuery } from '#generated';
@@ -89,6 +121,12 @@ describe('usePantryQuery', () => {
 
     // Default mocks
     mockUseAuth.mockReturnValue({ isLoggedOut: false });
+  });
+
+  afterAll(() => {
+    // Clean up timers to allow Jest to exit cleanly
+    jest.useRealTimers();
+    jest.clearAllTimers();
   });
 
   describe('successful data fetching', () => {
