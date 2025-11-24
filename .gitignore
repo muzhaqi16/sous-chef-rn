@@ -82,4 +82,4 @@ yarn-error.log
 # react-native-config codegen
 ios/tmp.xcconfig
 .claude
-e2e/artifacts/*
+e2e/artifacts
