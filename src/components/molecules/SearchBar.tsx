@@ -70,6 +70,7 @@ export const SearchBar: FC<SearchBarProps> = ({
                 size={action.size}
                 accessibilityLabel={action.accessibilityLabel || `${action.icon} button`}
                 isHighlighted={action.isHighlighted}
+                testID={action.testID}
               />
             );
           }

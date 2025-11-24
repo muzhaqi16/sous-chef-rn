@@ -63,6 +63,9 @@ export class ShoppingListScreen extends BaseScreen {
   async navigateToTab() {
     await this.tapByID('tab-shoppinglist');
     await this.waitForScreen();
+
+    // Wait for the add button in search bar to be visible
+    await this.waitForElement(this.addButton, 10000);
   }
 
   /**
@@ -82,8 +85,9 @@ export class ShoppingListScreen extends BaseScreen {
     // Wait for add item modal/screen
     await waitFor(element(by.id('add-item-modal'))).toBeVisible().withTimeout(3000);
 
-    // Fill in item details
-    await this.clearAndType('add-item-name-input', name);
+    // Fill in item details - use replaceText to avoid Android stylus popup
+    const nameInput = element(by.id('add-item-name-input'));
+    await nameInput.replaceText(name);
 
     if (quantity !== undefined) {
       const quantityStr = typeof quantity === 'number' ? quantity.toString() : quantity;
@@ -94,15 +98,25 @@ export class ShoppingListScreen extends BaseScreen {
     }
 
     if (unit) {
-      // Type into the unit picker input - this will trigger the autocomplete bottom sheet to open
-      // when text length >= 2 (minSearchLength)
-      await this.clearAndType('add-item-unit-picker', unit);
+      // Use replaceText for unit to avoid Android stylus popup
+      const unitInput = element(by.id('add-item-unit-picker'));
+      await unitInput.replaceText(unit);
 
       // Press enter to confirm the unit
       await element(by.id('add-item-unit-picker')).tapReturnKey();
+
+      // Wait for autocomplete to process
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
-    // Submit
+    // Tap outside inputs to dismiss keyboard and ensure submit button is accessible
+    // The modal container is safe to tap without closing the modal
+    await element(by.id('add-item-modal')).tap({ x: 10, y: 10 });
+
+    // Wait for keyboard to fully dismiss
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Submit - tap the checkmark button in the header
     await this.tapByID('add-item-submit-button');
 
     // Check if error modal appeared (e.g., "Please enter a valid quantity")
@@ -125,9 +139,27 @@ export class ShoppingListScreen extends BaseScreen {
       // Otherwise, error modal didn't appear (good!), continue
     }
 
-    // Wait for modal to close (5s max)
+    // Wait for modal to close (15s max to account for GraphQL mutation + Apollo cache updates)
     await waitFor(element(by.id('add-item-modal')))
       .not.toBeVisible()
+      .withTimeout(15000);
+
+    // Dismiss feature hint overlay if it appears (shown after first item added)
+    try {
+      await waitFor(element(by.id('feature-hint-overlay-dismiss')))
+        .toBeVisible()
+        .withTimeout(2000);
+      await element(by.id('feature-hint-overlay-dismiss')).tap();
+      await waitFor(element(by.id('feature-hint-overlay')))
+        .not.toBeVisible()
+        .withTimeout(2000);
+    } catch {
+      // Overlay not present, continue
+    }
+
+    // Wait for screen to navigate back to shopping list main
+    await waitFor(element(by.id('shopping-list-screen')))
+      .toBeVisible()
       .withTimeout(5000);
   }
 

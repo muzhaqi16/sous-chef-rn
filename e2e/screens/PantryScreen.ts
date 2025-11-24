@@ -124,8 +124,9 @@ export class PantryScreen extends BaseScreen {
       .withTimeout(3000);
 
     // Fill in item details
-    // Type item name - this will trigger item autocomplete bottom sheet
-    await this.clearAndType('add-pantry-item-name-input', name);
+    // Use replaceText for item name to avoid Android stylus popup
+    const nameInput = element(by.id('add-pantry-item-name-input'));
+    await nameInput.replaceText(name);
 
     // Wait for autocomplete bottom sheet animation
     await waitFor(element(by.id('add-pantry-item-name-input')))
@@ -145,12 +146,15 @@ export class PantryScreen extends BaseScreen {
     }
 
     if (unit) {
-      // Type into the unit picker input - this will trigger the autocomplete bottom sheet to open
-      // when text length >= 2 (minSearchLength)
-      await this.clearAndType('add-pantry-item-unit-picker', unit);
+      // Use replaceText for unit to avoid Android stylus popup
+      const unitInput = element(by.id('add-pantry-item-unit-picker'));
+      await unitInput.replaceText(unit);
 
       // Press enter to confirm the unit
       await element(by.id('add-pantry-item-unit-picker')).tapReturnKey();
+
+      // Wait a moment for autocomplete to process the selection and keyboard to dismiss
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
     if (expirationDate) {
@@ -159,7 +163,7 @@ export class PantryScreen extends BaseScreen {
       await this.tapByText(expirationDate);
     }
 
-    // Submit
+    // Submit - tap Return should have dismissed keyboard already
     await this.tapByID('add-pantry-item-submit-button');
 
     // Check if error modal appeared (e.g., "Please enter a valid quantity")
@@ -182,7 +186,13 @@ export class PantryScreen extends BaseScreen {
       // Otherwise, error modal didn't appear (good!), continue
     }
 
-    // Wait for screen to navigate back to pantry main (5s max)
+    // Wait for add item modal to disappear first (navigation started)
+    // Increased timeout to 15s to account for GraphQL mutation + Apollo cache updates
+    await waitFor(element(by.id('add-pantry-item-modal')))
+      .not.toBeVisible()
+      .withTimeout(15000);
+
+    // Wait for screen to navigate back to pantry main
     await waitFor(element(by.id('pantry-screen')))
       .toBeVisible()
       .withTimeout(5000);

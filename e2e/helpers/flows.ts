@@ -1,4 +1,4 @@
-import { element, by } from 'detox';
+import { element, by, waitFor } from 'detox';
 import { launchAppWithFabricWorkaround } from '../init';
 import {
   LandingAuthScreen,
@@ -63,11 +63,17 @@ export async function relaunchToHomeTab() {
   // For app reuse: Just reload React Native instead of terminating app
   await device.reloadReactNative();
 
-  // Wait for app to reload
+  // Wait for splash screen to disappear after reload
+  await waitFor(element(by.id('splash-screen')))
+    .not.toBeVisible()
+    .withTimeout(10000);
+
+  // Wait for app to initialize navigation (navigationState computation)
   await new Promise(resolve => setTimeout(resolve, 2000));
 
   await dismissBiometricPromptIfPresent();
 
+  // Navigate to pantry tab (might already be there)
   try {
     await element(by.id('tab-pantry')).tap();
   } catch {}

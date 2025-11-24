@@ -210,6 +210,7 @@ export const useStore = create<RootState>()(
             // Navigation transient state
             onBoardingStep, // Restart onboarding flow on app restart
             pendingDeepLinkAction, // Deep link actions should not persist
+            navigationState, // Always determine navigation state fresh on app start
 
             // Logout state (session-only flag)
             isLoggingOut,
