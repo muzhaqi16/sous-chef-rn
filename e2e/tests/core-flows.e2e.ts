@@ -6,10 +6,8 @@
  * stability over exhaustive edge cases.
  */
 
-import {
-  bootstrapAuthenticatedSession,
-  relaunchToHomeTab,
-} from '../helpers/flows';
+import { relaunchToHomeTab } from '../helpers/flows';
+import { bootstrapAuthenticatedSession } from '../helpers/auth';
 import { PantryScreen, ShoppingListScreen, RecipesScreen } from '../screens';
 
 describe('Core app flows', () => {

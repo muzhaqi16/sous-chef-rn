@@ -84,23 +84,24 @@ const createMockItem = (
   id: string,
   itemName: string,
   overrides?: Partial<ShoppingListItemCoreFragment>,
-): ShoppingListItemCoreFragment => ({
-  __typename: 'ShoppingListItem',
-  id,
-  itemName,
-  quantity: 1,
-  isPurchased: false,
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-  version: 1,
-  unit: null,
-  shoppingList: {
-    __typename: 'ShoppingList',
-    id: 'list-1',
-  },
-  pantryItem: null,
-  ...overrides,
-});
+): ShoppingListItemCoreFragment =>
+  ({
+    __typename: 'ShoppingListItem',
+    id,
+    itemName,
+    quantity: 1,
+    isPurchased: false,
+    updatedAt: new Date().toISOString(),
+    version: 1,
+    displayFormat: 'DECIMAL',
+    unit: null,
+    shoppingList: {
+      __typename: 'ShoppingList',
+      id: 'list-1',
+    },
+    pantryItem: null,
+    ...overrides,
+  } as unknown as ShoppingListItemCoreFragment);
 
 describe('useShoppingListMutations', () => {
   const mockListId = 'list-123';
@@ -488,8 +489,7 @@ describe('useShoppingListMutations', () => {
 
     it('handles props changes', () => {
       const { rerender } = renderHook(
-        ({ listId, items, refetch }) =>
-          useShoppingListMutations({ listId, items, refetch }),
+        (props: typeof defaultProps) => useShoppingListMutations(props),
         { initialProps: defaultProps },
       );
 

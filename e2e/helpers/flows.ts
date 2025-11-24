@@ -46,7 +46,11 @@ async function skipOptionalOnboardingScreens() {
   } catch {}
 }
 
-export async function bootstrapAuthenticatedSession() {
+/**
+ * Bootstrap fresh authenticated session with clean app state
+ * Use this when you need a completely fresh app install + login
+ */
+export async function bootstrapFreshAuthenticatedSession() {
   await launchAppWithFabricWorkaround({
     newInstance: true,
     delete: true,

@@ -4,15 +4,9 @@
  * Sets up global configurations and utilities for E2E tests
  */
 
-import { device, element, by, waitFor, expect } from 'detox';
+// Import detox - globals are already declared in detox/globals.d.ts
+import 'detox';
 import { execSync } from 'child_process';
-
-// Make Detox utilities globally available
-global.device = device;
-global.element = element;
-global.by = by;
-global.waitFor = waitFor;
-global.expect = expect;
 
 // Global test timeout
 jest.setTimeout(120000);

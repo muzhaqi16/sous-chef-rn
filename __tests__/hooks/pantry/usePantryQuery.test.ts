@@ -100,8 +100,7 @@ const createMockPantryItem = (id: string, itemName: string): PantryItem =>
     id,
     itemName,
     currentQuantity: 5,
-    storageState: 'FRESH',
-    createdAt: new Date().toISOString(),
+    storageState: 'REFRIGERATED',
     updatedAt: new Date().toISOString(),
     version: 1,
     storageLocation: null,
@@ -113,7 +112,7 @@ const createMockPantryItem = (id: string, itemName: string): PantryItem =>
       id: 'pantry-1',
     },
     unit: null,
-  } as PantryItem);
+  } as unknown as PantryItem);
 
 describe('usePantryQuery', () => {
   const mockPantryId = 'pantry-123';
@@ -261,8 +260,9 @@ describe('usePantryQuery', () => {
         itemsPageInfo: undefined,
       });
 
-      const { result, rerender } = renderHook(() =>
-        usePantryQuery(mockPantryId),
+      const { result, rerender } = renderHook(
+        (props: { id: string }) => usePantryQuery(props.id),
+        { initialProps: { id: mockPantryId } },
       );
 
       expect(result.current.loading).toBe(true);
@@ -291,7 +291,7 @@ describe('usePantryQuery', () => {
         itemsPageInfo: mockPageInfo,
       });
 
-      rerender();
+      rerender({ id: mockPantryId });
 
       expect(result.current.loading).toBe(false);
       expect(result.current.items).toEqual(mockItems);
@@ -588,10 +588,13 @@ describe('usePantryQuery', () => {
         itemsPageInfo: { hasNextPage: false, endCursor: null },
       });
 
-      const { rerender } = renderHook(() => usePantryQuery(mockPantryId));
+      const { rerender } = renderHook(
+        (props: { id: string }) => usePantryQuery(props.id),
+        { initialProps: { id: mockPantryId } },
+      );
 
       const firstCallCount = mockNormalizePantry.mock.calls.length;
-      rerender();
+      rerender({ id: mockPantryId });
       const secondCallCount = mockNormalizePantry.mock.calls.length;
 
       // Should not call normalizePantry again if data reference unchanged
@@ -616,12 +619,13 @@ describe('usePantryQuery', () => {
 
       mockNormalizePantry.mockReturnValue(mockNormalizedPantry);
 
-      const { result, rerender } = renderHook(() =>
-        usePantryQuery(mockPantryId),
+      const { result, rerender } = renderHook(
+        (props: { id: string }) => usePantryQuery(props.id),
+        { initialProps: { id: mockPantryId } },
       );
 
       const firstItems = result.current.items;
-      rerender();
+      rerender({ id: mockPantryId });
       const secondItems = result.current.items;
 
       expect(firstItems).toBe(secondItems); // Same reference
@@ -661,8 +665,9 @@ describe('usePantryQuery', () => {
         itemsPageInfo: undefined,
       });
 
-      const { result, rerender } = renderHook(() =>
-        usePantryQuery(mockPantryId),
+      const { result, rerender } = renderHook(
+        (props: { id: string }) => usePantryQuery(props.id),
+        { initialProps: { id: mockPantryId } },
       );
 
       const firstItems = result.current.items;
@@ -682,7 +687,7 @@ describe('usePantryQuery', () => {
         itemsPageInfo: undefined,
       });
 
-      rerender();
+      rerender({ id: mockPantryId });
 
       const secondItems = result.current.items;
       expect(secondItems).toEqual(mockItems2);
@@ -729,7 +734,7 @@ describe('usePantryQuery', () => {
       });
 
       const { rerender } = renderHook(
-        ({ pantryId }) => usePantryQuery(pantryId),
+        (props: { pantryId: string }) => usePantryQuery(props.pantryId),
         { initialProps: { pantryId: 'pantry-1' } },
       );
 
@@ -835,8 +840,9 @@ describe('usePantryQuery', () => {
         itemsPageInfo: undefined,
       });
 
-      const { result, rerender } = renderHook(() =>
-        usePantryQuery(mockPantryId),
+      const { result, rerender } = renderHook(
+        (props: { id: string }) => usePantryQuery(props.id),
+        { initialProps: { id: mockPantryId } },
       );
 
       expect(result.current.loading).toBe(true);
@@ -867,7 +873,7 @@ describe('usePantryQuery', () => {
         itemsPageInfo: mockPageInfo,
       });
 
-      rerender();
+      rerender({ id: mockPantryId });
 
       expect(result.current.loading).toBe(false);
       expect(result.current.items).toEqual(mockItems);

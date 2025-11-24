@@ -2,6 +2,7 @@ import { renderHook, act } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import { usePantryMutations } from '../../../src/hooks/pantry/usePantryMutations';
 import type { PantryItem } from '#/graphql/generated/types';
+import { StorageState } from '#generated';
 
 // Mock dependencies
 jest.mock('react-native', () => ({
@@ -15,9 +16,10 @@ jest.mock('#generated', () => ({
   useUpdatePantryItemMutation: jest.fn(),
   useDeletePantryItemMutation: jest.fn(),
   StorageState: {
-    FRESH: 'FRESH',
-    FROZEN: 'FROZEN',
-    PANTRY: 'PANTRY',
+    Ambient: 'AMBIENT',
+    Frozen: 'FROZEN',
+    None: 'NONE',
+    Refrigerated: 'REFRIGERATED',
   },
 }));
 
@@ -84,7 +86,7 @@ const createMockPantryItem = (
     id,
     itemName,
     currentQuantity: 5,
-    storageState: 'FRESH',
+    storageState: 'REFRIGERATED',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     version: 1,
@@ -210,7 +212,7 @@ describe('usePantryMutations', () => {
         itemName: 'Milk',
         quantity: 2,
         unitId: 'unit-1',
-        storageState: 'FRESH' as const,
+        storageState: StorageState.Refrigerated,
         brand: 'Organic Valley',
         location: 'Fridge',
         expirationDate: '2025-12-31',
@@ -226,7 +228,7 @@ describe('usePantryMutations', () => {
         initialQuantity: 2,
         itemName: 'Milk',
         unitId: 'unit-1',
-        storageState: 'FRESH',
+        storageState: 'REFRIGERATED',
         itemBrand: 'Organic Valley',
         storageLocation: 'Fridge',
         expiresAt: '2025-12-31',
@@ -246,7 +248,7 @@ describe('usePantryMutations', () => {
         itemName: 'Milk',
         quantity: 2,
         unitId: 'unit-1',
-        storageState: 'FRESH' as const,
+        storageState: StorageState.Refrigerated,
       };
 
       const transformed = transformInput(input);
@@ -256,7 +258,7 @@ describe('usePantryMutations', () => {
         initialQuantity: 2,
         itemName: 'Milk',
         unitId: 'unit-1',
-        storageState: 'FRESH',
+        storageState: 'REFRIGERATED',
       });
       expect(transformed).not.toHaveProperty('itemBrand');
       expect(transformed).not.toHaveProperty('storageLocation');
@@ -483,8 +485,8 @@ describe('usePantryMutations', () => {
 
     it('handles props changes', () => {
       const { rerender } = renderHook(
-        ({ pantryId, items, refetch }) =>
-          usePantryMutations({ pantryId, items, refetch }),
+        (props: typeof defaultProps) =>
+          usePantryMutations(props),
         { initialProps: defaultProps },
       );
 
@@ -562,7 +564,7 @@ describe('usePantryMutations', () => {
         itemName: 'Eggs',
         quantity: 12,
         unitId: 'unit-dozen',
-        storageState: 'FRESH' as const,
+        storageState: StorageState.Refrigerated,
         expirationDate: '2025-12-31',
         notes: 'Free range',
       };
@@ -608,7 +610,7 @@ describe('usePantryMutations', () => {
           itemName: 'Eggs',
           quantity: 12,
           unitId: 'unit-1',
-          storageState: 'FRESH' as const,
+          storageState: StorageState.Refrigerated,
         });
       });
 
@@ -656,7 +658,7 @@ describe('usePantryMutations', () => {
         itemName: 'Premium Milk',
         quantity: 2,
         unitId: 'unit-gallon',
-        storageState: 'FRESH' as const,
+        storageState: StorageState.Refrigerated,
         brand: 'Organic Valley',
         location: 'Top shelf',
         expirationDate: '2025-12-31',
@@ -681,7 +683,7 @@ describe('usePantryMutations', () => {
 
       await act(async () => {
         await result.current.updateItem('item-1', {
-          storageState: 'FROZEN' as const,
+          storageState: StorageState.Frozen,
           location: 'Freezer',
         });
       });
