@@ -16,7 +16,8 @@ module.exports = {
   apps: {
     'ios.debug': {
       type: 'ios.app',
-      binaryPath: 'ios/build/Build/Products/Debug-iphonesimulator/SousChefRN.app',
+      binaryPath:
+        'ios/build/Build/Products/Debug-iphonesimulator/SousChefRN.app',
       build:
         'xcodebuild -workspace ios/SousChefRN.xcworkspace -scheme SousChefRN -configuration Debug -sdk iphonesimulator -derivedDataPath ios/build',
     },
@@ -30,14 +31,17 @@ module.exports = {
     'android.debug': {
       type: 'android.apk',
       binaryPath: 'android/app/build/outputs/apk/debug/app-debug.apk',
-      testBinaryPath: 'android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk',
+      testBinaryPath:
+        'android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk',
       build:
         'cd android && ./gradlew assembleDebug assembleAndroidTest -DtestBuildType=debug',
     },
     'android.release': {
       type: 'android.apk',
-      binaryPath: 'android/app/build/outputs/apk/release/app-universal-release.apk',
-      testBinaryPath: 'android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk',
+      binaryPath:
+        'android/app/build/outputs/apk/release/app-universal-release.apk',
+      testBinaryPath:
+        'android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk',
       build:
         'cd android && ./gradlew assembleRelease :app:assembleDebugAndroidTest',
     },
@@ -79,7 +83,7 @@ module.exports = {
       // ⭐ OPTIMIZED FOR ANDROID DEVICE WITH APP REUSE
       behavior: {
         init: {
-          // Reinstall app on first run only
+          // Don't reinstall app (for app reuse)
           reinstallApp: false,
           // Keep app data between test runs
           launchApp: true,

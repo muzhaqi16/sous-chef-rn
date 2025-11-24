@@ -6,7 +6,7 @@
  */
 
 import { BaseScreen } from './BaseScreen';
-import { element, by, waitFor } from 'detox';
+import { element, by, waitFor, expect } from 'detox';
 
 export class PantryScreen extends BaseScreen {
   protected screenID = 'pantry-screen';

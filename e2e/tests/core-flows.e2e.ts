@@ -6,8 +6,10 @@
  * stability over exhaustive edge cases.
  */
 
-import { element, by, waitFor } from 'detox';
-import { bootstrapAuthenticatedSession, relaunchToHomeTab } from '../helpers/flows';
+import {
+  bootstrapAuthenticatedSession,
+  relaunchToHomeTab,
+} from '../helpers/flows';
 import { PantryScreen, ShoppingListScreen, RecipesScreen } from '../screens';
 
 describe('Core app flows', () => {

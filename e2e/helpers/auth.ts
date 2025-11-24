@@ -13,12 +13,12 @@
 import { element, by, waitFor } from 'detox';
 import {
   waitForScreen,
-  waitForElementToBeVisible,
   waitForModalReady,
   waitForModalClosed,
   waitForElementAndTap,
   waitIfPresent,
   waitForNetworkIdle,
+  tapFirstAvailable,
   delay,
   TIMEOUTS,
 } from './waitFor';
@@ -81,7 +81,9 @@ export async function loginWithCredentials(email: string, password: string) {
       await waitForScreen('pantry-screen', TIMEOUTS.NETWORK);
       console.log('✅ Reached pantry screen');
     } catch {
-      console.warn('⚠️  Neither shopping list nor pantry screen visible after login');
+      console.warn(
+        '⚠️  Neither shopping list nor pantry screen visible after login',
+      );
     }
   }
 
@@ -104,13 +106,11 @@ export async function dismissBiometricPromptIfPresent() {
 
       await waitForModalReady('post-login-biometric-prompt');
 
-      // Tap "Not now" button - try by.id first, fallback to by.label
-      try {
-        await waitForElementAndTap(element(by.id('biometric-prompt-decline')));
-      } catch {
-        console.log('Trying fallback selector for biometric prompt...');
-        await waitForElementAndTap(element(by.label('Not now')));
-      }
+      // Tap decline button - try by.id first, fallback to by.label
+      await tapFirstAvailable([
+        element(by.id('biometric-prompt-decline')),
+        element(by.label('Not now')),
+      ]);
 
       // Wait for modal to close completely
       await waitForModalClosed('post-login-biometric-prompt');
@@ -150,7 +150,9 @@ export async function dismissBiometricPromptIfPresent() {
       await waitForModalReady('feature-hint-overlay', 3000);
 
       // Tap dismiss button
-      await waitForElementAndTap(element(by.id('feature-hint-overlay-dismiss')));
+      await waitForElementAndTap(
+        element(by.id('feature-hint-overlay-dismiss')),
+      );
 
       // Wait for overlay to disappear
       await waitForModalClosed('feature-hint-overlay');

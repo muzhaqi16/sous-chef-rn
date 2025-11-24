@@ -10,6 +10,7 @@ import {
   BiometricSetupScreen,
 } from '../screens';
 import { dismissBiometricPromptIfPresent } from './auth';
+import { delay } from './waitFor';
 
 const landingScreen = new LandingAuthScreen();
 const loginScreen = new LoginScreen();
@@ -25,7 +26,9 @@ async function skipOptionalOnboardingScreens() {
   try {
     await createHomeScreen.waitForScreen(2000);
     await createHomeScreen.tapSkip();
-  } catch {}
+  } catch {
+    console.log('CreateHome screen not present, skipping...');
+  }
 
   try {
     await createShoppingListScreen.waitForScreen(2000);
@@ -69,7 +72,7 @@ export async function relaunchToHomeTab() {
     .withTimeout(10000);
 
   // Wait for app to initialize navigation (navigationState computation)
-  await new Promise(resolve => setTimeout(resolve, 2000));
+  await delay(2000);
 
   await dismissBiometricPromptIfPresent();
 

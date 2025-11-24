@@ -5,7 +5,7 @@
  * Provides common functionality for interacting with screens in E2E tests.
  */
 
-import { element, by, waitFor, device } from 'detox';
+import { element, by, waitFor, device, expect } from 'detox';
 
 export abstract class BaseScreen {
   /**

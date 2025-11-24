@@ -124,13 +124,6 @@ export class LoginScreen extends BaseScreen {
   }
 
   /**
-   * Expect login button to be disabled
-   */
-  async expectSubmitDisabled() {
-    await expect(this.getElementById(this.submitButton)).not.toBeEnabled();
-  }
-
-  /**
    * Check if email field has error
    */
   async expectEmailFieldError() {

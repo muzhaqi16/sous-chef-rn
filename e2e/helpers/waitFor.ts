@@ -240,22 +240,6 @@ export async function waitForElementAndType(
 }
 
 /**
- * ⭐ NEW: Wait for element to be tappable (visible and not disabled)
- */
-export async function waitForElementTappable(
-  targetElement: Detox.IndexableNativeElement,
-  timeout: number = DEFAULT_TIMEOUT,
-) {
-  await waitFor(targetElement).toBeVisible().withTimeout(timeout);
-  // Additional check: element should exist and not have disabled trait
-  try {
-    await expect(targetElement).not.toHaveSliderPosition(0, 0); // Not disabled
-  } catch {
-    // Trait check might not work on all elements
-  }
-}
-
-/**
  * ⭐ NEW: Scroll to element and wait for it to be visible
  * Useful for long lists or scrollable content
  */
@@ -400,6 +384,19 @@ export async function waitForAnyElement(
   }
 
   throw new Error('None of the elements became visible within timeout');
+}
+
+/**
+ * ⭐ NEW: Tap the first available element from multiple selectors
+ * Useful for handling UI variations (different testIDs, labels, etc.)
+ */
+export async function tapFirstAvailable(
+  elements: Detox.IndexableNativeElement[],
+  timeout: number = DEFAULT_TIMEOUT,
+): Promise<number> {
+  const index = await waitForAnyElement(elements, timeout);
+  await elements[index].tap();
+  return index;
 }
 
 /**

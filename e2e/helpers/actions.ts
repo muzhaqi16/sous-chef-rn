@@ -13,9 +13,7 @@
 import {
   waitForElementAndTap,
   waitForElementAndType,
-  waitForElementToBeVisible,
   waitForKeyboardDismiss,
-  retry,
   delay,
   TIMEOUTS,
 } from './waitFor';
@@ -23,14 +21,20 @@ import {
 /**
  * ⭐ ENHANCED: Tap an element by test ID with automatic wait
  */
-export async function tapByID(testID: string, timeout: number = TIMEOUTS.DEFAULT) {
+export async function tapByID(
+  testID: string,
+  timeout: number = TIMEOUTS.DEFAULT,
+) {
   await waitForElementAndTap(element(by.id(testID)), timeout);
 }
 
 /**
  * ⭐ ENHANCED: Tap an element by text with automatic wait
  */
-export async function tapByText(text: string, timeout: number = TIMEOUTS.DEFAULT) {
+export async function tapByText(
+  text: string,
+  timeout: number = TIMEOUTS.DEFAULT,
+) {
   await waitForElementAndTap(element(by.text(text)), timeout);
 }
 
@@ -42,7 +46,12 @@ export async function typeIntoField(
   text: string,
   dismissKeyboard: boolean = true,
 ) {
-  await waitForElementAndType(element(by.id(testID)), text, TIMEOUTS.DEFAULT, dismissKeyboard);
+  await waitForElementAndType(
+    element(by.id(testID)),
+    text,
+    TIMEOUTS.DEFAULT,
+    dismissKeyboard,
+  );
 }
 
 /**
@@ -136,7 +145,9 @@ export async function scrollInContainerAndTap(
     }
   }
 
-  throw new Error(`Failed to find element ${targetID} after ${maxScrolls} scrolls`);
+  throw new Error(
+    `Failed to find element ${targetID} after ${maxScrolls} scrolls`,
+  );
 }
 
 /**
@@ -361,35 +372,9 @@ export async function shakeDevice() {
     await device.shake();
   } else {
     // On Android, shake might not work, use menu button
-    console.warn('Shake not supported on Android, use device.openDevMenu() instead');
-  }
-}
-
-/**
- * ⭐ NEW: Grant permissions (iOS/Android)
- */
-export async function grantPermissions(...permissions: string[]) {
-  for (const permission of permissions) {
-    try {
-      await device.grantPermission(permission);
-      console.log(`✅ Granted permission: ${permission}`);
-    } catch (error) {
-      console.warn(`⚠️  Could not grant permission ${permission}:`, error);
-    }
-  }
-}
-
-/**
- * ⭐ NEW: Deny permissions (iOS/Android)
- */
-export async function denyPermissions(...permissions: string[]) {
-  for (const permission of permissions) {
-    try {
-      await device.revokePermission(permission);
-      console.log(`✅ Denied permission: ${permission}`);
-    } catch (error) {
-      console.warn(`⚠️  Could not deny permission ${permission}:`, error);
-    }
+    console.warn(
+      'Shake not supported on Android, use device.openDevMenu() instead',
+    );
   }
 }
 
@@ -411,19 +396,6 @@ export async function setLocation(lat: number, lon: number) {
 }
 
 /**
- * ⭐ NEW: Enable/disable network (for offline testing)
- */
-export async function setNetworkState(enabled: boolean) {
-  if (enabled) {
-    await device.enableSynchronization();
-    console.log('🌐 Network enabled');
-  } else {
-    await device.disableSynchronization();
-    console.log('📵 Network disabled');
-  }
-}
-
-/**
  * ⭐ NEW: Tap system alert button (permissions, etc.)
  */
 export async function tapSystemAlertButton(buttonLabel: string) {
@@ -435,6 +407,9 @@ export async function tapSystemAlertButton(buttonLabel: string) {
     }
     await delay(500);
   } catch (error) {
-    console.warn(`⚠️  Could not tap system alert button "${buttonLabel}":`, error);
+    console.warn(
+      `⚠️  Could not tap system alert button "${buttonLabel}":`,
+      error,
+    );
   }
 }
