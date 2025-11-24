@@ -178,13 +178,11 @@ describe('usePantryMutations', () => {
     it('creates add operation with correct configuration', () => {
       renderHook(() => usePantryMutations(defaultProps));
 
-      expect(mockCreateAddOperation).toHaveBeenCalledWith(
-        expect.objectContaining({
-          mutation: mockAddItemMutation,
-          parentId: mockPantryId,
-          operationName: 'Add Pantry Item',
-        }),
-      );
+      const callArgs = mockCreateAddOperation.mock.calls[0][0];
+      expect(callArgs.mutation).toBe(mockAddItemMutation);
+      expect(typeof callArgs.parentId).toBe('function');
+      expect(callArgs.parentId()).toBe(mockPantryId);
+      expect(callArgs.operationName).toBe('Add Pantry Item');
     });
 
     it('transforms input correctly', () => {
@@ -279,14 +277,12 @@ describe('usePantryMutations', () => {
         await result.current.updateItem('item-1', { itemName: 'Updated Milk' });
       });
 
-      expect(mockCreateUpdateOperation).toHaveBeenCalledWith(
-        expect.objectContaining({
-          mutation: mockUpdateItemMutation,
-          parentId: mockPantryId,
-          itemId: 'item-1',
-          operationName: 'Update Pantry Item',
-        }),
-      );
+      const callArgs = mockCreateUpdateOperation.mock.calls[0][0];
+      expect(callArgs.mutation).toBe(mockUpdateItemMutation);
+      expect(typeof callArgs.parentId).toBe('function');
+      expect(callArgs.parentId()).toBe(mockPantryId);
+      expect(callArgs.itemId).toBe('item-1');
+      expect(callArgs.operationName).toBe('Update Pantry Item');
     });
 
     it('uses errorPolicy: all for update mutation', () => {
@@ -342,14 +338,12 @@ describe('usePantryMutations', () => {
         await result.current.removeItem('item-1');
       });
 
-      expect(mockCreateRemoveOperation).toHaveBeenCalledWith(
-        expect.objectContaining({
-          mutation: mockRemoveItemMutation,
-          parentId: mockPantryId,
-          itemId: 'item-1',
-          operationName: 'Delete Pantry Item',
-        }),
-      );
+      const callArgs = mockCreateRemoveOperation.mock.calls[0][0];
+      expect(callArgs.mutation).toBe(mockRemoveItemMutation);
+      expect(typeof callArgs.parentId).toBe('function');
+      expect(callArgs.parentId()).toBe(mockPantryId);
+      expect(callArgs.itemId).toBe('item-1');
+      expect(callArgs.operationName).toBe('Delete Pantry Item');
     });
 
     it('uses errorPolicy: all for remove mutation', () => {
@@ -489,12 +483,10 @@ describe('usePantryMutations', () => {
     it('uses createAddOperation for addItem', () => {
       renderHook(() => usePantryMutations(defaultProps));
 
-      expect(mockCreateAddOperation).toHaveBeenCalledWith(
-        expect.objectContaining({
-          mutation: mockAddItemMutation,
-          parentId: mockPantryId,
-        }),
-      );
+      const callArgs = mockCreateAddOperation.mock.calls[0][0];
+      expect(callArgs.mutation).toBe(mockAddItemMutation);
+      expect(typeof callArgs.parentId).toBe('function');
+      expect(callArgs.parentId()).toBe(mockPantryId);
     });
 
     it('uses createUpdateOperation for updateItem', async () => {
@@ -529,11 +521,9 @@ describe('usePantryMutations', () => {
       renderHook(() => usePantryMutations(defaultProps));
 
       // Check all operations receive the correct parentId
-      expect(mockCreateAddOperation).toHaveBeenCalledWith(
-        expect.objectContaining({
-          parentId: mockPantryId,
-        }),
-      );
+      const callArgs = mockCreateAddOperation.mock.calls[0][0];
+      expect(typeof callArgs.parentId).toBe('function');
+      expect(callArgs.parentId()).toBe(mockPantryId);
     });
   });
 

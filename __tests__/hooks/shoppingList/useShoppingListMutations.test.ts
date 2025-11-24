@@ -196,13 +196,11 @@ describe('useShoppingListMutations', () => {
     it('creates add operation with correct configuration', () => {
       renderHook(() => useShoppingListMutations(defaultProps));
 
-      expect(mockCreateAddOperation).toHaveBeenCalledWith(
-        expect.objectContaining({
-          mutation: mockAddItemMutation,
-          parentId: mockListId,
-          operationName: 'Add Shopping List Item',
-        }),
-      );
+      const callArgs = mockCreateAddOperation.mock.calls[0][0];
+      expect(callArgs.mutation).toBe(mockAddItemMutation);
+      expect(typeof callArgs.parentId).toBe('function');
+      expect(callArgs.parentId()).toBe(mockListId);
+      expect(callArgs.operationName).toBe('Add Shopping List Item');
     });
 
     it('transforms input correctly', () => {
@@ -318,14 +316,11 @@ describe('useShoppingListMutations', () => {
         await result.current.removeItem('item-1');
       });
 
-      expect(mockCreateRemoveOperation).toHaveBeenCalledWith(
-        expect.objectContaining({
-          mutation: mockRemoveItemMutation,
-          parentId: mockListId,
-          itemId: 'item-1',
-          operationName: 'Delete Shopping List Item',
-        }),
-      );
+      const callArgs = mockCreateRemoveOperation.mock.calls[0][0];
+      expect(callArgs.mutation).toBe(mockRemoveItemMutation);
+      expect(callArgs.parentId).toBe(mockListId);
+      expect(callArgs.itemId).toBe('item-1');
+      expect(callArgs.operationName).toBe('Delete Shopping List Item');
     });
 
     it('uses errorPolicy: all for remove mutation', () => {
@@ -463,23 +458,19 @@ describe('useShoppingListMutations', () => {
     it('uses createAddOperation for addItem', () => {
       renderHook(() => useShoppingListMutations(defaultProps));
 
-      expect(mockCreateAddOperation).toHaveBeenCalledWith(
-        expect.objectContaining({
-          mutation: mockAddItemMutation,
-          parentId: mockListId,
-        }),
-      );
+      const callArgs = mockCreateAddOperation.mock.calls[0][0];
+      expect(callArgs.mutation).toBe(mockAddItemMutation);
+      expect(typeof callArgs.parentId).toBe('function');
+      expect(callArgs.parentId()).toBe(mockListId);
     });
 
     it('creates operations with correct parent ID', () => {
       renderHook(() => useShoppingListMutations(defaultProps));
 
       // Check all operations receive the correct parentId
-      expect(mockCreateAddOperation).toHaveBeenCalledWith(
-        expect.objectContaining({
-          parentId: mockListId,
-        }),
-      );
+      const callArgs = mockCreateAddOperation.mock.calls[0][0];
+      expect(typeof callArgs.parentId).toBe('function');
+      expect(callArgs.parentId()).toBe(mockListId);
     });
 
     it('provides onSuccess callback for addItem', () => {

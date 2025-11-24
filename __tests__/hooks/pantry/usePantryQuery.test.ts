@@ -3,6 +3,28 @@ import { usePantryQuery } from '../../../src/hooks/pantry/usePantryQuery';
 import type { PantryItem } from '#/graphql/generated/types';
 
 // Mock dependencies
+jest.mock('react-native-config', () => ({
+  API_URL: 'http://localhost:4000',
+  ENABLE_OFFLINE_MODE: 'true',
+}));
+
+jest.mock('react-native-mmkv', () => ({
+  MMKV: jest.fn().mockImplementation(() => ({
+    set: jest.fn(),
+    getString: jest.fn(),
+    delete: jest.fn(),
+    remove: jest.fn(),
+    clearAll: jest.fn(),
+  })),
+  createMMKV: jest.fn().mockReturnValue({
+    set: jest.fn(),
+    getString: jest.fn(),
+    delete: jest.fn(),
+    remove: jest.fn(),
+    clearAll: jest.fn(),
+  }),
+}));
+
 jest.mock('#generated', () => ({
   useGetPantryQuery: jest.fn(),
 }));
@@ -13,6 +35,16 @@ jest.mock('#hooks/auth/useAuth', () => ({
 
 jest.mock('#/utils/connectionUtils', () => ({
   normalizePantry: jest.fn(),
+}));
+
+// Mock the entire offline queue module to avoid dynamic import
+jest.mock('#/apollo/offlineQueue', () => ({
+  offlineQueueManager: {
+    enqueue: jest.fn(),
+    processQueue: jest.fn(),
+    clearQueue: jest.fn(),
+  },
+  createQueueLink: jest.fn(() => ({ request: (operation: any, forward: any) => forward(operation) })),
 }));
 
 import { useGetPantryQuery } from '#generated';
@@ -343,6 +375,7 @@ describe('usePantryQuery', () => {
           variables: {
             id: mockPantryId,
             itemsFirst: 25,
+            storageLocationsFirst: 50,
           },
         }),
       );
@@ -655,7 +688,7 @@ describe('usePantryQuery', () => {
 
       expect(mockUseGetPantryQuery).toHaveBeenCalledWith(
         expect.objectContaining({
-          variables: { id: 'pantry-1', itemsFirst: 25 },
+          variables: { id: 'pantry-1', itemsFirst: 25, storageLocationsFirst: 50 },
         }),
       );
 
@@ -663,7 +696,7 @@ describe('usePantryQuery', () => {
 
       expect(mockUseGetPantryQuery).toHaveBeenCalledWith(
         expect.objectContaining({
-          variables: { id: 'pantry-2', itemsFirst: 25 },
+          variables: { id: 'pantry-2', itemsFirst: 25, storageLocationsFirst: 50 },
         }),
       );
     });
