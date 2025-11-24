@@ -18,3 +18,6 @@ export * from './navigation';
 
 // Wait utilities
 export * from './waitFor';
+
+// End-to-end flows
+export * from './flows';
