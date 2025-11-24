@@ -108,10 +108,11 @@ export class PantryScreen extends BaseScreen {
 
   /**
    * Add new item to pantry
+   * @param quantity - Can be number, fraction (e.g., "1 1/4"), or decimal (e.g., "0.25")
    */
   async addItem(
     name: string,
-    quantity?: number,
+    quantity?: string | number,
     unit?: string,
     expirationDate?: string,
   ) {
@@ -126,29 +127,21 @@ export class PantryScreen extends BaseScreen {
     // Type item name - this will trigger item autocomplete bottom sheet
     await this.clearAndType('add-pantry-item-name-input', name);
 
-    // Wait for autocomplete bottom sheet to open
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Wait for autocomplete bottom sheet animation
+    await waitFor(element(by.id('add-pantry-item-name-input')))
+      .toBeVisible()
+      .withTimeout(1000);
 
     // Press enter to confirm and close the autocomplete
     await element(by.id('add-pantry-item-name-input')).tapReturnKey();
 
-    // Wait for autocomplete to dismiss
-    await new Promise(resolve => setTimeout(resolve, 800));
-
     if (quantity !== undefined) {
-      // Tap into the quantity field first to ensure it has focus
-      await this.tapByID('add-pantry-item-quantity-input');
+      // Type the quantity (supports fractions like "1 1/4" or "0.25")
+      const quantityStr = typeof quantity === 'number' ? quantity.toString() : quantity;
+      const quantityInput = element(by.id('add-pantry-item-quantity-input'));
 
-      // Wait a moment for focus
-      await new Promise(resolve => setTimeout(resolve, 200));
-
-      // Now type the quantity
-      await this.clearAndType(
-        'add-pantry-item-quantity-input',
-        quantity.toString(),
-      );
-      // Wait a moment to ensure quantity is committed before moving to unit field
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Use replaceText instead of clearAndType for better reliability
+      await quantityInput.replaceText(quantityStr);
     }
 
     if (unit) {
@@ -156,15 +149,8 @@ export class PantryScreen extends BaseScreen {
       // when text length >= 2 (minSearchLength)
       await this.clearAndType('add-pantry-item-unit-picker', unit);
 
-      // The bottom sheet should now be open with the search input
-      // Wait a moment for the bottom sheet animation
-      await new Promise(resolve => setTimeout(resolve, 500));
-
       // Press enter to confirm the unit
       await element(by.id('add-pantry-item-unit-picker')).tapReturnKey();
-
-      // Wait for the bottom sheet to fully dismiss
-      await new Promise(resolve => setTimeout(resolve, 500));
     }
 
     if (expirationDate) {
@@ -173,14 +159,33 @@ export class PantryScreen extends BaseScreen {
       await this.tapByText(expirationDate);
     }
 
-    // Submit - use regular tap now that KeyboardAvoidingView testID is fixed
-    await element(by.id('add-pantry-item-submit-button')).tap();
-    await expect(element(by.id('add-pantry-item-submit-button'))).toBeVisible();
+    // Submit
+    await this.tapByID('add-pantry-item-submit-button');
 
-    // Wait for screen to navigate back to pantry main (increased timeout for GraphQL mutation + navigation)
+    // Check if error modal appeared (e.g., "Please enter a valid quantity")
+    try {
+      await waitFor(element(by.text('Please enter a valid quantity')))
+        .toBeVisible()
+        .withTimeout(2000);
+
+      // Error modal appeared - dismiss it and throw error
+      await element(by.text('OK')).tap();
+      throw new Error(
+        `Failed to add pantry item: Invalid quantity "${quantity}". ` +
+        `Expected formats: "1", "1.5", "1/4", or "1 1/4"`
+      );
+    } catch (error) {
+      // If it's our thrown error, re-throw it
+      if (error instanceof Error && error.message.includes('Failed to add pantry item')) {
+        throw error;
+      }
+      // Otherwise, error modal didn't appear (good!), continue
+    }
+
+    // Wait for screen to navigate back to pantry main (5s max)
     await waitFor(element(by.id('pantry-screen')))
       .toBeVisible()
-      .withTimeout(15000);
+      .withTimeout(5000);
   }
 
   /**

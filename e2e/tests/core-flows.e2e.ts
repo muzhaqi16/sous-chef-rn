@@ -31,7 +31,7 @@ describe('Core app flows', () => {
   it('adds a pantry item', async () => {
     const itemName = `E2E Pantry Item ${Date.now()}`;
 
-    await pantryScreen.addItem(itemName, 1, 'ct');
+    await pantryScreen.addItem(itemName, '1', 'ct');
     await pantryScreen.waitForListToLoad();
     await pantryScreen.expectTextVisible(itemName);
   });
@@ -41,7 +41,7 @@ describe('Core app flows', () => {
 
     await shoppingListScreen.navigateToTab();
     await shoppingListScreen.waitForScreen();
-    await shoppingListScreen.addItem(listItemName, 1, 'ct');
+    await shoppingListScreen.addItem(listItemName, '1', 'ct');
     await shoppingListScreen.waitForElement('shopping-list');
     await shoppingListScreen.expectTextVisible(listItemName);
   });
@@ -51,9 +51,9 @@ describe('Core app flows', () => {
     await recipesScreen.waitForScreen();
     await recipesScreen.expectVisible('recipes-search-input');
 
-    // Verify at least one card renders when data loads
+    // Verify at least one card renders when data loads (5s max)
     await waitFor(element(by.id('recipe-card-0')))
       .toBeVisible()
-      .withTimeout(15000);
+      .withTimeout(5000);
   });
 });

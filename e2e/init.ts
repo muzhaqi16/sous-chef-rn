@@ -26,9 +26,12 @@ function setupAdbReverseForLocalTesting() {
   try {
     // Check if we're running on Android
     if (device.getPlatform() === 'android') {
-      console.log('🔧 Setting up ADB reverse for local API (port 4000)...');
+      console.log('🔧 Setting up ADB reverse for local development...');
+      // Port 8081: Metro bundler
+      execSync('adb reverse tcp:8081 tcp:8081', { stdio: 'pipe' });
+      // Port 4000: Local API server
       execSync('adb reverse tcp:4000 tcp:4000', { stdio: 'pipe' });
-      console.log('✅ ADB reverse setup complete');
+      console.log('✅ ADB reverse setup complete (ports 8081, 4000)');
     }
   } catch (error) {
     console.log('⚠️ Could not setup ADB reverse (this is expected for iOS or if no emulator is connected)');

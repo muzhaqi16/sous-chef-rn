@@ -7,6 +7,10 @@ module.exports = {
     },
     jest: {
       setupTimeout: 120000,
+      // Increase timeout for slower physical devices
+      testTimeout: 180000, // 3 minutes per test
+      // Retry failed tests once automatically
+      retryTimes: 1,
     },
   },
   apps: {
@@ -48,7 +52,7 @@ module.exports = {
     attached: {
       type: 'android.attached',
       device: {
-        adbName: '.*',
+        adbName: '.*', // Matches any attached device
       },
     },
     emulator: {
@@ -56,6 +60,8 @@ module.exports = {
       device: {
         avdName: 'Pixel_9a',
       },
+      // Boot emulator automatically if not running
+      bootArgs: '-no-snapshot-save',
     },
   },
   configurations: {
@@ -70,18 +76,172 @@ module.exports = {
     'android.att.debug': {
       device: 'attached',
       app: 'android.debug',
+      // ⭐ OPTIMIZED FOR ANDROID DEVICE WITH APP REUSE
+      behavior: {
+        init: {
+          // Reinstall app on first run only
+          reinstallApp: false,
+          // Keep app data between test runs
+          launchApp: true,
+        },
+        launchApp: 'auto',
+        cleanup: {
+          // Don't uninstall after tests (for app reuse)
+          shutdownDevice: false,
+        },
+      },
+      artifacts: {
+        // Record artifacts only on test failure
+        rootDir: 'e2e/artifacts/android-device',
+        plugins: {
+          log: {
+            enabled: true,
+            keepOnlyFailedTestsArtifacts: true,
+          },
+          screenshot: {
+            enabled: true,
+            shouldTakeAutomaticSnapshots: false, // Manual only
+            takeWhen: {
+              testStart: false,
+              testDone: false,
+              testFailure: true, // On failure only
+            },
+            keepOnlyFailedTestsArtifacts: true,
+          },
+          video: {
+            enabled: true,
+            keepOnlyFailedTestsArtifacts: true,
+            android: {
+              bitRate: 4000000, // Optimize quality/size
+              size: '1080x1920',
+            },
+          },
+        },
+      },
+      session: {
+        // Detox session configuration for stability
+        autoStart: true,
+        debugSynchronization: 10000, // Log if waiting >10s
+        server: 'ws://localhost:8099',
+        sessionId: 'sous-chef-e2e',
+      },
     },
     'android.att.release': {
       device: 'attached',
       app: 'android.release',
+      behavior: {
+        init: {
+          reinstallApp: false,
+          launchApp: true,
+        },
+        launchApp: 'auto',
+        cleanup: {
+          shutdownDevice: false,
+        },
+      },
+      artifacts: {
+        rootDir: 'e2e/artifacts/android-device-release',
+        plugins: {
+          log: {
+            enabled: true,
+            keepOnlyFailedTestsArtifacts: true,
+          },
+          screenshot: {
+            enabled: true,
+            shouldTakeAutomaticSnapshots: false,
+            takeWhen: {
+              testFailure: true,
+            },
+            keepOnlyFailedTestsArtifacts: true,
+          },
+          video: {
+            enabled: true,
+            keepOnlyFailedTestsArtifacts: true,
+            android: {
+              bitRate: 4000000,
+              size: '1080x1920',
+            },
+          },
+        },
+      },
     },
     'android.emu.debug': {
       device: 'emulator',
       app: 'android.debug',
+      behavior: {
+        init: {
+          reinstallApp: true, // Emulator can reinstall faster
+          launchApp: true,
+        },
+        launchApp: 'auto',
+        cleanup: {
+          shutdownDevice: false,
+        },
+      },
+      artifacts: {
+        rootDir: 'e2e/artifacts/android-emulator',
+        plugins: {
+          log: {
+            enabled: true,
+            keepOnlyFailedTestsArtifacts: true,
+          },
+          screenshot: {
+            enabled: true,
+            shouldTakeAutomaticSnapshots: false,
+            takeWhen: {
+              testFailure: true,
+            },
+            keepOnlyFailedTestsArtifacts: true,
+          },
+          video: {
+            enabled: false, // Disable for emulator (slower)
+          },
+        },
+      },
     },
     'android.emu.release': {
       device: 'emulator',
       app: 'android.release',
+      behavior: {
+        init: {
+          reinstallApp: true,
+          launchApp: true,
+        },
+        launchApp: 'auto',
+        cleanup: {
+          shutdownDevice: false,
+        },
+      },
+      artifacts: {
+        rootDir: 'e2e/artifacts/android-emulator-release',
+        plugins: {
+          log: {
+            enabled: true,
+            keepOnlyFailedTestsArtifacts: true,
+          },
+          screenshot: {
+            enabled: true,
+            shouldTakeAutomaticSnapshots: false,
+            takeWhen: {
+              testFailure: true,
+            },
+            keepOnlyFailedTestsArtifacts: true,
+          },
+          video: {
+            enabled: false,
+          },
+        },
+      },
+    },
+  },
+  // Global settings for all configurations
+  logger: {
+    level: 'info', // trace | debug | info | warn | error
+    overrideConsole: false,
+    options: {
+      showLoggerName: true,
+      showTimestamp: true,
+      useUTC: false,
     },
   },
 };

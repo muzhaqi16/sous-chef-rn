@@ -22,16 +22,17 @@ export abstract class BaseScreen {
   }
 
   /**
-   * Wait for the screen to be visible
+   * Wait for the screen to be visible (5 second max - screens appear in 1-2s)
    */
-  async waitForScreen(timeout: number = 10000) {
+  async waitForScreen(timeout: number = 5000) {
     await waitFor(this.screen).toBeVisible().withTimeout(timeout);
   }
 
   /**
-   * Assert that the screen is visible
+   * Assert that the screen is visible (wait first, then check)
    */
   async expectScreenVisible() {
+    await this.waitForScreen();
     await expect(this.screen).toBeVisible();
   }
 
@@ -57,16 +58,20 @@ export abstract class BaseScreen {
   }
 
   /**
-   * Tap element by test ID
+   * Tap element by test ID (wait for element first)
    */
   async tapByID(testID: string) {
+    await this.waitForElement(testID);
     await this.getElementById(testID).tap();
   }
 
   /**
-   * Tap element by text
+   * Tap element by text (wait for element first)
    */
   async tapByText(text: string) {
+    await waitFor(this.getElementByText(text))
+      .toBeVisible()
+      .withTimeout(5000);
     await this.getElementByText(text).tap();
   }
 
@@ -123,16 +128,18 @@ export abstract class BaseScreen {
   }
 
   /**
-   * Expect element to be visible
+   * Expect element to be visible (wait first, then check)
    */
   async expectVisible(testID: string) {
+    await this.waitForElement(testID);
     await expect(this.getElementById(testID)).toBeVisible();
   }
 
   /**
-   * Expect element to not be visible
+   * Expect element to not be visible (wait first, then check)
    */
   async expectNotVisible(testID: string) {
+    await this.waitForElementToDisappear(testID);
     await expect(this.getElementById(testID)).not.toBeVisible();
   }
 
@@ -140,13 +147,19 @@ export abstract class BaseScreen {
    * Expect element to exist (may not be visible)
    */
   async expectExists(testID: string) {
+    await waitFor(this.getElementById(testID))
+      .toExist()
+      .withTimeout(5000);
     await expect(this.getElementById(testID)).toExist();
   }
 
   /**
-   * Expect text to be visible
+   * Expect text to be visible (wait first, then check)
    */
   async expectTextVisible(text: string) {
+    await waitFor(this.getElementByText(text))
+      .toBeVisible()
+      .withTimeout(5000);
     await expect(this.getElementByText(text)).toBeVisible();
   }
 

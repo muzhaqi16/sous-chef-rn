@@ -56,14 +56,15 @@ export async function bootstrapAuthenticatedSession() {
   await loginScreen.loginAsTestUser();
 
   await skipOptionalOnboardingScreens();
-  await pantryScreen.waitForScreen(10000);
+  await pantryScreen.waitForScreen(); // Uses default 5s timeout
 }
 
 export async function relaunchToHomeTab() {
-  await launchAppWithFabricWorkaround({
-    newInstance: false,
-    permissions: { notifications: 'YES', camera: 'YES' },
-  });
+  // For app reuse: Just reload React Native instead of terminating app
+  await device.reloadReactNative();
+
+  // Wait for app to reload
+  await new Promise(resolve => setTimeout(resolve, 2000));
 
   await dismissBiometricPromptIfPresent();
 
@@ -71,5 +72,5 @@ export async function relaunchToHomeTab() {
     await element(by.id('tab-pantry')).tap();
   } catch {}
 
-  await pantryScreen.waitForScreen(10000);
+  await pantryScreen.waitForScreen(); // Uses default 5s timeout
 }

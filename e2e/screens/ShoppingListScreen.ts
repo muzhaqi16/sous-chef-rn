@@ -74,8 +74,9 @@ export class ShoppingListScreen extends BaseScreen {
 
   /**
    * Add new item to shopping list
+   * @param quantity - Can be number, fraction (e.g., "1 1/4"), or decimal (e.g., "0.25")
    */
-  async addItem(name: string, quantity?: number, unit?: string) {
+  async addItem(name: string, quantity?: string | number, unit?: string) {
     await this.tapAddButton();
 
     // Wait for add item modal/screen
@@ -85,7 +86,11 @@ export class ShoppingListScreen extends BaseScreen {
     await this.clearAndType('add-item-name-input', name);
 
     if (quantity !== undefined) {
-      await this.clearAndType('add-item-quantity-input', quantity.toString());
+      const quantityStr = typeof quantity === 'number' ? quantity.toString() : quantity;
+      const quantityInput = element(by.id('add-item-quantity-input'));
+
+      // Use replaceText instead of clearAndType for better reliability
+      await quantityInput.replaceText(quantityStr);
     }
 
     if (unit) {
@@ -93,24 +98,37 @@ export class ShoppingListScreen extends BaseScreen {
       // when text length >= 2 (minSearchLength)
       await this.clearAndType('add-item-unit-picker', unit);
 
-      // The bottom sheet should now be open with the search input
-      // Wait a moment for the bottom sheet animation
-      await new Promise(resolve => setTimeout(resolve, 500));
-
       // Press enter to confirm the unit
       await element(by.id('add-item-unit-picker')).tapReturnKey();
-
-      // Wait for the bottom sheet to fully dismiss
-      await new Promise(resolve => setTimeout(resolve, 500));
     }
 
     // Submit
     await this.tapByID('add-item-submit-button');
 
-    // Wait for modal to close (increased timeout for GraphQL mutation)
+    // Check if error modal appeared (e.g., "Please enter a valid quantity")
+    try {
+      await waitFor(element(by.text('Please enter a valid quantity')))
+        .toBeVisible()
+        .withTimeout(2000);
+
+      // Error modal appeared - dismiss it and throw error
+      await element(by.text('OK')).tap();
+      throw new Error(
+        `Failed to add shopping list item: Invalid quantity "${quantity}". ` +
+        `Expected formats: "1", "1.5", "1/4", or "1 1/4"`
+      );
+    } catch (error) {
+      // If it's our thrown error, re-throw it
+      if (error instanceof Error && error.message.includes('Failed to add shopping list item')) {
+        throw error;
+      }
+      // Otherwise, error modal didn't appear (good!), continue
+    }
+
+    // Wait for modal to close (5s max)
     await waitFor(element(by.id('add-item-modal')))
       .not.toBeVisible()
-      .withTimeout(10000);
+      .withTimeout(5000);
   }
 
   /**

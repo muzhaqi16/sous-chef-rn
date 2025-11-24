@@ -1,0 +1,2168 @@
+20:49:59.795 detox[97894] B node_modules/.bin/detox test --configuration android.att.debug --reuse
+  data: {
+    "id": "25b0a580-9941-0a2c-4d7f-85b9cd733ec4",
+    "detoxConfig": {
+      "configurationName": "android.att.debug",
+      "apps": {
+        "default": {
+          "type": "android.apk",
+          "binaryPath": "android/app/build/outputs/apk/debug/app-debug.apk",
+          "testBinaryPath": "android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk",
+          "build": "cd android && ./gradlew assembleDebug assembleAndroidTest -DtestBuildType=debug"
+        }
+      },
+      "artifacts": {
+        "rootDir": "e2e/artifacts/android-device/android.att.debug.2025-11-24 01-49-59Z",
+        "plugins": {
+          "log": {
+            "enabled": true,
+            "keepOnlyFailedTestsArtifacts": true
+          },
+          "screenshot": {
+            "enabled": true,
+            "shouldTakeAutomaticSnapshots": false,
+            "takeWhen": {
+              "testStart": false,
+              "testDone": false,
+              "testFailure": true
+            },
+            "keepOnlyFailedTestsArtifacts": true
+          },
+          "video": {
+            "enabled": true,
+            "keepOnlyFailedTestsArtifacts": true,
+            "android": {
+              "bitRate": 4000000,
+              "size": "1080x1920"
+            }
+          },
+          "instruments": {
+            "enabled": false,
+            "keepOnlyFailedTestsArtifacts": false
+          },
+          "uiHierarchy": {
+            "enabled": false,
+            "keepOnlyFailedTestsArtifacts": false
+          }
+        }
+      },
+      "behavior": {
+        "init": {
+          "keepLockFile": false,
+          "reinstallApp": false,
+          "launchApp": true,
+          "exposeGlobals": true
+        },
+        "cleanup": {
+          "shutdownDevice": false
+        },
+        "launchApp": "auto"
+      },
+      "cli": {
+        "configuration": "android.att.debug",
+        "reuse": true,
+        "start": true
+      },
+      "commands": [
+        {
+          "appName": "default",
+          "build": "cd android && ./gradlew assembleDebug assembleAndroidTest -DtestBuildType=debug"
+        }
+      ],
+      "device": {
+        "type": "android.attached",
+        "device": {
+          "adbName": ".*"
+        }
+      },
+      "logger": {
+        "level": "info",
+        "overrideConsole": false,
+        "options": {
+          "showLoggerName": true,
+          "showPid": true,
+          "showLevel": false,
+          "showMetadata": false,
+          "basepath": "/home/tani/Desktop/sous-chef-rn/node_modules/detox/src",
+          "prefixers": {},
+          "stringifiers": {},
+          "showTimestamp": true,
+          "useUTC": false
+        }
+      },
+      "testRunner": {
+        "retries": 0,
+        "forwardEnv": false,
+        "detached": false,
+        "bail": false,
+        "noRetryArgs": [
+          "shard"
+        ],
+        "jest": {
+          "setupTimeout": 120000,
+          "teardownTimeout": 30000,
+          "retryAfterCircusRetries": false,
+          "reportWorkerAssign": true,
+          "testTimeout": 180000,
+          "retryTimes": 1
+        },
+        "args": {
+          "$0": "jest",
+          "_": [],
+          "config": "e2e/config/jest.config.js",
+          "--": []
+        }
+      },
+      "session": {
+        "autoStart": true,
+        "debugSynchronization": 10000,
+        "server": "ws://localhost:8099",
+        "sessionId": "sous-chef-e2e"
+      }
+    },
+    "detoxIPCServer": "primary-97894",
+    "testResults": [],
+    "testSessionIndex": 0,
+    "workersCount": 0
+  }
+20:49:59.797 detox[97894] i Server path not specified, so defaulting to ipc.config.socketRoot + ipc.config.appspace + ipc.config.id /tmp/detox.primary-97894
+20:49:59.797 detox[97894] i starting server on  /tmp/detox.primary-97894 
+20:49:59.798 detox[97894] i starting TLS server false
+20:49:59.798 detox[97894] i starting server as Unix || Windows Socket
+20:49:59.799 detox[97894] i Detox server listening on localhost:8099...
+20:49:59.800 detox[97894] i Serialized the session state at: /tmp/25b0a580-9941-0a2c-4d7f-85b9cd733ec4.detox.json
+20:49:59.800 detox[97894] B jest --config e2e/config/jest.config.js
+20:49:59.938 detox[97918] i Service path not specified, so defaulting to ipc.config.socketRoot + ipc.config.appspace + id 
+20:49:59.938 detox[97918] i requested connection to  primary-97894 /tmp/detox.primary-97894
+20:49:59.938 detox[97918] i Connecting client on Unix Socket : /tmp/detox.primary-97894
+20:49:59.939 detox[97894] i ## socket connection to server detected ##
+20:49:59.939 detox[97894] i received event of :  registerContext { id: 'secondary-97918' }
+20:49:59.939 detox[97894] i dispatching event to socket  :  registerContextDone {
+  testResults: [],
+  testSessionIndex: 0,
+  unsafe_earlyTeardown: undefined
+}
+20:49:59.939 detox[97918] i retrying reset
+20:49:59.939 detox[97918] i dispatching event to  primary-97894 /tmp/detox.primary-97894  :  registerContext , { id: 'secondary-97918' }
+20:49:59.940 detox[97918] i ## received events ##
+20:49:59.940 detox[97918] i detected event registerContextDone { testResults: [], testSessionIndex: 0 }
+20:49:59.969 detox[97918] B e2e/tests/smoke.e2e.ts
+20:49:59.974 detox[97918] B set up environment
+20:49:59.974 detox[97918] i dispatching event to  primary-97894 /tmp/detox.primary-97894  :  registerWorker , { workerId: 'w1' }
+20:49:59.975 detox[97894] i received event of :  registerWorker { workerId: 'w1' }
+20:49:59.975 detox[97894] i dispatching event to socket  :  registerWorkerDone { workersCount: 1 }
+20:49:59.975 detox[97894] i broadcasting event to all known sockets listening to  /tmp/detox.primary-97894  :   sessionStateUpdate { workersCount: 1 }
+20:49:59.975 detox[97918] i ## received events ##
+20:49:59.975 detox[97918] i detected event registerWorkerDone { workersCount: 1 }
+20:50:00.028 detox[97918] i ## received events ##
+20:50:00.028 detox[97918] i detected event sessionStateUpdate { workersCount: 1 }
+20:50:00.030 detox[97894] B connection :8099<->:38196
+20:50:00.030 detox[97918] i opened web socket to: ws://localhost:8099
+20:50:00.031 detox[97918] i send message
+  data: {"type":"login","params":{"sessionId":"sous-chef-e2e","role":"tester"},"messageId":0}
+20:50:00.032 detox[97894] i get
+  data: {"type":"login","params":{"sessionId":"sous-chef-e2e","role":"tester"},"messageId":0}
+20:50:00.032 detox[97894] i created session sous-chef-e2e
+20:50:00.032 detox[97894] i send
+  data: {
+    "type": "loginSuccess",
+    "params": {
+      "testerConnected": true,
+      "appConnected": false
+    },
+    "messageId": 0
+  }
+20:50:00.032 detox[97894] i tester joined session sous-chef-e2e
+20:50:00.032 detox[97918] i get message
+  data: {"type":"loginSuccess","params":{"testerConnected":true,"appConnected":false},"messageId":0}
+   
+20:50:00.042 detox[97894] i received event of :  allocateDevice {
+  deviceConfig: { type: 'android.attached', device: { adbName: '.*' } }
+}
+20:50:00.042 detox[97918] i dispatching event to  primary-97894 /tmp/detox.primary-97894  :  allocateDevice , {
+  deviceConfig: { type: 'android.attached', device: { adbName: '.*' } }
+}
+20:50:00.049 detox[97894] B init
+  args: ()
+20:50:00.050 detox[97894] E init
+20:50:00.050 detox[97894] B allocate
+  data: {
+    "type": "android.attached",
+    "device": {
+      "adbName": ".*"
+    }
+  }
+20:50:00.051 detox[97894] i "/home/tani/Android/Sdk/platform-tools/adb"  devices
+20:50:00.054 detox[97894] i List of devices attached
+R5CT51KPEBM	device
+
+
+20:50:00.054 detox[97894] i Found a matching & free device R5CT51KPEBM
+20:50:00.054 detox[97894] i settled on R5CT51KPEBM
+  data: {
+    "id": "R5CT51KPEBM",
+    "adbName": "R5CT51KPEBM"
+  }
+20:50:00.054 detox[97894] E allocate
+20:50:00.054 detox[97894] B post-allocate: R5CT51KPEBM
+  data: {
+    "id": "R5CT51KPEBM",
+    "adbName": "R5CT51KPEBM"
+  }
+20:50:00.055 detox[97894] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell "getprop ro.build.version.sdk"
+20:50:00.094 detox[97894] i 36
+
+20:50:00.094 detox[97894] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell "dumpsys power | grep \"^[ ]*m[UW].*=\""
+20:50:00.400 detox[97894] i   mWakefulness=Dozing
+  mWakefulnessChanging=false
+  mUseAutoSuspend=true
+  mWakeLockSummary=0xc1
+  mWakeUpWhenPluggedOrUnpluggedConfig=true
+  mWakeUpWhenPluggedOrUnpluggedInTheaterModeConfig=false
+  mUserActivityTimeoutOverrideFromWindowManager=-1
+  mUserActivityTimeoutForDexOverrideFromWindowManager=-1
+  mUserInactiveOverrideFromWindowManager=false
+  mUseNormalBrightnessForDoze=false
+  mUserId=0
+  mWakeLockSummary=0xc1
+
+20:50:00.401 detox[97894] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell "input keyevent KEYCODE_POWER"
+20:50:00.484 detox[97894] i 
+20:50:00.484 detox[97894] E post-allocate: R5CT51KPEBM
+20:50:00.484 detox[97894] i dispatching event to socket  :  allocateDeviceDone { deviceCookie: { id: 'R5CT51KPEBM', adbName: 'R5CT51KPEBM' } }
+20:50:00.484 detox[97918] i ## received events ##
+20:50:00.485 detox[97918] i detected event allocateDeviceDone { deviceCookie: { id: 'R5CT51KPEBM', adbName: 'R5CT51KPEBM' } }
+20:50:00.490 detox[97918] B onBootDevice
+  args: ({"deviceId":"R5CT51KPEBM"})
+20:50:00.490 detox[97918] E onBootDevice
+20:50:00.490 detox[97918] B installUtilBinaries
+  args: ()
+20:50:00.490 detox[97918] E installUtilBinaries
+20:50:00.491 detox[97918] B selectApp
+  args: ("default")
+20:50:00.493 detox[97918] i "/home/tani/Android/Sdk/build-tools/36.1.0-rc1/aapt" dump badging "/home/tani/Desktop/sous-chef-rn/android/app/build/outputs/apk/debug/app-debug.apk"
+20:50:00.496 detox[97918] i package: name='dev.souschef.app' versionCode='20' versionName='1.7.17' platformBuildVersionName='16' platformBuildVersionCode='36' compileSdkVersion='36' compileSdkVersionCodename='16'
+sdkVersion:'24'
+targetSdkVersion:'36'
+uses-permission: name='android.permission.INTERNET'
+uses-permission: name='android.permission.CAMERA'
+uses-permission: name='android.permission.VIBRATE'
+uses-permission: name='android.permission.USE_BIOMETRIC'
+uses-permission: name='android.permission.USE_FINGERPRINT'
+uses-permission: name='android.permission.ACCESS_NETWORK_STATE'
+uses-permission: name='android.permission.ACCESS_WIFI_STATE'
+uses-permission: name='android.permission.SYSTEM_ALERT_WINDOW'
+uses-permission: name='android.permission.WAKE_LOCK'
+uses-permission: name='android.permission.RECEIVE_BOOT_COMPLETED'
+uses-permission: name='android.permission.FOREGROUND_SERVICE'
+uses-permission: name='dev.souschef.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION'
+uses-permission: name='android.permission.POST_NOTIFICATIONS'
+uses-permission: name='android.permission.SCHEDULE_EXACT_ALARM'
+uses-permission: name='android.permission.BROADCAST_CLOSE_SYSTEM_DIALOGS' maxSdkVersion='30'
+uses-permission: name='android.permission.ACCESS_NOTIFICATION_POLICY'
+uses-permission: name='com.google.android.finsky.permission.BIND_GET_INSTALL_REFERRER_SERVICE'
+application-label:'Sous Chef'
+application-label-af:'Sous Chef'
+application-label-am:'Sous Chef'
+application-label-ar:'Sous Chef'
+application-label-as:'Sous Chef'
+application-label-az:'Sous Chef'
+application-label-be:'Sous Chef'
+application-label-bg:'Sous Chef'
+application-label-bn:'Sous Chef'
+application-label-bs:'Sous Chef'
+application-label-ca:'Sous Chef'
+application-label-cs:'Sous Chef'
+application-label-da:'Sous Chef'
+application-label-de:'Sous Chef'
+application-label-el:'Sous Chef'
+application-label-en-AU:'Sous Chef'
+application-label-en-CA:'Sous Chef'
+application-label-en-GB:'Sous Chef'
+application-label-en-IN:'Sous Chef'
+application-label-en-XC:'Sous Chef'
+application-label-es:'Sous Chef'
+application-label-es-419:'Sous Chef'
+application-label-es-ES:'Sous Chef'
+application-label-es-US:'Sous Chef'
+application-label-et:'Sous Chef'
+application-label-eu:'Sous Chef'
+application-label-fa:'Sous Chef'
+application-label-fi:'Sous Chef'
+application-label-fr:'Sous Chef'
+application-label-fr-CA:'Sous Chef'
+application-label-gl:'Sous Chef'
+application-label-gu:'Sous Chef'
+application-label-hi:'Sous Chef'
+application-label-hr:'Sous Chef'
+application-label-hu:'Sous Chef'
+application-label-hy:'Sous Chef'
+application-label-in:'Sous Chef'
+application-label-is:'Sous Chef'
+application-label-it:'Sous Chef'
+application-label-iw:'Sous Chef'
+application-label-ja:'Sous Chef'
+application-label-ka:'Sous Chef'
+application-label-kk:'Sous Chef'
+application-label-km:'Sous Chef'
+application-label-kn:'Sous Chef'
+application-label-ko:'Sous Chef'
+application-label-ky:'Sous Chef'
+application-label-lo:'Sous Chef'
+application-label-lt:'Sous Chef'
+application-label-lv:'Sous Chef'
+application-label-mk:'Sous Chef'
+application-label-ml:'Sous Chef'
+application-label-mn:'Sous Chef'
+application-label-mr:'Sous Chef'
+application-label-ms:'Sous Chef'
+application-label-my:'Sous Chef'
+application-label-nb:'Sous Chef'
+application-label-ne:'Sous Chef'
+application-label-nl:'Sous Chef'
+application-label-or:'Sous Chef'
+application-label-pa:'Sous Chef'
+application-label-pl:'Sous Chef'
+application-label-pt:'Sous Chef'
+application-label-pt-BR:'Sous Chef'
+application-label-pt-PT:'Sous Chef'
+application-label-ro:'Sous Chef'
+application-label-ru:'Sous Chef'
+application-label-si:'Sous Chef'
+application-label-sk:'Sous Chef'
+application-label-sl:'Sous Chef'
+application-label-sq:'Sous Chef'
+application-label-sr:'Sous Chef'
+application-label-sr-Latn:'Sous Chef'
+application-label-sv:'Sous Chef'
+application-label-sw:'Sous Chef'
+application-label-ta:'Sous Chef'
+application-label-te:'Sous Chef'
+application-label-th:'Sous Chef'
+application-label-tl:'Sous Chef'
+application-label-tr:'Sous Chef'
+application-label-uk:'Sous Chef'
+application-label-ur:'Sous Chef'
+application-label-uz:'Sous Chef'
+application-label-vi:'Sous Chef'
+application-label-zh-CN:'Sous Chef'
+application-label-zh-HK:'Sous Chef'
+application-label-zh-TW:'Sous Chef'
+application-label-zu:'Sous Chef'
+application-icon-120:'res/mipmap-mdpi-v4/ic_launcher.png'
+application-icon-160:'res/mipmap-mdpi-v4/ic_launcher.png'
+application-icon-240:'res/mipmap-hdpi-v4/ic_launcher.png'
+application-icon-320:'res/mipmap-xhdpi-v4/ic_launcher.png'
+application-icon-480:'res/mipmap-xxhdpi-v4/ic_launcher.png'
+application-icon-640:'res/mipmap-xxxhdpi-v4/ic_launcher.png'
+application-icon-65534:'res/mipmap-mdpi-v4/ic_launcher.png'
+application: label='Sous Chef' icon='res/mipmap-mdpi-v4/ic_launcher.png'
+application-debuggable
+launchable-activity: name='dev.souschef.app.MainActivity'  label='Sous Chef' icon=''
+uses-library-not-required:'androidx.camera.extensions.impl'
+feature-group: label=''
+  uses-feature: name='android.hardware.camera'
+  uses-implied-feature: name='android.hardware.camera' reason='requested android.permission.CAMERA permission'
+  uses-feature: name='android.hardware.faketouch'
+  uses-implied-feature: name='android.hardware.faketouch' reason='default feature for all apps'
+  uses-feature: name='android.hardware.wifi'
+  uses-implied-feature: name='android.hardware.wifi' reason='requested android.permission.ACCESS_WIFI_STATE permission'
+main
+other-activities
+other-receivers
+other-services
+supports-screens: 'small' 'normal' 'large' 'xlarge'
+supports-any-density: 'true'
+locales: '--_--' 'af' 'am' 'ar' 'as' 'az' 'be' 'bg' 'bn' 'bs' 'ca' 'cs' 'da' 'de' 'el' 'en-AU' 'en-CA' 'en-GB' 'en-IN' 'en-XC' 'es' 'es-419' 'es-ES' 'es-US' 'et' 'eu' 'fa' 'fi' 'fr' 'fr-CA' 'gl' 'gu' 'hi' 'hr' 'hu' 'hy' 'in' 'is' 'it' 'iw' 'ja' 'ka' 'kk' 'km' 'kn' 'ko' 'ky' 'lo' 'lt' 'lv' 'mk' 'ml' 'mn' 'mr' 'ms' 'my' 'nb' 'ne' 'nl' 'or' 'pa' 'pl' 'pt' 'pt-BR' 'pt-PT' 'ro' 'ru' 'si' 'sk' 'sl' 'sq' 'sr' 'sr-Latn' 'sv' 'sw' 'ta' 'te' 'th' 'tl' 'tr' 'uk' 'ur' 'uz' 'vi' 'zh-CN' 'zh-HK' 'zh-TW' 'zu'
+densities: '120' '160' '240' '320' '480' '640' '65534'
+native-code: 'arm64-v8a' 'armeabi-v7a' 'x86' 'x86_64'
+
+20:50:00.497 detox[97918] E selectApp
+20:50:00.497 detox[97918] E set up environment
+20:50:00.659 detox[97918] i smoke.e2e.ts is assigned to AttachedDevice:R5CT51KPEBM
+20:50:00.659 detox[97918] B run the tests
+20:50:00.659 detox[97918] B onRunDescribeStart
+  args: ({"name":"ROOT_DESCRIBE_BLOCK"})
+20:50:00.660 detox[97918] E onRunDescribeStart
+20:50:00.660 detox[97918] B beforeAll
+20:50:00.672 detox[97918] E beforeAll
+20:50:00.672 detox[97918] B Smoke Tests
+20:50:00.672 detox[97918] B onRunDescribeStart
+  args: ({"name":"Smoke Tests"})
+20:50:00.672 detox[97918] E onRunDescribeStart
+20:50:00.672 detox[97918] B beforeAll
+20:50:00.673 detox[97918] B launchApp
+  args: ({"newInstance":true,"permissions":{"notifications":"YES"},"launchArgs":{"detoxEnableSynchronization":0}})
+20:50:00.673 detox[97918] B terminateApp
+  args: ("dev.souschef.app")
+20:50:00.673 detox[97918] B onBeforeTerminateApp
+  args: ({"deviceId":"R5CT51KPEBM","bundleId":"dev.souschef.app"})
+20:50:00.673 detox[97918] E onBeforeTerminateApp
+20:50:00.673 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell "am force-stop dev.souschef.app"
+20:50:00.793 detox[97918] i 
+20:50:00.793 detox[97918] B onTerminateApp
+  args: ({"deviceId":"R5CT51KPEBM","bundleId":"dev.souschef.app"})
+20:50:00.794 detox[97918] E onTerminateApp
+20:50:00.794 detox[97918] E terminateApp
+20:50:00.794 detox[97918] B onBeforeLaunchApp
+  args: ({"deviceId":"R5CT51KPEBM","bundleId":"dev.souschef.app","launchArgs":{"detoxServer":"ws://localhost:8099","detoxSessionId":"sous-chef-e2e","detoxEnableSynchronization":0}})
+20:50:00.794 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell "date +\"%m-%d %T.000\""
+20:50:00.866 detox[97918] i 11-23 20:50:00.000
+
+20:50:00.866 detox[97918] E onBeforeLaunchApp
+20:50:00.866 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM reverse tcp:8099 tcp:8099
+20:50:00.873 detox[97918] i 8099
+
+20:50:00.873 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell "pm list instrumentation"
+20:50:00.969 detox[97918] i instrumentation:com.aa.android/androidx.test.runner.AndroidJUnitRunner (target=com.aa.android.flight.test)
+instrumentation:com.samsung.android.app.dressroom/androidx.test.runner.AndroidJUnitRunner (target=com.samsung.android.app.dressroom)
+instrumentation:dev.souschef.app.test/androidx.test.runner.AndroidJUnitRunner (target=dev.souschef.app)
+
+20:50:00.971 detox[97918] i /home/tani/Android/Sdk/platform-tools/adb -s R5CT51KPEBM shell am instrument -w -r -e detoxServer ws://localhost:8099 -e detoxSessionId sous-chef-e2e -e detoxEnableSynchronization 0 -e debug false dev.souschef.app.test/androidx.test.runner.AndroidJUnitRunner
+20:50:01.471 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell "ps | grep \"dev\.souschef\.app$\""
+20:50:01.621 detox[97918] i u0_a1170       382  1815   19202232 115144 0                   0 R dev.souschef.app
+
+20:50:01.621 detox[97918] B onLaunchApp
+  args: ({"deviceId":"R5CT51KPEBM","bundleId":"dev.souschef.app","launchArgs":{"detoxServer":"ws://localhost:8099","detoxSessionId":"sous-chef-e2e","detoxEnableSynchronization":0},"pid":382})
+20:50:01.622 detox[97918] i starting ADBLogcatRecording
+20:50:01.623 detox[97918] i /home/tani/Android/Sdk/platform-tools/adb -s R5CT51KPEBM shell "logcat --pid=382 -f /sdcard/2050040_0.log"
+20:50:01.623 detox[97918] E onLaunchApp
+20:50:01.924 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell du /sdcard/2050040_0.log
+20:50:01.966 detox[97918] i 4	/sdcard/2050040_0.log
+
+20:50:03.657 detox[97918] i INSTRUMENTATION_STATUS: class=dev.souschef.app.DetoxTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stream=
+dev.souschef.app.DetoxTest:
+INSTRUMENTATION_STATUS: test=runDetoxTests
+INSTRUMENTATION_STATUS_CODE: 1
+
+20:50:03.777 detox[97894] B connection :8099<->:39583
+20:50:03.786 detox[97894] i get
+  data: {"messageId":0,"type":"login","params":{"role":"app","sessionId":"sous-chef-e2e"}}
+20:50:03.787 detox[97894] i send
+  data: {
+    "messageId": 0,
+    "type": "loginSuccess",
+    "params": {
+      "testerConnected": true,
+      "appConnected": true
+    }
+  }
+20:50:03.787 detox[97894] i app joined session sous-chef-e2e
+20:50:03.787 detox[97894] i send
+  data: {
+    "type": "appConnected"
+  }
+20:50:03.787 detox[97894] i get
+  data: {"type":"isReady","params":{},"messageId":-1000}
+20:50:03.787 detox[97918] i get message
+  data: {"type":"appConnected"}
+   
+20:50:03.787 detox[97918] i send message
+  data: {"type":"isReady","params":{},"messageId":-1000}
+20:50:03.788 detox[97894] i send
+  data: {
+    "type": "isReady",
+    "params": {},
+    "messageId": -1000
+  }
+20:50:13.789 detox[97894] i get
+  data: {"type":"currentStatus","params":{},"messageId":1}
+20:50:13.789 detox[97894] i send
+  data: {
+    "type": "currentStatus",
+    "params": {},
+    "messageId": 1
+  }
+20:50:13.789 detox[97918] i send message
+  data: {"type":"currentStatus","params":{},"messageId":1}
+20:50:18.789 detox[97918] i Failed to execute the current status query. The pending request #1 ("currentStatus") has been rejected due to the following error:
+
+The tester has not received a response within 5000ms timeout to the message:
+
+CurrentStatus {
+  type: 'currentStatus',
+  params: {},
+  messageId: 1
+}
+    at listOnTimeout (node:internal/timers:608:17)
+    at processTimers (node:internal/timers:543:7) {
+  name: 'DetoxRuntimeError'
+}
+20:51:04.447 detox[97918] i INSTRUMENTATION_STATUS: class=dev.souschef.app.DetoxTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=1
+INSTRUMENTATION_STATUS: stack=com.wix.detox.common.DetoxErrors$DetoxRuntimeException: Waited for the new RN-context for too long! (60 seconds)
+If you think that's not long enough, consider applying a custom Detox runtime-config in DetoxTest.runTests().
+	at com.wix.detox.reactnative.ReactNativeLoadingMonitor.awaitNewRNContext(ReactNativeLoadingMonitor.kt:54)
+	at com.wix.detox.reactnative.ReactNativeLoadingMonitor.getNewContext(ReactNativeLoadingMonitor.kt:26)
+	at com.wix.detox.reactnative.ReactNativeExtension.awaitNewReactNativeContext(ReactNativeExtension.kt:127)
+	at com.wix.detox.reactnative.ReactNativeExtension.waitForRNBootstrap(ReactNativeExtension.kt:37)
+	at com.wix.detox.DetoxMain.launchActivity(DetoxMain.kt:133)
+	at com.wix.detox.DetoxMain.launchActivityOnCue(DetoxMain.kt:55)
+	at com.wix.detox.DetoxMain.run(DetoxMain.kt:35)
+	at com.wix.detox.Detox.runTests(Detox.java:127)
+	at com.wix.detox.Detox.runTests(Detox.java:113)
+	at com.wix.detox.Detox.runTests(Detox.java:84)
+	at dev.souschef.app.DetoxTest.runDetoxTests(DetoxTest.java:21)
+
+INSTRUMENTATION_STATUS: stream=
+Error in runDetoxTests(dev.souschef.app.DetoxTest):
+com.wix.detox.common.DetoxErrors$DetoxRuntimeException: Waited for the new RN-context for too long! (60 seconds)
+If you think that's not long enough, consider applying a custom Detox runtime-config in DetoxTest.runTests().
+	at com.wix.detox.reactnative.ReactNativeLoadingMonitor.awaitNewRNContext(ReactNativeLoadingMonitor.kt:54)
+	at com.wix.detox.reactnative.ReactNativeLoadingMonitor.getNewContext(ReactNativeLoadingMonitor.kt:26)
+	at com.wix.detox.reactnative.ReactNativeExtension.awaitNewReactNativeContext(ReactNativeExtension.kt:127)
+	at com.wix.detox.reactnative.ReactNativeExtension.waitForRNBootstrap(ReactNativeExtension.kt:37)
+	at com.wix.detox.DetoxMain.launchActivity(DetoxMain.kt:133)
+	at com.wix.detox.DetoxMain.launchActivityOnCue(DetoxMain.kt:55)
+	at com.wix.detox.DetoxMain.run(DetoxMain.kt:35)
+	at com.wix.detox.Detox.runTests(Detox.java:127)
+	at com.wix.detox.Detox.runTests(Detox.java:113)
+	at com.wix.detox.Detox.runTests(Detox.java:84)
+	at dev.souschef.app.DetoxTest.runDetoxTests(DetoxTest.java:21)
+
+INSTRUMENTATION_STATUS: test=runDetoxTests
+INSTRUMENTATION_STATUS_CODE: -2
+
+20:51:04.479 detox[97894] i get
+  data: {"messageId":-1000,"type":"ready","params":{}}
+20:51:04.479 detox[97894] i send
+  data: {
+    "messageId": -1000,
+    "type": "ready",
+    "params": {}
+  }
+20:51:04.479 detox[97918] i get message
+  data: {"messageId":-1000,"type":"ready","params":{}}
+   
+20:51:04.480 detox[97918] B onAppReady
+  args: ({"deviceId":"R5CT51KPEBM","bundleId":"dev.souschef.app","pid":382})
+20:51:04.480 detox[97918] E onAppReady
+20:51:04.480 detox[97918] E launchApp
+20:51:04.517 detox[97894] i get
+  data: {"messageId":1,"type":"currentStatusResult","params":{"status":{"app_status":"idle"}}}
+20:51:04.517 detox[97894] i send
+  data: {
+    "messageId": 1,
+    "type": "currentStatusResult",
+    "params": {
+      "status": {
+        "app_status": "idle"
+      }
+    }
+  }
+20:51:04.517 detox[97918] i get message
+  data: {"messageId":1,"type":"currentStatusResult","params":{"status":{"app_status":"idle"}}}
+   
+20:51:05.385 detox[97918] i INSTRUMENTATION_RESULT: stream=
+
+Time: 61.713
+There was 1 failure:
+1) runDetoxTests(dev.souschef.app.DetoxTest)
+com.wix.detox.common.DetoxErrors$DetoxRuntimeException: Waited for the new RN-context for too long! (60 seconds)
+If you think that's not long enough, consider applying a custom Detox runtime-config in DetoxTest.runTests().
+	at com.wix.detox.reactnative.ReactNativeLoadingMonitor.awaitNewRNContext(ReactNativeLoadingMonitor.kt:54)
+	at com.wix.detox.reactnative.ReactNativeLoadingMonitor.getNewContext(ReactNativeLoadingMonitor.kt:26)
+	at com.wix.detox.reactnative.ReactNativeExtension.awaitNewReactNativeContext(ReactNativeExtension.kt:127)
+	at com.wix.detox.reactnative.ReactNativeExtension.waitForRNBootstrap(ReactNativeExtension.kt:37)
+	at com.wix.detox.DetoxMain.launchActivity(DetoxMain.kt:133)
+	at com.wix.detox.DetoxMain.launchActivityOnCue(DetoxMain.kt:55)
+	at com.wix.detox.DetoxMain.run(DetoxMain.kt:35)
+	at com.wix.detox.Detox.runTests(Detox.java:127)
+	at com.wix.detox.Detox.runTests(Detox.java:113)
+	at com.wix.detox.Detox.runTests(Detox.java:84)
+	at dev.souschef.app.DetoxTest.runDetoxTests(DetoxTest.java:21)
+
+FAILURES!!!
+Tests run: 1,  Failures: 1
+
+
+INSTRUMENTATION_CODE: -1
+
+20:51:05.414 detox[97918] i /home/tani/Android/Sdk/platform-tools/adb -s R5CT51KPEBM shell am instrument -w -r -e detoxServer ws://localhost:8099 -e detoxSessionId sous-chef-e2e -e detoxEnableSynchronization 0 -e debug false dev.souschef.app.test/androidx.test.runner.AndroidJUnitRunner exited with code #0
+20:51:05.414 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM reverse --remove tcp:8099
+20:51:05.421 detox[97918] i 
+20:51:05.471 detox[97894] i app exited session sous-chef-e2e
+20:51:05.471 detox[97894] i send
+  data: {
+    "type": "appDisconnected"
+  }
+20:51:05.471 detox[97894] E connection :8099<->:39583
+20:51:05.471 detox[97918] i get message
+  data: {"type":"appDisconnected"}
+   
+20:51:07.481 detox[97918] B enableSynchronization
+  args: ()
+20:51:07.481 detox[97918] i send message
+  data: {"type":"invoke","params":{"target":{"type":"Class","value":"com.wix.detox.espresso.EspressoDetox"},"method":"setSynchronization","args":[{"type":"boolean","value":true}]},"messageId":2}
+20:51:07.482 detox[97894] i get
+  data: {"type":"invoke","params":{"target":{"type":"Class","value":"com.wix.detox.espresso.EspressoDetox"},"method":"setSynchronization","args":[{"type":"boolean","value":true}]},"messageId":2}
+20:51:07.482 detox[97894] i send
+  data: {
+    "type": "serverError",
+    "params": {
+      "error": {
+        "name": "DetoxRuntimeError",
+        "message": "Detox can't seem to connect to the test app(s)!\n\nHINT: \n\nHave you forgotten to call 'device.launchApp()' in the beginning of your test?\nRefer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs\n\n---\nThe following package could not be delivered:\n\n{\n  type: 'invoke',\n  params: [Object],\n  messageId: 2\n}",
+        "stack": "DetoxRuntimeError: Detox can't seem to connect to the test app(s)!\n\nHINT: \n\nHave you forgotten to call 'device.launchApp()' in the beginning of your test?\nRefer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs\n\n---\nThe following package could not be delivered:\n\n{\n  type: 'invoke',\n  params: [Object],\n  messageId: 2\n}\n    at Object.maybeAppWasNotLaunched (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/errors/longreads/failedToReachTheApp.js:22:10)\n    at TesterConnectionHandler.handle (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/server/handlers/TesterConnectionHandler.js:32:31)\n    at DetoxConnection._onMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/server/DetoxConnection.js:76:23)\n    at WebSocket.emit (node:events:508:28)\n    at Receiver.receiverOnMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/websocket.js:1070:20)\n    at Receiver.emit (node:events:508:28)\n    at Receiver.dataMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:517:14)\n    at Receiver.getData (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:435:17)\n    at Receiver.startLoop (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:143:22)\n    at Receiver._write (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:78:10)\n    at writeOrBuffer (node:internal/streams/writable:570:12)\n    at _write (node:internal/streams/writable:499:10)\n    at Writable.write (node:internal/streams/writable:508:10)\n    at Socket.socketOnData (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/websocket.js:1164:35)\n    at Socket.emit (node:events:508:28)\n    at addChunk (node:internal/streams/readable:559:12)"
+      }
+    },
+    "messageId": 2
+  }
+20:51:07.484 detox[97918] i get message
+  data: {"type":"serverError","params":{"error":{"name":"DetoxRuntimeError","message":"Detox can't seem to connect to the test app(s)!\n\nHINT: \n\nHave you forgotten to call 'device.launchApp()' in the beginning of your test?\nRefer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs\n\n---\nThe following package could not be delivered:\n\n{\n  type: 'invoke',\n  params: [Object],\n  messageId: 2\n}","stack":"DetoxRuntimeError: Detox can't seem to connect to the test app(s)!\n\nHINT: \n\nHave you forgotten to call 'device.launchApp()' in the beginning of your test?\nRefer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs\n\n---\nThe following package could not be delivered:\n\n{\n  type: 'invoke',\n  params: [Object],\n  messageId: 2\n}\n    at Object.maybeAppWasNotLaunched (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/errors/longreads/failedToReachTheApp.js:22:10)\n    at TesterConnectionHandler.handle (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/server/handlers/TesterConnectionHandler.js:32:31)\n    at DetoxConnection._onMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/server/DetoxConnection.js:76:23)\n    at WebSocket.emit (node:events:508:28)\n    at Receiver.receiverOnMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/websocket.js:1070:20)\n    at Receiver.emit (node:events:508:28)\n    at Receiver.dataMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:517:14)\n    at Receiver.getData (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:435:17)\n    at Receiver.startLoop (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:143:22)\n    at Receiver._write (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:78:10)\n    at writeOrBuffer (node:internal/streams/writable:570:12)\n    at _write (node:internal/streams/writable:499:10)\n    at Writable.write (node:internal/streams/writable:508:10)\n    at Socket.socketOnData (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/websocket.js:1164:35)\n    at Socket.emit (node:events:508:28)\n    at addChunk (node:internal/streams/readable:559:12)"}},"messageId":2}
+   
+20:51:07.484 detox[97918] i Detox can't seem to connect to the test app(s)!
+
+HINT: 
+
+Have you forgotten to call 'device.launchApp()' in the beginning of your test?
+Refer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs
+
+---
+The following package could not be delivered:
+
+{
+  type: 'invoke',
+  params: [Object],
+  messageId: 2
+}
+20:51:07.484 detox[97918] E enableSynchronization
+  error: Detox can't seem to connect to the test app(s)!
+  
+  HINT: 
+  
+  Have you forgotten to call 'device.launchApp()' in the beginning of your test?
+  Refer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs
+  
+  ---
+  The following package could not be delivered:
+  
+  {
+    type: 'invoke',
+    params: [Object],
+    messageId: 2
+  }
+      at enableSynchronization (/home/tani/Desktop/sous-chef-rn/e2e/init.ts:64:18)
+      at Generator.next (<anonymous>)
+      at asyncGeneratorStep (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+20:51:07.485 detox[97918] E beforeAll
+20:51:07.485 detox[97918] B should launch the app successfully
+20:51:07.485 detox[97918] i Smoke Tests: should launch the app successfully
+20:51:07.486 detox[97918] B onTestStart
+  args: ({"title":"should launch the app successfully","fullName":"Smoke Tests should launch the app successfully","status":"running","invocations":1})
+20:51:07.486 detox[97918] i stopping ADBLogcatRecording
+20:51:07.486 detox[97918] i starting ADBVideoRecording
+20:51:07.488 detox[97918] i /home/tani/Android/Sdk/platform-tools/adb -s R5CT51KPEBM shell screenrecord --bit-rate 4000000 /sdcard/2050040_1.mp4
+20:51:07.488 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell "date +\"%m-%d %T.000\""
+20:51:07.536 detox[97918] i 11-23 20:51:07.000
+
+20:51:07.537 detox[97918] i sending SIGINT to: /home/tani/Android/Sdk/platform-tools/adb -s R5CT51KPEBM shell logcat --pid=382 -f /sdcard/2050040_0.log
+20:51:07.538 detox[97918] i /home/tani/Android/Sdk/platform-tools/adb -s R5CT51KPEBM shell "logcat --pid=382 -f /sdcard/2050040_0.log" terminated with SIGINT
+20:51:07.538 detox[97918] i starting ADBLogcatRecording
+20:51:07.539 detox[97918] i /home/tani/Android/Sdk/platform-tools/adb -s R5CT51KPEBM shell "logcat --pid=382 -f /sdcard/2050040_2.log"
+20:51:07.789 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell du /sdcard/2050040_1.mp4
+20:51:07.827 detox[97918] i 84	/sdcard/2050040_1.mp4
+
+20:51:07.827 detox[97918] E onTestStart
+20:51:07.827 detox[97918] B beforeEach
+20:51:07.828 detox[97918] E beforeEach
+20:51:07.828 detox[97918] B test_fn
+20:51:07.828 detox[97918] i send message
+  data: {"type":"invoke","params":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxAssertion"},"method":"waitForAssertMatcher","args":[{"type":"Invocation","value":{"target":{"type":"Class","value":"androidx.test.espresso.Espresso"},"method":"onView","args":[{"type":"Invocation","value":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxMatcher"},"method":"matcherForTestId","args":["splash-screen",{"type":"boolean","value":false}]}}]}},{"type":"Invocation","value":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxMatcher"},"method":"matcherForNot","args":[{"type":"Invocation","value":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxMatcher"},"method":"matcherForSufficientlyVisible","args":[{"type":"Integer","value":75}]}}]}},{"type":"Double","value":10}]},"messageId":3}
+20:51:07.829 detox[97894] i get
+  data: {"type":"invoke","params":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxAssertion"},"method":"waitForAssertMatcher","args":[{"type":"Invocation","value":{"target":{"type":"Class","value":"androidx.test.espresso.Espresso"},"method":"onView","args":[{"type":"Invocation","value":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxMatcher"},"method":"matcherForTestId","args":["splash-screen",{"type":"boolean","value":false}]}}]}},{"type":"Invocation","value":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxMatcher"},"method":"matcherForNot","args":[{"type":"Invocation","value":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxMatcher"},"method":"matcherForSufficientlyVisible","args":[{"type":"Integer","value":75}]}}]}},{"type":"Double","value":10}]},"messageId":3}
+20:51:07.829 detox[97894] i send
+  data: {
+    "type": "serverError",
+    "params": {
+      "error": {
+        "name": "DetoxRuntimeError",
+        "message": "Detox can't seem to connect to the test app(s)!\n\nHINT: \n\nHave you forgotten to call 'device.launchApp()' in the beginning of your test?\nRefer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs\n\n---\nThe following package could not be delivered:\n\n{\n  type: 'invoke',\n  params: [Object],\n  messageId: 3\n}",
+        "stack": "DetoxRuntimeError: Detox can't seem to connect to the test app(s)!\n\nHINT: \n\nHave you forgotten to call 'device.launchApp()' in the beginning of your test?\nRefer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs\n\n---\nThe following package could not be delivered:\n\n{\n  type: 'invoke',\n  params: [Object],\n  messageId: 3\n}\n    at Object.maybeAppWasNotLaunched (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/errors/longreads/failedToReachTheApp.js:22:10)\n    at TesterConnectionHandler.handle (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/server/handlers/TesterConnectionHandler.js:32:31)\n    at DetoxConnection._onMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/server/DetoxConnection.js:76:23)\n    at WebSocket.emit (node:events:508:28)\n    at Receiver.receiverOnMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/websocket.js:1070:20)\n    at Receiver.emit (node:events:508:28)\n    at Receiver.dataMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:517:14)\n    at Receiver.getData (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:435:17)\n    at Receiver.startLoop (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:143:22)\n    at Receiver._write (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:78:10)\n    at writeOrBuffer (node:internal/streams/writable:570:12)\n    at _write (node:internal/streams/writable:499:10)\n    at Writable.write (node:internal/streams/writable:508:10)\n    at Socket.socketOnData (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/websocket.js:1164:35)\n    at Socket.emit (node:events:508:28)\n    at addChunk (node:internal/streams/readable:559:12)"
+      }
+    },
+    "messageId": 3
+  }
+20:51:07.829 detox[97918] B undefined with timeout (10000 ms)
+  data: {
+    "target": {
+      "type": "Class",
+      "value": "com.wix.detox.espresso.DetoxAssertion"
+    },
+    "method": "waitForAssertMatcher",
+    "args": [
+      {
+        "type": "Invocation",
+        "value": {
+          "target": {
+            "type": "Class",
+            "value": "androidx.test.espresso.Espresso"
+          },
+          "method": "onView",
+          "args": [
+            {
+              "type": "Invocation",
+              "value": {
+                "target": {
+                  "type": "Class",
+                  "value": "com.wix.detox.espresso.DetoxMatcher"
+                },
+                "method": "matcherForTestId",
+                "args": [
+                  "splash-screen",
+                  {
+                    "type": "boolean",
+                    "value": false
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "type": "Invocation",
+        "value": {
+          "target": {
+            "type": "Class",
+            "value": "com.wix.detox.espresso.DetoxMatcher"
+          },
+          "method": "matcherForNot",
+          "args": [
+            {
+              "type": "Invocation",
+              "value": {
+                "target": {
+                  "type": "Class",
+                  "value": "com.wix.detox.espresso.DetoxMatcher"
+                },
+                "method": "matcherForSufficientlyVisible",
+                "args": [
+                  {
+                    "type": "Integer",
+                    "value": 75
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "type": "Double",
+        "value": 10
+      }
+    ]
+  }
+20:51:07.830 detox[97918] i get message
+  data: {"type":"serverError","params":{"error":{"name":"DetoxRuntimeError","message":"Detox can't seem to connect to the test app(s)!\n\nHINT: \n\nHave you forgotten to call 'device.launchApp()' in the beginning of your test?\nRefer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs\n\n---\nThe following package could not be delivered:\n\n{\n  type: 'invoke',\n  params: [Object],\n  messageId: 3\n}","stack":"DetoxRuntimeError: Detox can't seem to connect to the test app(s)!\n\nHINT: \n\nHave you forgotten to call 'device.launchApp()' in the beginning of your test?\nRefer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs\n\n---\nThe following package could not be delivered:\n\n{\n  type: 'invoke',\n  params: [Object],\n  messageId: 3\n}\n    at Object.maybeAppWasNotLaunched (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/errors/longreads/failedToReachTheApp.js:22:10)\n    at TesterConnectionHandler.handle (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/server/handlers/TesterConnectionHandler.js:32:31)\n    at DetoxConnection._onMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/server/DetoxConnection.js:76:23)\n    at WebSocket.emit (node:events:508:28)\n    at Receiver.receiverOnMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/websocket.js:1070:20)\n    at Receiver.emit (node:events:508:28)\n    at Receiver.dataMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:517:14)\n    at Receiver.getData (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:435:17)\n    at Receiver.startLoop (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:143:22)\n    at Receiver._write (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:78:10)\n    at writeOrBuffer (node:internal/streams/writable:570:12)\n    at _write (node:internal/streams/writable:499:10)\n    at Writable.write (node:internal/streams/writable:508:10)\n    at Socket.socketOnData (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/websocket.js:1164:35)\n    at Socket.emit (node:events:508:28)\n    at addChunk (node:internal/streams/readable:559:12)"}},"messageId":3}
+   
+20:51:07.830 detox[97918] i Detox can't seem to connect to the test app(s)!
+
+HINT: 
+
+Have you forgotten to call 'device.launchApp()' in the beginning of your test?
+Refer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs
+
+---
+The following package could not be delivered:
+
+{
+  type: 'invoke',
+  params: [Object],
+  messageId: 3
+}
+20:51:07.830 detox[97918] E undefined with timeout (10000 ms)
+  error: Detox can't seem to connect to the test app(s)!
+  
+  HINT: 
+  
+  Have you forgotten to call 'device.launchApp()' in the beginning of your test?
+  Refer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs
+  
+  ---
+  The following package could not be delivered:
+  
+  {
+    type: 'invoke',
+    params: [Object],
+    messageId: 3
+  }
+      at Object.withTimeout (/home/tani/Desktop/sous-chef-rn/e2e/tests/smoke.e2e.ts:28:8)
+      at Generator.next (<anonymous>)
+      at asyncGeneratorStep (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at /home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at new Promise (<anonymous>)
+      at Object.<anonymous> (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+      at Promise.then.completed (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/utils.js:298:28)
+      at new Promise (<anonymous>)
+      at callAsyncCircusFn (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/utils.js:231:10)
+      at _callCircusTest (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/run.js:316:40)
+      at processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at _runTest (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/run.js:252:3)
+      at _runTestsForDescribeBlock (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/run.js:126:9)
+      at _runTestsForDescribeBlock (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/run.js:121:9)
+      at run (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/run.js:71:3)
+      at runAndTransformResultsToJestFormat (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+      at jestAdapter (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+      at runTestInternal (/home/tani/Desktop/sous-chef-rn/node_modules/jest-runner/build/runTest.js:367:16)
+      at runTest (/home/tani/Desktop/sous-chef-rn/node_modules/jest-runner/build/runTest.js:444:34)
+20:51:07.830 detox[97918] B onTestFnFailure
+  args: ({"error":{}})
+20:51:07.830 detox[97918] E onTestFnFailure
+20:51:07.830 detox[97918] E test_fn
+  error: Detox can't seem to connect to the test app(s)!
+  
+  HINT: 
+  
+  Have you forgotten to call 'device.launchApp()' in the beginning of your test?
+  Refer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs
+  
+  ---
+  The following package could not be delivered:
+  
+  {
+    type: 'invoke',
+    params: [Object],
+    messageId: 3
+  }
+      at Object.withTimeout (/home/tani/Desktop/sous-chef-rn/e2e/tests/smoke.e2e.ts:28:8)
+      at Generator.next (<anonymous>)
+      at asyncGeneratorStep (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at /home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at new Promise (<anonymous>)
+      at Object.<anonymous> (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+      at Promise.then.completed (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/utils.js:298:28)
+      at new Promise (<anonymous>)
+      at callAsyncCircusFn (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/utils.js:231:10)
+      at _callCircusTest (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/run.js:316:40)
+      at processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at _runTest (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/run.js:252:3)
+      at _runTestsForDescribeBlock (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/run.js:126:9)
+      at _runTestsForDescribeBlock (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/run.js:121:9)
+      at run (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/run.js:71:3)
+      at runAndTransformResultsToJestFormat (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+      at jestAdapter (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+      at runTestInternal (/home/tani/Desktop/sous-chef-rn/node_modules/jest-runner/build/runTest.js:367:16)
+      at runTest (/home/tani/Desktop/sous-chef-rn/node_modules/jest-runner/build/runTest.js:444:34)
+20:51:07.831 detox[97918] B onTestDone
+  args: ({"title":"should launch the app successfully","fullName":"Smoke Tests should launch the app successfully","status":"failed","invocations":1,"timedOut":false})
+20:51:07.831 detox[97918] i stopping ADBLogcatRecording
+20:51:07.831 detox[97918] i stopping ADBVideoRecording
+20:51:07.832 detox[97918] i sending SIGINT to: /home/tani/Android/Sdk/platform-tools/adb -s R5CT51KPEBM shell screenrecord --bit-rate 4000000 /sdcard/2050040_1.mp4
+20:51:07.832 detox[97918] i /home/tani/Android/Sdk/platform-tools/adb -s R5CT51KPEBM shell screenrecord --bit-rate 4000000 /sdcard/2050040_1.mp4 terminated with SIGINT
+20:51:07.833 detox[97918] i saving ADBVideoRecording to: e2e/artifacts/android-device/android.att.debug.2025-11-24 01-49-59Z/✗ Smoke Tests should launch the app successfully/test.mp4
+20:51:07.839 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell du /sdcard/2050040_2.log
+20:51:07.879 detox[97918] i 112	/sdcard/2050040_2.log
+
+20:51:07.879 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell "date +\"%m-%d %T.000\""
+20:51:07.923 detox[97918] i 11-23 20:51:08.000
+
+20:51:07.924 detox[97918] i sending SIGINT to: /home/tani/Android/Sdk/platform-tools/adb -s R5CT51KPEBM shell logcat --pid=382 -f /sdcard/2050040_2.log
+20:51:07.925 detox[97918] i /home/tani/Android/Sdk/platform-tools/adb -s R5CT51KPEBM shell "logcat --pid=382 -f /sdcard/2050040_2.log" terminated with SIGINT
+20:51:07.925 detox[97918] E onTestDone
+20:51:07.925 detox[97918] E should launch the app successfully
+20:51:07.926 detox[97918] i Smoke Tests: should launch the app successfully [FAIL]
+20:51:07.926 detox[97918] B should show landing screen or login screen
+20:51:07.926 detox[97918] i Smoke Tests: should show landing screen or login screen
+20:51:07.926 detox[97918] B onTestStart
+  args: ({"title":"should show landing screen or login screen","fullName":"Smoke Tests should show landing screen or login screen","status":"running","invocations":1})
+20:51:07.926 detox[97918] i starting ADBLogcatRecording
+20:51:07.928 detox[97918] i /home/tani/Android/Sdk/platform-tools/adb -s R5CT51KPEBM shell "logcat --pid=382 -f /sdcard/2050040_3.log"
+20:51:07.928 detox[97918] i starting ADBVideoRecording
+20:51:07.929 detox[97918] i /home/tani/Android/Sdk/platform-tools/adb -s R5CT51KPEBM shell screenrecord --bit-rate 4000000 /sdcard/2050040_4.mp4
+20:51:08.228 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell du /sdcard/2050040_3.log
+20:51:08.229 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell du /sdcard/2050040_4.mp4
+20:51:08.261 detox[97918] i 4	/sdcard/2050040_4.mp4
+
+20:51:08.261 detox[97918] E onTestStart
+20:51:08.261 detox[97918] B beforeEach
+20:51:08.262 detox[97918] E beforeEach
+20:51:08.262 detox[97918] B test_fn
+20:51:08.263 detox[97894] i get
+  data: {"type":"invoke","params":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxAssertion"},"method":"waitForAssertMatcher","args":[{"type":"Invocation","value":{"target":{"type":"Class","value":"androidx.test.espresso.Espresso"},"method":"onView","args":[{"type":"Invocation","value":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxMatcher"},"method":"matcherForTestId","args":["landing-auth-screen",{"type":"boolean","value":false}]}}]}},{"type":"Invocation","value":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxMatcher"},"method":"matcherForSufficientlyVisible","args":[{"type":"Integer","value":75}]}},{"type":"Double","value":3}]},"messageId":4}
+20:51:08.263 detox[97894] i send
+  data: {
+    "type": "serverError",
+    "params": {
+      "error": {
+        "name": "DetoxRuntimeError",
+        "message": "Detox can't seem to connect to the test app(s)!\n\nHINT: \n\nHave you forgotten to call 'device.launchApp()' in the beginning of your test?\nRefer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs\n\n---\nThe following package could not be delivered:\n\n{\n  type: 'invoke',\n  params: [Object],\n  messageId: 4\n}",
+        "stack": "DetoxRuntimeError: Detox can't seem to connect to the test app(s)!\n\nHINT: \n\nHave you forgotten to call 'device.launchApp()' in the beginning of your test?\nRefer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs\n\n---\nThe following package could not be delivered:\n\n{\n  type: 'invoke',\n  params: [Object],\n  messageId: 4\n}\n    at Object.maybeAppWasNotLaunched (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/errors/longreads/failedToReachTheApp.js:22:10)\n    at TesterConnectionHandler.handle (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/server/handlers/TesterConnectionHandler.js:32:31)\n    at DetoxConnection._onMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/server/DetoxConnection.js:76:23)\n    at WebSocket.emit (node:events:508:28)\n    at Receiver.receiverOnMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/websocket.js:1070:20)\n    at Receiver.emit (node:events:508:28)\n    at Receiver.dataMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:517:14)\n    at Receiver.getData (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:435:17)\n    at Receiver.startLoop (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:143:22)\n    at Receiver._write (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:78:10)\n    at writeOrBuffer (node:internal/streams/writable:570:12)\n    at _write (node:internal/streams/writable:499:10)\n    at Writable.write (node:internal/streams/writable:508:10)\n    at Socket.socketOnData (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/websocket.js:1164:35)\n    at Socket.emit (node:events:508:28)\n    at addChunk (node:internal/streams/readable:559:12)"
+      }
+    },
+    "messageId": 4
+  }
+20:51:08.263 detox[97918] i send message
+  data: {"type":"invoke","params":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxAssertion"},"method":"waitForAssertMatcher","args":[{"type":"Invocation","value":{"target":{"type":"Class","value":"androidx.test.espresso.Espresso"},"method":"onView","args":[{"type":"Invocation","value":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxMatcher"},"method":"matcherForTestId","args":["landing-auth-screen",{"type":"boolean","value":false}]}}]}},{"type":"Invocation","value":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxMatcher"},"method":"matcherForSufficientlyVisible","args":[{"type":"Integer","value":75}]}},{"type":"Double","value":3}]},"messageId":4}
+20:51:08.263 detox[97918] B undefined with timeout (3000 ms)
+  data: {
+    "target": {
+      "type": "Class",
+      "value": "com.wix.detox.espresso.DetoxAssertion"
+    },
+    "method": "waitForAssertMatcher",
+    "args": [
+      {
+        "type": "Invocation",
+        "value": {
+          "target": {
+            "type": "Class",
+            "value": "androidx.test.espresso.Espresso"
+          },
+          "method": "onView",
+          "args": [
+            {
+              "type": "Invocation",
+              "value": {
+                "target": {
+                  "type": "Class",
+                  "value": "com.wix.detox.espresso.DetoxMatcher"
+                },
+                "method": "matcherForTestId",
+                "args": [
+                  "landing-auth-screen",
+                  {
+                    "type": "boolean",
+                    "value": false
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "type": "Invocation",
+        "value": {
+          "target": {
+            "type": "Class",
+            "value": "com.wix.detox.espresso.DetoxMatcher"
+          },
+          "method": "matcherForSufficientlyVisible",
+          "args": [
+            {
+              "type": "Integer",
+              "value": 75
+            }
+          ]
+        }
+      },
+      {
+        "type": "Double",
+        "value": 3
+      }
+    ]
+  }
+20:51:08.264 detox[97894] i get
+  data: {"type":"invoke","params":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxAssertion"},"method":"waitForAssertMatcher","args":[{"type":"Invocation","value":{"target":{"type":"Class","value":"androidx.test.espresso.Espresso"},"method":"onView","args":[{"type":"Invocation","value":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxMatcher"},"method":"matcherForTestId","args":["login-screen",{"type":"boolean","value":false}]}}]}},{"type":"Invocation","value":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxMatcher"},"method":"matcherForSufficientlyVisible","args":[{"type":"Integer","value":75}]}},{"type":"Double","value":3}]},"messageId":5}
+20:51:08.264 detox[97894] i send
+  data: {
+    "type": "serverError",
+    "params": {
+      "error": {
+        "name": "DetoxRuntimeError",
+        "message": "Detox can't seem to connect to the test app(s)!\n\nHINT: \n\nHave you forgotten to call 'device.launchApp()' in the beginning of your test?\nRefer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs\n\n---\nThe following package could not be delivered:\n\n{\n  type: 'invoke',\n  params: [Object],\n  messageId: 5\n}",
+        "stack": "DetoxRuntimeError: Detox can't seem to connect to the test app(s)!\n\nHINT: \n\nHave you forgotten to call 'device.launchApp()' in the beginning of your test?\nRefer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs\n\n---\nThe following package could not be delivered:\n\n{\n  type: 'invoke',\n  params: [Object],\n  messageId: 5\n}\n    at Object.maybeAppWasNotLaunched (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/errors/longreads/failedToReachTheApp.js:22:10)\n    at TesterConnectionHandler.handle (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/server/handlers/TesterConnectionHandler.js:32:31)\n    at DetoxConnection._onMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/server/DetoxConnection.js:76:23)\n    at WebSocket.emit (node:events:508:28)\n    at Receiver.receiverOnMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/websocket.js:1070:20)\n    at Receiver.emit (node:events:508:28)\n    at Receiver.dataMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:517:14)\n    at Receiver.getData (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:435:17)\n    at Receiver.startLoop (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:143:22)\n    at Receiver._write (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:78:10)\n    at writeOrBuffer (node:internal/streams/writable:570:12)\n    at _write (node:internal/streams/writable:499:10)\n    at Writable.write (node:internal/streams/writable:508:10)\n    at Socket.socketOnData (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/websocket.js:1164:35)\n    at Socket.emit (node:events:508:28)\n    at addChunk (node:internal/streams/readable:559:12)"
+      }
+    },
+    "messageId": 5
+  }
+20:51:08.264 detox[97918] i 112	/sdcard/2050040_3.log
+
+20:51:08.264 detox[97918] i get message
+  data: {"type":"serverError","params":{"error":{"name":"DetoxRuntimeError","message":"Detox can't seem to connect to the test app(s)!\n\nHINT: \n\nHave you forgotten to call 'device.launchApp()' in the beginning of your test?\nRefer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs\n\n---\nThe following package could not be delivered:\n\n{\n  type: 'invoke',\n  params: [Object],\n  messageId: 4\n}","stack":"DetoxRuntimeError: Detox can't seem to connect to the test app(s)!\n\nHINT: \n\nHave you forgotten to call 'device.launchApp()' in the beginning of your test?\nRefer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs\n\n---\nThe following package could not be delivered:\n\n{\n  type: 'invoke',\n  params: [Object],\n  messageId: 4\n}\n    at Object.maybeAppWasNotLaunched (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/errors/longreads/failedToReachTheApp.js:22:10)\n    at TesterConnectionHandler.handle (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/server/handlers/TesterConnectionHandler.js:32:31)\n    at DetoxConnection._onMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/server/DetoxConnection.js:76:23)\n    at WebSocket.emit (node:events:508:28)\n    at Receiver.receiverOnMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/websocket.js:1070:20)\n    at Receiver.emit (node:events:508:28)\n    at Receiver.dataMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:517:14)\n    at Receiver.getData (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:435:17)\n    at Receiver.startLoop (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:143:22)\n    at Receiver._write (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:78:10)\n    at writeOrBuffer (node:internal/streams/writable:570:12)\n    at _write (node:internal/streams/writable:499:10)\n    at Writable.write (node:internal/streams/writable:508:10)\n    at Socket.socketOnData (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/websocket.js:1164:35)\n    at Socket.emit (node:events:508:28)\n    at addChunk (node:internal/streams/readable:559:12)"}},"messageId":4}
+   
+20:51:08.264 detox[97918] i Detox can't seem to connect to the test app(s)!
+
+HINT: 
+
+Have you forgotten to call 'device.launchApp()' in the beginning of your test?
+Refer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs
+
+---
+The following package could not be delivered:
+
+{
+  type: 'invoke',
+  params: [Object],
+  messageId: 4
+}
+20:51:08.264 detox[97918] E undefined with timeout (3000 ms)
+  error: Detox can't seem to connect to the test app(s)!
+  
+  HINT: 
+  
+  Have you forgotten to call 'device.launchApp()' in the beginning of your test?
+  Refer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs
+  
+  ---
+  The following package could not be delivered:
+  
+  {
+    type: 'invoke',
+    params: [Object],
+    messageId: 4
+  }
+      at LandingAuthScreen.withTimeout (/home/tani/Desktop/sous-chef-rn/e2e/screens/BaseScreen.ts:28:46)
+      at Generator.next (<anonymous>)
+      at asyncGeneratorStep (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at /home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at new Promise (<anonymous>)
+      at LandingAuthScreen.<anonymous> (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+      at LandingAuthScreen.apply [as waitForScreen] (/home/tani/Desktop/sous-chef-rn/e2e/screens/BaseScreen.ts:27:22)
+      at Object.waitForScreen (/home/tani/Desktop/sous-chef-rn/e2e/tests/smoke.e2e.ts:36:27)
+      at Generator.next (<anonymous>)
+      at asyncGeneratorStep (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at /home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at new Promise (<anonymous>)
+      at Object.<anonymous> (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+      at Promise.then.completed (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/utils.js:298:28)
+      at new Promise (<anonymous>)
+      at callAsyncCircusFn (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/utils.js:231:10)
+      at _callCircusTest (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/run.js:316:40)
+      at processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at _runTest (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/run.js:252:3)
+      at _runTestsForDescribeBlock (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/run.js:126:9)
+      at _runTestsForDescribeBlock (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/run.js:121:9)
+      at run (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/run.js:71:3)
+      at runAndTransformResultsToJestFormat (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+      at jestAdapter (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+      at runTestInternal (/home/tani/Desktop/sous-chef-rn/node_modules/jest-runner/build/runTest.js:367:16)
+      at runTest (/home/tani/Desktop/sous-chef-rn/node_modules/jest-runner/build/runTest.js:444:34)
+20:51:08.264 detox[97918] i send message
+  data: {"type":"invoke","params":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxAssertion"},"method":"waitForAssertMatcher","args":[{"type":"Invocation","value":{"target":{"type":"Class","value":"androidx.test.espresso.Espresso"},"method":"onView","args":[{"type":"Invocation","value":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxMatcher"},"method":"matcherForTestId","args":["login-screen",{"type":"boolean","value":false}]}}]}},{"type":"Invocation","value":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxMatcher"},"method":"matcherForSufficientlyVisible","args":[{"type":"Integer","value":75}]}},{"type":"Double","value":3}]},"messageId":5}
+20:51:08.264 detox[97918] B undefined with timeout (3000 ms)
+  data: {
+    "target": {
+      "type": "Class",
+      "value": "com.wix.detox.espresso.DetoxAssertion"
+    },
+    "method": "waitForAssertMatcher",
+    "args": [
+      {
+        "type": "Invocation",
+        "value": {
+          "target": {
+            "type": "Class",
+            "value": "androidx.test.espresso.Espresso"
+          },
+          "method": "onView",
+          "args": [
+            {
+              "type": "Invocation",
+              "value": {
+                "target": {
+                  "type": "Class",
+                  "value": "com.wix.detox.espresso.DetoxMatcher"
+                },
+                "method": "matcherForTestId",
+                "args": [
+                  "login-screen",
+                  {
+                    "type": "boolean",
+                    "value": false
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "type": "Invocation",
+        "value": {
+          "target": {
+            "type": "Class",
+            "value": "com.wix.detox.espresso.DetoxMatcher"
+          },
+          "method": "matcherForSufficientlyVisible",
+          "args": [
+            {
+              "type": "Integer",
+              "value": 75
+            }
+          ]
+        }
+      },
+      {
+        "type": "Double",
+        "value": 3
+      }
+    ]
+  }
+20:51:08.265 detox[97894] i get
+  data: {"type":"invoke","params":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxAssertion"},"method":"assertMatcher","args":[{"type":"Invocation","value":{"target":{"type":"Class","value":"androidx.test.espresso.Espresso"},"method":"onView","args":[{"type":"Invocation","value":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxMatcher"},"method":"matcherForTestId","args":["tab-bar",{"type":"boolean","value":false}]}}]}},{"type":"Invocation","value":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxMatcher"},"method":"matcherForSufficientlyVisible","args":[{"type":"Integer","value":75}]}}]},"messageId":6}
+20:51:08.265 detox[97894] i send
+  data: {
+    "type": "serverError",
+    "params": {
+      "error": {
+        "name": "DetoxRuntimeError",
+        "message": "Detox can't seem to connect to the test app(s)!\n\nHINT: \n\nHave you forgotten to call 'device.launchApp()' in the beginning of your test?\nRefer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs\n\n---\nThe following package could not be delivered:\n\n{\n  type: 'invoke',\n  params: [Object],\n  messageId: 6\n}",
+        "stack": "DetoxRuntimeError: Detox can't seem to connect to the test app(s)!\n\nHINT: \n\nHave you forgotten to call 'device.launchApp()' in the beginning of your test?\nRefer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs\n\n---\nThe following package could not be delivered:\n\n{\n  type: 'invoke',\n  params: [Object],\n  messageId: 6\n}\n    at Object.maybeAppWasNotLaunched (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/errors/longreads/failedToReachTheApp.js:22:10)\n    at TesterConnectionHandler.handle (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/server/handlers/TesterConnectionHandler.js:32:31)\n    at DetoxConnection._onMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/server/DetoxConnection.js:76:23)\n    at WebSocket.emit (node:events:508:28)\n    at Receiver.receiverOnMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/websocket.js:1070:20)\n    at Receiver.emit (node:events:508:28)\n    at Receiver.dataMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:517:14)\n    at Receiver.getData (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:435:17)\n    at Receiver.startLoop (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:143:22)\n    at Receiver._write (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:78:10)\n    at writeOrBuffer (node:internal/streams/writable:570:12)\n    at _write (node:internal/streams/writable:499:10)\n    at Writable.write (node:internal/streams/writable:508:10)\n    at Socket.socketOnData (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/websocket.js:1164:35)\n    at Socket.emit (node:events:508:28)\n    at addChunk (node:internal/streams/readable:559:12)"
+      }
+    },
+    "messageId": 6
+  }
+20:51:08.265 detox[97918] i get message
+  data: {"type":"serverError","params":{"error":{"name":"DetoxRuntimeError","message":"Detox can't seem to connect to the test app(s)!\n\nHINT: \n\nHave you forgotten to call 'device.launchApp()' in the beginning of your test?\nRefer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs\n\n---\nThe following package could not be delivered:\n\n{\n  type: 'invoke',\n  params: [Object],\n  messageId: 5\n}","stack":"DetoxRuntimeError: Detox can't seem to connect to the test app(s)!\n\nHINT: \n\nHave you forgotten to call 'device.launchApp()' in the beginning of your test?\nRefer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs\n\n---\nThe following package could not be delivered:\n\n{\n  type: 'invoke',\n  params: [Object],\n  messageId: 5\n}\n    at Object.maybeAppWasNotLaunched (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/errors/longreads/failedToReachTheApp.js:22:10)\n    at TesterConnectionHandler.handle (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/server/handlers/TesterConnectionHandler.js:32:31)\n    at DetoxConnection._onMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/server/DetoxConnection.js:76:23)\n    at WebSocket.emit (node:events:508:28)\n    at Receiver.receiverOnMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/websocket.js:1070:20)\n    at Receiver.emit (node:events:508:28)\n    at Receiver.dataMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:517:14)\n    at Receiver.getData (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:435:17)\n    at Receiver.startLoop (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:143:22)\n    at Receiver._write (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:78:10)\n    at writeOrBuffer (node:internal/streams/writable:570:12)\n    at _write (node:internal/streams/writable:499:10)\n    at Writable.write (node:internal/streams/writable:508:10)\n    at Socket.socketOnData (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/websocket.js:1164:35)\n    at Socket.emit (node:events:508:28)\n    at addChunk (node:internal/streams/readable:559:12)"}},"messageId":5}
+   
+20:51:08.265 detox[97918] i Detox can't seem to connect to the test app(s)!
+
+HINT: 
+
+Have you forgotten to call 'device.launchApp()' in the beginning of your test?
+Refer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs
+
+---
+The following package could not be delivered:
+
+{
+  type: 'invoke',
+  params: [Object],
+  messageId: 5
+}
+20:51:08.265 detox[97918] E undefined with timeout (3000 ms)
+  error: Detox can't seem to connect to the test app(s)!
+  
+  HINT: 
+  
+  Have you forgotten to call 'device.launchApp()' in the beginning of your test?
+  Refer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs
+  
+  ---
+  The following package could not be delivered:
+  
+  {
+    type: 'invoke',
+    params: [Object],
+    messageId: 5
+  }
+      at LoginScreen.withTimeout (/home/tani/Desktop/sous-chef-rn/e2e/screens/BaseScreen.ts:28:46)
+      at Generator.next (<anonymous>)
+      at asyncGeneratorStep (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at /home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at new Promise (<anonymous>)
+      at LoginScreen.<anonymous> (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+      at LoginScreen.apply [as waitForScreen] (/home/tani/Desktop/sous-chef-rn/e2e/screens/BaseScreen.ts:27:22)
+      at Object.waitForScreen (/home/tani/Desktop/sous-chef-rn/e2e/tests/smoke.e2e.ts:40:27)
+      at Generator.throw (<anonymous>)
+      at asyncGeneratorStep (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _throw (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:20:9)
+      at processTicksAndRejections (node:internal/process/task_queues:105:5)
+20:51:08.265 detox[97918] i send message
+  data: {"type":"invoke","params":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxAssertion"},"method":"assertMatcher","args":[{"type":"Invocation","value":{"target":{"type":"Class","value":"androidx.test.espresso.Espresso"},"method":"onView","args":[{"type":"Invocation","value":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxMatcher"},"method":"matcherForTestId","args":["tab-bar",{"type":"boolean","value":false}]}}]}},{"type":"Invocation","value":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxMatcher"},"method":"matcherForSufficientlyVisible","args":[{"type":"Integer","value":75}]}}]},"messageId":6}
+20:51:08.265 detox[97918] B expect element to be visible
+  data: {
+    "target": {
+      "type": "Class",
+      "value": "com.wix.detox.espresso.DetoxAssertion"
+    },
+    "method": "assertMatcher",
+    "args": [
+      {
+        "type": "Invocation",
+        "value": {
+          "target": {
+            "type": "Class",
+            "value": "androidx.test.espresso.Espresso"
+          },
+          "method": "onView",
+          "args": [
+            {
+              "type": "Invocation",
+              "value": {
+                "target": {
+                  "type": "Class",
+                  "value": "com.wix.detox.espresso.DetoxMatcher"
+                },
+                "method": "matcherForTestId",
+                "args": [
+                  "tab-bar",
+                  {
+                    "type": "boolean",
+                    "value": false
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "type": "Invocation",
+        "value": {
+          "target": {
+            "type": "Class",
+            "value": "com.wix.detox.espresso.DetoxMatcher"
+          },
+          "method": "matcherForSufficientlyVisible",
+          "args": [
+            {
+              "type": "Integer",
+              "value": 75
+            }
+          ]
+        }
+      }
+    ]
+  }
+20:51:08.266 detox[97918] i get message
+  data: {"type":"serverError","params":{"error":{"name":"DetoxRuntimeError","message":"Detox can't seem to connect to the test app(s)!\n\nHINT: \n\nHave you forgotten to call 'device.launchApp()' in the beginning of your test?\nRefer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs\n\n---\nThe following package could not be delivered:\n\n{\n  type: 'invoke',\n  params: [Object],\n  messageId: 6\n}","stack":"DetoxRuntimeError: Detox can't seem to connect to the test app(s)!\n\nHINT: \n\nHave you forgotten to call 'device.launchApp()' in the beginning of your test?\nRefer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs\n\n---\nThe following package could not be delivered:\n\n{\n  type: 'invoke',\n  params: [Object],\n  messageId: 6\n}\n    at Object.maybeAppWasNotLaunched (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/errors/longreads/failedToReachTheApp.js:22:10)\n    at TesterConnectionHandler.handle (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/server/handlers/TesterConnectionHandler.js:32:31)\n    at DetoxConnection._onMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/server/DetoxConnection.js:76:23)\n    at WebSocket.emit (node:events:508:28)\n    at Receiver.receiverOnMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/websocket.js:1070:20)\n    at Receiver.emit (node:events:508:28)\n    at Receiver.dataMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:517:14)\n    at Receiver.getData (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:435:17)\n    at Receiver.startLoop (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:143:22)\n    at Receiver._write (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:78:10)\n    at writeOrBuffer (node:internal/streams/writable:570:12)\n    at _write (node:internal/streams/writable:499:10)\n    at Writable.write (node:internal/streams/writable:508:10)\n    at Socket.socketOnData (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/websocket.js:1164:35)\n    at Socket.emit (node:events:508:28)\n    at addChunk (node:internal/streams/readable:559:12)"}},"messageId":6}
+   
+20:51:08.266 detox[97918] i Detox can't seem to connect to the test app(s)!
+
+HINT: 
+
+Have you forgotten to call 'device.launchApp()' in the beginning of your test?
+Refer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs
+
+---
+The following package could not be delivered:
+
+{
+  type: 'invoke',
+  params: [Object],
+  messageId: 6
+}
+20:51:08.266 detox[97918] E expect element to be visible
+  error: Detox can't seem to connect to the test app(s)!
+  
+  HINT: 
+  
+  Have you forgotten to call 'device.launchApp()' in the beginning of your test?
+  Refer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs
+  
+  ---
+  The following package could not be delivered:
+  
+  {
+    type: 'invoke',
+    params: [Object],
+    messageId: 6
+  }
+      at Object.toBeVisible (/home/tani/Desktop/sous-chef-rn/e2e/tests/smoke.e2e.ts:44:49)
+      at Generator.throw (<anonymous>)
+      at asyncGeneratorStep (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _throw (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:20:9)
+      at processTicksAndRejections (node:internal/process/task_queues:105:5)
+20:51:08.266 detox[97918] B onTestFnFailure
+  args: ({"error":{}})
+20:51:08.266 detox[97918] E onTestFnFailure
+20:51:08.266 detox[97918] E test_fn
+  error: Detox can't seem to connect to the test app(s)!
+  
+  HINT: 
+  
+  Have you forgotten to call 'device.launchApp()' in the beginning of your test?
+  Refer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs
+  
+  ---
+  The following package could not be delivered:
+  
+  {
+    type: 'invoke',
+    params: [Object],
+    messageId: 6
+  }
+      at Object.toBeVisible (/home/tani/Desktop/sous-chef-rn/e2e/tests/smoke.e2e.ts:44:49)
+      at Generator.throw (<anonymous>)
+      at asyncGeneratorStep (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _throw (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:20:9)
+      at processTicksAndRejections (node:internal/process/task_queues:105:5)
+20:51:08.266 detox[97918] B onTestDone
+  args: ({"title":"should show landing screen or login screen","fullName":"Smoke Tests should show landing screen or login screen","status":"failed","invocations":1,"timedOut":false})
+20:51:08.266 detox[97918] i stopping ADBLogcatRecording
+20:51:08.266 detox[97918] i stopping ADBVideoRecording
+20:51:08.266 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell "date +\"%m-%d %T.000\""
+20:51:08.267 detox[97918] i sending SIGINT to: /home/tani/Android/Sdk/platform-tools/adb -s R5CT51KPEBM shell screenrecord --bit-rate 4000000 /sdcard/2050040_4.mp4
+20:51:08.268 detox[97918] i /home/tani/Android/Sdk/platform-tools/adb -s R5CT51KPEBM shell screenrecord --bit-rate 4000000 /sdcard/2050040_4.mp4 terminated with SIGINT
+20:51:08.307 detox[97918] i 11-23 20:51:08.000
+
+20:51:08.308 detox[97918] i sending SIGINT to: /home/tani/Android/Sdk/platform-tools/adb -s R5CT51KPEBM shell logcat --pid=382 -f /sdcard/2050040_3.log
+20:51:08.309 detox[97918] i /home/tani/Android/Sdk/platform-tools/adb -s R5CT51KPEBM shell "logcat --pid=382 -f /sdcard/2050040_3.log" terminated with SIGINT
+20:51:08.309 detox[97918] E onTestDone
+20:51:08.309 detox[97918] E should show landing screen or login screen
+20:51:08.309 detox[97918] i Smoke Tests: should show landing screen or login screen [FAIL]
+20:51:08.309 detox[97918] B should be able to navigate to login from landing
+20:51:08.309 detox[97918] i Smoke Tests: should be able to navigate to login from landing
+20:51:08.309 detox[97918] B onTestStart
+  args: ({"title":"should be able to navigate to login from landing","fullName":"Smoke Tests should be able to navigate to login from landing","status":"running","invocations":1})
+20:51:08.309 detox[97918] i starting ADBLogcatRecording
+20:51:08.311 detox[97918] i /home/tani/Android/Sdk/platform-tools/adb -s R5CT51KPEBM shell "logcat --pid=382 -f /sdcard/2050040_5.log"
+20:51:08.311 detox[97918] i starting ADBVideoRecording
+20:51:08.312 detox[97918] i /home/tani/Android/Sdk/platform-tools/adb -s R5CT51KPEBM shell screenrecord --bit-rate 4000000 /sdcard/2050040_6.mp4
+20:51:08.332 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell du /sdcard/2050040_1.mp4
+20:51:08.366 detox[97918] i 80	/sdcard/2050040_1.mp4
+
+20:51:08.367 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM pull "/sdcard/2050040_1.mp4" "e2e/artifacts/android-device/android.att.debug.2025-11-24 01-49-59Z/✗ Smoke Tests should launch the app successfully/test.mp4"
+20:51:08.377 detox[97918] i /sdcard/2050040_1.mp4: 1 file pulled, 0 skipped. 16.0 MB/s (79286 bytes in 0.005s)
+
+20:51:08.377 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell "rm  \"/sdcard/2050040_1.mp4\""
+20:51:08.424 detox[97918] i 
+20:51:08.424 detox[97918] i saving ADBLogcatRecording to: e2e/artifacts/android-device/android.att.debug.2025-11-24 01-49-59Z/✗ Smoke Tests should launch the app successfully/device.log
+20:51:08.424 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM pull "/sdcard/2050040_2.log" "e2e/artifacts/android-device/android.att.debug.2025-11-24 01-49-59Z/✗ Smoke Tests should launch the app successfully/device.log"
+20:51:08.434 detox[97918] i /sdcard/2050040_2.log: 1 file pulled, 0 skipped. 21.1 MB/s (114688 bytes in 0.005s)
+
+20:51:08.434 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell "rm  \"/sdcard/2050040_2.log\""
+20:51:08.482 detox[97918] i 
+20:51:08.482 detox[97918] i saving ADBLogcatRecording to: e2e/artifacts/android-device/android.att.debug.2025-11-24 01-49-59Z/R5CT51KPEBM 2025-11-24 01-51-08Z.startup.log
+20:51:08.483 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM pull "/sdcard/2050040_0.log" "e2e/artifacts/android-device/android.att.debug.2025-11-24 01-49-59Z/R5CT51KPEBM 2025-11-24 01-51-08Z.startup.log"
+20:51:08.492 detox[97918] i /sdcard/2050040_0.log: 1 file pulled, 0 skipped. 25.2 MB/s (114688 bytes in 0.004s)
+
+20:51:08.492 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell "rm  \"/sdcard/2050040_0.log\""
+20:51:08.532 detox[97918] i 
+20:51:08.532 detox[97918] i saving ADBVideoRecording to: e2e/artifacts/android-device/android.att.debug.2025-11-24 01-49-59Z/✗ Smoke Tests should show landing screen or login screen/test.mp4
+20:51:08.611 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell du /sdcard/2050040_5.log
+20:51:08.613 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell du /sdcard/2050040_6.mp4
+20:51:08.652 detox[97918] i 112	/sdcard/2050040_5.log
+
+20:51:08.662 detox[97918] i 84	/sdcard/2050040_6.mp4
+
+20:51:08.662 detox[97918] E onTestStart
+20:51:08.662 detox[97918] B beforeEach
+20:51:08.662 detox[97918] E beforeEach
+20:51:08.662 detox[97918] B test_fn
+20:51:08.663 detox[97894] i get
+  data: {"type":"invoke","params":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxAssertion"},"method":"waitForAssertMatcher","args":[{"type":"Invocation","value":{"target":{"type":"Class","value":"androidx.test.espresso.Espresso"},"method":"onView","args":[{"type":"Invocation","value":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxMatcher"},"method":"matcherForTestId","args":["landing-auth-screen",{"type":"boolean","value":false}]}}]}},{"type":"Invocation","value":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxMatcher"},"method":"matcherForSufficientlyVisible","args":[{"type":"Integer","value":75}]}},{"type":"Double","value":1}]},"messageId":7}
+20:51:08.663 detox[97894] i send
+  data: {
+    "type": "serverError",
+    "params": {
+      "error": {
+        "name": "DetoxRuntimeError",
+        "message": "Detox can't seem to connect to the test app(s)!\n\nHINT: \n\nHave you forgotten to call 'device.launchApp()' in the beginning of your test?\nRefer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs\n\n---\nThe following package could not be delivered:\n\n{\n  type: 'invoke',\n  params: [Object],\n  messageId: 7\n}",
+        "stack": "DetoxRuntimeError: Detox can't seem to connect to the test app(s)!\n\nHINT: \n\nHave you forgotten to call 'device.launchApp()' in the beginning of your test?\nRefer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs\n\n---\nThe following package could not be delivered:\n\n{\n  type: 'invoke',\n  params: [Object],\n  messageId: 7\n}\n    at Object.maybeAppWasNotLaunched (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/errors/longreads/failedToReachTheApp.js:22:10)\n    at TesterConnectionHandler.handle (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/server/handlers/TesterConnectionHandler.js:32:31)\n    at DetoxConnection._onMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/server/DetoxConnection.js:76:23)\n    at WebSocket.emit (node:events:508:28)\n    at Receiver.receiverOnMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/websocket.js:1070:20)\n    at Receiver.emit (node:events:508:28)\n    at Receiver.dataMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:517:14)\n    at Receiver.getData (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:435:17)\n    at Receiver.startLoop (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:143:22)\n    at Receiver._write (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:78:10)\n    at writeOrBuffer (node:internal/streams/writable:570:12)\n    at _write (node:internal/streams/writable:499:10)\n    at Writable.write (node:internal/streams/writable:508:10)\n    at Socket.socketOnData (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/websocket.js:1164:35)\n    at Socket.emit (node:events:508:28)\n    at addChunk (node:internal/streams/readable:559:12)"
+      }
+    },
+    "messageId": 7
+  }
+20:51:08.663 detox[97918] i send message
+  data: {"type":"invoke","params":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxAssertion"},"method":"waitForAssertMatcher","args":[{"type":"Invocation","value":{"target":{"type":"Class","value":"androidx.test.espresso.Espresso"},"method":"onView","args":[{"type":"Invocation","value":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxMatcher"},"method":"matcherForTestId","args":["landing-auth-screen",{"type":"boolean","value":false}]}}]}},{"type":"Invocation","value":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxMatcher"},"method":"matcherForSufficientlyVisible","args":[{"type":"Integer","value":75}]}},{"type":"Double","value":1}]},"messageId":7}
+20:51:08.663 detox[97918] B undefined with timeout (1000 ms)
+  data: {
+    "target": {
+      "type": "Class",
+      "value": "com.wix.detox.espresso.DetoxAssertion"
+    },
+    "method": "waitForAssertMatcher",
+    "args": [
+      {
+        "type": "Invocation",
+        "value": {
+          "target": {
+            "type": "Class",
+            "value": "androidx.test.espresso.Espresso"
+          },
+          "method": "onView",
+          "args": [
+            {
+              "type": "Invocation",
+              "value": {
+                "target": {
+                  "type": "Class",
+                  "value": "com.wix.detox.espresso.DetoxMatcher"
+                },
+                "method": "matcherForTestId",
+                "args": [
+                  "landing-auth-screen",
+                  {
+                    "type": "boolean",
+                    "value": false
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "type": "Invocation",
+        "value": {
+          "target": {
+            "type": "Class",
+            "value": "com.wix.detox.espresso.DetoxMatcher"
+          },
+          "method": "matcherForSufficientlyVisible",
+          "args": [
+            {
+              "type": "Integer",
+              "value": 75
+            }
+          ]
+        }
+      },
+      {
+        "type": "Double",
+        "value": 1
+      }
+    ]
+  }
+20:51:08.664 detox[97918] i get message
+  data: {"type":"serverError","params":{"error":{"name":"DetoxRuntimeError","message":"Detox can't seem to connect to the test app(s)!\n\nHINT: \n\nHave you forgotten to call 'device.launchApp()' in the beginning of your test?\nRefer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs\n\n---\nThe following package could not be delivered:\n\n{\n  type: 'invoke',\n  params: [Object],\n  messageId: 7\n}","stack":"DetoxRuntimeError: Detox can't seem to connect to the test app(s)!\n\nHINT: \n\nHave you forgotten to call 'device.launchApp()' in the beginning of your test?\nRefer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs\n\n---\nThe following package could not be delivered:\n\n{\n  type: 'invoke',\n  params: [Object],\n  messageId: 7\n}\n    at Object.maybeAppWasNotLaunched (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/errors/longreads/failedToReachTheApp.js:22:10)\n    at TesterConnectionHandler.handle (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/server/handlers/TesterConnectionHandler.js:32:31)\n    at DetoxConnection._onMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/server/DetoxConnection.js:76:23)\n    at WebSocket.emit (node:events:508:28)\n    at Receiver.receiverOnMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/websocket.js:1070:20)\n    at Receiver.emit (node:events:508:28)\n    at Receiver.dataMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:517:14)\n    at Receiver.getData (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:435:17)\n    at Receiver.startLoop (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:143:22)\n    at Receiver._write (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:78:10)\n    at writeOrBuffer (node:internal/streams/writable:570:12)\n    at _write (node:internal/streams/writable:499:10)\n    at Writable.write (node:internal/streams/writable:508:10)\n    at Socket.socketOnData (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/websocket.js:1164:35)\n    at Socket.emit (node:events:508:28)\n    at addChunk (node:internal/streams/readable:559:12)"}},"messageId":7}
+   
+20:51:08.664 detox[97918] i Detox can't seem to connect to the test app(s)!
+
+HINT: 
+
+Have you forgotten to call 'device.launchApp()' in the beginning of your test?
+Refer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs
+
+---
+The following package could not be delivered:
+
+{
+  type: 'invoke',
+  params: [Object],
+  messageId: 7
+}
+20:51:08.664 detox[97918] E undefined with timeout (1000 ms)
+  error: Detox can't seem to connect to the test app(s)!
+  
+  HINT: 
+  
+  Have you forgotten to call 'device.launchApp()' in the beginning of your test?
+  Refer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs
+  
+  ---
+  The following package could not be delivered:
+  
+  {
+    type: 'invoke',
+    params: [Object],
+    messageId: 7
+  }
+      at LandingAuthScreen.withTimeout (/home/tani/Desktop/sous-chef-rn/e2e/screens/BaseScreen.ts:28:46)
+      at Generator.next (<anonymous>)
+      at asyncGeneratorStep (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at /home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at new Promise (<anonymous>)
+      at LandingAuthScreen.<anonymous> (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+      at LandingAuthScreen.apply [as waitForScreen] (/home/tani/Desktop/sous-chef-rn/e2e/screens/BaseScreen.ts:27:22)
+      at Object.waitForScreen (/home/tani/Desktop/sous-chef-rn/e2e/tests/smoke.e2e.ts:53:27)
+      at Generator.next (<anonymous>)
+      at asyncGeneratorStep (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at /home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at new Promise (<anonymous>)
+      at Object.<anonymous> (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+      at Promise.then.completed (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/utils.js:298:28)
+      at new Promise (<anonymous>)
+      at callAsyncCircusFn (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/utils.js:231:10)
+      at _callCircusTest (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/run.js:316:40)
+      at processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at _runTest (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/run.js:252:3)
+      at _runTestsForDescribeBlock (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/run.js:126:9)
+      at _runTestsForDescribeBlock (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/run.js:121:9)
+      at run (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/run.js:71:3)
+      at runAndTransformResultsToJestFormat (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+      at jestAdapter (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+      at runTestInternal (/home/tani/Desktop/sous-chef-rn/node_modules/jest-runner/build/runTest.js:367:16)
+      at runTest (/home/tani/Desktop/sous-chef-rn/node_modules/jest-runner/build/runTest.js:444:34)
+20:51:08.664 detox[97918] E test_fn
+20:51:08.665 detox[97918] B onTestDone
+  args: ({"title":"should be able to navigate to login from landing","fullName":"Smoke Tests should be able to navigate to login from landing","status":"passed","invocations":1})
+20:51:08.665 detox[97918] i stopping ADBLogcatRecording
+20:51:08.665 detox[97918] i stopping ADBVideoRecording
+20:51:08.665 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell "date +\"%m-%d %T.000\""
+20:51:08.666 detox[97918] i sending SIGINT to: /home/tani/Android/Sdk/platform-tools/adb -s R5CT51KPEBM shell screenrecord --bit-rate 4000000 /sdcard/2050040_6.mp4
+20:51:08.666 detox[97918] i /home/tani/Android/Sdk/platform-tools/adb -s R5CT51KPEBM shell screenrecord --bit-rate 4000000 /sdcard/2050040_6.mp4 terminated with SIGINT
+20:51:08.708 detox[97918] i 11-23 20:51:08.000
+
+20:51:08.709 detox[97918] i sending SIGINT to: /home/tani/Android/Sdk/platform-tools/adb -s R5CT51KPEBM shell logcat --pid=382 -f /sdcard/2050040_5.log
+20:51:08.709 detox[97918] i /home/tani/Android/Sdk/platform-tools/adb -s R5CT51KPEBM shell "logcat --pid=382 -f /sdcard/2050040_5.log" terminated with SIGINT
+20:51:08.709 detox[97918] E onTestDone
+20:51:08.709 detox[97918] E should be able to navigate to login from landing
+20:51:08.709 detox[97918] i Smoke Tests: should be able to navigate to login from landing [OK]
+20:51:08.709 detox[97918] B should have functional login screen elements
+20:51:08.709 detox[97918] i Smoke Tests: should have functional login screen elements
+20:51:08.710 detox[97918] B onTestStart
+  args: ({"title":"should have functional login screen elements","fullName":"Smoke Tests should have functional login screen elements","status":"running","invocations":1})
+20:51:08.710 detox[97918] i starting ADBLogcatRecording
+20:51:08.711 detox[97918] i /home/tani/Android/Sdk/platform-tools/adb -s R5CT51KPEBM shell "logcat --pid=382 -f /sdcard/2050040_7.log"
+20:51:08.711 detox[97918] i starting ADBVideoRecording
+20:51:08.712 detox[97918] i /home/tani/Android/Sdk/platform-tools/adb -s R5CT51KPEBM shell screenrecord --bit-rate 4000000 /sdcard/2050040_8.mp4
+20:51:08.768 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell du /sdcard/2050040_4.mp4
+20:51:08.806 detox[97918] i 80	/sdcard/2050040_4.mp4
+
+20:51:08.806 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM pull "/sdcard/2050040_4.mp4" "e2e/artifacts/android-device/android.att.debug.2025-11-24 01-49-59Z/✗ Smoke Tests should show landing screen or login screen/test.mp4"
+20:51:08.815 detox[97918] i /sdcard/2050040_4.mp4: 1 file pulled, 0 skipped. 20.1 MB/s (79286 bytes in 0.004s)
+
+20:51:08.816 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell "rm  \"/sdcard/2050040_4.mp4\""
+20:51:08.865 detox[97918] i 
+20:51:08.865 detox[97918] i saving ADBLogcatRecording to: e2e/artifacts/android-device/android.att.debug.2025-11-24 01-49-59Z/✗ Smoke Tests should show landing screen or login screen/device.log
+20:51:08.865 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM pull "/sdcard/2050040_3.log" "e2e/artifacts/android-device/android.att.debug.2025-11-24 01-49-59Z/✗ Smoke Tests should show landing screen or login screen/device.log"
+20:51:08.877 detox[97918] i /sdcard/2050040_3.log: 1 file pulled, 0 skipped. 22.9 MB/s (114688 bytes in 0.005s)
+
+20:51:08.877 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell "rm  \"/sdcard/2050040_3.log\""
+20:51:08.934 detox[97918] i 
+20:51:08.934 detox[97918] i discarding ADBVideoRecording
+20:51:09.012 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell du /sdcard/2050040_7.log
+20:51:09.013 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell du /sdcard/2050040_8.mp4
+20:51:09.057 detox[97918] i 112	/sdcard/2050040_7.log
+
+20:51:09.069 detox[97918] i 84	/sdcard/2050040_8.mp4
+
+20:51:09.069 detox[97918] E onTestStart
+20:51:09.069 detox[97918] B beforeEach
+20:51:09.069 detox[97918] E beforeEach
+20:51:09.069 detox[97918] B test_fn
+20:51:09.070 detox[97894] i get
+  data: {"type":"invoke","params":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxAssertion"},"method":"waitForAssertMatcher","args":[{"type":"Invocation","value":{"target":{"type":"Class","value":"androidx.test.espresso.Espresso"},"method":"onView","args":[{"type":"Invocation","value":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxMatcher"},"method":"matcherForTestId","args":["login-screen",{"type":"boolean","value":false}]}}]}},{"type":"Invocation","value":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxMatcher"},"method":"matcherForSufficientlyVisible","args":[{"type":"Integer","value":75}]}},{"type":"Double","value":1}]},"messageId":8}
+20:51:09.070 detox[97894] i send
+  data: {
+    "type": "serverError",
+    "params": {
+      "error": {
+        "name": "DetoxRuntimeError",
+        "message": "Detox can't seem to connect to the test app(s)!\n\nHINT: \n\nHave you forgotten to call 'device.launchApp()' in the beginning of your test?\nRefer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs\n\n---\nThe following package could not be delivered:\n\n{\n  type: 'invoke',\n  params: [Object],\n  messageId: 8\n}",
+        "stack": "DetoxRuntimeError: Detox can't seem to connect to the test app(s)!\n\nHINT: \n\nHave you forgotten to call 'device.launchApp()' in the beginning of your test?\nRefer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs\n\n---\nThe following package could not be delivered:\n\n{\n  type: 'invoke',\n  params: [Object],\n  messageId: 8\n}\n    at Object.maybeAppWasNotLaunched (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/errors/longreads/failedToReachTheApp.js:22:10)\n    at TesterConnectionHandler.handle (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/server/handlers/TesterConnectionHandler.js:32:31)\n    at DetoxConnection._onMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/server/DetoxConnection.js:76:23)\n    at WebSocket.emit (node:events:508:28)\n    at Receiver.receiverOnMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/websocket.js:1070:20)\n    at Receiver.emit (node:events:508:28)\n    at Receiver.dataMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:517:14)\n    at Receiver.getData (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:435:17)\n    at Receiver.startLoop (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:143:22)\n    at Receiver._write (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:78:10)\n    at writeOrBuffer (node:internal/streams/writable:570:12)\n    at _write (node:internal/streams/writable:499:10)\n    at Writable.write (node:internal/streams/writable:508:10)\n    at Socket.socketOnData (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/websocket.js:1164:35)\n    at Socket.emit (node:events:508:28)\n    at addChunk (node:internal/streams/readable:559:12)"
+      }
+    },
+    "messageId": 8
+  }
+20:51:09.070 detox[97918] i send message
+  data: {"type":"invoke","params":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxAssertion"},"method":"waitForAssertMatcher","args":[{"type":"Invocation","value":{"target":{"type":"Class","value":"androidx.test.espresso.Espresso"},"method":"onView","args":[{"type":"Invocation","value":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxMatcher"},"method":"matcherForTestId","args":["login-screen",{"type":"boolean","value":false}]}}]}},{"type":"Invocation","value":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxMatcher"},"method":"matcherForSufficientlyVisible","args":[{"type":"Integer","value":75}]}},{"type":"Double","value":1}]},"messageId":8}
+20:51:09.070 detox[97918] B undefined with timeout (1000 ms)
+  data: {
+    "target": {
+      "type": "Class",
+      "value": "com.wix.detox.espresso.DetoxAssertion"
+    },
+    "method": "waitForAssertMatcher",
+    "args": [
+      {
+        "type": "Invocation",
+        "value": {
+          "target": {
+            "type": "Class",
+            "value": "androidx.test.espresso.Espresso"
+          },
+          "method": "onView",
+          "args": [
+            {
+              "type": "Invocation",
+              "value": {
+                "target": {
+                  "type": "Class",
+                  "value": "com.wix.detox.espresso.DetoxMatcher"
+                },
+                "method": "matcherForTestId",
+                "args": [
+                  "login-screen",
+                  {
+                    "type": "boolean",
+                    "value": false
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "type": "Invocation",
+        "value": {
+          "target": {
+            "type": "Class",
+            "value": "com.wix.detox.espresso.DetoxMatcher"
+          },
+          "method": "matcherForSufficientlyVisible",
+          "args": [
+            {
+              "type": "Integer",
+              "value": 75
+            }
+          ]
+        }
+      },
+      {
+        "type": "Double",
+        "value": 1
+      }
+    ]
+  }
+20:51:09.070 detox[97918] i get message
+  data: {"type":"serverError","params":{"error":{"name":"DetoxRuntimeError","message":"Detox can't seem to connect to the test app(s)!\n\nHINT: \n\nHave you forgotten to call 'device.launchApp()' in the beginning of your test?\nRefer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs\n\n---\nThe following package could not be delivered:\n\n{\n  type: 'invoke',\n  params: [Object],\n  messageId: 8\n}","stack":"DetoxRuntimeError: Detox can't seem to connect to the test app(s)!\n\nHINT: \n\nHave you forgotten to call 'device.launchApp()' in the beginning of your test?\nRefer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs\n\n---\nThe following package could not be delivered:\n\n{\n  type: 'invoke',\n  params: [Object],\n  messageId: 8\n}\n    at Object.maybeAppWasNotLaunched (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/errors/longreads/failedToReachTheApp.js:22:10)\n    at TesterConnectionHandler.handle (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/server/handlers/TesterConnectionHandler.js:32:31)\n    at DetoxConnection._onMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/server/DetoxConnection.js:76:23)\n    at WebSocket.emit (node:events:508:28)\n    at Receiver.receiverOnMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/websocket.js:1070:20)\n    at Receiver.emit (node:events:508:28)\n    at Receiver.dataMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:517:14)\n    at Receiver.getData (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:435:17)\n    at Receiver.startLoop (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:143:22)\n    at Receiver._write (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:78:10)\n    at writeOrBuffer (node:internal/streams/writable:570:12)\n    at _write (node:internal/streams/writable:499:10)\n    at Writable.write (node:internal/streams/writable:508:10)\n    at Socket.socketOnData (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/websocket.js:1164:35)\n    at Socket.emit (node:events:508:28)\n    at addChunk (node:internal/streams/readable:559:12)"}},"messageId":8}
+   
+20:51:09.070 detox[97918] i Detox can't seem to connect to the test app(s)!
+
+HINT: 
+
+Have you forgotten to call 'device.launchApp()' in the beginning of your test?
+Refer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs
+
+---
+The following package could not be delivered:
+
+{
+  type: 'invoke',
+  params: [Object],
+  messageId: 8
+}
+20:51:09.070 detox[97918] E undefined with timeout (1000 ms)
+  error: Detox can't seem to connect to the test app(s)!
+  
+  HINT: 
+  
+  Have you forgotten to call 'device.launchApp()' in the beginning of your test?
+  Refer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs
+  
+  ---
+  The following package could not be delivered:
+  
+  {
+    type: 'invoke',
+    params: [Object],
+    messageId: 8
+  }
+      at LoginScreen.withTimeout (/home/tani/Desktop/sous-chef-rn/e2e/screens/BaseScreen.ts:28:46)
+      at Generator.next (<anonymous>)
+      at asyncGeneratorStep (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at /home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at new Promise (<anonymous>)
+      at LoginScreen.<anonymous> (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+      at LoginScreen.apply [as waitForScreen] (/home/tani/Desktop/sous-chef-rn/e2e/screens/BaseScreen.ts:27:22)
+      at Object.waitForScreen (/home/tani/Desktop/sous-chef-rn/e2e/tests/smoke.e2e.ts:67:25)
+      at Generator.next (<anonymous>)
+      at asyncGeneratorStep (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at /home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at new Promise (<anonymous>)
+      at Object.<anonymous> (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+      at Promise.then.completed (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/utils.js:298:28)
+      at new Promise (<anonymous>)
+      at callAsyncCircusFn (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/utils.js:231:10)
+      at _callCircusTest (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/run.js:316:40)
+      at processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at _runTest (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/run.js:252:3)
+      at _runTestsForDescribeBlock (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/run.js:126:9)
+      at _runTestsForDescribeBlock (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/run.js:121:9)
+      at run (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/run.js:71:3)
+      at runAndTransformResultsToJestFormat (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+      at jestAdapter (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+      at runTestInternal (/home/tani/Desktop/sous-chef-rn/node_modules/jest-runner/build/runTest.js:367:16)
+      at runTest (/home/tani/Desktop/sous-chef-rn/node_modules/jest-runner/build/runTest.js:444:34)
+20:51:09.071 detox[97918] E test_fn
+20:51:09.071 detox[97918] B onTestDone
+  args: ({"title":"should have functional login screen elements","fullName":"Smoke Tests should have functional login screen elements","status":"passed","invocations":1})
+20:51:09.071 detox[97918] i stopping ADBLogcatRecording
+20:51:09.071 detox[97918] i stopping ADBVideoRecording
+20:51:09.071 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell "date +\"%m-%d %T.000\""
+20:51:09.072 detox[97918] i sending SIGINT to: /home/tani/Android/Sdk/platform-tools/adb -s R5CT51KPEBM shell screenrecord --bit-rate 4000000 /sdcard/2050040_8.mp4
+20:51:09.073 detox[97918] i /home/tani/Android/Sdk/platform-tools/adb -s R5CT51KPEBM shell screenrecord --bit-rate 4000000 /sdcard/2050040_8.mp4 terminated with SIGINT
+20:51:09.113 detox[97918] i 11-23 20:51:09.000
+
+20:51:09.114 detox[97918] i sending SIGINT to: /home/tani/Android/Sdk/platform-tools/adb -s R5CT51KPEBM shell logcat --pid=382 -f /sdcard/2050040_7.log
+20:51:09.115 detox[97918] i /home/tani/Android/Sdk/platform-tools/adb -s R5CT51KPEBM shell "logcat --pid=382 -f /sdcard/2050040_7.log" terminated with SIGINT
+20:51:09.115 detox[97918] E onTestDone
+20:51:09.115 detox[97918] E should have functional login screen elements
+20:51:09.115 detox[97918] i Smoke Tests: should have functional login screen elements [OK]
+20:51:09.115 detox[97918] B should have bottom navigation if logged in
+20:51:09.115 detox[97918] i Smoke Tests: should have bottom navigation if logged in
+20:51:09.115 detox[97918] B onTestStart
+  args: ({"title":"should have bottom navigation if logged in","fullName":"Smoke Tests should have bottom navigation if logged in","status":"running","invocations":1})
+20:51:09.115 detox[97918] i starting ADBLogcatRecording
+20:51:09.116 detox[97918] i /home/tani/Android/Sdk/platform-tools/adb -s R5CT51KPEBM shell "logcat --pid=382 -f /sdcard/2050040_9.log"
+20:51:09.116 detox[97918] i starting ADBVideoRecording
+20:51:09.117 detox[97918] i /home/tani/Android/Sdk/platform-tools/adb -s R5CT51KPEBM shell screenrecord --bit-rate 4000000 /sdcard/2050040_10.mp4
+20:51:09.167 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell du /sdcard/2050040_6.mp4
+20:51:09.204 detox[97918] i 80	/sdcard/2050040_6.mp4
+
+20:51:09.204 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell "rm  \"/sdcard/2050040_6.mp4\""
+20:51:09.258 detox[97918] i 
+20:51:09.258 detox[97918] i discarding ADBLogcatRecording
+20:51:09.258 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell "rm  \"/sdcard/2050040_5.log\""
+20:51:09.313 detox[97918] i 
+20:51:09.313 detox[97918] i discarding ADBVideoRecording
+20:51:09.416 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell du /sdcard/2050040_9.log
+20:51:09.417 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell du /sdcard/2050040_10.mp4
+20:51:09.458 detox[97918] i 112	/sdcard/2050040_9.log
+
+20:51:09.459 detox[97918] i 4	/sdcard/2050040_10.mp4
+
+20:51:09.459 detox[97918] E onTestStart
+20:51:09.459 detox[97918] B beforeEach
+20:51:09.459 detox[97918] E beforeEach
+20:51:09.459 detox[97918] B test_fn
+20:51:09.460 detox[97894] i get
+  data: {"type":"invoke","params":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxAssertion"},"method":"assertMatcher","args":[{"type":"Invocation","value":{"target":{"type":"Class","value":"androidx.test.espresso.Espresso"},"method":"onView","args":[{"type":"Invocation","value":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxMatcher"},"method":"matcherForTestId","args":["tab-bar",{"type":"boolean","value":false}]}}]}},{"type":"Invocation","value":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxMatcher"},"method":"matcherForSufficientlyVisible","args":[{"type":"Integer","value":75}]}}]},"messageId":9}
+20:51:09.460 detox[97894] i send
+  data: {
+    "type": "serverError",
+    "params": {
+      "error": {
+        "name": "DetoxRuntimeError",
+        "message": "Detox can't seem to connect to the test app(s)!\n\nHINT: \n\nHave you forgotten to call 'device.launchApp()' in the beginning of your test?\nRefer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs\n\n---\nThe following package could not be delivered:\n\n{\n  type: 'invoke',\n  params: [Object],\n  messageId: 9\n}",
+        "stack": "DetoxRuntimeError: Detox can't seem to connect to the test app(s)!\n\nHINT: \n\nHave you forgotten to call 'device.launchApp()' in the beginning of your test?\nRefer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs\n\n---\nThe following package could not be delivered:\n\n{\n  type: 'invoke',\n  params: [Object],\n  messageId: 9\n}\n    at Object.maybeAppWasNotLaunched (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/errors/longreads/failedToReachTheApp.js:22:10)\n    at TesterConnectionHandler.handle (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/server/handlers/TesterConnectionHandler.js:32:31)\n    at DetoxConnection._onMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/server/DetoxConnection.js:76:23)\n    at WebSocket.emit (node:events:508:28)\n    at Receiver.receiverOnMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/websocket.js:1070:20)\n    at Receiver.emit (node:events:508:28)\n    at Receiver.dataMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:517:14)\n    at Receiver.getData (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:435:17)\n    at Receiver.startLoop (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:143:22)\n    at Receiver._write (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:78:10)\n    at writeOrBuffer (node:internal/streams/writable:570:12)\n    at _write (node:internal/streams/writable:499:10)\n    at Writable.write (node:internal/streams/writable:508:10)\n    at Socket.socketOnData (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/websocket.js:1164:35)\n    at Socket.emit (node:events:508:28)\n    at addChunk (node:internal/streams/readable:559:12)"
+      }
+    },
+    "messageId": 9
+  }
+20:51:09.460 detox[97918] i send message
+  data: {"type":"invoke","params":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxAssertion"},"method":"assertMatcher","args":[{"type":"Invocation","value":{"target":{"type":"Class","value":"androidx.test.espresso.Espresso"},"method":"onView","args":[{"type":"Invocation","value":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxMatcher"},"method":"matcherForTestId","args":["tab-bar",{"type":"boolean","value":false}]}}]}},{"type":"Invocation","value":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxMatcher"},"method":"matcherForSufficientlyVisible","args":[{"type":"Integer","value":75}]}}]},"messageId":9}
+20:51:09.460 detox[97918] B expect element to be visible
+  data: {
+    "target": {
+      "type": "Class",
+      "value": "com.wix.detox.espresso.DetoxAssertion"
+    },
+    "method": "assertMatcher",
+    "args": [
+      {
+        "type": "Invocation",
+        "value": {
+          "target": {
+            "type": "Class",
+            "value": "androidx.test.espresso.Espresso"
+          },
+          "method": "onView",
+          "args": [
+            {
+              "type": "Invocation",
+              "value": {
+                "target": {
+                  "type": "Class",
+                  "value": "com.wix.detox.espresso.DetoxMatcher"
+                },
+                "method": "matcherForTestId",
+                "args": [
+                  "tab-bar",
+                  {
+                    "type": "boolean",
+                    "value": false
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "type": "Invocation",
+        "value": {
+          "target": {
+            "type": "Class",
+            "value": "com.wix.detox.espresso.DetoxMatcher"
+          },
+          "method": "matcherForSufficientlyVisible",
+          "args": [
+            {
+              "type": "Integer",
+              "value": 75
+            }
+          ]
+        }
+      }
+    ]
+  }
+20:51:09.460 detox[97918] i get message
+  data: {"type":"serverError","params":{"error":{"name":"DetoxRuntimeError","message":"Detox can't seem to connect to the test app(s)!\n\nHINT: \n\nHave you forgotten to call 'device.launchApp()' in the beginning of your test?\nRefer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs\n\n---\nThe following package could not be delivered:\n\n{\n  type: 'invoke',\n  params: [Object],\n  messageId: 9\n}","stack":"DetoxRuntimeError: Detox can't seem to connect to the test app(s)!\n\nHINT: \n\nHave you forgotten to call 'device.launchApp()' in the beginning of your test?\nRefer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs\n\n---\nThe following package could not be delivered:\n\n{\n  type: 'invoke',\n  params: [Object],\n  messageId: 9\n}\n    at Object.maybeAppWasNotLaunched (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/errors/longreads/failedToReachTheApp.js:22:10)\n    at TesterConnectionHandler.handle (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/server/handlers/TesterConnectionHandler.js:32:31)\n    at DetoxConnection._onMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/server/DetoxConnection.js:76:23)\n    at WebSocket.emit (node:events:508:28)\n    at Receiver.receiverOnMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/websocket.js:1070:20)\n    at Receiver.emit (node:events:508:28)\n    at Receiver.dataMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:517:14)\n    at Receiver.getData (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:435:17)\n    at Receiver.startLoop (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:143:22)\n    at Receiver._write (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:78:10)\n    at writeOrBuffer (node:internal/streams/writable:570:12)\n    at _write (node:internal/streams/writable:499:10)\n    at Writable.write (node:internal/streams/writable:508:10)\n    at Socket.socketOnData (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/websocket.js:1164:35)\n    at Socket.emit (node:events:508:28)\n    at addChunk (node:internal/streams/readable:559:12)"}},"messageId":9}
+   
+20:51:09.460 detox[97918] i Detox can't seem to connect to the test app(s)!
+
+HINT: 
+
+Have you forgotten to call 'device.launchApp()' in the beginning of your test?
+Refer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs
+
+---
+The following package could not be delivered:
+
+{
+  type: 'invoke',
+  params: [Object],
+  messageId: 9
+}
+20:51:09.460 detox[97918] E expect element to be visible
+  error: Detox can't seem to connect to the test app(s)!
+  
+  HINT: 
+  
+  Have you forgotten to call 'device.launchApp()' in the beginning of your test?
+  Refer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs
+  
+  ---
+  The following package could not be delivered:
+  
+  {
+    type: 'invoke',
+    params: [Object],
+    messageId: 9
+  }
+      at Object.toBeVisible (/home/tani/Desktop/sous-chef-rn/e2e/tests/smoke.e2e.ts:80:47)
+      at Generator.next (<anonymous>)
+      at asyncGeneratorStep (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at /home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at new Promise (<anonymous>)
+      at Object.<anonymous> (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+      at Promise.then.completed (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/utils.js:298:28)
+      at new Promise (<anonymous>)
+      at callAsyncCircusFn (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/utils.js:231:10)
+      at _callCircusTest (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/run.js:316:40)
+      at processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at _runTest (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/run.js:252:3)
+      at _runTestsForDescribeBlock (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/run.js:126:9)
+      at _runTestsForDescribeBlock (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/run.js:121:9)
+      at run (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/run.js:71:3)
+      at runAndTransformResultsToJestFormat (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+      at jestAdapter (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+      at runTestInternal (/home/tani/Desktop/sous-chef-rn/node_modules/jest-runner/build/runTest.js:367:16)
+      at runTest (/home/tani/Desktop/sous-chef-rn/node_modules/jest-runner/build/runTest.js:444:34)
+20:51:09.461 detox[97918] E test_fn
+20:51:09.461 detox[97918] B onTestDone
+  args: ({"title":"should have bottom navigation if logged in","fullName":"Smoke Tests should have bottom navigation if logged in","status":"passed","invocations":1})
+20:51:09.461 detox[97918] i stopping ADBLogcatRecording
+20:51:09.461 detox[97918] i stopping ADBVideoRecording
+20:51:09.461 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell "date +\"%m-%d %T.000\""
+20:51:09.462 detox[97918] i sending SIGINT to: /home/tani/Android/Sdk/platform-tools/adb -s R5CT51KPEBM shell screenrecord --bit-rate 4000000 /sdcard/2050040_10.mp4
+20:51:09.462 detox[97918] i /home/tani/Android/Sdk/platform-tools/adb -s R5CT51KPEBM shell screenrecord --bit-rate 4000000 /sdcard/2050040_10.mp4 terminated with SIGINT
+20:51:09.503 detox[97918] i 11-23 20:51:09.000
+
+20:51:09.505 detox[97918] i sending SIGINT to: /home/tani/Android/Sdk/platform-tools/adb -s R5CT51KPEBM shell logcat --pid=382 -f /sdcard/2050040_9.log
+20:51:09.505 detox[97918] i /home/tani/Android/Sdk/platform-tools/adb -s R5CT51KPEBM shell "logcat --pid=382 -f /sdcard/2050040_9.log" terminated with SIGINT
+20:51:09.505 detox[97918] E onTestDone
+20:51:09.505 detox[97918] E should have bottom navigation if logged in
+20:51:09.505 detox[97918] i Smoke Tests: should have bottom navigation if logged in [OK]
+20:51:09.505 detox[97918] B should not crash during basic interactions
+20:51:09.505 detox[97918] i Smoke Tests: should not crash during basic interactions
+20:51:09.506 detox[97918] B onTestStart
+  args: ({"title":"should not crash during basic interactions","fullName":"Smoke Tests should not crash during basic interactions","status":"running","invocations":1})
+20:51:09.506 detox[97918] i starting ADBLogcatRecording
+20:51:09.507 detox[97918] i /home/tani/Android/Sdk/platform-tools/adb -s R5CT51KPEBM shell "logcat --pid=382 -f /sdcard/2050040_11.log"
+20:51:09.507 detox[97918] i starting ADBVideoRecording
+20:51:09.509 detox[97918] i /home/tani/Android/Sdk/platform-tools/adb -s R5CT51KPEBM shell screenrecord --bit-rate 4000000 /sdcard/2050040_12.mp4
+20:51:09.573 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell du /sdcard/2050040_8.mp4
+20:51:09.611 detox[97918] i 80	/sdcard/2050040_8.mp4
+
+20:51:09.611 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell "rm  \"/sdcard/2050040_8.mp4\""
+20:51:09.660 detox[97918] i 
+20:51:09.660 detox[97918] i discarding ADBLogcatRecording
+20:51:09.660 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell "rm  \"/sdcard/2050040_7.log\""
+20:51:09.706 detox[97918] i 
+20:51:09.706 detox[97918] i discarding ADBVideoRecording
+20:51:09.808 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell du /sdcard/2050040_11.log
+20:51:09.810 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell du /sdcard/2050040_12.mp4
+20:51:09.848 detox[97918] i 112	/sdcard/2050040_11.log
+
+20:51:09.849 detox[97894] i get
+  data: {"type":"invoke","params":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxAssertion"},"method":"assertMatcher","args":[{"type":"Invocation","value":{"target":{"type":"Class","value":"androidx.test.espresso.Espresso"},"method":"onView","args":[{"type":"Invocation","value":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxMatcher"},"method":"matcherForTestId","args":["splash-screen",{"type":"boolean","value":false}]}}]}},{"type":"Invocation","value":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxMatcher"},"method":"matcherForNot","args":[{"type":"Invocation","value":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxMatcher"},"method":"matcherForSufficientlyVisible","args":[{"type":"Integer","value":75}]}}]}}]},"messageId":10}
+20:51:09.849 detox[97894] i send
+  data: {
+    "type": "serverError",
+    "params": {
+      "error": {
+        "name": "DetoxRuntimeError",
+        "message": "Detox can't seem to connect to the test app(s)!\n\nHINT: \n\nHave you forgotten to call 'device.launchApp()' in the beginning of your test?\nRefer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs\n\n---\nThe following package could not be delivered:\n\n{\n  type: 'invoke',\n  params: [Object],\n  messageId: 10\n}",
+        "stack": "DetoxRuntimeError: Detox can't seem to connect to the test app(s)!\n\nHINT: \n\nHave you forgotten to call 'device.launchApp()' in the beginning of your test?\nRefer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs\n\n---\nThe following package could not be delivered:\n\n{\n  type: 'invoke',\n  params: [Object],\n  messageId: 10\n}\n    at Object.maybeAppWasNotLaunched (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/errors/longreads/failedToReachTheApp.js:22:10)\n    at TesterConnectionHandler.handle (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/server/handlers/TesterConnectionHandler.js:32:31)\n    at DetoxConnection._onMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/server/DetoxConnection.js:76:23)\n    at WebSocket.emit (node:events:508:28)\n    at Receiver.receiverOnMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/websocket.js:1070:20)\n    at Receiver.emit (node:events:508:28)\n    at Receiver.dataMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:517:14)\n    at Receiver.getData (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:435:17)\n    at Receiver.startLoop (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:143:22)\n    at Receiver._write (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:78:10)\n    at writeOrBuffer (node:internal/streams/writable:570:12)\n    at _write (node:internal/streams/writable:499:10)\n    at Writable.write (node:internal/streams/writable:508:10)\n    at Socket.socketOnData (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/websocket.js:1164:35)\n    at Socket.emit (node:events:508:28)\n    at addChunk (node:internal/streams/readable:559:12)"
+      }
+    },
+    "messageId": 10
+  }
+20:51:09.849 detox[97918] i 84	/sdcard/2050040_12.mp4
+
+20:51:09.849 detox[97918] E onTestStart
+20:51:09.849 detox[97918] B beforeEach
+20:51:09.849 detox[97918] E beforeEach
+20:51:09.849 detox[97918] B test_fn
+20:51:09.849 detox[97918] i send message
+  data: {"type":"invoke","params":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxAssertion"},"method":"assertMatcher","args":[{"type":"Invocation","value":{"target":{"type":"Class","value":"androidx.test.espresso.Espresso"},"method":"onView","args":[{"type":"Invocation","value":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxMatcher"},"method":"matcherForTestId","args":["splash-screen",{"type":"boolean","value":false}]}}]}},{"type":"Invocation","value":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxMatcher"},"method":"matcherForNot","args":[{"type":"Invocation","value":{"target":{"type":"Class","value":"com.wix.detox.espresso.DetoxMatcher"},"method":"matcherForSufficientlyVisible","args":[{"type":"Integer","value":75}]}}]}}]},"messageId":10}
+20:51:09.849 detox[97918] B expect element not to be visible
+  data: {
+    "target": {
+      "type": "Class",
+      "value": "com.wix.detox.espresso.DetoxAssertion"
+    },
+    "method": "assertMatcher",
+    "args": [
+      {
+        "type": "Invocation",
+        "value": {
+          "target": {
+            "type": "Class",
+            "value": "androidx.test.espresso.Espresso"
+          },
+          "method": "onView",
+          "args": [
+            {
+              "type": "Invocation",
+              "value": {
+                "target": {
+                  "type": "Class",
+                  "value": "com.wix.detox.espresso.DetoxMatcher"
+                },
+                "method": "matcherForTestId",
+                "args": [
+                  "splash-screen",
+                  {
+                    "type": "boolean",
+                    "value": false
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "type": "Invocation",
+        "value": {
+          "target": {
+            "type": "Class",
+            "value": "com.wix.detox.espresso.DetoxMatcher"
+          },
+          "method": "matcherForNot",
+          "args": [
+            {
+              "type": "Invocation",
+              "value": {
+                "target": {
+                  "type": "Class",
+                  "value": "com.wix.detox.espresso.DetoxMatcher"
+                },
+                "method": "matcherForSufficientlyVisible",
+                "args": [
+                  {
+                    "type": "Integer",
+                    "value": 75
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+20:51:09.850 detox[97918] i get message
+  data: {"type":"serverError","params":{"error":{"name":"DetoxRuntimeError","message":"Detox can't seem to connect to the test app(s)!\n\nHINT: \n\nHave you forgotten to call 'device.launchApp()' in the beginning of your test?\nRefer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs\n\n---\nThe following package could not be delivered:\n\n{\n  type: 'invoke',\n  params: [Object],\n  messageId: 10\n}","stack":"DetoxRuntimeError: Detox can't seem to connect to the test app(s)!\n\nHINT: \n\nHave you forgotten to call 'device.launchApp()' in the beginning of your test?\nRefer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs\n\n---\nThe following package could not be delivered:\n\n{\n  type: 'invoke',\n  params: [Object],\n  messageId: 10\n}\n    at Object.maybeAppWasNotLaunched (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/errors/longreads/failedToReachTheApp.js:22:10)\n    at TesterConnectionHandler.handle (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/server/handlers/TesterConnectionHandler.js:32:31)\n    at DetoxConnection._onMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/src/server/DetoxConnection.js:76:23)\n    at WebSocket.emit (node:events:508:28)\n    at Receiver.receiverOnMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/websocket.js:1070:20)\n    at Receiver.emit (node:events:508:28)\n    at Receiver.dataMessage (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:517:14)\n    at Receiver.getData (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:435:17)\n    at Receiver.startLoop (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:143:22)\n    at Receiver._write (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/receiver.js:78:10)\n    at writeOrBuffer (node:internal/streams/writable:570:12)\n    at _write (node:internal/streams/writable:499:10)\n    at Writable.write (node:internal/streams/writable:508:10)\n    at Socket.socketOnData (/home/tani/Desktop/sous-chef-rn/node_modules/detox/node_modules/ws/lib/websocket.js:1164:35)\n    at Socket.emit (node:events:508:28)\n    at addChunk (node:internal/streams/readable:559:12)"}},"messageId":10}
+   
+20:51:09.850 detox[97918] i Detox can't seem to connect to the test app(s)!
+
+HINT: 
+
+Have you forgotten to call 'device.launchApp()' in the beginning of your test?
+Refer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs
+
+---
+The following package could not be delivered:
+
+{
+  type: 'invoke',
+  params: [Object],
+  messageId: 10
+}
+20:51:09.850 detox[97918] E expect element not to be visible
+  error: Detox can't seem to connect to the test app(s)!
+  
+  HINT: 
+  
+  Have you forgotten to call 'device.launchApp()' in the beginning of your test?
+  Refer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs
+  
+  ---
+  The following package could not be delivered:
+  
+  {
+    type: 'invoke',
+    params: [Object],
+    messageId: 10
+  }
+      at Object.toBeVisible (/home/tani/Desktop/sous-chef-rn/e2e/tests/smoke.e2e.ts:97:55)
+      at Generator.next (<anonymous>)
+      at asyncGeneratorStep (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at /home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at new Promise (<anonymous>)
+      at Object.<anonymous> (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+      at Promise.then.completed (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/utils.js:298:28)
+      at new Promise (<anonymous>)
+      at callAsyncCircusFn (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/utils.js:231:10)
+      at _callCircusTest (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/run.js:316:40)
+      at _runTest (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/run.js:252:3)
+      at _runTestsForDescribeBlock (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/run.js:126:9)
+      at _runTestsForDescribeBlock (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/run.js:121:9)
+      at run (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/run.js:71:3)
+      at runAndTransformResultsToJestFormat (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+      at jestAdapter (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+      at runTestInternal (/home/tani/Desktop/sous-chef-rn/node_modules/jest-runner/build/runTest.js:367:16)
+      at runTest (/home/tani/Desktop/sous-chef-rn/node_modules/jest-runner/build/runTest.js:444:34)
+20:51:09.850 detox[97918] B onTestFnFailure
+  args: ({"error":{}})
+20:51:09.850 detox[97918] E onTestFnFailure
+20:51:09.850 detox[97918] E test_fn
+  error: Detox can't seem to connect to the test app(s)!
+  
+  HINT: 
+  
+  Have you forgotten to call 'device.launchApp()' in the beginning of your test?
+  Refer to our troubleshooting guide, for full details: https://wix.github.io/Detox/docs/troubleshooting/running-tests#tests-execution-hangs
+  
+  ---
+  The following package could not be delivered:
+  
+  {
+    type: 'invoke',
+    params: [Object],
+    messageId: 10
+  }
+      at Object.toBeVisible (/home/tani/Desktop/sous-chef-rn/e2e/tests/smoke.e2e.ts:97:55)
+      at Generator.next (<anonymous>)
+      at asyncGeneratorStep (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at /home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at new Promise (<anonymous>)
+      at Object.<anonymous> (/home/tani/Desktop/sous-chef-rn/node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+      at Promise.then.completed (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/utils.js:298:28)
+      at new Promise (<anonymous>)
+      at callAsyncCircusFn (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/utils.js:231:10)
+      at _callCircusTest (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/run.js:316:40)
+      at _runTest (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/run.js:252:3)
+      at _runTestsForDescribeBlock (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/run.js:126:9)
+      at _runTestsForDescribeBlock (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/run.js:121:9)
+      at run (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/run.js:71:3)
+      at runAndTransformResultsToJestFormat (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapterInit.js:122:21)
+      at jestAdapter (/home/tani/Desktop/sous-chef-rn/node_modules/jest-circus/build/legacy-code-todo-rewrite/jestAdapter.js:79:19)
+      at runTestInternal (/home/tani/Desktop/sous-chef-rn/node_modules/jest-runner/build/runTest.js:367:16)
+      at runTest (/home/tani/Desktop/sous-chef-rn/node_modules/jest-runner/build/runTest.js:444:34)
+20:51:09.850 detox[97918] B onTestDone
+  args: ({"title":"should not crash during basic interactions","fullName":"Smoke Tests should not crash during basic interactions","status":"failed","invocations":1,"timedOut":false})
+20:51:09.850 detox[97918] i stopping ADBLogcatRecording
+20:51:09.850 detox[97918] i stopping ADBVideoRecording
+20:51:09.850 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell "date +\"%m-%d %T.000\""
+20:51:09.852 detox[97918] i sending SIGINT to: /home/tani/Android/Sdk/platform-tools/adb -s R5CT51KPEBM shell screenrecord --bit-rate 4000000 /sdcard/2050040_12.mp4
+20:51:09.852 detox[97918] i /home/tani/Android/Sdk/platform-tools/adb -s R5CT51KPEBM shell screenrecord --bit-rate 4000000 /sdcard/2050040_12.mp4 terminated with SIGINT
+20:51:09.894 detox[97918] i 11-23 20:51:10.000
+
+20:51:09.895 detox[97918] i sending SIGINT to: /home/tani/Android/Sdk/platform-tools/adb -s R5CT51KPEBM shell logcat --pid=382 -f /sdcard/2050040_11.log
+20:51:09.896 detox[97918] i /home/tani/Android/Sdk/platform-tools/adb -s R5CT51KPEBM shell "logcat --pid=382 -f /sdcard/2050040_11.log" terminated with SIGINT
+20:51:09.896 detox[97918] E onTestDone
+20:51:09.896 detox[97918] E should not crash during basic interactions
+20:51:09.896 detox[97918] i Smoke Tests: should not crash during basic interactions [FAIL]
+20:51:09.896 detox[97918] B onRunDescribeFinish
+  args: ({"name":"Smoke Tests"})
+20:51:09.896 detox[97918] E onRunDescribeFinish
+20:51:09.896 detox[97918] E Smoke Tests
+20:51:09.897 detox[97918] B afterAll
+20:51:09.897 detox[97918] E afterAll
+20:51:09.897 detox[97918] B onRunDescribeFinish
+  args: ({"name":"ROOT_DESCRIBE_BLOCK"})
+20:51:09.897 detox[97918] E onRunDescribeFinish
+20:51:09.897 detox[97918] E run the tests
+20:51:09.906 detox[97918] B tear down environment
+20:51:09.906 detox[97918] B onBeforeCleanup
+  args: ()
+20:51:09.962 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell du /sdcard/2050040_10.mp4
+20:51:10.001 detox[97918] i 4	/sdcard/2050040_10.mp4
+
+20:51:10.001 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell "rm  \"/sdcard/2050040_10.mp4\""
+20:51:10.048 detox[97918] i 
+20:51:10.048 detox[97918] i discarding ADBLogcatRecording
+20:51:10.048 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell "rm  \"/sdcard/2050040_9.log\""
+20:51:10.101 detox[97918] i 
+20:51:10.101 detox[97918] i saving ADBVideoRecording to: e2e/artifacts/android-device/android.att.debug.2025-11-24 01-49-59Z/✗ Smoke Tests should not crash during basic interactions/test.mp4
+20:51:10.353 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell du /sdcard/2050040_12.mp4
+20:51:10.392 detox[97918] i 80	/sdcard/2050040_12.mp4
+
+20:51:10.392 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM pull "/sdcard/2050040_12.mp4" "e2e/artifacts/android-device/android.att.debug.2025-11-24 01-49-59Z/✗ Smoke Tests should not crash during basic interactions/test.mp4"
+20:51:10.402 detox[97918] i /sdcard/2050040_12.mp4: 1 file pulled, 0 skipped. 17.7 MB/s (79286 bytes in 0.004s)
+
+20:51:10.402 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell "rm  \"/sdcard/2050040_12.mp4\""
+20:51:10.449 detox[97918] i 
+20:51:10.449 detox[97918] i saving ADBLogcatRecording to: e2e/artifacts/android-device/android.att.debug.2025-11-24 01-49-59Z/✗ Smoke Tests should not crash during basic interactions/device.log
+20:51:10.449 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM pull "/sdcard/2050040_11.log" "e2e/artifacts/android-device/android.att.debug.2025-11-24 01-49-59Z/✗ Smoke Tests should not crash during basic interactions/device.log"
+20:51:10.463 detox[97918] i /sdcard/2050040_11.log: 1 file pulled, 0 skipped. 14.4 MB/s (114688 bytes in 0.008s)
+
+20:51:10.463 detox[97918] i "/home/tani/Android/Sdk/platform-tools/adb" -s R5CT51KPEBM shell "rm  \"/sdcard/2050040_11.log\""
+20:51:10.512 detox[97918] i 
+20:51:10.512 detox[97918] i saving FileArtifact to: e2e/artifacts/android-device/android.att.debug.2025-11-24 01-49-59Z/detox_pid_97918.json.log { append: true }
+20:51:10.513 detox[97918] i saving FileArtifact to: e2e/artifacts/android-device/android.att.debug.2025-11-24 01-49-59Z/detox_pid_97918.log { append: true }
+20:51:10.513 detox[97918] E onBeforeCleanup
+20:51:10.514 detox[97894] i tester exited session sous-chef-e2e
+20:51:10.514 detox[97894] E connection :8099<->:38196
+20:51:10.514 detox[97894] i received event of :  deallocateDevice { deviceCookie: { id: 'R5CT51KPEBM', adbName: 'R5CT51KPEBM' } }
+20:51:10.514 detox[97894] B free: R5CT51KPEBM
+  data: {}
+20:51:10.514 detox[97918] i dispatching event to  primary-97894 /tmp/detox.primary-97894  :  deallocateDevice , { deviceCookie: { id: 'R5CT51KPEBM', adbName: 'R5CT51KPEBM' } }
+20:51:10.515 detox[97894] E free: R5CT51KPEBM
+20:51:10.515 detox[97894] i dispatching event to socket  :  deallocateDeviceDone {}
+20:51:10.515 detox[97918] i ## received events ##
+20:51:10.515 detox[97918] i detected event deallocateDeviceDone {}
+20:51:10.515 detox[97918] E tear down environment
+20:51:10.516 detox[97918] E e2e/tests/smoke.e2e.ts
+20:51:10.517 detox[97894] i received event of :  conductEarlyTeardown { permanent: false }
+20:51:10.517 detox[97894] i dispatching event to socket  :  conductEarlyTeardownDone { unsafe_earlyTeardown: true }
+20:51:10.517 detox[97894] i broadcasting event to all known sockets listening to  /tmp/detox.primary-97894  :   sessionStateUpdate { unsafe_earlyTeardown: true }
+20:51:10.517 detox[97918] i dispatching event to  primary-97894 /tmp/detox.primary-97894  :  conductEarlyTeardown , { permanent: false }
+20:51:10.517 detox[97918] i ## received events ##
+20:51:10.517 detox[97918] i detected event conductEarlyTeardownDone { unsafe_earlyTeardown: true }
+20:51:10.518 detox[97894] i received event of :  reportTestResults {
+  testResults: [
+    {
+      success: false,
+      testFilePath: '/home/tani/Desktop/sous-chef-rn/e2e/tests/smoke.e2e.ts',
+      isPermanentFailure: true
+    }
+  ]
+}
+20:51:10.518 detox[97894] i dispatching event to socket  :  reportTestResultsDone {
+  testResults: [
+    {
+      success: false,
+      testFilePath: '/home/tani/Desktop/sous-chef-rn/e2e/tests/smoke.e2e.ts',
+      isPermanentFailure: true
+    }
+  ]
+}
+20:51:10.518 detox[97894] i broadcasting event to all known sockets listening to  /tmp/detox.primary-97894  :   sessionStateUpdate {
+  testResults: [
+    {
+      success: false,
+      testFilePath: '/home/tani/Desktop/sous-chef-rn/e2e/tests/smoke.e2e.ts',
+      isPermanentFailure: true
+    }
+  ]
+}
+20:51:10.518 detox[97918] i dispatching event to  primary-97894 /tmp/detox.primary-97894  :  reportTestResults , {
+  testResults: [
+    {
+      success: false,
+      testFilePath: '/home/tani/Desktop/sous-chef-rn/e2e/tests/smoke.e2e.ts',
+      testExecError: undefined,
+      isPermanentFailure: true
+    }
+  ]
+}
+20:51:10.518 detox[97918] i ## received events ##
+20:51:10.518 detox[97918] i detected event sessionStateUpdate { unsafe_earlyTeardown: true }
+20:51:10.518 detox[97918] i ## received events ##
+20:51:10.524 detox[97894] i server socket error Error: read ECONNRESET
+    at Pipe.onStreamRead (node:internal/stream_base_commons:216:20) {
+  errno: -104,
+  code: 'ECONNRESET',
+  syscall: 'read'
+}
+20:51:10.524 detox[97894] i socket disconnected secondary-97918
+20:51:10.524 detox[97894] E Command failed with exit code = 1:
+jest --config e2e/config/jest.config.js
+20:51:10.525 detox[97894] B cleanup
+  args: ()
+20:51:10.525 detox[97894] E cleanup
+20:51:10.525 detox[97894] i Detox server has been closed gracefully
+20:51:10.526 detox[97894] E node_modules/.bin/detox test --configuration android.att.debug --reuse
