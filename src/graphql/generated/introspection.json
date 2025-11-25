@@ -59670,6 +59670,13 @@
         "args": []
       },
       {
+        "name": "ownerOnly",
+        "description": "Require that the current user is the owner of the parent resource\nReturns null for the field if user is not the owner (soft denial)\nThis is useful for sensitive fields that should only be visible to the owner\n\nThe owner check uses:\n1. parent.userId (if exists) - compared to context.userId\n2. parent.authorId (if exists) - for author-owned resources like recipes\n3. parent.ownerId (if exists) - for explicitly owned resources\n\nExample:\ntype User {\n  email: String! @auth\n  settings: UserSettings @ownerOnly\n  notifications: [Notification!]! @ownerOnly\n}\n\ntype Recipe {\n  privateNotes: String @ownerOnly\n}",
+        "isRepeatable": false,
+        "locations": ["FIELD_DEFINITION"],
+        "args": []
+      },
+      {
         "name": "requireAccess",
         "description": "Require specific access level to a resource\nReturns FORBIDDEN error if user doesn't have required access level\n\nThe resource ID is extracted from:\n1. parent.id (for field resolvers)\n2. args.id (for query/mutation arguments)\n\nAccess level mapping:\n- OWNER role → OWNER, WRITE, READ access\n- ADMIN/MEMBER roles → WRITE, READ access\n- GUEST role → READ access\n\nExample:\ntype ShoppingList {\n  items: [Item!]! @requireAccess(resource: \"ShoppingList\", level: READ)\n  collaborators: [Collaborator!]! @requireAccess(resource: \"ShoppingList\", level: OWNER)\n}\n\ntype Mutation {\n  deleteShoppingList(id: ID!): Boolean\n    @requireAccess(resource: \"ShoppingList\", level: OWNER)\n}",
         "isRepeatable": false,

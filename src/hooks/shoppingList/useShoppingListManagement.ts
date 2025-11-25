@@ -57,12 +57,23 @@ export interface ShoppingListItemUpdate extends Partial<ShoppingListItemInput> {
  * Vanilla Apollo shopping list management hook
  * Uses optimistic responses for instant UI updates
  * No refetchQueries, no custom caches - Apollo handles everything
+ *
+ * @param listId - The shopping list ID to manage
+ * @param initialItems - Optional items from parent query (GetShoppingLists.itemsConnection)
+ *                       When provided, skips separate GetShoppingListItems query for performance
  */
-export function useShoppingListManagement(listId: string | undefined) {
+export function useShoppingListManagement(
+  listId: string | undefined,
+  initialItems?: any[] | null,
+) {
   const client = useApolloClient();
   const { isLoggedOut } = useAuth();
   const { handleApolloError } = useErrorHandler();
-  const shouldSkip = !listId || isLoggedOut;
+
+  // PERFORMANCE: Skip separate items query when items provided from parent query
+  // This eliminates the second network request and reduces re-renders from 4 to 2
+  const hasInitialItems = initialItems !== undefined && initialItems !== null;
+  const shouldSkip = !listId || isLoggedOut || hasInitialItems;
 
   // Dynamic fetch policy based on network status
   // Online: cache-and-network (fresh data + instant UI)
@@ -73,9 +84,12 @@ export function useShoppingListManagement(listId: string | undefined) {
   );
 
   // Watch cache for updates from mutations and subscriptions
+  // PERFORMANCE: Include previousData to prevent UI flash during refetch
+  // PERFORMANCE: Skip when initialItems provided from GetShoppingLists.itemsConnection
   const {
     data,
-    loading,
+    previousData,
+    loading: queryLoading,
     error,
     refetch,
   } = useGetShoppingListItemsQuery({
@@ -88,6 +102,9 @@ export function useShoppingListManagement(listId: string | undefined) {
     notifyOnNetworkStatusChange: true,
     errorPolicy: 'all', // Return both data and errors for better debugging
   });
+
+  // Derive loading state - not loading if using initialItems
+  const loading = hasInitialItems ? false : queryLoading;
 
   // Real-time updates via subscription are now handled by SubscriptionProvider
   // This eliminates duplicate subscription code and provides consistent behavior
@@ -113,9 +130,17 @@ export function useShoppingListManagement(listId: string | undefined) {
     }
   }, [data?.shoppingListItems, isListChanging]);
 
+  // OPTIMIZATION: Use previousData as fallback to prevent UI flash during refetch
+  // PERFORMANCE: Prefer initialItems from GetShoppingLists when available (single query optimization)
   const items = useMemo(
-    () => (isListChanging ? [] : data?.shoppingListItems || []),
-    [data?.shoppingListItems, isListChanging],
+    () => {
+      if (isListChanging) return [];
+      // Use initialItems from parent query if available (from GetShoppingLists.itemsConnection)
+      if (hasInitialItems) return initialItems;
+      // Fall back to query data or previous data
+      return data?.shoppingListItems ?? previousData?.shoppingListItems ?? [];
+    },
+    [data?.shoppingListItems, previousData?.shoppingListItems, isListChanging, hasInitialItems, initialItems],
   );
 
   // Search functionality - using reusable search utility

@@ -4,61 +4,43 @@ import React, {
   useCallback,
   useRef,
   useState,
-  useLayoutEffect,
-  startTransition,
 } from 'react';
-import { Alert, View, Text, TouchableOpacity } from 'react-native';
+import { Alert, View } from 'react-native';
 import type { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { PaginationFooter } from '#/components/organisms/PaginationFooter';
-import { useApolloClient } from '@apollo/client/react';
 import { useAppNavigation } from '#hooks';
-import { toastService } from '#/services/toastService';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import {
-  ShoppingListItemFragmentDoc,
-  useGetShoppingListsQuery,
-  useMoveShoppingListItemMutation,
-  useUpdateShoppingListItemQuantityMutation,
-  GetShoppingListItemsDocument,
-  GetShoppingListItemsQuery,
-} from '#generated';
-import { useScanner } from '#context';
+import { StyleSheet } from 'react-native-unistyles';
 import {
   SearchBarAction,
   AnimatedItemSelector,
   ListTemplate,
 } from '#components';
-import { Icon } from '#utils';
-import type {
-  SelectorConfig,
-  ItemSelectorRef,
-} from '#components/organisms/AnimatedItemSelector';
-import type { SortableShoppingListItem } from '#components/organisms/SortableShoppingList';
-import { useShoppingListManagement } from '#/hooks';
-import { useAppStore, selectShoppingListState } from '#store/useAppStore';
-import { useShallow } from 'zustand/react/shallow';
-import { IconLibrary } from '#/utils/iconUtils';
 import { useOptimisticDataRestorationMultiple } from '#/hooks/offline/useOptimisticDataRestoration';
-import {
-  handleVersionConflict,
-  getVersionConflictMessage,
-} from '#/utils/errors/versionConflict';
-import { useAuth } from '#/hooks/auth/useAuth';
-import { isShoppingListOwner } from '#utils/ownershipHelpers';
-import { ShoppingListAvatar } from '#components/atoms';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { useFeatureHint } from '#/hooks/useFeatureHint';
 import { SwipeHintOverlay } from '#/components/organisms/SwipeHintOverlay';
-import { useHaptic } from '#hooks/haptic';
 import { ShoppingListErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
 import { useScreenTransition } from '#hooks/performance';
-import { useSelectorManagement } from '#hooks/ui';
-import { getItemImageUrl } from '#utils/imageUtils';
 import { Telemetry } from '#/services/telemetry';
 import { ShoppingListTabs } from '#/components/organisms/ShoppingListTabs';
 import { ShoppingListActionsProvider } from '#context/ShoppingListActionsContext';
+import { useScanner } from '#context';
+import { useUnistyles } from 'react-native-unistyles';
 
-// PERFORMANCE: Memoize screen component to prevent unnecessary re-renders
+// Extracted hooks
+import { useShoppingListScreen } from '#/hooks/shoppingList/useShoppingListScreen';
+import { useShoppingListActions } from '#/hooks/shoppingList/useShoppingListActions';
+import { useShoppingListSelectorModal } from '#/hooks/shoppingList/useShoppingListSelectorModal';
+
+/**
+ * Shopping List Main Screen
+ * Refactored to use extracted hooks for better separation of concerns
+ *
+ * Hook composition:
+ * - useShoppingListScreen: Data orchestration (lists, items, sortableItems)
+ * - useShoppingListActions: Mutation handlers (add, edit, delete, sort)
+ * - useShoppingListSelector: List selector modal logic
+ */
 const ShoppingListMainScreen: React.FC = React.memo(() => {
   // Restore optimistic data on mount (offline changes that haven't synced)
   useOptimisticDataRestorationMultiple(['ShoppingList', 'ShoppingListItem']);
@@ -66,156 +48,29 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
   // Feature hint for swipe gesture (shows once, after items load)
   const swipeHint = useFeatureHint({
     featureId: 'shopping_list_swipe',
-    showOnMount: false, // We'll manually trigger when items are available
+    showOnMount: false,
   });
 
-  const { navigate, navigateTo, isFocused } = useAppNavigation();
-  const client = useApolloClient();
+  const { navigate, navigateTo } = useAppNavigation();
+  const { setScannerProps } = useScanner();
   const {
     theme: { colors },
   } = useUnistyles();
   const { primary: primaryColor, primaryLight: primaryLightColor } = colors;
-  // PERFORMANCE: Use grouped selector with useShallow to prevent infinite loops (Zustand v5)
-  const { selectedShoppingListId, setSelectedShoppingListId } = useAppStore(
-    useShallow(selectShoppingListState),
-  );
-  const { user } = useAuth();
-  const selectorRef = useRef<ItemSelectorRef>(null);
-  const { setScannerProps, setOverlayOpen } = useScanner();
-  const haptic = useHaptic();
 
   // Track screen performance
   useScreenTransition('ShoppingListMain');
 
-  // Manage selector with overlay coordination
-  const { handleOpenSelector, handleOverlayOpen, handleOverlayClose } =
-    useSelectorManagement({
-      selectorRef,
-      setOverlayOpen,
-    });
-
-  // Track currently open swipeable across both unpurchased and purchased lists
-  const openSwipeableRef =
-    useRef<React.RefObject<SwipeableMethods | null> | null>(null);
-  const [moveItem] = useMoveShoppingListItemMutation({
-    errorPolicy: 'all',
-    // Optimistic response for instant UI feedback
-    optimisticResponse: variables => {
-      // Find the moved item
-      const movedItem = items.find(item => item.id === variables.input.itemId);
-      if (!movedItem) {
-        // Return the first item as a fallback - the real mutation will handle errors
-        // This prevents type errors while still allowing the mutation to proceed
-        return {
-          __typename: 'Mutation',
-          moveShoppingListItem: items[0] || {
-            __typename: 'ShoppingListItem',
-            id: variables.input.itemId,
-          },
-        };
-      }
-
-      // Calculate optimistic sortOrder based on afterItemId
-      const afterItem = variables.input.afterItemId
-        ? items.find(item => item.id === variables.input.afterItemId)
-        : null;
-
-      // Use fractional indexing for sortOrder
-      const optimisticSortOrder = afterItem?.sortOrder || movedItem.sortOrder;
-
-      // Return updated item with new sortOrder
-      return {
-        __typename: 'Mutation',
-        moveShoppingListItem: {
-          ...movedItem,
-          sortOrder: optimisticSortOrder,
-          updatedAt: new Date().toISOString(),
-          __typename: 'ShoppingListItem',
-        },
-      };
-    },
-    // Update cache to reflect new order
-    update(cache, { data }) {
-      if (!data?.moveShoppingListItem || !currentListId) return;
-
-      try {
-        // Read the current shopping list items query
-        const queryResult = cache.readQuery<GetShoppingListItemsQuery>({
-          query: GetShoppingListItemsDocument,
-          variables: { shoppingListId: currentListId },
-        });
-
-        if (!queryResult?.shoppingListItems) return;
-
-        // Update single item with new sortOrder
-        // PERFORMANCE: No sort needed - server returns pre-sorted by (isPurchased, sortOrder, createdAt)
-        // Map only updates one item's sortOrder, doesn't change array order
-        const updatedItems = queryResult.shoppingListItems.map(item =>
-          item.id === data.moveShoppingListItem.id
-            ? { ...item, sortOrder: data.moveShoppingListItem.sortOrder }
-            : item,
-        );
-
-        // Write back to cache
-        cache.writeQuery({
-          query: GetShoppingListItemsDocument,
-          variables: { shoppingListId: currentListId },
-          data: { shoppingListItems: updatedItems },
-        });
-      } catch (error) {
-        console.warn('Cache update failed for moveItem:', error);
-        // Don't throw - let mutation succeed even if cache update fails
-      }
-    },
-    onError: error => {
-      console.error('Move item error:', error);
-      const errorMessage =
-        error.message || 'Failed to reorder item. Please try again.';
-      Alert.alert('Error', `Could not reorder item: ${errorMessage}`);
-    },
-  });
-  const [updateQuantity] = useUpdateShoppingListItemQuantityMutation({
-    errorPolicy: 'all',
-    // No optimisticResponse here - will be passed at call site with fresh cache data
-    // This avoids stale closure issues as per Apollo best practices
-  });
-
-  const [refreshing, setRefreshing] = useState(false);
-
-  // Use cache-and-network like pantry and recipes - Apollo handles offline gracefully
-  // PERFORMANCE: Skip query when tab is not focused to prevent wasted network requests
-  const { data, previousData } = useGetShoppingListsQuery({
-    skip: !isFocused,
-    fetchPolicy: isFocused ? 'cache-and-network' : 'cache-only',
-    errorPolicy: 'all',
-  });
-
-  // OPTIMIZATION: Fall back to previousData if current data is unavailable (network error)
-  const lists = useMemo(
-    () => data?.shoppingLists ?? previousData?.shoppingLists ?? [],
-    [data?.shoppingLists, previousData?.shoppingLists],
-  );
-
-  // PERFORMANCE: Derive default list ID without waiting for full lists load
-  // This allows items query to start in parallel with lists query
-  const defaultListId = useMemo(() => {
-    const defaultList = lists.find(list => list.isDefault);
-    const firstList = lists[0];
-    return defaultList?.id || firstList?.id || '';
-  }, [lists]);
-
-  // PERFORMANCE: Use selectedShoppingListId directly for items query
-  // Don't block on lists query - let both queries run in parallel
-  const listIdForQuery = useMemo(
-    () => selectedShoppingListId || defaultListId,
-    [selectedShoppingListId, defaultListId],
-  );
-
-  // Use the shopping list hook - can start immediately without waiting for lists
-  // PERFORMANCE: Pass undefined when not focused to skip items query
+  // --- Screen Data Hook ---
   const {
+    lists,
+    listDataWithOwnership,
+    currentList,
+    currentListId,
     items,
+    sortableItems,
     loading,
+    isLoadingInitial,
     searchQuery,
     setSearchQuery,
     addItem,
@@ -225,442 +80,62 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
     loadMore,
     hasMore,
     isLoadingMore,
-  } = useShoppingListManagement(isFocused ? listIdForQuery : undefined);
-
-  // Derive current list info AFTER queries are running
-  const defaultList = lists.find(list => list.isDefault) || lists[0];
-  const currentListId = selectedShoppingListId || defaultList?.id;
-  const currentList =
-    lists.find(list => list.id === currentListId) || defaultList;
-
-  // Auto-select the default list if none is selected or if selected list no longer exists
-  // PERFORMANCE: Check list existence without depending on entire lists array
-  const selectedListExists = useMemo(
-    () =>
-      selectedShoppingListId
-        ? lists.some(list => list.id === selectedShoppingListId)
-        : false,
-    [selectedShoppingListId, lists],
-  );
-
-  useEffect(() => {
-    // Only auto-select if no list selected OR selected list doesn't exist
-    if (!selectedShoppingListId || !selectedListExists) {
-      if (defaultList?.id) {
-        startTransition(() => {
-          setSelectedShoppingListId(defaultList.id);
-        });
-      }
-    }
-  }, [
-    selectedShoppingListId,
-    selectedListExists,
-    defaultList?.id,
     setSelectedShoppingListId,
-  ]);
+  } = useShoppingListScreen();
 
-  // Refs for stable callbacks (avoid recreating callbacks on items change)
-  const updateQuantityRef = useRef(updateQuantity);
-  const refetchItemsRef = useRef(refetchItems);
+  // --- Actions Hook ---
+  const {
+    handleSortOrderUpdate,
+    handleIncrementQuantity,
+    handleDecrementQuantity,
+    handleTogglePurchase,
+    handleDeleteItem,
+    handleClearAllPurchased,
+    handleAddItemFromSearch,
+  } = useShoppingListActions({
+    currentListId,
+    items,
+    addItem,
+    toggleItem,
+    removeItem,
+    refetchItems,
+    setSearchQuery,
+  });
 
-  // Keep refs updated
-  useLayoutEffect(() => {
-    updateQuantityRef.current = updateQuantity;
-    refetchItemsRef.current = refetchItems;
-  }, [updateQuantity, refetchItems]);
+  // --- Selector Hook ---
+  const {
+    selectorRef,
+    listConfig,
+    handleOpenSelector,
+    handleOverlayOpen,
+    handleOverlayClose,
+  } = useShoppingListSelectorModal({
+    listDataWithOwnership,
+    currentListId,
+    setSelectedShoppingListId,
+  });
+
+  // Local state
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Track currently open swipeable across both unpurchased and purchased lists
+  const openSwipeableRef =
+    useRef<React.RefObject<SwipeableMethods | null> | null>(null);
 
   // Show swipe hint after items load (only once, only if there are unpurchased items)
   useEffect(() => {
     if (items.length > 0 && !swipeHint.hasBeenShown) {
       const unpurchasedItems = items.filter((item: any) => !item.isPurchased);
       if (unpurchasedItems.length > 0) {
-        // Show hint after a brief delay to let UI settle
         const timer = setTimeout(() => {
           swipeHint.show();
         }, 1500);
         return () => clearTimeout(timer);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items.length, swipeHint.hasBeenShown, swipeHint.show]);
+  }, [items, swipeHint]);
 
-  // Let Apollo handle all data management - no manual optimization needed
-
-  // PERFORMANCE: Memoize list data with ownership info separately
-  const listDataWithOwnership = useMemo(
-    () =>
-      lists.map(list => ({
-        ...list,
-        _isOwner: isShoppingListOwner(list, user?.id),
-      })),
-    [lists, user?.id],
-  );
-
-  // PERFORMANCE: Memoize render function to prevent recreation
-  const renderListItem = useCallback(
-    (list: any, isSelected: boolean, onPress: () => void) => (
-      <TouchableOpacity
-        style={[
-          styles.selectorItemContainer,
-          isSelected && styles.selectorItemSelected,
-        ]}
-        onPress={onPress}
-      >
-        <ShoppingListAvatar list={list} size={40} />
-        <View style={styles.selectorItemInfo}>
-          <Text style={styles.selectorItemName}>{list.name}</Text>
-          <Text style={styles.selectorItemSubtext}>
-            {list._isOwner
-              ? 'You own this list'
-              : `Shared by ${
-                  list.ownerships?.[0]?.user?.profile?.displayName ||
-                  list.ownerships?.[0]?.user?.email ||
-                  'someone'
-                }`}
-          </Text>
-        </View>
-        {isSelected && (
-          <Icon
-            name="check"
-            size={20}
-            color={colors.primary}
-            library="MaterialIcons"
-          />
-        )}
-      </TouchableOpacity>
-    ),
-    [colors],
-  );
-
-  // PERFORMANCE: Memoize actions array separately
-  const listActions = useMemo(
-    () => [
-      {
-        icon: 'add',
-        label: 'Create New List',
-        onPress: () => {
-          selectorRef.current?.close();
-          navigate('ListSettings');
-        },
-        iconLibrary: 'MaterialIcons' as IconLibrary,
-      },
-      ...(currentListId
-        ? [
-            {
-              icon: 'share',
-              label: 'Share Current List',
-              onPress: () => {
-                selectorRef.current?.close();
-                navigate('ShareList', { listId: currentListId });
-              },
-              iconLibrary: 'MaterialIcons' as IconLibrary,
-            },
-            {
-              icon: 'settings',
-              label: 'List Settings',
-              onPress: () => {
-                selectorRef.current?.close();
-                navigate('ListSettings', { listId: currentListId });
-              },
-              iconLibrary: 'MaterialIcons' as IconLibrary,
-            },
-          ]
-        : []),
-    ],
-    [currentListId, navigate],
-  );
-
-  // PERFORMANCE: Combine memoized parts into final config
-  const listConfig: SelectorConfig<any> = useMemo(
-    () => ({
-      title: 'Select Shopping List',
-      data: listDataWithOwnership,
-      selectedId: currentListId,
-      onSelect: (id: string) => {
-        setSelectedShoppingListId(id);
-        selectorRef.current?.close();
-      },
-      displayProperty: 'name',
-      loading: false,
-      emptyMessage: 'No shopping lists available',
-      renderCustomItem: renderListItem,
-      actions: listActions,
-    }),
-    [
-      listDataWithOwnership,
-      currentListId,
-      setSelectedShoppingListId,
-      renderListItem,
-      listActions,
-    ],
-  );
-
-  const handleSortOrderUpdate = useCallback(
-    async (
-      itemId: string,
-      afterItemId: string | null,
-      beforeItemId: string | null,
-      afterSortOrder: string | null,
-      beforeSortOrder: string | null,
-    ) => {
-      if (!currentListId) return;
-
-      try {
-        // DEFENSIVE CHECK: Detect duplicate sortOrder values
-        // This prevents the 'Zm >= Zm' fractional indexing error
-        if (
-          afterSortOrder !== null &&
-          beforeSortOrder !== null &&
-          afterSortOrder === beforeSortOrder
-        ) {
-          console.error('❌ Duplicate sortOrder detected:', {
-            afterItemId,
-            afterSortOrder,
-            beforeItemId,
-            beforeSortOrder,
-          });
-
-          // Trigger refetch to get clean data from server
-          Alert.alert(
-            'Error',
-            'Item positions are out of sync. Refreshing list...',
-          );
-          await refetchItems();
-          return;
-        }
-
-        // Execute mutation with optimistic response and cache update
-        // Note: Server will use afterItemId/beforeItemId to look up sortOrder values
-        // and generate the new position. We pass sortOrder here only for validation.
-        // Note: Item is already marked as reordered in SortableList.tsx before this call
-        await moveItem({
-          variables: {
-            input: {
-              itemId,
-              afterItemId: afterItemId ?? undefined,
-              beforeItemId: beforeItemId ?? undefined,
-            },
-          },
-        });
-      } catch (error) {
-        console.error('Failed to move item:', error);
-        toastService.error('Failed to reorder items');
-      }
-    },
-    [currentListId, moveItem, refetchItems],
-  );
-
-  // Quantity update handlers using specialized mutation (80% payload reduction)
-  // Using refs to avoid recreating callbacks on every items change
-  const handleIncrementQuantity = useCallback(
-    async (itemId: string) => {
-      // Always read fresh data directly from Apollo cache
-      const cacheId = client.cache.identify({
-        __typename: 'ShoppingListItem',
-        id: itemId,
-      });
-
-      const fullItem = cacheId
-        ? client.readFragment<any>({
-            id: cacheId,
-            fragment: ShoppingListItemFragmentDoc,
-            fragmentName: 'ShoppingListItemFragment',
-          })
-        : null;
-
-      if (!fullItem) {
-        console.warn('Item not in cache, cannot increment:', itemId);
-        return;
-      }
-
-      // Use fresh quantity from cache, not stale items array
-      const newQuantity = (fullItem.quantity || 0) + 1;
-
-      try {
-        optimisticDataPersistence.save(
-          'ShoppingListItem',
-          itemId,
-          'quantity',
-          newQuantity,
-        );
-
-        await updateQuantityRef.current({
-          variables: {
-            itemId,
-            quantity: newQuantity.toString(),
-            version: fullItem.version,
-          },
-          optimisticResponse: {
-            __typename: 'Mutation',
-            updateShoppingListItemQuantity: {
-              ...fullItem,
-              __typename: 'ShoppingListItem',
-              quantity: newQuantity,
-              // Keep current version; server response will deliver incremented version
-              version: fullItem.version,
-              updatedAt: new Date().toISOString(),
-            },
-          },
-          onCompleted: data => {
-            if (data?.updateShoppingListItemQuantity) {
-              optimisticDataPersistence.clear(
-                'ShoppingListItem',
-                data.updateShoppingListItemQuantity.id,
-                'quantity',
-              );
-            }
-          },
-        });
-      } catch (error: any) {
-        if (handleVersionConflict(error)) {
-          Alert.alert('Item Updated', getVersionConflictMessage(error), [
-            { text: 'Refresh', onPress: () => refetchItemsRef.current() },
-            { text: 'Cancel', style: 'cancel' },
-          ]);
-          return;
-        }
-        console.error('Failed to update quantity:', error);
-        toastService.error('Failed to update quantity');
-      }
-    },
-    [client], // Only client dependency - stable
-  );
-
-  const handleDecrementQuantity = useCallback(
-    async (itemId: string) => {
-      // Always read fresh data directly from Apollo cache
-      const cacheId = client.cache.identify({
-        __typename: 'ShoppingListItem',
-        id: itemId,
-      });
-
-      const fullItem = cacheId
-        ? client.readFragment<any>({
-            id: cacheId,
-            fragment: ShoppingListItemFragmentDoc,
-            fragmentName: 'ShoppingListItemFragment',
-          })
-        : null;
-
-      if (!fullItem) {
-        console.warn('Item not in cache, cannot decrement:', itemId);
-        return;
-      }
-
-      // Use fresh quantity from cache, not stale items array
-      const newQuantity = Math.max(0, (fullItem.quantity || 0) - 1);
-
-      try {
-        optimisticDataPersistence.save(
-          'ShoppingListItem',
-          itemId,
-          'quantity',
-          newQuantity,
-        );
-
-        await updateQuantityRef.current({
-          variables: {
-            itemId,
-            quantity: newQuantity.toString(),
-            version: fullItem.version,
-          },
-          optimisticResponse: {
-            __typename: 'Mutation',
-            updateShoppingListItemQuantity: {
-              ...fullItem,
-              __typename: 'ShoppingListItem',
-              quantity: newQuantity,
-              version: fullItem.version,
-              updatedAt: new Date().toISOString(),
-            },
-          },
-          onCompleted: data => {
-            if (data?.updateShoppingListItemQuantity) {
-              optimisticDataPersistence.clear(
-                'ShoppingListItem',
-                data.updateShoppingListItemQuantity.id,
-                'quantity',
-              );
-            }
-          },
-        });
-      } catch (error: any) {
-        if (handleVersionConflict(error)) {
-          Alert.alert('Item Updated', getVersionConflictMessage(error), [
-            { text: 'Refresh', onPress: () => refetchItemsRef.current() },
-            { text: 'Cancel', style: 'cancel' },
-          ]);
-          return;
-        }
-        console.error('Failed to update quantity:', error);
-        toastService.error('Failed to update quantity');
-      }
-    },
-    [client], // Only client dependency - stable
-  );
-
-  // Transform shopping list items for SortableShoppingList
-  // PERFORMANCE: Single-pass transformation (no separate filter/spread/map)
-  // Apollo's normalized cache provides stable references for unchanged items
-  const sortableItems = useMemo((): SortableShoppingListItem[] => {
-    // Server returns items sorted by: isPurchased ASC, sortOrder ASC, createdAt ASC
-    // Separate unpurchased and purchased in single pass, preserving server sort order
-    const unpurchased: SortableShoppingListItem[] = [];
-    const purchased: SortableShoppingListItem[] = [];
-
-    for (const item of items) {
-      const imageUrl = getItemImageUrl(item.item);
-
-      // Get primary category from item.item.categories
-      const primaryCategory = item.item?.categories?.find(
-        (cat: any) => cat.isPrimary,
-      );
-      const categoryName =
-        primaryCategory?.category?.name ||
-        item.item?.categories?.[0]?.category?.name ||
-        item.category;
-
-      const sortableItem: SortableShoppingListItem = {
-        id: item.id,
-        title: item.itemName || '',
-        subtitle: categoryName || undefined,
-        sortOrder: item.sortOrder ?? 'zzz', // String fallback for fractional indexing
-        isPurchased: item.isPurchased,
-        badge: undefined,
-        // Use config instead of creating element (performance optimization)
-        // Callbacks retrieved from ShoppingListActionsContext for stable references
-        rightElementConfig: {
-          type: 'counter' as const,
-          quantity: item.quantity || 0,
-          unit: item.unit?.symbol || item.unitName || undefined,
-          itemId: item.id,
-          disabled: item.isPurchased,
-        },
-        // Use config instead of creating element (performance optimization)
-        leftElementConfig: imageUrl
-          ? {
-              type: 'image' as const,
-              url: imageUrl,
-              isPurchased: item.isPurchased,
-            }
-          : undefined,
-      };
-
-      // Separate by purchased status (unpurchased first, then purchased)
-      if (item.isPurchased) {
-        purchased.push(sortableItem);
-      } else {
-        unpurchased.push(sortableItem);
-      }
-    }
-
-    // Return unpurchased items first, then purchased (single array allocation)
-    return [...unpurchased, ...purchased];
-  }, [items]);
-
-  // Determine loading state - only show loading if we have no data at all
-  const isLoadingInitial = loading && sortableItems.length === 0;
-
+  // Handle add item navigation
   const handleAddItem = useCallback(() => {
     if (!currentListId) {
       Telemetry.trackEvent('add_item_no_list_selected');
@@ -684,110 +159,10 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
     navigate('AddItem', { listId: currentListId });
   }, [currentListId, navigate]);
 
-  const handleAddItemFromSearch = useCallback(
-    async (itemName: string) => {
-      if (!currentListId) {
-        toastService.error('Please select a shopping list first');
-        return;
-      }
-
-      Telemetry.trackEvent('add_item_from_search', {
-        list_id: currentListId,
-        item_name_length: itemName.trim().length,
-      });
-
-      // Clear search input immediately for instant feedback
-      setSearchQuery('');
-
-      try {
-        const result = await addItem({
-          itemName: itemName.trim(),
-          quantity: 1,
-        });
-
-        if (result) {
-          Telemetry.trackEvent('add_item_success', { source: 'search' });
-          haptic.success(); // Haptic feedback on successful add
-        } else {
-          Telemetry.trackEvent('add_item_failed', { source: 'search' });
-          haptic.error(); // Error haptic on failure
-          toastService.error('Failed to add item');
-          // Restore search query on failure so user can retry
-          setSearchQuery(itemName.trim());
-        }
-      } catch (error) {
-        Telemetry.trackError(
-          error instanceof Error ? error : 'Failed to add item from search',
-          { component: 'ShoppingListMain', operation: 'addItemFromSearch' },
-        );
-        haptic.error(); // Error haptic on exception
-        toastService.error('Failed to add item');
-        // Restore search query on error so user can retry
-        setSearchQuery(itemName.trim());
-      }
-    },
-    [currentListId, addItem, setSearchQuery, haptic],
-  );
-
-  const handleTogglePurchase = useCallback(
-    async (itemId: string) => {
-      Telemetry.trackEvent('toggle_item_purchase', { item_id: itemId });
-      try {
-        haptic.selection(); // Haptic feedback on toggle
-        await toggleItem(itemId);
-        Telemetry.trackEvent('toggle_item_purchase_success');
-      } catch (error) {
-        Telemetry.trackError(
-          error instanceof Error ? error : 'Failed to toggle item purchase',
-          { component: 'ShoppingListMain', operation: 'togglePurchase' },
-        );
-        haptic.error(); // Error haptic on failure
-        toastService.error('Failed to toggle item');
-      }
-    },
-    [toggleItem, haptic],
-  );
-
-  const handleDeleteItem = async (itemId: string) => {
-    Telemetry.trackEvent('delete_item', { item_id: itemId });
-    try {
-      haptic.warning(); // Haptic feedback on delete
-      await removeItem(itemId);
-      Telemetry.trackEvent('delete_item_success');
-      // OPTIMIZATION: No refetch needed - removeItem updates cache via cache.modify
-      // Cache automatically updates via Apollo's normalized cache
-    } catch (error) {
-      Telemetry.trackError(
-        error instanceof Error ? error : 'Failed to delete item',
-        { component: 'ShoppingListMain', operation: 'deleteItem' },
-      );
-      haptic.error(); // Error haptic on failure
-      toastService.error('Failed to delete item');
-    }
-  };
-
-  const handleClearAllPurchased = useCallback(async () => {
-    const purchasedItems = items.filter((item: any) => item.isPurchased);
-
-    if (purchasedItems.length === 0) return;
-
-    try {
-      haptic.warning(); // Haptic feedback for clear all
-      // Delete all purchased items
-      await Promise.all(purchasedItems.map(item => removeItem(item.id)));
-
-      // OPTIMIZATION: No refetch needed - each removeItem updates cache via cache.modify
-      // Cache automatically updates via Apollo's normalized cache
-    } catch (error) {
-      haptic.error(); // Error haptic on failure
-      toastService.error('Failed to clear purchased items');
-    }
-  }, [items, removeItem, haptic]);
-
+  // Handle refresh
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      // Clear optimistic data before refetch to ensure API data is source of truth
       optimisticDataPersistence.clearType('ShoppingListItem');
       await refetchItems();
     } finally {
@@ -795,7 +170,7 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
     }
   }, [refetchItems]);
 
-  // Handle swipeable item opening - ensure only one item is open at a time across both lists
+  // Handle swipeable coordination
   const handleSwipeableWillOpen = useCallback(
     (ref: React.RefObject<SwipeableMethods | null>) => {
       if (openSwipeableRef.current && openSwipeableRef.current !== ref) {
@@ -806,13 +181,11 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
     [],
   );
 
-  // Handle swipeable item closing - clear the reference
   const handleSwipeableClose = useCallback(() => {
     openSwipeableRef.current = null;
   }, []);
 
-  // Search bar actions - conditionally show "Add" button when searching with no results
-
+  // Search bar actions
   const searchBarActions = useMemo(() => {
     const hasSearchWithNoResults =
       searchQuery.trim() && sortableItems.length === 0;
@@ -861,18 +234,14 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
     colors,
   ]);
 
-  // Use ref to track currentListId without triggering effect re-runs
+  // Use ref to track currentListId for scanner
   const currentListIdRef = useRef(currentListId);
-
-  // Update ref when currentListId changes
   useEffect(() => {
     currentListIdRef.current = currentListId;
   }, [currentListId]);
 
-  // Set up scanner button when component mounts and track screen view
-  // OPTIMIZATION: Defer telemetry to not block initial render
+  // Set up scanner and telemetry
   useEffect(() => {
-    // Defer telemetry tracking - not critical for initial render
     setTimeout(() => {
       Telemetry.trackScreen('ShoppingListMain', {
         list_id: currentListId,
@@ -895,14 +264,12 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
 
     setScannerProps(handleScanPress, true);
 
-    // Clean up on unmount
     return () => {
       setScannerProps(undefined, false);
     };
   }, [setScannerProps, navigateTo, currentListId, items, lists.length]);
 
-  // PERFORMANCE: Memoize footer to prevent unnecessary re-renders
-  // Must be before early returns to satisfy React Hooks rules
+  // Memoized footer
   const footerComponent = useMemo(
     () => (
       <PaginationFooter
@@ -915,7 +282,7 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
     [isLoadingMore, hasMore, loading, items.length],
   );
 
-  // If no lists exist at all
+  // Empty state when no lists exist
   if (lists.length === 0) {
     const noListsEmptyState = {
       icon: 'add-shopping-cart' as const,
@@ -1018,7 +385,7 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
   );
 });
 
-// PERFORMANCE: Screen-level error boundary prevents full app reset on mutation failures
+// Screen-level error boundary prevents full app reset on mutation failures
 export const ShoppingListMain: React.FC = () => (
   <ShoppingListErrorBoundary>
     <ShoppingListMainScreen />
@@ -1029,34 +396,5 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-  },
-  selectorItemContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    gap: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    marginBottom: theme.spacing.xs,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  selectorItemSelected: {
-    backgroundColor: theme.colors.primaryLight,
-    borderColor: theme.colors.primary,
-  },
-  selectorItemInfo: {
-    flex: 1,
-    gap: theme.spacing.xs,
-  },
-  selectorItemName: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-  },
-  selectorItemSubtext: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
   },
 }));

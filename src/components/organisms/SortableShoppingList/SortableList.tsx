@@ -59,42 +59,14 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
     itemsRef.current = items;
   }, [items]);
 
-  // Update local items when props change, but not during our own updates
-  // OPTIMIZATION: Sync on structural changes (add/remove/reorder) or data changes (quantity)
-  // PERFORMANCE: Single-pass check for both structural and data changes
+  // PERFORMANCE: Simplified sync - just check reference change
+  // Apollo's normalized cache provides stable item references
+  // When items truly change (add/remove/edit/reorder), Apollo returns new array reference
+  // During drag operations, isUpdatingRef prevents overwriting our optimistic update
   useEffect(() => {
     if (!isUpdatingRef.current) {
-      // Fast path: length change means structural change
-      if (localItems.length !== items.length) {
-        setLocalItems(items);
-        return;
-      }
-
-      // Single-pass check for structural changes (reorder) OR data changes
-      // Combines two separate iterations into one for better performance
-      for (let idx = 0; idx < localItems.length; idx++) {
-        const localItem = localItems[idx];
-        const newItem = items[idx];
-
-        // Structural change: item reordered
-        if (!newItem || localItem.id !== newItem.id) {
-          setLocalItems(items);
-          return;
-        }
-
-        // Data change: quantity or purchased status changed
-        const quantityChanged =
-          localItem.rightElementConfig?.quantity !==
-          newItem.rightElementConfig?.quantity;
-        const purchasedChanged = localItem.isPurchased !== newItem.isPurchased;
-
-        if (quantityChanged || purchasedChanged) {
-          setLocalItems(items);
-          return;
-        }
-      }
+      setLocalItems(items);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items]);
 
   // Drag gesture callbacks - gate RefreshControl during drag
@@ -332,10 +304,10 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
         // Either break normal scroll or cause VirtualizedList nesting warnings
         // Alternative: Add manual refresh button to tab bar or header
         // PERFORMANCE: Optimized for faster initial render and smoother scrolling
-        // Balance between performance and UX - render enough items to fill most screens
-        initialNumToRender={8} // Fills most phone screens without blank space
-        maxToRenderPerBatch={5} // Batch size for incremental rendering
-        windowSize={3} // Balance between performance and smooth scrolling
+        // Tuned for typical shopping list sizes (10-50 items)
+        initialNumToRender={12} // Fill most screens immediately, reduce blank flash
+        maxToRenderPerBatch={8} // Larger batches for smoother scroll catch-up
+        windowSize={5} // Wider window for smoother scrolling (5 viewports)
         updateCellsBatchingPeriod={50} // Batch cell updates for smoother animations
         removeClippedSubviews={true} // Reduce memory on large lists
       />
