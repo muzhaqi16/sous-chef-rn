@@ -1,14 +1,13 @@
 import { useState, useEffect } from 'react';
-import { InteractionManager } from 'react-native';
 
 /**
- * Hook to defer heavy rendering until after navigation animations complete.
+ * Hook to defer heavy rendering until after the current frame.
  *
- * Uses InteractionManager.runAfterInteractions to wait for all pending
- * interactions (like navigation animations) to complete before signaling
- * that the component is ready to render heavy content.
+ * Uses requestAnimationFrame to wait until after the browser/native
+ * has finished the current paint before signaling that the component
+ * is ready to render heavy content.
  *
- * @param delay - Optional additional delay in ms after interactions complete
+ * @param delay - Optional additional delay in ms after frame completes
  * @returns boolean - true when it's safe to render heavy content
  *
  * @example
@@ -28,18 +27,29 @@ export function useDeferredRender(delay = 0): boolean {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    // Wait for all interactions (navigation animations, etc.) to complete
-    const handle = InteractionManager.runAfterInteractions(() => {
+    let cancelled = false;
+    let timerId: ReturnType<typeof setTimeout> | undefined;
+
+    // Use requestAnimationFrame to defer until after current frame
+    // This allows navigation animations to complete before heavy rendering
+    const frameId = requestAnimationFrame(() => {
+      if (cancelled) return;
+
       if (delay > 0) {
-        // Optional additional delay after interactions
-        const timer = setTimeout(() => setIsReady(true), delay);
-        return () => clearTimeout(timer);
+        // Optional additional delay after frame
+        timerId = setTimeout(() => {
+          if (!cancelled) setIsReady(true);
+        }, delay);
       } else {
         setIsReady(true);
       }
     });
 
-    return () => handle.cancel();
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(frameId);
+      if (timerId) clearTimeout(timerId);
+    };
   }, [delay]);
 
   return isReady;

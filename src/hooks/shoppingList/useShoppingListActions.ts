@@ -339,22 +339,16 @@ export function useShoppingListActions({
   // Toggle purchase handler
   const handleTogglePurchase = useCallback(
     async (itemId: string) => {
-      setTimeout(() => {
-        Telemetry.trackEvent('toggle_item_purchase', { item_id: itemId });
-      }, 0);
+      Telemetry.trackEvent('toggle_item_purchase', { item_id: itemId });
       try {
         haptic.selection();
         await toggleItem(itemId);
-        setTimeout(() => {
-          Telemetry.trackEvent('toggle_item_purchase_success');
-        }, 0);
+        Telemetry.trackEvent('toggle_item_purchase_success');
       } catch (error) {
-        setTimeout(() => {
-          Telemetry.trackError(
-            error instanceof Error ? error : 'Failed to toggle item purchase',
-            { component: 'ShoppingListMain', operation: 'togglePurchase' },
-          );
-        }, 0);
+        Telemetry.trackError(
+          error instanceof Error ? error : 'Failed to toggle item purchase',
+          { component: 'ShoppingListMain', operation: 'togglePurchase' },
+        );
         haptic.error();
         toastService.error('Failed to toggle item');
       }
@@ -365,22 +359,16 @@ export function useShoppingListActions({
   // Delete item handler
   const handleDeleteItem = useCallback(
     async (itemId: string) => {
-      setTimeout(() => {
-        Telemetry.trackEvent('delete_item', { item_id: itemId });
-      }, 0);
+      Telemetry.trackEvent('delete_item', { item_id: itemId });
       try {
         haptic.warning();
         await removeItem(itemId);
-        setTimeout(() => {
-          Telemetry.trackEvent('delete_item_success');
-        }, 0);
+        Telemetry.trackEvent('delete_item_success');
       } catch (error) {
-        setTimeout(() => {
-          Telemetry.trackError(
-            error instanceof Error ? error : 'Failed to delete item',
-            { component: 'ShoppingListMain', operation: 'deleteItem' },
-          );
-        }, 0);
+        Telemetry.trackError(
+          error instanceof Error ? error : 'Failed to delete item',
+          { component: 'ShoppingListMain', operation: 'deleteItem' },
+        );
         haptic.error();
         toastService.error('Failed to delete item');
       }
@@ -411,12 +399,10 @@ export function useShoppingListActions({
         return;
       }
 
-      setTimeout(() => {
-        Telemetry.trackEvent('add_item_from_search', {
-          list_id: currentListId,
-          item_name_length: itemName.trim().length,
-        });
-      }, 0);
+      Telemetry.trackEvent('add_item_from_search', {
+        list_id: currentListId,
+        item_name_length: itemName.trim().length,
+      });
 
       // Clear search input immediately for instant feedback
       setSearchQuery('');
@@ -428,25 +414,19 @@ export function useShoppingListActions({
         });
 
         if (result) {
-          setTimeout(() => {
-            Telemetry.trackEvent('add_item_success', { source: 'search' });
-          }, 0);
+          Telemetry.trackEvent('add_item_success', { source: 'search' });
           haptic.success();
         } else {
-          setTimeout(() => {
-            Telemetry.trackEvent('add_item_failed', { source: 'search' });
-          }, 0);
+          Telemetry.trackEvent('add_item_failed', { source: 'search' });
           haptic.error();
           toastService.error('Failed to add item');
           setSearchQuery(itemName.trim());
         }
       } catch (error) {
-        setTimeout(() => {
-          Telemetry.trackError(
-            error instanceof Error ? error : 'Failed to add item from search',
-            { component: 'ShoppingListMain', operation: 'addItemFromSearch' },
-          );
-        }, 0);
+        Telemetry.trackError(
+          error instanceof Error ? error : 'Failed to add item from search',
+          { component: 'ShoppingListMain', operation: 'addItemFromSearch' },
+        );
         haptic.error();
         toastService.error('Failed to add item');
         setSearchQuery(itemName.trim());

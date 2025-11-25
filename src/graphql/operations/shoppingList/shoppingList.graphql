@@ -88,12 +88,12 @@ query GetShoppingLists {
       }
     }
     # PERFORMANCE: Include items in initial query to eliminate second GetShoppingListItems call
-    # Reduces re-renders from 4 to 2 by consolidating cache updates
+    # Uses lightweight ShoppingListItemDisplayFragment (11 fields vs 60+) for ~80% payload reduction
     itemsConnection(first: 100) {
       edges {
         cursor
         node {
-          ...ShoppingListItemFragment
+          ...ShoppingListItemDisplayFragment
         }
       }
       pageInfo {

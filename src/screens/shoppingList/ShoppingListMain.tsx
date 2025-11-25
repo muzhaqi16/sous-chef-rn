@@ -39,7 +39,7 @@ import { useShoppingListSelectorModal } from '#/hooks/shoppingList/useShoppingLi
  * Hook composition:
  * - useShoppingListScreen: Data orchestration (lists, items, sortableItems)
  * - useShoppingListActions: Mutation handlers (add, edit, delete, sort)
- * - useShoppingListSelector: List selector modal logic
+ * - useShoppingListSelectorModal: List selector modal logic
  */
 const ShoppingListMainScreen: React.FC = React.memo(() => {
   // Restore optimistic data on mount (offline changes that haven't synced)

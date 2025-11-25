@@ -64,12 +64,13 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
     // Priority 1: Use config-based element (performance optimized)
     if (item.rightElementConfig?.type === 'counter') {
       const config = item.rightElementConfig;
-      const dragHandle = !item.isPurchased && drag ? (
-        <DragHandle
-          onLongPress={handleLongPress}
-          disabled={item.isPurchased}
-        />
-      ) : undefined;
+      const dragHandle =
+        !item.isPurchased && drag ? (
+          <DragHandle
+            onLongPress={handleLongPress}
+            disabled={item.isPurchased}
+          />
+        ) : undefined;
 
       return (
         <ShoppingListItemCounter
@@ -140,7 +141,9 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
   return (
     <View style={[styles.container, isActive && styles.activeContainer]}>
       <SwipeableItem
-        onPress={() => onTogglePurchase ? onTogglePurchase(item.id) : onItemPress(item.id)}
+        onPress={() =>
+          onTogglePurchase ? onTogglePurchase(item.id) : onItemPress(item.id)
+        }
         onLongPress={
           !drag && onItemPress ? () => onItemPress(item.id) : undefined
         }
@@ -206,13 +209,14 @@ const arePropsEqual = (
   if (prev.item.isPurchased !== next.item.isPurchased) return false;
 
   // Config reference comparison - stable due to caching in useShoppingListScreen
-  if (prev.item.rightElementConfig !== next.item.rightElementConfig) return false;
+  if (prev.item.rightElementConfig !== next.item.rightElementConfig)
+    return false;
   if (prev.item.leftElementConfig !== next.item.leftElementConfig) return false;
 
   // Drag state - triggers re-render
   if (prev.isActive !== next.isActive) return false;
-  // Only compare drag presence, not reference (drag function changes on every render)
-  if (!!prev.drag !== !!next.drag) return false;
+  // Compare drag by reference to ensure fresh handler is used if it changes
+  if (prev.drag !== next.drag) return false;
 
   // Callbacks - compare by reference identity for stability
   // These should be stable from parent's useCallback/context

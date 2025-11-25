@@ -200,23 +200,29 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
   );
 
   // Render item with ScaleDecorator for drag feedback
+  // PERFORMANCE: Only wrap in ScaleDecorator when actively dragging
+  // This reduces Reanimated shared value creation from 300+ to ~18 on initial render
   const renderItem = useCallback(
     ({ item, drag, isActive }: RenderItemParams<SortableShoppingListItem>) => {
-      return (
-        <ScaleDecorator>
-          <SimpleDraggableItem
-            item={item}
-            onItemPress={onItemPress}
-            onItemEdit={onItemEdit}
-            onItemDelete={onItemDelete}
-            onTogglePurchase={onTogglePurchase}
-            drag={disabled ? undefined : drag}
-            isActive={isActive}
-            onSwipeableWillOpen={handleSwipeableWillOpen}
-            onSwipeableClose={handleSwipeableClose}
-          />
-        </ScaleDecorator>
+      const itemComponent = (
+        <SimpleDraggableItem
+          item={item}
+          onItemPress={onItemPress}
+          onItemEdit={onItemEdit}
+          onItemDelete={onItemDelete}
+          onTogglePurchase={onTogglePurchase}
+          drag={disabled ? undefined : drag}
+          isActive={isActive}
+          onSwipeableWillOpen={handleSwipeableWillOpen}
+          onSwipeableClose={handleSwipeableClose}
+        />
       );
+
+      // Only apply ScaleDecorator when actively dragging to reduce Reanimated overhead
+      if (isActive) {
+        return <ScaleDecorator>{itemComponent}</ScaleDecorator>;
+      }
+      return itemComponent;
     },
     [
       onItemPress,
@@ -303,11 +309,12 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
         // All approaches attempted (RNGH, native, ScrollView wrapper, NestableScrollContainer)
         // Either break normal scroll or cause VirtualizedList nesting warnings
         // Alternative: Add manual refresh button to tab bar or header
-        // PERFORMANCE: Optimized for faster initial render and smoother scrolling
-        // Tuned for typical shopping list sizes (10-50 items)
-        initialNumToRender={12} // Fill most screens immediately, reduce blank flash
-        maxToRenderPerBatch={8} // Larger batches for smoother scroll catch-up
-        windowSize={5} // Wider window for smoother scrolling (5 viewports)
+        // PERFORMANCE: Aggressive optimization to reduce initial render time
+        // Goal: Render minimum items first, virtualize the rest
+        // With 100 items, rendering 6 vs 12 cuts initial Reanimated objects by ~50%
+        initialNumToRender={6} // Render ~1 screen worth immediately
+        maxToRenderPerBatch={4} // Smaller batches to avoid blocking JS thread
+        windowSize={3} // Tighter window (3 viewports) to reduce off-screen rendering
         updateCellsBatchingPeriod={50} // Batch cell updates for smoother animations
         removeClippedSubviews={true} // Reduce memory on large lists
       />

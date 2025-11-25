@@ -83,9 +83,10 @@ class ApolloCachePersistence {
 
     // Debounce saves to avoid excessive writes
     this.saveTimeout = setTimeout(() => {
-      // PERFORMANCE: Defer serialization to next tick to avoid blocking mutation completion
-      // This ensures the mutation callback completes quickly and UI updates aren't blocked
-      setTimeout(() => {
+      // PERFORMANCE: Use requestIdleCallback to run serialization when JS thread is idle
+      // This prevents blocking UI interactions and list rendering
+      // Falls back to requestAnimationFrame which defers until after current paint
+      const serialize = () => {
         try {
           const cacheString = JSON.stringify(cache);
           const sizeKB = Math.round(cacheString.length / 1024);
@@ -93,11 +94,31 @@ class ApolloCachePersistence {
           storage.set(CACHE_STORAGE_KEY, cacheString);
           storage.set(CACHE_VERSION_KEY, CURRENT_CACHE_VERSION);
 
-          console.log(`💾 Cache: Persisted cache (${sizeKB} KB)`);
+          if (__DEV__) {
+            console.log(`💾 Cache: Persisted cache (${sizeKB} KB)`);
+          }
         } catch (error) {
           console.error('💾 Cache: Failed to persist cache:', error);
         }
-      }, 0);
+      };
+
+      // Use requestIdleCallback if available (web/newer RN), otherwise use requestAnimationFrame
+      // requestIdleCallback runs when browser is idle (optimal for background work)
+      // requestAnimationFrame defers until after current frame paint (better than setTimeout)
+      if (
+        typeof globalThis !== 'undefined' &&
+        'requestIdleCallback' in globalThis
+      ) {
+        (globalThis as any).requestIdleCallback(serialize, { timeout: 2000 });
+      } else if (typeof requestAnimationFrame === 'function') {
+        // requestAnimationFrame defers to next frame, then use setTimeout to avoid blocking paint
+        requestAnimationFrame(() => {
+          setTimeout(serialize, 0);
+        });
+      } else {
+        // Final fallback
+        setTimeout(serialize, 0);
+      }
     }, this.debounceMs);
   }
 
