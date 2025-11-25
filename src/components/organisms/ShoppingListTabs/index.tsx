@@ -17,9 +17,12 @@ interface ShoppingListTabsProps {
     itemId: string,
     afterItemId: string | null,
     beforeItemId: string | null,
+    afterSortOrder: string | null,
+    beforeSortOrder: string | null,
   ) => Promise<void>;
   onRefresh?: () => void | Promise<void>;
   refreshing?: boolean;
+  loading?: boolean;
   disabled?: boolean;
   emptyState?: any;
   onClearAllPurchased?: () => Promise<void>;
@@ -36,6 +39,7 @@ export const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   onSortOrderUpdate,
   onRefresh,
   refreshing,
+  loading,
   disabled,
   emptyState,
   onClearAllPurchased,
@@ -123,6 +127,7 @@ export const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
               onSortOrderUpdate={onSortOrderUpdate}
               onRefresh={onRefresh}
               refreshing={refreshing}
+              loading={loading}
               disabled={disabled}
               onSwipeableWillOpen={handleSwipeableWillOpen}
               onSwipeableClose={onSwipeableClose}
@@ -141,6 +146,7 @@ export const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
               onTogglePurchase={onTogglePurchase}
               onSortOrderUpdate={onSortOrderUpdate}
               onClearAll={onClearAllPurchased}
+              loading={loading}
               disabled={disabled}
               isDragging={isDragging}
               onSwipeableWillOpen={handleSwipeableWillOpen}
@@ -164,6 +170,7 @@ export const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
       onSortOrderUpdate,
       onRefresh,
       refreshing,
+      loading,
       disabled,
       onClearAllPurchased,
       handleSwipeableWillOpen,

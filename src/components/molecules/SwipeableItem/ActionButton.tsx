@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { Text } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated from 'react-native-reanimated';
@@ -21,21 +21,26 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
   const buttonStyle = circular
     ? styles.circularActionButton
     : styles.actionButton;
-  const iconColor = circular ? theme.colors.white : theme.colors.white;
+  const iconColor = theme.colors.white;
   const iconSize = theme.fonts.size['3xl'];
 
-  const handlePress = () => {
-    console.log('ActionButton pressed! Icon:', icon, 'Library:', library);
+  // PERFORMANCE: Memoize the press handler to prevent gesture recreation
+  const handlePress = useCallback(() => {
     onPress();
-  };
+  }, [onPress]);
 
-  // Create tap gesture with proper priority to avoid conflicts with swipeable
-  const tapGesture = Gesture.Tap()
-    .onEnd(() => {
-      'worklet';
-      scheduleOnRN(handlePress);
-    })
-    .shouldCancelWhenOutside(false);
+  // PERFORMANCE: Memoize Gesture.Tap() to avoid recreating gesture on every render
+  // This is critical as gesture creation involves setting up native gesture handlers
+  const tapGesture = useMemo(
+    () =>
+      Gesture.Tap()
+        .onEnd(() => {
+          'worklet';
+          scheduleOnRN(handlePress);
+        })
+        .shouldCancelWhenOutside(false),
+    [handlePress],
+  );
 
   return (
     <GestureDetector gesture={tapGesture}>
