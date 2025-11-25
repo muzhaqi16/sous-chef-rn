@@ -1,5 +1,5 @@
 import {ApolloLink, Observable} from '@apollo/client';
-import {serializeError, safeStringifyError} from '#/utils/errorSerialization';
+import {serializeError, safeStringifyError, isTimerCircularStructureError} from '#/utils/errorSerialization';
 
 // Enable detailed logging only in development
 const isDevelopment = __DEV__;
@@ -41,6 +41,19 @@ export const createConsoleLink = (
           const duration = Date.now() - startTime;
           const hasErrors = result.errors && result.errors.length > 0;
 
+          // Check for timer errors FIRST - skip ALL logging for these
+          // These are expected during subscription teardown/setup due to graphql-ws internals
+          if (hasErrors) {
+            const safeErrors = result.errors?.map(serializeError);
+            const isTimerError = safeErrors?.some((err: any) =>
+              isTimerCircularStructureError(err)
+            );
+            if (isTimerError) {
+              observer.next(result);
+              return; // Skip entire logging block
+            }
+          }
+
           // Determine status
           let emoji = '✅';
           let style = 'color: #22c55e; font-weight: bold';
@@ -76,11 +89,19 @@ export const createConsoleLink = (
             const {stringified, isCircular} = safeStringifyError(safeErrors);
 
             if (isCircular) {
-              // Circular structure errors are expected during WebSocket reconnection - log as warning
+              // Log actual error details for non-timer circular errors
               console.warn(
-                '   ⚠️ GraphQL errors (circular structure - expected during reconnection)',
+                '   ⚠️ GraphQL errors (may have circular refs):',
               );
-              console.warn('   Error count:', safeErrors?.length || 0);
+              safeErrors?.forEach((err: any, i: number) => {
+                console.warn(`      [${i}] message: ${err?.message || 'No message'}`);
+                if (err?.path) {
+                  console.warn(`          path: ${JSON.stringify(err.path)}`);
+                }
+                if (err?.extensions?.code) {
+                  console.warn(`          code: ${err.extensions.code}`);
+                }
+              });
             } else {
               console.error('   ❌ Errors:', stringified);
             }

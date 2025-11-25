@@ -157,6 +157,30 @@ export function isCircularStructureError(error: any): boolean {
 }
 
 /**
+ * Check if an error is a timer-related circular structure error
+ * These are expected during subscription teardown/setup due to graphql-ws internals
+ * and are not actionable - they should be silently suppressed
+ *
+ * The graphql-ws library uses internal setTimeout for keepalive pings.
+ * During subscription lifecycle transitions, error events may contain
+ * Timer object references which have circular linked-list structures.
+ */
+export function isTimerCircularStructureError(error: any): boolean {
+  if (!error) return false;
+
+  const message = typeof error === 'string' ? error : error.message || '';
+
+  // Must be a circular structure error AND involve timer objects
+  return (
+    message.includes('Converting circular structure to JSON') &&
+    (message.includes('Timeout') ||
+      message.includes('TimersList') ||
+      message.includes('_idlePrev') ||
+      message.includes('_idleNext'))
+  );
+}
+
+/**
  * Safely stringify errors with circular structure detection
  * Returns a brief warning message for circular structure errors instead of throwing
  */
