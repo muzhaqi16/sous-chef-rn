@@ -196,36 +196,28 @@ const styles = StyleSheet.create(theme => ({
 }));
 
 // PERFORMANCE: Custom comparator for React.memo
-// Only re-render when item data actually changes, not on callback reference changes
-// Config objects have stable references from useShoppingListScreen caching
+// Only re-render when item data or drag state changes
+// Callbacks are stable (from context/useCallback) so no need to compare them
 const arePropsEqual = (
   prev: SimpleDraggableItemProps,
   next: SimpleDraggableItemProps,
 ): boolean => {
-  // Item data comparison - these trigger re-renders
-  if (prev.item.id !== next.item.id) return false;
-  if (prev.item.title !== next.item.title) return false;
-  if (prev.item.subtitle !== next.item.subtitle) return false;
-  if (prev.item.isPurchased !== next.item.isPurchased) return false;
+  // Fast path: same item reference + same drag state = definitely equal
+  if (prev.item === next.item && prev.isActive === next.isActive && prev.drag === next.drag) {
+    return true;
+  }
 
-  // Config reference comparison - stable due to caching in useShoppingListScreen
-  if (prev.item.rightElementConfig !== next.item.rightElementConfig)
-    return false;
-  if (prev.item.leftElementConfig !== next.item.leftElementConfig) return false;
-
-  // Drag state - triggers re-render
-  if (prev.isActive !== next.isActive) return false;
-  // Compare drag by reference to ensure fresh handler is used if it changes
-  if (prev.drag !== next.drag) return false;
-
-  // Callbacks - compare by reference identity for stability
-  // These should be stable from parent's useCallback/context
-  if (prev.onItemPress !== next.onItemPress) return false;
-  if (prev.onItemEdit !== next.onItemEdit) return false;
-  if (prev.onItemDelete !== next.onItemDelete) return false;
-  if (prev.onTogglePurchase !== next.onTogglePurchase) return false;
-
-  return true;
+  // Compare item fields that affect rendering
+  return (
+    prev.item.id === next.item.id &&
+    prev.item.title === next.item.title &&
+    prev.item.subtitle === next.item.subtitle &&
+    prev.item.isPurchased === next.item.isPurchased &&
+    prev.item.rightElementConfig === next.item.rightElementConfig &&
+    prev.item.leftElementConfig === next.item.leftElementConfig &&
+    prev.isActive === next.isActive &&
+    prev.drag === next.drag
+  );
 };
 
 // PERFORMANCE: Memoize component with custom comparison
