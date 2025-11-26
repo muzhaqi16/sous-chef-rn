@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
+import { InteractionManager } from 'react-native';
 
 /**
- * Hook to defer heavy rendering until after navigation animations complete.
+ * Hook to defer heavy rendering until after interactions complete.
  *
- * Uses requestAnimationFrame + delay to wait until after the browser/native
- * has finished the current paint and navigation animations before signaling
- * that the component is ready to render heavy content.
+ * Uses InteractionManager to wait until navigation animations and other
+ * interactions have finished before signaling that the component is ready
+ * to render heavy content. This prevents janky animations during screen
+ * transitions.
  *
- * @param delay - Delay in ms after frame completes (default 250ms for navigation)
+ * @param delay - Optional additional delay in ms after interactions complete (default: 150ms)
  * @returns boolean - true when it's safe to render heavy content
  *
  * @example
@@ -23,20 +25,21 @@ import { useState, useEffect } from 'react';
  * };
  * ```
  */
-export function useDeferredRender(delay = 250): boolean {
+export function useDeferredRender(delay = 150): boolean {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     let timerId: ReturnType<typeof setTimeout> | undefined;
 
-    // Use requestAnimationFrame to defer until after current frame
-    // This allows navigation animations to complete before heavy rendering
-    const frameId = requestAnimationFrame(() => {
+    // Use InteractionManager to wait for navigation animations to complete
+    // This is critical for smooth screen transitions with heavy list components
+    const interactionHandle = InteractionManager.runAfterInteractions(() => {
       if (cancelled) return;
 
       if (delay > 0) {
-        // Optional additional delay after frame
+        // Additional delay after interactions complete
+        // This gives extra buffer for the UI to settle
         timerId = setTimeout(() => {
           if (!cancelled) setIsReady(true);
         }, delay);
@@ -47,7 +50,7 @@ export function useDeferredRender(delay = 250): boolean {
 
     return () => {
       cancelled = true;
-      cancelAnimationFrame(frameId);
+      interactionHandle.cancel();
       if (timerId) clearTimeout(timerId);
     };
   }, [delay]);

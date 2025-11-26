@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
 import { View, Image } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { SwipeableItem } from '#/components/molecules/SwipeableItem';
+import { LazySwipeableItem } from '#/components/molecules/SwipeableItem/LazySwipeableItem';
 import { ListItem } from '#/components/molecules/ListItem';
 import { DragHandle } from '#/components/atoms/DragHandle';
 import { commonStyles } from '#/styles';
@@ -140,7 +140,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
 
   return (
     <View style={[styles.container, isActive && styles.activeContainer]}>
-      <SwipeableItem
+      <LazySwipeableItem
         onPress={() =>
           onTogglePurchase ? onTogglePurchase(item.id) : onItemPress(item.id)
         }
@@ -166,7 +166,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
           rightIcon={undefined}
           isPurchased={item.isPurchased}
         />
-      </SwipeableItem>
+      </LazySwipeableItem>
     </View>
   );
 };
