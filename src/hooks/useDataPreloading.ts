@@ -1,7 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import { useShallow } from 'zustand/shallow';
 import { useGetCommonUnitsQuery } from '#generated';
-import { useAppStore } from '#store/useAppStore';
-import { useAuth } from './auth/useAuth';
+import { useAppStore, selectAuthState } from '#store/useAppStore';
 
 /**
  * Preloads essential reference data for offline access
@@ -16,9 +16,15 @@ import { useAuth } from './auth/useAuth';
  * - For full unit search, use SearchUnits query in autocomplete components
  */
 export function useDataPreloading() {
-  const { isAuthenticated } = useAuth();
+  // Access auth state directly from store to avoid circular dependency with useAuth
+  const {user, accessToken} = useAppStore(useShallow(selectAuthState));
+  const isAuthenticated = !!(user && accessToken);
+
   const cachedUnits = useAppStore(state => state.cachedUnits);
   const setCachedUnits = useAppStore(state => state.setCachedUnits);
+
+  // PERFORMANCE: Track if units have been cached to prevent infinite loop
+  const hasCachedUnitsRef = useRef(false);
 
   // Preload common units data when authenticated
   // Uses cache-and-network to show cached data immediately while fetching fresh data
@@ -30,14 +36,13 @@ export function useDataPreloading() {
   });
 
   // Store units in Zustand for fast access (avoids Apollo cache reads)
+  // PERFORMANCE: Use ref to prevent feedback loop (cachedUnits.length triggering re-render)
   useEffect(() => {
-    if (data?.units && data.units.length > 0) {
-      // Only update if we have new data or cache is empty
-      if (cachedUnits.length === 0 || cachedUnits.length !== data.units.length) {
-        setCachedUnits(data.units);
-      }
+    if (data?.units && data.units.length > 0 && !hasCachedUnitsRef.current) {
+      setCachedUnits(data.units);
+      hasCachedUnitsRef.current = true;
     }
-  }, [data?.units, cachedUnits.length, setCachedUnits]);
+  }, [data?.units, setCachedUnits]);
 
   return {
     isPreloading: loading,

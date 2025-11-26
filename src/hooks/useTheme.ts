@@ -1,13 +1,15 @@
 import { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
+import { useShallow } from 'zustand/shallow';
 import { UnistylesRuntime } from 'react-native-unistyles';
-import { useAppStore } from '#/store/useAppStore';
+import { useAppStore, selectPreferences } from '#/store/useAppStore';
 import { ThemePreference } from '#/store/slices/preferencesSlice';
 
 export const useTheme = () => {
   const systemColorScheme = useColorScheme();
-  const userThemePreference = useAppStore(state => state.theme);
-  const setTheme = useAppStore(state => state.setTheme);
+  const {theme: userThemePreference, setTheme} = useAppStore(
+    useShallow(selectPreferences),
+  );
 
   // Resolve the effective theme based on user preference and system
   const resolveEffectiveTheme = (): 'light' | 'dark' => {

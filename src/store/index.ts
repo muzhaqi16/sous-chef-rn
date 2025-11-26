@@ -62,9 +62,6 @@ import {
 } from './slices/navigationSlice';
 import { createTelemetrySlice, TelemetryState } from './slices/telemetrySlice';
 import { createNetworkSlice, NetworkState } from './slices/networkSlice';
-// Performance slice moved to separate store (performanceStore.ts) to prevent re-render loops
-// import { createPerformanceSlice, PerformanceState } from './slices/performanceSlice';
-// import {logger} from './logger';
 import { zustandStorage, STORAGE_KEY } from '#/storage/mmkv';
 
 // Add reset manager interface to root state
@@ -145,7 +142,7 @@ export const useStore = create<RootState>()(
       ),
       {
         name: STORAGE_KEY,
-        version: 5,
+        version: 6,
         storage: createJSONStorage(() => zustandStorage),
         // Do store migrations here
         migrate: (persistedState: any, version: number) => {

@@ -330,6 +330,29 @@ directive @cacheControl(
 ) on FIELD_DEFINITION | INTERFACE | OBJECT | UNION
 
 """
+Require that the current user is the owner of the parent resource
+Returns null for the field if user is not the owner (soft denial)
+This is useful for sensitive fields that should only be visible to the owner
+
+The owner check uses:
+1. parent.userId (if exists) - compared to context.userId
+2. parent.authorId (if exists) - for author-owned resources like recipes
+3. parent.ownerId (if exists) - for explicitly owned resources
+
+Example:
+type User {
+  email: String! @auth
+  settings: UserSettings @ownerOnly
+  notifications: [Notification!]! @ownerOnly
+}
+
+type Recipe {
+  privateNotes: String @ownerOnly
+}
+"""
+directive @ownerOnly on FIELD_DEFINITION
+
+"""
 Require specific access level to a resource
 Returns FORBIDDEN error if user doesn't have required access level
 
@@ -1859,6 +1882,10 @@ enum HealthGoal {
   SUGAR_FREE
 }
 
+"""
+Home/household for managing pantries and shopping lists
+Cache: 5 minutes - metadata changes occasionally
+"""
 type Home {
   allowJoinCode: Boolean!
   createdAt: DateTime!
@@ -2687,6 +2714,10 @@ enum MatchType {
   PARTIAL
 }
 
+"""
+Meal plan for organizing meals over a period
+Cache: 5 minutes - plans change occasionally
+"""
 type MealPlan {
   actualCost: Float!
   budgetAmount: Float
@@ -2706,6 +2737,10 @@ type MealPlan {
   version: Int!
 }
 
+"""
+Meal plan item linking recipes to meals
+Cache: 5 minutes - meal plans change occasionally
+"""
 type MealPlanItem {
   actualCost: Float
   completedAt: DateTime
@@ -3676,6 +3711,10 @@ input PaginationInput {
   take: Int
 }
 
+"""
+Pantry/storage location for a home
+Cache: 5 minutes - updated when items added/removed
+"""
 type Pantry {
   createdAt: DateTime!
   description: String
@@ -4165,8 +4204,6 @@ type Query {
   autocompleteItems(input: AutocompleteInput!): AutocompleteResponse
   brand(id: ID!): Brand
   brands(
-    country: String
-    isActive: Boolean
     parentId: String
     search: String
     skip: Int = 0
@@ -4210,6 +4247,7 @@ type Query {
   currencies(isActive: Boolean): [Currency!]!
   currency(id: ID!): Currency
   currencyByCode(code: String!): Currency
+  defaultPantry(homeId: ID!): Pantry
   defaultShoppingList: ShoppingList
   device(id: ID!): Device
   deviceByDeviceId(deviceId: String!): Device
@@ -4850,6 +4888,10 @@ input ShareShoppingListInput {
   shareCode: String
 }
 
+"""
+Shopping list for a home
+Cache: 1 minute - frequently updated by collaborators
+"""
 type ShoppingList {
   activities: [ShoppingListActivity!]
     @deprecated(

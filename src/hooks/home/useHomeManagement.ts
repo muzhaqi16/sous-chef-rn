@@ -12,8 +12,10 @@ import {
   useSetDefaultHomeMutation,
   useJoinHomeByCodeMutation,
   useGetHomeByJoinCodeLazyQuery,
+  useGetDefaultPantryLazyQuery,
 } from '#generated';
-import { useAppStore, selectSelectedHomeId } from '#store/useAppStore';
+import { useShallow } from 'zustand/shallow';
+import { useAppStore, selectSelectedHomeId, selectHomeState } from '#store/useAppStore';
 import { useErrorHandler } from '#/utils/errorHandling';
 import {
   handleVersionConflict,
@@ -27,6 +29,7 @@ import {
   createRemoveFromQueryFieldUpdater,
 } from '#/apollo/utils';
 import { useCrudOperations } from '#/hooks/utils';
+import { useOfflinePresetPolicy } from '#/apollo/policies/offlineFetchPolicies';
 
 // Cache updater utilities for homes
 const addToHomesCache = createAddToQueryFieldUpdater('homes');
@@ -34,15 +37,18 @@ const removeFromHomesCache = createRemoveFromQueryFieldUpdater('homes', 'Home');
 
 export function useHomeManagement() {
   const selectedHomeId = useAppStore(selectSelectedHomeId);
-  const setSelectedHomeId = useAppStore(state => state.setSelectedHomeId);
+  const {setSelectedHomeId} = useAppStore(useShallow(selectHomeState));
   const setSelectedPantryId = useAppStore(state => state.setSelectedPantryId);
   const { handleApolloError } = useErrorHandler();
 
   // Ref to track if initial home auto-selection has been attempted
   const hasInitializedDefaultHome = useRef(false);
 
+  // PERFORMANCE: Use offline-aware fetch policy preset for consistency
+  const fetchPolicy = useOfflinePresetPolicy('LIST');
+
   const { data, loading, error, refetch } = useGetHomesQuery({
-    fetchPolicy: 'cache-and-network',
+    fetchPolicy,
     nextFetchPolicy: 'cache-first', // Subsequent fetches use cache to avoid unnecessary refetches
     errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
   });
@@ -52,7 +58,7 @@ export function useHomeManagement() {
     loading: loadingDefaultHome,
     refetch: refetchDefaultHome,
   } = useGetDefaultHomeQuery({
-    fetchPolicy: 'cache-and-network',
+    fetchPolicy,
     nextFetchPolicy: 'cache-first', // Subsequent fetches use cache to avoid unnecessary refetches
     errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
   });
@@ -387,8 +393,13 @@ export function useHomeManagement() {
   // Preview home by join code query
   const [getHomeByJoinCode, { loading: loadingPreview, data: previewData }] =
     useGetHomeByJoinCodeLazyQuery({
-      fetchPolicy: 'network-only', // Always fetch fresh data
+      fetchPolicy: 'network-only', // Always fetch fresh data (one-time operation)
     });
+
+  // Get default pantry for a home
+  const [getDefaultPantry] = useGetDefaultPantryLazyQuery({
+    fetchPolicy: 'network-only', // Always fetch fresh default pantry (one-time operation)
+  });
 
   // Helper functions using CRUD utilities
   const createHomeOperation = createAddOperation({
@@ -485,6 +496,21 @@ export function useHomeManagement() {
       if (result.data) {
         // Immediately update local state for instant UI feedback
         setSelectedHomeId(homeId);
+
+        // Auto-select the default pantry using server query
+        try {
+          const { data: pantryData } = await getDefaultPantry({
+            variables: { homeId },
+          });
+
+          if (pantryData?.defaultPantry?.id) {
+            setSelectedPantryId(pantryData.defaultPantry.id);
+          }
+        } catch (error) {
+          console.warn('Failed to get default pantry:', error);
+          // Non-critical - user can manually select pantry if needed
+        }
+
         return true;
       }
 

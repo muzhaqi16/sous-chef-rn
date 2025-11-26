@@ -68,6 +68,7 @@ export const ToastProvider: React.FC<{children: ReactNode}> = ({children}) => {
       {children}
       {visible && Platform.OS === 'ios' && (
         <Animated.View
+          testID={`toast-${opts.type || 'default'}`}
           entering={SlideInDown.springify().damping(20)}
           exiting={SlideOutUp.duration(200)}
           style={[
@@ -76,7 +77,9 @@ export const ToastProvider: React.FC<{children: ReactNode}> = ({children}) => {
               backgroundColor: backgroundColors[opts.type || 'default'],
             },
           ]}>
-          <Text style={styles.toastText}>{opts.message}</Text>
+          <Text style={styles.toastText} testID="toast-message">
+            {opts.message}
+          </Text>
         </Animated.View>
       )}
     </ToastContext.Provider>

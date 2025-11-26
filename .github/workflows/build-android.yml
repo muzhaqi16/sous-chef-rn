@@ -155,6 +155,7 @@ jobs:
             echo "TELEMETRY_AUTH_USERNAME=${{ secrets.TELEMETRY_AUTH_USERNAME }}" >> "$ENV_FILE"
             echo "TELEMETRY_AUTH_PASSWORD=${{ secrets.TELEMETRY_AUTH_PASSWORD }}" >> "$ENV_FILE"
           elif [ "${{ env.BUILD_ENV }}" = "prod" ]; then
+            echo "NODE_ENV=production" >> "$ENV_FILE"
             echo "TELEMETRY_AUTH_USERNAME=${{ secrets.TELEMETRY_AUTH_USERNAME }}" >> "$ENV_FILE"
             echo "TELEMETRY_AUTH_PASSWORD=${{ secrets.TELEMETRY_AUTH_PASSWORD }}" >> "$ENV_FILE"
           fi

@@ -291,7 +291,7 @@ describe('usePantryStats', () => {
       ];
 
       const { result, rerender } = renderHook(
-        ({ pantryItems }) => usePantryStats(pantryItems),
+        (props: { pantryItems: typeof items }) => usePantryStats(props.pantryItems),
         { initialProps: { pantryItems: items } },
       );
 
@@ -308,7 +308,7 @@ describe('usePantryStats', () => {
       ];
 
       const { result, rerender } = renderHook(
-        ({ items }) => usePantryStats(items),
+        (props: { items: typeof items1 }) => usePantryStats(props.items),
         { initialProps: { items: items1 } },
       );
 

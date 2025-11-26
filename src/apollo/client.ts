@@ -94,9 +94,9 @@ export function cancelCachePersistence() {
  * Approach from apollo3-cache-persist - cleanest way to persist cache
  */
 function setupCachePersistence(client: ApolloClient) {
-  // Increased from 1000ms to 3000ms to reduce persistence frequency
-  // This minimizes JSON serialization overhead on the JS thread
-  const DEBOUNCE_MS = 3000;
+  // PERFORMANCE: Reduced from 3000ms to 1000ms to improve perceived mutation speed
+  // 1000ms is still sufficient to batch rapid mutations while reducing visible delay
+  const DEBOUNCE_MS = 1000;
 
   // Helper to schedule cache persistence (debounced)
   const schedulePersistence = () => {

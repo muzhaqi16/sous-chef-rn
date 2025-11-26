@@ -1,7 +1,13 @@
 import React, { useEffect, useRef } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { useAppStore, selectHydrated, selectUser } from '#store/useAppStore';
+import { useShallow } from 'zustand/shallow';
+import {
+  useAppStore,
+  selectHydrated,
+  selectUser,
+  selectPostLoginState,
+} from '#store/useAppStore';
 import { useAuth } from '#hooks/auth/useAuth';
 import { SplashScreen } from '#screens';
 import {
@@ -23,13 +29,14 @@ import {
   EmailVerificationDeepLinkScreen,
   ResetPasswordScreen,
 } from '#screens/auth';
-import { AcceptInvite } from '#screens/shoppingList/AcceptInvite';
+import { AcceptInvite } from '#screens/shoppingList';
 import {
   DeleteAccountScreen,
   DietaryProfileScreen,
   AppSettingsScreen,
   PersonalInformationScreen,
   PerformanceDashboard,
+  DebugInfo,
 } from '#screens/profile';
 import { NotificationSettingsScreen } from '#screens/notifications';
 import { linkingConfig } from './linking';
@@ -62,18 +69,22 @@ export type RootStackParamList = {
   PersonalInformation: undefined;
   AppSettings: undefined;
   PerformanceDashboard: undefined;
+  DebugInfo: undefined;
   NotFound: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function RootNavigator() {
+  // PERFORMANCE: Use grouped selectors to reduce subscriptions
   const isHydrated = useAppStore(selectHydrated);
-  const navigationState = useAppStore(state => state.navigationState);
-  const showBiometricSetup = useAppStore(state => state.showBiometricSetup);
-  const postLoginCredentials = useAppStore(state => state.postLoginCredentials);
-  const setNavigationState = useAppStore(state => state.setNavigationState);
   const user = useAppStore(selectUser);
+  const {
+    navigationState,
+    showBiometricSetup,
+    postLoginCredentials,
+    setNavigationState,
+  } = useAppStore(useShallow(selectPostLoginState));
   const { handlePostLoginBiometricComplete } = useAuth();
 
   // Initialize deep link router for handling URL-based navigation
@@ -234,6 +245,10 @@ function RootNavigator() {
               <Stack.Screen
                 name="PerformanceDashboard"
                 component={PerformanceDashboard}
+              />
+              <Stack.Screen
+                name="DebugInfo"
+                component={DebugInfo}
               />
               <Stack.Screen
                 name="AppSettings"

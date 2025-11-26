@@ -75,6 +75,39 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
     [onImageSelected, onError, isProfile],
   );
 
+  // PERFORMANCE: Consolidated permission request logic
+  const requestPermissionAndLaunch = useCallback(
+    async (
+      permission: any,
+      launchFn: (
+        options: CameraOptions | ImageLibraryOptions,
+        callback: (response: ImagePickerResponse) => void,
+      ) => void,
+      permissionName: string,
+      allowLaunchWithoutPermission: boolean = false,
+    ) => {
+      try {
+        const result = await request(permission);
+
+        if (result === RESULTS.GRANTED || result === RESULTS.LIMITED) {
+          launchFn(DEFAULT_OPTIONS, handleImageResponse);
+        } else if (allowLaunchWithoutPermission) {
+          // Modern iOS doesn't need permission for photo library
+          launchFn(DEFAULT_OPTIONS, handleImageResponse);
+        } else {
+          Alert.alert(
+            `${permissionName} Permission`,
+            `${permissionName} permission is required. Please enable it in your device settings.`,
+          );
+        }
+      } catch (error) {
+        // Fallback: try launching without permission check
+        launchFn(DEFAULT_OPTIONS, handleImageResponse);
+      }
+    },
+    [handleImageResponse],
+  );
+
   const showImagePicker = useCallback(() => {
     if (disabled) return;
 
@@ -84,45 +117,25 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
       [
         {
           text: 'Camera',
-          onPress: async () => {
-            try {
-              const result = await request(
-                PERMISSIONS.ANDROID.CAMERA || PERMISSIONS.IOS.CAMERA,
-              );
-              if (result === RESULTS.GRANTED) {
-                launchCamera(DEFAULT_OPTIONS, handleImageResponse);
-              } else {
-                Alert.alert(
-                  'Camera Permission',
-                  'Camera permission is required to take photos. Please enable it in your device settings.',
-                );
-              }
-            } catch (error) {
-              // Fallback: try launching without permission check
-              launchCamera(DEFAULT_OPTIONS, handleImageResponse);
-            }
-          },
+          onPress: () =>
+            requestPermissionAndLaunch(
+              PERMISSIONS.ANDROID.CAMERA || PERMISSIONS.IOS.CAMERA,
+              launchCamera,
+              'Camera',
+              false,
+            ),
           style: 'default',
         },
         {
           text: 'Photo Library',
-          onPress: async () => {
-            try {
-              const result = await request(
-                PERMISSIONS.ANDROID.READ_EXTERNAL_STORAGE ||
-                  PERMISSIONS.IOS.PHOTO_LIBRARY,
-              );
-              if (result === RESULTS.GRANTED || result === RESULTS.LIMITED) {
-                launchImageLibrary(DEFAULT_OPTIONS, handleImageResponse);
-              } else {
-                // Try anyway - modern iOS doesn't need permission for photo library
-                launchImageLibrary(DEFAULT_OPTIONS, handleImageResponse);
-              }
-            } catch (error) {
-              // Fallback: try launching without permission check
-              launchImageLibrary(DEFAULT_OPTIONS, handleImageResponse);
-            }
-          },
+          onPress: () =>
+            requestPermissionAndLaunch(
+              PERMISSIONS.ANDROID.READ_EXTERNAL_STORAGE ||
+                PERMISSIONS.IOS.PHOTO_LIBRARY,
+              launchImageLibrary,
+              'Photo Library',
+              true, // Allow launch without permission on modern iOS
+            ),
           style: 'default',
         },
         {
@@ -132,7 +145,7 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
       ],
       { cancelable: true },
     );
-  }, [disabled, handleImageResponse]);
+  }, [disabled, requestPermissionAndLaunch]);
 
   if (children) {
     return (

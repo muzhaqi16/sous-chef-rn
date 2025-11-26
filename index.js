@@ -4,6 +4,21 @@
  * MUST be imported before any other imports that use crypto
  */
 import 'react-native-get-random-values';
+import { LogBox } from 'react-native';
+/**
+ * Configure Reanimated logger BEFORE any Reanimated code runs
+ * This prevents "Cannot read property 'level' of undefined" errors
+ * Must be called before any imports that use Reanimated animations
+ */
+import {
+  configureReanimatedLogger,
+  ReanimatedLogLevel,
+} from 'react-native-reanimated';
+
+configureReanimatedLogger({
+  level: ReanimatedLogLevel.warn,
+  strict: false,
+});
 
 /**
  * Configure Apollo Client memory management
@@ -21,5 +36,10 @@ import './src/theme/unistyles';
 import App from './App';
 
 import { name as appName } from './app.json';
+
+// Will be removed when upgrading to react navigation 8
+LogBox.ignoreLogs([
+  'InteractionManager has been deprecated and will be removed in a future release.',
+]);
 
 AppRegistry.registerComponent(appName, () => App);

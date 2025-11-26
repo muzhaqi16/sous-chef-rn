@@ -20,21 +20,25 @@ import { useStore } from '#store';
 export function useNetworkStatus() {
   const setNetworkStatus = useStore(state => state.setNetworkStatus);
 
-  useEffect(() => {
-    // Get initial network state
-    NetInfo.fetch().then(state => {
-      updateNetworkState(state, setNetworkStatus);
-    });
+  useEffect(
+    () => {
+      // Get initial network state
+      NetInfo.fetch().then(state => {
+        updateNetworkState(state, setNetworkStatus);
+      });
 
-    // Subscribe to network state changes
-    const unsubscribe = NetInfo.addEventListener(state => {
-      updateNetworkState(state, setNetworkStatus);
-    });
+      // Subscribe to network state changes
+      const unsubscribe = NetInfo.addEventListener(state => {
+        updateNetworkState(state, setNetworkStatus);
+      });
 
-    return () => {
-      unsubscribe();
-    };
-  }, [setNetworkStatus]);
+      return () => {
+        unsubscribe();
+      };
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
 }
 
 /**
@@ -57,21 +61,3 @@ function updateNetworkState(
   });
 }
 
-/**
- * Selector hook to get network status from store
- *
- * Usage:
- * ```typescript
- * const { isOnline, isOffline, networkType } = useNetworkState();
- * ```
- */
-export function useNetworkState() {
-  return useStore(state => ({
-    isOnline: state.isOnline,
-    isOffline: !state.isOnline,
-    isInternetReachable: state.isInternetReachable,
-    networkType: state.networkType,
-    lastOnlineTime: state.lastOnlineTime,
-    lastOfflineTime: state.lastOfflineTime,
-  }));
-}

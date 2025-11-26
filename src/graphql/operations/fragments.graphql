@@ -26,6 +26,35 @@ fragment ShoppingListItemCore on ShoppingListItem {
   }
 }
 
+# Lightweight fragment for shopping list display (GetShoppingLists)
+# Contains ONLY fields needed for SortableShoppingList rendering
+# For full item details, use ShoppingListItemFragment in GetShoppingListItem
+fragment ShoppingListItemDisplayFragment on ShoppingListItem {
+  id
+  itemName
+  quantity
+  isPurchased
+  sortOrder
+  unitName
+  category
+  unit {
+    id
+    symbol
+  }
+  item {
+    id
+    imageUrl
+    categories {
+      id
+      isPrimary
+      category {
+        id
+        name
+      }
+    }
+  }
+}
+
 # Full fragment for detail views and complete data
 # Spreads Core and adds all extended fields
 fragment ShoppingListItemFragment on ShoppingListItem {

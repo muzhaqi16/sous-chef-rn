@@ -18,6 +18,7 @@
  */
 
 import { logger } from '#/utils/environment';
+import { serializeError } from '#/utils/errorSerialization';
 import {
   CombinedGraphQLErrors,
   CombinedProtocolErrors,
@@ -236,7 +237,7 @@ class ErrorService {
         logger.error(`Error in ${operation}:`, {
           code: errorCode,
           message: errorMessage,
-          originalError: error,
+          originalError: serializeError(error),
         });
       }
 

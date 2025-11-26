@@ -24,6 +24,8 @@ interface QuantitySectionProps {
   onDecrementQuantity: () => void;
   onUnitSelected?: (unitId: string | null) => void;
   onUnitChange?: (unit: string) => void;
+  testID?: string;
+  unitTestID?: string;
 }
 
 export const QuantitySection: React.FC<QuantitySectionProps> = ({
@@ -34,6 +36,8 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
   isAutoReorder,
   onQuantityInputChange,
   onUnitSelected,
+  testID,
+  unitTestID,
 }) => {
   const getFields = (): FieldDef<any>[] => {
     if (mode === 'add') {
@@ -47,6 +51,7 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
               value={quantityInput}
               onChangeText={onQuantityInputChange}
               placeholder="e.g., 1, 1 1/4, or 1.5"
+              testID={testID}
             />
           ),
         },
@@ -63,6 +68,7 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
           placeholder: 'kg, lbs, pcs',
           component: 'unitAutocomplete',
           onUnitSelected,
+          testID: unitTestID,
         },
         {
           name: 'minimumQuantity',
@@ -100,6 +106,7 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
           placeholder: 'kg, lbs, pcs',
           component: 'unitAutocomplete',
           onUnitSelected,
+          testID: unitTestID,
         },
         {
           name: 'reservedQuantity',

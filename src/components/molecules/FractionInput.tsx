@@ -9,6 +9,7 @@ interface FractionInputProps {
   error?: string;
   label?: string;
   disabled?: boolean;
+  testID?: string;
 }
 
 /**
@@ -28,6 +29,7 @@ export const FractionInput: React.FC<FractionInputProps> = ({
   error,
   label,
   disabled = false,
+  testID,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
 
@@ -66,6 +68,7 @@ export const FractionInput: React.FC<FractionInputProps> = ({
         keyboardType="numbers-and-punctuation"
         editable={!disabled}
         selectTextOnFocus
+        testID={testID}
       />
       {hasError && (
         <Text style={styles.errorText}>

@@ -53,7 +53,8 @@ export const OnboardingCompleteScreen = () => {
       title="All set!"
       subtitle="Your home is ready to use"
       step={7}
-      totalSteps={7}>
+      totalSteps={7}
+      testID="onboarding-complete-screen">
       <View style={styles.container}>
         <View style={styles.successIcon}>
           <Text style={styles.checkmark}>✓</Text>

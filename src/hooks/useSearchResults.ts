@@ -1,11 +1,12 @@
 import { useEffect } from 'react';
+import { useShallow } from 'zustand/shallow';
 import {
   useItemByUpcQuery,
   useItemBySkuQuery,
   useCreateItemMutation,
   CreateItemMutation,
 } from '#generated';
-import { useAppStore } from '#store/useAppStore';
+import { useAppStore, selectSearchState, selectBottomSheetState } from '#store/useAppStore';
 import { ScannedItem } from '../store/slices/barcodeScannerSlice';
 import { Alert } from 'react-native';
 import { useImageUpload } from './useImageUpload';
@@ -35,14 +36,17 @@ const convertToScannedItem = (
 });
 
 export const useSearchResults = (barcode: string) => {
-  const searchResults = useAppStore(state => state.searchResults);
-  const setSearching = useAppStore(state => state.setSearching);
-  const addToRecentlyScanned = useAppStore(state => state.addToRecentlyScanned);
-  const hideBottomSheet = useAppStore(state => state.hideBottomSheet);
-  const clearSearch = useAppStore(state => state.clearSearch);
-  const setSearchError = useAppStore(state => state.setSearchError);
-  const showBottomSheet = useAppStore(state => state.showBottomSheet);
-  const setSearchResults = useAppStore(state => state.setSearchResults);
+  const {
+    searchResults,
+    setSearching,
+    addToRecentlyScanned,
+    clearSearch,
+    setSearchError,
+    setSearchResults,
+  } = useAppStore(useShallow(selectSearchState));
+  const {showBottomSheet, hideBottomSheet} = useAppStore(
+    useShallow(selectBottomSheetState),
+  );
   // const selectedPantryId = useAppStore(state => state.selectedPantryId); // TODO: Use for context-aware search
 
   const { uploadItemImage } = useImageUpload();
@@ -191,7 +195,7 @@ export const useSearchResults = (barcode: string) => {
       const processedInput = {
         name: formData.name,
         description: formData.description || undefined,
-        upc: formData.upc || barcode,
+        primaryUpc: formData.upc || barcode,
         sku: formData.sku || undefined,
 
         // Classification

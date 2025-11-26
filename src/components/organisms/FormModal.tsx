@@ -9,6 +9,8 @@ interface FormModalProps {
   onSave: () => void;
   loading?: boolean;
   children: React.ReactNode;
+  testID?: string;
+  submitButtonTestID?: string;
 }
 
 export const FormModal: React.FC<FormModalProps> = ({
@@ -17,18 +19,20 @@ export const FormModal: React.FC<FormModalProps> = ({
   onSave,
   loading = false,
   children,
+  testID,
+  submitButtonTestID,
 }) => {
   const {theme} = useUnistyles();
   if (loading) {
     return (
-      <View style={styles.container}>
+      <View style={styles.container} testID={testID ? `${testID}-loading` : undefined}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} testID={testID}>
       <Header
         title={title}
         centerTitle
@@ -42,6 +46,7 @@ export const FormModal: React.FC<FormModalProps> = ({
           {
             icon: 'check',
             onPress: onSave,
+            testID: submitButtonTestID,
           },
         ]}
       />

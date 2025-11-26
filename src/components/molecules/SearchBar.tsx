@@ -1,7 +1,7 @@
 import { type FC } from 'react';
 import { View, StyleProp, ViewStyle, TextInputProps } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { BaseInput, ActionButton } from '#components';
+import { BaseInput, ActionButton, AnimatedActionButton } from '#components';
 import { commonStyles } from '#/styles';
 
 export interface SearchBarAction {
@@ -14,6 +14,9 @@ export interface SearchBarAction {
   library?: 'MaterialDesignIcons' | 'Ionicons' | 'FontAwesome' | string;
   style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
+  animated?: boolean;
+  isHighlighted?: boolean;
+  testID?: string; // Optional testID for E2E testing
 }
 
 type SearchBarProps = Omit<TextInputProps, 'style'> & {
@@ -49,23 +52,48 @@ export const SearchBar: FC<SearchBarProps> = ({
 
     return (
       <View style={[styles.actionsContainer]}>
-        {actions.map((action, index) => (
-          <ActionButton
-            key={`${side}-${index}-${action.icon}`}
-            name={action.icon}
-            onPress={action.onPress}
-            style={[
-              {
-                backgroundColor: action.backgroundColor || theme.colors.primary,
-                ...commonStyles.shadow,
-              },
-              action.style,
-            ]}
-            color={action.color || '#fff'}
-            size={action.size}
-            accessibilityLabel={action.accessibilityLabel || `${action.icon} button`}
-          />
-        ))}
+        {actions.map((action, index) => {
+          if (action.animated) {
+            return (
+              <AnimatedActionButton
+                key={`${side}-${index}-${action.icon}`}
+                name={action.icon}
+                onPress={action.onPress}
+                style={[
+                  {
+                    ...commonStyles.shadow,
+                  },
+                  action.style,
+                ]}
+                color={action.color || '#fff'}
+                backgroundColor={action.backgroundColor || theme.colors.primary}
+                size={action.size}
+                accessibilityLabel={action.accessibilityLabel || `${action.icon} button`}
+                isHighlighted={action.isHighlighted}
+                testID={action.testID}
+              />
+            );
+          }
+
+          return (
+            <ActionButton
+              key={`${side}-${index}-${action.icon}`}
+              name={action.icon}
+              onPress={action.onPress}
+              style={[
+                {
+                  backgroundColor: action.backgroundColor || theme.colors.primary,
+                  ...commonStyles.shadow,
+                },
+                action.style,
+              ]}
+              color={action.color || '#fff'}
+              size={action.size}
+              accessibilityLabel={action.accessibilityLabel || `${action.icon} button`}
+              testID={action.testID}
+            />
+          );
+        })}
       </View>
     );
   };

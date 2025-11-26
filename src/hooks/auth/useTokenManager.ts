@@ -1,6 +1,22 @@
+/**
+ * @deprecated This hook is deprecated and should not be used.
+ *
+ * Token refresh is now handled automatically by:
+ * - tokenScheduler.ts: Proactive refresh 5-10 minutes before expiration
+ * - authSlice.ts: Schedules refresh when tokens are set
+ * - refreshToken.ts: Reactive refresh on auth errors
+ *
+ * This duplicate implementation created race conditions and conflicting refresh schedules.
+ * The hook scheduled refreshes with only a 1-minute buffer (line 107) while checking for
+ * expiration at 5 minutes (line 29), causing timing issues.
+ *
+ * DO NOT USE THIS HOOK. It will be removed in a future version.
+ */
+
 import {useEffect, useRef, useCallback, useState} from 'react';
 import {AppState, AppStateStatus} from 'react-native';
-import {useAppStore} from '#store/useAppStore';
+import {useShallow} from 'zustand/shallow';
+import {useAppStore, selectTokenState} from '#store/useAppStore';
 import {client} from '#/apollo/client';
 import {RefreshTokenDocument, RefreshTokenMutation} from '#generated';
 import {jwtDecode} from 'jwt-decode';
@@ -10,10 +26,13 @@ interface DecodedToken {
   iat: number;
 }
 
+/**
+ * @deprecated Use the built-in token refresh system instead
+ */
 export const useTokenManager = () => {
-  const accessToken = useAppStore(state => state.accessToken);
-  const refreshToken = useAppStore(state => state.refreshToken);
-  const setTokens = useAppStore(state => state.setTokens);
+  const {accessToken, refreshToken, setTokens} = useAppStore(
+    useShallow(selectTokenState),
+  );
   const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const refreshPromiseRef = useRef<Promise<boolean> | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);

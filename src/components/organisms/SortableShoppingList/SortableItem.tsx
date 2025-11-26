@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
-import { Vibration, Platform, View, Image } from 'react-native';
+import { View, Image } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { SwipeableItem } from '#/components/molecules/SwipeableItem';
+import { LazySwipeableItem } from '#/components/molecules/SwipeableItem/LazySwipeableItem';
 import { ListItem } from '#/components/molecules/ListItem';
 import { DragHandle } from '#/components/atoms/DragHandle';
 import { commonStyles } from '#/styles';
@@ -58,31 +58,19 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
     }
   }, [drag]);
 
-  // Handle long press for purchase toggle (when drag handle is not available)
-  const handleToggleLongPress = useCallback(() => {
-    if (onTogglePurchase) {
-      // Provide haptic feedback for toggle action
-      if (Platform.OS === 'ios') {
-        Vibration.vibrate([0, 50]); // Short vibration for toggle
-      } else {
-        Vibration.vibrate(50);
-      }
-      onTogglePurchase(item.id);
-    }
-  }, [onTogglePurchase, item.id]);
-
   // Create rightElement from config or use provided element
   // OPTIMIZATION: Minimal dependencies - callbacks from context are stable
   const rightElement = React.useMemo(() => {
     // Priority 1: Use config-based element (performance optimized)
     if (item.rightElementConfig?.type === 'counter') {
       const config = item.rightElementConfig;
-      const dragHandle = !item.isPurchased && drag ? (
-        <DragHandle
-          onLongPress={handleLongPress}
-          disabled={item.isPurchased}
-        />
-      ) : undefined;
+      const dragHandle =
+        !item.isPurchased && drag ? (
+          <DragHandle
+            onLongPress={handleLongPress}
+            disabled={item.isPurchased}
+          />
+        ) : undefined;
 
       return (
         <ShoppingListItemCounter
@@ -139,6 +127,8 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
           <Image
             source={{ uri: config.url }}
             style={commonStyles.listItemImage}
+            resizeMode="cover"
+            fadeDuration={0}
           />
         </View>
       );
@@ -150,10 +140,12 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
 
   return (
     <View style={[styles.container, isActive && styles.activeContainer]}>
-      <SwipeableItem
-        onPress={() => onItemPress(item.id)}
+      <LazySwipeableItem
+        onPress={() =>
+          onTogglePurchase ? onTogglePurchase(item.id) : onItemPress(item.id)
+        }
         onLongPress={
-          !drag && onTogglePurchase ? handleToggleLongPress : undefined
+          !drag && onItemPress ? () => onItemPress(item.id) : undefined
         }
         onEdit={onItemEdit ? () => onItemEdit(item.id) : undefined}
         onDelete={onItemDelete ? () => onItemDelete(item.id) : undefined}
@@ -174,7 +166,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
           rightIcon={undefined}
           isPurchased={item.isPurchased}
         />
-      </SwipeableItem>
+      </LazySwipeableItem>
     </View>
   );
 };
@@ -203,39 +195,34 @@ const styles = StyleSheet.create(theme => ({
   },
 }));
 
-// Custom comparison function for React.memo to prevent unnecessary re-renders
-// Only re-render if critical props change
+// PERFORMANCE: Custom comparator for React.memo
+// Only re-render when item data or drag state changes
+// Callbacks are stable (from context/useCallback) so no need to compare them
 const arePropsEqual = (
   prev: SimpleDraggableItemProps,
   next: SimpleDraggableItemProps,
 ): boolean => {
-  // Check if item identity or key properties changed
-  if (prev.item.id !== next.item.id) return false;
-  if (prev.item.isPurchased !== next.item.isPurchased) return false;
-  if (prev.item.title !== next.item.title) return false;
-
-  // Check quantity in config (most common update)
-  if (prev.item.rightElementConfig?.quantity !== next.item.rightElementConfig?.quantity) {
-    return false;
+  // Fast path: same item reference + same drag state = definitely equal
+  if (prev.item === next.item && prev.isActive === next.isActive && prev.drag === next.drag) {
+    return true;
   }
 
-  // Check image URL in config
-  if (prev.item.leftElementConfig?.url !== next.item.leftElementConfig?.url) {
-    return false;
-  }
-
-  // Check disabled state
-  if (prev.item.rightElementConfig?.disabled !== next.item.rightElementConfig?.disabled) {
-    return false;
-  }
-
-  // Check drag state
-  if (prev.drag !== next.drag) return false;
-  if (prev.isActive !== next.isActive) return false;
-
-  // All critical props are equal - skip re-render
-  return true;
+  // Compare item fields that affect rendering
+  return (
+    prev.item.id === next.item.id &&
+    prev.item.title === next.item.title &&
+    prev.item.subtitle === next.item.subtitle &&
+    prev.item.isPurchased === next.item.isPurchased &&
+    prev.item.rightElementConfig === next.item.rightElementConfig &&
+    prev.item.leftElementConfig === next.item.leftElementConfig &&
+    prev.isActive === next.isActive &&
+    prev.drag === next.drag
+  );
 };
 
-// Memoize component to prevent unnecessary re-renders during drag operations
-export const SimpleDraggableItem = React.memo(SimpleDraggableItemComponent, arePropsEqual);
+// PERFORMANCE: Memoize component with custom comparison
+// Config object stability maintained by Map caching in useShoppingListScreen
+export const SimpleDraggableItem = React.memo(
+  SimpleDraggableItemComponent,
+  arePropsEqual,
+);

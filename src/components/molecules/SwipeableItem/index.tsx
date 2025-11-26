@@ -27,8 +27,10 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({
   leftThreshold = 120,
   rightThreshold = 120,
   friction = 1,
+  failOffsetY = [-20, 20],
   onSwipeableWillOpen,
   onSwipeableClose,
+  testIDPrefix,
 }) => {
   const dragX = useSharedValue(0);
 
@@ -61,9 +63,10 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({
         onEdit={onEdit}
         onDelete={onDelete}
         onActionPress={handleActionPress}
+        testIDPrefix={testIDPrefix}
       />
     );
-  }, [onEdit, onDelete, handleActionPress]);
+  }, [onEdit, onDelete, handleActionPress, testIDPrefix]);
 
   const renderLeftActions = useCallback((
     progress: SharedValue<number>,
@@ -89,8 +92,9 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({
         friction={friction}
         leftThreshold={leftThreshold}
         rightThreshold={rightThreshold}
-        dragOffsetFromLeftEdge={0}
-        dragOffsetFromRightEdge={0}
+        dragOffsetFromLeftEdge={15}
+        dragOffsetFromRightEdge={15}
+        failOffsetY={failOffsetY}
         renderLeftActions={renderLeftActions}
         renderRightActions={renderRightActions}
         onSwipeableWillOpen={handleSwipeableWillOpen}

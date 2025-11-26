@@ -36,7 +36,7 @@ import {
   MutationType,
   LogLevel,
 } from './types';
-import { serializeError } from '#/utils/errorSerialization';
+import { serializeError, isCircularStructureError, isTimerCircularStructureError } from '#/utils/errorSerialization';
 
 export class SubscriptionService {
   private static instance: SubscriptionService;
@@ -463,6 +463,12 @@ export class SubscriptionService {
       return;
     }
 
+    // Silently skip timer-related circular structure errors
+    // These are expected during subscription teardown/setup due to graphql-ws internals
+    if (level === LogLevel.ERROR && isTimerCircularStructureError(data)) {
+      return;
+    }
+
     // Skip logs below configured level
     const logLevels = [LogLevel.DEBUG, LogLevel.INFO, LogLevel.WARN, LogLevel.ERROR];
     const configLogLevel = config.logLevel || LogLevel.INFO;
@@ -470,26 +476,50 @@ export class SubscriptionService {
       return;
     }
 
+    // Check if this is a circular structure error - downgrade to warning
+    const isCircular =
+      level === LogLevel.ERROR &&
+      data &&
+      (isCircularStructureError(data) ||
+        (typeof data === 'object' &&
+          data.message &&
+          isCircularStructureError(data.message)));
+
+    // Extract raw error message for visibility even when circular refs detected
+    const rawErrorMessage = typeof data === 'object' && data?.message
+      ? data.message
+      : typeof data === 'string'
+        ? data
+        : 'Unknown error';
+
+    const actualLevel = isCircular ? LogLevel.WARN : level;
+    const actualMessage = isCircular
+      ? `${message} (may have circular refs - raw: ${rawErrorMessage})`
+      : message;
+
+    // For circular errors, still log raw message but skip full data object to avoid serialization issues
+    const actualData = isCircular ? '' : data || '';
+
     const emoji = {
       [LogLevel.DEBUG]: '🔍',
       [LogLevel.INFO]: '🔔',
       [LogLevel.WARN]: '⚠️',
       [LogLevel.ERROR]: '❌',
-    }[level];
+    }[actualLevel];
 
     const prefix = `${emoji} [${config.subscriptionName}]`;
 
-    switch (level) {
+    switch (actualLevel) {
       case LogLevel.ERROR:
-        console.error(prefix, message, data || '');
+        console.error(prefix, actualMessage, actualData);
         break;
       case LogLevel.WARN:
-        console.warn(prefix, message, data || '');
+        console.warn(prefix, actualMessage, actualData);
         break;
       case LogLevel.DEBUG:
       case LogLevel.INFO:
       default:
-        console.log(prefix, message, data || '');
+        console.log(prefix, actualMessage, actualData);
     }
   }
 

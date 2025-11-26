@@ -37,8 +37,17 @@ interface OptimisticFieldUpdate {
  * ```
  */
 class OptimisticDataPersistence {
+  private batchTimeout: NodeJS.Timeout | null = null;
+  private pendingUpdates: Record<string, any> = {};
+
+  // PERFORMANCE: In-memory cache to avoid repeated MMKV reads and JSON parsing
+  // Cache is invalidated on writes and has no TTL (data is small and static until updated)
+  private cache: Record<string, OptimisticFieldUpdate> | null = null;
+  private cacheHits = 0;
+  private cacheMisses = 0;
+
   /**
-   * Save an optimistic field update
+   * Save an optimistic field update (batched for performance)
    *
    * @param entityType - Type of entity (e.g., 'ShoppingListItem', 'ShoppingList')
    * @param entityId - ID of the entity
@@ -47,10 +56,10 @@ class OptimisticDataPersistence {
    */
   save(entityType: string, entityId: string, field: string, value: any): void {
     try {
-      const existing = this.loadAll();
       const key = `${entityType}:${entityId}:${field}`;
 
-      existing[key] = {
+      // Add to pending batch
+      this.pendingUpdates[key] = {
         entityType,
         entityId,
         field,
@@ -58,10 +67,43 @@ class OptimisticDataPersistence {
         timestamp: Date.now(),
       };
 
-      storage.set(OPTIMISTIC_DATA_KEY, JSON.stringify(existing));
-      console.log(`💾 Optimistic: Saved ${entityType}.${field} for ${entityId}`, { value });
+      console.log(`💾 Optimistic: Queued ${entityType}.${field} for ${entityId}`, { value });
+
+      // PERFORMANCE: Batch multiple saves into single storage write
+      // Schedule flush after 100ms of inactivity
+      if (this.batchTimeout) {
+        clearTimeout(this.batchTimeout);
+      }
+
+      this.batchTimeout = setTimeout(() => {
+        this.flushPendingUpdates();
+      }, 100);
     } catch (error) {
       console.error('Failed to save optimistic data:', error);
+    }
+  }
+
+  /**
+   * Flush pending updates to storage
+   * @private
+   */
+  private flushPendingUpdates(): void {
+    try {
+      if (Object.keys(this.pendingUpdates).length === 0) return;
+
+      const existing = this.loadAll();
+      const merged = { ...existing, ...this.pendingUpdates };
+
+      storage.set(OPTIMISTIC_DATA_KEY, JSON.stringify(merged));
+      console.log(`💾 Optimistic: Flushed ${Object.keys(this.pendingUpdates).length} updates`);
+
+      // Invalidate cache after write
+      this.cache = merged;
+
+      this.pendingUpdates = {};
+      this.batchTimeout = null;
+    } catch (error) {
+      console.error('Failed to flush optimistic data:', error);
     }
   }
 
@@ -141,9 +183,11 @@ class OptimisticDataPersistence {
 
       if (Object.keys(existing).length === 0) {
         storage.remove(OPTIMISTIC_DATA_KEY);
+        this.cache = {}; // Invalidate cache
         console.log('🧹 Optimistic: Cleared all data (storage empty)');
       } else {
         storage.set(OPTIMISTIC_DATA_KEY, JSON.stringify(existing));
+        this.cache = existing; // Update cache
         if (hadData) {
           console.log(`🧹 Optimistic: Cleared ${entityType}.${field} for ${entityId}`);
         }
@@ -174,8 +218,10 @@ class OptimisticDataPersistence {
 
       if (Object.keys(filtered).length === 0) {
         storage.remove(OPTIMISTIC_DATA_KEY);
+        this.cache = {}; // Invalidate cache
       } else {
         storage.set(OPTIMISTIC_DATA_KEY, JSON.stringify(filtered));
+        this.cache = filtered; // Update cache
       }
 
       if (clearedCount > 0) {
@@ -206,8 +252,10 @@ class OptimisticDataPersistence {
 
       if (Object.keys(filtered).length === 0) {
         storage.remove(OPTIMISTIC_DATA_KEY);
+        this.cache = {}; // Invalidate cache
       } else {
         storage.set(OPTIMISTIC_DATA_KEY, JSON.stringify(filtered));
+        this.cache = filtered; // Update cache
       }
 
       if (clearedCount > 0) {
@@ -224,6 +272,7 @@ class OptimisticDataPersistence {
   clearAll(): void {
     try {
       storage.remove(OPTIMISTIC_DATA_KEY);
+      this.cache = null; // Invalidate cache
       console.log('🧹 Optimistic: Cleared all persisted data');
     } catch (error) {
       console.error('Failed to clear all optimistic data:', error);
@@ -259,16 +308,46 @@ class OptimisticDataPersistence {
 
   /**
    * Load all persisted optimistic data from storage
+   * Uses in-memory cache to avoid repeated MMKV reads and JSON parsing
    * @private
    */
   private loadAll(): Record<string, OptimisticFieldUpdate> {
     try {
+      // Return cached data if available
+      if (this.cache !== null) {
+        this.cacheHits++;
+        if (__DEV__ && this.cacheHits % 100 === 0) {
+          console.log(`⚡ Optimistic cache stats: ${this.cacheHits} hits, ${this.cacheMisses} misses (${((this.cacheHits / (this.cacheHits + this.cacheMisses)) * 100).toFixed(1)}% hit rate)`);
+        }
+        return this.cache;
+      }
+
+      // Cache miss - load from storage
+      this.cacheMisses++;
       const data = storage.getString(OPTIMISTIC_DATA_KEY);
-      return data ? JSON.parse(data) : {};
+      const parsed = data ? JSON.parse(data) : {};
+
+      // Populate cache for future reads
+      this.cache = parsed;
+
+      return parsed;
     } catch (error) {
       console.error('Failed to load optimistic data:', error);
       return {};
     }
+  }
+
+  /**
+   * Get cache statistics for monitoring
+   * Useful for performance debugging
+   */
+  getCacheStats(): { hits: number; misses: number; hitRate: number } {
+    const total = this.cacheHits + this.cacheMisses;
+    return {
+      hits: this.cacheHits,
+      misses: this.cacheMisses,
+      hitRate: total > 0 ? (this.cacheHits / total) * 100 : 0,
+    };
   }
 }
 

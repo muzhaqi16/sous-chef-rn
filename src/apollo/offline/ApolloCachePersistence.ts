@@ -83,16 +83,41 @@ class ApolloCachePersistence {
 
     // Debounce saves to avoid excessive writes
     this.saveTimeout = setTimeout(() => {
-      try {
-        const cacheString = JSON.stringify(cache);
-        const sizeKB = Math.round(cacheString.length / 1024);
+      // PERFORMANCE: Use requestIdleCallback to run serialization when JS thread is idle
+      // This prevents blocking UI interactions and list rendering
+      // Falls back to requestAnimationFrame which defers until after current paint
+      const serialize = () => {
+        try {
+          const cacheString = JSON.stringify(cache);
+          const sizeKB = Math.round(cacheString.length / 1024);
 
-        storage.set(CACHE_STORAGE_KEY, cacheString);
-        storage.set(CACHE_VERSION_KEY, CURRENT_CACHE_VERSION);
+          storage.set(CACHE_STORAGE_KEY, cacheString);
+          storage.set(CACHE_VERSION_KEY, CURRENT_CACHE_VERSION);
 
-        console.log(`💾 Cache: Persisted cache (${sizeKB} KB)`);
-      } catch (error) {
-        console.error('💾 Cache: Failed to persist cache:', error);
+          if (__DEV__) {
+            console.log(`💾 Cache: Persisted cache (${sizeKB} KB)`);
+          }
+        } catch (error) {
+          console.error('💾 Cache: Failed to persist cache:', error);
+        }
+      };
+
+      // Use requestIdleCallback if available (web/newer RN), otherwise use requestAnimationFrame
+      // requestIdleCallback runs when browser is idle (optimal for background work)
+      // requestAnimationFrame defers until after current frame paint (better than setTimeout)
+      if (
+        typeof globalThis !== 'undefined' &&
+        'requestIdleCallback' in globalThis
+      ) {
+        (globalThis as any).requestIdleCallback(serialize, { timeout: 2000 });
+      } else if (typeof requestAnimationFrame === 'function') {
+        // requestAnimationFrame defers to next frame, then use setTimeout to avoid blocking paint
+        requestAnimationFrame(() => {
+          setTimeout(serialize, 0);
+        });
+      } else {
+        // Final fallback
+        setTimeout(serialize, 0);
       }
     }, this.debounceMs);
   }
@@ -186,9 +211,11 @@ class ApolloCachePersistence {
 
   /**
    * Check if cache is valid and can be restored
+   * PERFORMANCE: Single-pass validation - already optimized (reads both in one go)
    */
   isValid(): boolean {
     try {
+      // PERFORMANCE: Read both version and cache in single pass
       const storedVersion = storage.getString(CACHE_VERSION_KEY);
       const cacheString = storage.getString(CACHE_STORAGE_KEY);
 

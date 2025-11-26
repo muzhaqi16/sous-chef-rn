@@ -14,12 +14,15 @@ interface Props<T extends FieldValues> {
   control: Control<T>;
   errors: FieldErrors<T>;
   submitText: string;
+  submitButtonTestID?: string;
   onSubmit: () => void;
   footerText?: string;
   footerLinkText?: string;
+  footerLinkTestID?: string;
   onFooterLinkPress?: () => void;
   onLinkPress?: () => void;
   linkText?: string;
+  linkTestID?: string;
   isLoading?: boolean;
 }
 export function AuthFormTemplate<T extends FieldValues>({
@@ -30,11 +33,14 @@ export function AuthFormTemplate<T extends FieldValues>({
   control,
   errors,
   submitText,
+  submitButtonTestID,
   onSubmit,
   footerText,
   footerLinkText,
+  footerLinkTestID,
   onFooterLinkPress,
   linkText,
+  linkTestID,
   onLinkPress,
   isLoading = false,
 }: Props<T>) {
@@ -60,17 +66,22 @@ export function AuthFormTemplate<T extends FieldValues>({
       <DynamicFormFields<T> fields={fields} control={control} errors={errors} />
 
       {linkText && onLinkPress && (
-        <TouchableOpacity onPress={onLinkPress}>
+        <TouchableOpacity onPress={onLinkPress} testID={linkTestID}>
           <Text style={styles.link}>{linkText}</Text>
         </TouchableOpacity>
       )}
 
       <View style={styles.action}>
-        <Button title={submitText} onPress={onSubmit} disabled={isLoading} />
+        <Button
+          title={submitText}
+          onPress={onSubmit}
+          disabled={isLoading}
+          testID={submitButtonTestID}
+        />
       </View>
 
       {footerText && footerLinkText && onFooterLinkPress && (
-        <TouchableOpacity onPress={onFooterLinkPress}>
+        <TouchableOpacity onPress={onFooterLinkPress} testID={footerLinkTestID}>
           <Text style={styles.footer}>
             {footerText} <Text style={styles.link}>{footerLinkText}</Text>
           </Text>

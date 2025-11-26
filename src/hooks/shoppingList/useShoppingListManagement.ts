@@ -8,6 +8,7 @@ import {
   useRemoveItemFromShoppingListMutation,
   useToggleShoppingListItemPurchasedMutation,
   ShoppingListItemFragmentDoc,
+  DisplayFormat,
 } from '#generated';
 import type { ShoppingListItemCoreFragment } from '#/graphql/generated/types';
 import { useSearchableList } from '../useSearchableList';
@@ -27,6 +28,8 @@ import {
 } from '#/apollo/utils';
 import { shoppingListItemSearch } from '#/utils/searchUtils';
 import { useCrudOperations } from '#/hooks/utils';
+import { useAppStore, selectShoppingListState } from '#store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 
 // Cache updater utilities for shopping list items
 const addToShoppingListItemsCache = createAddToKeyedQueryFieldUpdater<any>(
@@ -56,12 +59,27 @@ export interface ShoppingListItemUpdate extends Partial<ShoppingListItemInput> {
  * Vanilla Apollo shopping list management hook
  * Uses optimistic responses for instant UI updates
  * No refetchQueries, no custom caches - Apollo handles everything
+ *
+ * Reads selectedShoppingListId directly from store (single source of truth)
+ *
+ * @param initialItems - Optional items from parent query (GetShoppingLists.itemsConnection)
+ *                       When provided, skips separate GetShoppingListItems query for performance
  */
-export function useShoppingListManagement(listId: string | undefined) {
+export function useShoppingListManagement(initialItems?: any[] | null) {
   const client = useApolloClient();
   const { isLoggedOut } = useAuth();
   const { handleApolloError } = useErrorHandler();
-  const shouldSkip = !listId || isLoggedOut;
+
+  // Read selected list ID directly from store - single source of truth
+  // This prevents issues with undefined transitions during navigation
+  const { selectedShoppingListId } = useAppStore(
+    useShallow(selectShoppingListState),
+  );
+
+  // PERFORMANCE: Skip separate items query when items provided from parent query
+  // This eliminates the second network request and reduces re-renders from 4 to 2
+  const hasInitialItems = initialItems !== undefined && initialItems !== null;
+  const shouldSkip = !selectedShoppingListId || isLoggedOut || hasInitialItems;
 
   // Dynamic fetch policy based on network status
   // Online: cache-and-network (fresh data + instant UI)
@@ -72,28 +90,44 @@ export function useShoppingListManagement(listId: string | undefined) {
   );
 
   // Watch cache for updates from mutations and subscriptions
+  // PERFORMANCE: Include previousData to prevent UI flash during refetch
+  // PERFORMANCE: Skip when initialItems provided from GetShoppingLists.itemsConnection
   const {
     data,
-    loading,
+    previousData,
+    loading: queryLoading,
     error,
     refetch,
   } = useGetShoppingListItemsQuery({
     variables: {
-      shoppingListId: listId ?? '',
+      shoppingListId: selectedShoppingListId ?? '',
     },
     skip: shouldSkip,
     fetchPolicy,
+    nextFetchPolicy: 'cache-first', // After first fetch, use cache-first to prevent refetch on tab switch
     notifyOnNetworkStatusChange: true,
     errorPolicy: 'all', // Return both data and errors for better debugging
   });
+
+  // Derive loading state - not loading if using initialItems
+  const loading = hasInitialItems ? false : queryLoading;
 
   // Real-time updates via subscription are now handled by SubscriptionProvider
   // This eliminates duplicate subscription code and provides consistent behavior
   // across all subscriptions (deduplication, error handling, logging)
 
+  // OPTIMIZATION: Use previousData as fallback to prevent UI flash during refetch
+  // PERFORMANCE: Prefer initialItems from GetShoppingLists when available (single query optimization)
+  // NOTE: No isListChanging state needed - store value is stable across focus changes
+  // and Apollo cache handles per-list data correctly
   const items = useMemo(
-    () => data?.shoppingListItems || [],
-    [data?.shoppingListItems],
+    () => {
+      // Use initialItems from parent query if available (from GetShoppingLists.itemsConnection)
+      if (hasInitialItems) return initialItems;
+      // Fall back to query data or previous data
+      return data?.shoppingListItems ?? previousData?.shoppingListItems ?? [];
+    },
+    [data?.shoppingListItems, previousData?.shoppingListItems, hasInitialItems, initialItems],
   );
 
   // Search functionality - using reusable search utility
@@ -142,6 +176,8 @@ export function useShoppingListManagement(listId: string | undefined) {
             // Core fields from mutation input
             itemName: variables.input.itemName,
             quantity: variables.input.quantity ?? 1,
+            quantityInput: variables.input.quantityInput || null,
+            displayFormat: DisplayFormat.Auto,
             unitName: variables.input.unitName || null,
             notes: variables.input.notes || null,
             category: variables.input.category || null,
@@ -149,7 +185,7 @@ export function useShoppingListManagement(listId: string | undefined) {
             // Nested shoppingList object with required fields
             shoppingList: {
               __typename: 'ShoppingList',
-              id: listId || '',
+              id: selectedShoppingListId || '',
               totalItems: null,
               completedItems: null,
               estimatedTotal: null,
@@ -215,17 +251,27 @@ export function useShoppingListManagement(listId: string | undefined) {
             createdAt: null,
             deletedAt: null,
             addedBy: null,
+            purchasesConnection: {
+              __typename: 'PurchaseConnection',
+              totalCount: 0,
+              edges: [],
+              pageInfo: {
+                __typename: 'PageInfo',
+                hasNextPage: false,
+                endCursor: null,
+              },
+            },
           }),
           __typename: 'ShoppingListItem',
         } as any, // Cast to any (like PantryItem) to bypass TypeScript validation
       };
     },
     update(cache, { data }) {
-      if (!data?.addItemToShoppingList || !listId) return;
+      if (!data?.addItemToShoppingList || !selectedShoppingListId) return;
 
       try {
         // Add to cache using generic utility
-        addToShoppingListItemsCache(cache, data.addItemToShoppingList, listId);
+        addToShoppingListItemsCache(cache, data.addItemToShoppingList, selectedShoppingListId);
       } catch (error) {
         console.warn('Cache update failed for addItem, will refetch:', error);
         // Fallback: refetch if cache update fails
@@ -244,6 +290,21 @@ export function useShoppingListManagement(listId: string | undefined) {
     errorPolicy: 'all',
     // No optimisticResponse here - will be passed at call site with fresh cache data
     // This avoids stale closure issues as per Apollo best practices
+    onCompleted: (data) => {
+      // Clear all optimistic data for this item after successful sync
+      // This ensures offline edits are cleared once synced with server
+      if (data?.updateShoppingListItem) {
+        const itemId = data.updateShoppingListItem.id;
+        // Clear common fields that might be updated
+        optimisticDataPersistence.clear('ShoppingListItem', itemId, 'quantity');
+        optimisticDataPersistence.clear('ShoppingListItem', itemId, 'quantityInput');
+        optimisticDataPersistence.clear('ShoppingListItem', itemId, 'itemName');
+        optimisticDataPersistence.clear('ShoppingListItem', itemId, 'notes');
+        optimisticDataPersistence.clear('ShoppingListItem', itemId, 'category');
+        optimisticDataPersistence.clear('ShoppingListItem', itemId, 'unitName');
+        optimisticDataPersistence.clear('ShoppingListItem', itemId, 'unitId');
+      }
+    },
     onError: error => {
       const { message } = handleApolloError(error, {
         operation: 'Update Shopping List Item',
@@ -274,7 +335,7 @@ export function useShoppingListManagement(listId: string | undefined) {
       };
     },
     update(cache, { data }, { variables }) {
-      if (!data?.removeItemFromShoppingList || !listId || !variables) return;
+      if (!data?.removeItemFromShoppingList || !selectedShoppingListId || !variables) return;
 
       try {
         const itemId = variables.id;
@@ -367,6 +428,10 @@ export function useShoppingListManagement(listId: string | undefined) {
         } as any,
       };
     },
+    // PERFORMANCE: Removed redundant update function
+    // The comprehensive optimisticResponse (lines 361-418) provides instant UI feedback
+    // Apollo's automatic normalization merges the server response into the cache
+    // No manual cache.modify needed - this was causing unnecessary complexity
     onCompleted: (data) => {
       // Clear optimistic data after successful sync
       if (data?.toggleShoppingListItemPurchased) {
@@ -384,9 +449,9 @@ export function useShoppingListManagement(listId: string | undefined) {
   // Simplified add item using CRUD utilities
   const addItem = createAddOperation({
     mutation: addItemMutation,
-    parentId: listId,
+    parentId: () => selectedShoppingListId,
     transformInput: (input: ShoppingListItemInput) => ({
-      shoppingListId: listId,
+      shoppingListId: selectedShoppingListId,
       itemName: input.itemName,
       quantity: input.quantity ?? 1,
       ...(input.unitName && { unitName: input.unitName }),
@@ -403,7 +468,7 @@ export function useShoppingListManagement(listId: string | undefined) {
     itemId: string,
     updates: ShoppingListItemUpdate,
   ) => {
-    if (!listId) return false;
+    if (!selectedShoppingListId) return false;
 
     try {
       // Read FRESH data from cache - use Full fragment (guaranteed to be cached)
@@ -459,6 +524,15 @@ export function useShoppingListManagement(listId: string | undefined) {
           : null,
       };
 
+      // Persist optimistic updates before mutation
+      // This ensures changes survive app restart if offline
+      Object.keys(updates).forEach(field => {
+        const value = updates[field as keyof ShoppingListItemUpdate];
+        if (value !== undefined) {
+          optimisticDataPersistence.save('ShoppingListItem', itemId, field, value);
+        }
+      });
+
       const result = await updateItemMutation({
         variables: {
           id: itemId,
@@ -501,7 +575,7 @@ export function useShoppingListManagement(listId: string | undefined) {
   const removeItem = async (itemId: string) => {
     const operation = createRemoveOperation({
       mutation: removeItemMutation,
-      parentId: listId,
+      parentId: selectedShoppingListId,
       itemId,
       operationName: 'Delete Shopping List Item',
     });
@@ -510,7 +584,7 @@ export function useShoppingListManagement(listId: string | undefined) {
 
   // Toggle item purchased status
   const toggleItem = async (itemId: string) => {
-    if (!listId) return false;
+    if (!selectedShoppingListId) return false;
 
     try {
       // Find item to get current isPurchased state and version

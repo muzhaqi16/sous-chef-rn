@@ -108,13 +108,11 @@ export function useStandardSubscription(options: StandardSubscriptionOptions) {
           }
         }
 
-        // Log subscription update in dev mode
+        // Log subscription update in dev mode (optimized string interpolation)
         if (__DEV__ && enableLogging) {
-          console.log(`🔔 ${operation}: Update received`, {
-            entityId,
-            changeType: data.data?.__typename,
-            timestamp: new Date().toISOString(),
-          });
+          console.log(
+            `🔔 ${operation}: Update received | Entity: ${entityId} | Type: ${data.data?.__typename} | Time: ${new Date().toISOString()}`,
+          );
         }
 
         // Call custom handler

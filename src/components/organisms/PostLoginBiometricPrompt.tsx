@@ -91,8 +91,8 @@ export const PostLoginBiometricPrompt = ({
       animationType="fade"
       statusBarTranslucent
     >
-      <View style={styles.overlay}>
-        <View style={styles.container}>
+      <View style={styles.overlay} testID="post-login-biometric-prompt">
+        <View style={styles.container} testID="post-login-biometric-prompt-container">
           <View style={styles.iconContainer}>
             <View style={styles.iconBackground}>
               <Icon name={getBiometricIcon()} size={40} color="#007AFF" />
@@ -107,6 +107,9 @@ export const PostLoginBiometricPrompt = ({
               style={[styles.button, styles.primaryButton]}
               onPress={handleEnableNow}
               disabled={isEnabling}
+              testID="biometric-prompt-enable"
+              accessibilityLabel="Enable Now"
+              accessible={false}
             >
               <Text style={[styles.buttonText, styles.primaryButtonText]}>
                 {isEnabling ? 'Setting up...' : 'Enable Now'}
@@ -117,6 +120,9 @@ export const PostLoginBiometricPrompt = ({
               style={[styles.button, styles.secondaryButton]}
               onPress={handleDecline}
               disabled={isEnabling}
+              testID="biometric-prompt-decline"
+              accessibilityLabel="Not now"
+              accessible={false}
             >
               <Text style={[styles.buttonText, styles.secondaryButtonText]}>
                 Not now

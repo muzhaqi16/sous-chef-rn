@@ -1,4 +1,5 @@
 import type { ApolloCache, Reference } from '@apollo/client';
+import { serializeError } from '#/utils/errorSerialization';
 
 /**
  * Apollo Cache Update Utilities
@@ -174,10 +175,11 @@ export function createAddToKeyedQueryFieldUpdater<T extends { id: string }>(
               if (exists) return existingItems;
             }
 
-            // Add at specified position
+            // PERFORMANCE: Use concat instead of spread for better performance with large arrays
+            // concat is generally faster than spread for arrays with 50+ items
             return position === 'start'
-              ? [newItemRef, ...existingItems]
-              : [...existingItems, newItemRef];
+              ? [newItemRef].concat(existingItems as Reference[])
+              : (existingItems as Reference[]).concat(newItemRef);
           },
         },
       });
@@ -616,7 +618,7 @@ export function createItemEvictor(typename: string) {
       });
       cache.gc();
     } catch (error) {
-      console.warn(`Cache eviction failed for ${typename}:${itemId}:`, error);
+      console.warn(`Cache eviction failed for ${typename}:${itemId}:`, serializeError(error));
     }
   };
 }

@@ -149,6 +149,21 @@ export const PROFILE_SETTINGS_CONFIG = [
     ],
   },
   {
+    title: 'Developer',
+    items: [
+      {
+        key: 'debugInfo',
+        label: 'Debug Info',
+        type: 'navigation',
+      },
+      {
+        key: 'performanceDashboard',
+        label: 'Performance Dashboard',
+        type: 'navigation',
+      },
+    ],
+  },
+  {
     title: '',
     items: [
       {

@@ -20,6 +20,7 @@ interface UnitsAutocompleteInputProps {
   required?: boolean;
   error?: string;
   onUnitSelected?: (unitId: string | null) => void;
+  testID?: string;
 }
 
 export const UnitsAutocompleteInput: React.FC<UnitsAutocompleteInputProps> = ({
@@ -30,6 +31,7 @@ export const UnitsAutocompleteInput: React.FC<UnitsAutocompleteInputProps> = ({
   required,
   error,
   onUnitSelected,
+  testID,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
@@ -124,6 +126,7 @@ export const UnitsAutocompleteInput: React.FC<UnitsAutocompleteInputProps> = ({
       emptyText="No units found"
       emptySubtext="Try a different search term"
       onSearchChange={setSearchTerm}
+      testID={testID}
     />
   );
 };

@@ -24,7 +24,10 @@ module.exports = {
       '@react-native-clipboard/clipboard|' +
       '@react-native-community|' +
       '@react-navigation|' +
-      '@notifee/react-native' +
-    ')/)',
+      '@notifee/react-native|' +
+      'immer|' +
+      'zustand|' +
+      'uuid' +
+      ')/)',
   ],
 };

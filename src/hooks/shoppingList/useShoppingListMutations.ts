@@ -322,7 +322,7 @@ export function useShoppingListMutations({
   // Simplified add item using CRUD utilities
   const addItem = createAddOperation({
     mutation: addItemMutation,
-    parentId: listId,
+    parentId: () => listId,
     transformInput: (input: ShoppingListItemInput) => ({
       shoppingListId: listId,
       itemName: input.itemName,

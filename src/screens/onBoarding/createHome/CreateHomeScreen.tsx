@@ -33,8 +33,9 @@ import { useOnboardingNavigation } from '#hooks';
 import { getCreateHomeSchema } from '#/utils';
 import { createPantryForHome, showPantryCreationError } from './helpers';
 import { normalizeHomes } from '#/utils/connectionUtils';
+import { OnboardingErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
 
-export const CreateHomeScreen = () => {
+const CreateHomeScreenComponent = () => {
   const { theme } = useUnistyles();
   const { navigateToNextStep, setUserNavigationState, skipToStep } =
     useOnboardingNavigation();
@@ -517,6 +518,7 @@ export const CreateHomeScreen = () => {
       step={1}
       totalSteps={7}
       onSkip={() => skipToStep('CreateShoppingList')}
+      testID="onboarding-create-home-screen"
     >
       {existingHome && (
         <View style={styles.existingResourcesContainer}>
@@ -543,6 +545,13 @@ export const CreateHomeScreen = () => {
     </OnBoardingWrapper>
   );
 };
+
+// PERFORMANCE: Screen-level error boundary prevents full app reset on mutation failures
+export const CreateHomeScreen = () => (
+  <OnboardingErrorBoundary>
+    <CreateHomeScreenComponent />
+  </OnboardingErrorBoundary>
+);
 
 const styles = StyleSheet.create(theme => ({
   existingResourcesContainer: {

@@ -6,7 +6,7 @@
  */
 
 import { BaseScreen } from './BaseScreen';
-import { element, by, waitFor } from 'detox';
+import { element, by, waitFor, expect } from 'detox';
 
 export class RecipesScreen extends BaseScreen {
   protected screenID = 'recipes-screen';
@@ -52,9 +52,10 @@ export class RecipesScreen extends BaseScreen {
 
   /**
    * Navigate to recipes tab
+   * Note: Tab testID is 'tab-recipe' (singular) based on route name 'Recipe'
    */
   async navigateToTab() {
-    await this.tapByID('tab-recipes');
+    await this.tapByID('tab-recipe');
     await this.waitForScreen();
   }
 

@@ -1,18 +1,16 @@
 import React, { useState } from 'react';
 import { View, Text, Alert } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { SettingSwitch, SettingSection, SettingRow } from '#components/settings';
+import { SettingSwitch, SettingSection } from '#components/settings';
 import { ProfileScreenWrapper } from '#components/templates';
 import { useAppSettings } from '#hooks/profile/useAppSettings';
 import { UnitSystem } from '#generated';
 import { Picker } from '@react-native-picker/picker';
 import { commonStyles } from '#/styles/commonStyles';
-import { useStore } from '#/store';
-import { useAppNavigation } from '#/hooks';
+import { useAppStore } from '#/store/useAppStore';
 
 export const AppSettingsScreen: React.FC = () => {
   const [updating, setUpdating] = useState<string | null>(null);
-  const { navigate } = useAppNavigation();
 
   const {
     settings,
@@ -21,9 +19,9 @@ export const AppSettingsScreen: React.FC = () => {
     resetToDefaults,
   } = useAppSettings();
 
-  // Haptic feedback preference from store
-  const hapticFeedbackEnabled = useStore(state => state.hapticFeedbackEnabled);
-  const setHapticFeedbackEnabled = useStore(state => state.setHapticFeedbackEnabled);
+  // PERFORMANCE: Use selective selectors instead of inline functions
+  const hapticFeedbackEnabled = useAppStore(state => state.hapticFeedbackEnabled);
+  const setHapticFeedbackEnabled = useAppStore(state => state.setHapticFeedbackEnabled);
 
   const handleSettingChange = async (key: string, value: any) => {
     setUpdating(key);
@@ -76,11 +74,12 @@ export const AppSettingsScreen: React.FC = () => {
   }
 
   return (
-    <ProfileScreenWrapper title="App Settings">
+    <ProfileScreenWrapper title="App Settings" testID="settings-screen">
       <SettingSection title="Units & Measurements">
         <View style={styles.pickerContainer}>
           <Text style={commonStyles.subtitle}>Preferred Unit System</Text>
           <Picker
+            testID="settings-unit-system-picker"
             selectedValue={settings.preferredUnitSystem}
             onValueChange={(value) => handleSettingChange('preferredUnitSystem', value)}
             style={styles.picker}
@@ -158,23 +157,13 @@ export const AppSettingsScreen: React.FC = () => {
 
       <SettingSection title="Experience">
         <SettingSwitch
+          testID="settings-haptic-feedback-switch"
           title="Haptic Feedback"
           description="Vibration feedback for interactions and alerts"
           value={hapticFeedbackEnabled}
           onValueChange={setHapticFeedbackEnabled}
         />
       </SettingSection>
-
-      {__DEV__ && (
-        <SettingSection title="Developer">
-          <SettingRow
-            title="Performance Dashboard"
-            description="View app performance metrics and monitoring data"
-            icon="speedometer"
-            onPress={() => navigate('PerformanceDashboard')}
-          />
-        </SettingSection>
-      )}
 
       <SettingSection title="Reset">
         <SettingSwitch

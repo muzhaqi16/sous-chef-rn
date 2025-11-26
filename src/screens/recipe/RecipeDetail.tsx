@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   FlatList,
+  Alert,
 } from 'react-native';
 import Animated, {
   useAnimatedScrollHandler,
@@ -43,10 +44,11 @@ import {
   createAddToQueryFieldUpdater,
 } from '#/apollo/utils';
 import { toastService } from '#/services/toastService';
+import { RecipeDetailErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
 
 type RecipeDetailRouteProp = RouteProp<RecipeStackParamList, 'RecipeDetail'>;
 
-export const RecipeDetail: React.FC = () => {
+const RecipeDetailScreen: React.FC = () => {
   const route = useRoute<RecipeDetailRouteProp>();
   const { theme } = useUnistyles();
   const { goBack } = useAppNavigation();
@@ -124,6 +126,12 @@ export const RecipeDetail: React.FC = () => {
         console.warn('Cache update failed for saveRecipe:', error);
       }
     },
+    onError: error => {
+      console.error('Save recipe error:', error);
+      const errorMessage =
+        error.message || 'Failed to save recipe. Please try again.';
+      Alert.alert('Error', `Could not save recipe: ${errorMessage}`);
+    },
   });
   const [addRecipeToShoppingListMutation] =
     useCreateShoppingListItemsFromRecipeMutation({
@@ -148,6 +156,12 @@ export const RecipeDetail: React.FC = () => {
         } catch (error) {
           console.warn('Cache update failed for addRecipeToShoppingList:', error);
         }
+      },
+      onError: error => {
+        console.error('Add recipe to shopping list error:', error);
+        const errorMessage =
+          error.message || 'Failed to add ingredients to shopping list';
+        Alert.alert('Error', `Could not add ingredients: ${errorMessage}`);
       },
     });
   const [addRecipeIngredientMutation] =
@@ -976,6 +990,13 @@ export const RecipeDetail: React.FC = () => {
     </View>
   );
 };
+
+// PERFORMANCE: Screen-level error boundary prevents full app reset on mutation failures
+export const RecipeDetail: React.FC = () => (
+  <RecipeDetailErrorBoundary>
+    <RecipeDetailScreen />
+  </RecipeDetailErrorBoundary>
+);
 
 const styles = StyleSheet.create(theme => ({
   container: {

@@ -16,6 +16,9 @@ export interface SaveOptions {
 let isOperationInProgress = false;
 const operationQueue: Array<() => Promise<any>> = [];
 
+// PERFORMANCE: Cache for hasCredentials() to avoid repeated native calls
+let credentialsExistCache: boolean | null = null;
+
 const queueOperation = async <T>(operation: () => Promise<T>): Promise<T> => {
   return new Promise<T>((resolve, reject) => {
     const wrappedOperation = async () => {
@@ -104,6 +107,9 @@ export async function saveCredentials(
       await Keychain.resetGenericPassword({ service });
       throw new Error("Keychain couldn't save credentials indicator");
     }
+
+    // PERFORMANCE: Invalidate cache after saving credentials
+    credentialsExistCache = true;
   });
 }
 
@@ -145,8 +151,16 @@ export async function loadCredentials(
 /**
  * Check if credentials exist without triggering biometric authentication.
  * This checks the unprotected indicator, not the actual credentials.
+ *
+ * PERFORMANCE: Results are cached to avoid repeated native Keychain calls.
+ * Cache is invalidated when credentials are saved or cleared.
  */
 export async function hasCredentials(): Promise<boolean> {
+  // PERFORMANCE: Return cached result if available
+  if (credentialsExistCache !== null) {
+    return credentialsExistCache;
+  }
+
   return queueOperation(async () => {
     try {
       // Check the unprotected indicator instead of the protected credentials
@@ -154,6 +168,10 @@ export async function hasCredentials(): Promise<boolean> {
         service: CREDENTIALS_INDICATOR_SERVICE,
       });
       const result = !!indicator;
+
+      // PERFORMANCE: Cache the result
+      credentialsExistCache = result;
+
       return result;
     } catch (err: any) {
       // Handle Android DataStore concurrency issue
@@ -165,11 +183,17 @@ export async function hasCredentials(): Promise<boolean> {
             service: CREDENTIALS_INDICATOR_SERVICE,
           });
           const result = !!indicator;
+
+          // PERFORMANCE: Cache the result
+          credentialsExistCache = result;
+
           return result;
         } catch (retryErr) {
+          // Don't cache errors
           return false;
         }
       }
+      // Don't cache errors
       return false;
     }
   });
@@ -186,8 +210,13 @@ export async function clearCredentials(
     await Keychain.resetGenericPassword({
       service: CREDENTIALS_INDICATOR_SERVICE,
     });
+
+    // PERFORMANCE: Invalidate cache after clearing credentials
+    credentialsExistCache = false;
   } catch (err) {
     console.error('Failed to clear credentials:', err);
+    // PERFORMANCE: Invalidate cache even on error to be safe
+    credentialsExistCache = null;
     throw err;
   }
 }

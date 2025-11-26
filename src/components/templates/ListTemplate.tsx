@@ -57,6 +57,9 @@ interface ListTemplateProps {
   listName?: string; // Override for SearchBar listName (defaults to title)
   completedCount?: number; // Override for SearchBar completedCount
 
+  // Test IDs
+  testIDPrefix?: string; // Prefix for item testIDs (e.g., 'pantry-item', 'shopping-list-item')
+
   // Custom list component
   customListComponent?: React.ComponentType<any>;
   customListProps?: any;
@@ -103,13 +106,17 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
   listName,
   completedCount,
 
+  // Test IDs
+  testIDPrefix,
+
   // Custom list component
   customListComponent: CustomListComponent,
   customListProps = {},
 }) => {
   const { theme } = useUnistyles();
   // Determine the actual display state
-  const isLoading = loading && items.length === 0;
+  // Don't show loading state if custom component exists - let it handle its own loading
+  const isLoading = loading && items.length === 0 && !CustomListComponent;
 
   // Use appropriate empty state based on context
   const effectiveEmptyState = hasNoData
@@ -177,6 +184,7 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
           onEndReached={onEndReached}
           onEndReachedThreshold={onEndReachedThreshold}
           ListFooterComponent={ListFooterComponent}
+          testIDPrefix={testIDPrefix}
           emptyState={effectiveEmptyState}
           {...customListProps}
         />
@@ -193,6 +201,7 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
           onEndReached={onEndReached}
           onEndReachedThreshold={onEndReachedThreshold}
           ListFooterComponent={ListFooterComponent}
+          testIDPrefix={testIDPrefix}
           emptyState={effectiveEmptyState}
         />
       )}

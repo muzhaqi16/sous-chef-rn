@@ -10,6 +10,7 @@ interface SettingSwitchProps {
   disabled?: boolean;
   loading?: boolean;
   isAction?: boolean;
+  testID?: string;
 }
 
 export const SettingSwitch: React.FC<SettingSwitchProps> = ({
@@ -19,6 +20,7 @@ export const SettingSwitch: React.FC<SettingSwitchProps> = ({
   onValueChange,
   disabled = false,
   loading = false,
+  testID,
 }) => {
   const { theme } = useUnistyles();
   return (
@@ -36,6 +38,7 @@ export const SettingSwitch: React.FC<SettingSwitchProps> = ({
         )}
       </View>
       <Switch
+        testID={testID}
         value={value}
         onValueChange={onValueChange}
         disabled={disabled || loading}

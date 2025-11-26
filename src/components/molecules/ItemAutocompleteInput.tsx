@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, Image, TouchableOpacity } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useAutocompleteItemsLazyQuery, ItemSuggestion } from '#generated';
 import { BottomSheetAutocompleteInput } from './BottomSheetAutocompleteInput';
-import { useStore } from '#store';
+import { useAppStore } from '#store/useAppStore';
 import { getItemImageUrl } from '#utils/imageUtils';
 
 interface ItemAutocompleteInputProps {
@@ -15,6 +15,7 @@ interface ItemAutocompleteInputProps {
   error?: string;
   onSelectItem?: (item: ItemSuggestion) => void;
   autoFocus?: boolean;
+  testID?: string;
 }
 
 export const ItemAutocompleteInput: React.FC<ItemAutocompleteInputProps> = ({
@@ -25,23 +26,44 @@ export const ItemAutocompleteInput: React.FC<ItemAutocompleteInputProps> = ({
   required,
   error,
   onSelectItem,
+  testID,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Check online status to prevent queries when offline
-  const isOnline = useStore(state => state.isOnline);
+  // PERFORMANCE: Use selective subscription instead of full store
+  const isOnline = useAppStore(state => state.isOnline);
+
+  // PERFORMANCE: Debounce timer to prevent request floods
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const [fetchItems, { data, loading }] = useAutocompleteItemsLazyQuery({
     fetchPolicy: 'cache-and-network',
   });
 
+  // PERFORMANCE: Debounce autocomplete queries to prevent request floods (250ms)
   useEffect(() => {
+    // Clear existing timer on term/online change
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
+
     // Only query when online and search term is long enough
     if (searchTerm.length >= 2 && isOnline) {
-      fetchItems({
-        variables: { input: { query: searchTerm } },
-      });
+      debounceTimerRef.current = setTimeout(() => {
+        fetchItems({
+          variables: { input: { query: searchTerm } },
+        });
+      }, 250); // 250ms debounce
     }
+
+    // Cleanup on unmount or term change
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
+      }
+    };
   }, [searchTerm, fetchItems, isOnline]);
 
   const items = data?.autocompleteItems?.suggestions || [];
@@ -113,6 +135,7 @@ export const ItemAutocompleteInput: React.FC<ItemAutocompleteInputProps> = ({
           : 'Type at least 2 characters to search'
       }
       onSearchChange={setSearchTerm}
+      testID={testID}
     />
   );
 };

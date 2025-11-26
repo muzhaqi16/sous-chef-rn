@@ -213,7 +213,7 @@ export function usePantryMutations({
   // Simplified add item using CRUD utilities
   const addItem = createAddOperation({
     mutation: addItemMutation,
-    parentId: pantryId,
+    parentId: () => pantryId,
     transformInput: (input: PantryItemInput) => ({
       pantryId,
       initialQuantity: input.quantity,
@@ -235,7 +235,7 @@ export function usePantryMutations({
   const updateItem = useCallback(async (itemId: string, updates: PantryItemUpdate) => {
     const operation = createUpdateOperation({
       mutation: updateItemMutation,
-      parentId: pantryId,
+      parentId: () => pantryId,
       itemId,
       onSuccess: (data: any) => data?.updatePantryItem,
       onVersionConflict: refetch,
@@ -248,7 +248,7 @@ export function usePantryMutations({
   const removeItem = useCallback(async (itemId: string) => {
     const operation = createRemoveOperation({
       mutation: removeItemMutation,
-      parentId: pantryId,
+      parentId: () => pantryId,
       itemId,
       operationName: 'Delete Pantry Item',
     });

@@ -8,8 +8,8 @@
  * Test user credentials
  */
 export const TEST_USER = {
-  email: 'test@example.com',
-  password: 'Test123!@#',
+  email: 'test@souschef.dev',
+  password: 'Test123!',
   displayName: 'Test User',
   firstName: 'Test',
   lastName: 'User',

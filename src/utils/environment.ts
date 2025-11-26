@@ -37,11 +37,13 @@ export class Environment {
       return Environment._config;
     }
 
+    const nodeEnv = getConfigValue('NODE_ENV', __DEV__ ? 'development' : 'production');
+
     const config: EnvironmentConfig = {
-      isDevelopment: __DEV__,
-      isProduction: !__DEV__ && !getConfigValue('IS_STAGING', false) && !getConfigValue('IS_TESTING', false),
-      isStaging: !!getConfigValue('IS_STAGING', false),
-      isTesting: !!getConfigValue('IS_TESTING', false) || process.env.NODE_ENV === 'test',
+      isDevelopment: nodeEnv === 'development' || __DEV__,
+      isProduction: nodeEnv === 'production',
+      isStaging: nodeEnv === 'staging',
+      isTesting: nodeEnv === 'testing' || nodeEnv === 'test' || process.env.NODE_ENV === 'test',
       platform: Platform.OS as 'ios' | 'android' | 'web',
       buildMode: __DEV__ ? 'debug' : 'release',
     };

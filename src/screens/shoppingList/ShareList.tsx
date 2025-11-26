@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -20,6 +20,39 @@ import { useShoppingListDetails } from '#/hooks';
 import CollaboratorPermissionsBottomSheet, {
   CollaboratorPermissionsBottomSheetRef,
 } from '#/components/organisms/CollaboratorPermissionsBottomSheet';
+
+// PERFORMANCE: Helper functions moved outside component to avoid recreation on every render
+const getStatusColor = (status: string) => {
+  switch (status?.toUpperCase()) {
+    case 'ACCEPTED':
+    case 'ACTIVE':
+      return '#4CAF50'; // Green
+    case 'PENDING':
+      return '#FFA500'; // Orange
+    case 'DECLINED':
+      return '#F44336'; // Red
+    case 'EXPIRED':
+      return '#9E9E9E'; // Gray
+    default:
+      return '#9E9E9E';
+  }
+};
+
+const formatStatus = (status: string) => {
+  switch (status?.toUpperCase()) {
+    case 'ACCEPTED':
+    case 'ACTIVE':
+      return 'Active';
+    case 'PENDING':
+      return 'Invited';
+    case 'DECLINED':
+      return 'Declined';
+    case 'EXPIRED':
+      return 'Expired';
+    default:
+      return status || 'Unknown';
+  }
+};
 
 export const ShareList: React.FC = () => {
   const { theme } = useUnistyles();
@@ -63,31 +96,98 @@ export const ShareList: React.FC = () => {
     }
   };
 
-  const handleRemoveMember = (email: string) => {
-    Alert.alert(
-      'Remove Member',
-      'Are you sure you want to remove this member?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await removeMember({
-                variables: {
-                  data: { shoppingListId: listId, email },
-                },
-              });
-              refetch();
-            } catch (error) {
-              Alert.alert('Error', 'Failed to remove member');
-            }
+  const handleRemoveMember = useCallback(
+    (email: string) => {
+      Alert.alert(
+        'Remove Member',
+        'Are you sure you want to remove this member?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Remove',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await removeMember({
+                  variables: {
+                    data: { shoppingListId: listId, email },
+                  },
+                });
+                refetch();
+              } catch (error) {
+                Alert.alert('Error', 'Failed to remove member');
+              }
+            },
           },
-        },
-      ],
-    );
-  };
+        ],
+      );
+    },
+    [listId, removeMember, refetch],
+  );
+
+  // PERFORMANCE: Memoized renderItem to avoid recreating on every render
+  const renderMemberItem = useCallback(
+    ({ item: member }: { item: any }) => {
+      const statusColor = getStatusColor(member.status);
+      const statusText = formatStatus(member.status);
+
+      return (
+        <TouchableOpacity
+          style={styles.memberCard}
+          onPress={() => permissionsBottomSheetRef.current?.open(member)}
+          activeOpacity={0.7}
+        >
+          <View style={styles.memberInfo}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>
+                {member.email?.[0]?.toUpperCase() || '?'}
+              </Text>
+            </View>
+            <View style={styles.memberDetails}>
+              <Text style={styles.memberName}>
+                {member.email || 'Unknown'}
+              </Text>
+              <Text style={styles.memberEmail}>{member.email || ''}</Text>
+              <View style={styles.statusContainer}>
+                <View
+                  style={[
+                    styles.statusBadge,
+                    {
+                      backgroundColor: statusColor + '20',
+                      borderColor: statusColor,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[styles.statusText, { color: statusColor }]}
+                  >
+                    {statusText}
+                  </Text>
+                </View>
+                {member.invitedAt && (
+                  <Text style={styles.invitedText}>
+                    Invited{' '}
+                    {new Date(member.invitedAt).toLocaleDateString()}
+                  </Text>
+                )}
+              </View>
+            </View>
+          </View>
+          <TouchableOpacity
+            onPress={(e) => {
+              e?.stopPropagation?.();
+              if (member.email) {
+                handleRemoveMember(member.email);
+              }
+            }}
+          >
+            <Icon name="close" size={20} color={theme.colors.error} />
+          </TouchableOpacity>
+        </TouchableOpacity>
+      );
+    },
+    [handleRemoveMember, theme.colors.error],
+  );
 
   if (loading) {
     return (
@@ -137,97 +237,7 @@ export const ShareList: React.FC = () => {
         <FlatList
           data={collaborators}
           keyExtractor={(member) => member.id}
-          renderItem={({ item: member }) => {
-            const getStatusColor = (status: string) => {
-              switch (status?.toUpperCase()) {
-                case 'ACCEPTED':
-                case 'ACTIVE':
-                  return '#4CAF50'; // Green
-                case 'PENDING':
-                  return '#FFA500'; // Orange
-                case 'DECLINED':
-                  return '#F44336'; // Red
-                case 'EXPIRED':
-                  return '#9E9E9E'; // Gray
-                default:
-                  return '#9E9E9E';
-              }
-            };
-
-            const formatStatus = (status: string) => {
-              switch (status?.toUpperCase()) {
-                case 'ACCEPTED':
-                case 'ACTIVE':
-                  return 'Active';
-                case 'PENDING':
-                  return 'Invited';
-                case 'DECLINED':
-                  return 'Declined';
-                case 'EXPIRED':
-                  return 'Expired';
-                default:
-                  return status || 'Unknown';
-              }
-            };
-
-            const statusColor = getStatusColor(member.status);
-            const statusText = formatStatus(member.status);
-
-            return (
-              <TouchableOpacity
-                style={styles.memberCard}
-                onPress={() => permissionsBottomSheetRef.current?.open(member)}
-                activeOpacity={0.7}
-              >
-                <View style={styles.memberInfo}>
-                  <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>
-                      {member.email?.[0]?.toUpperCase() || '?'}
-                    </Text>
-                  </View>
-                  <View style={styles.memberDetails}>
-                    <Text style={styles.memberName}>
-                      {member.email || 'Unknown'}
-                    </Text>
-                    <Text style={styles.memberEmail}>{member.email || ''}</Text>
-                    <View style={styles.statusContainer}>
-                      <View
-                        style={[
-                          styles.statusBadge,
-                          {
-                            backgroundColor: statusColor + '20',
-                            borderColor: statusColor,
-                          },
-                        ]}
-                      >
-                        <Text
-                          style={[styles.statusText, { color: statusColor }]}
-                        >
-                          {statusText}
-                        </Text>
-                      </View>
-                      {member.invitedAt && (
-                        <Text style={styles.invitedText}>
-                          Invited{' '}
-                          {new Date(member.invitedAt).toLocaleDateString()}
-                        </Text>
-                      )}
-                    </View>
-                  </View>
-                </View>
-                <TouchableOpacity
-                  onPress={(e) => {
-                    e?.stopPropagation?.();
-                    if (member.email) {
-                      handleRemoveMember(member.email);
-                    }
-                  }}
-                >
-                  <Icon name="close" size={20} color={theme.colors.error} />
-                </TouchableOpacity>
-              </TouchableOpacity>
-            );
-          }}
+          renderItem={renderMemberItem}
         />
       </View>
 

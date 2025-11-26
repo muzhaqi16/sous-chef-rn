@@ -30,6 +30,7 @@ interface OnboardingWrapperProps {
   continueAction?: NavigationAction;
   skipAction?: NavigationAction;
   allowStepNavigation?: boolean;
+  testID?: string;
 }
 
 export const OnBoardingWrapper = ({
@@ -45,6 +46,7 @@ export const OnBoardingWrapper = ({
   continueAction,
   skipAction,
   allowStepNavigation = false,
+  testID,
 }: OnboardingWrapperProps) => {
   const { theme } = useUnistyles();
   const progress = step && totalSteps ? (step / totalSteps) * 100 : 0;
@@ -57,10 +59,10 @@ export const OnBoardingWrapper = ({
   const displaySubtitle = subtitle || onboardingContext?.currentStep?.subtitle;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} testID={testID}>
       <View style={styles.headerContainer}>
         {onBack && (
-          <TouchableOpacity onPress={onBack} style={styles.iconButton}>
+          <TouchableOpacity onPress={onBack} style={styles.iconButton} testID={testID ? `${testID}-back-button` : undefined}>
             <Icon
               library="Feather"
               name="arrow-left"
@@ -121,7 +123,7 @@ export const OnBoardingWrapper = ({
       ) : (
         <View style={styles.bottomNavigation}>
           {onSkip && (
-            <TouchableOpacity onPress={onSkip} style={styles.skipButton}>
+            <TouchableOpacity onPress={onSkip} style={styles.skipButton} testID={testID ? `${testID}-skip-button` : undefined}>
               <Text style={styles.skipText}>Skip</Text>
             </TouchableOpacity>
           )}

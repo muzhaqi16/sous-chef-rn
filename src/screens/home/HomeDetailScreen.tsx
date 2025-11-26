@@ -12,7 +12,7 @@ import { commonStyles } from '#styles';
 import { DetailTemplate } from '#components/templates/DetailTemplate';
 import { EditableField, NavigationRow } from '#components/molecules';
 import { HomeMembersSection } from '#components/organisms/home';
-import { useStore } from '#store';
+import { useAppStore, selectUser } from '#store/useAppStore';
 import { Icon } from '#utils';
 
 type RouteParams = {
@@ -24,7 +24,8 @@ export const HomeDetailScreen: React.FC<{
 }> = ({ route }) => {
   const { goBack, navigate } = useAppNavigation();
   const { homeId } = route.params;
-  const currentUser = useStore(state => state.user);
+  // PERFORMANCE: Use selective selector instead of full store subscription
+  const currentUser = useAppStore(selectUser);
   const { theme } = useUnistyles();
 
   const [copied, setCopied] = useState(false);

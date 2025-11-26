@@ -19,6 +19,7 @@ interface BottomSheetAutocompleteInputProps<T> {
   placeholder?: string;
   required?: boolean;
   error?: string;
+  testID?: string;
 
   // Modal configuration
   title: string;
@@ -53,6 +54,7 @@ export function BottomSheetAutocompleteInput<T>({
   placeholder,
   required,
   error,
+  testID,
 
   // Modal props
   title,
@@ -129,6 +131,17 @@ export function BottomSheetAutocompleteInput<T>({
     onModalClose?.();
   }, [onModalClose]);
 
+  const handleSubmitCustomValue = useCallback(() => {
+    // Accept the current searchTerm as the custom value
+    if (searchTerm.trim()) {
+      onChangeText(searchTerm.trim());
+    }
+    // Dismiss the modal
+    setShowAutocomplete(false);
+    bottomSheetRef.current?.dismiss();
+    onModalClose?.();
+  }, [searchTerm, onChangeText, onModalClose]);
+
   const renderBackdrop = useCallback(
     (props: any) => (
       <BottomSheetBackdrop
@@ -167,6 +180,7 @@ export function BottomSheetAutocompleteInput<T>({
         placeholder={placeholder}
         required={required}
         error={error}
+        testID={testID}
       />
 
       <BottomSheetModal
@@ -211,7 +225,9 @@ export function BottomSheetAutocompleteInput<T>({
                 onChangeText={handleBottomSheetTextChange}
                 placeholder={searchPlaceholder}
                 autoFocus={showAutocomplete}
-                returnKeyType="search"
+                returnKeyType="done"
+                onSubmitEditing={handleSubmitCustomValue}
+                testID={testID ? `${testID}-search` : undefined}
               />
             </View>
           }
