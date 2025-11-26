@@ -86,7 +86,18 @@ const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
   if ((loading || !isReady) && items.length === 0) {
     return (
       <ScrollView contentContainerStyle={{ padding: 16, gap: 8 }}>
-        {[1, 2, 3, 4, 5].map(key => (
+        {[1, 2, 3, 4, 5, 6].map(key => (
+          <ShoppingListItemSkeleton key={key} />
+        ))}
+      </ScrollView>
+    );
+  }
+
+  // After transition complete, show skeleton only during initial load with no cached data
+  if (loading && items.length === 0) {
+    return (
+      <ScrollView contentContainerStyle={{ padding: 16, gap: 8 }}>
+        {[1, 2, 3, 4, 5, 6].map(key => (
           <ShoppingListItemSkeleton key={key} />
         ))}
       </ScrollView>
@@ -103,9 +114,7 @@ const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
           color={theme.colors.textSecondary}
           library="MaterialIcons"
         />
-        <Text
-          style={[styles.emptyTitle, { color: theme.colors.textPrimary }]}
-        >
+        <Text style={[styles.emptyTitle, { color: theme.colors.textPrimary }]}>
           No purchased items yet
         </Text>
         <Text

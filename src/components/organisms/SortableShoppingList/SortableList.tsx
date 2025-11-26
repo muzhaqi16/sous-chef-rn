@@ -16,7 +16,7 @@ import {
   findMovedItem,
   getNeighborIds,
 } from './SortableList.utils';
-import { useRenderTime } from '#hooks/performance';
+import { useRenderTime, useProgressiveList } from '#hooks/performance';
 import { SubscriptionService } from '#/services/subscriptions/SubscriptionService';
 
 // Tab bar height constant (65px from FloatingTabBar)
@@ -44,6 +44,16 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
 
   // Track local order for optimistic updates
   const [localItems, setLocalItems] = useState(items);
+
+  // PERFORMANCE: Progressive rendering - spread item initialization across multiple frames
+  // Each item creates ~8-10 Reanimated shared values + gesture handlers
+  // Rendering all at once blocks JS thread for 4-5 seconds
+  // Progressive loading renders 6 items, yields, renders 3 more, etc.
+  const progressiveItems = useProgressiveList(localItems, {
+    initialBatch: 6, // Show 6 items immediately (fills viewport)
+    batchSize: 3, // Add 3 items per batch after initial
+    batchDelay: 32, // ~2 frames at 60fps - gives time for animations
+  });
   // Track if we're currently updating the sort order
   const isUpdatingRef = useRef(false);
   // Track currently open swipeable item (only used if no external handler provided)
@@ -283,7 +293,7 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
   return (
     <View style={styles.container}>
       <DraggableFlatList
-        data={localItems}
+        data={progressiveItems}
         renderItem={renderItem}
         keyExtractor={item => item.id}
         getItemLayout={(_, index) => ({
@@ -309,11 +319,10 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
         // All approaches attempted (RNGH, native, ScrollView wrapper, NestableScrollContainer)
         // Either break normal scroll or cause VirtualizedList nesting warnings
         // Alternative: Add manual refresh button to tab bar or header
-        // PERFORMANCE: Aggressive optimization to reduce initial render time
-        // Goal: Render minimum items first, virtualize the rest
-        // With 100 items, rendering 6 vs 12 cuts initial Reanimated objects by ~50%
-        initialNumToRender={6} // Render ~1 screen worth immediately
-        maxToRenderPerBatch={4} // Smaller batches to avoid blocking JS thread
+        // PERFORMANCE: Render enough items to fill viewport above fold
+        // Each item creates ~5 Reanimated shared values + gesture handlers
+        initialNumToRender={6} // Fill viewport to avoid visible pop-in
+        maxToRenderPerBatch={2} // Smaller batches to avoid blocking JS thread
         windowSize={3} // Tighter window (3 viewports) to reduce off-screen rendering
         updateCellsBatchingPeriod={50} // Batch cell updates for smoother animations
         removeClippedSubviews={true} // Reduce memory on large lists

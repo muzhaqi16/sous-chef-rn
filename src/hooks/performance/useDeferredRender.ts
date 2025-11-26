@@ -15,7 +15,7 @@ import { InteractionManager } from 'react-native';
  * @example
  * ```tsx
  * const MyComponent = ({ items }) => {
- *   const isReady = useDeferredRender();
+ *   const isReady = useDeferredRender(); // Default 250ms delay
  *
  *   if (!isReady) {
  *     return <SkeletonPlaceholder />;
