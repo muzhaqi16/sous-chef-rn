@@ -64,6 +64,9 @@ const App = () => {
       Telemetry.updateConfig(getTelemetryConfig());
       Telemetry.initialize();
 
+      // Track app start as counter metric for dashboard
+      Telemetry.increment('app_starts_total');
+
       // Start memory monitoring (only in dev or if enabled in settings)
       if (__DEV__) {
         MemoryMonitor.start(10000); // Sample every 10 seconds
