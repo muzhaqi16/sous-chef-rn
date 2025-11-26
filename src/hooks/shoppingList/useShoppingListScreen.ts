@@ -48,9 +48,6 @@ export function useShoppingListScreen() {
   const currentList =
     lists.find(list => list.id === currentListId) || defaultList;
 
-  // Derive default list ID for queries
-  const defaultListId = defaultList?.id || '';
-
   // PERFORMANCE: Extract items from GetShoppingLists.itemsConnection
   // This eliminates the need for a separate GetShoppingListItems query
   // Reduces re-renders from 4 to 2 by having single cache update
@@ -62,17 +59,11 @@ export function useShoppingListScreen() {
       .filter(Boolean);
   }, [currentList?.itemsConnection?.edges]);
 
-  // PERFORMANCE: Use selectedShoppingListId directly for management hook
-  const listIdForQuery = useMemo(
-    () => selectedShoppingListId || defaultListId,
-    [selectedShoppingListId, defaultListId],
-  );
-
   // Use the shopping list management hook
   // PERFORMANCE: Pass itemsFromList to skip separate GetShoppingListItems query
   // When itemsFromList is provided, the hook uses it instead of making another network request
+  // NOTE: The hook reads selectedShoppingListId directly from store (single source of truth)
   const shoppingListManagement = useShoppingListManagement(
-    isFocused ? listIdForQuery : undefined,
     isFocused ? itemsFromList : null,
   );
 

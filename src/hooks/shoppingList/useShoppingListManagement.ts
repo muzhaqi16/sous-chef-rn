@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useRef, useState, useEffect } from 'react';
+import { useMemo, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { useApolloClient } from '@apollo/client/react';
 import {
@@ -28,6 +28,8 @@ import {
 } from '#/apollo/utils';
 import { shoppingListItemSearch } from '#/utils/searchUtils';
 import { useCrudOperations } from '#/hooks/utils';
+import { useAppStore, selectShoppingListState } from '#store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 
 // Cache updater utilities for shopping list items
 const addToShoppingListItemsCache = createAddToKeyedQueryFieldUpdater<any>(
@@ -58,17 +60,22 @@ export interface ShoppingListItemUpdate extends Partial<ShoppingListItemInput> {
  * Uses optimistic responses for instant UI updates
  * No refetchQueries, no custom caches - Apollo handles everything
  *
- * @param listId - The shopping list ID to manage
+ * Reads selectedShoppingListId directly from store (single source of truth)
+ *
  * @param initialItems - Optional items from parent query (GetShoppingLists.itemsConnection)
  *                       When provided, skips separate GetShoppingListItems query for performance
  */
-export function useShoppingListManagement(
-  listId: string | undefined,
-  initialItems?: any[] | null,
-) {
+export function useShoppingListManagement(initialItems?: any[] | null) {
   const client = useApolloClient();
   const { isLoggedOut } = useAuth();
   const { handleApolloError } = useErrorHandler();
+
+  // Read selected list ID directly from store - single source of truth
+  // This prevents issues with undefined transitions during navigation
+  const { selectedShoppingListId } = useAppStore(
+    useShallow(selectShoppingListState),
+  );
+  const listId = selectedShoppingListId;
 
   // PERFORMANCE: Skip separate items query when items provided from parent query
   // This eliminates the second network request and reduces re-renders from 4 to 2
@@ -110,37 +117,18 @@ export function useShoppingListManagement(
   // This eliminates duplicate subscription code and provides consistent behavior
   // across all subscriptions (deduplication, error handling, logging)
 
-  // PERFORMANCE FIX: Clear items immediately when list changes to prevent showing stale data
-  // Track previous listId to detect list changes
-  const prevListIdRef = useRef<string | null | undefined>(null);
-  const [isListChanging, setIsListChanging] = useState(false);
-
-  useEffect(() => {
-    if (prevListIdRef.current !== null && prevListIdRef.current !== listId) {
-      // List changed - temporarily show empty state until new data arrives
-      setIsListChanging(true);
-    }
-    prevListIdRef.current = listId;
-  }, [listId]);
-
-  useEffect(() => {
-    // Reset changing flag when new data arrives
-    if (isListChanging && data?.shoppingListItems) {
-      setIsListChanging(false);
-    }
-  }, [data?.shoppingListItems, isListChanging]);
-
   // OPTIMIZATION: Use previousData as fallback to prevent UI flash during refetch
   // PERFORMANCE: Prefer initialItems from GetShoppingLists when available (single query optimization)
+  // NOTE: No isListChanging state needed - store value is stable across focus changes
+  // and Apollo cache handles per-list data correctly
   const items = useMemo(
     () => {
-      if (isListChanging) return [];
       // Use initialItems from parent query if available (from GetShoppingLists.itemsConnection)
       if (hasInitialItems) return initialItems;
       // Fall back to query data or previous data
       return data?.shoppingListItems ?? previousData?.shoppingListItems ?? [];
     },
-    [data?.shoppingListItems, previousData?.shoppingListItems, isListChanging, hasInitialItems, initialItems],
+    [data?.shoppingListItems, previousData?.shoppingListItems, hasInitialItems, initialItems],
   );
 
   // Search functionality - using reusable search utility
@@ -632,7 +620,7 @@ export function useShoppingListManagement(
     // Data
     items: filteredItems,
     allItems: items,
-    loading: loading || isListChanging, // Show loading during list transition
+    loading,
     error,
     stats,
 

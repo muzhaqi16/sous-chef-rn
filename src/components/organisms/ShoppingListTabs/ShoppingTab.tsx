@@ -50,9 +50,10 @@ const ShoppingTabComponent: React.FC<ShoppingTabProps> = ({
   // This ensures smooth screen transitions by showing skeletons during navigation animation
   const isReady = useDeferredRender();
 
-  // Skeleton-first approach: Show skeletons whenever loading OR during navigation transition
-  // This ensures smooth UX when switching between lists and during screen transitions
-  if (loading || !isReady) {
+  // Show skeletons only during initial load when no data is available
+  // If we have cached items from a previous visit, show them immediately
+  // This prevents the skeleton from showing on subsequent navigations back to the screen
+  if ((loading || !isReady) && items.length === 0) {
     return (
       <ScrollView contentContainerStyle={{ padding: 16, gap: 8 }}>
         {[1, 2, 3, 4, 5].map(key => (
