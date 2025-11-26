@@ -75,12 +75,11 @@ export function useShoppingListManagement(initialItems?: any[] | null) {
   const { selectedShoppingListId } = useAppStore(
     useShallow(selectShoppingListState),
   );
-  const listId = selectedShoppingListId;
 
   // PERFORMANCE: Skip separate items query when items provided from parent query
   // This eliminates the second network request and reduces re-renders from 4 to 2
   const hasInitialItems = initialItems !== undefined && initialItems !== null;
-  const shouldSkip = !listId || isLoggedOut || hasInitialItems;
+  const shouldSkip = !selectedShoppingListId || isLoggedOut || hasInitialItems;
 
   // Dynamic fetch policy based on network status
   // Online: cache-and-network (fresh data + instant UI)
@@ -101,7 +100,7 @@ export function useShoppingListManagement(initialItems?: any[] | null) {
     refetch,
   } = useGetShoppingListItemsQuery({
     variables: {
-      shoppingListId: listId ?? '',
+      shoppingListId: selectedShoppingListId ?? '',
     },
     skip: shouldSkip,
     fetchPolicy,
@@ -186,7 +185,7 @@ export function useShoppingListManagement(initialItems?: any[] | null) {
             // Nested shoppingList object with required fields
             shoppingList: {
               __typename: 'ShoppingList',
-              id: listId || '',
+              id: selectedShoppingListId || '',
               totalItems: null,
               completedItems: null,
               estimatedTotal: null,
@@ -268,11 +267,11 @@ export function useShoppingListManagement(initialItems?: any[] | null) {
       };
     },
     update(cache, { data }) {
-      if (!data?.addItemToShoppingList || !listId) return;
+      if (!data?.addItemToShoppingList || !selectedShoppingListId) return;
 
       try {
         // Add to cache using generic utility
-        addToShoppingListItemsCache(cache, data.addItemToShoppingList, listId);
+        addToShoppingListItemsCache(cache, data.addItemToShoppingList, selectedShoppingListId);
       } catch (error) {
         console.warn('Cache update failed for addItem, will refetch:', error);
         // Fallback: refetch if cache update fails
@@ -336,7 +335,7 @@ export function useShoppingListManagement(initialItems?: any[] | null) {
       };
     },
     update(cache, { data }, { variables }) {
-      if (!data?.removeItemFromShoppingList || !listId || !variables) return;
+      if (!data?.removeItemFromShoppingList || !selectedShoppingListId || !variables) return;
 
       try {
         const itemId = variables.id;
@@ -450,9 +449,9 @@ export function useShoppingListManagement(initialItems?: any[] | null) {
   // Simplified add item using CRUD utilities
   const addItem = createAddOperation({
     mutation: addItemMutation,
-    parentId: () => listId,
+    parentId: () => selectedShoppingListId,
     transformInput: (input: ShoppingListItemInput) => ({
-      shoppingListId: listId,
+      shoppingListId: selectedShoppingListId,
       itemName: input.itemName,
       quantity: input.quantity ?? 1,
       ...(input.unitName && { unitName: input.unitName }),
@@ -469,7 +468,7 @@ export function useShoppingListManagement(initialItems?: any[] | null) {
     itemId: string,
     updates: ShoppingListItemUpdate,
   ) => {
-    if (!listId) return false;
+    if (!selectedShoppingListId) return false;
 
     try {
       // Read FRESH data from cache - use Full fragment (guaranteed to be cached)
@@ -576,7 +575,7 @@ export function useShoppingListManagement(initialItems?: any[] | null) {
   const removeItem = async (itemId: string) => {
     const operation = createRemoveOperation({
       mutation: removeItemMutation,
-      parentId: listId,
+      parentId: selectedShoppingListId,
       itemId,
       operationName: 'Delete Shopping List Item',
     });
@@ -585,7 +584,7 @@ export function useShoppingListManagement(initialItems?: any[] | null) {
 
   // Toggle item purchased status
   const toggleItem = async (itemId: string) => {
-    if (!listId) return false;
+    if (!selectedShoppingListId) return false;
 
     try {
       // Find item to get current isPurchased state and version

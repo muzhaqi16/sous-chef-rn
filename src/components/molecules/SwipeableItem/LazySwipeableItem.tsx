@@ -63,6 +63,8 @@ export const LazySwipeableItem: React.FC<SwipeableItemProps> = React.memo(
             onPressIn={handlePressIn}
             onPress={onPress}
             onLongPress={onLongPress}
+            // 150ms is faster than RN default (500ms) for more responsive long press
+            // Unrelated to useDeferredRender's 150ms delay (different purpose)
             delayLongPress={150}
             activeOpacity={1}
             style={styles.touchable}
