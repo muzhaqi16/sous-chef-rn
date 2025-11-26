@@ -298,6 +298,8 @@ export class TelemetryService {
       (global as any).HermesInternal.enablePromiseRejectionTracker?.({
         allRejections: true,
         onUnhandled: (id: any, reason: any) => {
+          // Track dedicated counter for dashboard compatibility
+          this.incrementCounter('unhandled_promise_rejections_total');
           this.trackError({
             message: 'Unhandled Promise Rejection',
             context: {
