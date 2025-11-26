@@ -34,6 +34,7 @@ export const LazySwipeableItem: React.FC<SwipeableItemProps> = React.memo(
     children,
     onPress,
     onLongPress,
+    testIDPrefix,
     ...swipeableProps
   }) => {
     // Track whether the full swipeable has been activated
@@ -54,7 +55,10 @@ export const LazySwipeableItem: React.FC<SwipeableItemProps> = React.memo(
     // First tap will: activate via onPressIn, then execute action via onPress
     if (!isActivated) {
       return (
-        <View style={styles.container}>
+        <View
+          style={styles.container}
+          testID={testIDPrefix ? `${testIDPrefix}-container` : undefined}
+        >
           <TouchableOpacity
             onPressIn={handlePressIn}
             onPress={onPress}
@@ -62,6 +66,7 @@ export const LazySwipeableItem: React.FC<SwipeableItemProps> = React.memo(
             delayLongPress={150}
             activeOpacity={1}
             style={styles.touchable}
+            testID={testIDPrefix ? `${testIDPrefix}-touchable` : undefined}
           >
             {children}
           </TouchableOpacity>
@@ -74,6 +79,7 @@ export const LazySwipeableItem: React.FC<SwipeableItemProps> = React.memo(
       <SwipeableItem
         onPress={onPress}
         onLongPress={onLongPress}
+        testIDPrefix={testIDPrefix}
         {...swipeableProps}
       >
         {children}
