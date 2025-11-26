@@ -1,19 +1,19 @@
 import { useState, useEffect } from 'react';
 
 /**
- * Hook to defer heavy rendering until after the current frame.
+ * Hook to defer heavy rendering until after navigation animations complete.
  *
- * Uses requestAnimationFrame to wait until after the browser/native
- * has finished the current paint before signaling that the component
- * is ready to render heavy content.
+ * Uses requestAnimationFrame + delay to wait until after the browser/native
+ * has finished the current paint and navigation animations before signaling
+ * that the component is ready to render heavy content.
  *
- * @param delay - Optional additional delay in ms after frame completes
+ * @param delay - Delay in ms after frame completes (default 250ms for navigation)
  * @returns boolean - true when it's safe to render heavy content
  *
  * @example
  * ```tsx
  * const MyComponent = ({ items }) => {
- *   const isReady = useDeferredRender();
+ *   const isReady = useDeferredRender(); // Default 250ms delay
  *
  *   if (!isReady) {
  *     return <SkeletonPlaceholder />;
@@ -23,7 +23,7 @@ import { useState, useEffect } from 'react';
  * };
  * ```
  */
-export function useDeferredRender(delay = 0): boolean {
+export function useDeferredRender(delay = 250): boolean {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
