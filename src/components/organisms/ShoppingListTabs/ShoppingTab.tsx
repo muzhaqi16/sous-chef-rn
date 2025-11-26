@@ -3,6 +3,7 @@ import { ScrollView } from 'react-native';
 import { SortableShoppingList } from '../SortableShoppingList';
 import type { SortableShoppingListItem } from '../SortableShoppingList';
 import { ShoppingListItemSkeleton } from '#components/base/Skeleton/ShoppingListItemSkeleton';
+import { useDeferredRender } from '#hooks/performance';
 
 interface ShoppingTabProps {
   items: SortableShoppingListItem[];
@@ -28,7 +29,7 @@ interface ShoppingTabProps {
   onDragRelease?: () => void;
 }
 
-export const ShoppingTab: React.FC<ShoppingTabProps> = React.memo(({
+const ShoppingTabComponent: React.FC<ShoppingTabProps> = ({
   items,
   onItemPress,
   onItemEdit,
@@ -45,12 +46,28 @@ export const ShoppingTab: React.FC<ShoppingTabProps> = React.memo(({
   onDragBegin,
   onDragRelease,
 }) => {
-  // Skeleton-first approach: Show skeletons whenever loading, regardless of cached items
-  // This ensures smooth UX when switching between lists
-  if (loading) {
+  // PERFORMANCE: Defer heavy SortableShoppingList render until after navigation completes
+  // This ensures smooth screen transitions by showing skeletons during navigation animation
+  const isReady = useDeferredRender();
+
+  // Show skeletons only during initial load when no data is available
+  // If we have cached items from a previous visit, show them immediately
+  // This prevents the skeleton from showing on subsequent navigations back to the screen
+  if ((loading || !isReady) && items.length === 0) {
     return (
       <ScrollView contentContainerStyle={{ padding: 16, gap: 8 }}>
-        {[1, 2, 3, 4, 5].map(key => (
+        {[1, 2, 3, 4, 5, 6].map(key => (
+          <ShoppingListItemSkeleton key={key} />
+        ))}
+      </ScrollView>
+    );
+  }
+
+  // After transition complete, show skeleton only during initial load with no cached data
+  if (loading && items.length === 0) {
+    return (
+      <ScrollView contentContainerStyle={{ padding: 16, gap: 8 }}>
+        {[1, 2, 3, 4, 5, 6].map(key => (
           <ShoppingListItemSkeleton key={key} />
         ))}
       </ScrollView>
@@ -76,6 +93,13 @@ export const ShoppingTab: React.FC<ShoppingTabProps> = React.memo(({
       onDragRelease={onDragRelease}
     />
   );
-});
+};
 
-ShoppingTab.displayName = 'ShoppingTab';
+// PERFORMANCE: Memoize with shallow comparison of items array
+// Items array reference changes when filter runs, but React.memo
+// does shallow comparison which triggers re-render with new items
+export const MemoizedShoppingTab = React.memo(ShoppingTabComponent);
+MemoizedShoppingTab.displayName = 'ShoppingTab';
+
+// Also export non-memoized for backwards compatibility
+export const ShoppingTab = ShoppingTabComponent;

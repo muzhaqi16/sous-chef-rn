@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useRef, useState, useEffect } from 'react';
+import { useMemo, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { useApolloClient } from '@apollo/client/react';
 import {
@@ -28,6 +28,8 @@ import {
 } from '#/apollo/utils';
 import { shoppingListItemSearch } from '#/utils/searchUtils';
 import { useCrudOperations } from '#/hooks/utils';
+import { useAppStore, selectShoppingListState } from '#store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 
 // Cache updater utilities for shopping list items
 const addToShoppingListItemsCache = createAddToKeyedQueryFieldUpdater<any>(
@@ -57,12 +59,27 @@ export interface ShoppingListItemUpdate extends Partial<ShoppingListItemInput> {
  * Vanilla Apollo shopping list management hook
  * Uses optimistic responses for instant UI updates
  * No refetchQueries, no custom caches - Apollo handles everything
+ *
+ * Reads selectedShoppingListId directly from store (single source of truth)
+ *
+ * @param initialItems - Optional items from parent query (GetShoppingLists.itemsConnection)
+ *                       When provided, skips separate GetShoppingListItems query for performance
  */
-export function useShoppingListManagement(listId: string | undefined) {
+export function useShoppingListManagement(initialItems?: any[] | null) {
   const client = useApolloClient();
   const { isLoggedOut } = useAuth();
   const { handleApolloError } = useErrorHandler();
-  const shouldSkip = !listId || isLoggedOut;
+
+  // Read selected list ID directly from store - single source of truth
+  // This prevents issues with undefined transitions during navigation
+  const { selectedShoppingListId } = useAppStore(
+    useShallow(selectShoppingListState),
+  );
+
+  // PERFORMANCE: Skip separate items query when items provided from parent query
+  // This eliminates the second network request and reduces re-renders from 4 to 2
+  const hasInitialItems = initialItems !== undefined && initialItems !== null;
+  const shouldSkip = !selectedShoppingListId || isLoggedOut || hasInitialItems;
 
   // Dynamic fetch policy based on network status
   // Online: cache-and-network (fresh data + instant UI)
@@ -73,14 +90,17 @@ export function useShoppingListManagement(listId: string | undefined) {
   );
 
   // Watch cache for updates from mutations and subscriptions
+  // PERFORMANCE: Include previousData to prevent UI flash during refetch
+  // PERFORMANCE: Skip when initialItems provided from GetShoppingLists.itemsConnection
   const {
     data,
-    loading,
+    previousData,
+    loading: queryLoading,
     error,
     refetch,
   } = useGetShoppingListItemsQuery({
     variables: {
-      shoppingListId: listId ?? '',
+      shoppingListId: selectedShoppingListId ?? '',
     },
     skip: shouldSkip,
     fetchPolicy,
@@ -89,33 +109,25 @@ export function useShoppingListManagement(listId: string | undefined) {
     errorPolicy: 'all', // Return both data and errors for better debugging
   });
 
+  // Derive loading state - not loading if using initialItems
+  const loading = hasInitialItems ? false : queryLoading;
+
   // Real-time updates via subscription are now handled by SubscriptionProvider
   // This eliminates duplicate subscription code and provides consistent behavior
   // across all subscriptions (deduplication, error handling, logging)
 
-  // PERFORMANCE FIX: Clear items immediately when list changes to prevent showing stale data
-  // Track previous listId to detect list changes
-  const prevListIdRef = useRef<string | null | undefined>(null);
-  const [isListChanging, setIsListChanging] = useState(false);
-
-  useEffect(() => {
-    if (prevListIdRef.current !== null && prevListIdRef.current !== listId) {
-      // List changed - temporarily show empty state until new data arrives
-      setIsListChanging(true);
-    }
-    prevListIdRef.current = listId;
-  }, [listId]);
-
-  useEffect(() => {
-    // Reset changing flag when new data arrives
-    if (isListChanging && data?.shoppingListItems) {
-      setIsListChanging(false);
-    }
-  }, [data?.shoppingListItems, isListChanging]);
-
+  // OPTIMIZATION: Use previousData as fallback to prevent UI flash during refetch
+  // PERFORMANCE: Prefer initialItems from GetShoppingLists when available (single query optimization)
+  // NOTE: No isListChanging state needed - store value is stable across focus changes
+  // and Apollo cache handles per-list data correctly
   const items = useMemo(
-    () => (isListChanging ? [] : data?.shoppingListItems || []),
-    [data?.shoppingListItems, isListChanging],
+    () => {
+      // Use initialItems from parent query if available (from GetShoppingLists.itemsConnection)
+      if (hasInitialItems) return initialItems;
+      // Fall back to query data or previous data
+      return data?.shoppingListItems ?? previousData?.shoppingListItems ?? [];
+    },
+    [data?.shoppingListItems, previousData?.shoppingListItems, hasInitialItems, initialItems],
   );
 
   // Search functionality - using reusable search utility
@@ -173,7 +185,7 @@ export function useShoppingListManagement(listId: string | undefined) {
             // Nested shoppingList object with required fields
             shoppingList: {
               __typename: 'ShoppingList',
-              id: listId || '',
+              id: selectedShoppingListId || '',
               totalItems: null,
               completedItems: null,
               estimatedTotal: null,
@@ -255,11 +267,11 @@ export function useShoppingListManagement(listId: string | undefined) {
       };
     },
     update(cache, { data }) {
-      if (!data?.addItemToShoppingList || !listId) return;
+      if (!data?.addItemToShoppingList || !selectedShoppingListId) return;
 
       try {
         // Add to cache using generic utility
-        addToShoppingListItemsCache(cache, data.addItemToShoppingList, listId);
+        addToShoppingListItemsCache(cache, data.addItemToShoppingList, selectedShoppingListId);
       } catch (error) {
         console.warn('Cache update failed for addItem, will refetch:', error);
         // Fallback: refetch if cache update fails
@@ -323,7 +335,7 @@ export function useShoppingListManagement(listId: string | undefined) {
       };
     },
     update(cache, { data }, { variables }) {
-      if (!data?.removeItemFromShoppingList || !listId || !variables) return;
+      if (!data?.removeItemFromShoppingList || !selectedShoppingListId || !variables) return;
 
       try {
         const itemId = variables.id;
@@ -437,9 +449,9 @@ export function useShoppingListManagement(listId: string | undefined) {
   // Simplified add item using CRUD utilities
   const addItem = createAddOperation({
     mutation: addItemMutation,
-    parentId: () => listId,
+    parentId: () => selectedShoppingListId,
     transformInput: (input: ShoppingListItemInput) => ({
-      shoppingListId: listId,
+      shoppingListId: selectedShoppingListId,
       itemName: input.itemName,
       quantity: input.quantity ?? 1,
       ...(input.unitName && { unitName: input.unitName }),
@@ -456,7 +468,7 @@ export function useShoppingListManagement(listId: string | undefined) {
     itemId: string,
     updates: ShoppingListItemUpdate,
   ) => {
-    if (!listId) return false;
+    if (!selectedShoppingListId) return false;
 
     try {
       // Read FRESH data from cache - use Full fragment (guaranteed to be cached)
@@ -563,7 +575,7 @@ export function useShoppingListManagement(listId: string | undefined) {
   const removeItem = async (itemId: string) => {
     const operation = createRemoveOperation({
       mutation: removeItemMutation,
-      parentId: listId,
+      parentId: selectedShoppingListId,
       itemId,
       operationName: 'Delete Shopping List Item',
     });
@@ -572,7 +584,7 @@ export function useShoppingListManagement(listId: string | undefined) {
 
   // Toggle item purchased status
   const toggleItem = async (itemId: string) => {
-    if (!listId) return false;
+    if (!selectedShoppingListId) return false;
 
     try {
       // Find item to get current isPurchased state and version
@@ -607,7 +619,7 @@ export function useShoppingListManagement(listId: string | undefined) {
     // Data
     items: filteredItems,
     allItems: items,
-    loading: loading || isListChanging, // Show loading during list transition
+    loading,
     error,
     stats,
 

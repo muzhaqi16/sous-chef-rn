@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
 import { View, Image } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { SwipeableItem } from '#/components/molecules/SwipeableItem';
+import { LazySwipeableItem } from '#/components/molecules/SwipeableItem/LazySwipeableItem';
 import { ListItem } from '#/components/molecules/ListItem';
 import { DragHandle } from '#/components/atoms/DragHandle';
 import { commonStyles } from '#/styles';
@@ -64,12 +64,13 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
     // Priority 1: Use config-based element (performance optimized)
     if (item.rightElementConfig?.type === 'counter') {
       const config = item.rightElementConfig;
-      const dragHandle = !item.isPurchased && drag ? (
-        <DragHandle
-          onLongPress={handleLongPress}
-          disabled={item.isPurchased}
-        />
-      ) : undefined;
+      const dragHandle =
+        !item.isPurchased && drag ? (
+          <DragHandle
+            onLongPress={handleLongPress}
+            disabled={item.isPurchased}
+          />
+        ) : undefined;
 
       return (
         <ShoppingListItemCounter
@@ -139,8 +140,10 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
 
   return (
     <View style={[styles.container, isActive && styles.activeContainer]}>
-      <SwipeableItem
-        onPress={() => onTogglePurchase ? onTogglePurchase(item.id) : onItemPress(item.id)}
+      <LazySwipeableItem
+        onPress={() =>
+          onTogglePurchase ? onTogglePurchase(item.id) : onItemPress(item.id)
+        }
         onLongPress={
           !drag && onItemPress ? () => onItemPress(item.id) : undefined
         }
@@ -163,7 +166,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
           rightIcon={undefined}
           isPurchased={item.isPurchased}
         />
-      </SwipeableItem>
+      </LazySwipeableItem>
     </View>
   );
 };
@@ -192,7 +195,34 @@ const styles = StyleSheet.create(theme => ({
   },
 }));
 
-// PERFORMANCE: Memoize component with default shallow comparison
-// Object identity maintained by WeakMap caching in ShoppingListMain (sortableItems useMemo)
-// This ensures config objects have stable references, making shallow comparison effective
-export const SimpleDraggableItem = React.memo(SimpleDraggableItemComponent);
+// PERFORMANCE: Custom comparator for React.memo
+// Only re-render when item data or drag state changes
+// Callbacks are stable (from context/useCallback) so no need to compare them
+const arePropsEqual = (
+  prev: SimpleDraggableItemProps,
+  next: SimpleDraggableItemProps,
+): boolean => {
+  // Fast path: same item reference + same drag state = definitely equal
+  if (prev.item === next.item && prev.isActive === next.isActive && prev.drag === next.drag) {
+    return true;
+  }
+
+  // Compare item fields that affect rendering
+  return (
+    prev.item.id === next.item.id &&
+    prev.item.title === next.item.title &&
+    prev.item.subtitle === next.item.subtitle &&
+    prev.item.isPurchased === next.item.isPurchased &&
+    prev.item.rightElementConfig === next.item.rightElementConfig &&
+    prev.item.leftElementConfig === next.item.leftElementConfig &&
+    prev.isActive === next.isActive &&
+    prev.drag === next.drag
+  );
+};
+
+// PERFORMANCE: Memoize component with custom comparison
+// Config object stability maintained by Map caching in useShoppingListScreen
+export const SimpleDraggableItem = React.memo(
+  SimpleDraggableItemComponent,
+  arePropsEqual,
+);

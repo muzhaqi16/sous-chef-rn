@@ -330,6 +330,29 @@ directive @cacheControl(
 ) on FIELD_DEFINITION | INTERFACE | OBJECT | UNION
 
 """
+Require that the current user is the owner of the parent resource
+Returns null for the field if user is not the owner (soft denial)
+This is useful for sensitive fields that should only be visible to the owner
+
+The owner check uses:
+1. parent.userId (if exists) - compared to context.userId
+2. parent.authorId (if exists) - for author-owned resources like recipes
+3. parent.ownerId (if exists) - for explicitly owned resources
+
+Example:
+type User {
+  email: String! @auth
+  settings: UserSettings @ownerOnly
+  notifications: [Notification!]! @ownerOnly
+}
+
+type Recipe {
+  privateNotes: String @ownerOnly
+}
+"""
+directive @ownerOnly on FIELD_DEFINITION
+
+"""
 Require specific access level to a resource
 Returns FORBIDDEN error if user doesn't have required access level
 

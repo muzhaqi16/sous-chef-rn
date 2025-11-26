@@ -87,6 +87,21 @@ query GetShoppingLists {
         }
       }
     }
+    # PERFORMANCE: Include items in initial query to eliminate second GetShoppingListItems call
+    # Uses lightweight ShoppingListItemDisplayFragment (11 fields vs 60+) for ~80% payload reduction
+    itemsConnection(first: 100) {
+      edges {
+        cursor
+        node {
+          ...ShoppingListItemDisplayFragment
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      totalCount
+    }
   }
 }
 

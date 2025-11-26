@@ -9102,6 +9102,35 @@ export type ShoppingListItemCoreFragment = {
     | undefined;
 };
 
+export type ShoppingListItemDisplayFragmentFragment = {
+  __typename?: 'ShoppingListItem';
+  id: string;
+  itemName?: string | null | undefined;
+  quantity?: number | null | undefined;
+  isPurchased: boolean;
+  sortOrder: string;
+  unitName?: string | null | undefined;
+  category?: string | null | undefined;
+  unit?: { __typename?: 'Unit'; id: string; symbol: string } | null | undefined;
+  item?:
+    | {
+        __typename?: 'Item';
+        id: string;
+        imageUrl?: string | null | undefined;
+        categories?:
+          | Array<{
+              __typename?: 'ItemCategory';
+              id: string;
+              isPrimary: boolean;
+              category: { __typename?: 'Category'; id: string; name: string };
+            }>
+          | null
+          | undefined;
+      }
+    | null
+    | undefined;
+};
+
 export type ShoppingListItemFragmentFragment = {
   __typename?: 'ShoppingListItem';
   estimatedPrice?: number | null | undefined;
@@ -19437,6 +19466,54 @@ export type GetShoppingListsQuery = {
         }>
       | null
       | undefined;
+    itemsConnection: {
+      __typename?: 'ShoppingListItemConnection';
+      totalCount: number;
+      edges: Array<{
+        __typename?: 'ShoppingListItemEdge';
+        cursor: string;
+        node: {
+          __typename?: 'ShoppingListItem';
+          id: string;
+          itemName?: string | null | undefined;
+          quantity?: number | null | undefined;
+          isPurchased: boolean;
+          sortOrder: string;
+          unitName?: string | null | undefined;
+          category?: string | null | undefined;
+          unit?:
+            | { __typename?: 'Unit'; id: string; symbol: string }
+            | null
+            | undefined;
+          item?:
+            | {
+                __typename?: 'Item';
+                id: string;
+                imageUrl?: string | null | undefined;
+                categories?:
+                  | Array<{
+                      __typename?: 'ItemCategory';
+                      id: string;
+                      isPrimary: boolean;
+                      category: {
+                        __typename?: 'Category';
+                        id: string;
+                        name: string;
+                      };
+                    }>
+                  | null
+                  | undefined;
+              }
+            | null
+            | undefined;
+        };
+      }>;
+      pageInfo: {
+        __typename?: 'PageInfo';
+        hasNextPage: boolean;
+        endCursor?: string | null | undefined;
+      };
+    };
   }>;
 };
 
