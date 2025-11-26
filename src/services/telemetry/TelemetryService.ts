@@ -181,9 +181,18 @@ export class TelemetryService {
 
   trackEvent(eventName: string, properties: Record<string, any> = {}): void {
     this.log('info', `Event: ${eventName}`, properties);
-    this.incrementCounter('app_events_total', 1, {
+
+    // Build labels for the counter
+    const labels: Record<string, string> = {
       event_name: eventName,
-    });
+    };
+
+    // Add method label if present (for auth events like login_attempt, login_success)
+    if (typeof properties.method === 'string') {
+      labels.method = properties.method;
+    }
+
+    this.incrementCounter('app_events_total', 1, labels);
   }
 
   trackScreenView(screenName: string, properties: Record<string, any> = {}): void {
