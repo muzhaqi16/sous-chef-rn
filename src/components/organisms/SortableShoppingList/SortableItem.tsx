@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
 import { View, Image } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { LazySwipeableItem } from '#/components/molecules/SwipeableItem/LazySwipeableItem';
+import { SwipeableItem } from '#/components/molecules/SwipeableItem';
 import { ListItem } from '#/components/molecules/ListItem';
 import { DragHandle } from '#/components/atoms/DragHandle';
 import { commonStyles } from '#/styles';
@@ -140,10 +140,8 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
 
   return (
     <View style={[styles.container, isActive && styles.activeContainer]}>
-      <LazySwipeableItem
-        onPress={() =>
-          onTogglePurchase ? onTogglePurchase(item.id) : onItemPress(item.id)
-        }
+      <SwipeableItem
+        onPress={() => onItemPress(item.id)}
         onLongPress={
           !drag && onItemPress ? () => onItemPress(item.id) : undefined
         }
@@ -166,7 +164,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
           rightIcon={undefined}
           isPurchased={item.isPurchased}
         />
-      </LazySwipeableItem>
+      </SwipeableItem>
     </View>
   );
 };
@@ -203,7 +201,11 @@ const arePropsEqual = (
   next: SimpleDraggableItemProps,
 ): boolean => {
   // Fast path: same item reference + same drag state = definitely equal
-  if (prev.item === next.item && prev.isActive === next.isActive && prev.drag === next.drag) {
+  if (
+    prev.item === next.item &&
+    prev.isActive === next.isActive &&
+    prev.drag === next.drag
+  ) {
     return true;
   }
 

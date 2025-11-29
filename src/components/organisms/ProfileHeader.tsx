@@ -84,6 +84,8 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.sizes.avatar.md,
     backgroundColor: theme.colors.surface,
     overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: theme.colors.primary,
   },
   avatarPlaceholder: {
     justifyContent: 'center',

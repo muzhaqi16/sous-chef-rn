@@ -86,12 +86,6 @@ query GetPantry(
   }
 }
 
-query GetPantryItems($pantryId: ID!) {
-  pantryItems(pantryId: $pantryId) {
-    ...PantryItemFragment
-  }
-}
-
 query GetPantryItem($id: ID!) {
   pantryItem(id: $id) {
     ...PantryItemFragment

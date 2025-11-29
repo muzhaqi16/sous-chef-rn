@@ -1,16 +1,11 @@
 import React from 'react';
-import { TouchableOpacity } from 'react-native';
+import { View, TouchableOpacity } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import Reanimated, {
-  useAnimatedStyle,
-  SharedValue,
-} from 'react-native-reanimated';
 
 interface SwipeableContentProps {
   children: React.ReactNode;
   onPress?: () => void;
   onLongPress?: () => void;
-  dragX?: SharedValue<number>;
   accessibilityLabel?: string;
   accessibilityHint?: string;
 }
@@ -19,25 +14,11 @@ export const SwipeableContent: React.FC<SwipeableContentProps> = ({
   children,
   onPress,
   onLongPress,
-  dragX,
   accessibilityLabel,
   accessibilityHint,
 }) => {
-  const animatedStyle = useAnimatedStyle(() => {
-    if (!dragX) return {};
-
-    const isSwipingLeft = dragX.value > 0; // Positive = left swipe (revealing right actions)
-    const isSwipingRight = dragX.value < 0; // Negative = right swipe (revealing left actions)
-
-    return {
-      marginRight: isSwipingLeft ? 12 : 0, // 12pt gap from right actions when swiping left
-      marginLeft: isSwipingRight ? 12 : 0, // 12pt gap from left actions when swiping right
-      borderRadius: Math.abs(dragX.value) > 10 ? 12 : 0,
-    };
-  }, []);
-
   return (
-    <Reanimated.View style={[styles.itemContainer, animatedStyle]}>
+    <View style={styles.itemContainer}>
       <TouchableOpacity
         onPress={onPress}
         onLongPress={onLongPress}
@@ -50,7 +31,7 @@ export const SwipeableContent: React.FC<SwipeableContentProps> = ({
       >
         {children}
       </TouchableOpacity>
-    </Reanimated.View>
+    </View>
   );
 };
 

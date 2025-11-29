@@ -560,6 +560,7 @@ const PantryMainScreen: React.FC = React.memo(() => {
 
   return (
     <View style={styles.container} testID="pantry-screen">
+      {isLoadingInitial && <View testID="pantry-loading" />}
       <ListTemplate
         title={selectedHomeId ? currentHomeData?.home?.name || 'Pantry' : ''}
         subtitle={selectedHomeId ? pantry?.name || 'Your Pantry' : ''}

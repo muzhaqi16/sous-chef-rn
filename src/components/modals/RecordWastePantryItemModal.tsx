@@ -1,17 +1,16 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { View, Text, TouchableOpacity, Alert } from 'react-native';
 import {
-  Modal,
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  Alert,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+  BottomSheetModal,
+  BottomSheetScrollView,
+  BottomSheetBackdrop,
+} from '@gorhom/bottom-sheet';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/molecules/FormInput';
 import { FormCheckbox } from '#components/molecules/FormCheckbox';
+import { FormattedItemSubtitle } from '#components/atoms/FormattedItemSubtitle';
 import { Icon } from '#/utils';
 import { WasteReason, PantryItemFragment } from '#generated';
 
@@ -24,7 +23,7 @@ interface RecordWastePantryItemModalProps {
     wasteReason: WasteReason,
     isComposted: boolean,
     isRecycled: boolean,
-    notes: string
+    notes: string,
   ) => void;
 }
 
@@ -39,28 +38,32 @@ const WASTE_REASON_OPTIONS: Array<{ label: string; value: WasteReason }> = [
   { label: 'Other', value: WasteReason.Other },
 ];
 
-export const RecordWastePantryItemModal: React.FC<RecordWastePantryItemModalProps> = ({
-  visible,
-  pantryItem,
-  onClose,
-  onConfirm,
-}) => {
+export const RecordWastePantryItemModal: React.FC<
+  RecordWastePantryItemModalProps
+> = ({ visible, pantryItem, onClose, onConfirm }) => {
   const { theme } = useUnistyles();
+  const insets = useSafeAreaInsets();
+  const bottomSheetRef = useRef<BottomSheetModal>(null);
   const [wasteAmountInput, setWasteAmountInput] = useState('');
-  const [wasteReason, setWasteReason] = useState<WasteReason>(WasteReason.Expired);
+  const [wasteReason, setWasteReason] = useState<WasteReason>(
+    WasteReason.Expired,
+  );
   const [isComposted, setIsComposted] = useState(false);
   const [isRecycled, setIsRecycled] = useState(false);
   const [notes, setNotes] = useState('');
 
-  // Reset form when modal opens with new item
+  // Control bottom sheet visibility based on visible prop
   useEffect(() => {
     if (visible && pantryItem) {
-      // Default to full quantity (waste everything)
+      bottomSheetRef.current?.present();
+      // Reset form when modal opens with new item
       setWasteAmountInput(pantryItem.currentQuantity.toString());
       setWasteReason(WasteReason.Expired);
       setIsComposted(false);
       setIsRecycled(false);
       setNotes('');
+    } else {
+      bottomSheetRef.current?.dismiss();
     }
   }, [visible, pantryItem]);
 
@@ -110,190 +113,200 @@ export const RecordWastePantryItemModal: React.FC<RecordWastePantryItemModalProp
     if (wasteValue > pantryItem.currentQuantity) {
       Alert.alert(
         'Error',
-        `Cannot waste more than available quantity (${pantryItem.currentQuantity} ${pantryItem.unit?.symbol || ''})`,
+        `Cannot waste more than available quantity (${
+          pantryItem.currentQuantity
+        } ${pantryItem.unit?.symbol || ''})`,
       );
       return;
     }
 
     onConfirm(wasteValue, wasteReason, isComposted, isRecycled, notes);
     onClose();
-  }, [pantryItem, wasteAmountInput, wasteReason, isComposted, isRecycled, notes, onConfirm, onClose, parseFractionalInput]);
+  }, [
+    pantryItem,
+    wasteAmountInput,
+    wasteReason,
+    isComposted,
+    isRecycled,
+    notes,
+    onConfirm,
+    onClose,
+    parseFractionalInput,
+  ]);
 
-  if (!pantryItem) return null;
-
-  const remaining = calculateRemaining();
+  const remaining = pantryItem ? calculateRemaining() : null;
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}
+    <BottomSheetModal
+      ref={bottomSheetRef}
+      snapPoints={['80%']}
+      enablePanDownToClose
+      enableDynamicSizing={false}
+      topInset={insets.top}
+      onDismiss={onClose}
+      backgroundStyle={{ backgroundColor: theme.colors.background }}
+      handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
+      backdropComponent={props => (
+        <BottomSheetBackdrop
+          {...props}
+          disappearsOnIndex={-1}
+          appearsOnIndex={0}
+          pressBehavior="close"
+        />
+      )}
     >
-      <SafeAreaView style={styles.container}>
+      <BottomSheetScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[
+          styles.contentContainer,
+          { paddingBottom: insets.bottom + 16 },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={onClose}
-            style={styles.closeButton}
-          >
-            <Icon
-              library="Feather"
-              name="x"
-              size={24}
-              color={theme.colors.textPrimary}
-            />
-          </TouchableOpacity>
-          <Text style={styles.title}>Record Waste</Text>
-          <View style={styles.headerSpacer} />
-        </View>
+        <Text style={styles.title}>Record Waste</Text>
 
-        <ScrollView style={styles.content}>
-          {/* Item Info */}
-          <View style={styles.itemInfo}>
-            <Text style={styles.itemName}>{pantryItem.itemName}</Text>
-            <Text style={styles.currentQuantity}>
-              Available: {pantryItem.currentQuantity} {pantryItem.unit?.symbol || ''}
-            </Text>
-          </View>
+        {pantryItem && (
+          <>
+            {/* Item Info */}
+            <View style={styles.itemInfo}>
+              <Text style={styles.itemName}>{pantryItem.itemName}</Text>
+              <View style={styles.availableRow}>
+                <Text style={styles.availableLabel}>Available: </Text>
+                <FormattedItemSubtitle
+                  quantity={pantryItem.currentQuantity}
+                  quantityInput={pantryItem.quantityInput}
+                  displayFormat={pantryItem.displayFormat}
+                  displayAsFraction={pantryItem.unit?.displayAsFraction}
+                  netWeight={pantryItem.item?.netWeight}
+                  unitSymbol={pantryItem.item?.displayUnit?.symbol || pantryItem.unit?.symbol}
+                />
+              </View>
+            </View>
 
-          {/* Waste Amount Input */}
-          <View style={styles.section}>
-            <FractionInput
-              label="Waste Amount *"
-              value={wasteAmountInput}
-              onChangeText={setWasteAmountInput}
-              placeholder="e.g., 1, 1 1/4, or 1.5"
-            />
-            {remaining !== null && (
-              <Text
-                style={[
-                  styles.remainingText,
-                  remaining < 0 && styles.remainingTextError,
-                ]}
-              >
-                Remaining: {remaining >= 0 ? remaining.toFixed(2) : 'Invalid'}{' '}
-                {pantryItem.unit?.symbol || ''}
-              </Text>
-            )}
-          </View>
-
-          {/* Waste Reason Selection */}
-          <View style={styles.section}>
-            <Text style={styles.label}>Waste Reason *</Text>
-            <View style={styles.reasonOptions}>
-              {WASTE_REASON_OPTIONS.map(option => (
-                <TouchableOpacity
-                  key={option.value}
+            {/* Waste Amount Input */}
+            <View style={styles.section}>
+              <FractionInput
+                label="Waste Amount *"
+                value={wasteAmountInput}
+                onChangeText={setWasteAmountInput}
+                placeholder="e.g., 1, 1 1/4, or 1.5"
+              />
+              {remaining !== null && (
+                <Text
                   style={[
-                    styles.reasonOption,
-                    wasteReason === option.value && styles.reasonOptionSelected,
+                    styles.remainingText,
+                    remaining < 0 && styles.remainingTextError,
                   ]}
-                  onPress={() => setWasteReason(option.value)}
                 >
-                  <Text
+                  Remaining: {remaining >= 0 ? remaining.toFixed(2) : 'Invalid'}{' '}
+                  {pantryItem.unit?.symbol || ''}
+                </Text>
+              )}
+            </View>
+
+            {/* Waste Reason Selection */}
+            <View style={styles.section}>
+              <Text style={styles.label}>Waste Reason *</Text>
+              <View style={styles.reasonOptions}>
+                {WASTE_REASON_OPTIONS.map(option => (
+                  <TouchableOpacity
+                    key={option.value}
                     style={[
-                      styles.reasonOptionText,
-                      wasteReason === option.value && styles.reasonOptionTextSelected,
+                      styles.reasonOption,
+                      wasteReason === option.value &&
+                        styles.reasonOptionSelected,
                     ]}
+                    onPress={() => setWasteReason(option.value)}
                   >
-                    {option.label}
-                  </Text>
-                  {wasteReason === option.value && (
-                    <Icon
-                      library="Feather"
-                      name="check"
-                      size={16}
-                      color={theme.colors.primary}
-                    />
-                  )}
-                </TouchableOpacity>
-              ))}
+                    <Text
+                      style={[
+                        styles.reasonOptionText,
+                        wasteReason === option.value &&
+                          styles.reasonOptionTextSelected,
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                    {wasteReason === option.value && (
+                      <Icon
+                        library="Feather"
+                        name="check"
+                        size={16}
+                        color={theme.colors.primary}
+                      />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
-          </View>
 
-          {/* Sustainability Tracking */}
-          <View style={styles.section}>
-            <Text style={styles.label}>Sustainability</Text>
-            <View style={styles.checkboxContainer}>
-              <FormCheckbox
-                label="Composted"
-                checked={isComposted}
-                onPress={() => setIsComposted(!isComposted)}
+            {/* Sustainability Tracking */}
+            <View style={styles.section}>
+              <Text style={styles.label}>Sustainability</Text>
+              <View style={styles.checkboxContainer}>
+                <FormCheckbox
+                  label="Composted"
+                  checked={isComposted}
+                  onPress={() => setIsComposted(!isComposted)}
+                />
+              </View>
+              <View style={styles.checkboxContainer}>
+                <FormCheckbox
+                  label="Recycled (packaging)"
+                  checked={isRecycled}
+                  onPress={() => setIsRecycled(!isRecycled)}
+                />
+              </View>
+            </View>
+
+            {/* Notes (Optional) */}
+            <View style={styles.section}>
+              <FormInput
+                label="Notes (Optional)"
+                value={notes}
+                onChangeText={setNotes}
+                placeholder="Add any notes about this waste..."
+                multiline
+                numberOfLines={3}
               />
             </View>
-            <View style={styles.checkboxContainer}>
-              <FormCheckbox
-                label="Recycled (packaging)"
-                checked={isRecycled}
-                onPress={() => setIsRecycled(!isRecycled)}
-              />
+
+            {/* Actions */}
+            <View style={styles.actions}>
+              <TouchableOpacity
+                style={[styles.button, styles.cancelButton]}
+                onPress={onClose}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, styles.confirmButton]}
+                onPress={handleConfirm}
+              >
+                <Text style={styles.confirmButtonText}>Record Waste</Text>
+              </TouchableOpacity>
             </View>
-          </View>
-
-          {/* Notes (Optional) */}
-          <View style={styles.section}>
-            <FormInput
-              label="Notes (Optional)"
-              value={notes}
-              onChangeText={setNotes}
-              placeholder="Add any notes about this waste..."
-              multiline
-              numberOfLines={3}
-            />
-          </View>
-        </ScrollView>
-
-        {/* Actions */}
-        <View style={styles.actions}>
-          <TouchableOpacity
-            style={[styles.button, styles.cancelButton]}
-            onPress={onClose}
-          >
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.button, styles.confirmButton]}
-            onPress={handleConfirm}
-          >
-            <Text style={styles.confirmButtonText}>Record Waste</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    </Modal>
+          </>
+        )}
+      </BottomSheetScrollView>
+    </BottomSheetModal>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  container: {
+  scrollView: {
     flex: 1,
-    backgroundColor: theme.colors.background,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: theme.spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.divider,
-  },
-  closeButton: {
-    padding: theme.spacing.xs,
-    minWidth: 40,
+  contentContainer: {
+    padding: theme.spacing.md,
   },
   title: {
     fontSize: theme.fonts.size.xl,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     textAlign: 'center',
-    flex: 1,
-  },
-  headerSpacer: {
-    width: 40,
-  },
-  content: {
-    flex: 1,
-    padding: theme.spacing.lg,
+    marginBottom: theme.spacing.lg,
   },
   itemInfo: {
     marginBottom: theme.spacing.xl,
@@ -307,7 +320,11 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.xs,
   },
-  currentQuantity: {
+  availableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  availableLabel: {
     fontSize: theme.fonts.size.base,
     color: theme.colors.textSecondary,
   },
@@ -361,10 +378,8 @@ const styles = StyleSheet.create(theme => ({
   },
   actions: {
     flexDirection: 'row',
-    padding: theme.spacing.lg,
+    marginTop: theme.spacing.lg,
     gap: theme.spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.divider,
   },
   button: {
     flex: 1,

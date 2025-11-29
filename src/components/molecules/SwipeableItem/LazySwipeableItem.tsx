@@ -1,8 +1,17 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { TouchableOpacity, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { SwipeableItem } from './index';
 import { SwipeableItemProps } from './types';
+
+interface LazySwipeableItemProps extends SwipeableItemProps {
+  /**
+   * If true, skip lazy loading and mount SwipeableItem immediately.
+   * Used to pre-activate items that are visible in the viewport,
+   * ensuring first swipe works without requiring a touch first.
+   */
+  isPreActivated?: boolean;
+}
 
 /**
  * LazySwipeableItem - Performance-optimized wrapper for SwipeableItem
@@ -29,30 +38,41 @@ import { SwipeableItemProps } from './types';
  * - onPress still fires and executes the action
  * - Re-render happens after touch completes, showing full SwipeableItem
  */
-export const LazySwipeableItem: React.FC<SwipeableItemProps> = React.memo(
+export const LazySwipeableItem: React.FC<LazySwipeableItemProps> = React.memo(
   ({
     children,
     onPress,
     onLongPress,
     testIDPrefix,
+    isPreActivated = false,
     ...swipeableProps
   }) => {
     // Track whether the full swipeable has been activated
-    const [isActivated, setIsActivated] = useState(false);
+    const [isActivated, setIsActivated] = useState(isPreActivated);
     // Use ref to avoid recreating callback when isActivated changes
-    const isActivatedRef = useRef(false);
+    const isActivatedRef = useRef(isPreActivated);
+
+    // Activate when isPreActivated becomes true (item scrolls into view)
+    useEffect(() => {
+      if (isPreActivated && !isActivatedRef.current) {
+        isActivatedRef.current = true;
+        setIsActivated(true);
+      }
+    }, [isPreActivated]);
 
     // Activate the full swipeable on first touch
-    // Using onPressIn ensures activation happens before onPress
+    // Defer state update to next tick so onPress can fire first (for taps)
+    // Swipes won't trigger onPress, so they just activate the swipeable
     const handlePressIn = useCallback(() => {
       if (!isActivatedRef.current) {
         isActivatedRef.current = true;
-        setIsActivated(true);
+        // Defer to allow onPress to fire before re-render
+        setTimeout(() => setIsActivated(true), 0);
       }
     }, []);
 
     // Before activation: render lightweight touchable
-    // First tap will: activate via onPressIn, then execute action via onPress
+    // First tap: handlePressIn activates AND executes onPress
     if (!isActivated) {
       return (
         <View

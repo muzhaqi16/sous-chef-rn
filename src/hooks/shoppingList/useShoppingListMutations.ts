@@ -18,19 +18,22 @@ import { createOptimisticEntity } from '#/apollo/utils/createOptimisticResponse'
 import { generateId } from '#/utils/generateId';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import {
-  createAddToKeyedQueryFieldUpdater,
-  createRemoveFromQueryFieldUpdater,
+  createAddToParentConnectionUpdater,
+  createRemoveFromParentConnectionUpdater,
 } from '#/apollo/utils';
 import { useCrudOperations } from '#/hooks/utils';
 
-// Cache updater utilities for shopping list items
-const addToShoppingListItemsCache = createAddToKeyedQueryFieldUpdater<any>(
-  'shoppingListItems',
-  'shoppingListId',
+// Cache updater utilities for shopping list items connection
+// Uses parent connection pattern for ShoppingList.itemsConnection
+const addToShoppingListItemsCache = createAddToParentConnectionUpdater<any>(
+  'ShoppingList',
+  'itemsConnection',
+  'ShoppingListItem',
 );
 
-const removeFromShoppingListItemsCache = createRemoveFromQueryFieldUpdater(
-  'shoppingListItems',
+const removeFromShoppingListItemsCache = createRemoveFromParentConnectionUpdater(
+  'ShoppingList',
+  'itemsConnection',
   'ShoppingListItem',
 );
 
@@ -162,7 +165,8 @@ export function useShoppingListMutations({
 
       try {
         // Add to cache using generic utility
-        addToShoppingListItemsCache(cache, data.addItemToShoppingList, listId);
+        // Parent connection pattern: (cache, parentId, newItem)
+        addToShoppingListItemsCache(cache, listId, data.addItemToShoppingList);
       } catch (error) {
         console.warn('Cache update failed for addItem, will refetch:', error);
         // Fallback: refetch if cache update fails
@@ -220,7 +224,8 @@ export function useShoppingListMutations({
         optimisticDataPersistence.save('ShoppingListItem', itemId, '__deleted', true);
 
         // Remove from cache using generic utility (handles filter + evict + gc)
-        removeFromShoppingListItemsCache(cache, itemId, { evictItem: true });
+        // Parent connection pattern: (cache, parentId, itemId, options)
+        removeFromShoppingListItemsCache(cache, listId, itemId, { evictItem: true });
       } catch (error) {
         console.warn(
           'Cache update failed for removeItem, will refetch:',

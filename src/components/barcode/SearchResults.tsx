@@ -3,13 +3,18 @@ import { ScrollView, Alert } from 'react-native';
 import { ItemCard } from './ItemCard';
 import { ActionButtons } from './ActionButtons';
 import { StyleSheet } from 'react-native-unistyles';
-import { ApolloCache } from '@apollo/client';
 import {
   useCreatePantryItemMutation,
   useAddItemToShoppingListMutation,
-  GetShoppingListItemsDocument,
-  GetShoppingListItemsQuery,
 } from '#generated';
+import { createAddToParentConnectionUpdater } from '#/apollo/utils';
+
+// Cache updater for ShoppingList.itemsConnection
+const addToShoppingListItemsConnection = createAddToParentConnectionUpdater<any>(
+  'ShoppingList',
+  'itemsConnection',
+  'ShoppingListItem',
+);
 
 interface SearchResultsProps {
   item: any;
@@ -31,7 +36,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   const [isAdded, setIsAdded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [addToPantry] = useCreatePantryItemMutation({
-    update: (cache: ApolloCache, { data }: any) => {
+    update: (cache, { data }: any) => {
       if (data?.createPantryItem && pantryId) {
         try {
           // Modify the Pantry.itemsConnection field in the cache
@@ -85,27 +90,10 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   });
 
   const [addToShoppingList] = useAddItemToShoppingListMutation({
-    update: (cache: ApolloCache, { data }: any) => {
+    update: (cache, { data }) => {
       if (data?.addItemToShoppingList && shoppingListId) {
-        // Read the existing shopping list items from cache
-        const existingData = cache.readQuery<GetShoppingListItemsQuery>({
-          query: GetShoppingListItemsDocument,
-          variables: { listId: shoppingListId },
-        });
-
-        if (existingData?.shoppingListItems) {
-          // Add the new item to the cache
-          cache.writeQuery<GetShoppingListItemsQuery>({
-            query: GetShoppingListItemsDocument,
-            variables: { listId: shoppingListId },
-            data: {
-              shoppingListItems: [
-                ...existingData.shoppingListItems,
-                data.addItemToShoppingList,
-              ],
-            },
-          });
-        }
+        // Add item to ShoppingList.itemsConnection using parent connection pattern
+        addToShoppingListItemsConnection(cache, shoppingListId, data.addItemToShoppingList);
       }
     },
   });

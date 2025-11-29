@@ -20,12 +20,6 @@ query GetHomes {
   }
 }
 
-query GetHomeInvites($homeId: ID!) {
-  homeInvites(homeId: $homeId) {
-    ...HomeInviteFragment
-  }
-}
-
 query GetMyPendingInvites {
   myPendingInvites {
     ...HomeInviteFragment

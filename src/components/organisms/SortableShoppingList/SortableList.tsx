@@ -209,11 +209,18 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
     [disabled, onSortOrderUpdate],
   );
 
+  // Number of items to render initially (fills viewport)
+  const INITIAL_NUM_TO_RENDER = 6;
+
   // Render item with ScaleDecorator for drag feedback
   // PERFORMANCE: Only wrap in ScaleDecorator when actively dragging
   // This reduces Reanimated shared value creation from 300+ to ~18 on initial render
   const renderItem = useCallback(
-    ({ item, drag, isActive }: RenderItemParams<SortableShoppingListItem>) => {
+    ({
+      item,
+      drag,
+      isActive,
+    }: RenderItemParams<SortableShoppingListItem>) => {
       const itemComponent = (
         <SimpleDraggableItem
           item={item}
@@ -321,7 +328,7 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
         // Alternative: Add manual refresh button to tab bar or header
         // PERFORMANCE: Render enough items to fill viewport above fold
         // Each item creates ~5 Reanimated shared values + gesture handlers
-        initialNumToRender={6} // Fill viewport to avoid visible pop-in
+        initialNumToRender={INITIAL_NUM_TO_RENDER} // Fill viewport to avoid visible pop-in
         maxToRenderPerBatch={2} // Smaller batches to avoid blocking JS thread
         windowSize={3} // Tighter window (3 viewports) to reduce off-screen rendering
         updateCellsBatchingPeriod={50} // Batch cell updates for smoother animations
