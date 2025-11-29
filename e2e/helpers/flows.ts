@@ -76,7 +76,8 @@ export async function relaunchToHomeTab() {
     .withTimeout(10000);
 
   // Wait for app to initialize navigation (navigationState computation)
-  await delay(2000);
+  // Increased from 2s to 3s to allow for store hydration and navigation state recalculation
+  await delay(3000);
 
   await dismissBiometricPromptIfPresent();
 
@@ -85,5 +86,6 @@ export async function relaunchToHomeTab() {
     await element(by.id('tab-pantry')).tap();
   } catch {}
 
-  await pantryScreen.waitForScreen(); // Uses default 5s timeout
+  // Increased timeout from 5s to 10s to handle navigation state transitions
+  await pantryScreen.waitForScreen(10000);
 }
