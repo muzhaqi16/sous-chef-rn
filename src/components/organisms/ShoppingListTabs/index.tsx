@@ -251,7 +251,7 @@ export const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
       lazy={true}
       lazyPreloadDistance={0}
       onIndexChange={handleIndexChange}
-      swipeEnabled={false}
+      swipeEnabled={true}
       onRefresh={onRefresh}
       refreshing={refreshing}
     />
