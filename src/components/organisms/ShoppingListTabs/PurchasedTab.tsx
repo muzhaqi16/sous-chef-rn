@@ -130,48 +130,46 @@ const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
   }
 
   return (
-    <View style={styles.container}>
-      <SortableShoppingList
-        items={items}
-        onItemPress={onItemPress}
-        onItemEdit={onItemEdit}
-        onItemDelete={onItemDelete}
-        onTogglePurchase={onTogglePurchase}
-        onSortOrderUpdate={onSortOrderUpdate}
-        disabled={disabled}
-        isDragging={isDragging}
-        showsVerticalScrollIndicator={true}
-        onSwipeableWillOpen={onSwipeableWillOpen}
-        onSwipeableClose={onSwipeableClose}
-        onDragBegin={onDragBegin}
-        onDragRelease={onDragRelease}
-        ListFooterComponent={
-          onClearAll ? (
-            <View style={styles.footer}>
-              <TouchableOpacity
-                style={clearButtonStyle}
-                onPress={handleClearAll}
+    <SortableShoppingList
+      items={items}
+      onItemPress={onItemPress}
+      onItemEdit={onItemEdit}
+      onItemDelete={onItemDelete}
+      onTogglePurchase={onTogglePurchase}
+      onSortOrderUpdate={onSortOrderUpdate}
+      disabled={disabled}
+      isDragging={isDragging}
+      showsVerticalScrollIndicator={true}
+      onSwipeableWillOpen={onSwipeableWillOpen}
+      onSwipeableClose={onSwipeableClose}
+      onDragBegin={onDragBegin}
+      onDragRelease={onDragRelease}
+      ListFooterComponent={
+        onClearAll ? (
+          <View style={styles.footer}>
+            <TouchableOpacity
+              style={clearButtonStyle}
+              onPress={handleClearAll}
+            >
+              <Icon
+                name="delete-outline"
+                size={20}
+                color={theme.colors.surface}
+                library="MaterialIcons"
+              />
+              <Text
+                style={[
+                  styles.clearButtonText,
+                  { color: theme.colors.surface },
+                ]}
               >
-                <Icon
-                  name="delete-outline"
-                  size={20}
-                  color={theme.colors.surface}
-                  library="MaterialIcons"
-                />
-                <Text
-                  style={[
-                    styles.clearButtonText,
-                    { color: theme.colors.surface },
-                  ]}
-                >
-                  Clear All Purchased
-                </Text>
-              </TouchableOpacity>
-            </View>
-          ) : null
-        }
-      />
-    </View>
+                Clear All Purchased
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : null
+      }
+    />
   );
 };
 
@@ -185,9 +183,6 @@ MemoizedPurchasedTab.displayName = 'PurchasedTab';
 export const PurchasedTab = PurchasedTabComponent;
 
 const styles = StyleSheet.create(theme => ({
-  container: {
-    flex: 1,
-  },
   emptyContainer: {
     flex: 1,
     alignItems: 'center',

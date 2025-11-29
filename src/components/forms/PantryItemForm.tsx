@@ -12,6 +12,7 @@ import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { useNavigation } from '@react-navigation/native';
 
 import { commonStyles } from '#/styles/commonStyles';
 import { useDefaultHome } from '#hooks';
@@ -32,8 +33,7 @@ import {
   FieldDef,
 } from '#components/molecules/DynamicFormFields';
 import { FormInput } from '#components/molecules/FormInput';
-
-import { PantryItemFormHeader } from './PantryItemFormHeader';
+import { Header } from '#components/molecules/Header';
 import { ItemInformationSection } from './ItemInformationSection';
 import { QuantitySection } from './QuantitySection';
 import { StorageDetailsSection } from './StorageDetailsSection';
@@ -112,8 +112,9 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   onSuccess,
 }) => {
   const { theme } = useUnistyles();
+  const navigation = useNavigation();
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [_saving, setSaving] = useState(false);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
     null,
@@ -525,16 +526,28 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   const formTestID = mode === 'add' ? 'add-pantry-item-modal' : 'edit-pantry-item-modal';
 
   return (
-    <View testID={formTestID} style={{flex: 1}}>
+    <View testID={formTestID} style={{flex: 1, paddingTop: 12}}>
       <KeyboardAvoidingView
         style={commonStyles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-      <PantryItemFormHeader
+      <Header
         title={mode === 'add' ? 'Add Pantry Item' : 'Edit Pantry Item'}
-        onSave={handleSubmit(handleSave)}
-        saving={saving}
-        testID={mode === 'add' ? 'add-pantry-item-submit-button' : 'edit-pantry-item-submit-button'}
+        centerTitle
+        leftActions={[
+          {
+            icon: 'close',
+            onPress: () => navigation.goBack(),
+            testID: 'pantry-item-form-close-button',
+          },
+        ]}
+        rightActions={[
+          {
+            icon: 'check',
+            onPress: handleSubmit(handleSave),
+            testID: mode === 'add' ? 'add-pantry-item-submit-button' : 'edit-pantry-item-submit-button',
+          },
+        ]}
       />
 
       <ScrollView

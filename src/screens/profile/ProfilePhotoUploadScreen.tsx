@@ -6,6 +6,7 @@ import {
   Alert,
   Image,
   Dimensions,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RouteProp, useFocusEffect } from '@react-navigation/native';
@@ -153,10 +154,11 @@ export const ProfilePhotoUploadScreen: React.FC<{
 
   const handleSelectPhoto = useCallback(async () => {
     try {
-      const result = await request(
-        PERMISSIONS.ANDROID.READ_EXTERNAL_STORAGE ||
-          PERMISSIONS.IOS.PHOTO_LIBRARY,
-      );
+      const permission =
+        Platform.OS === 'android'
+          ? PERMISSIONS.ANDROID.READ_MEDIA_IMAGES
+          : PERMISSIONS.IOS.PHOTO_LIBRARY;
+      const result = await request(permission);
       if (result === RESULTS.GRANTED || result === RESULTS.LIMITED) {
         launchImageLibrary(DEFAULT_OPTIONS, handleImageResponse);
       } else if (result === RESULTS.DENIED) {

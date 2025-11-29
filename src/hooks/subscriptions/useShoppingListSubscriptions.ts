@@ -3,7 +3,7 @@
  *
  * Centralizes all shopping list-related subscriptions using the unified
  * SubscriptionService. Handles real-time updates for:
- * - Shopping list items (add/update/delete)
+ * - Shopping list items (add/update/delete) - uses custom handler for itemsConnection
  * - Shopping list metadata (name, status, budget, totals)
  * - Collaborators (add/remove)
  *
@@ -18,7 +18,24 @@ import {
   useShoppingListCollaboratorsChangedSubscription,
 } from '#generated';
 import { subscriptionService } from '#/services/subscriptions';
-import { CacheStrategy } from '#/services/subscriptions/types';
+import { CacheStrategy, MutationType } from '#/services/subscriptions/types';
+import {
+  createAddToParentConnectionUpdater,
+  createRemoveFromParentConnectionUpdater,
+} from '#/apollo/utils';
+
+// Cache updaters for ShoppingList.itemsConnection (connection pattern)
+const addToShoppingListItemsConnection = createAddToParentConnectionUpdater<any>(
+  'ShoppingList',
+  'itemsConnection',
+  'ShoppingListItem',
+);
+
+const removeFromShoppingListItemsConnection = createRemoveFromParentConnectionUpdater(
+  'ShoppingList',
+  'itemsConnection',
+  'ShoppingListItem',
+);
 
 /**
  * Initialize shopping list subscriptions for the current user
@@ -37,16 +54,38 @@ export function useShoppingListSubscriptions(userId?: string) {
   //
   // Shopping List Items Changed Subscription
   // Handles CREATE/UPDATE/DELETE operations on shopping list items
+  // Uses custom handler for ShoppingList.itemsConnection cache updates
   //
   const itemsHandlers = subscriptionService.register({
     subscriptionName: 'ShoppingListItemsChanged',
     entityType: 'ShoppingListItem',
     enableDeduplication: true,
     userId,
-    cacheUpdateStrategy: CacheStrategy.AUTOMATIC, // Apollo handles full fragment updates
-    cacheFieldName: 'shoppingListItems',
+    cacheUpdateStrategy: CacheStrategy.NONE, // Disable default - using custom handler for connection pattern
     enableLogging: true,
     entityId: selectedShoppingListId,
+    // Custom handler for itemsConnection updates
+    // payload IS shoppingListItemsChanged (already extracted by SubscriptionService)
+    customOnData: (payload: any, client: any) => {
+      if (!payload || !selectedShoppingListId) return;
+
+      const mutation = payload.mutation;
+      const item = payload.item;
+
+      if (!item) return;
+
+      if (mutation === MutationType.CREATE) {
+        // Add new item to ShoppingList.itemsConnection
+        addToShoppingListItemsConnection(client.cache, selectedShoppingListId, item);
+      } else if (mutation === MutationType.DELETE) {
+        // Remove item from ShoppingList.itemsConnection
+        removeFromShoppingListItemsConnection(client.cache, selectedShoppingListId, item.id, {
+          evictItem: true,
+        });
+      }
+      // UPDATE mutations are handled by Apollo's automatic normalization
+      // since the subscription returns the full item fragment with id and __typename
+    },
   });
 
   useShoppingListItemsChangedSubscription({

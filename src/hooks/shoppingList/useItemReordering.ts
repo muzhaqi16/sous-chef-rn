@@ -3,8 +3,8 @@ import { Alert } from 'react-native';
 import { useMoveShoppingListItemMutation } from '#generated';
 import { generatePosition } from '#/utils/fractionalIndexing';
 import {
-  GetShoppingListItemsDocument,
-  GetShoppingListItemsQuery,
+  GetShoppingListDocument,
+  GetShoppingListQuery,
 } from '#generated';
 import { SubscriptionService } from '#/services/subscriptions/SubscriptionService';
 import {
@@ -105,35 +105,45 @@ export function useItemReordering<T extends ShoppingListItem>(
       };
     },
     // Update cache to reflect new order
+    // Uses GetShoppingList.itemsConnection as the cache location
     update(cache, { data }) {
       if (!data?.moveShoppingListItem || !listId) return;
 
       try {
-        // Read the current shopping list items query
-        const queryResult = cache.readQuery<GetShoppingListItemsQuery>({
-          query: GetShoppingListItemsDocument,
-          variables: { shoppingListId: listId },
+        // Read the current shopping list query with itemsConnection
+        const queryResult = cache.readQuery<GetShoppingListQuery>({
+          query: GetShoppingListDocument,
+          variables: { id: listId },
         });
 
-        if (!queryResult?.shoppingListItems) return;
+        if (!queryResult?.shoppingList?.itemsConnection?.edges) return;
 
-        // Create new array with updated item
-        const updatedItems = queryResult.shoppingListItems.map(item =>
-          item.id === data.moveShoppingListItem.id
-            ? { ...item, sortOrder: data.moveShoppingListItem.sortOrder }
-            : item,
+        // Create new edges array with updated item sortOrder
+        const updatedEdges = queryResult.shoppingList.itemsConnection.edges.map(
+          (edge: any) =>
+            edge.node.id === data.moveShoppingListItem.id
+              ? { ...edge, node: { ...edge.node, sortOrder: data.moveShoppingListItem.sortOrder } }
+              : edge,
         );
 
-        // Sort by sortOrder (server returns them sorted, so we should too)
-        const sortedItems = [...updatedItems].sort((a, b) =>
-          a.sortOrder.localeCompare(b.sortOrder),
+        // Sort edges by sortOrder
+        const sortedEdges = [...updatedEdges].sort((a: any, b: any) =>
+          (a.node.sortOrder || '').localeCompare(b.node.sortOrder || ''),
         );
 
         // Write back to cache
         cache.writeQuery({
-          query: GetShoppingListItemsDocument,
-          variables: { shoppingListId: listId },
-          data: { shoppingListItems: sortedItems },
+          query: GetShoppingListDocument,
+          variables: { id: listId },
+          data: {
+            shoppingList: {
+              ...queryResult.shoppingList,
+              itemsConnection: {
+                ...queryResult.shoppingList.itemsConnection,
+                edges: sortedEdges,
+              },
+            },
+          },
         });
       } catch (error) {
         console.warn('Cache update failed for moveItem:', error);
