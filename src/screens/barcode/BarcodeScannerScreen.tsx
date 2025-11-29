@@ -181,8 +181,6 @@ export const BarcodeScannerScreen: React.FC<{
         device={device}
         isActive={isActive}
         codeScanner={codeScanner}
-        // Reduce CPU by limiting camera FPS instead of per-frame JS throttling
-        fps={2}
         torch={flashEnabled ? 'on' : 'off'}
         enableZoomGesture
       />

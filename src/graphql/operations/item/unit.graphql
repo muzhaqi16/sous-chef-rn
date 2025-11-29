@@ -53,8 +53,13 @@ query SearchUnits($query: String!, $type: UnitType) {
     name
     symbol
     type
+    isMetric
     isCommon
     sortOrder
+    displayAsFraction
+    minPrecision
+    conversionFactor
+    baseUnitId
   }
 }
 
@@ -64,7 +69,26 @@ query GetCommonUnits($type: UnitType) {
     name
     symbol
     type
+    isMetric
     isCommon
     sortOrder
+    displayAsFraction
+    minPrecision
+    conversionFactor
+    baseUnitId
+  }
+}
+
+query GetConvertibleUnits($unitId: ID!) {
+  getConvertibleUnits(unitId: $unitId) {
+    id
+    name
+    symbol
+    type
+    isMetric
+    isCommon
+    displayAsFraction
+    minPrecision
+    conversionFactor
   }
 }

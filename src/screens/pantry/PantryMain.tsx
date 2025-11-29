@@ -225,6 +225,9 @@ const PantryMainScreen: React.FC = React.memo(() => {
       quantityInput: string,
       purpose: UsagePurpose,
       notes: string,
+      usageUnitId?: string,
+      weightUsed?: number,
+      weightUsedUnitId?: string,
     ) => {
       if (!selectedItemForConsume) return;
 
@@ -236,6 +239,9 @@ const PantryMainScreen: React.FC = React.memo(() => {
               quantityUsed,
               purpose,
               notes: notes || undefined,
+              usageUnitId,
+              weightUsed,
+              weightUsedUnitId,
             },
           },
         });
@@ -279,6 +285,9 @@ const PantryMainScreen: React.FC = React.memo(() => {
       isComposted: boolean,
       isRecycled: boolean,
       _notes: string,
+      wasteUnitId?: string,
+      wasteWeight?: number,
+      wasteWeightUnitId?: string,
     ) => {
       if (!selectedItemForWaste) return;
 
@@ -288,6 +297,9 @@ const PantryMainScreen: React.FC = React.memo(() => {
             id: selectedItemForWaste.id,
             wasteAmount,
             wasteReason,
+            wasteUnitId,
+            wasteWeight,
+            wasteWeightUnitId,
             isComposted,
             isRecycled,
           },

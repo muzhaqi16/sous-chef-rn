@@ -57,10 +57,10 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
         },
         {
           name: 'itemWeight',
-          label: 'Weight',
+          label: 'Net Weight',
           placeholder: 'e.g., 2.2',
           component: FormInput,
-          props: { keyboardType: 'decimal-pad' },
+          props: { keyboardType: 'decimal-pad', componentType: 'number' },
         },
         {
           name: 'unit',
@@ -98,7 +98,7 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
           label: 'Net Weight',
           placeholder: 'e.g., 2.2',
           component: FormInput,
-          props: { keyboardType: 'decimal-pad' },
+          props: { keyboardType: 'decimal-pad', componentType: 'number' },
         },
         {
           name: 'unit',

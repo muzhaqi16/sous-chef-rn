@@ -3461,6 +3461,9 @@ export type MutationRecordPantryItemWasteArgs = {
   isRecycled?: InputMaybe<Scalars['Boolean']['input']>;
   wasteAmount: Scalars['Float']['input'];
   wasteReason: WasteReason;
+  wasteUnitId?: InputMaybe<Scalars['String']['input']>;
+  wasteWeight?: InputMaybe<Scalars['Float']['input']>;
+  wasteWeightUnitId?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type MutationRecordPantryUsageArgs = {
@@ -4600,8 +4603,13 @@ export type PantryItemUsage = {
   recipe?: Maybe<Recipe>;
   recipeId?: Maybe<Scalars['String']['output']>;
   usageSource: UsageSource;
+  usageUnit?: Maybe<Unit>;
+  usageUnitId?: Maybe<Scalars['String']['output']>;
   usedAt: Scalars['DateTime']['output'];
   usedBy: User;
+  weightUsed?: Maybe<Scalars['Float']['output']>;
+  weightUsedUnit?: Maybe<Unit>;
+  weightUsedUnitId?: Maybe<Scalars['String']['output']>;
 };
 
 export type PantryItemUsageChangedPayload = {
@@ -5918,6 +5926,9 @@ export type RecordPantryItemUsageInput = {
   purpose: UsagePurpose;
   quantityUsed: Scalars['Float']['input'];
   recipeId?: InputMaybe<Scalars['String']['input']>;
+  usageUnitId?: InputMaybe<Scalars['String']['input']>;
+  weightUsed?: InputMaybe<Scalars['Float']['input']>;
+  weightUsedUnitId?: InputMaybe<Scalars['String']['input']>;
 };
 
 export enum RecurringPattern {
@@ -15245,8 +15256,13 @@ export type SearchUnitsQuery = {
     name: string;
     symbol: string;
     type: UnitType;
+    isMetric: boolean;
     isCommon: boolean;
     sortOrder: number;
+    displayAsFraction: boolean;
+    minPrecision: number;
+    conversionFactor: number;
+    baseUnitId?: string | null | undefined;
   }>;
 };
 
@@ -15262,8 +15278,33 @@ export type GetCommonUnitsQuery = {
     name: string;
     symbol: string;
     type: UnitType;
+    isMetric: boolean;
     isCommon: boolean;
     sortOrder: number;
+    displayAsFraction: boolean;
+    minPrecision: number;
+    conversionFactor: number;
+    baseUnitId?: string | null | undefined;
+  }>;
+};
+
+export type GetConvertibleUnitsQueryVariables = Exact<{
+  unitId: Scalars['ID']['input'];
+}>;
+
+export type GetConvertibleUnitsQuery = {
+  __typename?: 'Query';
+  getConvertibleUnits: Array<{
+    __typename?: 'Unit';
+    id: string;
+    name: string;
+    symbol: string;
+    type: UnitType;
+    isMetric: boolean;
+    isCommon: boolean;
+    displayAsFraction: boolean;
+    minPrecision: number;
+    conversionFactor: number;
   }>;
 };
 
@@ -16742,13 +16783,25 @@ export type CreatePantryItemUsageMutation = {
     __typename?: 'PantryItemUsage';
     id: string;
     quantityUsed: number;
+    usageUnitId?: string | null | undefined;
+    weightUsed?: number | null | undefined;
+    weightUsedUnitId?: string | null | undefined;
     usedAt: string;
     purpose: UsagePurpose;
     notes?: string | null | undefined;
+    usageUnit?:
+      | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+      | null
+      | undefined;
+    weightUsedUnit?:
+      | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+      | null
+      | undefined;
     pantryItem: {
       __typename?: 'PantryItem';
       id: string;
       currentQuantity: number;
+      actualNetWeight?: number | null | undefined;
       consumedQuantity: number;
       pantryId: string;
       itemId: string;
@@ -16767,7 +16820,6 @@ export type CreatePantryItemUsageMutation = {
       autoReorderPoint?: number | null | undefined;
       isAutoReorder: boolean;
       customCategory?: string | null | undefined;
-      actualNetWeight?: number | null | undefined;
       createdAt: string;
       updatedAt?: string | null | undefined;
       version?: number | null | undefined;
@@ -16969,6 +17021,9 @@ export type RecordPantryItemWasteMutationVariables = Exact<{
   id: Scalars['ID']['input'];
   wasteAmount: Scalars['Float']['input'];
   wasteReason: WasteReason;
+  wasteUnitId?: InputMaybe<Scalars['String']['input']>;
+  wasteWeight?: InputMaybe<Scalars['Float']['input']>;
+  wasteWeightUnitId?: InputMaybe<Scalars['String']['input']>;
   isComposted?: InputMaybe<Scalars['Boolean']['input']>;
   isRecycled?: InputMaybe<Scalars['Boolean']['input']>;
 }>;

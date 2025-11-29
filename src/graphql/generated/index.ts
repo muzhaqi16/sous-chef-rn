@@ -3465,6 +3465,9 @@ export type MutationRecordPantryItemWasteArgs = {
   isRecycled?: InputMaybe<Scalars['Boolean']['input']>;
   wasteAmount: Scalars['Float']['input'];
   wasteReason: WasteReason;
+  wasteUnitId?: InputMaybe<Scalars['String']['input']>;
+  wasteWeight?: InputMaybe<Scalars['Float']['input']>;
+  wasteWeightUnitId?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type MutationRecordPantryUsageArgs = {
@@ -4604,8 +4607,13 @@ export type PantryItemUsage = {
   recipe: Maybe<Recipe>;
   recipeId: Maybe<Scalars['String']['output']>;
   usageSource: UsageSource;
+  usageUnit: Maybe<Unit>;
+  usageUnitId: Maybe<Scalars['String']['output']>;
   usedAt: Scalars['DateTime']['output'];
   usedBy: User;
+  weightUsed: Maybe<Scalars['Float']['output']>;
+  weightUsedUnit: Maybe<Unit>;
+  weightUsedUnitId: Maybe<Scalars['String']['output']>;
 };
 
 export type PantryItemUsageChangedPayload = {
@@ -5922,6 +5930,9 @@ export type RecordPantryItemUsageInput = {
   purpose: UsagePurpose;
   quantityUsed: Scalars['Float']['input'];
   recipeId?: InputMaybe<Scalars['String']['input']>;
+  usageUnitId?: InputMaybe<Scalars['String']['input']>;
+  weightUsed?: InputMaybe<Scalars['Float']['input']>;
+  weightUsedUnitId?: InputMaybe<Scalars['String']['input']>;
 };
 
 export enum RecurringPattern {
@@ -11032,8 +11043,13 @@ export type SearchUnitsQuery = {
     name: string;
     symbol: string;
     type: UnitType;
+    isMetric: boolean;
     isCommon: boolean;
     sortOrder: number;
+    displayAsFraction: boolean;
+    minPrecision: number;
+    conversionFactor: number;
+    baseUnitId: string | null | undefined;
   }>;
 };
 
@@ -11049,8 +11065,33 @@ export type GetCommonUnitsQuery = {
     name: string;
     symbol: string;
     type: UnitType;
+    isMetric: boolean;
     isCommon: boolean;
     sortOrder: number;
+    displayAsFraction: boolean;
+    minPrecision: number;
+    conversionFactor: number;
+    baseUnitId: string | null | undefined;
+  }>;
+};
+
+export type GetConvertibleUnitsQueryVariables = Exact<{
+  unitId: Scalars['ID']['input'];
+}>;
+
+export type GetConvertibleUnitsQuery = {
+  __typename?: 'Query';
+  getConvertibleUnits: Array<{
+    __typename?: 'Unit';
+    id: string;
+    name: string;
+    symbol: string;
+    type: UnitType;
+    isMetric: boolean;
+    isCommon: boolean;
+    displayAsFraction: boolean;
+    minPrecision: number;
+    conversionFactor: number;
   }>;
 };
 
@@ -11378,13 +11419,25 @@ export type CreatePantryItemUsageMutation = {
     __typename?: 'PantryItemUsage';
     id: string;
     quantityUsed: number;
+    usageUnitId: string | null | undefined;
+    weightUsed: number | null | undefined;
+    weightUsedUnitId: string | null | undefined;
     usedAt: string;
     purpose: UsagePurpose;
     notes: string | null | undefined;
+    usageUnit:
+      | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+      | null
+      | undefined;
+    weightUsedUnit:
+      | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+      | null
+      | undefined;
     pantryItem: {
       __typename?: 'PantryItem';
       id: string;
       currentQuantity: number;
+      actualNetWeight: number | null | undefined;
       consumedQuantity: number;
     } & PantryItemFragment;
     usedBy: { __typename?: 'User'; id: string; email: string };
@@ -11395,6 +11448,9 @@ export type RecordPantryItemWasteMutationVariables = Exact<{
   id: Scalars['ID']['input'];
   wasteAmount: Scalars['Float']['input'];
   wasteReason: WasteReason;
+  wasteUnitId?: InputMaybe<Scalars['String']['input']>;
+  wasteWeight?: InputMaybe<Scalars['Float']['input']>;
+  wasteWeightUnitId?: InputMaybe<Scalars['String']['input']>;
   isComposted?: InputMaybe<Scalars['Boolean']['input']>;
   isRecycled?: InputMaybe<Scalars['Boolean']['input']>;
 }>;
@@ -37306,8 +37362,22 @@ export const SearchUnitsDocument = {
                 { kind: 'Field', name: { kind: 'Name', value: 'name' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'type' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'isMetric' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'isCommon' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'displayAsFraction' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'minPrecision' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'conversionFactor' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'baseUnitId' } },
               ],
             },
           },
@@ -37438,8 +37508,22 @@ export const GetCommonUnitsDocument = {
                 { kind: 'Field', name: { kind: 'Name', value: 'name' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'type' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'isMetric' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'isCommon' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'sortOrder' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'displayAsFraction' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'minPrecision' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'conversionFactor' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'baseUnitId' } },
               ],
             },
           },
@@ -37523,6 +37607,151 @@ export function refetchGetCommonUnitsQuery(
   variables?: GetCommonUnitsQueryVariables,
 ) {
   return { query: GetCommonUnitsDocument, variables: variables };
+}
+export const GetConvertibleUnitsDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'query',
+      name: { kind: 'Name', value: 'GetConvertibleUnits' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'unitId' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'getConvertibleUnits' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'unitId' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'unitId' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'type' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'isMetric' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'isCommon' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'displayAsFraction' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'minPrecision' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'conversionFactor' },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+
+/**
+ * __useGetConvertibleUnitsQuery__
+ *
+ * To run a query within a React component, call `useGetConvertibleUnitsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetConvertibleUnitsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetConvertibleUnitsQuery({
+ *   variables: {
+ *      unitId: // value for 'unitId'
+ *   },
+ * });
+ */
+export function useGetConvertibleUnitsQuery(
+  baseOptions: ApolloReactHooks.QueryHookOptions<
+    GetConvertibleUnitsQuery,
+    GetConvertibleUnitsQueryVariables
+  > &
+    (
+      | { variables: GetConvertibleUnitsQueryVariables; skip?: boolean }
+      | { skip: boolean }
+    ),
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useQuery<
+    GetConvertibleUnitsQuery,
+    GetConvertibleUnitsQueryVariables
+  >(GetConvertibleUnitsDocument, options);
+}
+export function useGetConvertibleUnitsLazyQuery(
+  baseOptions?: ApolloReactHooks.LazyQueryHookOptions<
+    GetConvertibleUnitsQuery,
+    GetConvertibleUnitsQueryVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useLazyQuery<
+    GetConvertibleUnitsQuery,
+    GetConvertibleUnitsQueryVariables
+  >(GetConvertibleUnitsDocument, options);
+}
+export function useGetConvertibleUnitsSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetConvertibleUnitsQuery,
+        GetConvertibleUnitsQueryVariables
+      >,
+) {
+  const options =
+    baseOptions === ApolloReactHooks.skipToken
+      ? baseOptions
+      : { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useSuspenseQuery<
+    GetConvertibleUnitsQuery,
+    GetConvertibleUnitsQueryVariables
+  >(GetConvertibleUnitsDocument, options);
+}
+export type GetConvertibleUnitsQueryHookResult = ReturnType<
+  typeof useGetConvertibleUnitsQuery
+>;
+export type GetConvertibleUnitsLazyQueryHookResult = ReturnType<
+  typeof useGetConvertibleUnitsLazyQuery
+>;
+export type GetConvertibleUnitsSuspenseQueryHookResult = ReturnType<
+  typeof useGetConvertibleUnitsSuspenseQuery
+>;
+export type GetConvertibleUnitsQueryResult = ApolloReactCommon.QueryResult<
+  GetConvertibleUnitsQuery,
+  GetConvertibleUnitsQueryVariables
+>;
+export function refetchGetConvertibleUnitsQuery(
+  variables: GetConvertibleUnitsQueryVariables,
+) {
+  return { query: GetConvertibleUnitsDocument, variables: variables };
 }
 export const GetMyNotificationsDocument = {
   kind: 'Document',
@@ -42224,6 +42453,42 @@ export const CreatePantryItemUsageDocument = {
                   kind: 'Field',
                   name: { kind: 'Name', value: 'quantityUsed' },
                 },
+                { kind: 'Field', name: { kind: 'Name', value: 'usageUnitId' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'usageUnit' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'symbol' },
+                      },
+                    ],
+                  },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'weightUsed' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'weightUsedUnitId' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'weightUsedUnit' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'symbol' },
+                      },
+                    ],
+                  },
+                },
                 { kind: 'Field', name: { kind: 'Name', value: 'usedAt' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'purpose' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
@@ -42237,6 +42502,10 @@ export const CreatePantryItemUsageDocument = {
                       {
                         kind: 'Field',
                         name: { kind: 'Name', value: 'currentQuantity' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'actualNetWeight' },
                       },
                       {
                         kind: 'Field',
@@ -42811,6 +43080,30 @@ export const RecordPantryItemWasteDocument = {
           kind: 'VariableDefinition',
           variable: {
             kind: 'Variable',
+            name: { kind: 'Name', value: 'wasteUnitId' },
+          },
+          type: { kind: 'NamedType', name: { kind: 'Name', value: 'String' } },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'wasteWeight' },
+          },
+          type: { kind: 'NamedType', name: { kind: 'Name', value: 'Float' } },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'wasteWeightUnitId' },
+          },
+          type: { kind: 'NamedType', name: { kind: 'Name', value: 'String' } },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
             name: { kind: 'Name', value: 'isComposted' },
           },
           type: { kind: 'NamedType', name: { kind: 'Name', value: 'Boolean' } },
@@ -42853,6 +43146,30 @@ export const RecordPantryItemWasteDocument = {
                 value: {
                   kind: 'Variable',
                   name: { kind: 'Name', value: 'wasteReason' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'wasteUnitId' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'wasteUnitId' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'wasteWeight' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'wasteWeight' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'wasteWeightUnitId' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'wasteWeightUnitId' },
                 },
               },
               {
@@ -43362,6 +43679,9 @@ export type RecordPantryItemWasteMutationFn =
  *      id: // value for 'id'
  *      wasteAmount: // value for 'wasteAmount'
  *      wasteReason: // value for 'wasteReason'
+ *      wasteUnitId: // value for 'wasteUnitId'
+ *      wasteWeight: // value for 'wasteWeight'
+ *      wasteWeightUnitId: // value for 'wasteWeightUnitId'
  *      isComposted: // value for 'isComposted'
  *      isRecycled: // value for 'isRecycled'
  *   },

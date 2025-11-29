@@ -3166,6 +3166,9 @@ type Mutation {
     isRecycled: Boolean
     wasteAmount: Float!
     wasteReason: WasteReason!
+    wasteUnitId: String
+    wasteWeight: Float
+    wasteWeightUnitId: String
   ): PantryItem!
   """
   Manually record pantry item usage
@@ -3946,8 +3949,13 @@ type PantryItemUsage {
   recipe: Recipe
   recipeId: String
   usageSource: UsageSource!
+  usageUnit: Unit
+  usageUnitId: String
   usedAt: DateTime!
   usedBy: User!
+  weightUsed: Float
+  weightUsedUnit: Unit
+  weightUsedUnitId: String
 }
 
 type PantryItemUsageChangedPayload {
@@ -4709,6 +4717,9 @@ input RecordPantryItemUsageInput {
   purpose: UsagePurpose!
   quantityUsed: Float!
   recipeId: String
+  usageUnitId: String
+  weightUsed: Float
+  weightUsedUnitId: String
 }
 
 enum RecurringPattern {

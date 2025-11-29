@@ -24287,6 +24287,30 @@
                 "defaultValue": null,
                 "isDeprecated": false,
                 "deprecationReason": null
+              },
+              {
+                "name": "wasteUnitId",
+                "description": null,
+                "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
+                "name": "wasteWeight",
+                "description": null,
+                "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
+              },
+              {
+                "name": "wasteWeightUnitId",
+                "description": null,
+                "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+                "defaultValue": null,
+                "isDeprecated": false,
+                "deprecationReason": null
               }
             ],
             "type": {
@@ -33424,6 +33448,22 @@
             "deprecationReason": null
           },
           {
+            "name": "usageUnit",
+            "description": null,
+            "args": [],
+            "type": { "kind": "OBJECT", "name": "Unit", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "usageUnitId",
+            "description": null,
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "usedAt",
             "description": null,
             "args": [],
@@ -33444,6 +33484,30 @@
               "name": null,
               "ofType": { "kind": "OBJECT", "name": "User", "ofType": null }
             },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "weightUsed",
+            "description": null,
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "weightUsedUnit",
+            "description": null,
+            "args": [],
+            "type": { "kind": "OBJECT", "name": "Unit", "ofType": null },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "weightUsedUnitId",
+            "description": null,
+            "args": [],
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
             "isDeprecated": false,
             "deprecationReason": null
           }
@@ -42764,6 +42828,30 @@
           },
           {
             "name": "recipeId",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "usageUnitId",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "weightUsed",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "Float", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "weightUsedUnitId",
             "description": null,
             "type": { "kind": "SCALAR", "name": "String", "ofType": null },
             "defaultValue": null,
