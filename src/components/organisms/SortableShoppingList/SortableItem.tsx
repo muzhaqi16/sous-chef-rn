@@ -141,9 +141,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
   return (
     <View style={[styles.container, isActive && styles.activeContainer]}>
       <LazySwipeableItem
-        onPress={() =>
-          onTogglePurchase ? onTogglePurchase(item.id) : onItemPress(item.id)
-        }
+        onPress={() => onItemPress(item.id)}
         onLongPress={
           !drag && onItemPress ? () => onItemPress(item.id) : undefined
         }

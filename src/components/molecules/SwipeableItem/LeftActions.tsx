@@ -102,6 +102,7 @@ export const LeftActions: React.FC<LeftActionsProps> = React.memo(({
     );
   }
 
+  // Show purchase button for shopping list items
   if (!onTogglePurchase) {
     return null;
   }

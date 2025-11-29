@@ -43,16 +43,18 @@ export const LazySwipeableItem: React.FC<SwipeableItemProps> = React.memo(
     const isActivatedRef = useRef(false);
 
     // Activate the full swipeable on first touch
-    // Using onPressIn ensures activation happens before onPress
+    // Defer state update to next tick so onPress can fire first (for taps)
+    // Swipes won't trigger onPress, so they just activate the swipeable
     const handlePressIn = useCallback(() => {
       if (!isActivatedRef.current) {
         isActivatedRef.current = true;
-        setIsActivated(true);
+        // Defer to allow onPress to fire before re-render
+        setTimeout(() => setIsActivated(true), 0);
       }
     }, []);
 
     // Before activation: render lightweight touchable
-    // First tap will: activate via onPressIn, then execute action via onPress
+    // First tap: handlePressIn activates AND executes onPress
     if (!isActivated) {
       return (
         <View
