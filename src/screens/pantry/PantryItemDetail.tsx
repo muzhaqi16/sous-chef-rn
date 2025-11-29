@@ -142,7 +142,7 @@ export const PantryItemDetail: React.FC<{
               {item.item.brands.map(brand => brand?.brand?.name).join(', ')}
             </Text>
           )}
-          {item?.currentQuantity && (
+          {item?.currentQuantity != null && (
             <View style={styles.quantityDescription}>
               <FormattedItemSubtitle
                 quantity={item.currentQuantity}
@@ -203,7 +203,7 @@ export const PantryItemDetail: React.FC<{
               {item?.reservedQuantity ?? 0} {item?.unit?.symbol ?? ''}
             </Text>
           </View>
-          {item?.item?.netWeight && item?.item?.displayUnit && (
+          {item?.item?.netWeight != null && item?.item?.displayUnit && (
             <View style={styles.detailRow}>
               <Text style={[commonStyles.caption, styles.detailLabel]}>
                 Package Size
