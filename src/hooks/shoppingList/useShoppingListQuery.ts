@@ -41,9 +41,22 @@ export function useShoppingListQuery(listId: string | undefined) {
   // This eliminates duplicate subscription code and provides consistent behavior
   // across all subscriptions (deduplication, error handling, logging)
 
+  // Memoize edges to avoid recreating empty array on every render
+  const edges = useMemo(
+    () => data?.shoppingList?.itemsConnection?.edges || [],
+    [data?.shoppingList?.itemsConnection?.edges],
+  );
+
+  // Create a key that changes when ANY item's sortOrder changes
+  // This ensures useMemo recalculates even if edges array reference stays the same
+  // (Apollo's normalized cache may update items without changing array reference)
+  const sortOrderKey = useMemo(
+    () => edges.map(edge => `${edge.node.id}:${edge.node.sortOrder}`).join(','),
+    [edges],
+  );
+
   const items = useMemo(() => {
     // Extract items from itemsConnection edges
-    const edges = data?.shoppingList?.itemsConnection?.edges || [];
     const rawItems = edges.map(edge => edge.node);
 
     // Sort items to ensure consistent order across reloads
@@ -63,7 +76,10 @@ export function useShoppingListQuery(listId: string | undefined) {
       // Items without sortOrder come last
       return 0;
     });
-  }, [data?.shoppingList?.itemsConnection?.edges]);
+    // sortOrderKey dependency ensures re-sort when any item's sortOrder changes
+    // even if edges array reference stays the same (Apollo cache normalization)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [edges, sortOrderKey]);
 
   return {
     items,

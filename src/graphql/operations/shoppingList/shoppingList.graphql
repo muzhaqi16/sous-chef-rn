@@ -31,7 +31,8 @@ query GetShoppingList(
     }
     # Items connection for single source of truth
     # Uses lightweight DisplayFragment for performance
-    itemsConnection(first: 100) {
+    # orderBy sortOrder ASC ensures items are returned in correct drag-reorder position
+    itemsConnection(first: 100, orderBy: { sortOrder: ASC }) {
       edges {
         cursor
         node {
@@ -104,7 +105,8 @@ query GetShoppingLists {
     }
     # PERFORMANCE: Include items in initial query to eliminate second GetShoppingListItems call
     # Uses lightweight ShoppingListItemDisplayFragment (11 fields vs 60+) for ~80% payload reduction
-    itemsConnection(first: 100) {
+    # orderBy sortOrder ASC ensures items are returned in correct drag-reorder position
+    itemsConnection(first: 100, orderBy: { sortOrder: ASC }) {
       edges {
         cursor
         node {
@@ -128,7 +130,7 @@ query GetDefaultShoppingList {
     isDefault
     totalItems
     completedItems
-    itemsConnection(first: 50) {
+    itemsConnection(first: 50, orderBy: { sortOrder: ASC }) {
       edges {
         node {
           id

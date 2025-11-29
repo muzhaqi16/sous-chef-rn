@@ -50326,6 +50326,20 @@ export const GetShoppingListDocument = {
                       name: { kind: 'Name', value: 'first' },
                       value: { kind: 'IntValue', value: '100' },
                     },
+                    {
+                      kind: 'Argument',
+                      name: { kind: 'Name', value: 'orderBy' },
+                      value: {
+                        kind: 'ObjectValue',
+                        fields: [
+                          {
+                            kind: 'ObjectField',
+                            name: { kind: 'Name', value: 'sortOrder' },
+                            value: { kind: 'EnumValue', value: 'ASC' },
+                          },
+                        ],
+                      },
+                    },
                   ],
                   selectionSet: {
                     kind: 'SelectionSet',
@@ -50890,6 +50904,20 @@ export const GetShoppingListsDocument = {
                       name: { kind: 'Name', value: 'first' },
                       value: { kind: 'IntValue', value: '100' },
                     },
+                    {
+                      kind: 'Argument',
+                      name: { kind: 'Name', value: 'orderBy' },
+                      value: {
+                        kind: 'ObjectValue',
+                        fields: [
+                          {
+                            kind: 'ObjectField',
+                            name: { kind: 'Name', value: 'sortOrder' },
+                            value: { kind: 'EnumValue', value: 'ASC' },
+                          },
+                        ],
+                      },
+                    },
                   ],
                   selectionSet: {
                     kind: 'SelectionSet',
@@ -51137,6 +51165,20 @@ export const GetDefaultShoppingListDocument = {
                       kind: 'Argument',
                       name: { kind: 'Name', value: 'first' },
                       value: { kind: 'IntValue', value: '50' },
+                    },
+                    {
+                      kind: 'Argument',
+                      name: { kind: 'Name', value: 'orderBy' },
+                      value: {
+                        kind: 'ObjectValue',
+                        fields: [
+                          {
+                            kind: 'ObjectField',
+                            name: { kind: 'Name', value: 'sortOrder' },
+                            value: { kind: 'EnumValue', value: 'ASC' },
+                          },
+                        ],
+                      },
                     },
                   ],
                   selectionSet: {

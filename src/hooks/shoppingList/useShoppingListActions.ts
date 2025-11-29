@@ -56,15 +56,28 @@ export function useShoppingListActions({
     errorPolicy: 'all',
     // Optimistic response for instant UI feedback
     optimisticResponse: variables => {
-      // Find the moved item
-      const movedItem = items.find(item => item.id === variables.input.itemId);
-      if (!movedItem) {
-        // Return the first item as a fallback - the real mutation will handle errors
+      // Read full item from Apollo cache to get all fragment fields
+      const cacheId = client.cache.identify({
+        __typename: 'ShoppingListItem',
+        id: variables.input.itemId,
+      });
+
+      const fullItem = cacheId
+        ? client.readFragment<any>({
+            id: cacheId,
+            fragment: ShoppingListItemFragmentDoc,
+            fragmentName: 'ShoppingListItemFragment',
+          })
+        : null;
+
+      if (!fullItem) {
+        // Fallback - return minimal item, real mutation will handle errors
         return {
           __typename: 'Mutation',
-          moveShoppingListItem: items[0] || {
+          moveShoppingListItem: {
             __typename: 'ShoppingListItem',
             id: variables.input.itemId,
+            sortOrder: 'a0',
           },
         };
       }
@@ -75,13 +88,13 @@ export function useShoppingListActions({
         : null;
 
       // Use fractional indexing for sortOrder
-      const optimisticSortOrder = afterItem?.sortOrder || movedItem.sortOrder;
+      const optimisticSortOrder = afterItem?.sortOrder || fullItem.sortOrder;
 
       // Return updated item with new sortOrder
       return {
         __typename: 'Mutation',
         moveShoppingListItem: {
-          ...movedItem,
+          ...fullItem,
           sortOrder: optimisticSortOrder,
           updatedAt: new Date().toISOString(),
           __typename: 'ShoppingListItem',

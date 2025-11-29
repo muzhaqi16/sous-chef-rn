@@ -65,8 +65,8 @@ export function useShoppingListSubscriptions(userId?: string) {
     enableLogging: true,
     entityId: selectedShoppingListId,
     // Custom handler for itemsConnection updates
-    customOnData: ({ client, data }) => {
-      const payload = data.data?.shoppingListItemsChanged;
+    // payload IS shoppingListItemsChanged (already extracted by SubscriptionService)
+    customOnData: (payload: any, client: any) => {
       if (!payload || !selectedShoppingListId) return;
 
       const mutation = payload.mutation;
@@ -84,7 +84,7 @@ export function useShoppingListSubscriptions(userId?: string) {
         });
       }
       // UPDATE mutations are handled by Apollo's automatic normalization
-      // since the subscription returns the full item fragment
+      // since the subscription returns the full item fragment with id and __typename
     },
   });
 
