@@ -1,16 +1,11 @@
 import React from 'react';
-import Reanimated, { SharedValue } from 'react-native-reanimated';
+import Reanimated from 'react-native-reanimated';
 import { ActionButton } from './ActionButton';
 import { useUnistyles } from 'react-native-unistyles';
 import { styles } from './styles';
 import { SwipeActionsProps } from './types';
 
-interface RightActionsProps extends SwipeActionsProps {
-  dragX: SharedValue<number>;
-  progress: SharedValue<number>;
-}
-
-export const RightActions: React.FC<RightActionsProps> = React.memo(
+export const RightActions: React.FC<SwipeActionsProps> = React.memo(
   ({ onEdit, onDelete, onActionPress, testIDPrefix }) => {
     const { theme } = useUnistyles();
     return (

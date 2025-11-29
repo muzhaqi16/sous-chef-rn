@@ -4,14 +4,8 @@ import Reanimated from 'react-native-reanimated';
 import { ActionButton } from './ActionButton';
 import { styles } from './styles';
 import { SwipeActionsProps } from './types';
-import { SharedValue } from 'react-native-reanimated';
 
-interface LeftActionsProps extends SwipeActionsProps {
-  dragX: SharedValue<number>;
-  progress: SharedValue<number>;
-}
-
-export const LeftActions: React.FC<LeftActionsProps> = React.memo(({
+export const LeftActions: React.FC<SwipeActionsProps> = React.memo(({
   onTogglePurchase,
   onConsume,
   onWaste,

@@ -1,10 +1,6 @@
 import React, { useCallback } from 'react';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
-import Reanimated, {
-  useAnimatedStyle,
-  SharedValue,
-  useSharedValue,
-} from 'react-native-reanimated';
+import Reanimated, { useAnimatedStyle } from 'react-native-reanimated';
 import { RightActions } from './RightActions';
 import { LeftActions } from './LeftActions';
 import { SwipeableContent } from './SwipeableContent';
@@ -13,7 +9,7 @@ import { useSwipeableActions } from './hooks/useSwipeableActions';
 import { styles } from './styles';
 import { SwipeableItemProps } from './types';
 
-export const SwipeableItem: React.FC<SwipeableItemProps> = ({
+const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
   children,
   onPress,
   onLongPress,
@@ -32,8 +28,6 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({
   onSwipeableClose,
   testIDPrefix,
 }) => {
-  const dragX = useSharedValue(0);
-
   const { itemOpacity, animateDelete } = useSwipeableAnimation();
 
   const { swipeableRef, handleActionPress, handleSwipeableWillOpen, handleSwipeableClose } =
@@ -52,14 +46,9 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({
     };
   });
 
-  const renderRightActions = useCallback((
-    progress: SharedValue<number>,
-    dragXValue: SharedValue<number>,
-  ) => {
+  const renderRightActions = useCallback(() => {
     return (
       <RightActions
-        dragX={dragXValue}
-        progress={progress}
         onEdit={onEdit}
         onDelete={onDelete}
         onActionPress={handleActionPress}
@@ -68,14 +57,9 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({
     );
   }, [onEdit, onDelete, handleActionPress, testIDPrefix]);
 
-  const renderLeftActions = useCallback((
-    progress: SharedValue<number>,
-    dragXValue: SharedValue<number>,
-  ) => {
+  const renderLeftActions = useCallback(() => {
     return (
       <LeftActions
-        dragX={dragXValue}
-        progress={progress}
         onTogglePurchase={onTogglePurchase}
         onConsume={onConsume}
         onWaste={onWaste}
@@ -102,10 +86,13 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({
         overshootFriction={8}
         containerStyle={{ overflow: 'visible' }}
       >
-        <SwipeableContent onPress={onPress} onLongPress={onLongPress} dragX={dragX}>
+        <SwipeableContent onPress={onPress} onLongPress={onLongPress}>
           {children}
         </SwipeableContent>
       </ReanimatedSwipeable>
     </Reanimated.View>
   );
 };
+
+// PERFORMANCE: Memoize to prevent unnecessary re-renders
+export const SwipeableItem = React.memo(SwipeableItemComponent);
