@@ -61,23 +61,6 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
   // Track latest items prop to avoid stale closure in callbacks
   const itemsRef = useRef(items);
 
-  // PERFORMANCE: Track viewable items to pre-activate swipeables
-  // Using ref instead of state to avoid re-renders on every scroll
-  const viewableItemIdsRef = useRef<Set<string>>(new Set());
-
-  // Callback to update viewable items - stable reference (no deps)
-  const handleViewableItemsChanged = useCallback(
-    ({ viewableItems }: { viewableItems: Array<{ key: string }> }) => {
-      viewableItemIdsRef.current = new Set(viewableItems.map(item => item.key));
-    },
-    [],
-  );
-
-  // Viewability config - must be stable reference for FlatList
-  const viewabilityConfig = useRef({
-    itemVisiblePercentThreshold: 10, // Pre-activate when 10% visible
-  }).current;
-
   // Safe area insets for bottom padding
   const insets = useSafeAreaInsets();
 
@@ -226,8 +209,7 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
     [disabled, onSortOrderUpdate],
   );
 
-  // Number of items to pre-activate (must match initialNumToRender)
-  // Pre-activated items have SwipeableItem mounted immediately so first swipe works
+  // Number of items to render initially (fills viewport)
   const INITIAL_NUM_TO_RENDER = 6;
 
   // Render item with ScaleDecorator for drag feedback
@@ -238,17 +220,7 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
       item,
       drag,
       isActive,
-      getIndex,
     }: RenderItemParams<SortableShoppingListItem>) => {
-      // Pre-activate items so first swipe works immediately
-      // Check both: initial viewport items (by index) AND currently viewable items (by ref)
-      // Index check covers initial render before onViewableItemsChanged fires
-      // Ref check covers items that scroll into view after initial render
-      const index = getIndex();
-      const isPreActivated =
-        (index !== undefined && index < INITIAL_NUM_TO_RENDER) ||
-        viewableItemIdsRef.current.has(item.id);
-
       const itemComponent = (
         <SimpleDraggableItem
           item={item}
@@ -260,7 +232,6 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
           isActive={isActive}
           onSwipeableWillOpen={handleSwipeableWillOpen}
           onSwipeableClose={handleSwipeableClose}
-          isPreActivated={isPreActivated}
         />
       );
 
@@ -362,9 +333,6 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
         windowSize={3} // Tighter window (3 viewports) to reduce off-screen rendering
         updateCellsBatchingPeriod={50} // Batch cell updates for smoother animations
         removeClippedSubviews={true} // Reduce memory on large lists
-        // Pre-activate swipeables when items scroll into view
-        onViewableItemsChanged={handleViewableItemsChanged}
-        viewabilityConfig={viewabilityConfig}
       />
     </View>
   );

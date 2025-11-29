@@ -49,6 +49,8 @@ jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
 jest.mock('#/apollo/utils', () => ({
   createAddToKeyedQueryFieldUpdater: jest.fn(() => jest.fn()),
   createRemoveFromQueryFieldUpdater: jest.fn(() => jest.fn()),
+  createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
+  createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),
 }));
 
 jest.mock('#/hooks/utils', () => ({
