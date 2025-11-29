@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
 import { View, Image } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { LazySwipeableItem } from '#/components/molecules/SwipeableItem/LazySwipeableItem';
+import { SwipeableItem } from '#/components/molecules/SwipeableItem';
 import { ListItem } from '#/components/molecules/ListItem';
 import { DragHandle } from '#/components/atoms/DragHandle';
 import { commonStyles } from '#/styles';
@@ -33,8 +33,6 @@ interface SimpleDraggableItemProps {
   isActive?: boolean;
   onSwipeableWillOpen?: (ref: any) => void;
   onSwipeableClose?: () => void;
-  /** Pre-activate swipeable for visible items so first swipe works immediately */
-  isPreActivated?: boolean;
 }
 
 const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
@@ -47,7 +45,6 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
   isActive,
   onSwipeableWillOpen,
   onSwipeableClose,
-  isPreActivated,
 }) => {
   // Get stable callbacks from context (prevents memoization breaking)
   const { onIncrementQuantity, onDecrementQuantity } = useShoppingListActions();
@@ -143,7 +140,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
 
   return (
     <View style={[styles.container, isActive && styles.activeContainer]}>
-      <LazySwipeableItem
+      <SwipeableItem
         onPress={() => onItemPress(item.id)}
         onLongPress={
           !drag && onItemPress ? () => onItemPress(item.id) : undefined
@@ -157,7 +154,6 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
         friction={1}
         onSwipeableWillOpen={onSwipeableWillOpen}
         onSwipeableClose={onSwipeableClose}
-        isPreActivated={isPreActivated}
       >
         <ListItem
           title={item.title}
@@ -168,7 +164,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
           rightIcon={undefined}
           isPurchased={item.isPurchased}
         />
-      </LazySwipeableItem>
+      </SwipeableItem>
     </View>
   );
 };
@@ -204,12 +200,11 @@ const arePropsEqual = (
   prev: SimpleDraggableItemProps,
   next: SimpleDraggableItemProps,
 ): boolean => {
-  // Fast path: same item reference + same drag state + same activation = definitely equal
+  // Fast path: same item reference + same drag state = definitely equal
   if (
     prev.item === next.item &&
     prev.isActive === next.isActive &&
-    prev.drag === next.drag &&
-    prev.isPreActivated === next.isPreActivated
+    prev.drag === next.drag
   ) {
     return true;
   }
@@ -223,8 +218,7 @@ const arePropsEqual = (
     prev.item.rightElementConfig === next.item.rightElementConfig &&
     prev.item.leftElementConfig === next.item.leftElementConfig &&
     prev.isActive === next.isActive &&
-    prev.drag === next.drag &&
-    prev.isPreActivated === next.isPreActivated
+    prev.drag === next.drag
   );
 };
 

@@ -4,7 +4,7 @@ import type { ShoppingListItemCoreFragment } from '#/graphql/generated/types';
 
 // Mock dependencies
 jest.mock('#generated', () => ({
-  useGetShoppingListItemsQuery: jest.fn(),
+  useGetShoppingListQuery: jest.fn(),
 }));
 
 jest.mock('#hooks/auth/useAuth', () => ({
@@ -21,11 +21,11 @@ jest.mock('#/apollo/policies/offlineFetchPolicies', () => ({
   },
 }));
 
-import { useGetShoppingListItemsQuery } from '#generated';
+import { useGetShoppingListQuery } from '#generated';
 import { useAuth } from '#hooks/auth/useAuth';
 import { useOfflineAwareFetchPolicy } from '#/apollo/policies/offlineFetchPolicies';
 
-const mockUseGetShoppingListItemsQuery = useGetShoppingListItemsQuery as jest.Mock;
+const mockUseGetShoppingListQuery = useGetShoppingListQuery as jest.Mock;
 const mockUseAuth = useAuth as jest.Mock;
 const mockUseOfflineAwareFetchPolicy = useOfflineAwareFetchPolicy as jest.Mock;
 
@@ -41,6 +41,7 @@ const createMockItem = (
     itemName,
     quantity: 1,
     isPurchased: false,
+    sortOrder: 'a0',
     updatedAt: new Date().toISOString(),
     version: 1,
     unit: null,
@@ -52,6 +53,26 @@ const createMockItem = (
     pantryItem: null,
     ...overrides,
   }) as unknown as ShoppingListItemCoreFragment;
+
+// Helper to create connection response structure
+const createConnectionResponse = (items: ShoppingListItemCoreFragment[]) => ({
+  shoppingList: {
+    __typename: 'ShoppingList',
+    itemsConnection: {
+      __typename: 'ShoppingListItemConnection',
+      edges: items.map(item => ({
+        __typename: 'ShoppingListItemEdge',
+        node: item,
+        cursor: item.id,
+      })),
+      pageInfo: {
+        hasNextPage: false,
+        endCursor: items.length > 0 ? items[items.length - 1].id : null,
+      },
+      totalCount: items.length,
+    },
+  },
+});
 
 describe('useShoppingListQuery', () => {
   const mockListId = 'list-123';
@@ -72,8 +93,8 @@ describe('useShoppingListQuery', () => {
         createMockItem('2', 'Bread'),
       ];
 
-      mockUseGetShoppingListItemsQuery.mockReturnValue({
-        data: { shoppingListItems: mockItems },
+      mockUseGetShoppingListQuery.mockReturnValue({
+        data: createConnectionResponse(mockItems),
         loading: false,
         error: undefined,
         refetch: mockRefetch,
@@ -81,15 +102,17 @@ describe('useShoppingListQuery', () => {
 
       const { result } = renderHook(() => useShoppingListQuery(mockListId));
 
-      expect(result.current.items).toEqual(mockItems);
+      expect(result.current.items).toHaveLength(2);
+      expect(result.current.items[0].itemName).toBe('Milk');
+      expect(result.current.items[1].itemName).toBe('Bread');
       expect(result.current.loading).toBe(false);
       expect(result.current.error).toBeUndefined();
       expect(result.current.refetch).toBe(mockRefetch);
     });
 
     it('returns empty array when no items', () => {
-      mockUseGetShoppingListItemsQuery.mockReturnValue({
-        data: { shoppingListItems: [] },
+      mockUseGetShoppingListQuery.mockReturnValue({
+        data: createConnectionResponse([]),
         loading: false,
         error: undefined,
         refetch: mockRefetch,
@@ -102,7 +125,7 @@ describe('useShoppingListQuery', () => {
     });
 
     it('returns empty array when data is undefined', () => {
-      mockUseGetShoppingListItemsQuery.mockReturnValue({
+      mockUseGetShoppingListQuery.mockReturnValue({
         data: undefined,
         loading: false,
         error: undefined,
@@ -114,9 +137,9 @@ describe('useShoppingListQuery', () => {
       expect(result.current.items).toEqual([]);
     });
 
-    it('returns empty array when shoppingListItems is null', () => {
-      mockUseGetShoppingListItemsQuery.mockReturnValue({
-        data: { shoppingListItems: null },
+    it('returns empty array when shoppingList is null', () => {
+      mockUseGetShoppingListQuery.mockReturnValue({
+        data: { shoppingList: null },
         loading: false,
         error: undefined,
         refetch: mockRefetch,
@@ -130,7 +153,7 @@ describe('useShoppingListQuery', () => {
 
   describe('loading states', () => {
     it('returns loading state correctly', () => {
-      mockUseGetShoppingListItemsQuery.mockReturnValue({
+      mockUseGetShoppingListQuery.mockReturnValue({
         data: undefined,
         loading: true,
         error: undefined,
@@ -146,7 +169,7 @@ describe('useShoppingListQuery', () => {
     it('transitions from loading to loaded', () => {
       const mockItems = [createMockItem('1', 'Milk')];
 
-      mockUseGetShoppingListItemsQuery.mockReturnValueOnce({
+      mockUseGetShoppingListQuery.mockReturnValueOnce({
         data: undefined,
         loading: true,
         error: undefined,
@@ -162,8 +185,8 @@ describe('useShoppingListQuery', () => {
       expect(result.current.items).toEqual([]);
 
       // Update mock to simulate data loaded
-      mockUseGetShoppingListItemsQuery.mockReturnValue({
-        data: { shoppingListItems: mockItems },
+      mockUseGetShoppingListQuery.mockReturnValue({
+        data: createConnectionResponse(mockItems),
         loading: false,
         error: undefined,
         refetch: mockRefetch,
@@ -172,7 +195,7 @@ describe('useShoppingListQuery', () => {
       rerender({ listId: mockListId });
 
       expect(result.current.loading).toBe(false);
-      expect(result.current.items).toEqual(mockItems);
+      expect(result.current.items).toHaveLength(1);
     });
   });
 
@@ -180,7 +203,7 @@ describe('useShoppingListQuery', () => {
     it('returns error when query fails', () => {
       const mockError = new Error('Network error');
 
-      mockUseGetShoppingListItemsQuery.mockReturnValue({
+      mockUseGetShoppingListQuery.mockReturnValue({
         data: undefined,
         loading: false,
         error: mockError,
@@ -197,8 +220,8 @@ describe('useShoppingListQuery', () => {
       const mockItems = [createMockItem('1', 'Milk')];
       const mockError = new Error('Partial failure');
 
-      mockUseGetShoppingListItemsQuery.mockReturnValue({
-        data: { shoppingListItems: mockItems },
+      mockUseGetShoppingListQuery.mockReturnValue({
+        data: createConnectionResponse(mockItems),
         loading: false,
         error: mockError,
         refetch: mockRefetch,
@@ -207,13 +230,13 @@ describe('useShoppingListQuery', () => {
       const { result } = renderHook(() => useShoppingListQuery(mockListId));
 
       expect(result.current.error).toBe(mockError);
-      expect(result.current.items).toEqual(mockItems);
+      expect(result.current.items).toHaveLength(1);
     });
   });
 
   describe('skip conditions', () => {
     it('skips query when listId is undefined', () => {
-      mockUseGetShoppingListItemsQuery.mockReturnValue({
+      mockUseGetShoppingListQuery.mockReturnValue({
         data: undefined,
         loading: false,
         error: undefined,
@@ -222,7 +245,7 @@ describe('useShoppingListQuery', () => {
 
       renderHook(() => useShoppingListQuery(undefined));
 
-      expect(mockUseGetShoppingListItemsQuery).toHaveBeenCalledWith(
+      expect(mockUseGetShoppingListQuery).toHaveBeenCalledWith(
         expect.objectContaining({
           skip: true,
         }),
@@ -232,7 +255,7 @@ describe('useShoppingListQuery', () => {
     it('skips query when user is logged out', () => {
       mockUseAuth.mockReturnValue({ isLoggedOut: true });
 
-      mockUseGetShoppingListItemsQuery.mockReturnValue({
+      mockUseGetShoppingListQuery.mockReturnValue({
         data: undefined,
         loading: false,
         error: undefined,
@@ -241,7 +264,7 @@ describe('useShoppingListQuery', () => {
 
       renderHook(() => useShoppingListQuery(mockListId));
 
-      expect(mockUseGetShoppingListItemsQuery).toHaveBeenCalledWith(
+      expect(mockUseGetShoppingListQuery).toHaveBeenCalledWith(
         expect.objectContaining({
           skip: true,
         }),
@@ -249,8 +272,8 @@ describe('useShoppingListQuery', () => {
     });
 
     it('does not skip when listId exists and user is logged in', () => {
-      mockUseGetShoppingListItemsQuery.mockReturnValue({
-        data: { shoppingListItems: [] },
+      mockUseGetShoppingListQuery.mockReturnValue({
+        data: createConnectionResponse([]),
         loading: false,
         error: undefined,
         refetch: mockRefetch,
@@ -258,7 +281,7 @@ describe('useShoppingListQuery', () => {
 
       renderHook(() => useShoppingListQuery(mockListId));
 
-      expect(mockUseGetShoppingListItemsQuery).toHaveBeenCalledWith(
+      expect(mockUseGetShoppingListQuery).toHaveBeenCalledWith(
         expect.objectContaining({
           skip: false,
         }),
@@ -268,8 +291,8 @@ describe('useShoppingListQuery', () => {
 
   describe('query configuration', () => {
     it('passes correct variables to query', () => {
-      mockUseGetShoppingListItemsQuery.mockReturnValue({
-        data: { shoppingListItems: [] },
+      mockUseGetShoppingListQuery.mockReturnValue({
+        data: createConnectionResponse([]),
         loading: false,
         error: undefined,
         refetch: mockRefetch,
@@ -277,10 +300,10 @@ describe('useShoppingListQuery', () => {
 
       renderHook(() => useShoppingListQuery(mockListId));
 
-      expect(mockUseGetShoppingListItemsQuery).toHaveBeenCalledWith(
+      expect(mockUseGetShoppingListQuery).toHaveBeenCalledWith(
         expect.objectContaining({
           variables: {
-            shoppingListId: mockListId,
+            id: mockListId,
           },
         }),
       );
@@ -290,8 +313,8 @@ describe('useShoppingListQuery', () => {
       const mockFetchPolicy = 'cache-first';
       mockUseOfflineAwareFetchPolicy.mockReturnValue(mockFetchPolicy);
 
-      mockUseGetShoppingListItemsQuery.mockReturnValue({
-        data: { shoppingListItems: [] },
+      mockUseGetShoppingListQuery.mockReturnValue({
+        data: createConnectionResponse([]),
         loading: false,
         error: undefined,
         refetch: mockRefetch,
@@ -304,7 +327,7 @@ describe('useShoppingListQuery', () => {
         'cache-only',
       );
 
-      expect(mockUseGetShoppingListItemsQuery).toHaveBeenCalledWith(
+      expect(mockUseGetShoppingListQuery).toHaveBeenCalledWith(
         expect.objectContaining({
           fetchPolicy: mockFetchPolicy,
         }),
@@ -312,8 +335,8 @@ describe('useShoppingListQuery', () => {
     });
 
     it('sets notifyOnNetworkStatusChange to true', () => {
-      mockUseGetShoppingListItemsQuery.mockReturnValue({
-        data: { shoppingListItems: [] },
+      mockUseGetShoppingListQuery.mockReturnValue({
+        data: createConnectionResponse([]),
         loading: false,
         error: undefined,
         refetch: mockRefetch,
@@ -321,7 +344,7 @@ describe('useShoppingListQuery', () => {
 
       renderHook(() => useShoppingListQuery(mockListId));
 
-      expect(mockUseGetShoppingListItemsQuery).toHaveBeenCalledWith(
+      expect(mockUseGetShoppingListQuery).toHaveBeenCalledWith(
         expect.objectContaining({
           notifyOnNetworkStatusChange: true,
         }),
@@ -329,8 +352,8 @@ describe('useShoppingListQuery', () => {
     });
 
     it('sets errorPolicy to all', () => {
-      mockUseGetShoppingListItemsQuery.mockReturnValue({
-        data: { shoppingListItems: [] },
+      mockUseGetShoppingListQuery.mockReturnValue({
+        data: createConnectionResponse([]),
         loading: false,
         error: undefined,
         refetch: mockRefetch,
@@ -338,7 +361,7 @@ describe('useShoppingListQuery', () => {
 
       renderHook(() => useShoppingListQuery(mockListId));
 
-      expect(mockUseGetShoppingListItemsQuery).toHaveBeenCalledWith(
+      expect(mockUseGetShoppingListQuery).toHaveBeenCalledWith(
         expect.objectContaining({
           errorPolicy: 'all',
         }),
@@ -346,12 +369,37 @@ describe('useShoppingListQuery', () => {
     });
   });
 
+  describe('sorting', () => {
+    it('sorts items by isPurchased (unpurchased first) then sortOrder', () => {
+      const mockItems = [
+        createMockItem('1', 'Purchased Item', { isPurchased: true, sortOrder: 'a0' }),
+        createMockItem('2', 'Unpurchased B', { isPurchased: false, sortOrder: 'b0' }),
+        createMockItem('3', 'Unpurchased A', { isPurchased: false, sortOrder: 'a0' }),
+      ];
+
+      mockUseGetShoppingListQuery.mockReturnValue({
+        data: createConnectionResponse(mockItems),
+        loading: false,
+        error: undefined,
+        refetch: mockRefetch,
+      });
+
+      const { result } = renderHook(() => useShoppingListQuery(mockListId));
+
+      // Unpurchased items should come first, sorted by sortOrder
+      expect(result.current.items[0].itemName).toBe('Unpurchased A');
+      expect(result.current.items[1].itemName).toBe('Unpurchased B');
+      // Purchased items come last
+      expect(result.current.items[2].itemName).toBe('Purchased Item');
+    });
+  });
+
   describe('memoization', () => {
     it('memoizes items when data reference unchanged', () => {
       const mockItems = [createMockItem('1', 'Milk')];
 
-      mockUseGetShoppingListItemsQuery.mockReturnValue({
-        data: { shoppingListItems: mockItems },
+      mockUseGetShoppingListQuery.mockReturnValue({
+        data: createConnectionResponse(mockItems),
         loading: false,
         error: undefined,
         refetch: mockRefetch,
@@ -373,8 +421,8 @@ describe('useShoppingListQuery', () => {
       const mockItems1 = [createMockItem('1', 'Milk')];
       const mockItems2 = [createMockItem('2', 'Bread')];
 
-      mockUseGetShoppingListItemsQuery.mockReturnValueOnce({
-        data: { shoppingListItems: mockItems1 },
+      mockUseGetShoppingListQuery.mockReturnValueOnce({
+        data: createConnectionResponse(mockItems1),
         loading: false,
         error: undefined,
         refetch: mockRefetch,
@@ -386,11 +434,11 @@ describe('useShoppingListQuery', () => {
       );
 
       const firstItems = result.current.items;
-      expect(firstItems).toEqual(mockItems1);
+      expect(firstItems[0].itemName).toBe('Milk');
 
       // Update mock to return different data
-      mockUseGetShoppingListItemsQuery.mockReturnValue({
-        data: { shoppingListItems: mockItems2 },
+      mockUseGetShoppingListQuery.mockReturnValue({
+        data: createConnectionResponse(mockItems2),
         loading: false,
         error: undefined,
         refetch: mockRefetch,
@@ -399,14 +447,14 @@ describe('useShoppingListQuery', () => {
       rerender({ listId: mockListId });
 
       const secondItems = result.current.items;
-      expect(secondItems).toEqual(mockItems2);
+      expect(secondItems[0].itemName).toBe('Bread');
       expect(firstItems).not.toBe(secondItems); // Different reference
     });
   });
 
   describe('edge cases', () => {
     it('handles empty string listId', () => {
-      mockUseGetShoppingListItemsQuery.mockReturnValue({
+      mockUseGetShoppingListQuery.mockReturnValue({
         data: undefined,
         loading: false,
         error: undefined,
@@ -415,7 +463,7 @@ describe('useShoppingListQuery', () => {
 
       renderHook(() => useShoppingListQuery(''));
 
-      expect(mockUseGetShoppingListItemsQuery).toHaveBeenCalledWith(
+      expect(mockUseGetShoppingListQuery).toHaveBeenCalledWith(
         expect.objectContaining({
           skip: true, // Empty string is falsy
         }),
@@ -423,8 +471,8 @@ describe('useShoppingListQuery', () => {
     });
 
     it('handles listId change', () => {
-      mockUseGetShoppingListItemsQuery.mockReturnValue({
-        data: { shoppingListItems: [] },
+      mockUseGetShoppingListQuery.mockReturnValue({
+        data: createConnectionResponse([]),
         loading: false,
         error: undefined,
         refetch: mockRefetch,
@@ -435,17 +483,17 @@ describe('useShoppingListQuery', () => {
         { initialProps: { listId: 'list-1' } },
       );
 
-      expect(mockUseGetShoppingListItemsQuery).toHaveBeenCalledWith(
+      expect(mockUseGetShoppingListQuery).toHaveBeenCalledWith(
         expect.objectContaining({
-          variables: { shoppingListId: 'list-1' },
+          variables: { id: 'list-1' },
         }),
       );
 
       rerender({ listId: 'list-2' });
 
-      expect(mockUseGetShoppingListItemsQuery).toHaveBeenCalledWith(
+      expect(mockUseGetShoppingListQuery).toHaveBeenCalledWith(
         expect.objectContaining({
-          variables: { shoppingListId: 'list-2' },
+          variables: { id: 'list-2' },
         }),
       );
     });
@@ -455,8 +503,8 @@ describe('useShoppingListQuery', () => {
         .fill(null)
         .map((_, i) => createMockItem(`item-${i}`, `Item ${i}`));
 
-      mockUseGetShoppingListItemsQuery.mockReturnValue({
-        data: { shoppingListItems: mockItems },
+      mockUseGetShoppingListQuery.mockReturnValue({
+        data: createConnectionResponse(mockItems),
         loading: false,
         error: undefined,
         refetch: mockRefetch,

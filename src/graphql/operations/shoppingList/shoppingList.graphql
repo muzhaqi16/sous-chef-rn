@@ -29,6 +29,21 @@ query GetShoppingList(
     ownerships {
       ...ShoppingListOwnershipFragment
     }
+    # Items connection for single source of truth
+    # Uses lightweight DisplayFragment for performance
+    itemsConnection(first: 100) {
+      edges {
+        cursor
+        node {
+          ...ShoppingListItemDisplayFragment
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      totalCount
+    }
     collaboratorsConnection(first: 20) {
       edges {
         cursor
@@ -153,22 +168,9 @@ query GetDefaultShoppingList {
   }
 }
 
-query GetShoppingListItems($shoppingListId: ID!) {
-  shoppingListItems(shoppingListId: $shoppingListId) {
-    ...ShoppingListItemFragment
-  }
-}
-
 query GetShoppingListItem($id: ID!) {
   shoppingListItem(id: $id) {
     ...ShoppingListItemFragment
-  }
-}
-
-query GetShoppingListCollaborators($shoppingListId: ID!) {
-  shoppingListCollaborators(shoppingListId: $shoppingListId) {
-    ...ShoppingListCollaboratorFragment
-    statusChangedAt
   }
 }
 

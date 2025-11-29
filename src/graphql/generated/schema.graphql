@@ -4289,8 +4289,6 @@ type Query {
   homeInviteByToken(token: String!): HomeInvite
   homeInviteLogs(homeId: String!, limit: Int): [InviteLog!]!
   homeInviteStats(homeId: String!): [HomeInviteStatsGroup!]!
-  homeInvites(homeId: ID!): [HomeInvite!]!
-  homeMemberships(homeId: ID!): [Membership!]!
   homes: [Home!]!
   inviteLogs(inviteId: String!, limit: Int): [InviteLog!]!
   inviteStats(inviteId: String!): InviteStats!
@@ -4374,7 +4372,6 @@ type Query {
   pantry(id: ID!): Pantry
   pantryItem(id: ID!): PantryItem!
   pantryItemUsage(pantryItemId: ID!): [PantryItemUsage!]!
-  pantryItems(filters: PantryItemFilters, pantryId: ID!): [PantryItem!]!
   pantryStats(pantryId: ID!): PantryStats!
   """
   Parse fractional input string to decimal
@@ -4435,7 +4432,6 @@ type Query {
   shoppingListByShareCode(shareCode: String!): ShoppingList
   shoppingListCollaborators(shoppingListId: ID!): [ShoppingListCollaborator!]!
   shoppingListItem(id: ID!): ShoppingListItem
-  shoppingListItems(shoppingListId: ID!): [ShoppingListItem!]!
   shoppingLists(filters: ShoppingListFilters): [ShoppingList!]!
   staleDevices(daysInactive: Int = 90, userId: ID!): [Device!]!
   """

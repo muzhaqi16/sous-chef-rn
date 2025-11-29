@@ -48,24 +48,11 @@ export function useShoppingListScreen() {
   const currentList =
     lists.find(list => list.id === currentListId) || defaultList;
 
-  // PERFORMANCE: Extract items from GetShoppingLists.itemsConnection
-  // This eliminates the need for a separate GetShoppingListItems query
-  // Reduces re-renders from 4 to 2 by having single cache update
-  const itemsFromList = useMemo(() => {
-    if (!currentList?.itemsConnection?.edges) return null;
-    // Map edges to nodes (ShoppingListItem[])
-    return currentList.itemsConnection.edges
-      .map((edge: any) => edge?.node)
-      .filter(Boolean);
-  }, [currentList?.itemsConnection?.edges]);
-
   // Use the shopping list management hook
-  // PERFORMANCE: Pass itemsFromList to skip separate GetShoppingListItems query
-  // When itemsFromList is provided, the hook uses it instead of making another network request
+  // Uses GetShoppingListItems query as single source of truth
+  // This ensures mutations and subscriptions update the same cache the UI reads from
   // NOTE: The hook reads selectedShoppingListId directly from store (single source of truth)
-  const shoppingListManagement = useShoppingListManagement(
-    isFocused ? itemsFromList : null,
-  );
+  const shoppingListManagement = useShoppingListManagement();
 
   const { items, loading } = shoppingListManagement;
 

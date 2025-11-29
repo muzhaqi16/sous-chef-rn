@@ -2,7 +2,7 @@ import { useMemo, useCallback } from 'react';
 import { Alert } from 'react-native';
 import { useApolloClient } from '@apollo/client/react';
 import {
-  useGetShoppingListItemsQuery,
+  useGetShoppingListQuery,
   useAddItemToShoppingListMutation,
   useUpdateShoppingListItemMutation,
   useRemoveItemFromShoppingListMutation,
@@ -23,22 +23,25 @@ import { generateId } from '#/utils/generateId';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { useOfflineAwareFetchPolicy, OFFLINE_FETCH_POLICIES } from '#/apollo/policies/offlineFetchPolicies';
 import {
-  createAddToKeyedQueryFieldUpdater,
-  createRemoveFromQueryFieldUpdater,
+  createAddToParentConnectionUpdater,
+  createRemoveFromParentConnectionUpdater,
 } from '#/apollo/utils';
 import { shoppingListItemSearch } from '#/utils/searchUtils';
 import { useCrudOperations } from '#/hooks/utils';
 import { useAppStore, selectShoppingListState } from '#store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 
-// Cache updater utilities for shopping list items
-const addToShoppingListItemsCache = createAddToKeyedQueryFieldUpdater<any>(
-  'shoppingListItems',
-  'shoppingListId',
+// Cache updater utilities for shopping list items connection
+// Uses parent connection pattern for ShoppingList.itemsConnection
+const addToShoppingListItemsCache = createAddToParentConnectionUpdater<any>(
+  'ShoppingList',
+  'itemsConnection',
+  'ShoppingListItem',
 );
 
-const removeFromShoppingListItemsCache = createRemoveFromQueryFieldUpdater(
-  'shoppingListItems',
+const removeFromShoppingListItemsCache = createRemoveFromParentConnectionUpdater(
+  'ShoppingList',
+  'itemsConnection',
   'ShoppingListItem',
 );
 
@@ -61,11 +64,9 @@ export interface ShoppingListItemUpdate extends Partial<ShoppingListItemInput> {
  * No refetchQueries, no custom caches - Apollo handles everything
  *
  * Reads selectedShoppingListId directly from store (single source of truth)
- *
- * @param initialItems - Optional items from parent query (GetShoppingLists.itemsConnection)
- *                       When provided, skips separate GetShoppingListItems query for performance
+ * Uses GetShoppingList query with itemsConnection as single source of truth
  */
-export function useShoppingListManagement(initialItems?: any[] | null) {
+export function useShoppingListManagement() {
   const client = useApolloClient();
   const { isLoggedOut } = useAuth();
   const { handleApolloError } = useErrorHandler();
@@ -76,10 +77,7 @@ export function useShoppingListManagement(initialItems?: any[] | null) {
     useShallow(selectShoppingListState),
   );
 
-  // PERFORMANCE: Skip separate items query when items provided from parent query
-  // This eliminates the second network request and reduces re-renders from 4 to 2
-  const hasInitialItems = initialItems !== undefined && initialItems !== null;
-  const shouldSkip = !selectedShoppingListId || isLoggedOut || hasInitialItems;
+  const shouldSkip = !selectedShoppingListId || isLoggedOut;
 
   // Dynamic fetch policy based on network status
   // Online: cache-and-network (fresh data + instant UI)
@@ -90,17 +88,17 @@ export function useShoppingListManagement(initialItems?: any[] | null) {
   );
 
   // Watch cache for updates from mutations and subscriptions
+  // Uses GetShoppingList with itemsConnection as single source of truth
   // PERFORMANCE: Include previousData to prevent UI flash during refetch
-  // PERFORMANCE: Skip when initialItems provided from GetShoppingLists.itemsConnection
   const {
     data,
     previousData,
-    loading: queryLoading,
+    loading,
     error,
     refetch,
-  } = useGetShoppingListItemsQuery({
+  } = useGetShoppingListQuery({
     variables: {
-      shoppingListId: selectedShoppingListId ?? '',
+      id: selectedShoppingListId ?? '',
     },
     skip: shouldSkip,
     fetchPolicy,
@@ -109,25 +107,20 @@ export function useShoppingListManagement(initialItems?: any[] | null) {
     errorPolicy: 'all', // Return both data and errors for better debugging
   });
 
-  // Derive loading state - not loading if using initialItems
-  const loading = hasInitialItems ? false : queryLoading;
-
   // Real-time updates via subscription are now handled by SubscriptionProvider
   // This eliminates duplicate subscription code and provides consistent behavior
   // across all subscriptions (deduplication, error handling, logging)
 
-  // OPTIMIZATION: Use previousData as fallback to prevent UI flash during refetch
-  // PERFORMANCE: Prefer initialItems from GetShoppingLists when available (single query optimization)
-  // NOTE: No isListChanging state needed - store value is stable across focus changes
-  // and Apollo cache handles per-list data correctly
+  // OPTIMIZATION: Extract items from itemsConnection edges
+  // Use previousData as fallback to prevent UI flash during refetch
   const items = useMemo(
     () => {
-      // Use initialItems from parent query if available (from GetShoppingLists.itemsConnection)
-      if (hasInitialItems) return initialItems;
-      // Fall back to query data or previous data
-      return data?.shoppingListItems ?? previousData?.shoppingListItems ?? [];
+      const edges = data?.shoppingList?.itemsConnection?.edges
+        ?? previousData?.shoppingList?.itemsConnection?.edges
+        ?? [];
+      return edges.map(edge => edge.node);
     },
-    [data?.shoppingListItems, previousData?.shoppingListItems, hasInitialItems, initialItems],
+    [data?.shoppingList?.itemsConnection?.edges, previousData?.shoppingList?.itemsConnection?.edges],
   );
 
   // Search functionality - using reusable search utility
@@ -270,8 +263,8 @@ export function useShoppingListManagement(initialItems?: any[] | null) {
       if (!data?.addItemToShoppingList || !selectedShoppingListId) return;
 
       try {
-        // Add to cache using generic utility
-        addToShoppingListItemsCache(cache, data.addItemToShoppingList, selectedShoppingListId);
+        // Add to cache using parent connection pattern: (cache, parentId, newItem)
+        addToShoppingListItemsCache(cache, selectedShoppingListId, data.addItemToShoppingList);
       } catch (error) {
         console.warn('Cache update failed for addItem, will refetch:', error);
         // Fallback: refetch if cache update fails
@@ -343,8 +336,8 @@ export function useShoppingListManagement(initialItems?: any[] | null) {
         // Save to optimistic persistence before removing
         optimisticDataPersistence.save('ShoppingListItem', itemId, '__deleted', true);
 
-        // Remove from cache using generic utility (handles filter + evict + gc)
-        removeFromShoppingListItemsCache(cache, itemId, { evictItem: true });
+        // Remove from cache using parent connection pattern: (cache, parentId, itemId, options)
+        removeFromShoppingListItemsCache(cache, selectedShoppingListId, itemId, { evictItem: true });
       } catch (error) {
         console.warn(
           'Cache update failed for removeItem, will refetch:',
@@ -396,7 +389,8 @@ export function useShoppingListManagement(initialItems?: any[] | null) {
         };
       }
 
-      // Fallback to core data if fragment is missing in cache
+      // Fallback to display fragment data if full fragment is missing in cache
+      // ShoppingListItemDisplayFragment doesn't have version/notes - those are in full fragment
       const currentItem = items.find(item => item.id === variables.id);
 
       if (currentItem) {
@@ -408,10 +402,8 @@ export function useShoppingListManagement(initialItems?: any[] | null) {
             itemName: currentItem.itemName,
             quantity: currentItem.quantity,
             isPurchased: variables.purchased,
-            version: currentItem.version,
             updatedAt: new Date().toISOString(),
             category: currentItem.category,
-            notes: currentItem.notes,
             unitName: currentItem.unitName,
             unit: currentItem.unit,
           } as any,

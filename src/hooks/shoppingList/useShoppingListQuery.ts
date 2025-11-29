@@ -1,11 +1,12 @@
 import { useMemo } from 'react';
-import { useGetShoppingListItemsQuery } from '#generated';
+import { useGetShoppingListQuery } from '#generated';
 import { useAuth } from '#hooks/auth/useAuth';
 import { useOfflineAwareFetchPolicy, OFFLINE_FETCH_POLICIES } from '#/apollo/policies/offlineFetchPolicies';
 
 /**
  * Hook for querying shopping list items
  * Handles data fetching, loading states, and offline-aware fetch policies
+ * Uses GetShoppingList query with itemsConnection as single source of truth
  */
 export function useShoppingListQuery(listId: string | undefined) {
   const { isLoggedOut } = useAuth();
@@ -20,14 +21,15 @@ export function useShoppingListQuery(listId: string | undefined) {
   );
 
   // Watch cache for updates from mutations and subscriptions
+  // Uses GetShoppingList with itemsConnection as single source of truth
   const {
     data,
     loading,
     error,
     refetch,
-  } = useGetShoppingListItemsQuery({
+  } = useGetShoppingListQuery({
     variables: {
-      shoppingListId: listId ?? '',
+      id: listId ?? '',
     },
     skip: shouldSkip,
     fetchPolicy,
@@ -40,11 +42,13 @@ export function useShoppingListQuery(listId: string | undefined) {
   // across all subscriptions (deduplication, error handling, logging)
 
   const items = useMemo(() => {
-    const rawItems = data?.shoppingListItems || [];
+    // Extract items from itemsConnection edges
+    const edges = data?.shoppingList?.itemsConnection?.edges || [];
+    const rawItems = edges.map(edge => edge.node);
 
     // Sort items to ensure consistent order across reloads
     // Server should return items sorted, but we enforce it client-side as well
-    // Sort by: isPurchased ASC -> sortOrder ASC -> createdAt ASC
+    // Sort by: isPurchased ASC -> sortOrder ASC
     return [...rawItems].sort((a, b) => {
       // First by purchased status (unpurchased items first)
       if (a.isPurchased !== b.isPurchased) {
@@ -56,10 +60,10 @@ export function useShoppingListQuery(listId: string | undefined) {
         return a.sortOrder.localeCompare(b.sortOrder);
       }
 
-      // Fallback to createdAt for items without sortOrder
-      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      // Items without sortOrder come last
+      return 0;
     });
-  }, [data?.shoppingListItems]);
+  }, [data?.shoppingList?.itemsConnection?.edges]);
 
   return {
     items,

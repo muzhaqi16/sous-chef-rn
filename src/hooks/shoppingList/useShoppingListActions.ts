@@ -5,8 +5,8 @@ import {
   ShoppingListItemFragmentDoc,
   useMoveShoppingListItemMutation,
   useUpdateShoppingListItemQuantityMutation,
-  GetShoppingListItemsDocument,
-  GetShoppingListItemsQuery,
+  GetShoppingListDocument,
+  GetShoppingListQuery,
 } from '#generated';
 import { toastService } from '#/services/toastService';
 import {
@@ -89,31 +89,40 @@ export function useShoppingListActions({
       };
     },
     // Update cache to reflect new order
+    // Uses GetShoppingList.itemsConnection as the cache location
     update(cache, { data }) {
       if (!data?.moveShoppingListItem || !currentListId) return;
 
       try {
-        // Read the current shopping list items query
-        const queryResult = cache.readQuery<GetShoppingListItemsQuery>({
-          query: GetShoppingListItemsDocument,
-          variables: { shoppingListId: currentListId },
+        // Read the current shopping list query with itemsConnection
+        const queryResult = cache.readQuery<GetShoppingListQuery>({
+          query: GetShoppingListDocument,
+          variables: { id: currentListId },
         });
 
-        if (!queryResult?.shoppingListItems) return;
+        if (!queryResult?.shoppingList?.itemsConnection?.edges) return;
 
         // Update single item with new sortOrder
-        // PERFORMANCE: No sort needed - server returns pre-sorted
-        const updatedItems = queryResult.shoppingListItems.map(item =>
-          item.id === data.moveShoppingListItem.id
-            ? { ...item, sortOrder: data.moveShoppingListItem.sortOrder }
-            : item,
+        const updatedEdges = queryResult.shoppingList.itemsConnection.edges.map(
+          (edge: any) =>
+            edge.node.id === data.moveShoppingListItem.id
+              ? { ...edge, node: { ...edge.node, sortOrder: data.moveShoppingListItem.sortOrder } }
+              : edge,
         );
 
         // Write back to cache
         cache.writeQuery({
-          query: GetShoppingListItemsDocument,
-          variables: { shoppingListId: currentListId },
-          data: { shoppingListItems: updatedItems },
+          query: GetShoppingListDocument,
+          variables: { id: currentListId },
+          data: {
+            shoppingList: {
+              ...queryResult.shoppingList,
+              itemsConnection: {
+                ...queryResult.shoppingList.itemsConnection,
+                edges: updatedEdges,
+              },
+            },
+          },
         });
       } catch (error) {
         console.warn('Cache update failed for moveItem:', error);

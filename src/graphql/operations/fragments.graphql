@@ -37,6 +37,7 @@ fragment ShoppingListItemDisplayFragment on ShoppingListItem {
   sortOrder
   unitName
   category
+  version # Required for optimistic concurrency control in mutations
   unit {
     id
     symbol

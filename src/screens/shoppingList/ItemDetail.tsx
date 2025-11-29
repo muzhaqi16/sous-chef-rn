@@ -81,7 +81,7 @@ export const ShoppingListItemDetail: React.FC<{
           <Text style={[commonStyles.title, styles.itemName]}>
             {item.itemName}
           </Text>
-          {item.quantity && (
+          {item.quantity ? (
             <View style={styles.itemDescription}>
               <FormattedItemSubtitle
                 quantity={item.quantity}
@@ -92,7 +92,7 @@ export const ShoppingListItemDetail: React.FC<{
                 unitSymbol={item.item?.displayUnit?.symbol || item.unitName}
               />
             </View>
-          )}
+          ) : null}
           {/* Status Badge */}
           {item.isPurchased ? (
             <View style={styles.statusBadge}>
