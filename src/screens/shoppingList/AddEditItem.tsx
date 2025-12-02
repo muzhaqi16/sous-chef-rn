@@ -82,10 +82,16 @@ export const AddEditItem: React.FC<{
 
   // Handle autocomplete item selection
   const handleItemSelect = (item: ItemSuggestion) => {
-    // When user selects from autocomplete, just set the item name
-    // In the future, you could extend this to fetch more item details
-    // and populate other fields like category, default unit, etc.
     updateField('itemName', item.name);
+    if (item.defaultUnit?.symbol) {
+      updateField('unit', item.defaultUnit.symbol);
+    }
+    if (item.defaultUnit?.id) {
+      updateField('selectedUnitId', item.defaultUnit.id);
+    }
+    if (item.category?.name) {
+      updateField('category', item.category.name);
+    }
   };
 
   // Handle unit selection from autocomplete

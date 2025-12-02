@@ -10,6 +10,7 @@ interface FractionInputProps {
   label?: string;
   disabled?: boolean;
   testID?: string;
+  keyboardType?: 'default' | 'numeric' | 'decimal-pad' | 'numbers-and-punctuation';
 }
 
 /**
@@ -30,6 +31,7 @@ export const FractionInput: React.FC<FractionInputProps> = ({
   label,
   disabled = false,
   testID,
+  keyboardType = 'numbers-and-punctuation',
 }) => {
   const [isFocused, setIsFocused] = useState(false);
 
@@ -65,7 +67,7 @@ export const FractionInput: React.FC<FractionInputProps> = ({
         onBlur={() => setIsFocused(false)}
         placeholder={placeholder}
         placeholderTextColor="#999"
-        keyboardType="numbers-and-punctuation"
+        keyboardType={keyboardType}
         editable={!disabled}
         selectTextOnFocus
         testID={testID}

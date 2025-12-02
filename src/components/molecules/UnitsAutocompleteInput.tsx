@@ -127,6 +127,7 @@ export const UnitsAutocompleteInput: React.FC<UnitsAutocompleteInputProps> = ({
       emptySubtext="Try a different search term"
       onSearchChange={setSearchTerm}
       testID={testID}
+      autoCapitalize="none"
     />
   );
 };

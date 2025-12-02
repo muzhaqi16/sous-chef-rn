@@ -8,8 +8,14 @@ interface PantryItem {
   id: string;
   expiresAt?: string | null;
   currentQuantity: number;
+  initialQuantity?: number | null;
   autoReorderPoint?: number | null;
   storageState?: string | null;
+  // Pantry item's own weight (override)
+  actualNetWeight?: number | null;
+  actualNetWeightUnit?: {
+    symbol?: string;
+  } | null;
   item?: {
     name?: string;
     netWeight?: number | null;
@@ -90,16 +96,22 @@ export function usePantryItemTransformation<T extends PantryItem>(
       // Get image URL for the item
       const imageUrl = getItemImageUrl(item.item);
 
+      // Use actualNetWeight if set (user override), otherwise fall back to catalog item weight
+      const effectiveNetWeight = item.actualNetWeight ?? item.item?.netWeight;
+      const effectiveWeightUnitSymbol =
+        item.actualNetWeightUnit?.symbol ||
+        item.item?.displayUnit?.symbol ||
+        item.unit?.symbol;
+
       return {
         id: item.id,
         title: item.item?.name || '',
         subtitle: (
           <FormattedItemSubtitle
             quantity={item.currentQuantity}
-            netWeight={item.item?.netWeight}
-            unitSymbol={
-              item.item?.displayUnit?.symbol || item.unit?.symbol
-            }
+            initialQuantity={item.initialQuantity}
+            netWeight={effectiveNetWeight}
+            unitSymbol={effectiveWeightUnitSymbol}
             additionalInfo={item.storageState ?? undefined}
           />
         ),

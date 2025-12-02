@@ -220,12 +220,20 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   const getInitialValues = useCallback((): PantryItemFormData => {
     if (mode === 'edit' && existingItemData?.pantryItem) {
       const item = existingItemData.pantryItem;
+      // Use actualNetWeight if set, otherwise fall back to item.netWeight from catalog
+      const weight = item.actualNetWeight ?? item.item?.netWeight ?? undefined;
+      // Use actualNetWeightUnit if set, otherwise fall back to item.displayUnit from catalog
+      const weightUnitSymbol =
+        item.actualNetWeightUnit?.symbol ||
+        item.item?.displayUnit?.symbol ||
+        item.unit?.symbol ||
+        '';
       return {
         quantity: item.currentQuantity || 1,
         quantityInput:
           item.quantityInput || item.currentQuantity?.toString() || '1',
-        itemWeight: item.actualNetWeight || undefined,
-        unit: item.actualNetWeightUnit?.symbol || item.unit?.symbol || '',
+        itemWeight: weight,
+        unit: weightUnitSymbol,
         reservedQuantity: item.reservedQuantity?.toString() || '',
         storageState: item.storageState || StorageState.Ambient,
         location:
@@ -296,6 +304,13 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
       if (item.defaultUnit?.symbol) {
         setValue('unit', item.defaultUnit.symbol);
       }
+      if (item.defaultUnit?.id) {
+        setSelectedUnitId(item.defaultUnit.id);
+      }
+      // Auto-populate weight from catalog
+      if (item.netWeight != null) {
+        setValue('itemWeight', item.netWeight);
+      }
     },
     [setValue],
   );
@@ -318,13 +333,6 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
           setValue('storageState', StorageState.Ambient);
         }
       }
-    },
-    [setValue],
-  );
-
-  const handleQuantityInputChange = useCallback(
-    (text: string) => {
-      setValue('quantityInput', text);
     },
     [setValue],
   );
@@ -581,11 +589,9 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
             errors={errors}
             mode={mode}
             quantity={watchedValues.quantity}
-            quantityInput={watchedValues.quantityInput}
             itemWeight={watchedValues.itemWeight}
             unit={watchedValues.unit}
             isAutoReorder={watchedValues.isAutoReorder}
-            onQuantityInputChange={handleQuantityInputChange}
             onIncrementQuantity={handleIncrementQuantity}
             onDecrementQuantity={handleDecrementQuantity}
             onUnitSelected={setSelectedUnitId}

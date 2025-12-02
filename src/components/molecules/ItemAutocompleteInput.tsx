@@ -74,7 +74,7 @@ export const ItemAutocompleteInput: React.FC<ItemAutocompleteInputProps> = ({
   };
 
   const handleSelectItem = (item: ItemSuggestion) => {
-    onChangeText(item.name);
+    onChangeText(item.name.trim());
     onSelectItem?.(item);
   };
 

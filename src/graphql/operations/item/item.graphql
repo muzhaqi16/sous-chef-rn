@@ -104,6 +104,8 @@ query AutocompleteItems($input: AutocompleteInput!) {
       name
       imageUrl
       images
+      netWeight
+      displayUnit
       defaultUnit {
         id
         name

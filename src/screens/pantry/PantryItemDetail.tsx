@@ -110,6 +110,10 @@ export const PantryItemDetail: React.FC<{
 
   const item = data?.pantryItem;
 
+  // Use actualNetWeight if set (user override), otherwise fall back to catalog item weight
+  const effectiveNetWeight = item?.actualNetWeight ?? item?.item?.netWeight;
+  const effectiveWeightUnit = item?.actualNetWeightUnit ?? item?.item?.displayUnit;
+
   // Helper function to format item type
   const formatItemType = (type?: string) => {
     if (!type) return 'N/A';
@@ -146,8 +150,9 @@ export const PantryItemDetail: React.FC<{
             <View style={styles.quantityDescription}>
               <FormattedItemSubtitle
                 quantity={item.currentQuantity}
-                netWeight={item.item?.netWeight}
-                unitSymbol={item.item?.displayUnit?.symbol || item.unit?.symbol}
+                initialQuantity={item.initialQuantity}
+                netWeight={effectiveNetWeight}
+                unitSymbol={effectiveWeightUnit?.symbol || item.unit?.symbol}
                 additionalInfo={item.storageState}
               />
             </View>
@@ -166,10 +171,9 @@ export const PantryItemDetail: React.FC<{
             <View>
               <FormattedItemSubtitle
                 quantity={item?.currentQuantity}
-                netWeight={item?.item?.netWeight}
-                unitSymbol={
-                  item?.item?.displayUnit?.symbol || item?.unit?.symbol
-                }
+                initialQuantity={item?.initialQuantity}
+                netWeight={effectiveNetWeight}
+                unitSymbol={effectiveWeightUnit?.symbol || item?.unit?.symbol}
               />
             </View>
           </View>
@@ -180,10 +184,8 @@ export const PantryItemDetail: React.FC<{
             <View>
               <FormattedItemSubtitle
                 quantity={item?.initialQuantity}
-                netWeight={item?.item?.netWeight}
-                unitSymbol={
-                  item?.item?.displayUnit?.symbol || item?.unit?.symbol
-                }
+                netWeight={effectiveNetWeight}
+                unitSymbol={effectiveWeightUnit?.symbol || item?.unit?.symbol}
               />
             </View>
           </View>
@@ -203,13 +205,13 @@ export const PantryItemDetail: React.FC<{
               {item?.reservedQuantity ?? 0} {item?.unit?.symbol ?? ''}
             </Text>
           </View>
-          {item?.item?.netWeight != null && item?.item?.displayUnit && (
+          {effectiveNetWeight != null && effectiveWeightUnit && (
             <View style={styles.detailRow}>
               <Text style={[commonStyles.caption, styles.detailLabel]}>
-                Package Size
+                Net Weight
               </Text>
               <Text style={styles.detailValue}>
-                {item.item.netWeight} {item.item.displayUnit.symbol} per item
+                {effectiveNetWeight} {effectiveWeightUnit.symbol} per item
               </Text>
             </View>
           )}

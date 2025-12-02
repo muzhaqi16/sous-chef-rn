@@ -173,12 +173,26 @@ mutation CreatePantryItemUsage($input: RecordPantryItemUsageInput!) {
   createPantryItemUsage(input: $input) {
     id
     quantityUsed
+    usageUnitId
+    usageUnit {
+      id
+      name
+      symbol
+    }
+    weightUsed
+    weightUsedUnitId
+    weightUsedUnit {
+      id
+      name
+      symbol
+    }
     usedAt
     purpose
     notes
     pantryItem {
       id
       currentQuantity
+      actualNetWeight
       consumedQuantity
       ...PantryItemFragment
     }
@@ -193,6 +207,9 @@ mutation RecordPantryItemWaste(
   $id: ID!
   $wasteAmount: Float!
   $wasteReason: WasteReason!
+  $wasteUnitId: String
+  $wasteWeight: Float
+  $wasteWeightUnitId: String
   $isComposted: Boolean
   $isRecycled: Boolean
 ) {
@@ -200,6 +217,9 @@ mutation RecordPantryItemWaste(
     id: $id
     wasteAmount: $wasteAmount
     wasteReason: $wasteReason
+    wasteUnitId: $wasteUnitId
+    wasteWeight: $wasteWeight
+    wasteWeightUnitId: $wasteWeightUnitId
     isComposted: $isComposted
     isRecycled: $isRecycled
   ) {

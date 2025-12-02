@@ -2031,10 +2031,12 @@ export type ItemSuggestion = {
   brand?: Maybe<BrandSuggestion>;
   category?: Maybe<CategorySuggestion>;
   defaultUnit?: Maybe<ItemUnitSuggestion>;
+  displayUnit?: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
   imageUrl?: Maybe<Scalars['String']['output']>;
   images?: Maybe<Scalars['JSON']['output']>;
   name: Scalars['String']['output'];
+  netWeight?: Maybe<Scalars['Float']['output']>;
 };
 
 export enum ItemType {
@@ -3461,6 +3463,9 @@ export type MutationRecordPantryItemWasteArgs = {
   isRecycled?: InputMaybe<Scalars['Boolean']['input']>;
   wasteAmount: Scalars['Float']['input'];
   wasteReason: WasteReason;
+  wasteUnitId?: InputMaybe<Scalars['String']['input']>;
+  wasteWeight?: InputMaybe<Scalars['Float']['input']>;
+  wasteWeightUnitId?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type MutationRecordPantryUsageArgs = {
@@ -4600,8 +4605,13 @@ export type PantryItemUsage = {
   recipe?: Maybe<Recipe>;
   recipeId?: Maybe<Scalars['String']['output']>;
   usageSource: UsageSource;
+  usageUnit?: Maybe<Unit>;
+  usageUnitId?: Maybe<Scalars['String']['output']>;
   usedAt: Scalars['DateTime']['output'];
-  usedBy: User;
+  usedBy?: Maybe<User>;
+  weightUsed?: Maybe<Scalars['Float']['output']>;
+  weightUsedUnit?: Maybe<Unit>;
+  weightUsedUnitId?: Maybe<Scalars['String']['output']>;
 };
 
 export type PantryItemUsageChangedPayload = {
@@ -5918,6 +5928,9 @@ export type RecordPantryItemUsageInput = {
   purpose: UsagePurpose;
   quantityUsed: Scalars['Float']['input'];
   recipeId?: InputMaybe<Scalars['String']['input']>;
+  usageUnitId?: InputMaybe<Scalars['String']['input']>;
+  weightUsed?: InputMaybe<Scalars['Float']['input']>;
+  weightUsedUnitId?: InputMaybe<Scalars['String']['input']>;
 };
 
 export enum RecurringPattern {
@@ -9902,7 +9915,7 @@ export type PantryItemFragmentFragment = {
     purpose: UsagePurpose;
     notes?: string | null | undefined;
     pantryItem: { __typename?: 'PantryItem'; id: string };
-    usedBy: { __typename?: 'User'; id: string };
+    usedBy?: { __typename?: 'User'; id: string } | null | undefined;
     cookingLog?: { __typename?: 'CookingLog'; id: string } | null | undefined;
     mealPlanItem?:
       | { __typename?: 'MealPlanItem'; id: string }
@@ -10222,7 +10235,7 @@ export type PantryFragmentFragment = {
           purpose: UsagePurpose;
           notes?: string | null | undefined;
           pantryItem: { __typename?: 'PantryItem'; id: string };
-          usedBy: { __typename?: 'User'; id: string };
+          usedBy?: { __typename?: 'User'; id: string } | null | undefined;
           cookingLog?:
             | { __typename?: 'CookingLog'; id: string }
             | null
@@ -10794,7 +10807,7 @@ export type HomeFragmentFragment = {
                 purpose: UsagePurpose;
                 notes?: string | null | undefined;
                 pantryItem: { __typename?: 'PantryItem'; id: string };
-                usedBy: { __typename?: 'User'; id: string };
+                usedBy?: { __typename?: 'User'; id: string } | null | undefined;
                 cookingLog?:
                   | { __typename?: 'CookingLog'; id: string }
                   | null
@@ -11345,7 +11358,10 @@ export type GetHomeQuery = {
                       purpose: UsagePurpose;
                       notes?: string | null | undefined;
                       pantryItem: { __typename?: 'PantryItem'; id: string };
-                      usedBy: { __typename?: 'User'; id: string };
+                      usedBy?:
+                        | { __typename?: 'User'; id: string }
+                        | null
+                        | undefined;
                       cookingLog?:
                         | { __typename?: 'CookingLog'; id: string }
                         | null
@@ -11929,7 +11945,10 @@ export type GetHomesQuery = {
                   purpose: UsagePurpose;
                   notes?: string | null | undefined;
                   pantryItem: { __typename?: 'PantryItem'; id: string };
-                  usedBy: { __typename?: 'User'; id: string };
+                  usedBy?:
+                    | { __typename?: 'User'; id: string }
+                    | null
+                    | undefined;
                   cookingLog?:
                     | { __typename?: 'CookingLog'; id: string }
                     | null
@@ -12384,7 +12403,10 @@ export type GetHomeByJoinCodeQuery = {
                       purpose: UsagePurpose;
                       notes?: string | null | undefined;
                       pantryItem: { __typename?: 'PantryItem'; id: string };
-                      usedBy: { __typename?: 'User'; id: string };
+                      usedBy?:
+                        | { __typename?: 'User'; id: string }
+                        | null
+                        | undefined;
                       cookingLog?:
                         | { __typename?: 'CookingLog'; id: string }
                         | null
@@ -12800,7 +12822,10 @@ export type CreateHomeMutation = {
                   purpose: UsagePurpose;
                   notes?: string | null | undefined;
                   pantryItem: { __typename?: 'PantryItem'; id: string };
-                  usedBy: { __typename?: 'User'; id: string };
+                  usedBy?:
+                    | { __typename?: 'User'; id: string }
+                    | null
+                    | undefined;
                   cookingLog?:
                     | { __typename?: 'CookingLog'; id: string }
                     | null
@@ -13215,7 +13240,10 @@ export type UpdateHomeMutation = {
                   purpose: UsagePurpose;
                   notes?: string | null | undefined;
                   pantryItem: { __typename?: 'PantryItem'; id: string };
-                  usedBy: { __typename?: 'User'; id: string };
+                  usedBy?:
+                    | { __typename?: 'User'; id: string }
+                    | null
+                    | undefined;
                   cookingLog?:
                     | { __typename?: 'CookingLog'; id: string }
                     | null
@@ -13629,7 +13657,10 @@ export type DeleteHomeMutation = {
                   purpose: UsagePurpose;
                   notes?: string | null | undefined;
                   pantryItem: { __typename?: 'PantryItem'; id: string };
-                  usedBy: { __typename?: 'User'; id: string };
+                  usedBy?:
+                    | { __typename?: 'User'; id: string }
+                    | null
+                    | undefined;
                   cookingLog?:
                     | { __typename?: 'CookingLog'; id: string }
                     | null
@@ -14447,7 +14478,10 @@ export type GetDefaultHomeQuery = {
                       purpose: UsagePurpose;
                       notes?: string | null | undefined;
                       pantryItem: { __typename?: 'PantryItem'; id: string };
-                      usedBy: { __typename?: 'User'; id: string };
+                      usedBy?:
+                        | { __typename?: 'User'; id: string }
+                        | null
+                        | undefined;
                       cookingLog?:
                         | { __typename?: 'CookingLog'; id: string }
                         | null
@@ -15003,6 +15037,8 @@ export type AutocompleteItemsQuery = {
           name: string;
           imageUrl?: string | null | undefined;
           images?: any | null | undefined;
+          netWeight?: number | null | undefined;
+          displayUnit?: string | null | undefined;
           defaultUnit?:
             | {
                 __typename?: 'ItemUnitSuggestion';
@@ -15245,8 +15281,13 @@ export type SearchUnitsQuery = {
     name: string;
     symbol: string;
     type: UnitType;
+    isMetric: boolean;
     isCommon: boolean;
     sortOrder: number;
+    displayAsFraction: boolean;
+    minPrecision: number;
+    conversionFactor: number;
+    baseUnitId?: string | null | undefined;
   }>;
 };
 
@@ -15262,8 +15303,33 @@ export type GetCommonUnitsQuery = {
     name: string;
     symbol: string;
     type: UnitType;
+    isMetric: boolean;
     isCommon: boolean;
     sortOrder: number;
+    displayAsFraction: boolean;
+    minPrecision: number;
+    conversionFactor: number;
+    baseUnitId?: string | null | undefined;
+  }>;
+};
+
+export type GetConvertibleUnitsQueryVariables = Exact<{
+  unitId: Scalars['ID']['input'];
+}>;
+
+export type GetConvertibleUnitsQuery = {
+  __typename?: 'Query';
+  getConvertibleUnits: Array<{
+    __typename?: 'Unit';
+    id: string;
+    name: string;
+    symbol: string;
+    type: UnitType;
+    isMetric: boolean;
+    isCommon: boolean;
+    displayAsFraction: boolean;
+    minPrecision: number;
+    conversionFactor: number;
   }>;
 };
 
@@ -15712,7 +15778,7 @@ export type GetPantryQuery = {
                 purpose: UsagePurpose;
                 notes?: string | null | undefined;
                 pantryItem: { __typename?: 'PantryItem'; id: string };
-                usedBy: { __typename?: 'User'; id: string };
+                usedBy?: { __typename?: 'User'; id: string } | null | undefined;
                 cookingLog?:
                   | { __typename?: 'CookingLog'; id: string }
                   | null
@@ -15983,7 +16049,7 @@ export type GetPantryItemQuery = {
       purpose: UsagePurpose;
       notes?: string | null | undefined;
       pantryItem: { __typename?: 'PantryItem'; id: string };
-      usedBy: { __typename?: 'User'; id: string };
+      usedBy?: { __typename?: 'User'; id: string } | null | undefined;
       cookingLog?: { __typename?: 'CookingLog'; id: string } | null | undefined;
       mealPlanItem?:
         | { __typename?: 'MealPlanItem'; id: string }
@@ -16284,7 +16350,7 @@ export type CreatePantryItemMutation = {
       purpose: UsagePurpose;
       notes?: string | null | undefined;
       pantryItem: { __typename?: 'PantryItem'; id: string };
-      usedBy: { __typename?: 'User'; id: string };
+      usedBy?: { __typename?: 'User'; id: string } | null | undefined;
       cookingLog?: { __typename?: 'CookingLog'; id: string } | null | undefined;
       mealPlanItem?:
         | { __typename?: 'MealPlanItem'; id: string }
@@ -16503,7 +16569,7 @@ export type UpdatePantryItemMutation = {
       purpose: UsagePurpose;
       notes?: string | null | undefined;
       pantryItem: { __typename?: 'PantryItem'; id: string };
-      usedBy: { __typename?: 'User'; id: string };
+      usedBy?: { __typename?: 'User'; id: string } | null | undefined;
       cookingLog?: { __typename?: 'CookingLog'; id: string } | null | undefined;
       mealPlanItem?:
         | { __typename?: 'MealPlanItem'; id: string }
@@ -16721,7 +16787,7 @@ export type DeletePantryItemMutation = {
       purpose: UsagePurpose;
       notes?: string | null | undefined;
       pantryItem: { __typename?: 'PantryItem'; id: string };
-      usedBy: { __typename?: 'User'; id: string };
+      usedBy?: { __typename?: 'User'; id: string } | null | undefined;
       cookingLog?: { __typename?: 'CookingLog'; id: string } | null | undefined;
       mealPlanItem?:
         | { __typename?: 'MealPlanItem'; id: string }
@@ -16742,13 +16808,25 @@ export type CreatePantryItemUsageMutation = {
     __typename?: 'PantryItemUsage';
     id: string;
     quantityUsed: number;
+    usageUnitId?: string | null | undefined;
+    weightUsed?: number | null | undefined;
+    weightUsedUnitId?: string | null | undefined;
     usedAt: string;
     purpose: UsagePurpose;
     notes?: string | null | undefined;
+    usageUnit?:
+      | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+      | null
+      | undefined;
+    weightUsedUnit?:
+      | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+      | null
+      | undefined;
     pantryItem: {
       __typename?: 'PantryItem';
       id: string;
       currentQuantity: number;
+      actualNetWeight?: number | null | undefined;
       consumedQuantity: number;
       pantryId: string;
       itemId: string;
@@ -16767,7 +16845,6 @@ export type CreatePantryItemUsageMutation = {
       autoReorderPoint?: number | null | undefined;
       isAutoReorder: boolean;
       customCategory?: string | null | undefined;
-      actualNetWeight?: number | null | undefined;
       createdAt: string;
       updatedAt?: string | null | undefined;
       version?: number | null | undefined;
@@ -16949,7 +17026,7 @@ export type CreatePantryItemUsageMutation = {
         purpose: UsagePurpose;
         notes?: string | null | undefined;
         pantryItem: { __typename?: 'PantryItem'; id: string };
-        usedBy: { __typename?: 'User'; id: string };
+        usedBy?: { __typename?: 'User'; id: string } | null | undefined;
         cookingLog?:
           | { __typename?: 'CookingLog'; id: string }
           | null
@@ -16961,7 +17038,10 @@ export type CreatePantryItemUsageMutation = {
         recipe?: { __typename?: 'Recipe'; id: string } | null | undefined;
       }>;
     };
-    usedBy: { __typename?: 'User'; id: string; email: string };
+    usedBy?:
+      | { __typename?: 'User'; id: string; email: string }
+      | null
+      | undefined;
   };
 };
 
@@ -16969,6 +17049,9 @@ export type RecordPantryItemWasteMutationVariables = Exact<{
   id: Scalars['ID']['input'];
   wasteAmount: Scalars['Float']['input'];
   wasteReason: WasteReason;
+  wasteUnitId?: InputMaybe<Scalars['String']['input']>;
+  wasteWeight?: InputMaybe<Scalars['Float']['input']>;
+  wasteWeightUnitId?: InputMaybe<Scalars['String']['input']>;
   isComposted?: InputMaybe<Scalars['Boolean']['input']>;
   isRecycled?: InputMaybe<Scalars['Boolean']['input']>;
 }>;
@@ -17176,7 +17259,7 @@ export type RecordPantryItemWasteMutation = {
       purpose: UsagePurpose;
       notes?: string | null | undefined;
       pantryItem: { __typename?: 'PantryItem'; id: string };
-      usedBy: { __typename?: 'User'; id: string };
+      usedBy?: { __typename?: 'User'; id: string } | null | undefined;
       cookingLog?: { __typename?: 'CookingLog'; id: string } | null | undefined;
       mealPlanItem?:
         | { __typename?: 'MealPlanItem'; id: string }
@@ -17397,7 +17480,7 @@ export type UpdatePantryItemQuantityMutation = {
       purpose: UsagePurpose;
       notes?: string | null | undefined;
       pantryItem: { __typename?: 'PantryItem'; id: string };
-      usedBy: { __typename?: 'User'; id: string };
+      usedBy?: { __typename?: 'User'; id: string } | null | undefined;
       cookingLog?: { __typename?: 'CookingLog'; id: string } | null | undefined;
       mealPlanItem?:
         | { __typename?: 'MealPlanItem'; id: string }
@@ -17636,7 +17719,7 @@ export type SyncPantryItemMutation = {
             purpose: UsagePurpose;
             notes?: string | null | undefined;
             pantryItem: { __typename?: 'PantryItem'; id: string };
-            usedBy: { __typename?: 'User'; id: string };
+            usedBy?: { __typename?: 'User'; id: string } | null | undefined;
             cookingLog?:
               | { __typename?: 'CookingLog'; id: string }
               | null
@@ -18048,7 +18131,7 @@ export type PantryItemsChangedSubscription = {
         purpose: UsagePurpose;
         notes?: string | null | undefined;
         pantryItem: { __typename?: 'PantryItem'; id: string };
-        usedBy: { __typename?: 'User'; id: string };
+        usedBy?: { __typename?: 'User'; id: string } | null | undefined;
         cookingLog?:
           | { __typename?: 'CookingLog'; id: string }
           | null
@@ -18083,7 +18166,7 @@ export type PantryItemUsageChangedSubscription = {
       purpose: UsagePurpose;
       notes?: string | null | undefined;
       pantryItem: { __typename?: 'PantryItem'; id: string };
-      usedBy: { __typename?: 'User'; id: string };
+      usedBy?: { __typename?: 'User'; id: string } | null | undefined;
     };
     previousValues?:
       | {

@@ -257,6 +257,7 @@ export function DynamicFormFields<T extends FieldValues>({
                   const inputProps: any = {
                     label,
                     ...(placeholder && { placeholder }),
+                    ...(testID && { testID }),
                     ...props,
                   };
 

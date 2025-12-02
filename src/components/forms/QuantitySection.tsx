@@ -15,11 +15,9 @@ interface QuantitySectionProps {
   errors: FieldErrors<any>;
   mode: 'add' | 'edit';
   quantity: number;
-  quantityInput: string;
   unit: string;
   itemWeight?: number;
   isAutoReorder?: boolean;
-  onQuantityInputChange: (text: string) => void;
   onIncrementQuantity: () => void;
   onDecrementQuantity: () => void;
   onUnitSelected?: (unitId: string | null) => void;
@@ -32,9 +30,7 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
   control,
   errors,
   mode,
-  quantityInput,
   isAutoReorder,
-  onQuantityInputChange,
   onUnitSelected,
   testID,
   unitTestID,
@@ -44,23 +40,17 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
       return [
         {
           name: 'quantityInput',
-          label: 'Quantity',
-          component: () => (
-            <FractionInput
-              label="Quantity *"
-              value={quantityInput}
-              onChangeText={onQuantityInputChange}
-              placeholder="e.g., 1, 1 1/4, or 1.5"
-              testID={testID}
-            />
-          ),
+          label: 'Quantity *',
+          placeholder: 'e.g., 1, 1 1/4, or 1.5',
+          component: FractionInput,
+          testID,
         },
         {
           name: 'itemWeight',
-          label: 'Weight',
+          label: 'Net Weight',
           placeholder: 'e.g., 2.2',
           component: FormInput,
-          props: { keyboardType: 'decimal-pad' },
+          props: { keyboardType: 'decimal-pad', componentType: 'number' },
         },
         {
           name: 'unit',
@@ -83,22 +73,16 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
       const baseFields: FieldDef<any>[] = [
         {
           name: 'quantityInput',
-          label: 'Current Quantity',
-          component: () => (
-            <FractionInput
-              label="Current Quantity *"
-              value={quantityInput}
-              onChangeText={onQuantityInputChange}
-              placeholder="e.g., 1, 1 1/4, or 1.5"
-            />
-          ),
+          label: 'Current Quantity *',
+          placeholder: 'e.g., 1, 1 1/4, or 1.5',
+          component: FractionInput,
         },
         {
           name: 'itemWeight',
           label: 'Net Weight',
           placeholder: 'e.g., 2.2',
           component: FormInput,
-          props: { keyboardType: 'decimal-pad' },
+          props: { keyboardType: 'decimal-pad', componentType: 'number' },
         },
         {
           name: 'unit',

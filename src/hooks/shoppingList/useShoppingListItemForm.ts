@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 
 import { ShoppingListItemFragment } from '#generated';
+import { parseFractionalInput } from '#/utils';
 
 type FormState = {
   itemName: string;
@@ -52,37 +53,11 @@ export function useShoppingListItemForm(initialState?: Partial<FormState>) {
   }, [formState.selectedUnitId, formState.unit]);
 
   const parseQuantityInput = useCallback(() => {
-    const trimmed = formState.quantityInput.trim();
-
-    if (!trimmed) {
+    const result = parseFractionalInput(formState.quantityInput);
+    if (result === null || result <= 0) {
       return null;
     }
-
-    try {
-      let quantityValue: number;
-
-      if (trimmed.includes('/')) {
-        const parts = trimmed.split(/\s+/);
-        if (parts.length === 2) {
-          const whole = parseInt(parts[0]);
-          const [num, den] = parts[1].split('/').map(Number);
-          quantityValue = whole + num / den;
-        } else {
-          const [num, den] = trimmed.split('/').map(Number);
-          quantityValue = num / den;
-        }
-      } else {
-        quantityValue = parseFloat(trimmed);
-      }
-
-      if (isNaN(quantityValue) || quantityValue <= 0) {
-        return null;
-      }
-
-      return quantityValue;
-    } catch (error) {
-      return null;
-    }
+    return result;
   }, [formState.quantityInput]);
 
   return {
