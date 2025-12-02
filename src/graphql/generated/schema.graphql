@@ -3954,7 +3954,7 @@ type PantryItemUsage {
   usageUnit: Unit
   usageUnitId: String
   usedAt: DateTime!
-  usedBy: User!
+  usedBy: User
   weightUsed: Float
   weightUsedUnit: Unit
   weightUsedUnitId: String

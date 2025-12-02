@@ -4612,7 +4612,7 @@ export type PantryItemUsage = {
   usageUnit: Maybe<Unit>;
   usageUnitId: Maybe<Scalars['String']['output']>;
   usedAt: Scalars['DateTime']['output'];
-  usedBy: User;
+  usedBy: Maybe<User>;
   weightUsed: Maybe<Scalars['Float']['output']>;
   weightUsedUnit: Maybe<Unit>;
   weightUsedUnitId: Maybe<Scalars['String']['output']>;
@@ -9489,7 +9489,7 @@ export type PantryItemFragment = {
     purpose: UsagePurpose;
     notes: string | null | undefined;
     pantryItem: { __typename?: 'PantryItem'; id: string };
-    usedBy: { __typename?: 'User'; id: string };
+    usedBy: { __typename?: 'User'; id: string } | null | undefined;
     cookingLog: { __typename?: 'CookingLog'; id: string } | null | undefined;
     mealPlanItem:
       | { __typename?: 'MealPlanItem'; id: string }
@@ -11444,7 +11444,10 @@ export type CreatePantryItemUsageMutation = {
       actualNetWeight: number | null | undefined;
       consumedQuantity: number;
     } & PantryItemFragment;
-    usedBy: { __typename?: 'User'; id: string; email: string };
+    usedBy:
+      | { __typename?: 'User'; id: string; email: string }
+      | null
+      | undefined;
   };
 };
 
@@ -11708,7 +11711,7 @@ export type PantryItemUsageChangedSubscription = {
       purpose: UsagePurpose;
       notes: string | null | undefined;
       pantryItem: { __typename?: 'PantryItem'; id: string };
-      usedBy: { __typename?: 'User'; id: string };
+      usedBy: { __typename?: 'User'; id: string } | null | undefined;
     };
     previousValues:
       | {
