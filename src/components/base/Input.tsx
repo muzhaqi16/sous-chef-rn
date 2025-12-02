@@ -14,6 +14,7 @@ interface InputProps {
   autoFocus?: boolean;
   required?: boolean;
   testID?: string;
+  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
 }
 
 export const Input: React.FC<InputProps> = ({
@@ -28,6 +29,7 @@ export const Input: React.FC<InputProps> = ({
   autoFocus = false,
   required = false,
   testID,
+  autoCapitalize,
 }) => {
   const {theme} = useUnistyles();
   return (
@@ -52,6 +54,7 @@ export const Input: React.FC<InputProps> = ({
         autoFocus={autoFocus}
         placeholderTextColor={theme.colors.textSecondary}
         testID={testID}
+        autoCapitalize={autoCapitalize}
       />
       {error && <Text style={styles.errorText}>{error}</Text>}
     </View>

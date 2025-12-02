@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, Platform } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetScrollView,
@@ -114,15 +114,17 @@ export const RecordWastePantryItemModal: React.FC<
   const calculateRemaining = useCallback((): number | null => {
     if (!pantryItem) return null;
     const wasteAmount = parseFractionalInput(wasteAmountInput);
-    if (wasteAmount === null) return null;
+    if (wasteAmount === null || isNaN(wasteAmount)) return null;
 
     if (trackingUnit === 'weight') {
       // Calculate remaining weight using effective total weight
       const totalWeight = getEffectiveTotalWeight(pantryItem);
-      return totalWeight - wasteAmount;
+      const remaining = totalWeight - wasteAmount;
+      return isNaN(remaining) ? null : remaining;
     } else {
       // Calculate remaining count
-      return pantryItem.currentQuantity - wasteAmount;
+      const remaining = pantryItem.currentQuantity - wasteAmount;
+      return isNaN(remaining) ? null : remaining;
     }
   }, [pantryItem, wasteAmountInput, trackingUnit, getEffectiveTotalWeight]);
 
@@ -235,14 +237,19 @@ export const RecordWastePantryItemModal: React.FC<
               <Text style={styles.itemName}>{pantryItem.itemName}</Text>
               <View style={styles.availableRow}>
                 <Text style={styles.availableLabel}>Available: </Text>
-                <FormattedItemSubtitle
-                  quantity={pantryItem.currentQuantity}
-                  quantityInput={pantryItem.quantityInput}
-                  displayFormat={pantryItem.displayFormat}
-                  displayAsFraction={pantryItem.unit?.displayAsFraction}
-                  netWeight={pantryItem.item?.netWeight}
-                  unitSymbol={pantryItem.item?.displayUnit?.symbol || pantryItem.unit?.symbol}
-                />
+                {trackingMode === 'count' ? (
+                  <FormattedItemSubtitle
+                    quantity={pantryItem.currentQuantity}
+                    quantityInput={pantryItem.quantityInput}
+                    displayFormat={pantryItem.displayFormat}
+                    displayAsFraction={pantryItem.unit?.displayAsFraction}
+                    unitSymbol={pantryItem.unit?.symbol}
+                  />
+                ) : (
+                  <Text style={styles.availableValue}>
+                    {getEffectiveTotalWeight(pantryItem)} {pantryItem.item?.displayUnit?.symbol || 'g'}
+                  </Text>
+                )}
               </View>
             </View>
 
@@ -304,6 +311,10 @@ export const RecordWastePantryItemModal: React.FC<
                 value={wasteAmountInput}
                 onChangeText={setWasteAmountInput}
                 placeholder="e.g., 1, 1 1/4, or 1.5"
+                keyboardType={trackingUnit === 'weight'
+                  ? (Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'decimal-pad')
+                  : 'numeric'
+                }
               />
               {remaining !== null && (
                 <Text
@@ -442,6 +453,11 @@ const styles = StyleSheet.create(theme => ({
   availableLabel: {
     fontSize: theme.fonts.size.base,
     color: theme.colors.textSecondary,
+  },
+  availableValue: {
+    fontSize: theme.fonts.size.base,
+    color: theme.colors.textPrimary,
+    fontWeight: theme.fonts.weight.semibold,
   },
   section: {
     marginBottom: theme.spacing.xl,

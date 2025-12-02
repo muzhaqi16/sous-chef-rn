@@ -2035,10 +2035,12 @@ export type ItemSuggestion = {
   brand: Maybe<BrandSuggestion>;
   category: Maybe<CategorySuggestion>;
   defaultUnit: Maybe<ItemUnitSuggestion>;
+  displayUnit: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
   imageUrl: Maybe<Scalars['String']['output']>;
   images: Maybe<Scalars['JSON']['output']>;
   name: Scalars['String']['output'];
+  netWeight: Maybe<Scalars['Float']['output']>;
 };
 
 export enum ItemType {
@@ -10801,6 +10803,8 @@ export type AutocompleteItemsQuery = {
           name: string;
           imageUrl: string | null | undefined;
           images: any | null | undefined;
+          netWeight: number | null | undefined;
+          displayUnit: string | null | undefined;
           defaultUnit:
             | {
                 __typename?: 'ItemUnitSuggestion';
@@ -36019,6 +36023,14 @@ export const AutocompleteItemsDocument = {
                       {
                         kind: 'Field',
                         name: { kind: 'Name', value: 'images' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'netWeight' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'displayUnit' },
                       },
                       {
                         kind: 'Field',

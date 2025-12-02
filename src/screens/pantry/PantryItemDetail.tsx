@@ -150,6 +150,7 @@ export const PantryItemDetail: React.FC<{
             <View style={styles.quantityDescription}>
               <FormattedItemSubtitle
                 quantity={item.currentQuantity}
+                initialQuantity={item.initialQuantity}
                 netWeight={effectiveNetWeight}
                 unitSymbol={effectiveWeightUnit?.symbol || item.unit?.symbol}
                 additionalInfo={item.storageState}
@@ -170,6 +171,7 @@ export const PantryItemDetail: React.FC<{
             <View>
               <FormattedItemSubtitle
                 quantity={item?.currentQuantity}
+                initialQuantity={item?.initialQuantity}
                 netWeight={effectiveNetWeight}
                 unitSymbol={effectiveWeightUnit?.symbol || item?.unit?.symbol}
               />

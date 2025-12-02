@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, Platform } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetScrollView,
@@ -114,15 +114,17 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
   const calculateRemaining = useCallback((): number | null => {
     if (!pantryItem) return null;
     const consumeAmount = parseFractionalInput(quantityInput);
-    if (consumeAmount === null) return null;
+    if (consumeAmount === null || isNaN(consumeAmount)) return null;
 
     if (trackingUnit === 'weight') {
       // Calculate remaining weight
       const totalWeight = getEffectiveTotalWeight(pantryItem);
-      return totalWeight - consumeAmount;
+      const remaining = totalWeight - consumeAmount;
+      return isNaN(remaining) ? null : remaining;
     } else {
       // Calculate remaining count
-      return pantryItem.currentQuantity - consumeAmount;
+      const remaining = pantryItem.currentQuantity - consumeAmount;
+      return isNaN(remaining) ? null : remaining;
     }
   }, [pantryItem, quantityInput, trackingUnit, getEffectiveTotalWeight]);
 
@@ -240,17 +242,19 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
               <Text style={styles.itemName}>{pantryItem.itemName}</Text>
               <View style={styles.availableRow}>
                 <Text style={styles.availableLabel}>Available: </Text>
-                <FormattedItemSubtitle
-                  quantity={pantryItem.currentQuantity}
-                  quantityInput={pantryItem.quantityInput}
-                  displayFormat={pantryItem.displayFormat}
-                  displayAsFraction={pantryItem.unit?.displayAsFraction}
-                  netWeight={pantryItem.item?.netWeight}
-                  unitSymbol={
-                    pantryItem.item?.displayUnit?.symbol ||
-                    pantryItem.unit?.symbol
-                  }
-                />
+                {trackingMode === 'count' ? (
+                  <FormattedItemSubtitle
+                    quantity={pantryItem.currentQuantity}
+                    quantityInput={pantryItem.quantityInput}
+                    displayFormat={pantryItem.displayFormat}
+                    displayAsFraction={pantryItem.unit?.displayAsFraction}
+                    unitSymbol={pantryItem.unit?.symbol}
+                  />
+                ) : (
+                  <Text style={styles.availableValue}>
+                    {getEffectiveTotalWeight(pantryItem)} {pantryItem.item?.displayUnit?.symbol || 'g'}
+                  </Text>
+                )}
               </View>
             </View>
 
@@ -312,6 +316,10 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
                 value={quantityInput}
                 onChangeText={setQuantityInput}
                 placeholder="e.g., 1, 1 1/4, or 1.5"
+                keyboardType={trackingUnit === 'weight'
+                  ? (Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'decimal-pad')
+                  : 'numeric'
+                }
               />
               {remaining !== null && (
                 <Text
@@ -430,6 +438,11 @@ const styles = StyleSheet.create(theme => ({
   availableLabel: {
     fontSize: theme.fonts.size.base,
     color: theme.colors.textSecondary,
+  },
+  availableValue: {
+    fontSize: theme.fonts.size.base,
+    color: theme.colors.textPrimary,
+    fontWeight: theme.fonts.weight.semibold,
   },
   section: {
     marginBottom: theme.spacing.xl,

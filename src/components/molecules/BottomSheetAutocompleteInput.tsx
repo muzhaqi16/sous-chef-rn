@@ -20,6 +20,7 @@ interface BottomSheetAutocompleteInputProps<T> {
   required?: boolean;
   error?: string;
   testID?: string;
+  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
 
   // Modal configuration
   title: string;
@@ -55,6 +56,7 @@ export function BottomSheetAutocompleteInput<T>({
   required,
   error,
   testID,
+  autoCapitalize,
 
   // Modal props
   title,
@@ -88,12 +90,31 @@ export function BottomSheetAutocompleteInput<T>({
   // Check online status to prevent autocomplete when offline
   const isOnline = useStore(state => state.isOnline);
 
-  // Sync searchTerm with external value changes
+  // Sync searchTerm with external value changes only when modal is closed
+  // When modal is open, searchTerm is the source of truth to avoid cursor jumping
   useEffect(() => {
-    if (value !== searchTerm) {
+    if (!showAutocomplete && value !== searchTerm) {
       setSearchTerm(value || '');
     }
-  }, [value, searchTerm]);
+  }, [value, showAutocomplete]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-close modal when no matches found after search completes
+  useEffect(() => {
+    if (
+      showAutocomplete &&
+      !loading &&
+      data.length === 0 &&
+      searchTerm.length >= minSearchLength
+    ) {
+      // Small delay to allow user to see "no results" briefly before closing
+      const timer = setTimeout(() => {
+        setShowAutocomplete(false);
+        bottomSheetRef.current?.dismiss();
+        onModalClose?.();
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [showAutocomplete, loading, data.length, searchTerm.length, minSearchLength, onModalClose]);
 
   const handleTextChange = (text: string) => {
     onChangeText(text);
@@ -181,6 +202,7 @@ export function BottomSheetAutocompleteInput<T>({
         required={required}
         error={error}
         testID={testID}
+        autoCapitalize={autoCapitalize}
       />
 
       <BottomSheetModal
@@ -228,6 +250,7 @@ export function BottomSheetAutocompleteInput<T>({
                 returnKeyType="done"
                 onSubmitEditing={handleSubmitCustomValue}
                 testID={testID ? `${testID}-search` : undefined}
+                autoCapitalize={autoCapitalize}
               />
             </View>
           }

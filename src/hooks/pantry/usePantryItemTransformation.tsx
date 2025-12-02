@@ -8,6 +8,7 @@ interface PantryItem {
   id: string;
   expiresAt?: string | null;
   currentQuantity: number;
+  initialQuantity?: number | null;
   autoReorderPoint?: number | null;
   storageState?: string | null;
   // Pantry item's own weight (override)
@@ -108,6 +109,7 @@ export function usePantryItemTransformation<T extends PantryItem>(
         subtitle: (
           <FormattedItemSubtitle
             quantity={item.currentQuantity}
+            initialQuantity={item.initialQuantity}
             netWeight={effectiveNetWeight}
             unitSymbol={effectiveWeightUnitSymbol}
             additionalInfo={item.storageState ?? undefined}

@@ -304,6 +304,13 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
       if (item.defaultUnit?.symbol) {
         setValue('unit', item.defaultUnit.symbol);
       }
+      if (item.defaultUnit?.id) {
+        setSelectedUnitId(item.defaultUnit.id);
+      }
+      // Auto-populate weight from catalog
+      if (item.netWeight != null) {
+        setValue('itemWeight', item.netWeight);
+      }
     },
     [setValue],
   );
@@ -326,13 +333,6 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
           setValue('storageState', StorageState.Ambient);
         }
       }
-    },
-    [setValue],
-  );
-
-  const handleQuantityInputChange = useCallback(
-    (text: string) => {
-      setValue('quantityInput', text);
     },
     [setValue],
   );
@@ -589,11 +589,9 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
             errors={errors}
             mode={mode}
             quantity={watchedValues.quantity}
-            quantityInput={watchedValues.quantityInput}
             itemWeight={watchedValues.itemWeight}
             unit={watchedValues.unit}
             isAutoReorder={watchedValues.isAutoReorder}
-            onQuantityInputChange={handleQuantityInputChange}
             onIncrementQuantity={handleIncrementQuantity}
             onDecrementQuantity={handleDecrementQuantity}
             onUnitSelected={setSelectedUnitId}

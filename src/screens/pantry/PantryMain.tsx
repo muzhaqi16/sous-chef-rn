@@ -192,7 +192,7 @@ const PantryMainScreen: React.FC = React.memo(() => {
       console.error('Failed to create pantry item usage:', error);
       Alert.alert(
         'Error',
-        'Failed to record item consumption. Please try again.',
+        error.message || 'Failed to record item consumption. Please try again.',
       );
     },
   });
@@ -202,7 +202,10 @@ const PantryMainScreen: React.FC = React.memo(() => {
     errorPolicy: 'all',
     onError: error => {
       console.error('Failed to record pantry item waste:', error);
-      Alert.alert('Error', 'Failed to record waste. Please try again.');
+      Alert.alert(
+        'Error',
+        error.message || 'Failed to record waste. Please try again.',
+      );
     },
   });
 

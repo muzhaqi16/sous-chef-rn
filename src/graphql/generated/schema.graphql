@@ -2375,10 +2375,12 @@ type ItemSuggestion {
   brand: BrandSuggestion
   category: CategorySuggestion
   defaultUnit: ItemUnitSuggestion
+  displayUnit: String
   id: ID!
   imageUrl: String
   images: JSON
   name: String!
+  netWeight: Float
 }
 
 enum ItemType {
