@@ -178,7 +178,8 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
         const perItemWeight = totalWeight / pantryItem.currentQuantity;
         weightUsed = quantityValue * perItemWeight;
         weightUsedUnitId =
-          pantryItem.actualNetWeightUnit?.id || pantryItem.item?.displayUnit?.id;
+          pantryItem.actualNetWeightUnit?.id ||
+          pantryItem.item?.displayUnit?.id;
       }
     }
 
@@ -245,14 +246,14 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
                 {trackingMode === 'count' ? (
                   <FormattedItemSubtitle
                     quantity={pantryItem.currentQuantity}
-                    quantityInput={pantryItem.quantityInput}
                     displayFormat={pantryItem.displayFormat}
                     displayAsFraction={pantryItem.unit?.displayAsFraction}
                     unitSymbol={pantryItem.unit?.symbol}
                   />
                 ) : (
                   <Text style={styles.availableValue}>
-                    {getEffectiveTotalWeight(pantryItem)} {pantryItem.item?.displayUnit?.symbol || 'g'}
+                    {getEffectiveTotalWeight(pantryItem)}{' '}
+                    {pantryItem.item?.displayUnit?.symbol || 'g'}
                   </Text>
                 )}
               </View>
@@ -266,7 +267,8 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
                   <TouchableOpacity
                     style={[
                       styles.unitToggleOption,
-                      trackingUnit === 'count' && styles.unitToggleOptionSelected,
+                      trackingUnit === 'count' &&
+                        styles.unitToggleOptionSelected,
                     ]}
                     onPress={() => {
                       setTrackingUnit('count');
@@ -276,7 +278,8 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
                     <Text
                       style={[
                         styles.unitToggleText,
-                        trackingUnit === 'count' && styles.unitToggleTextSelected,
+                        trackingUnit === 'count' &&
+                          styles.unitToggleTextSelected,
                       ]}
                     >
                       Count ({pantryItem.unit?.symbol || 'item'})
@@ -285,7 +288,8 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
                   <TouchableOpacity
                     style={[
                       styles.unitToggleOption,
-                      trackingUnit === 'weight' && styles.unitToggleOptionSelected,
+                      trackingUnit === 'weight' &&
+                        styles.unitToggleOptionSelected,
                     ]}
                     onPress={() => {
                       setTrackingUnit('weight');
@@ -295,7 +299,8 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
                     <Text
                       style={[
                         styles.unitToggleText,
-                        trackingUnit === 'weight' && styles.unitToggleTextSelected,
+                        trackingUnit === 'weight' &&
+                          styles.unitToggleTextSelected,
                       ]}
                     >
                       Weight ({pantryItem.item?.displayUnit?.symbol || 'g'})
@@ -310,15 +315,22 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
               <FractionInput
                 label={
                   trackingUnit === 'weight'
-                    ? `Weight to Consume (${pantryItem.item?.displayUnit?.symbol || 'g'}) *`
-                    : `Quantity to Consume (${pantryItem.unit?.symbol || 'item'}) *`
+                    ? `Weight to Consume (${
+                        pantryItem.item?.displayUnit?.symbol || 'g'
+                      }) *`
+                    : `Quantity to Consume (${
+                        pantryItem.unit?.symbol || 'item'
+                      }) *`
                 }
                 value={quantityInput}
                 onChangeText={setQuantityInput}
                 placeholder="e.g., 1, 1 1/4, or 1.5"
-                keyboardType={trackingUnit === 'weight'
-                  ? (Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'decimal-pad')
-                  : 'numeric'
+                keyboardType={
+                  trackingUnit === 'weight'
+                    ? Platform.OS === 'ios'
+                      ? 'numbers-and-punctuation'
+                      : 'decimal-pad'
+                    : 'numeric'
                 }
               />
               {remaining !== null && (

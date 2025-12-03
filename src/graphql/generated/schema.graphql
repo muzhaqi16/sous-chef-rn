@@ -496,6 +496,24 @@ enum AllergenSeverity {
   TRACE
 }
 
+"""
+Input for filtering analytics queries by time period
+"""
+input AnalyticsFilterInput {
+  """
+  Custom date range - overrides dateRange if both provided
+  """
+  customRange: DateRangeInput
+  """
+  Predefined date range (TODAY, LAST_WEEK, LAST_MONTH, etc.)
+  """
+  dateRange: DateRange
+  """
+  Limit for top items lists (default: 10)
+  """
+  topItemsLimit: Int
+}
+
 enum AppTheme {
   DARK
   LIGHT
@@ -1096,15 +1114,12 @@ input CreatePantryItemInput {
   acquisitionMethod: AcquisitionMethod
   actualNetWeight: Float
   actualNetWeightUnitId: String
-  autoReorderPoint: Float
-  batchNumber: String
   bestByDate: String
   condition: ItemCondition
   costPerUnit: Float
   customCategory: String
   expiresAt: String
   initialQuantity: Float
-  isAutoReorder: Boolean
   itemBrand: String
   itemCategory: String
   itemDescription: String
@@ -1114,11 +1129,9 @@ input CreatePantryItemInput {
   itemNetWeight: Float
   itemUpc: String
   lastUsedAt: DateTime
-  lotNumber: String
   pantryId: ID!
   priority: Int
   purchaseId: String
-  quantityInput: String
   storageLocation: String
   storageNotes: String
   storageState: StorageState
@@ -3825,8 +3838,6 @@ type PantryItem {
   addedAt: DateTime!
   addedBy: User
   alertSentAt: DateTime
-  autoReorderPoint: Float
-  batchNumber: String
   bestByDate: DateTime
   condition: ItemCondition!
   consumedQuantity: Float!
@@ -3840,7 +3851,6 @@ type PantryItem {
   expiresAt: DateTime
   id: ID!
   initialQuantity: Float!
-  isAutoReorder: Boolean!
   isComposted: Boolean!
   isRecycled: Boolean!
   item: Item!
@@ -3848,9 +3858,7 @@ type PantryItem {
   itemName: String!
   itemUpc: String
   lastModifiedBy: User
-  lastReorderDate: DateTime
   lastUsedAt: DateTime
-  lotNumber: String
   lowStockAlert: Boolean!
   normalizedQuantity: Float
   normalizedUnit: Unit
@@ -3862,9 +3870,7 @@ type PantryItem {
   priority: Int
   purchase: Purchase
   purchaseId: String
-  quantityInput: String
   remainingValue: Float
-  reservedQuantity: Float!
   storageLocation: StorageLocation
   storageNotes: String
   storageState: StorageState!
@@ -3876,7 +3882,6 @@ type PantryItem {
   unitId: String
   unitName: String!
   updatedAt: DateTime
-  usageFrequency: UsageFrequency!
   usageRecords: [PantryItemUsage!]!
   version: Int
   wasteAmount: Float!
@@ -3913,7 +3918,6 @@ input PantryItemFilters {
   expirationDays: Int
   expiringSoon: Boolean
   itemId: String
-  lowStock: Boolean
   search: String
   storageState: StorageState
   tags: [String!]
@@ -4383,6 +4387,22 @@ type Query {
   pantryItem(id: ID!): PantryItem!
   pantryItemUsage(pantryItemId: ID!): [PantryItemUsage!]!
   pantryStats(pantryId: ID!): PantryStats!
+  """
+  Get comprehensive usage analytics for a pantry
+  Useful for building usage pattern charts and reports
+  """
+  pantryUsageAnalytics(
+    filter: AnalyticsFilterInput
+    pantryId: ID!
+  ): UsageAnalytics!
+  """
+  Get comprehensive waste analytics for a pantry
+  Useful for building waste tracking charts and reports
+  """
+  pantryWasteAnalytics(
+    filter: AnalyticsFilterInput
+    pantryId: ID!
+  ): WasteAnalytics!
   """
   Parse fractional input string to decimal
   Handles "1/4", "1 1/4", "0.25" formats
@@ -5686,8 +5706,6 @@ input SyncPantryItemInput {
   acquisitionMethod: AcquisitionMethod
   actualNetWeight: Float
   actualNetWeightUnitId: String
-  autoReorderPoint: Float
-  batchNumber: String
   bestByDate: String
   condition: ItemCondition
   costPerUnit: Float
@@ -5696,7 +5714,6 @@ input SyncPantryItemInput {
   expirationAlert: Boolean
   expiresAt: String
   initialQuantity: Float
-  isAutoReorder: Boolean
   isComposted: Boolean
   isRecycled: Boolean
   itemBrand: String
@@ -5708,14 +5725,11 @@ input SyncPantryItemInput {
   itemNetWeight: Float
   itemUpc: String
   lastUsedAt: DateTime
-  lotNumber: String
   lowStockAlert: Boolean
   openedAt: String
   pantryId: ID!
   priority: Int
   purchaseId: String
-  quantityInput: String
-  reservedQuantity: Float
   storageLocation: String
   storageNotes: String
   storageState: StorageState
@@ -5725,7 +5739,6 @@ input SyncPantryItemInput {
   unitId: String
   unitName: String
   unitSymbol: String
-  usageFrequency: UsageFrequency
   version: Int
   wasteAmount: Float
   wasteReason: WasteReason
@@ -5826,6 +5839,15 @@ type SyncShoppingListItemResult {
   Whether this was a create (true) or update (false) operation
   """
   wasCreated: Boolean!
+}
+
+"""
+Time series data point for charting usage/waste trends
+"""
+type TimeSeriesDataPoint {
+  count: Int!
+  date: DateTime!
+  value: Float!
 }
 
 interface Timestamped {
@@ -6224,27 +6246,24 @@ input UpdatePantryInput {
 input UpdatePantryItemInput {
   actualNetWeight: Float
   actualNetWeightUnitId: String
-  autoReorderPoint: Float
   bestByDate: String
   condition: ItemCondition
   currentQuantity: Float
   customCategory: String
   expirationAlert: Boolean
   expiresAt: String
-  isAutoReorder: Boolean
   isComposted: Boolean
   isRecycled: Boolean
   lastUsedAt: DateTime
   lowStockAlert: Boolean
   openedAt: String
   priority: Int
-  quantityInput: String
-  reservedQuantity: Float
   storageLocation: String
   storageNotes: String
   storageState: StorageState
   tags: [String!]
-  usageFrequency: UsageFrequency
+  unitId: String
+  unitName: String
   version: Int
   wasteAmount: Float
   wasteReason: WasteReason
@@ -6503,13 +6522,50 @@ type UpsertItemResult {
   mapping: ExternalSourceMapping!
 }
 
-enum UsageFrequency {
-  DAILY
-  MONTHLY
-  RARELY
-  SEASONAL
-  UNKNOWN
-  WEEKLY
+"""
+Comprehensive usage analytics for a pantry
+"""
+type UsageAnalytics {
+  averageUsagePerDay: Float!
+  periodEnd: DateTime!
+  periodStart: DateTime!
+  topUsedItems: [UsageByItem!]!
+  totalQuantityUsed: Float!
+  totalUsageCount: Int!
+  usageByPurpose: [UsageByPurpose!]!
+  usageBySource: [UsageBySource!]!
+  usageTrend: [TimeSeriesDataPoint!]!
+}
+
+"""
+Usage breakdown by item - top consumed items
+"""
+type UsageByItem {
+  count: Int!
+  itemId: String!
+  itemName: String!
+  totalQuantity: Float!
+  unitName: String
+}
+
+"""
+Usage breakdown by purpose (cooking, snack, waste, etc.)
+"""
+type UsageByPurpose {
+  count: Int!
+  percentage: Float!
+  purpose: UsagePurpose!
+  totalQuantity: Float!
+}
+
+"""
+Usage breakdown by source (manual, cooking log, meal plan, recipe)
+"""
+type UsageBySource {
+  count: Int!
+  percentage: Float!
+  source: UsageSource!
+  totalQuantity: Float!
 }
 
 enum UsagePurpose {
@@ -6813,6 +6869,47 @@ enum Visibility {
   PRIVATE
   PUBLIC
   RESTRICTED
+}
+
+"""
+Comprehensive waste analytics for a pantry
+"""
+type WasteAnalytics {
+  averageWastePerDay: Float!
+  composted: Float!
+  periodEnd: DateTime!
+  periodStart: DateTime!
+  recycled: Float!
+  topWastedItems: [WasteByItem!]!
+  totalWasteCount: Int!
+  totalWasteQuantity: Float!
+  totalWasteValue: Float!
+  wasteByReason: [WasteByReason!]!
+  wasteRate: Float!
+  wasteTrend: [TimeSeriesDataPoint!]!
+}
+
+"""
+Waste breakdown by item - most wasted items
+"""
+type WasteByItem {
+  count: Int!
+  estimatedValue: Float
+  itemId: String!
+  itemName: String!
+  totalQuantity: Float!
+  unitName: String
+}
+
+"""
+Waste breakdown by reason (expired, spoiled, etc.)
+"""
+type WasteByReason {
+  count: Int!
+  estimatedValue: Float
+  percentage: Float!
+  reason: WasteReason!
+  totalQuantity: Float!
 }
 
 enum WasteReason {

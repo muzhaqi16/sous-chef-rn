@@ -112,7 +112,8 @@ export const PantryItemDetail: React.FC<{
 
   // Use actualNetWeight if set (user override), otherwise fall back to catalog item weight
   const effectiveNetWeight = item?.actualNetWeight ?? item?.item?.netWeight;
-  const effectiveWeightUnit = item?.actualNetWeightUnit ?? item?.item?.displayUnit;
+  const effectiveWeightUnit =
+    item?.actualNetWeightUnit ?? item?.item?.displayUnit;
 
   // Helper function to format item type
   const formatItemType = (type?: string) => {
@@ -171,7 +172,6 @@ export const PantryItemDetail: React.FC<{
             <View>
               <FormattedItemSubtitle
                 quantity={item?.currentQuantity}
-                initialQuantity={item?.initialQuantity}
                 netWeight={effectiveNetWeight}
                 unitSymbol={effectiveWeightUnit?.symbol || item?.unit?.symbol}
               />
@@ -193,17 +193,13 @@ export const PantryItemDetail: React.FC<{
             <Text style={[commonStyles.caption, styles.detailLabel]}>
               Consumed
             </Text>
-            <Text style={styles.detailValue}>
-              {item?.consumedQuantity ?? 0} {item?.unit?.symbol ?? ''}
-            </Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={[commonStyles.caption, styles.detailLabel]}>
-              Minimum Stock
-            </Text>
-            <Text style={styles.detailValue}>
-              {item?.reservedQuantity ?? 0} {item?.unit?.symbol ?? ''}
-            </Text>
+            <View>
+              <FormattedItemSubtitle
+                quantity={item?.consumedQuantity}
+                netWeight={effectiveNetWeight}
+                unitSymbol={effectiveWeightUnit?.symbol || item?.unit?.symbol}
+              />
+            </View>
           </View>
           {effectiveNetWeight != null && effectiveWeightUnit && (
             <View style={styles.detailRow}>
@@ -268,17 +264,6 @@ export const PantryItemDetail: React.FC<{
               {formatItemType(item?.item?.type)}
             </Text>
           </View>
-          {item?.isAutoReorder && (
-            <View style={styles.detailRow}>
-              <Text style={[commonStyles.caption, styles.detailLabel]}>
-                Auto-Reorder
-              </Text>
-              <Text style={styles.detailValue}>
-                Enabled (at {item.autoReorderPoint ?? 0}{' '}
-                {item?.unit?.symbol ?? ''})
-              </Text>
-            </View>
-          )}
         </View>
       ),
     },

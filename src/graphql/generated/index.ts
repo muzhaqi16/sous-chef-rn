@@ -131,6 +131,16 @@ export enum AllergenSeverity {
   Trace = 'TRACE',
 }
 
+/** Input for filtering analytics queries by time period */
+export type AnalyticsFilterInput = {
+  /** Custom date range - overrides dateRange if both provided */
+  customRange?: InputMaybe<DateRangeInput>;
+  /** Predefined date range (TODAY, LAST_WEEK, LAST_MONTH, etc.) */
+  dateRange?: InputMaybe<DateRange>;
+  /** Limit for top items lists (default: 10) */
+  topItemsLimit?: InputMaybe<Scalars['Int']['input']>;
+};
+
 export enum AppTheme {
   Dark = 'DARK',
   Light = 'LIGHT',
@@ -734,15 +744,12 @@ export type CreatePantryItemInput = {
   acquisitionMethod?: InputMaybe<AcquisitionMethod>;
   actualNetWeight?: InputMaybe<Scalars['Float']['input']>;
   actualNetWeightUnitId?: InputMaybe<Scalars['String']['input']>;
-  autoReorderPoint?: InputMaybe<Scalars['Float']['input']>;
-  batchNumber?: InputMaybe<Scalars['String']['input']>;
   bestByDate?: InputMaybe<Scalars['String']['input']>;
   condition?: InputMaybe<ItemCondition>;
   costPerUnit?: InputMaybe<Scalars['Float']['input']>;
   customCategory?: InputMaybe<Scalars['String']['input']>;
   expiresAt?: InputMaybe<Scalars['String']['input']>;
   initialQuantity?: InputMaybe<Scalars['Float']['input']>;
-  isAutoReorder?: InputMaybe<Scalars['Boolean']['input']>;
   itemBrand?: InputMaybe<Scalars['String']['input']>;
   itemCategory?: InputMaybe<Scalars['String']['input']>;
   itemDescription?: InputMaybe<Scalars['String']['input']>;
@@ -752,11 +759,9 @@ export type CreatePantryItemInput = {
   itemNetWeight?: InputMaybe<Scalars['Float']['input']>;
   itemUpc?: InputMaybe<Scalars['String']['input']>;
   lastUsedAt?: InputMaybe<Scalars['DateTime']['input']>;
-  lotNumber?: InputMaybe<Scalars['String']['input']>;
   pantryId: Scalars['ID']['input'];
   priority?: InputMaybe<Scalars['Int']['input']>;
   purchaseId?: InputMaybe<Scalars['String']['input']>;
-  quantityInput?: InputMaybe<Scalars['String']['input']>;
   storageLocation?: InputMaybe<Scalars['String']['input']>;
   storageNotes?: InputMaybe<Scalars['String']['input']>;
   storageState?: InputMaybe<StorageState>;
@@ -4482,8 +4487,6 @@ export type PantryItem = {
   addedAt: Scalars['DateTime']['output'];
   addedBy: Maybe<User>;
   alertSentAt: Maybe<Scalars['DateTime']['output']>;
-  autoReorderPoint: Maybe<Scalars['Float']['output']>;
-  batchNumber: Maybe<Scalars['String']['output']>;
   bestByDate: Maybe<Scalars['DateTime']['output']>;
   condition: ItemCondition;
   consumedQuantity: Scalars['Float']['output'];
@@ -4497,7 +4500,6 @@ export type PantryItem = {
   expiresAt: Maybe<Scalars['DateTime']['output']>;
   id: Scalars['ID']['output'];
   initialQuantity: Scalars['Float']['output'];
-  isAutoReorder: Scalars['Boolean']['output'];
   isComposted: Scalars['Boolean']['output'];
   isRecycled: Scalars['Boolean']['output'];
   item: Item;
@@ -4505,9 +4507,7 @@ export type PantryItem = {
   itemName: Scalars['String']['output'];
   itemUpc: Maybe<Scalars['String']['output']>;
   lastModifiedBy: Maybe<User>;
-  lastReorderDate: Maybe<Scalars['DateTime']['output']>;
   lastUsedAt: Maybe<Scalars['DateTime']['output']>;
-  lotNumber: Maybe<Scalars['String']['output']>;
   lowStockAlert: Scalars['Boolean']['output'];
   normalizedQuantity: Maybe<Scalars['Float']['output']>;
   normalizedUnit: Maybe<Unit>;
@@ -4519,9 +4519,7 @@ export type PantryItem = {
   priority: Maybe<Scalars['Int']['output']>;
   purchase: Maybe<Purchase>;
   purchaseId: Maybe<Scalars['String']['output']>;
-  quantityInput: Maybe<Scalars['String']['output']>;
   remainingValue: Maybe<Scalars['Float']['output']>;
-  reservedQuantity: Scalars['Float']['output'];
   storageLocation: Maybe<StorageLocation>;
   storageNotes: Maybe<Scalars['String']['output']>;
   storageState: StorageState;
@@ -4533,7 +4531,6 @@ export type PantryItem = {
   unitId: Maybe<Scalars['String']['output']>;
   unitName: Scalars['String']['output'];
   updatedAt: Maybe<Scalars['DateTime']['output']>;
-  usageFrequency: UsageFrequency;
   usageRecords: Array<PantryItemUsage>;
   version: Maybe<Scalars['Int']['output']>;
   wasteAmount: Scalars['Float']['output'];
@@ -4571,7 +4568,6 @@ export type PantryItemFilters = {
   expirationDays?: InputMaybe<Scalars['Int']['input']>;
   expiringSoon?: InputMaybe<Scalars['Boolean']['input']>;
   itemId?: InputMaybe<Scalars['String']['input']>;
-  lowStock?: InputMaybe<Scalars['Boolean']['input']>;
   search?: InputMaybe<Scalars['String']['input']>;
   storageState?: InputMaybe<StorageState>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
@@ -4984,6 +4980,16 @@ export type Query = {
   pantryItem: PantryItem;
   pantryItemUsage: Array<PantryItemUsage>;
   pantryStats: PantryStats;
+  /**
+   * Get comprehensive usage analytics for a pantry
+   * Useful for building usage pattern charts and reports
+   */
+  pantryUsageAnalytics: UsageAnalytics;
+  /**
+   * Get comprehensive waste analytics for a pantry
+   * Useful for building waste tracking charts and reports
+   */
+  pantryWasteAnalytics: WasteAnalytics;
   /**
    * Parse fractional input string to decimal
    * Handles "1/4", "1 1/4", "0.25" formats
@@ -5439,6 +5445,16 @@ export type QueryPantryItemUsageArgs = {
 };
 
 export type QueryPantryStatsArgs = {
+  pantryId: Scalars['ID']['input'];
+};
+
+export type QueryPantryUsageAnalyticsArgs = {
+  filter?: InputMaybe<AnalyticsFilterInput>;
+  pantryId: Scalars['ID']['input'];
+};
+
+export type QueryPantryWasteAnalyticsArgs = {
+  filter?: InputMaybe<AnalyticsFilterInput>;
   pantryId: Scalars['ID']['input'];
 };
 
@@ -6988,8 +7004,6 @@ export type SyncPantryItemInput = {
   acquisitionMethod?: InputMaybe<AcquisitionMethod>;
   actualNetWeight?: InputMaybe<Scalars['Float']['input']>;
   actualNetWeightUnitId?: InputMaybe<Scalars['String']['input']>;
-  autoReorderPoint?: InputMaybe<Scalars['Float']['input']>;
-  batchNumber?: InputMaybe<Scalars['String']['input']>;
   bestByDate?: InputMaybe<Scalars['String']['input']>;
   condition?: InputMaybe<ItemCondition>;
   costPerUnit?: InputMaybe<Scalars['Float']['input']>;
@@ -6998,7 +7012,6 @@ export type SyncPantryItemInput = {
   expirationAlert?: InputMaybe<Scalars['Boolean']['input']>;
   expiresAt?: InputMaybe<Scalars['String']['input']>;
   initialQuantity?: InputMaybe<Scalars['Float']['input']>;
-  isAutoReorder?: InputMaybe<Scalars['Boolean']['input']>;
   isComposted?: InputMaybe<Scalars['Boolean']['input']>;
   isRecycled?: InputMaybe<Scalars['Boolean']['input']>;
   itemBrand?: InputMaybe<Scalars['String']['input']>;
@@ -7010,14 +7023,11 @@ export type SyncPantryItemInput = {
   itemNetWeight?: InputMaybe<Scalars['Float']['input']>;
   itemUpc?: InputMaybe<Scalars['String']['input']>;
   lastUsedAt?: InputMaybe<Scalars['DateTime']['input']>;
-  lotNumber?: InputMaybe<Scalars['String']['input']>;
   lowStockAlert?: InputMaybe<Scalars['Boolean']['input']>;
   openedAt?: InputMaybe<Scalars['String']['input']>;
   pantryId: Scalars['ID']['input'];
   priority?: InputMaybe<Scalars['Int']['input']>;
   purchaseId?: InputMaybe<Scalars['String']['input']>;
-  quantityInput?: InputMaybe<Scalars['String']['input']>;
-  reservedQuantity?: InputMaybe<Scalars['Float']['input']>;
   storageLocation?: InputMaybe<Scalars['String']['input']>;
   storageNotes?: InputMaybe<Scalars['String']['input']>;
   storageState?: InputMaybe<StorageState>;
@@ -7027,7 +7037,6 @@ export type SyncPantryItemInput = {
   unitId?: InputMaybe<Scalars['String']['input']>;
   unitName?: InputMaybe<Scalars['String']['input']>;
   unitSymbol?: InputMaybe<Scalars['String']['input']>;
-  usageFrequency?: InputMaybe<UsageFrequency>;
   version?: InputMaybe<Scalars['Int']['input']>;
   wasteAmount?: InputMaybe<Scalars['Float']['input']>;
   wasteReason?: InputMaybe<WasteReason>;
@@ -7094,6 +7103,14 @@ export type SyncShoppingListItemResult = {
   serverId: Maybe<Scalars['ID']['output']>;
   /** Whether this was a create (true) or update (false) operation */
   wasCreated: Scalars['Boolean']['output'];
+};
+
+/** Time series data point for charting usage/waste trends */
+export type TimeSeriesDataPoint = {
+  __typename?: 'TimeSeriesDataPoint';
+  count: Scalars['Int']['output'];
+  date: Scalars['DateTime']['output'];
+  value: Scalars['Float']['output'];
 };
 
 export type Timestamped = {
@@ -7494,27 +7511,24 @@ export type UpdatePantryInput = {
 export type UpdatePantryItemInput = {
   actualNetWeight?: InputMaybe<Scalars['Float']['input']>;
   actualNetWeightUnitId?: InputMaybe<Scalars['String']['input']>;
-  autoReorderPoint?: InputMaybe<Scalars['Float']['input']>;
   bestByDate?: InputMaybe<Scalars['String']['input']>;
   condition?: InputMaybe<ItemCondition>;
   currentQuantity?: InputMaybe<Scalars['Float']['input']>;
   customCategory?: InputMaybe<Scalars['String']['input']>;
   expirationAlert?: InputMaybe<Scalars['Boolean']['input']>;
   expiresAt?: InputMaybe<Scalars['String']['input']>;
-  isAutoReorder?: InputMaybe<Scalars['Boolean']['input']>;
   isComposted?: InputMaybe<Scalars['Boolean']['input']>;
   isRecycled?: InputMaybe<Scalars['Boolean']['input']>;
   lastUsedAt?: InputMaybe<Scalars['DateTime']['input']>;
   lowStockAlert?: InputMaybe<Scalars['Boolean']['input']>;
   openedAt?: InputMaybe<Scalars['String']['input']>;
   priority?: InputMaybe<Scalars['Int']['input']>;
-  quantityInput?: InputMaybe<Scalars['String']['input']>;
-  reservedQuantity?: InputMaybe<Scalars['Float']['input']>;
   storageLocation?: InputMaybe<Scalars['String']['input']>;
   storageNotes?: InputMaybe<Scalars['String']['input']>;
   storageState?: InputMaybe<StorageState>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
-  usageFrequency?: InputMaybe<UsageFrequency>;
+  unitId?: InputMaybe<Scalars['String']['input']>;
+  unitName?: InputMaybe<Scalars['String']['input']>;
   version?: InputMaybe<Scalars['Int']['input']>;
   wasteAmount?: InputMaybe<Scalars['Float']['input']>;
   wasteReason?: InputMaybe<WasteReason>;
@@ -7746,14 +7760,47 @@ export type UpsertItemResult = {
   mapping: ExternalSourceMapping;
 };
 
-export enum UsageFrequency {
-  Daily = 'DAILY',
-  Monthly = 'MONTHLY',
-  Rarely = 'RARELY',
-  Seasonal = 'SEASONAL',
-  Unknown = 'UNKNOWN',
-  Weekly = 'WEEKLY',
-}
+/** Comprehensive usage analytics for a pantry */
+export type UsageAnalytics = {
+  __typename?: 'UsageAnalytics';
+  averageUsagePerDay: Scalars['Float']['output'];
+  periodEnd: Scalars['DateTime']['output'];
+  periodStart: Scalars['DateTime']['output'];
+  topUsedItems: Array<UsageByItem>;
+  totalQuantityUsed: Scalars['Float']['output'];
+  totalUsageCount: Scalars['Int']['output'];
+  usageByPurpose: Array<UsageByPurpose>;
+  usageBySource: Array<UsageBySource>;
+  usageTrend: Array<TimeSeriesDataPoint>;
+};
+
+/** Usage breakdown by item - top consumed items */
+export type UsageByItem = {
+  __typename?: 'UsageByItem';
+  count: Scalars['Int']['output'];
+  itemId: Scalars['String']['output'];
+  itemName: Scalars['String']['output'];
+  totalQuantity: Scalars['Float']['output'];
+  unitName: Maybe<Scalars['String']['output']>;
+};
+
+/** Usage breakdown by purpose (cooking, snack, waste, etc.) */
+export type UsageByPurpose = {
+  __typename?: 'UsageByPurpose';
+  count: Scalars['Int']['output'];
+  percentage: Scalars['Float']['output'];
+  purpose: UsagePurpose;
+  totalQuantity: Scalars['Float']['output'];
+};
+
+/** Usage breakdown by source (manual, cooking log, meal plan, recipe) */
+export type UsageBySource = {
+  __typename?: 'UsageBySource';
+  count: Scalars['Int']['output'];
+  percentage: Scalars['Float']['output'];
+  source: UsageSource;
+  totalQuantity: Scalars['Float']['output'];
+};
 
 export enum UsagePurpose {
   Cooking = 'COOKING',
@@ -8072,6 +8119,44 @@ export enum Visibility {
   Public = 'PUBLIC',
   Restricted = 'RESTRICTED',
 }
+
+/** Comprehensive waste analytics for a pantry */
+export type WasteAnalytics = {
+  __typename?: 'WasteAnalytics';
+  averageWastePerDay: Scalars['Float']['output'];
+  composted: Scalars['Float']['output'];
+  periodEnd: Scalars['DateTime']['output'];
+  periodStart: Scalars['DateTime']['output'];
+  recycled: Scalars['Float']['output'];
+  topWastedItems: Array<WasteByItem>;
+  totalWasteCount: Scalars['Int']['output'];
+  totalWasteQuantity: Scalars['Float']['output'];
+  totalWasteValue: Scalars['Float']['output'];
+  wasteByReason: Array<WasteByReason>;
+  wasteRate: Scalars['Float']['output'];
+  wasteTrend: Array<TimeSeriesDataPoint>;
+};
+
+/** Waste breakdown by item - most wasted items */
+export type WasteByItem = {
+  __typename?: 'WasteByItem';
+  count: Scalars['Int']['output'];
+  estimatedValue: Maybe<Scalars['Float']['output']>;
+  itemId: Scalars['String']['output'];
+  itemName: Scalars['String']['output'];
+  totalQuantity: Scalars['Float']['output'];
+  unitName: Maybe<Scalars['String']['output']>;
+};
+
+/** Waste breakdown by reason (expired, spoiled, etc.) */
+export type WasteByReason = {
+  __typename?: 'WasteByReason';
+  count: Scalars['Int']['output'];
+  estimatedValue: Maybe<Scalars['Float']['output']>;
+  percentage: Scalars['Float']['output'];
+  reason: WasteReason;
+  totalQuantity: Scalars['Float']['output'];
+};
 
 export enum WasteReason {
   CookingFail = 'COOKING_FAIL',
@@ -9426,14 +9511,9 @@ export type PantryItemFragment = {
   storageNotes: string | null | undefined;
   initialQuantity: number;
   currentQuantity: number;
-  quantityInput: string | null | undefined;
-  normalizedQuantity: number | null | undefined;
+  consumedQuantity: number;
   normalizedUnitId: string | null | undefined;
   displayFormat: DisplayFormat;
-  consumedQuantity: number;
-  reservedQuantity: number;
-  autoReorderPoint: number | null | undefined;
-  isAutoReorder: boolean;
   customCategory: string | null | undefined;
   actualNetWeight: number | null | undefined;
   createdAt: string;
@@ -15757,11 +15837,7 @@ export const PantryItemFragmentDoc = {
           { kind: 'Field', name: { kind: 'Name', value: 'storageNotes' } },
           { kind: 'Field', name: { kind: 'Name', value: 'initialQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'currentQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'quantityInput' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'normalizedQuantity' },
-          },
+          { kind: 'Field', name: { kind: 'Name', value: 'consumedQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'normalizedUnitId' } },
           {
             kind: 'Field',
@@ -15776,10 +15852,6 @@ export const PantryItemFragmentDoc = {
             },
           },
           { kind: 'Field', name: { kind: 'Name', value: 'displayFormat' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'consumedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'reservedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'autoReorderPoint' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isAutoReorder' } },
           { kind: 'Field', name: { kind: 'Name', value: 'customCategory' } },
           { kind: 'Field', name: { kind: 'Name', value: 'actualNetWeight' } },
           {
@@ -16566,11 +16638,7 @@ export const PantryFragmentDoc = {
           { kind: 'Field', name: { kind: 'Name', value: 'storageNotes' } },
           { kind: 'Field', name: { kind: 'Name', value: 'initialQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'currentQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'quantityInput' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'normalizedQuantity' },
-          },
+          { kind: 'Field', name: { kind: 'Name', value: 'consumedQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'normalizedUnitId' } },
           {
             kind: 'Field',
@@ -16585,10 +16653,6 @@ export const PantryFragmentDoc = {
             },
           },
           { kind: 'Field', name: { kind: 'Name', value: 'displayFormat' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'consumedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'reservedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'autoReorderPoint' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isAutoReorder' } },
           { kind: 'Field', name: { kind: 'Name', value: 'customCategory' } },
           { kind: 'Field', name: { kind: 'Name', value: 'actualNetWeight' } },
           {
@@ -17309,11 +17373,7 @@ export const HomeFragmentDoc = {
           { kind: 'Field', name: { kind: 'Name', value: 'storageNotes' } },
           { kind: 'Field', name: { kind: 'Name', value: 'initialQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'currentQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'quantityInput' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'normalizedQuantity' },
-          },
+          { kind: 'Field', name: { kind: 'Name', value: 'consumedQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'normalizedUnitId' } },
           {
             kind: 'Field',
@@ -17328,10 +17388,6 @@ export const HomeFragmentDoc = {
             },
           },
           { kind: 'Field', name: { kind: 'Name', value: 'displayFormat' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'consumedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'reservedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'autoReorderPoint' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isAutoReorder' } },
           { kind: 'Field', name: { kind: 'Name', value: 'customCategory' } },
           { kind: 'Field', name: { kind: 'Name', value: 'actualNetWeight' } },
           {
@@ -22964,11 +23020,7 @@ export const GetHomeDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'storageNotes' } },
           { kind: 'Field', name: { kind: 'Name', value: 'initialQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'currentQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'quantityInput' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'normalizedQuantity' },
-          },
+          { kind: 'Field', name: { kind: 'Name', value: 'consumedQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'normalizedUnitId' } },
           {
             kind: 'Field',
@@ -22983,10 +23035,6 @@ export const GetHomeDocument = {
             },
           },
           { kind: 'Field', name: { kind: 'Name', value: 'displayFormat' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'consumedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'reservedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'autoReorderPoint' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isAutoReorder' } },
           { kind: 'Field', name: { kind: 'Name', value: 'customCategory' } },
           { kind: 'Field', name: { kind: 'Name', value: 'actualNetWeight' } },
           {
@@ -24555,11 +24603,7 @@ export const GetHomesDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'storageNotes' } },
           { kind: 'Field', name: { kind: 'Name', value: 'initialQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'currentQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'quantityInput' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'normalizedQuantity' },
-          },
+          { kind: 'Field', name: { kind: 'Name', value: 'consumedQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'normalizedUnitId' } },
           {
             kind: 'Field',
@@ -24574,10 +24618,6 @@ export const GetHomesDocument = {
             },
           },
           { kind: 'Field', name: { kind: 'Name', value: 'displayFormat' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'consumedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'reservedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'autoReorderPoint' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isAutoReorder' } },
           { kind: 'Field', name: { kind: 'Name', value: 'customCategory' } },
           { kind: 'Field', name: { kind: 'Name', value: 'actualNetWeight' } },
           {
@@ -25803,11 +25843,7 @@ export const GetHomeByJoinCodeDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'storageNotes' } },
           { kind: 'Field', name: { kind: 'Name', value: 'initialQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'currentQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'quantityInput' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'normalizedQuantity' },
-          },
+          { kind: 'Field', name: { kind: 'Name', value: 'consumedQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'normalizedUnitId' } },
           {
             kind: 'Field',
@@ -25822,10 +25858,6 @@ export const GetHomeByJoinCodeDocument = {
             },
           },
           { kind: 'Field', name: { kind: 'Name', value: 'displayFormat' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'consumedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'reservedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'autoReorderPoint' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isAutoReorder' } },
           { kind: 'Field', name: { kind: 'Name', value: 'customCategory' } },
           { kind: 'Field', name: { kind: 'Name', value: 'actualNetWeight' } },
           {
@@ -26874,11 +26906,7 @@ export const CreateHomeDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'storageNotes' } },
           { kind: 'Field', name: { kind: 'Name', value: 'initialQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'currentQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'quantityInput' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'normalizedQuantity' },
-          },
+          { kind: 'Field', name: { kind: 'Name', value: 'consumedQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'normalizedUnitId' } },
           {
             kind: 'Field',
@@ -26893,10 +26921,6 @@ export const CreateHomeDocument = {
             },
           },
           { kind: 'Field', name: { kind: 'Name', value: 'displayFormat' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'consumedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'reservedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'autoReorderPoint' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isAutoReorder' } },
           { kind: 'Field', name: { kind: 'Name', value: 'customCategory' } },
           { kind: 'Field', name: { kind: 'Name', value: 'actualNetWeight' } },
           {
@@ -27924,11 +27948,7 @@ export const UpdateHomeDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'storageNotes' } },
           { kind: 'Field', name: { kind: 'Name', value: 'initialQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'currentQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'quantityInput' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'normalizedQuantity' },
-          },
+          { kind: 'Field', name: { kind: 'Name', value: 'consumedQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'normalizedUnitId' } },
           {
             kind: 'Field',
@@ -27943,10 +27963,6 @@ export const UpdateHomeDocument = {
             },
           },
           { kind: 'Field', name: { kind: 'Name', value: 'displayFormat' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'consumedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'reservedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'autoReorderPoint' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isAutoReorder' } },
           { kind: 'Field', name: { kind: 'Name', value: 'customCategory' } },
           { kind: 'Field', name: { kind: 'Name', value: 'actualNetWeight' } },
           {
@@ -28953,11 +28969,7 @@ export const DeleteHomeDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'storageNotes' } },
           { kind: 'Field', name: { kind: 'Name', value: 'initialQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'currentQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'quantityInput' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'normalizedQuantity' },
-          },
+          { kind: 'Field', name: { kind: 'Name', value: 'consumedQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'normalizedUnitId' } },
           {
             kind: 'Field',
@@ -28972,10 +28984,6 @@ export const DeleteHomeDocument = {
             },
           },
           { kind: 'Field', name: { kind: 'Name', value: 'displayFormat' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'consumedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'reservedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'autoReorderPoint' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isAutoReorder' } },
           { kind: 'Field', name: { kind: 'Name', value: 'customCategory' } },
           { kind: 'Field', name: { kind: 'Name', value: 'actualNetWeight' } },
           {
@@ -31715,11 +31723,7 @@ export const GetDefaultHomeDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'storageNotes' } },
           { kind: 'Field', name: { kind: 'Name', value: 'initialQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'currentQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'quantityInput' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'normalizedQuantity' },
-          },
+          { kind: 'Field', name: { kind: 'Name', value: 'consumedQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'normalizedUnitId' } },
           {
             kind: 'Field',
@@ -31734,10 +31738,6 @@ export const GetDefaultHomeDocument = {
             },
           },
           { kind: 'Field', name: { kind: 'Name', value: 'displayFormat' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'consumedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'reservedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'autoReorderPoint' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isAutoReorder' } },
           { kind: 'Field', name: { kind: 'Name', value: 'customCategory' } },
           { kind: 'Field', name: { kind: 'Name', value: 'actualNetWeight' } },
           {
@@ -39448,11 +39448,7 @@ export const GetPantryDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'storageNotes' } },
           { kind: 'Field', name: { kind: 'Name', value: 'initialQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'currentQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'quantityInput' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'normalizedQuantity' },
-          },
+          { kind: 'Field', name: { kind: 'Name', value: 'consumedQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'normalizedUnitId' } },
           {
             kind: 'Field',
@@ -39467,10 +39463,6 @@ export const GetPantryDocument = {
             },
           },
           { kind: 'Field', name: { kind: 'Name', value: 'displayFormat' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'consumedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'reservedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'autoReorderPoint' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isAutoReorder' } },
           { kind: 'Field', name: { kind: 'Name', value: 'customCategory' } },
           { kind: 'Field', name: { kind: 'Name', value: 'actualNetWeight' } },
           {
@@ -40029,11 +40021,7 @@ export const GetPantryItemDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'storageNotes' } },
           { kind: 'Field', name: { kind: 'Name', value: 'initialQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'currentQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'quantityInput' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'normalizedQuantity' },
-          },
+          { kind: 'Field', name: { kind: 'Name', value: 'consumedQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'normalizedUnitId' } },
           {
             kind: 'Field',
@@ -40048,10 +40036,6 @@ export const GetPantryItemDocument = {
             },
           },
           { kind: 'Field', name: { kind: 'Name', value: 'displayFormat' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'consumedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'reservedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'autoReorderPoint' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isAutoReorder' } },
           { kind: 'Field', name: { kind: 'Name', value: 'customCategory' } },
           { kind: 'Field', name: { kind: 'Name', value: 'actualNetWeight' } },
           {
@@ -41150,11 +41134,7 @@ export const CreatePantryItemDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'storageNotes' } },
           { kind: 'Field', name: { kind: 'Name', value: 'initialQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'currentQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'quantityInput' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'normalizedQuantity' },
-          },
+          { kind: 'Field', name: { kind: 'Name', value: 'consumedQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'normalizedUnitId' } },
           {
             kind: 'Field',
@@ -41169,10 +41149,6 @@ export const CreatePantryItemDocument = {
             },
           },
           { kind: 'Field', name: { kind: 'Name', value: 'displayFormat' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'consumedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'reservedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'autoReorderPoint' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isAutoReorder' } },
           { kind: 'Field', name: { kind: 'Name', value: 'customCategory' } },
           { kind: 'Field', name: { kind: 'Name', value: 'actualNetWeight' } },
           {
@@ -41717,11 +41693,7 @@ export const UpdatePantryItemDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'storageNotes' } },
           { kind: 'Field', name: { kind: 'Name', value: 'initialQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'currentQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'quantityInput' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'normalizedQuantity' },
-          },
+          { kind: 'Field', name: { kind: 'Name', value: 'consumedQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'normalizedUnitId' } },
           {
             kind: 'Field',
@@ -41736,10 +41708,6 @@ export const UpdatePantryItemDocument = {
             },
           },
           { kind: 'Field', name: { kind: 'Name', value: 'displayFormat' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'consumedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'reservedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'autoReorderPoint' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isAutoReorder' } },
           { kind: 'Field', name: { kind: 'Name', value: 'customCategory' } },
           { kind: 'Field', name: { kind: 'Name', value: 'actualNetWeight' } },
           {
@@ -42263,11 +42231,7 @@ export const DeletePantryItemDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'storageNotes' } },
           { kind: 'Field', name: { kind: 'Name', value: 'initialQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'currentQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'quantityInput' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'normalizedQuantity' },
-          },
+          { kind: 'Field', name: { kind: 'Name', value: 'consumedQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'normalizedUnitId' } },
           {
             kind: 'Field',
@@ -42282,10 +42246,6 @@ export const DeletePantryItemDocument = {
             },
           },
           { kind: 'Field', name: { kind: 'Name', value: 'displayFormat' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'consumedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'reservedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'autoReorderPoint' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isAutoReorder' } },
           { kind: 'Field', name: { kind: 'Name', value: 'customCategory' } },
           { kind: 'Field', name: { kind: 'Name', value: 'actualNetWeight' } },
           {
@@ -42891,11 +42851,7 @@ export const CreatePantryItemUsageDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'storageNotes' } },
           { kind: 'Field', name: { kind: 'Name', value: 'initialQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'currentQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'quantityInput' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'normalizedQuantity' },
-          },
+          { kind: 'Field', name: { kind: 'Name', value: 'consumedQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'normalizedUnitId' } },
           {
             kind: 'Field',
@@ -42910,10 +42866,6 @@ export const CreatePantryItemUsageDocument = {
             },
           },
           { kind: 'Field', name: { kind: 'Name', value: 'displayFormat' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'consumedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'reservedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'autoReorderPoint' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isAutoReorder' } },
           { kind: 'Field', name: { kind: 'Name', value: 'customCategory' } },
           { kind: 'Field', name: { kind: 'Name', value: 'actualNetWeight' } },
           {
@@ -43558,11 +43510,7 @@ export const RecordPantryItemWasteDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'storageNotes' } },
           { kind: 'Field', name: { kind: 'Name', value: 'initialQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'currentQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'quantityInput' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'normalizedQuantity' },
-          },
+          { kind: 'Field', name: { kind: 'Name', value: 'consumedQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'normalizedUnitId' } },
           {
             kind: 'Field',
@@ -43577,10 +43525,6 @@ export const RecordPantryItemWasteDocument = {
             },
           },
           { kind: 'Field', name: { kind: 'Name', value: 'displayFormat' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'consumedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'reservedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'autoReorderPoint' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isAutoReorder' } },
           { kind: 'Field', name: { kind: 'Name', value: 'customCategory' } },
           { kind: 'Field', name: { kind: 'Name', value: 'actualNetWeight' } },
           {
@@ -44168,11 +44112,7 @@ export const UpdatePantryItemQuantityDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'storageNotes' } },
           { kind: 'Field', name: { kind: 'Name', value: 'initialQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'currentQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'quantityInput' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'normalizedQuantity' },
-          },
+          { kind: 'Field', name: { kind: 'Name', value: 'consumedQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'normalizedUnitId' } },
           {
             kind: 'Field',
@@ -44187,10 +44127,6 @@ export const UpdatePantryItemQuantityDocument = {
             },
           },
           { kind: 'Field', name: { kind: 'Name', value: 'displayFormat' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'consumedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'reservedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'autoReorderPoint' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isAutoReorder' } },
           { kind: 'Field', name: { kind: 'Name', value: 'customCategory' } },
           { kind: 'Field', name: { kind: 'Name', value: 'actualNetWeight' } },
           {
@@ -44793,11 +44729,7 @@ export const SyncPantryItemDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'storageNotes' } },
           { kind: 'Field', name: { kind: 'Name', value: 'initialQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'currentQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'quantityInput' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'normalizedQuantity' },
-          },
+          { kind: 'Field', name: { kind: 'Name', value: 'consumedQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'normalizedUnitId' } },
           {
             kind: 'Field',
@@ -44812,10 +44744,6 @@ export const SyncPantryItemDocument = {
             },
           },
           { kind: 'Field', name: { kind: 'Name', value: 'displayFormat' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'consumedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'reservedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'autoReorderPoint' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isAutoReorder' } },
           { kind: 'Field', name: { kind: 'Name', value: 'customCategory' } },
           { kind: 'Field', name: { kind: 'Name', value: 'actualNetWeight' } },
           {
@@ -46063,11 +45991,7 @@ export const PantryItemsChangedDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'storageNotes' } },
           { kind: 'Field', name: { kind: 'Name', value: 'initialQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'currentQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'quantityInput' } },
-          {
-            kind: 'Field',
-            name: { kind: 'Name', value: 'normalizedQuantity' },
-          },
+          { kind: 'Field', name: { kind: 'Name', value: 'consumedQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'normalizedUnitId' } },
           {
             kind: 'Field',
@@ -46082,10 +46006,6 @@ export const PantryItemsChangedDocument = {
             },
           },
           { kind: 'Field', name: { kind: 'Name', value: 'displayFormat' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'consumedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'reservedQuantity' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'autoReorderPoint' } },
-          { kind: 'Field', name: { kind: 'Name', value: 'isAutoReorder' } },
           { kind: 'Field', name: { kind: 'Name', value: 'customCategory' } },
           { kind: 'Field', name: { kind: 'Name', value: 'actualNetWeight' } },
           {

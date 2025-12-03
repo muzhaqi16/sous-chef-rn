@@ -7,21 +7,13 @@ import {
   FieldDef,
 } from '#components/molecules/DynamicFormFields';
 import { FormInput } from '#components/molecules/FormInput';
-import { FormCheckbox } from '#components/molecules/FormCheckbox';
 import { FractionInput } from '#components/molecules/FractionInput';
 
 interface QuantitySectionProps {
   control: Control<any>;
   errors: FieldErrors<any>;
   mode: 'add' | 'edit';
-  quantity: number;
-  unit: string;
-  itemWeight?: number;
-  isAutoReorder?: boolean;
-  onIncrementQuantity: () => void;
-  onDecrementQuantity: () => void;
-  onUnitSelected?: (unitId: string | null) => void;
-  onUnitChange?: (unit: string) => void;
+  onUnitSelected?: (unitId: string | null, unitName: string | null) => void;
   testID?: string;
   unitTestID?: string;
 }
@@ -30,7 +22,6 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
   control,
   errors,
   mode,
-  isAutoReorder,
   onUnitSelected,
   testID,
   unitTestID,
@@ -70,20 +61,8 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
       ];
     } else {
       // Edit mode fields
-      const baseFields: FieldDef<any>[] = [
-        {
-          name: 'quantityInput',
-          label: 'Current Quantity *',
-          placeholder: 'e.g., 1, 1 1/4, or 1.5',
-          component: FractionInput,
-        },
-        {
-          name: 'itemWeight',
-          label: 'Net Weight',
-          placeholder: 'e.g., 2.2',
-          component: FormInput,
-          props: { keyboardType: 'decimal-pad', componentType: 'number' },
-        },
+      // Note: Quantity is managed via consume/waste modals, not direct editing
+      return [
         {
           name: 'unit',
           label: 'Unit',
@@ -92,32 +71,7 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
           onUnitSelected,
           testID: unitTestID,
         },
-        {
-          name: 'reservedQuantity',
-          label: 'Minimum Stock Level',
-          placeholder: 'Alert when below this quantity',
-          component: FormInput,
-          props: { keyboardType: 'numeric' },
-        },
-        {
-          name: 'isAutoReorder',
-          label: 'Auto Reorder',
-          component: FormCheckbox,
-          props: { componentType: 'checkbox' },
-        },
       ];
-
-      if (isAutoReorder) {
-        baseFields.push({
-          name: 'autoReorderPoint',
-          label: 'Reorder Point',
-          placeholder: 'Reorder when quantity reaches...',
-          component: FormInput,
-          props: { keyboardType: 'numeric' },
-        });
-      }
-
-      return baseFields;
     }
   };
 

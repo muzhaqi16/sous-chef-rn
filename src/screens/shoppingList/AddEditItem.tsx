@@ -36,6 +36,8 @@ export const AddEditItem: React.FC<{
     parseQuantityInput,
     setFromItem,
     buildUnitInput,
+    buildDirtyInput,
+    hasDirtyFields,
   } = useShoppingListItemForm();
   const [saving, setSaving] = useState(false);
 
@@ -119,17 +121,16 @@ export const AddEditItem: React.FC<{
 
       let result;
       if (isEdit) {
+        // Skip mutation if no fields changed
+        if (!hasDirtyFields) {
+          navigation.goBack();
+          return;
+        }
+
+        // Only send changed fields
+        const input = buildDirtyInput(quantityValue);
         result = await updateItem({
-          variables: {
-            id: itemId,
-            input: {
-              itemName,
-              quantity: quantityValue,
-              ...unitData,
-              notes,
-              category,
-            },
-          },
+          variables: { id: itemId, input },
         });
       } else {
         result = await addItem({

@@ -207,6 +207,7 @@ const styles = StyleSheet.create(theme => ({
   },
   listContent: {
     paddingBottom: 16,
+    paddingHorizontal: 8,
   },
   columnWrapper: {
     justifyContent: 'center',

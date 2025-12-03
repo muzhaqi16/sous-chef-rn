@@ -1,6 +1,6 @@
 {
   "name": "sous-chef-app",
-  "version": "1.8.2",
+  "version": "1.8.3",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
@@ -115,6 +115,7 @@
     "react-native-worklets-core": "^1.6.2",
     "rxjs": "^7.8.2",
     "uuid": "^13.0.0",
+    "victory-native": "^41.20.2",
     "yup": "^1.7.0",
     "zustand": "^5.0.8"
   },

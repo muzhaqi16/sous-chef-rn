@@ -2,3 +2,4 @@
 export * from './common';
 export * from './navigation';
 export * from './components';
+export * from './analytics';

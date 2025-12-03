@@ -51,7 +51,7 @@ export type FieldDef<T extends FieldValues> = {
   transformOnBlur?: boolean;
   // Autocomplete specific props
   onSelectItem?: (item: any) => void;
-  onUnitSelected?: (unitId: string | null) => void;
+  onUnitSelected?: (unitId: string | null, unitName: string | null) => void;
   onCategorySelected?: (categoryId: string | null) => void;
   onStorageLocationSelected?: (
     locationId: string | null,

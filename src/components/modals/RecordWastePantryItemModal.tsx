@@ -78,14 +78,17 @@ export const RecordWastePantryItemModal: React.FC<
   const trackingMode = pantryItem ? determineTrackingMode(pantryItem) : 'count';
 
   // Calculate effective total weight (actualNetWeight or catalog weight * quantity)
-  const getEffectiveTotalWeight = useCallback((item: PantryItemFragment): number => {
-    if (item.actualNetWeight != null && item.actualNetWeight > 0) {
-      return item.actualNetWeight;
-    }
-    // Fall back to catalog per-item weight * quantity
-    const perItemWeight = item.item?.netWeight ?? 0;
-    return perItemWeight * item.currentQuantity;
-  }, []);
+  const getEffectiveTotalWeight = useCallback(
+    (item: PantryItemFragment): number => {
+      if (item.actualNetWeight != null && item.actualNetWeight > 0) {
+        return item.actualNetWeight;
+      }
+      // Fall back to catalog per-item weight * quantity
+      const perItemWeight = item.item?.netWeight ?? 0;
+      return perItemWeight * item.currentQuantity;
+    },
+    [],
+  );
 
   // Control bottom sheet visibility based on visible prop
   useEffect(() => {
@@ -178,12 +181,23 @@ export const RecordWastePantryItemModal: React.FC<
         // Calculate per-item weight and multiply by waste quantity
         const perItemWeight = totalWeight / pantryItem.currentQuantity;
         wasteWeight = wasteValue * perItemWeight;
-        wasteWeightUnitId = pantryItem.actualNetWeightUnit?.id || pantryItem.item?.displayUnit?.id;
+        wasteWeightUnitId =
+          pantryItem.actualNetWeightUnit?.id ||
+          pantryItem.item?.displayUnit?.id;
       }
       // If no weight tracking, wasteWeight and wasteWeightUnitId remain undefined
     }
 
-    onConfirm(wasteValue, wasteReason, isComposted, isRecycled, notes, wasteUnitId, wasteWeight, wasteWeightUnitId);
+    onConfirm(
+      wasteValue,
+      wasteReason,
+      isComposted,
+      isRecycled,
+      notes,
+      wasteUnitId,
+      wasteWeight,
+      wasteWeightUnitId,
+    );
     onClose();
   }, [
     pantryItem,
@@ -240,14 +254,14 @@ export const RecordWastePantryItemModal: React.FC<
                 {trackingMode === 'count' ? (
                   <FormattedItemSubtitle
                     quantity={pantryItem.currentQuantity}
-                    quantityInput={pantryItem.quantityInput}
                     displayFormat={pantryItem.displayFormat}
                     displayAsFraction={pantryItem.unit?.displayAsFraction}
                     unitSymbol={pantryItem.unit?.symbol}
                   />
                 ) : (
                   <Text style={styles.availableValue}>
-                    {getEffectiveTotalWeight(pantryItem)} {pantryItem.item?.displayUnit?.symbol || 'g'}
+                    {getEffectiveTotalWeight(pantryItem)}{' '}
+                    {pantryItem.item?.displayUnit?.symbol || 'g'}
                   </Text>
                 )}
               </View>
@@ -261,17 +275,21 @@ export const RecordWastePantryItemModal: React.FC<
                   <TouchableOpacity
                     style={[
                       styles.unitToggleOption,
-                      trackingUnit === 'count' && styles.unitToggleOptionSelected,
+                      trackingUnit === 'count' &&
+                        styles.unitToggleOptionSelected,
                     ]}
                     onPress={() => {
                       setTrackingUnit('count');
-                      setWasteAmountInput(pantryItem.currentQuantity.toString());
+                      setWasteAmountInput(
+                        pantryItem.currentQuantity.toString(),
+                      );
                     }}
                   >
                     <Text
                       style={[
                         styles.unitToggleText,
-                        trackingUnit === 'count' && styles.unitToggleTextSelected,
+                        trackingUnit === 'count' &&
+                          styles.unitToggleTextSelected,
                       ]}
                     >
                       Count ({pantryItem.unit?.symbol || 'item'})
@@ -280,17 +298,21 @@ export const RecordWastePantryItemModal: React.FC<
                   <TouchableOpacity
                     style={[
                       styles.unitToggleOption,
-                      trackingUnit === 'weight' && styles.unitToggleOptionSelected,
+                      trackingUnit === 'weight' &&
+                        styles.unitToggleOptionSelected,
                     ]}
                     onPress={() => {
                       setTrackingUnit('weight');
-                      setWasteAmountInput(getEffectiveTotalWeight(pantryItem).toString());
+                      setWasteAmountInput(
+                        getEffectiveTotalWeight(pantryItem).toString(),
+                      );
                     }}
                   >
                     <Text
                       style={[
                         styles.unitToggleText,
-                        trackingUnit === 'weight' && styles.unitToggleTextSelected,
+                        trackingUnit === 'weight' &&
+                          styles.unitToggleTextSelected,
                       ]}
                     >
                       Weight ({pantryItem.item?.displayUnit?.symbol || 'g'})
@@ -305,15 +327,20 @@ export const RecordWastePantryItemModal: React.FC<
               <FractionInput
                 label={
                   trackingUnit === 'weight'
-                    ? `Waste Amount (${pantryItem.item?.displayUnit?.symbol || 'g'}) *`
+                    ? `Waste Amount (${
+                        pantryItem.item?.displayUnit?.symbol || 'g'
+                      }) *`
                     : `Waste Amount (${pantryItem.unit?.symbol || 'item'}) *`
                 }
                 value={wasteAmountInput}
                 onChangeText={setWasteAmountInput}
                 placeholder="e.g., 1, 1 1/4, or 1.5"
-                keyboardType={trackingUnit === 'weight'
-                  ? (Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'decimal-pad')
-                  : 'numeric'
+                keyboardType={
+                  trackingUnit === 'weight'
+                    ? Platform.OS === 'ios'
+                      ? 'numbers-and-punctuation'
+                      : 'decimal-pad'
+                    : 'numeric'
                 }
               />
               {remaining !== null && (
