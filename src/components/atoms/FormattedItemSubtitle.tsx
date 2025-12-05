@@ -38,7 +38,7 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
 
   // For partial single items, display quantity as 1 and use the actual weight from the server
   const displayQuantity = isPartialSingleItem ? 1 : quantity;
-  // netWeight already contains the actual remaining weight from the server (actualNetWeight)
+  // netWeight already contains the actual remaining weight from the server (packageWeight)
   const displayWeight = netWeight;
 
   // Handle edge cases

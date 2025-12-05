@@ -503,10 +503,8 @@ fragment PantryItemFragment on PantryItem {
     name
     symbol
   }
-  displayFormat
-  customCategory
-  actualNetWeight
-  actualNetWeightUnit {
+  packageWeight
+  packageWeightUnit {
     id
     name
     symbol

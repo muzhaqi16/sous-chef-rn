@@ -71,16 +71,14 @@ export const BreakdownPieChart: React.FC<BreakdownPieChartProps> = ({
         </Text>
       )}
       <View style={styles.chartWrapper}>
-        <View style={[styles.pieContainer, { height }]}>
+        <View style={{ width: height, height, marginRight: 16 }}>
           <PolarChart
             data={chartData}
             labelKey="label"
             valueKey="value"
             colorKey="color"
           >
-            <Pie.Chart innerRadius="50%">
-              {() => null}
-            </Pie.Chart>
+            <Pie.Chart innerRadius="50%" />
           </PolarChart>
         </View>
         {showLegend && (
@@ -127,10 +125,6 @@ const styles = StyleSheet.create(theme => ({
   },
   chartWrapper: {
     flexDirection: 'row',
-    alignItems: 'center',
-  },
-  pieContainer: {
-    flex: 1,
     alignItems: 'center',
   },
   legend: {

@@ -1,9 +1,11 @@
 import React from 'react';
-import { View, Text, Alert, Image } from 'react-native';
+import { View, Text, Alert, Image, ActivityIndicator } from 'react-native';
 import {
   useGetPantryItemQuery,
   useDeletePantryItemMutation,
   useAddItemToShoppingListMutation,
+  useGetPantryItemLedgerQuery,
+  DateRange,
 } from '#generated';
 import { DetailTemplate } from '#components/templates/DetailTemplate';
 import { FormattedItemSubtitle } from '#components';
@@ -13,6 +15,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks';
 import { PantryStackParamList } from '#navigation/stacks/PantryStack';
 import { getItemImageUrl } from '#utils/imageUtils';
+import { getEffectiveUnit } from '#utils/pantryItemUtils';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils';
 
 export const PantryItemDetail: React.FC<{
@@ -27,6 +30,15 @@ export const PantryItemDetail: React.FC<{
   const { data } = useGetPantryItemQuery({
     variables: { id: itemId },
     fetchPolicy: 'cache-first',
+  });
+
+  // Fetch item ledger for usage history
+  const { data: ledgerData, loading: ledgerLoading } = useGetPantryItemLedgerQuery({
+    variables: {
+      pantryItemId: itemId,
+      filter: { dateRange: DateRange.LastMonth },
+    },
+    fetchPolicy: 'cache-and-network',
   });
 
   const [deleteItem] = useDeletePantryItemMutation();
@@ -110,10 +122,9 @@ export const PantryItemDetail: React.FC<{
 
   const item = data?.pantryItem;
 
-  // Use actualNetWeight if set (user override), otherwise fall back to catalog item weight
-  const effectiveNetWeight = item?.actualNetWeight ?? item?.item?.netWeight;
-  const effectiveWeightUnit =
-    item?.actualNetWeightUnit ?? item?.item?.displayUnit;
+  // Use packageWeight if set (user override), otherwise fall back to catalog item weight
+  const effectiveNetWeight = item?.packageWeight ?? item?.item?.netWeight;
+  const effectiveWeightUnit = getEffectiveUnit(item);
 
   // Helper function to format item type
   const formatItemType = (type?: string) => {
@@ -320,6 +331,64 @@ export const PantryItemDetail: React.FC<{
     });
   }
 
+  // Add item ledger section
+  const itemLedger = ledgerData?.pantryItemLedger;
+  if (itemLedger || ledgerLoading) {
+    sections.push({
+      title: 'Usage History (Last Month)',
+      content: ledgerLoading ? (
+        <View style={styles.ledgerLoading}>
+          <ActivityIndicator size="small" color={theme.colors.primary} />
+        </View>
+      ) : (
+        <View>
+          <View style={styles.ledgerRow}>
+            <Text style={[commonStyles.caption, styles.detailLabel]}>Added</Text>
+            <Text style={[styles.ledgerValue, { color: theme.colors.success }]}>
+              +{itemLedger?.totalAdded ?? 0} {itemLedger?.unitName || ''}
+            </Text>
+          </View>
+          <View style={styles.ledgerRow}>
+            <Text style={[commonStyles.caption, styles.detailLabel]}>Consumed</Text>
+            <Text style={[styles.ledgerValue, { color: theme.colors.primary }]}>
+              -{itemLedger?.totalConsumed ?? 0} {itemLedger?.unitName || ''}
+            </Text>
+          </View>
+          <View style={styles.ledgerRow}>
+            <Text style={[commonStyles.caption, styles.detailLabel]}>Wasted</Text>
+            <Text style={[styles.ledgerValue, { color: theme.colors.error }]}>
+              -{itemLedger?.totalWasted ?? 0} {itemLedger?.unitName || ''}
+            </Text>
+          </View>
+          <View style={[styles.ledgerRow, styles.ledgerSummary]}>
+            <Text style={[commonStyles.caption, styles.detailLabel]}>Net Change</Text>
+            <Text
+              style={[
+                styles.ledgerValue,
+                styles.ledgerNetValue,
+                {
+                  color:
+                    (itemLedger?.netQuantity ?? 0) >= 0
+                      ? theme.colors.success
+                      : theme.colors.error,
+                },
+              ]}
+            >
+              {(itemLedger?.netQuantity ?? 0) >= 0 ? '+' : ''}
+              {itemLedger?.netQuantity ?? 0} {itemLedger?.unitName || ''}
+            </Text>
+          </View>
+          <View style={styles.ledgerCounts}>
+            <Text style={styles.ledgerCountText}>
+              {itemLedger?.additionCount ?? 0} additions · {itemLedger?.consumptionCount ?? 0}{' '}
+              consumptions · {itemLedger?.wasteCount ?? 0} waste events
+            </Text>
+          </View>
+        </View>
+      ),
+    });
+  }
+
   return (
     <DetailTemplate
       title="Item Details"
@@ -396,6 +465,40 @@ const styles = StyleSheet.create(theme => ({
   descriptionText: {
     marginTop: theme.spacing.xs,
     lineHeight: theme.fonts.size.base * theme.typography.lineHeight.relaxed,
+    color: theme.colors.textSecondary,
+  },
+  ledgerLoading: {
+    paddingVertical: theme.spacing.lg,
+    alignItems: 'center',
+  },
+  ledgerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: theme.spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  ledgerValue: {
+    fontSize: theme.fonts.size.base,
+    fontWeight: theme.fonts.weight.semibold,
+  },
+  ledgerSummary: {
+    borderBottomWidth: 0,
+    marginTop: theme.spacing.xs,
+    paddingTop: theme.spacing.sm,
+    borderTopWidth: 2,
+    borderTopColor: theme.colors.border,
+  },
+  ledgerNetValue: {
+    fontSize: theme.fonts.size.lg,
+  },
+  ledgerCounts: {
+    marginTop: theme.spacing.md,
+    alignItems: 'center',
+  },
+  ledgerCountText: {
+    fontSize: theme.fonts.size.xs,
     color: theme.colors.textSecondary,
   },
 }));

@@ -75,13 +75,13 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
 
   /**
    * Calculate the effective total weight for an item.
-   * Uses actualNetWeight override if set, otherwise falls back to
+   * Uses packageWeight override if set, otherwise falls back to
    * catalog per-item weight * quantity.
    */
   const getEffectiveTotalWeight = useCallback(
     (item: PantryItemFragment): number => {
-      if (item.actualNetWeight != null && item.actualNetWeight > 0) {
-        return item.actualNetWeight;
+      if (item.packageWeight != null && item.packageWeight > 0) {
+        return item.packageWeight;
       }
       // Fall back to catalog per-item weight * quantity
       const perItemWeight = item.item?.netWeight ?? 0;
@@ -178,7 +178,7 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
         const perItemWeight = totalWeight / pantryItem.currentQuantity;
         weightUsed = quantityValue * perItemWeight;
         weightUsedUnitId =
-          pantryItem.actualNetWeightUnit?.id ||
+          pantryItem.packageWeightUnit?.id ||
           pantryItem.item?.displayUnit?.id;
       }
     }
@@ -246,7 +246,6 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
                 {trackingMode === 'count' ? (
                   <FormattedItemSubtitle
                     quantity={pantryItem.currentQuantity}
-                    displayFormat={pantryItem.displayFormat}
                     displayAsFraction={pantryItem.unit?.displayAsFraction}
                     unitSymbol={pantryItem.unit?.symbol}
                   />

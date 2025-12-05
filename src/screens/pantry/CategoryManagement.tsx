@@ -25,7 +25,7 @@ export const CategoryManagement: React.FC = () => {
 
     const grouped: Record<string, any[]> = {};
     items.forEach(item => {
-      const category = item.customCategory || 'Uncategorized';
+      const category = item.item?.categories?.[0]?.category?.name || 'Uncategorized';
       if (!grouped[category]) {
         grouped[category] = [];
       }

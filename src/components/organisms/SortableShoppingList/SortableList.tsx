@@ -28,6 +28,7 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
   onItemEdit,
   onItemDelete,
   onTogglePurchase,
+  onMoveToPantry,
   onSortOrderUpdate,
   disabled = false,
   ListFooterComponent,
@@ -228,6 +229,7 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
           onItemEdit={onItemEdit}
           onItemDelete={onItemDelete}
           onTogglePurchase={onTogglePurchase}
+          onMoveToPantry={onMoveToPantry}
           drag={disabled ? undefined : drag}
           isActive={isActive}
           onSwipeableWillOpen={handleSwipeableWillOpen}
@@ -246,6 +248,7 @@ export const SortableShoppingList: React.FC<SortableShoppingListProps> = ({
       onItemEdit,
       onItemDelete,
       onTogglePurchase,
+      onMoveToPantry,
       disabled,
       handleSwipeableWillOpen,
       handleSwipeableClose,

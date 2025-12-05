@@ -1,12 +1,13 @@
 import { useState, useCallback } from 'react';
 import { gql } from '@apollo/client';
 import { useQuery } from '@apollo/client/react';
-import type {
+import {
+  useGetPantryLedgerAnalyticsQuery,
+  PeriodGranularity,
   DateRange,
-  AnalyticsFilterInput,
-  UsageAnalytics,
-  WasteAnalytics,
-} from '#types';
+  type AnalyticsFilterInput,
+} from '#generated';
+import type { UsageAnalytics, WasteAnalytics } from '#types';
 
 // GraphQL queries - these will work once the backend schema is available
 const GET_PANTRY_USAGE_ANALYTICS = gql`
@@ -37,6 +38,7 @@ const GET_PANTRY_USAGE_ANALYTICS = gql`
         imageUrl
         count
         totalQuantity
+        unitName
       }
     }
   }
@@ -71,6 +73,7 @@ const GET_PANTRY_WASTE_ANALYTICS = gql`
         count
         totalQuantity
         estimatedValue
+        unitName
       }
     }
   }
@@ -79,6 +82,66 @@ const GET_PANTRY_WASTE_ANALYTICS = gql`
 interface UsePantryAnalyticsOptions {
   pantryId: string | undefined;
   initialDateRange?: DateRange;
+  ledgerGranularity?: PeriodGranularity;
+}
+
+// Ledger summary type based on API
+interface LedgerSummary {
+  totalAdded: number;
+  totalConsumed: number;
+  totalWasted: number;
+  netQuantity: number;
+  additionCount: number;
+  consumptionCount: number;
+  wasteCount: number;
+  additionsByUnit: Array<{
+    unitId: string;
+    unitName: string;
+    unitSymbol: string;
+    totalQuantity: number;
+    count: number;
+  }>;
+  consumptionByUnit: Array<{
+    unitId: string;
+    unitName: string;
+    unitSymbol: string;
+    totalQuantity: number;
+    count: number;
+  }>;
+}
+
+interface LedgerPeriodData {
+  periodStart: string;
+  periodEnd: string;
+  periodLabel: string;
+  added: number;
+  consumed: number;
+  wasted: number;
+  net: number;
+  additionCost: number | null;
+}
+
+interface CostAnalytics {
+  totalSpent: number;
+  averageCostPerUnit: number;
+  costByStore: Array<{
+    storeId: string;
+    storeName: string;
+    totalSpent: number;
+    itemCount: number;
+  }>;
+}
+
+interface LedgerAnalytics {
+  summary: LedgerSummary;
+  periodData: LedgerPeriodData[];
+  costAnalytics: CostAnalytics | null;
+  topRestockedItems: Array<{
+    itemId: string;
+    itemName: string;
+    totalQuantity: number;
+  }>;
+  granularity: PeriodGranularity;
 }
 
 interface UsePantryAnalyticsReturn {
@@ -92,6 +155,11 @@ interface UsePantryAnalyticsReturn {
   wasteLoading: boolean;
   wasteError: Error | undefined;
 
+  // Ledger data
+  ledgerData: LedgerAnalytics | null;
+  ledgerLoading: boolean;
+  ledgerError: Error | undefined;
+
   // Combined loading state
   loading: boolean;
 
@@ -99,15 +167,23 @@ interface UsePantryAnalyticsReturn {
   dateRange: DateRange;
   setDateRange: (range: DateRange) => void;
 
+  // Ledger granularity
+  ledgerGranularity: PeriodGranularity;
+  setLedgerGranularity: (granularity: PeriodGranularity) => void;
+
   // Actions
   refetch: () => Promise<void>;
 }
 
 export function usePantryAnalytics({
   pantryId,
-  initialDateRange = 'LAST_MONTH',
+  initialDateRange = DateRange.LastMonth,
+  ledgerGranularity: initialLedgerGranularity = PeriodGranularity.Weekly,
 }: UsePantryAnalyticsOptions): UsePantryAnalyticsReturn {
   const [dateRange, setDateRange] = useState<DateRange>(initialDateRange);
+  const [ledgerGranularity, setLedgerGranularity] = useState<PeriodGranularity>(
+    initialLedgerGranularity,
+  );
 
   const hasValidPantryId = !!pantryId?.trim();
 
@@ -146,9 +222,25 @@ export function usePantryAnalytics({
     },
   );
 
+  const {
+    data: ledgerQueryData,
+    loading: ledgerLoading,
+    error: ledgerError,
+    refetch: refetchLedger,
+  } = useGetPantryLedgerAnalyticsQuery({
+    variables: {
+      pantryId: pantryId ?? '',
+      filter,
+      granularity: ledgerGranularity,
+    },
+    skip: !hasValidPantryId,
+    fetchPolicy: 'cache-and-network',
+    errorPolicy: 'all',
+  });
+
   const refetch = useCallback(async () => {
-    await Promise.all([refetchUsage(), refetchWaste()]);
-  }, [refetchUsage, refetchWaste]);
+    await Promise.all([refetchUsage(), refetchWaste(), refetchLedger()]);
+  }, [refetchUsage, refetchWaste, refetchLedger]);
 
   return {
     usageData: usageQueryData?.pantryUsageAnalytics ?? null,
@@ -157,9 +249,14 @@ export function usePantryAnalytics({
     wasteData: wasteQueryData?.pantryWasteAnalytics ?? null,
     wasteLoading,
     wasteError: wasteError as Error | undefined,
-    loading: usageLoading || wasteLoading,
+    ledgerData: (ledgerQueryData?.pantryLedgerAnalytics as LedgerAnalytics) ?? null,
+    ledgerLoading,
+    ledgerError: ledgerError as Error | undefined,
+    loading: usageLoading || wasteLoading || ledgerLoading,
     dateRange,
     setDateRange,
+    ledgerGranularity,
+    setLedgerGranularity,
     refetch,
   };
 }

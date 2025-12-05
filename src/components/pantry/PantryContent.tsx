@@ -12,6 +12,7 @@ interface PantryContentProps {
   onItemDelete?: (id: string) => void;
   onItemConsume?: (id: string) => void;
   onItemWaste?: (id: string) => void;
+  onItemRestock?: (id: string) => void;
   onRefresh?: () => Promise<void>;
   emptyState?: any;
 }
@@ -33,6 +34,7 @@ export const PantryContent: React.FC<PantryContentProps> = ({
   onItemDelete,
   onItemConsume,
   onItemWaste,
+  onItemRestock,
   onRefresh,
   emptyState,
 }) => {
@@ -56,6 +58,7 @@ export const PantryContent: React.FC<PantryContentProps> = ({
       onItemDelete={onItemDelete}
       onItemConsume={onItemConsume}
       onItemWaste={onItemWaste}
+      onItemRestock={onItemRestock}
       onRefresh={onRefresh}
       emptyState={emptyState}
     />

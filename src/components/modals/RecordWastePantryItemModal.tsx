@@ -77,11 +77,11 @@ export const RecordWastePantryItemModal: React.FC<
   // Determine tracking mode based on item properties
   const trackingMode = pantryItem ? determineTrackingMode(pantryItem) : 'count';
 
-  // Calculate effective total weight (actualNetWeight or catalog weight * quantity)
+  // Calculate effective total weight (packageWeight or catalog weight * quantity)
   const getEffectiveTotalWeight = useCallback(
     (item: PantryItemFragment): number => {
-      if (item.actualNetWeight != null && item.actualNetWeight > 0) {
-        return item.actualNetWeight;
+      if (item.packageWeight != null && item.packageWeight > 0) {
+        return item.packageWeight;
       }
       // Fall back to catalog per-item weight * quantity
       const perItemWeight = item.item?.netWeight ?? 0;
@@ -182,7 +182,7 @@ export const RecordWastePantryItemModal: React.FC<
         const perItemWeight = totalWeight / pantryItem.currentQuantity;
         wasteWeight = wasteValue * perItemWeight;
         wasteWeightUnitId =
-          pantryItem.actualNetWeightUnit?.id ||
+          pantryItem.packageWeightUnit?.id ||
           pantryItem.item?.displayUnit?.id;
       }
       // If no weight tracking, wasteWeight and wasteWeightUnitId remain undefined
@@ -254,7 +254,6 @@ export const RecordWastePantryItemModal: React.FC<
                 {trackingMode === 'count' ? (
                   <FormattedItemSubtitle
                     quantity={pantryItem.currentQuantity}
-                    displayFormat={pantryItem.displayFormat}
                     displayAsFraction={pantryItem.unit?.displayAsFraction}
                     unitSymbol={pantryItem.unit?.symbol}
                   />

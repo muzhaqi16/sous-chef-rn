@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import type { DateRange } from '#types';
+import { DateRange } from '#generated';
 
 interface DateRangeOption {
   value: DateRange;
@@ -9,10 +9,10 @@ interface DateRangeOption {
 }
 
 const DATE_RANGE_OPTIONS: DateRangeOption[] = [
-  { value: 'LAST_WEEK', label: 'Week' },
-  { value: 'LAST_MONTH', label: 'Month' },
-  { value: 'LAST_QUARTER', label: 'Quarter' },
-  { value: 'LAST_YEAR', label: 'Year' },
+  { value: DateRange.LastWeek, label: 'Week' },
+  { value: DateRange.LastMonth, label: 'Month' },
+  { value: DateRange.LastQuarter, label: 'Quarter' },
+  { value: DateRange.LastYear, label: 'Year' },
 ];
 
 interface DateRangeFilterProps {

@@ -16,6 +16,10 @@ interface QuantitySectionProps {
   onUnitSelected?: (unitId: string | null, unitName: string | null) => void;
   testID?: string;
   unitTestID?: string;
+  // Edit mode stock info (read-only display)
+  initialQuantity?: number | null;
+  consumedQuantity?: number | null;
+  unitSymbol?: string | null;
 }
 
 export const QuantitySection: React.FC<QuantitySectionProps> = ({
@@ -25,6 +29,9 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
   onUnitSelected,
   testID,
   unitTestID,
+  initialQuantity,
+  consumedQuantity,
+  unitSymbol,
 }) => {
   const getFields = (): FieldDef<any>[] => {
     if (mode === 'add') {
@@ -60,9 +67,15 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
         },
       ];
     } else {
-      // Edit mode fields
-      // Note: Quantity is managed via consume/waste modals, not direct editing
+      // Edit mode fields - allow editing quantity and unit
       return [
+        {
+          name: 'quantityInput',
+          label: 'Current Quantity',
+          placeholder: 'e.g., 1, 1 1/4, or 1.5',
+          component: FractionInput,
+          testID,
+        },
         {
           name: 'unit',
           label: 'Unit',
@@ -75,6 +88,13 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
     }
   };
 
+  // Format quantity with unit symbol for display
+  const formatQuantity = (qty: number | null | undefined) => {
+    if (qty == null) return '-';
+    const unit = unitSymbol ? ` ${unitSymbol}` : '';
+    return `${qty}${unit}`;
+  };
+
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>
@@ -85,6 +105,24 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
         control={control}
         errors={errors}
       />
+      {/* Stock info display in edit mode */}
+      {mode === 'edit' && (
+        <View style={styles.stockInfoContainer}>
+          <Text style={styles.stockInfoTitle}>Stock Info</Text>
+          <View style={styles.stockInfoRow}>
+            <Text style={styles.stockInfoLabel}>Initial:</Text>
+            <Text style={styles.stockInfoValue}>
+              {formatQuantity(initialQuantity)}
+            </Text>
+          </View>
+          <View style={styles.stockInfoRow}>
+            <Text style={styles.stockInfoLabel}>Consumed:</Text>
+            <Text style={styles.stockInfoValue}>
+              {formatQuantity(consumedQuantity)}
+            </Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 };
@@ -145,5 +183,33 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.base,
     color: theme.colors.textSecondary,
     textAlign: 'center',
+  },
+  stockInfoContainer: {
+    marginTop: theme.spacing.md,
+    padding: theme.spacing.sm,
+    backgroundColor: theme.colors.surfaceVariant,
+    borderRadius: theme.radii.md,
+    borderWidth: 1,
+    borderColor: theme.colors.borderLight,
+  },
+  stockInfoTitle: {
+    fontSize: theme.fonts.size.sm,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.xs,
+  },
+  stockInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: theme.spacing.xs,
+  },
+  stockInfoLabel: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textTertiary,
+  },
+  stockInfoValue: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textSecondary,
+    fontWeight: theme.fonts.weight.medium,
   },
 }));

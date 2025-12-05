@@ -21,6 +21,7 @@ import {
   StorageState,
   useCreatePantryItemMutation,
   useUpdatePantryItemMutation,
+  useUpdatePantryItemQuantityMutation,
   useGetPantryItemQuery,
   GetPantryItemDocument,
   useGetHomeQuery,
@@ -29,6 +30,7 @@ import {
   ItemSuggestion,
 } from '#generated';
 import { normalizePantry } from '#/utils/connectionUtils';
+import { getEffectiveUnitSymbol } from '#/utils/pantryItemUtils';
 import {
   DynamicFormFields,
   FieldDef,
@@ -111,7 +113,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [_saving, setSaving] = useState(false);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
-  const [selectedUnitName, setSelectedUnitName] = useState<string | null>(null);
+  const [_selectedUnitName, setSelectedUnitName] = useState<string | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
     null,
   );
@@ -209,20 +211,18 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
 
   // Update mutation (edit mode only)
   const [updateItem] = useUpdatePantryItemMutation();
+  const [updateItemQuantity] = useUpdatePantryItemQuantityMutation();
 
   // Get initial values based on mode
   const getInitialValues = useCallback((): PantryItemFormData => {
     if (mode === 'edit' && existingItemData?.pantryItem) {
       const item = existingItemData.pantryItem;
-      // Use actualNetWeight if set, otherwise fall back to item.netWeight from catalog
-      const weight = item.actualNetWeight ?? item.item?.netWeight ?? undefined;
-      // Use actualNetWeightUnit if set, otherwise fall back to item.displayUnit from catalog
-      const weightUnitSymbol =
-        item.actualNetWeightUnit?.symbol ||
-        item.item?.displayUnit?.symbol ||
-        item.unit?.symbol ||
-        '';
+      // Use packageWeight if set, otherwise fall back to item.netWeight from catalog
+      const weight = item.packageWeight ?? item.item?.netWeight ?? undefined;
+      // Use centralized utility for correct unit priority
+      const weightUnitSymbol = getEffectiveUnitSymbol(item) || '';
       return {
+        quantityInput: item.currentQuantity?.toString() || '1',
         itemWeight: weight,
         unit: weightUnitSymbol,
         storageState: item.storageState || StorageState.Ambient,
@@ -232,7 +232,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
             : item.storageLocation?.name || '',
         expirationDate: item.expiresAt ? new Date(item.expiresAt) : undefined,
         notes: item.storageNotes || '',
-        category: item.customCategory || '',
+        category: item.item?.categories?.[0]?.category?.name || '',
         tags: item.tags || [],
       };
     }
@@ -364,23 +364,9 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   };
 
   // Build update input with only dirty (changed) fields
-  const buildDirtyInput = (
-    data: PantryItemFormData,
-    dirty: typeof dirtyFields,
-    quantityValue: number,
-    unitId: string | null,
-    unitName: string | null,
-  ) => {
+  // Note: quantity and unit changes are handled separately via updatePantryItemQuantity
+  const buildDirtyInput = (data: PantryItemFormData, dirty: typeof dirtyFields) => {
     const input: Record<string, any> = {};
-
-    // Note: currentQuantity is managed by the server via recordUsage/recordPantryItemWaste mutations
-    // The edit form should not update quantity directly
-
-    // Send unit fields when unit changes
-    if (dirty.unit) {
-      input.unitId = unitId || undefined;
-      input.unitName = unitName || data.unit.trim() || undefined;
-    }
 
     if (dirty.storageState) {
       input.storageState = data.storageState;
@@ -398,9 +384,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
       input.storageNotes = data.notes;
     }
 
-    if (dirty.category) {
-      input.customCategory = data.category;
-    }
+    // Note: category editing removed - customCategory field no longer exists
 
     if (dirty.tags) {
       input.tags = data.tags || [];
@@ -460,7 +444,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
           };
         } else {
           const categoryInput = selectedCategoryId
-            ? { customCategory: selectedCategoryId }
+            ? { itemCategory: selectedCategoryId }
             : data.category.trim()
             ? { itemCategory: data.category.trim() }
             : {};
@@ -488,27 +472,43 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
           Alert.alert('Error', 'Failed to add pantry item. Please try again.');
         }
       } else {
-        // Edit mode - only send changed fields
-        const input = buildDirtyInput(
-          data,
-          dirtyFields,
-          quantityValue,
-          unitId,
-          selectedUnitName,
-        );
+        // Edit mode - handle quantity/unit changes separately
+        const quantityOrUnitChanged =
+          dirtyFields.quantityInput || dirtyFields.unit;
 
-        // Skip mutation if no fields changed
-        if (Object.keys(input).length === 0) {
+        // If quantity or unit changed, use updatePantryItemQuantity mutation
+        if (quantityOrUnitChanged) {
+          await updateItemQuantity({
+            variables: {
+              pantryItemId: itemId!,
+              quantity: data.quantityInput || quantityValue.toString(),
+              unitId: unitId || undefined,
+              version: existingItemData?.pantryItem?.version ?? undefined,
+            },
+            refetchQueries: [
+              { query: GetPantryItemDocument, variables: { id: itemId } },
+            ],
+          });
+        }
+
+        // Build input for other dirty fields (excluding quantity/unit)
+        const input = buildDirtyInput(data, dirtyFields);
+
+        // Update other fields if any changed
+        if (Object.keys(input).length > 0) {
+          await updateItem({
+            variables: { id: itemId!, input },
+            refetchQueries: [
+              { query: GetPantryItemDocument, variables: { id: itemId } },
+            ],
+          });
+        }
+
+        // If nothing changed at all, just succeed
+        if (!quantityOrUnitChanged && Object.keys(input).length === 0) {
           onSuccess?.();
           return;
         }
-
-        await updateItem({
-          variables: { id: itemId!, input },
-          refetchQueries: [
-            { query: GetPantryItemDocument, variables: { id: itemId } },
-          ],
-        });
 
         onSuccess?.();
       }
@@ -639,6 +639,10 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
                   ? 'add-pantry-item-unit-picker'
                   : 'edit-pantry-item-unit-picker'
               }
+              // Edit mode stock info (read-only display)
+              initialQuantity={item?.initialQuantity}
+              consumedQuantity={item?.consumedQuantity}
+              unitSymbol={item?.unit?.symbol}
             />
 
             {/* Storage Details Section */}

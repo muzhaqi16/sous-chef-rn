@@ -53,6 +53,7 @@ export interface SortableShoppingListProps extends Omit<ScrollViewProps, 'data' 
   onItemEdit?: (id: string) => void;
   onItemDelete?: (id: string) => void;
   onTogglePurchase?: (id: string) => void;
+  onMoveToPantry?: (id: string) => void;
   onDragEnd?: (reorderedItems: SortableShoppingListItem[]) => void;
   onSortOrderUpdate?: (
     itemId: string,

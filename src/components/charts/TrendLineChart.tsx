@@ -1,8 +1,12 @@
 import React, { useMemo } from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, Platform } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { CartesianChart, Line, Area } from 'victory-native';
+import { matchFont } from '@shopify/react-native-skia';
 import type { TimeSeriesDataPoint } from '#types';
+
+const fontFamily = Platform.select({ ios: 'Helvetica', default: 'sans-serif' });
+const axisFont = matchFont({ fontFamily, fontSize: 10 });
 
 interface TrendLineChartProps {
   data: TimeSeriesDataPoint[];
@@ -10,6 +14,7 @@ interface TrendLineChartProps {
   showArea?: boolean;
   color?: string;
   title?: string;
+  subtitle?: string;
 }
 
 export const TrendLineChart: React.FC<TrendLineChartProps> = ({
@@ -18,6 +23,7 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({
   showArea = true,
   color,
   title,
+  subtitle,
 }) => {
   const { theme } = useUnistyles();
   const lineColor = color || theme.colors.primary;
@@ -54,16 +60,26 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({
           {title}
         </Text>
       )}
+      {subtitle && (
+        <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
+          {subtitle}
+        </Text>
+      )}
       <View style={{ height }}>
         <CartesianChart
           data={chartData}
           xKey="x"
           yKeys={['y']}
           domainPadding={{ left: 10, right: 10, top: 20, bottom: 10 }}
-          axisOptions={{
-            font: null,
-            lineColor: theme.colors.border,
+          yAxis={[{
+            font: axisFont,
+            tickCount: 5,
             labelColor: theme.colors.textSecondary,
+            lineColor: theme.colors.border,
+          }]}
+          frame={{
+            lineColor: theme.colors.border,
+            lineWidth: 1,
           }}
         >
           {({ points }) => (
@@ -98,6 +114,11 @@ const styles = StyleSheet.create(theme => ({
   title: {
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.semibold,
+    marginBottom: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.sm,
+  },
+  subtitle: {
+    fontSize: theme.fonts.size.xs,
     marginBottom: theme.spacing.sm,
     paddingHorizontal: theme.spacing.sm,
   },

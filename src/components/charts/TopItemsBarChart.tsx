@@ -69,12 +69,14 @@ export const TopItemsBarChart: React.FC<TopItemsBarChartProps> = ({
                 </Text>
               </View>
               <View style={styles.barContainer}>
-                <View
-                  style={[
-                    styles.bar,
-                    { width: `${barWidth}%`, backgroundColor: barColor },
-                  ]}
-                />
+                <View style={styles.barWrapper}>
+                  <View
+                    style={[
+                      styles.bar,
+                      { width: `${barWidth}%`, backgroundColor: barColor },
+                    ]}
+                  />
+                </View>
                 <Text style={[styles.barValue, { color: theme.colors.textSecondary }]}>
                   {item.value}
                   {showSecondaryValue && item.secondaryValue !== undefined && (
@@ -129,6 +131,10 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     height: 24,
   },
+  barWrapper: {
+    flex: 1,
+    marginRight: theme.spacing.sm,
+  },
   bar: {
     height: 20,
     borderRadius: 4,
@@ -136,7 +142,7 @@ const styles = StyleSheet.create(theme => ({
   },
   barValue: {
     fontSize: theme.fonts.size.xs,
-    marginLeft: theme.spacing.sm,
+    flexShrink: 0,
   },
   secondaryValue: {
     fontWeight: theme.fonts.weight.regular,

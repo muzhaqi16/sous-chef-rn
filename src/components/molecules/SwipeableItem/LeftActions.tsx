@@ -9,9 +9,57 @@ export const LeftActions: React.FC<SwipeActionsProps> = React.memo(({
   onTogglePurchase,
   onConsume,
   onWaste,
+  onRestock,
   isPurchased,
   swipeableRef,
 }) => {
+
+  // Show consume, waste, and restock buttons for pantry items
+  if (onConsume && onWaste && onRestock) {
+    const handleConsumePress = () => {
+      swipeableRef?.current?.close();
+      onConsume();
+    };
+
+    const handleWastePress = () => {
+      swipeableRef?.current?.close();
+      onWaste();
+    };
+
+    const handleRestockPress = () => {
+      swipeableRef?.current?.close();
+      onRestock();
+    };
+
+    return (
+      <Reanimated.View
+        style={styles.leftActionsContainer}
+        pointerEvents="box-none"
+      >
+        <ActionButton
+          onPress={handleConsumePress}
+          icon="restaurant"
+          backgroundColor="#9C27B0" // Purple for consume
+          circular={true}
+          library="MaterialIcons"
+        />
+        <ActionButton
+          onPress={handleWastePress}
+          icon="warning"
+          backgroundColor="#FF9800" // Orange for waste
+          circular={true}
+          library="MaterialIcons"
+        />
+        <ActionButton
+          onPress={handleRestockPress}
+          icon="add-circle-outline"
+          backgroundColor="#4CAF50" // Green for restock
+          circular={true}
+          library="MaterialIcons"
+        />
+      </Reanimated.View>
+    );
+  }
 
   // Show both consume and waste buttons if both are provided
   if (onConsume && onWaste) {

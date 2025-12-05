@@ -18,6 +18,7 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
   onTogglePurchase,
   onConsume,
   onWaste,
+  onRestock,
   isPurchased,
   enableSwipeToDelete = true,
   leftThreshold = 120,
@@ -63,11 +64,12 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
         onTogglePurchase={onTogglePurchase}
         onConsume={onConsume}
         onWaste={onWaste}
+        onRestock={onRestock}
         isPurchased={isPurchased}
         swipeableRef={swipeableRef}
       />
     );
-  }, [onTogglePurchase, onConsume, onWaste, isPurchased, swipeableRef]);
+  }, [onTogglePurchase, onConsume, onWaste, onRestock, isPurchased, swipeableRef]);
 
   return (
     <Reanimated.View style={[styles.gestureContainer, animatedStyle]}>

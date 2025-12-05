@@ -26,6 +26,7 @@ import {
   useGetHomeBasicQuery,
   useCreatePantryItemUsageMutation,
   useRecordPantryItemWasteMutation,
+  useRestockPantryItemMutation,
   UsagePurpose,
   WasteReason,
 } from '#generated';
@@ -43,6 +44,7 @@ import {
 import { PantryContent } from '#components/pantry';
 import { ConsumePantryItemModal } from '#components/modals/ConsumePantryItemModal';
 import { RecordWastePantryItemModal } from '#components/modals/RecordWastePantryItemModal';
+import { RestockPantryItemModal } from '#components/modals/RestockPantryItemModal';
 import type { ItemSelectorRef } from '#components/organisms/AnimatedItemSelector';
 import { normalizeHome } from '#/utils/connectionUtils';
 import { PantryErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
@@ -77,6 +79,10 @@ const PantryMainScreen: React.FC = React.memo(() => {
   // Waste item state
   const [wasteModalVisible, setWasteModalVisible] = useState(false);
   const [selectedItemForWaste, setSelectedItemForWaste] = useState<any>(null);
+
+  // Restock item state
+  const [restockModalVisible, setRestockModalVisible] = useState(false);
+  const [selectedItemForRestock, setSelectedItemForRestock] = useState<any>(null);
 
   // Manage selector with overlay coordination
   const { handleOpenSelector, handleOverlayOpen, handleOverlayClose } =
@@ -209,6 +215,18 @@ const PantryMainScreen: React.FC = React.memo(() => {
     },
   });
 
+  // Restock item mutation
+  const [restockPantryItem] = useRestockPantryItemMutation({
+    errorPolicy: 'all',
+    onError: error => {
+      console.error('Failed to restock pantry item:', error);
+      Alert.alert(
+        'Error',
+        error.message || 'Failed to restock item. Please try again.',
+      );
+    },
+  });
+
   // Handler to open consume modal
   const handleConsumeItem = useCallback(
     (itemId: string) => {
@@ -325,6 +343,59 @@ const PantryMainScreen: React.FC = React.memo(() => {
   const handleCloseWasteModal = useCallback(() => {
     setWasteModalVisible(false);
     setSelectedItemForWaste(null);
+  }, []);
+
+  // Handler to open restock modal
+  const handleRestockItem = useCallback(
+    (itemId: string) => {
+      const item = pantryItems.find(p => p.id === itemId);
+      if (item) {
+        setSelectedItemForRestock(item);
+        setRestockModalVisible(true);
+      }
+    },
+    [pantryItems],
+  );
+
+  // Handler to confirm restock
+  const handleConfirmRestock = useCallback(
+    async (
+      quantity: number,
+      _quantityInput: string,
+      notes: string,
+      unitId?: string,
+    ) => {
+      if (!selectedItemForRestock) return;
+
+      try {
+        await restockPantryItem({
+          variables: {
+            input: {
+              pantryItemId: selectedItemForRestock.id,
+              quantity,
+              unitId,
+              notes: notes || undefined,
+            },
+          },
+        });
+
+        // Reset state
+        setRestockModalVisible(false);
+        setSelectedItemForRestock(null);
+
+        // Refetch to get updated quantities
+        await refetch();
+      } catch (error) {
+        console.error('Error restocking pantry item:', error);
+      }
+    },
+    [selectedItemForRestock, restockPantryItem, refetch],
+  );
+
+  // Handler to close restock modal
+  const handleCloseRestockModal = useCallback(() => {
+    setRestockModalVisible(false);
+    setSelectedItemForRestock(null);
   }, []);
 
   // Handle swipeable item opening - ensure only one item is open at a time
@@ -587,6 +658,7 @@ const PantryMainScreen: React.FC = React.memo(() => {
         onItemDelete={handleDeleteItem}
         onItemConsume={handleConsumeItem}
         onItemWaste={handleWasteItem}
+        onItemRestock={handleRestockItem}
         onRefresh={handleRefresh}
         onSwipeableWillOpen={handleSwipeableWillOpen}
         onEndReached={loadMore}
@@ -630,6 +702,12 @@ const PantryMainScreen: React.FC = React.memo(() => {
         pantryItem={selectedItemForWaste}
         onClose={handleCloseWasteModal}
         onConfirm={handleConfirmWaste}
+      />
+      <RestockPantryItemModal
+        visible={restockModalVisible}
+        pantryItem={selectedItemForRestock}
+        onClose={handleCloseRestockModal}
+        onConfirm={handleConfirmRestock}
       />
 
       {/* Home switch hint overlay */}

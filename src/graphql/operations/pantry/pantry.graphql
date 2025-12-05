@@ -101,6 +101,97 @@ query GetDefaultPantry($homeId: ID!) {
 }
 
 # ============================================
+# ANALYTICS QUERIES
+# ============================================
+
+query GetPantryLedgerAnalytics(
+  $pantryId: ID!
+  $itemId: String
+  $filter: AnalyticsFilterInput
+  $granularity: PeriodGranularity
+) {
+  pantryLedgerAnalytics(
+    pantryId: $pantryId
+    itemId: $itemId
+    filter: $filter
+    granularity: $granularity
+  ) {
+    summary {
+      totalAdded
+      totalConsumed
+      totalWasted
+      netQuantity
+      additionCount
+      consumptionCount
+      wasteCount
+      additionsByUnit {
+        unitId
+        unitName
+        unitSymbol
+        totalQuantity
+        count
+      }
+      consumptionByUnit {
+        unitId
+        unitName
+        unitSymbol
+        totalQuantity
+        count
+      }
+    }
+    periodData {
+      periodStart
+      periodEnd
+      periodLabel
+      added
+      consumed
+      wasted
+      net
+      additionCost
+    }
+    costAnalytics {
+      totalSpent
+      averageCostPerUnit
+      costByStore {
+        storeId
+        storeName
+        totalSpent
+        itemCount
+      }
+    }
+    topRestockedItems {
+      itemId
+      itemName
+      totalQuantity
+    }
+    granularity
+  }
+}
+
+query GetPantryItemLedger($pantryItemId: ID!, $filter: AnalyticsFilterInput) {
+  pantryItemLedger(pantryItemId: $pantryItemId, filter: $filter) {
+    totalAdded
+    totalConsumed
+    totalWasted
+    netQuantity
+    additionCount
+    consumptionCount
+    wasteCount
+    unitName
+    additionsByUnit {
+      unitId
+      unitName
+      totalQuantity
+    }
+    consumptionByUnit {
+      unitId
+      unitName
+      totalQuantity
+    }
+  }
+}
+
+# ============================================
 # MUTATIONS
 # ============================================
 
@@ -192,7 +283,7 @@ mutation CreatePantryItemUsage($input: RecordPantryItemUsageInput!) {
     pantryItem {
       id
       currentQuantity
-      actualNetWeight
+      packageWeight
       consumedQuantity
       ...PantryItemFragment
     }
@@ -224,6 +315,19 @@ mutation RecordPantryItemWaste(
     isRecycled: $isRecycled
   ) {
     ...PantryItemFragment
+  }
+}
+
+mutation RestockPantryItem($input: RestockPantryItemInput!) {
+  restockPantryItem(input: $input) {
+    id
+    quantityUsed
+    purpose
+    costPerUnit
+    totalCost
+    pantryItem {
+      ...PantryItemFragment
+    }
   }
 }
 

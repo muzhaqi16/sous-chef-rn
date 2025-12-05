@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
-import { View, Image } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { View, Image, TouchableOpacity } from 'react-native';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { SwipeableItem } from '#/components/molecules/SwipeableItem';
 import { ListItem } from '#/components/molecules/ListItem';
 import { DragHandle } from '#/components/atoms/DragHandle';
@@ -8,6 +8,7 @@ import { commonStyles } from '#/styles';
 import { HapticService } from '#services/haptic';
 import { ShoppingListItemCounter } from '#/components/molecules/ShoppingListItemCounter';
 import { useShoppingListActions } from '#context/ShoppingListActionsContext';
+import { Icon } from '#utils';
 import type { CounterElementConfig, ImageElementConfig } from './types';
 
 interface SimpleDraggableItemProps {
@@ -29,6 +30,7 @@ interface SimpleDraggableItemProps {
   onItemEdit?: (id: string) => void;
   onItemDelete?: (id: string) => void;
   onTogglePurchase?: (id: string) => void;
+  onMoveToPantry?: (id: string) => void;
   drag?: () => void;
   isActive?: boolean;
   onSwipeableWillOpen?: (ref: any) => void;
@@ -41,6 +43,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
   onItemEdit,
   onItemDelete,
   onTogglePurchase,
+  onMoveToPantry,
   drag,
   isActive,
   onSwipeableWillOpen,
@@ -48,6 +51,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
 }) => {
   // Get stable callbacks from context (prevents memoization breaking)
   const { onIncrementQuantity, onDecrementQuantity } = useShoppingListActions();
+  const { theme } = useUnistyles();
 
   // Handle long press for drag activation with haptic feedback
   const handleLongPress = useCallback(() => {
@@ -64,13 +68,35 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
     // Priority 1: Use config-based element (performance optimized)
     if (item.rightElementConfig?.type === 'counter') {
       const config = item.rightElementConfig;
-      const dragHandle =
-        !item.isPurchased && drag ? (
+
+      // For purchased items, show "Move to Pantry" button instead of drag handle
+      let counterRightElement: React.ReactNode;
+
+      if (item.isPurchased && onMoveToPantry) {
+        // "Move to Pantry" icon button for purchased items
+        counterRightElement = (
+          <TouchableOpacity
+            onPress={() => onMoveToPantry(item.id)}
+            style={styles.moveToPantryButton}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Icon
+              name="cupboard"
+              size={24}
+              color={theme.colors.primary}
+              library="MaterialDesignIcons"
+            />
+          </TouchableOpacity>
+        );
+      } else if (!item.isPurchased && drag) {
+        // Drag handle for unpurchased items
+        counterRightElement = (
           <DragHandle
             onLongPress={handleLongPress}
             disabled={item.isPurchased}
           />
-        ) : undefined;
+        );
+      }
 
       return (
         <ShoppingListItemCounter
@@ -79,7 +105,7 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
           onIncrement={() => onIncrementQuantity(config.itemId)}
           onDecrement={() => onDecrementQuantity(config.itemId)}
           disabled={config.disabled}
-          rightElement={dragHandle}
+          rightElement={counterRightElement}
         />
       );
     }
@@ -105,11 +131,14 @@ const SimpleDraggableItemComponent: React.FC<SimpleDraggableItemProps> = ({
   }, [
     drag,
     item.isPurchased,
+    item.id,
     item.rightElement,
     item.rightElementConfig,
     handleLongPress,
     onIncrementQuantity,
     onDecrementQuantity,
+    onMoveToPantry,
+    theme.colors.primary,
   ]);
 
   // Create leftElement from config or use provided element
@@ -191,6 +220,10 @@ const styles = StyleSheet.create(theme => ({
     shadowRadius: 8,
     elevation: 8,
   },
+  moveToPantryButton: {
+    padding: theme.spacing.xs,
+    marginLeft: theme.spacing.sm,
+  },
 }));
 
 // PERFORMANCE: Custom comparator for React.memo
@@ -204,7 +237,8 @@ const arePropsEqual = (
   if (
     prev.item === next.item &&
     prev.isActive === next.isActive &&
-    prev.drag === next.drag
+    prev.drag === next.drag &&
+    prev.onMoveToPantry === next.onMoveToPantry
   ) {
     return true;
   }
@@ -218,7 +252,8 @@ const arePropsEqual = (
     prev.item.rightElementConfig === next.item.rightElementConfig &&
     prev.item.leftElementConfig === next.item.leftElementConfig &&
     prev.isActive === next.isActive &&
-    prev.drag === next.drag
+    prev.drag === next.drag &&
+    prev.onMoveToPantry === next.onMoveToPantry
   );
 };
 
