@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { Text, ActivityIndicator, FlatList, ListRenderItemInfo } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { Text, ActivityIndicator, ScrollView, View } from 'react-native';
 import { OnBoardingWrapper } from '#components/templates';
 import { StyleSheet } from 'react-native-unistyles';
 import { useOnboardingNavigation, useSelectableItems } from '#hooks';
@@ -63,29 +63,6 @@ export const SelectPantryItems = () => {
       initialItems: selectableItems,
       maxSelection: 100,
     },
-  );
-
-  // PERFORMANCE: Memoized callbacks for FlatList - must be before early returns
-  const renderItem = useCallback(
-    ({ item }: ListRenderItemInfo<typeof items[0]>) => (
-      <AnimatedChip
-        label={item.name}
-        selected={item.selected}
-        onPress={() => toggleItem(item.id)}
-        disabled={!item.selected && isMaxReached}
-        imageUrl={item.imageUrl}
-      />
-    ),
-    [toggleItem, isMaxReached],
-  );
-
-  const keyExtractor = useCallback((item: typeof items[0]) => item.id, []);
-
-  const ListHeaderComponent = useCallback(
-    () => (
-      <Text style={styles.helperText}>{selectedItems.length} selected</Text>
-    ),
-    [selectedItems.length],
   );
 
   if (loading) {
@@ -162,20 +139,21 @@ export const SelectPantryItems = () => {
       onSkip={() => navigateToNextStep('SelectPantryItems')}
       testID="onboarding-select-pantry-items-screen"
     >
-      <FlatList
-        data={items}
-        renderItem={renderItem}
-        keyExtractor={keyExtractor}
-        ListHeaderComponent={ListHeaderComponent}
-        numColumns={3}
-        columnWrapperStyle={styles.columnWrapper}
-        contentContainerStyle={styles.listContent}
-        initialNumToRender={15}
-        maxToRenderPerBatch={10}
-        windowSize={5}
-        removeClippedSubviews={true}
-        style={styles.form}
-      />
+      <ScrollView style={styles.form} contentContainerStyle={styles.listContent}>
+        <Text style={styles.helperText}>{selectedItems.length} selected</Text>
+        <View style={styles.chipContainer}>
+          {items.map(item => (
+            <AnimatedChip
+              key={item.id}
+              label={item.name}
+              selected={item.selected}
+              onPress={() => toggleItem(item.id)}
+              disabled={!item.selected && isMaxReached}
+              imageUrl={item.imageUrl}
+            />
+          ))}
+        </View>
+      </ScrollView>
 
       <Button
         title={
@@ -209,10 +187,11 @@ const styles = StyleSheet.create(theme => ({
     paddingBottom: 16,
     paddingHorizontal: 8,
   },
-  columnWrapper: {
+  chipContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'center',
     gap: 8,
-    marginBottom: 8,
   },
   nextButton: {
     backgroundColor: theme.colors.primary,
