@@ -5912,6 +5912,14 @@
             "deprecationReason": null
           },
           {
+            "name": "storageLocationName",
+            "description": null,
+            "type": { "kind": "SCALAR", "name": "String", "ofType": null },
+            "defaultValue": null,
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
             "name": "storageNotes",
             "description": null,
             "type": { "kind": "SCALAR", "name": "String", "ofType": null },

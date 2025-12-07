@@ -1195,6 +1195,7 @@ input CreatePantryItemInput {
   pantryId: ID!
   purchaseId: String
   storageLocationId: String
+  storageLocationName: String
   storageNotes: String
   storageState: StorageState
   storeId: String

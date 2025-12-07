@@ -818,6 +818,7 @@ export type CreatePantryItemInput = {
   pantryId: Scalars['ID']['input'];
   purchaseId?: InputMaybe<Scalars['String']['input']>;
   storageLocationId?: InputMaybe<Scalars['String']['input']>;
+  storageLocationName?: InputMaybe<Scalars['String']['input']>;
   storageNotes?: InputMaybe<Scalars['String']['input']>;
   storageState?: InputMaybe<StorageState>;
   storeId?: InputMaybe<Scalars['String']['input']>;

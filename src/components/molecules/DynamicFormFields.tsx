@@ -57,6 +57,7 @@ export type FieldDef<T extends FieldValues> = {
     locationId: string | null,
     location: any,
   ) => void;
+  onAddNewLocation?: (name: string) => void;
   storageLocations?: any[];
   testID?: string;
 };
@@ -91,6 +92,7 @@ export function DynamicFormFields<T extends FieldValues>({
           onUnitSelected,
           onCategorySelected,
           onStorageLocationSelected,
+          onAddNewLocation,
           storageLocations,
           testID,
         },
@@ -110,6 +112,7 @@ export function DynamicFormFields<T extends FieldValues>({
         onUnitSelected,
         onCategorySelected,
         onStorageLocationSelected,
+        onAddNewLocation,
         storageLocations,
         testID,
         key: `${String(name)}-${idx}`,
@@ -134,6 +137,7 @@ export function DynamicFormFields<T extends FieldValues>({
           onUnitSelected,
           onCategorySelected,
           onStorageLocationSelected,
+          onAddNewLocation,
           storageLocations,
           testID,
           key,
@@ -235,6 +239,7 @@ export function DynamicFormFields<T extends FieldValues>({
                       error={errors[name]?.message?.toString()}
                       storageLocations={storageLocations || []}
                       onStorageLocationSelected={onStorageLocationSelected}
+                      onAddNewLocation={onAddNewLocation}
                       {...props}
                     />
                   );

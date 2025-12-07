@@ -8,7 +8,6 @@ import {
   DynamicFormFields,
   FieldDef,
 } from '#components/molecules/DynamicFormFields';
-import {FormInput} from '#components/molecules/FormInput';
 import {FormTextArea} from '#components/molecules/FormTextArea';
 import {StorageState} from '#generated';
 import {commonStyles} from '#/styles/commonStyles';
@@ -42,6 +41,7 @@ interface StorageDetailsSectionProps {
   onCategorySelected?: (categoryId: string | null) => void;
   storageLocations?: StorageLocation[];
   onStorageLocationSelected?: (locationId: string | null, location: StorageLocation | null) => void;
+  onAddNewLocation?: (name: string) => void;
 }
 
 export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
@@ -57,6 +57,7 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
   onCategorySelected,
   storageLocations = [],
   onStorageLocationSelected,
+  onAddNewLocation,
 }) => {
   const {theme} = useUnistyles();
 
@@ -91,9 +92,10 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
       name: 'location',
       label: 'Location',
       placeholder: 'e.g., Top shelf, Drawer 2',
-      component: storageLocations.length > 0 ? 'storageLocationAutocomplete' : FormInput,
+      component: 'storageLocationAutocomplete',
       storageLocations,
       onStorageLocationSelected,
+      onAddNewLocation,
     },
     {
       name: 'expirationDate',

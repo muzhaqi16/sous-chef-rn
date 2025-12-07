@@ -117,7 +117,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
     null,
   );
-  const [_selectedLocationId, setSelectedLocationId] = useState<string | null>(
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(
     null,
   );
 
@@ -329,6 +329,15 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     [setValue],
   );
 
+  // Handler for adding a new storage location (user typed a custom name)
+  const handleAddNewLocation = useCallback(
+    (name: string) => {
+      setValue('location', name);
+      setSelectedLocationId(null); // Clear ID - will use name for server to find or create
+    },
+    [setValue],
+  );
+
   const handleUnitSelected = useCallback(
     (unitId: string | null, unitName: string | null) => {
       setSelectedUnitId(unitId);
@@ -425,6 +434,13 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
           return;
         }
 
+        // Determine storage location field: use ID if selected, name if typed
+        const storageLocationInput = selectedLocationId
+          ? { storageLocationId: selectedLocationId }
+          : data.location.trim()
+          ? { storageLocationName: data.location.trim() }
+          : {};
+
         const baseInput = {
           pantryId: currentPantryId,
           unitId: unitId || '',
@@ -432,7 +448,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
           storageState: data.storageState as StorageState,
           expiresAt: data.expirationDate?.toISOString() || null,
           storageNotes: data.notes.trim() || null,
-          storageLocation: data.location.trim() || null,
+          ...storageLocationInput,
         };
 
         let input: any;
@@ -662,6 +678,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
               onCategorySelected={handleCategorySelect}
               storageLocations={storageLocations}
               onStorageLocationSelected={handleStorageLocationSelect}
+              onAddNewLocation={handleAddNewLocation}
             />
 
             {/* Tags Section (Edit mode only) */}
