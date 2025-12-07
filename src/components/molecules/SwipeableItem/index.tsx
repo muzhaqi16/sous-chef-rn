@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
-import Reanimated, { useAnimatedStyle } from 'react-native-reanimated';
+import Reanimated, { useAnimatedStyle, SharedValue } from 'react-native-reanimated';
 import { RightActions } from './RightActions';
 import { LeftActions } from './LeftActions';
 import { SwipeableContent } from './SwipeableContent';
@@ -58,18 +58,22 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
     );
   }, [onEdit, onDelete, handleActionPress, testIDPrefix]);
 
-  const renderLeftActions = useCallback(() => {
-    return (
-      <LeftActions
-        onTogglePurchase={onTogglePurchase}
-        onConsume={onConsume}
-        onWaste={onWaste}
-        onRestock={onRestock}
-        isPurchased={isPurchased}
-        swipeableRef={swipeableRef}
-      />
-    );
-  }, [onTogglePurchase, onConsume, onWaste, onRestock, isPurchased, swipeableRef]);
+  const renderLeftActions = useCallback(
+    (progress: SharedValue<number>) => {
+      return (
+        <LeftActions
+          onTogglePurchase={onTogglePurchase}
+          onConsume={onConsume}
+          onWaste={onWaste}
+          onRestock={onRestock}
+          isPurchased={isPurchased}
+          swipeableRef={swipeableRef}
+          progress={progress}
+        />
+      );
+    },
+    [onTogglePurchase, onConsume, onWaste, onRestock, isPurchased, swipeableRef],
+  );
 
   return (
     <Reanimated.View style={[styles.gestureContainer, animatedStyle]}>

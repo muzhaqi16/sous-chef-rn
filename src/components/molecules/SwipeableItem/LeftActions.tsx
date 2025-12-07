@@ -1,7 +1,7 @@
 import React from 'react';
 import { Vibration, Platform } from 'react-native';
 import Reanimated from 'react-native-reanimated';
-import { ActionButton } from './ActionButton';
+import { AnimatedActionButton } from './AnimatedActionButton';
 import { styles } from './styles';
 import { SwipeActionsProps } from './types';
 
@@ -12,6 +12,7 @@ export const LeftActions: React.FC<SwipeActionsProps> = React.memo(({
   onRestock,
   isPurchased,
   swipeableRef,
+  progress,
 }) => {
 
   // Show consume, waste, and restock buttons for pantry items
@@ -36,26 +37,32 @@ export const LeftActions: React.FC<SwipeActionsProps> = React.memo(({
         style={styles.leftActionsContainer}
         pointerEvents="box-none"
       >
-        <ActionButton
+        <AnimatedActionButton
           onPress={handleConsumePress}
           icon="restaurant"
           backgroundColor="#9C27B0" // Purple for consume
           circular={true}
           library="MaterialIcons"
+          progress={progress}
+          index={0}
         />
-        <ActionButton
+        <AnimatedActionButton
           onPress={handleWastePress}
           icon="warning"
           backgroundColor="#FF9800" // Orange for waste
           circular={true}
           library="MaterialIcons"
+          progress={progress}
+          index={1}
         />
-        <ActionButton
+        <AnimatedActionButton
           onPress={handleRestockPress}
           icon="add-circle-outline"
           backgroundColor="#4CAF50" // Green for restock
           circular={true}
           library="MaterialIcons"
+          progress={progress}
+          index={2}
         />
       </Reanimated.View>
     );
@@ -78,19 +85,23 @@ export const LeftActions: React.FC<SwipeActionsProps> = React.memo(({
         style={styles.leftActionsContainer}
         pointerEvents="box-none"
       >
-        <ActionButton
+        <AnimatedActionButton
           onPress={handleConsumePress}
           icon="restaurant"
           backgroundColor="#9C27B0" // Purple for consume
           circular={true}
           library="MaterialIcons"
+          progress={progress}
+          index={0}
         />
-        <ActionButton
+        <AnimatedActionButton
           onPress={handleWastePress}
           icon="warning"
           backgroundColor="#FF9800" // Orange for waste
           circular={true}
           library="MaterialIcons"
+          progress={progress}
+          index={1}
         />
       </Reanimated.View>
     );
@@ -110,12 +121,14 @@ export const LeftActions: React.FC<SwipeActionsProps> = React.memo(({
         style={styles.leftActionsContainer}
         pointerEvents="box-none"
       >
-        <ActionButton
+        <AnimatedActionButton
           onPress={handleConsumePress}
           icon="restaurant"
           backgroundColor="#9C27B0" // Purple for consume
           circular={true}
           library="MaterialIcons"
+          progress={progress}
+          index={0}
         />
       </Reanimated.View>
     );
@@ -133,12 +146,14 @@ export const LeftActions: React.FC<SwipeActionsProps> = React.memo(({
         style={styles.leftActionsContainer}
         pointerEvents="box-none"
       >
-        <ActionButton
+        <AnimatedActionButton
           onPress={handleWastePress}
           icon="warning"
           backgroundColor="#FF9800" // Orange for waste
           circular={true}
           library="MaterialIcons"
+          progress={progress}
+          index={0}
         />
       </Reanimated.View>
     );
@@ -172,12 +187,14 @@ export const LeftActions: React.FC<SwipeActionsProps> = React.memo(({
       style={styles.leftActionsContainer}
       pointerEvents="box-none"
     >
-      <ActionButton
+      <AnimatedActionButton
         onPress={handlePress}
         icon={iconName}
         backgroundColor={bgColor}
         circular={true}
         library="Ionicons"
+        progress={progress}
+        index={0}
       />
     </Reanimated.View>
   );

@@ -1,3 +1,4 @@
+import { SharedValue } from 'react-native-reanimated';
 import {Icon} from '#/utils/iconUtils';
 
 export interface SwipeableItemProps {
@@ -42,4 +43,5 @@ export interface SwipeActionsProps {
   onActionPress?: (action: 'edit' | 'delete') => void;
   swipeableRef?: React.RefObject<any>;
   testIDPrefix?: string;
+  progress?: SharedValue<number>;
 }

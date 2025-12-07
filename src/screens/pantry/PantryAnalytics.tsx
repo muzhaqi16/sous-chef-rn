@@ -71,7 +71,6 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
     usageError,
     wasteError,
     ledgerError,
-    loading,
     dateRange,
     setDateRange,
     ledgerGranularity,
@@ -643,12 +642,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
       <DateRangeFilter selected={dateRange} onSelect={setDateRange} />
 
       {/* Tab View */}
-      <TabView
-        routes={routes}
-        renderScene={renderScene}
-        onRefresh={handleRefresh}
-        refreshing={loading}
-      />
+      <TabView routes={routes} renderScene={renderScene} />
     </View>
   );
 };

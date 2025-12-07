@@ -14,6 +14,7 @@ interface PantryContentProps {
   onItemWaste?: (id: string) => void;
   onItemRestock?: (id: string) => void;
   onRefresh?: () => Promise<void>;
+  onSwipeableWillOpen?: (ref: any) => void;
   emptyState?: any;
 }
 
@@ -36,6 +37,7 @@ export const PantryContent: React.FC<PantryContentProps> = ({
   onItemWaste,
   onItemRestock,
   onRefresh,
+  onSwipeableWillOpen,
   emptyState,
 }) => {
   // Show skeleton screens during initial load
@@ -60,6 +62,7 @@ export const PantryContent: React.FC<PantryContentProps> = ({
       onItemWaste={onItemWaste}
       onItemRestock={onItemRestock}
       onRefresh={onRefresh}
+      onSwipeableWillOpen={onSwipeableWillOpen}
       emptyState={emptyState}
     />
   );
