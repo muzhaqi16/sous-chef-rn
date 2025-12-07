@@ -124,6 +124,7 @@ query GetPantryLedgerAnalytics(
       additionCount
       consumptionCount
       wasteCount
+      unitName
       additionsByUnit {
         unitId
         unitName
@@ -157,13 +158,19 @@ query GetPantryLedgerAnalytics(
         storeName
         totalSpent
         itemCount
+        averageCostPerUnit
       }
     }
     topRestockedItems {
       itemId
       itemName
       totalQuantity
+      count
+      unitName
+      imageUrl
     }
+    periodStart
+    periodEnd
     granularity
   }
 }
@@ -187,6 +194,76 @@ query GetPantryItemLedger($pantryItemId: ID!, $filter: AnalyticsFilterInput) {
       unitId
       unitName
       totalQuantity
+    }
+  }
+}
+
+query GetPantryUsageAnalytics($pantryId: ID!, $filter: AnalyticsFilterInput) {
+  pantryUsageAnalytics(pantryId: $pantryId, filter: $filter) {
+    totalUsageCount
+    totalQuantityUsed
+    averageUsagePerDay
+    periodStart
+    periodEnd
+    usageTrend {
+      date
+      value
+      count
+    }
+    usageByPurpose {
+      purpose
+      totalQuantity
+      count
+      percentage
+    }
+    usageBySource {
+      source
+      totalQuantity
+      count
+      percentage
+    }
+    topUsedItems {
+      itemId
+      itemName
+      totalQuantity
+      count
+      unitName
+      imageUrl
+    }
+  }
+}
+
+query GetPantryWasteAnalytics($pantryId: ID!, $filter: AnalyticsFilterInput) {
+  pantryWasteAnalytics(pantryId: $pantryId, filter: $filter) {
+    totalWasteCount
+    totalWasteQuantity
+    totalWasteValue
+    wasteRate
+    averageWastePerDay
+    composted
+    recycled
+    periodStart
+    periodEnd
+    wasteTrend {
+      date
+      value
+      count
+    }
+    wasteByReason {
+      reason
+      totalQuantity
+      count
+      percentage
+      estimatedValue
+    }
+    topWastedItems {
+      itemId
+      itemName
+      totalQuantity
+      count
+      estimatedValue
+      unitName
+      imageUrl
     }
   }
 }

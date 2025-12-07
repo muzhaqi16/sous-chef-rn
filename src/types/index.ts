@@ -2,4 +2,4 @@
 export * from './common';
 export * from './navigation';
 export * from './components';
-export * from './analytics';
+// Analytics types are now generated - use imports from '#generated' instead

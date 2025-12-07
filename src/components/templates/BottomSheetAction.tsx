@@ -5,9 +5,8 @@ import {
   BottomSheetScrollView,
   BottomSheetView,
   BottomSheetBackdrop,
-  useBottomSheetTimingConfigs,
 } from '@gorhom/bottom-sheet';
-import { Easing } from 'react-native-reanimated';
+import { useSharedBottomSheetConfigs } from '#hooks';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Title } from '../atoms';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -37,10 +36,7 @@ export const BottomSheetAction: React.FC<BottomSheetActionProps> = ({
   const insets = useSafeAreaInsets();
 
   // Configure smooth animation for open/close
-  const animationConfigs = useBottomSheetTimingConfigs({
-    duration: 300,
-    easing: Easing.out(Easing.ease),
-  });
+  const animationConfigs = useSharedBottomSheetConfigs();
 
   const content = (
     <>

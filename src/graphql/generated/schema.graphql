@@ -735,6 +735,33 @@ enum CategoryType {
 }
 
 """
+Source of the change for audit purposes
+"""
+enum ChangeSource {
+  API
+  BARCODE_SCAN
+  EXPIRATION_ALERT
+  MOBILE_APP
+  RECIPE_COOKING
+  SHOPPING_LIST
+  SYSTEM
+  USER
+  WEB_APP
+}
+
+"""
+Change types for pantry item modifications
+"""
+enum ChangeType {
+  CONSUMED
+  CREATED
+  DELETED
+  EXPIRATION_UPDATED
+  LOCATION_UPDATED
+  QUANTITY_UPDATED
+}
+
+"""
 Order by options for collaborators
 """
 input CollaboratorOrderBy {
@@ -760,9 +787,26 @@ enum CollaboratorStatus {
   SUSPENDED
 }
 
+type CompatibleUnit {
+  conversionConfidence: Float
+  conversionRatio: Float
+  isConfigured: Boolean!
+  isDefault: Boolean!
+  source: ConversionSource
+  unit: Unit!
+  usageContexts: [UnitUsageContext!]!
+}
+
 input CompleteShoppingListInput {
   completedShopDate: DateTime
   totalCost: Float
+}
+
+input ConfirmedIngredientConsumptionInput {
+  pantryItemId: ID!
+  quantity: Float!
+  recipeIngredientId: ID!
+  unitId: ID!
 }
 
 interface Connection {
@@ -779,6 +823,14 @@ input ConnectionPaginationInput {
   before: String
   first: Int
   last: Int
+}
+
+type ConsumptionFailure {
+  availableQuantity: Float!
+  pantryItemId: ID!
+  reason: String!
+  recipeIngredientId: ID!
+  requestedQuantity: Float!
 }
 
 """
@@ -3112,6 +3164,11 @@ type Mutation {
   ): ShoppingList!
   confirmItemImageUpload(itemId: String!, key: String!): String!
   confirmProfileImageUpload(key: String!): String!
+  confirmRecipeConsumption(
+    consumptions: [ConfirmedIngredientConsumptionInput!]!
+    pantryId: ID!
+    recipeId: ID!
+  ): RecipeConsumptionResult!
   createBrand(input: CreateBrandInput): Brand!
   createBulkPurchases(purchases: [CreatePurchaseInput!]!): [Purchase!]!
   createBulkStores(stores: [CreateStoreInput!]!): [Store!]!
@@ -3994,6 +4051,43 @@ type PantryItem {
   wasteReason: WasteReason
 }
 
+"""
+Audit record of a change to a pantry item
+"""
+type PantryItemChange {
+  changeType: ChangeType!
+  changedBy: User!
+  changedById: ID!
+  createdAt: DateTime!
+  deviceId: String
+  field: String
+  id: ID!
+  ipAddress: String
+  metadata: JSON
+  newValue: String
+  oldValue: String
+  pantryItem: PantryItem!
+  pantryItemId: ID!
+  source: ChangeSource!
+}
+
+"""
+Connection type for paginated PantryItemChange results
+"""
+type PantryItemChangeConnection {
+  edges: [PantryItemChangeEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+"""
+Edge type for PantryItemChange pagination
+"""
+type PantryItemChangeEdge {
+  cursor: String!
+  node: PantryItemChange!
+}
+
 type PantryItemChangedPayload {
   item: PantryItem!
   mutation: MutationType!
@@ -4048,6 +4142,9 @@ type PantryItemPhoto {
 }
 
 type PantryItemUsage {
+  conversionConfidence: Float
+  conversionRatio: Float
+  conversionSource: String
   cookingLog: CookingLog
   cookingLogId: String
   costPerUnit: Float
@@ -4364,6 +4461,7 @@ type Query {
   categoryBySlug(slug: String!): Category
   checkItemAvailability(itemId: ID!, storeIds: [String!]): [ItemAvailability!]
   compareItemPrices(itemId: ID!, storeIds: [String!]): [StorePriceComparison!]
+  compatibleUnitsForItem(currentUnitId: ID, itemId: ID!): [CompatibleUnit!]!
   """
   Convert quantity between units with item context
   Supports both same-type (cup→tbsp) and cross-type (cup→gram) conversions
@@ -4448,6 +4546,11 @@ type Query {
   ): [LoginHistory!]!
   loginHistoryStats(days: Int = 30, userId: ID!): LoginHistoryStats!
   lowBatteryDevices(threshold: Float = 0.2, userId: ID!): [Device!]!
+  matchRecipeIngredientsToPantry(
+    pantryId: ID!
+    recipeId: ID!
+    servings: Int
+  ): [RecipeIngredientMatch!]!
   me: User
   mealPlan(id: ID!): MealPlan
   mealPlans(
@@ -4503,6 +4606,17 @@ type Query {
   pantries(homeId: ID!): [Pantry!]!
   pantry(id: ID!): Pantry
   pantryItem(id: ID!): PantryItem!
+  """
+  Get the change history for a specific pantry item.
+  Useful for audit trails and tracking item modifications over time.
+  """
+  pantryItemHistory(
+    after: String
+    before: String
+    first: Int
+    last: Int
+    pantryItemId: ID!
+  ): PantryItemChangeConnection!
   """
   Get ledger summary for a specific pantry item showing total added, consumed, and wasted.
   Handles mixed units by providing breakdown per unit.
@@ -4755,6 +4869,15 @@ type RecipeConnection {
   totalCount: Int!
 }
 
+type RecipeConsumptionResult {
+  consumedItems: [PantryItemUsage!]!
+  cookingLog: CookingLog
+  failedItems: [ConsumptionFailure!]!
+  success: Boolean!
+  totalConsumed: Int!
+  totalFailed: Int!
+}
+
 """
 Recipe connection for pagination
 """
@@ -4801,6 +4924,18 @@ input RecipeIngredientInput {
   unitId: String
   usAmount: Float
   usUnit: String
+}
+
+type RecipeIngredientMatch {
+  alternativeMatches: [PantryItem!]!
+  availableQuantity: Float!
+  ingredient: RecipeIngredient!
+  isAvailable: Boolean!
+  matchConfidence: Float!
+  matchedPantryItem: PantryItem
+  shortfall: Float
+  suggestedQuantity: Float!
+  suggestedUnit: Unit
 }
 
 input RecipeIngredientSourceInput {
@@ -5072,10 +5207,6 @@ Shopping list for a home
 Cache: 1 minute - frequently updated by collaborators
 """
 type ShoppingList {
-  activities: [ShoppingListActivity!]
-    @deprecated(
-      reason: "Use activitiesConnection for pagination to reduce query complexity"
-    )
   activitiesConnection(
     after: String
     before: String
@@ -5087,10 +5218,6 @@ type ShoppingList {
   basedOnTemplate: ShoppingList
   budgetAmount: Float
   category: String
-  collaborators: [ShoppingListCollaborator!]
-    @deprecated(
-      reason: "Use collaboratorsConnection for pagination to reduce query complexity"
-    )
   collaboratorsConnection(
     after: String
     before: String
@@ -5112,10 +5239,6 @@ type ShoppingList {
   isPublic: Boolean!
   isRecurring: Boolean!
   isTemplate: Boolean!
-  items: [ShoppingListItem!]
-    @deprecated(
-      reason: "Use itemsConnection for pagination to reduce query complexity"
-    )
   itemsConnection(
     after: String
     before: String
@@ -5133,10 +5256,6 @@ type ShoppingList {
   plannedShopDate: DateTime
   priceTracking: Boolean!
   priority: Int!
-  purchases: [Purchase!]
-    @deprecated(
-      reason: "Query purchases separately by list ID to reduce query complexity"
-    )
   recurringInterval: Int
   recurringPattern: RecurringPattern
   reminderDate: DateTime
@@ -5150,10 +5269,6 @@ type ShoppingList {
   targetStore: Store
   targetStoreId: String
   templateName: String
-  templatesCreated: [ShoppingList!]
-    @deprecated(
-      reason: "Query templates separately to avoid circular references"
-    )
   totalCollaborators: Int!
   totalCost: Float!
   totalItems: Int!
@@ -5324,10 +5439,6 @@ type ShoppingListItem {
   purchasedById: String
   purchasedPrice: Float
   purchasedQuantity: Float
-  purchases: [Purchase!]
-    @deprecated(
-      reason: "Use purchasesConnection for pagination to reduce query complexity"
-    )
   purchasesConnection(
     after: String
     before: String

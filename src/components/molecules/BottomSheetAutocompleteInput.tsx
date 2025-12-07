@@ -10,6 +10,7 @@ import {
 import { StyleSheet } from 'react-native-unistyles';
 import { Input } from '#components/base/Input';
 import { useStore } from '#store';
+import { useSharedBottomSheetConfigs } from '#hooks';
 
 interface BottomSheetAutocompleteInputProps<T> {
   // Input field props
@@ -88,6 +89,7 @@ export function BottomSheetAutocompleteInput<T>({
   const hasInteractedRef = useRef(false);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [searchTerm, setSearchTerm] = useState(value || '');
+  const animationConfigs = useSharedBottomSheetConfigs();
 
   // Check online status to prevent autocomplete when offline
   const isOnline = useStore(state => state.isOnline);
@@ -216,6 +218,7 @@ export function BottomSheetAutocompleteInput<T>({
         android_keyboardInputMode="adjustResize"
         enablePanDownToClose={true}
         enableContentPanningGesture={false}
+        animationConfigs={animationConfigs}
       >
         <BottomSheetFlatList
           data={loading ? [] : data}

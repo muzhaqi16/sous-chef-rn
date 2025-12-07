@@ -6,6 +6,7 @@ import {
   BottomSheetBackdrop,
 } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSharedBottomSheetConfigs } from '#hooks';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/molecules/FormInput';
@@ -65,6 +66,7 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
   const { theme } = useUnistyles();
   const insets = useSafeAreaInsets();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
+  const animationConfigs = useSharedBottomSheetConfigs();
   const [quantityInput, setQuantityInput] = useState('1');
   const [purpose, setPurpose] = useState<UsagePurpose>(UsagePurpose.General);
   const [notes, setNotes] = useState('');
@@ -214,6 +216,7 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
       enableDynamicSizing={false}
       topInset={insets.top}
       onDismiss={onClose}
+      animationConfigs={animationConfigs}
       backgroundStyle={{ backgroundColor: theme.colors.background }}
       handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
       backdropComponent={props => (

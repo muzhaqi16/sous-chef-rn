@@ -369,6 +369,29 @@ export enum CategoryType {
   System = 'SYSTEM',
 }
 
+/** Source of the change for audit purposes */
+export enum ChangeSource {
+  Api = 'API',
+  BarcodeScan = 'BARCODE_SCAN',
+  ExpirationAlert = 'EXPIRATION_ALERT',
+  MobileApp = 'MOBILE_APP',
+  RecipeCooking = 'RECIPE_COOKING',
+  ShoppingList = 'SHOPPING_LIST',
+  System = 'SYSTEM',
+  User = 'USER',
+  WebApp = 'WEB_APP',
+}
+
+/** Change types for pantry item modifications */
+export enum ChangeType {
+  Consumed = 'CONSUMED',
+  Created = 'CREATED',
+  Deleted = 'DELETED',
+  ExpirationUpdated = 'EXPIRATION_UPDATED',
+  LocationUpdated = 'LOCATION_UPDATED',
+  QuantityUpdated = 'QUANTITY_UPDATED',
+}
+
 /** Order by options for collaborators */
 export type CollaboratorOrderBy = {
   invitedAt?: InputMaybe<SortOrder>;
@@ -393,9 +416,27 @@ export enum CollaboratorStatus {
   Suspended = 'SUSPENDED',
 }
 
+export type CompatibleUnit = {
+  __typename?: 'CompatibleUnit';
+  conversionConfidence: Maybe<Scalars['Float']['output']>;
+  conversionRatio: Maybe<Scalars['Float']['output']>;
+  isConfigured: Scalars['Boolean']['output'];
+  isDefault: Scalars['Boolean']['output'];
+  source: Maybe<ConversionSource>;
+  unit: Unit;
+  usageContexts: Array<UnitUsageContext>;
+};
+
 export type CompleteShoppingListInput = {
   completedShopDate?: InputMaybe<Scalars['DateTime']['input']>;
   totalCost?: InputMaybe<Scalars['Float']['input']>;
+};
+
+export type ConfirmedIngredientConsumptionInput = {
+  pantryItemId: Scalars['ID']['input'];
+  quantity: Scalars['Float']['input'];
+  recipeIngredientId: Scalars['ID']['input'];
+  unitId: Scalars['ID']['input'];
 };
 
 export type Connection = {
@@ -410,6 +451,15 @@ export type ConnectionPaginationInput = {
   before?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type ConsumptionFailure = {
+  __typename?: 'ConsumptionFailure';
+  availableQuantity: Scalars['Float']['output'];
+  pantryItemId: Scalars['ID']['output'];
+  reason: Scalars['String']['output'];
+  recipeIngredientId: Scalars['ID']['output'];
+  requestedQuantity: Scalars['Float']['output'];
 };
 
 /** Conversion availability result */
@@ -2741,6 +2791,7 @@ export type Mutation = {
   completeShoppingList: ShoppingList;
   confirmItemImageUpload: Scalars['String']['output'];
   confirmProfileImageUpload: Scalars['String']['output'];
+  confirmRecipeConsumption: RecipeConsumptionResult;
   createBrand: Brand;
   createBulkPurchases: Array<Purchase>;
   createBulkStores: Array<Store>;
@@ -3141,6 +3192,12 @@ export type MutationConfirmItemImageUploadArgs = {
 
 export type MutationConfirmProfileImageUploadArgs = {
   key: Scalars['String']['input'];
+};
+
+export type MutationConfirmRecipeConsumptionArgs = {
+  consumptions: Array<ConfirmedIngredientConsumptionInput>;
+  pantryId: Scalars['ID']['input'];
+  recipeId: Scalars['ID']['input'];
 };
 
 export type MutationCreateBrandArgs = {
@@ -4625,6 +4682,40 @@ export type PantryItem = {
   wasteReason: Maybe<WasteReason>;
 };
 
+/** Audit record of a change to a pantry item */
+export type PantryItemChange = {
+  __typename?: 'PantryItemChange';
+  changeType: ChangeType;
+  changedBy: User;
+  changedById: Scalars['ID']['output'];
+  createdAt: Scalars['DateTime']['output'];
+  deviceId: Maybe<Scalars['String']['output']>;
+  field: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  ipAddress: Maybe<Scalars['String']['output']>;
+  metadata: Maybe<Scalars['JSON']['output']>;
+  newValue: Maybe<Scalars['String']['output']>;
+  oldValue: Maybe<Scalars['String']['output']>;
+  pantryItem: PantryItem;
+  pantryItemId: Scalars['ID']['output'];
+  source: ChangeSource;
+};
+
+/** Connection type for paginated PantryItemChange results */
+export type PantryItemChangeConnection = {
+  __typename?: 'PantryItemChangeConnection';
+  edges: Array<PantryItemChangeEdge>;
+  pageInfo: PageInfo;
+  totalCount: Scalars['Int']['output'];
+};
+
+/** Edge type for PantryItemChange pagination */
+export type PantryItemChangeEdge = {
+  __typename?: 'PantryItemChangeEdge';
+  cursor: Scalars['String']['output'];
+  node: PantryItemChange;
+};
+
 export type PantryItemChangedPayload = {
   __typename?: 'PantryItemChangedPayload';
   item: PantryItem;
@@ -4680,6 +4771,9 @@ export type PantryItemPhoto = {
 
 export type PantryItemUsage = {
   __typename?: 'PantryItemUsage';
+  conversionConfidence: Maybe<Scalars['Float']['output']>;
+  conversionRatio: Maybe<Scalars['Float']['output']>;
+  conversionSource: Maybe<Scalars['String']['output']>;
   cookingLog: Maybe<CookingLog>;
   cookingLogId: Maybe<Scalars['String']['output']>;
   costPerUnit: Maybe<Scalars['Float']['output']>;
@@ -4984,6 +5078,7 @@ export type Query = {
   categoryBySlug: Maybe<Category>;
   checkItemAvailability: Maybe<Array<ItemAvailability>>;
   compareItemPrices: Maybe<Array<StorePriceComparison>>;
+  compatibleUnitsForItem: Array<CompatibleUnit>;
   /**
    * Convert quantity between units with item context
    * Supports both same-type (cup→tbsp) and cross-type (cup→gram) conversions
@@ -5043,6 +5138,7 @@ export type Query = {
   loginHistoryForUser: Array<LoginHistory>;
   loginHistoryStats: LoginHistoryStats;
   lowBatteryDevices: Array<Device>;
+  matchRecipeIngredientsToPantry: Array<RecipeIngredientMatch>;
   me: Maybe<User>;
   mealPlan: Maybe<MealPlan>;
   mealPlans: Array<MealPlan>;
@@ -5076,6 +5172,11 @@ export type Query = {
   pantries: Array<Pantry>;
   pantry: Maybe<Pantry>;
   pantryItem: PantryItem;
+  /**
+   * Get the change history for a specific pantry item.
+   * Useful for audit trails and tracking item modifications over time.
+   */
+  pantryItemHistory: PantryItemChangeConnection;
   /**
    * Get ledger summary for a specific pantry item showing total added, consumed, and wasted.
    * Handles mixed units by providing breakdown per unit.
@@ -5248,6 +5349,11 @@ export type QueryCheckItemAvailabilityArgs = {
 export type QueryCompareItemPricesArgs = {
   itemId: Scalars['ID']['input'];
   storeIds?: InputMaybe<Array<Scalars['String']['input']>>;
+};
+
+export type QueryCompatibleUnitsForItemArgs = {
+  currentUnitId?: InputMaybe<Scalars['ID']['input']>;
+  itemId: Scalars['ID']['input'];
 };
 
 export type QueryConvertQuantityArgs = {
@@ -5449,6 +5555,12 @@ export type QueryLowBatteryDevicesArgs = {
   userId: Scalars['ID']['input'];
 };
 
+export type QueryMatchRecipeIngredientsToPantryArgs = {
+  pantryId: Scalars['ID']['input'];
+  recipeId: Scalars['ID']['input'];
+  servings?: InputMaybe<Scalars['Int']['input']>;
+};
+
 export type QueryMealPlanArgs = {
   id: Scalars['ID']['input'];
 };
@@ -5546,6 +5658,14 @@ export type QueryPantryArgs = {
 
 export type QueryPantryItemArgs = {
   id: Scalars['ID']['input'];
+};
+
+export type QueryPantryItemHistoryArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
+  pantryItemId: Scalars['ID']['input'];
 };
 
 export type QueryPantryItemLedgerArgs = {
@@ -5945,6 +6065,16 @@ export type RecipeConnection = {
   totalCount: Scalars['Int']['output'];
 };
 
+export type RecipeConsumptionResult = {
+  __typename?: 'RecipeConsumptionResult';
+  consumedItems: Array<PantryItemUsage>;
+  cookingLog: Maybe<CookingLog>;
+  failedItems: Array<ConsumptionFailure>;
+  success: Scalars['Boolean']['output'];
+  totalConsumed: Scalars['Int']['output'];
+  totalFailed: Scalars['Int']['output'];
+};
+
 /** Recipe connection for pagination */
 export type RecipeEdge = {
   __typename?: 'RecipeEdge';
@@ -5991,6 +6121,19 @@ export type RecipeIngredientInput = {
   unitId?: InputMaybe<Scalars['String']['input']>;
   usAmount?: InputMaybe<Scalars['Float']['input']>;
   usUnit?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type RecipeIngredientMatch = {
+  __typename?: 'RecipeIngredientMatch';
+  alternativeMatches: Array<PantryItem>;
+  availableQuantity: Scalars['Float']['output'];
+  ingredient: RecipeIngredient;
+  isAvailable: Scalars['Boolean']['output'];
+  matchConfidence: Scalars['Float']['output'];
+  matchedPantryItem: Maybe<PantryItem>;
+  shortfall: Maybe<Scalars['Float']['output']>;
+  suggestedQuantity: Scalars['Float']['output'];
+  suggestedUnit: Maybe<Unit>;
 };
 
 export type RecipeIngredientSourceInput = {
@@ -6266,15 +6409,11 @@ export type ShareShoppingListInput = {
  */
 export type ShoppingList = {
   __typename?: 'ShoppingList';
-  /** @deprecated Use activitiesConnection for pagination to reduce query complexity */
-  activities: Maybe<Array<ShoppingListActivity>>;
   activitiesConnection: ShoppingListActivityConnection;
   autoAddSuggestions: Scalars['Boolean']['output'];
   basedOnTemplate: Maybe<ShoppingList>;
   budgetAmount: Maybe<Scalars['Float']['output']>;
   category: Maybe<Scalars['String']['output']>;
-  /** @deprecated Use collaboratorsConnection for pagination to reduce query complexity */
-  collaborators: Maybe<Array<ShoppingListCollaborator>>;
   collaboratorsConnection: ShoppingListCollaboratorConnection;
   completedAt: Maybe<Scalars['DateTime']['output']>;
   completedItems: Scalars['Int']['output'];
@@ -6290,8 +6429,6 @@ export type ShoppingList = {
   isPublic: Scalars['Boolean']['output'];
   isRecurring: Scalars['Boolean']['output'];
   isTemplate: Scalars['Boolean']['output'];
-  /** @deprecated Use itemsConnection for pagination to reduce query complexity */
-  items: Maybe<Array<ShoppingListItem>>;
   itemsConnection: ShoppingListItemConnection;
   lastRecurredAt: Maybe<Scalars['DateTime']['output']>;
   lastReminderSent: Maybe<Scalars['DateTime']['output']>;
@@ -6303,8 +6440,6 @@ export type ShoppingList = {
   plannedShopDate: Maybe<Scalars['DateTime']['output']>;
   priceTracking: Scalars['Boolean']['output'];
   priority: Scalars['Int']['output'];
-  /** @deprecated Query purchases separately by list ID to reduce query complexity */
-  purchases: Maybe<Array<Purchase>>;
   recurringInterval: Maybe<Scalars['Int']['output']>;
   recurringPattern: Maybe<RecurringPattern>;
   reminderDate: Maybe<Scalars['DateTime']['output']>;
@@ -6318,8 +6453,6 @@ export type ShoppingList = {
   targetStore: Maybe<Store>;
   targetStoreId: Maybe<Scalars['String']['output']>;
   templateName: Maybe<Scalars['String']['output']>;
-  /** @deprecated Query templates separately to avoid circular references */
-  templatesCreated: Maybe<Array<ShoppingList>>;
   totalCollaborators: Scalars['Int']['output'];
   totalCost: Scalars['Float']['output'];
   totalItems: Scalars['Int']['output'];
@@ -6528,8 +6661,6 @@ export type ShoppingListItem = {
   purchasedById: Maybe<Scalars['String']['output']>;
   purchasedPrice: Maybe<Scalars['Float']['output']>;
   purchasedQuantity: Maybe<Scalars['Float']['output']>;
-  /** @deprecated Use purchasesConnection for pagination to reduce query complexity */
-  purchases: Maybe<Array<Purchase>>;
   purchasesConnection: PurchaseConnection;
   quantity: Maybe<Scalars['Float']['output']>;
   quantityInput: Maybe<Scalars['String']['output']>;
@@ -10744,6 +10875,7 @@ export type GetItemConversionsQuery = {
     conversionRatio: number;
     source: ConversionSource;
     confidence: number;
+    isVerified: boolean;
     notes: string | null | undefined;
     createdAt: string;
     fromUnit: {
@@ -10880,6 +11012,7 @@ export type GetItemsQuery = {
   items: {
     __typename?: 'ItemsResponse';
     totalCount: number;
+    hasMore: boolean;
     items:
       | Array<{
           __typename?: 'Item';
@@ -10894,6 +11027,7 @@ export type GetItemsQuery = {
           status: ItemStatus;
           visibility: Visibility;
           showInOnboarding: boolean;
+          popularity: number;
           nutritions: any | null | undefined;
           healthBenefits: any | null | undefined;
           metadata: any | null | undefined;
@@ -11556,6 +11690,8 @@ export type GetPantryLedgerAnalyticsQuery = {
   __typename?: 'Query';
   pantryLedgerAnalytics: {
     __typename?: 'LedgerAnalytics';
+    periodStart: string;
+    periodEnd: string;
     granularity: PeriodGranularity;
     summary: {
       __typename?: 'LedgerSummary';
@@ -11566,6 +11702,7 @@ export type GetPantryLedgerAnalyticsQuery = {
       additionCount: number;
       consumptionCount: number;
       wasteCount: number;
+      unitName: string | null | undefined;
       additionsByUnit: Array<{
         __typename?: 'UsageByUnit';
         unitId: string;
@@ -11605,6 +11742,7 @@ export type GetPantryLedgerAnalyticsQuery = {
             storeName: string | null | undefined;
             totalSpent: number;
             itemCount: number;
+            averageCostPerUnit: number;
           }>;
         }
       | null
@@ -11614,6 +11752,9 @@ export type GetPantryLedgerAnalyticsQuery = {
       itemId: string;
       itemName: string;
       totalQuantity: number;
+      count: number;
+      unitName: string | null | undefined;
+      imageUrl: string | null | undefined;
     }>;
   };
 };
@@ -11646,6 +11787,97 @@ export type GetPantryItemLedgerQuery = {
       unitId: string;
       unitName: string;
       totalQuantity: number;
+    }>;
+  };
+};
+
+export type GetPantryUsageAnalyticsQueryVariables = Exact<{
+  pantryId: Scalars['ID']['input'];
+  filter?: InputMaybe<AnalyticsFilterInput>;
+}>;
+
+export type GetPantryUsageAnalyticsQuery = {
+  __typename?: 'Query';
+  pantryUsageAnalytics: {
+    __typename?: 'UsageAnalytics';
+    totalUsageCount: number;
+    totalQuantityUsed: number;
+    averageUsagePerDay: number;
+    periodStart: string;
+    periodEnd: string;
+    usageTrend: Array<{
+      __typename?: 'TimeSeriesDataPoint';
+      date: string;
+      value: number;
+      count: number;
+    }>;
+    usageByPurpose: Array<{
+      __typename?: 'UsageByPurpose';
+      purpose: UsagePurpose;
+      totalQuantity: number;
+      count: number;
+      percentage: number;
+    }>;
+    usageBySource: Array<{
+      __typename?: 'UsageBySource';
+      source: UsageSource;
+      totalQuantity: number;
+      count: number;
+      percentage: number;
+    }>;
+    topUsedItems: Array<{
+      __typename?: 'UsageByItem';
+      itemId: string;
+      itemName: string;
+      totalQuantity: number;
+      count: number;
+      unitName: string | null | undefined;
+      imageUrl: string | null | undefined;
+    }>;
+  };
+};
+
+export type GetPantryWasteAnalyticsQueryVariables = Exact<{
+  pantryId: Scalars['ID']['input'];
+  filter?: InputMaybe<AnalyticsFilterInput>;
+}>;
+
+export type GetPantryWasteAnalyticsQuery = {
+  __typename?: 'Query';
+  pantryWasteAnalytics: {
+    __typename?: 'WasteAnalytics';
+    totalWasteCount: number;
+    totalWasteQuantity: number;
+    totalWasteValue: number;
+    wasteRate: number;
+    averageWastePerDay: number;
+    composted: number;
+    recycled: number;
+    periodStart: string;
+    periodEnd: string;
+    wasteTrend: Array<{
+      __typename?: 'TimeSeriesDataPoint';
+      date: string;
+      value: number;
+      count: number;
+    }>;
+    wasteByReason: Array<{
+      __typename?: 'WasteByReason';
+      reason: WasteReason;
+      totalQuantity: number;
+      count: number;
+      percentage: number;
+      estimatedValue: number | null | undefined;
+    }>;
+    topWastedItems: Array<{
+      __typename?: 'WasteByItem';
+      itemId: string;
+      itemName: string;
+      totalQuantity: number;
+      count: number;
+      estimatedValue: number | null | undefined;
+      unitName: string | null | undefined;
+      imageUrl: string | null | undefined;
     }>;
   };
 };
@@ -34377,6 +34609,7 @@ export const GetItemConversionsDocument = {
                 },
                 { kind: 'Field', name: { kind: 'Name', value: 'source' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'confidence' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'isVerified' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'notes' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
               ],
@@ -35430,6 +35663,10 @@ export const GetItemsDocument = {
                       },
                       {
                         kind: 'Field',
+                        name: { kind: 'Name', value: 'popularity' },
+                      },
+                      {
+                        kind: 'Field',
                         name: { kind: 'Name', value: 'units' },
                         selectionSet: {
                           kind: 'SelectionSet',
@@ -35503,6 +35740,7 @@ export const GetItemsDocument = {
                   },
                 },
                 { kind: 'Field', name: { kind: 'Name', value: 'totalCount' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'hasMore' } },
               ],
             },
           },
@@ -40724,6 +40962,10 @@ export const GetPantryLedgerAnalyticsDocument = {
                       },
                       {
                         kind: 'Field',
+                        name: { kind: 'Name', value: 'unitName' },
+                      },
+                      {
+                        kind: 'Field',
                         name: { kind: 'Name', value: 'additionsByUnit' },
                         selectionSet: {
                           kind: 'SelectionSet',
@@ -40854,6 +41096,13 @@ export const GetPantryLedgerAnalyticsDocument = {
                               kind: 'Field',
                               name: { kind: 'Name', value: 'itemCount' },
                             },
+                            {
+                              kind: 'Field',
+                              name: {
+                                kind: 'Name',
+                                value: 'averageCostPerUnit',
+                              },
+                            },
                           ],
                         },
                       },
@@ -40878,9 +41127,20 @@ export const GetPantryLedgerAnalyticsDocument = {
                         kind: 'Field',
                         name: { kind: 'Name', value: 'totalQuantity' },
                       },
+                      { kind: 'Field', name: { kind: 'Name', value: 'count' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'unitName' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'imageUrl' },
+                      },
                     ],
                   },
                 },
+                { kind: 'Field', name: { kind: 'Name', value: 'periodStart' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'periodEnd' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'granularity' } },
               ],
             },
@@ -41178,6 +41438,493 @@ export function refetchGetPantryItemLedgerQuery(
   variables: GetPantryItemLedgerQueryVariables,
 ) {
   return { query: GetPantryItemLedgerDocument, variables: variables };
+}
+export const GetPantryUsageAnalyticsDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'query',
+      name: { kind: 'Name', value: 'GetPantryUsageAnalytics' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'pantryId' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'filter' },
+          },
+          type: {
+            kind: 'NamedType',
+            name: { kind: 'Name', value: 'AnalyticsFilterInput' },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'pantryUsageAnalytics' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'pantryId' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'pantryId' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'filter' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'filter' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'totalUsageCount' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'totalQuantityUsed' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'averageUsagePerDay' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'periodStart' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'periodEnd' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'usageTrend' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'date' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'value' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'count' } },
+                    ],
+                  },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'usageByPurpose' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'purpose' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'totalQuantity' },
+                      },
+                      { kind: 'Field', name: { kind: 'Name', value: 'count' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'percentage' },
+                      },
+                    ],
+                  },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'usageBySource' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'source' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'totalQuantity' },
+                      },
+                      { kind: 'Field', name: { kind: 'Name', value: 'count' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'percentage' },
+                      },
+                    ],
+                  },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'topUsedItems' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'itemId' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'itemName' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'totalQuantity' },
+                      },
+                      { kind: 'Field', name: { kind: 'Name', value: 'count' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'unitName' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'imageUrl' },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+
+/**
+ * __useGetPantryUsageAnalyticsQuery__
+ *
+ * To run a query within a React component, call `useGetPantryUsageAnalyticsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetPantryUsageAnalyticsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetPantryUsageAnalyticsQuery({
+ *   variables: {
+ *      pantryId: // value for 'pantryId'
+ *      filter: // value for 'filter'
+ *   },
+ * });
+ */
+export function useGetPantryUsageAnalyticsQuery(
+  baseOptions: ApolloReactHooks.QueryHookOptions<
+    GetPantryUsageAnalyticsQuery,
+    GetPantryUsageAnalyticsQueryVariables
+  > &
+    (
+      | { variables: GetPantryUsageAnalyticsQueryVariables; skip?: boolean }
+      | { skip: boolean }
+    ),
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useQuery<
+    GetPantryUsageAnalyticsQuery,
+    GetPantryUsageAnalyticsQueryVariables
+  >(GetPantryUsageAnalyticsDocument, options);
+}
+export function useGetPantryUsageAnalyticsLazyQuery(
+  baseOptions?: ApolloReactHooks.LazyQueryHookOptions<
+    GetPantryUsageAnalyticsQuery,
+    GetPantryUsageAnalyticsQueryVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useLazyQuery<
+    GetPantryUsageAnalyticsQuery,
+    GetPantryUsageAnalyticsQueryVariables
+  >(GetPantryUsageAnalyticsDocument, options);
+}
+export function useGetPantryUsageAnalyticsSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetPantryUsageAnalyticsQuery,
+        GetPantryUsageAnalyticsQueryVariables
+      >,
+) {
+  const options =
+    baseOptions === ApolloReactHooks.skipToken
+      ? baseOptions
+      : { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useSuspenseQuery<
+    GetPantryUsageAnalyticsQuery,
+    GetPantryUsageAnalyticsQueryVariables
+  >(GetPantryUsageAnalyticsDocument, options);
+}
+export type GetPantryUsageAnalyticsQueryHookResult = ReturnType<
+  typeof useGetPantryUsageAnalyticsQuery
+>;
+export type GetPantryUsageAnalyticsLazyQueryHookResult = ReturnType<
+  typeof useGetPantryUsageAnalyticsLazyQuery
+>;
+export type GetPantryUsageAnalyticsSuspenseQueryHookResult = ReturnType<
+  typeof useGetPantryUsageAnalyticsSuspenseQuery
+>;
+export type GetPantryUsageAnalyticsQueryResult = ApolloReactCommon.QueryResult<
+  GetPantryUsageAnalyticsQuery,
+  GetPantryUsageAnalyticsQueryVariables
+>;
+export function refetchGetPantryUsageAnalyticsQuery(
+  variables: GetPantryUsageAnalyticsQueryVariables,
+) {
+  return { query: GetPantryUsageAnalyticsDocument, variables: variables };
+}
+export const GetPantryWasteAnalyticsDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'query',
+      name: { kind: 'Name', value: 'GetPantryWasteAnalytics' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'pantryId' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'filter' },
+          },
+          type: {
+            kind: 'NamedType',
+            name: { kind: 'Name', value: 'AnalyticsFilterInput' },
+          },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'pantryWasteAnalytics' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'pantryId' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'pantryId' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'filter' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'filter' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'totalWasteCount' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'totalWasteQuantity' },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'totalWasteValue' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'wasteRate' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'averageWastePerDay' },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'composted' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'recycled' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'periodStart' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'periodEnd' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'wasteTrend' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'date' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'value' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'count' } },
+                    ],
+                  },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'wasteByReason' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'reason' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'totalQuantity' },
+                      },
+                      { kind: 'Field', name: { kind: 'Name', value: 'count' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'percentage' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'estimatedValue' },
+                      },
+                    ],
+                  },
+                },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'topWastedItems' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'itemId' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'itemName' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'totalQuantity' },
+                      },
+                      { kind: 'Field', name: { kind: 'Name', value: 'count' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'estimatedValue' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'unitName' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'imageUrl' },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+
+/**
+ * __useGetPantryWasteAnalyticsQuery__
+ *
+ * To run a query within a React component, call `useGetPantryWasteAnalyticsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetPantryWasteAnalyticsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetPantryWasteAnalyticsQuery({
+ *   variables: {
+ *      pantryId: // value for 'pantryId'
+ *      filter: // value for 'filter'
+ *   },
+ * });
+ */
+export function useGetPantryWasteAnalyticsQuery(
+  baseOptions: ApolloReactHooks.QueryHookOptions<
+    GetPantryWasteAnalyticsQuery,
+    GetPantryWasteAnalyticsQueryVariables
+  > &
+    (
+      | { variables: GetPantryWasteAnalyticsQueryVariables; skip?: boolean }
+      | { skip: boolean }
+    ),
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useQuery<
+    GetPantryWasteAnalyticsQuery,
+    GetPantryWasteAnalyticsQueryVariables
+  >(GetPantryWasteAnalyticsDocument, options);
+}
+export function useGetPantryWasteAnalyticsLazyQuery(
+  baseOptions?: ApolloReactHooks.LazyQueryHookOptions<
+    GetPantryWasteAnalyticsQuery,
+    GetPantryWasteAnalyticsQueryVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useLazyQuery<
+    GetPantryWasteAnalyticsQuery,
+    GetPantryWasteAnalyticsQueryVariables
+  >(GetPantryWasteAnalyticsDocument, options);
+}
+export function useGetPantryWasteAnalyticsSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetPantryWasteAnalyticsQuery,
+        GetPantryWasteAnalyticsQueryVariables
+      >,
+) {
+  const options =
+    baseOptions === ApolloReactHooks.skipToken
+      ? baseOptions
+      : { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useSuspenseQuery<
+    GetPantryWasteAnalyticsQuery,
+    GetPantryWasteAnalyticsQueryVariables
+  >(GetPantryWasteAnalyticsDocument, options);
+}
+export type GetPantryWasteAnalyticsQueryHookResult = ReturnType<
+  typeof useGetPantryWasteAnalyticsQuery
+>;
+export type GetPantryWasteAnalyticsLazyQueryHookResult = ReturnType<
+  typeof useGetPantryWasteAnalyticsLazyQuery
+>;
+export type GetPantryWasteAnalyticsSuspenseQueryHookResult = ReturnType<
+  typeof useGetPantryWasteAnalyticsSuspenseQuery
+>;
+export type GetPantryWasteAnalyticsQueryResult = ApolloReactCommon.QueryResult<
+  GetPantryWasteAnalyticsQuery,
+  GetPantryWasteAnalyticsQueryVariables
+>;
+export function refetchGetPantryWasteAnalyticsQuery(
+  variables: GetPantryWasteAnalyticsQueryVariables,
+) {
+  return { query: GetPantryWasteAnalyticsDocument, variables: variables };
 }
 export const CreatePantryDocument = {
   kind: 'Document',

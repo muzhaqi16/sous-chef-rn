@@ -1,83 +1,18 @@
 import { useState, useCallback } from 'react';
-import { gql } from '@apollo/client';
-import { useQuery } from '@apollo/client/react';
 import {
   useGetPantryLedgerAnalyticsQuery,
+  useGetPantryUsageAnalyticsQuery,
+  useGetPantryWasteAnalyticsQuery,
   PeriodGranularity,
   DateRange,
   type AnalyticsFilterInput,
+  type GetPantryUsageAnalyticsQuery,
+  type GetPantryWasteAnalyticsQuery,
 } from '#generated';
-import type { UsageAnalytics, WasteAnalytics } from '#types';
 
-// GraphQL queries - these will work once the backend schema is available
-const GET_PANTRY_USAGE_ANALYTICS = gql`
-  query GetPantryUsageAnalytics($pantryId: ID!, $filter: AnalyticsFilterInput) {
-    pantryUsageAnalytics(pantryId: $pantryId, filter: $filter) {
-      totalUsageCount
-      totalQuantityUsed
-      averageUsagePerDay
-      periodStart
-      periodEnd
-      usageTrend {
-        date
-        value
-      }
-      usageByPurpose {
-        purpose
-        count
-        percentage
-      }
-      usageBySource {
-        source
-        count
-        percentage
-      }
-      topUsedItems {
-        itemId
-        itemName
-        imageUrl
-        count
-        totalQuantity
-        unitName
-      }
-    }
-  }
-`;
-
-const GET_PANTRY_WASTE_ANALYTICS = gql`
-  query GetPantryWasteAnalytics($pantryId: ID!, $filter: AnalyticsFilterInput) {
-    pantryWasteAnalytics(pantryId: $pantryId, filter: $filter) {
-      totalWasteCount
-      totalWasteQuantity
-      totalWasteValue
-      wasteRate
-      averageWastePerDay
-      composted
-      recycled
-      periodStart
-      periodEnd
-      wasteTrend {
-        date
-        value
-      }
-      wasteByReason {
-        reason
-        count
-        percentage
-        estimatedValue
-      }
-      topWastedItems {
-        itemId
-        itemName
-        imageUrl
-        count
-        totalQuantity
-        estimatedValue
-        unitName
-      }
-    }
-  }
-`;
+// Type aliases for cleaner usage
+type UsageAnalytics = NonNullable<GetPantryUsageAnalyticsQuery['pantryUsageAnalytics']>;
+type WasteAnalytics = NonNullable<GetPantryWasteAnalyticsQuery['pantryWasteAnalytics']>;
 
 interface UsePantryAnalyticsOptions {
   pantryId: string | undefined;
@@ -197,30 +132,24 @@ export function usePantryAnalytics({
     loading: usageLoading,
     error: usageError,
     refetch: refetchUsage,
-  } = useQuery<{ pantryUsageAnalytics: UsageAnalytics }>(
-    GET_PANTRY_USAGE_ANALYTICS,
-    {
-      variables: { pantryId, filter },
-      skip: !hasValidPantryId,
-      fetchPolicy: 'cache-and-network',
-      errorPolicy: 'all',
-    },
-  );
+  } = useGetPantryUsageAnalyticsQuery({
+    variables: { pantryId: pantryId ?? '', filter },
+    skip: !hasValidPantryId,
+    fetchPolicy: 'cache-and-network',
+    errorPolicy: 'all',
+  });
 
   const {
     data: wasteQueryData,
     loading: wasteLoading,
     error: wasteError,
     refetch: refetchWaste,
-  } = useQuery<{ pantryWasteAnalytics: WasteAnalytics }>(
-    GET_PANTRY_WASTE_ANALYTICS,
-    {
-      variables: { pantryId, filter },
-      skip: !hasValidPantryId,
-      fetchPolicy: 'cache-and-network',
-      errorPolicy: 'all',
-    },
-  );
+  } = useGetPantryWasteAnalyticsQuery({
+    variables: { pantryId: pantryId ?? '', filter },
+    skip: !hasValidPantryId,
+    fetchPolicy: 'cache-and-network',
+    errorPolicy: 'all',
+  });
 
   const {
     data: ledgerQueryData,

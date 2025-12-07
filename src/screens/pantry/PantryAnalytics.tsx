@@ -136,7 +136,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
     return wasteData.topWastedItems.map(item => ({
       label: item.itemName,
       value: item.count,
-      secondaryValue: item.estimatedValue,
+      secondaryValue: item.estimatedValue ?? undefined,
     }));
   }, [wasteData?.topWastedItems]);
 

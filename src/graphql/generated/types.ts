@@ -365,6 +365,29 @@ export enum CategoryType {
   System = 'SYSTEM',
 }
 
+/** Source of the change for audit purposes */
+export enum ChangeSource {
+  Api = 'API',
+  BarcodeScan = 'BARCODE_SCAN',
+  ExpirationAlert = 'EXPIRATION_ALERT',
+  MobileApp = 'MOBILE_APP',
+  RecipeCooking = 'RECIPE_COOKING',
+  ShoppingList = 'SHOPPING_LIST',
+  System = 'SYSTEM',
+  User = 'USER',
+  WebApp = 'WEB_APP',
+}
+
+/** Change types for pantry item modifications */
+export enum ChangeType {
+  Consumed = 'CONSUMED',
+  Created = 'CREATED',
+  Deleted = 'DELETED',
+  ExpirationUpdated = 'EXPIRATION_UPDATED',
+  LocationUpdated = 'LOCATION_UPDATED',
+  QuantityUpdated = 'QUANTITY_UPDATED',
+}
+
 /** Order by options for collaborators */
 export type CollaboratorOrderBy = {
   invitedAt?: InputMaybe<SortOrder>;
@@ -389,9 +412,27 @@ export enum CollaboratorStatus {
   Suspended = 'SUSPENDED',
 }
 
+export type CompatibleUnit = {
+  __typename?: 'CompatibleUnit';
+  conversionConfidence?: Maybe<Scalars['Float']['output']>;
+  conversionRatio?: Maybe<Scalars['Float']['output']>;
+  isConfigured: Scalars['Boolean']['output'];
+  isDefault: Scalars['Boolean']['output'];
+  source?: Maybe<ConversionSource>;
+  unit: Unit;
+  usageContexts: Array<UnitUsageContext>;
+};
+
 export type CompleteShoppingListInput = {
   completedShopDate?: InputMaybe<Scalars['DateTime']['input']>;
   totalCost?: InputMaybe<Scalars['Float']['input']>;
+};
+
+export type ConfirmedIngredientConsumptionInput = {
+  pantryItemId: Scalars['ID']['input'];
+  quantity: Scalars['Float']['input'];
+  recipeIngredientId: Scalars['ID']['input'];
+  unitId: Scalars['ID']['input'];
 };
 
 export type Connection = {
@@ -406,6 +447,15 @@ export type ConnectionPaginationInput = {
   before?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type ConsumptionFailure = {
+  __typename?: 'ConsumptionFailure';
+  availableQuantity: Scalars['Float']['output'];
+  pantryItemId: Scalars['ID']['output'];
+  reason: Scalars['String']['output'];
+  recipeIngredientId: Scalars['ID']['output'];
+  requestedQuantity: Scalars['Float']['output'];
 };
 
 /** Conversion availability result */
@@ -2737,6 +2787,7 @@ export type Mutation = {
   completeShoppingList: ShoppingList;
   confirmItemImageUpload: Scalars['String']['output'];
   confirmProfileImageUpload: Scalars['String']['output'];
+  confirmRecipeConsumption: RecipeConsumptionResult;
   createBrand: Brand;
   createBulkPurchases: Array<Purchase>;
   createBulkStores: Array<Store>;
@@ -3137,6 +3188,12 @@ export type MutationConfirmItemImageUploadArgs = {
 
 export type MutationConfirmProfileImageUploadArgs = {
   key: Scalars['String']['input'];
+};
+
+export type MutationConfirmRecipeConsumptionArgs = {
+  consumptions: Array<ConfirmedIngredientConsumptionInput>;
+  pantryId: Scalars['ID']['input'];
+  recipeId: Scalars['ID']['input'];
 };
 
 export type MutationCreateBrandArgs = {
@@ -4621,6 +4678,40 @@ export type PantryItem = {
   wasteReason?: Maybe<WasteReason>;
 };
 
+/** Audit record of a change to a pantry item */
+export type PantryItemChange = {
+  __typename?: 'PantryItemChange';
+  changeType: ChangeType;
+  changedBy: User;
+  changedById: Scalars['ID']['output'];
+  createdAt: Scalars['DateTime']['output'];
+  deviceId?: Maybe<Scalars['String']['output']>;
+  field?: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  ipAddress?: Maybe<Scalars['String']['output']>;
+  metadata?: Maybe<Scalars['JSON']['output']>;
+  newValue?: Maybe<Scalars['String']['output']>;
+  oldValue?: Maybe<Scalars['String']['output']>;
+  pantryItem: PantryItem;
+  pantryItemId: Scalars['ID']['output'];
+  source: ChangeSource;
+};
+
+/** Connection type for paginated PantryItemChange results */
+export type PantryItemChangeConnection = {
+  __typename?: 'PantryItemChangeConnection';
+  edges: Array<PantryItemChangeEdge>;
+  pageInfo: PageInfo;
+  totalCount: Scalars['Int']['output'];
+};
+
+/** Edge type for PantryItemChange pagination */
+export type PantryItemChangeEdge = {
+  __typename?: 'PantryItemChangeEdge';
+  cursor: Scalars['String']['output'];
+  node: PantryItemChange;
+};
+
 export type PantryItemChangedPayload = {
   __typename?: 'PantryItemChangedPayload';
   item: PantryItem;
@@ -4676,6 +4767,9 @@ export type PantryItemPhoto = {
 
 export type PantryItemUsage = {
   __typename?: 'PantryItemUsage';
+  conversionConfidence?: Maybe<Scalars['Float']['output']>;
+  conversionRatio?: Maybe<Scalars['Float']['output']>;
+  conversionSource?: Maybe<Scalars['String']['output']>;
   cookingLog?: Maybe<CookingLog>;
   cookingLogId?: Maybe<Scalars['String']['output']>;
   costPerUnit?: Maybe<Scalars['Float']['output']>;
@@ -4980,6 +5074,7 @@ export type Query = {
   categoryBySlug?: Maybe<Category>;
   checkItemAvailability?: Maybe<Array<ItemAvailability>>;
   compareItemPrices?: Maybe<Array<StorePriceComparison>>;
+  compatibleUnitsForItem: Array<CompatibleUnit>;
   /**
    * Convert quantity between units with item context
    * Supports both same-type (cup→tbsp) and cross-type (cup→gram) conversions
@@ -5039,6 +5134,7 @@ export type Query = {
   loginHistoryForUser: Array<LoginHistory>;
   loginHistoryStats: LoginHistoryStats;
   lowBatteryDevices: Array<Device>;
+  matchRecipeIngredientsToPantry: Array<RecipeIngredientMatch>;
   me?: Maybe<User>;
   mealPlan?: Maybe<MealPlan>;
   mealPlans: Array<MealPlan>;
@@ -5072,6 +5168,11 @@ export type Query = {
   pantries: Array<Pantry>;
   pantry?: Maybe<Pantry>;
   pantryItem: PantryItem;
+  /**
+   * Get the change history for a specific pantry item.
+   * Useful for audit trails and tracking item modifications over time.
+   */
+  pantryItemHistory: PantryItemChangeConnection;
   /**
    * Get ledger summary for a specific pantry item showing total added, consumed, and wasted.
    * Handles mixed units by providing breakdown per unit.
@@ -5244,6 +5345,11 @@ export type QueryCheckItemAvailabilityArgs = {
 export type QueryCompareItemPricesArgs = {
   itemId: Scalars['ID']['input'];
   storeIds?: InputMaybe<Array<Scalars['String']['input']>>;
+};
+
+export type QueryCompatibleUnitsForItemArgs = {
+  currentUnitId?: InputMaybe<Scalars['ID']['input']>;
+  itemId: Scalars['ID']['input'];
 };
 
 export type QueryConvertQuantityArgs = {
@@ -5445,6 +5551,12 @@ export type QueryLowBatteryDevicesArgs = {
   userId: Scalars['ID']['input'];
 };
 
+export type QueryMatchRecipeIngredientsToPantryArgs = {
+  pantryId: Scalars['ID']['input'];
+  recipeId: Scalars['ID']['input'];
+  servings?: InputMaybe<Scalars['Int']['input']>;
+};
+
 export type QueryMealPlanArgs = {
   id: Scalars['ID']['input'];
 };
@@ -5542,6 +5654,14 @@ export type QueryPantryArgs = {
 
 export type QueryPantryItemArgs = {
   id: Scalars['ID']['input'];
+};
+
+export type QueryPantryItemHistoryArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
+  pantryItemId: Scalars['ID']['input'];
 };
 
 export type QueryPantryItemLedgerArgs = {
@@ -5941,6 +6061,16 @@ export type RecipeConnection = {
   totalCount: Scalars['Int']['output'];
 };
 
+export type RecipeConsumptionResult = {
+  __typename?: 'RecipeConsumptionResult';
+  consumedItems: Array<PantryItemUsage>;
+  cookingLog?: Maybe<CookingLog>;
+  failedItems: Array<ConsumptionFailure>;
+  success: Scalars['Boolean']['output'];
+  totalConsumed: Scalars['Int']['output'];
+  totalFailed: Scalars['Int']['output'];
+};
+
 /** Recipe connection for pagination */
 export type RecipeEdge = {
   __typename?: 'RecipeEdge';
@@ -5987,6 +6117,19 @@ export type RecipeIngredientInput = {
   unitId?: InputMaybe<Scalars['String']['input']>;
   usAmount?: InputMaybe<Scalars['Float']['input']>;
   usUnit?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type RecipeIngredientMatch = {
+  __typename?: 'RecipeIngredientMatch';
+  alternativeMatches: Array<PantryItem>;
+  availableQuantity: Scalars['Float']['output'];
+  ingredient: RecipeIngredient;
+  isAvailable: Scalars['Boolean']['output'];
+  matchConfidence: Scalars['Float']['output'];
+  matchedPantryItem?: Maybe<PantryItem>;
+  shortfall?: Maybe<Scalars['Float']['output']>;
+  suggestedQuantity: Scalars['Float']['output'];
+  suggestedUnit?: Maybe<Unit>;
 };
 
 export type RecipeIngredientSourceInput = {
@@ -6262,15 +6405,11 @@ export type ShareShoppingListInput = {
  */
 export type ShoppingList = {
   __typename?: 'ShoppingList';
-  /** @deprecated Use activitiesConnection for pagination to reduce query complexity */
-  activities?: Maybe<Array<ShoppingListActivity>>;
   activitiesConnection: ShoppingListActivityConnection;
   autoAddSuggestions: Scalars['Boolean']['output'];
   basedOnTemplate?: Maybe<ShoppingList>;
   budgetAmount?: Maybe<Scalars['Float']['output']>;
   category?: Maybe<Scalars['String']['output']>;
-  /** @deprecated Use collaboratorsConnection for pagination to reduce query complexity */
-  collaborators?: Maybe<Array<ShoppingListCollaborator>>;
   collaboratorsConnection: ShoppingListCollaboratorConnection;
   completedAt?: Maybe<Scalars['DateTime']['output']>;
   completedItems: Scalars['Int']['output'];
@@ -6286,8 +6425,6 @@ export type ShoppingList = {
   isPublic: Scalars['Boolean']['output'];
   isRecurring: Scalars['Boolean']['output'];
   isTemplate: Scalars['Boolean']['output'];
-  /** @deprecated Use itemsConnection for pagination to reduce query complexity */
-  items?: Maybe<Array<ShoppingListItem>>;
   itemsConnection: ShoppingListItemConnection;
   lastRecurredAt?: Maybe<Scalars['DateTime']['output']>;
   lastReminderSent?: Maybe<Scalars['DateTime']['output']>;
@@ -6299,8 +6436,6 @@ export type ShoppingList = {
   plannedShopDate?: Maybe<Scalars['DateTime']['output']>;
   priceTracking: Scalars['Boolean']['output'];
   priority: Scalars['Int']['output'];
-  /** @deprecated Query purchases separately by list ID to reduce query complexity */
-  purchases?: Maybe<Array<Purchase>>;
   recurringInterval?: Maybe<Scalars['Int']['output']>;
   recurringPattern?: Maybe<RecurringPattern>;
   reminderDate?: Maybe<Scalars['DateTime']['output']>;
@@ -6314,8 +6449,6 @@ export type ShoppingList = {
   targetStore?: Maybe<Store>;
   targetStoreId?: Maybe<Scalars['String']['output']>;
   templateName?: Maybe<Scalars['String']['output']>;
-  /** @deprecated Query templates separately to avoid circular references */
-  templatesCreated?: Maybe<Array<ShoppingList>>;
   totalCollaborators: Scalars['Int']['output'];
   totalCost: Scalars['Float']['output'];
   totalItems: Scalars['Int']['output'];
@@ -6524,8 +6657,6 @@ export type ShoppingListItem = {
   purchasedById?: Maybe<Scalars['String']['output']>;
   purchasedPrice?: Maybe<Scalars['Float']['output']>;
   purchasedQuantity?: Maybe<Scalars['Float']['output']>;
-  /** @deprecated Use purchasesConnection for pagination to reduce query complexity */
-  purchases?: Maybe<Array<Purchase>>;
   purchasesConnection: PurchaseConnection;
   quantity?: Maybe<Scalars['Float']['output']>;
   quantityInput?: Maybe<Scalars['String']['output']>;
@@ -14915,6 +15046,7 @@ export type GetItemConversionsQuery = {
     conversionRatio: number;
     source: ConversionSource;
     confidence: number;
+    isVerified: boolean;
     notes?: string | null | undefined;
     createdAt: string;
     fromUnit: {
@@ -15051,6 +15183,7 @@ export type GetItemsQuery = {
   items: {
     __typename?: 'ItemsResponse';
     totalCount: number;
+    hasMore: boolean;
     items?:
       | Array<{
           __typename?: 'Item';
@@ -15065,6 +15198,7 @@ export type GetItemsQuery = {
           status: ItemStatus;
           visibility: Visibility;
           showInOnboarding: boolean;
+          popularity: number;
           nutritions?: any | null | undefined;
           healthBenefits?: any | null | undefined;
           metadata?: any | null | undefined;
@@ -16237,6 +16371,8 @@ export type GetPantryLedgerAnalyticsQuery = {
   __typename?: 'Query';
   pantryLedgerAnalytics: {
     __typename?: 'LedgerAnalytics';
+    periodStart: string;
+    periodEnd: string;
     granularity: PeriodGranularity;
     summary: {
       __typename?: 'LedgerSummary';
@@ -16247,6 +16383,7 @@ export type GetPantryLedgerAnalyticsQuery = {
       additionCount: number;
       consumptionCount: number;
       wasteCount: number;
+      unitName?: string | null | undefined;
       additionsByUnit: Array<{
         __typename?: 'UsageByUnit';
         unitId: string;
@@ -16286,6 +16423,7 @@ export type GetPantryLedgerAnalyticsQuery = {
             storeName?: string | null | undefined;
             totalSpent: number;
             itemCount: number;
+            averageCostPerUnit: number;
           }>;
         }
       | null
@@ -16295,6 +16433,9 @@ export type GetPantryLedgerAnalyticsQuery = {
       itemId: string;
       itemName: string;
       totalQuantity: number;
+      count: number;
+      unitName?: string | null | undefined;
+      imageUrl?: string | null | undefined;
     }>;
   };
 };
@@ -16327,6 +16468,97 @@ export type GetPantryItemLedgerQuery = {
       unitId: string;
       unitName: string;
       totalQuantity: number;
+    }>;
+  };
+};
+
+export type GetPantryUsageAnalyticsQueryVariables = Exact<{
+  pantryId: Scalars['ID']['input'];
+  filter?: InputMaybe<AnalyticsFilterInput>;
+}>;
+
+export type GetPantryUsageAnalyticsQuery = {
+  __typename?: 'Query';
+  pantryUsageAnalytics: {
+    __typename?: 'UsageAnalytics';
+    totalUsageCount: number;
+    totalQuantityUsed: number;
+    averageUsagePerDay: number;
+    periodStart: string;
+    periodEnd: string;
+    usageTrend: Array<{
+      __typename?: 'TimeSeriesDataPoint';
+      date: string;
+      value: number;
+      count: number;
+    }>;
+    usageByPurpose: Array<{
+      __typename?: 'UsageByPurpose';
+      purpose: UsagePurpose;
+      totalQuantity: number;
+      count: number;
+      percentage: number;
+    }>;
+    usageBySource: Array<{
+      __typename?: 'UsageBySource';
+      source: UsageSource;
+      totalQuantity: number;
+      count: number;
+      percentage: number;
+    }>;
+    topUsedItems: Array<{
+      __typename?: 'UsageByItem';
+      itemId: string;
+      itemName: string;
+      totalQuantity: number;
+      count: number;
+      unitName?: string | null | undefined;
+      imageUrl?: string | null | undefined;
+    }>;
+  };
+};
+
+export type GetPantryWasteAnalyticsQueryVariables = Exact<{
+  pantryId: Scalars['ID']['input'];
+  filter?: InputMaybe<AnalyticsFilterInput>;
+}>;
+
+export type GetPantryWasteAnalyticsQuery = {
+  __typename?: 'Query';
+  pantryWasteAnalytics: {
+    __typename?: 'WasteAnalytics';
+    totalWasteCount: number;
+    totalWasteQuantity: number;
+    totalWasteValue: number;
+    wasteRate: number;
+    averageWastePerDay: number;
+    composted: number;
+    recycled: number;
+    periodStart: string;
+    periodEnd: string;
+    wasteTrend: Array<{
+      __typename?: 'TimeSeriesDataPoint';
+      date: string;
+      value: number;
+      count: number;
+    }>;
+    wasteByReason: Array<{
+      __typename?: 'WasteByReason';
+      reason: WasteReason;
+      totalQuantity: number;
+      count: number;
+      percentage: number;
+      estimatedValue?: number | null | undefined;
+    }>;
+    topWastedItems: Array<{
+      __typename?: 'WasteByItem';
+      itemId: string;
+      itemName: string;
+      totalQuantity: number;
+      count: number;
+      estimatedValue?: number | null | undefined;
+      unitName?: string | null | undefined;
+      imageUrl?: string | null | undefined;
     }>;
   };
 };

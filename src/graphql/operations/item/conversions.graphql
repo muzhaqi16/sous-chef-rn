@@ -115,6 +115,7 @@ query GetItemConversions(
     conversionRatio
     source
     confidence
+    isVerified
     notes
     createdAt
   }
