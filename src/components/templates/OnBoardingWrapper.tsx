@@ -62,7 +62,11 @@ export const OnBoardingWrapper = ({
     <SafeAreaView style={styles.safeArea} testID={testID}>
       <View style={styles.headerContainer}>
         {onBack && (
-          <TouchableOpacity onPress={onBack} style={styles.iconButton} testID={testID ? `${testID}-back-button` : undefined}>
+          <TouchableOpacity
+            onPress={onBack}
+            style={styles.iconButton}
+            testID={testID ? `${testID}-back-button` : undefined}
+          >
             <Icon
               library="Feather"
               name="arrow-left"
@@ -80,7 +84,9 @@ export const OnBoardingWrapper = ({
             steps={onboardingContext.steps}
             activeIndex={onboardingContext.activeStepIndex}
             stepSize={12}
-            onStepPress={allowStepNavigation ? onboardingContext.goToStep : undefined}
+            onStepPress={
+              allowStepNavigation ? onboardingContext.goToStep : undefined
+            }
             allowStepNavigation={allowStepNavigation}
           />
         </View>
@@ -95,7 +101,9 @@ export const OnBoardingWrapper = ({
           keyboardShouldPersistTaps="handled"
         >
           {displayTitle && <Text style={styles.title}>{displayTitle}</Text>}
-          {displaySubtitle && <Text style={styles.subtitle}>{displaySubtitle}</Text>}
+          {displaySubtitle && (
+            <Text style={styles.subtitle}>{displaySubtitle}</Text>
+          )}
           <View style={styles.content}>{children}</View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -103,7 +111,9 @@ export const OnBoardingWrapper = ({
       {showNavigation && !isLegacyMode && onboardingContext ? (
         <OnboardingNavigation
           showBackButton={onboardingContext.canGoBack}
-          showContinueButton={onboardingContext.canGoNext || onboardingContext.isLastStep}
+          showContinueButton={
+            onboardingContext.canGoNext || onboardingContext.isLastStep
+          }
           showSkipButton={!!skipAction}
           backAction={{
             label: 'Back',
@@ -111,25 +121,33 @@ export const OnBoardingWrapper = ({
             backgroundColor: theme.colors.surface,
             labelColor: theme.colors.textPrimary,
           }}
-          continueAction={continueAction || {
-            label: 'Continue',
-            onPress: onboardingContext.goToNextStep,
-            backgroundColor: theme.colors.primary,
-            labelColor: theme.colors.background,
-          }}
+          continueAction={
+            continueAction || {
+              label: 'Continue',
+              onPress: onboardingContext.goToNextStep,
+              backgroundColor: theme.colors.primary,
+              labelColor: theme.colors.background,
+            }
+          }
           skipAction={skipAction}
           isLastStep={onboardingContext.isLastStep}
         />
       ) : (
         <View style={styles.bottomNavigation}>
           {onSkip && (
-            <TouchableOpacity onPress={onSkip} style={styles.skipButton} testID={testID ? `${testID}-skip-button` : undefined}>
+            <TouchableOpacity
+              onPress={onSkip}
+              style={styles.skipButton}
+              testID={testID ? `${testID}-skip-button` : undefined}
+            >
               <Text style={styles.skipText}>Skip</Text>
             </TouchableOpacity>
           )}
           {step != null && totalSteps != null && (
             <View style={styles.progressBarBackground}>
-              <View style={[styles.progressBarFill, { width: `${progress}%` }]} />
+              <View
+                style={[styles.progressBarFill, { width: `${progress}%` }]}
+              />
             </View>
           )}
         </View>
@@ -146,7 +164,7 @@ const styles = StyleSheet.create(theme => ({
   headerContainer: {
     flexDirection: 'column',
     justifyContent: 'flex-start',
-    paddingHorizontal: 24,
+    paddingHorizontal: theme.spacing.md,
   },
   stepsContainer: {
     paddingVertical: 16,
@@ -188,7 +206,7 @@ const styles = StyleSheet.create(theme => ({
   scrollContainer: {
     flexGrow: 1,
     flex: 1,
-    paddingHorizontal: 24,
+    paddingHorizontal: theme.spacing.md,
     paddingVertical: 16,
   },
   bottomNavigation: {

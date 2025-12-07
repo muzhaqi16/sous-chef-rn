@@ -11,6 +11,7 @@ import {
   AcquisitionMethod,
   ItemSortField,
   SortOrder,
+  ItemType,
 } from '#generated';
 import { useAppStore } from '#store/useAppStore';
 import { Button } from '#components';
@@ -30,6 +31,7 @@ export const SelectPantryItems = () => {
     variables: {
       filters: {
         showInOnboarding: true,
+        types: [ItemType.Food, ItemType.Foundation],
       },
       sort: {
         field: ItemSortField.Popularity,
@@ -139,7 +141,11 @@ export const SelectPantryItems = () => {
       onSkip={() => navigateToNextStep('SelectPantryItems')}
       testID="onboarding-select-pantry-items-screen"
     >
-      <ScrollView style={styles.form} contentContainerStyle={styles.listContent}>
+      <ScrollView
+        style={styles.form}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+      >
         <Text style={styles.helperText}>{selectedItems.length} selected</Text>
         <View style={styles.chipContainer}>
           {items.map(item => (
@@ -185,13 +191,13 @@ const styles = StyleSheet.create(theme => ({
   },
   listContent: {
     paddingBottom: 16,
-    paddingHorizontal: 8,
+    paddingHorizontal: theme.spacing.md,
   },
   chipContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: 8,
+    gap: theme.spacing.xs,
   },
   nextButton: {
     backgroundColor: theme.colors.primary,
