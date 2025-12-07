@@ -1,11 +1,13 @@
 import React, { useRef, ReactNode, Ref } from 'react';
-import { Keyboard } from 'react-native';
+import { Keyboard, View } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetScrollView,
   BottomSheetView,
   BottomSheetBackdrop,
+  useBottomSheetTimingConfigs,
 } from '@gorhom/bottom-sheet';
+import { Easing } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Title } from '../atoms';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -18,6 +20,8 @@ interface BottomSheetActionProps {
   sheetRef?: Ref<BottomSheetModal>;
   /** Whether to wrap content in scrollable view (default: true). Set to false when children contain FlatList/SectionList */
   scrollable?: boolean;
+  /** Optional element to render on the right side of the header */
+  headerRight?: ReactNode;
 }
 
 export const BottomSheetAction: React.FC<BottomSheetActionProps> = ({
@@ -26,15 +30,26 @@ export const BottomSheetAction: React.FC<BottomSheetActionProps> = ({
   snapPoints = ['25%', '50%', '90%'],
   sheetRef,
   scrollable = true,
+  headerRight,
 }) => {
   const { theme } = useUnistyles();
   const bottomSheetModalRef = useRef<BottomSheetModal>(null);
-
   const insets = useSafeAreaInsets();
+
+  // Configure smooth animation for open/close
+  const animationConfigs = useBottomSheetTimingConfigs({
+    duration: 300,
+    easing: Easing.out(Easing.ease),
+  });
 
   const content = (
     <>
-      {sheetTitle && <Title style={styles.sheetTitle}>{sheetTitle}</Title>}
+      {(sheetTitle || headerRight) && (
+        <View style={styles.headerRow}>
+          {sheetTitle && <Title style={styles.sheetTitle}>{sheetTitle}</Title>}
+          {headerRight}
+        </View>
+      )}
       {children}
     </>
   );
@@ -48,6 +63,7 @@ export const BottomSheetAction: React.FC<BottomSheetActionProps> = ({
       keyboardBehavior="fillParent"
       enableDynamicSizing={false}
       topInset={insets.top}
+      animationConfigs={animationConfigs}
       onDismiss={() => {
         // Optionally handle dismiss actions here
         Keyboard.dismiss();
@@ -80,7 +96,7 @@ export const BottomSheetAction: React.FC<BottomSheetActionProps> = ({
   );
 };
 
-const styles = StyleSheet.create(() => ({
+const styles = StyleSheet.create(theme => ({
   scrollView: {
     flex: 1, // Allow ScrollView to fill the bottom sheet
   },
@@ -91,5 +107,13 @@ const styles = StyleSheet.create(() => ({
     flex: 1, // Allow View to fill the bottom sheet
     padding: 16,
   },
-  sheetTitle: {},
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing.sm,
+  },
+  sheetTitle: {
+    flex: 1,
+  },
 }));

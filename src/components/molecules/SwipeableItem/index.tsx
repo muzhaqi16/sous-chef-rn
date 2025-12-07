@@ -1,6 +1,9 @@
 import React, { useCallback } from 'react';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
-import Reanimated, { useAnimatedStyle, SharedValue } from 'react-native-reanimated';
+import Reanimated, {
+  useAnimatedStyle,
+  SharedValue,
+} from 'react-native-reanimated';
 import { RightActions } from './RightActions';
 import { LeftActions } from './LeftActions';
 import { SwipeableContent } from './SwipeableContent';
@@ -23,7 +26,7 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
   enableSwipeToDelete = true,
   leftThreshold = 120,
   rightThreshold = 120,
-  friction = 1,
+  friction = 1.5,
   failOffsetY = [-20, 20],
   onSwipeableWillOpen,
   onSwipeableClose,
@@ -31,15 +34,31 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
 }) => {
   const { itemOpacity, animateDelete } = useSwipeableAnimation();
 
-  const { swipeableRef, handleActionPress, handleSwipeableWillOpen, handleSwipeableClose } =
-    useSwipeableActions({
-      onEdit,
-      onDelete,
-      animateDelete,
-      enableSwipeToDelete,
-      onSwipeableWillOpen,
-      onSwipeableClose,
-    });
+  // Calculate thresholds based on number of actions
+  // Fewer actions = smaller threshold for more natural swipe feel
+  const leftActionCount = [
+    onTogglePurchase,
+    onConsume,
+    onWaste,
+    onRestock,
+  ].filter(Boolean).length;
+  const rightActionCount = [onEdit, onDelete].filter(Boolean).length;
+  const computedLeftThreshold = leftActionCount <= 1 ? 60 : leftThreshold;
+  const computedRightThreshold = rightActionCount <= 1 ? 60 : rightThreshold;
+
+  const {
+    swipeableRef,
+    handleActionPress,
+    handleSwipeableWillOpen,
+    handleSwipeableClose,
+  } = useSwipeableActions({
+    onEdit,
+    onDelete,
+    animateDelete,
+    enableSwipeToDelete,
+    onSwipeableWillOpen,
+    onSwipeableClose,
+  });
 
   const animatedStyle = useAnimatedStyle(() => {
     return {
@@ -47,16 +66,20 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
     };
   });
 
-  const renderRightActions = useCallback(() => {
-    return (
-      <RightActions
-        onEdit={onEdit}
-        onDelete={onDelete}
-        onActionPress={handleActionPress}
-        testIDPrefix={testIDPrefix}
-      />
-    );
-  }, [onEdit, onDelete, handleActionPress, testIDPrefix]);
+  const renderRightActions = useCallback(
+    (progress: SharedValue<number>) => {
+      return (
+        <RightActions
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onActionPress={handleActionPress}
+          testIDPrefix={testIDPrefix}
+          progress={progress}
+        />
+      );
+    },
+    [onEdit, onDelete, handleActionPress, testIDPrefix],
+  );
 
   const renderLeftActions = useCallback(
     (progress: SharedValue<number>) => {
@@ -72,7 +95,14 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
         />
       );
     },
-    [onTogglePurchase, onConsume, onWaste, onRestock, isPurchased, swipeableRef],
+    [
+      onTogglePurchase,
+      onConsume,
+      onWaste,
+      onRestock,
+      isPurchased,
+      swipeableRef,
+    ],
   );
 
   return (
@@ -80,8 +110,8 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
       <ReanimatedSwipeable
         ref={swipeableRef}
         friction={friction}
-        leftThreshold={leftThreshold}
-        rightThreshold={rightThreshold}
+        leftThreshold={computedLeftThreshold}
+        rightThreshold={computedRightThreshold}
         dragOffsetFromLeftEdge={15}
         dragOffsetFromRightEdge={15}
         failOffsetY={failOffsetY}

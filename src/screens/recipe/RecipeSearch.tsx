@@ -340,7 +340,7 @@ export const RecipeSearch: React.FC = () => {
 
     setLoading(true);
     setSearchPerformed(true);
-    ingredientSheetRef.current?.dismiss();
+    ingredientSheetRef.current?.close();
 
     try {
       const results = await spoonacularService.searchRecipesByIngredients({
@@ -611,6 +611,21 @@ export const RecipeSearch: React.FC = () => {
         sheetTitle="Select Ingredients"
         snapPoints={['50%', '75%', '90%']}
         scrollable={false}
+        headerRight={
+          <TouchableOpacity
+            style={[
+              styles.headerSearchButton,
+              { backgroundColor: theme.colors.primary },
+              selectedIngredients.size === 0 && styles.headerSearchButtonDisabled,
+            ]}
+            onPress={handleIngredientSearch}
+            disabled={selectedIngredients.size === 0}
+          >
+            <Text style={styles.headerSearchButtonText}>
+              Search ({selectedIngredients.size})
+            </Text>
+          </TouchableOpacity>
+        }
       >
         <FlatList
           data={pantryItems}
@@ -621,6 +636,8 @@ export const RecipeSearch: React.FC = () => {
             offset: INGREDIENT_ITEM_HEIGHT * index,
             index,
           })}
+          style={styles.ingredientList}
+          contentContainerStyle={styles.ingredientListContent}
           maxToRenderPerBatch={10}
           windowSize={5}
           removeClippedSubviews
@@ -628,20 +645,6 @@ export const RecipeSearch: React.FC = () => {
             <Text style={styles.emptyText}>No pantry items available</Text>
           }
         />
-
-        <TouchableOpacity
-          style={[
-            styles.searchButton,
-            { backgroundColor: theme.colors.primary },
-          ]}
-          onPress={handleIngredientSearch}
-          disabled={selectedIngredients.size === 0}
-        >
-          <Text style={styles.searchButtonText}>
-            Search with {selectedIngredients.size} ingredient
-            {selectedIngredients.size !== 1 ? 's' : ''}
-          </Text>
-        </TouchableOpacity>
       </BottomSheetAction>
 
       {/* Filter Bottom Sheet */}
@@ -860,6 +863,12 @@ const styles = StyleSheet.create(theme => ({
     resizeMode: 'cover',
     elevation: 2,
   },
+  ingredientList: {
+    flex: 1,
+  },
+  ingredientListContent: {
+    paddingBottom: theme.spacing.xl,
+  },
   ingredientItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -878,16 +887,17 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.md,
     marginTop: theme.spacing.xl,
   },
-  searchButton: {
-    padding: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    alignItems: 'center',
-    marginTop: theme.spacing.md,
-    marginHorizontal: theme.spacing.md,
+  headerSearchButton: {
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.radii.full,
   },
-  searchButtonText: {
+  headerSearchButtonDisabled: {
+    opacity: 0.5,
+  },
+  headerSearchButtonText: {
     color: '#fff',
-    fontSize: theme.fonts.size.md,
+    fontSize: theme.fonts.size.sm,
     fontWeight: '600',
   },
   // Filter styles
