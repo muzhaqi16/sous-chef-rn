@@ -96,7 +96,6 @@ export function useAllPendingInvites(userId?: string) {
               invite.invitedBy?.profile?.displayName ||
               invite.invitedBy?.email,
             inviterEmail: invite.invitedBy?.email,
-            token: invite.inviteToken,
             role: invite.role,
           },
           sentAt: invite.invitedAt,
@@ -104,7 +103,7 @@ export function useAllPendingInvites(userId?: string) {
           requiresAction: true,
           actionType: 'ACCEPT_SHOPPING_LIST_INVITE' as const,
           actionData: {
-            token: invite.inviteToken,
+            inviteId: invite.id,
             listId: invite.shoppingListId,
           },
           expiresAt: invite.expiresAt,
@@ -132,7 +131,6 @@ export function useAllPendingInvites(userId?: string) {
             inviterName:
               invite.inviter?.profile?.displayName || invite.inviter?.email,
             inviterEmail: invite.inviter?.email,
-            token: invite.token,
             role: invite.role,
           },
           sentAt: invite.sentAt,
@@ -140,7 +138,7 @@ export function useAllPendingInvites(userId?: string) {
           requiresAction: true,
           actionType: 'ACCEPT_HOME_INVITE' as const,
           actionData: {
-            token: invite.token,
+            inviteId: invite.id,
             homeId: invite.homeId,
           },
           expiresAt: invite.expiresAt,

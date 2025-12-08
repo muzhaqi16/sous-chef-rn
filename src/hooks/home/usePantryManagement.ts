@@ -139,8 +139,8 @@ export function usePantryManagement(pantryId: string | undefined) {
     }).length;
 
     const lowStock = pantryItems.filter(item => {
-      if (!item.currentQuantity || !item.autoReorderPoint) return false;
-      return item.currentQuantity <= item.autoReorderPoint;
+      // Consider low stock if quantity is 1 or less, or if lowStockAlert flag is set
+      return item.currentQuantity <= 1 || item.lowStockAlert;
     }).length;
 
     return {
@@ -388,8 +388,8 @@ export function usePantryManagement(pantryId: string | undefined) {
     },
     getLowStockItems: () =>
       pantryItems.filter(item => {
-        if (!item.currentQuantity || !item.autoReorderPoint) return false;
-        return item.currentQuantity <= item.autoReorderPoint;
+        // Consider low stock if quantity is 1 or less, or if lowStockAlert flag is set
+        return item.currentQuantity <= 1 || item.lowStockAlert;
       }),
     getExpiredItems: () => {
       const now = new Date();

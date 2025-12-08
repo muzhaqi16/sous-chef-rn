@@ -12,6 +12,8 @@ import {
   ActivityIndicator,
   FlatList,
   Alert,
+  Image,
+  Linking,
 } from 'react-native';
 import Animated, {
   useAnimatedScrollHandler,
@@ -649,11 +651,13 @@ const RecipeDetailScreen: React.FC = () => {
         summary: externalRecipe.summary,
         ingredients: externalRecipe.extendedIngredients || [],
         instructions: externalRecipe.analyzedInstructions,
+        instructionsHtml: externalRecipe.instructions, // HTML string fallback
         vegetarian: externalRecipe.vegetarian,
         vegan: externalRecipe.vegan,
         glutenFree: externalRecipe.glutenFree,
         dairyFree: externalRecipe.dairyFree,
         sourceName: externalRecipe.sourceName,
+        sourceUrl: externalRecipe.sourceUrl, // For "View Original" link
       };
     }
     return null;
@@ -696,7 +700,7 @@ const RecipeDetailScreen: React.FC = () => {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Recipe Image with Back Button */}
+        {/* Recipe Image with Back Button and Favorite Button */}
         {displayData.image && (
           <View style={styles.imageContainer}>
             <Animated.Image
@@ -706,6 +710,22 @@ const RecipeDetailScreen: React.FC = () => {
             {/* Back Button */}
             <TouchableOpacity onPress={goBack} style={styles.backButton}>
               <Ionicons name="arrow-back" size={24} color="#1d1d1d" />
+            </TouchableOpacity>
+            {/* Favorite/Save Button */}
+            <TouchableOpacity
+              onPress={handleSaveRecipe}
+              style={styles.favoriteButton}
+              disabled={saving || recipeSaved || isBackendRecipe}
+            >
+              {saving ? (
+                <ActivityIndicator size="small" color="#E91E63" />
+              ) : (
+                <Ionicons
+                  name={recipeSaved || isBackendRecipe ? 'heart' : 'heart-outline'}
+                  size={24}
+                  color="#E91E63"
+                />
+              )}
             </TouchableOpacity>
           </View>
         )}
@@ -771,7 +791,7 @@ const RecipeDetailScreen: React.FC = () => {
             </View>
           )}
 
-          {/* Ingredients */}
+          {/* Ingredients - Horizontal Scroll Cards */}
           {displayData.ingredients && displayData.ingredients.length > 0 && (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
@@ -781,112 +801,164 @@ const RecipeDetailScreen: React.FC = () => {
                   disabled={addingToList}
                 >
                   <Text style={styles.addAllButton}>
-                    {addingToList ? 'Adding...' : 'Add All to List'}
+                    {addingToList ? 'Adding...' : 'Add All'}
                   </Text>
                 </TouchableOpacity>
               </View>
-              {displayData.ingredients.map((ingredient: any, index: number) => {
-                const ingredientText =
-                  ingredient.original ||
-                  `${ingredient.quantity || ''} ${
-                    ingredient.unit?.symbol || ''
-                  } ${ingredient.name || ''}`.trim() ||
-                  ingredient.originalString ||
-                  'Unknown ingredient';
-                const isAdded = addedIngredients.has(ingredient.id);
+              <FlatList
+                horizontal
+                data={displayData.ingredients as any[]}
+                keyExtractor={(item, index) =>
+                  item.id?.toString() || index.toString()
+                }
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.ingredientsList}
+                ItemSeparatorComponent={() => <View style={{ width: 12 }} />}
+                renderItem={({ item: ingredient }: { item: any }) => {
+                  const ingredientName = ingredient.name || 'Unknown';
+                  const quantity = ingredient.quantity || ingredient.amount || '';
+                  const unit =
+                    ingredient.unit?.symbol ||
+                    ingredient.measures?.us?.unitShort ||
+                    '';
+                  // Get image URL from Spoonacular CDN or backend item
+                  const imageUrl = ingredient.image
+                    ? `https://spoonacular.com/cdn/ingredients_100x100/${ingredient.image}`
+                    : ingredient.item?.imageUrl;
+                  const isAdded = addedIngredients.has(ingredient.id);
 
-                return (
-                  <View key={index} style={styles.ingredientRow}>
-                    <Text style={styles.ingredientText}>
-                      • {ingredientText}
-                    </Text>
+                  return (
                     <TouchableOpacity
+                      style={styles.ingredientCard}
                       onPress={() => handleAddSingleIngredient(ingredient)}
-                      style={styles.addIngredientButton}
                       disabled={isAdded}
+                      activeOpacity={0.7}
                     >
-                      <Ionicons
-                        name={
-                          isAdded ? 'checkmark-circle' : 'add-circle-outline'
-                        }
-                        size={24}
-                        color={
-                          isAdded
-                            ? theme.colors.success || '#10B981'
-                            : theme.colors.primary
-                        }
-                      />
+                      {imageUrl ? (
+                        <Image
+                          source={{ uri: imageUrl }}
+                          style={styles.ingredientCardImage}
+                        />
+                      ) : (
+                        <View style={styles.ingredientCardImagePlaceholder}>
+                          <Ionicons
+                            name="leaf-outline"
+                            size={32}
+                            color={theme.colors.textSecondary}
+                          />
+                        </View>
+                      )}
+                      <Text
+                        style={styles.ingredientCardQuantity}
+                        numberOfLines={1}
+                      >
+                        {quantity} {unit}
+                      </Text>
+                      <Text
+                        style={styles.ingredientCardName}
+                        numberOfLines={2}
+                      >
+                        {ingredientName}
+                      </Text>
+                      {isAdded ? (
+                        <View style={styles.ingredientAddedBadge}>
+                          <Ionicons name="checkmark" size={12} color="#fff" />
+                        </View>
+                      ) : (
+                        <View style={styles.ingredientAddButton}>
+                          <Ionicons
+                            name="add"
+                            size={16}
+                            color={theme.colors.primary}
+                          />
+                        </View>
+                      )}
                     </TouchableOpacity>
-                  </View>
-                );
-              })}
+                  );
+                }}
+              />
             </View>
           )}
 
-          {/* Instructions */}
-          {displayData.instructions &&
-            (isBackendRecipe
-              ? Array.isArray(displayData.instructions) &&
-                displayData.instructions.length > 0
-              : Array.isArray(displayData.instructions) &&
-                displayData.instructions.length > 0 &&
-                displayData.instructions[0]?.steps?.length > 0) && (
+          {/* Recipe Instructions */}
+          {(() => {
+            // Check if we have instructions to display
+            const hasBackendInstructions =
+              isBackendRecipe &&
+              Array.isArray(displayData.instructions) &&
+              displayData.instructions.length > 0;
+            const hasAnalyzedInstructions =
+              !isBackendRecipe &&
+              Array.isArray(displayData.instructions) &&
+              displayData.instructions.length > 0 &&
+              displayData.instructions[0]?.steps?.length > 0;
+            const hasHtmlInstructions =
+              !isBackendRecipe &&
+              displayData.instructionsHtml &&
+              typeof displayData.instructionsHtml === 'string';
+
+            if (!hasBackendInstructions && !hasAnalyzedInstructions && !hasHtmlInstructions) {
+              return null;
+            }
+
+            return (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Instructions</Text>
-                {isBackendRecipe
-                  ? // Backend recipe instructions (JSON format)
-                    displayData.instructions.map((step: any, index: number) => (
+                <Text style={styles.sectionTitle}>Recipe</Text>
+                {hasBackendInstructions &&
+                  // Backend recipe instructions (JSON format)
+                  displayData.instructions.map((step: any, index: number) => (
+                    <View key={index} style={styles.instructionStep}>
+                      <Text style={styles.stepNumber}>
+                        {step.number || index + 1}.
+                      </Text>
+                      <Text style={styles.stepText}>{step.step}</Text>
+                    </View>
+                  ))}
+                {hasAnalyzedInstructions &&
+                  // External recipe - analyzed instructions with steps
+                  displayData.instructions[0].steps.map(
+                    (step: any, index: number) => (
                       <View key={index} style={styles.instructionStep}>
-                        <Text style={styles.stepNumber}>
-                          {step.number || index + 1}.
-                        </Text>
+                        <Text style={styles.stepNumber}>{step.number}.</Text>
                         <Text style={styles.stepText}>{step.step}</Text>
                       </View>
-                    ))
-                  : // External recipe instructions
-                    displayData.instructions[0].steps.map(
-                      (step: any, index: number) => (
-                        <View key={index} style={styles.instructionStep}>
-                          <Text style={styles.stepNumber}>{step.number}.</Text>
-                          <Text style={styles.stepText}>{step.step}</Text>
-                        </View>
-                      ),
-                    )}
+                    ),
+                  )}
+                {!hasBackendInstructions && !hasAnalyzedInstructions && hasHtmlInstructions && (
+                  // External recipe - HTML instructions fallback (strip HTML tags)
+                  <Text style={styles.description}>
+                    {displayData.instructionsHtml.replace(/<[^>]*>/g, '\n').trim()}
+                  </Text>
+                )}
               </View>
-            )}
+            );
+          })()}
 
-          {/* Source Attribution (Only for external recipes) */}
-          {displayData.sourceName && (
-            <View style={styles.attribution}>
+          {/* Source Attribution - Clickable Link (Only for external recipes) */}
+          {(displayData.sourceName || displayData.sourceUrl) && (
+            <TouchableOpacity
+              style={styles.attribution}
+              onPress={() => {
+                if (displayData.sourceUrl) {
+                  Linking.openURL(displayData.sourceUrl);
+                }
+              }}
+              disabled={!displayData.sourceUrl}
+              activeOpacity={displayData.sourceUrl ? 0.7 : 1}
+            >
               <Text style={styles.attributionText}>
-                Recipe from {displayData.sourceName}
+                Recipe from {displayData.sourceName || 'External Source'}
               </Text>
-            </View>
+              {displayData.sourceUrl && (
+                <View style={styles.viewOriginalLink}>
+                  <Text style={styles.viewOriginalText}>View Original Recipe</Text>
+                  <Ionicons name="open-outline" size={14} color={theme.colors.primary} />
+                </View>
+              )}
+            </TouchableOpacity>
           )}
-
-          {/* Extra padding for floating button (only for external recipes) */}
-          {!isBackendRecipe && <View style={{ height: 140 }} />}
         </View>
       </Animated.ScrollView>
-
-      {/* Floating Action Button - Only for external recipes */}
-      {!isBackendRecipe && (
-        <View style={styles.floatingButtonContainer}>
-          <TouchableOpacity
-            style={[styles.saveButton, recipeSaved && styles.savedButton]}
-            onPress={handleSaveRecipe}
-            disabled={saving || recipeSaved}
-          >
-            {saving ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.saveButtonText}>
-                {recipeSaved ? 'Saved ✓' : 'Save to My Recipes'}
-              </Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      )}
 
       {/* Shopping List Options Bottom Sheet */}
       <BottomSheetAction
@@ -1101,23 +1173,6 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
     lineHeight: 22,
   },
-  ingredientText: {
-    fontSize: theme.fonts.size.md,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.sm,
-    lineHeight: 24,
-    flex: 1,
-  },
-  ingredientRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: theme.spacing.sm,
-  },
-  addIngredientButton: {
-    padding: theme.spacing.xs,
-    marginLeft: theme.spacing.sm,
-  },
   instructionStep: {
     flexDirection: 'row',
     marginBottom: theme.spacing.md,
@@ -1146,33 +1201,6 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
     fontStyle: 'italic',
     textAlign: 'center',
-  },
-  floatingButtonContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: theme.spacing.lg,
-    backgroundColor: theme.colors.background,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-  },
-  saveButton: {
-    backgroundColor: theme.colors.primary,
-    padding: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 48,
-  },
-  savedButton: {
-    backgroundColor: theme.colors.success || '#10B981',
-    opacity: 0.8,
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontSize: theme.fonts.size.md,
-    fontWeight: '600',
   },
   shoppingListOptions: {
     padding: theme.spacing.md,
@@ -1259,5 +1287,106 @@ const styles = StyleSheet.create(theme => ({
     shadowOpacity: 0.22,
     shadowRadius: 2.22,
     elevation: 3,
+  },
+  // Favorite/Save button positioned over image (right side)
+  favoriteButton: {
+    position: 'absolute',
+    top: 48,
+    right: 12,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 9999,
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.22,
+    shadowRadius: 2.22,
+    elevation: 3,
+  },
+  // Horizontal ingredients list
+  ingredientsList: {
+    paddingVertical: theme.spacing.sm,
+    paddingLeft: theme.spacing.lg, // Match content area left padding
+  },
+  // Individual ingredient card
+  ingredientCard: {
+    width: 100,
+    alignItems: 'center',
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radii.lg,
+    padding: theme.spacing.sm,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  ingredientCardImage: {
+    width: 64,
+    height: 64,
+    borderRadius: theme.radii.md,
+    marginBottom: theme.spacing.xs,
+    backgroundColor: theme.colors.surfaceVariant,
+  },
+  ingredientCardImagePlaceholder: {
+    width: 64,
+    height: 64,
+    borderRadius: theme.radii.md,
+    marginBottom: theme.spacing.xs,
+    backgroundColor: theme.colors.surfaceVariant,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ingredientCardQuantity: {
+    fontSize: theme.fonts.size.xs,
+    color: theme.colors.textSecondary,
+    marginBottom: 2,
+  },
+  ingredientCardName: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textPrimary,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  ingredientAddedBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: theme.colors.success || '#10B981',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Add button on ingredient card
+  ingredientAddButton: {
+    position: 'absolute',
+    bottom: 4,
+    right: 4,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: theme.colors.primary + '20',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // View original recipe link
+  viewOriginalLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.xs,
+    marginTop: theme.spacing.sm,
+  },
+  viewOriginalText: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.primary,
+    fontWeight: '500',
   },
 }));

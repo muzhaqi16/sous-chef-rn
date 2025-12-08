@@ -29,6 +29,7 @@ import {
   useRestockPantryItemMutation,
   UsagePurpose,
   WasteReason,
+  StorageState,
 } from '#generated';
 import { useScanner } from '#context';
 import { useFeatureHint } from '#/hooks/useFeatureHint';
@@ -41,7 +42,7 @@ import {
   HeaderAction,
   AnimatedItemSelector,
 } from '#components';
-import { PantryContent } from '#components/pantry';
+import { PantryContent, PantryFilterChips, FilterType } from '#components/pantry';
 import { ConsumePantryItemModal } from '#components/modals/ConsumePantryItemModal';
 import { RecordWastePantryItemModal } from '#components/modals/RecordWastePantryItemModal';
 import { RestockPantryItemModal } from '#components/modals/RestockPantryItemModal';
@@ -88,6 +89,11 @@ const PantryMainScreen: React.FC = React.memo(() => {
   const [restockModalVisible, setRestockModalVisible] = useState(false);
   const [selectedItemForRestock, setSelectedItemForRestock] =
     useState<any>(null);
+
+  // Filter state for filter chips
+  const [activeFilters, setActiveFilters] = useState<Set<FilterType>>(
+    new Set(),
+  );
 
   // Manage selector with overlay coordination
   const { handleOpenSelector, handleOverlayOpen, handleOverlayClose } =
@@ -446,9 +452,81 @@ const PantryMainScreen: React.FC = React.memo(() => {
     navigate,
   });
 
+  // Calculate storage counts for filter chips
+  const storageCounts = useMemo(() => {
+    return {
+      refrigerated: pantryItems.filter(
+        (item: any) => item.storageState === StorageState.Refrigerated,
+      ).length,
+      frozen: pantryItems.filter(
+        (item: any) => item.storageState === StorageState.Frozen,
+      ).length,
+    };
+  }, [pantryItems]);
+
+  // Helper functions for filtering
+  const isExpiringSoon = useCallback((item: any) => {
+    if (!item.expiresAt) return false;
+    const expiresAt = new Date(item.expiresAt);
+    const now = new Date();
+    const daysUntilExpiry = Math.ceil(
+      (expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+    );
+    return daysUntilExpiry > 0 && daysUntilExpiry <= 7;
+  }, []);
+
+  const isExpired = useCallback((item: any) => {
+    if (!item.expiresAt) return false;
+    return new Date(item.expiresAt) < new Date();
+  }, []);
+
+  const isLowStock = useCallback((item: any) => {
+    // Consider low stock if currentQuantity is 1 or less, or below reorderPoint if set
+    return item.currentQuantity <= 1 || item.lowStockAlert;
+  }, []);
+
+  // Filter items based on active filters
+  const filteredPantryItems = useMemo(() => {
+    if (activeFilters.size === 0) return pantryItems;
+
+    return pantryItems.filter((item: any) => {
+      if (activeFilters.has('expiring') && isExpiringSoon(item)) return true;
+      if (activeFilters.has('expired') && isExpired(item)) return true;
+      if (activeFilters.has('lowStock') && isLowStock(item)) return true;
+      if (
+        activeFilters.has('refrigerated') &&
+        item.storageState === StorageState.Refrigerated
+      )
+        return true;
+      if (
+        activeFilters.has('frozen') &&
+        item.storageState === StorageState.Frozen
+      )
+        return true;
+      return false;
+    });
+  }, [pantryItems, activeFilters, isExpiringSoon, isExpired, isLowStock]);
+
+  // Handle filter change
+  const handleFilterChange = useCallback((newFilters: Set<FilterType>) => {
+    setActiveFilters(newFilters);
+  }, []);
+
+  // Calculate filter counts using same logic as filter functions
+  // This ensures counts match what gets filtered (unlike stats from usePantryManagement)
+  const filterCounts = useMemo(
+    () => ({
+      expiringSoon: pantryItems.filter((item: any) => isExpiringSoon(item))
+        .length,
+      expired: pantryItems.filter((item: any) => isExpired(item)).length,
+      lowStock: pantryItems.filter((item: any) => isLowStock(item)).length,
+    }),
+    [pantryItems, isExpiringSoon, isExpired, isLowStock],
+  );
+
   // Transform pantry items to list items format
   const items = usePantryItemTransformation({
-    items: pantryItems,
+    items: filteredPantryItems,
     theme,
   });
 
@@ -678,6 +756,14 @@ const PantryMainScreen: React.FC = React.memo(() => {
         onSwipeableWillOpen={handleSwipeableWillOpen}
         onEndReached={loadMore}
         onEndReachedThreshold={0.5}
+        ListHeaderComponent={
+          <PantryFilterChips
+            activeFilters={activeFilters}
+            onFilterChange={handleFilterChange}
+            stats={filterCounts}
+            storageCounts={storageCounts}
+          />
+        }
         ListFooterComponent={
           <PaginationFooter
             isLoadingMore={isLoadingMore}

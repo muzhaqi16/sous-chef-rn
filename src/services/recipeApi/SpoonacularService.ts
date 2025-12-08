@@ -7,6 +7,8 @@ import type {
   RecipeInformation,
   SearchRecipesParams,
   SearchRecipesResponse,
+  GetRandomRecipesParams,
+  GetRandomRecipesResponse,
   SpoonacularApiError,
 } from './types';
 
@@ -163,6 +165,30 @@ class SpoonacularService {
       offset,
       ...restParams,
     });
+  }
+
+  /**
+   * Get random recipes
+   * https://spoonacular.com/food-api/docs#Get-Random-Recipes
+   *
+   * @param params - Random recipe parameters
+   * @returns Array of random recipe information
+   */
+  async getRandomRecipes(
+    params: GetRandomRecipesParams = {},
+  ): Promise<RecipeInformation[]> {
+    const { number = 10, tags, includeNutrition = false } = params;
+
+    const response = await this.fetch<GetRandomRecipesResponse>(
+      '/recipes/random',
+      {
+        number: Math.min(number, 10), // Limit to 10 to save API calls
+        tags,
+        includeNutrition,
+      },
+    );
+
+    return response.recipes;
   }
 
   /**

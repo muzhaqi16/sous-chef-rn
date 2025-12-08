@@ -36,6 +36,7 @@ interface ListTemplateProps {
   // Pagination
   onEndReached?: () => void;
   onEndReachedThreshold?: number;
+  ListHeaderComponent?: React.ComponentType<any> | React.ReactElement | null;
   ListFooterComponent?: React.ComponentType<any> | React.ReactElement | null;
 
   // State management
@@ -86,6 +87,7 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
   // Pagination
   onEndReached,
   onEndReachedThreshold = 0.5,
+  ListHeaderComponent,
   ListFooterComponent,
 
   // State management
@@ -186,6 +188,7 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
           onSwipeableWillOpen={onSwipeableWillOpen}
           onEndReached={onEndReached}
           onEndReachedThreshold={onEndReachedThreshold}
+          ListHeaderComponent={ListHeaderComponent}
           ListFooterComponent={ListFooterComponent}
           testIDPrefix={testIDPrefix}
           emptyState={effectiveEmptyState}
@@ -204,6 +207,7 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
           onSwipeableWillOpen={onSwipeableWillOpen}
           onEndReached={onEndReached}
           onEndReachedThreshold={onEndReachedThreshold}
+          ListHeaderComponent={ListHeaderComponent}
           ListFooterComponent={ListFooterComponent}
           testIDPrefix={testIDPrefix}
           emptyState={effectiveEmptyState}

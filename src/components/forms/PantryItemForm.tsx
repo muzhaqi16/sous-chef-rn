@@ -91,6 +91,7 @@ const editItemSchema = yup.object({
     .nullable()
     .transform((value, originalValue) => (originalValue === '' ? null : value)),
   unit: yup.string(),
+  minimumQuantity: yup.string(),
   storageState: yup.string().oneOf(Object.values(StorageState)),
   location: yup.string(),
   notes: yup.string(),
@@ -225,6 +226,9 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
         quantityInput: item.currentQuantity?.toString() || '1',
         itemWeight: weight,
         unit: weightUnitSymbol,
+        // Note: minimumQuantity is not stored on PantryItem in the API
+        // The lowStockAlert boolean is used instead
+        minimumQuantity: '',
         storageState: item.storageState || StorageState.Ambient,
         location:
           typeof item.storageLocation === 'string'
@@ -374,15 +378,20 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
 
   // Build update input with only dirty (changed) fields
   // Note: quantity and unit changes are handled separately via updatePantryItemQuantity
-  const buildDirtyInput = (data: PantryItemFormData, dirty: typeof dirtyFields) => {
+  const buildDirtyInput = (
+    data: PantryItemFormData,
+    dirty: typeof dirtyFields,
+    locationId: string | null,
+  ) => {
     const input: Record<string, any> = {};
 
     if (dirty.storageState) {
       input.storageState = data.storageState;
     }
 
-    if (dirty.location) {
-      input.storageLocation = data.location;
+    // UpdatePantryItemInput only accepts storageLocationId, not storageLocation name
+    if (dirty.location && locationId) {
+      input.storageLocationId = locationId;
     }
 
     if (dirty.expirationDate) {
@@ -518,7 +527,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
         }
 
         // Build input for other dirty fields (excluding quantity/unit)
-        const input = buildDirtyInput(data, dirtyFields);
+        const input = buildDirtyInput(data, dirtyFields, selectedLocationId);
 
         // Update other fields if any changed
         if (Object.keys(input).length > 0) {
@@ -581,8 +590,8 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
       label: 'Tags',
       placeholder: 'Enter tags separated by commas',
       component: FormInput,
-      renderValue: (value: string[]) =>
-        Array.isArray(value) ? value.join(', ') : '',
+      renderValue: (value: string[] | string) =>
+        Array.isArray(value) ? value.join(', ') : typeof value === 'string' ? value : '',
       transformValue: (value: string) => {
         return value
           .split(',')

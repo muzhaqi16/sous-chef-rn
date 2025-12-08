@@ -536,6 +536,9 @@ enum AppealStatus {
   WITHDRAWN
 }
 
+"""
+Authentication response containing tokens - NEVER cache
+"""
 type AuthPayload {
   accessToken: String!
   refreshToken: String!
@@ -593,7 +596,6 @@ type Brand {
   deletedAt: DateTime
   description: String
   id: ID!
-  items: [ItemBrand!]
   name: String!
   parent: Brand
   updatedAt: DateTime!
@@ -676,7 +678,7 @@ Category type for organizing items
 Cache: 2 hours - reference data that changes very rarely
 """
 type Category {
-  children: [Category!]
+  children: [Category!]!
   color: String
   createdAt: DateTime!
   createdBy: User
@@ -686,7 +688,6 @@ type Category {
   id: ID!
   isActive: Boolean!
   isSystem: Boolean!
-  itemCategories: [ItemCategory!]!
   itemCount: Int!
   name: String!
   parent: Category
@@ -889,6 +890,9 @@ type ConvertedValue {
   value: Float!
 }
 
+"""
+Cooking activity log - personal user data
+"""
 type CookingLog {
   actualCookTime: Int
   actualPrepTime: Int
@@ -1438,8 +1442,6 @@ type Currency {
   id: ID!
   isActive: Boolean!
   name: String!
-  priceHistory: [ItemPriceHistory!]!
-  purchases: [Purchase!]!
   symbol: String!
   updatedAt: DateTime!
 }
@@ -1482,6 +1484,9 @@ enum DeductionMethod {
   RECIPE_BASED
 }
 
+"""
+User device information - contains sensitive device fingerprinting data
+"""
 type Device {
   androidId: String
   apiLevel: Int
@@ -1519,9 +1524,6 @@ type Device {
   isVerified: Boolean!
   isWiredHeadphonesConnected: Boolean
   language: String
-  lastCity: String
-  lastCountry: String
-  lastIpAddress: String
   lastLoginAt: DateTime
   lastSeenAt: DateTime!
   loginCount: Int!
@@ -1583,13 +1585,6 @@ input DeviceHardwareInfoInput {
   totalDiskCapacity: String
   totalMemory: String
   usedMemory: String
-}
-
-type DeviceLocation {
-  city: String
-  country: String
-  ipAddress: String
-  updatedAt: DateTime!
 }
 
 input DeviceLocationInput {
@@ -2003,7 +1998,7 @@ type Home {
 type HomeInvite {
   acceptedAt: DateTime
   createdAt: DateTime!
-  customPermissions: JSON
+  customPermissions: HomePermissions
   declinedAt: DateTime
   email: String!
   expiresAt: DateTime!
@@ -2022,7 +2017,6 @@ type HomeInvite {
   role: MembershipRole!
   sentAt: DateTime!
   status: InviteStatus!
-  token: String!
   updatedAt: DateTime!
   version: Int!
 }
@@ -2055,6 +2049,18 @@ type HomeOwnership {
   transferredFrom: String
   user: User!
   userId: String!
+}
+
+"""
+Custom permissions that can override default role permissions
+"""
+type HomePermissions {
+  canAddItems: Boolean
+  canEditPantry: Boolean
+  canInviteOthers: Boolean
+  canManageHome: Boolean
+  canRemoveItems: Boolean
+  canViewPantry: Boolean
 }
 
 enum HomeType {
@@ -2192,11 +2198,9 @@ type InviteLog {
   id: ID!
   invite: HomeInvite!
   inviteId: String!
-  ipAddress: String
   metadata: JSON
   newStatus: InviteStatus
   oldStatus: InviteStatus
-  userAgent: String
 }
 
 type InviteStats {
@@ -2273,19 +2277,15 @@ type Item {
   needsApproval: Boolean!
   netWeight: Float
   nutritions: JSON
-  pantryItems: [PantryItem!]!
   popularity: Int!
   preferredTrackingUnit: Unit
   preferredTrackingUnitId: String
   priceHistory: [ItemPriceHistory!]!
   primaryUpc: String
-  purchases: [Purchase!]!
-  recipeIngredients: [RecipeIngredient!]!
   servingSize: Float
   servingSizeUnit: String
   servingsPerPackage: Int
   shelfLifeDays: Int
-  shoppingListItems: [ShoppingListItem!]!
   showInOnboarding: Boolean!
   status: ItemStatus!
   storageState: StorageState!
@@ -2398,6 +2398,9 @@ input ItemFilters {
   visibility: Visibility
 }
 
+"""
+Price history for items - may contain user-specific pricing data
+"""
 type ItemPriceHistory {
   createdAt: DateTime!
   id: ID!
@@ -2674,6 +2677,9 @@ enum LoginFailureReason {
   SUSPICIOUS_ACTIVITY
 }
 
+"""
+Security audit log for login attempts - NEVER cache
+"""
 type LoginHistory {
   apiClient: String
   browserName: String
@@ -2690,10 +2696,6 @@ type LoginHistory {
   flaggedById: String
   flaggedReason: String
   id: ID!
-  ipAddress: String
-  ipCity: String
-  ipCountry: String
-  ipRegion: String
   isApiLogin: Boolean!
   isAutomated: Boolean!
   isMobileApp: Boolean!
@@ -2735,7 +2737,6 @@ type LoginHistory {
 
 type LoginHistoryActivity {
   id: ID!
-  ipAddress: String
   isRisky: Boolean!
   loggedInAt: DateTime!
   method: LoginMethod!
@@ -3170,7 +3171,7 @@ type Mutation {
     pantryId: ID!
     recipeId: ID!
   ): RecipeConsumptionResult!
-  createBrand(input: CreateBrandInput): Brand!
+  createBrand(input: CreateBrandInput!): Brand!
   createBulkPurchases(purchases: [CreatePurchaseInput!]!): [Purchase!]!
   createBulkStores(stores: [CreateStoreInput!]!): [Store!]!
   createCategory(input: CreateCategoryInput!): Category!
@@ -3229,16 +3230,16 @@ type Mutation {
   deleteDevice(id: ID!): Device!
   deleteExpiredNotifications: Int!
   deleteHome(id: ID!): Home!
-  deleteItem(id: ID!, permanent: Boolean): Boolean!
+  deleteItem(id: ID!, permanent: Boolean): Item!
   deleteMealPlan(id: ID!): Boolean!
   deleteMultipleDevices(deviceIds: [ID!]!): [Device!]!
   deleteMultipleNotifications(ids: [ID!]!): Int!
   deleteNotification(id: ID!): Boolean!
-  deletePantry(id: ID!): Boolean!
+  deletePantry(id: ID!): Pantry!
   deletePantryItem(id: ID!): PantryItem!
   deletePurchase(id: ID!): Boolean!
   deleteRecipe(id: ID!): Boolean!
-  deleteShoppingList(id: ID!): Boolean!
+  deleteShoppingList(id: ID!): ShoppingList!
   """
   Delete a storage location (soft delete)
   Fails if location has child locations or items
@@ -3361,12 +3362,7 @@ type Mutation {
     quantity: Float!
     unitId: ID!
   ): PantryItemUsage!
-  recordPriceObservation(
-    itemId: ID!
-    observedAt: DateTime
-    price: Float!
-    storeId: String!
-  ): ItemPriceHistory!
+  recordPriceObservation(input: RecordPriceObservationInput!): ItemPriceHistory!
   refresh(token: String!): RefreshTokenPayload!
   register(input: RegisterInput!): AuthPayload!
   registerDevice(input: DeviceRegistrationInput!): Device!
@@ -3473,7 +3469,7 @@ type Mutation {
   unsuspendUser(userId: ID!): UserModeration!
   untrustDevice(id: ID!): Device!
   untrustMultipleDevices(deviceIds: [ID!]!): [Device!]!
-  updateBrand(input: UpdateBrandInput): Brand!
+  updateBrand(input: UpdateBrandInput!): Brand!
   updateCategory(id: ID!, input: UpdateCategoryInput!): Category!
   updateCollaboratorPermissions(
     collaboratorId: ID!
@@ -3515,12 +3511,7 @@ type Mutation {
   updateItemIngredients(id: ID!, ingredients: [IngredientInput!]!): Item!
   updateItemMetadata(id: ID!, merge: Boolean, metadata: JSON!): Item!
   updateItemNutrition(id: ID!, nutritionFacts: [NutritionFactInput!]!): Item!
-  updateItemPrice(
-    itemId: ID!
-    price: Float!
-    source: String
-    storeId: String
-  ): Item!
+  updateItemPrice(input: UpdateItemPriceInput!): Item!
   updateItemUnit(id: ID!, input: ItemUnitInput!): ItemUnit!
   updateLoginHistory(id: ID!, input: UpdateLoginHistoryInput!): LoginHistory!
   updateLoginSession(
@@ -3891,7 +3882,7 @@ type PageInfo {
   hasNextPage: Boolean!
   hasPreviousPage: Boolean!
   startCursor: String
-  totalCount: Int
+  totalCount: Int!
 }
 
 input PaginationInput {
@@ -4005,6 +3996,7 @@ type PantryItem {
   acquisitionMethod: AcquisitionMethod!
   addedAt: DateTime!
   addedBy: User
+  brand: Brand
   condition: ItemCondition!
   consumedQuantity: Float!
   costPerUnit: Float
@@ -4063,7 +4055,6 @@ type PantryItemChange {
   deviceId: String
   field: String
   id: ID!
-  ipAddress: String
   metadata: JSON
   newValue: String
   oldValue: String
@@ -4313,6 +4304,9 @@ enum ProviderType {
   WALMART
 }
 
+"""
+Purchase record - contains financial and shopping data
+"""
 type Purchase {
   createdAt: DateTime!
   currency: Currency!
@@ -5016,6 +5010,16 @@ input RecordPantryItemUsageInput {
   weightUsedUnitId: String
 }
 
+"""
+Input for recording a price observation (historical tracking)
+"""
+input RecordPriceObservationInput {
+  itemId: ID!
+  observedAt: DateTime
+  price: Float!
+  storeId: String!
+}
+
 enum RecurringPattern {
   BIWEEKLY
   CUSTOM
@@ -5024,6 +5028,9 @@ enum RecurringPattern {
   WEEKLY
 }
 
+"""
+Token refresh response - NEVER cache
+"""
 type RefreshTokenPayload {
   accessToken: String!
   refreshToken: String!
@@ -5284,7 +5291,6 @@ type ShoppingListActivity {
   createdAt: DateTime!
   description: String!
   id: ID!
-  ipAddress: String
   itemName: String
   metadata: JSON
   newValue: String
@@ -5293,7 +5299,6 @@ type ShoppingListActivity {
   shoppingListId: String!
   source: String
   user: User!
-  userAgent: String
   userId: String!
 }
 
@@ -5333,7 +5338,6 @@ type ShoppingListCollaborator {
   email: String
   expiresAt: DateTime
   id: ID!
-  inviteToken: String
   invitedAt: DateTime!
   invitedBy: User
   itemsAdded: Int!
@@ -5627,10 +5631,6 @@ type StorageLocation {
   Display name of the storage location (e.g., 'Main Fridge', 'Basement Freezer')
   """
   name: String!
-  """
-  Items currently stored in this location
-  """
-  pantryItems: [PantryItem!]!
   """
   Parent location if this is a nested location (e.g., a drawer inside a refrigerator)
   """
@@ -6146,20 +6146,13 @@ type Unit {
   commonFractions: JSON
   conversionFactor: Float!
   createdAt: DateTime!
-  derivedUnits: [Unit!]!
   displayAsFraction: Boolean!
   id: ID!
   isCommon: Boolean!
   isMetric: Boolean!
-  itemUnits: [ItemUnit!]!
   minPrecision: Float!
   name: String!
   notes: String
-  pantryItems: [PantryItem!]!
-  priceHistory: [ItemPriceHistory!]!
-  purchases: [Purchase!]!
-  recipeIngredients: [RecipeIngredient!]!
-  shoppingListItems: [ShoppingListItem!]!
   sortOrder: Int!
   symbol: String!
   type: UnitType!
@@ -6404,6 +6397,16 @@ input UpdateItemInput {
   units: [ItemUnitInput!]
   vendor: String
   visibility: Visibility
+}
+
+"""
+Input for updating an item's price
+"""
+input UpdateItemPriceInput {
+  itemId: ID!
+  price: Float!
+  source: String
+  storeId: String
 }
 
 input UpdateLoginHistoryInput {
@@ -6897,7 +6900,6 @@ type User {
   onBoarded: Boolean!
   preferredCurrency: String
   profile: UserProfile
-  purchases: [Purchase!]!
   role: UserRole!
   settings: UserSettings
   shoppingListOwnerships: [ShoppingListOwnership!]!

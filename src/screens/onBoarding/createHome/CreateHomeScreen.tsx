@@ -424,13 +424,13 @@ const CreateHomeScreenComponent = () => {
                   <View style={styles.inviteActions}>
                     <TouchableOpacity
                       style={[styles.button, styles.inviteDeclineButton]}
-                      onPress={() => handleDeclineInvite(invite.token, inviteHomeName)}
+                      onPress={() => handleDeclineInvite(invite.id, inviteHomeName)}
                       disabled={accepting}>
                       <Text style={styles.inviteDeclineButtonText}>Decline</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={[styles.button, styles.inviteAcceptButton]}
-                      onPress={() => handleAcceptInvite(invite.token)}
+                      onPress={() => handleAcceptInvite(invite.id)}
                       disabled={accepting}>
                       {accepting ? (
                         <ActivityIndicator size="small" color={theme.colors.white} />

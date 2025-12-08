@@ -307,7 +307,10 @@ mutation UpdatePantry($id: ID!, $input: UpdatePantryInput!) {
 }
 
 mutation DeletePantry($id: ID!) {
-  deletePantry(id: $id)
+  deletePantry(id: $id) {
+    id
+    name
+  }
 }
 
 mutation SetDefaultPantry($pantryId: ID!) {

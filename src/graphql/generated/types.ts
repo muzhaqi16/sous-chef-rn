@@ -158,6 +158,7 @@ export enum AppealStatus {
   Withdrawn = 'WITHDRAWN',
 }
 
+/** Authentication response containing tokens - NEVER cache */
 export type AuthPayload = {
   __typename?: 'AuthPayload';
   accessToken: Scalars['String']['output'];
@@ -217,7 +218,6 @@ export type Brand = {
   deletedAt?: Maybe<Scalars['DateTime']['output']>;
   description?: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
-  items?: Maybe<Array<ItemBrand>>;
   name: Scalars['String']['output'];
   parent?: Maybe<Brand>;
   updatedAt: Scalars['DateTime']['output'];
@@ -306,7 +306,7 @@ export enum CacheControlScope {
  */
 export type Category = {
   __typename?: 'Category';
-  children?: Maybe<Array<Category>>;
+  children: Array<Category>;
   color?: Maybe<Scalars['String']['output']>;
   createdAt: Scalars['DateTime']['output'];
   createdBy?: Maybe<User>;
@@ -316,7 +316,6 @@ export type Category = {
   id: Scalars['ID']['output'];
   isActive: Scalars['Boolean']['output'];
   isSystem: Scalars['Boolean']['output'];
-  itemCategories: Array<ItemCategory>;
   itemCount: Scalars['Int']['output'];
   name: Scalars['String']['output'];
   parent?: Maybe<Category>;
@@ -510,6 +509,7 @@ export type ConvertedValue = {
   value: Scalars['Float']['output'];
 };
 
+/** Cooking activity log - personal user data */
 export type CookingLog = {
   __typename?: 'CookingLog';
   actualCookTime?: Maybe<Scalars['Int']['output']>;
@@ -1034,8 +1034,6 @@ export type Currency = {
   id: Scalars['ID']['output'];
   isActive: Scalars['Boolean']['output'];
   name: Scalars['String']['output'];
-  priceHistory: Array<ItemPriceHistory>;
-  purchases: Array<Purchase>;
   symbol: Scalars['String']['output'];
   updatedAt: Scalars['DateTime']['output'];
 };
@@ -1074,6 +1072,7 @@ export enum DeductionMethod {
   RecipeBased = 'RECIPE_BASED',
 }
 
+/** User device information - contains sensitive device fingerprinting data */
 export type Device = {
   __typename?: 'Device';
   androidId?: Maybe<Scalars['String']['output']>;
@@ -1112,9 +1111,6 @@ export type Device = {
   isVerified: Scalars['Boolean']['output'];
   isWiredHeadphonesConnected?: Maybe<Scalars['Boolean']['output']>;
   language?: Maybe<Scalars['String']['output']>;
-  lastCity?: Maybe<Scalars['String']['output']>;
-  lastCountry?: Maybe<Scalars['String']['output']>;
-  lastIpAddress?: Maybe<Scalars['String']['output']>;
   lastLoginAt?: Maybe<Scalars['DateTime']['output']>;
   lastSeenAt: Scalars['DateTime']['output'];
   loginCount: Scalars['Int']['output'];
@@ -1178,14 +1174,6 @@ export type DeviceHardwareInfoInput = {
   totalDiskCapacity?: InputMaybe<Scalars['String']['input']>;
   totalMemory?: InputMaybe<Scalars['String']['input']>;
   usedMemory?: InputMaybe<Scalars['String']['input']>;
-};
-
-export type DeviceLocation = {
-  __typename?: 'DeviceLocation';
-  city?: Maybe<Scalars['String']['output']>;
-  country?: Maybe<Scalars['String']['output']>;
-  ipAddress?: Maybe<Scalars['String']['output']>;
-  updatedAt: Scalars['DateTime']['output'];
 };
 
 export type DeviceLocationInput = {
@@ -1629,7 +1617,7 @@ export type HomeInvite = {
   __typename?: 'HomeInvite';
   acceptedAt?: Maybe<Scalars['DateTime']['output']>;
   createdAt: Scalars['DateTime']['output'];
-  customPermissions?: Maybe<Scalars['JSON']['output']>;
+  customPermissions?: Maybe<HomePermissions>;
   declinedAt?: Maybe<Scalars['DateTime']['output']>;
   email: Scalars['String']['output'];
   expiresAt: Scalars['DateTime']['output'];
@@ -1648,7 +1636,6 @@ export type HomeInvite = {
   role: MembershipRole;
   sentAt: Scalars['DateTime']['output'];
   status: InviteStatus;
-  token: Scalars['String']['output'];
   updatedAt: Scalars['DateTime']['output'];
   version: Scalars['Int']['output'];
 };
@@ -1687,6 +1674,17 @@ export type HomeOwnership = {
   transferredFrom?: Maybe<Scalars['String']['output']>;
   user: User;
   userId: Scalars['String']['output'];
+};
+
+/** Custom permissions that can override default role permissions */
+export type HomePermissions = {
+  __typename?: 'HomePermissions';
+  canAddItems?: Maybe<Scalars['Boolean']['output']>;
+  canEditPantry?: Maybe<Scalars['Boolean']['output']>;
+  canInviteOthers?: Maybe<Scalars['Boolean']['output']>;
+  canManageHome?: Maybe<Scalars['Boolean']['output']>;
+  canRemoveItems?: Maybe<Scalars['Boolean']['output']>;
+  canViewPantry?: Maybe<Scalars['Boolean']['output']>;
 };
 
 export enum HomeType {
@@ -1825,11 +1823,9 @@ export type InviteLog = {
   id: Scalars['ID']['output'];
   invite: HomeInvite;
   inviteId: Scalars['String']['output'];
-  ipAddress?: Maybe<Scalars['String']['output']>;
   metadata?: Maybe<Scalars['JSON']['output']>;
   newStatus?: Maybe<InviteStatus>;
   oldStatus?: Maybe<InviteStatus>;
-  userAgent?: Maybe<Scalars['String']['output']>;
 };
 
 export type InviteStats = {
@@ -1909,19 +1905,15 @@ export type Item = {
   needsApproval: Scalars['Boolean']['output'];
   netWeight?: Maybe<Scalars['Float']['output']>;
   nutritions?: Maybe<Scalars['JSON']['output']>;
-  pantryItems: Array<PantryItem>;
   popularity: Scalars['Int']['output'];
   preferredTrackingUnit?: Maybe<Unit>;
   preferredTrackingUnitId?: Maybe<Scalars['String']['output']>;
   priceHistory: Array<ItemPriceHistory>;
   primaryUpc?: Maybe<Scalars['String']['output']>;
-  purchases: Array<Purchase>;
-  recipeIngredients: Array<RecipeIngredient>;
   servingSize?: Maybe<Scalars['Float']['output']>;
   servingSizeUnit?: Maybe<Scalars['String']['output']>;
   servingsPerPackage?: Maybe<Scalars['Int']['output']>;
   shelfLifeDays?: Maybe<Scalars['Int']['output']>;
-  shoppingListItems: Array<ShoppingListItem>;
   showInOnboarding: Scalars['Boolean']['output'];
   status: ItemStatus;
   storageState: StorageState;
@@ -2040,6 +2032,7 @@ export type ItemFilters = {
   visibility?: InputMaybe<Visibility>;
 };
 
+/** Price history for items - may contain user-specific pricing data */
 export type ItemPriceHistory = {
   __typename?: 'ItemPriceHistory';
   createdAt: Scalars['DateTime']['output'];
@@ -2319,6 +2312,7 @@ export enum LoginFailureReason {
   SuspiciousActivity = 'SUSPICIOUS_ACTIVITY',
 }
 
+/** Security audit log for login attempts - NEVER cache */
 export type LoginHistory = {
   __typename?: 'LoginHistory';
   apiClient?: Maybe<Scalars['String']['output']>;
@@ -2336,10 +2330,6 @@ export type LoginHistory = {
   flaggedById?: Maybe<Scalars['String']['output']>;
   flaggedReason?: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
-  ipAddress?: Maybe<Scalars['String']['output']>;
-  ipCity?: Maybe<Scalars['String']['output']>;
-  ipCountry?: Maybe<Scalars['String']['output']>;
-  ipRegion?: Maybe<Scalars['String']['output']>;
   isApiLogin: Scalars['Boolean']['output'];
   isAutomated: Scalars['Boolean']['output'];
   isMobileApp: Scalars['Boolean']['output'];
@@ -2382,7 +2372,6 @@ export type LoginHistory = {
 export type LoginHistoryActivity = {
   __typename?: 'LoginHistoryActivity';
   id: Scalars['ID']['output'];
-  ipAddress?: Maybe<Scalars['String']['output']>;
   isRisky: Scalars['Boolean']['output'];
   loggedInAt: Scalars['DateTime']['output'];
   method: LoginMethod;
@@ -2836,16 +2825,16 @@ export type Mutation = {
   deleteDevice: Device;
   deleteExpiredNotifications: Scalars['Int']['output'];
   deleteHome: Home;
-  deleteItem: Scalars['Boolean']['output'];
+  deleteItem: Item;
   deleteMealPlan: Scalars['Boolean']['output'];
   deleteMultipleDevices: Array<Device>;
   deleteMultipleNotifications: Scalars['Int']['output'];
   deleteNotification: Scalars['Boolean']['output'];
-  deletePantry: Scalars['Boolean']['output'];
+  deletePantry: Pantry;
   deletePantryItem: PantryItem;
   deletePurchase: Scalars['Boolean']['output'];
   deleteRecipe: Scalars['Boolean']['output'];
-  deleteShoppingList: Scalars['Boolean']['output'];
+  deleteShoppingList: ShoppingList;
   /**
    * Delete a storage location (soft delete)
    * Fails if location has child locations or items
@@ -3198,7 +3187,7 @@ export type MutationConfirmRecipeConsumptionArgs = {
 };
 
 export type MutationCreateBrandArgs = {
-  input?: InputMaybe<CreateBrandInput>;
+  input: CreateBrandInput;
 };
 
 export type MutationCreateBulkPurchasesArgs = {
@@ -3631,10 +3620,7 @@ export type MutationRecordPantryUsageArgs = {
 };
 
 export type MutationRecordPriceObservationArgs = {
-  itemId: Scalars['ID']['input'];
-  observedAt?: InputMaybe<Scalars['DateTime']['input']>;
-  price: Scalars['Float']['input'];
-  storeId: Scalars['String']['input'];
+  input: RecordPriceObservationInput;
 };
 
 export type MutationRefreshArgs = {
@@ -3910,7 +3896,7 @@ export type MutationUntrustMultipleDevicesArgs = {
 };
 
 export type MutationUpdateBrandArgs = {
-  input?: InputMaybe<UpdateBrandInput>;
+  input: UpdateBrandInput;
 };
 
 export type MutationUpdateCategoryArgs = {
@@ -4016,10 +4002,7 @@ export type MutationUpdateItemNutritionArgs = {
 };
 
 export type MutationUpdateItemPriceArgs = {
-  itemId: Scalars['ID']['input'];
-  price: Scalars['Float']['input'];
-  source?: InputMaybe<Scalars['String']['input']>;
-  storeId?: InputMaybe<Scalars['String']['input']>;
+  input: UpdateItemPriceInput;
 };
 
 export type MutationUpdateItemUnitArgs = {
@@ -4506,7 +4489,7 @@ export type PageInfo = {
   hasNextPage: Scalars['Boolean']['output'];
   hasPreviousPage: Scalars['Boolean']['output'];
   startCursor?: Maybe<Scalars['String']['output']>;
-  totalCount?: Maybe<Scalars['Int']['output']>;
+  totalCount: Scalars['Int']['output'];
 };
 
 export type PaginationInput = {
@@ -4633,6 +4616,7 @@ export type PantryItem = {
   acquisitionMethod: AcquisitionMethod;
   addedAt: Scalars['DateTime']['output'];
   addedBy?: Maybe<User>;
+  brand?: Maybe<Brand>;
   condition: ItemCondition;
   consumedQuantity: Scalars['Float']['output'];
   costPerUnit?: Maybe<Scalars['Float']['output']>;
@@ -4690,7 +4674,6 @@ export type PantryItemChange = {
   deviceId?: Maybe<Scalars['String']['output']>;
   field?: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
-  ipAddress?: Maybe<Scalars['String']['output']>;
   metadata?: Maybe<Scalars['JSON']['output']>;
   newValue?: Maybe<Scalars['String']['output']>;
   oldValue?: Maybe<Scalars['String']['output']>;
@@ -4947,6 +4930,7 @@ export enum ProviderType {
   Walmart = 'WALMART',
 }
 
+/** Purchase record - contains financial and shopping data */
 export type Purchase = {
   __typename?: 'Purchase';
   createdAt: Scalars['DateTime']['output'];
@@ -6214,6 +6198,14 @@ export type RecordPantryItemUsageInput = {
   weightUsedUnitId?: InputMaybe<Scalars['String']['input']>;
 };
 
+/** Input for recording a price observation (historical tracking) */
+export type RecordPriceObservationInput = {
+  itemId: Scalars['ID']['input'];
+  observedAt?: InputMaybe<Scalars['DateTime']['input']>;
+  price: Scalars['Float']['input'];
+  storeId: Scalars['String']['input'];
+};
+
 export enum RecurringPattern {
   Biweekly = 'BIWEEKLY',
   Custom = 'CUSTOM',
@@ -6222,6 +6214,7 @@ export enum RecurringPattern {
   Weekly = 'WEEKLY',
 }
 
+/** Token refresh response - NEVER cache */
 export type RefreshTokenPayload = {
   __typename?: 'RefreshTokenPayload';
   accessToken: Scalars['String']['output'];
@@ -6502,7 +6495,6 @@ export type ShoppingListActivity = {
   createdAt: Scalars['DateTime']['output'];
   description: Scalars['String']['output'];
   id: Scalars['ID']['output'];
-  ipAddress?: Maybe<Scalars['String']['output']>;
   itemName?: Maybe<Scalars['String']['output']>;
   metadata?: Maybe<Scalars['JSON']['output']>;
   newValue?: Maybe<Scalars['String']['output']>;
@@ -6511,7 +6503,6 @@ export type ShoppingListActivity = {
   shoppingListId: Scalars['String']['output'];
   source?: Maybe<Scalars['String']['output']>;
   user: User;
-  userAgent?: Maybe<Scalars['String']['output']>;
   userId: Scalars['String']['output'];
 };
 
@@ -6550,7 +6541,6 @@ export type ShoppingListCollaborator = {
   email?: Maybe<Scalars['String']['output']>;
   expiresAt?: Maybe<Scalars['DateTime']['output']>;
   id: Scalars['ID']['output'];
-  inviteToken?: Maybe<Scalars['String']['output']>;
   invitedAt: Scalars['DateTime']['output'];
   invitedBy?: Maybe<User>;
   itemsAdded: Scalars['Int']['output'];
@@ -6820,8 +6810,6 @@ export type StorageLocation = {
   isDefault: Scalars['Boolean']['output'];
   /** Display name of the storage location (e.g., 'Main Fridge', 'Basement Freezer') */
   name: Scalars['String']['output'];
-  /** Items currently stored in this location */
-  pantryItems: Array<PantryItem>;
   /** Parent location if this is a nested location (e.g., a drawer inside a refrigerator) */
   parentLocation?: Maybe<StorageLocation>;
   /** ID of the parent location */
@@ -7408,20 +7396,13 @@ export type Unit = {
   commonFractions?: Maybe<Scalars['JSON']['output']>;
   conversionFactor: Scalars['Float']['output'];
   createdAt: Scalars['DateTime']['output'];
-  derivedUnits: Array<Unit>;
   displayAsFraction: Scalars['Boolean']['output'];
   id: Scalars['ID']['output'];
   isCommon: Scalars['Boolean']['output'];
   isMetric: Scalars['Boolean']['output'];
-  itemUnits: Array<ItemUnit>;
   minPrecision: Scalars['Float']['output'];
   name: Scalars['String']['output'];
   notes?: Maybe<Scalars['String']['output']>;
-  pantryItems: Array<PantryItem>;
-  priceHistory: Array<ItemPriceHistory>;
-  purchases: Array<Purchase>;
-  recipeIngredients: Array<RecipeIngredient>;
-  shoppingListItems: Array<ShoppingListItem>;
   sortOrder: Scalars['Int']['output'];
   symbol: Scalars['String']['output'];
   type: UnitType;
@@ -7667,6 +7648,14 @@ export type UpdateItemInput = {
   units?: InputMaybe<Array<ItemUnitInput>>;
   vendor?: InputMaybe<Scalars['String']['input']>;
   visibility?: InputMaybe<Visibility>;
+};
+
+/** Input for updating an item's price */
+export type UpdateItemPriceInput = {
+  itemId: Scalars['ID']['input'];
+  price: Scalars['Float']['input'];
+  source?: InputMaybe<Scalars['String']['input']>;
+  storeId?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type UpdateLoginHistoryInput = {
@@ -8127,7 +8116,6 @@ export type User = {
   onBoarded: Scalars['Boolean']['output'];
   preferredCurrency?: Maybe<Scalars['String']['output']>;
   profile?: Maybe<UserProfile>;
-  purchases: Array<Purchase>;
   role: UserRole;
   settings?: Maybe<UserSettings>;
   shoppingListOwnerships: Array<ShoppingListOwnership>;
@@ -8521,9 +8509,6 @@ export type GetCompleteUserQuery = {
           isActive: boolean;
           isTrusted: boolean;
           lastSeenAt: string;
-          lastIpAddress?: string | null | undefined;
-          lastCountry?: string | null | undefined;
-          lastCity?: string | null | undefined;
           isVerified: boolean;
           verifiedAt?: string | null | undefined;
           loginCount: number;
@@ -8546,7 +8531,6 @@ export type GetCompleteUserQuery = {
             createdAt: string;
           };
         }>;
-        purchases: Array<{ __typename?: 'Purchase'; id: string }>;
         shoppingListOwnerships: Array<{
           __typename?: 'ShoppingListOwnership';
           createdAt: string;
@@ -8688,9 +8672,6 @@ export type GetMyDevicesQuery = {
     screenResolution?: string | null | undefined;
     timezone?: string | null | undefined;
     language?: string | null | undefined;
-    lastIpAddress?: string | null | undefined;
-    lastCountry?: string | null | undefined;
-    lastCity?: string | null | undefined;
     isActive: boolean;
     isTrusted: boolean;
     isVerified: boolean;
@@ -8850,9 +8831,6 @@ export type DeviceActivitySubscription = {
     deviceType: DeviceType;
     platform?: MobilePlatform | null | undefined;
     lastSeenAt: string;
-    lastIpAddress?: string | null | undefined;
-    lastCountry?: string | null | undefined;
-    lastCity?: string | null | undefined;
     isActive: boolean;
     isTrusted: boolean;
     loginCount: number;
@@ -8954,10 +8932,6 @@ export type LoginAttemptsSubscription = {
     success: boolean;
     method: LoginMethod;
     provider?: string | null | undefined;
-    ipAddress?: string | null | undefined;
-    ipCountry?: string | null | undefined;
-    ipRegion?: string | null | undefined;
-    ipCity?: string | null | undefined;
     isVpn?: boolean | null | undefined;
     isTor?: boolean | null | undefined;
     isProxy?: boolean | null | undefined;
@@ -8997,21 +8971,12 @@ export type SuspiciousActivitySubscription = {
     riskyLogins: Array<{
       __typename?: 'LoginHistory';
       id: string;
-      ipAddress?: string | null | undefined;
-      ipCountry?: string | null | undefined;
       riskScore?: number | null | undefined;
       riskFactors: Array<RiskFactor>;
       loggedInAt: string;
     }>;
     newLocationLogins?:
-      | Array<{
-          __typename?: 'LoginHistory';
-          id: string;
-          ipAddress?: string | null | undefined;
-          ipCountry?: string | null | undefined;
-          ipCity?: string | null | undefined;
-          loggedInAt: string;
-        }>
+      | Array<{ __typename?: 'LoginHistory'; id: string; loggedInAt: string }>
       | null
       | undefined;
     newDeviceLogins?:
@@ -9025,28 +8990,12 @@ export type SuspiciousActivitySubscription = {
         }>
       | null
       | undefined;
-    failedFromSameIP?:
-      | Array<{
-          __typename?: 'FailedIPStat';
-          ipAddress?: string | null | undefined;
-          count: number;
-        }>
-      | null
-      | undefined;
     unusualTimeLogins?:
       | Array<{
           __typename?: 'LoginHistory';
           id: string;
           loggedInAt: string;
           timezoneDiff?: number | null | undefined;
-        }>
-      | null
-      | undefined;
-    multipleAccountsFromIP?:
-      | Array<{
-          __typename?: 'FailedIPStat';
-          ipAddress?: string | null | undefined;
-          count: number;
         }>
       | null
       | undefined;
@@ -9064,8 +9013,6 @@ export type FailedLoginAttemptsSubscription = {
     id: string;
     userId: string;
     method: LoginMethod;
-    ipAddress?: string | null | undefined;
-    ipCountry?: string | null | undefined;
     userAgent?: string | null | undefined;
     failureReason?: LoginFailureReason | null | undefined;
     failureDetails?: string | null | undefined;
@@ -9083,8 +9030,6 @@ export type RiskyLoginAlertsSubscription = {
     __typename?: 'LoginHistory';
     id: string;
     userId: string;
-    ipAddress?: string | null | undefined;
-    ipCountry?: string | null | undefined;
     riskScore?: number | null | undefined;
     riskFactors: Array<RiskFactor>;
     isVpn?: boolean | null | undefined;
@@ -9845,9 +9790,6 @@ export type CompleteUserFragment = {
     isActive: boolean;
     isTrusted: boolean;
     lastSeenAt: string;
-    lastIpAddress?: string | null | undefined;
-    lastCountry?: string | null | undefined;
-    lastCity?: string | null | undefined;
     isVerified: boolean;
     verifiedAt?: string | null | undefined;
     loginCount: number;
@@ -9865,7 +9807,6 @@ export type CompleteUserFragment = {
     user: { __typename?: 'User'; id: string };
     home: { __typename?: 'Home'; id: string; name: string; createdAt: string };
   }>;
-  purchases: Array<{ __typename?: 'Purchase'; id: string }>;
   shoppingListOwnerships: Array<{
     __typename?: 'ShoppingListOwnership';
     createdAt: string;
@@ -10109,6 +10050,10 @@ export type PantryItemFragmentFragment = {
   updatedAt?: string | null | undefined;
   version?: number | null | undefined;
   tags: Array<string>;
+  lastUsedAt?: string | null | undefined;
+  wasteAmount: number;
+  wasteDate?: string | null | undefined;
+  wasteReason?: WasteReason | null | undefined;
   item: {
     __typename?: 'Item';
     id: string;
@@ -10275,6 +10220,8 @@ export type PantryItemFragmentFragment = {
       }
     | null
     | undefined;
+  brand?: { __typename?: 'Brand'; id: string; name: string } | null | undefined;
+  store?: { __typename?: 'Store'; id: string; name: string } | null | undefined;
   usageRecords: Array<{
     __typename?: 'PantryItemUsage';
     id: string;
@@ -10297,12 +10244,10 @@ export type HomeInviteFragmentFragment = {
   __typename?: 'HomeInvite';
   id: string;
   email: string;
-  token: string;
   homeId: string;
   invitedUserId?: string | null | undefined;
   recipientName?: string | null | undefined;
   role: MembershipRole;
-  customPermissions?: any | null | undefined;
   status: InviteStatus;
   expiresAt: string;
   sentAt: string;
@@ -10313,6 +10258,18 @@ export type HomeInviteFragmentFragment = {
   revokedAt?: string | null | undefined;
   message?: string | null | undefined;
   createdAt: string;
+  customPermissions?:
+    | {
+        __typename?: 'HomePermissions';
+        canViewPantry?: boolean | null | undefined;
+        canEditPantry?: boolean | null | undefined;
+        canAddItems?: boolean | null | undefined;
+        canRemoveItems?: boolean | null | undefined;
+        canInviteOthers?: boolean | null | undefined;
+        canManageHome?: boolean | null | undefined;
+      }
+    | null
+    | undefined;
   home: { __typename?: 'Home'; id: string; name: string };
   inviter: {
     __typename?: 'User';
@@ -10419,6 +10376,10 @@ export type PantryFragmentFragment = {
         updatedAt?: string | null | undefined;
         version?: number | null | undefined;
         tags: Array<string>;
+        lastUsedAt?: string | null | undefined;
+        wasteAmount: number;
+        wasteDate?: string | null | undefined;
+        wasteReason?: WasteReason | null | undefined;
         item: {
           __typename?: 'Item';
           id: string;
@@ -10588,6 +10549,14 @@ export type PantryFragmentFragment = {
             }
           | null
           | undefined;
+        brand?:
+          | { __typename?: 'Brand'; id: string; name: string }
+          | null
+          | undefined;
+        store?:
+          | { __typename?: 'Store'; id: string; name: string }
+          | null
+          | undefined;
         usageRecords: Array<{
           __typename?: 'PantryItemUsage';
           id: string;
@@ -10660,12 +10629,10 @@ export type HomeWithPantriesFragmentFragment = {
         __typename?: 'HomeInvite';
         id: string;
         email: string;
-        token: string;
         homeId: string;
         invitedUserId?: string | null | undefined;
         recipientName?: string | null | undefined;
         role: MembershipRole;
-        customPermissions?: any | null | undefined;
         status: InviteStatus;
         expiresAt: string;
         sentAt: string;
@@ -10676,6 +10643,18 @@ export type HomeWithPantriesFragmentFragment = {
         revokedAt?: string | null | undefined;
         message?: string | null | undefined;
         createdAt: string;
+        customPermissions?:
+          | {
+              __typename?: 'HomePermissions';
+              canViewPantry?: boolean | null | undefined;
+              canEditPantry?: boolean | null | undefined;
+              canAddItems?: boolean | null | undefined;
+              canRemoveItems?: boolean | null | undefined;
+              canInviteOthers?: boolean | null | undefined;
+              canManageHome?: boolean | null | undefined;
+            }
+          | null
+          | undefined;
         home: { __typename?: 'Home'; id: string; name: string };
         inviter: {
           __typename?: 'User';
@@ -10820,12 +10799,10 @@ export type HomeFragmentFragment = {
         __typename?: 'HomeInvite';
         id: string;
         email: string;
-        token: string;
         homeId: string;
         invitedUserId?: string | null | undefined;
         recipientName?: string | null | undefined;
         role: MembershipRole;
-        customPermissions?: any | null | undefined;
         status: InviteStatus;
         expiresAt: string;
         sentAt: string;
@@ -10836,6 +10813,18 @@ export type HomeFragmentFragment = {
         revokedAt?: string | null | undefined;
         message?: string | null | undefined;
         createdAt: string;
+        customPermissions?:
+          | {
+              __typename?: 'HomePermissions';
+              canViewPantry?: boolean | null | undefined;
+              canEditPantry?: boolean | null | undefined;
+              canAddItems?: boolean | null | undefined;
+              canRemoveItems?: boolean | null | undefined;
+              canInviteOthers?: boolean | null | undefined;
+              canManageHome?: boolean | null | undefined;
+            }
+          | null
+          | undefined;
         home: { __typename?: 'Home'; id: string; name: string };
         inviter: {
           __typename?: 'User';
@@ -10969,6 +10958,10 @@ export type HomeFragmentFragment = {
               updatedAt?: string | null | undefined;
               version?: number | null | undefined;
               tags: Array<string>;
+              lastUsedAt?: string | null | undefined;
+              wasteAmount: number;
+              wasteDate?: string | null | undefined;
+              wasteReason?: WasteReason | null | undefined;
               item: {
                 __typename?: 'Item';
                 id: string;
@@ -11151,6 +11144,14 @@ export type HomeFragmentFragment = {
                     symbol: string;
                     type: UnitType;
                   }
+                | null
+                | undefined;
+              brand?:
+                | { __typename?: 'Brand'; id: string; name: string }
+                | null
+                | undefined;
+              store?:
+                | { __typename?: 'Store'; id: string; name: string }
                 | null
                 | undefined;
               usageRecords: Array<{
@@ -11364,12 +11365,10 @@ export type GetHomeQuery = {
               __typename?: 'HomeInvite';
               id: string;
               email: string;
-              token: string;
               homeId: string;
               invitedUserId?: string | null | undefined;
               recipientName?: string | null | undefined;
               role: MembershipRole;
-              customPermissions?: any | null | undefined;
               status: InviteStatus;
               expiresAt: string;
               sentAt: string;
@@ -11380,6 +11379,18 @@ export type GetHomeQuery = {
               revokedAt?: string | null | undefined;
               message?: string | null | undefined;
               createdAt: string;
+              customPermissions?:
+                | {
+                    __typename?: 'HomePermissions';
+                    canViewPantry?: boolean | null | undefined;
+                    canEditPantry?: boolean | null | undefined;
+                    canAddItems?: boolean | null | undefined;
+                    canRemoveItems?: boolean | null | undefined;
+                    canInviteOthers?: boolean | null | undefined;
+                    canManageHome?: boolean | null | undefined;
+                  }
+                | null
+                | undefined;
               home: { __typename?: 'Home'; id: string; name: string };
               inviter: {
                 __typename?: 'User';
@@ -11513,6 +11524,10 @@ export type GetHomeQuery = {
                     updatedAt?: string | null | undefined;
                     version?: number | null | undefined;
                     tags: Array<string>;
+                    lastUsedAt?: string | null | undefined;
+                    wasteAmount: number;
+                    wasteDate?: string | null | undefined;
+                    wasteReason?: WasteReason | null | undefined;
                     item: {
                       __typename?: 'Item';
                       id: string;
@@ -11697,6 +11712,14 @@ export type GetHomeQuery = {
                         }
                       | null
                       | undefined;
+                    brand?:
+                      | { __typename?: 'Brand'; id: string; name: string }
+                      | null
+                      | undefined;
+                    store?:
+                      | { __typename?: 'Store'; id: string; name: string }
+                      | null
+                      | undefined;
                     usageRecords: Array<{
                       __typename?: 'PantryItemUsage';
                       id: string;
@@ -11777,12 +11800,10 @@ export type GetHomeBasicQuery = {
               __typename?: 'HomeInvite';
               id: string;
               email: string;
-              token: string;
               homeId: string;
               invitedUserId?: string | null | undefined;
               recipientName?: string | null | undefined;
               role: MembershipRole;
-              customPermissions?: any | null | undefined;
               status: InviteStatus;
               expiresAt: string;
               sentAt: string;
@@ -11793,6 +11814,18 @@ export type GetHomeBasicQuery = {
               revokedAt?: string | null | undefined;
               message?: string | null | undefined;
               createdAt: string;
+              customPermissions?:
+                | {
+                    __typename?: 'HomePermissions';
+                    canViewPantry?: boolean | null | undefined;
+                    canEditPantry?: boolean | null | undefined;
+                    canAddItems?: boolean | null | undefined;
+                    canRemoveItems?: boolean | null | undefined;
+                    canInviteOthers?: boolean | null | undefined;
+                    canManageHome?: boolean | null | undefined;
+                  }
+                | null
+                | undefined;
               home: { __typename?: 'Home'; id: string; name: string };
               inviter: {
                 __typename?: 'User';
@@ -11944,12 +11977,10 @@ export type GetHomesQuery = {
           __typename?: 'HomeInvite';
           id: string;
           email: string;
-          token: string;
           homeId: string;
           invitedUserId?: string | null | undefined;
           recipientName?: string | null | undefined;
           role: MembershipRole;
-          customPermissions?: any | null | undefined;
           status: InviteStatus;
           expiresAt: string;
           sentAt: string;
@@ -11960,6 +11991,18 @@ export type GetHomesQuery = {
           revokedAt?: string | null | undefined;
           message?: string | null | undefined;
           createdAt: string;
+          customPermissions?:
+            | {
+                __typename?: 'HomePermissions';
+                canViewPantry?: boolean | null | undefined;
+                canEditPantry?: boolean | null | undefined;
+                canAddItems?: boolean | null | undefined;
+                canRemoveItems?: boolean | null | undefined;
+                canInviteOthers?: boolean | null | undefined;
+                canManageHome?: boolean | null | undefined;
+              }
+            | null
+            | undefined;
           home: { __typename?: 'Home'; id: string; name: string };
           inviter: {
             __typename?: 'User';
@@ -12093,6 +12136,10 @@ export type GetHomesQuery = {
                 updatedAt?: string | null | undefined;
                 version?: number | null | undefined;
                 tags: Array<string>;
+                lastUsedAt?: string | null | undefined;
+                wasteAmount: number;
+                wasteDate?: string | null | undefined;
+                wasteReason?: WasteReason | null | undefined;
                 item: {
                   __typename?: 'Item';
                   id: string;
@@ -12277,6 +12324,14 @@ export type GetHomesQuery = {
                     }
                   | null
                   | undefined;
+                brand?:
+                  | { __typename?: 'Brand'; id: string; name: string }
+                  | null
+                  | undefined;
+                store?:
+                  | { __typename?: 'Store'; id: string; name: string }
+                  | null
+                  | undefined;
                 usageRecords: Array<{
                   __typename?: 'PantryItemUsage';
                   id: string;
@@ -12329,12 +12384,10 @@ export type GetMyPendingInvitesQuery = {
     __typename?: 'HomeInvite';
     id: string;
     email: string;
-    token: string;
     homeId: string;
     invitedUserId?: string | null | undefined;
     recipientName?: string | null | undefined;
     role: MembershipRole;
-    customPermissions?: any | null | undefined;
     status: InviteStatus;
     expiresAt: string;
     sentAt: string;
@@ -12345,6 +12398,18 @@ export type GetMyPendingInvitesQuery = {
     revokedAt?: string | null | undefined;
     message?: string | null | undefined;
     createdAt: string;
+    customPermissions?:
+      | {
+          __typename?: 'HomePermissions';
+          canViewPantry?: boolean | null | undefined;
+          canEditPantry?: boolean | null | undefined;
+          canAddItems?: boolean | null | undefined;
+          canRemoveItems?: boolean | null | undefined;
+          canInviteOthers?: boolean | null | undefined;
+          canManageHome?: boolean | null | undefined;
+        }
+      | null
+      | undefined;
     home: { __typename?: 'Home'; id: string; name: string };
     inviter: {
       __typename?: 'User';
@@ -12395,12 +12460,10 @@ export type GetHomeByJoinCodeQuery = {
               __typename?: 'HomeInvite';
               id: string;
               email: string;
-              token: string;
               homeId: string;
               invitedUserId?: string | null | undefined;
               recipientName?: string | null | undefined;
               role: MembershipRole;
-              customPermissions?: any | null | undefined;
               status: InviteStatus;
               expiresAt: string;
               sentAt: string;
@@ -12411,6 +12474,18 @@ export type GetHomeByJoinCodeQuery = {
               revokedAt?: string | null | undefined;
               message?: string | null | undefined;
               createdAt: string;
+              customPermissions?:
+                | {
+                    __typename?: 'HomePermissions';
+                    canViewPantry?: boolean | null | undefined;
+                    canEditPantry?: boolean | null | undefined;
+                    canAddItems?: boolean | null | undefined;
+                    canRemoveItems?: boolean | null | undefined;
+                    canInviteOthers?: boolean | null | undefined;
+                    canManageHome?: boolean | null | undefined;
+                  }
+                | null
+                | undefined;
               home: { __typename?: 'Home'; id: string; name: string };
               inviter: {
                 __typename?: 'User';
@@ -12544,6 +12619,10 @@ export type GetHomeByJoinCodeQuery = {
                     updatedAt?: string | null | undefined;
                     version?: number | null | undefined;
                     tags: Array<string>;
+                    lastUsedAt?: string | null | undefined;
+                    wasteAmount: number;
+                    wasteDate?: string | null | undefined;
+                    wasteReason?: WasteReason | null | undefined;
                     item: {
                       __typename?: 'Item';
                       id: string;
@@ -12728,6 +12807,14 @@ export type GetHomeByJoinCodeQuery = {
                         }
                       | null
                       | undefined;
+                    brand?:
+                      | { __typename?: 'Brand'; id: string; name: string }
+                      | null
+                      | undefined;
+                    store?:
+                      | { __typename?: 'Store'; id: string; name: string }
+                      | null
+                      | undefined;
                     usageRecords: Array<{
                       __typename?: 'PantryItemUsage';
                       id: string;
@@ -12807,12 +12894,10 @@ export type CreateHomeMutation = {
           __typename?: 'HomeInvite';
           id: string;
           email: string;
-          token: string;
           homeId: string;
           invitedUserId?: string | null | undefined;
           recipientName?: string | null | undefined;
           role: MembershipRole;
-          customPermissions?: any | null | undefined;
           status: InviteStatus;
           expiresAt: string;
           sentAt: string;
@@ -12823,6 +12908,18 @@ export type CreateHomeMutation = {
           revokedAt?: string | null | undefined;
           message?: string | null | undefined;
           createdAt: string;
+          customPermissions?:
+            | {
+                __typename?: 'HomePermissions';
+                canViewPantry?: boolean | null | undefined;
+                canEditPantry?: boolean | null | undefined;
+                canAddItems?: boolean | null | undefined;
+                canRemoveItems?: boolean | null | undefined;
+                canInviteOthers?: boolean | null | undefined;
+                canManageHome?: boolean | null | undefined;
+              }
+            | null
+            | undefined;
           home: { __typename?: 'Home'; id: string; name: string };
           inviter: {
             __typename?: 'User';
@@ -12956,6 +13053,10 @@ export type CreateHomeMutation = {
                 updatedAt?: string | null | undefined;
                 version?: number | null | undefined;
                 tags: Array<string>;
+                lastUsedAt?: string | null | undefined;
+                wasteAmount: number;
+                wasteDate?: string | null | undefined;
+                wasteReason?: WasteReason | null | undefined;
                 item: {
                   __typename?: 'Item';
                   id: string;
@@ -13138,6 +13239,14 @@ export type CreateHomeMutation = {
                       symbol: string;
                       type: UnitType;
                     }
+                  | null
+                  | undefined;
+                brand?:
+                  | { __typename?: 'Brand'; id: string; name: string }
+                  | null
+                  | undefined;
+                store?:
+                  | { __typename?: 'Store'; id: string; name: string }
                   | null
                   | undefined;
                 usageRecords: Array<{
@@ -13218,12 +13327,10 @@ export type UpdateHomeMutation = {
           __typename?: 'HomeInvite';
           id: string;
           email: string;
-          token: string;
           homeId: string;
           invitedUserId?: string | null | undefined;
           recipientName?: string | null | undefined;
           role: MembershipRole;
-          customPermissions?: any | null | undefined;
           status: InviteStatus;
           expiresAt: string;
           sentAt: string;
@@ -13234,6 +13341,18 @@ export type UpdateHomeMutation = {
           revokedAt?: string | null | undefined;
           message?: string | null | undefined;
           createdAt: string;
+          customPermissions?:
+            | {
+                __typename?: 'HomePermissions';
+                canViewPantry?: boolean | null | undefined;
+                canEditPantry?: boolean | null | undefined;
+                canAddItems?: boolean | null | undefined;
+                canRemoveItems?: boolean | null | undefined;
+                canInviteOthers?: boolean | null | undefined;
+                canManageHome?: boolean | null | undefined;
+              }
+            | null
+            | undefined;
           home: { __typename?: 'Home'; id: string; name: string };
           inviter: {
             __typename?: 'User';
@@ -13367,6 +13486,10 @@ export type UpdateHomeMutation = {
                 updatedAt?: string | null | undefined;
                 version?: number | null | undefined;
                 tags: Array<string>;
+                lastUsedAt?: string | null | undefined;
+                wasteAmount: number;
+                wasteDate?: string | null | undefined;
+                wasteReason?: WasteReason | null | undefined;
                 item: {
                   __typename?: 'Item';
                   id: string;
@@ -13549,6 +13672,14 @@ export type UpdateHomeMutation = {
                       symbol: string;
                       type: UnitType;
                     }
+                  | null
+                  | undefined;
+                brand?:
+                  | { __typename?: 'Brand'; id: string; name: string }
+                  | null
+                  | undefined;
+                store?:
+                  | { __typename?: 'Store'; id: string; name: string }
                   | null
                   | undefined;
                 usageRecords: Array<{
@@ -13628,12 +13759,10 @@ export type DeleteHomeMutation = {
           __typename?: 'HomeInvite';
           id: string;
           email: string;
-          token: string;
           homeId: string;
           invitedUserId?: string | null | undefined;
           recipientName?: string | null | undefined;
           role: MembershipRole;
-          customPermissions?: any | null | undefined;
           status: InviteStatus;
           expiresAt: string;
           sentAt: string;
@@ -13644,6 +13773,18 @@ export type DeleteHomeMutation = {
           revokedAt?: string | null | undefined;
           message?: string | null | undefined;
           createdAt: string;
+          customPermissions?:
+            | {
+                __typename?: 'HomePermissions';
+                canViewPantry?: boolean | null | undefined;
+                canEditPantry?: boolean | null | undefined;
+                canAddItems?: boolean | null | undefined;
+                canRemoveItems?: boolean | null | undefined;
+                canInviteOthers?: boolean | null | undefined;
+                canManageHome?: boolean | null | undefined;
+              }
+            | null
+            | undefined;
           home: { __typename?: 'Home'; id: string; name: string };
           inviter: {
             __typename?: 'User';
@@ -13777,6 +13918,10 @@ export type DeleteHomeMutation = {
                 updatedAt?: string | null | undefined;
                 version?: number | null | undefined;
                 tags: Array<string>;
+                lastUsedAt?: string | null | undefined;
+                wasteAmount: number;
+                wasteDate?: string | null | undefined;
+                wasteReason?: WasteReason | null | undefined;
                 item: {
                   __typename?: 'Item';
                   id: string;
@@ -13961,6 +14106,14 @@ export type DeleteHomeMutation = {
                     }
                   | null
                   | undefined;
+                brand?:
+                  | { __typename?: 'Brand'; id: string; name: string }
+                  | null
+                  | undefined;
+                store?:
+                  | { __typename?: 'Store'; id: string; name: string }
+                  | null
+                  | undefined;
                 usageRecords: Array<{
                   __typename?: 'PantryItemUsage';
                   id: string;
@@ -14015,12 +14168,10 @@ export type InviteToHomeMutation = {
     __typename?: 'HomeInvite';
     id: string;
     email: string;
-    token: string;
     homeId: string;
     invitedUserId?: string | null | undefined;
     recipientName?: string | null | undefined;
     role: MembershipRole;
-    customPermissions?: any | null | undefined;
     status: InviteStatus;
     expiresAt: string;
     sentAt: string;
@@ -14031,6 +14182,18 @@ export type InviteToHomeMutation = {
     revokedAt?: string | null | undefined;
     message?: string | null | undefined;
     createdAt: string;
+    customPermissions?:
+      | {
+          __typename?: 'HomePermissions';
+          canViewPantry?: boolean | null | undefined;
+          canEditPantry?: boolean | null | undefined;
+          canAddItems?: boolean | null | undefined;
+          canRemoveItems?: boolean | null | undefined;
+          canInviteOthers?: boolean | null | undefined;
+          canManageHome?: boolean | null | undefined;
+        }
+      | null
+      | undefined;
     home: { __typename?: 'Home'; id: string; name: string };
     inviter: {
       __typename?: 'User';
@@ -14442,12 +14605,10 @@ export type GetDefaultHomeQuery = {
               __typename?: 'HomeInvite';
               id: string;
               email: string;
-              token: string;
               homeId: string;
               invitedUserId?: string | null | undefined;
               recipientName?: string | null | undefined;
               role: MembershipRole;
-              customPermissions?: any | null | undefined;
               status: InviteStatus;
               expiresAt: string;
               sentAt: string;
@@ -14458,6 +14619,18 @@ export type GetDefaultHomeQuery = {
               revokedAt?: string | null | undefined;
               message?: string | null | undefined;
               createdAt: string;
+              customPermissions?:
+                | {
+                    __typename?: 'HomePermissions';
+                    canViewPantry?: boolean | null | undefined;
+                    canEditPantry?: boolean | null | undefined;
+                    canAddItems?: boolean | null | undefined;
+                    canRemoveItems?: boolean | null | undefined;
+                    canInviteOthers?: boolean | null | undefined;
+                    canManageHome?: boolean | null | undefined;
+                  }
+                | null
+                | undefined;
               home: { __typename?: 'Home'; id: string; name: string };
               inviter: {
                 __typename?: 'User';
@@ -14591,6 +14764,10 @@ export type GetDefaultHomeQuery = {
                     updatedAt?: string | null | undefined;
                     version?: number | null | undefined;
                     tags: Array<string>;
+                    lastUsedAt?: string | null | undefined;
+                    wasteAmount: number;
+                    wasteDate?: string | null | undefined;
+                    wasteReason?: WasteReason | null | undefined;
                     item: {
                       __typename?: 'Item';
                       id: string;
@@ -14773,6 +14950,14 @@ export type GetDefaultHomeQuery = {
                           symbol: string;
                           type: UnitType;
                         }
+                      | null
+                      | undefined;
+                    brand?:
+                      | { __typename?: 'Brand'; id: string; name: string }
+                      | null
+                      | undefined;
+                    store?:
+                      | { __typename?: 'Store'; id: string; name: string }
                       | null
                       | undefined;
                     usageRecords: Array<{
@@ -15887,6 +16072,10 @@ export type GetPantryQuery = {
               updatedAt?: string | null | undefined;
               version?: number | null | undefined;
               tags: Array<string>;
+              lastUsedAt?: string | null | undefined;
+              wasteAmount: number;
+              wasteDate?: string | null | undefined;
+              wasteReason?: WasteReason | null | undefined;
               item: {
                 __typename?: 'Item';
                 id: string;
@@ -16071,6 +16260,14 @@ export type GetPantryQuery = {
                   }
                 | null
                 | undefined;
+              brand?:
+                | { __typename?: 'Brand'; id: string; name: string }
+                | null
+                | undefined;
+              store?:
+                | { __typename?: 'Store'; id: string; name: string }
+                | null
+                | undefined;
               usageRecords: Array<{
                 __typename?: 'PantryItemUsage';
                 id: string;
@@ -16169,6 +16366,10 @@ export type GetPantryItemQuery = {
     updatedAt?: string | null | undefined;
     version?: number | null | undefined;
     tags: Array<string>;
+    lastUsedAt?: string | null | undefined;
+    wasteAmount: number;
+    wasteDate?: string | null | undefined;
+    wasteReason?: WasteReason | null | undefined;
     item: {
       __typename?: 'Item';
       id: string;
@@ -16333,6 +16534,14 @@ export type GetPantryItemQuery = {
           symbol: string;
           type: UnitType;
         }
+      | null
+      | undefined;
+    brand?:
+      | { __typename?: 'Brand'; id: string; name: string }
+      | null
+      | undefined;
+    store?:
+      | { __typename?: 'Store'; id: string; name: string }
       | null
       | undefined;
     usageRecords: Array<{
@@ -16622,7 +16831,7 @@ export type DeletePantryMutationVariables = Exact<{
 
 export type DeletePantryMutation = {
   __typename?: 'Mutation';
-  deletePantry: boolean;
+  deletePantry: { __typename?: 'Pantry'; id: string; name: string };
 };
 
 export type SetDefaultPantryMutationVariables = Exact<{
@@ -16666,6 +16875,10 @@ export type CreatePantryItemMutation = {
     updatedAt?: string | null | undefined;
     version?: number | null | undefined;
     tags: Array<string>;
+    lastUsedAt?: string | null | undefined;
+    wasteAmount: number;
+    wasteDate?: string | null | undefined;
+    wasteReason?: WasteReason | null | undefined;
     item: {
       __typename?: 'Item';
       id: string;
@@ -16830,6 +17043,14 @@ export type CreatePantryItemMutation = {
           symbol: string;
           type: UnitType;
         }
+      | null
+      | undefined;
+    brand?:
+      | { __typename?: 'Brand'; id: string; name: string }
+      | null
+      | undefined;
+    store?:
+      | { __typename?: 'Store'; id: string; name: string }
       | null
       | undefined;
     usageRecords: Array<{
@@ -16878,6 +17099,10 @@ export type UpdatePantryItemMutation = {
     updatedAt?: string | null | undefined;
     version?: number | null | undefined;
     tags: Array<string>;
+    lastUsedAt?: string | null | undefined;
+    wasteAmount: number;
+    wasteDate?: string | null | undefined;
+    wasteReason?: WasteReason | null | undefined;
     item: {
       __typename?: 'Item';
       id: string;
@@ -17042,6 +17267,14 @@ export type UpdatePantryItemMutation = {
           symbol: string;
           type: UnitType;
         }
+      | null
+      | undefined;
+    brand?:
+      | { __typename?: 'Brand'; id: string; name: string }
+      | null
+      | undefined;
+    store?:
+      | { __typename?: 'Store'; id: string; name: string }
       | null
       | undefined;
     usageRecords: Array<{
@@ -17089,6 +17322,10 @@ export type DeletePantryItemMutation = {
     updatedAt?: string | null | undefined;
     version?: number | null | undefined;
     tags: Array<string>;
+    lastUsedAt?: string | null | undefined;
+    wasteAmount: number;
+    wasteDate?: string | null | undefined;
+    wasteReason?: WasteReason | null | undefined;
     item: {
       __typename?: 'Item';
       id: string;
@@ -17253,6 +17490,14 @@ export type DeletePantryItemMutation = {
           symbol: string;
           type: UnitType;
         }
+      | null
+      | undefined;
+    brand?:
+      | { __typename?: 'Brand'; id: string; name: string }
+      | null
+      | undefined;
+    store?:
+      | { __typename?: 'Store'; id: string; name: string }
       | null
       | undefined;
     usageRecords: Array<{
@@ -17318,6 +17563,10 @@ export type CreatePantryItemUsageMutation = {
       updatedAt?: string | null | undefined;
       version?: number | null | undefined;
       tags: Array<string>;
+      lastUsedAt?: string | null | undefined;
+      wasteAmount: number;
+      wasteDate?: string | null | undefined;
+      wasteReason?: WasteReason | null | undefined;
       item: {
         __typename?: 'Item';
         id: string;
@@ -17485,6 +17734,14 @@ export type CreatePantryItemUsageMutation = {
             symbol: string;
             type: UnitType;
           }
+        | null
+        | undefined;
+      brand?:
+        | { __typename?: 'Brand'; id: string; name: string }
+        | null
+        | undefined;
+      store?:
+        | { __typename?: 'Store'; id: string; name: string }
         | null
         | undefined;
       usageRecords: Array<{
@@ -17547,6 +17804,10 @@ export type RecordPantryItemWasteMutation = {
     updatedAt?: string | null | undefined;
     version?: number | null | undefined;
     tags: Array<string>;
+    lastUsedAt?: string | null | undefined;
+    wasteAmount: number;
+    wasteDate?: string | null | undefined;
+    wasteReason?: WasteReason | null | undefined;
     item: {
       __typename?: 'Item';
       id: string;
@@ -17713,6 +17974,14 @@ export type RecordPantryItemWasteMutation = {
         }
       | null
       | undefined;
+    brand?:
+      | { __typename?: 'Brand'; id: string; name: string }
+      | null
+      | undefined;
+    store?:
+      | { __typename?: 'Store'; id: string; name: string }
+      | null
+      | undefined;
     usageRecords: Array<{
       __typename?: 'PantryItemUsage';
       id: string;
@@ -17766,6 +18035,10 @@ export type RestockPantryItemMutation = {
       updatedAt?: string | null | undefined;
       version?: number | null | undefined;
       tags: Array<string>;
+      lastUsedAt?: string | null | undefined;
+      wasteAmount: number;
+      wasteDate?: string | null | undefined;
+      wasteReason?: WasteReason | null | undefined;
       item: {
         __typename?: 'Item';
         id: string;
@@ -17935,6 +18208,14 @@ export type RestockPantryItemMutation = {
           }
         | null
         | undefined;
+      brand?:
+        | { __typename?: 'Brand'; id: string; name: string }
+        | null
+        | undefined;
+      store?:
+        | { __typename?: 'Store'; id: string; name: string }
+        | null
+        | undefined;
       usageRecords: Array<{
         __typename?: 'PantryItemUsage';
         id: string;
@@ -17987,6 +18268,10 @@ export type UpdatePantryItemQuantityMutation = {
     updatedAt?: string | null | undefined;
     version?: number | null | undefined;
     tags: Array<string>;
+    lastUsedAt?: string | null | undefined;
+    wasteAmount: number;
+    wasteDate?: string | null | undefined;
+    wasteReason?: WasteReason | null | undefined;
     item: {
       __typename?: 'Item';
       id: string;
@@ -18153,6 +18438,14 @@ export type UpdatePantryItemQuantityMutation = {
         }
       | null
       | undefined;
+    brand?:
+      | { __typename?: 'Brand'; id: string; name: string }
+      | null
+      | undefined;
+    store?:
+      | { __typename?: 'Store'; id: string; name: string }
+      | null
+      | undefined;
     usageRecords: Array<{
       __typename?: 'PantryItemUsage';
       id: string;
@@ -18206,6 +18499,10 @@ export type SyncPantryItemMutation = {
           updatedAt?: string | null | undefined;
           version?: number | null | undefined;
           tags: Array<string>;
+          lastUsedAt?: string | null | undefined;
+          wasteAmount: number;
+          wasteDate?: string | null | undefined;
+          wasteReason?: WasteReason | null | undefined;
           item: {
             __typename?: 'Item';
             id: string;
@@ -18383,6 +18680,14 @@ export type SyncPantryItemMutation = {
                 symbol: string;
                 type: UnitType;
               }
+            | null
+            | undefined;
+          brand?:
+            | { __typename?: 'Brand'; id: string; name: string }
+            | null
+            | undefined;
+          store?:
+            | { __typename?: 'Store'; id: string; name: string }
             | null
             | undefined;
           usageRecords: Array<{
@@ -18621,6 +18926,10 @@ export type PantryItemsChangedSubscription = {
       updatedAt?: string | null | undefined;
       version?: number | null | undefined;
       tags: Array<string>;
+      lastUsedAt?: string | null | undefined;
+      wasteAmount: number;
+      wasteDate?: string | null | undefined;
+      wasteReason?: WasteReason | null | undefined;
       item: {
         __typename?: 'Item';
         id: string;
@@ -18788,6 +19097,14 @@ export type PantryItemsChangedSubscription = {
             symbol: string;
             type: UnitType;
           }
+        | null
+        | undefined;
+      brand?:
+        | { __typename?: 'Brand'; id: string; name: string }
+        | null
+        | undefined;
+      store?:
+        | { __typename?: 'Store'; id: string; name: string }
         | null
         | undefined;
       usageRecords: Array<{
@@ -19449,7 +19766,6 @@ export type MyShoppingListInvitesQuery = {
     canRemoveItems: boolean;
     canMarkPurchased: boolean;
     canInviteOthers: boolean;
-    inviteToken?: string | null | undefined;
     invitedAt: string;
     expiresAt?: string | null | undefined;
     shoppingList: {
@@ -19511,7 +19827,6 @@ export type InviteToShoppingListMutation = {
     canRemoveItems: boolean;
     canMarkPurchased: boolean;
     canInviteOthers: boolean;
-    inviteToken?: string | null | undefined;
     invitedAt: string;
     expiresAt?: string | null | undefined;
     shoppingList: { __typename?: 'ShoppingList'; id: string; name: string };
@@ -19673,7 +19988,6 @@ export type CollaborationInviteSentSubscription = {
     email?: string | null | undefined;
     role: CollaboratorRole;
     status: CollaboratorStatus;
-    inviteToken?: string | null | undefined;
     invitedAt: string;
     expiresAt?: string | null | undefined;
     shoppingList: { __typename?: 'ShoppingList'; id: string; name: string };
@@ -20624,7 +20938,7 @@ export type DeleteShoppingListMutationVariables = Exact<{
 
 export type DeleteShoppingListMutation = {
   __typename?: 'Mutation';
-  deleteShoppingList: boolean;
+  deleteShoppingList: { __typename?: 'ShoppingList'; id: string; name: string };
 };
 
 export type SetDefaultShoppingListMutationVariables = Exact<{
@@ -20679,7 +20993,6 @@ export type AddCollaboratorMutation = {
     canInviteOthers: boolean;
     canViewHistory: boolean;
     canExport: boolean;
-    inviteToken?: string | null | undefined;
     invitedAt: string;
     statusChangedAt?: string | null | undefined;
     expiresAt?: string | null | undefined;
@@ -22494,6 +22807,10 @@ export type MoveShoppingItemToPantryMutation = {
     updatedAt?: string | null | undefined;
     version?: number | null | undefined;
     tags: Array<string>;
+    lastUsedAt?: string | null | undefined;
+    wasteAmount: number;
+    wasteDate?: string | null | undefined;
+    wasteReason?: WasteReason | null | undefined;
     item: {
       __typename?: 'Item';
       id: string;
@@ -22658,6 +22975,14 @@ export type MoveShoppingItemToPantryMutation = {
           symbol: string;
           type: UnitType;
         }
+      | null
+      | undefined;
+    brand?:
+      | { __typename?: 'Brand'; id: string; name: string }
+      | null
+      | undefined;
+    store?:
+      | { __typename?: 'Store'; id: string; name: string }
       | null
       | undefined;
     usageRecords: Array<{

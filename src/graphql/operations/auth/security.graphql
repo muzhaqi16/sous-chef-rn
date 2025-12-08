@@ -9,10 +9,6 @@ subscription LoginAttempts($userId: ID!) {
     success
     method
     provider
-    ipAddress
-    ipCountry
-    ipRegion
-    ipCity
     isVpn
     isTor
     isProxy
@@ -47,17 +43,12 @@ subscription SuspiciousActivity($userId: ID!) {
     }
     riskyLogins {
       id
-      ipAddress
-      ipCountry
       riskScore
       riskFactors
       loggedInAt
     }
     newLocationLogins {
       id
-      ipAddress
-      ipCountry
-      ipCity
       loggedInAt
     }
     newDeviceLogins {
@@ -67,19 +58,11 @@ subscription SuspiciousActivity($userId: ID!) {
       osName
       loggedInAt
     }
-    failedFromSameIP {
-      ipAddress
-      count
-    }
     suspiciousActivity
     unusualTimeLogins {
       id
       loggedInAt
       timezoneDiff
-    }
-    multipleAccountsFromIP {
-      ipAddress
-      count
     }
   }
 }
@@ -89,8 +72,6 @@ subscription FailedLoginAttempts($userId: ID!) {
     id
     userId
     method
-    ipAddress
-    ipCountry
     userAgent
     failureReason
     failureDetails
@@ -102,8 +83,6 @@ subscription RiskyLoginAlerts($userId: ID!) {
   riskyLoginAlerts(userId: $userId) {
     id
     userId
-    ipAddress
-    ipCountry
     riskScore
     riskFactors
     isVpn

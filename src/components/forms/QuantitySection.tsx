@@ -72,7 +72,7 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
         },
       ];
     } else {
-      // Edit mode fields - allow editing quantity, weight, and unit
+      // Edit mode fields - allow editing quantity, weight, unit, and minimum quantity
       return [
         {
           name: 'quantityInput',
@@ -95,6 +95,13 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
           component: 'unitAutocomplete',
           onUnitSelected,
           testID: unitTestID,
+        },
+        {
+          name: 'minimumQuantity',
+          label: 'Minimum Quantity',
+          placeholder: 'Alert when below this quantity',
+          component: FormInput,
+          props: { keyboardType: 'numeric' },
         },
       ];
     }

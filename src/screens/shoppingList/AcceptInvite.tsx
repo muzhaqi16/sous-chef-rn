@@ -46,12 +46,15 @@ export const AcceptInvite: React.FC = () => {
   const loading = shoppingListLoading || homeInviteLoading;
 
   // Find the specific invite and determine type
+  // Note: Tokens are no longer exposed in query responses for security.
+  // When navigating via deep link, token comes from route params.
+  // When navigating via in-app UI, inviteId is used to match.
   const shoppingListInvite = shoppingListData?.myShoppingListInvites?.find(inv =>
-    token ? inv.inviteToken === token : inv.id === inviteId,
+    inviteId ? inv.id === inviteId : false,
   );
 
   const homeInvite = homeInviteData?.myPendingInvites?.find(inv =>
-    token ? inv.token === token : inv.id === inviteId,
+    inviteId ? inv.id === inviteId : false,
   );
 
   // Determine invitation type
@@ -66,16 +69,18 @@ export const AcceptInvite: React.FC = () => {
   }, [shoppingListInvite, homeInvite, loading]);
 
   const handleAccept = async () => {
+    // Token comes from route params (deep link) or we use invite ID
+    // Note: Tokens are no longer exposed in query responses for security reasons
     let inviteToken: string | undefined;
 
     if (invitationType === 'shopping_list' && shoppingListInvite) {
-      inviteToken = token || shoppingListInvite.inviteToken || undefined;
+      inviteToken = token || shoppingListInvite.id;
     } else if (invitationType === 'home' && homeInvite) {
-      inviteToken = token || homeInvite.token || undefined;
+      inviteToken = token || homeInvite.id;
     }
 
     if (!inviteToken) {
-      Alert.alert('Error', 'Invalid invite token');
+      Alert.alert('Error', 'Invalid invitation');
       return;
     }
 
@@ -126,16 +131,18 @@ export const AcceptInvite: React.FC = () => {
   };
 
   const handleDecline = async () => {
+    // Token comes from route params (deep link) or we use invite ID
+    // Note: Tokens are no longer exposed in query responses for security reasons
     let inviteToken: string | undefined;
 
     if (invitationType === 'shopping_list' && shoppingListInvite) {
-      inviteToken = token || shoppingListInvite.inviteToken || undefined;
+      inviteToken = token || shoppingListInvite.id;
     } else if (invitationType === 'home' && homeInvite) {
-      inviteToken = token || homeInvite.token || undefined;
+      inviteToken = token || homeInvite.id;
     }
 
     if (!inviteToken) {
-      Alert.alert('Error', 'Invalid invite token');
+      Alert.alert('Error', 'Invalid invitation');
       return;
     }
 

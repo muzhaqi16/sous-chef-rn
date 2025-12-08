@@ -35,6 +35,7 @@ interface ItemListProps {
   onSwipeableWillOpen?: (ref: any) => void;
   onEndReached?: () => void;
   onEndReachedThreshold?: number;
+  ListHeaderComponent?: React.ComponentType<any> | React.ReactElement | null;
   ListFooterComponent?: React.ComponentType<any> | React.ReactElement | null;
   testIDPrefix?: string;
   emptyState?: {
@@ -60,6 +61,7 @@ export const ItemList: React.FC<ItemListProps> = ({
   onSwipeableWillOpen,
   onEndReached,
   onEndReachedThreshold = 0.5,
+  ListHeaderComponent,
   ListFooterComponent,
   testIDPrefix,
   emptyState,
@@ -154,6 +156,14 @@ export const ItemList: React.FC<ItemListProps> = ({
       updateCellsBatchingPeriod={50}
       windowSize={5}
       removeClippedSubviews={true}
+      ListHeaderComponent={
+        ListHeaderComponent &&
+        (typeof ListHeaderComponent === 'function' ? (
+          <ListHeaderComponent />
+        ) : (
+          ListHeaderComponent
+        ))
+      }
       ListFooterComponent={
         ListFooterComponent &&
         (typeof ListFooterComponent === 'function' ? (

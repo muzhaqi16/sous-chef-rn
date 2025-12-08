@@ -217,6 +217,20 @@ export interface SearchRecipesResponse {
 }
 
 // ============================================
+// Get Random Recipes
+// ============================================
+
+export interface GetRandomRecipesParams {
+  number?: number; // Number of random recipes (default: 1, max: 100)
+  tags?: string; // Comma-separated list of tags (e.g., 'vegetarian,dessert')
+  includeNutrition?: boolean;
+}
+
+export interface GetRandomRecipesResponse {
+  recipes: RecipeInformation[];
+}
+
+// ============================================
 // Error Types
 // ============================================
 
