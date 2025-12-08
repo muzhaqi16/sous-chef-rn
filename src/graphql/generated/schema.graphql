@@ -3401,7 +3401,7 @@ type Mutation {
   Restock a pantry item - adds quantity and creates a ledger record.
   Use this when replenishing an existing pantry item.
   """
-  restockPantryItem(input: RestockPantryItemInput!): PantryItemUsage!
+  restockPantryItem(id: ID!, input: RestockPantryItemInput!): PantryItemUsage!
   restoreItem(id: ID!): Item!
   reviewAppeal(input: ReviewAppealInput!): UserModeration!
   revokeHomeInvite(id: ID!): Boolean!
@@ -5097,12 +5097,13 @@ Input for restocking a pantry item - adds quantity and creates ledger record
 input RestockPantryItemInput {
   costPerUnit: Float
   notes: String
-  pantryItemId: ID!
   quantity: Float!
   restockedAt: DateTime
   storeId: String
   totalCost: Float
   unitId: String
+  weight: Float
+  weightUnitId: String
 }
 
 enum RestrictionSeverity {

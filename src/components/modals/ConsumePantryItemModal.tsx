@@ -36,14 +36,17 @@ type TrackingMode = 'count' | 'weight' | 'both';
  * - No weight → count only
  * - Count = 1 → weight only
  * - Count > 1 AND has weight → let user choose
+ *
+ * Uses pantryItem.packageWeight (user's actual weight), not item.netWeight (catalog)
  */
 function determineTrackingMode(pantryItem: PantryItemFragment): TrackingMode {
-  const hasWeight =
-    pantryItem.item?.netWeight != null && pantryItem.item?.displayUnit != null;
+  // Only require packageWeight to be set (unit can fall back to 'g')
+  const hasWeight = pantryItem.packageWeight != null && pantryItem.packageWeight > 0;
   const count = pantryItem.currentQuantity;
 
   if (!hasWeight) return 'count';
-  if (count === 1) return 'weight';
+  // Use tolerance for floating point comparison
+  if (Math.abs(count - 1) < 0.001) return 'weight';
   return 'both';
 }
 
@@ -76,18 +79,12 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
   const trackingMode = pantryItem ? determineTrackingMode(pantryItem) : 'count';
 
   /**
-   * Calculate the effective total weight for an item.
-   * Uses packageWeight override if set, otherwise falls back to
-   * catalog per-item weight * quantity.
+   * Get the total weight for an item.
+   * Only uses pantryItem.packageWeight (user's actual weight), not catalog data.
    */
   const getEffectiveTotalWeight = useCallback(
     (item: PantryItemFragment): number => {
-      if (item.packageWeight != null && item.packageWeight > 0) {
-        return item.packageWeight;
-      }
-      // Fall back to catalog per-item weight * quantity
-      const perItemWeight = item.item?.netWeight ?? 0;
-      return perItemWeight * item.currentQuantity;
+      return item.packageWeight ?? 0;
     },
     [],
   );
@@ -147,7 +144,7 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
         Alert.alert(
           'Error',
           `Cannot consume more than available weight (${totalWeight} ${
-            pantryItem.item?.displayUnit?.symbol || 'g'
+            pantryItem.packageWeightUnit?.symbol || 'g'
           })`,
         );
         return;
@@ -167,7 +164,7 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
     // Determine the unit ID to send
     const usageUnitId =
       trackingUnit === 'weight'
-        ? pantryItem.item?.displayUnit?.id
+        ? pantryItem.packageWeightUnit?.id
         : pantryItem.unit?.id;
 
     // Calculate weight values when tracking by count
@@ -179,9 +176,7 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
       if (totalWeight > 0) {
         const perItemWeight = totalWeight / pantryItem.currentQuantity;
         weightUsed = quantityValue * perItemWeight;
-        weightUsedUnitId =
-          pantryItem.packageWeightUnit?.id ||
-          pantryItem.item?.displayUnit?.id;
+        weightUsedUnitId = pantryItem.packageWeightUnit?.id;
       }
     }
 
@@ -255,7 +250,7 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
                 ) : (
                   <Text style={styles.availableValue}>
                     {getEffectiveTotalWeight(pantryItem)}{' '}
-                    {pantryItem.item?.displayUnit?.symbol || 'g'}
+                    {pantryItem.packageWeightUnit?.symbol || 'g'}
                   </Text>
                 )}
               </View>
@@ -305,7 +300,7 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
                           styles.unitToggleTextSelected,
                       ]}
                     >
-                      Weight ({pantryItem.item?.displayUnit?.symbol || 'g'})
+                      Weight ({pantryItem.packageWeightUnit?.symbol || 'g'})
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -318,7 +313,7 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
                 label={
                   trackingUnit === 'weight'
                     ? `Weight to Consume (${
-                        pantryItem.item?.displayUnit?.symbol || 'g'
+                        pantryItem.packageWeightUnit?.symbol || 'g'
                       }) *`
                     : `Quantity to Consume (${
                         pantryItem.unit?.symbol || 'item'
@@ -344,7 +339,7 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
                 >
                   Remaining: {remaining >= 0 ? remaining.toFixed(2) : 'Invalid'}{' '}
                   {trackingUnit === 'weight'
-                    ? pantryItem.item?.displayUnit?.symbol || 'g'
+                    ? pantryItem.packageWeightUnit?.symbol || 'g'
                     : pantryItem.unit?.symbol || ''}
                 </Text>
               )}

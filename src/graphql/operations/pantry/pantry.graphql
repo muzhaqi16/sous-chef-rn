@@ -395,8 +395,8 @@ mutation RecordPantryItemWaste(
   }
 }
 
-mutation RestockPantryItem($input: RestockPantryItemInput!) {
-  restockPantryItem(input: $input) {
+mutation RestockPantryItem($id: ID!, $input: RestockPantryItemInput!) {
+  restockPantryItem(id: $id, input: $input) {
     id
     quantityUsed
     purpose

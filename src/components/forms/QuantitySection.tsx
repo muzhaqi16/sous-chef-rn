@@ -20,6 +20,9 @@ interface QuantitySectionProps {
   initialQuantity?: number | null;
   consumedQuantity?: number | null;
   unitSymbol?: string | null;
+  // Weight info for stock display
+  packageWeight?: number | null;
+  weightUnitSymbol?: string | null;
 }
 
 export const QuantitySection: React.FC<QuantitySectionProps> = ({
@@ -31,7 +34,9 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
   unitTestID,
   initialQuantity,
   consumedQuantity,
-  unitSymbol,
+  unitSymbol: _unitSymbol,
+  packageWeight,
+  weightUnitSymbol,
 }) => {
   const getFields = (): FieldDef<any>[] => {
     if (mode === 'add') {
@@ -67,7 +72,7 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
         },
       ];
     } else {
-      // Edit mode fields - allow editing quantity and unit
+      // Edit mode fields - allow editing quantity, weight, and unit
       return [
         {
           name: 'quantityInput',
@@ -75,6 +80,13 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
           placeholder: 'e.g., 1, 1 1/4, or 1.5',
           component: FractionInput,
           testID,
+        },
+        {
+          name: 'itemWeight',
+          label: 'Package Weight',
+          placeholder: 'e.g., 300',
+          component: FormInput,
+          props: { keyboardType: 'decimal-pad', componentType: 'number' },
         },
         {
           name: 'unit',
@@ -88,11 +100,22 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
     }
   };
 
-  // Format quantity with unit symbol for display
-  const formatQuantity = (qty: number | null | undefined) => {
+  // Format stock display with quantity and optional weight
+  const formatStockDisplay = (qty: number | null | undefined) => {
     if (qty == null) return '-';
-    const unit = unitSymbol ? ` ${unitSymbol}` : '';
-    return `${qty}${unit}`;
+    if (packageWeight != null) {
+      const weightUnit = weightUnitSymbol ? ` ${weightUnitSymbol}` : '';
+      // Skip "1 ×" when quantity is 1 - just show weight (industry standard)
+      // Use tolerance for floating point comparison
+      const isQuantityOne = Math.abs(qty - 1) < 0.001;
+      if (isQuantityOne) {
+        return `${packageWeight}${weightUnit}`;
+      }
+      // Show: "2 × 300g" format for qty > 1
+      return `${qty} × ${packageWeight}${weightUnit}`;
+    }
+    // Just quantity, no weight
+    return `${qty}`;
   };
 
   return (
@@ -112,13 +135,13 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
           <View style={styles.stockInfoRow}>
             <Text style={styles.stockInfoLabel}>Initial:</Text>
             <Text style={styles.stockInfoValue}>
-              {formatQuantity(initialQuantity)}
+              {formatStockDisplay(initialQuantity)}
             </Text>
           </View>
           <View style={styles.stockInfoRow}>
             <Text style={styles.stockInfoLabel}>Consumed:</Text>
             <Text style={styles.stockInfoValue}>
-              {formatQuantity(consumedQuantity)}
+              {formatStockDisplay(consumedQuantity)}
             </Text>
           </View>
         </View>

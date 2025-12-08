@@ -3726,6 +3726,7 @@ export type MutationResetPasswordArgs = {
 };
 
 export type MutationRestockPantryItemArgs = {
+  id: Scalars['ID']['input'];
   input: RestockPantryItemInput;
 };
 
@@ -6295,12 +6296,13 @@ export type ResetPasswordResponse = {
 export type RestockPantryItemInput = {
   costPerUnit?: InputMaybe<Scalars['Float']['input']>;
   notes?: InputMaybe<Scalars['String']['input']>;
-  pantryItemId: Scalars['ID']['input'];
   quantity: Scalars['Float']['input'];
   restockedAt?: InputMaybe<Scalars['DateTime']['input']>;
   storeId?: InputMaybe<Scalars['String']['input']>;
   totalCost?: InputMaybe<Scalars['Float']['input']>;
   unitId?: InputMaybe<Scalars['String']['input']>;
+  weight?: InputMaybe<Scalars['Float']['input']>;
+  weightUnitId?: InputMaybe<Scalars['String']['input']>;
 };
 
 export enum RestrictionSeverity {
@@ -12037,6 +12039,7 @@ export type RecordPantryItemWasteMutation = {
 };
 
 export type RestockPantryItemMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
   input: RestockPantryItemInput;
 }>;
 
@@ -45258,6 +45261,14 @@ export const RestockPantryItemDocument = {
       variableDefinitions: [
         {
           kind: 'VariableDefinition',
+          variable: { kind: 'Variable', name: { kind: 'Name', value: 'id' } },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+        {
+          kind: 'VariableDefinition',
           variable: {
             kind: 'Variable',
             name: { kind: 'Name', value: 'input' },
@@ -45278,6 +45289,14 @@ export const RestockPantryItemDocument = {
             kind: 'Field',
             name: { kind: 'Name', value: 'restockPantryItem' },
             arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'id' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'id' },
+                },
+              },
               {
                 kind: 'Argument',
                 name: { kind: 'Name', value: 'input' },
@@ -45780,6 +45799,7 @@ export type RestockPantryItemMutationFn = ApolloReactCommon.MutationFunction<
  * @example
  * const [restockPantryItemMutation, { data, loading, error }] = useRestockPantryItemMutation({
  *   variables: {
+ *      id: // value for 'id'
  *      input: // value for 'input'
  *   },
  * });

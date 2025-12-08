@@ -399,6 +399,10 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
       input.tags = data.tags || [];
     }
 
+    if (dirty.itemWeight) {
+      input.packageWeight = data.itemWeight;
+    }
+
     return input;
   };
 
@@ -454,9 +458,15 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
         let input: any;
 
         if (data.selectedItemId) {
+          const weightInput =
+            data.itemWeight && unitId
+              ? { packageWeight: data.itemWeight, packageWeightUnitId: unitId }
+              : {};
+
           input = {
             ...baseInput,
             itemId: data.selectedItemId,
+            ...weightInput,
           };
         } else {
           const categoryInput = selectedCategoryId
@@ -659,6 +669,8 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
               initialQuantity={item?.initialQuantity}
               consumedQuantity={item?.consumedQuantity}
               unitSymbol={item?.unit?.symbol}
+              packageWeight={item?.packageWeight ?? item?.item?.netWeight}
+              weightUnitSymbol={item ? getEffectiveUnitSymbol(item) : undefined}
             />
 
             {/* Storage Details Section */}
