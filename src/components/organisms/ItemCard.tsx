@@ -14,6 +14,7 @@ interface ItemCardProps {
   onDelete?: () => void;
   onConsume?: () => void;
   onWaste?: () => void;
+  onRestock?: () => void;
   onSwipeableWillOpen?: (ref: any) => void;
   badge?: {
     text: string;
@@ -32,6 +33,7 @@ const ItemCardComponent: React.FC<ItemCardProps> = ({
   onDelete,
   onConsume,
   onWaste,
+  onRestock,
   onSwipeableWillOpen,
   badge,
   rightElement,
@@ -39,13 +41,14 @@ const ItemCardComponent: React.FC<ItemCardProps> = ({
   testID,
 }) => {
   const innerContent =
-    onEdit || onDelete || onConsume || onWaste ? (
+    onEdit || onDelete || onConsume || onWaste || onRestock ? (
       <SwipeableItem
         onPress={onPress}
         onEdit={onEdit}
         onDelete={onDelete}
         onConsume={onConsume}
         onWaste={onWaste}
+        onRestock={onRestock}
         onSwipeableWillOpen={onSwipeableWillOpen}
         testIDPrefix={testID}
       >

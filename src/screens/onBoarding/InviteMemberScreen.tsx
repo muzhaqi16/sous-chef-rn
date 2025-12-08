@@ -1,12 +1,5 @@
 import React, { useState } from 'react';
-import {
-  Text,
-  View,
-  TextInput,
-  TouchableOpacity,
-  FlatList,
-  Alert,
-} from 'react-native';
+import { Text, View, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { OnBoardingWrapper } from '#components/templates';
 import { Button } from '#components';
 import { StyleSheet } from 'react-native-unistyles';
@@ -30,7 +23,9 @@ export const InviteMemberScreen = () => {
   const { user } = useAuth();
 
   const selectedHomeId = useAppStore(state => state.selectedHomeId);
-  const selectedShoppingListId = useAppStore(state => state.selectedShoppingListId);
+  const selectedShoppingListId = useAppStore(
+    state => state.selectedShoppingListId,
+  );
 
   const [invites, setInvites] = useState<InviteEntry[]>([]);
   const [currentEmail, setCurrentEmail] = useState('');
@@ -212,12 +207,8 @@ export const InviteMemberScreen = () => {
           </TouchableOpacity>
         </View>
 
-        <FlatList
-          style={styles.invitesList}
-          data={invites}
-          keyExtractor={(invite) => invite.id}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
+        <View style={styles.invitesList}>
+          {invites.length === 0 ? (
             <View style={styles.emptyState}>
               <Text style={styles.emptyStateText}>
                 No invitations added yet
@@ -226,37 +217,37 @@ export const InviteMemberScreen = () => {
                 Add email addresses above to invite members
               </Text>
             </View>
-          }
-          ListHeaderComponent={
-            invites.length > 0 ? (
+          ) : (
+            <>
               <Text style={styles.listHeader}>
                 Inviting {invites.length}{' '}
                 {invites.length === 1 ? 'person' : 'people'}:
               </Text>
-            ) : null
-          }
-          renderItem={({ item: invite }) => (
-            <View style={styles.inviteItem}>
-              <View style={styles.inviteInfo}>
-                <Text style={styles.inviteEmail}>{invite.email}</Text>
-                <TouchableOpacity
-                  onPress={() => toggleInviteType(invite.id)}
-                  style={styles.typeButton}
-                >
-                  <Text style={styles.typeText}>
-                    {getInviteTypeLabel(invite.type)}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-              <TouchableOpacity
-                onPress={() => removeInvite(invite.id)}
-                style={styles.removeButton}
-              >
-                <Text style={styles.removeButtonText}>✕</Text>
-              </TouchableOpacity>
-            </View>
+              {invites.map(invite => (
+                <View key={invite.id} style={styles.inviteItem}>
+                  <View style={styles.inviteInfo}>
+                    <Text style={styles.inviteEmail}>{invite.email}</Text>
+                    <TouchableOpacity
+                      onPress={() => toggleInviteType(invite.id)}
+                      style={styles.typeButton}
+                    >
+                      <Text style={styles.typeText}>
+                        {getInviteTypeLabel(invite.type)}
+                        <Text style={styles.typeHint}> (tap to change)</Text>
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => removeInvite(invite.id)}
+                    style={styles.removeButton}
+                  >
+                    <Text style={styles.removeButtonText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </>
           )}
-        />
+        </View>
 
         <View style={styles.infoBox}>
           <Text style={styles.infoText}>
@@ -361,6 +352,11 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.primary,
     fontWeight: '500',
   },
+  typeHint: {
+    fontSize: 11,
+    color: theme.colors.textSecondary || '#999',
+    fontWeight: '400',
+  },
   removeButton: {
     width: 32,
     height: 32,
@@ -381,6 +377,7 @@ const styles = StyleSheet.create(theme => ({
     fontSize: 13,
     color: '#555',
     lineHeight: 18,
+    textAlign: 'center',
   },
   nextButton: {
     backgroundColor: theme.colors.primary,

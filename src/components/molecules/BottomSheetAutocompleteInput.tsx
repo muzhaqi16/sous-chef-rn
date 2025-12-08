@@ -10,6 +10,7 @@ import {
 import { StyleSheet } from 'react-native-unistyles';
 import { Input } from '#components/base/Input';
 import { useStore } from '#store';
+import { useSharedBottomSheetConfigs } from '#hooks';
 
 interface BottomSheetAutocompleteInputProps<T> {
   // Input field props
@@ -84,8 +85,11 @@ export function BottomSheetAutocompleteInput<T>({
 }: BottomSheetAutocompleteInputProps<T>) {
   const { height } = useWindowDimensions();
   const bottomSheetRef = useRef<BottomSheetModal>(null);
+  const userDismissedRef = useRef(false);
+  const hasInteractedRef = useRef(false);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [searchTerm, setSearchTerm] = useState(value || '');
+  const animationConfigs = useSharedBottomSheetConfigs();
 
   // Check online status to prevent autocomplete when offline
   const isOnline = useStore(state => state.isOnline);
@@ -98,40 +102,35 @@ export function BottomSheetAutocompleteInput<T>({
     }
   }, [value, showAutocomplete]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-close modal when no matches found after search completes
+  // Show modal only when we have results (search-first pattern)
+  // Don't re-open if user explicitly dismissed (via selection or backdrop tap)
+  // Only show if user has interacted with the field (prevents auto-open on form load)
   useEffect(() => {
     if (
-      showAutocomplete &&
-      !loading &&
-      data.length === 0 &&
-      searchTerm.length >= minSearchLength
+      data.length > 0 &&
+      searchTerm.length >= minSearchLength &&
+      isOnline &&
+      !showAutocomplete &&
+      !userDismissedRef.current &&
+      hasInteractedRef.current
     ) {
-      // Small delay to allow user to see "no results" briefly before closing
-      const timer = setTimeout(() => {
-        setShowAutocomplete(false);
-        bottomSheetRef.current?.dismiss();
-        onModalClose?.();
-      }, 300);
-      return () => clearTimeout(timer);
+      setShowAutocomplete(true);
+      bottomSheetRef.current?.present();
+      onModalOpen?.();
     }
-  }, [showAutocomplete, loading, data.length, searchTerm.length, minSearchLength, onModalClose]);
+  }, [data.length, searchTerm.length, minSearchLength, isOnline, showAutocomplete, onModalOpen]);
+
+  // Modal only closes via explicit user action:
+  // - handleSelectItem (user selects an item)
+  // - handleDismiss (user taps backdrop)
+  // - handleSubmitCustomValue (user presses return/done)
 
   const handleTextChange = (text: string) => {
+    hasInteractedRef.current = true; // User has interacted with the field
+    userDismissedRef.current = false; // Clear flag - user is typing again
     onChangeText(text);
     setSearchTerm(text);
-
-    // Only show autocomplete if online and text is long enough
-    if (text.length >= minSearchLength && !showAutocomplete && isOnline) {
-      setShowAutocomplete(true);
-      setTimeout(() => {
-        bottomSheetRef.current?.present();
-        onModalOpen?.();
-      }, 50);
-    } else if (text.length < minSearchLength && showAutocomplete) {
-      setShowAutocomplete(false);
-      bottomSheetRef.current?.dismiss();
-      onModalClose?.();
-    }
+    // Modal visibility now controlled by data-based effects above
   };
 
   const handleBottomSheetTextChange = (text: string) => {
@@ -141,6 +140,7 @@ export function BottomSheetAutocompleteInput<T>({
   };
 
   const handleSelectItem = (item: T) => {
+    userDismissedRef.current = true; // Mark as user-dismissed
     setShowAutocomplete(false);
     bottomSheetRef.current?.dismiss();
     onSelectItem(item);
@@ -148,6 +148,7 @@ export function BottomSheetAutocompleteInput<T>({
   };
 
   const handleDismiss = useCallback(() => {
+    userDismissedRef.current = true; // Mark as user-dismissed
     setShowAutocomplete(false);
     onModalClose?.();
   }, [onModalClose]);
@@ -158,6 +159,7 @@ export function BottomSheetAutocompleteInput<T>({
       onChangeText(searchTerm.trim());
     }
     // Dismiss the modal
+    userDismissedRef.current = true; // Mark as user-dismissed
     setShowAutocomplete(false);
     bottomSheetRef.current?.dismiss();
     onModalClose?.();
@@ -216,6 +218,7 @@ export function BottomSheetAutocompleteInput<T>({
         android_keyboardInputMode="adjustResize"
         enablePanDownToClose={true}
         enableContentPanningGesture={false}
+        animationConfigs={animationConfigs}
       >
         <BottomSheetFlatList
           data={loading ? [] : data}

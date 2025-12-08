@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { View, Image } from 'react-native';
 import { FormattedItemSubtitle } from '#components';
 import { getItemImageUrl } from '#utils/imageUtils';
+import { getEffectiveUnitSymbol } from '#utils/pantryItemUtils';
 import { commonStyles } from '#/styles';
 
 interface PantryItem {
@@ -12,8 +13,8 @@ interface PantryItem {
   autoReorderPoint?: number | null;
   storageState?: string | null;
   // Pantry item's own weight (override)
-  actualNetWeight?: number | null;
-  actualNetWeightUnit?: {
+  packageWeight?: number | null;
+  packageWeightUnit?: {
     symbol?: string;
   } | null;
   item?: {
@@ -96,12 +97,9 @@ export function usePantryItemTransformation<T extends PantryItem>(
       // Get image URL for the item
       const imageUrl = getItemImageUrl(item.item);
 
-      // Use actualNetWeight if set (user override), otherwise fall back to catalog item weight
-      const effectiveNetWeight = item.actualNetWeight ?? item.item?.netWeight;
-      const effectiveWeightUnitSymbol =
-        item.actualNetWeightUnit?.symbol ||
-        item.item?.displayUnit?.symbol ||
-        item.unit?.symbol;
+      // Use packageWeight if set (user override), otherwise fall back to catalog item weight
+      const effectiveNetWeight = item.packageWeight ?? item.item?.netWeight;
+      const effectiveWeightUnitSymbol = getEffectiveUnitSymbol(item);
 
       return {
         id: item.id,

@@ -28,6 +28,7 @@ interface ListTemplateProps {
   onItemDelete?: (id: string) => void;
   onItemConsume?: (id: string) => void;
   onItemWaste?: (id: string) => void;
+  onItemRestock?: (id: string) => void;
   onRefresh?: () => Promise<void>;
   onSwipeableWillOpen?: (ref: any) => void;
   emptyState?: any;
@@ -77,6 +78,7 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
   onItemDelete = () => {},
   onItemConsume,
   onItemWaste,
+  onItemRestock,
   onRefresh = async () => {},
   onSwipeableWillOpen,
   emptyState,
@@ -179,6 +181,7 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
           onItemDelete={isLoading ? () => {} : onItemDelete}
           onItemConsume={isLoading ? undefined : onItemConsume}
           onItemWaste={isLoading ? undefined : onItemWaste}
+          onItemRestock={isLoading ? undefined : onItemRestock}
           onRefresh={onRefresh}
           onSwipeableWillOpen={onSwipeableWillOpen}
           onEndReached={onEndReached}
@@ -196,6 +199,7 @@ export const ListTemplate: React.FC<ListTemplateProps> = ({
           onItemDelete={isLoading ? () => {} : onItemDelete}
           onItemConsume={isLoading ? undefined : onItemConsume}
           onItemWaste={isLoading ? undefined : onItemWaste}
+          onItemRestock={isLoading ? undefined : onItemRestock}
           onRefresh={onRefresh}
           onSwipeableWillOpen={onSwipeableWillOpen}
           onEndReached={onEndReached}

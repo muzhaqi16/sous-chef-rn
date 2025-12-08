@@ -30,6 +30,7 @@ interface ItemListProps {
   onItemDelete?: (id: string) => void;
   onItemConsume?: (id: string) => void;
   onItemWaste?: (id: string) => void;
+  onItemRestock?: (id: string) => void;
   onRefresh?: () => Promise<void>;
   onSwipeableWillOpen?: (ref: any) => void;
   onEndReached?: () => void;
@@ -54,6 +55,7 @@ export const ItemList: React.FC<ItemListProps> = ({
   onItemDelete,
   onItemConsume,
   onItemWaste,
+  onItemRestock,
   onRefresh,
   onSwipeableWillOpen,
   onEndReached,
@@ -120,11 +122,12 @@ export const ItemList: React.FC<ItemListProps> = ({
         onDelete={onItemDelete ? () => onItemDelete(item.id) : undefined}
         onConsume={onItemConsume ? () => onItemConsume(item.id) : undefined}
         onWaste={onItemWaste ? () => onItemWaste(item.id) : undefined}
+        onRestock={onItemRestock ? () => onItemRestock(item.id) : undefined}
         onSwipeableWillOpen={onSwipeableWillOpen}
         testID={testIDPrefix ? `${testIDPrefix}-${index}` : undefined}
       />
     ),
-    [onItemPress, onItemEdit, onItemDelete, onItemConsume, onItemWaste, onSwipeableWillOpen, testIDPrefix],
+    [onItemPress, onItemEdit, onItemDelete, onItemConsume, onItemWaste, onItemRestock, onSwipeableWillOpen, testIDPrefix],
   );
 
   if (items.length === 0 && emptyState) {

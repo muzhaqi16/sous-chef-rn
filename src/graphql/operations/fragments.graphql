@@ -496,22 +496,15 @@ fragment PantryItemFragment on PantryItem {
   storageNotes
   initialQuantity
   currentQuantity
-  quantityInput
-  normalizedQuantity
+  consumedQuantity
   normalizedUnitId
   normalizedUnit {
     id
     name
     symbol
   }
-  displayFormat
-  consumedQuantity
-  reservedQuantity
-  autoReorderPoint
-  isAutoReorder
-  customCategory
-  actualNetWeight
-  actualNetWeightUnit {
+  packageWeight
+  packageWeightUnit {
     id
     name
     symbol

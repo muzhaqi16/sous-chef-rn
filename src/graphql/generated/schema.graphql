@@ -418,13 +418,12 @@ enum AccessLevel {
 }
 
 enum AcquisitionMethod {
-  BULK_SPLIT
-  FOUND
+  BARCODE_SCAN
   GIFTED
   HOMEGROWN
-  LEFTOVER
+  OTHER
   PURCHASED
-  TRANSFERRED
+  SHOPPING_LIST
 }
 
 input AddCollaboratorInput {
@@ -472,6 +471,15 @@ input AddWarningInput {
 }
 
 """
+Cost analytics for additions/restocks
+"""
+type AdditionCostAnalytics {
+  averageCostPerUnit: Float!
+  costByStore: [StoreCostBreakdown!]!
+  totalSpent: Float!
+}
+
+"""
 Result of quantity aggregation (add/subtract)
 """
 type AggregationResult {
@@ -494,6 +502,24 @@ enum AllergenSeverity {
   MODERATE
   SEVERE
   TRACE
+}
+
+"""
+Input for filtering analytics queries by time period
+"""
+input AnalyticsFilterInput {
+  """
+  Custom date range - overrides dateRange if both provided
+  """
+  customRange: DateRangeInput
+  """
+  Predefined date range (TODAY, LAST_WEEK, LAST_MONTH, etc.)
+  """
+  dateRange: DateRange
+  """
+  Limit for top items lists (default: 10)
+  """
+  topItemsLimit: Int
 }
 
 enum AppTheme {
@@ -709,6 +735,33 @@ enum CategoryType {
 }
 
 """
+Source of the change for audit purposes
+"""
+enum ChangeSource {
+  API
+  BARCODE_SCAN
+  EXPIRATION_ALERT
+  MOBILE_APP
+  RECIPE_COOKING
+  SHOPPING_LIST
+  SYSTEM
+  USER
+  WEB_APP
+}
+
+"""
+Change types for pantry item modifications
+"""
+enum ChangeType {
+  CONSUMED
+  CREATED
+  DELETED
+  EXPIRATION_UPDATED
+  LOCATION_UPDATED
+  QUANTITY_UPDATED
+}
+
+"""
 Order by options for collaborators
 """
 input CollaboratorOrderBy {
@@ -734,9 +787,26 @@ enum CollaboratorStatus {
   SUSPENDED
 }
 
+type CompatibleUnit {
+  conversionConfidence: Float
+  conversionRatio: Float
+  isConfigured: Boolean!
+  isDefault: Boolean!
+  source: ConversionSource
+  unit: Unit!
+  usageContexts: [UnitUsageContext!]!
+}
+
 input CompleteShoppingListInput {
   completedShopDate: DateTime
   totalCost: Float
+}
+
+input ConfirmedIngredientConsumptionInput {
+  pantryItemId: ID!
+  quantity: Float!
+  recipeIngredientId: ID!
+  unitId: ID!
 }
 
 interface Connection {
@@ -753,6 +823,14 @@ input ConnectionPaginationInput {
   before: String
   first: Int
   last: Int
+}
+
+type ConsumptionFailure {
+  availableQuantity: Float!
+  pantryItemId: ID!
+  reason: String!
+  recipeIngredientId: ID!
+  requestedQuantity: Float!
 }
 
 """
@@ -961,6 +1039,7 @@ input CreateItemInput {
   categories: [CategoryInput!]
   categoryIds: [String!]
   defaultUnit: String
+  density: Float
   description: String
   displayUnitId: String
   displayUnitName: String
@@ -976,7 +1055,11 @@ input CreateItemInput {
   metadata: JSON
   name: String!
   netWeight: Float
+  preferredTrackingUnitId: String
   primaryUpc: String
+  servingSize: Float
+  servingSizeUnit: String
+  servingsPerPackage: Int
   shelfLifeDays: Int
   storageState: StorageState
   tags: [String!]
@@ -1094,17 +1177,10 @@ input CreatePantryInput {
 
 input CreatePantryItemInput {
   acquisitionMethod: AcquisitionMethod
-  actualNetWeight: Float
-  actualNetWeightUnitId: String
-  autoReorderPoint: Float
-  batchNumber: String
-  bestByDate: String
   condition: ItemCondition
   costPerUnit: Float
-  customCategory: String
   expiresAt: String
   initialQuantity: Float
-  isAutoReorder: Boolean
   itemBrand: String
   itemCategory: String
   itemDescription: String
@@ -1114,12 +1190,12 @@ input CreatePantryItemInput {
   itemNetWeight: Float
   itemUpc: String
   lastUsedAt: DateTime
-  lotNumber: String
+  packageWeight: Float
+  packageWeightUnitId: String
   pantryId: ID!
-  priority: Int
   purchaseId: String
-  quantityInput: String
-  storageLocation: String
+  storageLocationId: String
+  storageLocationName: String
   storageNotes: String
   storageState: StorageState
   storeId: String
@@ -2250,10 +2326,8 @@ type ItemCategory {
 }
 
 enum ItemCondition {
-  EXCELLENT
   FAIR
   GOOD
-  POOR
   SPOILED
 }
 
@@ -2484,6 +2558,49 @@ type ItemsResponse {
 }
 
 scalar JSON
+
+"""
+Comprehensive ledger analytics combining additions and consumption
+"""
+type LedgerAnalytics {
+  costAnalytics: AdditionCostAnalytics
+  granularity: PeriodGranularity!
+  periodData: [LedgerPeriodData!]!
+  periodEnd: DateTime!
+  periodStart: DateTime!
+  summary: LedgerSummary!
+  topRestockedItems: [UsageByItem!]!
+}
+
+"""
+Per-period ledger data for trend analysis
+"""
+type LedgerPeriodData {
+  added: Float!
+  additionCost: Float
+  consumed: Float!
+  net: Float!
+  periodEnd: DateTime!
+  periodLabel: String!
+  periodStart: DateTime!
+  wasted: Float!
+}
+
+"""
+Ledger summary showing additions vs consumption
+"""
+type LedgerSummary {
+  additionCount: Int!
+  additionsByUnit: [UsageByUnit!]!
+  consumptionByUnit: [UsageByUnit!]!
+  consumptionCount: Int!
+  netQuantity: Float!
+  totalAdded: Float!
+  totalConsumed: Float!
+  totalWasted: Float!
+  unitName: String
+  wasteCount: Int!
+}
 
 enum ListActivityType {
   AUTO_SUGGESTION_ADDED
@@ -2937,6 +3054,57 @@ enum ModerationStatus {
   WARNED
 }
 
+"""
+Input for moving a shopping list item to the pantry.
+Creates a PantryItem from a ShoppingListItem after purchase.
+"""
+input MoveShoppingItemToPantryInput {
+  """
+  Actual quantity purchased (may differ from planned)
+  """
+  actualQuantity: Float!
+  """
+  Unit ID for the quantity (defaults to shopping item's unit)
+  """
+  actualUnitId: ID
+  """
+  Cost per unit (optional)
+  """
+  costPerUnit: Float
+  """
+  Expiration date (optional)
+  """
+  expiresAt: DateTime
+  """
+  Additional notes
+  """
+  notes: String
+  """
+  ID of the target pantry
+  """
+  pantryId: ID!
+  """
+  Whether to remove the item from the shopping list after moving (default: true)
+  """
+  removeFromList: Boolean
+  """
+  ID of the shopping list item to move
+  """
+  shoppingListItemId: ID!
+  """
+  Storage location ID (optional)
+  """
+  storageLocationId: ID
+  """
+  Storage state (FROZEN, REFRIGERATED, AMBIENT, NONE)
+  """
+  storageState: StorageState
+  """
+  Total cost paid (optional)
+  """
+  totalCost: Float
+}
+
 input MoveShoppingListItemInput {
   afterItemId: ID
   beforeItemId: ID
@@ -2997,6 +3165,11 @@ type Mutation {
   ): ShoppingList!
   confirmItemImageUpload(itemId: String!, key: String!): String!
   confirmProfileImageUpload(key: String!): String!
+  confirmRecipeConsumption(
+    consumptions: [ConfirmedIngredientConsumptionInput!]!
+    pantryId: ID!
+    recipeId: ID!
+  ): RecipeConsumptionResult!
   createBrand(input: CreateBrandInput): Brand!
   createBulkPurchases(purchases: [CreatePurchaseInput!]!): [Purchase!]!
   createBulkStores(stores: [CreateStoreInput!]!): [Store!]!
@@ -3157,6 +3330,12 @@ type Mutation {
     servings: Float
   ): CookingLog!
   mergeItems(duplicateIds: [ID!]!, primaryId: ID!): Item!
+  """
+  Move a shopping list item to the pantry after purchase.
+  Creates a PantryItem with full traceability back to the shopping list item.
+  Optionally removes the item from the shopping list.
+  """
+  moveShoppingItemToPantry(input: MoveShoppingItemToPantryInput!): PantryItem!
   moveShoppingListItem(input: MoveShoppingListItemInput!): ShoppingListItem!
   openPantryItem(id: ID!, version: Int): PantryItem!
   putUnderReview(input: PutUnderReviewInput!): UserModeration!
@@ -3218,6 +3397,11 @@ type Mutation {
   Reset password using token from email
   """
   resetPassword(newPassword: String!, token: String!): ResetPasswordResponse!
+  """
+  Restock a pantry item - adds quantity and creates a ledger record.
+  Use this when replenishing an existing pantry item.
+  """
+  restockPantryItem(id: ID!, input: RestockPantryItemInput!): PantryItemUsage!
   restoreItem(id: ID!): Item!
   reviewAppeal(input: ReviewAppealInput!): UserModeration!
   revokeHomeInvite(id: ID!): Boolean!
@@ -3360,7 +3544,7 @@ type Mutation {
   updatePantryItem(id: ID!, input: UpdatePantryItemInput!): PantryItem!
   updatePantryItemLocation(
     id: ID!
-    storageLocation: String!
+    storageLocationId: String!
     version: Int
   ): PantryItem!
   """
@@ -3819,28 +4003,17 @@ type PantryExpiringItemsAlertPayload {
 
 type PantryItem {
   acquisitionMethod: AcquisitionMethod!
-  actualNetWeight: Float
-  actualNetWeightUnit: Unit
-  actualNetWeightUnitId: String
   addedAt: DateTime!
   addedBy: User
-  alertSentAt: DateTime
-  autoReorderPoint: Float
-  batchNumber: String
-  bestByDate: DateTime
   condition: ItemCondition!
   consumedQuantity: Float!
   costPerUnit: Float
   createdAt: DateTime!
   currentQuantity: Float!
-  customCategory: String
-  displayFormat: DisplayFormat!
-  estimatedShelfLife: Int
   expirationAlert: Boolean!
   expiresAt: DateTime
   id: ID!
   initialQuantity: Float!
-  isAutoReorder: Boolean!
   isComposted: Boolean!
   isRecycled: Boolean!
   item: Item!
@@ -3848,23 +4021,19 @@ type PantryItem {
   itemName: String!
   itemUpc: String
   lastModifiedBy: User
-  lastReorderDate: DateTime
   lastUsedAt: DateTime
-  lotNumber: String
   lowStockAlert: Boolean!
   normalizedQuantity: Float
   normalizedUnit: Unit
   normalizedUnitId: String
-  openedAt: DateTime
+  packageWeight: Float
+  packageWeightUnit: Unit
+  packageWeightUnitId: String
   pantry: Pantry!
   pantryId: String!
   photos: [PantryItemPhoto!]!
-  priority: Int
   purchase: Purchase
   purchaseId: String
-  quantityInput: String
-  remainingValue: Float
-  reservedQuantity: Float!
   storageLocation: StorageLocation
   storageNotes: String
   storageState: StorageState!
@@ -3876,12 +4045,48 @@ type PantryItem {
   unitId: String
   unitName: String!
   updatedAt: DateTime
-  usageFrequency: UsageFrequency!
   usageRecords: [PantryItemUsage!]!
   version: Int
   wasteAmount: Float!
   wasteDate: DateTime
   wasteReason: WasteReason
+}
+
+"""
+Audit record of a change to a pantry item
+"""
+type PantryItemChange {
+  changeType: ChangeType!
+  changedBy: User!
+  changedById: ID!
+  createdAt: DateTime!
+  deviceId: String
+  field: String
+  id: ID!
+  ipAddress: String
+  metadata: JSON
+  newValue: String
+  oldValue: String
+  pantryItem: PantryItem!
+  pantryItemId: ID!
+  source: ChangeSource!
+}
+
+"""
+Connection type for paginated PantryItemChange results
+"""
+type PantryItemChangeConnection {
+  edges: [PantryItemChangeEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+"""
+Edge type for PantryItemChange pagination
+"""
+type PantryItemChangeEdge {
+  cursor: String!
+  node: PantryItemChange!
 }
 
 type PantryItemChangedPayload {
@@ -3913,7 +4118,6 @@ input PantryItemFilters {
   expirationDays: Int
   expiringSoon: Boolean
   itemId: String
-  lowStock: Boolean
   search: String
   storageState: StorageState
   tags: [String!]
@@ -3939,8 +4143,12 @@ type PantryItemPhoto {
 }
 
 type PantryItemUsage {
+  conversionConfidence: Float
+  conversionRatio: Float
+  conversionSource: String
   cookingLog: CookingLog
   cookingLogId: String
+  costPerUnit: Float
   id: ID!
   mealPlanItem: MealPlanItem
   mealPlanItemId: String
@@ -3950,6 +4158,9 @@ type PantryItemUsage {
   quantityUsed: Float!
   recipe: Recipe
   recipeId: String
+  store: Store
+  storeId: String
+  totalCost: Float
   usageSource: UsageSource!
   usageUnit: Unit
   usageUnitId: String
@@ -4019,6 +4230,15 @@ type ParentCategorySuggestion {
   name: String!
   slug: String
   type: CategoryType!
+}
+
+"""
+Period granularity for ledger analytics
+"""
+enum PeriodGranularity {
+  DAILY
+  MONTHLY
+  WEEKLY
 }
 
 enum PhotoType {
@@ -4242,6 +4462,7 @@ type Query {
   categoryBySlug(slug: String!): Category
   checkItemAvailability(itemId: ID!, storeIds: [String!]): [ItemAvailability!]
   compareItemPrices(itemId: ID!, storeIds: [String!]): [StorePriceComparison!]
+  compatibleUnitsForItem(currentUnitId: ID, itemId: ID!): [CompatibleUnit!]!
   """
   Convert quantity between units with item context
   Supports both same-type (cup→tbsp) and cross-type (cup→gram) conversions
@@ -4326,6 +4547,11 @@ type Query {
   ): [LoginHistory!]!
   loginHistoryStats(days: Int = 30, userId: ID!): LoginHistoryStats!
   lowBatteryDevices(threshold: Float = 0.2, userId: ID!): [Device!]!
+  matchRecipeIngredientsToPantry(
+    pantryId: ID!
+    recipeId: ID!
+    servings: Int
+  ): [RecipeIngredientMatch!]!
   me: User
   mealPlan(id: ID!): MealPlan
   mealPlans(
@@ -4381,8 +4607,53 @@ type Query {
   pantries(homeId: ID!): [Pantry!]!
   pantry(id: ID!): Pantry
   pantryItem(id: ID!): PantryItem!
+  """
+  Get the change history for a specific pantry item.
+  Useful for audit trails and tracking item modifications over time.
+  """
+  pantryItemHistory(
+    after: String
+    before: String
+    first: Int
+    last: Int
+    pantryItemId: ID!
+  ): PantryItemChangeConnection!
+  """
+  Get ledger summary for a specific pantry item showing total added, consumed, and wasted.
+  Handles mixed units by providing breakdown per unit.
+  """
+  pantryItemLedger(
+    filter: AnalyticsFilterInput
+    pantryItemId: ID!
+  ): LedgerSummary!
   pantryItemUsage(pantryItemId: ID!): [PantryItemUsage!]!
+  """
+  Get comprehensive ledger analytics for a pantry showing additions vs consumption over time.
+  Includes cost tracking for restocks and per-period breakdowns.
+  """
+  pantryLedgerAnalytics(
+    filter: AnalyticsFilterInput
+    granularity: PeriodGranularity
+    itemId: String
+    pantryId: ID!
+  ): LedgerAnalytics!
   pantryStats(pantryId: ID!): PantryStats!
+  """
+  Get comprehensive usage analytics for a pantry
+  Useful for building usage pattern charts and reports
+  """
+  pantryUsageAnalytics(
+    filter: AnalyticsFilterInput
+    pantryId: ID!
+  ): UsageAnalytics!
+  """
+  Get comprehensive waste analytics for a pantry
+  Useful for building waste tracking charts and reports
+  """
+  pantryWasteAnalytics(
+    filter: AnalyticsFilterInput
+    pantryId: ID!
+  ): WasteAnalytics!
   """
   Parse fractional input string to decimal
   Handles "1/4", "1 1/4", "0.25" formats
@@ -4599,6 +4870,15 @@ type RecipeConnection {
   totalCount: Int!
 }
 
+type RecipeConsumptionResult {
+  consumedItems: [PantryItemUsage!]!
+  cookingLog: CookingLog
+  failedItems: [ConsumptionFailure!]!
+  success: Boolean!
+  totalConsumed: Int!
+  totalFailed: Int!
+}
+
 """
 Recipe connection for pagination
 """
@@ -4645,6 +4925,18 @@ input RecipeIngredientInput {
   unitId: String
   usAmount: Float
   usUnit: String
+}
+
+type RecipeIngredientMatch {
+  alternativeMatches: [PantryItem!]!
+  availableQuantity: Float!
+  ingredient: RecipeIngredient!
+  isAvailable: Boolean!
+  matchConfidence: Float!
+  matchedPantryItem: PantryItem
+  shortfall: Float
+  suggestedQuantity: Float!
+  suggestedUnit: Unit
 }
 
 input RecipeIngredientSourceInput {
@@ -4799,6 +5091,21 @@ type ResetPasswordResponse {
   success: Boolean!
 }
 
+"""
+Input for restocking a pantry item - adds quantity and creates ledger record
+"""
+input RestockPantryItemInput {
+  costPerUnit: Float
+  notes: String
+  quantity: Float!
+  restockedAt: DateTime
+  storeId: String
+  totalCost: Float
+  unitId: String
+  weight: Float
+  weightUnitId: String
+}
+
 enum RestrictionSeverity {
   ALLERGY
   GOAL
@@ -4902,10 +5209,6 @@ Shopping list for a home
 Cache: 1 minute - frequently updated by collaborators
 """
 type ShoppingList {
-  activities: [ShoppingListActivity!]
-    @deprecated(
-      reason: "Use activitiesConnection for pagination to reduce query complexity"
-    )
   activitiesConnection(
     after: String
     before: String
@@ -4917,10 +5220,6 @@ type ShoppingList {
   basedOnTemplate: ShoppingList
   budgetAmount: Float
   category: String
-  collaborators: [ShoppingListCollaborator!]
-    @deprecated(
-      reason: "Use collaboratorsConnection for pagination to reduce query complexity"
-    )
   collaboratorsConnection(
     after: String
     before: String
@@ -4942,10 +5241,6 @@ type ShoppingList {
   isPublic: Boolean!
   isRecurring: Boolean!
   isTemplate: Boolean!
-  items: [ShoppingListItem!]
-    @deprecated(
-      reason: "Use itemsConnection for pagination to reduce query complexity"
-    )
   itemsConnection(
     after: String
     before: String
@@ -4963,10 +5258,6 @@ type ShoppingList {
   plannedShopDate: DateTime
   priceTracking: Boolean!
   priority: Int!
-  purchases: [Purchase!]
-    @deprecated(
-      reason: "Query purchases separately by list ID to reduce query complexity"
-    )
   recurringInterval: Int
   recurringPattern: RecurringPattern
   reminderDate: DateTime
@@ -4980,10 +5271,6 @@ type ShoppingList {
   targetStore: Store
   targetStoreId: String
   templateName: String
-  templatesCreated: [ShoppingList!]
-    @deprecated(
-      reason: "Query templates separately to avoid circular references"
-    )
   totalCollaborators: Int!
   totalCost: Float!
   totalItems: Int!
@@ -5154,10 +5441,6 @@ type ShoppingListItem {
   purchasedById: String
   purchasedPrice: Float
   purchasedQuantity: Float
-  purchases: [Purchase!]
-    @deprecated(
-      reason: "Use purchasesConnection for pagination to reduce query complexity"
-    )
   purchasesConnection(
     after: String
     before: String
@@ -5500,6 +5783,17 @@ type Store {
 }
 
 """
+Cost breakdown by store
+"""
+type StoreCostBreakdown {
+  averageCostPerUnit: Float!
+  itemCount: Int!
+  storeId: String
+  storeName: String
+  totalSpent: Float!
+}
+
+"""
 Store information and contact details
 Cache: 30 minutes - store metadata changes rarely
 """
@@ -5684,19 +5978,12 @@ enum SyncOperation {
 
 input SyncPantryItemInput {
   acquisitionMethod: AcquisitionMethod
-  actualNetWeight: Float
-  actualNetWeightUnitId: String
-  autoReorderPoint: Float
-  batchNumber: String
-  bestByDate: String
   condition: ItemCondition
   costPerUnit: Float
   currentQuantity: Float
-  customCategory: String
   expirationAlert: Boolean
   expiresAt: String
   initialQuantity: Float
-  isAutoReorder: Boolean
   isComposted: Boolean
   isRecycled: Boolean
   itemBrand: String
@@ -5708,15 +5995,12 @@ input SyncPantryItemInput {
   itemNetWeight: Float
   itemUpc: String
   lastUsedAt: DateTime
-  lotNumber: String
   lowStockAlert: Boolean
-  openedAt: String
+  packageWeight: Float
+  packageWeightUnitId: String
   pantryId: ID!
-  priority: Int
   purchaseId: String
-  quantityInput: String
-  reservedQuantity: Float
-  storageLocation: String
+  storageLocationId: String
   storageNotes: String
   storageState: StorageState
   storeId: String
@@ -5725,7 +6009,6 @@ input SyncPantryItemInput {
   unitId: String
   unitName: String
   unitSymbol: String
-  usageFrequency: UsageFrequency
   version: Int
   wasteAmount: Float
   wasteReason: WasteReason
@@ -5826,6 +6109,15 @@ type SyncShoppingListItemResult {
   Whether this was a create (true) or update (false) operation
   """
   wasCreated: Boolean!
+}
+
+"""
+Time series data point for charting usage/waste trends
+"""
+type TimeSeriesDataPoint {
+  count: Int!
+  date: DateTime!
+  value: Float!
 }
 
 interface Timestamped {
@@ -6080,6 +6372,7 @@ input UpdateItemInput {
   categories: [CategoryInput!]
   categoryIds: [String!]
   defaultUnit: String
+  density: Float
   description: String
   displayUnitId: String
   displayUnitName: String
@@ -6092,11 +6385,15 @@ input UpdateItemInput {
   name: String
   netWeight: Float
   popularity: Int
+  preferredTrackingUnitId: String
   primaryUpc: String
   removeCategoryIds: [String!]
   removeStoreSkuIds: [String!]
   removeTags: [String!]
   removeUnitIds: [String!]
+  servingSize: Float
+  servingSizeUnit: String
+  servingsPerPackage: Int
   shelfLifeDays: Int
   showInOnboarding: Boolean
   status: ItemStatus
@@ -6222,29 +6519,22 @@ input UpdatePantryInput {
 }
 
 input UpdatePantryItemInput {
-  actualNetWeight: Float
-  actualNetWeightUnitId: String
-  autoReorderPoint: Float
-  bestByDate: String
   condition: ItemCondition
   currentQuantity: Float
-  customCategory: String
   expirationAlert: Boolean
   expiresAt: String
-  isAutoReorder: Boolean
   isComposted: Boolean
   isRecycled: Boolean
   lastUsedAt: DateTime
   lowStockAlert: Boolean
-  openedAt: String
-  priority: Int
-  quantityInput: String
-  reservedQuantity: Float
-  storageLocation: String
+  packageWeight: Float
+  packageWeightUnitId: String
+  storageLocationId: String
   storageNotes: String
   storageState: StorageState
   tags: [String!]
-  usageFrequency: UsageFrequency
+  unitId: String
+  unitName: String
   version: Int
   wasteAmount: Float
   wasteReason: WasteReason
@@ -6503,13 +6793,62 @@ type UpsertItemResult {
   mapping: ExternalSourceMapping!
 }
 
-enum UsageFrequency {
-  DAILY
-  MONTHLY
-  RARELY
-  SEASONAL
-  UNKNOWN
-  WEEKLY
+"""
+Comprehensive usage analytics for a pantry
+"""
+type UsageAnalytics {
+  averageUsagePerDay: Float!
+  periodEnd: DateTime!
+  periodStart: DateTime!
+  topUsedItems: [UsageByItem!]!
+  totalQuantityUsed: Float!
+  totalUsageCount: Int!
+  usageByPurpose: [UsageByPurpose!]!
+  usageBySource: [UsageBySource!]!
+  usageTrend: [TimeSeriesDataPoint!]!
+}
+
+"""
+Usage breakdown by item - top consumed items
+"""
+type UsageByItem {
+  count: Int!
+  imageUrl: String
+  itemId: String!
+  itemName: String!
+  totalQuantity: Float!
+  unitName: String
+}
+
+"""
+Usage breakdown by purpose (cooking, snack, waste, etc.)
+"""
+type UsageByPurpose {
+  count: Int!
+  percentage: Float!
+  purpose: UsagePurpose!
+  totalQuantity: Float!
+}
+
+"""
+Usage breakdown by source (manual, cooking log, meal plan, recipe)
+"""
+type UsageBySource {
+  count: Int!
+  percentage: Float!
+  source: UsageSource!
+  totalQuantity: Float!
+}
+
+"""
+Usage breakdown by unit for mixed-unit tracking
+"""
+type UsageByUnit {
+  count: Int!
+  totalQuantity: Float!
+  unitId: String!
+  unitName: String!
+  unitSymbol: String!
 }
 
 enum UsagePurpose {
@@ -6517,6 +6856,7 @@ enum UsagePurpose {
   GENERAL
   GIFT
   MEAL_PREP
+  RESTOCK
   SNACK
   TRANSFER
   WASTE
@@ -6526,10 +6866,11 @@ enum UsagePurpose {
 Source that triggered pantry item usage
 """
 enum UsageSource {
-  COOKING_LOG
   MANUAL
-  MEAL_PLAN
-  RECIPE
+  RECIPE_AUTO
+  RECIPE_MANUAL
+  TRANSFER
+  WASTE
 }
 
 """
@@ -6813,6 +7154,48 @@ enum Visibility {
   PRIVATE
   PUBLIC
   RESTRICTED
+}
+
+"""
+Comprehensive waste analytics for a pantry
+"""
+type WasteAnalytics {
+  averageWastePerDay: Float!
+  composted: Float!
+  periodEnd: DateTime!
+  periodStart: DateTime!
+  recycled: Float!
+  topWastedItems: [WasteByItem!]!
+  totalWasteCount: Int!
+  totalWasteQuantity: Float!
+  totalWasteValue: Float!
+  wasteByReason: [WasteByReason!]!
+  wasteRate: Float!
+  wasteTrend: [TimeSeriesDataPoint!]!
+}
+
+"""
+Waste breakdown by item - most wasted items
+"""
+type WasteByItem {
+  count: Int!
+  estimatedValue: Float
+  imageUrl: String
+  itemId: String!
+  itemName: String!
+  totalQuantity: Float!
+  unitName: String
+}
+
+"""
+Waste breakdown by reason (expired, spoiled, etc.)
+"""
+type WasteByReason {
+  count: Int!
+  estimatedValue: Float
+  percentage: Float!
+  reason: WasteReason!
+  totalQuantity: Float!
 }
 
 enum WasteReason {

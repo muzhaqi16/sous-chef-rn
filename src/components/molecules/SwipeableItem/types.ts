@@ -1,3 +1,4 @@
+import { SharedValue } from 'react-native-reanimated';
 import {Icon} from '#/utils/iconUtils';
 
 export interface SwipeableItemProps {
@@ -9,6 +10,7 @@ export interface SwipeableItemProps {
   onTogglePurchase?: () => void;
   onConsume?: () => void;
   onWaste?: () => void;
+  onRestock?: () => void;
   isPurchased?: boolean;
   enableSwipeToDelete?: boolean;
   leftThreshold?: number;
@@ -36,8 +38,10 @@ export interface SwipeActionsProps {
   onTogglePurchase?: () => void;
   onConsume?: () => void;
   onWaste?: () => void;
+  onRestock?: () => void;
   isPurchased?: boolean;
   onActionPress?: (action: 'edit' | 'delete') => void;
   swipeableRef?: React.RefObject<any>;
   testIDPrefix?: string;
+  progress?: SharedValue<number>;
 }

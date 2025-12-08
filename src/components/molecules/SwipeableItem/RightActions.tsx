@@ -1,31 +1,51 @@
 import React from 'react';
 import Reanimated from 'react-native-reanimated';
-import { ActionButton } from './ActionButton';
+import { AnimatedActionButton } from './AnimatedActionButton';
 import { useUnistyles } from 'react-native-unistyles';
 import { styles } from './styles';
 import { SwipeActionsProps } from './types';
 
+// Calculate container width based on number of buttons
+const getContainerWidth = (buttonCount: number): number => {
+  if (buttonCount === 1) return 80;
+  if (buttonCount === 2) return 120;
+  return 180; // 3 buttons
+};
+
 export const RightActions: React.FC<SwipeActionsProps> = React.memo(
-  ({ onEdit, onDelete, onActionPress, testIDPrefix }) => {
+  ({ onEdit, onDelete, onActionPress, testIDPrefix, progress }) => {
     const { theme } = useUnistyles();
+
+    // Calculate index for delete button based on whether edit is shown
+    const hasEdit = !!onEdit;
+    const hasDelete = !!onDelete;
+    const buttonCount = (hasEdit ? 1 : 0) + (hasDelete ? 1 : 0);
+
     return (
-      <Reanimated.View style={styles.actionsContainer} pointerEvents="box-none">
+      <Reanimated.View
+        style={[styles.actionsContainer, { width: getContainerWidth(buttonCount) }]}
+        pointerEvents="box-none"
+      >
         {onEdit && (
-          <ActionButton
+          <AnimatedActionButton
             onPress={() => onActionPress?.('edit')}
             icon="edit"
             backgroundColor={theme.colors.info}
             circular={true}
             testID={testIDPrefix ? `${testIDPrefix}-edit` : undefined}
+            progress={progress}
+            index={0}
           />
         )}
         {onDelete && (
-          <ActionButton
+          <AnimatedActionButton
             onPress={() => onActionPress?.('delete')}
             icon="delete"
             backgroundColor={theme.colors.danger}
             circular={true}
             testID={testIDPrefix ? `${testIDPrefix}-delete` : undefined}
+            progress={progress}
+            index={hasEdit ? 1 : 0}
           />
         )}
       </Reanimated.View>

@@ -432,6 +432,12 @@ mutation UpdateCollaboratorRole(
   )
 }
 
+mutation MoveShoppingItemToPantry($input: MoveShoppingItemToPantryInput!) {
+  moveShoppingItemToPantry(input: $input) {
+    ...PantryItemFragment
+  }
+}
+
 # ============================================
 # OFFLINE SYNC MUTATIONS
 # ============================================

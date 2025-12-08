@@ -6,7 +6,7 @@ import React, {
   useState,
 } from 'react';
 import { Alert, View } from 'react-native';
-import type { Swipeable } from 'react-native-gesture-handler';
+import { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { PaginationFooter } from '#/components/organisms/PaginationFooter';
 import { useAppNavigation } from '#hooks';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
@@ -26,6 +26,7 @@ import {
   useGetHomeBasicQuery,
   useCreatePantryItemUsageMutation,
   useRecordPantryItemWasteMutation,
+  useRestockPantryItemMutation,
   UsagePurpose,
   WasteReason,
 } from '#generated';
@@ -43,6 +44,7 @@ import {
 import { PantryContent } from '#components/pantry';
 import { ConsumePantryItemModal } from '#components/modals/ConsumePantryItemModal';
 import { RecordWastePantryItemModal } from '#components/modals/RecordWastePantryItemModal';
+import { RestockPantryItemModal } from '#components/modals/RestockPantryItemModal';
 import type { ItemSelectorRef } from '#components/organisms/AnimatedItemSelector';
 import { normalizeHome } from '#/utils/connectionUtils';
 import { PantryErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
@@ -64,10 +66,14 @@ const PantryMainScreen: React.FC = React.memo(() => {
   });
 
   // PERFORMANCE: Use grouped selector with useShallow to prevent infinite loops (Zustand v5)
-  const { selectedPantryId, setSelectedPantryId } = useAppStore(useShallow(selectPantryState));
+  const { selectedPantryId, setSelectedPantryId } = useAppStore(
+    useShallow(selectPantryState),
+  );
   const showBiometricSetup = useAppStore(state => state.showBiometricSetup);
   const selectorRef = useRef<ItemSelectorRef>(null);
-  const openSwipeableRef = useRef<React.RefObject<Swipeable> | null>(null);
+
+  // Store the ref object
+  const openSwipeableRef = useRef<SwipeableMethods | null>(null);
 
   // Consume item state
   const [consumeModalVisible, setConsumeModalVisible] = useState(false);
@@ -77,6 +83,11 @@ const PantryMainScreen: React.FC = React.memo(() => {
   // Waste item state
   const [wasteModalVisible, setWasteModalVisible] = useState(false);
   const [selectedItemForWaste, setSelectedItemForWaste] = useState<any>(null);
+
+  // Restock item state
+  const [restockModalVisible, setRestockModalVisible] = useState(false);
+  const [selectedItemForRestock, setSelectedItemForRestock] =
+    useState<any>(null);
 
   // Manage selector with overlay coordination
   const { handleOpenSelector, handleOverlayOpen, handleOverlayClose } =
@@ -209,6 +220,18 @@ const PantryMainScreen: React.FC = React.memo(() => {
     },
   });
 
+  // Restock item mutation
+  const [restockPantryItem] = useRestockPantryItemMutation({
+    errorPolicy: 'all',
+    onError: error => {
+      console.error('Failed to restock pantry item:', error);
+      Alert.alert(
+        'Error',
+        error.message || 'Failed to restock item. Please try again.',
+      );
+    },
+  });
+
   // Handler to open consume modal
   const handleConsumeItem = useCallback(
     (itemId: string) => {
@@ -327,16 +350,74 @@ const PantryMainScreen: React.FC = React.memo(() => {
     setSelectedItemForWaste(null);
   }, []);
 
+  // Handler to open restock modal
+  const handleRestockItem = useCallback(
+    (itemId: string) => {
+      const item = pantryItems.find(p => p.id === itemId);
+      if (item) {
+        setSelectedItemForRestock(item);
+        setRestockModalVisible(true);
+      }
+    },
+    [pantryItems],
+  );
+
+  // Handler to confirm restock
+  const handleConfirmRestock = useCallback(
+    async (
+      quantity: number,
+      _quantityInput: string,
+      notes: string,
+      unitId?: string,
+      weight?: number,
+      weightUnitId?: string,
+    ) => {
+      if (!selectedItemForRestock) return;
+
+      try {
+        await restockPantryItem({
+          variables: {
+            id: selectedItemForRestock.id,
+            input: {
+              quantity,
+              unitId,
+              weight,
+              weightUnitId,
+              notes: notes || undefined,
+            },
+          },
+        });
+
+        // Reset state
+        setRestockModalVisible(false);
+        setSelectedItemForRestock(null);
+
+        // Refetch to get updated quantities
+        await refetch();
+      } catch (error) {
+        console.error('Error restocking pantry item:', error);
+      }
+    },
+    [selectedItemForRestock, restockPantryItem, refetch],
+  );
+
+  // Handler to close restock modal
+  const handleCloseRestockModal = useCallback(() => {
+    setRestockModalVisible(false);
+    setSelectedItemForRestock(null);
+  }, []);
+
   // Handle swipeable item opening - ensure only one item is open at a time
   const handleSwipeableWillOpen = useCallback(
-    (ref: React.RefObject<Swipeable>) => {
-    if (openSwipeableRef.current && openSwipeableRef.current !== ref) {
-      // Close the previously open swipeable
-      openSwipeableRef.current.current?.close();
-    }
-    // Update to track the newly opening swipeable
-    openSwipeableRef.current = ref;
-  },
+    (ref: React.RefObject<SwipeableMethods>) => {
+      if (
+        openSwipeableRef.current &&
+        openSwipeableRef.current !== ref.current
+      ) {
+        openSwipeableRef.current?.close();
+      }
+      openSwipeableRef.current = ref.current;
+    },
     [],
   );
 
@@ -389,7 +470,12 @@ const PantryMainScreen: React.FC = React.memo(() => {
   // Show home switch hint when user has items and home is selected
   // BUT only if biometric setup modal is not showing (prevent modal overlap)
   useEffect(() => {
-    if (selectedHomeId && items.length > 0 && !homeSwitchHint.hasBeenShown && !showBiometricSetup) {
+    if (
+      selectedHomeId &&
+      items.length > 0 &&
+      !homeSwitchHint.hasBeenShown &&
+      !showBiometricSetup
+    ) {
       // Show hint after a delay to let UI settle
       const timer = setTimeout(() => {
         homeSwitchHint.show();
@@ -587,6 +673,7 @@ const PantryMainScreen: React.FC = React.memo(() => {
         onItemDelete={handleDeleteItem}
         onItemConsume={handleConsumeItem}
         onItemWaste={handleWasteItem}
+        onItemRestock={handleRestockItem}
         onRefresh={handleRefresh}
         onSwipeableWillOpen={handleSwipeableWillOpen}
         onEndReached={loadMore}
@@ -630,6 +717,12 @@ const PantryMainScreen: React.FC = React.memo(() => {
         pantryItem={selectedItemForWaste}
         onClose={handleCloseWasteModal}
         onConfirm={handleConfirmWaste}
+      />
+      <RestockPantryItemModal
+        visible={restockModalVisible}
+        pantryItem={selectedItemForRestock}
+        onClose={handleCloseRestockModal}
+        onConfirm={handleConfirmRestock}
       />
 
       {/* Home switch hint overlay */}

@@ -26,6 +26,17 @@ import { ShoppingListTabs } from '#/components/organisms/ShoppingListTabs';
 import { ShoppingListActionsProvider } from '#context/ShoppingListActionsContext';
 import { useScanner } from '#context';
 import { useUnistyles } from 'react-native-unistyles';
+import { MoveToPantryModal } from '#/components/modals/MoveToPantryModal';
+import {
+  useMoveShoppingItemToPantryMutation,
+  StorageState,
+  ShoppingListItemDisplayFragment,
+  BasicPantryFragment,
+} from '#generated';
+import { useAppStore, selectSelectedPantryId } from '#store/useAppStore';
+import { useDefaultHome } from '#hooks/home/useDefaultHome';
+import { normalizeHome } from '#/utils/connectionUtils';
+import { createAddToParentConnectionUpdater, createRemoveFromParentConnectionUpdater } from '#/apollo/utils';
 
 // Extracted hooks
 import { useShoppingListScreen } from '#/hooks/shoppingList/useShoppingListScreen';
@@ -117,6 +128,119 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
 
   // Local state
   const [refreshing, setRefreshing] = useState(false);
+
+  // Move to pantry modal state
+  const [moveToPantryModalVisible, setMoveToPantryModalVisible] = useState(false);
+  const [selectedItemForMove, setSelectedItemForMove] = useState<ShoppingListItemDisplayFragment | null>(null);
+
+  // Get home and pantries for moving items
+  const selectedPantryId = useAppStore(selectSelectedPantryId);
+  const { selectedHomeId, homes } = useDefaultHome();
+
+  // Get pantries for the current home
+  const pantries = useMemo(() => {
+    if (!selectedHomeId || !homes.length) return [];
+    const currentHome = homes.find(h => h.id === selectedHomeId);
+    if (!currentHome) return [];
+    const normalized = normalizeHome(currentHome);
+    return (normalized?.pantries || []) as BasicPantryFragment[];
+  }, [selectedHomeId, homes]);
+
+  // Ref to track the pantryId used in the mutation (for cache update)
+  const moveToPantryIdRef = useRef<string | null>(null);
+
+  // Move to pantry mutation
+  const [moveShoppingItemToPantry] = useMoveShoppingItemToPantryMutation({
+    update: (cache, { data }) => {
+      if (!data?.moveShoppingItemToPantry || !moveToPantryIdRef.current) return;
+
+      try {
+        // Add to pantry items cache
+        const addToPantryCache = createAddToParentConnectionUpdater(
+          'Pantry',
+          'itemsConnection',
+          'PantryItem',
+        );
+        addToPantryCache(cache, moveToPantryIdRef.current, data.moveShoppingItemToPantry);
+
+        // Remove from shopping list cache if removeFromList was true (default)
+        if (selectedItemForMove && currentListId) {
+          const removeFromShoppingListCache = createRemoveFromParentConnectionUpdater(
+            'ShoppingList',
+            'itemsConnection',
+            'ShoppingListItem',
+          );
+          removeFromShoppingListCache(cache, currentListId, selectedItemForMove.id);
+        }
+      } catch (error) {
+        console.warn('Cache update failed for moveShoppingItemToPantry:', error);
+      }
+    },
+    onError: (error) => {
+      Alert.alert('Error', error.message || 'Failed to move item to pantry');
+    },
+  });
+
+  // Handle move to pantry button press
+  const handleMoveToPantry = useCallback((itemId: string) => {
+    if (pantries.length === 0) {
+      Alert.alert(
+        'No Pantry Available',
+        'Please create a pantry in your home first.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    const item = items.find((i: any) => i.id === itemId);
+    if (item) {
+      setSelectedItemForMove(item as ShoppingListItemDisplayFragment);
+      setMoveToPantryModalVisible(true);
+    }
+  }, [items, pantries.length]);
+
+  // Handle confirm move to pantry
+  const handleConfirmMoveToPantry = useCallback(async (input: {
+    pantryId: string;
+    actualQuantity: number;
+    storageState?: StorageState;
+    expiresAt?: string;
+    removeFromList: boolean;
+  }) => {
+    if (!selectedItemForMove) return;
+
+    // Set the ref for cache update
+    moveToPantryIdRef.current = input.pantryId;
+
+    try {
+      await moveShoppingItemToPantry({
+        variables: {
+          input: {
+            shoppingListItemId: selectedItemForMove.id,
+            pantryId: input.pantryId,
+            actualQuantity: input.actualQuantity,
+            storageState: input.storageState,
+            expiresAt: input.expiresAt,
+            removeFromList: input.removeFromList,
+          },
+        },
+      });
+
+      Telemetry.trackEvent('shopping_item_moved_to_pantry', {
+        shopping_list_id: currentListId,
+        pantry_id: input.pantryId,
+        remove_from_list: input.removeFromList,
+      });
+    } catch (error) {
+      // Error handled by mutation onError
+    }
+  }, [selectedItemForMove, currentListId, moveShoppingItemToPantry]);
+
+  // Handle close move to pantry modal
+  const handleCloseMoveToPantryModal = useCallback(() => {
+    setMoveToPantryModalVisible(false);
+    setSelectedItemForMove(null);
+  }, []);
 
   // Track currently open swipeable across both unpurchased and purchased lists
   const openSwipeableRef =
@@ -356,6 +480,7 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
               ? undefined
               : handleSortOrderUpdate,
             onTogglePurchase: handleTogglePurchase,
+            onMoveToPantry: handleMoveToPantry,
             onRefresh: handleRefresh,
             refreshing,
             disabled: !!searchQuery.trim(),
@@ -380,6 +505,16 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
         {swipeHint.isVisible && (
           <SwipeHintOverlay onDismiss={swipeHint.dismiss} />
         )}
+
+        {/* Move to Pantry Modal */}
+        <MoveToPantryModal
+          visible={moveToPantryModalVisible}
+          shoppingListItem={selectedItemForMove}
+          pantries={pantries}
+          selectedPantryId={selectedPantryId}
+          onClose={handleCloseMoveToPantryModal}
+          onConfirm={handleConfirmMoveToPantry}
+        />
       </View>
     </ShoppingListActionsProvider>
   );

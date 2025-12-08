@@ -24,8 +24,8 @@ export const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.charade['950'],
     justifyContent: 'center',
     alignItems: 'center',
-    width: 180, // Fixed width for two buttons (consume + waste)
-    gap: theme.spacing.sm, // Space between buttons
+    width: 180, // Fixed width for three buttons (consume + waste + restock)
+    gap: theme.spacing.xs, // Reduced space between buttons
     borderTopRightRadius: 0, // Square connection to card
     borderBottomRightRadius: 0, // Square connection to card
     borderTopLeftRadius: 12, // Round the outer edge
@@ -44,7 +44,7 @@ export const styles = StyleSheet.create(theme => ({
     height: 45,
     borderRadius: 28,
     ...commonStyles.center,
-    marginHorizontal: 8,
+    marginHorizontal: 4,
     zIndex: 100, // Ensure button is above other elements for touch priority
   },
 

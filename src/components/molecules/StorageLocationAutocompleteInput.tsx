@@ -17,6 +17,14 @@ interface StorageLocation {
   } | null;
 }
 
+interface AddNewItem {
+  id: '__add_new__';
+  name: string;
+  isAddNew: true;
+}
+
+type LocationItem = StorageLocation | AddNewItem;
+
 interface StorageLocationAutocompleteInputProps {
   label?: string;
   value: string;
@@ -26,6 +34,7 @@ interface StorageLocationAutocompleteInputProps {
   error?: string;
   storageLocations: StorageLocation[];
   onStorageLocationSelected?: (locationId: string | null, location: StorageLocation | null) => void;
+  onAddNewLocation?: (name: string) => void;
 }
 
 export const StorageLocationAutocompleteInput: React.FC<StorageLocationAutocompleteInputProps> = ({
@@ -37,6 +46,7 @@ export const StorageLocationAutocompleteInput: React.FC<StorageLocationAutocompl
   error,
   storageLocations = [],
   onStorageLocationSelected,
+  onAddNewLocation,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -64,56 +74,115 @@ export const StorageLocationAutocompleteInput: React.FC<StorageLocationAutocompl
     });
   }, [filteredLocations]);
 
+  // Add "Add New" option when search term doesn't exactly match any existing location
+  const dataWithAddNew = useMemo((): LocationItem[] => {
+    if (searchTerm.length >= 2) {
+      const exactMatch = sortedLocations.some(
+        loc => loc.name.toLowerCase() === searchTerm.toLowerCase()
+      );
+      if (!exactMatch) {
+        // Add "Add New" option at the end of the list
+        return [
+          ...sortedLocations,
+          { id: '__add_new__', name: searchTerm, isAddNew: true as const },
+        ];
+      }
+    }
+    // If no search or exact match found, just return sorted locations
+    // But if there are no locations and user typed something, still show "Add New"
+    if (storageLocations.length === 0 && searchTerm.length >= 2) {
+      return [{ id: '__add_new__', name: searchTerm, isAddNew: true as const }];
+    }
+    return sortedLocations;
+  }, [sortedLocations, searchTerm, storageLocations.length]);
+
+  // Track if we have a selected location to avoid unnecessary state updates
+  const hasSelectionRef = React.useRef(false);
+
   const handleTextChange = (text: string) => {
     onChangeText(text);
     setSearchTerm(text);
-    // Clear location selection when user types manually - allows custom input
-    onStorageLocationSelected?.(null, null);
-  };
-
-  const handleSelectLocation = (location: StorageLocation) => {
-    // Build display name with parent if exists
-    const displayName = location.parentLocation
-      ? `${location.name} (${location.parentLocation.name})`
-      : location.name;
-
-    onChangeText(displayName);
-    setSearchTerm('');
-
-    if (onStorageLocationSelected) {
-      onStorageLocationSelected(location.id, location);
+    // Only clear location selection if we had one - avoids extra re-renders
+    if (hasSelectionRef.current) {
+      hasSelectionRef.current = false;
+      onStorageLocationSelected?.(null, null);
     }
   };
 
-  const renderLocationItem = (location: StorageLocation) => (
-    <TouchableOpacity
-      onPress={() => handleSelectLocation(location)}
-      style={styles.locationItem}
-      activeOpacity={0.7}
-    >
-      <View style={styles.locationContent}>
-        {location.icon && <Text style={styles.locationIcon}>{location.icon}</Text>}
-        <View style={styles.locationDetails}>
-          <View style={styles.locationNameRow}>
-            <Text style={styles.locationName}>{location.name}</Text>
-            {location.isDefault && (
-              <View style={styles.defaultBadge}>
-                <Text style={styles.defaultBadgeText}>Default</Text>
-              </View>
-            )}
+  const isAddNewItem = (item: LocationItem): item is AddNewItem => {
+    return 'isAddNew' in item && item.isAddNew === true;
+  };
+
+  const handleSelectItem = (item: LocationItem) => {
+    if (isAddNewItem(item)) {
+      // User selected "Add New" option
+      hasSelectionRef.current = false;
+      onChangeText(item.name);
+      setSearchTerm('');
+      onStorageLocationSelected?.(null, null);
+      onAddNewLocation?.(item.name);
+    } else {
+      // User selected an existing location
+      hasSelectionRef.current = true;
+      const displayName = item.parentLocation
+        ? `${item.name} (${item.parentLocation.name})`
+        : item.name;
+
+      onChangeText(displayName);
+      setSearchTerm('');
+      onStorageLocationSelected?.(item.id, item);
+    }
+  };
+
+  const renderLocationItem = (item: LocationItem) => {
+    if (isAddNewItem(item)) {
+      return (
+        <TouchableOpacity
+          onPress={() => handleSelectItem(item)}
+          style={[styles.locationItem, styles.addNewItem]}
+          activeOpacity={0.7}
+        >
+          <View style={styles.locationContent}>
+            <Text style={styles.addNewIcon}>+</Text>
+            <View style={styles.locationDetails}>
+              <Text style={styles.addNewText}>Add "{item.name}"</Text>
+              <Text style={styles.addNewSubtext}>Create new storage location</Text>
+            </View>
           </View>
-          {location.parentLocation && (
-            <Text style={styles.locationSubtext}>
-              Inside {location.parentLocation.name}
+        </TouchableOpacity>
+      );
+    }
+
+    return (
+      <TouchableOpacity
+        onPress={() => handleSelectItem(item)}
+        style={styles.locationItem}
+        activeOpacity={0.7}
+      >
+        <View style={styles.locationContent}>
+          {item.icon && <Text style={styles.locationIcon}>{item.icon}</Text>}
+          <View style={styles.locationDetails}>
+            <View style={styles.locationNameRow}>
+              <Text style={styles.locationName}>{item.name}</Text>
+              {item.isDefault && (
+                <View style={styles.defaultBadge}>
+                  <Text style={styles.defaultBadgeText}>Default</Text>
+                </View>
+              )}
+            </View>
+            {item.parentLocation && (
+              <Text style={styles.locationSubtext}>
+                Inside {item.parentLocation.name}
+              </Text>
+            )}
+            <Text style={styles.locationTypeText}>
+              {item.type.replace(/_/g, ' ')}
             </Text>
-          )}
-          <Text style={styles.locationTypeText}>
-            {location.type.replace(/_/g, ' ')}
-          </Text>
+          </View>
         </View>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <BottomSheetAutocompleteInput
@@ -125,13 +194,13 @@ export const StorageLocationAutocompleteInput: React.FC<StorageLocationAutocompl
       error={error}
       title="Select a storage location"
       searchPlaceholder="Type to search storage locations..."
-      data={sortedLocations}
+      data={dataWithAddNew}
       loading={false}
       renderItem={renderLocationItem}
-      keyExtractor={(item: StorageLocation) => item.id}
-      onSelectItem={handleSelectLocation}
-      emptyText="No storage locations found"
-      emptySubtext={searchTerm.length >= 2 ? `Continue typing to use "${searchTerm}" as a custom location` : 'Type at least 2 characters to search'}
+      keyExtractor={(item: LocationItem) => item.id}
+      onSelectItem={handleSelectItem}
+      emptyText={storageLocations.length === 0 ? "No storage locations yet" : "No matching locations"}
+      emptySubtext={searchTerm.length >= 2 ? `Tap "Add" below to create "${searchTerm}"` : 'Type at least 2 characters to search or add new'}
       onSearchChange={setSearchTerm}
     />
   );
@@ -143,6 +212,11 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     backgroundColor: theme.colors.surface,
   },
+  addNewItem: {
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceVariant,
+  },
   locationContent: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -152,6 +226,13 @@ const styles = StyleSheet.create(theme => ({
     fontSize: 24,
     width: 32,
     textAlign: 'center',
+  },
+  addNewIcon: {
+    fontSize: 24,
+    width: 32,
+    textAlign: 'center',
+    color: theme.colors.primary,
+    fontWeight: '600',
   },
   locationDetails: {
     flex: 1,
@@ -166,6 +247,16 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.typography.fontSize.base,
     fontWeight: '600',
     color: theme.colors.textPrimary,
+  },
+  addNewText: {
+    fontSize: theme.typography.fontSize.base,
+    fontWeight: '600',
+    color: theme.colors.primary,
+    marginBottom: theme.spacing.xs,
+  },
+  addNewSubtext: {
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.textSecondary,
   },
   defaultBadge: {
     paddingHorizontal: theme.spacing.xs,

@@ -48,13 +48,12 @@ export enum AccessLevel {
 }
 
 export enum AcquisitionMethod {
-  BulkSplit = 'BULK_SPLIT',
-  Found = 'FOUND',
+  BarcodeScan = 'BARCODE_SCAN',
   Gifted = 'GIFTED',
   Homegrown = 'HOMEGROWN',
-  Leftover = 'LEFTOVER',
+  Other = 'OTHER',
   Purchased = 'PURCHASED',
-  Transferred = 'TRANSFERRED',
+  ShoppingList = 'SHOPPING_LIST',
 }
 
 export type AddCollaboratorInput = {
@@ -103,6 +102,14 @@ export type AddWarningInput = {
   userId: Scalars['ID']['input'];
 };
 
+/** Cost analytics for additions/restocks */
+export type AdditionCostAnalytics = {
+  __typename?: 'AdditionCostAnalytics';
+  averageCostPerUnit: Scalars['Float']['output'];
+  costByStore: Array<StoreCostBreakdown>;
+  totalSpent: Scalars['Float']['output'];
+};
+
 /** Result of quantity aggregation (add/subtract) */
 export type AggregationResult = {
   __typename?: 'AggregationResult';
@@ -126,6 +133,16 @@ export enum AllergenSeverity {
   Severe = 'SEVERE',
   Trace = 'TRACE',
 }
+
+/** Input for filtering analytics queries by time period */
+export type AnalyticsFilterInput = {
+  /** Custom date range - overrides dateRange if both provided */
+  customRange?: InputMaybe<DateRangeInput>;
+  /** Predefined date range (TODAY, LAST_WEEK, LAST_MONTH, etc.) */
+  dateRange?: InputMaybe<DateRange>;
+  /** Limit for top items lists (default: 10) */
+  topItemsLimit?: InputMaybe<Scalars['Int']['input']>;
+};
 
 export enum AppTheme {
   Dark = 'DARK',
@@ -348,6 +365,29 @@ export enum CategoryType {
   System = 'SYSTEM',
 }
 
+/** Source of the change for audit purposes */
+export enum ChangeSource {
+  Api = 'API',
+  BarcodeScan = 'BARCODE_SCAN',
+  ExpirationAlert = 'EXPIRATION_ALERT',
+  MobileApp = 'MOBILE_APP',
+  RecipeCooking = 'RECIPE_COOKING',
+  ShoppingList = 'SHOPPING_LIST',
+  System = 'SYSTEM',
+  User = 'USER',
+  WebApp = 'WEB_APP',
+}
+
+/** Change types for pantry item modifications */
+export enum ChangeType {
+  Consumed = 'CONSUMED',
+  Created = 'CREATED',
+  Deleted = 'DELETED',
+  ExpirationUpdated = 'EXPIRATION_UPDATED',
+  LocationUpdated = 'LOCATION_UPDATED',
+  QuantityUpdated = 'QUANTITY_UPDATED',
+}
+
 /** Order by options for collaborators */
 export type CollaboratorOrderBy = {
   invitedAt?: InputMaybe<SortOrder>;
@@ -372,9 +412,27 @@ export enum CollaboratorStatus {
   Suspended = 'SUSPENDED',
 }
 
+export type CompatibleUnit = {
+  __typename?: 'CompatibleUnit';
+  conversionConfidence?: Maybe<Scalars['Float']['output']>;
+  conversionRatio?: Maybe<Scalars['Float']['output']>;
+  isConfigured: Scalars['Boolean']['output'];
+  isDefault: Scalars['Boolean']['output'];
+  source?: Maybe<ConversionSource>;
+  unit: Unit;
+  usageContexts: Array<UnitUsageContext>;
+};
+
 export type CompleteShoppingListInput = {
   completedShopDate?: InputMaybe<Scalars['DateTime']['input']>;
   totalCost?: InputMaybe<Scalars['Float']['input']>;
+};
+
+export type ConfirmedIngredientConsumptionInput = {
+  pantryItemId: Scalars['ID']['input'];
+  quantity: Scalars['Float']['input'];
+  recipeIngredientId: Scalars['ID']['input'];
+  unitId: Scalars['ID']['input'];
 };
 
 export type Connection = {
@@ -389,6 +447,15 @@ export type ConnectionPaginationInput = {
   before?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type ConsumptionFailure = {
+  __typename?: 'ConsumptionFailure';
+  availableQuantity: Scalars['Float']['output'];
+  pantryItemId: Scalars['ID']['output'];
+  reason: Scalars['String']['output'];
+  recipeIngredientId: Scalars['ID']['output'];
+  requestedQuantity: Scalars['Float']['output'];
 };
 
 /** Conversion availability result */
@@ -595,6 +662,7 @@ export type CreateItemInput = {
   categories?: InputMaybe<Array<CategoryInput>>;
   categoryIds?: InputMaybe<Array<Scalars['String']['input']>>;
   defaultUnit?: InputMaybe<Scalars['String']['input']>;
+  density?: InputMaybe<Scalars['Float']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
   displayUnitId?: InputMaybe<Scalars['String']['input']>;
   displayUnitName?: InputMaybe<Scalars['String']['input']>;
@@ -610,7 +678,11 @@ export type CreateItemInput = {
   metadata?: InputMaybe<Scalars['JSON']['input']>;
   name: Scalars['String']['input'];
   netWeight?: InputMaybe<Scalars['Float']['input']>;
+  preferredTrackingUnitId?: InputMaybe<Scalars['String']['input']>;
   primaryUpc?: InputMaybe<Scalars['String']['input']>;
+  servingSize?: InputMaybe<Scalars['Float']['input']>;
+  servingSizeUnit?: InputMaybe<Scalars['String']['input']>;
+  servingsPerPackage?: InputMaybe<Scalars['Int']['input']>;
   shelfLifeDays?: InputMaybe<Scalars['Int']['input']>;
   storageState?: InputMaybe<StorageState>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
@@ -728,17 +800,10 @@ export type CreatePantryInput = {
 
 export type CreatePantryItemInput = {
   acquisitionMethod?: InputMaybe<AcquisitionMethod>;
-  actualNetWeight?: InputMaybe<Scalars['Float']['input']>;
-  actualNetWeightUnitId?: InputMaybe<Scalars['String']['input']>;
-  autoReorderPoint?: InputMaybe<Scalars['Float']['input']>;
-  batchNumber?: InputMaybe<Scalars['String']['input']>;
-  bestByDate?: InputMaybe<Scalars['String']['input']>;
   condition?: InputMaybe<ItemCondition>;
   costPerUnit?: InputMaybe<Scalars['Float']['input']>;
-  customCategory?: InputMaybe<Scalars['String']['input']>;
   expiresAt?: InputMaybe<Scalars['String']['input']>;
   initialQuantity?: InputMaybe<Scalars['Float']['input']>;
-  isAutoReorder?: InputMaybe<Scalars['Boolean']['input']>;
   itemBrand?: InputMaybe<Scalars['String']['input']>;
   itemCategory?: InputMaybe<Scalars['String']['input']>;
   itemDescription?: InputMaybe<Scalars['String']['input']>;
@@ -748,12 +813,12 @@ export type CreatePantryItemInput = {
   itemNetWeight?: InputMaybe<Scalars['Float']['input']>;
   itemUpc?: InputMaybe<Scalars['String']['input']>;
   lastUsedAt?: InputMaybe<Scalars['DateTime']['input']>;
-  lotNumber?: InputMaybe<Scalars['String']['input']>;
+  packageWeight?: InputMaybe<Scalars['Float']['input']>;
+  packageWeightUnitId?: InputMaybe<Scalars['String']['input']>;
   pantryId: Scalars['ID']['input'];
-  priority?: InputMaybe<Scalars['Int']['input']>;
   purchaseId?: InputMaybe<Scalars['String']['input']>;
-  quantityInput?: InputMaybe<Scalars['String']['input']>;
-  storageLocation?: InputMaybe<Scalars['String']['input']>;
+  storageLocationId?: InputMaybe<Scalars['String']['input']>;
+  storageLocationName?: InputMaybe<Scalars['String']['input']>;
   storageNotes?: InputMaybe<Scalars['String']['input']>;
   storageState?: InputMaybe<StorageState>;
   storeId?: InputMaybe<Scalars['String']['input']>;
@@ -1900,10 +1965,8 @@ export type ItemCategory = {
 };
 
 export enum ItemCondition {
-  Excellent = 'EXCELLENT',
   Fair = 'FAIR',
   Good = 'GOOD',
-  Poor = 'POOR',
   Spoiled = 'SPOILED',
 }
 
@@ -2141,6 +2204,46 @@ export type ItemsResponse = {
   hasMore: Scalars['Boolean']['output'];
   items?: Maybe<Array<Item>>;
   totalCount: Scalars['Int']['output'];
+};
+
+/** Comprehensive ledger analytics combining additions and consumption */
+export type LedgerAnalytics = {
+  __typename?: 'LedgerAnalytics';
+  costAnalytics?: Maybe<AdditionCostAnalytics>;
+  granularity: PeriodGranularity;
+  periodData: Array<LedgerPeriodData>;
+  periodEnd: Scalars['DateTime']['output'];
+  periodStart: Scalars['DateTime']['output'];
+  summary: LedgerSummary;
+  topRestockedItems: Array<UsageByItem>;
+};
+
+/** Per-period ledger data for trend analysis */
+export type LedgerPeriodData = {
+  __typename?: 'LedgerPeriodData';
+  added: Scalars['Float']['output'];
+  additionCost?: Maybe<Scalars['Float']['output']>;
+  consumed: Scalars['Float']['output'];
+  net: Scalars['Float']['output'];
+  periodEnd: Scalars['DateTime']['output'];
+  periodLabel: Scalars['String']['output'];
+  periodStart: Scalars['DateTime']['output'];
+  wasted: Scalars['Float']['output'];
+};
+
+/** Ledger summary showing additions vs consumption */
+export type LedgerSummary = {
+  __typename?: 'LedgerSummary';
+  additionCount: Scalars['Int']['output'];
+  additionsByUnit: Array<UsageByUnit>;
+  consumptionByUnit: Array<UsageByUnit>;
+  consumptionCount: Scalars['Int']['output'];
+  netQuantity: Scalars['Float']['output'];
+  totalAdded: Scalars['Float']['output'];
+  totalConsumed: Scalars['Float']['output'];
+  totalWasted: Scalars['Float']['output'];
+  unitName?: Maybe<Scalars['String']['output']>;
+  wasteCount: Scalars['Int']['output'];
 };
 
 export enum ListActivityType {
@@ -2613,6 +2716,35 @@ export enum ModerationStatus {
   Warned = 'WARNED',
 }
 
+/**
+ * Input for moving a shopping list item to the pantry.
+ * Creates a PantryItem from a ShoppingListItem after purchase.
+ */
+export type MoveShoppingItemToPantryInput = {
+  /** Actual quantity purchased (may differ from planned) */
+  actualQuantity: Scalars['Float']['input'];
+  /** Unit ID for the quantity (defaults to shopping item's unit) */
+  actualUnitId?: InputMaybe<Scalars['ID']['input']>;
+  /** Cost per unit (optional) */
+  costPerUnit?: InputMaybe<Scalars['Float']['input']>;
+  /** Expiration date (optional) */
+  expiresAt?: InputMaybe<Scalars['DateTime']['input']>;
+  /** Additional notes */
+  notes?: InputMaybe<Scalars['String']['input']>;
+  /** ID of the target pantry */
+  pantryId: Scalars['ID']['input'];
+  /** Whether to remove the item from the shopping list after moving (default: true) */
+  removeFromList?: InputMaybe<Scalars['Boolean']['input']>;
+  /** ID of the shopping list item to move */
+  shoppingListItemId: Scalars['ID']['input'];
+  /** Storage location ID (optional) */
+  storageLocationId?: InputMaybe<Scalars['ID']['input']>;
+  /** Storage state (FROZEN, REFRIGERATED, AMBIENT, NONE) */
+  storageState?: InputMaybe<StorageState>;
+  /** Total cost paid (optional) */
+  totalCost?: InputMaybe<Scalars['Float']['input']>;
+};
+
 export type MoveShoppingListItemInput = {
   afterItemId?: InputMaybe<Scalars['ID']['input']>;
   beforeItemId?: InputMaybe<Scalars['ID']['input']>;
@@ -2656,6 +2788,7 @@ export type Mutation = {
   completeShoppingList: ShoppingList;
   confirmItemImageUpload: Scalars['String']['output'];
   confirmProfileImageUpload: Scalars['String']['output'];
+  confirmRecipeConsumption: RecipeConsumptionResult;
   createBrand: Brand;
   createBulkPurchases: Array<Purchase>;
   createBulkStores: Array<Store>;
@@ -2761,6 +2894,12 @@ export type Mutation = {
   /** Mark recipe as cooked and optionally deduct from pantry */
   markRecipeAsCooked: CookingLog;
   mergeItems: Item;
+  /**
+   * Move a shopping list item to the pantry after purchase.
+   * Creates a PantryItem with full traceability back to the shopping list item.
+   * Optionally removes the item from the shopping list.
+   */
+  moveShoppingItemToPantry: PantryItem;
   moveShoppingListItem: ShoppingListItem;
   openPantryItem: PantryItem;
   putUnderReview: UserModeration;
@@ -2798,6 +2937,11 @@ export type Mutation = {
   resendVerificationEmail: Scalars['Boolean']['output'];
   /** Reset password using token from email */
   resetPassword: ResetPasswordResponse;
+  /**
+   * Restock a pantry item - adds quantity and creates a ledger record.
+   * Use this when replenishing an existing pantry item.
+   */
+  restockPantryItem: PantryItemUsage;
   restoreItem: Item;
   reviewAppeal: UserModeration;
   revokeHomeInvite: Scalars['Boolean']['output'];
@@ -3045,6 +3189,12 @@ export type MutationConfirmItemImageUploadArgs = {
 
 export type MutationConfirmProfileImageUploadArgs = {
   key: Scalars['String']['input'];
+};
+
+export type MutationConfirmRecipeConsumptionArgs = {
+  consumptions: Array<ConfirmedIngredientConsumptionInput>;
+  pantryId: Scalars['ID']['input'];
+  recipeId: Scalars['ID']['input'];
 };
 
 export type MutationCreateBrandArgs = {
@@ -3436,6 +3586,10 @@ export type MutationMergeItemsArgs = {
   primaryId: Scalars['ID']['input'];
 };
 
+export type MutationMoveShoppingItemToPantryArgs = {
+  input: MoveShoppingItemToPantryInput;
+};
+
 export type MutationMoveShoppingListItemArgs = {
   input: MoveShoppingListItemInput;
 };
@@ -3565,6 +3719,11 @@ export type MutationResendVerificationEmailArgs = {
 export type MutationResetPasswordArgs = {
   newPassword: Scalars['String']['input'];
   token: Scalars['String']['input'];
+};
+
+export type MutationRestockPantryItemArgs = {
+  id: Scalars['ID']['input'];
+  input: RestockPantryItemInput;
 };
 
 export type MutationRestoreItemArgs = {
@@ -3917,7 +4076,7 @@ export type MutationUpdatePantryItemArgs = {
 
 export type MutationUpdatePantryItemLocationArgs = {
   id: Scalars['ID']['input'];
-  storageLocation: Scalars['String']['input'];
+  storageLocationId: Scalars['String']['input'];
   version?: InputMaybe<Scalars['Int']['input']>;
 };
 
@@ -4472,28 +4631,17 @@ export type PantryExpiringItemsAlertPayload = {
 export type PantryItem = {
   __typename?: 'PantryItem';
   acquisitionMethod: AcquisitionMethod;
-  actualNetWeight?: Maybe<Scalars['Float']['output']>;
-  actualNetWeightUnit?: Maybe<Unit>;
-  actualNetWeightUnitId?: Maybe<Scalars['String']['output']>;
   addedAt: Scalars['DateTime']['output'];
   addedBy?: Maybe<User>;
-  alertSentAt?: Maybe<Scalars['DateTime']['output']>;
-  autoReorderPoint?: Maybe<Scalars['Float']['output']>;
-  batchNumber?: Maybe<Scalars['String']['output']>;
-  bestByDate?: Maybe<Scalars['DateTime']['output']>;
   condition: ItemCondition;
   consumedQuantity: Scalars['Float']['output'];
   costPerUnit?: Maybe<Scalars['Float']['output']>;
   createdAt: Scalars['DateTime']['output'];
   currentQuantity: Scalars['Float']['output'];
-  customCategory?: Maybe<Scalars['String']['output']>;
-  displayFormat: DisplayFormat;
-  estimatedShelfLife?: Maybe<Scalars['Int']['output']>;
   expirationAlert: Scalars['Boolean']['output'];
   expiresAt?: Maybe<Scalars['DateTime']['output']>;
   id: Scalars['ID']['output'];
   initialQuantity: Scalars['Float']['output'];
-  isAutoReorder: Scalars['Boolean']['output'];
   isComposted: Scalars['Boolean']['output'];
   isRecycled: Scalars['Boolean']['output'];
   item: Item;
@@ -4501,23 +4649,19 @@ export type PantryItem = {
   itemName: Scalars['String']['output'];
   itemUpc?: Maybe<Scalars['String']['output']>;
   lastModifiedBy?: Maybe<User>;
-  lastReorderDate?: Maybe<Scalars['DateTime']['output']>;
   lastUsedAt?: Maybe<Scalars['DateTime']['output']>;
-  lotNumber?: Maybe<Scalars['String']['output']>;
   lowStockAlert: Scalars['Boolean']['output'];
   normalizedQuantity?: Maybe<Scalars['Float']['output']>;
   normalizedUnit?: Maybe<Unit>;
   normalizedUnitId?: Maybe<Scalars['String']['output']>;
-  openedAt?: Maybe<Scalars['DateTime']['output']>;
+  packageWeight?: Maybe<Scalars['Float']['output']>;
+  packageWeightUnit?: Maybe<Unit>;
+  packageWeightUnitId?: Maybe<Scalars['String']['output']>;
   pantry: Pantry;
   pantryId: Scalars['String']['output'];
   photos: Array<PantryItemPhoto>;
-  priority?: Maybe<Scalars['Int']['output']>;
   purchase?: Maybe<Purchase>;
   purchaseId?: Maybe<Scalars['String']['output']>;
-  quantityInput?: Maybe<Scalars['String']['output']>;
-  remainingValue?: Maybe<Scalars['Float']['output']>;
-  reservedQuantity: Scalars['Float']['output'];
   storageLocation?: Maybe<StorageLocation>;
   storageNotes?: Maybe<Scalars['String']['output']>;
   storageState: StorageState;
@@ -4529,12 +4673,45 @@ export type PantryItem = {
   unitId?: Maybe<Scalars['String']['output']>;
   unitName: Scalars['String']['output'];
   updatedAt?: Maybe<Scalars['DateTime']['output']>;
-  usageFrequency: UsageFrequency;
   usageRecords: Array<PantryItemUsage>;
   version?: Maybe<Scalars['Int']['output']>;
   wasteAmount: Scalars['Float']['output'];
   wasteDate?: Maybe<Scalars['DateTime']['output']>;
   wasteReason?: Maybe<WasteReason>;
+};
+
+/** Audit record of a change to a pantry item */
+export type PantryItemChange = {
+  __typename?: 'PantryItemChange';
+  changeType: ChangeType;
+  changedBy: User;
+  changedById: Scalars['ID']['output'];
+  createdAt: Scalars['DateTime']['output'];
+  deviceId?: Maybe<Scalars['String']['output']>;
+  field?: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  ipAddress?: Maybe<Scalars['String']['output']>;
+  metadata?: Maybe<Scalars['JSON']['output']>;
+  newValue?: Maybe<Scalars['String']['output']>;
+  oldValue?: Maybe<Scalars['String']['output']>;
+  pantryItem: PantryItem;
+  pantryItemId: Scalars['ID']['output'];
+  source: ChangeSource;
+};
+
+/** Connection type for paginated PantryItemChange results */
+export type PantryItemChangeConnection = {
+  __typename?: 'PantryItemChangeConnection';
+  edges: Array<PantryItemChangeEdge>;
+  pageInfo: PageInfo;
+  totalCount: Scalars['Int']['output'];
+};
+
+/** Edge type for PantryItemChange pagination */
+export type PantryItemChangeEdge = {
+  __typename?: 'PantryItemChangeEdge';
+  cursor: Scalars['String']['output'];
+  node: PantryItemChange;
 };
 
 export type PantryItemChangedPayload = {
@@ -4567,7 +4744,6 @@ export type PantryItemFilters = {
   expirationDays?: InputMaybe<Scalars['Int']['input']>;
   expiringSoon?: InputMaybe<Scalars['Boolean']['input']>;
   itemId?: InputMaybe<Scalars['String']['input']>;
-  lowStock?: InputMaybe<Scalars['Boolean']['input']>;
   search?: InputMaybe<Scalars['String']['input']>;
   storageState?: InputMaybe<StorageState>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
@@ -4593,8 +4769,12 @@ export type PantryItemPhoto = {
 
 export type PantryItemUsage = {
   __typename?: 'PantryItemUsage';
+  conversionConfidence?: Maybe<Scalars['Float']['output']>;
+  conversionRatio?: Maybe<Scalars['Float']['output']>;
+  conversionSource?: Maybe<Scalars['String']['output']>;
   cookingLog?: Maybe<CookingLog>;
   cookingLogId?: Maybe<Scalars['String']['output']>;
+  costPerUnit?: Maybe<Scalars['Float']['output']>;
   id: Scalars['ID']['output'];
   mealPlanItem?: Maybe<MealPlanItem>;
   mealPlanItemId?: Maybe<Scalars['String']['output']>;
@@ -4604,6 +4784,9 @@ export type PantryItemUsage = {
   quantityUsed: Scalars['Float']['output'];
   recipe?: Maybe<Recipe>;
   recipeId?: Maybe<Scalars['String']['output']>;
+  store?: Maybe<Store>;
+  storeId?: Maybe<Scalars['String']['output']>;
+  totalCost?: Maybe<Scalars['Float']['output']>;
   usageSource: UsageSource;
   usageUnit?: Maybe<Unit>;
   usageUnitId?: Maybe<Scalars['String']['output']>;
@@ -4681,6 +4864,13 @@ export type ParentCategorySuggestion = {
   slug?: Maybe<Scalars['String']['output']>;
   type: CategoryType;
 };
+
+/** Period granularity for ledger analytics */
+export enum PeriodGranularity {
+  Daily = 'DAILY',
+  Monthly = 'MONTHLY',
+  Weekly = 'WEEKLY',
+}
 
 export enum PhotoType {
   Condition = 'CONDITION',
@@ -4886,6 +5076,7 @@ export type Query = {
   categoryBySlug?: Maybe<Category>;
   checkItemAvailability?: Maybe<Array<ItemAvailability>>;
   compareItemPrices?: Maybe<Array<StorePriceComparison>>;
+  compatibleUnitsForItem: Array<CompatibleUnit>;
   /**
    * Convert quantity between units with item context
    * Supports both same-type (cup→tbsp) and cross-type (cup→gram) conversions
@@ -4945,6 +5136,7 @@ export type Query = {
   loginHistoryForUser: Array<LoginHistory>;
   loginHistoryStats: LoginHistoryStats;
   lowBatteryDevices: Array<Device>;
+  matchRecipeIngredientsToPantry: Array<RecipeIngredientMatch>;
   me?: Maybe<User>;
   mealPlan?: Maybe<MealPlan>;
   mealPlans: Array<MealPlan>;
@@ -4978,8 +5170,33 @@ export type Query = {
   pantries: Array<Pantry>;
   pantry?: Maybe<Pantry>;
   pantryItem: PantryItem;
+  /**
+   * Get the change history for a specific pantry item.
+   * Useful for audit trails and tracking item modifications over time.
+   */
+  pantryItemHistory: PantryItemChangeConnection;
+  /**
+   * Get ledger summary for a specific pantry item showing total added, consumed, and wasted.
+   * Handles mixed units by providing breakdown per unit.
+   */
+  pantryItemLedger: LedgerSummary;
   pantryItemUsage: Array<PantryItemUsage>;
+  /**
+   * Get comprehensive ledger analytics for a pantry showing additions vs consumption over time.
+   * Includes cost tracking for restocks and per-period breakdowns.
+   */
+  pantryLedgerAnalytics: LedgerAnalytics;
   pantryStats: PantryStats;
+  /**
+   * Get comprehensive usage analytics for a pantry
+   * Useful for building usage pattern charts and reports
+   */
+  pantryUsageAnalytics: UsageAnalytics;
+  /**
+   * Get comprehensive waste analytics for a pantry
+   * Useful for building waste tracking charts and reports
+   */
+  pantryWasteAnalytics: WasteAnalytics;
   /**
    * Parse fractional input string to decimal
    * Handles "1/4", "1 1/4", "0.25" formats
@@ -5130,6 +5347,11 @@ export type QueryCheckItemAvailabilityArgs = {
 export type QueryCompareItemPricesArgs = {
   itemId: Scalars['ID']['input'];
   storeIds?: InputMaybe<Array<Scalars['String']['input']>>;
+};
+
+export type QueryCompatibleUnitsForItemArgs = {
+  currentUnitId?: InputMaybe<Scalars['ID']['input']>;
+  itemId: Scalars['ID']['input'];
 };
 
 export type QueryConvertQuantityArgs = {
@@ -5331,6 +5553,12 @@ export type QueryLowBatteryDevicesArgs = {
   userId: Scalars['ID']['input'];
 };
 
+export type QueryMatchRecipeIngredientsToPantryArgs = {
+  pantryId: Scalars['ID']['input'];
+  recipeId: Scalars['ID']['input'];
+  servings?: InputMaybe<Scalars['Int']['input']>;
+};
+
 export type QueryMealPlanArgs = {
   id: Scalars['ID']['input'];
 };
@@ -5430,11 +5658,41 @@ export type QueryPantryItemArgs = {
   id: Scalars['ID']['input'];
 };
 
+export type QueryPantryItemHistoryArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
+  pantryItemId: Scalars['ID']['input'];
+};
+
+export type QueryPantryItemLedgerArgs = {
+  filter?: InputMaybe<AnalyticsFilterInput>;
+  pantryItemId: Scalars['ID']['input'];
+};
+
 export type QueryPantryItemUsageArgs = {
   pantryItemId: Scalars['ID']['input'];
 };
 
+export type QueryPantryLedgerAnalyticsArgs = {
+  filter?: InputMaybe<AnalyticsFilterInput>;
+  granularity?: InputMaybe<PeriodGranularity>;
+  itemId?: InputMaybe<Scalars['String']['input']>;
+  pantryId: Scalars['ID']['input'];
+};
+
 export type QueryPantryStatsArgs = {
+  pantryId: Scalars['ID']['input'];
+};
+
+export type QueryPantryUsageAnalyticsArgs = {
+  filter?: InputMaybe<AnalyticsFilterInput>;
+  pantryId: Scalars['ID']['input'];
+};
+
+export type QueryPantryWasteAnalyticsArgs = {
+  filter?: InputMaybe<AnalyticsFilterInput>;
   pantryId: Scalars['ID']['input'];
 };
 
@@ -5805,6 +6063,16 @@ export type RecipeConnection = {
   totalCount: Scalars['Int']['output'];
 };
 
+export type RecipeConsumptionResult = {
+  __typename?: 'RecipeConsumptionResult';
+  consumedItems: Array<PantryItemUsage>;
+  cookingLog?: Maybe<CookingLog>;
+  failedItems: Array<ConsumptionFailure>;
+  success: Scalars['Boolean']['output'];
+  totalConsumed: Scalars['Int']['output'];
+  totalFailed: Scalars['Int']['output'];
+};
+
 /** Recipe connection for pagination */
 export type RecipeEdge = {
   __typename?: 'RecipeEdge';
@@ -5851,6 +6119,19 @@ export type RecipeIngredientInput = {
   unitId?: InputMaybe<Scalars['String']['input']>;
   usAmount?: InputMaybe<Scalars['Float']['input']>;
   usUnit?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type RecipeIngredientMatch = {
+  __typename?: 'RecipeIngredientMatch';
+  alternativeMatches: Array<PantryItem>;
+  availableQuantity: Scalars['Float']['output'];
+  ingredient: RecipeIngredient;
+  isAvailable: Scalars['Boolean']['output'];
+  matchConfidence: Scalars['Float']['output'];
+  matchedPantryItem?: Maybe<PantryItem>;
+  shortfall?: Maybe<Scalars['Float']['output']>;
+  suggestedQuantity: Scalars['Float']['output'];
+  suggestedUnit?: Maybe<Unit>;
 };
 
 export type RecipeIngredientSourceInput = {
@@ -6007,6 +6288,19 @@ export type ResetPasswordResponse = {
   success: Scalars['Boolean']['output'];
 };
 
+/** Input for restocking a pantry item - adds quantity and creates ledger record */
+export type RestockPantryItemInput = {
+  costPerUnit?: InputMaybe<Scalars['Float']['input']>;
+  notes?: InputMaybe<Scalars['String']['input']>;
+  quantity: Scalars['Float']['input'];
+  restockedAt?: InputMaybe<Scalars['DateTime']['input']>;
+  storeId?: InputMaybe<Scalars['String']['input']>;
+  totalCost?: InputMaybe<Scalars['Float']['input']>;
+  unitId?: InputMaybe<Scalars['String']['input']>;
+  weight?: InputMaybe<Scalars['Float']['input']>;
+  weightUnitId?: InputMaybe<Scalars['String']['input']>;
+};
+
 export enum RestrictionSeverity {
   Allergy = 'ALLERGY',
   Goal = 'GOAL',
@@ -6114,15 +6408,11 @@ export type ShareShoppingListInput = {
  */
 export type ShoppingList = {
   __typename?: 'ShoppingList';
-  /** @deprecated Use activitiesConnection for pagination to reduce query complexity */
-  activities?: Maybe<Array<ShoppingListActivity>>;
   activitiesConnection: ShoppingListActivityConnection;
   autoAddSuggestions: Scalars['Boolean']['output'];
   basedOnTemplate?: Maybe<ShoppingList>;
   budgetAmount?: Maybe<Scalars['Float']['output']>;
   category?: Maybe<Scalars['String']['output']>;
-  /** @deprecated Use collaboratorsConnection for pagination to reduce query complexity */
-  collaborators?: Maybe<Array<ShoppingListCollaborator>>;
   collaboratorsConnection: ShoppingListCollaboratorConnection;
   completedAt?: Maybe<Scalars['DateTime']['output']>;
   completedItems: Scalars['Int']['output'];
@@ -6138,8 +6428,6 @@ export type ShoppingList = {
   isPublic: Scalars['Boolean']['output'];
   isRecurring: Scalars['Boolean']['output'];
   isTemplate: Scalars['Boolean']['output'];
-  /** @deprecated Use itemsConnection for pagination to reduce query complexity */
-  items?: Maybe<Array<ShoppingListItem>>;
   itemsConnection: ShoppingListItemConnection;
   lastRecurredAt?: Maybe<Scalars['DateTime']['output']>;
   lastReminderSent?: Maybe<Scalars['DateTime']['output']>;
@@ -6151,8 +6439,6 @@ export type ShoppingList = {
   plannedShopDate?: Maybe<Scalars['DateTime']['output']>;
   priceTracking: Scalars['Boolean']['output'];
   priority: Scalars['Int']['output'];
-  /** @deprecated Query purchases separately by list ID to reduce query complexity */
-  purchases?: Maybe<Array<Purchase>>;
   recurringInterval?: Maybe<Scalars['Int']['output']>;
   recurringPattern?: Maybe<RecurringPattern>;
   reminderDate?: Maybe<Scalars['DateTime']['output']>;
@@ -6166,8 +6452,6 @@ export type ShoppingList = {
   targetStore?: Maybe<Store>;
   targetStoreId?: Maybe<Scalars['String']['output']>;
   templateName?: Maybe<Scalars['String']['output']>;
-  /** @deprecated Query templates separately to avoid circular references */
-  templatesCreated?: Maybe<Array<ShoppingList>>;
   totalCollaborators: Scalars['Int']['output'];
   totalCost: Scalars['Float']['output'];
   totalItems: Scalars['Int']['output'];
@@ -6376,8 +6660,6 @@ export type ShoppingListItem = {
   purchasedById?: Maybe<Scalars['String']['output']>;
   purchasedPrice?: Maybe<Scalars['Float']['output']>;
   purchasedQuantity?: Maybe<Scalars['Float']['output']>;
-  /** @deprecated Use purchasesConnection for pagination to reduce query complexity */
-  purchases?: Maybe<Array<Purchase>>;
   purchasesConnection: PurchaseConnection;
   quantity?: Maybe<Scalars['Float']['output']>;
   quantityInput?: Maybe<Scalars['String']['output']>;
@@ -6638,6 +6920,16 @@ export type Store = {
   storeSkus: Array<ItemStoreSku>;
   supportsPriceAPI: Scalars['Boolean']['output'];
   updatedAt: Scalars['DateTime']['output'];
+};
+
+/** Cost breakdown by store */
+export type StoreCostBreakdown = {
+  __typename?: 'StoreCostBreakdown';
+  averageCostPerUnit: Scalars['Float']['output'];
+  itemCount: Scalars['Int']['output'];
+  storeId?: Maybe<Scalars['String']['output']>;
+  storeName?: Maybe<Scalars['String']['output']>;
+  totalSpent: Scalars['Float']['output'];
 };
 
 /**
@@ -6982,19 +7274,12 @@ export enum SyncOperation {
 
 export type SyncPantryItemInput = {
   acquisitionMethod?: InputMaybe<AcquisitionMethod>;
-  actualNetWeight?: InputMaybe<Scalars['Float']['input']>;
-  actualNetWeightUnitId?: InputMaybe<Scalars['String']['input']>;
-  autoReorderPoint?: InputMaybe<Scalars['Float']['input']>;
-  batchNumber?: InputMaybe<Scalars['String']['input']>;
-  bestByDate?: InputMaybe<Scalars['String']['input']>;
   condition?: InputMaybe<ItemCondition>;
   costPerUnit?: InputMaybe<Scalars['Float']['input']>;
   currentQuantity?: InputMaybe<Scalars['Float']['input']>;
-  customCategory?: InputMaybe<Scalars['String']['input']>;
   expirationAlert?: InputMaybe<Scalars['Boolean']['input']>;
   expiresAt?: InputMaybe<Scalars['String']['input']>;
   initialQuantity?: InputMaybe<Scalars['Float']['input']>;
-  isAutoReorder?: InputMaybe<Scalars['Boolean']['input']>;
   isComposted?: InputMaybe<Scalars['Boolean']['input']>;
   isRecycled?: InputMaybe<Scalars['Boolean']['input']>;
   itemBrand?: InputMaybe<Scalars['String']['input']>;
@@ -7006,15 +7291,12 @@ export type SyncPantryItemInput = {
   itemNetWeight?: InputMaybe<Scalars['Float']['input']>;
   itemUpc?: InputMaybe<Scalars['String']['input']>;
   lastUsedAt?: InputMaybe<Scalars['DateTime']['input']>;
-  lotNumber?: InputMaybe<Scalars['String']['input']>;
   lowStockAlert?: InputMaybe<Scalars['Boolean']['input']>;
-  openedAt?: InputMaybe<Scalars['String']['input']>;
+  packageWeight?: InputMaybe<Scalars['Float']['input']>;
+  packageWeightUnitId?: InputMaybe<Scalars['String']['input']>;
   pantryId: Scalars['ID']['input'];
-  priority?: InputMaybe<Scalars['Int']['input']>;
   purchaseId?: InputMaybe<Scalars['String']['input']>;
-  quantityInput?: InputMaybe<Scalars['String']['input']>;
-  reservedQuantity?: InputMaybe<Scalars['Float']['input']>;
-  storageLocation?: InputMaybe<Scalars['String']['input']>;
+  storageLocationId?: InputMaybe<Scalars['String']['input']>;
   storageNotes?: InputMaybe<Scalars['String']['input']>;
   storageState?: InputMaybe<StorageState>;
   storeId?: InputMaybe<Scalars['String']['input']>;
@@ -7023,7 +7305,6 @@ export type SyncPantryItemInput = {
   unitId?: InputMaybe<Scalars['String']['input']>;
   unitName?: InputMaybe<Scalars['String']['input']>;
   unitSymbol?: InputMaybe<Scalars['String']['input']>;
-  usageFrequency?: InputMaybe<UsageFrequency>;
   version?: InputMaybe<Scalars['Int']['input']>;
   wasteAmount?: InputMaybe<Scalars['Float']['input']>;
   wasteReason?: InputMaybe<WasteReason>;
@@ -7090,6 +7371,14 @@ export type SyncShoppingListItemResult = {
   serverId?: Maybe<Scalars['ID']['output']>;
   /** Whether this was a create (true) or update (false) operation */
   wasCreated: Scalars['Boolean']['output'];
+};
+
+/** Time series data point for charting usage/waste trends */
+export type TimeSeriesDataPoint = {
+  __typename?: 'TimeSeriesDataPoint';
+  count: Scalars['Int']['output'];
+  date: Scalars['DateTime']['output'];
+  value: Scalars['Float']['output'];
 };
 
 export type Timestamped = {
@@ -7346,6 +7635,7 @@ export type UpdateItemInput = {
   categories?: InputMaybe<Array<CategoryInput>>;
   categoryIds?: InputMaybe<Array<Scalars['String']['input']>>;
   defaultUnit?: InputMaybe<Scalars['String']['input']>;
+  density?: InputMaybe<Scalars['Float']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
   displayUnitId?: InputMaybe<Scalars['String']['input']>;
   displayUnitName?: InputMaybe<Scalars['String']['input']>;
@@ -7358,11 +7648,15 @@ export type UpdateItemInput = {
   name?: InputMaybe<Scalars['String']['input']>;
   netWeight?: InputMaybe<Scalars['Float']['input']>;
   popularity?: InputMaybe<Scalars['Int']['input']>;
+  preferredTrackingUnitId?: InputMaybe<Scalars['String']['input']>;
   primaryUpc?: InputMaybe<Scalars['String']['input']>;
   removeCategoryIds?: InputMaybe<Array<Scalars['String']['input']>>;
   removeStoreSkuIds?: InputMaybe<Array<Scalars['String']['input']>>;
   removeTags?: InputMaybe<Array<Scalars['String']['input']>>;
   removeUnitIds?: InputMaybe<Array<Scalars['String']['input']>>;
+  servingSize?: InputMaybe<Scalars['Float']['input']>;
+  servingSizeUnit?: InputMaybe<Scalars['String']['input']>;
+  servingsPerPackage?: InputMaybe<Scalars['Int']['input']>;
   shelfLifeDays?: InputMaybe<Scalars['Int']['input']>;
   showInOnboarding?: InputMaybe<Scalars['Boolean']['input']>;
   status?: InputMaybe<ItemStatus>;
@@ -7488,29 +7782,22 @@ export type UpdatePantryInput = {
 };
 
 export type UpdatePantryItemInput = {
-  actualNetWeight?: InputMaybe<Scalars['Float']['input']>;
-  actualNetWeightUnitId?: InputMaybe<Scalars['String']['input']>;
-  autoReorderPoint?: InputMaybe<Scalars['Float']['input']>;
-  bestByDate?: InputMaybe<Scalars['String']['input']>;
   condition?: InputMaybe<ItemCondition>;
   currentQuantity?: InputMaybe<Scalars['Float']['input']>;
-  customCategory?: InputMaybe<Scalars['String']['input']>;
   expirationAlert?: InputMaybe<Scalars['Boolean']['input']>;
   expiresAt?: InputMaybe<Scalars['String']['input']>;
-  isAutoReorder?: InputMaybe<Scalars['Boolean']['input']>;
   isComposted?: InputMaybe<Scalars['Boolean']['input']>;
   isRecycled?: InputMaybe<Scalars['Boolean']['input']>;
   lastUsedAt?: InputMaybe<Scalars['DateTime']['input']>;
   lowStockAlert?: InputMaybe<Scalars['Boolean']['input']>;
-  openedAt?: InputMaybe<Scalars['String']['input']>;
-  priority?: InputMaybe<Scalars['Int']['input']>;
-  quantityInput?: InputMaybe<Scalars['String']['input']>;
-  reservedQuantity?: InputMaybe<Scalars['Float']['input']>;
-  storageLocation?: InputMaybe<Scalars['String']['input']>;
+  packageWeight?: InputMaybe<Scalars['Float']['input']>;
+  packageWeightUnitId?: InputMaybe<Scalars['String']['input']>;
+  storageLocationId?: InputMaybe<Scalars['String']['input']>;
   storageNotes?: InputMaybe<Scalars['String']['input']>;
   storageState?: InputMaybe<StorageState>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
-  usageFrequency?: InputMaybe<UsageFrequency>;
+  unitId?: InputMaybe<Scalars['String']['input']>;
+  unitName?: InputMaybe<Scalars['String']['input']>;
   version?: InputMaybe<Scalars['Int']['input']>;
   wasteAmount?: InputMaybe<Scalars['Float']['input']>;
   wasteReason?: InputMaybe<WasteReason>;
@@ -7742,20 +8029,65 @@ export type UpsertItemResult = {
   mapping: ExternalSourceMapping;
 };
 
-export enum UsageFrequency {
-  Daily = 'DAILY',
-  Monthly = 'MONTHLY',
-  Rarely = 'RARELY',
-  Seasonal = 'SEASONAL',
-  Unknown = 'UNKNOWN',
-  Weekly = 'WEEKLY',
-}
+/** Comprehensive usage analytics for a pantry */
+export type UsageAnalytics = {
+  __typename?: 'UsageAnalytics';
+  averageUsagePerDay: Scalars['Float']['output'];
+  periodEnd: Scalars['DateTime']['output'];
+  periodStart: Scalars['DateTime']['output'];
+  topUsedItems: Array<UsageByItem>;
+  totalQuantityUsed: Scalars['Float']['output'];
+  totalUsageCount: Scalars['Int']['output'];
+  usageByPurpose: Array<UsageByPurpose>;
+  usageBySource: Array<UsageBySource>;
+  usageTrend: Array<TimeSeriesDataPoint>;
+};
+
+/** Usage breakdown by item - top consumed items */
+export type UsageByItem = {
+  __typename?: 'UsageByItem';
+  count: Scalars['Int']['output'];
+  imageUrl?: Maybe<Scalars['String']['output']>;
+  itemId: Scalars['String']['output'];
+  itemName: Scalars['String']['output'];
+  totalQuantity: Scalars['Float']['output'];
+  unitName?: Maybe<Scalars['String']['output']>;
+};
+
+/** Usage breakdown by purpose (cooking, snack, waste, etc.) */
+export type UsageByPurpose = {
+  __typename?: 'UsageByPurpose';
+  count: Scalars['Int']['output'];
+  percentage: Scalars['Float']['output'];
+  purpose: UsagePurpose;
+  totalQuantity: Scalars['Float']['output'];
+};
+
+/** Usage breakdown by source (manual, cooking log, meal plan, recipe) */
+export type UsageBySource = {
+  __typename?: 'UsageBySource';
+  count: Scalars['Int']['output'];
+  percentage: Scalars['Float']['output'];
+  source: UsageSource;
+  totalQuantity: Scalars['Float']['output'];
+};
+
+/** Usage breakdown by unit for mixed-unit tracking */
+export type UsageByUnit = {
+  __typename?: 'UsageByUnit';
+  count: Scalars['Int']['output'];
+  totalQuantity: Scalars['Float']['output'];
+  unitId: Scalars['String']['output'];
+  unitName: Scalars['String']['output'];
+  unitSymbol: Scalars['String']['output'];
+};
 
 export enum UsagePurpose {
   Cooking = 'COOKING',
   General = 'GENERAL',
   Gift = 'GIFT',
   MealPrep = 'MEAL_PREP',
+  Restock = 'RESTOCK',
   Snack = 'SNACK',
   Transfer = 'TRANSFER',
   Waste = 'WASTE',
@@ -7763,10 +8095,11 @@ export enum UsagePurpose {
 
 /** Source that triggered pantry item usage */
 export enum UsageSource {
-  CookingLog = 'COOKING_LOG',
   Manual = 'MANUAL',
-  MealPlan = 'MEAL_PLAN',
-  Recipe = 'RECIPE',
+  RecipeAuto = 'RECIPE_AUTO',
+  RecipeManual = 'RECIPE_MANUAL',
+  Transfer = 'TRANSFER',
+  Waste = 'WASTE',
 }
 
 /**
@@ -8068,6 +8401,45 @@ export enum Visibility {
   Public = 'PUBLIC',
   Restricted = 'RESTRICTED',
 }
+
+/** Comprehensive waste analytics for a pantry */
+export type WasteAnalytics = {
+  __typename?: 'WasteAnalytics';
+  averageWastePerDay: Scalars['Float']['output'];
+  composted: Scalars['Float']['output'];
+  periodEnd: Scalars['DateTime']['output'];
+  periodStart: Scalars['DateTime']['output'];
+  recycled: Scalars['Float']['output'];
+  topWastedItems: Array<WasteByItem>;
+  totalWasteCount: Scalars['Int']['output'];
+  totalWasteQuantity: Scalars['Float']['output'];
+  totalWasteValue: Scalars['Float']['output'];
+  wasteByReason: Array<WasteByReason>;
+  wasteRate: Scalars['Float']['output'];
+  wasteTrend: Array<TimeSeriesDataPoint>;
+};
+
+/** Waste breakdown by item - most wasted items */
+export type WasteByItem = {
+  __typename?: 'WasteByItem';
+  count: Scalars['Int']['output'];
+  estimatedValue?: Maybe<Scalars['Float']['output']>;
+  imageUrl?: Maybe<Scalars['String']['output']>;
+  itemId: Scalars['String']['output'];
+  itemName: Scalars['String']['output'];
+  totalQuantity: Scalars['Float']['output'];
+  unitName?: Maybe<Scalars['String']['output']>;
+};
+
+/** Waste breakdown by reason (expired, spoiled, etc.) */
+export type WasteByReason = {
+  __typename?: 'WasteByReason';
+  count: Scalars['Int']['output'];
+  estimatedValue?: Maybe<Scalars['Float']['output']>;
+  percentage: Scalars['Float']['output'];
+  reason: WasteReason;
+  totalQuantity: Scalars['Float']['output'];
+};
 
 export enum WasteReason {
   CookingFail = 'COOKING_FAIL',
@@ -9727,16 +10099,9 @@ export type PantryItemFragmentFragment = {
   storageNotes?: string | null | undefined;
   initialQuantity: number;
   currentQuantity: number;
-  quantityInput?: string | null | undefined;
-  normalizedQuantity?: number | null | undefined;
-  normalizedUnitId?: string | null | undefined;
-  displayFormat: DisplayFormat;
   consumedQuantity: number;
-  reservedQuantity: number;
-  autoReorderPoint?: number | null | undefined;
-  isAutoReorder: boolean;
-  customCategory?: string | null | undefined;
-  actualNetWeight?: number | null | undefined;
+  normalizedUnitId?: string | null | undefined;
+  packageWeight?: number | null | undefined;
   createdAt: string;
   updatedAt?: string | null | undefined;
   version?: number | null | undefined;
@@ -9897,7 +10262,7 @@ export type PantryItemFragmentFragment = {
     | { __typename?: 'Unit'; id: string; name: string; symbol: string }
     | null
     | undefined;
-  actualNetWeightUnit?:
+  packageWeightUnit?:
     | {
         __typename?: 'Unit';
         id: string;
@@ -10044,16 +10409,9 @@ export type PantryFragmentFragment = {
         storageNotes?: string | null | undefined;
         initialQuantity: number;
         currentQuantity: number;
-        quantityInput?: string | null | undefined;
-        normalizedQuantity?: number | null | undefined;
-        normalizedUnitId?: string | null | undefined;
-        displayFormat: DisplayFormat;
         consumedQuantity: number;
-        reservedQuantity: number;
-        autoReorderPoint?: number | null | undefined;
-        isAutoReorder: boolean;
-        customCategory?: string | null | undefined;
-        actualNetWeight?: number | null | undefined;
+        normalizedUnitId?: string | null | undefined;
+        packageWeight?: number | null | undefined;
         createdAt: string;
         updatedAt?: string | null | undefined;
         version?: number | null | undefined;
@@ -10217,7 +10575,7 @@ export type PantryFragmentFragment = {
           | { __typename?: 'Unit'; id: string; name: string; symbol: string }
           | null
           | undefined;
-        actualNetWeightUnit?:
+        packageWeightUnit?:
           | {
               __typename?: 'Unit';
               id: string;
@@ -10601,16 +10959,9 @@ export type HomeFragmentFragment = {
               storageNotes?: string | null | undefined;
               initialQuantity: number;
               currentQuantity: number;
-              quantityInput?: string | null | undefined;
-              normalizedQuantity?: number | null | undefined;
-              normalizedUnitId?: string | null | undefined;
-              displayFormat: DisplayFormat;
               consumedQuantity: number;
-              reservedQuantity: number;
-              autoReorderPoint?: number | null | undefined;
-              isAutoReorder: boolean;
-              customCategory?: string | null | undefined;
-              actualNetWeight?: number | null | undefined;
+              normalizedUnitId?: string | null | undefined;
+              packageWeight?: number | null | undefined;
               createdAt: string;
               updatedAt?: string | null | undefined;
               version?: number | null | undefined;
@@ -10789,7 +11140,7 @@ export type HomeFragmentFragment = {
                   }
                 | null
                 | undefined;
-              actualNetWeightUnit?:
+              packageWeightUnit?:
                 | {
                     __typename?: 'Unit';
                     id: string;
@@ -11152,16 +11503,9 @@ export type GetHomeQuery = {
                     storageNotes?: string | null | undefined;
                     initialQuantity: number;
                     currentQuantity: number;
-                    quantityInput?: string | null | undefined;
-                    normalizedQuantity?: number | null | undefined;
-                    normalizedUnitId?: string | null | undefined;
-                    displayFormat: DisplayFormat;
                     consumedQuantity: number;
-                    reservedQuantity: number;
-                    autoReorderPoint?: number | null | undefined;
-                    isAutoReorder: boolean;
-                    customCategory?: string | null | undefined;
-                    actualNetWeight?: number | null | undefined;
+                    normalizedUnitId?: string | null | undefined;
+                    packageWeight?: number | null | undefined;
                     createdAt: string;
                     updatedAt?: string | null | undefined;
                     version?: number | null | undefined;
@@ -11340,7 +11684,7 @@ export type GetHomeQuery = {
                         }
                       | null
                       | undefined;
-                    actualNetWeightUnit?:
+                    packageWeightUnit?:
                       | {
                           __typename?: 'Unit';
                           id: string;
@@ -11739,16 +12083,9 @@ export type GetHomesQuery = {
                 storageNotes?: string | null | undefined;
                 initialQuantity: number;
                 currentQuantity: number;
-                quantityInput?: string | null | undefined;
-                normalizedQuantity?: number | null | undefined;
-                normalizedUnitId?: string | null | undefined;
-                displayFormat: DisplayFormat;
                 consumedQuantity: number;
-                reservedQuantity: number;
-                autoReorderPoint?: number | null | undefined;
-                isAutoReorder: boolean;
-                customCategory?: string | null | undefined;
-                actualNetWeight?: number | null | undefined;
+                normalizedUnitId?: string | null | undefined;
+                packageWeight?: number | null | undefined;
                 createdAt: string;
                 updatedAt?: string | null | undefined;
                 version?: number | null | undefined;
@@ -11927,7 +12264,7 @@ export type GetHomesQuery = {
                     }
                   | null
                   | undefined;
-                actualNetWeightUnit?:
+                packageWeightUnit?:
                   | {
                       __typename?: 'Unit';
                       id: string;
@@ -12197,16 +12534,9 @@ export type GetHomeByJoinCodeQuery = {
                     storageNotes?: string | null | undefined;
                     initialQuantity: number;
                     currentQuantity: number;
-                    quantityInput?: string | null | undefined;
-                    normalizedQuantity?: number | null | undefined;
-                    normalizedUnitId?: string | null | undefined;
-                    displayFormat: DisplayFormat;
                     consumedQuantity: number;
-                    reservedQuantity: number;
-                    autoReorderPoint?: number | null | undefined;
-                    isAutoReorder: boolean;
-                    customCategory?: string | null | undefined;
-                    actualNetWeight?: number | null | undefined;
+                    normalizedUnitId?: string | null | undefined;
+                    packageWeight?: number | null | undefined;
                     createdAt: string;
                     updatedAt?: string | null | undefined;
                     version?: number | null | undefined;
@@ -12385,7 +12715,7 @@ export type GetHomeByJoinCodeQuery = {
                         }
                       | null
                       | undefined;
-                    actualNetWeightUnit?:
+                    packageWeightUnit?:
                       | {
                           __typename?: 'Unit';
                           id: string;
@@ -12616,16 +12946,9 @@ export type CreateHomeMutation = {
                 storageNotes?: string | null | undefined;
                 initialQuantity: number;
                 currentQuantity: number;
-                quantityInput?: string | null | undefined;
-                normalizedQuantity?: number | null | undefined;
-                normalizedUnitId?: string | null | undefined;
-                displayFormat: DisplayFormat;
                 consumedQuantity: number;
-                reservedQuantity: number;
-                autoReorderPoint?: number | null | undefined;
-                isAutoReorder: boolean;
-                customCategory?: string | null | undefined;
-                actualNetWeight?: number | null | undefined;
+                normalizedUnitId?: string | null | undefined;
+                packageWeight?: number | null | undefined;
                 createdAt: string;
                 updatedAt?: string | null | undefined;
                 version?: number | null | undefined;
@@ -12804,7 +13127,7 @@ export type CreateHomeMutation = {
                     }
                   | null
                   | undefined;
-                actualNetWeightUnit?:
+                packageWeightUnit?:
                   | {
                       __typename?: 'Unit';
                       id: string;
@@ -13034,16 +13357,9 @@ export type UpdateHomeMutation = {
                 storageNotes?: string | null | undefined;
                 initialQuantity: number;
                 currentQuantity: number;
-                quantityInput?: string | null | undefined;
-                normalizedQuantity?: number | null | undefined;
-                normalizedUnitId?: string | null | undefined;
-                displayFormat: DisplayFormat;
                 consumedQuantity: number;
-                reservedQuantity: number;
-                autoReorderPoint?: number | null | undefined;
-                isAutoReorder: boolean;
-                customCategory?: string | null | undefined;
-                actualNetWeight?: number | null | undefined;
+                normalizedUnitId?: string | null | undefined;
+                packageWeight?: number | null | undefined;
                 createdAt: string;
                 updatedAt?: string | null | undefined;
                 version?: number | null | undefined;
@@ -13222,7 +13538,7 @@ export type UpdateHomeMutation = {
                     }
                   | null
                   | undefined;
-                actualNetWeightUnit?:
+                packageWeightUnit?:
                   | {
                       __typename?: 'Unit';
                       id: string;
@@ -13451,16 +13767,9 @@ export type DeleteHomeMutation = {
                 storageNotes?: string | null | undefined;
                 initialQuantity: number;
                 currentQuantity: number;
-                quantityInput?: string | null | undefined;
-                normalizedQuantity?: number | null | undefined;
-                normalizedUnitId?: string | null | undefined;
-                displayFormat: DisplayFormat;
                 consumedQuantity: number;
-                reservedQuantity: number;
-                autoReorderPoint?: number | null | undefined;
-                isAutoReorder: boolean;
-                customCategory?: string | null | undefined;
-                actualNetWeight?: number | null | undefined;
+                normalizedUnitId?: string | null | undefined;
+                packageWeight?: number | null | undefined;
                 createdAt: string;
                 updatedAt?: string | null | undefined;
                 version?: number | null | undefined;
@@ -13639,7 +13948,7 @@ export type DeleteHomeMutation = {
                     }
                   | null
                   | undefined;
-                actualNetWeightUnit?:
+                packageWeightUnit?:
                   | {
                       __typename?: 'Unit';
                       id: string;
@@ -14272,16 +14581,9 @@ export type GetDefaultHomeQuery = {
                     storageNotes?: string | null | undefined;
                     initialQuantity: number;
                     currentQuantity: number;
-                    quantityInput?: string | null | undefined;
-                    normalizedQuantity?: number | null | undefined;
-                    normalizedUnitId?: string | null | undefined;
-                    displayFormat: DisplayFormat;
                     consumedQuantity: number;
-                    reservedQuantity: number;
-                    autoReorderPoint?: number | null | undefined;
-                    isAutoReorder: boolean;
-                    customCategory?: string | null | undefined;
-                    actualNetWeight?: number | null | undefined;
+                    normalizedUnitId?: string | null | undefined;
+                    packageWeight?: number | null | undefined;
                     createdAt: string;
                     updatedAt?: string | null | undefined;
                     version?: number | null | undefined;
@@ -14460,7 +14762,7 @@ export type GetDefaultHomeQuery = {
                         }
                       | null
                       | undefined;
-                    actualNetWeightUnit?:
+                    packageWeightUnit?:
                       | {
                           __typename?: 'Unit';
                           id: string;
@@ -14747,6 +15049,7 @@ export type GetItemConversionsQuery = {
     conversionRatio: number;
     source: ConversionSource;
     confidence: number;
+    isVerified: boolean;
     notes?: string | null | undefined;
     createdAt: string;
     fromUnit: {
@@ -14883,6 +15186,7 @@ export type GetItemsQuery = {
   items: {
     __typename?: 'ItemsResponse';
     totalCount: number;
+    hasMore: boolean;
     items?:
       | Array<{
           __typename?: 'Item';
@@ -14897,6 +15201,7 @@ export type GetItemsQuery = {
           status: ItemStatus;
           visibility: Visibility;
           showInOnboarding: boolean;
+          popularity: number;
           nutritions?: any | null | undefined;
           healthBenefits?: any | null | undefined;
           metadata?: any | null | undefined;
@@ -15572,16 +15877,9 @@ export type GetPantryQuery = {
               storageNotes?: string | null | undefined;
               initialQuantity: number;
               currentQuantity: number;
-              quantityInput?: string | null | undefined;
-              normalizedQuantity?: number | null | undefined;
-              normalizedUnitId?: string | null | undefined;
-              displayFormat: DisplayFormat;
               consumedQuantity: number;
-              reservedQuantity: number;
-              autoReorderPoint?: number | null | undefined;
-              isAutoReorder: boolean;
-              customCategory?: string | null | undefined;
-              actualNetWeight?: number | null | undefined;
+              normalizedUnitId?: string | null | undefined;
+              packageWeight?: number | null | undefined;
               createdAt: string;
               updatedAt?: string | null | undefined;
               version?: number | null | undefined;
@@ -15760,7 +16058,7 @@ export type GetPantryQuery = {
                   }
                 | null
                 | undefined;
-              actualNetWeightUnit?:
+              packageWeightUnit?:
                 | {
                     __typename?: 'Unit';
                     id: string;
@@ -15861,16 +16159,9 @@ export type GetPantryItemQuery = {
     storageNotes?: string | null | undefined;
     initialQuantity: number;
     currentQuantity: number;
-    quantityInput?: string | null | undefined;
-    normalizedQuantity?: number | null | undefined;
-    normalizedUnitId?: string | null | undefined;
-    displayFormat: DisplayFormat;
     consumedQuantity: number;
-    reservedQuantity: number;
-    autoReorderPoint?: number | null | undefined;
-    isAutoReorder: boolean;
-    customCategory?: string | null | undefined;
-    actualNetWeight?: number | null | undefined;
+    normalizedUnitId?: string | null | undefined;
+    packageWeight?: number | null | undefined;
     createdAt: string;
     updatedAt?: string | null | undefined;
     version?: number | null | undefined;
@@ -16031,7 +16322,7 @@ export type GetPantryItemQuery = {
       | { __typename?: 'Unit'; id: string; name: string; symbol: string }
       | null
       | undefined;
-    actualNetWeightUnit?:
+    packageWeightUnit?:
       | {
           __typename?: 'Unit';
           id: string;
@@ -16070,6 +16361,209 @@ export type GetDefaultPantryQuery = {
     | { __typename?: 'Pantry'; id: string; name: string; isDefault: boolean }
     | null
     | undefined;
+};
+
+export type GetPantryLedgerAnalyticsQueryVariables = Exact<{
+  pantryId: Scalars['ID']['input'];
+  itemId?: InputMaybe<Scalars['String']['input']>;
+  filter?: InputMaybe<AnalyticsFilterInput>;
+  granularity?: InputMaybe<PeriodGranularity>;
+}>;
+
+export type GetPantryLedgerAnalyticsQuery = {
+  __typename?: 'Query';
+  pantryLedgerAnalytics: {
+    __typename?: 'LedgerAnalytics';
+    periodStart: string;
+    periodEnd: string;
+    granularity: PeriodGranularity;
+    summary: {
+      __typename?: 'LedgerSummary';
+      totalAdded: number;
+      totalConsumed: number;
+      totalWasted: number;
+      netQuantity: number;
+      additionCount: number;
+      consumptionCount: number;
+      wasteCount: number;
+      unitName?: string | null | undefined;
+      additionsByUnit: Array<{
+        __typename?: 'UsageByUnit';
+        unitId: string;
+        unitName: string;
+        unitSymbol: string;
+        totalQuantity: number;
+        count: number;
+      }>;
+      consumptionByUnit: Array<{
+        __typename?: 'UsageByUnit';
+        unitId: string;
+        unitName: string;
+        unitSymbol: string;
+        totalQuantity: number;
+        count: number;
+      }>;
+    };
+    periodData: Array<{
+      __typename?: 'LedgerPeriodData';
+      periodStart: string;
+      periodEnd: string;
+      periodLabel: string;
+      added: number;
+      consumed: number;
+      wasted: number;
+      net: number;
+      additionCost?: number | null | undefined;
+    }>;
+    costAnalytics?:
+      | {
+          __typename?: 'AdditionCostAnalytics';
+          totalSpent: number;
+          averageCostPerUnit: number;
+          costByStore: Array<{
+            __typename?: 'StoreCostBreakdown';
+            storeId?: string | null | undefined;
+            storeName?: string | null | undefined;
+            totalSpent: number;
+            itemCount: number;
+            averageCostPerUnit: number;
+          }>;
+        }
+      | null
+      | undefined;
+    topRestockedItems: Array<{
+      __typename?: 'UsageByItem';
+      itemId: string;
+      itemName: string;
+      totalQuantity: number;
+      count: number;
+      unitName?: string | null | undefined;
+      imageUrl?: string | null | undefined;
+    }>;
+  };
+};
+
+export type GetPantryItemLedgerQueryVariables = Exact<{
+  pantryItemId: Scalars['ID']['input'];
+  filter?: InputMaybe<AnalyticsFilterInput>;
+}>;
+
+export type GetPantryItemLedgerQuery = {
+  __typename?: 'Query';
+  pantryItemLedger: {
+    __typename?: 'LedgerSummary';
+    totalAdded: number;
+    totalConsumed: number;
+    totalWasted: number;
+    netQuantity: number;
+    additionCount: number;
+    consumptionCount: number;
+    wasteCount: number;
+    unitName?: string | null | undefined;
+    additionsByUnit: Array<{
+      __typename?: 'UsageByUnit';
+      unitId: string;
+      unitName: string;
+      totalQuantity: number;
+    }>;
+    consumptionByUnit: Array<{
+      __typename?: 'UsageByUnit';
+      unitId: string;
+      unitName: string;
+      totalQuantity: number;
+    }>;
+  };
+};
+
+export type GetPantryUsageAnalyticsQueryVariables = Exact<{
+  pantryId: Scalars['ID']['input'];
+  filter?: InputMaybe<AnalyticsFilterInput>;
+}>;
+
+export type GetPantryUsageAnalyticsQuery = {
+  __typename?: 'Query';
+  pantryUsageAnalytics: {
+    __typename?: 'UsageAnalytics';
+    totalUsageCount: number;
+    totalQuantityUsed: number;
+    averageUsagePerDay: number;
+    periodStart: string;
+    periodEnd: string;
+    usageTrend: Array<{
+      __typename?: 'TimeSeriesDataPoint';
+      date: string;
+      value: number;
+      count: number;
+    }>;
+    usageByPurpose: Array<{
+      __typename?: 'UsageByPurpose';
+      purpose: UsagePurpose;
+      totalQuantity: number;
+      count: number;
+      percentage: number;
+    }>;
+    usageBySource: Array<{
+      __typename?: 'UsageBySource';
+      source: UsageSource;
+      totalQuantity: number;
+      count: number;
+      percentage: number;
+    }>;
+    topUsedItems: Array<{
+      __typename?: 'UsageByItem';
+      itemId: string;
+      itemName: string;
+      totalQuantity: number;
+      count: number;
+      unitName?: string | null | undefined;
+      imageUrl?: string | null | undefined;
+    }>;
+  };
+};
+
+export type GetPantryWasteAnalyticsQueryVariables = Exact<{
+  pantryId: Scalars['ID']['input'];
+  filter?: InputMaybe<AnalyticsFilterInput>;
+}>;
+
+export type GetPantryWasteAnalyticsQuery = {
+  __typename?: 'Query';
+  pantryWasteAnalytics: {
+    __typename?: 'WasteAnalytics';
+    totalWasteCount: number;
+    totalWasteQuantity: number;
+    totalWasteValue: number;
+    wasteRate: number;
+    averageWastePerDay: number;
+    composted: number;
+    recycled: number;
+    periodStart: string;
+    periodEnd: string;
+    wasteTrend: Array<{
+      __typename?: 'TimeSeriesDataPoint';
+      date: string;
+      value: number;
+      count: number;
+    }>;
+    wasteByReason: Array<{
+      __typename?: 'WasteByReason';
+      reason: WasteReason;
+      totalQuantity: number;
+      count: number;
+      percentage: number;
+      estimatedValue?: number | null | undefined;
+    }>;
+    topWastedItems: Array<{
+      __typename?: 'WasteByItem';
+      itemId: string;
+      itemName: string;
+      totalQuantity: number;
+      count: number;
+      estimatedValue?: number | null | undefined;
+      unitName?: string | null | undefined;
+      imageUrl?: string | null | undefined;
+    }>;
+  };
 };
 
 export type CreatePantryMutationVariables = Exact<{
@@ -16162,16 +16656,9 @@ export type CreatePantryItemMutation = {
     storageNotes?: string | null | undefined;
     initialQuantity: number;
     currentQuantity: number;
-    quantityInput?: string | null | undefined;
-    normalizedQuantity?: number | null | undefined;
-    normalizedUnitId?: string | null | undefined;
-    displayFormat: DisplayFormat;
     consumedQuantity: number;
-    reservedQuantity: number;
-    autoReorderPoint?: number | null | undefined;
-    isAutoReorder: boolean;
-    customCategory?: string | null | undefined;
-    actualNetWeight?: number | null | undefined;
+    normalizedUnitId?: string | null | undefined;
+    packageWeight?: number | null | undefined;
     createdAt: string;
     updatedAt?: string | null | undefined;
     version?: number | null | undefined;
@@ -16332,7 +16819,7 @@ export type CreatePantryItemMutation = {
       | { __typename?: 'Unit'; id: string; name: string; symbol: string }
       | null
       | undefined;
-    actualNetWeightUnit?:
+    packageWeightUnit?:
       | {
           __typename?: 'Unit';
           id: string;
@@ -16381,16 +16868,9 @@ export type UpdatePantryItemMutation = {
     storageNotes?: string | null | undefined;
     initialQuantity: number;
     currentQuantity: number;
-    quantityInput?: string | null | undefined;
-    normalizedQuantity?: number | null | undefined;
-    normalizedUnitId?: string | null | undefined;
-    displayFormat: DisplayFormat;
     consumedQuantity: number;
-    reservedQuantity: number;
-    autoReorderPoint?: number | null | undefined;
-    isAutoReorder: boolean;
-    customCategory?: string | null | undefined;
-    actualNetWeight?: number | null | undefined;
+    normalizedUnitId?: string | null | undefined;
+    packageWeight?: number | null | undefined;
     createdAt: string;
     updatedAt?: string | null | undefined;
     version?: number | null | undefined;
@@ -16551,7 +17031,7 @@ export type UpdatePantryItemMutation = {
       | { __typename?: 'Unit'; id: string; name: string; symbol: string }
       | null
       | undefined;
-    actualNetWeightUnit?:
+    packageWeightUnit?:
       | {
           __typename?: 'Unit';
           id: string;
@@ -16599,16 +17079,9 @@ export type DeletePantryItemMutation = {
     storageNotes?: string | null | undefined;
     initialQuantity: number;
     currentQuantity: number;
-    quantityInput?: string | null | undefined;
-    normalizedQuantity?: number | null | undefined;
-    normalizedUnitId?: string | null | undefined;
-    displayFormat: DisplayFormat;
     consumedQuantity: number;
-    reservedQuantity: number;
-    autoReorderPoint?: number | null | undefined;
-    isAutoReorder: boolean;
-    customCategory?: string | null | undefined;
-    actualNetWeight?: number | null | undefined;
+    normalizedUnitId?: string | null | undefined;
+    packageWeight?: number | null | undefined;
     createdAt: string;
     updatedAt?: string | null | undefined;
     version?: number | null | undefined;
@@ -16769,7 +17242,7 @@ export type DeletePantryItemMutation = {
       | { __typename?: 'Unit'; id: string; name: string; symbol: string }
       | null
       | undefined;
-    actualNetWeightUnit?:
+    packageWeightUnit?:
       | {
           __typename?: 'Unit';
           id: string;
@@ -16826,7 +17299,7 @@ export type CreatePantryItemUsageMutation = {
       __typename?: 'PantryItem';
       id: string;
       currentQuantity: number;
-      actualNetWeight?: number | null | undefined;
+      packageWeight?: number | null | undefined;
       consumedQuantity: number;
       pantryId: string;
       itemId: string;
@@ -16837,14 +17310,7 @@ export type CreatePantryItemUsageMutation = {
       storageState: StorageState;
       storageNotes?: string | null | undefined;
       initialQuantity: number;
-      quantityInput?: string | null | undefined;
-      normalizedQuantity?: number | null | undefined;
       normalizedUnitId?: string | null | undefined;
-      displayFormat: DisplayFormat;
-      reservedQuantity: number;
-      autoReorderPoint?: number | null | undefined;
-      isAutoReorder: boolean;
-      customCategory?: string | null | undefined;
       createdAt: string;
       updatedAt?: string | null | undefined;
       version?: number | null | undefined;
@@ -17008,7 +17474,7 @@ export type CreatePantryItemUsageMutation = {
         | { __typename?: 'Unit'; id: string; name: string; symbol: string }
         | null
         | undefined;
-      actualNetWeightUnit?:
+      packageWeightUnit?:
         | {
             __typename?: 'Unit';
             id: string;
@@ -17071,16 +17537,9 @@ export type RecordPantryItemWasteMutation = {
     storageNotes?: string | null | undefined;
     initialQuantity: number;
     currentQuantity: number;
-    quantityInput?: string | null | undefined;
-    normalizedQuantity?: number | null | undefined;
-    normalizedUnitId?: string | null | undefined;
-    displayFormat: DisplayFormat;
     consumedQuantity: number;
-    reservedQuantity: number;
-    autoReorderPoint?: number | null | undefined;
-    isAutoReorder: boolean;
-    customCategory?: string | null | undefined;
-    actualNetWeight?: number | null | undefined;
+    normalizedUnitId?: string | null | undefined;
+    packageWeight?: number | null | undefined;
     createdAt: string;
     updatedAt?: string | null | undefined;
     version?: number | null | undefined;
@@ -17241,7 +17700,7 @@ export type RecordPantryItemWasteMutation = {
       | { __typename?: 'Unit'; id: string; name: string; symbol: string }
       | null
       | undefined;
-    actualNetWeightUnit?:
+    packageWeightUnit?:
       | {
           __typename?: 'Unit';
           id: string;
@@ -17270,6 +17729,232 @@ export type RecordPantryItemWasteMutation = {
   };
 };
 
+export type RestockPantryItemMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+  input: RestockPantryItemInput;
+}>;
+
+export type RestockPantryItemMutation = {
+  __typename?: 'Mutation';
+  restockPantryItem: {
+    __typename?: 'PantryItemUsage';
+    id: string;
+    quantityUsed: number;
+    purpose: UsagePurpose;
+    costPerUnit?: number | null | undefined;
+    totalCost?: number | null | undefined;
+    pantryItem: {
+      __typename?: 'PantryItem';
+      id: string;
+      pantryId: string;
+      itemId: string;
+      itemName: string;
+      unitName: string;
+      unitId?: string | null | undefined;
+      expiresAt?: string | null | undefined;
+      storageState: StorageState;
+      storageNotes?: string | null | undefined;
+      initialQuantity: number;
+      currentQuantity: number;
+      consumedQuantity: number;
+      normalizedUnitId?: string | null | undefined;
+      packageWeight?: number | null | undefined;
+      createdAt: string;
+      updatedAt?: string | null | undefined;
+      version?: number | null | undefined;
+      tags: Array<string>;
+      item: {
+        __typename?: 'Item';
+        id: string;
+        name: string;
+        description?: string | null | undefined;
+        dataSource: DataSource;
+        type: ItemType;
+        storageState: StorageState;
+        showInOnboarding: boolean;
+        shelfLifeDays?: number | null | undefined;
+        popularity: number;
+        status: ItemStatus;
+        visibility: Visibility;
+        imageUrl?: string | null | undefined;
+        tags: Array<string>;
+        healthBenefits?: any | null | undefined;
+        allergens?: any | null | undefined;
+        nutritions?: any | null | undefined;
+        metadata?: any | null | undefined;
+        ingredients?: any | null | undefined;
+        createdAt: string;
+        updatedAt: string;
+        deletedAt?: string | null | undefined;
+        version: number;
+        netWeight?: number | null | undefined;
+        density?: number | null | undefined;
+        preferredTrackingUnitId?: string | null | undefined;
+        preferredTrackingUnit?:
+          | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+          | null
+          | undefined;
+        displayUnit?:
+          | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+          | null
+          | undefined;
+        units: Array<{
+          __typename?: 'ItemUnit';
+          id: string;
+          itemId: string;
+          unitId: string;
+          isDefault: boolean;
+          isPreferred: boolean;
+          isCommon: boolean;
+          packageSize?: number | null | undefined;
+          packageDescription?: string | null | undefined;
+          retailUnit: boolean;
+          usageContext: Array<UnitUsageContext>;
+          recommendedFor: Array<UnitRecommendation>;
+          minQuantity?: number | null | undefined;
+          maxQuantity?: number | null | undefined;
+          quantityStep?: number | null | undefined;
+          averagePricePerUnit?: number | null | undefined;
+          lastPriceUpdate?: string | null | undefined;
+          priceSource?: string | null | undefined;
+          usageCount: number;
+          lastUsedAt?: string | null | undefined;
+          popularityScore: number;
+          source: UnitSource;
+          confidence?: number | null | undefined;
+          isVerified: boolean;
+          verifiedAt?: string | null | undefined;
+          createdAt: string;
+          updatedAt: string;
+          version: number;
+        }>;
+        brands: Array<{
+          __typename?: 'ItemBrand';
+          id: string;
+          brand: {
+            __typename?: 'Brand';
+            id: string;
+            name: string;
+            description?: string | null | undefined;
+            createdAt: string;
+            updatedAt: string;
+            version: number;
+          };
+        }>;
+        categories?:
+          | Array<{
+              __typename?: 'ItemCategory';
+              id: string;
+              isPrimary: boolean;
+              assignedAt?: string | null | undefined;
+              assignedBy?:
+                | { __typename?: 'User'; id: string }
+                | null
+                | undefined;
+              category: {
+                __typename?: 'Category';
+                id: string;
+                name: string;
+                slug: string;
+                description?: string | null | undefined;
+                icon?: string | null | undefined;
+                color?: string | null | undefined;
+                sortOrder: number;
+                type: CategoryType;
+                isActive: boolean;
+                isSystem: boolean;
+                visibility: Visibility;
+                itemCount: number;
+                usageCount: number;
+                createdAt: string;
+                updatedAt: string;
+                deletedAt?: string | null | undefined;
+                version: number;
+              };
+            }>
+          | null
+          | undefined;
+        creations: Array<{
+          __typename?: 'ItemCreation';
+          id: string;
+          source: DataSource;
+          reason?: string | null | undefined;
+          metadata?: any | null | undefined;
+          createdAt: string;
+        }>;
+        edits: Array<{
+          __typename?: 'ItemEdit';
+          id: string;
+          fieldsChanged: Array<string>;
+          oldValues?: any | null | undefined;
+          newValues?: any | null | undefined;
+          editReason?: string | null | undefined;
+          createdAt: string;
+        }>;
+      };
+      unit?:
+        | {
+            __typename?: 'Unit';
+            id: string;
+            name: string;
+            symbol: string;
+            type: UnitType;
+            isMetric: boolean;
+            baseUnitId?: string | null | undefined;
+            conversionFactor: number;
+            isCommon: boolean;
+            displayAsFraction: boolean;
+            minPrecision: number;
+            autoConvertThreshold?: number | null | undefined;
+          }
+        | null
+        | undefined;
+      storageLocation?:
+        | {
+            __typename?: 'StorageLocation';
+            id: string;
+            name: string;
+            type: StorageType;
+          }
+        | null
+        | undefined;
+      normalizedUnit?:
+        | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+        | null
+        | undefined;
+      packageWeightUnit?:
+        | {
+            __typename?: 'Unit';
+            id: string;
+            name: string;
+            symbol: string;
+            type: UnitType;
+          }
+        | null
+        | undefined;
+      usageRecords: Array<{
+        __typename?: 'PantryItemUsage';
+        id: string;
+        quantityUsed: number;
+        usedAt: string;
+        purpose: UsagePurpose;
+        notes?: string | null | undefined;
+        pantryItem: { __typename?: 'PantryItem'; id: string };
+        usedBy?: { __typename?: 'User'; id: string } | null | undefined;
+        cookingLog?:
+          | { __typename?: 'CookingLog'; id: string }
+          | null
+          | undefined;
+        mealPlanItem?:
+          | { __typename?: 'MealPlanItem'; id: string }
+          | null
+          | undefined;
+        recipe?: { __typename?: 'Recipe'; id: string } | null | undefined;
+      }>;
+    };
+  };
+};
+
 export type UpdatePantryItemQuantityMutationVariables = Exact<{
   pantryItemId: Scalars['ID']['input'];
   quantity: Scalars['String']['input'];
@@ -17292,16 +17977,9 @@ export type UpdatePantryItemQuantityMutation = {
     storageNotes?: string | null | undefined;
     initialQuantity: number;
     currentQuantity: number;
-    quantityInput?: string | null | undefined;
-    normalizedQuantity?: number | null | undefined;
-    normalizedUnitId?: string | null | undefined;
-    displayFormat: DisplayFormat;
     consumedQuantity: number;
-    reservedQuantity: number;
-    autoReorderPoint?: number | null | undefined;
-    isAutoReorder: boolean;
-    customCategory?: string | null | undefined;
-    actualNetWeight?: number | null | undefined;
+    normalizedUnitId?: string | null | undefined;
+    packageWeight?: number | null | undefined;
     createdAt: string;
     updatedAt?: string | null | undefined;
     version?: number | null | undefined;
@@ -17462,7 +18140,7 @@ export type UpdatePantryItemQuantityMutation = {
       | { __typename?: 'Unit'; id: string; name: string; symbol: string }
       | null
       | undefined;
-    actualNetWeightUnit?:
+    packageWeightUnit?:
       | {
           __typename?: 'Unit';
           id: string;
@@ -17518,16 +18196,9 @@ export type SyncPantryItemMutation = {
           storageNotes?: string | null | undefined;
           initialQuantity: number;
           currentQuantity: number;
-          quantityInput?: string | null | undefined;
-          normalizedQuantity?: number | null | undefined;
-          normalizedUnitId?: string | null | undefined;
-          displayFormat: DisplayFormat;
           consumedQuantity: number;
-          reservedQuantity: number;
-          autoReorderPoint?: number | null | undefined;
-          isAutoReorder: boolean;
-          customCategory?: string | null | undefined;
-          actualNetWeight?: number | null | undefined;
+          normalizedUnitId?: string | null | undefined;
+          packageWeight?: number | null | undefined;
           createdAt: string;
           updatedAt?: string | null | undefined;
           version?: number | null | undefined;
@@ -17701,7 +18372,7 @@ export type SyncPantryItemMutation = {
             | { __typename?: 'Unit'; id: string; name: string; symbol: string }
             | null
             | undefined;
-          actualNetWeightUnit?:
+          packageWeightUnit?:
             | {
                 __typename?: 'Unit';
                 id: string;
@@ -17940,16 +18611,9 @@ export type PantryItemsChangedSubscription = {
       storageNotes?: string | null | undefined;
       initialQuantity: number;
       currentQuantity: number;
-      quantityInput?: string | null | undefined;
-      normalizedQuantity?: number | null | undefined;
-      normalizedUnitId?: string | null | undefined;
-      displayFormat: DisplayFormat;
       consumedQuantity: number;
-      reservedQuantity: number;
-      autoReorderPoint?: number | null | undefined;
-      isAutoReorder: boolean;
-      customCategory?: string | null | undefined;
-      actualNetWeight?: number | null | undefined;
+      normalizedUnitId?: string | null | undefined;
+      packageWeight?: number | null | undefined;
       createdAt: string;
       updatedAt?: string | null | undefined;
       version?: number | null | undefined;
@@ -18113,7 +18777,7 @@ export type PantryItemsChangedSubscription = {
         | { __typename?: 'Unit'; id: string; name: string; symbol: string }
         | null
         | undefined;
-      actualNetWeightUnit?:
+      packageWeightUnit?:
         | {
             __typename?: 'Unit';
             id: string;
@@ -21794,6 +22458,217 @@ export type UpdateCollaboratorRoleMutationVariables = Exact<{
 export type UpdateCollaboratorRoleMutation = {
   __typename?: 'Mutation';
   updateCollaboratorRole: boolean;
+};
+
+export type MoveShoppingItemToPantryMutationVariables = Exact<{
+  input: MoveShoppingItemToPantryInput;
+}>;
+
+export type MoveShoppingItemToPantryMutation = {
+  __typename?: 'Mutation';
+  moveShoppingItemToPantry: {
+    __typename?: 'PantryItem';
+    id: string;
+    pantryId: string;
+    itemId: string;
+    itemName: string;
+    unitName: string;
+    unitId?: string | null | undefined;
+    expiresAt?: string | null | undefined;
+    storageState: StorageState;
+    storageNotes?: string | null | undefined;
+    initialQuantity: number;
+    currentQuantity: number;
+    consumedQuantity: number;
+    normalizedUnitId?: string | null | undefined;
+    packageWeight?: number | null | undefined;
+    createdAt: string;
+    updatedAt?: string | null | undefined;
+    version?: number | null | undefined;
+    tags: Array<string>;
+    item: {
+      __typename?: 'Item';
+      id: string;
+      name: string;
+      description?: string | null | undefined;
+      dataSource: DataSource;
+      type: ItemType;
+      storageState: StorageState;
+      showInOnboarding: boolean;
+      shelfLifeDays?: number | null | undefined;
+      popularity: number;
+      status: ItemStatus;
+      visibility: Visibility;
+      imageUrl?: string | null | undefined;
+      tags: Array<string>;
+      healthBenefits?: any | null | undefined;
+      allergens?: any | null | undefined;
+      nutritions?: any | null | undefined;
+      metadata?: any | null | undefined;
+      ingredients?: any | null | undefined;
+      createdAt: string;
+      updatedAt: string;
+      deletedAt?: string | null | undefined;
+      version: number;
+      netWeight?: number | null | undefined;
+      density?: number | null | undefined;
+      preferredTrackingUnitId?: string | null | undefined;
+      preferredTrackingUnit?:
+        | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+        | null
+        | undefined;
+      displayUnit?:
+        | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+        | null
+        | undefined;
+      units: Array<{
+        __typename?: 'ItemUnit';
+        id: string;
+        itemId: string;
+        unitId: string;
+        isDefault: boolean;
+        isPreferred: boolean;
+        isCommon: boolean;
+        packageSize?: number | null | undefined;
+        packageDescription?: string | null | undefined;
+        retailUnit: boolean;
+        usageContext: Array<UnitUsageContext>;
+        recommendedFor: Array<UnitRecommendation>;
+        minQuantity?: number | null | undefined;
+        maxQuantity?: number | null | undefined;
+        quantityStep?: number | null | undefined;
+        averagePricePerUnit?: number | null | undefined;
+        lastPriceUpdate?: string | null | undefined;
+        priceSource?: string | null | undefined;
+        usageCount: number;
+        lastUsedAt?: string | null | undefined;
+        popularityScore: number;
+        source: UnitSource;
+        confidence?: number | null | undefined;
+        isVerified: boolean;
+        verifiedAt?: string | null | undefined;
+        createdAt: string;
+        updatedAt: string;
+        version: number;
+      }>;
+      brands: Array<{
+        __typename?: 'ItemBrand';
+        id: string;
+        brand: {
+          __typename?: 'Brand';
+          id: string;
+          name: string;
+          description?: string | null | undefined;
+          createdAt: string;
+          updatedAt: string;
+          version: number;
+        };
+      }>;
+      categories?:
+        | Array<{
+            __typename?: 'ItemCategory';
+            id: string;
+            isPrimary: boolean;
+            assignedAt?: string | null | undefined;
+            assignedBy?: { __typename?: 'User'; id: string } | null | undefined;
+            category: {
+              __typename?: 'Category';
+              id: string;
+              name: string;
+              slug: string;
+              description?: string | null | undefined;
+              icon?: string | null | undefined;
+              color?: string | null | undefined;
+              sortOrder: number;
+              type: CategoryType;
+              isActive: boolean;
+              isSystem: boolean;
+              visibility: Visibility;
+              itemCount: number;
+              usageCount: number;
+              createdAt: string;
+              updatedAt: string;
+              deletedAt?: string | null | undefined;
+              version: number;
+            };
+          }>
+        | null
+        | undefined;
+      creations: Array<{
+        __typename?: 'ItemCreation';
+        id: string;
+        source: DataSource;
+        reason?: string | null | undefined;
+        metadata?: any | null | undefined;
+        createdAt: string;
+      }>;
+      edits: Array<{
+        __typename?: 'ItemEdit';
+        id: string;
+        fieldsChanged: Array<string>;
+        oldValues?: any | null | undefined;
+        newValues?: any | null | undefined;
+        editReason?: string | null | undefined;
+        createdAt: string;
+      }>;
+    };
+    unit?:
+      | {
+          __typename?: 'Unit';
+          id: string;
+          name: string;
+          symbol: string;
+          type: UnitType;
+          isMetric: boolean;
+          baseUnitId?: string | null | undefined;
+          conversionFactor: number;
+          isCommon: boolean;
+          displayAsFraction: boolean;
+          minPrecision: number;
+          autoConvertThreshold?: number | null | undefined;
+        }
+      | null
+      | undefined;
+    storageLocation?:
+      | {
+          __typename?: 'StorageLocation';
+          id: string;
+          name: string;
+          type: StorageType;
+        }
+      | null
+      | undefined;
+    normalizedUnit?:
+      | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+      | null
+      | undefined;
+    packageWeightUnit?:
+      | {
+          __typename?: 'Unit';
+          id: string;
+          name: string;
+          symbol: string;
+          type: UnitType;
+        }
+      | null
+      | undefined;
+    usageRecords: Array<{
+      __typename?: 'PantryItemUsage';
+      id: string;
+      quantityUsed: number;
+      usedAt: string;
+      purpose: UsagePurpose;
+      notes?: string | null | undefined;
+      pantryItem: { __typename?: 'PantryItem'; id: string };
+      usedBy?: { __typename?: 'User'; id: string } | null | undefined;
+      cookingLog?: { __typename?: 'CookingLog'; id: string } | null | undefined;
+      mealPlanItem?:
+        | { __typename?: 'MealPlanItem'; id: string }
+        | null
+        | undefined;
+      recipe?: { __typename?: 'Recipe'; id: string } | null | undefined;
+    }>;
+  };
 };
 
 export type SyncShoppingListItemMutationVariables = Exact<{

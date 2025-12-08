@@ -13,6 +13,7 @@ interface ShoppingListTabsProps {
   onItemEdit?: (id: string) => void;
   onItemDelete?: (id: string) => void;
   onTogglePurchase?: (id: string) => void;
+  onMoveToPantry?: (id: string) => void;
   onSortOrderUpdate?: (
     itemId: string,
     afterItemId: string | null,
@@ -36,6 +37,7 @@ export const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   onItemEdit,
   onItemDelete,
   onTogglePurchase,
+  onMoveToPantry,
   onSortOrderUpdate,
   onRefresh,
   refreshing,
@@ -59,6 +61,7 @@ export const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     onItemEdit,
     onItemDelete,
     onTogglePurchase,
+    onMoveToPantry,
     onSortOrderUpdate,
     onRefresh,
     onClearAllPurchased,
@@ -72,6 +75,7 @@ export const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
       onItemEdit,
       onItemDelete,
       onTogglePurchase,
+      onMoveToPantry,
       onSortOrderUpdate,
       onRefresh,
       onClearAllPurchased,
@@ -190,6 +194,7 @@ export const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
               onItemEdit={callbacks.onItemEdit}
               onItemDelete={callbacks.onItemDelete}
               onTogglePurchase={callbacks.onTogglePurchase}
+              onMoveToPantry={callbacks.onMoveToPantry}
               onSortOrderUpdate={callbacks.onSortOrderUpdate}
               onClearAll={callbacks.onClearAllPurchased}
               disabled={disabled}

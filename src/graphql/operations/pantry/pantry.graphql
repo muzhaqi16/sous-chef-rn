@@ -101,6 +101,174 @@ query GetDefaultPantry($homeId: ID!) {
 }
 
 # ============================================
+# ANALYTICS QUERIES
+# ============================================
+
+query GetPantryLedgerAnalytics(
+  $pantryId: ID!
+  $itemId: String
+  $filter: AnalyticsFilterInput
+  $granularity: PeriodGranularity
+) {
+  pantryLedgerAnalytics(
+    pantryId: $pantryId
+    itemId: $itemId
+    filter: $filter
+    granularity: $granularity
+  ) {
+    summary {
+      totalAdded
+      totalConsumed
+      totalWasted
+      netQuantity
+      additionCount
+      consumptionCount
+      wasteCount
+      unitName
+      additionsByUnit {
+        unitId
+        unitName
+        unitSymbol
+        totalQuantity
+        count
+      }
+      consumptionByUnit {
+        unitId
+        unitName
+        unitSymbol
+        totalQuantity
+        count
+      }
+    }
+    periodData {
+      periodStart
+      periodEnd
+      periodLabel
+      added
+      consumed
+      wasted
+      net
+      additionCost
+    }
+    costAnalytics {
+      totalSpent
+      averageCostPerUnit
+      costByStore {
+        storeId
+        storeName
+        totalSpent
+        itemCount
+        averageCostPerUnit
+      }
+    }
+    topRestockedItems {
+      itemId
+      itemName
+      totalQuantity
+      count
+      unitName
+      imageUrl
+    }
+    periodStart
+    periodEnd
+    granularity
+  }
+}
+
+query GetPantryItemLedger($pantryItemId: ID!, $filter: AnalyticsFilterInput) {
+  pantryItemLedger(pantryItemId: $pantryItemId, filter: $filter) {
+    totalAdded
+    totalConsumed
+    totalWasted
+    netQuantity
+    additionCount
+    consumptionCount
+    wasteCount
+    unitName
+    additionsByUnit {
+      unitId
+      unitName
+      totalQuantity
+    }
+    consumptionByUnit {
+      unitId
+      unitName
+      totalQuantity
+    }
+  }
+}
+
+query GetPantryUsageAnalytics($pantryId: ID!, $filter: AnalyticsFilterInput) {
+  pantryUsageAnalytics(pantryId: $pantryId, filter: $filter) {
+    totalUsageCount
+    totalQuantityUsed
+    averageUsagePerDay
+    periodStart
+    periodEnd
+    usageTrend {
+      date
+      value
+      count
+    }
+    usageByPurpose {
+      purpose
+      totalQuantity
+      count
+      percentage
+    }
+    usageBySource {
+      source
+      totalQuantity
+      count
+      percentage
+    }
+    topUsedItems {
+      itemId
+      itemName
+      totalQuantity
+      count
+      unitName
+      imageUrl
+    }
+  }
+}
+
+query GetPantryWasteAnalytics($pantryId: ID!, $filter: AnalyticsFilterInput) {
+  pantryWasteAnalytics(pantryId: $pantryId, filter: $filter) {
+    totalWasteCount
+    totalWasteQuantity
+    totalWasteValue
+    wasteRate
+    averageWastePerDay
+    composted
+    recycled
+    periodStart
+    periodEnd
+    wasteTrend {
+      date
+      value
+      count
+    }
+    wasteByReason {
+      reason
+      totalQuantity
+      count
+      percentage
+      estimatedValue
+    }
+    topWastedItems {
+      itemId
+      itemName
+      totalQuantity
+      count
+      estimatedValue
+      unitName
+      imageUrl
+    }
+  }
+}
+
+# ============================================
 # MUTATIONS
 # ============================================
 
@@ -192,7 +360,7 @@ mutation CreatePantryItemUsage($input: RecordPantryItemUsageInput!) {
     pantryItem {
       id
       currentQuantity
-      actualNetWeight
+      packageWeight
       consumedQuantity
       ...PantryItemFragment
     }
@@ -224,6 +392,19 @@ mutation RecordPantryItemWaste(
     isRecycled: $isRecycled
   ) {
     ...PantryItemFragment
+  }
+}
+
+mutation RestockPantryItem($id: ID!, $input: RestockPantryItemInput!) {
+  restockPantryItem(id: $id, input: $input) {
+    id
+    quantityUsed
+    purpose
+    costPerUnit
+    totalCost
+    pantryItem {
+      ...PantryItemFragment
+    }
   }
 }
 

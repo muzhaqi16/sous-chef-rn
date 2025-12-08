@@ -7,33 +7,36 @@ import {
   FieldDef,
 } from '#components/molecules/DynamicFormFields';
 import { FormInput } from '#components/molecules/FormInput';
-import { FormCheckbox } from '#components/molecules/FormCheckbox';
 import { FractionInput } from '#components/molecules/FractionInput';
 
 interface QuantitySectionProps {
   control: Control<any>;
   errors: FieldErrors<any>;
   mode: 'add' | 'edit';
-  quantity: number;
-  unit: string;
-  itemWeight?: number;
-  isAutoReorder?: boolean;
-  onIncrementQuantity: () => void;
-  onDecrementQuantity: () => void;
-  onUnitSelected?: (unitId: string | null) => void;
-  onUnitChange?: (unit: string) => void;
+  onUnitSelected?: (unitId: string | null, unitName: string | null) => void;
   testID?: string;
   unitTestID?: string;
+  // Edit mode stock info (read-only display)
+  initialQuantity?: number | null;
+  consumedQuantity?: number | null;
+  unitSymbol?: string | null;
+  // Weight info for stock display
+  packageWeight?: number | null;
+  weightUnitSymbol?: string | null;
 }
 
 export const QuantitySection: React.FC<QuantitySectionProps> = ({
   control,
   errors,
   mode,
-  isAutoReorder,
   onUnitSelected,
   testID,
   unitTestID,
+  initialQuantity,
+  consumedQuantity,
+  unitSymbol: _unitSymbol,
+  packageWeight,
+  weightUnitSymbol,
 }) => {
   const getFields = (): FieldDef<any>[] => {
     if (mode === 'add') {
@@ -69,18 +72,19 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
         },
       ];
     } else {
-      // Edit mode fields
-      const baseFields: FieldDef<any>[] = [
+      // Edit mode fields - allow editing quantity, weight, and unit
+      return [
         {
           name: 'quantityInput',
-          label: 'Current Quantity *',
+          label: 'Current Quantity',
           placeholder: 'e.g., 1, 1 1/4, or 1.5',
           component: FractionInput,
+          testID,
         },
         {
           name: 'itemWeight',
-          label: 'Net Weight',
-          placeholder: 'e.g., 2.2',
+          label: 'Package Weight',
+          placeholder: 'e.g., 300',
           component: FormInput,
           props: { keyboardType: 'decimal-pad', componentType: 'number' },
         },
@@ -92,33 +96,26 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
           onUnitSelected,
           testID: unitTestID,
         },
-        {
-          name: 'reservedQuantity',
-          label: 'Minimum Stock Level',
-          placeholder: 'Alert when below this quantity',
-          component: FormInput,
-          props: { keyboardType: 'numeric' },
-        },
-        {
-          name: 'isAutoReorder',
-          label: 'Auto Reorder',
-          component: FormCheckbox,
-          props: { componentType: 'checkbox' },
-        },
       ];
-
-      if (isAutoReorder) {
-        baseFields.push({
-          name: 'autoReorderPoint',
-          label: 'Reorder Point',
-          placeholder: 'Reorder when quantity reaches...',
-          component: FormInput,
-          props: { keyboardType: 'numeric' },
-        });
-      }
-
-      return baseFields;
     }
+  };
+
+  // Format stock display with quantity and optional weight
+  const formatStockDisplay = (qty: number | null | undefined) => {
+    if (qty == null) return '-';
+    if (packageWeight != null) {
+      const weightUnit = weightUnitSymbol ? ` ${weightUnitSymbol}` : '';
+      // Skip "1 ×" when quantity is 1 - just show weight (industry standard)
+      // Use tolerance for floating point comparison
+      const isQuantityOne = Math.abs(qty - 1) < 0.001;
+      if (isQuantityOne) {
+        return `${packageWeight}${weightUnit}`;
+      }
+      // Show: "2 × 300g" format for qty > 1
+      return `${qty} × ${packageWeight}${weightUnit}`;
+    }
+    // Just quantity, no weight
+    return `${qty}`;
   };
 
   return (
@@ -131,6 +128,24 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
         control={control}
         errors={errors}
       />
+      {/* Stock info display in edit mode */}
+      {mode === 'edit' && (
+        <View style={styles.stockInfoContainer}>
+          <Text style={styles.stockInfoTitle}>Stock Info</Text>
+          <View style={styles.stockInfoRow}>
+            <Text style={styles.stockInfoLabel}>Initial:</Text>
+            <Text style={styles.stockInfoValue}>
+              {formatStockDisplay(initialQuantity)}
+            </Text>
+          </View>
+          <View style={styles.stockInfoRow}>
+            <Text style={styles.stockInfoLabel}>Consumed:</Text>
+            <Text style={styles.stockInfoValue}>
+              {formatStockDisplay(consumedQuantity)}
+            </Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 };
@@ -191,5 +206,33 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.base,
     color: theme.colors.textSecondary,
     textAlign: 'center',
+  },
+  stockInfoContainer: {
+    marginTop: theme.spacing.md,
+    padding: theme.spacing.sm,
+    backgroundColor: theme.colors.surfaceVariant,
+    borderRadius: theme.radii.md,
+    borderWidth: 1,
+    borderColor: theme.colors.borderLight,
+  },
+  stockInfoTitle: {
+    fontSize: theme.fonts.size.sm,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.xs,
+  },
+  stockInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: theme.spacing.xs,
+  },
+  stockInfoLabel: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textTertiary,
+  },
+  stockInfoValue: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textSecondary,
+    fontWeight: theme.fonts.weight.medium,
   },
 }));

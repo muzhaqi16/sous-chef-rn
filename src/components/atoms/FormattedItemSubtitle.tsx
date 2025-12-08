@@ -38,7 +38,7 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
 
   // For partial single items, display quantity as 1 and use the actual weight from the server
   const displayQuantity = isPartialSingleItem ? 1 : quantity;
-  // netWeight already contains the actual remaining weight from the server (actualNetWeight)
+  // netWeight already contains the actual remaining weight from the server (packageWeight)
   const displayWeight = netWeight;
 
   // Handle edge cases
@@ -48,6 +48,31 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
 
   // Case 1: Both quantity and weight
   if (hasQuantity && hasWeight && hasUnit) {
+    // Skip "1 ×" when quantity is 1 - just show weight (industry standard)
+    // Use tolerance for floating point comparison
+    // This also applies to partial single items (initialQuantity=1, currentQuantity<1)
+    const isQuantityOne = displayQuantity != null && Math.abs(displayQuantity - 1) < 0.001;
+    if (isQuantityOne) {
+      return (
+        <View style={styles.container}>
+          <Text style={[styles.weight, { color: theme.colors.textPrimary }]}>
+            {displayWeight} {unitSymbol}
+          </Text>
+          {additionalInfo && (
+            <>
+              <Text style={[styles.separator, { color: theme.colors.textSecondary }]}>
+                {' • '}
+              </Text>
+              <Text style={[styles.additionalInfo, { color: theme.colors.textSecondary }]}>
+                {additionalInfo}
+              </Text>
+            </>
+          )}
+        </View>
+      );
+    }
+
+    // Quantity > 1 or partial single item: show "2 × 100g" format
     return (
       <View style={styles.container}>
         <QuantityDisplay
