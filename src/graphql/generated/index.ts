@@ -9328,7 +9328,10 @@ export type ShoppingListItemDisplayFragment = {
   unitName: string | null | undefined;
   category: string | null | undefined;
   version: number;
-  unit: { __typename?: 'Unit'; id: string; symbol: string } | null | undefined;
+  unit:
+    | { __typename?: 'Unit'; id: string; name: string; symbol: string }
+    | null
+    | undefined;
   item:
     | {
         __typename?: 'Item';
@@ -14297,6 +14300,7 @@ export const ShoppingListItemDisplayFragmentDoc = {
               kind: 'SelectionSet',
               selections: [
                 { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
               ],
             },
@@ -52966,6 +52970,7 @@ export const GetShoppingListDocument = {
               kind: 'SelectionSet',
               selections: [
                 { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
               ],
             },
@@ -53413,6 +53418,7 @@ export const GetShoppingListsDocument = {
               kind: 'SelectionSet',
               selections: [
                 { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'name' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'symbol' } },
               ],
             },

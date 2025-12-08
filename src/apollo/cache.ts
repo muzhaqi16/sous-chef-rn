@@ -138,6 +138,11 @@ export function makeCache(): InMemoryCache {
       ShoppingListItem: {
         keyFields: ['id'],
         merge: true, // Enable automatic field-level merging for partial data
+        fields: {
+          unit: {
+            merge: false, // Always replace unit with incoming data, never merge
+          },
+        },
       },
       ShoppingList: {
         keyFields: ['id'],

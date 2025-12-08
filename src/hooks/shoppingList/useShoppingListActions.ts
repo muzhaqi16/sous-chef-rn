@@ -3,6 +3,7 @@ import { Alert } from 'react-native';
 import { useApolloClient } from '@apollo/client/react';
 import {
   ShoppingListItemFragmentDoc,
+  ShoppingListItemDisplayFragmentDoc,
   useMoveShoppingListItemMutation,
   useUpdateShoppingListItemQuantityMutation,
   GetShoppingListDocument,
@@ -213,29 +214,42 @@ export function useShoppingListActions({
     [currentListId, moveItem, refetchItems],
   );
 
-  // Quantity increment handler - uses refs for stable reference
+  // Quantity increment handler - uses cache.modify for instant UI without warnings
   const handleIncrementQuantity = useCallback(
     async (itemId: string) => {
-      // Always read fresh data directly from Apollo cache
       const cacheId = client.cache.identify({
         __typename: 'ShoppingListItem',
         id: itemId,
       });
 
-      const fullItem = cacheId
-        ? client.readFragment<any>({
-            id: cacheId,
-            fragment: ShoppingListItemFragmentDoc,
-            fragmentName: 'ShoppingListItemFragment',
-          })
-        : null;
-
-      if (!fullItem) {
+      if (!cacheId) {
         console.warn('Item not in cache, cannot increment:', itemId);
         return;
       }
 
-      const newQuantity = (fullItem.quantity || 0) + 1;
+      // Read current quantity from cache using lightweight display fragment
+      const cachedItem = client.readFragment<any>({
+        id: cacheId,
+        fragment: ShoppingListItemDisplayFragmentDoc,
+        fragmentName: 'ShoppingListItemDisplayFragment',
+      });
+
+      if (!cachedItem) {
+        console.warn('Item not in cache, cannot increment:', itemId);
+        return;
+      }
+
+      const newQuantity = (cachedItem.quantity || 0) + 1;
+
+      // Immediate cache update for instant UI feedback (Pattern 5 from apollo-client-patterns.md)
+      client.cache.modify({
+        id: cacheId,
+        fields: {
+          quantity() {
+            return newQuantity;
+          },
+        },
+      });
 
       try {
         optimisticDataPersistence.save(
@@ -249,18 +263,9 @@ export function useShoppingListActions({
           variables: {
             itemId,
             quantity: newQuantity.toString(),
-            version: fullItem.version,
+            version: cachedItem.version,
           },
-          optimisticResponse: {
-            __typename: 'Mutation',
-            updateShoppingListItemQuantity: {
-              ...fullItem,
-              __typename: 'ShoppingListItem',
-              quantity: newQuantity,
-              version: fullItem.version,
-              updatedAt: new Date().toISOString(),
-            },
-          },
+          // NO optimisticResponse - cache.modify handles instant UI
           onCompleted: data => {
             if (data?.updateShoppingListItemQuantity) {
               optimisticDataPersistence.clear(
@@ -272,6 +277,16 @@ export function useShoppingListActions({
           },
         });
       } catch (error: any) {
+        // Revert cache on error
+        client.cache.modify({
+          id: cacheId,
+          fields: {
+            quantity() {
+              return cachedItem.quantity;
+            },
+          },
+        });
+
         if (handleVersionConflict(error)) {
           Alert.alert('Item Updated', getVersionConflictMessage(error), [
             { text: 'Refresh', onPress: () => refetchItemsRef.current() },
@@ -286,7 +301,7 @@ export function useShoppingListActions({
     [client],
   );
 
-  // Quantity decrement handler - uses refs for stable reference
+  // Quantity decrement handler - uses cache.modify for instant UI without warnings
   const handleDecrementQuantity = useCallback(
     async (itemId: string) => {
       const cacheId = client.cache.identify({
@@ -294,20 +309,34 @@ export function useShoppingListActions({
         id: itemId,
       });
 
-      const fullItem = cacheId
-        ? client.readFragment<any>({
-            id: cacheId,
-            fragment: ShoppingListItemFragmentDoc,
-            fragmentName: 'ShoppingListItemFragment',
-          })
-        : null;
-
-      if (!fullItem) {
+      if (!cacheId) {
         console.warn('Item not in cache, cannot decrement:', itemId);
         return;
       }
 
-      const newQuantity = Math.max(0, (fullItem.quantity || 0) - 1);
+      // Read current quantity from cache using lightweight display fragment
+      const cachedItem = client.readFragment<any>({
+        id: cacheId,
+        fragment: ShoppingListItemDisplayFragmentDoc,
+        fragmentName: 'ShoppingListItemDisplayFragment',
+      });
+
+      if (!cachedItem) {
+        console.warn('Item not in cache, cannot decrement:', itemId);
+        return;
+      }
+
+      const newQuantity = Math.max(0, (cachedItem.quantity || 0) - 1);
+
+      // Immediate cache update for instant UI feedback (Pattern 5 from apollo-client-patterns.md)
+      client.cache.modify({
+        id: cacheId,
+        fields: {
+          quantity() {
+            return newQuantity;
+          },
+        },
+      });
 
       try {
         optimisticDataPersistence.save(
@@ -321,18 +350,9 @@ export function useShoppingListActions({
           variables: {
             itemId,
             quantity: newQuantity.toString(),
-            version: fullItem.version,
+            version: cachedItem.version,
           },
-          optimisticResponse: {
-            __typename: 'Mutation',
-            updateShoppingListItemQuantity: {
-              ...fullItem,
-              __typename: 'ShoppingListItem',
-              quantity: newQuantity,
-              version: fullItem.version,
-              updatedAt: new Date().toISOString(),
-            },
-          },
+          // NO optimisticResponse - cache.modify handles instant UI
           onCompleted: data => {
             if (data?.updateShoppingListItemQuantity) {
               optimisticDataPersistence.clear(
@@ -344,6 +364,16 @@ export function useShoppingListActions({
           },
         });
       } catch (error: any) {
+        // Revert cache on error
+        client.cache.modify({
+          id: cacheId,
+          fields: {
+            quantity() {
+              return cachedItem.quantity;
+            },
+          },
+        });
+
         if (handleVersionConflict(error)) {
           Alert.alert('Item Updated', getVersionConflictMessage(error), [
             { text: 'Refresh', onPress: () => refetchItemsRef.current() },

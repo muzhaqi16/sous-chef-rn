@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, Alert, Image, ActivityIndicator } from 'react-native';
 import {
   useGetPantryItemQuery,
@@ -25,6 +25,10 @@ export const PantryItemDetail: React.FC<{
   const { goBack, navigateTo } = useAppNavigation();
   const { theme } = useUnistyles();
   const selectedShoppingListId = useAppStore(selectSelectedShoppingListId);
+
+  const [addToListStatus, setAddToListStatus] = useState<
+    'idle' | 'loading' | 'success' | 'error'
+  >('idle');
 
   // Use cache-first policy - offlineQueryLink will handle offline behavior automatically
   const { data } = useGetPantryItemQuery({
@@ -85,7 +89,7 @@ export const PantryItemDetail: React.FC<{
     ]);
   };
 
-  const handleAddToShoppingList = async () => {
+  const handleAddToShoppingList = useCallback(async () => {
     // Validate that a shopping list is selected
     if (!selectedShoppingListId) {
       Alert.alert(
@@ -102,6 +106,13 @@ export const PantryItemDetail: React.FC<{
       return;
     }
 
+    // Prevent multiple clicks while loading or after success
+    if (addToListStatus === 'loading' || addToListStatus === 'success') {
+      return;
+    }
+
+    setAddToListStatus('loading');
+
     try {
       await addToShoppingList({
         variables: {
@@ -114,13 +125,40 @@ export const PantryItemDetail: React.FC<{
           },
         },
       });
+      setAddToListStatus('success');
+      // Reset to idle after 3 seconds so user can add again if needed
+      setTimeout(() => setAddToListStatus('idle'), 3000);
     } catch (error) {
       console.error('Failed to add to shopping list:', error);
-      Alert.alert('Error', 'Failed to add to shopping list');
+      setAddToListStatus('error');
+      // Reset to idle after 3 seconds so user can retry
+      setTimeout(() => setAddToListStatus('idle'), 3000);
+    }
+  }, [
+    selectedShoppingListId,
+    addToListStatus,
+    addToShoppingList,
+    data?.pantryItem,
+    navigateTo,
+  ]);
+
+  const item = data?.pantryItem;
+
+  // Get button label and icon based on status
+  const getAddToListButtonConfig = () => {
+    switch (addToListStatus) {
+      case 'loading':
+        return { label: 'Adding...', icon: 'hourglass-empty' as const };
+      case 'success':
+        return { label: 'Added to List', icon: 'check' as const };
+      case 'error':
+        return { label: 'Failed - Tap to Retry', icon: 'error-outline' as const };
+      default:
+        return { label: 'Add to Shopping List', icon: 'add-shopping-cart' as const };
     }
   };
 
-  const item = data?.pantryItem;
+  const addToListButton = getAddToListButtonConfig();
 
   // Use packageWeight if set (user override), otherwise fall back to catalog item weight
   const effectiveNetWeight = item?.packageWeight ?? item?.item?.netWeight;
@@ -406,8 +444,8 @@ export const PantryItemDetail: React.FC<{
       ]}
       sections={sections}
       primaryAction={{
-        label: 'Add to Shopping List',
-        icon: 'add-shopping-cart',
+        label: addToListButton.label,
+        icon: addToListButton.icon,
         onPress: handleAddToShoppingList,
       }}
     />
