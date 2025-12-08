@@ -5,25 +5,472 @@ exports[`SplashScreen renders the splash screen 1`] = `
   testID="splash-screen"
 >
   <View>
-    <Image
-      resizeMode="contain"
-      source={
+    <View>
+      <Text
+        style={
+          [
+            undefined,
+            {
+              "color": "#000",
+            },
+          ]
+        }
+      >
+        Sous Chef
+      </Text>
+      <Text
+        style={
+          [
+            undefined,
+            {
+              "color": "#666",
+            },
+          ]
+        }
+      >
+        Your Kitchen Assistant
+      </Text>
+    </View>
+    <Canvas
+      style={
         {
-          "testUri": "../../../src/assets/images/logo.png",
+          "height": 240,
+          "width": 240,
         }
       }
-    />
-  </View>
-  <View>
-    <View>
-      <ActivityIndicator
-        color="#000"
-        size="small"
-      />
+    >
+      <Group
+        transform={[]}
+      >
+        <Path
+          color="#F5A623"
+          path={
+            {
+              "close": [MockFunction] {
+                "calls": [
+                  [],
+                ],
+                "results": [
+                  {
+                    "type": "return",
+                    "value": [Circular],
+                  },
+                ],
+              },
+              "lineTo": [MockFunction],
+              "moveTo": [MockFunction] {
+                "calls": [
+                  [
+                    90,
+                    66,
+                  ],
+                ],
+                "results": [
+                  {
+                    "type": "return",
+                    "value": [Circular],
+                  },
+                ],
+              },
+              "quadTo": [MockFunction] {
+                "calls": [
+                  [
+                    84,
+                    54,
+                    96,
+                    36,
+                  ],
+                  [
+                    102,
+                    24,
+                    108,
+                    30,
+                  ],
+                  [
+                    114,
+                    42,
+                    102,
+                    66,
+                  ],
+                ],
+                "results": [
+                  {
+                    "type": "return",
+                    "value": [Circular],
+                  },
+                  {
+                    "type": "return",
+                    "value": [Circular],
+                  },
+                  {
+                    "type": "return",
+                    "value": [Circular],
+                  },
+                ],
+              },
+            }
+          }
+        />
+        <Path
+          color="#8B5A2B"
+          path={
+            {
+              "close": [MockFunction],
+              "lineTo": [MockFunction] {
+                "calls": [
+                  [
+                    103.2,
+                    57.6,
+                  ],
+                ],
+                "results": [
+                  {
+                    "type": "return",
+                    "value": [Circular],
+                  },
+                ],
+              },
+              "moveTo": [MockFunction] {
+                "calls": [
+                  [
+                    93.6,
+                    54,
+                  ],
+                ],
+                "results": [
+                  {
+                    "type": "return",
+                    "value": [Circular],
+                  },
+                ],
+              },
+              "quadTo": [MockFunction],
+            }
+          }
+          strokeWidth={2.4}
+          style="stroke"
+        />
+        <Path
+          color="#8B5A2B"
+          path={
+            {
+              "close": [MockFunction],
+              "lineTo": [MockFunction] {
+                "calls": [
+                  [
+                    105.6,
+                    49.2,
+                  ],
+                ],
+                "results": [
+                  {
+                    "type": "return",
+                    "value": [Circular],
+                  },
+                ],
+              },
+              "moveTo": [MockFunction] {
+                "calls": [
+                  [
+                    96,
+                    45.60000000000001,
+                  ],
+                ],
+                "results": [
+                  {
+                    "type": "return",
+                    "value": [Circular],
+                  },
+                ],
+              },
+              "quadTo": [MockFunction],
+            }
+          }
+          strokeWidth={2.4}
+          style="stroke"
+        />
+        <Path
+          color="#8B5A2B"
+          path={
+            {
+              "close": [MockFunction],
+              "lineTo": [MockFunction] {
+                "calls": [
+                  [
+                    106.8,
+                    39.60000000000001,
+                  ],
+                ],
+                "results": [
+                  {
+                    "type": "return",
+                    "value": [Circular],
+                  },
+                ],
+              },
+              "moveTo": [MockFunction] {
+                "calls": [
+                  [
+                    99.6,
+                    37.2,
+                  ],
+                ],
+                "results": [
+                  {
+                    "type": "return",
+                    "value": [Circular],
+                  },
+                ],
+              },
+              "quadTo": [MockFunction],
+            }
+          }
+          strokeWidth={2.4}
+          style="stroke"
+        />
+      </Group>
+      <Group
+        transform={[]}
+      >
+        <Circle
+          color="#E53935"
+          cx={126}
+          cy={60}
+          r={21.599999999999998}
+        />
+        <Circle
+          color="#EF5350"
+          cx={122.4}
+          cy={56.400000000000006}
+          opacity={0.4}
+          r={6}
+        />
+        <Path
+          color="#4CAF50"
+          path={
+            {
+              "close": [MockFunction],
+              "lineTo": [MockFunction],
+              "moveTo": [MockFunction] {
+                "calls": [
+                  [
+                    126,
+                    38.400000000000006,
+                  ],
+                ],
+                "results": [
+                  {
+                    "type": "return",
+                    "value": [Circular],
+                  },
+                ],
+              },
+              "quadTo": [MockFunction] {
+                "calls": [
+                  [
+                    129.6,
+                    32.400000000000006,
+                    134.4,
+                    34.8,
+                  ],
+                  [
+                    129.6,
+                    37.2,
+                    126,
+                    38.400000000000006,
+                  ],
+                ],
+                "results": [
+                  {
+                    "type": "return",
+                    "value": [Circular],
+                  },
+                  {
+                    "type": "return",
+                    "value": [Circular],
+                  },
+                ],
+              },
+            }
+          }
+        />
+      </Group>
+      <Group
+        transform={[]}
+      >
+        <Path
+          color="#66BB6A"
+          path={
+            {
+              "close": [MockFunction] {
+                "calls": [
+                  [],
+                ],
+                "results": [
+                  {
+                    "type": "return",
+                    "value": [Circular],
+                  },
+                ],
+              },
+              "lineTo": [MockFunction],
+              "moveTo": [MockFunction] {
+                "calls": [
+                  [
+                    144,
+                    72,
+                  ],
+                ],
+                "results": [
+                  {
+                    "type": "return",
+                    "value": [Circular],
+                  },
+                ],
+              },
+              "quadTo": [MockFunction] {
+                "calls": [
+                  [
+                    156,
+                    48,
+                    150,
+                    36,
+                  ],
+                  [
+                    144,
+                    42,
+                    138,
+                    60,
+                  ],
+                ],
+                "results": [
+                  {
+                    "type": "return",
+                    "value": [Circular],
+                  },
+                  {
+                    "type": "return",
+                    "value": [Circular],
+                  },
+                ],
+              },
+            }
+          }
+        />
+        <Path
+          color="#43A047"
+          path={
+            {
+              "close": [MockFunction] {
+                "calls": [
+                  [],
+                ],
+                "results": [
+                  {
+                    "type": "return",
+                    "value": [Circular],
+                  },
+                ],
+              },
+              "lineTo": [MockFunction],
+              "moveTo": [MockFunction] {
+                "calls": [
+                  [
+                    156,
+                    78,
+                  ],
+                ],
+                "results": [
+                  {
+                    "type": "return",
+                    "value": [Circular],
+                  },
+                ],
+              },
+              "quadTo": [MockFunction] {
+                "calls": [
+                  [
+                    174,
+                    60,
+                    168,
+                    48,
+                  ],
+                  [
+                    162,
+                    54,
+                    150,
+                    72,
+                  ],
+                ],
+                "results": [
+                  {
+                    "type": "return",
+                    "value": [Circular],
+                  },
+                  {
+                    "type": "return",
+                    "value": [Circular],
+                  },
+                ],
+              },
+            }
+          }
+        />
+      </Group>
+      <Group>
+        <RoundedRect
+          color="#D4A574"
+          height={84}
+          r={9.6}
+          width={108}
+          x={66}
+          y={90}
+        />
+        <RoundedRect
+          color="#C4956A"
+          height={14.399999999999999}
+          r={4.8}
+          width={115.19999999999999}
+          x={62.400000000000006}
+          y={84}
+        />
+      </Group>
+      <Group>
+        <RoundedRect
+          color="#FFF3E0"
+          height={33.6}
+          r={16.8}
+          width={132}
+          x={54}
+          y={150}
+        />
+      </Group>
+    </Canvas>
+    <View
+      style={
+        [
+          undefined,
+          {
+            "marginTop": -42,
+            "width": 132,
+          },
+        ]
+      }
+    >
+      <Text
+        style={
+          [
+            undefined,
+            {
+              "color": "#F76818",
+              "fontSize": 13.2,
+            },
+          ]
+        }
+      >
+        LOADING
+      </Text>
     </View>
-    <Text>
-      Loading...
-    </Text>
   </View>
 </View>
 `;
