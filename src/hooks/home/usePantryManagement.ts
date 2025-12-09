@@ -101,8 +101,10 @@ export function usePantryManagement(pantryId: string | undefined) {
     [data?.pantry],
   );
 
+  // Filter out items that are pending deletion to prevent flicker
+  // during the race condition between optimistic delete and subscription auto-normalization
   const pantryItems = useMemo(
-    () => normalizedPantry?.items || [],
+    () => subscriptionService.filterPendingDeletes(normalizedPantry?.items || []),
     [normalizedPantry],
   );
 
@@ -344,7 +346,15 @@ export function usePantryManagement(pantryId: string | undefined) {
 
     // Register pending delete to handle subscription race condition
     // This prevents Apollo's auto-normalization from re-adding the item
-    subscriptionService.registerPendingDelete(itemId, pantryId, 'PantryItem');
+    // We pass the parent typename and connection field so the subscription handler
+    // can properly remove from the Connection if Apollo re-adds the item
+    subscriptionService.registerPendingDelete(
+      itemId,
+      pantryId,
+      'PantryItem',
+      'Pantry',
+      'itemsConnection',
+    );
 
     // Optimistically remove from cache IMMEDIATELY for instant UI feedback
     // This removes the row from the list before the mutation completes

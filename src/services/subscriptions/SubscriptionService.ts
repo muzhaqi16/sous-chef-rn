@@ -54,7 +54,12 @@ export class SubscriptionService {
   // Pending delete tracking (to handle subscription race conditions)
   // When we optimistically delete an item, Apollo's auto-normalization may re-add it
   // from the subscription payload. We track pending deletes to re-evict if needed.
-  private pendingDeletes = new Map<string, { parentId: string; entityType: string }>();
+  private pendingDeletes = new Map<string, {
+    parentId: string;
+    entityType: string;
+    parentTypename: string;
+    connectionField: string;
+  }>();
 
   // Statistics
   private stats = {
@@ -87,9 +92,17 @@ export class SubscriptionService {
    * @param itemId - The ID of the item being deleted
    * @param parentId - The parent entity ID (e.g., pantryId)
    * @param entityType - The GraphQL typename (e.g., 'PantryItem')
+   * @param parentTypename - The parent entity typename (e.g., 'Pantry')
+   * @param connectionField - The Connection field name (e.g., 'itemsConnection')
    */
-  registerPendingDelete(itemId: string, parentId: string, entityType: string): void {
-    this.pendingDeletes.set(itemId, { parentId, entityType });
+  registerPendingDelete(
+    itemId: string,
+    parentId: string,
+    entityType: string,
+    parentTypename: string = 'Pantry',
+    connectionField: string = 'itemsConnection',
+  ): void {
+    this.pendingDeletes.set(itemId, { parentId, entityType, parentTypename, connectionField });
     // Auto-cleanup after 30s to prevent memory leaks in edge cases
     setTimeout(() => this.pendingDeletes.delete(itemId), 30000);
   }
@@ -99,6 +112,27 @@ export class SubscriptionService {
    */
   unregisterPendingDelete(itemId: string): void {
     this.pendingDeletes.delete(itemId);
+  }
+
+  /**
+   * Check if an item is pending deletion.
+   * Use this to filter out items that are being deleted but may have been
+   * temporarily re-added to cache by Apollo's auto-normalization.
+   */
+  isPendingDelete(itemId: string): boolean {
+    return this.pendingDeletes.has(itemId);
+  }
+
+  /**
+   * Filter out items that are pending deletion.
+   * Call this on arrays of items before rendering to prevent flicker
+   * during the race condition between optimistic delete and subscription.
+   */
+  filterPendingDeletes<T extends { id: string }>(items: T[]): T[] {
+    if (this.pendingDeletes.size === 0) {
+      return items;
+    }
+    return items.filter(item => !this.pendingDeletes.has(item.id));
   }
 
   /**
@@ -448,10 +482,49 @@ export class SubscriptionService {
 
           // Check if this is a pending delete (self-triggered from our mutation)
           // Apollo's auto-normalization may have re-added the item from the subscription
-          // payload, so we need to re-evict it
+          // payload, so we need to re-evict it AND ensure it's removed from the Connection
           const pendingDelete = this.pendingDeletes.get(itemId);
           if (pendingDelete) {
             this.log(config, LogLevel.DEBUG, 'Re-evicting pending delete (counteract auto-normalization)', itemId);
+
+            // First, ensure the item is removed from the parent Connection
+            // This prevents the race condition where auto-normalization writes the item
+            // back and React renders before we evict
+            try {
+              const parentCacheId = cache.identify({
+                __typename: pendingDelete.parentTypename,
+                id: pendingDelete.parentId,
+              });
+
+              if (parentCacheId) {
+                cache.modify({
+                  id: parentCacheId,
+                  fields: {
+                    [pendingDelete.connectionField]: (existingConnection: any = {}, { readField }: any) => {
+                      const existingEdges = existingConnection?.edges || [];
+                      const edges = existingEdges.filter(
+                        (edge: any) => readField('id', edge?.node) !== itemId,
+                      );
+
+                      // If edges didn't change, no need to update
+                      if (edges.length === existingEdges.length) {
+                        return existingConnection;
+                      }
+
+                      return {
+                        ...existingConnection,
+                        edges,
+                        totalCount: Math.max(0, (existingConnection?.totalCount || 0) - 1),
+                      };
+                    },
+                  },
+                });
+              }
+            } catch (error) {
+              this.log(config, LogLevel.WARN, 'Failed to remove from parent Connection during pending delete', serializeError(error));
+            }
+
+            // Then evict the item itself
             if (cacheId) {
               cache.evict({ id: cacheId });
               cache.gc();
