@@ -30,17 +30,6 @@ interface PantryItem {
     displayUnit?: {
       symbol?: string;
     } | null;
-    category?: {
-      id?: string;
-      name?: string;
-    } | null;
-    categories?: Array<{
-      isPrimary?: boolean;
-      category?: {
-        id?: string;
-        name?: string;
-      } | null;
-    }> | null;
   } | null;
   unit?: {
     symbol?: string;
@@ -80,29 +69,6 @@ const formatStorageState = (state?: string | null): string => {
     [StorageState.Ambient]: 'Dry pantry',
   };
   return mapping[state] || state;
-};
-
-// Helper to get primary category name from item
-const getPrimaryCategory = (item: PantryItem): string | null => {
-  // First check for direct category on item
-  if (item.item?.category?.name) {
-    return item.item.category.name;
-  }
-
-  // Then check categories array for primary
-  const categories = item.item?.categories;
-  if (categories && categories.length > 0) {
-    const primary = categories.find(c => c.isPrimary);
-    if (primary?.category?.name) {
-      return primary.category.name;
-    }
-    // Fall back to first category if no primary
-    if (categories[0]?.category?.name) {
-      return categories[0].category.name;
-    }
-  }
-
-  return null;
 };
 
 // Helper to format quantity as fraction/mixed number
