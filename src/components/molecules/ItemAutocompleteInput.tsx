@@ -103,8 +103,12 @@ export const ItemAutocompleteInput: React.FC<ItemAutocompleteInputProps> = ({
           )}
           <View style={styles.itemDetails}>
             <Text style={styles.itemName}>{item.name}</Text>
-            {item.brand?.name && (
-              <Text style={styles.itemBrand}>Brand: {item.brand.name}</Text>
+            {item.brands && item.brands.length > 0 && (
+              <Text style={styles.itemBrand}>
+                {item.brands.length === 1
+                  ? `Brand: ${item.brands[0].name}`
+                  : `Brands: ${item.brands.map(b => b.name).join(', ')}`}
+              </Text>
             )}
           </View>
         </View>

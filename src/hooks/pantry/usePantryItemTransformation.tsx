@@ -1,6 +1,5 @@
 import React, { useMemo } from 'react';
 import { View, Image, Text } from 'react-native';
-import { FormattedItemSubtitle } from '#components';
 import { getItemImageUrl } from '#utils/imageUtils';
 import { getEffectiveUnitSymbol } from '#utils/pantryItemUtils';
 import { commonStyles } from '#/styles';
@@ -14,6 +13,11 @@ interface PantryItem {
   initialQuantity?: number | null;
   autoReorderPoint?: number | null;
   storageState?: string | null;
+  storageLocation?: {
+    id?: string;
+    name?: string;
+    type?: string;
+  } | null;
   lowStockAlert?: boolean | null;
   // Pantry item's own weight (override)
   packageWeight?: number | null;
@@ -26,46 +30,42 @@ interface PantryItem {
     displayUnit?: {
       symbol?: string;
     } | null;
+    category?: {
+      id?: string;
+      name?: string;
+    } | null;
+    categories?: Array<{
+      isPrimary?: boolean;
+      category?: {
+        id?: string;
+        name?: string;
+      } | null;
+    }> | null;
   } | null;
   unit?: {
     symbol?: string;
   } | null;
 }
 
-// Helper to get time-based info for list display
-const getItemTimeInfo = (item: PantryItem): { text: string; color: string; isUrgent: boolean } | null => {
+// Helper to get URGENT time-based info for list display (expiring/expired only)
+const getUrgentTimeInfo = (item: PantryItem): { text: string; color: string } | null => {
+  if (!item.expiresAt) return null;
+
   const now = new Date();
+  const expiry = new Date(item.expiresAt);
+  const diffDays = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
-  // Check expiry first
-  if (item.expiresAt) {
-    const expiry = new Date(item.expiresAt);
-    const diffDays = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-
-    if (diffDays < 0) {
-      return { text: `Expired ${Math.abs(diffDays)} days ago!`, color: 'error', isUrgent: true };
-    }
-    if (diffDays === 0) {
-      return { text: 'Expires today!', color: 'warning', isUrgent: true };
-    }
-    if (diffDays === 1) {
-      return { text: 'Expiring in 1 day!', color: 'warning', isUrgent: true };
-    }
-    if (diffDays <= 7) {
-      return { text: `Expiring in ${diffDays} days!`, color: 'warning', isUrgent: diffDays <= 3 };
-    }
+  if (diffDays < 0) {
+    return { text: `Expired ${Math.abs(diffDays)}d ago!`, color: 'error' };
   }
-
-  // Fall back to "X days in" based on createdAt
-  if (item.createdAt) {
-    const created = new Date(item.createdAt);
-    const daysIn = Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
-    if (daysIn === 0) {
-      return { text: 'Added today', color: 'textSecondary', isUrgent: false };
-    }
-    if (daysIn === 1) {
-      return { text: '1 day in', color: 'textSecondary', isUrgent: false };
-    }
-    return { text: `${daysIn} days in`, color: 'textSecondary', isUrgent: false };
+  if (diffDays === 0) {
+    return { text: 'Expires today!', color: 'warning' };
+  }
+  if (diffDays === 1) {
+    return { text: 'Expires tomorrow!', color: 'warning' };
+  }
+  if (diffDays <= 7) {
+    return { text: `Expires in ${diffDays}d`, color: 'warning' };
   }
 
   return null;
@@ -82,6 +82,85 @@ const formatStorageState = (state?: string | null): string => {
   return mapping[state] || state;
 };
 
+// Helper to get primary category name from item
+const getPrimaryCategory = (item: PantryItem): string | null => {
+  // First check for direct category on item
+  if (item.item?.category?.name) {
+    return item.item.category.name;
+  }
+
+  // Then check categories array for primary
+  const categories = item.item?.categories;
+  if (categories && categories.length > 0) {
+    const primary = categories.find(c => c.isPrimary);
+    if (primary?.category?.name) {
+      return primary.category.name;
+    }
+    // Fall back to first category if no primary
+    if (categories[0]?.category?.name) {
+      return categories[0].category.name;
+    }
+  }
+
+  return null;
+};
+
+// Helper to format quantity as fraction/mixed number
+const formatQuantityAsFraction = (qty: number): string => {
+  if (qty === 0) return '0';
+  if (Number.isInteger(qty)) return qty.toString();
+
+  const whole = Math.floor(qty);
+  const fractional = qty - whole;
+
+  // Common fractions with tolerance-based matching for floating point
+  const commonFractions = [
+    { value: 0.125, display: '1/8' },
+    { value: 0.25, display: '1/4' },
+    { value: 1 / 3, display: '1/3' },
+    { value: 0.375, display: '3/8' },
+    { value: 0.5, display: '1/2' },
+    { value: 0.625, display: '5/8' },
+    { value: 2 / 3, display: '2/3' },
+    { value: 0.75, display: '3/4' },
+    { value: 0.875, display: '7/8' },
+  ];
+
+  const tolerance = 0.02; // Allow small floating point differences
+  const matchedFraction = commonFractions.find(
+    f => Math.abs(fractional - f.value) < tolerance,
+  );
+
+  if (matchedFraction) {
+    return whole === 0
+      ? matchedFraction.display
+      : `${whole} ${matchedFraction.display}`;
+  }
+
+  // Fall back to decimal with smart formatting
+  const formatted = qty.toFixed(2).replace(/\.?0+$/, '');
+  return formatted || '0';
+};
+
+// Helper to build stacked quantity + weight display
+// Returns { qty, weight } where either can be null
+const buildStackedDisplay = (
+  qty: number,
+  weight: number | null | undefined,
+  weightUnit: string | null | undefined,
+): { qtyDisplay: string | null; weightDisplay: string | null } => {
+  const isOne = Math.abs(qty - 1) < 0.001;
+  const hasWeight = weight != null && weight > 0 && weightUnit;
+
+  // Quantity display: hide "1" for single items
+  const qtyDisplay = isOne ? null : formatQuantityAsFraction(qty);
+
+  // Weight display: show if available
+  const weightDisplay = hasWeight ? `${weight} ${weightUnit}` : null;
+
+  return { qtyDisplay, weightDisplay };
+};
+
 interface ThemeColors {
   surface: string;
   error: string;
@@ -93,7 +172,7 @@ interface ThemeColors {
 interface TransformedItem {
   id: string;
   title: string;
-  subtitle: React.JSX.Element;
+  subtitle?: React.JSX.Element | null;
   badge?: {
     text: string;
     variant: 'danger' | 'warning';
@@ -150,8 +229,8 @@ export function usePantryItemTransformation<T extends PantryItem>(
       const isExpired =
         item.expiresAt && new Date(item.expiresAt) < new Date();
 
-      // Get time info for subtitle display
-      const timeInfo = getItemTimeInfo(item);
+      // Get urgent expiry info (only if expiring within 7 days or expired)
+      const urgentTimeInfo = getUrgentTimeInfo(item);
 
       // Get image URL for the item
       const imageUrl = getItemImageUrl(item.item);
@@ -160,46 +239,97 @@ export function usePantryItemTransformation<T extends PantryItem>(
       const effectiveNetWeight = item.packageWeight ?? item.item?.netWeight;
       const effectiveWeightUnitSymbol = getEffectiveUnitSymbol(item);
 
-      // Format quantity display
-      const quantityDisplay = effectiveNetWeight && effectiveWeightUnitSymbol
-        ? `${effectiveNetWeight} ${effectiveWeightUnitSymbol}`
-        : `${item.currentQuantity} pcs`;
+      // Format storage state (Fridge/Freezer/Dry pantry) for right element
+      const storageStateDisplay = formatStorageState(item.storageState);
 
-      // Format storage location
-      const storageDisplay = formatStorageState(item.storageState);
+      // Get user-defined storage location name (e.g., "Top shelf", "Pantry drawer")
+      const storageLocationName = item.storageLocation?.name || null;
 
-      // Determine subtitle text color based on time info
-      const getSubtitleColor = () => {
-        if (!timeInfo) return theme.colors.textSecondary;
-        if (timeInfo.color === 'error') return theme.colors.error;
-        if (timeInfo.color === 'warning') return theme.colors.warning;
-        return theme.colors.textSecondary;
+      // Build stacked quantity + weight display for right element
+      const { qtyDisplay, weightDisplay } = buildStackedDisplay(
+        item.currentQuantity,
+        effectiveNetWeight,
+        effectiveWeightUnitSymbol,
+      );
+
+      // Subtitle: show storage location and expiry warnings (no category - too cluttered)
+      const buildSubtitle = () => {
+        const lines: React.ReactNode[] = [];
+
+        // Line 1: User storage location (if defined)
+        if (storageLocationName) {
+          lines.push(
+            <Text
+              key="location"
+              style={{ color: theme.colors.textSecondary, fontSize: 14 }}
+            >
+              {storageLocationName}
+            </Text>,
+          );
+        }
+
+        // Line 2: Expiry warning with color
+        if (urgentTimeInfo) {
+          const expiryColor =
+            urgentTimeInfo.color === 'error'
+              ? theme.colors.error
+              : theme.colors.warning;
+          lines.push(
+            <Text
+              key="expiry"
+              style={{ color: expiryColor, fontSize: 13, fontWeight: '500' }}
+            >
+              {urgentTimeInfo.text}
+            </Text>,
+          );
+        }
+
+        if (lines.length === 0) return null;
+
+        return <View>{lines}</View>;
       };
 
       return {
         id: item.id,
         title: item.item?.name || '',
-        subtitle: timeInfo ? (
-          <Text style={{ color: getSubtitleColor(), fontSize: 14 }}>
-            {timeInfo.text}
-          </Text>
-        ) : (
-          <FormattedItemSubtitle
-            quantity={item.currentQuantity}
-            initialQuantity={item.initialQuantity}
-            netWeight={effectiveNetWeight}
-            unitSymbol={effectiveWeightUnitSymbol}
-            additionalInfo={item.storageState ?? undefined}
-          />
-        ),
+        subtitle: buildSubtitle(),
         rightElement: (
           <View style={{ alignItems: 'flex-end' }}>
-            <Text style={{ fontWeight: '500', fontSize: 14, color: theme.colors.textPrimary }}>
-              {quantityDisplay}
-            </Text>
-            {storageDisplay ? (
-              <Text style={{ color: theme.colors.textSecondary, fontSize: 12, marginTop: 2 }}>
-                {storageDisplay}
+            {/* Line 1: Quantity (hidden for single items) */}
+            {qtyDisplay ? (
+              <Text
+                style={{
+                  fontWeight: '600',
+                  fontSize: 15,
+                  color: theme.colors.textPrimary,
+                }}
+              >
+                {qtyDisplay}
+              </Text>
+            ) : null}
+            {/* Line 2: Weight */}
+            {weightDisplay ? (
+              <Text
+                style={{
+                  fontWeight: '400',
+                  fontSize: 13,
+                  color: theme.colors.textSecondary,
+                  marginTop: qtyDisplay ? 1 : 0,
+                }}
+              >
+                {weightDisplay}
+              </Text>
+            ) : null}
+            {/* Line 3: Storage state - ONLY if no user-defined storage location */}
+            {!storageLocationName && storageStateDisplay ? (
+              <Text
+                style={{
+                  color: theme.colors.textSecondary,
+                  fontSize: 12,
+                  marginTop: qtyDisplay || weightDisplay ? 2 : 0,
+                }}
+              >
+                {storageStateDisplay}
               </Text>
             ) : null}
           </View>

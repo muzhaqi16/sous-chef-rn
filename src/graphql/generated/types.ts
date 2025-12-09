@@ -2084,7 +2084,7 @@ export type ItemStoreSku = {
 
 export type ItemSuggestion = {
   __typename?: 'ItemSuggestion';
-  brand?: Maybe<BrandSuggestion>;
+  brands: Array<BrandSuggestion>;
   category?: Maybe<CategorySuggestion>;
   defaultUnit?: Maybe<ItemUnitSuggestion>;
   displayUnit?: Maybe<Scalars['String']['output']>;
@@ -15544,10 +15544,11 @@ export type AutocompleteItemsQuery = {
               }
             | null
             | undefined;
-          brand?:
-            | { __typename?: 'BrandSuggestion'; id: string; name: string }
-            | null
-            | undefined;
+          brands: Array<{
+            __typename?: 'BrandSuggestion';
+            id: string;
+            name: string;
+          }>;
           category?:
             | {
                 __typename?: 'CategorySuggestion';

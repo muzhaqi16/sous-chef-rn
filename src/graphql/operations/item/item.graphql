@@ -116,7 +116,7 @@ query AutocompleteItems($input: AutocompleteInput!) {
         isDefault
         isPreferred
       }
-      brand {
+      brands {
         id
         name
       }

@@ -121,6 +121,9 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(
     null,
   );
+  const [suggestedBrands, setSuggestedBrands] = useState<
+    { id: string; name: string }[]
+  >([]);
 
   const selectedPantryId = useAppStore(selectSelectedPantryId);
   const { selectedHomeId, getDefaultPantry } = useDefaultHome();
@@ -290,8 +293,13 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     (item: ItemSuggestion) => {
       setValue('itemName', item.name);
       setValue('selectedItemId', item.id);
-      if (item.brand?.name) {
-        setValue('brand', item.brand.name);
+      // Handle multiple brands - store all as suggestions, pre-populate with first
+      if (item.brands && item.brands.length > 0) {
+        setSuggestedBrands(item.brands);
+        setValue('brand', item.brands[0].name);
+      } else {
+        setSuggestedBrands([]);
+        setValue('brand', '');
       }
       if (item.category?.name) {
         setValue('category', item.category.name);
@@ -645,6 +653,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
                 errors={errors}
                 mode="add"
                 onSelectItem={handleItemSelect}
+                suggestedBrands={suggestedBrands}
                 testID="add-pantry-item-name-input"
               />
             ) : (

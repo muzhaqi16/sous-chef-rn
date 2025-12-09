@@ -2449,7 +2449,7 @@ type ItemStoreSku {
 }
 
 type ItemSuggestion {
-  brand: BrandSuggestion
+  brands: [BrandSuggestion!]!
   category: CategorySuggestion
   defaultUnit: ItemUnitSuggestion
   displayUnit: String
