@@ -93,6 +93,12 @@ export const lightTheme = {
     // Validation colors - for forms
     validation: colors.validation,
 
+    // Pantry redesign colors
+    expiration: colors.expiration,
+    filterTab: colors.filterTab,
+    avatar: colors.avatar,
+    sectionHeader: colors.sectionHeader,
+
     // Overlay
     overlay: colors.overlay,
     gap: (v: number) => v * 8,
@@ -174,6 +180,12 @@ export const darkTheme = {
 
     // Validation colors - for forms
     validation: colors.validation,
+
+    // Pantry redesign colors
+    expiration: colors.expiration,
+    filterTab: colors.filterTab,
+    avatar: colors.avatar,
+    sectionHeader: colors.sectionHeader,
 
     // Overlay
     overlay: colors.overlay,

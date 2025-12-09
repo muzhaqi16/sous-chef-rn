@@ -11056,6 +11056,7 @@ export type ItemByUpcQuery = {
         imageUrl: string | null | undefined;
         name: string;
         netWeight: number | null | undefined;
+        primaryUpc: string | null | undefined;
         units: Array<{
           __typename?: 'ItemUnit';
           isDefault: boolean;
@@ -11081,6 +11082,7 @@ export type ItemBySkuQuery = {
         name: string;
         netWeight: number | null | undefined;
         description: string | null | undefined;
+        primaryUpc: string | null | undefined;
         units: Array<{
           __typename?: 'ItemUnit';
           isDefault: boolean;
@@ -36499,6 +36501,7 @@ export const ItemByUpcDocument = {
                 { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'name' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'primaryUpc' } },
                 {
                   kind: 'Field',
                   name: { kind: 'Name', value: 'units' },
@@ -36660,6 +36663,7 @@ export const ItemBySkuDocument = {
                 { kind: 'Field', name: { kind: 'Name', value: 'name' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'description' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'primaryUpc' } },
                 {
                   kind: 'Field',
                   name: { kind: 'Name', value: 'units' },

@@ -154,6 +154,69 @@ export function usePantryManagement(pantryId: string | undefined) {
     };
   }, [pantryItems]);
 
+  // Location counts for filter tabs
+  const locationCounts = useMemo(() => {
+    if (!pantryItems || pantryItems.length === 0) {
+      return {
+        all: 0,
+        fridge: 0,
+        freezer: 0,
+        pantry: 0,
+      };
+    }
+
+    return {
+      all: pantryItems.length,
+      fridge: pantryItems.filter(
+        item => item.storageState === StorageState.Refrigerated,
+      ).length,
+      freezer: pantryItems.filter(
+        item => item.storageState === StorageState.Frozen,
+      ).length,
+      pantry: pantryItems.filter(
+        item => item.storageState === StorageState.Ambient || !item.storageState,
+      ).length,
+    };
+  }, [pantryItems]);
+
+  // Sectioned items for redesign
+  const sectionedItems = useMemo(() => {
+    if (!pantryItems || pantryItems.length === 0) {
+      return {
+        expiredItems: [],
+        expiringSoonItems: [],
+        normalItems: [],
+      };
+    }
+
+    const now = new Date();
+    const threeDaysFromNow = new Date();
+    threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
+
+    const expiredItems = pantryItems.filter(item => {
+      if (!item.expiresAt) return false;
+      return new Date(item.expiresAt) < now;
+    });
+
+    const expiringSoonItems = pantryItems.filter(item => {
+      if (!item.expiresAt) return false;
+      const expirationDate = new Date(item.expiresAt);
+      return expirationDate >= now && expirationDate <= threeDaysFromNow;
+    });
+
+    const normalItems = pantryItems.filter(item => {
+      if (!item.expiresAt) return true; // Items without expiry go to normal
+      const expirationDate = new Date(item.expiresAt);
+      return expirationDate > threeDaysFromNow;
+    });
+
+    return {
+      expiredItems,
+      expiringSoonItems,
+      normalItems,
+    };
+  }, [pantryItems]);
+
   // Pagination using generic utility hook
   const { hasMore, loadMore, isLoadingMore } = usePagination({
     pageInfo: normalizedPantry?.itemsPageInfo,
@@ -389,6 +452,10 @@ export function usePantryManagement(pantryId: string | undefined) {
     loading,
     error,
     stats,
+
+    // Redesign data
+    locationCounts,
+    sectionedItems,
 
     // Pagination
     loadMore,
