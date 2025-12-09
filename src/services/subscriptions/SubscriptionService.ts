@@ -51,6 +51,11 @@ export class SubscriptionService {
   // Recent reorder tracking (for ignoring subscription echoes)
   private recentReorders = new Map<string, number>(); // itemId -> timestamp
 
+  // Pending delete tracking (to handle subscription race conditions)
+  // When we optimistically delete an item, Apollo's auto-normalization may re-add it
+  // from the subscription payload. We track pending deletes to re-evict if needed.
+  private pendingDeletes = new Map<string, { parentId: string; entityType: string }>();
+
   // Statistics
   private stats = {
     totalUpdates: 0,
@@ -71,6 +76,29 @@ export class SubscriptionService {
       SubscriptionService.instance = new SubscriptionService();
     }
     return SubscriptionService.instance;
+  }
+
+  /**
+   * Register a pending delete to handle subscription race conditions.
+   * When we optimistically delete an item, the subscription may arrive with
+   * the deleted item's data, causing Apollo to re-add it via auto-normalization.
+   * By tracking pending deletes, we can re-evict the item if this happens.
+   *
+   * @param itemId - The ID of the item being deleted
+   * @param parentId - The parent entity ID (e.g., pantryId)
+   * @param entityType - The GraphQL typename (e.g., 'PantryItem')
+   */
+  registerPendingDelete(itemId: string, parentId: string, entityType: string): void {
+    this.pendingDeletes.set(itemId, { parentId, entityType });
+    // Auto-cleanup after 30s to prevent memory leaks in edge cases
+    setTimeout(() => this.pendingDeletes.delete(itemId), 30000);
+  }
+
+  /**
+   * Unregister a pending delete (called after mutation completes)
+   */
+  unregisterPendingDelete(itemId: string): void {
+    this.pendingDeletes.delete(itemId);
   }
 
   /**
@@ -411,7 +439,35 @@ export class SubscriptionService {
         case MutationType.DELETE:
         case 'DELETED':
         case 'ITEM_REMOVED':
-        case 'COLLABORATOR_REMOVED':
+        case 'COLLABORATOR_REMOVED': {
+          // Build cache ID for this item
+          const cacheId = cache.identify({
+            __typename: config.entityType,
+            id: itemId,
+          });
+
+          // Check if this is a pending delete (self-triggered from our mutation)
+          // Apollo's auto-normalization may have re-added the item from the subscription
+          // payload, so we need to re-evict it
+          const pendingDelete = this.pendingDeletes.get(itemId);
+          if (pendingDelete) {
+            this.log(config, LogLevel.DEBUG, 'Re-evicting pending delete (counteract auto-normalization)', itemId);
+            if (cacheId) {
+              cache.evict({ id: cacheId });
+              cache.gc();
+            }
+            this.pendingDeletes.delete(itemId);
+            break;
+          }
+
+          // Check if item is already evicted (e.g., from a previous operation)
+          const itemExists = cacheId && cache.data?.data?.[cacheId];
+          if (!itemExists) {
+            this.log(config, LogLevel.DEBUG, 'Item already evicted, skipping delete', itemId);
+            break;
+          }
+
+          // Normal delete processing for other users' deletes
           // Remove item from array field
           cache.modify({
             fields: {
@@ -422,17 +478,11 @@ export class SubscriptionService {
           });
 
           // Evict item from cache
-          const cacheId = cache.identify({
-            __typename: config.entityType,
-            id: itemId,
-          });
-
-          if (cacheId) {
-            cache.evict({ id: cacheId });
-            cache.gc(); // Garbage collect orphaned references
-            this.log(config, LogLevel.DEBUG, 'Removed and evicted item from cache', itemId);
-          }
+          cache.evict({ id: cacheId });
+          cache.gc(); // Garbage collect orphaned references
+          this.log(config, LogLevel.DEBUG, 'Removed and evicted item from cache', itemId);
           break;
+        }
 
         default:
           this.log(config, LogLevel.WARN, 'Unknown mutation type', mutation);

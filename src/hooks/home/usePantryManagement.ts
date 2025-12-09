@@ -27,6 +27,7 @@ import {
 } from '#/apollo/utils';
 import { pantryItemSearch } from '#/utils/searchUtils';
 import { useOfflinePresetPolicy } from '#/apollo/policies/offlineFetchPolicies';
+import { subscriptionService } from '#/services/subscriptions';
 
 // Cache updater utilities for pantry items
 const addToPantryItemsCache = createAddToParentConnectionUpdater(
@@ -162,8 +163,7 @@ export function usePantryManagement(pantryId: string | undefined) {
   });
 
   // CRUD operations utilities
-  const { createAddOperation, createUpdateOperation, createRemoveOperation } =
-    useCrudOperations();
+  const { createAddOperation, createUpdateOperation } = useCrudOperations();
 
   // Mutations with optimistic updates
   const [addItemMutation] = useCreatePantryItemMutation({
@@ -275,7 +275,7 @@ export function usePantryManagement(pantryId: string | undefined) {
     // The optimistic response provides instant UI feedback
   });
 
-  const [removeItemMutation] = useDeletePantryItemMutation({
+  const [removeItemMutation, { client }] = useDeletePantryItemMutation({
     errorPolicy: 'all',
     onError: (error: any) => {
       const { message } = handleApolloError(error, {
@@ -338,15 +338,38 @@ export function usePantryManagement(pantryId: string | undefined) {
     return operation(updates);
   };
 
-  // Simplified remove item using CRUD utilities
+  // Remove item with optimistic cache update for instant UI feedback
   const removeItem = async (itemId: string) => {
-    const operation = createRemoveOperation({
-      mutation: removeItemMutation,
-      parentId: () => pantryId,
-      itemId,
-      operationName: 'Delete Pantry Item',
-    });
-    return operation();
+    if (!pantryId) return;
+
+    // Register pending delete to handle subscription race condition
+    // This prevents Apollo's auto-normalization from re-adding the item
+    subscriptionService.registerPendingDelete(itemId, pantryId, 'PantryItem');
+
+    // Optimistically remove from cache IMMEDIATELY for instant UI feedback
+    // This removes the row from the list before the mutation completes
+    removeFromPantryItemsCache(client.cache, pantryId, itemId, { evictItem: true });
+
+    try {
+      // Now call the mutation - the update callback will be a no-op since item is already removed
+      const result = await removeItemMutation({
+        variables: { id: itemId },
+      });
+
+      // With errorPolicy: 'all', GraphQL errors don't reject but are in result.error
+      // If there's an error, refetch to restore correct state
+      if (result.error) {
+        console.warn('Delete mutation had errors, refetching to restore state');
+        refetch();
+      }
+    } catch (error) {
+      // Network errors will reject the promise
+      console.warn('Delete mutation failed, refetching to restore state:', error);
+      refetch();
+    } finally {
+      // Clean up pending delete registry
+      subscriptionService.unregisterPendingDelete(itemId);
+    }
   };
 
   return {

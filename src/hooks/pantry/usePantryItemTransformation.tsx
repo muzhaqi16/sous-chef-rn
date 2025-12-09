@@ -73,6 +73,7 @@ const formatStorageState = (state?: string | null): string => {
 
 // Helper to format quantity as fraction/mixed number
 const formatQuantityAsFraction = (qty: number): string => {
+  if (qty == null) return '0';
   if (qty === 0) return '0';
   if (Number.isInteger(qty)) return qty.toString();
 
@@ -190,7 +191,9 @@ export function usePantryItemTransformation<T extends PantryItem>(
   const { items, theme } = options;
 
   return useMemo(() => {
-    return items.map(item => {
+    // Filter out items with missing or invalid IDs to prevent key warnings
+    // This can happen during cache updates when items are being removed
+    return items.filter(item => item.id).map(item => {
       // Calculate expired status for badge
       const isExpired =
         item.expiresAt && new Date(item.expiresAt) < new Date();
