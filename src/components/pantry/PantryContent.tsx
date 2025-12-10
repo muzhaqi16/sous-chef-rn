@@ -15,7 +15,7 @@ import {
 import { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Icon } from '#utils';
+import { Icon, IconLibrary } from '#utils';
 import { getItemImageUrl } from '#utils/imageUtils';
 import { LocationFilter } from '#utils/pantryFilters';
 import { AlertBanner } from '../molecules';
@@ -521,21 +521,27 @@ export const PantryContent: React.FC<PantryContentProps> = ({
               <View style={styles.sortModal}>
                 <Text style={styles.sortModalTitle}>Sort by</Text>
                 {[
-                  { key: 'name' as SortOption, label: 'Name', icon: '🔤' },
+                  {
+                    key: 'name' as SortOption,
+                    label: 'Name',
+                    icon: 'sort-by-alpha',
+                    library: 'MaterialIcons' as IconLibrary,
+                  },
                   {
                     key: 'expiry' as SortOption,
                     label: 'Expiry Date',
-                    icon: '📅',
+                    icon: 'calendar-month',
                   },
                   {
                     key: 'quantity' as SortOption,
                     label: 'Quantity',
-                    icon: '📊',
+                    icon: 'bar-chart',
                   },
                   {
                     key: 'recent' as SortOption,
                     label: 'Recently Added',
-                    icon: '🕐',
+                    icon: 'clock',
+                    library: 'Feather' as IconLibrary,
                   },
                 ].map(option => (
                   <TouchableOpacity
@@ -546,7 +552,12 @@ export const PantryContent: React.FC<PantryContentProps> = ({
                     ]}
                     onPress={() => handleSortSelect(option.key)}
                   >
-                    <Text style={styles.sortOptionIcon}>{option.icon}</Text>
+                    <Icon
+                      name={option.icon}
+                      size={18}
+                      library={option.library}
+                      color="#F97316"
+                    />
                     <Text
                       style={[
                         styles.sortOptionLabel,
@@ -726,6 +737,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: 12,
     borderRadius: 10,
     marginBottom: 8,
+    gap: theme.spacing.md,
   },
   sortOptionActive: {
     backgroundColor: '#FFF7ED',
