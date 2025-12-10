@@ -98,6 +98,7 @@ export const lightTheme = {
     filterTab: colors.filterTab,
     avatar: colors.avatar,
     sectionHeader: colors.sectionHeader,
+    alertBanner: colors.alertBanner,
 
     // Overlay
     overlay: colors.overlay,
@@ -186,6 +187,7 @@ export const darkTheme = {
     filterTab: colors.filterTab,
     avatar: colors.avatar,
     sectionHeader: colors.sectionHeader,
+    alertBanner: colors.alertBanner,
 
     // Overlay
     overlay: colors.overlay,

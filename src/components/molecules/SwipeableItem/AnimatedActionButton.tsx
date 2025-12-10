@@ -22,7 +22,6 @@ interface AnimatedActionButtonProps extends ActionButtonProps {
 export const AnimatedActionButton: React.FC<AnimatedActionButtonProps> = ({
   onPress,
   icon,
-  backgroundColor,
   label,
   circular = false,
   library,
@@ -36,7 +35,7 @@ export const AnimatedActionButton: React.FC<AnimatedActionButtonProps> = ({
     ? styles.circularActionButton
     : styles.actionButton;
   const iconColor = theme.colors.white;
-  const iconSize = theme.fonts.size['3xl'];
+  const iconSize = theme.fonts.size.xl;
 
   // Calculate stagger thresholds - buttons reveal sequentially as swipe progresses
   // First button starts appearing at 0.1, fully visible at 0.3
@@ -89,10 +88,7 @@ export const AnimatedActionButton: React.FC<AnimatedActionButtonProps> = ({
 
   return (
     <GestureDetector gesture={tapGesture}>
-      <Animated.View
-        style={[buttonStyle, { backgroundColor }, animatedStyle]}
-        testID={testID}
-      >
+      <Animated.View style={[buttonStyle, animatedStyle]} testID={testID}>
         <Icon name={icon} size={iconSize} color={iconColor} library={library} />
         {label && <Text style={styles.deleteText}>{label}</Text>}
       </Animated.View>

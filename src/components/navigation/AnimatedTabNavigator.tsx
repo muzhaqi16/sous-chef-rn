@@ -5,7 +5,7 @@ import {
   BottomTabNavigationOptions,
 } from '@react-navigation/bottom-tabs';
 import { StyleSheet } from 'react-native-unistyles';
-import { ScannerProvider } from '#/context/ScannerContext';
+import { TabBarActionsProvider } from '#/context/TabBarActionsContext';
 import { FloatingTabBar } from './FloatingTabBar';
 
 interface AnimatedTabNavigatorProps<
@@ -29,7 +29,7 @@ export function createAnimatedTabNavigator<
     initialRouteName,
   }) => {
     return (
-      <ScannerProvider>
+      <TabBarActionsProvider>
         <View style={styles.container}>
           <Tab.Navigator
           initialRouteName={initialRouteName}
@@ -51,7 +51,7 @@ export function createAnimatedTabNavigator<
           {children}
           </Tab.Navigator>
         </View>
-      </ScannerProvider>
+      </TabBarActionsProvider>
     );
   };
 

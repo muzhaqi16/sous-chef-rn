@@ -5196,6 +5196,13 @@ export type Query = {
   purchasesByShoppingListItem: Array<Purchase>;
   purchasesByStore: Array<Purchase>;
   recentNotifications: Array<Notification>;
+  /**
+   * Get recently deleted pantry items for quick re-adding suggestions.
+   * Returns soft-deleted items that are not currently in the pantry,
+   * deduplicated by itemId (only shows most recent entry per item).
+   * Useful for "Add to Pantry" UI to show items user previously had.
+   */
+  recentlyDeletedPantryItems: Array<PantryItem>;
   recipe?: Maybe<Recipe>;
   recipeCookingLogs: Array<CookingLog>;
   recipeSuggestions: RecipeConnection;
@@ -5728,6 +5735,11 @@ export type QueryPurchasesByStoreArgs = {
 
 export type QueryRecentNotificationsArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type QueryRecentlyDeletedPantryItemsArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  pantryId: Scalars['ID']['input'];
 };
 
 export type QueryRecipeArgs = {
@@ -16576,6 +16588,28 @@ export type GetDefaultPantryQuery = {
     | { __typename?: 'Pantry'; id: string; name: string; isDefault: boolean }
     | null
     | undefined;
+};
+
+export type GetRecentlyDeletedPantryItemsQueryVariables = Exact<{
+  pantryId: Scalars['ID']['input'];
+  limit?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+export type GetRecentlyDeletedPantryItemsQuery = {
+  __typename?: 'Query';
+  recentlyDeletedPantryItems: Array<{
+    __typename?: 'PantryItem';
+    id: string;
+    itemName: string;
+    itemId: string;
+    createdAt: string;
+    item: {
+      __typename?: 'Item';
+      id: string;
+      name: string;
+      imageUrl?: string | null | undefined;
+    };
+  }>;
 };
 
 export type GetPantryLedgerAnalyticsQueryVariables = Exact<{

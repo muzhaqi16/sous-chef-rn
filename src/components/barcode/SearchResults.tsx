@@ -107,8 +107,14 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
 
     try {
       if (source === 'pantry' && pantryId) {
-        // Debug: Log the item structure
-        console.log('Item data:', JSON.stringify(item, null, 2));
+        // Build weight input from catalog item if available
+        const weightInput =
+          item.netWeight && item.displayUnit?.id
+            ? {
+                packageWeight: item.netWeight,
+                packageWeightUnitId: item.displayUnit.id,
+              }
+            : {};
 
         await addToPantry({
           variables: {
@@ -118,6 +124,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
               initialQuantity: 1,
               itemName: item.name,
               unitId: item.unitId,
+              ...weightInput, // Include weight info from catalog item
             },
           },
         });

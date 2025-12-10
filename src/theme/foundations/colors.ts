@@ -119,6 +119,34 @@ export const colors = {
     actionText: '#F97316',
   },
 
+  // Alert banner colors - for generic status banners
+  alertBanner: {
+    error: {
+      bg: '#FEF2F2',
+      border: '#FECACA',
+      text: '#DC2626',
+      iconBg: '#FEE2E2',
+    },
+    warning: {
+      bg: '#FFFBEB',
+      border: '#FDE68A',
+      text: '#EA580C',
+      iconBg: '#FEF3C7',
+    },
+    info: {
+      bg: '#EFF6FF',
+      border: '#BFDBFE',
+      text: '#2563EB',
+      iconBg: '#DBEAFE',
+    },
+    success: {
+      bg: '#F0FDF4',
+      border: '#BBF7D0',
+      text: '#16A34A',
+      iconBg: '#DCFCE7',
+    },
+  },
+
   // Overlay variations - for modals, backdrops
   overlays: {
     light: 'rgba(0, 0, 0, 0.3)',

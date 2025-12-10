@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from 'react';
-import { useWindowDimensions, TouchableOpacity } from 'react-native';
+import { View, useWindowDimensions, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useSharedValue,
@@ -8,7 +8,7 @@ import Animated, {
   withSequence,
 } from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { useScanner } from '#context/ScannerContext';
+import { useTabBarActions } from '#context/TabBarActionsContext';
 import type { FloatingTabBarProps } from './types';
 import { AddButton } from './AddButton';
 
@@ -19,7 +19,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = React.memo(({
   descriptors,
   navigation,
 }) => {
-  const { onScanPress, showScannerButton, setActiveTab, isOverlayOpen } = useScanner();
+  const { onAddPress, showAddButton, addButtonConfig, setActiveTab, isOverlayOpen } = useTabBarActions();
   const { bottom: safeBottom } = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
   const { theme } = useUnistyles();
@@ -75,77 +75,95 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = React.memo(({
     [tabBarWidth, safeBottom]
   );
 
+  // Split tabs: first half before add button, second half after
+  const middleIndex = Math.floor(state.routes.length / 2);
+
+  const renderTabItem = (route: typeof state.routes[0], index: number) => {
+    const { options } = descriptors[route.key];
+    const isFocused = state.index === index;
+
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const iconScale = useSharedValue(isFocused ? 1.2 : 1);
+
+    // Update scale when focus changes
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    useEffect(() => {
+      iconScale.value = withSpring(isFocused ? 1.2 : 1, {
+        damping: 35,
+        stiffness: 250,
+      });
+    }, [isFocused, iconScale]);
+
+    const onPress = () => {
+      // Animate icon scale on press (squeeze then expand)
+      iconScale.value = withSequence(
+        withSpring(0.85, { damping: 15, stiffness: 300 }),
+        withSpring(isFocused ? 1.2 : 1, { damping: 15, stiffness: 300 })
+      );
+
+      const event = navigation.emit({
+        type: 'tabPress',
+        target: route.key,
+        canPreventDefault: true,
+      });
+
+      if (!isFocused && !event.defaultPrevented) {
+        navigation.navigate(route.name, route.params);
+      }
+    };
+
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const animatedIconStyle = useAnimatedStyle(() => ({
+      transform: [{ scale: iconScale.value }],
+    }));
+
+    return (
+      <TouchableOpacity
+        key={route.key}
+        testID={`tab-${route.name.toLowerCase().replace(/\s+/g, '-')}`}
+        accessibilityRole="button"
+        accessibilityState={isFocused ? { selected: true } : {}}
+        accessibilityLabel={options.tabBarAccessibilityLabel}
+        onPress={onPress}
+        style={styles.tabItem}
+        activeOpacity={0.7}
+      >
+        <Animated.View style={animatedIconStyle}>
+          {options.tabBarIcon && (
+            <options.tabBarIcon
+              focused={isFocused}
+              color={isFocused ? theme.colors.primary : '#CCCCCC'}
+              size={24}
+            />
+          )}
+        </Animated.View>
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <Animated.View
       style={[containerStyle, styles.container, animatedStyle]}
       testID="tab-bar"
     >
-      {state.routes.map((route, index) => {
-        const { options } = descriptors[route.key];
-        const isFocused = state.index === index;
+      {/* First half of tabs (Pantry, ShoppingList) */}
+      {state.routes.slice(0, middleIndex).map((route, index) => renderTabItem(route, index))}
 
-        // eslint-disable-next-line react-hooks/rules-of-hooks
-        const iconScale = useSharedValue(isFocused ? 1.2 : 1);
-
-        // Update scale when focus changes
-        // eslint-disable-next-line react-hooks/rules-of-hooks
-        useEffect(() => {
-          iconScale.value = withSpring(isFocused ? 1.2 : 1, {
-            damping: 35,
-            stiffness: 250,
-          });
-        }, [isFocused, iconScale]);
-
-        const onPress = () => {
-          // Animate icon scale on press (squeeze then expand)
-          iconScale.value = withSequence(
-            withSpring(0.85, { damping: 15, stiffness: 300 }),
-            withSpring(isFocused ? 1.2 : 1, { damping: 15, stiffness: 300 })
-          );
-
-          const event = navigation.emit({
-            type: 'tabPress',
-            target: route.key,
-            canPreventDefault: true,
-          });
-
-          if (!isFocused && !event.defaultPrevented) {
-            navigation.navigate(route.name, route.params);
-          }
-        };
-
-        // eslint-disable-next-line react-hooks/rules-of-hooks
-        const animatedIconStyle = useAnimatedStyle(() => ({
-          transform: [{ scale: iconScale.value }],
-        }));
-
-        return (
-          <TouchableOpacity
-            key={route.key}
-            testID={`tab-${route.name.toLowerCase().replace(/\s+/g, '-')}`}
-            accessibilityRole="button"
-            accessibilityState={isFocused ? { selected: true } : {}}
-            accessibilityLabel={options.tabBarAccessibilityLabel}
-            onPress={onPress}
-            style={styles.tabItem}
-            activeOpacity={0.7}
-          >
-            <Animated.View style={animatedIconStyle}>
-              {options.tabBarIcon && (
-                <options.tabBarIcon
-                  focused={isFocused}
-                  color={isFocused ? theme.colors.primary : '#CCCCCC'}
-                  size={24}
-                />
-              )}
-            </Animated.View>
-          </TouchableOpacity>
-        );
-      })}
-
-      {showScannerButton && onScanPress && (
-        <AddButton onPress={onScanPress} />
+      {/* Center Add Button */}
+      {showAddButton && onAddPress ? (
+        <View style={styles.addButtonContainer}>
+          <AddButton
+            onPress={onAddPress}
+            icon={addButtonConfig.icon}
+            iconLibrary={addButtonConfig.iconLibrary}
+          />
+        </View>
+      ) : (
+        <View style={styles.addButtonPlaceholder} />
       )}
+
+      {/* Second half of tabs (Recipe, Profile) */}
+      {state.routes.slice(middleIndex).map((route, index) => renderTabItem(route, middleIndex + index))}
     </Animated.View>
   );
 });
@@ -175,5 +193,13 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     height: '100%',
     minWidth: 40,
+  },
+  addButtonContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+  },
+  addButtonPlaceholder: {
+    width: 72, // Same width as addButtonContainer to maintain layout
   },
 }));

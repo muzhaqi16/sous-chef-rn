@@ -3,6 +3,14 @@ import {RootState} from '../index';
 import {NotificationType} from '#/graphql/generated';
 import {safeParseDate} from '#utils/dateUtils';
 
+// Helper to check if a notification is an invitation (should always show)
+// These notification types ask user to join something - they shouldn't require
+// the user to already have that context (home, list) selected
+const isInvitationNotification = (type: NotificationType): boolean =>
+  type === NotificationType.HomeInvitation ||
+  type === NotificationType.MembershipInvite ||
+  type === NotificationType.CollaborationInvite;
+
 export enum NotificationPriority {
   LOW = 'LOW',
   MEDIUM = 'MEDIUM',
@@ -130,6 +138,9 @@ export const createNotificationSlice: StateCreator<
       return;
     }
 
+    // Invitations should always be shown - user needs them to join homes/lists
+    const isInvitation = isInvitationNotification(notification.type);
+
     // Safety check: Don't add pantry notifications without pantry
     if (
       notification.category === NotificationCategory.PANTRY &&
@@ -138,10 +149,11 @@ export const createNotificationSlice: StateCreator<
       return;
     }
 
-    // Safety check: Don't add home notifications without home
+    // Safety check: Don't add home notifications without home (except invitations)
     if (
       notification.category === NotificationCategory.MEMBERSHIP &&
-      !state.selectedHomeId
+      !state.selectedHomeId &&
+      !isInvitation
     ) {
       return;
     }
@@ -190,6 +202,11 @@ export const createNotificationSlice: StateCreator<
 
     // Filter notifications based on current state
     const validNotifications = notifications.filter(notification => {
+      // Invitations should always be shown - user needs them to join homes/lists
+      if (isInvitationNotification(notification.type)) {
+        return true;
+      }
+
       if (
         notification.category === NotificationCategory.PANTRY &&
         !state.selectedPantryId
@@ -324,8 +341,13 @@ export const createNotificationSlice: StateCreator<
         draft.subscribedLists = [];
       }
 
-      // Remove notifications for entities that no longer exist
+      // Remove notifications for entities that no longer exist (but always keep invitations)
       draft.notifications = draft.notifications.filter(notification => {
+        // Always keep invitations - user needs them to join homes/lists
+        if (isInvitationNotification(notification.type)) {
+          return true;
+        }
+
         if (
           notification.category === NotificationCategory.PANTRY &&
           !state.selectedPantryId

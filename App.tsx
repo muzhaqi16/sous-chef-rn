@@ -169,15 +169,9 @@ const App = () => {
   );
 };
 
-const styles = StyleSheet.create(theme => ({
+const styles = StyleSheet.create(() => ({
   container: {
     flex: 1,
-  },
-  text: {
-    color: theme.colors.textPrimary,
-    fontSize: 16,
-    textAlign: 'center',
-    margin: 10,
   },
 }));
 

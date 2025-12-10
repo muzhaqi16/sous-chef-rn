@@ -35,6 +35,7 @@ import {
   useAddItemToShoppingListMutation,
   useGetShoppingListsQuery,
   useMyRecipesQuery,
+  useMarkRecipeAsCookedMutation,
 } from '#generated';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { BottomSheetAction } from '#components';
@@ -47,6 +48,7 @@ import {
 } from '#/apollo/utils';
 import { toastService } from '#/services/toastService';
 import { RecipeDetailErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
+import { MarkCookedModal } from '#/components/modals/MarkCookedModal';
 
 type RecipeDetailRouteProp = RouteProp<RecipeStackParamList, 'RecipeDetail'>;
 
@@ -88,6 +90,10 @@ const RecipeDetailScreen: React.FC = () => {
   const [addedIngredients, setAddedIngredients] = useState<
     Set<string | number>
   >(new Set());
+
+  // State for mark as cooked modal
+  const [cookedModalVisible, setCookedModalVisible] = useState(false);
+  const [markingAsCooked, setMarkingAsCooked] = useState(false);
 
   // Refs for bottom sheets
   const shoppingListOptionsRef = useRef<BottomSheetModal>(null);
@@ -207,6 +213,14 @@ const RecipeDetailScreen: React.FC = () => {
       } catch (error) {
         console.warn('Cache update failed for addItemToShoppingList:', error);
       }
+    },
+  });
+
+  // Mark recipe as cooked mutation
+  const [markRecipeAsCookedMutation] = useMarkRecipeAsCookedMutation({
+    onError: error => {
+      console.error('Mark recipe as cooked error:', error);
+      toastService.error(error.message || 'Failed to mark recipe as cooked');
     },
   });
 
@@ -629,6 +643,41 @@ const RecipeDetailScreen: React.FC = () => {
     addRecipeIngredientMutation,
   ]);
 
+  // Handle mark recipe as cooked
+  const handleMarkAsCooked = useCallback(async (input: {
+    servings: number;
+    deductFromPantry: boolean;
+    notes?: string;
+  }) => {
+    if (!recipeId) {
+      toastService.error('Cannot mark external recipes as cooked. Please save the recipe first.');
+      return;
+    }
+
+    setMarkingAsCooked(true);
+
+    try {
+      await markRecipeAsCookedMutation({
+        variables: {
+          recipeId,
+          servings: input.servings,
+          deductFromPantry: input.deductFromPantry,
+          notes: input.notes,
+        },
+      });
+
+      if (input.deductFromPantry) {
+        toastService.success('Recipe marked as cooked! Ingredients deducted from pantry.');
+      } else {
+        toastService.success('Recipe marked as cooked!');
+      }
+    } catch (error) {
+      // Error handled by mutation onError
+    } finally {
+      setMarkingAsCooked(false);
+    }
+  }, [recipeId, markRecipeAsCookedMutation]);
+
   // Normalize recipe data
   const displayData = useMemo(() => {
     if (isBackendRecipe && backendRecipe) {
@@ -752,6 +801,24 @@ const RecipeDetailScreen: React.FC = () => {
               </Text>
             )}
           </View>
+
+          {/* I Cooked This Button (Only for backend recipes) */}
+          {isBackendRecipe && recipeId && (
+            <TouchableOpacity
+              style={styles.cookedButton}
+              onPress={() => setCookedModalVisible(true)}
+              disabled={markingAsCooked}
+            >
+              {markingAsCooked ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <>
+                  <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+                  <Text style={styles.cookedButtonText}>I Cooked This!</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          )}
 
           {/* Dietary Tags (Only for external recipes) */}
           {!isBackendRecipe && (
@@ -1059,6 +1126,15 @@ const RecipeDetailScreen: React.FC = () => {
           )}
         </TouchableOpacity>
       </BottomSheetAction>
+
+      {/* Mark Cooked Modal */}
+      <MarkCookedModal
+        visible={cookedModalVisible}
+        recipeName={displayData.title || ''}
+        defaultServings={displayData.servings || 1}
+        onClose={() => setCookedModalVisible(false)}
+        onConfirm={handleMarkAsCooked}
+      />
     </View>
   );
 };
@@ -1131,6 +1207,23 @@ const styles = StyleSheet.create(theme => ({
   metadataText: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
+  },
+  cookedButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.success,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.lg,
+    borderRadius: theme.radii.full,
+    gap: theme.spacing.xs,
+    marginBottom: theme.spacing.md,
+    alignSelf: 'flex-start',
+  },
+  cookedButtonText: {
+    fontSize: theme.fonts.size.sm,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
   tags: {
     flexDirection: 'row',

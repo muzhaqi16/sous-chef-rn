@@ -10,11 +10,13 @@ import { createRemoveFromQueryFieldUpdater } from '#/apollo/utils';
 import { spoonacularService } from '#/services/recipeApi';
 import type { RecipeInformation } from '#/services/recipeApi/types';
 import { Icon } from '#/utils';
+import { useTabBarActions } from '#context';
 
 // PERFORMANCE: Memoize screen component to prevent unnecessary re-renders
 export const RecipeMain: React.FC = React.memo(() => {
-  const { navigate } = useAppNavigation();
+  const { navigate, isFocused } = useAppNavigation();
   const { theme } = useUnistyles();
+  const { setAddProps } = useTabBarActions();
   const [searchQuery, setSearchQuery] = useState('');
 
   // State for random recipes (shown when user has no saved recipes)
@@ -76,6 +78,16 @@ export const RecipeMain: React.FC = React.memo(() => {
       hasFetchedRandom.current = false; // Reset so it can fetch again if recipes are deleted
     }
   }, [recipes.length, randomRecipes.length]);
+
+  // Register add button action - navigate to recipe search
+  useEffect(() => {
+    if (isFocused) {
+      setAddProps(() => navigate('RecipeSearch'), true);
+    }
+    return () => {
+      setAddProps(undefined, false);
+    };
+  }, [isFocused, setAddProps, navigate]);
 
   // Manual refresh to get new random recipes
   const handleRefreshRandom = useCallback(async () => {

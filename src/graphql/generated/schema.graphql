@@ -4663,6 +4663,13 @@ type Query {
   purchasesByShoppingListItem(limit: Int, shoppingListItemId: ID!): [Purchase!]!
   purchasesByStore(storeId: ID!, userId: ID): [Purchase!]!
   recentNotifications(limit: Int = 10): [Notification!]!
+  """
+  Get recently deleted pantry items for quick re-adding suggestions.
+  Returns soft-deleted items that are not currently in the pantry,
+  deduplicated by itemId (only shows most recent entry per item).
+  Useful for "Add to Pantry" UI to show items user previously had.
+  """
+  recentlyDeletedPantryItems(limit: Int = 10, pantryId: ID!): [PantryItem!]!
   recipe(id: ID!): Recipe
   recipeCookingLogs(limit: Int, offset: Int, recipeId: ID!): [CookingLog!]!
   recipeSuggestions(

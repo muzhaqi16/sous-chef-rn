@@ -10,6 +10,7 @@ import { useSharedBottomSheetConfigs } from '#hooks';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { FractionInput } from '#components/molecules/FractionInput';
+import { FormInput } from '#components/molecules/FormInput';
 import { Icon } from '#utils';
 import { parseFractionalInput } from '#/utils';
 import { StorageState, ShoppingListItemDisplayFragment, BasicPantryFragment } from '#generated';
@@ -28,6 +29,9 @@ interface MoveToPantryModalProps {
     storageState?: StorageState;
     expiresAt?: string;
     removeFromList: boolean;
+    costPerUnit?: number;
+    totalCost?: number;
+    notes?: string;
   }) => void;
 }
 
@@ -51,6 +55,9 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   const [expirationDate, setExpirationDate] = useState<Date | undefined>(undefined);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [removeFromList, setRemoveFromList] = useState(true);
+  const [costPerUnitInput, setCostPerUnitInput] = useState('');
+  const [totalCostInput, setTotalCostInput] = useState('');
+  const [notes, setNotes] = useState('');
 
   // Control bottom sheet visibility based on visible prop
   useEffect(() => {
@@ -63,6 +70,9 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
       setExpirationDate(undefined);
       setShowDatePicker(false);
       setRemoveFromList(true);
+      setCostPerUnitInput('');
+      setTotalCostInput('');
+      setNotes('');
     } else {
       bottomSheetRef.current?.dismiss();
     }
@@ -83,15 +93,26 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
       return;
     }
 
+    // Parse cost values (optional)
+    const costPerUnit = costPerUnitInput
+      ? parseFloat(costPerUnitInput)
+      : undefined;
+    const totalCost = totalCostInput
+      ? parseFloat(totalCostInput)
+      : undefined;
+
     onConfirm({
       pantryId,
       actualQuantity: quantityValue,
       storageState,
       expiresAt: expirationDate?.toISOString(),
       removeFromList,
+      costPerUnit: isNaN(costPerUnit!) ? undefined : costPerUnit,
+      totalCost: isNaN(totalCost!) ? undefined : totalCost,
+      notes: notes || undefined,
     });
     onClose();
-  }, [shoppingListItem, pantryId, quantityInput, storageState, expirationDate, removeFromList, onConfirm, onClose]);
+  }, [shoppingListItem, pantryId, quantityInput, storageState, expirationDate, removeFromList, costPerUnitInput, totalCostInput, notes, onConfirm, onClose]);
 
   const handleDateChange = useCallback((_event: any, date?: Date) => {
     setShowDatePicker(false);
@@ -265,6 +286,43 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
               )}
             </View>
 
+            {/* Cost Tracking (Optional) */}
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Cost (Optional)</Text>
+              <View style={styles.costRow}>
+                <View style={styles.costField}>
+                  <FormInput
+                    label="Cost per Unit"
+                    value={costPerUnitInput}
+                    onChangeText={setCostPerUnitInput}
+                    placeholder="0.00"
+                    keyboardType="decimal-pad"
+                  />
+                </View>
+                <View style={styles.costField}>
+                  <FormInput
+                    label="Total Cost"
+                    value={totalCostInput}
+                    onChangeText={setTotalCostInput}
+                    placeholder="0.00"
+                    keyboardType="decimal-pad"
+                  />
+                </View>
+              </View>
+            </View>
+
+            {/* Notes (Optional) */}
+            <View style={styles.section}>
+              <FormInput
+                label="Notes (Optional)"
+                value={notes}
+                onChangeText={setNotes}
+                placeholder="Add any notes about this purchase..."
+                multiline
+                numberOfLines={2}
+              />
+            </View>
+
             {/* Remove from List Toggle */}
             <View style={styles.toggleSection}>
               <View style={styles.toggleInfo}>
@@ -341,6 +399,13 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
+  },
+  costRow: {
+    flexDirection: 'row',
+    gap: theme.spacing.md,
+  },
+  costField: {
+    flex: 1,
   },
   pantryList: {
     gap: theme.spacing.sm,

@@ -5200,6 +5200,13 @@ export type Query = {
   purchasesByShoppingListItem: Array<Purchase>;
   purchasesByStore: Array<Purchase>;
   recentNotifications: Array<Notification>;
+  /**
+   * Get recently deleted pantry items for quick re-adding suggestions.
+   * Returns soft-deleted items that are not currently in the pantry,
+   * deduplicated by itemId (only shows most recent entry per item).
+   * Useful for "Add to Pantry" UI to show items user previously had.
+   */
+  recentlyDeletedPantryItems: Array<PantryItem>;
   recipe: Maybe<Recipe>;
   recipeCookingLogs: Array<CookingLog>;
   recipeSuggestions: RecipeConnection;
@@ -5732,6 +5739,11 @@ export type QueryPurchasesByStoreArgs = {
 
 export type QueryRecentNotificationsArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type QueryRecentlyDeletedPantryItemsArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  pantryId: Scalars['ID']['input'];
 };
 
 export type QueryRecipeArgs = {
@@ -11647,6 +11659,28 @@ export type GetDefaultPantryQuery = {
     | { __typename?: 'Pantry'; id: string; name: string; isDefault: boolean }
     | null
     | undefined;
+};
+
+export type GetRecentlyDeletedPantryItemsQueryVariables = Exact<{
+  pantryId: Scalars['ID']['input'];
+  limit?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+export type GetRecentlyDeletedPantryItemsQuery = {
+  __typename?: 'Query';
+  recentlyDeletedPantryItems: Array<{
+    __typename?: 'PantryItem';
+    id: string;
+    itemName: string;
+    itemId: string;
+    createdAt: string;
+    item: {
+      __typename?: 'Item';
+      id: string;
+      name: string;
+      imageUrl: string | null | undefined;
+    };
+  }>;
 };
 
 export type GetPantryLedgerAnalyticsQueryVariables = Exact<{
@@ -41378,6 +41412,173 @@ export function refetchGetDefaultPantryQuery(
   variables: GetDefaultPantryQueryVariables,
 ) {
   return { query: GetDefaultPantryDocument, variables: variables };
+}
+export const GetRecentlyDeletedPantryItemsDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'query',
+      name: { kind: 'Name', value: 'GetRecentlyDeletedPantryItems' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'pantryId' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'limit' },
+          },
+          type: { kind: 'NamedType', name: { kind: 'Name', value: 'Int' } },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'recentlyDeletedPantryItems' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'pantryId' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'pantryId' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'limit' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'limit' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'itemName' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'itemId' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'item' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'imageUrl' },
+                      },
+                    ],
+                  },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+
+/**
+ * __useGetRecentlyDeletedPantryItemsQuery__
+ *
+ * To run a query within a React component, call `useGetRecentlyDeletedPantryItemsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetRecentlyDeletedPantryItemsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetRecentlyDeletedPantryItemsQuery({
+ *   variables: {
+ *      pantryId: // value for 'pantryId'
+ *      limit: // value for 'limit'
+ *   },
+ * });
+ */
+export function useGetRecentlyDeletedPantryItemsQuery(
+  baseOptions: ApolloReactHooks.QueryHookOptions<
+    GetRecentlyDeletedPantryItemsQuery,
+    GetRecentlyDeletedPantryItemsQueryVariables
+  > &
+    (
+      | {
+          variables: GetRecentlyDeletedPantryItemsQueryVariables;
+          skip?: boolean;
+        }
+      | { skip: boolean }
+    ),
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useQuery<
+    GetRecentlyDeletedPantryItemsQuery,
+    GetRecentlyDeletedPantryItemsQueryVariables
+  >(GetRecentlyDeletedPantryItemsDocument, options);
+}
+export function useGetRecentlyDeletedPantryItemsLazyQuery(
+  baseOptions?: ApolloReactHooks.LazyQueryHookOptions<
+    GetRecentlyDeletedPantryItemsQuery,
+    GetRecentlyDeletedPantryItemsQueryVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useLazyQuery<
+    GetRecentlyDeletedPantryItemsQuery,
+    GetRecentlyDeletedPantryItemsQueryVariables
+  >(GetRecentlyDeletedPantryItemsDocument, options);
+}
+export function useGetRecentlyDeletedPantryItemsSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetRecentlyDeletedPantryItemsQuery,
+        GetRecentlyDeletedPantryItemsQueryVariables
+      >,
+) {
+  const options =
+    baseOptions === ApolloReactHooks.skipToken
+      ? baseOptions
+      : { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useSuspenseQuery<
+    GetRecentlyDeletedPantryItemsQuery,
+    GetRecentlyDeletedPantryItemsQueryVariables
+  >(GetRecentlyDeletedPantryItemsDocument, options);
+}
+export type GetRecentlyDeletedPantryItemsQueryHookResult = ReturnType<
+  typeof useGetRecentlyDeletedPantryItemsQuery
+>;
+export type GetRecentlyDeletedPantryItemsLazyQueryHookResult = ReturnType<
+  typeof useGetRecentlyDeletedPantryItemsLazyQuery
+>;
+export type GetRecentlyDeletedPantryItemsSuspenseQueryHookResult = ReturnType<
+  typeof useGetRecentlyDeletedPantryItemsSuspenseQuery
+>;
+export type GetRecentlyDeletedPantryItemsQueryResult =
+  ApolloReactCommon.QueryResult<
+    GetRecentlyDeletedPantryItemsQuery,
+    GetRecentlyDeletedPantryItemsQueryVariables
+  >;
+export function refetchGetRecentlyDeletedPantryItemsQuery(
+  variables: GetRecentlyDeletedPantryItemsQueryVariables,
+) {
+  return { query: GetRecentlyDeletedPantryItemsDocument, variables: variables };
 }
 export const GetPantryLedgerAnalyticsDocument = {
   kind: 'Document',

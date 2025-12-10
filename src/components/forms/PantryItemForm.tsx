@@ -23,14 +23,13 @@ import {
   useUpdatePantryItemMutation,
   useUpdatePantryItemQuantityMutation,
   useGetPantryItemQuery,
-  GetPantryItemDocument,
   useGetHomeQuery,
   useGetPantryQuery,
   useGetUnitBySymbolLazyQuery,
   ItemSuggestion,
 } from '#generated';
+import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
 import { normalizePantry } from '#/utils/connectionUtils';
-import { getEffectiveUnitSymbol } from '#/utils/pantryItemUtils';
 import {
   DynamicFormFields,
   FieldDef,
@@ -49,8 +48,11 @@ interface PantryItemFormData {
 
   // Quantity fields (both modes)
   quantityInput?: string;
+  unit: string; // Tracking unit (for counting items)
+
+  // Weight fields (both modes) - separate from tracking unit
   itemWeight?: number;
-  unit: string;
+  weightUnit?: string; // Weight unit (for physical weight measurement)
 
   // Edit mode specific
   tags?: string[];
@@ -68,12 +70,13 @@ interface PantryItemFormData {
 const addItemSchema = yup.object({
   itemName: yup.string().required('Item name is required'),
   quantityInput: yup.string().required('Quantity is required'),
+  unit: yup.string(), // Tracking unit
   itemWeight: yup
     .number()
     .positive('Item weight must be positive')
     .nullable()
     .transform((value, originalValue) => (originalValue === '' ? null : value)),
-  unit: yup.string(),
+  weightUnit: yup.string(), // Weight unit (separate from tracking unit)
   minimumQuantity: yup.string(),
   storageState: yup.string().oneOf(Object.values(StorageState)),
   location: yup.string(),
@@ -85,12 +88,13 @@ const addItemSchema = yup.object({
 // Schema for edit mode
 const editItemSchema = yup.object({
   quantityInput: yup.string().required('Quantity is required'),
+  unit: yup.string(), // Tracking unit
   itemWeight: yup
     .number()
     .positive('Item weight must be positive')
     .nullable()
     .transform((value, originalValue) => (originalValue === '' ? null : value)),
-  unit: yup.string(),
+  weightUnit: yup.string(), // Weight unit (separate from tracking unit)
   minimumQuantity: yup.string(),
   storageState: yup.string().oneOf(Object.values(StorageState)),
   location: yup.string(),
@@ -115,6 +119,8 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   const [_saving, setSaving] = useState(false);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [_selectedUnitName, setSelectedUnitName] = useState<string | null>(null);
+  const [selectedWeightUnitId, setSelectedWeightUnitId] = useState<string | null>(null);
+  const [_selectedWeightUnitName, setSelectedWeightUnitName] = useState<string | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
     null,
   );
@@ -223,12 +229,15 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
       const item = existingItemData.pantryItem;
       // Use packageWeight if set, otherwise fall back to item.netWeight from catalog
       const weight = item.packageWeight ?? item.item?.netWeight ?? undefined;
-      // Use centralized utility for correct unit priority
-      const weightUnitSymbol = getEffectiveUnitSymbol(item) || '';
+      // Tracking unit (for counting items) - from item.unit or item.unitName
+      const trackingUnitSymbol = item.unit?.symbol || item.unitName || '';
+      // Weight unit (for physical weight) - from item.packageWeightUnit or catalog displayUnit
+      const weightUnitSymbol = item.packageWeightUnit?.symbol || item.item?.displayUnit?.symbol || '';
       return {
         quantityInput: item.currentQuantity?.toString() || '1',
+        unit: trackingUnitSymbol, // Tracking unit
         itemWeight: weight,
-        unit: weightUnitSymbol,
+        weightUnit: weightUnitSymbol, // Weight unit (separate from tracking)
         // Note: minimumQuantity is not stored on PantryItem in the API
         // The lowStockAlert boolean is used instead
         minimumQuantity: '',
@@ -249,8 +258,9 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
       itemName: '',
       brand: '',
       quantityInput: '1',
+      unit: '', // Tracking unit
       itemWeight: undefined,
-      unit: '',
+      weightUnit: '', // Weight unit
       minimumQuantity: '',
       storageState: StorageState.Ambient,
       location: '',
@@ -330,11 +340,11 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
       if (location?.temperature) {
         const tempLower = location.temperature.toLowerCase();
         if (tempLower === 'frozen') {
-          setValue('storageState', StorageState.Frozen);
+          setValue('storageState', StorageState.Frozen, { shouldDirty: true });
         } else if (tempLower === 'refrigerated') {
-          setValue('storageState', StorageState.Refrigerated);
+          setValue('storageState', StorageState.Refrigerated, { shouldDirty: true });
         } else if (tempLower === 'ambient') {
-          setValue('storageState', StorageState.Ambient);
+          setValue('storageState', StorageState.Ambient, { shouldDirty: true });
         }
       }
     },
@@ -344,7 +354,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   // Handler for adding a new storage location (user typed a custom name)
   const handleAddNewLocation = useCallback(
     (name: string) => {
-      setValue('location', name);
+      setValue('location', name, { shouldDirty: true });
       setSelectedLocationId(null); // Clear ID - will use name for server to find or create
     },
     [setValue],
@@ -354,6 +364,15 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     (unitId: string | null, unitName: string | null) => {
       setSelectedUnitId(unitId);
       setSelectedUnitName(unitName);
+    },
+    [],
+  );
+
+  // Handler for weight unit selection (separate from tracking unit)
+  const handleWeightUnitSelected = useCallback(
+    (unitId: string | null, unitName: string | null) => {
+      setSelectedWeightUnitId(unitId);
+      setSelectedWeightUnitName(unitName);
     },
     [],
   );
@@ -385,11 +404,12 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   };
 
   // Build update input with only dirty (changed) fields
-  // Note: quantity and unit changes are handled separately via updatePantryItemQuantity
+  // Note: quantity and tracking unit changes are handled separately via updatePantryItemQuantity
   const buildDirtyInput = (
     data: PantryItemFormData,
     dirty: typeof dirtyFields,
     locationId: string | null,
+    weightUnitId: string | null,
   ) => {
     const input: Record<string, any> = {};
 
@@ -403,7 +423,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     }
 
     if (dirty.expirationDate) {
-      input.expiresAt = data.expirationDate?.toISOString();
+      input.expiresAt = data.expirationDate?.toISOString() ?? null;
     }
 
     if (dirty.notes) {
@@ -416,8 +436,13 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
       input.tags = data.tags || [];
     }
 
-    if (dirty.itemWeight) {
-      input.packageWeight = data.itemWeight;
+    // Weight changes - MUST send both packageWeight and packageWeightUnitId together per API docs
+    if (dirty.itemWeight || dirty.weightUnit) {
+      input.packageWeight = data.itemWeight ?? null;
+      // Always include weight unit when weight is set
+      if (data.itemWeight && weightUnitId) {
+        input.packageWeightUnitId = weightUnitId;
+      }
     }
 
     return input;
@@ -475,9 +500,10 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
         let input: any;
 
         if (data.selectedItemId) {
+          // Use selectedWeightUnitId for package weight (separate from tracking unit)
           const weightInput =
-            data.itemWeight && unitId
-              ? { packageWeight: data.itemWeight, packageWeightUnitId: unitId }
+            data.itemWeight && selectedWeightUnitId
+              ? { packageWeight: data.itemWeight, packageWeightUnitId: selectedWeightUnitId }
               : {};
 
           input = {
@@ -492,9 +518,10 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
             ? { itemCategory: data.category.trim() }
             : {};
 
+          // Use selectedWeightUnitId for item weight (separate from tracking unit)
           const weightInput =
-            data.itemWeight && unitId
-              ? { itemNetWeight: data.itemWeight, itemDisplayUnitId: unitId }
+            data.itemWeight && selectedWeightUnitId
+              ? { itemNetWeight: data.itemWeight, itemDisplayUnitId: selectedWeightUnitId }
               : {};
 
           input = {
@@ -521,29 +548,48 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
 
         // If quantity or unit changed, use updatePantryItemQuantity mutation
         if (quantityOrUnitChanged) {
+          const currentItem = existingItemData?.pantryItem;
+          const newQuantity = parseFloat(data.quantityInput || quantityValue.toString());
+
           await updateItemQuantity({
             variables: {
               pantryItemId: itemId!,
               quantity: data.quantityInput || quantityValue.toString(),
               unitId: unitId || undefined,
-              version: existingItemData?.pantryItem?.version ?? undefined,
+              version: currentItem?.version ?? undefined,
             },
-            refetchQueries: [
-              { query: GetPantryItemDocument, variables: { id: itemId } },
-            ],
+            // Optimistic response for instant UI update (no flicker)
+            optimisticResponse: currentItem ? {
+              __typename: 'Mutation',
+              updatePantryItemQuantity: enhanceWithVersion(currentItem as any, {
+                currentQuantity: newQuantity,
+                unit: unitId ? {
+                  __typename: 'Unit',
+                  id: unitId,
+                  symbol: data.unit || currentItem.unit?.symbol,
+                  name: data.unit || currentItem.unit?.name,
+                } : currentItem.unit,
+                unitId: unitId || currentItem.unitId,
+                unitName: data.unit || currentItem.unitName,
+              }),
+            } : undefined,
           });
         }
 
-        // Build input for other dirty fields (excluding quantity/unit)
-        const input = buildDirtyInput(data, dirtyFields, selectedLocationId);
+        // Build input for other dirty fields (excluding quantity/tracking unit)
+        const input = buildDirtyInput(data, dirtyFields, selectedLocationId, selectedWeightUnitId);
 
         // Update other fields if any changed
         if (Object.keys(input).length > 0) {
+          const currentItemForUpdate = existingItemData?.pantryItem;
+
           await updateItem({
             variables: { id: itemId!, input },
-            refetchQueries: [
-              { query: GetPantryItemDocument, variables: { id: itemId } },
-            ],
+            // Optimistic response for instant UI update (no flicker)
+            optimisticResponse: currentItemForUpdate ? {
+              __typename: 'Mutation',
+              updatePantryItem: enhanceWithVersion(currentItemForUpdate as any, input),
+            } : undefined,
           });
         }
 
@@ -673,6 +719,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
               errors={errors}
               mode={mode}
               onUnitSelected={handleUnitSelected}
+              onWeightUnitSelected={handleWeightUnitSelected}
               testID={
                 mode === 'add'
                   ? 'add-pantry-item-quantity-input'
@@ -683,12 +730,17 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
                   ? 'add-pantry-item-unit-picker'
                   : 'edit-pantry-item-unit-picker'
               }
+              weightUnitTestID={
+                mode === 'add'
+                  ? 'add-pantry-item-weight-unit-picker'
+                  : 'edit-pantry-item-weight-unit-picker'
+              }
               // Edit mode stock info (read-only display)
               initialQuantity={item?.initialQuantity}
               consumedQuantity={item?.consumedQuantity}
               unitSymbol={item?.unit?.symbol}
               packageWeight={item?.packageWeight ?? item?.item?.netWeight}
-              weightUnitSymbol={item ? getEffectiveUnitSymbol(item) : undefined}
+              weightUnitSymbol={item?.packageWeightUnit?.symbol || item?.item?.displayUnit?.symbol}
             />
 
             {/* Storage Details Section */}
@@ -699,11 +751,11 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
               storageState={watchedValues.storageState}
               expirationDate={watchedValues.expirationDate}
               showDatePicker={showDatePicker}
-              onStorageStateChange={state => setValue('storageState', state)}
+              onStorageStateChange={state => setValue('storageState', state, { shouldDirty: true })}
               onDatePickerToggle={() => setShowDatePicker(!showDatePicker)}
               onDateChange={date => {
                 setShowDatePicker(Platform.OS === 'ios');
-                if (date) setValue('expirationDate', date);
+                if (date) setValue('expirationDate', date, { shouldDirty: true });
               }}
               onCategorySelected={handleCategorySelect}
               storageLocations={storageLocations}
