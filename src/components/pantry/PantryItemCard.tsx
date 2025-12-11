@@ -140,7 +140,7 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   expiration: {
-    fontSize: 13,
+    fontSize: theme.typography.fontSize.sm - 1,
   },
   expirationBold: {
     fontWeight: theme.fonts.weight.medium,

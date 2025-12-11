@@ -137,21 +137,21 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    padding: theme.spacing.md,
     backgroundColor: theme.colors.surface,
-    borderRadius: 12,
+    borderRadius: theme.radii.lg,
   },
   purchasedContainer: {
     opacity: 0.6,
     backgroundColor: theme.colors.surfaceVariant,
   },
   checkboxContainer: {
-    marginRight: 12,
+    marginRight: theme.spacing['3'],
   },
   checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: theme.sizes.icon.md,
+    height: theme.sizes.icon.md,
+    borderRadius: theme.radii.lg,
     borderWidth: 2,
     borderColor: theme.colors.border,
     justifyContent: 'center',
@@ -162,19 +162,19 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.primary,
   },
   itemImage: {
-    width: 48,
-    height: 48,
-    borderRadius: 8,
-    marginRight: 12,
+    width: theme.sizes.avatar.lg,
+    height: theme.sizes.avatar.lg,
+    borderRadius: theme.radii.md,
+    marginRight: theme.spacing['3'],
   },
   contentContainer: {
     flex: 1,
   },
   itemName: {
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.base,
     fontWeight: '500',
     color: theme.colors.textPrimary,
-    marginBottom: 4,
+    marginBottom: theme.spacing.xs,
   },
   purchasedText: {
     textDecorationLine: 'line-through',
@@ -185,13 +185,13 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
   },
   quantityText: {
-    fontSize: 14,
+    fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
-    marginRight: 4,
+    marginRight: theme.spacing.xs,
   },
   editQuantityContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: theme.spacing.sm,
   },
 }));

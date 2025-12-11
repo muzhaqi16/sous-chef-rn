@@ -454,7 +454,7 @@ export const PantryContent: React.FC<PantryContentProps> = ({
                 color={theme.colors.primary}
               />
               <Text style={styles.householdName}>{householdName}</Text>
-              <Icon name="chevron-right" size={16} color="#9CA3AF" />
+              <Icon name="chevron-right" size={16} color={theme.colors.textTertiary} />
             </Pressable>
           </View>
 
@@ -574,7 +574,7 @@ export const PantryContent: React.FC<PantryContentProps> = ({
                       name={option.icon}
                       size={18}
                       library={option.library}
-                      color="#F97316"
+                      color={theme.colors.primary}
                     />
                     <Text
                       style={[
@@ -593,7 +593,7 @@ export const PantryContent: React.FC<PantryContentProps> = ({
                             : 'arrow-downward'
                         }
                         size={18}
-                        color="#F97316"
+                        color={theme.colors.primary}
                       />
                     )}
                   </TouchableOpacity>
@@ -628,7 +628,7 @@ const styles = StyleSheet.create(theme => ({
     alignContent: 'center',
   },
   greeting: {
-    fontSize: 26,
+    fontSize: theme.typography.fontSize['2xl'] + 2,
     fontWeight: theme.fonts.weight.bold,
     color: theme.colors.secondaryDark,
   },
@@ -638,139 +638,131 @@ const styles = StyleSheet.create(theme => ({
   householdBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
-    gap: 6,
+    marginTop: theme.spacing.xs,
+    gap: theme.spacing.xs + 2,
   },
   homeEmoji: {
-    fontSize: 12,
+    fontSize: theme.typography.fontSize.xs,
   },
   householdName: {
-    fontSize: 14,
-    color: '#6B7280',
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.textSecondary,
   },
   avatarContainer: {
     position: 'relative',
   },
   avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: '#F97316',
+    width: theme.sizes.avatar.lg,
+    height: theme.sizes.avatar.lg,
+    borderRadius: theme.radii.xl - 2,
+    backgroundColor: theme.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: 'rgba(249, 115, 22, 0.3)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 12,
-    elevation: 8,
+    ...theme.shadows.md,
   },
   avatarImage: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    shadowColor: 'rgba(249, 115, 22, 0.3)',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 12,
-    elevation: 8,
+    width: theme.sizes.avatar.lg,
+    height: theme.sizes.avatar.lg,
+    borderRadius: theme.radii.xl - 2,
+    ...theme.shadows.md,
   },
   avatarText: {
-    fontSize: 18,
+    fontSize: theme.typography.fontSize.lg,
     fontWeight: theme.fonts.weight.bold,
-    color: '#FFFFFF',
+    color: theme.colors.white,
   },
   notificationBadge: {
     position: 'absolute',
-    top: -4,
-    right: -4,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#EF4444',
+    top: -theme.spacing.xs,
+    right: -theme.spacing.xs,
+    width: theme.spacing['5'],
+    height: theme.spacing['5'],
+    borderRadius: theme.radii.lg,
+    backgroundColor: theme.colors.error,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#FFFFFF',
+    borderColor: theme.colors.white,
   },
   notificationCount: {
-    fontSize: 11,
+    fontSize: theme.typography.fontSize.xs - 1,
     fontWeight: theme.fonts.weight.bold,
-    color: '#FFFFFF',
+    color: theme.colors.white,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: theme.colors.backgroundSecondary,
     borderRadius: theme.spacing.sm,
     paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 12,
-    gap: 8,
+    paddingVertical: theme.spacing['3'],
+    gap: theme.spacing.sm,
   },
 
   searchInput: {
     flex: 1,
-    fontSize: 15,
-    color: '#374151',
+    fontSize: theme.typography.fontSize.sm + 1,
+    color: theme.colors.textPrimary,
     padding: 0,
   },
   settingsIcon: {
-    fontSize: 18,
+    fontSize: theme.typography.fontSize.lg,
     marginLeft: theme.spacing.sm,
   },
   listContent: {
     // Padding 0 to allow offscreen scroll elements
     paddingHorizontal: 0,
-    paddingBottom: 120, // Space for bottom navigation
+    paddingBottom: theme.spacing['3xl'] * 2, // Space for bottom navigation
   },
   // Sort modal styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: theme.colors.overlays.medium,
     justifyContent: 'center',
     alignItems: 'center',
   },
   sortModal: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radii.xl,
+    padding: theme.spacing['5'],
     width: '80%',
-    maxWidth: 320,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    maxWidth: theme.sizes.modal.sm,
+    shadowColor: theme.colors.black,
+    shadowOffset: { width: 0, height: theme.spacing.xs },
     shadowOpacity: 0.15,
-    shadowRadius: 12,
+    shadowRadius: theme.spacing['3'],
     elevation: 10,
   },
   sortModalTitle: {
-    fontSize: 18,
+    fontSize: theme.typography.fontSize.lg,
     fontWeight: theme.fonts.weight.bold,
-    color: '#1F2937',
-    marginBottom: 16,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.md,
     textAlign: 'center',
   },
   sortOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    marginBottom: 8,
+    paddingVertical: theme.spacing['3'] + 2,
+    paddingHorizontal: theme.spacing['3'],
+    borderRadius: theme.radii.lg,
+    marginBottom: theme.spacing.sm,
     gap: theme.spacing.md,
   },
   sortOptionActive: {
-    backgroundColor: '#FFF7ED',
+    backgroundColor: theme.colors.primaryLight,
   },
   sortOptionIcon: {
-    fontSize: 18,
-    marginRight: 12,
+    fontSize: theme.typography.fontSize.lg,
+    marginRight: theme.spacing['3'],
   },
   sortOptionLabel: {
     flex: 1,
-    fontSize: 15,
-    color: '#4B5563',
+    fontSize: theme.typography.fontSize.sm + 1,
+    color: theme.colors.textSecondary,
   },
   sortOptionLabelActive: {
-    color: '#F97316',
+    color: theme.colors.primary,
     fontWeight: theme.fonts.weight.semibold,
   },
 }));
