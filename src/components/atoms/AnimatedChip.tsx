@@ -30,12 +30,12 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
   // Animated container style with dynamic padding and colors
   const animatedContainerStyle = useAnimatedStyle(() => {
     return {
-      paddingLeft: imageUrl ? 8 : 16,
-      paddingRight: selected ? 12 : 16,
+      paddingLeft: imageUrl ? theme.spacing.sm : theme.spacing.md,
+      paddingRight: selected ? theme.spacing['3'] : theme.spacing.md,
       borderWidth: 1.5,
       borderColor: selected
         ? theme.colors.primary
-        : theme.colors.border || '#c9d3db',
+        : theme.colors.border,
       backgroundColor: selected
         ? theme.colors.chipSelectedBackground
         : theme.colors.chipBackground,
@@ -48,7 +48,7 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
     return {
       color: selected
         ? theme.colors.chipSelectedText
-        : theme.colors.chipText || '#222',
+        : theme.colors.chipText,
     };
   }, [selected, theme]);
 
@@ -90,27 +90,27 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create(theme => ({
   container: {
     alignItems: 'center',
-    borderRadius: 20,
+    borderRadius: theme.radii['2xl'],
     flexDirection: 'row',
     justifyContent: 'center',
-    paddingLeft: 16,
-    paddingVertical: 8,
-    margin: 4,
+    paddingLeft: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    margin: theme.spacing.xs,
   },
   image: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    marginRight: 8,
+    width: theme.sizes.icon.md,
+    height: theme.sizes.icon.md,
+    borderRadius: theme.radii.lg,
+    marginRight: theme.spacing.sm,
   },
   label: {
-    fontSize: 15,
+    fontSize: theme.typography.fontSize.sm + 1,
     fontWeight: '600',
   },
   iconContainer: {
-    marginLeft: 8,
+    marginLeft: theme.spacing.sm,
   },
-});
+}));

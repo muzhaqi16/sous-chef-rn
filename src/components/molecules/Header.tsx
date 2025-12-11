@@ -93,11 +93,11 @@ export const Header: React.FC<HeaderProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   title: {
-    fontSize: 18,
+    fontSize: theme.typography.fontSize.lg,
     fontWeight: '600',
     color: theme.colors.textPrimary,
     flex: 1,
-    marginHorizontal: 8,
+    marginHorizontal: theme.spacing.sm,
   },
 
   centerTitle: {
@@ -117,12 +117,12 @@ const styles = StyleSheet.create(theme => ({
 
   badge: {
     position: 'absolute',
-    top: -4,
-    right: -4,
-    backgroundColor: '#FF6B6B',
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
+    top: -theme.spacing.xs,
+    right: -theme.spacing.xs,
+    backgroundColor: theme.colors.error,
+    borderRadius: theme.radii.lg,
+    minWidth: theme.spacing['5'],
+    height: theme.spacing['5'],
     justifyContent: 'center',
     alignItems: 'center',
   },

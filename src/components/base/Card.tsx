@@ -312,7 +312,7 @@ const styles = StyleSheet.create(theme => ({
   },
 
   placeholderText: {
-    fontSize: 48,
+    fontSize: theme.typography.fontSize['4xl'],
   },
 
   // Content styles
@@ -334,17 +334,17 @@ const styles = StyleSheet.create(theme => ({
   title: {
     fontSize: theme.typography.fontSize.md,
     fontWeight: theme.fonts.weight.semibold as any,
-    lineHeight: 24,
+    lineHeight: theme.typography.lineHeight.normal,
   },
 
   subtitle: {
     fontSize: theme.typography.fontSize.sm,
-    lineHeight: 20,
+    lineHeight: theme.typography.lineHeight.tight,
   },
 
   description: {
     fontSize: theme.typography.fontSize.sm,
-    lineHeight: 20,
+    lineHeight: theme.typography.lineHeight.tight,
   },
 
   price: {

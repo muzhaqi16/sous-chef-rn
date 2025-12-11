@@ -35,13 +35,13 @@ const Chip: React.FC<ChipProps> = ({label, selected, onPress, style}) => {
 
 const styles = StyleSheet.create(theme => ({
   chip: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    marginRight: 8,
+    paddingVertical: theme.spacing.xs + 2,
+    paddingHorizontal: theme.spacing['3'],
+    borderRadius: theme.radii['2xl'],
+    marginRight: theme.spacing.sm,
   },
   chipText: {
-    fontSize: 14,
+    fontSize: theme.typography.fontSize.sm,
     fontWeight: '600',
   },
   selected: {
