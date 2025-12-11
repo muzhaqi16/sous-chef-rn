@@ -1,6 +1,6 @@
 import React, {useState} from 'react';
 import {TextInput, View, Text} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import { Label } from '#components/atoms';
 
 interface FractionInputProps {
@@ -34,6 +34,7 @@ export const FractionInput: React.FC<FractionInputProps> = ({
   testID,
   keyboardType = 'numbers-and-punctuation',
 }) => {
+  const { theme } = useUnistyles();
   const [isFocused, setIsFocused] = useState(false);
 
   // Validation regex for fraction input
@@ -67,7 +68,7 @@ export const FractionInput: React.FC<FractionInputProps> = ({
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
         placeholder={placeholder}
-        placeholderTextColor="#999"
+        placeholderTextColor={theme.colors.textTertiary}
         keyboardType={keyboardType}
         editable={!disabled}
         selectTextOnFocus
@@ -89,21 +90,21 @@ export const FractionInput: React.FC<FractionInputProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    marginBottom: 16,
+    marginBottom: theme.spacing.md,
   },
   label: {
-    fontSize: 14,
+    fontSize: theme.typography.fontSize.sm,
     fontWeight: '600',
     color: theme.colors.textPrimary,
-    marginBottom: 8,
+    marginBottom: theme.spacing.sm,
   },
   input: {
-    height: 48,
+    height: theme.sizes.input.md,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    fontSize: 16,
+    borderRadius: theme.radii.sm,
+    paddingHorizontal: theme.spacing.md,
+    fontSize: theme.typography.fontSize.md,
     color: theme.colors.inputText,
     backgroundColor: theme.colors.inputBackground,
   },
@@ -119,13 +120,13 @@ const styles = StyleSheet.create(theme => ({
     opacity: 0.6,
   },
   errorText: {
-    fontSize: 12,
+    fontSize: theme.typography.fontSize.xs,
     color: theme.colors.error,
-    marginTop: 4,
+    marginTop: theme.spacing.xs,
   },
   hintText: {
-    fontSize: 12,
+    fontSize: theme.typography.fontSize.xs,
     color: theme.colors.textSecondary,
-    marginTop: 4,
+    marginTop: theme.spacing.xs,
   },
 }));

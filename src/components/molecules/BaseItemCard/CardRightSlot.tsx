@@ -81,32 +81,32 @@ export const CardRightSlot: React.FC<CardRightSlotProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    marginLeft: 12,
+    marginLeft: theme.spacing['3'],
   },
   metaContainer: {
     alignItems: 'flex-end',
-    marginLeft: 12,
+    marginLeft: theme.spacing['3'],
   },
   primary: {
-    fontSize: 15,
+    fontSize: theme.typography.fontSize.base,
     fontWeight: theme.fonts.weight.semibold,
-    color: '#374151',
+    color: theme.colors.textPrimary,
   },
   secondary: {
-    fontSize: 12,
-    color: '#9CA3AF',
+    fontSize: theme.typography.fontSize.xs,
+    color: theme.colors.textTertiary,
     textTransform: 'capitalize',
-    marginTop: 2,
+    marginTop: theme.spacing.xs,
   },
   counterContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginLeft: 8,
+    marginLeft: theme.spacing.sm,
   },
   counterButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+    width: theme.sizes.button.sm,
+    height: theme.sizes.button.sm,
+    borderRadius: theme.radii.sm,
     backgroundColor: theme.colors.surfaceVariant,
     justifyContent: 'center',
     alignItems: 'center',
@@ -116,20 +116,20 @@ const styles = StyleSheet.create(theme => ({
   },
   counterValue: {
     alignItems: 'center',
-    minWidth: 40,
-    marginHorizontal: 4,
+    minWidth: theme.sizes.button.md,
+    marginHorizontal: theme.spacing.xs,
   },
   counterText: {
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.md,
     fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
   },
   counterUnit: {
-    fontSize: 11,
+    fontSize: theme.typography.fontSize.xs - 1,
     color: theme.colors.textSecondary,
   },
   dragHandle: {
-    padding: 8,
-    marginLeft: 4,
+    padding: theme.spacing.sm,
+    marginLeft: theme.spacing.xs,
   },
 }));

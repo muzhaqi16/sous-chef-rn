@@ -40,7 +40,7 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.md,
   },
   errorIcon: {
-    fontSize: 48,
+    fontSize: theme.sizes.avatar.lg,
   },
   errorText: {
     fontSize: theme.fonts.size.xl,

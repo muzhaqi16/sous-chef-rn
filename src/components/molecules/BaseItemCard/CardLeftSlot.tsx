@@ -27,11 +27,11 @@ export const CardLeftSlot: React.FC<CardLeftSlotProps> = ({
 
     switch (variant) {
       case 'warning':
-        return '#FEF3C7'; // amber-100
+        return theme.colors.warning + '20';
       case 'expired':
         return theme.colors.expiration.expiredIconBg;
       default:
-        return '#F8FAFC'; // slate-50
+        return theme.colors.surfaceVariant;
     }
   };
 
@@ -72,7 +72,7 @@ export const CardLeftSlot: React.FC<CardLeftSlotProps> = ({
       >
         <Icon
           name={icon}
-          size={22}
+          size={theme.sizes.icon.md}
           color={theme.colors.textPrimary}
           library={iconLibrary}
         />
@@ -94,29 +94,29 @@ export const CardLeftSlot: React.FC<CardLeftSlotProps> = ({
   );
 };
 
-const styles = StyleSheet.create(_theme => ({
+const styles = StyleSheet.create(theme => ({
   container: {},
   imageContainer: {
     overflow: 'hidden',
   },
   iconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
+    width: theme.sizes.avatar.md,
+    height: theme.sizes.avatar.md,
+    borderRadius: theme.radii.md,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: theme.spacing['3'],
   },
   emojiContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
+    width: theme.sizes.avatar.md,
+    height: theme.sizes.avatar.md,
+    borderRadius: theme.radii.md,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: theme.spacing['3'],
   },
   emoji: {
-    fontSize: 22,
+    fontSize: theme.typography.fontSize.xl,
   },
   dimmed: {
     opacity: 0.5,
