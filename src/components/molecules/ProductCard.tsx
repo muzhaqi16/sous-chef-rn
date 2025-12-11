@@ -16,13 +16,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
 }) => {
   const {theme} = useUnistyles();
   return (
-    <View
-      style={{
-        backgroundColor: theme.colors.background,
-        padding: 16,
-        borderRadius: 8,
-        marginBottom: 10,
-      }}>
+    <View style={styles.container}>
       <Text style={styles.text}>
         {name} - ${price}
       </Text>
@@ -32,11 +26,17 @@ const ProductCard: React.FC<ProductCardProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
+  container: {
+    backgroundColor: theme.colors.background,
+    padding: theme.spacing.md,
+    borderRadius: theme.radii.sm,
+    marginBottom: theme.spacing.sm + 2,
+  },
   text: {
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.md,
     fontWeight: 'bold',
-    marginBottom: 10,
-    color: theme.colors.textPrimary || '#000',
+    marginBottom: theme.spacing.sm + 2,
+    color: theme.colors.textPrimary,
   },
 }));
 
