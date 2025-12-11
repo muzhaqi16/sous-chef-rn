@@ -34,7 +34,7 @@ export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
     >
       <View style={[
         styles.overlay,
-        { backgroundColor: transparent ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.6)' }
+        { backgroundColor: transparent ? theme.colors.overlays.light : theme.colors.overlays.medium }
       ]}>
         <View style={[
           styles.container,
@@ -84,32 +84,25 @@ export const BiometricLoadingOverlay: React.FC<{ visible: boolean }> = ({ visibl
   />
 );
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create(theme => ({
   overlay: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
   container: {
-    padding: 32,
-    borderRadius: 12,
+    padding: theme.spacing.xl + 8,
+    borderRadius: theme.radii.md,
     alignItems: 'center',
     minWidth: 150,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    ...theme.shadows.lg,
   },
   spinner: {
-    marginBottom: 16,
+    marginBottom: theme.spacing.md,
   },
   message: {
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.md,
     textAlign: 'center',
     fontWeight: '500',
   },
-});
+}));
