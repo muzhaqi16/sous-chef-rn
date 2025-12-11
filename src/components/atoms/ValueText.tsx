@@ -10,8 +10,8 @@ export const ValueText: React.FC<{children: React.ReactNode}> = ({
 
 const styles = StyleSheet.create(theme => ({
   text: {
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.base,
     color: theme.colors.textSecondary,
-    marginRight: 8,
+    marginRight: theme.spacing.sm,
   },
 }));

@@ -149,21 +149,21 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
   );
 };
 
-const styles = StyleSheet.create(_theme => ({
+const styles = StyleSheet.create(theme => ({
   button: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    minHeight: 48,
+    paddingVertical: theme.spacing['3'],
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.radii.md,
+    minHeight: theme.sizes.fab.sm,
   },
   disabled: {
     opacity: 0.5,
   },
   text: {
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.base,
     fontWeight: '500',
     textAlign: 'center',
   },
