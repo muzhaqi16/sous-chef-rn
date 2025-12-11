@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useAutocompleteCategoriesLazyQuery, CategorySuggestion, CategoryType } from '#generated';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetAutocompleteInput } from './BottomSheetAutocompleteInput';
-import { useStore } from '#store';
+import { useAutocompleteInput } from '#hooks';
 
 interface CategoryAutocompleteInputProps {
   label?: string;
@@ -26,29 +26,37 @@ export const CategoryAutocompleteInput: React.FC<CategoryAutocompleteInputProps>
   onCategorySelected,
   categoryType = CategoryType.General,
 }) => {
-  const [searchTerm, setSearchTerm] = useState('');
   const [categories, setCategories] = useState<CategorySuggestion[]>([]);
 
-  // Check online status to prevent queries when offline
-  const isOnline = useStore(state => state.isOnline);
+  const {
+    searchTerm,
+    debouncedSearchTerm,
+    canSearch,
+    handleTextChange,
+    handleSelectItem,
+    setSearchTerm,
+  } = useAutocompleteInput<CategorySuggestion>({
+    onChangeText,
+    onItemSelected: onCategorySelected,
+    getDisplayValue: (item) => item.name,
+  });
 
   const [searchCategories, { data: categoriesData, loading: categoriesLoading }] =
     useAutocompleteCategoriesLazyQuery();
 
   useEffect(() => {
-    // Only query when online and search term is long enough
-    if (searchTerm.length >= 2 && isOnline) {
+    if (canSearch) {
       searchCategories({
         variables: {
           input: {
-            query: searchTerm,
+            query: debouncedSearchTerm,
             limit: 5,
             type: categoryType
           }
         }
       });
     }
-  }, [searchTerm, searchCategories, categoryType, isOnline]);
+  }, [debouncedSearchTerm, canSearch, searchCategories, categoryType]);
 
   // Update categories when data changes
   useEffect(() => {
@@ -59,21 +67,9 @@ export const CategoryAutocompleteInput: React.FC<CategoryAutocompleteInputProps>
     }
   }, [categoriesData, searchTerm]);
 
-  const handleTextChange = (text: string) => {
-    onChangeText(text);
-    setSearchTerm(text);
-    // Clear category selection when user types manually - allows custom input
-    onCategorySelected?.(null);
-  };
-
-  const handleSelectCategory = (category: CategorySuggestion) => {
-    onChangeText(category.name);
-    onCategorySelected?.(category.id);
-  };
-
   const renderCategoryItem = (category: CategorySuggestion) => (
     <TouchableOpacity
-      onPress={() => handleSelectCategory(category)}
+      onPress={() => handleSelectItem(category)}
       style={styles.categoryItem}
       activeOpacity={0.7}>
       <View style={styles.categoryContent}>
@@ -101,7 +97,7 @@ export const CategoryAutocompleteInput: React.FC<CategoryAutocompleteInputProps>
       loading={categoriesLoading}
       renderItem={renderCategoryItem}
       keyExtractor={(item: CategorySuggestion) => item.id}
-      onSelectItem={handleSelectCategory}
+      onSelectItem={handleSelectItem}
       emptyText="No categories found"
       emptySubtext={`Continue typing to use "${searchTerm}" as a custom category`}
       onSearchChange={setSearchTerm}

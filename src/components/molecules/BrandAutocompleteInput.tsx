@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { Text, TouchableOpacity } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useSearchBrandsLazyQuery } from '#generated';
 import { BottomSheetAutocompleteInput } from './BottomSheetAutocompleteInput';
-import { useStore } from '#store';
+import { useAutocompleteInput } from '#hooks';
 
 type BrandItem = {
   id: string;
@@ -29,39 +29,34 @@ export const BrandAutocompleteInput: React.FC<BrandAutocompleteInputProps> = ({
   error,
   onBrandSelected,
 }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-
-  // Check online status to prevent queries when offline
-  const isOnline = useStore(state => state.isOnline);
+  const {
+    searchTerm,
+    debouncedSearchTerm,
+    canSearch,
+    handleTextChange,
+    handleSelectItem,
+    setSearchTerm,
+  } = useAutocompleteInput<BrandItem>({
+    onChangeText,
+    onItemSelected: onBrandSelected,
+    getDisplayValue: (item) => item.name,
+  });
 
   const [searchBrands, { data: brandsData }] = useSearchBrandsLazyQuery();
 
   useEffect(() => {
-    // Only query when online and search term is long enough
-    if (searchTerm.length >= 2 && isOnline) {
+    if (canSearch) {
       searchBrands({
-        variables: { search: searchTerm, limit: 20 },
+        variables: { search: debouncedSearchTerm, limit: 20 },
       });
     }
-  }, [searchTerm, searchBrands, isOnline]);
+  }, [debouncedSearchTerm, canSearch, searchBrands]);
 
   const brands = brandsData?.brands || [];
 
-  const handleTextChange = (text: string) => {
-    onChangeText(text);
-    setSearchTerm(text);
-    // Clear brand selection when user types manually
-    onBrandSelected?.(null);
-  };
-
-  const handleSelectBrand = (brand: BrandItem) => {
-    onChangeText(brand.name);
-    onBrandSelected?.(brand.id);
-  };
-
   const renderBrandItem = (brand: BrandItem) => (
     <TouchableOpacity
-      onPress={() => handleSelectBrand(brand)}
+      onPress={() => handleSelectItem(brand)}
       style={styles.brandItem}
       activeOpacity={0.7}
     >
@@ -82,7 +77,7 @@ export const BrandAutocompleteInput: React.FC<BrandAutocompleteInputProps> = ({
       data={brands}
       renderItem={renderBrandItem}
       keyExtractor={(item: BrandItem) => item.id}
-      onSelectItem={handleSelectBrand}
+      onSelectItem={handleSelectItem}
       emptyText="No brands found"
       emptySubtext={`Continue typing to add "${searchTerm}" as a custom brand`}
       onSearchChange={setSearchTerm}
