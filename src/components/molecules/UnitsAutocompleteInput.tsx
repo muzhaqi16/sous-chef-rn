@@ -9,6 +9,7 @@ interface Unit {
   id: string;
   name: string;
   symbol: string;
+  type?: string;
   abbreviation?: string;
 }
 
@@ -19,7 +20,7 @@ interface UnitsAutocompleteInputProps {
   placeholder?: string;
   required?: boolean;
   error?: string;
-  onUnitSelected?: (unitId: string | null, unitName: string | null) => void;
+  onUnitSelected?: (unitId: string | null, unitName: string | null, unitType?: string | null) => void;
   testID?: string;
 }
 
@@ -83,12 +84,12 @@ export const UnitsAutocompleteInput: React.FC<UnitsAutocompleteInputProps> = ({
     onChangeText(text);
     setSearchTerm(text);
     // Clear unit selection when user types manually
-    onUnitSelected?.(null, null);
+    onUnitSelected?.(null, null, null);
   };
 
   const handleSelectUnit = (unit: Unit) => {
     onChangeText(unit.symbol);
-    onUnitSelected?.(unit.id, unit.name);
+    onUnitSelected?.(unit.id, unit.name, unit.type);
   };
 
   const renderUnitItem = (unit: Unit) => (

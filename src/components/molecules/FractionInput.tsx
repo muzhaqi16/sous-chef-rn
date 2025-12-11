@@ -1,6 +1,7 @@
 import React, {useState} from 'react';
 import {TextInput, View, Text} from 'react-native';
 import {StyleSheet} from 'react-native-unistyles';
+import { Label } from '#components/atoms';
 
 interface FractionInputProps {
   value: string;
@@ -53,7 +54,7 @@ export const FractionInput: React.FC<FractionInputProps> = ({
 
   return (
     <View style={styles.container}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label && <Label>{label}</Label>}
       <TextInput
         style={[
           styles.input,

@@ -11,8 +11,8 @@ interface QuantitySectionProps {
   control: Control<any>;
   errors: FieldErrors<any>;
   mode: 'add' | 'edit';
-  onUnitSelected?: (unitId: string | null, unitName: string | null) => void;
-  onWeightUnitSelected?: (unitId: string | null, unitName: string | null) => void;
+  onUnitSelected?: (unitId: string | null, unitName: string | null, unitType?: string | null) => void;
+  onWeightUnitSelected?: (unitId: string | null, unitName: string | null, unitType?: string | null) => void;
   testID?: string;
   unitTestID?: string;
   weightUnitTestID?: string;
@@ -126,22 +126,39 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
         />
       </FieldRow>
 
-      {/* Row 3: Minimum Quantity (full width) */}
-      <Controller
-        control={control}
-        name="minimumQuantity"
-        render={({ field: { onChange, onBlur, value } }) => (
-          <FormInput
-            label="Minimum Quantity"
-            value={value?.toString() || ''}
-            onChangeText={onChange}
-            onBlur={onBlur}
-            placeholder="Alert when below this quantity"
-            keyboardType="numeric"
-            error={errors.minimumQuantity?.message?.toString()}
-          />
-        )}
-      />
+      {/* Row 3: Low Stock Settings */}
+      <FieldRow>
+        <Controller
+          control={control}
+          name="minQuantity"
+          render={({ field: { onChange, onBlur, value } }) => (
+            <FormInput
+              label="Alert When Below"
+              value={value?.toString() || ''}
+              onChangeText={onChange}
+              onBlur={onBlur}
+              placeholder="e.g., 2"
+              keyboardType="decimal-pad"
+              error={errors.minQuantity?.message?.toString()}
+            />
+          )}
+        />
+        <Controller
+          control={control}
+          name="restockQuantity"
+          render={({ field: { onChange, onBlur, value } }) => (
+            <FormInput
+              label="Restock To"
+              value={value?.toString() || ''}
+              onChangeText={onChange}
+              onBlur={onBlur}
+              placeholder="e.g., 6"
+              keyboardType="decimal-pad"
+              error={errors.restockQuantity?.message?.toString()}
+            />
+          )}
+        />
+      </FieldRow>
 
       {/* Stock info display in edit mode */}
       {mode === 'edit' && (

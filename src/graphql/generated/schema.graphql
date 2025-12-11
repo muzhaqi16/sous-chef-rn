@@ -673,6 +673,11 @@ enum CacheControlScope {
   PUBLIC
 }
 
+type CanDeleteAccountResult {
+  blockers: [DeletionBlocker!]!
+  canDelete: Boolean!
+}
+
 """
 Category type for organizing items
 Cache: 2 hours - reference data that changes very rarely
@@ -1194,10 +1199,12 @@ input CreatePantryItemInput {
   itemNetWeight: Float
   itemUpc: String
   lastUsedAt: DateTime
+  minQuantity: Float
   packageWeight: Float
   packageWeightUnitId: String
   pantryId: ID!
   purchaseId: String
+  restockQuantity: Float
   storageLocationId: String
   storageLocationName: String
   storageNotes: String
@@ -1482,6 +1489,19 @@ enum DeductionMethod {
   AUTOMATIC
   MANUAL
   RECIPE_BASED
+}
+
+type DeletionBlocker {
+  message: String!
+  resourceId: ID!
+  resourceName: String!
+  type: DeletionBlockerType!
+}
+
+enum DeletionBlockerType {
+  HOME_OWNERSHIP
+  OTHER
+  SHOPPING_LIST
 }
 
 """
@@ -4007,6 +4027,7 @@ type PantryItem {
   id: ID!
   initialQuantity: Float!
   isComposted: Boolean!
+  isLowStock: Boolean!
   isRecycled: Boolean!
   item: Item!
   itemId: String!
@@ -4015,6 +4036,7 @@ type PantryItem {
   lastModifiedBy: User
   lastUsedAt: DateTime
   lowStockAlert: Boolean!
+  minQuantity: Float
   normalizedQuantity: Float
   normalizedUnit: Unit
   normalizedUnitId: String
@@ -4026,6 +4048,7 @@ type PantryItem {
   photos: [PantryItemPhoto!]!
   purchase: Purchase
   purchaseId: String
+  restockQuantity: Float
   storageLocation: StorageLocation
   storageNotes: String
   storageState: StorageState!
@@ -4192,7 +4215,7 @@ type PantryPreviousValues {
 type PantryStats {
   activeItems: Int!
   expiringCount: Int!
-  lowStockItems: Int!
+  lowStockCount: Int!
   totalItems: Int!
   totalValue: Float!
 }
@@ -4414,6 +4437,7 @@ type Query {
   _empty: String
   activeDevices(userId: ID!): [Device!]!
   activeModerations: [UserModeration!]!
+  adminCanDeleteUser(userId: ID!): CanDeleteAccountResult!
   """
   Aggregate multiple quantities of the same item
   Useful for calculating total needed across multiple recipes
@@ -4451,6 +4475,7 @@ type Query {
     itemId: ID
     toUnitId: ID!
   ): ConversionAvailability!
+  canDeleteAccount: CanDeleteAccountResult!
   categories(parentId: String, type: CategoryType): [Category!]!
   category(id: ID!): Category
   categoryBySlug(slug: String!): Category
@@ -4670,6 +4695,16 @@ type Query {
   Useful for "Add to Pantry" UI to show items user previously had.
   """
   recentlyDeletedPantryItems(limit: Int = 10, pantryId: ID!): [PantryItem!]!
+  """
+  Get recently deleted shopping list items for quick re-adding suggestions.
+  Returns soft-deleted items that are not currently in the shopping list,
+  deduplicated by itemId (only shows most recent entry per item).
+  Useful for "Add to List" UI to show items user previously had.
+  """
+  recentlyDeletedShoppingListItems(
+    limit: Int = 10
+    shoppingListId: ID!
+  ): [ShoppingListItem!]!
   recipe(id: ID!): Recipe
   recipeCookingLogs(limit: Int, offset: Int, recipeId: ID!): [CookingLog!]!
   recipeSuggestions(
@@ -6003,10 +6038,12 @@ input SyncPantryItemInput {
   itemUpc: String
   lastUsedAt: DateTime
   lowStockAlert: Boolean
+  minQuantity: Float
   packageWeight: Float
   packageWeightUnitId: String
   pantryId: ID!
   purchaseId: String
+  restockQuantity: Float
   storageLocationId: String
   storageNotes: String
   storageState: StorageState
@@ -6537,8 +6574,10 @@ input UpdatePantryItemInput {
   isRecycled: Boolean
   lastUsedAt: DateTime
   lowStockAlert: Boolean
+  minQuantity: Float
   packageWeight: Float
   packageWeightUnitId: String
+  restockQuantity: Float
   storageLocationId: String
   storageNotes: String
   storageState: StorageState

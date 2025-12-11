@@ -1,5 +1,6 @@
 export * from './CodeInputAdapter';
 export * from './Counter';
+export * from './EditableCounter';
 export * from './DynamicFormFields';
 export * from './FractionInput';
 export * from './QuantityDisplay';
@@ -43,3 +44,7 @@ export * from './BaseItemCard';
 export * from './FieldRow';
 export * from './InlineBrandAutocomplete';
 export * from './InlineStorageLocationAutocomplete';
+export * from './InlineItemAutocomplete';
+export * from './InlineUnitsAutocomplete';
+export * from './DatePickerField';
+export * from './SegmentedControl';

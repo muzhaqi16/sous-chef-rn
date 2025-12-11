@@ -6,7 +6,9 @@ import {
   TextInputProps,
   StyleSheet,
 } from 'react-native';
+import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { useUnistyles } from 'react-native-unistyles';
+import { Label } from '#components/atoms';
 
 interface FormInputProps extends Omit<TextInputProps, 'style'> {
   label: string;
@@ -16,6 +18,8 @@ interface FormInputProps extends Omit<TextInputProps, 'style'> {
   inputStyle?: any;
   accessibilityLabel?: string;
   accessibilityHint?: string;
+  /** Use BottomSheetTextInput for proper keyboard handling inside bottom sheets */
+  useBottomSheetInput?: boolean;
 }
 
 export const FormInput: React.FC<FormInputProps> = ({
@@ -26,23 +30,16 @@ export const FormInput: React.FC<FormInputProps> = ({
   inputStyle,
   accessibilityLabel,
   accessibilityHint,
+  useBottomSheetInput = false,
   ...textInputProps
 }) => {
+  const InputComponent = useBottomSheetInput ? BottomSheetTextInput : TextInput;
   const { theme } = useUnistyles();
 
   const styles = StyleSheet.create({
     container: {
       marginBottom: 16,
       ...containerStyle,
-    },
-    label: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: theme.colors.textPrimary,
-      marginBottom: 8,
-    },
-    required: {
-      color: '#dc3545',
     },
     input: {
       borderWidth: 1,
@@ -66,16 +63,15 @@ export const FormInput: React.FC<FormInputProps> = ({
   const inputLabel = accessibilityLabel || label;
   const fullLabel = required ? `${inputLabel}, required` : inputLabel;
   const fullHint = error
-    ? `${accessibilityHint || ''}${accessibilityHint ? '. ' : ''}Error: ${error}`
+    ? `${accessibilityHint || ''}${
+        accessibilityHint ? '. ' : ''
+      }Error: ${error}`
     : accessibilityHint;
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>
-        {label}
-        {required && <Text style={styles.required}> *</Text>}
-      </Text>
-      <TextInput
+      <Label required={required}>{label}</Label>
+      <InputComponent
         style={styles.input}
         placeholderTextColor={theme.colors.textSecondary}
         accessible={true}

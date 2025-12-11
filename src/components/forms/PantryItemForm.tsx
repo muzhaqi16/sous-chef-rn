@@ -57,8 +57,11 @@ interface PantryItemFormData {
   // Edit mode specific
   tags?: string[];
 
+  // Low stock settings (both modes)
+  minQuantity?: string;
+  restockQuantity?: string;
+
   // Storage fields (both modes)
-  minimumQuantity?: string;
   storageState: StorageState;
   location: string;
   expirationDate?: Date;
@@ -77,7 +80,8 @@ const addItemSchema = yup.object({
     .nullable()
     .transform((value, originalValue) => (originalValue === '' ? null : value)),
   weightUnit: yup.string(), // Weight unit (separate from tracking unit)
-  minimumQuantity: yup.string(),
+  minQuantity: yup.string(),
+  restockQuantity: yup.string(),
   storageState: yup.string().oneOf(Object.values(StorageState)),
   location: yup.string(),
   notes: yup.string(),
@@ -95,7 +99,8 @@ const editItemSchema = yup.object({
     .nullable()
     .transform((value, originalValue) => (originalValue === '' ? null : value)),
   weightUnit: yup.string(), // Weight unit (separate from tracking unit)
-  minimumQuantity: yup.string(),
+  minQuantity: yup.string(),
+  restockQuantity: yup.string(),
   storageState: yup.string().oneOf(Object.values(StorageState)),
   location: yup.string(),
   notes: yup.string(),
@@ -115,12 +120,13 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
 }) => {
   const { theme } = useUnistyles();
   const navigation = useNavigation();
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [_saving, setSaving] = useState(false);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [_selectedUnitName, setSelectedUnitName] = useState<string | null>(null);
+  const [selectedUnitType, setSelectedUnitType] = useState<string | null>(null);
   const [selectedWeightUnitId, setSelectedWeightUnitId] = useState<string | null>(null);
   const [_selectedWeightUnitName, setSelectedWeightUnitName] = useState<string | null>(null);
+  const [selectedWeightUnitType, setSelectedWeightUnitType] = useState<string | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
     null,
   );
@@ -238,9 +244,9 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
         unit: trackingUnitSymbol, // Tracking unit
         itemWeight: weight,
         weightUnit: weightUnitSymbol, // Weight unit (separate from tracking)
-        // Note: minimumQuantity is not stored on PantryItem in the API
-        // The lowStockAlert boolean is used instead
-        minimumQuantity: '',
+        minQuantity: item.minQuantity?.toString() || '',
+        restockQuantity: item.restockQuantity?.toString() || '',
+        brand: item.brand?.name || '',
         storageState: item.storageState || StorageState.Ambient,
         location:
           typeof item.storageLocation === 'string'
@@ -261,7 +267,8 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
       unit: '', // Tracking unit
       itemWeight: undefined,
       weightUnit: '', // Weight unit
-      minimumQuantity: '',
+      minQuantity: '',
+      restockQuantity: '',
       storageState: StorageState.Ambient,
       location: '',
       notes: '',
@@ -361,18 +368,20 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   );
 
   const handleUnitSelected = useCallback(
-    (unitId: string | null, unitName: string | null) => {
+    (unitId: string | null, unitName: string | null, unitType?: string | null) => {
       setSelectedUnitId(unitId);
       setSelectedUnitName(unitName);
+      setSelectedUnitType(unitType ?? null);
     },
     [],
   );
 
   // Handler for weight unit selection (separate from tracking unit)
   const handleWeightUnitSelected = useCallback(
-    (unitId: string | null, unitName: string | null) => {
+    (unitId: string | null, unitName: string | null, unitType?: string | null) => {
       setSelectedWeightUnitId(unitId);
       setSelectedWeightUnitName(unitName);
+      setSelectedWeightUnitType(unitType ?? null);
     },
     [],
   );
@@ -445,6 +454,14 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
       }
     }
 
+    // Low stock settings
+    if (dirty.minQuantity) {
+      input.minQuantity = data.minQuantity ? parseFloat(data.minQuantity) : null;
+    }
+    if (dirty.restockQuantity) {
+      input.restockQuantity = data.restockQuantity ? parseFloat(data.restockQuantity) : null;
+    }
+
     return input;
   };
 
@@ -494,6 +511,8 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
           storageState: data.storageState as StorageState,
           expiresAt: data.expirationDate?.toISOString() || null,
           storageNotes: data.notes.trim() || null,
+          minQuantity: data.minQuantity ? parseFloat(data.minQuantity) : undefined,
+          restockQuantity: data.restockQuantity ? parseFloat(data.restockQuantity) : undefined,
           ...storageLocationInput,
         };
 
@@ -564,10 +583,12 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
               updatePantryItemQuantity: enhanceWithVersion(currentItem as any, {
                 currentQuantity: newQuantity,
                 unit: unitId ? {
+                  ...currentItem.unit,
                   __typename: 'Unit',
                   id: unitId,
                   symbol: data.unit || currentItem.unit?.symbol,
                   name: data.unit || currentItem.unit?.name,
+                  type: selectedUnitType || currentItem.unit?.type,
                 } : currentItem.unit,
                 unitId: unitId || currentItem.unitId,
                 unitName: data.unit || currentItem.unitName,
@@ -583,12 +604,27 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
         if (Object.keys(input).length > 0) {
           const currentItemForUpdate = existingItemData?.pantryItem;
 
+          // Build enhanced input with full nested objects for cache
+          const optimisticInput: Record<string, any> = { ...input };
+
+          // If weight unit changed, include full packageWeightUnit object
+          if (input.packageWeightUnitId && currentItemForUpdate) {
+            optimisticInput.packageWeightUnit = {
+              ...currentItemForUpdate.packageWeightUnit,
+              __typename: 'Unit',
+              id: input.packageWeightUnitId,
+              symbol: data.weightUnit || currentItemForUpdate.packageWeightUnit?.symbol,
+              name: data.weightUnit || currentItemForUpdate.packageWeightUnit?.name,
+              type: selectedWeightUnitType || currentItemForUpdate.packageWeightUnit?.type,
+            };
+          }
+
           await updateItem({
             variables: { id: itemId!, input },
             // Optimistic response for instant UI update (no flicker)
             optimisticResponse: currentItemForUpdate ? {
               __typename: 'Mutation',
-              updatePantryItem: enhanceWithVersion(currentItemForUpdate as any, input),
+              updatePantryItem: enhanceWithVersion(currentItemForUpdate as any, optimisticInput),
             } : undefined,
           });
         }
@@ -710,6 +746,12 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
                     {item?.item?.name || item?.itemName || 'Unknown Item'}
                   </Text>
                 </View>
+                {item?.brand?.name && (
+                  <View style={[styles.readOnlyField, { marginTop: 8 }]}>
+                    <Text style={styles.readOnlyLabel}>Brand</Text>
+                    <Text style={styles.readOnlyText}>{item.brand.name}</Text>
+                  </View>
+                )}
               </View>
             )}
 
@@ -750,12 +792,9 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
               mode={mode}
               storageState={watchedValues.storageState}
               expirationDate={watchedValues.expirationDate}
-              showDatePicker={showDatePicker}
               onStorageStateChange={state => setValue('storageState', state, { shouldDirty: true })}
-              onDatePickerToggle={() => setShowDatePicker(!showDatePicker)}
               onDateChange={date => {
-                setShowDatePicker(Platform.OS === 'ios');
-                if (date) setValue('expirationDate', date, { shouldDirty: true });
+                setValue('expirationDate', date ?? undefined, { shouldDirty: true });
               }}
               onCategorySelected={handleCategorySelect}
               storageLocations={storageLocations}
@@ -800,6 +839,11 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.borderLight,
     borderRadius: theme.radii.md,
     backgroundColor: theme.colors.surfaceVariant,
+  },
+  readOnlyLabel: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.xs,
   },
   readOnlyText: {
     fontSize: theme.fonts.size.base,

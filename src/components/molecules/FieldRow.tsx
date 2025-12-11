@@ -12,6 +12,7 @@ interface FieldRowProps {
  *
  * Places children side-by-side with equal flex distribution.
  * Useful for grouping related fields like Quantity + Unit.
+ * Applies consistent bottom margin for spacing between rows.
  *
  * @example
  * <FieldRow>
@@ -21,18 +22,19 @@ interface FieldRowProps {
  */
 export const FieldRow: React.FC<FieldRowProps> = ({ children, gap = 12 }) => {
   return (
-    <View style={[styles.row, { gap }]}>
-      {React.Children.map(children, (child) =>
-        child ? <View style={styles.field}>{child}</View> : null
+    <View style={[styles.container, { gap }]}>
+      {React.Children.map(children, child =>
+        child ? <View style={styles.field}>{child}</View> : null,
       )}
     </View>
   );
 };
 
-const styles = StyleSheet.create(() => ({
-  row: {
+const styles = StyleSheet.create(theme => ({
+  container: {
     flexDirection: 'row',
-    alignItems: 'flex-end', // Align fields at bottom so inputs line up
+    alignItems: 'flex-start', // Align at top so labels line up
+    marginBottom: theme.spacing.md, // Consistent spacing between rows
   },
   field: {
     flex: 1,

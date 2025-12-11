@@ -1,0 +1,143 @@
+import React, { useState, useCallback } from 'react';
+import { View, Text, TouchableOpacity, Platform } from 'react-native';
+import DateTimePicker, {
+  DateTimePickerEvent,
+} from '@react-native-community/datetimepicker';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { Icon } from '#utils';
+import { Label } from '#components/atoms';
+
+interface DatePickerFieldProps {
+  label?: string;
+  value: Date | null;
+  onChange: (date: Date | null) => void;
+  placeholder?: string;
+  minimumDate?: Date;
+  maximumDate?: Date;
+  required?: boolean;
+  error?: string;
+  testID?: string;
+}
+
+/**
+ * DatePickerField - Reusable date picker with label and icon
+ * Handles platform-specific date picker display (iOS inline, Android dialog)
+ */
+export const DatePickerField: React.FC<DatePickerFieldProps> = ({
+  label,
+  value,
+  onChange,
+  placeholder = 'Select date',
+  minimumDate,
+  maximumDate,
+  required,
+  error,
+  testID,
+}) => {
+  const { theme } = useUnistyles();
+  const [showPicker, setShowPicker] = useState(false);
+
+  const handleDateChange = useCallback(
+    (event: DateTimePickerEvent, selectedDate?: Date) => {
+      // On Android, the picker closes automatically
+      if (Platform.OS === 'android') {
+        setShowPicker(false);
+      }
+
+      if (event.type === 'set' && selectedDate) {
+        onChange(selectedDate);
+      } else if (event.type === 'dismissed') {
+        // User cancelled
+        setShowPicker(false);
+      }
+    },
+    [onChange],
+  );
+
+  const handlePress = useCallback(() => {
+    setShowPicker(true);
+  }, []);
+
+  const formatDate = (date: Date): string => {
+    return date.toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
+  return (
+    <View style={styles.container} testID={testID}>
+      {label && <Label required={required}>{label}</Label>}
+      <TouchableOpacity
+        style={[styles.input, error && styles.inputError]}
+        onPress={handlePress}
+        activeOpacity={0.7}
+      >
+        <Icon
+          name="event"
+          size={20}
+          color={theme.colors.textSecondary}
+          library="MaterialIcons"
+        />
+        <Text style={[styles.dateText, !value && styles.placeholder]}>
+          {value ? formatDate(value) : placeholder}
+        </Text>
+      </TouchableOpacity>
+      {error && <Text style={styles.errorText}>{error}</Text>}
+
+      {showPicker && (
+        <DateTimePicker
+          value={value || new Date()}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'inline' : 'default'}
+          minimumDate={minimumDate}
+          maximumDate={maximumDate}
+          onChange={handleDateChange}
+        />
+      )}
+    </View>
+  );
+};
+
+const styles = StyleSheet.create(theme => ({
+  container: {
+    marginBottom: theme.spacing.lg,
+  },
+  label: {
+    fontSize: theme.fonts.size.md,
+    fontWeight: theme.fonts.weight.medium,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.md,
+  },
+  required: {
+    color: theme.colors.error,
+  },
+  input: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 48,
+    paddingHorizontal: theme.spacing.sm,
+    borderRadius: theme.radii.md,
+    backgroundColor: theme.colors.inputBackground,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    gap: theme.spacing.sm,
+  },
+  inputError: {
+    borderColor: theme.colors.error,
+  },
+  dateText: {
+    flex: 1,
+    fontSize: theme.fonts.size.md,
+    color: theme.colors.inputText,
+  },
+  placeholder: {
+    color: theme.colors.textSecondary,
+  },
+  errorText: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.error,
+    marginTop: theme.spacing.xs,
+  },
+}));

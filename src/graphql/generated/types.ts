@@ -300,6 +300,12 @@ export enum CacheControlScope {
   Public = 'PUBLIC',
 }
 
+export type CanDeleteAccountResult = {
+  __typename?: 'CanDeleteAccountResult';
+  blockers: Array<DeletionBlocker>;
+  canDelete: Scalars['Boolean']['output'];
+};
+
 /**
  * Category type for organizing items
  * Cache: 2 hours - reference data that changes very rarely
@@ -813,10 +819,12 @@ export type CreatePantryItemInput = {
   itemNetWeight?: InputMaybe<Scalars['Float']['input']>;
   itemUpc?: InputMaybe<Scalars['String']['input']>;
   lastUsedAt?: InputMaybe<Scalars['DateTime']['input']>;
+  minQuantity?: InputMaybe<Scalars['Float']['input']>;
   packageWeight?: InputMaybe<Scalars['Float']['input']>;
   packageWeightUnitId?: InputMaybe<Scalars['String']['input']>;
   pantryId: Scalars['ID']['input'];
   purchaseId?: InputMaybe<Scalars['String']['input']>;
+  restockQuantity?: InputMaybe<Scalars['Float']['input']>;
   storageLocationId?: InputMaybe<Scalars['String']['input']>;
   storageLocationName?: InputMaybe<Scalars['String']['input']>;
   storageNotes?: InputMaybe<Scalars['String']['input']>;
@@ -1070,6 +1078,20 @@ export enum DeductionMethod {
   Automatic = 'AUTOMATIC',
   Manual = 'MANUAL',
   RecipeBased = 'RECIPE_BASED',
+}
+
+export type DeletionBlocker = {
+  __typename?: 'DeletionBlocker';
+  message: Scalars['String']['output'];
+  resourceId: Scalars['ID']['output'];
+  resourceName: Scalars['String']['output'];
+  type: DeletionBlockerType;
+};
+
+export enum DeletionBlockerType {
+  HomeOwnership = 'HOME_OWNERSHIP',
+  Other = 'OTHER',
+  ShoppingList = 'SHOPPING_LIST',
 }
 
 /** User device information - contains sensitive device fingerprinting data */
@@ -4627,6 +4649,7 @@ export type PantryItem = {
   id: Scalars['ID']['output'];
   initialQuantity: Scalars['Float']['output'];
   isComposted: Scalars['Boolean']['output'];
+  isLowStock: Scalars['Boolean']['output'];
   isRecycled: Scalars['Boolean']['output'];
   item: Item;
   itemId: Scalars['String']['output'];
@@ -4635,6 +4658,7 @@ export type PantryItem = {
   lastModifiedBy?: Maybe<User>;
   lastUsedAt?: Maybe<Scalars['DateTime']['output']>;
   lowStockAlert: Scalars['Boolean']['output'];
+  minQuantity?: Maybe<Scalars['Float']['output']>;
   normalizedQuantity?: Maybe<Scalars['Float']['output']>;
   normalizedUnit?: Maybe<Unit>;
   normalizedUnitId?: Maybe<Scalars['String']['output']>;
@@ -4646,6 +4670,7 @@ export type PantryItem = {
   photos: Array<PantryItemPhoto>;
   purchase?: Maybe<Purchase>;
   purchaseId?: Maybe<Scalars['String']['output']>;
+  restockQuantity?: Maybe<Scalars['Float']['output']>;
   storageLocation?: Maybe<StorageLocation>;
   storageNotes?: Maybe<Scalars['String']['output']>;
   storageState: StorageState;
@@ -4814,7 +4839,7 @@ export type PantryStats = {
   __typename?: 'PantryStats';
   activeItems: Scalars['Int']['output'];
   expiringCount: Scalars['Int']['output'];
-  lowStockItems: Scalars['Int']['output'];
+  lowStockCount: Scalars['Int']['output'];
   totalItems: Scalars['Int']['output'];
   totalValue: Scalars['Float']['output'];
 };
@@ -5036,6 +5061,7 @@ export type Query = {
   _empty?: Maybe<Scalars['String']['output']>;
   activeDevices: Array<Device>;
   activeModerations: Array<UserModeration>;
+  adminCanDeleteUser: CanDeleteAccountResult;
   /**
    * Aggregate multiple quantities of the same item
    * Useful for calculating total needed across multiple recipes
@@ -5055,6 +5081,7 @@ export type Query = {
    * Returns availability and confidence level
    */
   canConvert: ConversionAvailability;
+  canDeleteAccount: CanDeleteAccountResult;
   categories: Array<Category>;
   category?: Maybe<Category>;
   categoryBySlug?: Maybe<Category>;
@@ -5203,6 +5230,13 @@ export type Query = {
    * Useful for "Add to Pantry" UI to show items user previously had.
    */
   recentlyDeletedPantryItems: Array<PantryItem>;
+  /**
+   * Get recently deleted shopping list items for quick re-adding suggestions.
+   * Returns soft-deleted items that are not currently in the shopping list,
+   * deduplicated by itemId (only shows most recent entry per item).
+   * Useful for "Add to List" UI to show items user previously had.
+   */
+  recentlyDeletedShoppingListItems: Array<ShoppingListItem>;
   recipe?: Maybe<Recipe>;
   recipeCookingLogs: Array<CookingLog>;
   recipeSuggestions: RecipeConnection;
@@ -5278,6 +5312,10 @@ export type Query = {
 };
 
 export type QueryActiveDevicesArgs = {
+  userId: Scalars['ID']['input'];
+};
+
+export type QueryAdminCanDeleteUserArgs = {
   userId: Scalars['ID']['input'];
 };
 
@@ -5740,6 +5778,11 @@ export type QueryRecentNotificationsArgs = {
 export type QueryRecentlyDeletedPantryItemsArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
   pantryId: Scalars['ID']['input'];
+};
+
+export type QueryRecentlyDeletedShoppingListItemsArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  shoppingListId: Scalars['ID']['input'];
 };
 
 export type QueryRecipeArgs = {
@@ -7292,10 +7335,12 @@ export type SyncPantryItemInput = {
   itemUpc?: InputMaybe<Scalars['String']['input']>;
   lastUsedAt?: InputMaybe<Scalars['DateTime']['input']>;
   lowStockAlert?: InputMaybe<Scalars['Boolean']['input']>;
+  minQuantity?: InputMaybe<Scalars['Float']['input']>;
   packageWeight?: InputMaybe<Scalars['Float']['input']>;
   packageWeightUnitId?: InputMaybe<Scalars['String']['input']>;
   pantryId: Scalars['ID']['input'];
   purchaseId?: InputMaybe<Scalars['String']['input']>;
+  restockQuantity?: InputMaybe<Scalars['Float']['input']>;
   storageLocationId?: InputMaybe<Scalars['String']['input']>;
   storageNotes?: InputMaybe<Scalars['String']['input']>;
   storageState?: InputMaybe<StorageState>;
@@ -7791,8 +7836,10 @@ export type UpdatePantryItemInput = {
   isRecycled?: InputMaybe<Scalars['Boolean']['input']>;
   lastUsedAt?: InputMaybe<Scalars['DateTime']['input']>;
   lowStockAlert?: InputMaybe<Scalars['Boolean']['input']>;
+  minQuantity?: InputMaybe<Scalars['Float']['input']>;
   packageWeight?: InputMaybe<Scalars['Float']['input']>;
   packageWeightUnitId?: InputMaybe<Scalars['String']['input']>;
+  restockQuantity?: InputMaybe<Scalars['Float']['input']>;
   storageLocationId?: InputMaybe<Scalars['String']['input']>;
   storageNotes?: InputMaybe<Scalars['String']['input']>;
   storageState?: InputMaybe<StorageState>;
@@ -9159,6 +9206,23 @@ export type GetUserProfileQuery = {
     | undefined;
 };
 
+export type CanDeleteAccountQueryVariables = Exact<{ [key: string]: never }>;
+
+export type CanDeleteAccountQuery = {
+  __typename?: 'Query';
+  canDeleteAccount: {
+    __typename?: 'CanDeleteAccountResult';
+    canDelete: boolean;
+    blockers: Array<{
+      __typename?: 'DeletionBlocker';
+      type: DeletionBlockerType;
+      resourceId: string;
+      resourceName: string;
+      message: string;
+    }>;
+  };
+};
+
 export type UpdateUserMutationVariables = Exact<{
   id: Scalars['ID']['input'];
   input: UpdateUserInput;
@@ -10062,6 +10126,9 @@ export type PantryItemFragmentFragment = {
   updatedAt?: string | null | undefined;
   version?: number | null | undefined;
   tags: Array<string>;
+  lowStockAlert: boolean;
+  minQuantity?: number | null | undefined;
+  restockQuantity?: number | null | undefined;
   lastUsedAt?: string | null | undefined;
   wasteAmount: number;
   wasteDate?: string | null | undefined;
@@ -10388,6 +10455,9 @@ export type PantryFragmentFragment = {
         updatedAt?: string | null | undefined;
         version?: number | null | undefined;
         tags: Array<string>;
+        lowStockAlert: boolean;
+        minQuantity?: number | null | undefined;
+        restockQuantity?: number | null | undefined;
         lastUsedAt?: string | null | undefined;
         wasteAmount: number;
         wasteDate?: string | null | undefined;
@@ -10970,6 +11040,9 @@ export type HomeFragmentFragment = {
               updatedAt?: string | null | undefined;
               version?: number | null | undefined;
               tags: Array<string>;
+              lowStockAlert: boolean;
+              minQuantity?: number | null | undefined;
+              restockQuantity?: number | null | undefined;
               lastUsedAt?: string | null | undefined;
               wasteAmount: number;
               wasteDate?: string | null | undefined;
@@ -11536,6 +11609,9 @@ export type GetHomeQuery = {
                     updatedAt?: string | null | undefined;
                     version?: number | null | undefined;
                     tags: Array<string>;
+                    lowStockAlert: boolean;
+                    minQuantity?: number | null | undefined;
+                    restockQuantity?: number | null | undefined;
                     lastUsedAt?: string | null | undefined;
                     wasteAmount: number;
                     wasteDate?: string | null | undefined;
@@ -12148,6 +12224,9 @@ export type GetHomesQuery = {
                 updatedAt?: string | null | undefined;
                 version?: number | null | undefined;
                 tags: Array<string>;
+                lowStockAlert: boolean;
+                minQuantity?: number | null | undefined;
+                restockQuantity?: number | null | undefined;
                 lastUsedAt?: string | null | undefined;
                 wasteAmount: number;
                 wasteDate?: string | null | undefined;
@@ -12631,6 +12710,9 @@ export type GetHomeByJoinCodeQuery = {
                     updatedAt?: string | null | undefined;
                     version?: number | null | undefined;
                     tags: Array<string>;
+                    lowStockAlert: boolean;
+                    minQuantity?: number | null | undefined;
+                    restockQuantity?: number | null | undefined;
                     lastUsedAt?: string | null | undefined;
                     wasteAmount: number;
                     wasteDate?: string | null | undefined;
@@ -13065,6 +13147,9 @@ export type CreateHomeMutation = {
                 updatedAt?: string | null | undefined;
                 version?: number | null | undefined;
                 tags: Array<string>;
+                lowStockAlert: boolean;
+                minQuantity?: number | null | undefined;
+                restockQuantity?: number | null | undefined;
                 lastUsedAt?: string | null | undefined;
                 wasteAmount: number;
                 wasteDate?: string | null | undefined;
@@ -13498,6 +13583,9 @@ export type UpdateHomeMutation = {
                 updatedAt?: string | null | undefined;
                 version?: number | null | undefined;
                 tags: Array<string>;
+                lowStockAlert: boolean;
+                minQuantity?: number | null | undefined;
+                restockQuantity?: number | null | undefined;
                 lastUsedAt?: string | null | undefined;
                 wasteAmount: number;
                 wasteDate?: string | null | undefined;
@@ -13930,6 +14018,9 @@ export type DeleteHomeMutation = {
                 updatedAt?: string | null | undefined;
                 version?: number | null | undefined;
                 tags: Array<string>;
+                lowStockAlert: boolean;
+                minQuantity?: number | null | undefined;
+                restockQuantity?: number | null | undefined;
                 lastUsedAt?: string | null | undefined;
                 wasteAmount: number;
                 wasteDate?: string | null | undefined;
@@ -14776,6 +14867,9 @@ export type GetDefaultHomeQuery = {
                     updatedAt?: string | null | undefined;
                     version?: number | null | undefined;
                     tags: Array<string>;
+                    lowStockAlert: boolean;
+                    minQuantity?: number | null | undefined;
+                    restockQuantity?: number | null | undefined;
                     lastUsedAt?: string | null | undefined;
                     wasteAmount: number;
                     wasteDate?: string | null | undefined;
@@ -16087,6 +16181,9 @@ export type GetPantryQuery = {
               updatedAt?: string | null | undefined;
               version?: number | null | undefined;
               tags: Array<string>;
+              lowStockAlert: boolean;
+              minQuantity?: number | null | undefined;
+              restockQuantity?: number | null | undefined;
               lastUsedAt?: string | null | undefined;
               wasteAmount: number;
               wasteDate?: string | null | undefined;
@@ -16381,6 +16478,9 @@ export type GetPantryItemQuery = {
     updatedAt?: string | null | undefined;
     version?: number | null | undefined;
     tags: Array<string>;
+    lowStockAlert: boolean;
+    minQuantity?: number | null | undefined;
+    restockQuantity?: number | null | undefined;
     lastUsedAt?: string | null | undefined;
     wasteAmount: number;
     wasteDate?: string | null | undefined;
@@ -16912,6 +17012,9 @@ export type CreatePantryItemMutation = {
     updatedAt?: string | null | undefined;
     version?: number | null | undefined;
     tags: Array<string>;
+    lowStockAlert: boolean;
+    minQuantity?: number | null | undefined;
+    restockQuantity?: number | null | undefined;
     lastUsedAt?: string | null | undefined;
     wasteAmount: number;
     wasteDate?: string | null | undefined;
@@ -17136,6 +17239,9 @@ export type UpdatePantryItemMutation = {
     updatedAt?: string | null | undefined;
     version?: number | null | undefined;
     tags: Array<string>;
+    lowStockAlert: boolean;
+    minQuantity?: number | null | undefined;
+    restockQuantity?: number | null | undefined;
     lastUsedAt?: string | null | undefined;
     wasteAmount: number;
     wasteDate?: string | null | undefined;
@@ -17359,6 +17465,9 @@ export type DeletePantryItemMutation = {
     updatedAt?: string | null | undefined;
     version?: number | null | undefined;
     tags: Array<string>;
+    lowStockAlert: boolean;
+    minQuantity?: number | null | undefined;
+    restockQuantity?: number | null | undefined;
     lastUsedAt?: string | null | undefined;
     wasteAmount: number;
     wasteDate?: string | null | undefined;
@@ -17600,6 +17709,9 @@ export type CreatePantryItemUsageMutation = {
       updatedAt?: string | null | undefined;
       version?: number | null | undefined;
       tags: Array<string>;
+      lowStockAlert: boolean;
+      minQuantity?: number | null | undefined;
+      restockQuantity?: number | null | undefined;
       lastUsedAt?: string | null | undefined;
       wasteAmount: number;
       wasteDate?: string | null | undefined;
@@ -17841,6 +17953,9 @@ export type RecordPantryItemWasteMutation = {
     updatedAt?: string | null | undefined;
     version?: number | null | undefined;
     tags: Array<string>;
+    lowStockAlert: boolean;
+    minQuantity?: number | null | undefined;
+    restockQuantity?: number | null | undefined;
     lastUsedAt?: string | null | undefined;
     wasteAmount: number;
     wasteDate?: string | null | undefined;
@@ -18072,6 +18187,9 @@ export type RestockPantryItemMutation = {
       updatedAt?: string | null | undefined;
       version?: number | null | undefined;
       tags: Array<string>;
+      lowStockAlert: boolean;
+      minQuantity?: number | null | undefined;
+      restockQuantity?: number | null | undefined;
       lastUsedAt?: string | null | undefined;
       wasteAmount: number;
       wasteDate?: string | null | undefined;
@@ -18305,6 +18423,9 @@ export type UpdatePantryItemQuantityMutation = {
     updatedAt?: string | null | undefined;
     version?: number | null | undefined;
     tags: Array<string>;
+    lowStockAlert: boolean;
+    minQuantity?: number | null | undefined;
+    restockQuantity?: number | null | undefined;
     lastUsedAt?: string | null | undefined;
     wasteAmount: number;
     wasteDate?: string | null | undefined;
@@ -18536,6 +18657,9 @@ export type SyncPantryItemMutation = {
           updatedAt?: string | null | undefined;
           version?: number | null | undefined;
           tags: Array<string>;
+          lowStockAlert: boolean;
+          minQuantity?: number | null | undefined;
+          restockQuantity?: number | null | undefined;
           lastUsedAt?: string | null | undefined;
           wasteAmount: number;
           wasteDate?: string | null | undefined;
@@ -18963,6 +19087,9 @@ export type PantryItemsChangedSubscription = {
       updatedAt?: string | null | undefined;
       version?: number | null | undefined;
       tags: Array<string>;
+      lowStockAlert: boolean;
+      minQuantity?: number | null | undefined;
+      restockQuantity?: number | null | undefined;
       lastUsedAt?: string | null | undefined;
       wasteAmount: number;
       wasteDate?: string | null | undefined;
@@ -22844,6 +22971,9 @@ export type MoveShoppingItemToPantryMutation = {
     updatedAt?: string | null | undefined;
     version?: number | null | undefined;
     tags: Array<string>;
+    lowStockAlert: boolean;
+    minQuantity?: number | null | undefined;
+    restockQuantity?: number | null | undefined;
     lastUsedAt?: string | null | undefined;
     wasteAmount: number;
     wasteDate?: string | null | undefined;

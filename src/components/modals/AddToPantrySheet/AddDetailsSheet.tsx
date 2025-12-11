@@ -1,26 +1,26 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, Switch, Alert, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, Alert } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetBackdrop,
   BottomSheetScrollView,
 } from '@gorhom/bottom-sheet';
 import PagerView from 'react-native-pager-view';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedBottomSheetConfigs } from '#hooks';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { Icon } from '#utils';
-import { FractionInput } from '#components/molecules/FractionInput';
-import { FormInput } from '#components/molecules/FormInput';
-import { InlineItemAutocomplete } from '#components/molecules/InlineItemAutocomplete';
-import { InlineUnitsAutocomplete } from '#components/molecules/InlineUnitsAutocomplete';
-import { InlineBrandAutocomplete } from '#components/molecules/InlineBrandAutocomplete';
 import {
+  FormInput,
+  EditableCounter,
+  InlineItemAutocomplete,
+  InlineUnitsAutocomplete,
+  InlineBrandAutocomplete,
   InlineStorageLocationAutocomplete,
-  StorageLocation,
-} from '#components/molecules/InlineStorageLocationAutocomplete';
-import { FieldRow } from '#components/molecules/FieldRow';
+  FieldRow,
+  DatePickerField,
+  SegmentedControl,
+} from '#components/molecules';
+import type { StorageLocation } from '#components/molecules/InlineStorageLocationAutocomplete';
 import { parseFractionalInput } from '#/utils';
 import {
   StorageState,
@@ -30,7 +30,7 @@ import {
 import { createAddToParentConnectionUpdater } from '#/apollo/utils';
 
 const STORAGE_STATES = Object.values(StorageState);
-const PAGES = ['Main', 'Details', 'Storage'] as const;
+const PAGES = ['Main', 'Details', 'Storage', 'Stock'] as const;
 
 interface AddDetailsSheetProps {
   visible: boolean;
@@ -143,21 +143,24 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   const [packageWeight, setPackageWeight] = useState('');
   const [weightUnit, setWeightUnit] = useState('');
   const [weightUnitId, setWeightUnitId] = useState<string | null>(null);
-  const [expirationDate, setExpirationDate] = useState('');
-  const [expirationDateObj, setExpirationDateObj] = useState<Date | null>(null);
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [expirationDate, setExpirationDate] = useState<Date | null>(null);
 
   // Form state - Page 3 (Storage)
   const [storageLocation, setStorageLocation] = useState('');
-  const [selectedStorageLocationId, setSelectedStorageLocationId] = useState<string | null>(null);
+  const [selectedStorageLocationId, setSelectedStorageLocationId] = useState<
+    string | null
+  >(null);
   const [storageNotes, setStorageNotes] = useState('');
   const [tags, setTags] = useState('');
   const [brand, setBrand] = useState('');
-  const [selectedBrandId, setSelectedBrandId] = useState<string | null>(null);
-  const [suggestedBrands, setSuggestedBrands] = useState<{ id: string; name: string }[]>([]);
+  const [_selectedBrandId, setSelectedBrandId] = useState<string | null>(null);
+  const [suggestedBrands, setSuggestedBrands] = useState<
+    { id: string; name: string }[]
+  >([]);
 
-  // Form state - Add Another toggle
-  const [addAnother, setAddAnother] = useState(false);
+  // Form state - Page 4 (Stock)
+  const [minQuantity, setMinQuantity] = useState('');
+  const [restockQuantity, setRestockQuantity] = useState('');
 
   // Create mutation
   const [createPantryItem, { loading }] = useCreatePantryItemMutation({
@@ -188,9 +191,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     setPackageWeight('');
     setWeightUnit('');
     setWeightUnitId(null);
-    setExpirationDate('');
-    setExpirationDateObj(null);
-    setShowDatePicker(false);
+    setExpirationDate(null);
     setStorageLocation('');
     setSelectedStorageLocationId(null);
     setStorageNotes('');
@@ -198,6 +199,8 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     setBrand('');
     setSelectedBrandId(null);
     setSuggestedBrands([]);
+    setMinQuantity('');
+    setRestockQuantity('');
   }, []);
 
   // Control visibility
@@ -256,18 +259,6 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     [],
   );
 
-  // Handle date picker change
-  const handleDateChange = useCallback(
-    (_event: any, date?: Date) => {
-      setShowDatePicker(Platform.OS === 'ios');
-      if (date) {
-        setExpirationDateObj(date);
-        setExpirationDate(date.toISOString().split('T')[0]);
-      }
-    },
-    [],
-  );
-
   // Handle storage location selection
   const handleStorageLocationSelected = useCallback(
     (locationId: string | null, location: StorageLocation | null) => {
@@ -276,7 +267,8 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
       if (location?.temperature) {
         const temp = location.temperature.toLowerCase();
         if (temp === 'frozen') setStorageState(StorageState.Frozen);
-        else if (temp === 'refrigerated') setStorageState(StorageState.Refrigerated);
+        else if (temp === 'refrigerated')
+          setStorageState(StorageState.Refrigerated);
         else setStorageState(StorageState.Ambient);
       }
     },
@@ -334,12 +326,15 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
               ? parseFloat(packageWeight)
               : undefined,
             packageWeightUnitId: weightUnitId || undefined,
-            expiresAt: expirationDate || undefined,
+            expiresAt: expirationDate
+              ? expirationDate.toISOString().split('T')[0]
+              : undefined,
             // Use storage location ID if selected, otherwise use name for server to create
             storageLocationId: selectedStorageLocationId || undefined,
-            storageLocationName: !selectedStorageLocationId && storageLocation.trim()
-              ? storageLocation.trim()
-              : undefined,
+            storageLocationName:
+              !selectedStorageLocationId && storageLocation.trim()
+                ? storageLocation.trim()
+                : undefined,
             storageNotes: storageNotes.trim() || undefined,
             tags: tags
               ? tags
@@ -348,17 +343,15 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
                   .filter(Boolean)
               : undefined,
             itemBrand: brand.trim() || undefined,
+            minQuantity: minQuantity ? parseFloat(minQuantity) : undefined,
+            restockQuantity: restockQuantity
+              ? parseFloat(restockQuantity)
+              : undefined,
           },
         },
       });
 
-      if (addAnother) {
-        resetForm();
-        setCurrentPage(0);
-        pagerRef.current?.setPage(0);
-      } else {
-        onSuccess();
-      }
+      onSuccess();
     } catch (error) {
       Alert.alert('Error', 'Failed to add item. Please try again.');
     }
@@ -377,22 +370,25 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     storageNotes,
     tags,
     brand,
-    addAnother,
+    minQuantity,
+    restockQuantity,
     createPantryItem,
     onSuccess,
-    resetForm,
     handlePageChange,
   ]);
 
   return (
     <BottomSheetModal
       ref={bottomSheetRef}
-      snapPoints={['90%']}
+      snapPoints={['75%', '90%']}
       enablePanDownToClose
       enableDynamicSizing={false}
       topInset={insets.top}
       onDismiss={onClose}
       animationConfigs={animationConfigs}
+      keyboardBehavior="fillParent"
+      keyboardBlurBehavior="restore"
+      android_keyboardInputMode="adjustResize"
       backgroundStyle={{ backgroundColor: theme.colors.background }}
       handleIndicatorStyle={{ backgroundColor: theme.colors.textSecondary }}
       backdropComponent={props => (
@@ -407,16 +403,19 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={onClose} style={styles.backButton}>
-            <Icon
-              name="arrow-back"
-              size={24}
-              color={theme.colors.textPrimary}
-              library="MaterialIcons"
-            />
+          <TouchableOpacity onPress={onClose} style={styles.cancelButton}>
+            <Text style={styles.cancelButtonText}>Cancel</Text>
           </TouchableOpacity>
           <Text style={styles.title}>Add Item Details</Text>
-          <View style={styles.headerSpacer} />
+          <TouchableOpacity
+            style={[styles.saveButton, loading && styles.saveButtonDisabled]}
+            onPress={handleConfirm}
+            disabled={loading}
+          >
+            <Text style={styles.saveButtonText}>
+              {loading ? 'Adding...' : 'Add'}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Page Indicators */}
@@ -438,12 +437,15 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
           <BottomSheetScrollView
             key="main"
             style={styles.page}
-            contentContainerStyle={styles.pageContent}
+            contentContainerStyle={[
+              styles.pageContent,
+              { paddingBottom: insets.bottom + 20 },
+            ]}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
             {/* Item Name */}
-            <View style={styles.section}>
+            <View style={[styles.section, { zIndex: 20 }]}>
               <InlineItemAutocomplete
                 label="Item Name"
                 required
@@ -451,132 +453,6 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
                 onChangeText={handleItemNameChange}
                 onSelectItem={handleItemSelect}
                 placeholder="e.g., Milk, Eggs, Bread..."
-              />
-            </View>
-
-            {/* Quantity + Unit */}
-            <FieldRow>
-              <FractionInput
-                label="Quantity *"
-                value={quantityInput}
-                onChangeText={setQuantityInput}
-                placeholder="e.g., 1, 1/2"
-              />
-              <InlineUnitsAutocomplete
-                label="Unit"
-                value={unit}
-                onChangeText={setUnit}
-                onUnitSelected={handleUnitSelected}
-                placeholder="pcs, dozen"
-              />
-            </FieldRow>
-
-            {/* Storage State */}
-            <View style={styles.section}>
-              <Text style={styles.label}>Storage</Text>
-              <View style={styles.segmentedControl}>
-                {STORAGE_STATES.map(state => (
-                  <TouchableOpacity
-                    key={state}
-                    style={[
-                      styles.segment,
-                      storageState === state && styles.segmentActive,
-                    ]}
-                    onPress={() => setStorageState(state)}
-                  >
-                    <Text
-                      style={[
-                        styles.segmentText,
-                        storageState === state && styles.segmentTextActive,
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {state}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          </BottomSheetScrollView>
-          {/* Page 2: Details */}
-          <BottomSheetScrollView
-            key="details"
-            style={styles.page}
-            contentContainerStyle={styles.pageContent}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
-            {/* Package Weight + Weight Unit */}
-            <FieldRow>
-              <FormInput
-                label="Package Weight"
-                value={packageWeight}
-                onChangeText={setPackageWeight}
-                placeholder="e.g., 300"
-                keyboardType="decimal-pad"
-              />
-              <InlineUnitsAutocomplete
-                label="Weight Unit"
-                value={weightUnit}
-                onChangeText={setWeightUnit}
-                onUnitSelected={handleWeightUnitSelected}
-                placeholder="g, kg, oz"
-              />
-            </FieldRow>
-
-            {/* Expiration Date */}
-            <View style={styles.section}>
-              <Text style={styles.fieldLabel}>Expiration Date</Text>
-              <TouchableOpacity
-                style={styles.dateInput}
-                onPress={() => setShowDatePicker(true)}
-              >
-                <Icon
-                  name="event"
-                  size={20}
-                  color={theme.colors.textSecondary}
-                  library="MaterialIcons"
-                />
-                <Text
-                  style={[
-                    styles.dateText,
-                    !expirationDateObj && styles.datePlaceholder,
-                  ]}
-                >
-                  {expirationDateObj
-                    ? expirationDateObj.toLocaleDateString()
-                    : 'Select date'}
-                </Text>
-              </TouchableOpacity>
-              {showDatePicker && (
-                <DateTimePicker
-                  value={expirationDateObj || new Date()}
-                  mode="date"
-                  minimumDate={new Date()}
-                  onChange={handleDateChange}
-                />
-              )}
-            </View>
-          </BottomSheetScrollView>
-
-          {/* Page 3: Storage */}
-          <BottomSheetScrollView
-            key="storage"
-            style={styles.page}
-            contentContainerStyle={[styles.pageContent, { overflow: 'visible' }]}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
-            {/* Storage Location */}
-            <View style={[styles.section, { zIndex: 20 }]}>
-              <InlineStorageLocationAutocomplete
-                label="Storage Location"
-                value={storageLocation}
-                onChangeText={setStorageLocation}
-                placeholder="e.g., Top shelf, Crisper drawer"
-                storageLocations={storageLocations}
-                onStorageLocationSelected={handleStorageLocationSelected}
-                onAddNewLocation={handleAddNewLocation}
               />
             </View>
 
@@ -592,6 +468,96 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
               />
             </View>
 
+            {/* Quantity + Unit */}
+            <FieldRow>
+              <EditableCounter
+                label="Quantity"
+                required
+                value={quantityInput}
+                onChangeText={setQuantityInput}
+                placeholder="1"
+              />
+              <InlineUnitsAutocomplete
+                label="Unit"
+                value={unit}
+                onChangeText={setUnit}
+                onUnitSelected={handleUnitSelected}
+                placeholder="pcs, dozen"
+              />
+            </FieldRow>
+
+            {/* Storage State */}
+            <SegmentedControl
+              label="Storage"
+              options={STORAGE_STATES}
+              value={storageState}
+              onChange={setStorageState}
+            />
+          </BottomSheetScrollView>
+          {/* Page 2: Details */}
+          <BottomSheetScrollView
+            key="details"
+            style={styles.page}
+            contentContainerStyle={[
+              styles.pageContent,
+              { paddingBottom: insets.bottom + 20 },
+            ]}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Package Weight + Weight Unit */}
+            <FieldRow>
+              <FormInput
+                label="Package Weight"
+                value={packageWeight}
+                onChangeText={setPackageWeight}
+                placeholder="e.g., 300"
+                keyboardType="decimal-pad"
+                useBottomSheetInput
+              />
+              <InlineUnitsAutocomplete
+                label="Weight Unit"
+                value={weightUnit}
+                onChangeText={setWeightUnit}
+                onUnitSelected={handleWeightUnitSelected}
+                placeholder="g, kg, oz"
+              />
+            </FieldRow>
+
+            {/* Expiration Date */}
+            <DatePickerField
+              label="Expiration Date"
+              value={expirationDate}
+              onChange={setExpirationDate}
+              placeholder="Select date"
+              minimumDate={new Date()}
+            />
+          </BottomSheetScrollView>
+
+          {/* Page 3: Storage */}
+          <BottomSheetScrollView
+            key="storage"
+            style={styles.page}
+            contentContainerStyle={[
+              styles.pageContent,
+              { overflow: 'visible', paddingBottom: insets.bottom + 20 },
+            ]}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Storage Location */}
+            <View style={[styles.section, { zIndex: 10 }]}>
+              <InlineStorageLocationAutocomplete
+                label="Storage Location"
+                value={storageLocation}
+                onChangeText={setStorageLocation}
+                placeholder="e.g., Top shelf, Crisper drawer"
+                storageLocations={storageLocations}
+                onStorageLocationSelected={handleStorageLocationSelected}
+                onAddNewLocation={handleAddNewLocation}
+              />
+            </View>
+
             {/* Tags */}
             <View style={styles.section}>
               <FormInput
@@ -599,6 +565,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
                 value={tags}
                 onChangeText={setTags}
                 placeholder="e.g., organic, gluten-free (comma separated)"
+                useBottomSheetInput
               />
             </View>
 
@@ -610,56 +577,54 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
                 onChangeText={setStorageNotes}
                 placeholder="e.g., Store in cool, dry place"
                 multiline
+                useBottomSheetInput
               />
             </View>
           </BottomSheetScrollView>
-        </PagerView>
 
-        {/* Footer */}
-        <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
-          {/* Add Another Toggle */}
-          <View style={styles.toggleSection}>
-            <View style={styles.toggleInfo}>
-              <Text style={styles.toggleLabel}>Add another item</Text>
-              <Text style={styles.toggleDescription}>
-                Keep adding after this one
-              </Text>
+          {/* Page 4: Stock Settings */}
+          <BottomSheetScrollView
+            key="stock"
+            style={styles.page}
+            contentContainerStyle={[
+              styles.pageContent,
+              { paddingBottom: insets.bottom + 20 },
+            ]}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            <Text style={styles.sectionTitle}>Low Stock Settings</Text>
+            <Text style={styles.sectionDescription}>
+              Get notified when this item is running low.
+            </Text>
+
+            <View style={styles.section}>
+              <FormInput
+                label="Alert When Below"
+                value={minQuantity}
+                onChangeText={setMinQuantity}
+                placeholder="e.g., 2"
+                keyboardType="decimal-pad"
+                useBottomSheetInput
+              />
             </View>
-            <Switch
-              value={addAnother}
-              onValueChange={setAddAnother}
-              trackColor={{
-                false: theme.colors.border,
-                true: theme.colors.primary,
-              }}
-              thumbColor={theme.colors.white}
-            />
-          </View>
 
-          {/* Actions */}
-          <View style={styles.actions}>
-            <TouchableOpacity
-              style={[styles.button, styles.cancelButton]}
-              onPress={onClose}
-              disabled={loading}
-            >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.button,
-                styles.confirmButton,
-                loading && styles.buttonDisabled,
-              ]}
-              onPress={handleConfirm}
-              disabled={loading}
-            >
-              <Text style={styles.confirmButtonText}>
-                {loading ? 'Adding...' : 'Add to Pantry'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+            <View style={styles.section}>
+              <FormInput
+                label="Restock To"
+                value={restockQuantity}
+                onChangeText={setRestockQuantity}
+                placeholder="e.g., 6"
+                keyboardType="decimal-pad"
+                useBottomSheetInput
+              />
+            </View>
+
+            <Text style={styles.helpText}>
+              Leave empty to disable low stock alerts for this item.
+            </Text>
+          </BottomSheetScrollView>
+        </PagerView>
       </View>
     </BottomSheetModal>
   );
@@ -672,21 +637,38 @@ const styles = StyleSheet.create(theme => ({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: theme.spacing.md,
-    paddingBottom: theme.spacing.sm,
+    paddingVertical: theme.spacing.md,
   },
-  backButton: {
-    padding: theme.spacing.xs,
-    marginRight: theme.spacing.sm,
+  cancelButton: {
+    minWidth: 60,
+  },
+  cancelButtonText: {
+    color: theme.colors.textSecondary,
+    fontSize: theme.fonts.size.md,
+    fontWeight: theme.fonts.weight.medium,
   },
   title: {
     flex: 1,
-    fontSize: theme.fonts.size.xl,
+    fontSize: theme.fonts.size.lg,
     fontWeight: theme.fonts.weight.bold,
     color: theme.colors.textPrimary,
+    textAlign: 'center',
   },
-  headerSpacer: {
-    width: 32,
+  saveButton: {
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.radii.md,
+  },
+  saveButtonDisabled: {
+    opacity: 0.5,
+  },
+  saveButtonText: {
+    color: theme.colors.white,
+    fontSize: theme.fonts.size.md,
+    fontWeight: theme.fonts.weight.semibold,
   },
   pager: {
     flex: 1,
@@ -704,122 +686,21 @@ const styles = StyleSheet.create(theme => ({
   section: {
     marginBottom: theme.spacing.lg,
   },
-  label: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.sm,
-  },
-  fieldLabel: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.medium,
+  sectionTitle: {
+    fontSize: theme.fonts.size.lg,
+    fontWeight: theme.fonts.weight.semibold,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.xs,
   },
-  dateInput: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: theme.spacing.sm,
-    borderRadius: theme.radii.md,
-    backgroundColor: theme.colors.inputBackground,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    gap: theme.spacing.sm,
-  },
-  dateText: {
-    fontSize: theme.fonts.size.md,
-    color: theme.colors.inputText,
-  },
-  datePlaceholder: {
-    color: theme.colors.textSecondary,
-  },
-  segmentedControl: {
-    flexDirection: 'row',
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radii.md,
-    overflow: 'hidden',
-  },
-  segment: {
-    flex: 1,
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.xs,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.colors.surface,
-  },
-  segmentActive: {
-    backgroundColor: theme.colors.primary,
-  },
-  segmentText: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
-  },
-  segmentTextActive: {
-    color: theme.colors.white,
-  },
-  footer: {
-    paddingHorizontal: theme.spacing.md,
-    paddingTop: theme.spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-    backgroundColor: theme.colors.background,
-  },
-  toggleSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.md,
-  },
-  toggleInfo: {
-    flex: 1,
-    marginRight: theme.spacing.md,
-  },
-  toggleLabel: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
-  },
-  toggleDescription: {
+  sectionDescription: {
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-    marginTop: theme.spacing.xs,
+    marginBottom: theme.spacing.lg,
   },
-  actions: {
-    flexDirection: 'row',
-    gap: theme.spacing.md,
-  },
-  button: {
-    flex: 1,
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  cancelButton: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  cancelButtonText: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.semibold,
+  helpText: {
+    fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
-  },
-  confirmButton: {
-    backgroundColor: theme.colors.primary,
-  },
-  confirmButtonText: {
-    fontSize: theme.fonts.size.base,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.onPrimary || '#FFFFFF',
+    marginTop: theme.spacing.md,
+    fontStyle: 'italic',
   },
 }));

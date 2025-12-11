@@ -1,5 +1,11 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ActivityIndicator,
+  Image,
+} from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetScrollView,
@@ -61,7 +67,11 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   const suggestions = autocompleteData?.autocompleteItems?.suggestions ?? [];
 
   // Fetch recently deleted items
-  const { data: recentData, loading: loadingRecent, refetch: refetchRecent } = useGetRecentlyDeletedPantryItemsQuery({
+  const {
+    data: recentData,
+    loading: loadingRecent,
+    refetch: refetchRecent,
+  } = useGetRecentlyDeletedPantryItemsQuery({
     variables: { pantryId: pantryId ?? '', limit: 10 },
     skip: !pantryId,
     fetchPolicy: 'cache-and-network',
@@ -76,26 +86,30 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     fetchPolicy: 'cache-first',
   });
 
-  const normalizedPantry = pantryData?.pantry ? normalizePantry(pantryData.pantry) : null;
+  const normalizedPantry = pantryData?.pantry
+    ? normalizePantry(pantryData.pantry)
+    : null;
   const storageLocations = normalizedPantry?.storageLocations || [];
 
   // Create pantry item mutation for quick add
-  const [createPantryItem, { loading: creating }] = useCreatePantryItemMutation({
-    update: (cache, { data }) => {
-      if (!data?.createPantryItem || !pantryId) return;
+  const [createPantryItem, { loading: creating }] = useCreatePantryItemMutation(
+    {
+      update: (cache, { data }) => {
+        if (!data?.createPantryItem || !pantryId) return;
 
-      try {
-        const addToPantryCache = createAddToParentConnectionUpdater(
-          'Pantry',
-          'itemsConnection',
-          'PantryItem',
-        );
-        addToPantryCache(cache, pantryId, data.createPantryItem);
-      } catch (error) {
-        console.warn('Cache update failed for createPantryItem:', error);
-      }
+        try {
+          const addToPantryCache = createAddToParentConnectionUpdater(
+            'Pantry',
+            'itemsConnection',
+            'PantryItem',
+          );
+          addToPantryCache(cache, pantryId, data.createPantryItem);
+        } catch (error) {
+          console.warn('Cache update failed for createPantryItem:', error);
+        }
+      },
     },
-  });
+  );
 
   // Debounced autocomplete search (250ms)
   useEffect(() => {
@@ -147,51 +161,57 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   }, [searchQuery]);
 
   // Handle quick add from autocomplete suggestion
-  const handleQuickAddSuggestion = useCallback(async (item: ItemSuggestion) => {
-    if (!pantryId || creating) return;
+  const handleQuickAddSuggestion = useCallback(
+    async (item: ItemSuggestion) => {
+      if (!pantryId || creating) return;
 
-    try {
-      await createPantryItem({
-        variables: {
-          input: {
-            pantryId,
-            itemId: item.id,
-            itemName: item.name,
-            initialQuantity: 1,
+      try {
+        await createPantryItem({
+          variables: {
+            input: {
+              pantryId,
+              itemId: item.id,
+              itemName: item.name,
+              initialQuantity: 1,
+            },
           },
-        },
-      });
+        });
 
-      toastService.success(`Added ${item.name} (Qty: 1)`);
-      setSearchQuery(''); // Clear search after adding
-      refetchRecent();
-    } catch (error) {
-      toastService.error('Failed to add item. Please try again.');
-    }
-  }, [pantryId, creating, createPantryItem, refetchRecent]);
+        toastService.success(`Added ${item.name} (Qty: 1)`);
+        setSearchQuery(''); // Clear search after adding
+        refetchRecent();
+      } catch (error) {
+        toastService.error('Failed to add item. Please try again.');
+      }
+    },
+    [pantryId, creating, createPantryItem, refetchRecent],
+  );
 
   // Handle quick add from recent items
-  const handleQuickAddRecent = useCallback(async (item: typeof recentItems[0]) => {
-    if (!pantryId || creating) return;
+  const handleQuickAddRecent = useCallback(
+    async (item: (typeof recentItems)[0]) => {
+      if (!pantryId || creating) return;
 
-    try {
-      await createPantryItem({
-        variables: {
-          input: {
-            pantryId,
-            itemId: item.itemId,
-            itemName: item.itemName,
-            initialQuantity: 1,
+      try {
+        await createPantryItem({
+          variables: {
+            input: {
+              pantryId,
+              itemId: item.itemId,
+              itemName: item.itemName,
+              initialQuantity: 1,
+            },
           },
-        },
-      });
+        });
 
-      toastService.success(`Added ${item.itemName} (Qty: 1)`);
-      refetchRecent();
-    } catch (error) {
-      toastService.error('Failed to add item. Please try again.');
-    }
-  }, [pantryId, creating, createPantryItem, refetchRecent]);
+        toastService.success(`Added ${item.itemName} (Qty: 1)`);
+        refetchRecent();
+      } catch (error) {
+        toastService.error('Failed to add item. Please try again.');
+      }
+    },
+    [pantryId, creating, createPantryItem, refetchRecent],
+  );
 
   // Handle successful add from details sheet
   const handleAddSuccess = useCallback(() => {
@@ -283,7 +303,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
               <Icon
                 name="qr-code-scanner"
                 size={24}
-                color={theme.colors.textSecondary}
+                color={theme.colors.primary}
                 library="MaterialIcons"
               />
             </TouchableOpacity>
@@ -294,7 +314,10 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
             <View style={styles.searchResultsContainer}>
               {searchLoading ? (
                 <View style={styles.searchLoadingContainer}>
-                  <ActivityIndicator size="small" color={theme.colors.primary} />
+                  <ActivityIndicator
+                    size="small"
+                    color={theme.colors.primary}
+                  />
                   <Text style={styles.searchLoadingText}>Searching...</Text>
                 </View>
               ) : (
@@ -315,7 +338,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
                               <Icon
                                 name="inventory-2"
                                 size={20}
-                                color={theme.colors.textSecondary}
+                                color={theme.colors.primary}
                                 library="MaterialIcons"
                               />
                             </View>
@@ -326,13 +349,19 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
                             {item.name}
                           </Text>
                           {item.brands && item.brands.length > 0 && (
-                            <Text style={styles.suggestionBrands} numberOfLines={1}>
+                            <Text
+                              style={styles.suggestionBrands}
+                              numberOfLines={1}
+                            >
                               {item.brands[0].name}
                             </Text>
                           )}
                         </View>
                         <TouchableOpacity
-                          style={[styles.quickAddButton, creating && styles.quickAddButtonDisabled]}
+                          style={[
+                            styles.quickAddButton,
+                            creating && styles.quickAddButtonDisabled,
+                          ]}
                           onPress={() => handleQuickAddSuggestion(item)}
                           disabled={creating}
                         >
@@ -379,7 +408,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
                 <Icon
                   name="qr-code-scanner"
                   size={32}
-                  color={theme.colors.textSecondary}
+                  color={theme.colors.primary}
                   library="MaterialIcons"
                 />
               </View>
@@ -392,9 +421,9 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
             >
               <View style={styles.actionIconContainer}>
                 <Icon
-                  name="edit"
+                  name="add"
                   size={32}
-                  color={theme.colors.textSecondary}
+                  color={theme.colors.primary}
                   library="MaterialIcons"
                 />
               </View>

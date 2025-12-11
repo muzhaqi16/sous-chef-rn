@@ -4,6 +4,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { useSearchBrandsLazyQuery } from '#generated';
 import { useAppStore } from '#store/useAppStore';
+import { Label } from '#components/atoms';
 
 interface SuggestedBrand {
   id: string;
@@ -143,12 +144,7 @@ export const InlineBrandAutocomplete: React.FC<InlineBrandAutocompleteProps> = (
 
   return (
     <View style={styles.container}>
-      {label && (
-        <Text style={styles.label}>
-          {label}
-          {required && <Text style={styles.required}> *</Text>}
-        </Text>
-      )}
+      {label && <Label required={required}>{label}</Label>}
       <BottomSheetTextInput
         style={[styles.input, error && styles.inputError]}
         value={value}
@@ -171,7 +167,8 @@ export const InlineBrandAutocomplete: React.FC<InlineBrandAutocompleteProps> = (
               keyExtractor={item => item.id}
               renderItem={renderBrandOption}
               keyboardShouldPersistTaps="handled"
-              scrollEnabled={false}
+              scrollEnabled={true}
+              nestedScrollEnabled={true}
               ItemSeparatorComponent={() => <View style={styles.separator} />}
             />
           )}
@@ -191,16 +188,16 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.xs,
+    marginBottom: theme.spacing.sm,
   },
   required: {
     color: theme.colors.error,
   },
   input: {
+    height: 48,
     borderRadius: theme.radii.md,
     fontSize: theme.fonts.size.md,
     paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.sm,
     backgroundColor: theme.colors.inputBackground,
     borderWidth: 1,
     borderColor: theme.colors.border,

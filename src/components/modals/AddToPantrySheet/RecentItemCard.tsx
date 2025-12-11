@@ -5,7 +5,9 @@ import { Icon } from '#utils';
 import { GetRecentlyDeletedPantryItemsQuery } from '#generated';
 import { formatDistanceToNow } from 'date-fns';
 
-type RecentPantryItem = NonNullable<GetRecentlyDeletedPantryItemsQuery['recentlyDeletedPantryItems']>[0];
+type RecentPantryItem = NonNullable<
+  GetRecentlyDeletedPantryItemsQuery['recentlyDeletedPantryItems']
+>[0];
 
 interface RecentItemCardProps {
   item: RecentPantryItem;
@@ -22,7 +24,9 @@ export const RecentItemCard: React.FC<RecentItemCardProps> = ({
 
   // Format the time since the item was added
   const timeAgo = item.createdAt
-    ? `Added ${formatDistanceToNow(new Date(item.createdAt), { addSuffix: false })} ago`
+    ? `Added ${formatDistanceToNow(new Date(item.createdAt), {
+        addSuffix: false,
+      })} ago`
     : '';
 
   // Get item image URL
@@ -39,7 +43,7 @@ export const RecentItemCard: React.FC<RecentItemCardProps> = ({
             <Icon
               name="inventory-2"
               size={24}
-              color={theme.colors.textSecondary}
+              color={theme.colors.primary}
               library="MaterialIcons"
             />
           </View>

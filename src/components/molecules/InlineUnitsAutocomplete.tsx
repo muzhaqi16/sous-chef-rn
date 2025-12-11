@@ -4,6 +4,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { useSearchUnitsQuery } from '#generated';
 import { useStore } from '#store';
+import { Label } from '#components/atoms';
 
 interface Unit {
   id: string;
@@ -27,7 +28,9 @@ interface InlineUnitsAutocompleteProps {
  * InlineUnitsAutocomplete - Autocomplete for units that works inside bottom sheets.
  * Shows suggestions in a dropdown below the input instead of opening a nested modal.
  */
-export const InlineUnitsAutocomplete: React.FC<InlineUnitsAutocompleteProps> = ({
+export const InlineUnitsAutocomplete: React.FC<
+  InlineUnitsAutocompleteProps
+> = ({
   label,
   value,
   onChangeText,
@@ -121,12 +124,7 @@ export const InlineUnitsAutocomplete: React.FC<InlineUnitsAutocompleteProps> = (
 
   return (
     <View style={styles.container}>
-      {label && (
-        <Text style={styles.label}>
-          {label}
-          {required && <Text style={styles.required}> *</Text>}
-        </Text>
-      )}
+      {label && <Label required={required}>{label}</Label>}
       <BottomSheetTextInput
         style={[styles.input, error && styles.inputError]}
         value={value}
@@ -150,7 +148,8 @@ export const InlineUnitsAutocomplete: React.FC<InlineUnitsAutocompleteProps> = (
               keyExtractor={item => item.id}
               renderItem={renderUnitItem}
               keyboardShouldPersistTaps="handled"
-              scrollEnabled={false}
+              scrollEnabled={true}
+              nestedScrollEnabled={true}
               ItemSeparatorComponent={() => <View style={styles.separator} />}
             />
           )}
@@ -169,16 +168,16 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.md,
     fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.xs,
+    marginBottom: theme.spacing.sm,
   },
   required: {
     color: theme.colors.error,
   },
   input: {
+    height: 48,
     borderRadius: theme.radii.md,
     fontSize: theme.fonts.size.md,
     paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.sm,
     backgroundColor: theme.colors.inputBackground,
     borderWidth: 1,
     borderColor: theme.colors.border,

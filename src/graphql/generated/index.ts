@@ -304,6 +304,12 @@ export enum CacheControlScope {
   Public = 'PUBLIC',
 }
 
+export type CanDeleteAccountResult = {
+  __typename?: 'CanDeleteAccountResult';
+  blockers: Array<DeletionBlocker>;
+  canDelete: Scalars['Boolean']['output'];
+};
+
 /**
  * Category type for organizing items
  * Cache: 2 hours - reference data that changes very rarely
@@ -817,10 +823,12 @@ export type CreatePantryItemInput = {
   itemNetWeight?: InputMaybe<Scalars['Float']['input']>;
   itemUpc?: InputMaybe<Scalars['String']['input']>;
   lastUsedAt?: InputMaybe<Scalars['DateTime']['input']>;
+  minQuantity?: InputMaybe<Scalars['Float']['input']>;
   packageWeight?: InputMaybe<Scalars['Float']['input']>;
   packageWeightUnitId?: InputMaybe<Scalars['String']['input']>;
   pantryId: Scalars['ID']['input'];
   purchaseId?: InputMaybe<Scalars['String']['input']>;
+  restockQuantity?: InputMaybe<Scalars['Float']['input']>;
   storageLocationId?: InputMaybe<Scalars['String']['input']>;
   storageLocationName?: InputMaybe<Scalars['String']['input']>;
   storageNotes?: InputMaybe<Scalars['String']['input']>;
@@ -1074,6 +1082,20 @@ export enum DeductionMethod {
   Automatic = 'AUTOMATIC',
   Manual = 'MANUAL',
   RecipeBased = 'RECIPE_BASED',
+}
+
+export type DeletionBlocker = {
+  __typename?: 'DeletionBlocker';
+  message: Scalars['String']['output'];
+  resourceId: Scalars['ID']['output'];
+  resourceName: Scalars['String']['output'];
+  type: DeletionBlockerType;
+};
+
+export enum DeletionBlockerType {
+  HomeOwnership = 'HOME_OWNERSHIP',
+  Other = 'OTHER',
+  ShoppingList = 'SHOPPING_LIST',
 }
 
 /** User device information - contains sensitive device fingerprinting data */
@@ -4631,6 +4653,7 @@ export type PantryItem = {
   id: Scalars['ID']['output'];
   initialQuantity: Scalars['Float']['output'];
   isComposted: Scalars['Boolean']['output'];
+  isLowStock: Scalars['Boolean']['output'];
   isRecycled: Scalars['Boolean']['output'];
   item: Item;
   itemId: Scalars['String']['output'];
@@ -4639,6 +4662,7 @@ export type PantryItem = {
   lastModifiedBy: Maybe<User>;
   lastUsedAt: Maybe<Scalars['DateTime']['output']>;
   lowStockAlert: Scalars['Boolean']['output'];
+  minQuantity: Maybe<Scalars['Float']['output']>;
   normalizedQuantity: Maybe<Scalars['Float']['output']>;
   normalizedUnit: Maybe<Unit>;
   normalizedUnitId: Maybe<Scalars['String']['output']>;
@@ -4650,6 +4674,7 @@ export type PantryItem = {
   photos: Array<PantryItemPhoto>;
   purchase: Maybe<Purchase>;
   purchaseId: Maybe<Scalars['String']['output']>;
+  restockQuantity: Maybe<Scalars['Float']['output']>;
   storageLocation: Maybe<StorageLocation>;
   storageNotes: Maybe<Scalars['String']['output']>;
   storageState: StorageState;
@@ -4818,7 +4843,7 @@ export type PantryStats = {
   __typename?: 'PantryStats';
   activeItems: Scalars['Int']['output'];
   expiringCount: Scalars['Int']['output'];
-  lowStockItems: Scalars['Int']['output'];
+  lowStockCount: Scalars['Int']['output'];
   totalItems: Scalars['Int']['output'];
   totalValue: Scalars['Float']['output'];
 };
@@ -5040,6 +5065,7 @@ export type Query = {
   _empty: Maybe<Scalars['String']['output']>;
   activeDevices: Array<Device>;
   activeModerations: Array<UserModeration>;
+  adminCanDeleteUser: CanDeleteAccountResult;
   /**
    * Aggregate multiple quantities of the same item
    * Useful for calculating total needed across multiple recipes
@@ -5059,6 +5085,7 @@ export type Query = {
    * Returns availability and confidence level
    */
   canConvert: ConversionAvailability;
+  canDeleteAccount: CanDeleteAccountResult;
   categories: Array<Category>;
   category: Maybe<Category>;
   categoryBySlug: Maybe<Category>;
@@ -5207,6 +5234,13 @@ export type Query = {
    * Useful for "Add to Pantry" UI to show items user previously had.
    */
   recentlyDeletedPantryItems: Array<PantryItem>;
+  /**
+   * Get recently deleted shopping list items for quick re-adding suggestions.
+   * Returns soft-deleted items that are not currently in the shopping list,
+   * deduplicated by itemId (only shows most recent entry per item).
+   * Useful for "Add to List" UI to show items user previously had.
+   */
+  recentlyDeletedShoppingListItems: Array<ShoppingListItem>;
   recipe: Maybe<Recipe>;
   recipeCookingLogs: Array<CookingLog>;
   recipeSuggestions: RecipeConnection;
@@ -5282,6 +5316,10 @@ export type Query = {
 };
 
 export type QueryActiveDevicesArgs = {
+  userId: Scalars['ID']['input'];
+};
+
+export type QueryAdminCanDeleteUserArgs = {
   userId: Scalars['ID']['input'];
 };
 
@@ -5744,6 +5782,11 @@ export type QueryRecentNotificationsArgs = {
 export type QueryRecentlyDeletedPantryItemsArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
   pantryId: Scalars['ID']['input'];
+};
+
+export type QueryRecentlyDeletedShoppingListItemsArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  shoppingListId: Scalars['ID']['input'];
 };
 
 export type QueryRecipeArgs = {
@@ -7296,10 +7339,12 @@ export type SyncPantryItemInput = {
   itemUpc?: InputMaybe<Scalars['String']['input']>;
   lastUsedAt?: InputMaybe<Scalars['DateTime']['input']>;
   lowStockAlert?: InputMaybe<Scalars['Boolean']['input']>;
+  minQuantity?: InputMaybe<Scalars['Float']['input']>;
   packageWeight?: InputMaybe<Scalars['Float']['input']>;
   packageWeightUnitId?: InputMaybe<Scalars['String']['input']>;
   pantryId: Scalars['ID']['input'];
   purchaseId?: InputMaybe<Scalars['String']['input']>;
+  restockQuantity?: InputMaybe<Scalars['Float']['input']>;
   storageLocationId?: InputMaybe<Scalars['String']['input']>;
   storageNotes?: InputMaybe<Scalars['String']['input']>;
   storageState?: InputMaybe<StorageState>;
@@ -7795,8 +7840,10 @@ export type UpdatePantryItemInput = {
   isRecycled?: InputMaybe<Scalars['Boolean']['input']>;
   lastUsedAt?: InputMaybe<Scalars['DateTime']['input']>;
   lowStockAlert?: InputMaybe<Scalars['Boolean']['input']>;
+  minQuantity?: InputMaybe<Scalars['Float']['input']>;
   packageWeight?: InputMaybe<Scalars['Float']['input']>;
   packageWeightUnitId?: InputMaybe<Scalars['String']['input']>;
+  restockQuantity?: InputMaybe<Scalars['Float']['input']>;
   storageLocationId?: InputMaybe<Scalars['String']['input']>;
   storageNotes?: InputMaybe<Scalars['String']['input']>;
   storageState?: InputMaybe<StorageState>;
@@ -9015,6 +9062,23 @@ export type GetUserProfileQuery = {
     | undefined;
 };
 
+export type CanDeleteAccountQueryVariables = Exact<{ [key: string]: never }>;
+
+export type CanDeleteAccountQuery = {
+  __typename?: 'Query';
+  canDeleteAccount: {
+    __typename?: 'CanDeleteAccountResult';
+    canDelete: boolean;
+    blockers: Array<{
+      __typename?: 'DeletionBlocker';
+      type: DeletionBlockerType;
+      resourceId: string;
+      resourceName: string;
+      message: string;
+    }>;
+  };
+};
+
 export type UpdateUserMutationVariables = Exact<{
   id: Scalars['ID']['input'];
   input: UpdateUserInput;
@@ -9765,6 +9829,9 @@ export type PantryItemFragment = {
   updatedAt: string | null | undefined;
   version: number | null | undefined;
   tags: Array<string>;
+  lowStockAlert: boolean;
+  minQuantity: number | null | undefined;
+  restockQuantity: number | null | undefined;
   lastUsedAt: string | null | undefined;
   wasteAmount: number;
   wasteDate: string | null | undefined;
@@ -16436,6 +16503,9 @@ export const PantryItemFragmentDoc = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },
@@ -17261,6 +17331,9 @@ export const PantryFragmentDoc = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },
@@ -18020,6 +18093,9 @@ export const HomeFragmentDoc = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },
@@ -22017,6 +22093,128 @@ export function refetchGetUserProfileQuery(
 ) {
   return { query: GetUserProfileDocument, variables: variables };
 }
+export const CanDeleteAccountDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'query',
+      name: { kind: 'Name', value: 'CanDeleteAccount' },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'canDeleteAccount' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'canDelete' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'blockers' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'type' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'resourceId' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'resourceName' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'message' },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+
+/**
+ * __useCanDeleteAccountQuery__
+ *
+ * To run a query within a React component, call `useCanDeleteAccountQuery` and pass it any options that fit your needs.
+ * When your component renders, `useCanDeleteAccountQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useCanDeleteAccountQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useCanDeleteAccountQuery(
+  baseOptions?: ApolloReactHooks.QueryHookOptions<
+    CanDeleteAccountQuery,
+    CanDeleteAccountQueryVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useQuery<
+    CanDeleteAccountQuery,
+    CanDeleteAccountQueryVariables
+  >(CanDeleteAccountDocument, options);
+}
+export function useCanDeleteAccountLazyQuery(
+  baseOptions?: ApolloReactHooks.LazyQueryHookOptions<
+    CanDeleteAccountQuery,
+    CanDeleteAccountQueryVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useLazyQuery<
+    CanDeleteAccountQuery,
+    CanDeleteAccountQueryVariables
+  >(CanDeleteAccountDocument, options);
+}
+export function useCanDeleteAccountSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        CanDeleteAccountQuery,
+        CanDeleteAccountQueryVariables
+      >,
+) {
+  const options =
+    baseOptions === ApolloReactHooks.skipToken
+      ? baseOptions
+      : { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useSuspenseQuery<
+    CanDeleteAccountQuery,
+    CanDeleteAccountQueryVariables
+  >(CanDeleteAccountDocument, options);
+}
+export type CanDeleteAccountQueryHookResult = ReturnType<
+  typeof useCanDeleteAccountQuery
+>;
+export type CanDeleteAccountLazyQueryHookResult = ReturnType<
+  typeof useCanDeleteAccountLazyQuery
+>;
+export type CanDeleteAccountSuspenseQueryHookResult = ReturnType<
+  typeof useCanDeleteAccountSuspenseQuery
+>;
+export type CanDeleteAccountQueryResult = ApolloReactCommon.QueryResult<
+  CanDeleteAccountQuery,
+  CanDeleteAccountQueryVariables
+>;
+export function refetchCanDeleteAccountQuery(
+  variables?: CanDeleteAccountQueryVariables,
+) {
+  return { query: CanDeleteAccountDocument, variables: variables };
+}
 export const UpdateUserDocument = {
   kind: 'Document',
   definitions: [
@@ -23635,6 +23833,9 @@ export const GetHomeDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },
@@ -25298,6 +25499,9 @@ export const GetHomesDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },
@@ -26618,6 +26822,9 @@ export const GetHomeByJoinCodeDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },
@@ -27733,6 +27940,9 @@ export const CreateHomeDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },
@@ -28827,6 +29037,9 @@ export const UpdateHomeDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },
@@ -29900,6 +30113,9 @@ export const DeleteHomeDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },
@@ -32734,6 +32950,9 @@ export const GetDefaultHomeDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },
@@ -40519,6 +40738,9 @@ export const GetPantryDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },
@@ -41116,6 +41338,9 @@ export const GetPantryItemDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },
@@ -43520,6 +43745,9 @@ export const CreatePantryItemDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },
@@ -44103,6 +44331,9 @@ export const UpdatePantryItemDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },
@@ -44665,6 +44896,9 @@ export const DeletePantryItemDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },
@@ -45309,6 +45543,9 @@ export const CreatePantryItemUsageDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },
@@ -45992,6 +46229,9 @@ export const RecordPantryItemWasteDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },
@@ -46600,6 +46840,9 @@ export const RestockPantryItemDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },
@@ -47219,6 +47462,9 @@ export const UpdatePantryItemQuantityDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },
@@ -47860,6 +48106,9 @@ export const SyncPantryItemDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },
@@ -49146,6 +49395,9 @@ export const PantryItemsChangedDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },
@@ -61645,6 +61897,9 @@ export const MoveShoppingItemToPantryDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },

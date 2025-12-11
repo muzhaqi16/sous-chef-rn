@@ -55,6 +55,18 @@ query GetUserProfile {
   }
 }
 
+query CanDeleteAccount {
+  canDeleteAccount {
+    canDelete
+    blockers {
+      type
+      resourceId
+      resourceName
+      message
+    }
+  }
+}
+
 # ============================================
 # MUTATIONS
 # ============================================

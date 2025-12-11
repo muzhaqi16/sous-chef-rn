@@ -513,6 +513,9 @@ fragment PantryItemFragment on PantryItem {
     id
     name
   }
+  lowStockAlert
+  minQuantity
+  restockQuantity
   lastUsedAt
   wasteAmount
   wasteDate
