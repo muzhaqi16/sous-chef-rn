@@ -1,7 +1,7 @@
 import React from 'react';
 import Icon from '@react-native-vector-icons/ionicons';
-import {Text, View, Pressable} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
+import { Text, View, Pressable } from 'react-native';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 export const Counter = ({
   count,
@@ -16,6 +16,8 @@ export const Counter = ({
   disabled?: boolean;
   label?: string;
 }) => {
+  const { theme } = useUnistyles();
+
   const handleDecrement = (e: any) => {
     e.stopPropagation();
     if (!disabled) {
@@ -29,6 +31,8 @@ export const Counter = ({
       onIncrement();
     }
   };
+
+  const iconColor = disabled ? theme.colors.textTertiary : theme.colors.textPrimary;
 
   return (
     <View
@@ -59,8 +63,8 @@ export const Counter = ({
       <Pressable
         onPress={handleDecrement}
         disabled={disabled}
-        style={({pressed}) => [
-          styles.cardAdd,
+        style={({ pressed }) => [
+          styles.button,
           pressed && !disabled && styles.pressed,
         ]}
         accessible={true}
@@ -69,7 +73,7 @@ export const Counter = ({
         accessibilityHint={`Current ${label} is ${count}`}
         accessibilityState={{ disabled }}
       >
-        <Icon color={disabled ? '#b0b0b0' : '#1d1d1d'} name="remove" size={11} />
+        <Icon color={iconColor} name="remove" size={11} />
       </Pressable>
       <Text
         style={[styles.counterActionText, disabled && styles.textDisabled]}
@@ -80,8 +84,8 @@ export const Counter = ({
       <Pressable
         onPress={handleIncrement}
         disabled={disabled}
-        style={({pressed}) => [
-          styles.cardMinus,
+        style={({ pressed }) => [
+          styles.button,
           pressed && !disabled && styles.pressed,
         ]}
         accessible={true}
@@ -90,72 +94,48 @@ export const Counter = ({
         accessibilityHint={`Current ${label} is ${count}`}
         accessibilityState={{ disabled }}
       >
-        <Icon color={disabled ? '#b0b0b0' : '#1d1d1d'} name="add" size={11} />
+        <Icon color={iconColor} name="add" size={11} />
       </Pressable>
     </View>
   );
 };
+
 const styles = StyleSheet.create(theme => ({
   container: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginRight: 10,
+    marginRight: theme.spacing['2.5'],
     borderWidth: 1,
     backgroundColor: theme.colors.surface,
-    borderColor: '#ececec',
+    borderColor: theme.colors.border,
     borderStyle: 'solid',
-    borderRadius: 9999,
+    borderRadius: theme.radii.full,
   },
-  cardAdd: {
+  button: {
     zIndex: 9,
     backgroundColor: theme.colors.surface,
     width: 30,
     height: 30,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 9999,
-    shadowColor: theme.colors.black,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.23,
-    shadowRadius: 2.62,
-    elevation: 4,
+    borderRadius: theme.radii.full,
+    ...theme.shadows.sm,
   },
   counterActionText: {
-    fontSize: 20,
-    paddingHorizontal: 10,
-
+    fontSize: theme.typography.fontSize.lg,
+    paddingHorizontal: theme.spacing['2.5'],
     lineHeight: 20,
     fontWeight: '500',
-    color: '#000',
-  },
-  cardMinus: {
-    zIndex: 9,
-    backgroundColor: theme.colors.surface,
-    width: 30,
-    height: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 9999,
-    shadowColor: theme.colors.black,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.23,
-    shadowRadius: 2.62,
-    elevation: 4,
+    color: theme.colors.textPrimary,
   },
   pressed: {
     opacity: 0.7,
   },
   containerDisabled: {
-    borderColor: '#d0d0d0',
+    borderColor: theme.colors.borderLight,
   },
   textDisabled: {
-    color: '#b0b0b0',
+    color: theme.colors.textTertiary,
   },
 }));

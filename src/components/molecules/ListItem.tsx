@@ -15,8 +15,8 @@ interface ListItemProps {
     variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger';
   };
   rightElement?: React.ReactNode;
-  leftElement?: React.ReactNode; // Optional left element for image or icon
-  isPurchased?: boolean; // For strikethrough styling
+  leftElement?: React.ReactNode;
+  isPurchased?: boolean;
 }
 
 const ListItemComponent: React.FC<ListItemProps> = ({
@@ -34,7 +34,6 @@ const ListItemComponent: React.FC<ListItemProps> = ({
 
   const content = (
     <>
-      {/* Optional left element for image or icon */}
       {leftElement}
       {leftIcon && (
         <View style={styles.leftIcon}>
@@ -70,7 +69,6 @@ const ListItemComponent: React.FC<ListItemProps> = ({
   );
 
   if (onPress) {
-    // Build accessible label from content
     const subtitleText = typeof subtitle === 'string' ? subtitle : '';
     const accessibilityLabel = [title, subtitleText, badge?.text].filter(Boolean).join(', ');
 
@@ -97,39 +95,38 @@ const ListItemComponent: React.FC<ListItemProps> = ({
   );
 };
 
-// Memoize the component to prevent unnecessary re-renders
 export const ListItem = React.memo(ListItemComponent);
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    borderRadius: 12,
+    borderRadius: theme.radii.lg,
     overflow: 'hidden',
     backgroundColor: theme.colors.surface,
   },
   contentContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    padding: theme.spacing.md,
     minHeight: 87,
   },
   leftIcon: {
-    marginRight: 12,
+    marginRight: theme.spacing['3'],
   },
   content: {
     flex: 1,
   },
   title: {
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.base,
     fontWeight: '500',
     color: theme.colors.textPrimary,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
-    marginTop: 4,
+    marginTop: theme.spacing.xs,
   },
   subtitleContainer: {
-    marginTop: 4,
+    marginTop: theme.spacing.xs,
   },
   purchasedText: {
     textDecorationLine: 'line-through',
