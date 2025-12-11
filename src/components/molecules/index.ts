@@ -41,3 +41,5 @@ export * from './AlertBanner';
 export * from './GreetingHeader';
 export * from './BaseItemCard';
 export * from './FieldRow';
+export * from './InlineBrandAutocomplete';
+export * from './InlineStorageLocationAutocomplete';

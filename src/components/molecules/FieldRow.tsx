@@ -32,6 +32,7 @@ export const FieldRow: React.FC<FieldRowProps> = ({ children, gap = 12 }) => {
 const styles = StyleSheet.create(() => ({
   row: {
     flexDirection: 'row',
+    alignItems: 'flex-end', // Align fields at bottom so inputs line up
   },
   field: {
     flex: 1,

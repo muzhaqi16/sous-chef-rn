@@ -11,14 +11,15 @@ import { useSharedBottomSheetConfigs, useAppNavigation } from '#hooks';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { toastService } from '#/services/toastService';
 import { Icon } from '#utils';
-import { getItemImageUrl } from '#utils/imageUtils';
 import { useAppStore } from '#store/useAppStore';
 import {
   useGetRecentlyDeletedPantryItemsQuery,
   useCreatePantryItemMutation,
   useAutocompleteItemsLazyQuery,
+  useGetPantryQuery,
   ItemSuggestion,
 } from '#generated';
+import { normalizePantry } from '#/utils/connectionUtils';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils';
 import { RecentItemCard } from './RecentItemCard';
 import { AddDetailsSheet } from './AddDetailsSheet';
@@ -67,6 +68,16 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   });
 
   const recentItems = recentData?.recentlyDeletedPantryItems ?? [];
+
+  // Fetch pantry to get storage locations
+  const { data: pantryData } = useGetPantryQuery({
+    variables: { id: pantryId ?? '' },
+    skip: !pantryId,
+    fetchPolicy: 'cache-first',
+  });
+
+  const normalizedPantry = pantryData?.pantry ? normalizePantry(pantryData.pantry) : null;
+  const storageLocations = normalizedPantry?.storageLocations || [];
 
   // Create pantry item mutation for quick add
   const [createPantryItem, { loading: creating }] = useCreatePantryItemMutation({
@@ -290,7 +301,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
                 <>
                   {/* Autocomplete suggestions */}
                   {suggestions.map((item: ItemSuggestion) => {
-                    const imageUrl = item.imageUrl ? getItemImageUrl(item.imageUrl) : null;
+                    const imageUrl = item.imageUrl || null;
                     return (
                       <View key={item.id} style={styles.suggestionItem}>
                         <View style={styles.suggestionImageContainer}>
@@ -316,7 +327,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
                           </Text>
                           {item.brands && item.brands.length > 0 && (
                             <Text style={styles.suggestionBrands} numberOfLines={1}>
-                              {item.brands.slice(0, 2).map((b: { name: string }) => b.name).join(', ')}
+                              {item.brands[0].name}
                             </Text>
                           )}
                         </View>
@@ -427,6 +438,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
         visible={showAddDetails}
         pantryId={pantryId}
         prefilledItemName={prefilledItemName}
+        storageLocations={storageLocations}
         onClose={handleCloseDetails}
         onSuccess={handleAddSuccess}
       />

@@ -29,7 +29,7 @@ import {
 import { StorageState } from '#generated';
 import { FilterTabs } from '../molecules';
 
-// Sort options for pantry items
+// Sort types (same as in preferencesSlice)
 export type SortOption = 'name' | 'expiry' | 'quantity' | 'recent';
 export type SortDirection = 'asc' | 'desc';
 
@@ -97,6 +97,11 @@ interface PantryContentProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
 
+  // Sort (initial values from store, callbacks to persist changes)
+  initialSortOption?: SortOption;
+  initialSortDirection?: SortDirection;
+  onSortChange?: (option: SortOption, direction: SortDirection) => void;
+
   // Actions
   onItemPress: (id: string) => void;
   onItemEdit?: (id: string) => void;
@@ -131,6 +136,9 @@ export const PantryContent: React.FC<PantryContentProps> = ({
   locationCounts,
   searchQuery,
   onSearchChange,
+  initialSortOption = 'recent',
+  initialSortDirection = 'desc',
+  onSortChange,
   onItemPress,
   onItemEdit,
   onItemDelete,
@@ -149,9 +157,9 @@ export const PantryContent: React.FC<PantryContentProps> = ({
   const { theme } = useUnistyles();
   const insets = useSafeAreaInsets();
 
-  // Sort state
-  const [sortOption, setSortOption] = useState<SortOption>('name');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  // Sort state (local, initialized from props)
+  const [sortOption, setSortOption] = useState<SortOption>(initialSortOption);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(initialSortDirection);
   const [sortModalVisible, setSortModalVisible] = useState(false);
 
   // Track open swipeable to close others
@@ -296,19 +304,29 @@ export const PantryContent: React.FC<PantryContentProps> = ({
   );
 
   // Handle sort option selection
-  const handleSortSelect = useCallback((option: SortOption) => {
-    setSortOption(prev => {
-      if (prev === option) {
+  const handleSortSelect = useCallback(
+    (option: SortOption) => {
+      let newOption = sortOption;
+      let newDirection = sortDirection;
+
+      if (sortOption === option) {
         // Toggle direction if same option selected
-        setSortDirection(dir => (dir === 'asc' ? 'desc' : 'asc'));
-        return prev;
+        newDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+        setSortDirection(newDirection);
+      } else {
+        // Set new option and reset to ascending
+        newOption = option;
+        newDirection = 'asc';
+        setSortOption(newOption);
+        setSortDirection(newDirection);
       }
-      // Reset to ascending for new option
-      setSortDirection('asc');
-      return option;
-    });
-    setSortModalVisible(false);
-  }, []);
+
+      // Persist to store
+      onSortChange?.(newOption, newDirection);
+      setSortModalVisible(false);
+    },
+    [sortOption, sortDirection, onSortChange],
+  );
 
   // Build flat list data with section markers
   const listData = useMemo((): ListSection[] => {

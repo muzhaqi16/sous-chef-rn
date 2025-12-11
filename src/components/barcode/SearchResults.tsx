@@ -124,6 +124,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
               initialQuantity: 1,
               itemName: item.name,
               unitId: item.unitId,
+              itemUpc: item.upc || item.primaryUpc, // Include UPC from barcode scan
               ...weightInput, // Include weight info from catalog item
             },
           },

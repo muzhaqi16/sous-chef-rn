@@ -1,19 +1,25 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, Switch, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Switch, Alert, Platform } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetBackdrop,
   BottomSheetScrollView,
 } from '@gorhom/bottom-sheet';
 import PagerView from 'react-native-pager-view';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSharedBottomSheetConfigs } from '#hooks';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#utils';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/molecules/FormInput';
-import { ItemAutocompleteInput } from '#components/molecules/ItemAutocompleteInput';
-import { UnitsAutocompleteInput } from '#components/molecules/UnitsAutocompleteInput';
+import { InlineItemAutocomplete } from '#components/molecules/InlineItemAutocomplete';
+import { InlineUnitsAutocomplete } from '#components/molecules/InlineUnitsAutocomplete';
+import { InlineBrandAutocomplete } from '#components/molecules/InlineBrandAutocomplete';
+import {
+  InlineStorageLocationAutocomplete,
+  StorageLocation,
+} from '#components/molecules/InlineStorageLocationAutocomplete';
 import { FieldRow } from '#components/molecules/FieldRow';
 import { parseFractionalInput } from '#/utils';
 import {
@@ -30,6 +36,7 @@ interface AddDetailsSheetProps {
   visible: boolean;
   pantryId: string | undefined;
   prefilledItemName?: string;
+  storageLocations?: StorageLocation[];
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -109,6 +116,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   visible,
   pantryId,
   prefilledItemName = '',
+  storageLocations = [],
   onClose,
   onSuccess,
 }) => {
@@ -135,13 +143,18 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   const [packageWeight, setPackageWeight] = useState('');
   const [weightUnit, setWeightUnit] = useState('');
   const [weightUnitId, setWeightUnitId] = useState<string | null>(null);
-  // const [minimumQuantity, setMinimumQuantity] = useState('');
   const [expirationDate, setExpirationDate] = useState('');
+  const [expirationDateObj, setExpirationDateObj] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   // Form state - Page 3 (Storage)
+  const [storageLocation, setStorageLocation] = useState('');
+  const [selectedStorageLocationId, setSelectedStorageLocationId] = useState<string | null>(null);
   const [storageNotes, setStorageNotes] = useState('');
   const [tags, setTags] = useState('');
   const [brand, setBrand] = useState('');
+  const [selectedBrandId, setSelectedBrandId] = useState<string | null>(null);
+  const [suggestedBrands, setSuggestedBrands] = useState<{ id: string; name: string }[]>([]);
 
   // Form state - Add Another toggle
   const [addAnother, setAddAnother] = useState(false);
@@ -175,11 +188,16 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     setPackageWeight('');
     setWeightUnit('');
     setWeightUnitId(null);
-    // setMinimumQuantity('');
     setExpirationDate('');
+    setExpirationDateObj(null);
+    setShowDatePicker(false);
+    setStorageLocation('');
+    setSelectedStorageLocationId(null);
     setStorageNotes('');
     setTags('');
     setBrand('');
+    setSelectedBrandId(null);
+    setSuggestedBrands([]);
   }, []);
 
   // Control visibility
@@ -200,6 +218,13 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   const handleItemSelect = useCallback((item: ItemSuggestion) => {
     setSelectedItem(item);
     setItemName(item.name);
+    // Set suggested brands from item
+    if (item.brands && item.brands.length > 0) {
+      setSuggestedBrands(item.brands.map(b => ({ id: b.id, name: b.name })));
+      setBrand(item.brands[0].name);
+    } else {
+      setSuggestedBrands([]);
+    }
   }, []);
 
   // Handle item name change (manual entry)
@@ -227,6 +252,47 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     (id: string | null, name: string | null) => {
       setWeightUnitId(id);
       if (name) setWeightUnit(name);
+    },
+    [],
+  );
+
+  // Handle date picker change
+  const handleDateChange = useCallback(
+    (_event: any, date?: Date) => {
+      setShowDatePicker(Platform.OS === 'ios');
+      if (date) {
+        setExpirationDateObj(date);
+        setExpirationDate(date.toISOString().split('T')[0]);
+      }
+    },
+    [],
+  );
+
+  // Handle storage location selection
+  const handleStorageLocationSelected = useCallback(
+    (locationId: string | null, location: StorageLocation | null) => {
+      setSelectedStorageLocationId(locationId);
+      // Auto-set storage state based on location temperature
+      if (location?.temperature) {
+        const temp = location.temperature.toLowerCase();
+        if (temp === 'frozen') setStorageState(StorageState.Frozen);
+        else if (temp === 'refrigerated') setStorageState(StorageState.Refrigerated);
+        else setStorageState(StorageState.Ambient);
+      }
+    },
+    [],
+  );
+
+  // Handle add new storage location
+  const handleAddNewLocation = useCallback((name: string) => {
+    setStorageLocation(name);
+    setSelectedStorageLocationId(null);
+  }, []);
+
+  // Handle brand selection
+  const handleBrandSelected = useCallback(
+    (brandId: string | null, _brandName: string | null) => {
+      setSelectedBrandId(brandId);
     },
     [],
   );
@@ -269,6 +335,11 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
               : undefined,
             packageWeightUnitId: weightUnitId || undefined,
             expiresAt: expirationDate || undefined,
+            // Use storage location ID if selected, otherwise use name for server to create
+            storageLocationId: selectedStorageLocationId || undefined,
+            storageLocationName: !selectedStorageLocationId && storageLocation.trim()
+              ? storageLocation.trim()
+              : undefined,
             storageNotes: storageNotes.trim() || undefined,
             tags: tags
               ? tags
@@ -276,6 +347,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
                   .map(t => t.trim())
                   .filter(Boolean)
               : undefined,
+            itemBrand: brand.trim() || undefined,
           },
         },
       });
@@ -300,8 +372,11 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     packageWeight,
     weightUnitId,
     expirationDate,
+    selectedStorageLocationId,
+    storageLocation,
     storageNotes,
     tags,
+    brand,
     addAnother,
     createPantryItem,
     onSuccess,
@@ -369,8 +444,9 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
           >
             {/* Item Name */}
             <View style={styles.section}>
-              <Text style={styles.label}>Item Name *</Text>
-              <ItemAutocompleteInput
+              <InlineItemAutocomplete
+                label="Item Name"
+                required
                 value={itemName}
                 onChangeText={handleItemNameChange}
                 onSelectItem={handleItemSelect}
@@ -386,7 +462,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
                 onChangeText={setQuantityInput}
                 placeholder="e.g., 1, 1/2"
               />
-              <UnitsAutocompleteInput
+              <InlineUnitsAutocomplete
                 label="Unit"
                 value={unit}
                 onChangeText={setUnit}
@@ -439,7 +515,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
                 placeholder="e.g., 300"
                 keyboardType="decimal-pad"
               />
-              <UnitsAutocompleteInput
+              <InlineUnitsAutocomplete
                 label="Weight Unit"
                 value={weightUnit}
                 onChangeText={setWeightUnit}
@@ -448,25 +524,38 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
               />
             </FieldRow>
 
-            {/* Minimum Quantity */}
-            {/* <View style={styles.section}>
-              <FormInput
-                label="Minimum Quantity"
-                value={minimumQuantity}
-                onChangeText={setMinimumQuantity}
-                placeholder="Alert when below this"
-                keyboardType="numeric"
-              />
-            </View> */}
-
             {/* Expiration Date */}
             <View style={styles.section}>
-              <FormInput
-                label="Expiration Date"
-                value={expirationDate}
-                onChangeText={setExpirationDate}
-                placeholder="YYYY-MM-DD"
-              />
+              <Text style={styles.fieldLabel}>Expiration Date</Text>
+              <TouchableOpacity
+                style={styles.dateInput}
+                onPress={() => setShowDatePicker(true)}
+              >
+                <Icon
+                  name="event"
+                  size={20}
+                  color={theme.colors.textSecondary}
+                  library="MaterialIcons"
+                />
+                <Text
+                  style={[
+                    styles.dateText,
+                    !expirationDateObj && styles.datePlaceholder,
+                  ]}
+                >
+                  {expirationDateObj
+                    ? expirationDateObj.toLocaleDateString()
+                    : 'Select date'}
+                </Text>
+              </TouchableOpacity>
+              {showDatePicker && (
+                <DateTimePicker
+                  value={expirationDateObj || new Date()}
+                  mode="date"
+                  minimumDate={new Date()}
+                  onChange={handleDateChange}
+                />
+              )}
             </View>
           </BottomSheetScrollView>
 
@@ -474,18 +563,32 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
           <BottomSheetScrollView
             key="storage"
             style={styles.page}
-            contentContainerStyle={styles.pageContent}
+            contentContainerStyle={[styles.pageContent, { overflow: 'visible' }]}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            {/* Storage Notes */}
-            <View style={styles.section}>
-              <FormInput
-                label="Storage Notes"
-                value={storageNotes}
-                onChangeText={setStorageNotes}
-                placeholder="e.g., Store in cool, dry place"
-                multiline
+            {/* Storage Location */}
+            <View style={[styles.section, { zIndex: 20 }]}>
+              <InlineStorageLocationAutocomplete
+                label="Storage Location"
+                value={storageLocation}
+                onChangeText={setStorageLocation}
+                placeholder="e.g., Top shelf, Crisper drawer"
+                storageLocations={storageLocations}
+                onStorageLocationSelected={handleStorageLocationSelected}
+                onAddNewLocation={handleAddNewLocation}
+              />
+            </View>
+
+            {/* Brand */}
+            <View style={[styles.section, { zIndex: 10 }]}>
+              <InlineBrandAutocomplete
+                label="Brand"
+                value={brand}
+                onChangeText={setBrand}
+                placeholder="e.g., Whole Foods, Organic Valley"
+                suggestedBrands={suggestedBrands}
+                onBrandSelected={handleBrandSelected}
               />
             </View>
 
@@ -499,13 +602,14 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
               />
             </View>
 
-            {/* Brand */}
+            {/* Notes */}
             <View style={styles.section}>
               <FormInput
-                label="Brand"
-                value={brand}
-                onChangeText={setBrand}
-                placeholder="e.g., Whole Foods, Organic Valley"
+                label="Notes"
+                value={storageNotes}
+                onChangeText={setStorageNotes}
+                placeholder="e.g., Store in cool, dry place"
+                multiline
               />
             </View>
           </BottomSheetScrollView>
@@ -605,6 +709,29 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
     marginBottom: theme.spacing.sm,
+  },
+  fieldLabel: {
+    fontSize: theme.fonts.size.md,
+    fontWeight: theme.fonts.weight.medium,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.xs,
+  },
+  dateInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: theme.spacing.sm,
+    borderRadius: theme.radii.md,
+    backgroundColor: theme.colors.inputBackground,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    gap: theme.spacing.sm,
+  },
+  dateText: {
+    fontSize: theme.fonts.size.md,
+    color: theme.colors.inputText,
+  },
+  datePlaceholder: {
+    color: theme.colors.textSecondary,
   },
   segmentedControl: {
     flexDirection: 'row',

@@ -20,6 +20,8 @@ interface Props<T extends FieldValues> {
   footerLinkText?: string;
   footerLinkTestID?: string;
   onFooterLinkPress?: () => void;
+  footerLinkDisabled?: boolean;
+  footerLinkCountdown?: number; // seconds remaining for countdown display
   onLinkPress?: () => void;
   linkText?: string;
   linkTestID?: string;
@@ -39,6 +41,8 @@ export function AuthFormTemplate<T extends FieldValues>({
   footerLinkText,
   footerLinkTestID,
   onFooterLinkPress,
+  footerLinkDisabled,
+  footerLinkCountdown,
   linkText,
   linkTestID,
   onLinkPress,
@@ -81,9 +85,22 @@ export function AuthFormTemplate<T extends FieldValues>({
       </View>
 
       {footerText && footerLinkText && onFooterLinkPress && (
-        <TouchableOpacity onPress={onFooterLinkPress} testID={footerLinkTestID}>
-          <Text style={styles.footer}>
-            {footerText} <Text style={styles.link}>{footerLinkText}</Text>
+        <TouchableOpacity
+          onPress={onFooterLinkPress}
+          disabled={footerLinkDisabled}
+          testID={footerLinkTestID}
+        >
+          <Text
+            style={[styles.footer, footerLinkDisabled && styles.footerDisabled]}
+          >
+            {footerText}{' '}
+            <Text
+              style={[styles.link, footerLinkDisabled && styles.linkDisabled]}
+            >
+              {footerLinkCountdown && footerLinkCountdown > 0
+                ? `${footerLinkText} (${footerLinkCountdown}s)`
+                : footerLinkText}
+            </Text>
           </Text>
         </TouchableOpacity>
       )}
@@ -143,5 +160,11 @@ const styles = StyleSheet.create(theme => ({
     textAlign: 'center',
     paddingVertical: 24,
     color: theme.colors.textSecondary,
+  },
+  footerDisabled: {
+    opacity: 0.5,
+  },
+  linkDisabled: {
+    textDecorationLine: 'none',
   },
 }));

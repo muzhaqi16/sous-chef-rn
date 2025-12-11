@@ -32,19 +32,6 @@ interface PantryItemCardProps {
   onSwipeableWillOpen?: (ref: any) => void;
 }
 
-// Map storage state to icon
-const getStorageIcon = (storageState?: string | null): { icon: string; library: 'MaterialDesignIcons' | 'Ionicons' } | null => {
-  switch (storageState) {
-    case 'REFRIGERATED':
-      return { icon: 'fridge-outline', library: 'MaterialDesignIcons' };
-    case 'FROZEN':
-      return { icon: 'snowflake', library: 'MaterialDesignIcons' };
-    case 'ROOM_TEMPERATURE':
-      return { icon: 'home-outline', library: 'Ionicons' };
-    default:
-      return null;
-  }
-};
 
 /**
  * Expiration text component with color based on variant
@@ -92,7 +79,7 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
   expirationVariant,
   quantity,
   location,
-  storageState,
+  storageState: _storageState,
   variant = 'normal',
   imageUrl,
   onPress,
@@ -106,9 +93,7 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
   // Map ItemVariant to CardVariant
   const cardVariant: CardVariant = variant;
 
-  // Determine left element: image > storage icon > nothing
-  const storageIcon = getStorageIcon(storageState);
-
+  // Only show image if available, no placeholder
   const renderLeftElement = () => {
     if (imageUrl) {
       return (
@@ -119,17 +104,7 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
         />
       );
     }
-    if (storageIcon) {
-      return (
-        <CardLeftSlot
-          type="icon"
-          icon={storageIcon.icon}
-          iconLibrary={storageIcon.library}
-          variant={cardVariant}
-        />
-      );
-    }
-    // No left element if no image and no storage state
+    // No left element if no image - just show name directly
     return undefined;
   };
 

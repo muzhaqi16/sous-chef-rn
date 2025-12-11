@@ -52,6 +52,22 @@ const PantryMainScreen: React.FC = React.memo(() => {
 
   const showBiometricSetup = useAppStore(state => state.showBiometricSetup);
   const unreadCount = useStore(state => state.unreadCount);
+
+  // Pantry sort preferences from store
+  const pantrySortOption = useAppStore(s => s.pantrySortOption) ?? 'recent';
+  const pantrySortDirection = useAppStore(s => s.pantrySortDirection) ?? 'desc';
+  const setPantrySortOption = useAppStore(s => s.setPantrySortOption);
+  const setPantrySortDirection = useAppStore(s => s.setPantrySortDirection);
+
+  // Callback to persist sort changes to store (defensive - check functions exist)
+  const handleSortChange = useCallback(
+    (option: 'name' | 'expiry' | 'quantity' | 'recent', direction: 'asc' | 'desc') => {
+      setPantrySortOption?.(option);
+      setPantrySortDirection?.(direction);
+    },
+    [setPantrySortOption, setPantrySortDirection],
+  );
+
   const selectorRef = useRef<ItemSelectorRef>(null);
 
   // Location filter for redesigned tabs
@@ -113,6 +129,7 @@ const PantryMainScreen: React.FC = React.memo(() => {
     removeItem,
     refetch,
     loading,
+    error: pantryError,
     loadMore,
     locationCounts,
     sectionedItems,
@@ -212,9 +229,13 @@ const PantryMainScreen: React.FC = React.memo(() => {
     await Promise.all([refetch(), refetchHome()]);
   };
 
-  // Determine loading state - only show loading if we have no data at all
+  // Determine loading state - only show loading if we have no data at all and no error
+  // If there's an error, stop showing loading state to prevent infinite spinner
   const isLoadingInitial =
-    loading && locationFilteredItems.length === 0 && !allItems?.length;
+    loading && !pantryError && locationFilteredItems.length === 0 && !allItems?.length;
+
+  // Don't show refreshing indicator if there's an error (prevents stuck spinner)
+  const isRefreshing = loading && !pantryError;
 
   // Get user display name and avatar
   const userName =
@@ -251,6 +272,9 @@ const PantryMainScreen: React.FC = React.memo(() => {
         locationCounts={locationCounts}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
+        initialSortOption={pantrySortOption}
+        initialSortDirection={pantrySortDirection}
+        onSortChange={handleSortChange}
         onItemPress={id => navigateTo.pantryItemDetail({ itemId: id })}
         onItemEdit={handleEditItem}
         onItemDelete={handleDeleteItem}
@@ -265,7 +289,7 @@ const PantryMainScreen: React.FC = React.memo(() => {
         onSettingsPress={handleOpenSelector}
         onRefresh={handleRefresh}
         onEndReached={loadMore}
-        refreshing={loading}
+        refreshing={isRefreshing}
         loading={isLoadingInitial}
       />
       <AnimatedItemSelector
