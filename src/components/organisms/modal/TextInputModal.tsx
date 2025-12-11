@@ -109,7 +109,7 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
               error ? { borderColor: errorColor } : {},
             ]}
             placeholder={placeholder}
-            placeholderTextColor="#999"
+            placeholderTextColor={styles.inputPlaceholder.color}
             value={text}
             onChangeText={newText => {
               setText(newText);
@@ -148,7 +148,7 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
               disabled={isSubmitting || loading}
             >
               {isSubmitting || loading ? (
-                <ActivityIndicator size="small" color="#FFF" />
+                <ActivityIndicator size="small" color={styles.submitButtonText.color} />
               ) : (
                 <Text style={styles.submitButtonText}>{submitText}</Text>
               )}
@@ -165,80 +165,83 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: theme.colors.overlays.medium,
   },
   modalView: {
-    margin: 20,
+    margin: theme.spacing['5'],
     backgroundColor: theme.colors.surface,
-    borderRadius: 12,
-    padding: 20,
+    borderRadius: theme.radii.lg,
+    padding: theme.spacing['5'],
     shadowColor: theme.colors.black,
     shadowOffset: {
       width: 0,
       height: 2,
     },
     shadowOpacity: 0.25,
-    shadowRadius: 4,
+    shadowRadius: theme.spacing.xs,
     elevation: 5,
     minWidth: 300,
     maxWidth: '90%',
   },
   title: {
-    fontSize: 18,
+    fontSize: theme.typography.fontSize.lg,
     fontWeight: '600',
-    marginBottom: 16,
+    marginBottom: theme.spacing.md,
     textAlign: 'center',
-    color: '#000',
+    color: theme.colors.textPrimary,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    marginBottom: 8,
-    color: '#000',
-    backgroundColor: '#FAFAFA',
+    borderColor: theme.colors.border,
+    borderRadius: theme.radii.md,
+    padding: theme.spacing['3'],
+    fontSize: theme.typography.fontSize.base,
+    marginBottom: theme.spacing.sm,
+    color: theme.colors.textPrimary,
+    backgroundColor: theme.colors.background,
+  },
+  inputPlaceholder: {
+    color: theme.colors.textSecondary,
   },
   multilineInput: {
-    minHeight: 80,
-    maxHeight: 120,
+    minHeight: theme.spacing['2xl'] + theme.spacing.xl,
+    maxHeight: theme.spacing['3xl'] * 2,
   },
   errorText: {
-    fontSize: 12,
-    marginBottom: 12,
+    fontSize: theme.typography.fontSize.xs,
+    marginBottom: theme.spacing['3'],
   },
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 12,
+    marginTop: theme.spacing['3'],
   },
   button: {
     flex: 1,
-    padding: 12,
-    borderRadius: 8,
+    padding: theme.spacing['3'],
+    borderRadius: theme.radii.md,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 44,
+    minHeight: theme.sizes.button.md,
   },
   cancelButton: {
-    backgroundColor: '#F0F0F0',
-    marginRight: 8,
+    backgroundColor: theme.colors.background,
+    marginRight: theme.spacing.sm,
   },
   submitButton: {
-    marginLeft: 8,
+    marginLeft: theme.spacing.sm,
   },
   disabledButton: {
     opacity: 0.6,
   },
   cancelButtonText: {
-    color: '#666',
-    fontSize: 16,
+    color: theme.colors.textSecondary,
+    fontSize: theme.typography.fontSize.base,
     fontWeight: '500',
   },
   submitButtonText: {
-    color: 'white',
-    fontSize: 16,
+    color: theme.colors.white,
+    fontSize: theme.typography.fontSize.base,
     fontWeight: '600',
   },
 }));

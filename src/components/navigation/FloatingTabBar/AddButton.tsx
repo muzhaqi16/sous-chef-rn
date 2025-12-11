@@ -31,9 +31,9 @@ export const AddButton: React.FC<AddButtonProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   addButton: {
-    width: 56,
-    height: 44,
-    borderRadius: 12,
+    width: theme.sizes.fab.md,
+    height: theme.sizes.button.md,
+    borderRadius: theme.radii.lg,
     backgroundColor: theme.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
@@ -41,10 +41,10 @@ const styles = StyleSheet.create(theme => ({
     shadowColor: theme.colors.primary,
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: theme.spacing.xs,
     },
     shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowRadius: theme.radii.md,
     elevation: 8,
   },
 }));
