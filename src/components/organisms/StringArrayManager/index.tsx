@@ -370,7 +370,7 @@ const styles = (theme: any) =>
     },
     modalOverlay: {
       flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      backgroundColor: theme.colors.overlays.medium,
       justifyContent: 'center',
       alignItems: 'center',
       padding: theme.spacing.lg,
@@ -386,7 +386,7 @@ const styles = (theme: any) =>
     },
     errorText: {
       color: theme.colors.danger,
-      fontSize: 14,
+      fontSize: theme.typography.fontSize.sm,
       marginTop: theme.spacing.xs,
     },
     modalButtons: {
