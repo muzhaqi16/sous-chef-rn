@@ -94,10 +94,45 @@ export function useRecipeSearch() {
   // User can manually apply filters via the filter sheet when needed
   // This allows unfiltered searches by default
 
-  // Text-based search
+  // Text-based search (with pantry fallback when empty)
   const handleTextSearch = useCallback(async () => {
+    // If no query, fall back to pantry ingredient search
     if (!searchQuery.trim()) {
-      Alert.alert('Search Required', 'Please enter a search term');
+      if (pantryItems?.length) {
+        const ingredientNames = pantryItems
+          .map(item => item.item?.name || item.itemName)
+          .filter(Boolean)
+          .slice(0, 20)
+          .join(',');
+
+        if (ingredientNames) {
+          setLoading(true);
+          setSearchPerformed(true);
+
+          try {
+            const results = await spoonacularService.searchRecipesByIngredients({
+              ingredients: ingredientNames,
+              number: 10,
+              ranking: 1,
+              ignorePantry: true,
+            });
+            setSearchResults(results);
+          } catch (error: any) {
+            console.error('Pantry search error:', error);
+            if (error.isQuotaExceeded) {
+              Alert.alert('API Limit Reached', 'Spoonacular API quota exceeded. Please try again later.');
+            } else if (error.isRateLimitError) {
+              Alert.alert('Rate Limit', 'Too many requests. Please try again in a moment.');
+            } else {
+              Alert.alert('Search Error', 'Failed to search recipes. Please try again.');
+            }
+          } finally {
+            setLoading(false);
+          }
+          return;
+        }
+      }
+      Alert.alert('Search Required', 'Please enter a search term or add items to your pantry');
       return;
     }
 
@@ -133,15 +168,58 @@ export function useRecipeSearch() {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, activeFilters, excludedIngredients]);
+  }, [searchQuery, activeFilters, excludedIngredients, pantryItems]);
 
-  // Auto-trigger search if initialQuery is provided
+  // Pantry-based search (auto-search on mount)
+  const handlePantrySearch = useCallback(async (ingredients: string) => {
+    setLoading(true);
+    setSearchPerformed(true);
+
+    try {
+      const results = await spoonacularService.searchRecipesByIngredients({
+        ingredients,
+        number: 10,
+        ranking: 1, // Maximize used ingredients
+        ignorePantry: true,
+      });
+
+      setSearchResults(results);
+    } catch (error: any) {
+      console.error('Pantry search error:', error);
+      if (error.isQuotaExceeded) {
+        Alert.alert('API Limit Reached', 'Spoonacular API quota exceeded. Please try again later.');
+      } else if (error.isRateLimitError) {
+        Alert.alert('Rate Limit', 'Too many requests. Please try again in a moment.');
+      } else {
+        Alert.alert('Search Error', 'Failed to search recipes. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Auto-trigger search on mount
   useEffect(() => {
-    if (initialQuery && initialQuery.trim() && !hasAutoSearchedRef.current) {
+    if (hasAutoSearchedRef.current) return;
+
+    if (initialQuery && initialQuery.trim()) {
+      // Text search from navigation params
       hasAutoSearchedRef.current = true;
       handleTextSearch();
+    } else if (pantryItems?.length) {
+      // Auto-search with pantry ingredients
+      const ingredientNames = pantryItems
+        .map(item => item.item?.name || item.itemName)
+        .filter(Boolean)
+        .slice(0, 20) // Limit to 20 ingredients for API
+        .join(',');
+
+      if (ingredientNames) {
+        hasAutoSearchedRef.current = true;
+        handlePantrySearch(ingredientNames);
+      }
     }
-  }, [initialQuery, handleTextSearch]);
+  }, [initialQuery, pantryItems, handleTextSearch, handlePantrySearch]);
 
   // Ingredient-based search
   const handleIngredientSearch = useCallback(async () => {
