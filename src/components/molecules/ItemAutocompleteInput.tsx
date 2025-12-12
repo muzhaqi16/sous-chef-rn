@@ -167,7 +167,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
   },
   itemImagePlaceholderText: {
-    fontSize: 20,
+    fontSize: theme.typography.fontSize.lg,
   },
   itemDetails: {
     flex: 1,

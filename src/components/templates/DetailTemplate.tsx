@@ -86,14 +86,14 @@ const styles = StyleSheet.create(theme => ({
   },
   section: {
     backgroundColor: theme.colors.surface,
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 16,
+    borderRadius: theme.radii.sm,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.md,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.md,
     fontWeight: '600',
     color: theme.colors.textPrimary,
-    marginBottom: 12,
+    marginBottom: theme.spacing['3'],
   },
 }));

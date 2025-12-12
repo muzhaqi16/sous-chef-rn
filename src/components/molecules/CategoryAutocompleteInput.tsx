@@ -121,7 +121,7 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.sm,
   },
   categoryIcon: {
-    fontSize: 24,
+    fontSize: theme.typography.fontSize.xl,
     width: 32,
     textAlign: 'center',
   },
