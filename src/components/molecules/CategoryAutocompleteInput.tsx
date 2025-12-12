@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useAutocompleteCategoriesLazyQuery, CategorySuggestion, CategoryType } from '#generated';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetAutocompleteInput } from './BottomSheetAutocompleteInput';
-import { useStore } from '#store';
+import { useAutocompleteInput } from '#hooks/ui/useAutocompleteInput';
 
 interface CategoryAutocompleteInputProps {
   label?: string;
@@ -26,42 +26,41 @@ export const CategoryAutocompleteInput: React.FC<CategoryAutocompleteInputProps>
   onCategorySelected,
   categoryType = CategoryType.General,
 }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [categories, setCategories] = useState<CategorySuggestion[]>([]);
-
-  // Check online status to prevent queries when offline
-  const isOnline = useStore(state => state.isOnline);
-
   const [searchCategories, { data: categoriesData, loading: categoriesLoading }] =
     useAutocompleteCategoriesLazyQuery();
 
-  useEffect(() => {
-    // Only query when online and search term is long enough
-    if (searchTerm.length >= 2 && isOnline) {
+  // Use the shared autocomplete hook for debouncing and state management
+  const {
+    inputValue,
+    handleTextChange: hookHandleTextChange,
+    shouldSearch,
+  } = useAutocompleteInput<CategorySuggestion>({
+    minChars: 2,
+    debounceMs: 300,
+    onChangeText: useCallback((text: string) => {
+      // This is called after debounce - trigger the GraphQL query
       searchCategories({
         variables: {
           input: {
-            query: searchTerm,
+            query: text,
             limit: 5,
             type: categoryType
           }
         }
       });
-    }
-  }, [searchTerm, searchCategories, categoryType, isOnline]);
+    }, [searchCategories, categoryType]),
+    getDisplayValue: (item) => item.name,
+  });
 
-  // Update categories when data changes
-  useEffect(() => {
-    if (categoriesData?.autocompleteCategories?.suggestions) {
-      setCategories(categoriesData.autocompleteCategories.suggestions as CategorySuggestion[]);
-    } else if (searchTerm.length < 2) {
-      setCategories([]);
-    }
-  }, [categoriesData, searchTerm]);
+  // Get categories from query data
+  const categories = useMemo(() => {
+    if (!shouldSearch) return [];
+    return (categoriesData?.autocompleteCategories?.suggestions || []) as CategorySuggestion[];
+  }, [categoriesData, shouldSearch]);
 
   const handleTextChange = (text: string) => {
     onChangeText(text);
-    setSearchTerm(text);
+    hookHandleTextChange(text);
     // Clear category selection when user types manually - allows custom input
     onCategorySelected?.(null);
   };
@@ -103,8 +102,8 @@ export const CategoryAutocompleteInput: React.FC<CategoryAutocompleteInputProps>
       keyExtractor={(item: CategorySuggestion) => item.id}
       onSelectItem={handleSelectCategory}
       emptyText="No categories found"
-      emptySubtext={`Continue typing to use "${searchTerm}" as a custom category`}
-      onSearchChange={setSearchTerm}
+      emptySubtext={`Continue typing to use "${inputValue}" as a custom category`}
+      onSearchChange={hookHandleTextChange}
     />
   );
 };
