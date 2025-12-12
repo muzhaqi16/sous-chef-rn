@@ -280,9 +280,6 @@ fragment CompleteUser on User {
     isActive
     isTrusted
     lastSeenAt
-    lastIpAddress
-    lastCountry
-    lastCity
     isVerified
     verifiedAt
     loginCount
@@ -304,9 +301,6 @@ fragment CompleteUser on User {
       name
       createdAt
     }
-  }
-  purchases {
-    id
   }
   shoppingListOwnerships {
     createdAt
@@ -505,6 +499,7 @@ fragment PantryItemFragment on PantryItem {
     symbol
   }
   packageWeight
+  packageWeightUnitId
   packageWeightUnit {
     id
     name
@@ -515,6 +510,21 @@ fragment PantryItemFragment on PantryItem {
   updatedAt
   version
   tags
+  brand {
+    id
+    name
+  }
+  lowStockAlert
+  minQuantity
+  restockQuantity
+  lastUsedAt
+  wasteAmount
+  wasteDate
+  wasteReason
+  store {
+    id
+    name
+  }
 
   usageRecords {
     id
@@ -543,12 +553,18 @@ fragment PantryItemFragment on PantryItem {
 fragment HomeInviteFragment on HomeInvite {
   id
   email
-  token
   homeId
   invitedUserId
   recipientName
   role
-  customPermissions
+  customPermissions {
+    canViewPantry
+    canEditPantry
+    canAddItems
+    canRemoveItems
+    canInviteOthers
+    canManageHome
+  }
   status
   expiresAt
   sentAt

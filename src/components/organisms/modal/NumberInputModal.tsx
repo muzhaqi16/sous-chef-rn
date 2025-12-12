@@ -5,10 +5,9 @@ import {
   Modal,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
   ActivityIndicator,
 } from 'react-native';
-import { useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
 
 export interface NumberInputModalProps {
@@ -263,21 +262,21 @@ export const NumberInputModal: React.FC<NumberInputModalProps> = ({
       animationType="slide"
       onRequestClose={handleCancel}
     >
-      <View style={styles(theme).modalOverlay}>
-        <View style={[commonStyles.card, styles(theme).modalContent]}>
+      <View style={localStyles.modalOverlay}>
+        <View style={[commonStyles.card, localStyles.modalContent]}>
           {/* Title */}
           <Text style={commonStyles.h3}>{title}</Text>
 
           {/* Label and helper text */}
           {(label || helperText) && (
-            <View style={styles(theme).labelContainer}>
+            <View style={localStyles.labelContainer}>
               {label && (
                 <Text style={commonStyles.body}>
                   {label} {getRangeText()}
                 </Text>
               )}
               {helperText && (
-                <Text style={[commonStyles.bodySecondary, styles(theme).helperText]}>
+                <Text style={[commonStyles.bodySecondary, localStyles.helperText]}>
                   {helperText}
                 </Text>
               )}
@@ -288,8 +287,8 @@ export const NumberInputModal: React.FC<NumberInputModalProps> = ({
           <TextInput
             style={[
               commonStyles.input,
-              styles(theme).numberInput,
-              error && styles(theme).inputError,
+              localStyles.numberInput,
+              error && localStyles.inputError,
             ]}
             value={inputValue}
             onChangeText={(text) => {
@@ -303,12 +302,12 @@ export const NumberInputModal: React.FC<NumberInputModalProps> = ({
           />
 
           {/* Error message */}
-          {error && <Text style={styles(theme).errorText}>{error}</Text>}
+          {error && <Text style={localStyles.errorText}>{error}</Text>}
 
           {/* Buttons */}
-          <View style={styles(theme).modalButtons}>
+          <View style={localStyles.modalButtons}>
             <TouchableOpacity
-              style={[commonStyles.button, styles(theme).modalButton]}
+              style={[commonStyles.button, localStyles.modalButton]}
               onPress={handleCancel}
               disabled={loading}
             >
@@ -319,8 +318,8 @@ export const NumberInputModal: React.FC<NumberInputModalProps> = ({
               style={[
                 commonStyles.button,
                 commonStyles.buttonPrimary,
-                styles(theme).modalButton,
-                loading && styles(theme).buttonDisabled,
+                localStyles.modalButton,
+                loading && localStyles.buttonDisabled,
               ]}
               onPress={handleSave}
               disabled={loading}
@@ -345,54 +344,53 @@ export const NumberInputModal: React.FC<NumberInputModalProps> = ({
   );
 };
 
-const styles = (theme: any) =>
-  StyleSheet.create({
-    modalOverlay: {
-      flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: theme.spacing.lg,
-    },
-    modalContent: {
-      width: '100%',
-      maxWidth: 400,
-      padding: theme.spacing.lg,
-    },
-    labelContainer: {
-      marginTop: theme.spacing.md,
-      marginBottom: theme.spacing.xs,
-    },
-    helperText: {
-      marginTop: theme.spacing.xs,
-      fontSize: 13,
-    },
-    numberInput: {
-      marginTop: theme.spacing.sm,
-      textAlign: 'center',
-      fontSize: 24,
-      fontWeight: '600',
-    },
-    inputError: {
-      borderColor: theme.colors.danger,
-      borderWidth: 1,
-    },
-    errorText: {
-      color: theme.colors.danger,
-      fontSize: 14,
-      marginTop: theme.spacing.xs,
-      textAlign: 'center',
-    },
-    modalButtons: {
-      flexDirection: 'row',
-      justifyContent: 'flex-end',
-      gap: theme.spacing.sm,
-      marginTop: theme.spacing.lg,
-    },
-    modalButton: {
-      flex: 1,
-    },
-    buttonDisabled: {
-      opacity: 0.6,
-    },
-  });
+const localStyles = StyleSheet.create(theme => ({
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: theme.colors.overlays.medium,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: theme.spacing.lg,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: theme.sizes.modal.md,
+    padding: theme.spacing.lg,
+  },
+  labelContainer: {
+    marginTop: theme.spacing.md,
+    marginBottom: theme.spacing.xs,
+  },
+  helperText: {
+    marginTop: theme.spacing.xs,
+    fontSize: theme.typography.fontSize.sm - 1,
+  },
+  numberInput: {
+    marginTop: theme.spacing.sm,
+    textAlign: 'center',
+    fontSize: theme.typography.fontSize['2xl'],
+    fontWeight: '600',
+  },
+  inputError: {
+    borderColor: theme.colors.danger,
+    borderWidth: 1,
+  },
+  errorText: {
+    color: theme.colors.danger,
+    fontSize: theme.typography.fontSize.sm,
+    marginTop: theme.spacing.xs,
+    textAlign: 'center',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.lg,
+  },
+  modalButton: {
+    flex: 1,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+}));

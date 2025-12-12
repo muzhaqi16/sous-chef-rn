@@ -1,11 +1,21 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#/utils';
 import { IconButton } from '#components/atoms/IconButton';
-import { useDeleteAccountMutation } from '#generated';
+import {
+  useDeleteAccountMutation,
+  useCanDeleteAccountQuery,
+} from '#generated';
 import { useAuth, useAppNavigation } from '#hooks';
 
 export const DeleteAccountScreen: React.FC = () => {
@@ -15,6 +25,19 @@ export const DeleteAccountScreen: React.FC = () => {
 
   const [confirmText, setConfirmText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Check if account can be deleted
+  const {
+    data: eligibilityData,
+    loading: checkingEligibility,
+    error: eligibilityError,
+    refetch: refetchEligibility,
+  } = useCanDeleteAccountQuery({
+    fetchPolicy: 'network-only',
+  });
+
+  const canDelete = eligibilityData?.canDeleteAccount?.canDelete ?? false;
+  const blockers = eligibilityData?.canDeleteAccount?.blockers ?? [];
 
   const [deleteAccountMutation] = useDeleteAccountMutation({
     onCompleted: () => logout(),
@@ -55,6 +78,217 @@ export const DeleteAccountScreen: React.FC = () => {
     );
   };
 
+  const renderLoadingState = () => (
+    <View style={styles.centerContainer}>
+      <ActivityIndicator size="large" color={theme.colors.primary} />
+      <Text style={styles.loadingText}>Checking account status...</Text>
+    </View>
+  );
+
+  const renderErrorState = () => (
+    <View style={styles.centerContainer}>
+      <Icon
+        library="Feather"
+        name="alert-circle"
+        size={48}
+        color={theme.colors.error}
+      />
+      <Text style={styles.errorTitle}>Unable to check account status</Text>
+      <Text style={styles.errorText}>
+        {eligibilityError?.message || 'An error occurred. Please try again.'}
+      </Text>
+      <TouchableOpacity
+        style={styles.retryButton}
+        onPress={() => refetchEligibility()}
+      >
+        <Text style={styles.retryButtonText}>Retry</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderBlockedState = () => (
+    <KeyboardAwareScrollView
+      style={styles.content}
+      contentContainerStyle={styles.contentContainer}
+    >
+      <View style={styles.blockedWarningContainer}>
+        <Icon
+          library="Feather"
+          name="alert-circle"
+          size={48}
+          color={theme.colors.warning}
+        />
+        <Text style={styles.blockedWarningTitle}>Cannot Delete Account</Text>
+      </View>
+
+      <Text style={styles.blockedDescription}>
+        Your account cannot be deleted until you resolve the following:
+      </Text>
+
+      {blockers.map((blocker, index) => (
+        <View key={blocker.resourceId || index} style={styles.blockerCard}>
+          <View style={styles.blockerHeader}>
+            <Icon
+              library="Feather"
+              name="home"
+              size={20}
+              color={theme.colors.primary}
+            />
+            <Text style={styles.blockerResourceName}>
+              {blocker.resourceName}
+            </Text>
+          </View>
+          <Text style={styles.blockerMessage}>{blocker.message}</Text>
+          <View style={styles.resolutionSection}>
+            <Text style={styles.resolutionTitle}>To resolve:</Text>
+            <Text style={styles.resolutionOption}>
+              • Transfer ownership to another member
+            </Text>
+            <Text style={styles.resolutionOption}>
+              • Remove all members from the home
+            </Text>
+            <Text style={styles.resolutionOption}>• Delete the home</Text>
+          </View>
+        </View>
+      ))}
+
+      <TouchableOpacity style={styles.goBackButton} onPress={goBack}>
+        <Text style={styles.goBackButtonText}>Go Back</Text>
+      </TouchableOpacity>
+    </KeyboardAwareScrollView>
+  );
+
+  const renderDeleteForm = () => (
+    <KeyboardAwareScrollView
+      style={styles.content}
+      contentContainerStyle={styles.contentContainer}
+      keyboardShouldPersistTaps="handled"
+      enableOnAndroid={true}
+      extraScrollHeight={20}
+    >
+      <View style={styles.warningContainer}>
+        <Icon
+          library="Feather"
+          name="alert-triangle"
+          size={48}
+          color={theme.colors.error}
+        />
+        <Text style={styles.warningTitle}>Warning: This is permanent!</Text>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>What will be deleted:</Text>
+        <View style={styles.bulletPoint}>
+          <Icon
+            library="Feather"
+            name="x-circle"
+            size={20}
+            color={theme.colors.error}
+          />
+          <Text style={styles.bulletText}>
+            Your profile and account information
+          </Text>
+        </View>
+        <View style={styles.bulletPoint}>
+          <Icon
+            library="Feather"
+            name="x-circle"
+            size={20}
+            color={theme.colors.error}
+          />
+          <Text style={styles.bulletText}>
+            All your pantry items and inventory
+          </Text>
+        </View>
+        <View style={styles.bulletPoint}>
+          <Icon
+            library="Feather"
+            name="x-circle"
+            size={20}
+            color={theme.colors.error}
+          />
+          <Text style={styles.bulletText}>Your shopping lists</Text>
+        </View>
+        <View style={styles.bulletPoint}>
+          <Icon
+            library="Feather"
+            name="x-circle"
+            size={20}
+            color={theme.colors.error}
+          />
+          <Text style={styles.bulletText}>
+            All associated data and preferences
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Before you proceed:</Text>
+        <Text style={styles.text}>
+          • This action is <Text style={styles.bold}>irreversible</Text>
+        </Text>
+        <Text style={styles.text}>• You will be immediately logged out</Text>
+        <Text style={styles.text}>
+          • You cannot recover your account or data after deletion
+        </Text>
+      </View>
+
+      <View style={styles.confirmationSection}>
+        <Text style={styles.confirmationLabel}>
+          Type <Text style={styles.bold}>DELETE</Text> to confirm:
+        </Text>
+        <TextInput
+          style={styles.input}
+          value={confirmText}
+          onChangeText={setConfirmText}
+          placeholder="Type DELETE"
+          placeholderTextColor={theme.colors.textSecondary}
+          autoCapitalize="characters"
+          autoCorrect={false}
+          editable={!isDeleting}
+        />
+      </View>
+
+      <TouchableOpacity
+        style={[
+          styles.deleteButton,
+          (confirmText.trim().toUpperCase() !== 'DELETE' || isDeleting) &&
+            styles.deleteButtonDisabled,
+        ]}
+        onPress={handleDeleteAccount}
+        disabled={confirmText.trim().toUpperCase() !== 'DELETE' || isDeleting}
+      >
+        <Text style={styles.deleteButtonText}>
+          {isDeleting ? 'Deleting Account...' : 'Delete My Account Forever'}
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.cancelButton}
+        onPress={goBack}
+        disabled={isDeleting}
+      >
+        <Text style={styles.cancelButtonText}>Cancel</Text>
+      </TouchableOpacity>
+    </KeyboardAwareScrollView>
+  );
+
+  const renderContent = () => {
+    if (checkingEligibility) {
+      return renderLoadingState();
+    }
+
+    if (eligibilityError) {
+      return renderErrorState();
+    }
+
+    if (!canDelete && blockers.length > 0) {
+      return renderBlockedState();
+    }
+
+    return renderDeleteForm();
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -68,118 +302,7 @@ export const DeleteAccountScreen: React.FC = () => {
         <View style={{ width: 40 }} />
       </View>
 
-      <KeyboardAwareScrollView
-        style={styles.content}
-        contentContainerStyle={styles.contentContainer}
-        keyboardShouldPersistTaps="handled"
-        enableOnAndroid={true}
-        extraScrollHeight={20}
-      >
-        <View style={styles.warningContainer}>
-          <Icon
-            library="Feather"
-            name="alert-triangle"
-            size={48}
-            color={theme.colors.error}
-          />
-          <Text style={styles.warningTitle}>Warning: This is permanent!</Text>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>What will be deleted:</Text>
-          <View style={styles.bulletPoint}>
-            <Icon
-              library="Feather"
-              name="x-circle"
-              size={20}
-              color={theme.colors.error}
-            />
-            <Text style={styles.bulletText}>
-              Your profile and account information
-            </Text>
-          </View>
-          <View style={styles.bulletPoint}>
-            <Icon
-              library="Feather"
-              name="x-circle"
-              size={20}
-              color={theme.colors.error}
-            />
-            <Text style={styles.bulletText}>
-              All your pantry items and inventory
-            </Text>
-          </View>
-          <View style={styles.bulletPoint}>
-            <Icon
-              library="Feather"
-              name="x-circle"
-              size={20}
-              color={theme.colors.error}
-            />
-            <Text style={styles.bulletText}>Your shopping lists</Text>
-          </View>
-          <View style={styles.bulletPoint}>
-            <Icon
-              library="Feather"
-              name="x-circle"
-              size={20}
-              color={theme.colors.error}
-            />
-            <Text style={styles.bulletText}>
-              All associated data and preferences
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Before you proceed:</Text>
-          <Text style={styles.text}>
-            • This action is <Text style={styles.bold}>irreversible</Text>
-          </Text>
-          <Text style={styles.text}>• You will be immediately logged out</Text>
-          <Text style={styles.text}>
-            • You cannot recover your account or data after deletion
-          </Text>
-        </View>
-
-        <View style={styles.confirmationSection}>
-          <Text style={styles.confirmationLabel}>
-            Type <Text style={styles.bold}>DELETE</Text> to confirm:
-          </Text>
-          <TextInput
-            style={styles.input}
-            value={confirmText}
-            onChangeText={setConfirmText}
-            placeholder="Type DELETE"
-            placeholderTextColor={theme.colors.textSecondary}
-            autoCapitalize="characters"
-            autoCorrect={false}
-            editable={!isDeleting}
-          />
-        </View>
-
-        <TouchableOpacity
-          style={[
-            styles.deleteButton,
-            (confirmText.trim().toUpperCase() !== 'DELETE' || isDeleting) &&
-              styles.deleteButtonDisabled,
-          ]}
-          onPress={handleDeleteAccount}
-          disabled={confirmText.trim().toUpperCase() !== 'DELETE' || isDeleting}
-        >
-          <Text style={styles.deleteButtonText}>
-            {isDeleting ? 'Deleting Account...' : 'Delete My Account Forever'}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.cancelButton}
-          onPress={goBack}
-          disabled={isDeleting}
-        >
-          <Text style={styles.cancelButtonText}>Cancel</Text>
-        </TouchableOpacity>
-      </KeyboardAwareScrollView>
+      {renderContent()}
     </SafeAreaView>
   );
 };
@@ -210,6 +333,117 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.lg,
     paddingBottom: 100,
   },
+  // Loading state styles
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: theme.spacing.lg,
+  },
+  loadingText: {
+    marginTop: theme.spacing.md,
+    fontSize: theme.fonts.size.md,
+    color: theme.colors.textSecondary,
+  },
+  // Error state styles
+  errorTitle: {
+    marginTop: theme.spacing.md,
+    fontSize: theme.fonts.size.lg,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textPrimary,
+    textAlign: 'center',
+  },
+  errorText: {
+    marginTop: theme.spacing.sm,
+    fontSize: theme.fonts.size.md,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+  },
+  retryButton: {
+    marginTop: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.xl,
+    paddingVertical: theme.spacing.md,
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.radii.md,
+  },
+  retryButtonText: {
+    color: theme.colors.white,
+    fontSize: theme.fonts.size.md,
+    fontWeight: theme.fonts.weight.semibold,
+  },
+  // Blocked state styles
+  blockedWarningContainer: {
+    alignItems: 'center',
+    padding: theme.spacing.lg,
+    backgroundColor: `${theme.colors.warning}15`,
+    borderRadius: theme.radii.md,
+    marginBottom: theme.spacing.lg,
+  },
+  blockedWarningTitle: {
+    fontSize: theme.fonts.size.xl,
+    fontWeight: theme.fonts.weight.bold,
+    color: theme.colors.warning,
+    marginTop: 12,
+  },
+  blockedDescription: {
+    fontSize: theme.fonts.size.md,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.lg,
+  },
+  blockerCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radii.md,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  blockerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing.sm,
+  },
+  blockerResourceName: {
+    fontSize: theme.fonts.size.md,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textPrimary,
+    marginLeft: theme.spacing.sm,
+  },
+  blockerMessage: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.md,
+  },
+  resolutionSection: {
+    backgroundColor: theme.colors.background,
+    padding: theme.spacing.sm,
+    borderRadius: theme.radii.sm,
+  },
+  resolutionTitle: {
+    fontSize: theme.fonts.size.sm,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.xs,
+  },
+  resolutionOption: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textSecondary,
+    marginLeft: theme.spacing.sm,
+    marginBottom: 4,
+  },
+  goBackButton: {
+    marginTop: theme.spacing.lg,
+    padding: theme.spacing.md,
+    borderRadius: theme.radii.md,
+    alignItems: 'center',
+    backgroundColor: theme.colors.primary,
+  },
+  goBackButtonText: {
+    color: theme.colors.white,
+    fontSize: theme.fonts.size.md,
+    fontWeight: theme.fonts.weight.semibold,
+  },
+  // Delete form styles (existing)
   warningContainer: {
     alignItems: 'center',
     padding: theme.spacing.lg,

@@ -27,12 +27,12 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.sm,
   },
   title: {
-    fontSize: 18,
+    fontSize: theme.typography.fontSize.lg,
     fontWeight: 'bold',
     color: theme.colors.textPrimary,
   },
   seeAll: {
-    fontSize: 14,
+    fontSize: theme.typography.fontSize.sm,
     color: theme.colors.primary,
   },
   chipList: {

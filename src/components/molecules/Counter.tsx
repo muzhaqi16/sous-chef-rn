@@ -1,7 +1,7 @@
 import React from 'react';
 import Icon from '@react-native-vector-icons/ionicons';
 import {Text, View, Pressable} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 
 export const Counter = ({
   count,
@@ -16,6 +16,8 @@ export const Counter = ({
   disabled?: boolean;
   label?: string;
 }) => {
+  const {theme} = useUnistyles();
+
   const handleDecrement = (e: any) => {
     e.stopPropagation();
     if (!disabled) {
@@ -30,6 +32,8 @@ export const Counter = ({
     }
   };
 
+  const iconColor = disabled ? theme.colors.textTertiary : theme.colors.textPrimary;
+
   return (
     <View
       style={[styles.container, disabled && styles.containerDisabled]}
@@ -42,10 +46,10 @@ export const Counter = ({
         text: String(count),
       }}
       accessibilityActions={[
-        { name: 'increment', label: `Increase ${label}` },
-        { name: 'decrement', label: `Decrease ${label}` },
+        {name: 'increment', label: `Increase ${label}`},
+        {name: 'decrement', label: `Decrease ${label}`},
       ]}
-      onAccessibilityAction={(event) => {
+      onAccessibilityAction={event => {
         switch (event.nativeEvent.actionName) {
           case 'increment':
             if (!disabled) onIncrement();
@@ -54,108 +58,80 @@ export const Counter = ({
             if (!disabled) onDecrement();
             break;
         }
-      }}
-    >
+      }}>
       <Pressable
         onPress={handleDecrement}
         disabled={disabled}
         style={({pressed}) => [
-          styles.cardAdd,
+          styles.counterButton,
           pressed && !disabled && styles.pressed,
         ]}
         accessible={true}
         accessibilityRole="button"
         accessibilityLabel={`Decrease ${label}`}
         accessibilityHint={`Current ${label} is ${count}`}
-        accessibilityState={{ disabled }}
-      >
-        <Icon color={disabled ? '#b0b0b0' : '#1d1d1d'} name="remove" size={11} />
+        accessibilityState={{disabled}}>
+        <Icon color={iconColor} name="remove" size={11} />
       </Pressable>
       <Text
         style={[styles.counterActionText, disabled && styles.textDisabled]}
-        accessibilityLabel={`${label} count: ${count}`}
-      >
+        accessibilityLabel={`${label} count: ${count}`}>
         {count}
       </Text>
       <Pressable
         onPress={handleIncrement}
         disabled={disabled}
         style={({pressed}) => [
-          styles.cardMinus,
+          styles.counterButton,
           pressed && !disabled && styles.pressed,
         ]}
         accessible={true}
         accessibilityRole="button"
         accessibilityLabel={`Increase ${label}`}
         accessibilityHint={`Current ${label} is ${count}`}
-        accessibilityState={{ disabled }}
-      >
-        <Icon color={disabled ? '#b0b0b0' : '#1d1d1d'} name="add" size={11} />
+        accessibilityState={{disabled}}>
+        <Icon color={iconColor} name="add" size={11} />
       </Pressable>
     </View>
   );
 };
+
 const styles = StyleSheet.create(theme => ({
   container: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginRight: 10,
+    marginRight: theme.spacing['2.5'],
     borderWidth: 1,
     backgroundColor: theme.colors.surface,
-    borderColor: '#ececec',
+    borderColor: theme.colors.borderLight,
     borderStyle: 'solid',
-    borderRadius: 9999,
+    borderRadius: theme.radii.full,
   },
-  cardAdd: {
-    zIndex: 9,
+  counterButton: {
+    zIndex: theme.zIndex.base,
     backgroundColor: theme.colors.surface,
     width: 30,
     height: 30,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 9999,
-    shadowColor: theme.colors.black,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.23,
-    shadowRadius: 2.62,
-    elevation: 4,
+    borderRadius: theme.radii.full,
+    ...theme.shadows.sm,
   },
   counterActionText: {
-    fontSize: 20,
-    paddingHorizontal: 10,
-
+    fontSize: theme.typography.fontSize.xl,
+    paddingHorizontal: theme.spacing['2.5'],
     lineHeight: 20,
     fontWeight: '500',
-    color: '#000',
-  },
-  cardMinus: {
-    zIndex: 9,
-    backgroundColor: theme.colors.surface,
-    width: 30,
-    height: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 9999,
-    shadowColor: theme.colors.black,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.23,
-    shadowRadius: 2.62,
-    elevation: 4,
+    color: theme.colors.textPrimary,
   },
   pressed: {
     opacity: 0.7,
   },
   containerDisabled: {
-    borderColor: '#d0d0d0',
+    borderColor: theme.colors.border,
   },
   textDisabled: {
-    color: '#b0b0b0',
+    color: theme.colors.textTertiary,
   },
 }));

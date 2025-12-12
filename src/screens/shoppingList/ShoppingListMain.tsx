@@ -24,7 +24,7 @@ import { useScreenTransition } from '#hooks/performance';
 import { Telemetry } from '#/services/telemetry';
 import { ShoppingListTabs } from '#/components/organisms/ShoppingListTabs';
 import { ShoppingListActionsProvider } from '#context/ShoppingListActionsContext';
-import { useScanner } from '#context';
+import { useTabBarActions } from '#context';
 import { useUnistyles } from 'react-native-unistyles';
 import { MoveToPantryModal } from '#/components/modals/MoveToPantryModal';
 import {
@@ -62,8 +62,8 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
     showOnMount: false,
   });
 
-  const { navigate, navigateTo } = useAppNavigation();
-  const { setScannerProps } = useScanner();
+  const { navigate, navigateTo, isFocused } = useAppNavigation();
+  const { setScannerProps, setAddProps } = useTabBarActions();
   const {
     theme: { colors },
   } = useUnistyles();
@@ -206,6 +206,9 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
     storageState?: StorageState;
     expiresAt?: string;
     removeFromList: boolean;
+    costPerUnit?: number;
+    totalCost?: number;
+    notes?: string;
   }) => {
     if (!selectedItemForMove) return;
 
@@ -222,6 +225,9 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
             storageState: input.storageState,
             expiresAt: input.expiresAt,
             removeFromList: input.removeFromList,
+            costPerUnit: input.costPerUnit,
+            totalCost: input.totalCost,
+            notes: input.notes,
           },
         },
       });
@@ -392,6 +398,19 @@ const ShoppingListMainScreen: React.FC = React.memo(() => {
       setScannerProps(undefined, false);
     };
   }, [setScannerProps, navigateTo, currentListId, items, lists.length]);
+
+  // Register add button action - navigate to add shopping list item screen
+  useEffect(() => {
+    if (isFocused && currentListId) {
+      setAddProps(() => {
+        Telemetry.trackEvent('add_item_from_tab_bar', { list_id: currentListId });
+        navigate('AddItem', { listId: currentListId });
+      }, true);
+    }
+    return () => {
+      setAddProps(undefined, false);
+    };
+  }, [isFocused, currentListId, setAddProps, navigate]);
 
   // Memoized footer
   const footerComponent = useMemo(

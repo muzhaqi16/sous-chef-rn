@@ -102,34 +102,34 @@ export const ListItem = React.memo(ListItemComponent);
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    borderRadius: 12,
+    borderRadius: theme.radii.lg,
     overflow: 'hidden',
     backgroundColor: theme.colors.surface,
   },
   contentContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    minHeight: 87,
+    padding: theme.spacing.md,
+    minHeight: 87, // Specific design requirement for list item height
   },
   leftIcon: {
-    marginRight: 12,
+    marginRight: theme.spacing['3'],
   },
   content: {
     flex: 1,
   },
   title: {
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.base,
     fontWeight: '500',
     color: theme.colors.textPrimary,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: theme.typography.fontSize.sm,
     color: theme.colors.textSecondary,
-    marginTop: 4,
+    marginTop: theme.spacing.xs,
   },
   subtitleContainer: {
-    marginTop: 4,
+    marginTop: theme.spacing.xs,
   },
   purchasedText: {
     textDecorationLine: 'line-through',

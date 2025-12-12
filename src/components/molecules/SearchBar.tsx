@@ -65,7 +65,7 @@ export const SearchBar: FC<SearchBarProps> = ({
                   },
                   action.style,
                 ]}
-                color={action.color || '#fff'}
+                color={action.color || theme.colors.white}
                 backgroundColor={action.backgroundColor || theme.colors.primary}
                 size={action.size}
                 accessibilityLabel={action.accessibilityLabel || `${action.icon} button`}

@@ -282,7 +282,10 @@ mutation UpdateShoppingList($id: ID!, $input: UpdateShoppingListInput!) {
 }
 
 mutation DeleteShoppingList($id: ID!) {
-  deleteShoppingList(id: $id)
+  deleteShoppingList(id: $id) {
+    id
+    name
+  }
 }
 
 mutation SetDefaultShoppingList($id: ID!) {
@@ -318,7 +321,6 @@ mutation AddCollaborator($data: AddCollaboratorInput!) {
     canInviteOthers
     canViewHistory
     canExport
-    inviteToken
     invitedAt
     statusChangedAt
     expiresAt

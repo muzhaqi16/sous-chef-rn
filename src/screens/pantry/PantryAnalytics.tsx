@@ -714,7 +714,7 @@ const styles = StyleSheet.create(theme => ({
   legendDot: {
     width: 8,
     height: 8,
-    borderRadius: 4,
+    borderRadius: theme.radii.full,
   },
   legendText: {
     fontSize: theme.fonts.size.xs,

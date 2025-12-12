@@ -25,6 +25,8 @@ interface RestockPantryItemModalProps {
     unitId?: string,
     weight?: number,
     weightUnitId?: string,
+    costPerUnit?: number,
+    totalCost?: number,
   ) => void;
 }
 
@@ -41,6 +43,8 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
   const [quantityInput, setQuantityInput] = useState('1');
   const [weightInput, setWeightInput] = useState('');
   const [notes, setNotes] = useState('');
+  const [costPerUnitInput, setCostPerUnitInput] = useState('');
+  const [totalCostInput, setTotalCostInput] = useState('');
 
   // Control bottom sheet visibility based on visible prop
   useEffect(() => {
@@ -50,6 +54,8 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
       setQuantityInput('1');
       setWeightInput('');
       setNotes('');
+      setCostPerUnitInput('');
+      setTotalCostInput('');
     } else {
       bottomSheetRef.current?.dismiss();
     }
@@ -94,9 +100,26 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
       ? pantryItem.packageWeightUnit?.id
       : undefined;
 
-    onConfirm(quantityValue, quantityInput, notes, unitId, weightValue ?? undefined, weightUnitId);
+    // Parse cost values (optional)
+    const costPerUnit = costPerUnitInput
+      ? parseFloat(costPerUnitInput)
+      : undefined;
+    const totalCost = totalCostInput
+      ? parseFloat(totalCostInput)
+      : undefined;
+
+    onConfirm(
+      quantityValue,
+      quantityInput,
+      notes,
+      unitId,
+      weightValue ?? undefined,
+      weightUnitId,
+      isNaN(costPerUnit!) ? undefined : costPerUnit,
+      isNaN(totalCost!) ? undefined : totalCost,
+    );
     onClose();
-  }, [pantryItem, quantityInput, weightInput, notes, onConfirm, onClose]);
+  }, [pantryItem, quantityInput, weightInput, notes, costPerUnitInput, totalCostInput, onConfirm, onClose]);
 
   const newQuantity = pantryItem ? calculateNewQuantity() : null;
   const newWeight = pantryItem ? calculateNewWeight() : null;
@@ -191,6 +214,31 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
               </View>
             )}
 
+            {/* Cost Tracking (Optional) */}
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>Cost (Optional)</Text>
+              <View style={styles.costRow}>
+                <View style={styles.costField}>
+                  <FormInput
+                    label="Cost per Unit"
+                    value={costPerUnitInput}
+                    onChangeText={setCostPerUnitInput}
+                    placeholder="0.00"
+                    keyboardType="decimal-pad"
+                  />
+                </View>
+                <View style={styles.costField}>
+                  <FormInput
+                    label="Total Cost"
+                    value={totalCostInput}
+                    onChangeText={setTotalCostInput}
+                    placeholder="0.00"
+                    keyboardType="decimal-pad"
+                  />
+                </View>
+              </View>
+            </View>
+
             {/* Notes (Optional) */}
             <View style={styles.section}>
               <FormInput
@@ -266,6 +314,19 @@ const styles = StyleSheet.create(theme => ({
   },
   section: {
     marginBottom: theme.spacing.xl,
+  },
+  sectionLabel: {
+    fontSize: theme.fonts.size.sm,
+    fontWeight: theme.fonts.weight.medium,
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.sm,
+  },
+  costRow: {
+    flexDirection: 'row',
+    gap: theme.spacing.md,
+  },
+  costField: {
+    flex: 1,
   },
   newQuantityText: {
     fontSize: theme.fonts.size.sm,

@@ -1,14 +1,8 @@
 import React, {useState} from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  FlatList,
-  Modal,
-} from 'react-native';
-import {useUnistyles} from 'react-native-unistyles';
+import {View, Text, TouchableOpacity, FlatList, Modal, ViewStyle} from 'react-native';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {Icon} from '#utils';
+import {FormFieldWrapper} from '../atoms/FormFieldWrapper';
 
 interface SelectOption {
   label: string;
@@ -23,7 +17,7 @@ interface FormSelectProps {
   error?: string;
   required?: boolean;
   placeholder?: string;
-  containerStyle?: any;
+  containerStyle?: ViewStyle;
 }
 
 export const FormSelect: React.FC<FormSelectProps> = ({
@@ -41,93 +35,6 @@ export const FormSelect: React.FC<FormSelectProps> = ({
 
   const selectedOption = options.find(option => option.value === value);
 
-  const styles = StyleSheet.create({
-    container: {
-      marginBottom: 16,
-      ...containerStyle,
-    },
-    label: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: theme.colors.textPrimary,
-      marginBottom: 8,
-    },
-    required: {
-      color: '#dc3545',
-    },
-    selectButton: {
-      borderWidth: 1,
-      borderColor: error ? '#dc3545' : theme.colors.border,
-      borderRadius: 8,
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      backgroundColor: theme.colors.surface,
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-    },
-    selectText: {
-      fontSize: 16,
-      color: selectedOption
-        ? theme.colors.textPrimary
-        : theme.colors.textSecondary,
-    },
-    errorText: {
-      fontSize: 14,
-      color: '#dc3545',
-      marginTop: 4,
-    },
-    modal: {
-      flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    modalContent: {
-      backgroundColor: theme.colors.surface,
-      borderRadius: 12,
-      padding: 20,
-      maxHeight: '80%',
-      width: '90%',
-    },
-    modalTitle: {
-      fontSize: 18,
-      fontWeight: '600',
-      color: theme.colors.textPrimary,
-      marginBottom: 16,
-      textAlign: 'center',
-    },
-    option: {
-      paddingVertical: 12,
-      paddingHorizontal: 16,
-      borderRadius: 8,
-    },
-    selectedOption: {
-      backgroundColor: theme.colors.primary + '20',
-    },
-    optionText: {
-      fontSize: 16,
-      color: theme.colors.textPrimary,
-    },
-    selectedOptionText: {
-      color: theme.colors.primary,
-      fontWeight: '600',
-    },
-    closeButton: {
-      marginTop: 16,
-      paddingVertical: 12,
-      paddingHorizontal: 24,
-      backgroundColor: theme.colors.border,
-      borderRadius: 8,
-      alignSelf: 'center',
-    },
-    closeButtonText: {
-      fontSize: 16,
-      color: theme.colors.textPrimary,
-      fontWeight: '500',
-    },
-  });
-
   const handleSelect = (optionValue: string) => {
     onValueChange(optionValue);
     setModalVisible(false);
@@ -139,8 +46,7 @@ export const FormSelect: React.FC<FormSelectProps> = ({
       <TouchableOpacity
         style={[styles.option, isSelected && styles.selectedOption]}
         onPress={() => handleSelect(item.value)}>
-        <Text
-          style={[styles.optionText, isSelected && styles.selectedOptionText]}>
+        <Text style={[styles.optionText, isSelected && styles.selectedOptionText]}>
           {item.label}
         </Text>
       </TouchableOpacity>
@@ -148,16 +54,19 @@ export const FormSelect: React.FC<FormSelectProps> = ({
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.label}>
-        {label}
-        {required && <Text style={styles.required}> *</Text>}
-      </Text>
-
+    <FormFieldWrapper
+      label={label}
+      error={error}
+      required={required}
+      containerStyle={containerStyle}>
       <TouchableOpacity
-        style={styles.selectButton}
+        style={[styles.selectButton, error && styles.selectButtonError]}
         onPress={() => setModalVisible(true)}>
-        <Text style={styles.selectText}>
+        <Text
+          style={[
+            styles.selectText,
+            !selectedOption && styles.selectTextPlaceholder,
+          ]}>
           {selectedOption ? selectedOption.label : placeholder}
         </Text>
         <Icon
@@ -166,8 +75,6 @@ export const FormSelect: React.FC<FormSelectProps> = ({
           color={theme.colors.textSecondary}
         />
       </TouchableOpacity>
-
-      {error && <Text style={styles.errorText}>{error}</Text>}
 
       <Modal
         visible={modalVisible}
@@ -182,7 +89,6 @@ export const FormSelect: React.FC<FormSelectProps> = ({
               renderItem={renderOption}
               keyExtractor={item => item.value}
               showsVerticalScrollIndicator={false}
-              // Performance optimizations
               maxToRenderPerBatch={10}
               windowSize={5}
               removeClippedSubviews={true}
@@ -197,6 +103,79 @@ export const FormSelect: React.FC<FormSelectProps> = ({
           </View>
         </View>
       </Modal>
-    </View>
+    </FormFieldWrapper>
   );
 };
+
+const styles = StyleSheet.create(theme => ({
+  selectButton: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radii.md,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing['3'],
+    backgroundColor: theme.colors.surface,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  selectButtonError: {
+    borderColor: theme.colors.error,
+  },
+  selectText: {
+    fontSize: theme.typography.fontSize.base,
+    color: theme.colors.textPrimary,
+  },
+  selectTextPlaceholder: {
+    color: theme.colors.textSecondary,
+  },
+  modal: {
+    flex: 1,
+    backgroundColor: theme.colors.overlays.medium,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radii.lg,
+    padding: theme.spacing['5'],
+    maxHeight: '80%',
+    width: '90%',
+  },
+  modalTitle: {
+    fontSize: theme.typography.fontSize.lg,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.md,
+    textAlign: 'center',
+  },
+  option: {
+    paddingVertical: theme.spacing['3'],
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.radii.md,
+  },
+  selectedOption: {
+    backgroundColor: theme.colors.primaryLight,
+  },
+  optionText: {
+    fontSize: theme.typography.fontSize.base,
+    color: theme.colors.textPrimary,
+  },
+  selectedOptionText: {
+    color: theme.colors.primary,
+    fontWeight: '600',
+  },
+  closeButton: {
+    marginTop: theme.spacing.md,
+    paddingVertical: theme.spacing['3'],
+    paddingHorizontal: theme.spacing.lg,
+    backgroundColor: theme.colors.border,
+    borderRadius: theme.radii.md,
+    alignSelf: 'center',
+  },
+  closeButtonText: {
+    fontSize: theme.typography.fontSize.base,
+    color: theme.colors.textPrimary,
+    fontWeight: '500',
+  },
+}));

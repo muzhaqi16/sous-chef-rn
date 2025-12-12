@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { Text } from 'react-native';
 import { GraphQLError } from 'graphql';
@@ -8,6 +8,14 @@ import {
   useVerifyEmailMutation,
   useResendVerificationEmailMutation,
 } from '#generated';
+
+// Exponential backoff delays in seconds: immediate, then 30s, 1m, 3m, 5m
+const RESEND_BACKOFF_DELAYS = [0, 30, 60, 180, 300];
+
+const getBackoffDelay = (attemptCount: number): number => {
+  const index = Math.min(attemptCount, RESEND_BACKOFF_DELAYS.length - 1);
+  return RESEND_BACKOFF_DELAYS[index];
+};
 
 type CodeVerificationValues = {
   code: string;
@@ -19,6 +27,11 @@ export function CodeVerificationScreen() {
   const [verifyEmail] = useVerifyEmailMutation();
   const [resendVerificationEmail] = useResendVerificationEmailMutation();
 
+  // Backoff state for resend rate limiting
+  const [resendAttempts, setResendAttempts] = useState(0);
+  const [countdown, setCountdown] = useState(0);
+  const countdownRef = useRef<NodeJS.Timeout | null>(null);
+
   const {
     control,
     handleSubmit,
@@ -26,6 +39,15 @@ export function CodeVerificationScreen() {
   } = useForm({
     defaultValues: { code: '' },
   });
+
+  // Cleanup countdown interval on unmount
+  useEffect(() => {
+    return () => {
+      if (countdownRef.current) {
+        clearInterval(countdownRef.current);
+      }
+    };
+  }, []);
 
   // No navigation effects needed - conditional groups handle it
   useEffect(() => {
@@ -35,6 +57,28 @@ export function CodeVerificationScreen() {
       console.log('User email verified, navigation will update automatically');
     }
   }, [user?.emailVerified]);
+
+  // Start countdown timer for backoff
+  const startCountdown = useCallback((seconds: number) => {
+    if (countdownRef.current) {
+      clearInterval(countdownRef.current);
+    }
+
+    setCountdown(seconds);
+
+    countdownRef.current = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          if (countdownRef.current) {
+            clearInterval(countdownRef.current);
+            countdownRef.current = null;
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, []);
 
   const onVerifyCode = async (data: CodeVerificationValues) => {
     try {
@@ -53,12 +97,21 @@ export function CodeVerificationScreen() {
   };
 
   const onResend = async () => {
-    try {
-      if (!user?.email) return;
+    // Prevent resend during countdown
+    if (countdown > 0 || !user?.email) return;
 
+    try {
       const response = await resendVerificationEmail({
         variables: { email: user.email },
       });
+
+      // Increment attempts and start countdown for next request
+      const newAttempts = resendAttempts + 1;
+      setResendAttempts(newAttempts);
+      const nextDelay = getBackoffDelay(newAttempts);
+      if (nextDelay > 0) {
+        startCountdown(nextDelay);
+      }
 
       // Check for errors in response (errorPolicy: 'all' returns errors in error.errors)
       if (response.error && 'errors' in response.error) {
@@ -111,6 +164,8 @@ export function CodeVerificationScreen() {
         footerText="Didn't get the email?"
         footerLinkText="Resend code"
         onFooterLinkPress={onResend}
+        footerLinkDisabled={countdown > 0}
+        footerLinkCountdown={countdown}
       />
     </AuthWrapper>
   );

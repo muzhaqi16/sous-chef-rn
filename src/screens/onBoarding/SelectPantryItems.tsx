@@ -181,16 +181,16 @@ export const SelectPantryItems = () => {
 const styles = StyleSheet.create(theme => ({
   form: {
     flex: 1,
-    marginBottom: 12,
+    marginBottom: theme.spacing['3'],
   },
   helperText: {
-    fontSize: 14,
-    color: theme.colors.textSecondary || '#666',
-    marginBottom: 16,
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.md,
     textAlign: 'center',
   },
   listContent: {
-    paddingBottom: 16,
+    paddingBottom: theme.spacing.md,
     paddingHorizontal: theme.spacing.md,
   },
   chipContainer: {
@@ -201,22 +201,22 @@ const styles = StyleSheet.create(theme => ({
   },
   nextButton: {
     backgroundColor: theme.colors.primary,
-    padding: 16,
-    borderRadius: 8,
+    padding: theme.spacing.md,
+    borderRadius: theme.radii.sm,
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: theme.spacing.lg,
   },
   nextText: {
     color: theme.colors.white,
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.md,
     fontWeight: 'bold',
   },
   errorText: {
-    color: theme.colors.error || 'red',
+    color: theme.colors.error,
     textAlign: 'center',
-    marginVertical: 12,
+    marginVertical: theme.spacing['3'],
   },
   loader: {
-    marginVertical: 24,
+    marginVertical: theme.spacing.xl,
   },
 }));

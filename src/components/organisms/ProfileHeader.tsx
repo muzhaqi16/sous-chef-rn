@@ -74,8 +74,8 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    paddingVertical: 16,
+    paddingHorizontal: theme.spacing.xl,
+    paddingVertical: theme.spacing.md,
   },
   avatarContainer: {},
   avatar: {
@@ -99,7 +99,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     width: 28,
     height: 28,
-    borderRadius: 9999,
+    borderRadius: theme.radii.full,
     backgroundColor: theme.colors.primary,
   },
 }));

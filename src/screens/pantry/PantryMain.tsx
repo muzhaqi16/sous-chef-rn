@@ -5,56 +5,41 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { Alert, View } from 'react-native';
-import { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
-import { PaginationFooter } from '#/components/organisms/PaginationFooter';
+import { View } from 'react-native';
 import { useAppNavigation } from '#hooks';
 import { useUnistyles, StyleSheet } from 'react-native-unistyles';
-import {
-  useDefaultHome,
-  usePantryManagement,
-  usePantryItemTransformation,
-  usePantrySelectorConfig,
-} from '#hooks';
-import { useHaptic } from '#hooks/haptic';
+import { usePantryManagement, usePantrySelectorConfig } from '#hooks';
+import { usePantryItemActions, useCurrentPantry } from '#hooks/pantry';
 import { useScreenTransition } from '#hooks/performance';
 import { useScannerSetup } from '#hooks/scanner';
 import { useSelectorManagement } from '#hooks/ui';
-import { useAppStore, selectPantryState } from '#store/useAppStore';
-import { useShallow } from 'zustand/react/shallow';
-import {
-  useGetHomeBasicQuery,
-  useCreatePantryItemUsageMutation,
-  useRecordPantryItemWasteMutation,
-  useRestockPantryItemMutation,
-  UsagePurpose,
-  WasteReason,
-} from '#generated';
-import { useScanner } from '#context';
+import { useAppStore } from '#store/useAppStore';
+import { useStore } from '#store';
+import { useGetHomeBasicQuery } from '#generated';
+import { useTabBarActions } from '#context';
 import { useFeatureHint } from '#/hooks/useFeatureHint';
 import { FeatureHintOverlay } from '#/components/organisms/FeatureHintOverlay';
 import { Telemetry } from '#/services/telemetry';
+import { useProfileData } from '#hooks/profile/useProfileData';
+import { filterByLocation, LocationFilter } from '#/utils/pantryFilters';
 
-import {
-  ListTemplate,
-  SearchBarAction,
-  HeaderAction,
-  AnimatedItemSelector,
-} from '#components';
+import { AnimatedItemSelector } from '#components';
 import { PantryContent } from '#components/pantry';
 import { ConsumePantryItemModal } from '#components/modals/ConsumePantryItemModal';
 import { RecordWastePantryItemModal } from '#components/modals/RecordWastePantryItemModal';
 import { RestockPantryItemModal } from '#components/modals/RestockPantryItemModal';
+import { AddToPantrySheet } from '#components/modals/AddToPantrySheet';
 import type { ItemSelectorRef } from '#components/organisms/AnimatedItemSelector';
-import { normalizeHome } from '#/utils/connectionUtils';
 import { PantryErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
 
 // PERFORMANCE: Memoize screen component to prevent unnecessary re-renders
 const PantryMainScreen: React.FC = React.memo(() => {
   const { navigate, navigateTo, isFocused } = useAppNavigation();
-  const { theme } = useUnistyles();
-  const { setOverlayOpen } = useScanner();
-  const haptic = useHaptic();
+  useUnistyles();
+  const { setOverlayOpen, setAddProps } = useTabBarActions();
+
+  // Get user profile for greeting
+  const { profile } = useProfileData();
 
   // Track screen performance
   useScreenTransition('PantryMain');
@@ -65,29 +50,31 @@ const PantryMainScreen: React.FC = React.memo(() => {
     showOnMount: false, // We'll manually trigger when appropriate
   });
 
-  // PERFORMANCE: Use grouped selector with useShallow to prevent infinite loops (Zustand v5)
-  const { selectedPantryId, setSelectedPantryId } = useAppStore(
-    useShallow(selectPantryState),
-  );
   const showBiometricSetup = useAppStore(state => state.showBiometricSetup);
+  const unreadCount = useStore(state => state.unreadCount);
+
+  // Pantry sort preferences from store
+  const pantrySortOption = useAppStore(s => s.pantrySortOption) ?? 'recent';
+  const pantrySortDirection = useAppStore(s => s.pantrySortDirection) ?? 'desc';
+  const setPantrySortOption = useAppStore(s => s.setPantrySortOption);
+  const setPantrySortDirection = useAppStore(s => s.setPantrySortDirection);
+
+  // Callback to persist sort changes to store (defensive - check functions exist)
+  const handleSortChange = useCallback(
+    (option: 'name' | 'expiry' | 'quantity' | 'recent', direction: 'asc' | 'desc') => {
+      setPantrySortOption?.(option);
+      setPantrySortDirection?.(direction);
+    },
+    [setPantrySortOption, setPantrySortDirection],
+  );
+
   const selectorRef = useRef<ItemSelectorRef>(null);
 
-  // Store the ref object
-  const openSwipeableRef = useRef<SwipeableMethods | null>(null);
+  // Location filter for redesigned tabs
+  const [locationFilter, setLocationFilter] = useState<LocationFilter>('all');
 
-  // Consume item state
-  const [consumeModalVisible, setConsumeModalVisible] = useState(false);
-  const [selectedItemForConsume, setSelectedItemForConsume] =
-    useState<any>(null);
-
-  // Waste item state
-  const [wasteModalVisible, setWasteModalVisible] = useState(false);
-  const [selectedItemForWaste, setSelectedItemForWaste] = useState<any>(null);
-
-  // Restock item state
-  const [restockModalVisible, setRestockModalVisible] = useState(false);
-  const [selectedItemForRestock, setSelectedItemForRestock] =
-    useState<any>(null);
+  // Add to pantry sheet state
+  const [addSheetVisible, setAddSheetVisible] = useState(false);
 
   // Manage selector with overlay coordination
   const { handleOpenSelector, handleOverlayOpen, handleOverlayClose } =
@@ -96,80 +83,21 @@ const PantryMainScreen: React.FC = React.memo(() => {
       setOverlayOpen,
     });
 
-  const { selectedHomeId, homes, getDefaultPantry } = useDefaultHome();
+  // Centralized pantry selection with fallback chain
+  const {
+    pantry,
+    pantries,
+    currentHome,
+    selectedHomeId,
+    setSelectedPantryId,
+  } = useCurrentPantry();
 
-  // Try to get home data from homes list first to avoid extra query
-  const homeFromList = homes.find((home: any) => home.id === selectedHomeId);
-
-  // PERFORMANCE: Skip query when tab is not focused to prevent wasted network requests
-  const { data: homeData, refetch: refetchHome } = useGetHomeBasicQuery({
+  // Keep query for pull-to-refresh
+  const { refetch: refetchHome } = useGetHomeBasicQuery({
     variables: { homeId: selectedHomeId ?? '' },
-    fetchPolicy: isFocused ? 'cache-and-network' : 'cache-only', // Only fetch when focused
-    nextFetchPolicy: 'cache-first', // Subsequent fetches use cache to avoid unnecessary refetches
-    skip: !selectedHomeId || !isFocused,
-    errorPolicy: 'all', // Allow partial data and cache on errors
+    skip: !selectedHomeId || !!currentHome,
+    fetchPolicy: 'cache-and-network',
   });
-
-  // Use home data from either source
-  const normalizedHomeResult = useMemo(() => {
-    if (!homeData?.home) {
-      return undefined;
-    }
-    const normalized = normalizeHome(homeData.home);
-    return normalized ? { home: normalized } : undefined;
-  }, [homeData]);
-
-  const currentHomeData = useMemo(() => {
-    if (homeFromList) {
-      return { home: homeFromList };
-    }
-    return normalizedHomeResult;
-  }, [homeFromList, normalizedHomeResult]);
-
-  // Use selected pantry from store or fall back to default pantry
-  const defaultPantry = useMemo(
-    () => getDefaultPantry(currentHomeData),
-    [currentHomeData, getDefaultPantry],
-  );
-
-  const pantry = useMemo(() => {
-    let result;
-
-    // Try to find selected pantry in current home data
-    if (selectedPantryId && currentHomeData?.home?.pantries) {
-      result = currentHomeData.home.pantries.find(
-        (p: any) => p.id === selectedPantryId,
-      );
-      if (result) {
-        return result;
-      }
-    }
-
-    // Fall back to default pantry
-    if (defaultPantry) {
-      return defaultPantry;
-    }
-
-    // Last resort: if we have selectedPantryId but no home data yet
-    // (e.g., during loading or network error), create minimal pantry object
-    // to keep the query running with the correct ID
-    if (selectedPantryId) {
-      return {
-        id: selectedPantryId,
-        name: 'Pantry',
-        isDefault: false,
-      };
-    }
-
-    return null;
-  }, [selectedPantryId, currentHomeData, defaultPantry]);
-
-  // Auto-select the default pantry if none is selected
-  useEffect(() => {
-    if (!selectedPantryId && defaultPantry?.id) {
-      setSelectedPantryId(defaultPantry.id);
-    }
-  }, [selectedPantryId, defaultPantry?.id, setSelectedPantryId]);
 
   // Set up scanner button
   useScannerSetup({
@@ -181,6 +109,16 @@ const PantryMainScreen: React.FC = React.memo(() => {
     },
   });
 
+  // Register add button action - open add to pantry sheet
+  useEffect(() => {
+    if (isFocused) {
+      setAddProps(() => setAddSheetVisible(true), true);
+    }
+    return () => {
+      setAddProps(undefined, false);
+    };
+  }, [isFocused, setAddProps]);
+
   // PERFORMANCE: Pass undefined when not focused to skip pantry items query
   const {
     items: pantryItems,
@@ -191,235 +129,31 @@ const PantryMainScreen: React.FC = React.memo(() => {
     removeItem,
     refetch,
     loading,
+    error: pantryError,
     loadMore,
-    hasMore,
-    isLoadingMore,
+    locationCounts,
+    sectionedItems,
   } = usePantryManagement(isFocused ? pantry?.id : undefined);
 
-  // Consume item mutation
-  const [createPantryItemUsage] = useCreatePantryItemUsageMutation({
-    errorPolicy: 'all',
-    onError: error => {
-      console.error('Failed to create pantry item usage:', error);
-      Alert.alert(
-        'Error',
-        error.message || 'Failed to record item consumption. Please try again.',
-      );
-    },
+  // Extract item actions (modal state + mutations + handlers) to separate hook
+  const {
+    consumeModal,
+    wasteModal,
+    restockModal,
+    handleConfirmConsume,
+    handleConfirmWaste,
+    handleConfirmRestock,
+    handleConsumeItem,
+    handleWasteItem,
+    handleRestockItem,
+    handleEditItem,
+    handleDeleteItem,
+  } = usePantryItemActions({
+    pantryItems,
+    refetch,
+    removeItem,
+    navigateTo: { pantryItem: params => navigateTo.pantryItem(params) },
   });
-
-  // Waste item mutation
-  const [recordPantryItemWaste] = useRecordPantryItemWasteMutation({
-    errorPolicy: 'all',
-    onError: error => {
-      console.error('Failed to record pantry item waste:', error);
-      Alert.alert(
-        'Error',
-        error.message || 'Failed to record waste. Please try again.',
-      );
-    },
-  });
-
-  // Restock item mutation
-  const [restockPantryItem] = useRestockPantryItemMutation({
-    errorPolicy: 'all',
-    onError: error => {
-      console.error('Failed to restock pantry item:', error);
-      Alert.alert(
-        'Error',
-        error.message || 'Failed to restock item. Please try again.',
-      );
-    },
-  });
-
-  // Handler to open consume modal
-  const handleConsumeItem = useCallback(
-    (itemId: string) => {
-      const item = pantryItems.find(p => p.id === itemId);
-      if (item) {
-        setSelectedItemForConsume(item);
-        setConsumeModalVisible(true);
-      }
-    },
-    [pantryItems],
-  );
-
-  // Handler to confirm consumption
-  const handleConfirmConsume = useCallback(
-    async (
-      quantityUsed: number,
-      quantityInput: string,
-      purpose: UsagePurpose,
-      notes: string,
-      usageUnitId?: string,
-      weightUsed?: number,
-      weightUsedUnitId?: string,
-    ) => {
-      if (!selectedItemForConsume) return;
-
-      try {
-        await createPantryItemUsage({
-          variables: {
-            input: {
-              pantryItemId: selectedItemForConsume.id,
-              quantityUsed,
-              purpose,
-              notes: notes || undefined,
-              usageUnitId,
-              weightUsed,
-              weightUsedUnitId,
-            },
-          },
-        });
-
-        // Reset state
-        setConsumeModalVisible(false);
-        setSelectedItemForConsume(null);
-
-        // Refetch to get updated quantities
-        await refetch();
-      } catch (error) {
-        console.error('Error consuming pantry item:', error);
-      }
-    },
-    [selectedItemForConsume, createPantryItemUsage, refetch],
-  );
-
-  // Handler to close consume modal
-  const handleCloseConsumeModal = useCallback(() => {
-    setConsumeModalVisible(false);
-    setSelectedItemForConsume(null);
-  }, []);
-
-  // Handler to open waste modal
-  const handleWasteItem = useCallback(
-    (itemId: string) => {
-      const item = pantryItems.find(p => p.id === itemId);
-      if (item) {
-        setSelectedItemForWaste(item);
-        setWasteModalVisible(true);
-      }
-    },
-    [pantryItems],
-  );
-
-  // Handler to confirm waste recording
-  const handleConfirmWaste = useCallback(
-    async (
-      wasteAmount: number,
-      wasteReason: WasteReason,
-      isComposted: boolean,
-      isRecycled: boolean,
-      _notes: string,
-      wasteUnitId?: string,
-      wasteWeight?: number,
-      wasteWeightUnitId?: string,
-    ) => {
-      if (!selectedItemForWaste) return;
-
-      try {
-        await recordPantryItemWaste({
-          variables: {
-            id: selectedItemForWaste.id,
-            wasteAmount,
-            wasteReason,
-            wasteUnitId,
-            wasteWeight,
-            wasteWeightUnitId,
-            isComposted,
-            isRecycled,
-          },
-        });
-
-        // Reset state
-        setWasteModalVisible(false);
-        setSelectedItemForWaste(null);
-
-        // Refetch to get updated quantities
-        await refetch();
-      } catch (error) {
-        console.error('Error recording pantry item waste:', error);
-      }
-    },
-    [selectedItemForWaste, recordPantryItemWaste, refetch],
-  );
-
-  // Handler to close waste modal
-  const handleCloseWasteModal = useCallback(() => {
-    setWasteModalVisible(false);
-    setSelectedItemForWaste(null);
-  }, []);
-
-  // Handler to open restock modal
-  const handleRestockItem = useCallback(
-    (itemId: string) => {
-      const item = pantryItems.find(p => p.id === itemId);
-      if (item) {
-        setSelectedItemForRestock(item);
-        setRestockModalVisible(true);
-      }
-    },
-    [pantryItems],
-  );
-
-  // Handler to confirm restock
-  const handleConfirmRestock = useCallback(
-    async (
-      quantity: number,
-      _quantityInput: string,
-      notes: string,
-      unitId?: string,
-      weight?: number,
-      weightUnitId?: string,
-    ) => {
-      if (!selectedItemForRestock) return;
-
-      try {
-        await restockPantryItem({
-          variables: {
-            id: selectedItemForRestock.id,
-            input: {
-              quantity,
-              unitId,
-              weight,
-              weightUnitId,
-              notes: notes || undefined,
-            },
-          },
-        });
-
-        // Reset state
-        setRestockModalVisible(false);
-        setSelectedItemForRestock(null);
-
-        // Refetch to get updated quantities
-        await refetch();
-      } catch (error) {
-        console.error('Error restocking pantry item:', error);
-      }
-    },
-    [selectedItemForRestock, restockPantryItem, refetch],
-  );
-
-  // Handler to close restock modal
-  const handleCloseRestockModal = useCallback(() => {
-    setRestockModalVisible(false);
-    setSelectedItemForRestock(null);
-  }, []);
-
-  // Handle swipeable item opening - ensure only one item is open at a time
-  const handleSwipeableWillOpen = useCallback(
-    (ref: React.RefObject<SwipeableMethods>) => {
-      if (
-        openSwipeableRef.current &&
-        openSwipeableRef.current !== ref.current
-      ) {
-        openSwipeableRef.current?.close();
-      }
-      openSwipeableRef.current = ref.current;
-    },
-    [],
-  );
 
   // Refetch pantry items when switching between pantries
   const prevPantryIdRef = useRef<string | undefined>(pantry?.id);
@@ -438,7 +172,7 @@ const PantryMainScreen: React.FC = React.memo(() => {
 
   // Create selector configuration for pantries
   const pantryConfig = usePantrySelectorConfig({
-    pantries: currentHomeData?.home?.pantries || [],
+    pantries,
     selectedPantryId: pantry?.id,
     loading,
     setSelectedPantryId,
@@ -446,33 +180,33 @@ const PantryMainScreen: React.FC = React.memo(() => {
     navigate,
   });
 
-  // Transform pantry items to list items format
-  const items = usePantryItemTransformation({
-    items: pantryItems,
-    theme,
-  });
+  // Filter items by location for redesigned tabs (using shared utility)
+  const locationFilteredItems = useMemo(
+    () => filterByLocation(pantryItems, locationFilter),
+    [pantryItems, locationFilter],
+  );
+
+  // Handle location filter change
+  const handleLocationFilterChange = useCallback((filter: LocationFilter) => {
+    setLocationFilter(filter);
+  }, []);
 
   // Track screen view on mount
   useEffect(() => {
     Telemetry.trackScreen('PantryMain', {
       home_id: selectedHomeId,
       pantry_id: pantry?.id,
-      item_count: items.length,
-      has_pantries: (currentHomeData?.home?.pantries?.length || 0) > 0,
+      item_count: locationFilteredItems.length,
+      has_pantries: pantries.length > 0,
     });
-  }, [
-    selectedHomeId,
-    pantry?.id,
-    items.length,
-    currentHomeData?.home?.pantries?.length,
-  ]);
+  }, [selectedHomeId, pantry?.id, locationFilteredItems.length, pantries.length]);
 
   // Show home switch hint when user has items and home is selected
   // BUT only if biometric setup modal is not showing (prevent modal overlap)
   useEffect(() => {
     if (
       selectedHomeId &&
-      items.length > 0 &&
+      locationFilteredItems.length > 0 &&
       !homeSwitchHint.hasBeenShown &&
       !showBiometricSetup
     ) {
@@ -484,220 +218,79 @@ const PantryMainScreen: React.FC = React.memo(() => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    items.length,
+    locationFilteredItems.length,
     selectedHomeId,
     homeSwitchHint.hasBeenShown,
     homeSwitchHint.show,
     showBiometricSetup,
   ]);
 
-  const handleAddItem = useCallback(() => {
-    if (!selectedHomeId) {
-      Telemetry.trackEvent('add_pantry_item_no_home_selected');
-      Alert.alert(
-        'No Home Selected',
-        'You need to be a member of a home to add pantry items.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Manage Homes',
-            onPress: () => {
-              Telemetry.trackEvent('manage_homes_from_pantry');
-              navigate('HomeManagement');
-            },
-            style: 'default',
-          },
-        ],
-      );
-      return;
-    }
-    Telemetry.trackEvent('add_pantry_item_clicked', {
-      home_id: selectedHomeId,
-      pantry_id: pantry?.id,
-    });
-    navigateTo.pantryItem({});
-  }, [selectedHomeId, navigate, navigateTo, pantry?.id]);
-
-  const handleDeleteItem = async (itemId: string) => {
-    Telemetry.trackEvent('delete_pantry_item', { item_id: itemId });
-    try {
-      haptic.warning(); // Haptic feedback on delete
-      const result = await removeItem(itemId);
-      Telemetry.trackEvent('delete_pantry_item_success');
-      return result;
-    } catch (error) {
-      Telemetry.trackError(
-        error instanceof Error ? error : 'Failed to delete pantry item',
-        { component: 'PantryMain', operation: 'deleteItem' },
-      );
-      haptic.error(); // Error haptic on failure
-      throw error;
-    }
-  };
-
   const handleRefresh = async () => {
     await Promise.all([refetch(), refetchHome()]);
   };
 
-  // Header actions
-  const headerActions = useMemo(() => {
-    const rightActions: HeaderAction[] = [];
+  // Determine loading state - only show loading if we have no data at all and no error
+  // If there's an error, stop showing loading state to prevent infinite spinner
+  const isLoadingInitial =
+    loading && !pantryError && locationFilteredItems.length === 0 && !allItems?.length;
 
-    // Only show right actions if there are items
-    if (items.length > 0) {
-      // Show expired items action only if there are expired items
-      if (stats.expired > 0) {
-        rightActions.push({
-          icon: 'schedule',
-          onPress: () => {
-            haptic.error(); // Error haptic for expired items alert
-            navigate('ExpiringItems');
-          },
-          badge: stats.expired,
-          color: theme.colors.error,
-        });
-      }
+  // Don't show refreshing indicator if there's an error (prevents stuck spinner)
+  const isRefreshing = loading && !pantryError;
 
-      // Show low stock action only if there are low stock items
-      if (stats.lowStock > 0) {
-        rightActions.push({
-          icon: 'warning',
-          onPress: () => {
-            haptic.warning(); // Warning haptic for low stock alert
-            navigate('LowStockItems');
-          },
-          badge: stats.lowStock,
-          color: theme.colors.warning,
-        });
-      }
+  // Get user display name and avatar
+  const userName =
+    profile?.displayName || profile?.firstName || profile?.lastName || 'there';
+  const avatarInitial = userName.charAt(0).toUpperCase();
+  const householdName = currentHome?.name || 'Your Home';
 
-      // Show category management only if items have categories
-      const hasCategories = pantryItems.some(
-        (item: any) => item.item?.category?.id,
-      );
-      if (hasCategories) {
-        rightActions.push({
-          icon: 'category',
-          onPress: () => navigate('CategoryManagement'),
-        });
-      }
-    }
-
-    return {
-      left: [
-        {
-          icon: 'home-switch-outline',
-          onPress: () => navigate('HomeManagement', { homeId: selectedHomeId }),
-          size: 34,
-          color: theme.colors.primary,
-          library: 'MaterialDesignIcons',
-        },
-      ] as HeaderAction[],
-      right: rightActions,
-    };
-  }, [
-    navigate,
-    selectedHomeId,
-    stats.expired,
-    stats.lowStock,
-    items.length,
-    pantryItems,
-    theme,
-    haptic,
-  ]);
-
-  // Search bar actions
-  const searchBarActions = useMemo(
-    () => ({
-      left: [] as SearchBarAction[],
-      right: [
-        {
-          icon: 'add',
-          onPress: handleAddItem,
-          color: theme.colors.primary,
-          backgroundColor: theme.colors.surface,
-          testID: 'pantry-add-button',
-        },
-        {
-          icon: 'list',
-          color: theme.colors.white,
-          onPress: handleOpenSelector,
-        },
-      ] as SearchBarAction[],
-    }),
-    [
-      handleAddItem,
-      handleOpenSelector,
-      theme.colors.primary,
-      theme.colors.surface,
-      theme.colors.white,
-    ],
+  // Sectioned items for redesigned content - filter based on location (using shared utility)
+  const filteredExpiringSoonItems = useMemo(
+    () => filterByLocation(sectionedItems.expiringSoonItems, locationFilter),
+    [sectionedItems.expiringSoonItems, locationFilter],
   );
 
-  // Determine loading state - only show loading if we have no data at all
-  const isLoadingInitial = loading && items.length === 0 && !allItems?.length;
-
-  // Compute empty state based on current context
-  const emptyStateConfig = !selectedHomeId
-    ? {
-        icon: 'home',
-        title: 'No Home Selected',
-        description:
-          'You need to create or be a member of a home to manage pantry items.',
-        action: {
-          label: 'Manage Homes',
-          onPress: () => navigate('HomeManagement'),
-        },
-      }
-    : {
-        icon: 'inventory',
-        title: 'No items in pantry',
-        description: 'Add items to track your pantry inventory',
-        action: {
-          label: 'Add first item',
-          onPress: handleAddItem,
-        },
-      };
+  const filteredNormalItems = useMemo(
+    () => filterByLocation(sectionedItems.normalItems, locationFilter),
+    [sectionedItems.normalItems, locationFilter],
+  );
 
   return (
     <View style={styles.container} testID="pantry-screen">
       {isLoadingInitial && <View testID="pantry-loading" />}
-      <ListTemplate
-        title={selectedHomeId ? currentHomeData?.home?.name || 'Pantry' : ''}
-        subtitle={selectedHomeId ? pantry?.name || 'Your Pantry' : ''}
-        items={items}
+      <PantryContent
+        userName={userName}
+        householdName={householdName}
+        avatarInitial={avatarInitial}
+        avatarUrl={profile?.avatar}
+        notificationCount={unreadCount}
+        items={locationFilteredItems}
+        expiredCount={stats.expired}
+        expiringSoonItems={filteredExpiringSoonItems}
+        normalItems={filteredNormalItems}
+        locationFilter={locationFilter}
+        onLocationFilterChange={handleLocationFilterChange}
+        locationCounts={locationCounts}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
+        initialSortOption={pantrySortOption}
+        initialSortDirection={pantrySortDirection}
+        onSortChange={handleSortChange}
         onItemPress={id => navigateTo.pantryItemDetail({ itemId: id })}
-        onItemEdit={id => navigateTo.pantryItem({ itemId: id })}
+        onItemEdit={handleEditItem}
         onItemDelete={handleDeleteItem}
         onItemConsume={handleConsumeItem}
         onItemWaste={handleWasteItem}
         onItemRestock={handleRestockItem}
-        onRefresh={handleRefresh}
-        onSwipeableWillOpen={handleSwipeableWillOpen}
-        onEndReached={loadMore}
-        onEndReachedThreshold={0.5}
-        ListFooterComponent={
-          <PaginationFooter
-            isLoadingMore={isLoadingMore}
-            hasMore={hasMore}
-            loading={loading}
-            itemCount={items.length}
-          />
+        onExpiredBannerPress={() => navigate('ExpiringItems')}
+        onAvatarPress={() => navigate('Notifications')}
+        onHomePress={() =>
+          navigate('HomeManagement', { homeId: selectedHomeId })
         }
+        onSettingsPress={handleOpenSelector}
+        onRefresh={handleRefresh}
+        onEndReached={loadMore}
+        refreshing={isRefreshing}
         loading={isLoadingInitial}
-        hasNoData={!selectedHomeId}
-        showHeader={true}
-        showSearchBar={true}
-        headerActions={headerActions}
-        searchBarActions={searchBarActions}
-        testIDPrefix="pantry-item"
-        emptyState={emptyStateConfig}
-        customListComponent={PantryContent}
-        customListProps={{
-          loading: isLoadingInitial,
-        }}
       />
       <AnimatedItemSelector
         ref={selectorRef}
@@ -707,22 +300,29 @@ const PantryMainScreen: React.FC = React.memo(() => {
         onClose={handleOverlayClose}
       />
       <ConsumePantryItemModal
-        visible={consumeModalVisible}
-        pantryItem={selectedItemForConsume}
-        onClose={handleCloseConsumeModal}
+        visible={consumeModal.visible}
+        pantryItem={consumeModal.item}
+        onClose={consumeModal.close}
         onConfirm={handleConfirmConsume}
       />
       <RecordWastePantryItemModal
-        visible={wasteModalVisible}
-        pantryItem={selectedItemForWaste}
-        onClose={handleCloseWasteModal}
+        visible={wasteModal.visible}
+        pantryItem={wasteModal.item}
+        onClose={wasteModal.close}
         onConfirm={handleConfirmWaste}
       />
       <RestockPantryItemModal
-        visible={restockModalVisible}
-        pantryItem={selectedItemForRestock}
-        onClose={handleCloseRestockModal}
+        visible={restockModal.visible}
+        pantryItem={restockModal.item}
+        onClose={restockModal.close}
         onConfirm={handleConfirmRestock}
+      />
+
+      {/* Add to Pantry Sheet */}
+      <AddToPantrySheet
+        visible={addSheetVisible}
+        pantryId={pantry?.id}
+        onClose={() => setAddSheetVisible(false)}
       />
 
       {/* Home switch hint overlay */}

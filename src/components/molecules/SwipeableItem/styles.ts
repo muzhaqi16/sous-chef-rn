@@ -12,11 +12,13 @@ export const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.charade['950'],
     justifyContent: 'center',
     alignItems: 'center',
-    width: 160, // Fixed width for consistent spacing
-    borderTopLeftRadius: 0, // Square connection to card
-    borderBottomLeftRadius: 0, // Square connection to card
-    borderTopRightRadius: 12, // Round the outer edge
-    borderBottomRightRadius: 12, // Round the outer edge
+    width: 160,
+    marginLeft: -12, // Extend under card edge to cover rounded corners
+    paddingLeft: 12, // Compensate for margin to maintain button positioning
+    borderTopLeftRadius: 0, // Square edge where it meets the card
+    borderBottomLeftRadius: 0,
+    borderTopRightRadius: theme.radii.md, // Rounded outer edge
+    borderBottomRightRadius: theme.radii.md,
   },
   leftActionsContainer: {
     ...commonStyles.row,
@@ -24,12 +26,14 @@ export const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.charade['950'],
     justifyContent: 'center',
     alignItems: 'center',
-    width: 180, // Fixed width for three buttons (consume + waste + restock)
-    gap: theme.spacing.xs, // Reduced space between buttons
-    borderTopRightRadius: 0, // Square connection to card
-    borderBottomRightRadius: 0, // Square connection to card
-    borderTopLeftRadius: 12, // Round the outer edge
-    borderBottomLeftRadius: 12, // Round the outer edge
+    width: 180,
+    gap: theme.spacing.xs,
+    marginRight: -12, // Extend under card edge to cover rounded corners
+    paddingRight: 12, // Compensate for margin to maintain button positioning
+    borderTopRightRadius: 0, // Square edge where it meets the card
+    borderBottomRightRadius: 0,
+    borderTopLeftRadius: theme.radii.md, // Rounded outer edge
+    borderBottomLeftRadius: theme.radii.md,
   },
 
   actionButton: {
@@ -40,12 +44,15 @@ export const styles = StyleSheet.create(theme => ({
   },
 
   circularActionButton: {
-    width: 45,
-    height: 45,
-    borderRadius: 28,
+    width: 40,
+    height: 40,
+    borderRadius: theme.radii.full,
     ...commonStyles.center,
     marginHorizontal: 4,
     zIndex: 100, // Ensure button is above other elements for touch priority
+    borderWidth: 1.5,
+    borderColor: theme.colors.white, // Subtle white border
+    backgroundColor: 'transparent', // No fill - outlined style
   },
 
   editButton: {

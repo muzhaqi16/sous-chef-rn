@@ -19,7 +19,7 @@ const convertToScannedItem = (
     name: string;
     description?: string | null;
     imageUrl?: string | null;
-    upc?: string | null;
+    primaryUpc?: string | null;
     units: Array<{
       unitId: string;
       isDefault?: boolean | null;
@@ -31,7 +31,7 @@ const convertToScannedItem = (
   name: item.name,
   description: item.description || undefined,
   imageUrl: item.imageUrl || undefined,
-  upc: item.upc || fallbackBarcode,
+  upc: item.primaryUpc || fallbackBarcode,
   unitId: item.units?.find((u: any) => u.isDefault)?.unitId || undefined,
 });
 
@@ -47,10 +47,8 @@ export const useSearchResults = (barcode: string) => {
   const {showBottomSheet, hideBottomSheet} = useAppStore(
     useShallow(selectBottomSheetState),
   );
-  // const selectedPantryId = useAppStore(state => state.selectedPantryId); // TODO: Use for context-aware search
 
   const { uploadItemImage } = useImageUpload();
-  // const _client = useApolloClient(); // TODO: Use for direct Apollo operations if needed
 
   const [addNewItem, { loading: addingItem }] = useCreateItemMutation({
     onCompleted: async (data: CreateItemMutation) => {

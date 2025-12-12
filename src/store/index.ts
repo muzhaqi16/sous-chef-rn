@@ -171,6 +171,11 @@ export const useStore = create<RootState>()(
             } else {
               // Mark store as hydrated
               state?.setHydrated(true);
+
+              // Clean up orphaned notifications on app startup
+              // This ensures persisted notifications are filtered correctly
+              // after app updates or context changes
+              state?.cleanupOrphanedSubscriptions();
             }
           };
         },

@@ -1,54 +1,113 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, Alert, Image, ActivityIndicator } from 'react-native';
+import React, { useState, useCallback, useEffect } from 'react';
+import {
+  View,
+  Text,
+  Alert,
+  Image,
+  ScrollView,
+  TouchableOpacity,
+  FlatList,
+  ActivityIndicator,
+} from 'react-native';
 import {
   useGetPantryItemQuery,
   useDeletePantryItemMutation,
   useAddItemToShoppingListMutation,
-  useGetPantryItemLedgerQuery,
-  DateRange,
+  StorageState,
 } from '#generated';
-import { DetailTemplate } from '#components/templates/DetailTemplate';
-import { FormattedItemSubtitle } from '#components';
 import { useAppStore, selectSelectedShoppingListId } from '#store/useAppStore';
-import { commonStyles } from '#styles';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks';
 import { PantryStackParamList } from '#navigation/stacks/PantryStack';
 import { getItemImageUrl } from '#utils/imageUtils';
-import { getEffectiveUnit } from '#utils/pantryItemUtils';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Header } from '#components/molecules/Header';
+import { Icon } from '#/utils';
+import { spoonacularService } from '#/services/recipeApi';
+import type { RecipeInformation } from '#/services/recipeApi/types';
+
+// Helper function to calculate expiry info
+const getExpiryInfo = (expiresAt: string | null | undefined) => {
+  if (!expiresAt) return null;
+  const now = new Date();
+  const expiry = new Date(expiresAt);
+  const diffDays = Math.ceil(
+    (expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+  );
+
+  if (diffDays < 0) return { text: 'Expired', isExpired: true, isUrgent: true };
+  if (diffDays === 0)
+    return { text: 'Expires today', isExpired: false, isUrgent: true };
+  if (diffDays === 1)
+    return { text: '1 day to expire', isExpired: false, isUrgent: true };
+  return {
+    text: `${diffDays} days to expire`,
+    isExpired: false,
+    isUrgent: diffDays <= 3,
+  };
+};
+
+// Format date
+const formatDate = (dateString: string | null | undefined) => {
+  if (!dateString) return null;
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+};
+
+// Calculate days in pantry
+const getDaysInPantry = (createdAt: string | null | undefined) => {
+  if (!createdAt) return null;
+  const created = new Date(createdAt);
+  const now = new Date();
+  return Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
+};
+
+// Format storage state for display
+const formatStorageState = (state?: string | null): string => {
+  if (!state) return '';
+  const mapping: Record<string, string> = {
+    [StorageState.Refrigerated]: 'Fridge',
+    [StorageState.Frozen]: 'Freezer',
+    [StorageState.Ambient]: 'Dry Pantry',
+  };
+  return mapping[state] || state;
+};
 
 export const PantryItemDetail: React.FC<{
   route: { params: PantryStackParamList['PantryItemDetail'] };
 }> = ({ route }) => {
   const itemId = route.params.itemId;
-  const { goBack, navigateTo } = useAppNavigation();
+  const { goBack, navigate, navigateTo } = useAppNavigation();
   const { theme } = useUnistyles();
+  const insets = useSafeAreaInsets();
   const selectedShoppingListId = useAppStore(selectSelectedShoppingListId);
 
   const [addToListStatus, setAddToListStatus] = useState<
     'idle' | 'loading' | 'success' | 'error'
   >('idle');
+  const [purchaseHistoryExpanded, setPurchaseHistoryExpanded] = useState(false);
 
-  // Use cache-first policy - offlineQueryLink will handle offline behavior automatically
+  // Recipes to try state (dev only)
+  const [suggestedRecipes, setSuggestedRecipes] = useState<RecipeInformation[]>(
+    [],
+  );
+  const [loadingRecipes, setLoadingRecipes] = useState(false);
+
   const { data } = useGetPantryItemQuery({
     variables: { id: itemId },
     fetchPolicy: 'cache-first',
   });
 
-  // Fetch item ledger for usage history
-  const { data: ledgerData, loading: ledgerLoading } = useGetPantryItemLedgerQuery({
-    variables: {
-      pantryItemId: itemId,
-      filter: { dateRange: DateRange.LastMonth },
-    },
-    fetchPolicy: 'cache-and-network',
-  });
-
   const [deleteItem] = useDeletePantryItemMutation();
   const [addToShoppingList] = useAddItemToShoppingListMutation({
-    update: (cache, { data }) => {
-      if (!data?.addItemToShoppingList || !selectedShoppingListId) return;
+    update: (cache, { data: mutationData }) => {
+      if (!mutationData?.addItemToShoppingList || !selectedShoppingListId)
+        return;
 
       try {
         const addToShoppingListItemsCache = createAddToParentConnectionUpdater(
@@ -59,13 +118,38 @@ export const PantryItemDetail: React.FC<{
         addToShoppingListItemsCache(
           cache,
           selectedShoppingListId,
-          data.addItemToShoppingList,
+          mutationData.addItemToShoppingList,
         );
       } catch (error) {
         console.warn('Cache update failed for addToShoppingList:', error);
       }
     },
   });
+
+  const item = data?.pantryItem;
+
+  // Fetch suggested recipes (dev only)
+  useEffect(() => {
+    if (!__DEV__ || !item?.item?.name) return;
+
+    const fetchRecipes = async () => {
+      setLoadingRecipes(true);
+      try {
+        const recipes = await spoonacularService.searchRecipes({
+          query: item.item?.name || '',
+          number: 5,
+          addRecipeInformation: true,
+        });
+        setSuggestedRecipes(recipes.results as unknown as RecipeInformation[]);
+      } catch (error) {
+        console.error('Failed to fetch suggested recipes:', error);
+      } finally {
+        setLoadingRecipes(false);
+      }
+    };
+
+    fetchRecipes();
+  }, [item?.item?.name]);
 
   const handleDelete = () => {
     Alert.alert('Delete Item', 'Are you sure you want to delete this item?', [
@@ -76,9 +160,7 @@ export const PantryItemDetail: React.FC<{
         onPress: async () => {
           try {
             await deleteItem({
-              variables: {
-                id: itemId,
-              },
+              variables: { id: itemId },
             });
             goBack();
           } catch (error) {
@@ -90,7 +172,6 @@ export const PantryItemDetail: React.FC<{
   };
 
   const handleAddToShoppingList = useCallback(async () => {
-    // Validate that a shopping list is selected
     if (!selectedShoppingListId) {
       Alert.alert(
         'No Shopping List Selected',
@@ -106,7 +187,6 @@ export const PantryItemDetail: React.FC<{
       return;
     }
 
-    // Prevent multiple clicks while loading or after success
     if (addToListStatus === 'loading' || addToListStatus === 'success') {
       return;
     }
@@ -126,12 +206,10 @@ export const PantryItemDetail: React.FC<{
         },
       });
       setAddToListStatus('success');
-      // Reset to idle after 3 seconds so user can add again if needed
       setTimeout(() => setAddToListStatus('idle'), 3000);
     } catch (error) {
       console.error('Failed to add to shopping list:', error);
       setAddToListStatus('error');
-      // Reset to idle after 3 seconds so user can retry
       setTimeout(() => setAddToListStatus('idle'), 3000);
     }
   }, [
@@ -142,401 +220,669 @@ export const PantryItemDetail: React.FC<{
     navigateTo,
   ]);
 
-  const item = data?.pantryItem;
-
-  // Get button label and icon based on status
-  const getAddToListButtonConfig = () => {
-    switch (addToListStatus) {
-      case 'loading':
-        return { label: 'Adding...', icon: 'hourglass-empty' as const };
-      case 'success':
-        return { label: 'Added to List', icon: 'check' as const };
-      case 'error':
-        return { label: 'Failed - Tap to Retry', icon: 'error-outline' as const };
-      default:
-        return { label: 'Add to Shopping List', icon: 'add-shopping-cart' as const };
-    }
+  const handleEdit = () => {
+    navigateTo.pantryItem({ itemId });
   };
 
-  const addToListButton = getAddToListButtonConfig();
-
-  // Use packageWeight if set (user override), otherwise fall back to catalog item weight
-  const effectiveNetWeight = item?.packageWeight ?? item?.item?.netWeight;
-  const effectiveWeightUnit = getEffectiveUnit(item);
-
-  // Helper function to format item type
-  const formatItemType = (type?: string) => {
-    if (!type) return 'N/A';
-    return type
-      .split('_')
-      .map(word => word.charAt(0) + word.slice(1).toLowerCase())
-      .join(' ');
+  const handleRecipePress = (recipeId: number) => {
+    navigate('RecipeDetail', {
+      externalSource: 'SPOONACULAR',
+      externalId: String(recipeId),
+    });
   };
 
+  // Computed values
   const imageUrl = getItemImageUrl(item?.item);
+  const expiryInfo = getExpiryInfo(item?.expiresAt);
+  const daysInPantry = getDaysInPantry(item?.createdAt);
+  const storageStateDisplay = formatStorageState(item?.storageState);
+  // Use pantryItem's specific brand (not item.brands which contains all brands for the item type)
+  const brandName = item?.brand?.name || null;
+  // Get category name for display
+  const categoryName = item?.item?.categories?.[0]?.category?.name || null;
 
-  const sections = [
-    {
-      content: (
-        <View>
-          {imageUrl && (
-            <View style={styles.imageContainer}>
-              <Image
-                source={{ uri: imageUrl }}
-                style={styles.itemImage}
-                resizeMode="contain"
-              />
-            </View>
-          )}
-          <Text style={[commonStyles.title, styles.itemName]}>
-            {item?.item?.name}
+  if (!item) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <Header variant="detail" onBack={goBack} borderless />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      {/* Header */}
+      <Header
+        variant="detail"
+        onBack={goBack}
+        borderless
+        rightActions={[
+          {
+            icon: addToListStatus === 'success' ? 'cart' : 'cart-outline',
+            onPress: handleAddToShoppingList,
+            variant: addToListStatus === 'success' ? 'success' : 'primary',
+            loading: addToListStatus === 'loading',
+            library: 'Ionicons',
+            testID: 'pantry-item-add-to-list-button',
+          },
+          {
+            icon: 'create-outline',
+            onPress: handleEdit,
+            library: 'Ionicons',
+            testID: 'pantry-item-edit-button',
+          },
+          {
+            icon: 'trash-outline',
+            onPress: handleDelete,
+            variant: 'error',
+            library: 'Ionicons',
+            testID: 'pantry-item-delete-button',
+          },
+        ]}
+      />
+
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Hero Image - only show if image exists */}
+        {imageUrl && (
+          <View style={styles.imageSection}>
+            <Image
+              source={{ uri: imageUrl }}
+              style={styles.heroImage}
+              resizeMode="contain"
+            />
+          </View>
+        )}
+
+        {/* Title Row - Name */}
+        <View style={styles.titleRow}>
+          <Text style={styles.itemTitle} numberOfLines={2}>
+            {item.item?.name || item.itemName}
           </Text>
-          {item?.item?.brands && item.item.brands.length > 0 && (
-            <Text style={[commonStyles.subtitle, styles.brandName]}>
-              {item.item.brands.map(brand => brand?.brand?.name).join(', ')}
-            </Text>
-          )}
-          {item?.currentQuantity != null && (
-            <View style={styles.quantityDescription}>
-              <FormattedItemSubtitle
-                quantity={item.currentQuantity}
-                initialQuantity={item.initialQuantity}
-                netWeight={effectiveNetWeight}
-                unitSymbol={effectiveWeightUnit?.symbol || item.unit?.symbol}
-                additionalInfo={item.storageState}
-              />
-            </View>
-          )}
         </View>
-      ),
-    },
-    {
-      title: 'Quantity Details',
-      content: (
-        <View>
-          <View style={styles.detailRow}>
-            <Text style={[commonStyles.caption, styles.detailLabel]}>
-              Current
+
+        {/* Category Badge with Storage Location */}
+        {(categoryName || storageStateDisplay) && (
+          <View style={styles.categoryBadge}>
+            <Icon
+              name="restaurant-outline"
+              size={16}
+              color={theme.colors.primary}
+              library="Ionicons"
+            />
+            <Text style={styles.categoryText}>
+              {categoryName || 'Item'}
+              {storageStateDisplay ? ` in ${storageStateDisplay}` : ''}
             </Text>
-            <View>
-              <FormattedItemSubtitle
-                quantity={item?.currentQuantity}
-                netWeight={effectiveNetWeight}
-                unitSymbol={effectiveWeightUnit?.symbol || item?.unit?.symbol}
-              />
-            </View>
           </View>
-          <View style={styles.detailRow}>
-            <Text style={[commonStyles.caption, styles.detailLabel]}>
-              Initial
+        )}
+
+        {/* Three-Column Info Row */}
+        <View style={styles.infoColumns}>
+          <View style={styles.infoColumn}>
+            <Text style={styles.infoColumnLabel}>In the pantry</Text>
+            <Text style={styles.infoColumnValue}>
+              {daysInPantry !== null
+                ? daysInPantry === 0
+                  ? 'Today'
+                  : daysInPantry === 1
+                    ? '1 day'
+                    : `${daysInPantry} days`
+                : '-'}
             </Text>
-            <View>
-              <FormattedItemSubtitle
-                quantity={item?.initialQuantity}
-                netWeight={effectiveNetWeight}
-                unitSymbol={effectiveWeightUnit?.symbol || item?.unit?.symbol}
-              />
-            </View>
           </View>
-          <View style={styles.detailRow}>
-            <Text style={[commonStyles.caption, styles.detailLabel]}>
-              Consumed
+          <View style={styles.infoColumn}>
+            <Text style={styles.infoColumnLabel}>Expiring</Text>
+            <Text
+              style={[
+                styles.infoColumnValue,
+                expiryInfo?.isUrgent && styles.expiryColumnUrgent,
+                expiryInfo?.isExpired && styles.expiryColumnExpired,
+              ]}
+            >
+              {expiryInfo?.text || 'No expiry'}
             </Text>
-            <View>
-              <FormattedItemSubtitle
-                quantity={item?.consumedQuantity}
-                netWeight={effectiveNetWeight}
-                unitSymbol={effectiveWeightUnit?.symbol || item?.unit?.symbol}
-              />
-            </View>
           </View>
-          {effectiveNetWeight != null && effectiveWeightUnit && (
-            <View style={styles.detailRow}>
-              <Text style={[commonStyles.caption, styles.detailLabel]}>
-                Net Weight
-              </Text>
-              <Text style={styles.detailValue}>
-                {effectiveNetWeight} {effectiveWeightUnit.symbol} per item
-              </Text>
-            </View>
-          )}
+          <View style={styles.infoColumn}>
+            <Text style={styles.infoColumnLabel}>Amount</Text>
+            <Text style={styles.infoColumnValue}>
+              {item.packageWeight != null && item.packageWeight > 0
+                ? `${item.packageWeight} ${item.packageWeightUnit?.symbol || 'g'}`
+                : `${item.currentQuantity} ${item.unit?.symbol || 'pcs'}`}
+            </Text>
+          </View>
         </View>
-      ),
-    },
-    {
-      title: 'Storage & Status',
-      content: (
-        <View>
-          <View style={styles.detailRow}>
-            <Text style={[commonStyles.caption, styles.detailLabel]}>
-              Storage
-            </Text>
-            <Text style={styles.detailValue}>
-              {item?.storageState || 'N/A'}
+
+        {/* Brand Row - always show, "Unbranded" if null */}
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Brand</Text>
+          <View style={styles.infoValueContainer}>
+            <View style={styles.infoIcon}>
+              <Icon
+                name="pricetag-outline"
+                size={16}
+                color={theme.colors.textSecondary}
+                library="Ionicons"
+              />
+            </View>
+            <Text style={[styles.infoValue, !brandName && styles.infoValueMuted]}>
+              {brandName || 'Unbranded'}
             </Text>
           </View>
-          {item?.storageLocation && (
-            <View style={styles.detailRow}>
-              <Text style={[commonStyles.caption, styles.detailLabel]}>
-                Location
-              </Text>
-              <Text style={styles.detailValue}>
+        </View>
+
+        {/* Storage Location */}
+        {item.storageLocation && (
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Storage</Text>
+            <View style={styles.infoValueContainer}>
+              <View style={styles.infoIcon}>
+                <Icon
+                  name="cube-outline"
+                  size={16}
+                  color={theme.colors.textSecondary}
+                  library="Ionicons"
+                />
+              </View>
+              <Text style={styles.infoValue}>
                 {typeof item.storageLocation === 'string'
                   ? item.storageLocation
                   : item.storageLocation.name}
               </Text>
             </View>
-          )}
-          {item?.expiresAt && (
-            <View style={styles.detailRow}>
-              <Text style={[commonStyles.caption, styles.detailLabel]}>
-                Expires
-              </Text>
-              <Text style={styles.detailValue}>
-                {new Date(item.expiresAt).toLocaleDateString()}
+          </View>
+        )}
+
+        {/* Weight Row */}
+        {item.packageWeight != null && item.packageWeight > 0 && (
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Weight</Text>
+            <View style={styles.infoValueContainer}>
+              <View style={styles.infoIcon}>
+                <Icon
+                  name="scale-outline"
+                  size={16}
+                  color={theme.colors.textSecondary}
+                  library="Ionicons"
+                />
+              </View>
+              <Text style={styles.infoValue}>
+                {item.packageWeight} {item.packageWeightUnit?.symbol || 'g'}
               </Text>
             </View>
-          )}
-          <View style={styles.detailRow}>
-            <Text style={[commonStyles.caption, styles.detailLabel]}>
-              Added
-            </Text>
-            <Text style={styles.detailValue}>
-              {new Date(item?.createdAt || '').toLocaleDateString()}
-            </Text>
           </View>
-          <View style={styles.detailRow}>
-            <Text style={[commonStyles.caption, styles.detailLabel]}>
-              Item Type
-            </Text>
-            <Text style={styles.detailValue}>
-              {formatItemType(item?.item?.type)}
-            </Text>
-          </View>
-        </View>
-      ),
-    },
-  ];
+        )}
 
-  // Add Item Info section if description or categories exist
-  if (
-    item?.item?.description ||
-    (item?.item?.categories && item.item.categories.length > 0)
-  ) {
-    sections.push({
-      title: 'Item Information',
-      content: (
-        <View>
-          {item?.item?.description && (
-            <View style={styles.descriptionContainer}>
-              <Text style={[commonStyles.caption, styles.detailLabel]}>
-                Description
-              </Text>
-              <Text style={[commonStyles.body, styles.descriptionText]}>
-                {item.item.description}
+        {/* Store Row */}
+        {item.store?.name && (
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Store</Text>
+            <View style={styles.infoValueContainer}>
+              <View style={styles.infoIcon}>
+                <Icon
+                  name="storefront-outline"
+                  size={16}
+                  color={theme.colors.textSecondary}
+                  library="Ionicons"
+                />
+              </View>
+              <Text style={styles.infoValue}>{item.store.name}</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Usage Info Row */}
+        {(item.lastUsedAt || item.consumedQuantity > 0) && (
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Usage</Text>
+            <View style={styles.infoValueContainer}>
+              <View style={styles.infoIcon}>
+                <Icon
+                  name="time-outline"
+                  size={16}
+                  color={theme.colors.textSecondary}
+                  library="Ionicons"
+                />
+              </View>
+              <Text style={styles.infoValue}>
+                {item.consumedQuantity > 0 && `Used ${item.consumedQuantity}`}
+                {item.consumedQuantity > 0 && item.lastUsedAt && ' • '}
+                {item.lastUsedAt && `Last: ${formatDate(item.lastUsedAt)}`}
               </Text>
             </View>
-          )}
-          {item?.item?.categories && item.item.categories.length > 0 && (
-            <View style={styles.detailRow}>
-              <Text style={[commonStyles.caption, styles.detailLabel]}>
-                Categories
-              </Text>
-              <Text style={styles.detailValue}>
-                {item.item.categories
-                  .filter(cat => cat.isPrimary)
-                  .map(cat => cat?.category?.name)
-                  .join(', ') ||
-                  item.item.categories
-                    .map(cat => cat?.category?.name)
-                    .join(', ')}
+          </View>
+        )}
+
+        {/* Waste Info Row */}
+        {item.wasteAmount > 0 && (
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Waste</Text>
+            <View style={styles.infoValueContainer}>
+              <View style={styles.infoIcon}>
+                <Icon
+                  name="trash-outline"
+                  size={16}
+                  color={theme.colors.error}
+                  library="Ionicons"
+                />
+              </View>
+              <Text style={[styles.infoValue, styles.infoValueError]}>
+                {item.wasteAmount} wasted
+                {item.wasteReason && ` (${item.wasteReason.toLowerCase().replace('_', ' ')})`}
               </Text>
             </View>
-          )}
-        </View>
-      ),
-    });
-  }
+          </View>
+        )}
 
-  if (item?.storageNotes) {
-    sections.push({
-      title: 'Notes',
-      content: (
-        <Text style={[commonStyles.body, styles.notes]}>
-          {item.storageNotes}
-        </Text>
-      ),
-    });
-  }
+        {/* Notes Section */}
+        {item.storageNotes && (
+          <View style={styles.notesSection}>
+            <View style={styles.notesHeader}>
+              <Icon
+                name="document-text-outline"
+                size={16}
+                color={theme.colors.textSecondary}
+                library="Ionicons"
+              />
+              <Text style={styles.notesLabel}>Notes</Text>
+            </View>
+            <Text style={styles.notesText}>{item.storageNotes}</Text>
+          </View>
+        )}
 
-  // Add item ledger section
-  const itemLedger = ledgerData?.pantryItemLedger;
-  if (itemLedger || ledgerLoading) {
-    sections.push({
-      title: 'Usage History (Last Month)',
-      content: ledgerLoading ? (
-        <View style={styles.ledgerLoading}>
-          <ActivityIndicator size="small" color={theme.colors.primary} />
+        {/* Tags Section */}
+        {item.tags && item.tags.length > 0 && (
+          <View style={styles.tagsSection}>
+            <Text style={styles.tagsLabel}>Tags</Text>
+            <View style={styles.tagsContainer}>
+              {item.tags.map(tag => (
+                <View key={tag} style={styles.tagChip}>
+                  <Text style={styles.tagText}>{tag}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Added Info - simplified purchase history */}
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Added</Text>
+          <View style={styles.infoValueContainer}>
+            <View style={styles.infoIcon}>
+              <Icon
+                name="calendar-outline"
+                size={16}
+                color={theme.colors.textSecondary}
+                library="Ionicons"
+              />
+            </View>
+            <Text style={styles.infoValue}>{formatDate(item.createdAt)}</Text>
+          </View>
         </View>
-      ) : (
-        <View>
-          <View style={styles.ledgerRow}>
-            <Text style={[commonStyles.caption, styles.detailLabel]}>Added</Text>
-            <Text style={[styles.ledgerValue, { color: theme.colors.success }]}>
-              +{itemLedger?.totalAdded ?? 0} {itemLedger?.unitName || ''}
-            </Text>
-          </View>
-          <View style={styles.ledgerRow}>
-            <Text style={[commonStyles.caption, styles.detailLabel]}>Consumed</Text>
-            <Text style={[styles.ledgerValue, { color: theme.colors.primary }]}>
-              -{itemLedger?.totalConsumed ?? 0} {itemLedger?.unitName || ''}
-            </Text>
-          </View>
-          <View style={styles.ledgerRow}>
-            <Text style={[commonStyles.caption, styles.detailLabel]}>Wasted</Text>
-            <Text style={[styles.ledgerValue, { color: theme.colors.error }]}>
-              -{itemLedger?.totalWasted ?? 0} {itemLedger?.unitName || ''}
-            </Text>
-          </View>
-          <View style={[styles.ledgerRow, styles.ledgerSummary]}>
-            <Text style={[commonStyles.caption, styles.detailLabel]}>Net Change</Text>
-            <Text
-              style={[
-                styles.ledgerValue,
-                styles.ledgerNetValue,
-                {
-                  color:
-                    (itemLedger?.netQuantity ?? 0) >= 0
-                      ? theme.colors.success
-                      : theme.colors.error,
-                },
-              ]}
+
+        {/* Usage Records Section - only show if there are usage records */}
+        {item.usageRecords && item.usageRecords.length > 0 && (
+          <>
+            <TouchableOpacity
+              style={styles.sectionHeader}
+              onPress={() => setPurchaseHistoryExpanded(!purchaseHistoryExpanded)}
+              activeOpacity={0.7}
             >
-              {(itemLedger?.netQuantity ?? 0) >= 0 ? '+' : ''}
-              {itemLedger?.netQuantity ?? 0} {itemLedger?.unitName || ''}
-            </Text>
-          </View>
-          <View style={styles.ledgerCounts}>
-            <Text style={styles.ledgerCountText}>
-              {itemLedger?.additionCount ?? 0} additions · {itemLedger?.consumptionCount ?? 0}{' '}
-              consumptions · {itemLedger?.wasteCount ?? 0} waste events
-            </Text>
-          </View>
-        </View>
-      ),
-    });
-  }
+              <Text style={styles.sectionTitle}>
+                Usage History ({item.usageRecords.length})
+              </Text>
+              <Icon
+                name={purchaseHistoryExpanded ? 'chevron-up' : 'chevron-down'}
+                size={20}
+                color={theme.colors.textSecondary}
+                library="Ionicons"
+              />
+            </TouchableOpacity>
 
-  return (
-    <DetailTemplate
-      title="Item Details"
-      onBack={() => goBack()}
-      headerActions={[
-        {
-          icon: 'edit',
-          onPress: () => navigateTo.pantryItem({ itemId }),
-        },
-        {
-          icon: 'delete',
-          onPress: handleDelete,
-          color: theme.colors.error,
-        },
-      ]}
-      sections={sections}
-      primaryAction={{
-        label: addToListButton.label,
-        icon: addToListButton.icon,
-        onPress: handleAddToShoppingList,
-      }}
-    />
+            {purchaseHistoryExpanded && (
+              <View style={styles.purchaseHistoryContent}>
+                {item.usageRecords.slice(0, 5).map(usage => (
+                  <View key={usage.id} style={styles.purchaseRow}>
+                    <View style={styles.purchaseDateStore}>
+                      <Text style={styles.purchaseDate}>
+                        {formatDate(usage.usedAt)}
+                      </Text>
+                      {usage.purpose && (
+                        <Text style={styles.purchaseStore}>{usage.purpose}</Text>
+                      )}
+                    </View>
+                    <Text style={styles.purchasePrice}>
+                      -{usage.quantityUsed}
+                    </Text>
+                  </View>
+                ))}
+                {item.usageRecords.length > 5 && (
+                  <Text style={styles.noPurchaseData}>
+                    +{item.usageRecords.length - 5} more entries
+                  </Text>
+                )}
+              </View>
+            )}
+          </>
+        )}
+
+        {/* Recipes to try (dev only) */}
+        {__DEV__ && (
+          <View style={styles.recipesSection}>
+            <Text style={styles.sectionTitle}>Recipes to try</Text>
+            {loadingRecipes ? (
+              <ActivityIndicator
+                size="small"
+                color={theme.colors.primary}
+                style={styles.recipesLoading}
+              />
+            ) : suggestedRecipes.length > 0 ? (
+              <FlatList
+                horizontal
+                data={suggestedRecipes}
+                keyExtractor={recipe => String(recipe.id)}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.recipesList}
+                renderItem={({ item: recipe }) => (
+                  <TouchableOpacity
+                    style={styles.recipeCard}
+                    onPress={() => handleRecipePress(recipe.id)}
+                    activeOpacity={0.8}
+                  >
+                    <Image
+                      source={{ uri: recipe.image }}
+                      style={styles.recipeImage}
+                      resizeMode="cover"
+                    />
+                    <Text style={styles.recipeTitle} numberOfLines={2}>
+                      {recipe.title}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              />
+            ) : (
+              <Text style={styles.noRecipes}>
+                No recipe suggestions available
+              </Text>
+            )}
+          </View>
+        )}
+
+        {/* Bottom padding for safe area */}
+        <View style={{ height: insets.bottom + 20 }} />
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  imageContainer: {
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  imageSection: {
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: theme.spacing.xl,
     backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.lg,
-    padding: theme.spacing.lg,
     marginBottom: theme.spacing.md,
   },
-  itemImage: {
+  heroImage: {
     width: 200,
     height: 200,
   },
-  itemName: {
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.sm,
+  },
+  itemTitle: {
+    flex: 1,
     fontSize: theme.fonts.size['2xl'],
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textPrimary,
+    marginRight: theme.spacing.md,
   },
-  brandName: {
+  quantityBadge: {
+    fontSize: theme.fonts.size.lg,
+    fontWeight: theme.fonts.weight.medium,
+    color: theme.colors.textSecondary,
+  },
+  expiryText: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textSecondary,
+    paddingHorizontal: theme.spacing.lg,
     marginTop: theme.spacing.xs,
+    marginBottom: theme.spacing.md,
   },
-  quantityDescription: {
-    marginTop: theme.spacing.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
+  expiryUrgent: {
+    color: theme.colors.warning,
   },
-  detailRow: {
+  expiryExpired: {
+    color: theme.colors.error,
+  },
+  categoryBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.sm,
+    gap: theme.spacing.xs,
+  },
+  categoryText: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.primary,
+    fontWeight: theme.fonts.weight.medium,
+  },
+  infoColumns: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+    marginTop: theme.spacing.sm,
+  },
+  infoColumn: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  infoColumnLabel: {
+    fontSize: theme.fonts.size.xs,
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.xs,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  infoColumnValue: {
+    fontSize: theme.fonts.size.sm,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textPrimary,
+    textAlign: 'center',
+  },
+  expiryColumnUrgent: {
+    color: theme.colors.warning,
+  },
+  expiryColumnExpired: {
+    color: theme.colors.error,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
-  detailLabel: {
-    flex: 1,
+  infoLabel: {
+    fontSize: theme.fonts.size.base,
+    color: theme.colors.textSecondary,
   },
-  detailValue: {
-    fontSize: theme.fonts.size.sm,
+  infoValueContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  infoIcon: {
+    marginRight: theme.spacing.xs,
+  },
+  infoValue: {
+    fontSize: theme.fonts.size.base,
     fontWeight: theme.fonts.weight.medium,
     color: theme.colors.textPrimary,
   },
-  notes: {
-    lineHeight: theme.fonts.size.base * theme.typography.lineHeight.relaxed,
+  infoValueMuted: {
+    color: theme.colors.textTertiary,
+    fontStyle: 'italic',
   },
-  descriptionContainer: {
-    paddingVertical: theme.spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+  infoValueError: {
+    color: theme.colors.error,
   },
-  descriptionText: {
-    marginTop: theme.spacing.xs,
-    lineHeight: theme.fonts.size.base * theme.typography.lineHeight.relaxed,
-    color: theme.colors.textSecondary,
-  },
-  ledgerLoading: {
-    paddingVertical: theme.spacing.lg,
-    alignItems: 'center',
-  },
-  ledgerRow: {
+  sectionHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: theme.spacing.sm,
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+    marginTop: theme.spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
-  ledgerValue: {
+  sectionTitle: {
     fontSize: theme.fonts.size.base,
     fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textPrimary,
   },
-  ledgerSummary: {
-    borderBottomWidth: 0,
-    marginTop: theme.spacing.xs,
-    paddingTop: theme.spacing.sm,
-    borderTopWidth: 2,
-    borderTopColor: theme.colors.border,
+  purchaseHistoryContent: {
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.sm,
   },
-  ledgerNetValue: {
-    fontSize: theme.fonts.size.lg,
-  },
-  ledgerCounts: {
-    marginTop: theme.spacing.md,
+  purchaseRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    paddingVertical: theme.spacing.sm,
   },
-  ledgerCountText: {
-    fontSize: theme.fonts.size.xs,
+  purchaseDateStore: {
+    flex: 1,
+  },
+  purchaseDate: {
+    fontSize: theme.fonts.size.base,
+    color: theme.colors.textPrimary,
+    fontWeight: theme.fonts.weight.medium,
+  },
+  purchaseStore: {
+    fontSize: theme.fonts.size.sm,
     color: theme.colors.textSecondary,
+    marginTop: 2,
+  },
+  purchasePrice: {
+    fontSize: theme.fonts.size.base,
+    fontWeight: theme.fonts.weight.semibold,
+    color: theme.colors.textPrimary,
+  },
+  noPurchaseData: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textSecondary,
+    fontStyle: 'italic',
+  },
+  notesSection: {
+    marginHorizontal: theme.spacing.lg,
+    marginTop: theme.spacing.md,
+    padding: theme.spacing.md,
+    backgroundColor: theme.colors.surfaceVariant,
+    borderRadius: theme.radii.md,
+  },
+  notesHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing.xs,
+  },
+  notesLabel: {
+    fontSize: theme.fonts.size.sm,
+    fontWeight: theme.fonts.weight.medium,
+    color: theme.colors.textSecondary,
+    marginLeft: theme.spacing.xs,
+  },
+  notesText: {
+    fontSize: theme.fonts.size.base,
+    color: theme.colors.textPrimary,
+    lineHeight: 22,
+  },
+  tagsSection: {
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+  },
+  tagsLabel: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.sm,
+  },
+  tagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: theme.spacing.xs,
+  },
+  tagChip: {
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
+    backgroundColor: theme.colors.primaryLight,
+    borderRadius: theme.radii.full,
+  },
+  tagText: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.primary,
+    fontWeight: theme.fonts.weight.medium,
+  },
+  recipesSection: {
+    marginTop: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.lg,
+  },
+  recipesLoading: {
+    marginTop: theme.spacing.md,
+  },
+  recipesList: {
+    paddingTop: theme.spacing.md,
+    paddingRight: theme.spacing.lg,
+  },
+  recipeCard: {
+    width: 140,
+    marginRight: theme.spacing.md,
+  },
+  recipeImage: {
+    width: 140,
+    height: 100,
+    borderRadius: theme.radii.md,
+    backgroundColor: theme.colors.surface,
+  },
+  recipeTitle: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textPrimary,
+    marginTop: theme.spacing.xs,
+    fontWeight: theme.fonts.weight.medium,
+  },
+  noRecipes: {
+    fontSize: theme.fonts.size.sm,
+    color: theme.colors.textSecondary,
+    marginTop: theme.spacing.md,
+    fontStyle: 'italic',
   },
 }));

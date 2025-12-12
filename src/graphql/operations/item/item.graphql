@@ -62,6 +62,7 @@ query ItemByUpc($upc: String!) {
     imageUrl
     name
     netWeight
+    primaryUpc
     units {
       isDefault
       unitId
@@ -76,6 +77,7 @@ query ItemBySku($sku: String!, $storeId: String) {
     name
     netWeight
     description
+    primaryUpc
     units {
       isDefault
       unitId
@@ -116,7 +118,7 @@ query AutocompleteItems($input: AutocompleteInput!) {
         isDefault
         isPreferred
       }
-      brand {
+      brands {
         id
         name
       }

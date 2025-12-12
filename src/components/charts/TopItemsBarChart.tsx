@@ -137,7 +137,7 @@ const styles = StyleSheet.create(theme => ({
   },
   bar: {
     height: 20,
-    borderRadius: 4,
+    borderRadius: theme.radii.sm,
     minWidth: 4,
   },
   barValue: {

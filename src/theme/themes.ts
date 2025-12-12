@@ -6,6 +6,7 @@ import {
   radii,
   shadows,
   sizes,
+  zIndex,
 } from './foundations';
 
 const commonTheme = {
@@ -15,6 +16,7 @@ const commonTheme = {
   radii,
   shadows,
   sizes,
+  zIndex,
 };
 
 export const lightTheme = {
@@ -92,6 +94,13 @@ export const lightTheme = {
 
     // Validation colors - for forms
     validation: colors.validation,
+
+    // Pantry redesign colors
+    expiration: colors.expiration,
+    filterTab: colors.filterTab,
+    avatar: colors.avatar,
+    sectionHeader: colors.sectionHeader,
+    alertBanner: colors.alertBanner,
 
     // Overlay
     overlay: colors.overlay,
@@ -174,6 +183,13 @@ export const darkTheme = {
 
     // Validation colors - for forms
     validation: colors.validation,
+
+    // Pantry redesign colors
+    expiration: colors.expiration,
+    filterTab: colors.filterTab,
+    avatar: colors.avatar,
+    sectionHeader: colors.sectionHeader,
+    alertBanner: colors.alertBanner,
 
     // Overlay
     overlay: colors.overlay,

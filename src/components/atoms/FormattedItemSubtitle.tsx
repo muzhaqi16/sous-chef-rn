@@ -134,11 +134,11 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
     );
   }
 
-  // Case 3: Only weight (no quantity)
+  // Case 3: Only weight (no quantity) - weight is primary info
   if (hasWeight && hasUnit && !hasQuantity) {
     return (
       <View style={styles.container}>
-        <Text style={[styles.weight, { color: theme.colors.textSecondary }]}>
+        <Text style={[styles.weight, { color: theme.colors.textPrimary }]}>
           {displayWeight} {unitSymbol}
         </Text>
         {additionalInfo && (

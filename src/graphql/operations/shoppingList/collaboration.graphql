@@ -15,7 +15,6 @@ query MyShoppingListInvites {
     canRemoveItems
     canMarkPurchased
     canInviteOthers
-    inviteToken
     invitedAt
     expiresAt
     shoppingList {
@@ -59,7 +58,6 @@ mutation InviteToShoppingList($input: InviteToShoppingListInput!) {
     canRemoveItems
     canMarkPurchased
     canInviteOthers
-    inviteToken
     invitedAt
     expiresAt
     shoppingList {
@@ -169,7 +167,6 @@ subscription CollaborationInviteSent($shoppingListId: ID!, $email: String!) {
     email
     role
     status
-    inviteToken
     invitedAt
     expiresAt
     shoppingList {

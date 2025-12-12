@@ -1,19 +1,15 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TextInputProps,
-  StyleSheet,
-} from 'react-native';
-import {useUnistyles} from 'react-native-unistyles';
+import {TextInput, TextInputProps, ViewStyle} from 'react-native';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
+import {FormFieldWrapper} from '../atoms/FormFieldWrapper';
 
-interface FormNumberInputProps extends Omit<TextInputProps, 'style' | 'keyboardType'> {
+interface FormNumberInputProps
+  extends Omit<TextInputProps, 'style' | 'keyboardType'> {
   label: string;
   error?: string;
   required?: boolean;
-  containerStyle?: any;
-  inputStyle?: any;
+  containerStyle?: ViewStyle;
+  inputStyle?: ViewStyle;
   keyboardType?: 'numeric' | 'decimal-pad' | 'number-pad';
 }
 
@@ -28,14 +24,15 @@ export const FormNumberInput: React.FC<FormNumberInputProps> = ({
   ...textInputProps
 }) => {
   const {theme} = useUnistyles();
-  
+
   const handleChangeText = (text: string) => {
     // Allow only numbers and decimal point for decimal-pad
     if (keyboardType === 'decimal-pad') {
       const sanitized = text.replace(/[^0-9.]/g, '');
       // Ensure only one decimal point
       const parts = sanitized.split('.');
-      const result = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : sanitized;
+      const result =
+        parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : sanitized;
       onChangeText?.(result);
     } else {
       // For numeric/number-pad, only allow digits
@@ -43,53 +40,36 @@ export const FormNumberInput: React.FC<FormNumberInputProps> = ({
       onChangeText?.(sanitized);
     }
   };
-  
-  const styles = StyleSheet.create({
-    container: {
-      marginBottom: 16,
-      ...containerStyle,
-    },
-    label: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: theme.colors.textPrimary,
-      marginBottom: 8,
-    },
-    required: {
-      color: '#dc3545',
-    },
-    input: {
-      borderWidth: 1,
-      borderColor: error ? '#dc3545' : theme.colors.border,
-      borderRadius: 8,
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      fontSize: 16,
-      backgroundColor: theme.colors.surface,
-      color: theme.colors.textPrimary,
-      ...inputStyle,
-    },
-    errorText: {
-      fontSize: 14,
-      color: '#dc3545',
-      marginTop: 4,
-    },
-  });
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.label}>
-        {label}
-        {required && <Text style={styles.required}> *</Text>}
-      </Text>
+    <FormFieldWrapper
+      label={label}
+      error={error}
+      required={required}
+      containerStyle={containerStyle}>
       <TextInput
-        style={styles.input}
+        style={[styles.input, error && styles.inputError, inputStyle]}
         placeholderTextColor={theme.colors.textSecondary}
         keyboardType={keyboardType}
         onChangeText={handleChangeText}
         {...textInputProps}
       />
-      {error && <Text style={styles.errorText}>{error}</Text>}
-    </View>
+    </FormFieldWrapper>
   );
 };
+
+const styles = StyleSheet.create(theme => ({
+  input: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radii.md,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing['3'],
+    fontSize: theme.typography.fontSize.base,
+    backgroundColor: theme.colors.surface,
+    color: theme.colors.textPrimary,
+  },
+  inputError: {
+    borderColor: theme.colors.error,
+  },
+}));

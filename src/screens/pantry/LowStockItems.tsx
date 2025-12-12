@@ -38,9 +38,9 @@ export const LowStockItems: React.FC = () => {
   const lowStockItems = useMemo(() => {
     if (!items) return [];
 
+    // Match the low stock logic used in usePantryManagement stats
     return items.filter(item => {
-      if (!item.reservedQuantity) return false;
-      return item.currentQuantity <= item.reservedQuantity;
+      return item.currentQuantity <= 1 || item.lowStockAlert;
     });
   }, [items]);
 
@@ -101,8 +101,7 @@ export const LowStockItems: React.FC = () => {
               <View style={styles.itemInfo}>
                 <Text style={styles.itemName}>{item.item?.name}</Text>
                 <Text style={[commonStyles.caption, styles.itemDetails]}>
-                  {item.currentQuantity} / {item.reservedQuantity}{' '}
-                  {item.unit?.symbol}
+                  {item.currentQuantity} {item.unit?.symbol || 'pcs'} remaining
                 </Text>
               </View>
               <TouchableOpacity

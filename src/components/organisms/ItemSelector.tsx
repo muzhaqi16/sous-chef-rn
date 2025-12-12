@@ -110,10 +110,10 @@ export function ItemSelector<T extends SelectableItem>({
 
 const styles = StyleSheet.create(theme => ({
   item: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    marginBottom: 8,
+    paddingVertical: theme.spacing['3'],
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.radii.sm,
+    marginBottom: theme.spacing.sm,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: 'transparent',
@@ -123,7 +123,7 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.primary,
   },
   itemText: {
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.md,
     color: theme.colors.textPrimary,
   },
   selectedItemText: {
@@ -134,16 +134,16 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 32,
+    paddingVertical: theme.spacing.xl,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 32,
+    paddingVertical: theme.spacing.xl,
   },
   emptyText: {
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.md,
     color: theme.colors.textSecondary,
     textAlign: 'center',
   },

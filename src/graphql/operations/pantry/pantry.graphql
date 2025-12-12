@@ -100,6 +100,20 @@ query GetDefaultPantry($homeId: ID!) {
   }
 }
 
+query GetRecentlyDeletedPantryItems($pantryId: ID!, $limit: Int) {
+  recentlyDeletedPantryItems(pantryId: $pantryId, limit: $limit) {
+    id
+    itemName
+    itemId
+    item {
+      id
+      name
+      imageUrl
+    }
+    createdAt
+  }
+}
+
 # ============================================
 # ANALYTICS QUERIES
 # ============================================
@@ -307,7 +321,10 @@ mutation UpdatePantry($id: ID!, $input: UpdatePantryInput!) {
 }
 
 mutation DeletePantry($id: ID!) {
-  deletePantry(id: $id)
+  deletePantry(id: $id) {
+    id
+    name
+  }
 }
 
 mutation SetDefaultPantry($pantryId: ID!) {

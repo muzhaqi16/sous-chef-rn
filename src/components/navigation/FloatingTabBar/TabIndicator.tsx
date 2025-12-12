@@ -47,7 +47,7 @@ const styles = StyleSheet.create(theme => ({
     position: 'absolute',
     height: '100%',
     backgroundColor: theme.colors.primary,
-    borderRadius: 20,
+    borderRadius: theme.radii['2xl'],
     opacity: 0.35, // More visible indicator
     // NO z-index or elevation needed - parent layer controls stacking
   },
