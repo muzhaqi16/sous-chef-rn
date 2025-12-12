@@ -58,13 +58,13 @@ const styles = StyleSheet.create(theme => ({
   },
   formActions: {
     flexDirection: 'row',
-    marginTop: 12,
-    gap: 12,
+    marginTop: theme.spacing['3'],
+    gap: theme.spacing['3'],
   },
   button: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 8,
+    paddingVertical: theme.spacing['3'] + 2,
+    borderRadius: theme.radii.sm,
     alignItems: 'center',
   },
   cancelButton: {
@@ -74,7 +74,7 @@ const styles = StyleSheet.create(theme => ({
   },
   cancelButtonText: {
     color: theme.colors.textPrimary,
-    fontSize: 14,
+    fontSize: theme.typography.fontSize.sm,
     fontWeight: '600',
   },
   createButton: {
@@ -87,10 +87,10 @@ const styles = StyleSheet.create(theme => ({
   input: {
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 16,
+    borderRadius: theme.radii.sm,
+    paddingHorizontal: theme.spacing['3'],
+    paddingVertical: theme.spacing.sm,
+    fontSize: theme.typography.fontSize.md,
     color: theme.colors.textPrimary,
     backgroundColor: theme.colors.surface,
   },

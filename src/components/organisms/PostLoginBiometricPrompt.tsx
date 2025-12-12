@@ -138,7 +138,7 @@ export const PostLoginBiometricPrompt = ({
 const styles = StyleSheet.create(theme => ({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: theme.colors.overlays.heavy,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: theme.spacing.lg,
@@ -162,7 +162,7 @@ const styles = StyleSheet.create(theme => ({
   iconBackground: {
     width: 70,
     height: 70,
-    borderRadius: 35,
+    borderRadius: theme.radii.full,
     backgroundColor: theme.colors.surface,
     justifyContent: 'center',
     alignItems: 'center',

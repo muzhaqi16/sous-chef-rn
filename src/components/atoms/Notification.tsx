@@ -66,36 +66,36 @@ export const NotificationBanner: React.FC<NotificationBannerProps> = ({
   );
 };
 
-const styles = StyleSheet.create(_theme => ({
+const styles = StyleSheet.create(theme => ({
   bannerContainer: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    zIndex: 1000,
-    paddingHorizontal: 16,
-    paddingTop: 40, // for status bar
+    zIndex: theme.zIndex.overlay,
+    paddingHorizontal: theme.spacing.md,
+    paddingTop: theme.spacing['2xl'], // for status bar
   },
   bannerInner: {
-    backgroundColor: '#333',
-    padding: 12,
-    borderRadius: 8,
+    backgroundColor: theme.colors.textPrimary,
+    padding: theme.spacing['3'],
+    borderRadius: theme.radii.md,
     flexDirection: 'row',
     alignItems: 'center',
   },
   bannerTitle: {
-    color: 'white',
+    color: theme.colors.white,
     fontWeight: 'bold',
-    marginRight: 8,
+    marginRight: theme.spacing.sm,
     flexShrink: 1,
   },
   bannerMessage: {
-    color: 'white',
+    color: theme.colors.white,
     flex: 1,
   },
   bannerClose: {
-    color: 'white',
-    fontSize: 18,
-    paddingHorizontal: 8,
+    color: theme.colors.white,
+    fontSize: theme.typography.fontSize.lg,
+    paddingHorizontal: theme.spacing.sm,
   },
 }));

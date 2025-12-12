@@ -5,6 +5,7 @@ import {
   Text,
   ActivityIndicator,
   TouchableOpacity,
+  Pressable,
 } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
@@ -234,6 +235,7 @@ export const StorageLocationsScreen: React.FC<{
               setEditingId(null);
               setShowCreateForm(true);
             },
+            variant: 'primary',
           },
         ]}
         sections={sections}
@@ -243,33 +245,45 @@ export const StorageLocationsScreen: React.FC<{
 
       {/* Create Form Overlay */}
       {showCreateForm && (
-        <Animated.View
-          {...formAnimationPreset}
-          style={[commonStyles.shadow, styles.formOverlay]}
-        >
-          <StorageLocationForm
-            onSubmit={handleCreate}
-            onCancel={() => setShowCreateForm(false)}
-            isSubmitting={creating}
-            availableLocations={locations}
+        <View style={commonStyles.absoluteFill}>
+          <Pressable
+            style={commonStyles.overlay}
+            onPress={() => setShowCreateForm(false)}
           />
-        </Animated.View>
+          <Animated.View
+            {...formAnimationPreset}
+            style={[commonStyles.shadow, styles.formOverlay]}
+          >
+            <StorageLocationForm
+              onSubmit={handleCreate}
+              onCancel={() => setShowCreateForm(false)}
+              isSubmitting={creating}
+              availableLocations={locations}
+            />
+          </Animated.View>
+        </View>
       )}
 
       {/* Edit Form Overlay */}
       {editingLocation && (
-        <Animated.View
-          {...formAnimationPreset}
-          style={[commonStyles.shadow, styles.formOverlay]}
-        >
-          <StorageLocationForm
-            initialData={editingLocation}
-            onSubmit={data => handleUpdate(editingLocation.id, data)}
-            onCancel={() => setEditingId(null)}
-            isSubmitting={false}
-            availableLocations={locations}
+        <View style={commonStyles.absoluteFill}>
+          <Pressable
+            style={commonStyles.overlay}
+            onPress={() => setEditingId(null)}
           />
-        </Animated.View>
+          <Animated.View
+            {...formAnimationPreset}
+            style={[commonStyles.shadow, styles.formOverlay]}
+          >
+            <StorageLocationForm
+              initialData={editingLocation}
+              onSubmit={data => handleUpdate(editingLocation.id, data)}
+              onCancel={() => setEditingId(null)}
+              isSubmitting={false}
+              availableLocations={locations}
+            />
+          </Animated.View>
+        </View>
       )}
     </>
   );

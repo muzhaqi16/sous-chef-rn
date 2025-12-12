@@ -197,45 +197,45 @@ export const useErrorHandler = () => {
   }, []);
 };
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: theme.spacing.lg,
   },
   content: {
     alignItems: 'center',
     maxWidth: 300,
   },
   title: {
-    fontSize: 24,
+    fontSize: theme.typography.fontSize.xl,
     fontWeight: 'bold',
-    marginBottom: 12,
+    marginBottom: theme.spacing['3'],
     textAlign: 'center',
   },
   message: {
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.md,
     textAlign: 'center',
-    marginBottom: 8,
-    lineHeight: 22,
+    marginBottom: theme.spacing.sm,
+    lineHeight: theme.typography.lineHeight.relaxed,
   },
   context: {
-    fontSize: 12,
+    fontSize: theme.typography.fontSize.xs,
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: theme.spacing.xl,
     fontStyle: 'italic',
   },
   retryButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginTop: 16,
+    paddingHorizontal: theme.spacing.xl,
+    paddingVertical: theme.spacing['3'],
+    borderRadius: theme.radii.sm,
+    marginTop: theme.spacing.md,
   },
   retryText: {
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.md,
     fontWeight: '600',
   },
-});
+}));
 
 export default ErrorBoundary;

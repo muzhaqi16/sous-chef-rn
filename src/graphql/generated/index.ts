@@ -101,6 +101,16 @@ export type AddRestrictionsInput = {
   userId: Scalars['ID']['input'];
 };
 
+export type AddTemplateItemInput = {
+  customMealName?: InputMaybe<Scalars['String']['input']>;
+  dayOffset: Scalars['Int']['input'];
+  mealType: MealType;
+  notes?: InputMaybe<Scalars['String']['input']>;
+  recipeId?: InputMaybe<Scalars['ID']['input']>;
+  servings?: InputMaybe<Scalars['Int']['input']>;
+  templateId: Scalars['ID']['input'];
+};
+
 export type AddWarningInput = {
   reason: Scalars['String']['input'];
   userId: Scalars['ID']['input'];
@@ -123,7 +133,9 @@ export type AggregationResult = {
   unit: Unit;
 };
 
+/** Input for allergen data */
 export type AllergenInput = {
+  confirmed?: InputMaybe<Scalars['Boolean']['input']>;
   contains: Scalars['Boolean']['input'];
   mayContain?: InputMaybe<Scalars['Boolean']['input']>;
   name: Scalars['String']['input'];
@@ -131,7 +143,9 @@ export type AllergenInput = {
   severity?: InputMaybe<AllergenSeverity>;
 };
 
+/** Allergen severity levels */
 export enum AllergenSeverity {
+  LifeThreatening = 'LIFE_THREATENING',
   Mild = 'MILD',
   Moderate = 'MODERATE',
   Severe = 'SEVERE',
@@ -263,6 +277,33 @@ export type BulkCreateItemsResponse = {
   updated: Array<Item>;
 };
 
+/** Error detail for bulk device operations */
+export type BulkDeviceError = {
+  __typename?: 'BulkDeviceError';
+  deviceId: Scalars['ID']['output'];
+  message: Scalars['String']['output'];
+};
+
+/** Result of bulk device update */
+export type BulkDeviceResult = {
+  __typename?: 'BulkDeviceResult';
+  devices: Array<Device>;
+  errors: Maybe<Array<BulkDeviceError>>;
+  success: Scalars['Boolean']['output'];
+  updatedCount: Scalars['Int']['output'];
+};
+
+/**
+ * Input for bulk device updates.
+ * Only status fields that make sense for bulk operations.
+ */
+export type BulkDeviceUpdateInput = {
+  delete?: InputMaybe<Scalars['Boolean']['input']>;
+  isActive?: InputMaybe<Scalars['Boolean']['input']>;
+  isTrusted?: InputMaybe<Scalars['Boolean']['input']>;
+  isVerified?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
 export type BulkNotificationInput = {
   actionUrl?: InputMaybe<Scalars['String']['input']>;
   batchId?: InputMaybe<Scalars['String']['input']>;
@@ -303,6 +344,12 @@ export enum CacheControlScope {
   Private = 'PRIVATE',
   Public = 'PUBLIC',
 }
+
+export type CanDeleteAccountResult = {
+  __typename?: 'CanDeleteAccountResult';
+  blockers: Array<DeletionBlocker>;
+  canDelete: Scalars['Boolean']['output'];
+};
 
 /**
  * Category type for organizing items
@@ -740,14 +787,58 @@ export type CreateLoginHistoryInput = {
   userId: Scalars['ID']['input'];
 };
 
+/** Input for creating a meal plan from a template */
+export type CreateMealPlanFromTemplateInput = {
+  /** Optional budget for the meal plan */
+  budgetAmount?: InputMaybe<Scalars['Float']['input']>;
+  /** Optional dietary profile to link for nutrition tracking */
+  dietaryProfileId?: InputMaybe<Scalars['ID']['input']>;
+  /** Name for the new meal plan (defaults to template name + date) */
+  name?: InputMaybe<Scalars['String']['input']>;
+  /** Override default servings from template */
+  servings?: InputMaybe<Scalars['Int']['input']>;
+  /** Start date for the new meal plan */
+  startDate: Scalars['DateTime']['input'];
+  templateId: Scalars['ID']['input'];
+};
+
 export type CreateMealPlanInput = {
   budgetAmount?: InputMaybe<Scalars['Float']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
+  /** Optional link to a dietary profile for nutrition goal tracking */
+  dietaryProfileId?: InputMaybe<Scalars['ID']['input']>;
   endDate: Scalars['DateTime']['input'];
   name: Scalars['String']['input'];
   planType: MealPlanType;
   servings?: InputMaybe<Scalars['Int']['input']>;
   startDate: Scalars['DateTime']['input'];
+};
+
+export type CreateMealPlanItemInput = {
+  /** Manual nutrition override - if not provided, will be pulled from recipe */
+  calories?: InputMaybe<Scalars['Float']['input']>;
+  carbs?: InputMaybe<Scalars['Float']['input']>;
+  customMealName?: InputMaybe<Scalars['String']['input']>;
+  date: Scalars['DateTime']['input'];
+  estimatedCost?: InputMaybe<Scalars['Float']['input']>;
+  fat?: InputMaybe<Scalars['Float']['input']>;
+  mealPlanId: Scalars['ID']['input'];
+  mealType: MealType;
+  notes?: InputMaybe<Scalars['String']['input']>;
+  protein?: InputMaybe<Scalars['Float']['input']>;
+  recipeId?: InputMaybe<Scalars['ID']['input']>;
+  servings?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type CreateMealTemplateInput = {
+  category?: InputMaybe<TemplateCategory>;
+  defaultServings?: InputMaybe<Scalars['Int']['input']>;
+  description?: InputMaybe<Scalars['String']['input']>;
+  durationDays?: InputMaybe<Scalars['Int']['input']>;
+  /** Initial items to add to the template */
+  items?: InputMaybe<Array<MealTemplateItemInput>>;
+  name: Scalars['String']['input'];
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
 };
 
 export type CreateMembershipInput = {
@@ -817,10 +908,12 @@ export type CreatePantryItemInput = {
   itemNetWeight?: InputMaybe<Scalars['Float']['input']>;
   itemUpc?: InputMaybe<Scalars['String']['input']>;
   lastUsedAt?: InputMaybe<Scalars['DateTime']['input']>;
+  minQuantity?: InputMaybe<Scalars['Float']['input']>;
   packageWeight?: InputMaybe<Scalars['Float']['input']>;
   packageWeightUnitId?: InputMaybe<Scalars['String']['input']>;
   pantryId: Scalars['ID']['input'];
   purchaseId?: InputMaybe<Scalars['String']['input']>;
+  restockQuantity?: InputMaybe<Scalars['Float']['input']>;
   storageLocationId?: InputMaybe<Scalars['String']['input']>;
   storageLocationName?: InputMaybe<Scalars['String']['input']>;
   storageNotes?: InputMaybe<Scalars['String']['input']>;
@@ -952,6 +1045,15 @@ export type CreateStoreInput = {
   supportsPriceAPI?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
+/** Input for creating a template from an existing meal plan */
+export type CreateTemplateFromMealPlanInput = {
+  category?: InputMaybe<TemplateCategory>;
+  description?: InputMaybe<Scalars['String']['input']>;
+  mealPlanId: Scalars['ID']['input'];
+  name: Scalars['String']['input'];
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
+};
+
 export type CreateUnitInput = {
   baseUnitId?: InputMaybe<Scalars['String']['input']>;
   conversionFactor?: InputMaybe<Scalars['Float']['input']>;
@@ -1076,6 +1178,25 @@ export enum DeductionMethod {
   RecipeBased = 'RECIPE_BASED',
 }
 
+/** Input for deleted device cleanup */
+export type DeletedDeviceCleanupInput = {
+  olderThanDays?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type DeletionBlocker = {
+  __typename?: 'DeletionBlocker';
+  message: Scalars['String']['output'];
+  resourceId: Scalars['ID']['output'];
+  resourceName: Scalars['String']['output'];
+  type: DeletionBlockerType;
+};
+
+export enum DeletionBlockerType {
+  HomeOwnership = 'HOME_OWNERSHIP',
+  Other = 'OTHER',
+  ShoppingList = 'SHOPPING_LIST',
+}
+
 /** User device information - contains sensitive device fingerprinting data */
 export type Device = {
   __typename?: 'Device';
@@ -1159,6 +1280,48 @@ export type DeviceBreakdown = {
   deviceTypes: Array<DeviceTypeStat>;
   operatingSystems: Array<OperatingSystemStat>;
   platforms: Array<PlatformStat>;
+};
+
+/** Input for device cleanup operations */
+export type DeviceCleanupInput = {
+  /** Clean up soft-deleted devices older than X days */
+  deletedDevices?: InputMaybe<DeletedDeviceCleanupInput>;
+  /** Clean up stale devices (not seen for X days) */
+  staleDevices?: InputMaybe<StaleDeviceCleanupInput>;
+};
+
+/** Result of device cleanup operation */
+export type DeviceCleanupResult = {
+  __typename?: 'DeviceCleanupResult';
+  deletedDevicesRemoved: Maybe<Scalars['Int']['output']>;
+  staleDevicesRemoved: Maybe<Scalars['Int']['output']>;
+  success: Scalars['Boolean']['output'];
+  totalRemoved: Scalars['Int']['output'];
+};
+
+/** Device connection for pagination */
+export type DeviceConnection = {
+  __typename?: 'DeviceConnection';
+  edges: Array<DeviceEdge>;
+  pageInfo: PageInfo;
+  totalCount: Scalars['Int']['output'];
+};
+
+/** Input for device count query */
+export type DeviceCountInput = {
+  deviceType?: InputMaybe<DeviceType>;
+  isActive?: InputMaybe<Scalars['Boolean']['input']>;
+  isTrusted?: InputMaybe<Scalars['Boolean']['input']>;
+  isVerified?: InputMaybe<Scalars['Boolean']['input']>;
+  platform?: InputMaybe<MobilePlatform>;
+  userId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+/** Device edge for pagination */
+export type DeviceEdge = {
+  __typename?: 'DeviceEdge';
+  cursor: Scalars['String']['output'];
+  node: Device;
 };
 
 export type DeviceFiltersInput = {
@@ -1248,6 +1411,14 @@ export type DeviceRegistrationInput = {
   userAgent?: InputMaybe<Scalars['String']['input']>;
 };
 
+/** Sort field options for devices */
+export enum DeviceSortField {
+  CreatedAt = 'CREATED_AT',
+  DeviceName = 'DEVICE_NAME',
+  LastLoginAt = 'LAST_LOGIN_AT',
+  LastSeenAt = 'LAST_SEEN_AT',
+}
+
 export type DeviceStat = {
   __typename?: 'DeviceStat';
   count: Scalars['Int']['output'];
@@ -1284,6 +1455,32 @@ export type DeviceTypeStat = {
   __typename?: 'DeviceTypeStat';
   count: Scalars['Int']['output'];
   deviceType: DeviceType;
+};
+
+/**
+ * Comprehensive input for querying devices with filtering, pagination, and sorting.
+ * If userId is not provided, returns current user's devices.
+ */
+export type DevicesQueryInput = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  batteryLevelBelow?: InputMaybe<Scalars['Float']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  deviceType?: InputMaybe<DeviceType>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  hasPeripherals?: InputMaybe<Scalars['Boolean']['input']>;
+  inactiveDays?: InputMaybe<Scalars['Int']['input']>;
+  isActive?: InputMaybe<Scalars['Boolean']['input']>;
+  isEmulated?: InputMaybe<Scalars['Boolean']['input']>;
+  isSuspicious?: InputMaybe<Scalars['Boolean']['input']>;
+  isTrusted?: InputMaybe<Scalars['Boolean']['input']>;
+  isVerified?: InputMaybe<Scalars['Boolean']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
+  manufacturer?: InputMaybe<Scalars['String']['input']>;
+  orderBy?: InputMaybe<DeviceSortField>;
+  orderDirection?: InputMaybe<SortOrder>;
+  platform?: InputMaybe<MobilePlatform>;
+  search?: InputMaybe<Scalars['String']['input']>;
+  userId?: InputMaybe<Scalars['ID']['input']>;
 };
 
 export enum Diet {
@@ -1531,6 +1728,22 @@ export type GetExpirationNotificationsInput = {
   status?: InputMaybe<NotificationDeliveryStatus>;
 };
 
+/** Progress toward a single nutrition goal */
+export type GoalProgress = {
+  __typename?: 'GoalProgress';
+  current: Scalars['Float']['output'];
+  percentage: Scalars['Float']['output'];
+  status: GoalStatus;
+  target: Scalars['Float']['output'];
+};
+
+/** Status relative to nutrition target */
+export enum GoalStatus {
+  OnTarget = 'ON_TARGET',
+  OverTarget = 'OVER_TARGET',
+  UnderTarget = 'UNDER_TARGET',
+}
+
 export enum HealthBenefitCategory {
   Dietary = 'DIETARY',
   Fitness = 'FITNESS',
@@ -1755,14 +1968,18 @@ export type ImportItemsResponse = {
   updated: Scalars['Int']['output'];
 };
 
+/** Input for ingredient data */
 export type IngredientInput = {
+  amount?: InputMaybe<Scalars['Float']['input']>;
   isActive?: InputMaybe<Scalars['Boolean']['input']>;
+  isAllergen?: InputMaybe<Scalars['Boolean']['input']>;
   isGMO?: InputMaybe<Scalars['Boolean']['input']>;
   isOrganic?: InputMaybe<Scalars['Boolean']['input']>;
   name: Scalars['String']['input'];
   order?: InputMaybe<Scalars['Int']['input']>;
   percentage?: InputMaybe<Scalars['Float']['input']>;
   subIngredients?: InputMaybe<Array<IngredientInput>>;
+  unit?: InputMaybe<Scalars['String']['input']>;
 };
 
 /** Input for ingredient usage when marking recipe as cooked */
@@ -2489,14 +2706,29 @@ export type MealPlan = {
   createdAt: Scalars['DateTime']['output'];
   deletedAt: Maybe<Scalars['DateTime']['output']>;
   description: Maybe<Scalars['String']['output']>;
+  dietaryProfile: Maybe<DietaryProfile>;
   endDate: Scalars['DateTime']['output'];
   generatedShoppingLists: Array<ShoppingList>;
   id: Scalars['ID']['output'];
   mealPlanItems: Array<MealPlanItem>;
   name: Scalars['String']['output'];
+  /**
+   * Progress toward nutrition goals from linked dietary profile.
+   * Returns null if no dietary profile is linked.
+   */
+  nutritionGoalProgress: Maybe<NutritionGoalProgress>;
+  /**
+   * Aggregated nutrition summary for the entire meal plan.
+   * Includes totals, daily averages, and breakdown by meal type.
+   */
+  nutritionSummary: MealPlanNutritionSummary;
   planType: MealPlanType;
   servings: Scalars['Int']['output'];
   startDate: Scalars['DateTime']['output'];
+  totalCalories: Maybe<Scalars['Float']['output']>;
+  totalCarbs: Maybe<Scalars['Float']['output']>;
+  totalFat: Maybe<Scalars['Float']['output']>;
+  totalProtein: Maybe<Scalars['Float']['output']>;
   updatedAt: Scalars['DateTime']['output'];
   user: User;
   version: Scalars['Int']['output'];
@@ -2509,18 +2741,40 @@ export type MealPlan = {
 export type MealPlanItem = {
   __typename?: 'MealPlanItem';
   actualCost: Maybe<Scalars['Float']['output']>;
+  calories: Maybe<Scalars['Float']['output']>;
+  carbs: Maybe<Scalars['Float']['output']>;
   completedAt: Maybe<Scalars['DateTime']['output']>;
   customMealName: Maybe<Scalars['String']['output']>;
   date: Scalars['DateTime']['output'];
   estimatedCost: Maybe<Scalars['Float']['output']>;
+  fat: Maybe<Scalars['Float']['output']>;
   id: Scalars['ID']['output'];
   isCompleted: Scalars['Boolean']['output'];
   mealPlan: MealPlan;
   mealType: MealType;
   notes: Maybe<Scalars['String']['output']>;
+  nutritionSource: NutritionSource;
+  protein: Maybe<Scalars['Float']['output']>;
   recipe: Maybe<Recipe>;
   servings: Maybe<Scalars['Int']['output']>;
   usedPantryItems: Scalars['JSON']['output'];
+};
+
+/** Aggregated nutrition data for a meal plan */
+export type MealPlanNutritionSummary = {
+  __typename?: 'MealPlanNutritionSummary';
+  avgDailyCalories: Scalars['Float']['output'];
+  avgDailyCarbs: Scalars['Float']['output'];
+  avgDailyFat: Scalars['Float']['output'];
+  avgDailyProtein: Scalars['Float']['output'];
+  coveragePercentage: Scalars['Float']['output'];
+  mealTypeBreakdown: Array<MealTypeNutrition>;
+  mealsWithNutrition: Scalars['Int']['output'];
+  totalCalories: Scalars['Float']['output'];
+  totalCarbs: Scalars['Float']['output'];
+  totalFat: Scalars['Float']['output'];
+  totalMeals: Scalars['Int']['output'];
+  totalProtein: Scalars['Float']['output'];
 };
 
 export enum MealPlanType {
@@ -2530,6 +2784,60 @@ export enum MealPlanType {
   Weekly = 'WEEKLY',
 }
 
+/**
+ * Reusable meal template for quick meal plan creation.
+ * Templates store meal patterns that can be applied to create meal plans.
+ * Cache: 5 minutes - templates change occasionally
+ */
+export type MealTemplate = {
+  __typename?: 'MealTemplate';
+  category: TemplateCategory;
+  createdAt: Scalars['DateTime']['output'];
+  defaultServings: Scalars['Int']['output'];
+  deletedAt: Maybe<Scalars['DateTime']['output']>;
+  description: Maybe<Scalars['String']['output']>;
+  durationDays: Scalars['Int']['output'];
+  id: Scalars['ID']['output'];
+  items: Array<MealTemplateItem>;
+  lastUsedAt: Maybe<Scalars['DateTime']['output']>;
+  name: Scalars['String']['output'];
+  tags: Array<Scalars['String']['output']>;
+  updatedAt: Scalars['DateTime']['output'];
+  usageCount: Scalars['Int']['output'];
+  user: User;
+};
+
+/** A single meal within a template */
+export type MealTemplateItem = {
+  __typename?: 'MealTemplateItem';
+  customMealName: Maybe<Scalars['String']['output']>;
+  dayOffset: Scalars['Int']['output'];
+  id: Scalars['ID']['output'];
+  mealType: MealType;
+  notes: Maybe<Scalars['String']['output']>;
+  recipe: Maybe<Recipe>;
+  servings: Maybe<Scalars['Int']['output']>;
+  template: MealTemplate;
+};
+
+export type MealTemplateItemInput = {
+  customMealName?: InputMaybe<Scalars['String']['input']>;
+  dayOffset: Scalars['Int']['input'];
+  mealType: MealType;
+  notes?: InputMaybe<Scalars['String']['input']>;
+  recipeId?: InputMaybe<Scalars['ID']['input']>;
+  servings?: InputMaybe<Scalars['Int']['input']>;
+};
+
+/** Filter options for listing templates */
+export type MealTemplatesFilter = {
+  category?: InputMaybe<TemplateCategory>;
+  maxDuration?: InputMaybe<Scalars['Int']['input']>;
+  minDuration?: InputMaybe<Scalars['Int']['input']>;
+  search?: InputMaybe<Scalars['String']['input']>;
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
+};
+
 export enum MealType {
   Breakfast = 'BREAKFAST',
   Brunch = 'BRUNCH',
@@ -2538,6 +2846,17 @@ export enum MealType {
   Lunch = 'LUNCH',
   Snack = 'SNACK',
 }
+
+/** Nutrition breakdown by meal type */
+export type MealTypeNutrition = {
+  __typename?: 'MealTypeNutrition';
+  mealCount: Scalars['Int']['output'];
+  mealType: MealType;
+  totalCalories: Scalars['Float']['output'];
+  totalCarbs: Scalars['Float']['output'];
+  totalFat: Scalars['Float']['output'];
+  totalProtein: Scalars['Float']['output'];
+};
 
 export type Membership = {
   __typename?: 'Membership';
@@ -2750,10 +3069,7 @@ export type Mutation = {
   acceptHomeInvite: Membership;
   acceptShoppingListInvite: ShoppingListCollaborator;
   addCollaborator: ShoppingListCollaborator;
-  addItemTags: Item;
-  addItemToCategory: Item;
   addItemToShoppingList: ShoppingListItem;
-  addItemUnit: ItemUnit;
   /**
    * Add recipe ingredients to shopping list with smart unit handling
    * Checks pantry for available items and only adds deficit
@@ -2761,19 +3077,33 @@ export type Mutation = {
   addRecipeToShoppingList: ShoppingList;
   addRestriction: DietaryRestriction;
   addRestrictions: UserModeration;
+  /** Add an item to a template */
+  addTemplateItem: MealTemplateItem;
   addUserAddress: UserAddress;
   addWarning: UserModeration;
   adminDeleteUser: Scalars['Boolean']['output'];
+  /** Approve a user-created item for public visibility */
   approveItem: Item;
   archiveShoppingList: ShoppingList;
   banUser: UserModeration;
+  /** Create multiple items at once */
   bulkCreateItems: BulkCreateItemsResponse;
+  /** Delete multiple items */
   bulkDeleteItems: BulkOperationSummary;
+  /**
+   * Bulk update multiple devices at once.
+   * Replaces: trustMultipleDevices, untrustMultipleDevices, deactivateMultipleDevices, deleteMultipleDevices
+   */
+  bulkUpdateDevices: BulkDeviceResult;
+  /** Update multiple items with the same changes */
   bulkUpdateItems: BulkOperationSummary;
   cancelRecurring: ShoppingList;
   categorizeItem: ItemCategory;
-  cleanupDeletedDevices: Scalars['Int']['output'];
-  cleanupStaleDevices: Scalars['Int']['output'];
+  /**
+   * Cleanup stale or deleted devices.
+   * Admin operation for maintenance.
+   */
+  cleanupDevices: DeviceCleanupResult;
   clearReminder: ShoppingList;
   /** Mark user onboarding as complete and send welcome email */
   completeOnboarding: Scalars['Boolean']['output'];
@@ -2787,13 +3117,20 @@ export type Mutation = {
   createBulkStores: Array<Store>;
   createCategory: Category;
   createCurrency: Currency;
-  createDevice: Device;
   createFromTemplate: ShoppingList;
   createHome: Home;
   createImageUploadUrl: PresignPayload;
+  /** Create a new item */
   createItem: Item;
   createLoginHistory: LoginHistory;
   createMealPlan: MealPlan;
+  /**
+   * Create a new meal plan from a template.
+   * Copies all template items to the new plan with dates offset from startDate.
+   */
+  createMealPlanFromTemplate: MealPlan;
+  /** Create a new meal template */
+  createMealTemplate: MealTemplate;
   createMembership: Membership;
   createModerationRecord: UserModeration;
   createNotification: Notification;
@@ -2813,10 +3150,13 @@ export type Mutation = {
    */
   createStorageLocation: StorageLocation;
   createStore: Store;
+  /**
+   * Create a template from an existing meal plan.
+   * Extracts the meal pattern into a reusable template.
+   */
+  createTemplateFromMealPlan: MealTemplate;
   createUnit: Unit;
   createUploadUrl: PresignPayload;
-  deactivateDevice: Device;
-  deactivateMultipleDevices: Array<Device>;
   declineHomeInvite: Scalars['Boolean']['output'];
   declineShoppingListInvite: Scalars['Boolean']['output'];
   deleteAccount: Scalars['Boolean']['output'];
@@ -2826,12 +3166,13 @@ export type Mutation = {
   deleteCategory: Scalars['Boolean']['output'];
   deleteCookingLog: Scalars['Boolean']['output'];
   deleteCurrency: Scalars['Boolean']['output'];
-  deleteDevice: Device;
   deleteExpiredNotifications: Scalars['Int']['output'];
   deleteHome: Home;
+  /** Delete an item (soft delete by default, permanent if specified) */
   deleteItem: Item;
   deleteMealPlan: Scalars['Boolean']['output'];
-  deleteMultipleDevices: Array<Device>;
+  /** Delete a meal template (soft delete) */
+  deleteMealTemplate: Scalars['Boolean']['output'];
   deleteMultipleNotifications: Scalars['Int']['output'];
   deleteNotification: Scalars['Boolean']['output'];
   deletePantry: Pantry;
@@ -2849,9 +3190,12 @@ export type Mutation = {
   deleteUnit: Scalars['Boolean']['output'];
   deleteUserAddress: UserAddress;
   dismissExpirationNotification: ExpirationNotification;
+  /** Duplicate a template with a new name */
+  duplicateTemplate: MealTemplate;
+  /** Export items to file */
   exportItems: ExportResponse;
   favoriteRecipe: SavedRecipe;
-  flagDeviceAsEmulator: Device;
+  /** Flag an item for review */
   flagItemForReview: Item;
   flagLoginAsRisky: LoginHistory;
   flagMultipleLoginsAsRisky: Array<LoginHistory>;
@@ -2860,11 +3204,12 @@ export type Mutation = {
   forkRecipe: Recipe;
   generateNextRecurringList: ShoppingList;
   generateShoppingListShareCode: ShoppingList;
+  /** Hard delete a device permanently (admin only) */
   hardDeleteDevice: Scalars['Boolean']['output'];
+  /** Import items from CSV file */
   importItemsFromCSV: ImportItemsResponse;
+  /** Import items from external provider (USDA, Spoonacular, etc.) */
   importItemsFromProvider: ImportItemsResponse;
-  incrementDeviceLoginCount: Device;
-  incrementItemPopularity: Item;
   incrementRecipeCookedCount: SavedRecipe;
   inviteToHome: HomeInvite;
   inviteToShoppingList: ShoppingListCollaborator;
@@ -2886,6 +3231,7 @@ export type Mutation = {
   markPantryItemExpired: PantryItem;
   /** Mark recipe as cooked and optionally deduct from pantry */
   markRecipeAsCooked: CookingLog;
+  /** Merge duplicate items into one */
   mergeItems: Item;
   /**
    * Move a shopping list item to the pantry after purchase.
@@ -2896,30 +3242,31 @@ export type Mutation = {
   moveShoppingListItem: ShoppingListItem;
   openPantryItem: PantryItem;
   putUnderReview: UserModeration;
-  reactivateDevice: Device;
   recordLoginAttempt: LoginHistory;
   recordPantryItemWaste: PantryItem;
   /** Manually record pantry item usage */
   recordPantryUsage: PantryItemUsage;
+  /** Record a price observation for historical tracking */
   recordPriceObservation: ItemPriceHistory;
   refresh: RefreshTokenPayload;
   register: AuthPayload;
+  /**
+   * Register a new device for the current user.
+   * This is the primary way to add a device from mobile apps.
+   */
   registerDevice: Device;
+  /** Reject a user-created item */
   rejectItem: Scalars['Boolean']['output'];
   removeCollaborator: Scalars['Boolean']['output'];
-  removeItemBrand: Item;
-  removeItemFromCategory: Item;
   removeItemFromShoppingList: ShoppingListItem;
-  removeItemImage: Item;
-  removeItemTags: Item;
-  removeItemUnit: Scalars['Boolean']['output'];
   removeMember: Scalars['Boolean']['output'];
   removeProfileAvatar: UserProfile;
   removeProfileCover: UserProfile;
-  removePushToken: Device;
   removeRestriction: Scalars['Boolean']['output'];
   removeRestrictions: UserModeration;
   removeShoppingListCollaborator: Scalars['Boolean']['output'];
+  /** Remove an item from a template */
+  removeTemplateItem: Scalars['Boolean']['output'];
   removeUnitConversion: Unit;
   /**
    * Reorder multiple storage locations
@@ -2935,13 +3282,13 @@ export type Mutation = {
    * Use this when replenishing an existing pantry item.
    */
   restockPantryItem: PantryItemUsage;
+  /** Restore a soft-deleted item */
   restoreItem: Item;
   reviewAppeal: UserModeration;
   revokeHomeInvite: Scalars['Boolean']['output'];
   sendBulkNotifications: BulkNotificationResult;
   sendTestNotification: Notification;
   setDefaultHome: UserSettings;
-  setDefaultItemUnit: ItemUnit;
   setDefaultPantry: Pantry;
   setDefaultShoppingList: ShoppingList;
   /**
@@ -2950,19 +3297,21 @@ export type Mutation = {
    * Requires user to have edit permissions in the home
    */
   setDefaultStorageLocation: StorageLocation;
-  setItemBrand: Item;
-  setItemCategories: Item;
   setReminder: ShoppingList;
   setupRecurring: ShoppingList;
   setupUnitConversion: Unit;
   shareShoppingList: ShoppingList;
   submitAppeal: UserModeration;
   suspendUser: UserModeration;
+  /** Sync all item prices for a store */
   syncAllItemPrices: BulkOperationSummary;
   syncDeletePantryItem: SyncPantryItemResult;
   syncDeleteShoppingListItem: SyncShoppingListItemResult;
+  /** Sync item offers from store */
   syncItemOffers: Item;
+  /** Sync item prices from stores */
   syncItemPrices: Item;
+  /** Sync item data with external provider */
   syncItemWithProvider: Item;
   syncMovePantryItem: SyncPantryItemResult;
   syncMoveShoppingListItem: SyncShoppingListItemResult;
@@ -2970,41 +3319,49 @@ export type Mutation = {
   syncShoppingListItem: SyncShoppingListItemResult;
   toggleShoppingListItemPurchased: ShoppingListItem;
   transferHomeOwnership: HomeOwnership;
-  trustDevice: Device;
-  trustMultipleDevices: Array<Device>;
   unbanUser: UserModeration;
   uncategorizeItem: Scalars['Boolean']['output'];
   uncompleteShoppingList: ShoppingList;
   unfavoriteRecipe: Scalars['Boolean']['output'];
   unsuspendUser: UserModeration;
-  untrustDevice: Device;
-  untrustMultipleDevices: Array<Device>;
   updateBrand: Brand;
   updateCategory: Category;
   updateCollaboratorPermissions: ShoppingListCollaborator;
   updateCollaboratorRole: Scalars['Boolean']['output'];
   updateCookingLog: CookingLog;
   updateCurrency: Currency;
+  /**
+   * Update a device. Consolidated mutation that handles all device updates including:
+   * - Status changes (trust, verify, activate/deactivate)
+   * - Location updates
+   * - Push token management
+   * - Hardware info updates
+   * - Battery info updates
+   * - Peripheral updates
+   * - Soft delete
+   */
   updateDevice: Device;
-  updateDeviceBatteryInfo: Device;
-  updateDeviceHardwareInfo: Device;
-  updateDeviceLastSeen: Device;
-  updateDeviceLocation: Device;
-  updateDevicePeripherals: Device;
   updateDietaryProfile: DietaryProfile;
   updateFavoriteRecipe: SavedRecipe;
   updateHome: Home;
+  /**
+   * Update an item. Consolidated mutation that handles:
+   * - Basic fields (name, description, type, etc.)
+   * - Categories (set, add, remove)
+   * - Brands (set, add, remove)
+   * - Units (set, add, remove, default)
+   * - Tags (set, add, remove)
+   * - Nutrition facts, allergens, ingredients
+   * - Images
+   * - Metadata
+   * - Price updates
+   */
   updateItem: Item;
-  updateItemAllergens: Item;
-  updateItemImage: Item;
-  updateItemIngredients: Item;
-  updateItemMetadata: Item;
-  updateItemNutrition: Item;
-  updateItemPrice: Item;
-  updateItemUnit: ItemUnit;
   updateLoginHistory: LoginHistory;
   updateLoginSession: LoginHistory;
   updateMealPlan: MealPlan;
+  /** Update an existing meal template */
+  updateMealTemplate: MealTemplate;
   updateMembership: Membership;
   updateModerationStatus: UserModeration;
   updateNotification: Notification;
@@ -3018,7 +3375,6 @@ export type Mutation = {
   updateProfileAvatar: UserProfile;
   updateProfileCover: UserProfile;
   updatePurchase: Purchase;
-  updatePushToken: Device;
   updateRecipe: Recipe;
   updateRecipeIngredients: Recipe;
   updateRestriction: DietaryRestriction;
@@ -3040,6 +3396,8 @@ export type Mutation = {
   updateStoreInfo: StoreInfo;
   updateStorePriceAccuracy: Store;
   updateStoreQualityRating: Store;
+  /** Update a template item */
+  updateTemplateItem: MealTemplateItem;
   updateTrustLevel: UserModeration;
   updateUnit: Unit;
   updateUser: User;
@@ -3047,12 +3405,11 @@ export type Mutation = {
   upsertItemByExternalSource: UpsertItemResult;
   /** Add or update item-specific unit conversion */
   upsertItemUnitConversion: ItemUnitConversion;
+  /** Validate item data integrity */
   validateItem: ValidationResult;
   /** Validate if a password reset token is still valid */
   validatePasswordResetToken: ValidateTokenResponse;
-  verifyDevice: Device;
   verifyEmail: Scalars['Boolean']['output'];
-  verifyItemUnit: ItemUnit;
   verifyUserEmail: User;
 };
 
@@ -3068,24 +3425,8 @@ export type MutationAddCollaboratorArgs = {
   data: AddCollaboratorInput;
 };
 
-export type MutationAddItemTagsArgs = {
-  id: Scalars['ID']['input'];
-  tags: Array<Scalars['String']['input']>;
-};
-
-export type MutationAddItemToCategoryArgs = {
-  categoryId: Scalars['ID']['input'];
-  isPrimary?: InputMaybe<Scalars['Boolean']['input']>;
-  itemId: Scalars['ID']['input'];
-};
-
 export type MutationAddItemToShoppingListArgs = {
   input: CreateShoppingListItemInput;
-};
-
-export type MutationAddItemUnitArgs = {
-  input: ItemUnitInput;
-  itemId: Scalars['ID']['input'];
 };
 
 export type MutationAddRecipeToShoppingListArgs = {
@@ -3101,6 +3442,10 @@ export type MutationAddRestrictionArgs = {
 
 export type MutationAddRestrictionsArgs = {
   input: AddRestrictionsInput;
+};
+
+export type MutationAddTemplateItemArgs = {
+  input: AddTemplateItemInput;
 };
 
 export type MutationAddUserAddressArgs = {
@@ -3136,6 +3481,11 @@ export type MutationBulkDeleteItemsArgs = {
   permanent?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
+export type MutationBulkUpdateDevicesArgs = {
+  ids: Array<Scalars['ID']['input']>;
+  input: BulkDeviceUpdateInput;
+};
+
 export type MutationBulkUpdateItemsArgs = {
   ids: Array<Scalars['ID']['input']>;
   input: UpdateItemInput;
@@ -3151,13 +3501,8 @@ export type MutationCategorizeItemArgs = {
   itemId: Scalars['ID']['input'];
 };
 
-export type MutationCleanupDeletedDevicesArgs = {
-  olderThanDays?: InputMaybe<Scalars['Int']['input']>;
-};
-
-export type MutationCleanupStaleDevicesArgs = {
-  daysInactive?: InputMaybe<Scalars['Int']['input']>;
-  userId: Scalars['ID']['input'];
+export type MutationCleanupDevicesArgs = {
+  input: DeviceCleanupInput;
 };
 
 export type MutationClearReminderArgs = {
@@ -3210,10 +3555,6 @@ export type MutationCreateCurrencyArgs = {
   input: CreateCurrencyInput;
 };
 
-export type MutationCreateDeviceArgs = {
-  input: CreateDeviceInput;
-};
-
 export type MutationCreateFromTemplateArgs = {
   input: CreateFromTemplateInput;
 };
@@ -3238,6 +3579,14 @@ export type MutationCreateLoginHistoryArgs = {
 
 export type MutationCreateMealPlanArgs = {
   input: CreateMealPlanInput;
+};
+
+export type MutationCreateMealPlanFromTemplateArgs = {
+  input: CreateMealPlanFromTemplateInput;
+};
+
+export type MutationCreateMealTemplateArgs = {
+  input: CreateMealTemplateInput;
 };
 
 export type MutationCreateMembershipArgs = {
@@ -3300,6 +3649,10 @@ export type MutationCreateStoreArgs = {
   input: CreateStoreInput;
 };
 
+export type MutationCreateTemplateFromMealPlanArgs = {
+  input: CreateTemplateFromMealPlanInput;
+};
+
 export type MutationCreateUnitArgs = {
   input: CreateUnitInput;
 };
@@ -3307,14 +3660,6 @@ export type MutationCreateUnitArgs = {
 export type MutationCreateUploadUrlArgs = {
   ext: Scalars['String']['input'];
   mime: Scalars['String']['input'];
-};
-
-export type MutationDeactivateDeviceArgs = {
-  id: Scalars['ID']['input'];
-};
-
-export type MutationDeactivateMultipleDevicesArgs = {
-  deviceIds: Array<Scalars['ID']['input']>;
 };
 
 export type MutationDeclineHomeInviteArgs = {
@@ -3345,10 +3690,6 @@ export type MutationDeleteCurrencyArgs = {
   id: Scalars['ID']['input'];
 };
 
-export type MutationDeleteDeviceArgs = {
-  id: Scalars['ID']['input'];
-};
-
 export type MutationDeleteHomeArgs = {
   id: Scalars['ID']['input'];
 };
@@ -3362,8 +3703,8 @@ export type MutationDeleteMealPlanArgs = {
   id: Scalars['ID']['input'];
 };
 
-export type MutationDeleteMultipleDevicesArgs = {
-  deviceIds: Array<Scalars['ID']['input']>;
+export type MutationDeleteMealTemplateArgs = {
+  id: Scalars['ID']['input'];
 };
 
 export type MutationDeleteMultipleNotificationsArgs = {
@@ -3414,6 +3755,11 @@ export type MutationDismissExpirationNotificationArgs = {
   input: DismissNotificationInput;
 };
 
+export type MutationDuplicateTemplateArgs = {
+  id: Scalars['ID']['input'];
+  newName: Scalars['String']['input'];
+};
+
 export type MutationExportItemsArgs = {
   filters?: InputMaybe<ItemFilters>;
   format: ExportFormat;
@@ -3421,10 +3767,6 @@ export type MutationExportItemsArgs = {
 
 export type MutationFavoriteRecipeArgs = {
   input: FavoriteRecipeInput;
-};
-
-export type MutationFlagDeviceAsEmulatorArgs = {
-  id: Scalars['ID']['input'];
 };
 
 export type MutationFlagItemForReviewArgs = {
@@ -3472,14 +3814,6 @@ export type MutationImportItemsFromCsvArgs = {
 
 export type MutationImportItemsFromProviderArgs = {
   input: ImportItemsFromProviderInput;
-};
-
-export type MutationIncrementDeviceLoginCountArgs = {
-  id: Scalars['ID']['input'];
-};
-
-export type MutationIncrementItemPopularityArgs = {
-  id: Scalars['ID']['input'];
 };
 
 export type MutationIncrementRecipeCookedCountArgs = {
@@ -3596,10 +3930,6 @@ export type MutationPutUnderReviewArgs = {
   input: PutUnderReviewInput;
 };
 
-export type MutationReactivateDeviceArgs = {
-  id: Scalars['ID']['input'];
-};
-
 export type MutationRecordLoginAttemptArgs = {
   input: LoginAttemptInput;
 };
@@ -3647,39 +3977,12 @@ export type MutationRemoveCollaboratorArgs = {
   data: RemoveCollaboratorInput;
 };
 
-export type MutationRemoveItemBrandArgs = {
-  brandId: Scalars['ID']['input'];
-  itemId: Scalars['ID']['input'];
-};
-
-export type MutationRemoveItemFromCategoryArgs = {
-  categoryId: Scalars['ID']['input'];
-  itemId: Scalars['ID']['input'];
-};
-
 export type MutationRemoveItemFromShoppingListArgs = {
-  id: Scalars['ID']['input'];
-};
-
-export type MutationRemoveItemImageArgs = {
-  id: Scalars['ID']['input'];
-};
-
-export type MutationRemoveItemTagsArgs = {
-  id: Scalars['ID']['input'];
-  tags: Array<Scalars['String']['input']>;
-};
-
-export type MutationRemoveItemUnitArgs = {
   id: Scalars['ID']['input'];
 };
 
 export type MutationRemoveMemberArgs = {
   membershipId: Scalars['ID']['input'];
-};
-
-export type MutationRemovePushTokenArgs = {
-  id: Scalars['ID']['input'];
 };
 
 export type MutationRemoveRestrictionArgs = {
@@ -3691,6 +3994,10 @@ export type MutationRemoveRestrictionsArgs = {
 };
 
 export type MutationRemoveShoppingListCollaboratorArgs = {
+  id: Scalars['ID']['input'];
+};
+
+export type MutationRemoveTemplateItemArgs = {
   id: Scalars['ID']['input'];
 };
 
@@ -3740,11 +4047,6 @@ export type MutationSetDefaultHomeArgs = {
   homeId: Scalars['ID']['input'];
 };
 
-export type MutationSetDefaultItemUnitArgs = {
-  itemId: Scalars['ID']['input'];
-  unitId: Scalars['ID']['input'];
-};
-
 export type MutationSetDefaultPantryArgs = {
   id: Scalars['ID']['input'];
 };
@@ -3755,17 +4057,6 @@ export type MutationSetDefaultShoppingListArgs = {
 
 export type MutationSetDefaultStorageLocationArgs = {
   id: Scalars['ID']['input'];
-};
-
-export type MutationSetItemBrandArgs = {
-  brandId: Scalars['ID']['input'];
-  isPrimary?: InputMaybe<Scalars['Boolean']['input']>;
-  itemId: Scalars['ID']['input'];
-};
-
-export type MutationSetItemCategoriesArgs = {
-  categoryIds: Array<Scalars['ID']['input']>;
-  itemId: Scalars['ID']['input'];
 };
 
 export type MutationSetReminderArgs = {
@@ -3862,14 +4153,6 @@ export type MutationTransferHomeOwnershipArgs = {
   newOwnerId: Scalars['ID']['input'];
 };
 
-export type MutationTrustDeviceArgs = {
-  id: Scalars['ID']['input'];
-};
-
-export type MutationTrustMultipleDevicesArgs = {
-  deviceIds: Array<Scalars['ID']['input']>;
-};
-
 export type MutationUnbanUserArgs = {
   userId: Scalars['ID']['input'];
 };
@@ -3889,14 +4172,6 @@ export type MutationUnfavoriteRecipeArgs = {
 
 export type MutationUnsuspendUserArgs = {
   userId: Scalars['ID']['input'];
-};
-
-export type MutationUntrustDeviceArgs = {
-  id: Scalars['ID']['input'];
-};
-
-export type MutationUntrustMultipleDevicesArgs = {
-  deviceIds: Array<Scalars['ID']['input']>;
 };
 
 export type MutationUpdateBrandArgs = {
@@ -3935,31 +4210,6 @@ export type MutationUpdateDeviceArgs = {
   input: UpdateDeviceInput;
 };
 
-export type MutationUpdateDeviceBatteryInfoArgs = {
-  batteryLevel: Scalars['Float']['input'];
-  id: Scalars['ID']['input'];
-  isBatteryCharging: Scalars['Boolean']['input'];
-};
-
-export type MutationUpdateDeviceHardwareInfoArgs = {
-  hardwareInfo: DeviceHardwareInfoInput;
-  id: Scalars['ID']['input'];
-};
-
-export type MutationUpdateDeviceLastSeenArgs = {
-  id: Scalars['ID']['input'];
-};
-
-export type MutationUpdateDeviceLocationArgs = {
-  id: Scalars['ID']['input'];
-  input: DeviceLocationInput;
-};
-
-export type MutationUpdateDevicePeripheralsArgs = {
-  id: Scalars['ID']['input'];
-  peripherals: DevicePeripheralsInput;
-};
-
 export type MutationUpdateDietaryProfileArgs = {
   input: UpdateDietaryProfileInput;
 };
@@ -3979,41 +4229,6 @@ export type MutationUpdateItemArgs = {
   input: UpdateItemInput;
 };
 
-export type MutationUpdateItemAllergensArgs = {
-  allergens: Array<AllergenInput>;
-  id: Scalars['ID']['input'];
-};
-
-export type MutationUpdateItemImageArgs = {
-  id: Scalars['ID']['input'];
-  imageUrl: Scalars['String']['input'];
-};
-
-export type MutationUpdateItemIngredientsArgs = {
-  id: Scalars['ID']['input'];
-  ingredients: Array<IngredientInput>;
-};
-
-export type MutationUpdateItemMetadataArgs = {
-  id: Scalars['ID']['input'];
-  merge?: InputMaybe<Scalars['Boolean']['input']>;
-  metadata: Scalars['JSON']['input'];
-};
-
-export type MutationUpdateItemNutritionArgs = {
-  id: Scalars['ID']['input'];
-  nutritionFacts: Array<NutritionFactInput>;
-};
-
-export type MutationUpdateItemPriceArgs = {
-  input: UpdateItemPriceInput;
-};
-
-export type MutationUpdateItemUnitArgs = {
-  id: Scalars['ID']['input'];
-  input: ItemUnitInput;
-};
-
 export type MutationUpdateLoginHistoryArgs = {
   id: Scalars['ID']['input'];
   input: UpdateLoginHistoryInput;
@@ -4029,6 +4244,11 @@ export type MutationUpdateLoginSessionArgs = {
 export type MutationUpdateMealPlanArgs = {
   id: Scalars['ID']['input'];
   input: UpdateMealPlanInput;
+};
+
+export type MutationUpdateMealTemplateArgs = {
+  id: Scalars['ID']['input'];
+  input: UpdateMealTemplateInput;
 };
 
 export type MutationUpdateMembershipArgs = {
@@ -4089,11 +4309,6 @@ export type MutationUpdateProfileCoverArgs = {
 export type MutationUpdatePurchaseArgs = {
   id: Scalars['ID']['input'];
   input: UpdatePurchaseInput;
-};
-
-export type MutationUpdatePushTokenArgs = {
-  id: Scalars['ID']['input'];
-  pushToken: Scalars['String']['input'];
 };
 
 export type MutationUpdateRecipeArgs = {
@@ -4178,6 +4393,11 @@ export type MutationUpdateStoreQualityRatingArgs = {
   rating: Scalars['Float']['input'];
 };
 
+export type MutationUpdateTemplateItemArgs = {
+  id: Scalars['ID']['input'];
+  input: UpdateTemplateItemInput;
+};
+
 export type MutationUpdateTrustLevelArgs = {
   trustLevel: TrustLevel;
   userId: Scalars['ID']['input'];
@@ -4222,16 +4442,8 @@ export type MutationValidatePasswordResetTokenArgs = {
   token: Scalars['String']['input'];
 };
 
-export type MutationVerifyDeviceArgs = {
-  id: Scalars['ID']['input'];
-};
-
 export type MutationVerifyEmailArgs = {
   code: Scalars['String']['input'];
-};
-
-export type MutationVerifyItemUnitArgs = {
-  id: Scalars['ID']['input'];
 };
 
 export type MutationVerifyUserEmailArgs = {
@@ -4452,13 +4664,40 @@ export enum NutritionCategory {
   Vitamin = 'VITAMIN',
 }
 
+/** Input for nutrition fact data */
 export type NutritionFactInput = {
+  amount: Scalars['Float']['input'];
   category?: InputMaybe<NutritionCategory>;
   dailyValue?: InputMaybe<Scalars['Float']['input']>;
   name: Scalars['String']['input'];
+  nutrientId?: InputMaybe<Scalars['String']['input']>;
+  nutrientName: Scalars['String']['input'];
+  percentDailyValue?: InputMaybe<Scalars['Float']['input']>;
   unit?: InputMaybe<Scalars['String']['input']>;
+  unitName: Scalars['String']['input'];
   value: Scalars['Float']['input'];
 };
+
+/** Progress toward nutrition goals from dietary profile */
+export type NutritionGoalProgress = {
+  __typename?: 'NutritionGoalProgress';
+  caloriesProgress: Maybe<GoalProgress>;
+  carbsProgress: Maybe<GoalProgress>;
+  fatProgress: Maybe<GoalProgress>;
+  /**
+   * Overall score (0-100) based on how close to targets.
+   * 100 = all targets met perfectly.
+   */
+  overallScore: Scalars['Float']['output'];
+  proteinProgress: Maybe<GoalProgress>;
+};
+
+/** Source of nutrition data for a meal plan item */
+export enum NutritionSource {
+  Auto = 'AUTO',
+  Manual = 'MANUAL',
+  Partial = 'PARTIAL',
+}
 
 export type OfferInput = {
   brand?: InputMaybe<Scalars['String']['input']>;
@@ -4631,6 +4870,7 @@ export type PantryItem = {
   id: Scalars['ID']['output'];
   initialQuantity: Scalars['Float']['output'];
   isComposted: Scalars['Boolean']['output'];
+  isLowStock: Scalars['Boolean']['output'];
   isRecycled: Scalars['Boolean']['output'];
   item: Item;
   itemId: Scalars['String']['output'];
@@ -4639,6 +4879,7 @@ export type PantryItem = {
   lastModifiedBy: Maybe<User>;
   lastUsedAt: Maybe<Scalars['DateTime']['output']>;
   lowStockAlert: Scalars['Boolean']['output'];
+  minQuantity: Maybe<Scalars['Float']['output']>;
   normalizedQuantity: Maybe<Scalars['Float']['output']>;
   normalizedUnit: Maybe<Unit>;
   normalizedUnitId: Maybe<Scalars['String']['output']>;
@@ -4650,6 +4891,7 @@ export type PantryItem = {
   photos: Array<PantryItemPhoto>;
   purchase: Maybe<Purchase>;
   purchaseId: Maybe<Scalars['String']['output']>;
+  restockQuantity: Maybe<Scalars['Float']['output']>;
   storageLocation: Maybe<StorageLocation>;
   storageNotes: Maybe<Scalars['String']['output']>;
   storageState: StorageState;
@@ -4818,7 +5060,7 @@ export type PantryStats = {
   __typename?: 'PantryStats';
   activeItems: Scalars['Int']['output'];
   expiringCount: Scalars['Int']['output'];
-  lowStockItems: Scalars['Int']['output'];
+  lowStockCount: Scalars['Int']['output'];
   totalItems: Scalars['Int']['output'];
   totalValue: Scalars['Float']['output'];
 };
@@ -5038,8 +5280,8 @@ export type QuantityInput = {
 export type Query = {
   __typename?: 'Query';
   _empty: Maybe<Scalars['String']['output']>;
-  activeDevices: Array<Device>;
   activeModerations: Array<UserModeration>;
+  adminCanDeleteUser: CanDeleteAccountResult;
   /**
    * Aggregate multiple quantities of the same item
    * Useful for calculating total needed across multiple recipes
@@ -5059,6 +5301,7 @@ export type Query = {
    * Returns availability and confidence level
    */
   canConvert: ConversionAvailability;
+  canDeleteAccount: CanDeleteAccountResult;
   categories: Array<Category>;
   category: Maybe<Category>;
   categoryBySlug: Maybe<Category>;
@@ -5077,15 +5320,22 @@ export type Query = {
   currencyByCode: Maybe<Currency>;
   defaultPantry: Maybe<Pantry>;
   defaultShoppingList: Maybe<ShoppingList>;
+  /** Get a single device by ID */
   device: Maybe<Device>;
+  /** Get a single device by device identifier string */
   deviceByDeviceId: Maybe<Device>;
+  /** Get device count with filters */
   deviceCount: Scalars['Int']['output'];
+  /** Get device statistics for a user */
   deviceStats: DeviceStats;
-  devicesByManufacturer: Array<Device>;
-  devicesByPlatform: Array<Device>;
-  devicesWithPeripherals: Array<Device>;
+  /**
+   * Consolidated device query with comprehensive filtering.
+   * Replaces: userDevices, myDevices, activeDevices, trustedDevices, verifiedDevices,
+   * mobileDevices, tabletDevices, emulatedDevices, suspiciousDevices, devicesByPlatform,
+   * devicesByManufacturer, devicesWithPeripherals, lowBatteryDevices, staleDevices
+   */
+  devices: DeviceConnection;
   dietaryProfile: Maybe<DietaryProfile>;
-  emulatedDevices: Array<Device>;
   expirationNotification: Maybe<ExpirationNotification>;
   failedLoginAttempts: Array<LoginHistory>;
   frequentlyBoughtItems: Array<ShoppingListItem>;
@@ -5123,18 +5373,21 @@ export type Query = {
   loginHistoryByIP: Array<LoginHistory>;
   loginHistoryForUser: Array<LoginHistory>;
   loginHistoryStats: LoginHistoryStats;
-  lowBatteryDevices: Array<Device>;
   matchRecipeIngredientsToPantry: Array<RecipeIngredientMatch>;
   me: Maybe<User>;
   mealPlan: Maybe<MealPlan>;
   mealPlans: Array<MealPlan>;
+  /** Get a single meal template by ID */
+  mealTemplate: Maybe<MealTemplate>;
+  /** List meal templates for the current user */
+  mealTemplates: Array<MealTemplate>;
+  /** Count templates matching filter criteria */
+  mealTemplatesCount: Scalars['Int']['output'];
   membership: Maybe<Membership>;
   membershipStats: MembershipStats;
-  mobileDevices: Array<Device>;
   myCollaboratedShoppingLists: Array<ShoppingList>;
   myCookingLogs: Array<CookingLog>;
   myCookingStats: Maybe<CookingStats>;
-  myDevices: Array<Device>;
   myDietaryProfile: Maybe<DietaryProfile>;
   myExpirationNotifications: Array<ExpirationNotification>;
   myHomes: Maybe<Array<Home>>;
@@ -5193,6 +5446,8 @@ export type Query = {
   popularBrands: Array<Brand>;
   popularCategories: Array<Category>;
   popularStores: Array<Store>;
+  /** Get popular/frequently used templates */
+  popularTemplates: Array<MealTemplate>;
   purchase: Maybe<Purchase>;
   purchaseStats: PurchaseStats;
   purchasesByDateRange: Array<Purchase>;
@@ -5200,6 +5455,20 @@ export type Query = {
   purchasesByShoppingListItem: Array<Purchase>;
   purchasesByStore: Array<Purchase>;
   recentNotifications: Array<Notification>;
+  /**
+   * Get recently deleted pantry items for quick re-adding suggestions.
+   * Returns soft-deleted items that are not currently in the pantry,
+   * deduplicated by itemId (only shows most recent entry per item).
+   * Useful for "Add to Pantry" UI to show items user previously had.
+   */
+  recentlyDeletedPantryItems: Array<PantryItem>;
+  /**
+   * Get recently deleted shopping list items for quick re-adding suggestions.
+   * Returns soft-deleted items that are not currently in the shopping list,
+   * deduplicated by itemId (only shows most recent entry per item).
+   * Useful for "Add to List" UI to show items user previously had.
+   */
+  recentlyDeletedShoppingListItems: Array<ShoppingListItem>;
   recipe: Maybe<Recipe>;
   recipeCookingLogs: Array<CookingLog>;
   recipeSuggestions: RecipeConnection;
@@ -5211,7 +5480,6 @@ export type Query = {
   rootCategories: Array<Category>;
   savedRecipe: Maybe<SavedRecipe>;
   savedRecipeFolders: Array<Scalars['String']['output']>;
-  searchDevicesByUserAgent: Array<Device>;
   searchItems: Maybe<ItemsResponse>;
   searchLoginHistory: Array<LoginHistory>;
   searchRecipes: RecipeConnection;
@@ -5223,7 +5491,6 @@ export type Query = {
   shoppingListCollaborators: Array<ShoppingListCollaborator>;
   shoppingListItem: Maybe<ShoppingListItem>;
   shoppingLists: Array<ShoppingList>;
-  staleDevices: Array<Device>;
   /**
    * Get a single storage location by ID
    * Requires user to be a member of the home
@@ -5254,27 +5521,22 @@ export type Query = {
    */
   suggestDisplayFormat: QuantityDisplay;
   suggestedItemsForList: Array<ItemSuggestion>;
-  suspiciousDevices: Array<Device>;
   suspiciousInviteActivity: Array<InviteLog>;
   suspiciousLoginActivity: SuspiciousActivity;
-  tabletDevices: Array<Device>;
-  trustedDevices: Array<Device>;
   unit: Maybe<Unit>;
   unitBySymbol: Maybe<Unit>;
   units: Array<Unit>;
   unreadNotificationCount: Scalars['Int']['output'];
   user: Maybe<User>;
-  userDevices: Array<Device>;
   userModeration: Maybe<UserModeration>;
   userProfile: Maybe<UserProfile>;
   userPurchases: Array<Purchase>;
   userSettings: Maybe<UserSettings>;
   users: Array<User>;
   validateUpc: UpcValidation;
-  verifiedDevices: Array<Device>;
 };
 
-export type QueryActiveDevicesArgs = {
+export type QueryAdminCanDeleteUserArgs = {
   userId: Scalars['ID']['input'];
 };
 
@@ -5384,37 +5646,18 @@ export type QueryDeviceByDeviceIdArgs = {
 };
 
 export type QueryDeviceCountArgs = {
-  activeOnly?: InputMaybe<Scalars['Boolean']['input']>;
-  deviceType?: InputMaybe<DeviceType>;
-  platform?: InputMaybe<MobilePlatform>;
-  trustedOnly?: InputMaybe<Scalars['Boolean']['input']>;
-  userId: Scalars['ID']['input'];
-  verifiedOnly?: InputMaybe<Scalars['Boolean']['input']>;
+  input: DeviceCountInput;
 };
 
 export type QueryDeviceStatsArgs = {
   userId: Scalars['ID']['input'];
 };
 
-export type QueryDevicesByManufacturerArgs = {
-  manufacturer: Scalars['String']['input'];
-  userId: Scalars['ID']['input'];
-};
-
-export type QueryDevicesByPlatformArgs = {
-  platform: MobilePlatform;
-  userId: Scalars['ID']['input'];
-};
-
-export type QueryDevicesWithPeripheralsArgs = {
-  userId: Scalars['ID']['input'];
+export type QueryDevicesArgs = {
+  input: DevicesQueryInput;
 };
 
 export type QueryDietaryProfileArgs = {
-  userId: Scalars['ID']['input'];
-};
-
-export type QueryEmulatedDevicesArgs = {
   userId: Scalars['ID']['input'];
 };
 
@@ -5536,11 +5779,6 @@ export type QueryLoginHistoryStatsArgs = {
   userId: Scalars['ID']['input'];
 };
 
-export type QueryLowBatteryDevicesArgs = {
-  threshold?: InputMaybe<Scalars['Float']['input']>;
-  userId: Scalars['ID']['input'];
-};
-
 export type QueryMatchRecipeIngredientsToPantryArgs = {
   pantryId: Scalars['ID']['input'];
   recipeId: Scalars['ID']['input'];
@@ -5558,6 +5796,20 @@ export type QueryMealPlansArgs = {
   take?: InputMaybe<Scalars['Int']['input']>;
 };
 
+export type QueryMealTemplateArgs = {
+  id: Scalars['ID']['input'];
+};
+
+export type QueryMealTemplatesArgs = {
+  filter?: InputMaybe<MealTemplatesFilter>;
+  skip?: InputMaybe<Scalars['Int']['input']>;
+  take?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type QueryMealTemplatesCountArgs = {
+  filter?: InputMaybe<MealTemplatesFilter>;
+};
+
 export type QueryMembershipArgs = {
   id: Scalars['ID']['input'];
 };
@@ -5566,17 +5818,9 @@ export type QueryMembershipStatsArgs = {
   homeId: Scalars['ID']['input'];
 };
 
-export type QueryMobileDevicesArgs = {
-  userId: Scalars['ID']['input'];
-};
-
 export type QueryMyCookingLogsArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
   offset?: InputMaybe<Scalars['Int']['input']>;
-};
-
-export type QueryMyDevicesArgs = {
-  filters?: InputMaybe<DeviceFiltersInput>;
 };
 
 export type QueryMyExpirationNotificationsArgs = {
@@ -5702,6 +5946,10 @@ export type QueryPopularStoresArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
 };
 
+export type QueryPopularTemplatesArgs = {
+  take?: InputMaybe<Scalars['Int']['input']>;
+};
+
 export type QueryPurchaseArgs = {
   id: Scalars['ID']['input'];
 };
@@ -5732,6 +5980,16 @@ export type QueryPurchasesByStoreArgs = {
 
 export type QueryRecentNotificationsArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type QueryRecentlyDeletedPantryItemsArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  pantryId: Scalars['ID']['input'];
+};
+
+export type QueryRecentlyDeletedShoppingListItemsArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  shoppingListId: Scalars['ID']['input'];
 };
 
 export type QueryRecipeArgs = {
@@ -5776,10 +6034,6 @@ export type QueryRootCategoriesArgs = {
 
 export type QuerySavedRecipeArgs = {
   recipeId: Scalars['ID']['input'];
-};
-
-export type QuerySearchDevicesByUserAgentArgs = {
-  userAgent: Scalars['String']['input'];
 };
 
 export type QuerySearchItemsArgs = {
@@ -5832,11 +6086,6 @@ export type QueryShoppingListsArgs = {
   filters?: InputMaybe<ShoppingListFilters>;
 };
 
-export type QueryStaleDevicesArgs = {
-  daysInactive?: InputMaybe<Scalars['Int']['input']>;
-  userId: Scalars['ID']['input'];
-};
-
 export type QueryStorageLocationArgs = {
   id: Scalars['ID']['input'];
 };
@@ -5880,24 +6129,12 @@ export type QuerySuggestedItemsForListArgs = {
   shoppingListId: Scalars['ID']['input'];
 };
 
-export type QuerySuspiciousDevicesArgs = {
-  userId: Scalars['ID']['input'];
-};
-
 export type QuerySuspiciousInviteActivityArgs = {
   timeWindowHours?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type QuerySuspiciousLoginActivityArgs = {
   hours?: InputMaybe<Scalars['Int']['input']>;
-  userId: Scalars['ID']['input'];
-};
-
-export type QueryTabletDevicesArgs = {
-  userId: Scalars['ID']['input'];
-};
-
-export type QueryTrustedDevicesArgs = {
   userId: Scalars['ID']['input'];
 };
 
@@ -5916,11 +6153,6 @@ export type QueryUnitsArgs = {
 
 export type QueryUserArgs = {
   id: Scalars['ID']['input'];
-};
-
-export type QueryUserDevicesArgs = {
-  filters?: InputMaybe<DeviceFiltersInput>;
-  userId: Scalars['ID']['input'];
 };
 
 export type QueryUserModerationArgs = {
@@ -5943,10 +6175,6 @@ export type QueryUsersArgs = {
 
 export type QueryValidateUpcArgs = {
   upc: Scalars['String']['input'];
-};
-
-export type QueryVerifiedDevicesArgs = {
-  userId: Scalars['ID']['input'];
 };
 
 export type QuietHoursInput = {
@@ -6231,6 +6459,7 @@ export type RegisterInput = {
   password: Scalars['String']['input'];
 };
 
+/** Input for rejecting a user-created item */
 export type RejectItemInput = {
   itemId: Scalars['ID']['input'];
   notifyUser?: InputMaybe<Scalars['Boolean']['input']>;
@@ -6776,6 +7005,12 @@ export enum SortOrder {
   Desc = 'DESC',
 }
 
+/** Input for stale device cleanup */
+export type StaleDeviceCleanupInput = {
+  daysInactive?: InputMaybe<Scalars['Int']['input']>;
+  userId: Scalars['ID']['input'];
+};
+
 /**
  * Storage location within a home (refrigerator, freezer, pantry shelf, etc.)
  * Supports hierarchical organization with parent-child relationships
@@ -7284,10 +7519,12 @@ export type SyncPantryItemInput = {
   itemUpc?: InputMaybe<Scalars['String']['input']>;
   lastUsedAt?: InputMaybe<Scalars['DateTime']['input']>;
   lowStockAlert?: InputMaybe<Scalars['Boolean']['input']>;
+  minQuantity?: InputMaybe<Scalars['Float']['input']>;
   packageWeight?: InputMaybe<Scalars['Float']['input']>;
   packageWeightUnitId?: InputMaybe<Scalars['String']['input']>;
   pantryId: Scalars['ID']['input'];
   purchaseId?: InputMaybe<Scalars['String']['input']>;
+  restockQuantity?: InputMaybe<Scalars['Float']['input']>;
   storageLocationId?: InputMaybe<Scalars['String']['input']>;
   storageNotes?: InputMaybe<Scalars['String']['input']>;
   storageState?: InputMaybe<StorageState>;
@@ -7364,6 +7601,18 @@ export type SyncShoppingListItemResult = {
   /** Whether this was a create (true) or update (false) operation */
   wasCreated: Scalars['Boolean']['output'];
 };
+
+/** Categories for organizing meal templates */
+export enum TemplateCategory {
+  Breakfast = 'BREAKFAST',
+  Custom = 'CUSTOM',
+  Dinner = 'DINNER',
+  Holiday = 'HOLIDAY',
+  Lunch = 'LUNCH',
+  Monthly = 'MONTHLY',
+  SpecialDiet = 'SPECIAL_DIET',
+  Weekly = 'WEEKLY',
+}
 
 /** Time series data point for charting usage/waste trends */
 export type TimeSeriesDataPoint = {
@@ -7516,6 +7765,10 @@ export type UpdateCurrencyInput = {
   symbol?: InputMaybe<Scalars['String']['input']>;
 };
 
+/**
+ * Consolidated input for updating devices.
+ * Handles all device updates including status changes, location, hardware info, etc.
+ */
 export type UpdateDeviceInput = {
   androidId?: InputMaybe<Scalars['String']['input']>;
   apiLevel?: InputMaybe<Scalars['Int']['input']>;
@@ -7528,12 +7781,20 @@ export type UpdateDeviceInput = {
   buildNumber?: InputMaybe<Scalars['String']['input']>;
   bundleId?: InputMaybe<Scalars['String']['input']>;
   carrier?: InputMaybe<Scalars['String']['input']>;
+  /** Clear the push token (replaces removePushToken mutation) */
+  clearPushToken?: InputMaybe<Scalars['Boolean']['input']>;
+  /** Soft delete the device (replaces deleteDevice mutation) */
+  delete?: InputMaybe<Scalars['Boolean']['input']>;
   deviceName?: InputMaybe<Scalars['String']['input']>;
   deviceType?: InputMaybe<DeviceType>;
   freeDiskStorage?: InputMaybe<Scalars['String']['input']>;
+  /** Update hardware info using structured input */
+  hardwareInfo?: InputMaybe<DeviceHardwareInfoInput>;
   hasDynamicIsland?: InputMaybe<Scalars['Boolean']['input']>;
   hasNotch?: InputMaybe<Scalars['Boolean']['input']>;
   hostNames?: InputMaybe<Scalars['JSON']['input']>;
+  /** Increment the login count (replaces incrementDeviceLoginCount mutation) */
+  incrementLoginCount?: InputMaybe<Scalars['Boolean']['input']>;
   instanceId?: InputMaybe<Scalars['String']['input']>;
   isActive?: InputMaybe<Scalars['Boolean']['input']>;
   isAirplaneMode?: InputMaybe<Scalars['Boolean']['input']>;
@@ -7552,11 +7813,15 @@ export type UpdateDeviceInput = {
   lastCity?: InputMaybe<Scalars['String']['input']>;
   lastCountry?: InputMaybe<Scalars['String']['input']>;
   lastIpAddress?: InputMaybe<Scalars['String']['input']>;
+  /** Update location using structured input */
+  location?: InputMaybe<DeviceLocationInput>;
   manufacturer?: InputMaybe<Scalars['String']['input']>;
   maxMemory?: InputMaybe<Scalars['String']['input']>;
   model?: InputMaybe<Scalars['String']['input']>;
   osName?: InputMaybe<Scalars['String']['input']>;
   osVersion?: InputMaybe<Scalars['String']['input']>;
+  /** Update peripheral info using structured input */
+  peripherals?: InputMaybe<DevicePeripheralsInput>;
   platform?: InputMaybe<MobilePlatform>;
   powerState?: InputMaybe<Scalars['JSON']['input']>;
   pushToken?: InputMaybe<Scalars['String']['input']>;
@@ -7568,6 +7833,8 @@ export type UpdateDeviceInput = {
   timezone?: InputMaybe<Scalars['String']['input']>;
   totalDiskCapacity?: InputMaybe<Scalars['String']['input']>;
   totalMemory?: InputMaybe<Scalars['String']['input']>;
+  /** Update lastSeenAt to now (replaces updateDeviceLastSeen mutation) */
+  touchLastSeen?: InputMaybe<Scalars['Boolean']['input']>;
   usedMemory?: InputMaybe<Scalars['String']['input']>;
   userAgent?: InputMaybe<Scalars['String']['input']>;
 };
@@ -7608,6 +7875,10 @@ export type UpdateHomeInput = {
   version?: InputMaybe<Scalars['Int']['input']>;
 };
 
+/**
+ * Consolidated input for updating items.
+ * Handles all item updates including categories, brands, units, tags, nutrition, images, etc.
+ */
 export type UpdateItemInput = {
   addCategoryIds?: InputMaybe<Array<Scalars['String']['input']>>;
   addStoreSkus?: InputMaybe<Array<StoreSkuInput>>;
@@ -7628,14 +7899,27 @@ export type UpdateItemInput = {
   healthBenefits?: InputMaybe<Scalars['JSON']['input']>;
   imageUrl?: InputMaybe<Scalars['String']['input']>;
   images?: InputMaybe<Scalars['JSON']['input']>;
+  /** Increment popularity counter (replaces incrementItemPopularity) */
+  incrementPopularity?: InputMaybe<Scalars['Boolean']['input']>;
   ingredients?: InputMaybe<Scalars['JSON']['input']>;
+  mergeMetadata?: InputMaybe<Scalars['Boolean']['input']>;
   metadata?: InputMaybe<Scalars['JSON']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
   netWeight?: InputMaybe<Scalars['Float']['input']>;
+  nutritionFacts?: InputMaybe<Array<NutritionFactInput>>;
   popularity?: InputMaybe<Scalars['Int']['input']>;
   preferredTrackingUnitId?: InputMaybe<Scalars['String']['input']>;
+  /** Update item price (replaces updateItemPrice) */
+  price?: InputMaybe<Scalars['Float']['input']>;
+  /** Price source for tracking */
+  priceSource?: InputMaybe<Scalars['String']['input']>;
+  /** Store ID for price update */
+  priceStoreId?: InputMaybe<Scalars['String']['input']>;
+  primaryCategoryId?: InputMaybe<Scalars['String']['input']>;
   primaryUpc?: InputMaybe<Scalars['String']['input']>;
   removeCategoryIds?: InputMaybe<Array<Scalars['String']['input']>>;
+  /** Remove the item image (replaces removeItemImage) */
+  removeImage?: InputMaybe<Scalars['Boolean']['input']>;
   removeStoreSkuIds?: InputMaybe<Array<Scalars['String']['input']>>;
   removeTags?: InputMaybe<Array<Scalars['String']['input']>>;
   removeUnitIds?: InputMaybe<Array<Scalars['String']['input']>>;
@@ -7709,11 +7993,40 @@ export type UpdateMealPlanInput = {
   actualCost?: InputMaybe<Scalars['Float']['input']>;
   budgetAmount?: InputMaybe<Scalars['Float']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
+  /** Link or unlink dietary profile for nutrition goal tracking */
+  dietaryProfileId?: InputMaybe<Scalars['ID']['input']>;
   endDate?: InputMaybe<Scalars['DateTime']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
   planType?: InputMaybe<MealPlanType>;
   servings?: InputMaybe<Scalars['Int']['input']>;
   startDate?: InputMaybe<Scalars['DateTime']['input']>;
+};
+
+export type UpdateMealPlanItemInput = {
+  actualCost?: InputMaybe<Scalars['Float']['input']>;
+  /** Manual nutrition override */
+  calories?: InputMaybe<Scalars['Float']['input']>;
+  carbs?: InputMaybe<Scalars['Float']['input']>;
+  completedAt?: InputMaybe<Scalars['DateTime']['input']>;
+  customMealName?: InputMaybe<Scalars['String']['input']>;
+  date?: InputMaybe<Scalars['DateTime']['input']>;
+  estimatedCost?: InputMaybe<Scalars['Float']['input']>;
+  fat?: InputMaybe<Scalars['Float']['input']>;
+  isCompleted?: InputMaybe<Scalars['Boolean']['input']>;
+  mealType?: InputMaybe<MealType>;
+  notes?: InputMaybe<Scalars['String']['input']>;
+  protein?: InputMaybe<Scalars['Float']['input']>;
+  recipeId?: InputMaybe<Scalars['ID']['input']>;
+  servings?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type UpdateMealTemplateInput = {
+  category?: InputMaybe<TemplateCategory>;
+  defaultServings?: InputMaybe<Scalars['Int']['input']>;
+  description?: InputMaybe<Scalars['String']['input']>;
+  durationDays?: InputMaybe<Scalars['Int']['input']>;
+  name?: InputMaybe<Scalars['String']['input']>;
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
 };
 
 export type UpdateMembershipInput = {
@@ -7783,8 +8096,10 @@ export type UpdatePantryItemInput = {
   isRecycled?: InputMaybe<Scalars['Boolean']['input']>;
   lastUsedAt?: InputMaybe<Scalars['DateTime']['input']>;
   lowStockAlert?: InputMaybe<Scalars['Boolean']['input']>;
+  minQuantity?: InputMaybe<Scalars['Float']['input']>;
   packageWeight?: InputMaybe<Scalars['Float']['input']>;
   packageWeightUnitId?: InputMaybe<Scalars['String']['input']>;
+  restockQuantity?: InputMaybe<Scalars['Float']['input']>;
   storageLocationId?: InputMaybe<Scalars['String']['input']>;
   storageNotes?: InputMaybe<Scalars['String']['input']>;
   storageState?: InputMaybe<StorageState>;
@@ -7929,6 +8244,15 @@ export type UpdateStoreInput = {
   priceAccuracy?: InputMaybe<Scalars['Float']['input']>;
   qualityRating?: InputMaybe<Scalars['Float']['input']>;
   supportsPriceAPI?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+export type UpdateTemplateItemInput = {
+  customMealName?: InputMaybe<Scalars['String']['input']>;
+  dayOffset?: InputMaybe<Scalars['Int']['input']>;
+  mealType?: InputMaybe<MealType>;
+  notes?: InputMaybe<Scalars['String']['input']>;
+  recipeId?: InputMaybe<Scalars['ID']['input']>;
+  servings?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type UpdateUnitInput = {
@@ -8545,36 +8869,51 @@ export type ResendVerificationEmailMutation = {
 };
 
 export type GetMyDevicesQueryVariables = Exact<{
-  filters?: InputMaybe<DeviceFiltersInput>;
+  input: DevicesQueryInput;
 }>;
 
 export type GetMyDevicesQuery = {
   __typename?: 'Query';
-  myDevices: Array<{
-    __typename?: 'Device';
-    id: string;
-    deviceId: string;
-    deviceName: string | null | undefined;
-    deviceType: DeviceType;
-    platform: MobilePlatform | null | undefined;
-    osName: string | null | undefined;
-    osVersion: string | null | undefined;
-    appVersion: string | null | undefined;
-    userAgent: string | null | undefined;
-    browserName: string | null | undefined;
-    browserVersion: string | null | undefined;
-    screenResolution: string | null | undefined;
-    timezone: string | null | undefined;
-    language: string | null | undefined;
-    isActive: boolean;
-    isTrusted: boolean;
-    isVerified: boolean;
-    loginCount: number;
-    lastLoginAt: string | null | undefined;
-    lastSeenAt: string;
-    createdAt: string;
-    updatedAt: string;
-  }>;
+  devices: {
+    __typename?: 'DeviceConnection';
+    totalCount: number;
+    edges: Array<{
+      __typename?: 'DeviceEdge';
+      cursor: string;
+      node: {
+        __typename?: 'Device';
+        id: string;
+        deviceId: string;
+        deviceName: string | null | undefined;
+        deviceType: DeviceType;
+        platform: MobilePlatform | null | undefined;
+        osName: string | null | undefined;
+        osVersion: string | null | undefined;
+        appVersion: string | null | undefined;
+        userAgent: string | null | undefined;
+        browserName: string | null | undefined;
+        browserVersion: string | null | undefined;
+        screenResolution: string | null | undefined;
+        timezone: string | null | undefined;
+        language: string | null | undefined;
+        isActive: boolean;
+        isTrusted: boolean;
+        isVerified: boolean;
+        loginCount: number;
+        lastLoginAt: string | null | undefined;
+        lastSeenAt: string;
+        createdAt: string;
+        updatedAt: string;
+      };
+    }>;
+    pageInfo: {
+      __typename?: 'PageInfo';
+      hasNextPage: boolean;
+      hasPreviousPage: boolean;
+      startCursor: string | null | undefined;
+      endCursor: string | null | undefined;
+    };
+  };
 };
 
 export type GetDeviceByDeviceIdQueryVariables = Exact<{
@@ -8637,7 +8976,7 @@ export type UpdateDeviceLastSeenMutationVariables = Exact<{
 
 export type UpdateDeviceLastSeenMutation = {
   __typename?: 'Mutation';
-  updateDeviceLastSeen: {
+  updateDevice: {
     __typename?: 'Device';
     id: string;
     deviceId: string;
@@ -8652,7 +8991,7 @@ export type TrustDeviceMutationVariables = Exact<{
 
 export type TrustDeviceMutation = {
   __typename?: 'Mutation';
-  trustDevice: {
+  updateDevice: {
     __typename?: 'Device';
     id: string;
     deviceId: string;
@@ -8668,7 +9007,7 @@ export type UntrustDeviceMutationVariables = Exact<{
 
 export type UntrustDeviceMutation = {
   __typename?: 'Mutation';
-  untrustDevice: {
+  updateDevice: {
     __typename?: 'Device';
     id: string;
     deviceId: string;
@@ -8684,7 +9023,7 @@ export type VerifyDeviceMutationVariables = Exact<{
 
 export type VerifyDeviceMutation = {
   __typename?: 'Mutation';
-  verifyDevice: {
+  updateDevice: {
     __typename?: 'Device';
     id: string;
     deviceId: string;
@@ -8700,7 +9039,7 @@ export type DeactivateDeviceMutationVariables = Exact<{
 
 export type DeactivateDeviceMutation = {
   __typename?: 'Mutation';
-  deactivateDevice: {
+  updateDevice: {
     __typename?: 'Device';
     id: string;
     deviceId: string;
@@ -9001,6 +9340,23 @@ export type GetUserProfileQuery = {
       }
     | null
     | undefined;
+};
+
+export type CanDeleteAccountQueryVariables = Exact<{ [key: string]: never }>;
+
+export type CanDeleteAccountQuery = {
+  __typename?: 'Query';
+  canDeleteAccount: {
+    __typename?: 'CanDeleteAccountResult';
+    canDelete: boolean;
+    blockers: Array<{
+      __typename?: 'DeletionBlocker';
+      type: DeletionBlockerType;
+      resourceId: string;
+      resourceName: string;
+      message: string;
+    }>;
+  };
 };
 
 export type UpdateUserMutationVariables = Exact<{
@@ -9749,10 +10105,14 @@ export type PantryItemFragment = {
   consumedQuantity: number;
   normalizedUnitId: string | null | undefined;
   packageWeight: number | null | undefined;
+  packageWeightUnitId: string | null | undefined;
   createdAt: string;
   updatedAt: string | null | undefined;
   version: number | null | undefined;
   tags: Array<string>;
+  lowStockAlert: boolean;
+  minQuantity: number | null | undefined;
+  restockQuantity: number | null | undefined;
   lastUsedAt: string | null | undefined;
   wasteAmount: number;
   wasteDate: string | null | undefined;
@@ -10713,7 +11073,7 @@ export type UpdateItemImageMutationVariables = Exact<{
 
 export type UpdateItemImageMutation = {
   __typename?: 'Mutation';
-  updateItemImage: {
+  updateItem: {
     __typename?: 'Item';
     id: string;
     imageUrl: string | null | undefined;
@@ -10726,7 +11086,7 @@ export type RemoveItemImageMutationVariables = Exact<{
 
 export type RemoveItemImageMutation = {
   __typename?: 'Mutation';
-  removeItemImage: {
+  updateItem: {
     __typename?: 'Item';
     id: string;
     imageUrl: string | null | undefined;
@@ -11056,6 +11416,7 @@ export type ItemByUpcQuery = {
         imageUrl: string | null | undefined;
         name: string;
         netWeight: number | null | undefined;
+        primaryUpc: string | null | undefined;
         units: Array<{
           __typename?: 'ItemUnit';
           isDefault: boolean;
@@ -11081,6 +11442,7 @@ export type ItemBySkuQuery = {
         name: string;
         netWeight: number | null | undefined;
         description: string | null | undefined;
+        primaryUpc: string | null | undefined;
         units: Array<{
           __typename?: 'ItemUnit';
           isDefault: boolean;
@@ -11645,6 +12007,28 @@ export type GetDefaultPantryQuery = {
     | { __typename?: 'Pantry'; id: string; name: string; isDefault: boolean }
     | null
     | undefined;
+};
+
+export type GetRecentlyDeletedPantryItemsQueryVariables = Exact<{
+  pantryId: Scalars['ID']['input'];
+  limit?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+export type GetRecentlyDeletedPantryItemsQuery = {
+  __typename?: 'Query';
+  recentlyDeletedPantryItems: Array<{
+    __typename?: 'PantryItem';
+    id: string;
+    itemName: string;
+    itemId: string;
+    createdAt: string;
+    item: {
+      __typename?: 'Item';
+      id: string;
+      name: string;
+      imageUrl: string | null | undefined;
+    };
+  }>;
 };
 
 export type GetPantryLedgerAnalyticsQueryVariables = Exact<{
@@ -16374,6 +16758,10 @@ export const PantryItemFragmentDoc = {
           { kind: 'Field', name: { kind: 'Name', value: 'packageWeight' } },
           {
             kind: 'Field',
+            name: { kind: 'Name', value: 'packageWeightUnitId' },
+          },
+          {
+            kind: 'Field',
             name: { kind: 'Name', value: 'packageWeightUnit' },
             selectionSet: {
               kind: 'SelectionSet',
@@ -16400,6 +16788,9 @@ export const PantryItemFragmentDoc = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },
@@ -17199,6 +17590,10 @@ export const PantryFragmentDoc = {
           { kind: 'Field', name: { kind: 'Name', value: 'packageWeight' } },
           {
             kind: 'Field',
+            name: { kind: 'Name', value: 'packageWeightUnitId' },
+          },
+          {
+            kind: 'Field',
             name: { kind: 'Name', value: 'packageWeightUnit' },
             selectionSet: {
               kind: 'SelectionSet',
@@ -17225,6 +17620,9 @@ export const PantryFragmentDoc = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },
@@ -17958,6 +18356,10 @@ export const HomeFragmentDoc = {
           { kind: 'Field', name: { kind: 'Name', value: 'packageWeight' } },
           {
             kind: 'Field',
+            name: { kind: 'Name', value: 'packageWeightUnitId' },
+          },
+          {
+            kind: 'Field',
             name: { kind: 'Name', value: 'packageWeightUnit' },
             selectionSet: {
               kind: 'SelectionSet',
@@ -17984,6 +18386,9 @@ export const HomeFragmentDoc = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },
@@ -19689,11 +20094,14 @@ export const GetMyDevicesDocument = {
           kind: 'VariableDefinition',
           variable: {
             kind: 'Variable',
-            name: { kind: 'Name', value: 'filters' },
+            name: { kind: 'Name', value: 'input' },
           },
           type: {
-            kind: 'NamedType',
-            name: { kind: 'Name', value: 'DeviceFiltersInput' },
+            kind: 'NonNullType',
+            type: {
+              kind: 'NamedType',
+              name: { kind: 'Name', value: 'DevicesQueryInput' },
+            },
           },
         },
       ],
@@ -19702,48 +20110,156 @@ export const GetMyDevicesDocument = {
         selections: [
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'myDevices' },
+            name: { kind: 'Name', value: 'devices' },
             arguments: [
               {
                 kind: 'Argument',
-                name: { kind: 'Name', value: 'filters' },
+                name: { kind: 'Name', value: 'input' },
                 value: {
                   kind: 'Variable',
-                  name: { kind: 'Name', value: 'filters' },
+                  name: { kind: 'Name', value: 'input' },
                 },
               },
             ],
             selectionSet: {
               kind: 'SelectionSet',
               selections: [
-                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'deviceId' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'deviceName' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'deviceType' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'platform' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'osName' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'osVersion' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'appVersion' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'userAgent' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'browserName' } },
                 {
                   kind: 'Field',
-                  name: { kind: 'Name', value: 'browserVersion' },
+                  name: { kind: 'Name', value: 'edges' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'node' },
+                        selectionSet: {
+                          kind: 'SelectionSet',
+                          selections: [
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'id' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'deviceId' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'deviceName' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'deviceType' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'platform' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'osName' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'osVersion' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'appVersion' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'userAgent' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'browserName' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'browserVersion' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'screenResolution' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'timezone' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'language' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'isActive' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'isTrusted' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'isVerified' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'loginCount' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'lastLoginAt' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'lastSeenAt' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'createdAt' },
+                            },
+                            {
+                              kind: 'Field',
+                              name: { kind: 'Name', value: 'updatedAt' },
+                            },
+                          ],
+                        },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'cursor' },
+                      },
+                    ],
+                  },
                 },
                 {
                   kind: 'Field',
-                  name: { kind: 'Name', value: 'screenResolution' },
+                  name: { kind: 'Name', value: 'pageInfo' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'hasNextPage' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'hasPreviousPage' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'startCursor' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'endCursor' },
+                      },
+                    ],
+                  },
                 },
-                { kind: 'Field', name: { kind: 'Name', value: 'timezone' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'language' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'isActive' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'isTrusted' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'isVerified' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'loginCount' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'lastLoginAt' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'lastSeenAt' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'updatedAt' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'totalCount' } },
               ],
             },
           },
@@ -19765,15 +20281,19 @@ export const GetMyDevicesDocument = {
  * @example
  * const { data, loading, error } = useGetMyDevicesQuery({
  *   variables: {
- *      filters: // value for 'filters'
+ *      input: // value for 'input'
  *   },
  * });
  */
 export function useGetMyDevicesQuery(
-  baseOptions?: ApolloReactHooks.QueryHookOptions<
+  baseOptions: ApolloReactHooks.QueryHookOptions<
     GetMyDevicesQuery,
     GetMyDevicesQueryVariables
-  >,
+  > &
+    (
+      | { variables: GetMyDevicesQueryVariables; skip?: boolean }
+      | { skip: boolean }
+    ),
 ) {
   const options = { ...defaultOptions, ...baseOptions };
   return ApolloReactHooks.useQuery<
@@ -19824,7 +20344,7 @@ export type GetMyDevicesQueryResult = ApolloReactCommon.QueryResult<
   GetMyDevicesQueryVariables
 >;
 export function refetchGetMyDevicesQuery(
-  variables?: GetMyDevicesQueryVariables,
+  variables: GetMyDevicesQueryVariables,
 ) {
   return { query: GetMyDevicesDocument, variables: variables };
 }
@@ -20109,7 +20629,7 @@ export const UpdateDeviceLastSeenDocument = {
         selections: [
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'updateDeviceLastSeen' },
+            name: { kind: 'Name', value: 'updateDevice' },
             arguments: [
               {
                 kind: 'Argument',
@@ -20117,6 +20637,20 @@ export const UpdateDeviceLastSeenDocument = {
                 value: {
                   kind: 'Variable',
                   name: { kind: 'Name', value: 'id' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'input' },
+                value: {
+                  kind: 'ObjectValue',
+                  fields: [
+                    {
+                      kind: 'ObjectField',
+                      name: { kind: 'Name', value: 'touchLastSeen' },
+                      value: { kind: 'BooleanValue', value: true },
+                    },
+                  ],
                 },
               },
             ],
@@ -20201,7 +20735,7 @@ export const TrustDeviceDocument = {
         selections: [
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'trustDevice' },
+            name: { kind: 'Name', value: 'updateDevice' },
             arguments: [
               {
                 kind: 'Argument',
@@ -20209,6 +20743,20 @@ export const TrustDeviceDocument = {
                 value: {
                   kind: 'Variable',
                   name: { kind: 'Name', value: 'id' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'input' },
+                value: {
+                  kind: 'ObjectValue',
+                  fields: [
+                    {
+                      kind: 'ObjectField',
+                      name: { kind: 'Name', value: 'isTrusted' },
+                      value: { kind: 'BooleanValue', value: true },
+                    },
+                  ],
                 },
               },
             ],
@@ -20293,7 +20841,7 @@ export const UntrustDeviceDocument = {
         selections: [
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'untrustDevice' },
+            name: { kind: 'Name', value: 'updateDevice' },
             arguments: [
               {
                 kind: 'Argument',
@@ -20301,6 +20849,20 @@ export const UntrustDeviceDocument = {
                 value: {
                   kind: 'Variable',
                   name: { kind: 'Name', value: 'id' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'input' },
+                value: {
+                  kind: 'ObjectValue',
+                  fields: [
+                    {
+                      kind: 'ObjectField',
+                      name: { kind: 'Name', value: 'isTrusted' },
+                      value: { kind: 'BooleanValue', value: false },
+                    },
+                  ],
                 },
               },
             ],
@@ -20386,7 +20948,7 @@ export const VerifyDeviceDocument = {
         selections: [
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'verifyDevice' },
+            name: { kind: 'Name', value: 'updateDevice' },
             arguments: [
               {
                 kind: 'Argument',
@@ -20394,6 +20956,20 @@ export const VerifyDeviceDocument = {
                 value: {
                   kind: 'Variable',
                   name: { kind: 'Name', value: 'id' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'input' },
+                value: {
+                  kind: 'ObjectValue',
+                  fields: [
+                    {
+                      kind: 'ObjectField',
+                      name: { kind: 'Name', value: 'isVerified' },
+                      value: { kind: 'BooleanValue', value: true },
+                    },
+                  ],
                 },
               },
             ],
@@ -20478,7 +21054,7 @@ export const DeactivateDeviceDocument = {
         selections: [
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'deactivateDevice' },
+            name: { kind: 'Name', value: 'updateDevice' },
             arguments: [
               {
                 kind: 'Argument',
@@ -20486,6 +21062,20 @@ export const DeactivateDeviceDocument = {
                 value: {
                   kind: 'Variable',
                   name: { kind: 'Name', value: 'id' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'input' },
+                value: {
+                  kind: 'ObjectValue',
+                  fields: [
+                    {
+                      kind: 'ObjectField',
+                      name: { kind: 'Name', value: 'isActive' },
+                      value: { kind: 'BooleanValue', value: false },
+                    },
+                  ],
                 },
               },
             ],
@@ -21980,6 +22570,128 @@ export function refetchGetUserProfileQuery(
   variables?: GetUserProfileQueryVariables,
 ) {
   return { query: GetUserProfileDocument, variables: variables };
+}
+export const CanDeleteAccountDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'query',
+      name: { kind: 'Name', value: 'CanDeleteAccount' },
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'canDeleteAccount' },
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'canDelete' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'blockers' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'type' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'resourceId' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'resourceName' },
+                      },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'message' },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+
+/**
+ * __useCanDeleteAccountQuery__
+ *
+ * To run a query within a React component, call `useCanDeleteAccountQuery` and pass it any options that fit your needs.
+ * When your component renders, `useCanDeleteAccountQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useCanDeleteAccountQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useCanDeleteAccountQuery(
+  baseOptions?: ApolloReactHooks.QueryHookOptions<
+    CanDeleteAccountQuery,
+    CanDeleteAccountQueryVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useQuery<
+    CanDeleteAccountQuery,
+    CanDeleteAccountQueryVariables
+  >(CanDeleteAccountDocument, options);
+}
+export function useCanDeleteAccountLazyQuery(
+  baseOptions?: ApolloReactHooks.LazyQueryHookOptions<
+    CanDeleteAccountQuery,
+    CanDeleteAccountQueryVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useLazyQuery<
+    CanDeleteAccountQuery,
+    CanDeleteAccountQueryVariables
+  >(CanDeleteAccountDocument, options);
+}
+export function useCanDeleteAccountSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        CanDeleteAccountQuery,
+        CanDeleteAccountQueryVariables
+      >,
+) {
+  const options =
+    baseOptions === ApolloReactHooks.skipToken
+      ? baseOptions
+      : { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useSuspenseQuery<
+    CanDeleteAccountQuery,
+    CanDeleteAccountQueryVariables
+  >(CanDeleteAccountDocument, options);
+}
+export type CanDeleteAccountQueryHookResult = ReturnType<
+  typeof useCanDeleteAccountQuery
+>;
+export type CanDeleteAccountLazyQueryHookResult = ReturnType<
+  typeof useCanDeleteAccountLazyQuery
+>;
+export type CanDeleteAccountSuspenseQueryHookResult = ReturnType<
+  typeof useCanDeleteAccountSuspenseQuery
+>;
+export type CanDeleteAccountQueryResult = ApolloReactCommon.QueryResult<
+  CanDeleteAccountQuery,
+  CanDeleteAccountQueryVariables
+>;
+export function refetchCanDeleteAccountQuery(
+  variables?: CanDeleteAccountQueryVariables,
+) {
+  return { query: CanDeleteAccountDocument, variables: variables };
 }
 export const UpdateUserDocument = {
   kind: 'Document',
@@ -23573,6 +24285,10 @@ export const GetHomeDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'packageWeight' } },
           {
             kind: 'Field',
+            name: { kind: 'Name', value: 'packageWeightUnitId' },
+          },
+          {
+            kind: 'Field',
             name: { kind: 'Name', value: 'packageWeightUnit' },
             selectionSet: {
               kind: 'SelectionSet',
@@ -23599,6 +24315,9 @@ export const GetHomeDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },
@@ -25236,6 +25955,10 @@ export const GetHomesDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'packageWeight' } },
           {
             kind: 'Field',
+            name: { kind: 'Name', value: 'packageWeightUnitId' },
+          },
+          {
+            kind: 'Field',
             name: { kind: 'Name', value: 'packageWeightUnit' },
             selectionSet: {
               kind: 'SelectionSet',
@@ -25262,6 +25985,9 @@ export const GetHomesDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },
@@ -26556,6 +27282,10 @@ export const GetHomeByJoinCodeDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'packageWeight' } },
           {
             kind: 'Field',
+            name: { kind: 'Name', value: 'packageWeightUnitId' },
+          },
+          {
+            kind: 'Field',
             name: { kind: 'Name', value: 'packageWeightUnit' },
             selectionSet: {
               kind: 'SelectionSet',
@@ -26582,6 +27312,9 @@ export const GetHomeByJoinCodeDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },
@@ -27671,6 +28404,10 @@ export const CreateHomeDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'packageWeight' } },
           {
             kind: 'Field',
+            name: { kind: 'Name', value: 'packageWeightUnitId' },
+          },
+          {
+            kind: 'Field',
             name: { kind: 'Name', value: 'packageWeightUnit' },
             selectionSet: {
               kind: 'SelectionSet',
@@ -27697,6 +28434,9 @@ export const CreateHomeDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },
@@ -28765,6 +29505,10 @@ export const UpdateHomeDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'packageWeight' } },
           {
             kind: 'Field',
+            name: { kind: 'Name', value: 'packageWeightUnitId' },
+          },
+          {
+            kind: 'Field',
             name: { kind: 'Name', value: 'packageWeightUnit' },
             selectionSet: {
               kind: 'SelectionSet',
@@ -28791,6 +29535,9 @@ export const UpdateHomeDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },
@@ -29838,6 +30585,10 @@ export const DeleteHomeDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'packageWeight' } },
           {
             kind: 'Field',
+            name: { kind: 'Name', value: 'packageWeightUnitId' },
+          },
+          {
+            kind: 'Field',
             name: { kind: 'Name', value: 'packageWeightUnit' },
             selectionSet: {
               kind: 'SelectionSet',
@@ -29864,6 +30615,9 @@ export const DeleteHomeDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },
@@ -32672,6 +33426,10 @@ export const GetDefaultHomeDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'packageWeight' } },
           {
             kind: 'Field',
+            name: { kind: 'Name', value: 'packageWeightUnitId' },
+          },
+          {
+            kind: 'Field',
             name: { kind: 'Name', value: 'packageWeightUnit' },
             selectionSet: {
               kind: 'SelectionSet',
@@ -32698,6 +33456,9 @@ export const GetDefaultHomeDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },
@@ -34089,7 +34850,7 @@ export const UpdateItemImageDocument = {
         selections: [
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'updateItemImage' },
+            name: { kind: 'Name', value: 'updateItem' },
             arguments: [
               {
                 kind: 'Argument',
@@ -34101,10 +34862,19 @@ export const UpdateItemImageDocument = {
               },
               {
                 kind: 'Argument',
-                name: { kind: 'Name', value: 'imageUrl' },
+                name: { kind: 'Name', value: 'input' },
                 value: {
-                  kind: 'Variable',
-                  name: { kind: 'Name', value: 'imageUrl' },
+                  kind: 'ObjectValue',
+                  fields: [
+                    {
+                      kind: 'ObjectField',
+                      name: { kind: 'Name', value: 'imageUrl' },
+                      value: {
+                        kind: 'Variable',
+                        name: { kind: 'Name', value: 'imageUrl' },
+                      },
+                    },
+                  ],
                 },
               },
             ],
@@ -34188,7 +34958,7 @@ export const RemoveItemImageDocument = {
         selections: [
           {
             kind: 'Field',
-            name: { kind: 'Name', value: 'removeItemImage' },
+            name: { kind: 'Name', value: 'updateItem' },
             arguments: [
               {
                 kind: 'Argument',
@@ -34196,6 +34966,20 @@ export const RemoveItemImageDocument = {
                 value: {
                   kind: 'Variable',
                   name: { kind: 'Name', value: 'id' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'input' },
+                value: {
+                  kind: 'ObjectValue',
+                  fields: [
+                    {
+                      kind: 'ObjectField',
+                      name: { kind: 'Name', value: 'removeImage' },
+                      value: { kind: 'BooleanValue', value: true },
+                    },
+                  ],
                 },
               },
             ],
@@ -36499,6 +37283,7 @@ export const ItemByUpcDocument = {
                 { kind: 'Field', name: { kind: 'Name', value: 'imageUrl' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'name' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'primaryUpc' } },
                 {
                   kind: 'Field',
                   name: { kind: 'Name', value: 'units' },
@@ -36660,6 +37445,7 @@ export const ItemBySkuDocument = {
                 { kind: 'Field', name: { kind: 'Name', value: 'name' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'netWeight' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'description' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'primaryUpc' } },
                 {
                   kind: 'Field',
                   name: { kind: 'Name', value: 'units' },
@@ -40455,6 +41241,10 @@ export const GetPantryDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'packageWeight' } },
           {
             kind: 'Field',
+            name: { kind: 'Name', value: 'packageWeightUnitId' },
+          },
+          {
+            kind: 'Field',
             name: { kind: 'Name', value: 'packageWeightUnit' },
             selectionSet: {
               kind: 'SelectionSet',
@@ -40481,6 +41271,9 @@ export const GetPantryDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },
@@ -41052,6 +41845,10 @@ export const GetPantryItemDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'packageWeight' } },
           {
             kind: 'Field',
+            name: { kind: 'Name', value: 'packageWeightUnitId' },
+          },
+          {
+            kind: 'Field',
             name: { kind: 'Name', value: 'packageWeightUnit' },
             selectionSet: {
               kind: 'SelectionSet',
@@ -41078,6 +41875,9 @@ export const GetPantryItemDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },
@@ -41374,6 +42174,173 @@ export function refetchGetDefaultPantryQuery(
   variables: GetDefaultPantryQueryVariables,
 ) {
   return { query: GetDefaultPantryDocument, variables: variables };
+}
+export const GetRecentlyDeletedPantryItemsDocument = {
+  kind: 'Document',
+  definitions: [
+    {
+      kind: 'OperationDefinition',
+      operation: 'query',
+      name: { kind: 'Name', value: 'GetRecentlyDeletedPantryItems' },
+      variableDefinitions: [
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'pantryId' },
+          },
+          type: {
+            kind: 'NonNullType',
+            type: { kind: 'NamedType', name: { kind: 'Name', value: 'ID' } },
+          },
+        },
+        {
+          kind: 'VariableDefinition',
+          variable: {
+            kind: 'Variable',
+            name: { kind: 'Name', value: 'limit' },
+          },
+          type: { kind: 'NamedType', name: { kind: 'Name', value: 'Int' } },
+        },
+      ],
+      selectionSet: {
+        kind: 'SelectionSet',
+        selections: [
+          {
+            kind: 'Field',
+            name: { kind: 'Name', value: 'recentlyDeletedPantryItems' },
+            arguments: [
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'pantryId' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'pantryId' },
+                },
+              },
+              {
+                kind: 'Argument',
+                name: { kind: 'Name', value: 'limit' },
+                value: {
+                  kind: 'Variable',
+                  name: { kind: 'Name', value: 'limit' },
+                },
+              },
+            ],
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'itemName' } },
+                { kind: 'Field', name: { kind: 'Name', value: 'itemId' } },
+                {
+                  kind: 'Field',
+                  name: { kind: 'Name', value: 'item' },
+                  selectionSet: {
+                    kind: 'SelectionSet',
+                    selections: [
+                      { kind: 'Field', name: { kind: 'Name', value: 'id' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'name' } },
+                      {
+                        kind: 'Field',
+                        name: { kind: 'Name', value: 'imageUrl' },
+                      },
+                    ],
+                  },
+                },
+                { kind: 'Field', name: { kind: 'Name', value: 'createdAt' } },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ],
+} as unknown as DocumentNode;
+
+/**
+ * __useGetRecentlyDeletedPantryItemsQuery__
+ *
+ * To run a query within a React component, call `useGetRecentlyDeletedPantryItemsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGetRecentlyDeletedPantryItemsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGetRecentlyDeletedPantryItemsQuery({
+ *   variables: {
+ *      pantryId: // value for 'pantryId'
+ *      limit: // value for 'limit'
+ *   },
+ * });
+ */
+export function useGetRecentlyDeletedPantryItemsQuery(
+  baseOptions: ApolloReactHooks.QueryHookOptions<
+    GetRecentlyDeletedPantryItemsQuery,
+    GetRecentlyDeletedPantryItemsQueryVariables
+  > &
+    (
+      | {
+          variables: GetRecentlyDeletedPantryItemsQueryVariables;
+          skip?: boolean;
+        }
+      | { skip: boolean }
+    ),
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useQuery<
+    GetRecentlyDeletedPantryItemsQuery,
+    GetRecentlyDeletedPantryItemsQueryVariables
+  >(GetRecentlyDeletedPantryItemsDocument, options);
+}
+export function useGetRecentlyDeletedPantryItemsLazyQuery(
+  baseOptions?: ApolloReactHooks.LazyQueryHookOptions<
+    GetRecentlyDeletedPantryItemsQuery,
+    GetRecentlyDeletedPantryItemsQueryVariables
+  >,
+) {
+  const options = { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useLazyQuery<
+    GetRecentlyDeletedPantryItemsQuery,
+    GetRecentlyDeletedPantryItemsQueryVariables
+  >(GetRecentlyDeletedPantryItemsDocument, options);
+}
+export function useGetRecentlyDeletedPantryItemsSuspenseQuery(
+  baseOptions?:
+    | ApolloReactHooks.SkipToken
+    | ApolloReactHooks.SuspenseQueryHookOptions<
+        GetRecentlyDeletedPantryItemsQuery,
+        GetRecentlyDeletedPantryItemsQueryVariables
+      >,
+) {
+  const options =
+    baseOptions === ApolloReactHooks.skipToken
+      ? baseOptions
+      : { ...defaultOptions, ...baseOptions };
+  return ApolloReactHooks.useSuspenseQuery<
+    GetRecentlyDeletedPantryItemsQuery,
+    GetRecentlyDeletedPantryItemsQueryVariables
+  >(GetRecentlyDeletedPantryItemsDocument, options);
+}
+export type GetRecentlyDeletedPantryItemsQueryHookResult = ReturnType<
+  typeof useGetRecentlyDeletedPantryItemsQuery
+>;
+export type GetRecentlyDeletedPantryItemsLazyQueryHookResult = ReturnType<
+  typeof useGetRecentlyDeletedPantryItemsLazyQuery
+>;
+export type GetRecentlyDeletedPantryItemsSuspenseQueryHookResult = ReturnType<
+  typeof useGetRecentlyDeletedPantryItemsSuspenseQuery
+>;
+export type GetRecentlyDeletedPantryItemsQueryResult =
+  ApolloReactCommon.QueryResult<
+    GetRecentlyDeletedPantryItemsQuery,
+    GetRecentlyDeletedPantryItemsQueryVariables
+  >;
+export function refetchGetRecentlyDeletedPantryItemsQuery(
+  variables: GetRecentlyDeletedPantryItemsQueryVariables,
+) {
+  return { query: GetRecentlyDeletedPantryItemsDocument, variables: variables };
 }
 export const GetPantryLedgerAnalyticsDocument = {
   kind: 'Document',
@@ -43289,6 +44256,10 @@ export const CreatePantryItemDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'packageWeight' } },
           {
             kind: 'Field',
+            name: { kind: 'Name', value: 'packageWeightUnitId' },
+          },
+          {
+            kind: 'Field',
             name: { kind: 'Name', value: 'packageWeightUnit' },
             selectionSet: {
               kind: 'SelectionSet',
@@ -43315,6 +44286,9 @@ export const CreatePantryItemDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },
@@ -43872,6 +44846,10 @@ export const UpdatePantryItemDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'packageWeight' } },
           {
             kind: 'Field',
+            name: { kind: 'Name', value: 'packageWeightUnitId' },
+          },
+          {
+            kind: 'Field',
             name: { kind: 'Name', value: 'packageWeightUnit' },
             selectionSet: {
               kind: 'SelectionSet',
@@ -43898,6 +44876,9 @@ export const UpdatePantryItemDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },
@@ -44434,6 +45415,10 @@ export const DeletePantryItemDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'packageWeight' } },
           {
             kind: 'Field',
+            name: { kind: 'Name', value: 'packageWeightUnitId' },
+          },
+          {
+            kind: 'Field',
             name: { kind: 'Name', value: 'packageWeightUnit' },
             selectionSet: {
               kind: 'SelectionSet',
@@ -44460,6 +45445,9 @@ export const DeletePantryItemDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },
@@ -45078,6 +46066,10 @@ export const CreatePantryItemUsageDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'packageWeight' } },
           {
             kind: 'Field',
+            name: { kind: 'Name', value: 'packageWeightUnitId' },
+          },
+          {
+            kind: 'Field',
             name: { kind: 'Name', value: 'packageWeightUnit' },
             selectionSet: {
               kind: 'SelectionSet',
@@ -45104,6 +46096,9 @@ export const CreatePantryItemUsageDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },
@@ -45761,6 +46756,10 @@ export const RecordPantryItemWasteDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'packageWeight' } },
           {
             kind: 'Field',
+            name: { kind: 'Name', value: 'packageWeightUnitId' },
+          },
+          {
+            kind: 'Field',
             name: { kind: 'Name', value: 'packageWeightUnit' },
             selectionSet: {
               kind: 'SelectionSet',
@@ -45787,6 +46786,9 @@ export const RecordPantryItemWasteDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },
@@ -46369,6 +47371,10 @@ export const RestockPantryItemDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'packageWeight' } },
           {
             kind: 'Field',
+            name: { kind: 'Name', value: 'packageWeightUnitId' },
+          },
+          {
+            kind: 'Field',
             name: { kind: 'Name', value: 'packageWeightUnit' },
             selectionSet: {
               kind: 'SelectionSet',
@@ -46395,6 +47401,9 @@ export const RestockPantryItemDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },
@@ -46988,6 +47997,10 @@ export const UpdatePantryItemQuantityDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'packageWeight' } },
           {
             kind: 'Field',
+            name: { kind: 'Name', value: 'packageWeightUnitId' },
+          },
+          {
+            kind: 'Field',
             name: { kind: 'Name', value: 'packageWeightUnit' },
             selectionSet: {
               kind: 'SelectionSet',
@@ -47014,6 +48027,9 @@ export const UpdatePantryItemQuantityDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },
@@ -47629,6 +48645,10 @@ export const SyncPantryItemDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'packageWeight' } },
           {
             kind: 'Field',
+            name: { kind: 'Name', value: 'packageWeightUnitId' },
+          },
+          {
+            kind: 'Field',
             name: { kind: 'Name', value: 'packageWeightUnit' },
             selectionSet: {
               kind: 'SelectionSet',
@@ -47655,6 +48675,9 @@ export const SyncPantryItemDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },
@@ -48915,6 +49938,10 @@ export const PantryItemsChangedDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'packageWeight' } },
           {
             kind: 'Field',
+            name: { kind: 'Name', value: 'packageWeightUnitId' },
+          },
+          {
+            kind: 'Field',
             name: { kind: 'Name', value: 'packageWeightUnit' },
             selectionSet: {
               kind: 'SelectionSet',
@@ -48941,6 +49968,9 @@ export const PantryItemsChangedDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },
@@ -61414,6 +62444,10 @@ export const MoveShoppingItemToPantryDocument = {
           { kind: 'Field', name: { kind: 'Name', value: 'packageWeight' } },
           {
             kind: 'Field',
+            name: { kind: 'Name', value: 'packageWeightUnitId' },
+          },
+          {
+            kind: 'Field',
             name: { kind: 'Name', value: 'packageWeightUnit' },
             selectionSet: {
               kind: 'SelectionSet',
@@ -61440,6 +62474,9 @@ export const MoveShoppingItemToPantryDocument = {
               ],
             },
           },
+          { kind: 'Field', name: { kind: 'Name', value: 'lowStockAlert' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'minQuantity' } },
+          { kind: 'Field', name: { kind: 'Name', value: 'restockQuantity' } },
           { kind: 'Field', name: { kind: 'Name', value: 'lastUsedAt' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteAmount' } },
           { kind: 'Field', name: { kind: 'Name', value: 'wasteDate' } },

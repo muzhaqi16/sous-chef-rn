@@ -1,16 +1,14 @@
 import React from 'react';
-import {View, Text, TouchableOpacity} from 'react-native';
+import {View, Text} from 'react-native';
 import {Control, FieldErrors} from 'react-hook-form';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import {Icon} from '#utils';
-import {StyleSheet, useUnistyles} from 'react-native-unistyles';
+import {StyleSheet} from 'react-native-unistyles';
 import {
   DynamicFormFields,
   FieldDef,
 } from '#components/molecules/DynamicFormFields';
 import {FormTextArea} from '#components/molecules/FormTextArea';
+import {SegmentedControl, DatePickerField} from '#components/molecules';
 import {StorageState} from '#generated';
-import {commonStyles} from '#/styles/commonStyles';
 
 const STORAGE_STATES = Object.values(StorageState);
 
@@ -34,10 +32,8 @@ interface StorageDetailsSectionProps {
   mode: 'add' | 'edit';
   storageState: StorageState;
   expirationDate?: Date;
-  showDatePicker: boolean;
   onStorageStateChange: (state: StorageState) => void;
-  onDatePickerToggle: () => void;
-  onDateChange: (date?: Date) => void;
+  onDateChange: (date: Date | null) => void;
   onCategorySelected?: (categoryId: string | null) => void;
   storageLocations?: StorageLocation[];
   onStorageLocationSelected?: (locationId: string | null, location: StorageLocation | null) => void;
@@ -50,44 +46,15 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
   mode,
   storageState,
   expirationDate,
-  showDatePicker,
   onStorageStateChange,
-  onDatePickerToggle,
   onDateChange,
   onCategorySelected,
   storageLocations = [],
   onStorageLocationSelected,
   onAddNewLocation,
 }) => {
-  const {theme} = useUnistyles();
-
+  // Fields that use DynamicFormFields (react-hook-form integrated)
   const getFields = (): FieldDef<any>[] => [
-    {
-      name: 'storageState',
-      label: 'Storage Type',
-      component: () => (
-        <View style={styles.segmentedControl}>
-          {STORAGE_STATES.map(state => (
-            <TouchableOpacity
-              key={state}
-              style={[
-                styles.segment,
-                storageState === state && styles.segmentActive,
-              ]}
-              onPress={() => onStorageStateChange(state)}>
-              <Text
-                style={[
-                  styles.segmentText,
-                  storageState === state && styles.segmentTextActive,
-                ]}
-                numberOfLines={1}>
-                {state}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      ),
-    },
     {
       name: 'location',
       label: 'Location',
@@ -96,34 +63,6 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
       storageLocations,
       onStorageLocationSelected,
       onAddNewLocation,
-    },
-    {
-      name: 'expirationDate',
-      label: 'Expiration Date',
-      component: ({label}: {label: string}) => (
-        <View>
-          <Text style={styles.fieldLabel}>{label}</Text>
-          <TouchableOpacity
-            style={[commonStyles.input, commonStyles.row, styles.dateInput]}
-            onPress={onDatePickerToggle}>
-            <Icon name="event" size={20} color={theme.colors.textSecondary} />
-            <Text style={styles.dateText}>
-              {expirationDate
-                ? expirationDate.toLocaleDateString()
-                : 'Select date'}
-            </Text>
-          </TouchableOpacity>
-          {showDatePicker && (
-            <DateTimePicker
-              value={expirationDate || new Date()}
-              mode="date"
-              onChange={(event, date) => {
-                onDateChange(date);
-              }}
-            />
-          )}
-        </View>
-      ),
     },
     {
       name: 'category',
@@ -144,6 +83,24 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>Storage Details</Text>
+
+      {/* Storage State - using reusable SegmentedControl molecule */}
+      <SegmentedControl
+        label="Storage Type"
+        options={STORAGE_STATES}
+        value={storageState}
+        onChange={onStorageStateChange}
+      />
+
+      {/* Expiration Date - using reusable DatePickerField molecule */}
+      <DatePickerField
+        label="Expiration Date"
+        value={expirationDate ?? null}
+        onChange={onDateChange}
+        placeholder="Select date"
+      />
+
+      {/* Remaining fields using DynamicFormFields */}
       <DynamicFormFields
         fields={getFields()}
         control={control}
@@ -165,46 +122,5 @@ const styles = StyleSheet.create(theme => ({
     paddingBottom: theme.spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
-  },
-  segmentedControl: {
-    flexDirection: 'row',
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radii.md,
-    overflow: 'hidden',
-    marginBottom: theme.spacing.md,
-  },
-  segment: {
-    flex: 1,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.xs,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.colors.surface,
-  },
-  segmentActive: {
-    backgroundColor: theme.colors.primary,
-  },
-  segmentText: {
-    fontSize: theme.fonts.size.sm,
-    fontWeight: theme.fonts.weight.medium,
-    color: theme.colors.textPrimary,
-  },
-  segmentTextActive: {
-    color: theme.colors.white,
-  },
-  dateInput: {
-    justifyContent: 'flex-start',
-    marginBottom: theme.spacing.md,
-  },
-  dateText: {
-    fontSize: theme.fonts.size.base,
-    color: theme.colors.textPrimary,
-    marginLeft: theme.spacing.md,
-  },
-  fieldLabel: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.medium,
-    marginBottom: theme.spacing.sm,
   },
 }));

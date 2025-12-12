@@ -31,7 +31,7 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.md,
     backgroundColor: theme.colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border || '#E0E0E0',
+    borderBottomColor: theme.colors.border,
     alignItems: 'center',
   },
   default: {
@@ -41,23 +41,23 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
   },
   primary: {
-    backgroundColor: theme.colors.primary || '#62B1F6',
+    backgroundColor: theme.colors.primary,
     borderBottomWidth: 0,
   },
   disabled: {
     opacity: 0.6,
   },
   text: {
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.md,
     fontWeight: '500',
   },
   defaultText: {
     color: theme.colors.textPrimary,
   },
   dangerText: {
-    color: theme.colors.error || '#FF3B30',
+    color: theme.colors.error,
   },
   primaryText: {
-    color: '#FFFFFF',
+    color: theme.colors.white,
   },
 }));

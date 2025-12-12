@@ -20,9 +20,9 @@ const styles = StyleSheet.create(theme => ({
   },
   text: {
     color: theme.colors.textPrimary,
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.md,
     textAlign: 'center',
-    marginTop: 20,
+    marginTop: theme.spacing.lg,
   },
 }));
 

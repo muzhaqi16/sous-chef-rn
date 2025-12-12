@@ -1,12 +1,12 @@
 import React from 'react';
-import { View, Text } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import {View, Text, ViewStyle} from 'react-native';
+import {StyleSheet} from 'react-native-unistyles';
 
 interface BadgeProps {
   children: React.ReactNode;
   variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger';
   size?: 'small' | 'medium';
-  style?: any;
+  style?: ViewStyle;
 }
 
 export const Badge: React.FC<BadgeProps> = ({
@@ -24,15 +24,15 @@ export const Badge: React.FC<BadgeProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   badge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
+    borderRadius: theme.radii.xs,
   },
   default: {
     backgroundColor: theme.colors.surface,
   },
   primary: {
-    backgroundColor: theme.colors.primary + '20',
+    backgroundColor: theme.colors.primaryLight,
   },
   success: {
     backgroundColor: theme.colors.successLight,
@@ -44,15 +44,15 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.errorLight,
   },
   small: {
-    paddingHorizontal: 6,
+    paddingHorizontal: theme.spacing.xs + 2,
     paddingVertical: 2,
   },
   medium: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: theme.spacing['2.5'],
+    paddingVertical: theme.spacing.xs + 2,
   },
   text: {
-    fontSize: 12,
+    fontSize: theme.typography.fontSize.xs,
     fontWeight: '600',
   },
   defaultText: {

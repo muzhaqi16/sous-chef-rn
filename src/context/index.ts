@@ -1,3 +1,3 @@
 export * from './OnboardingContext';
-export * from './ScannerContext';
+export * from './TabBarActionsContext';
 export * from './ShoppingListActionsContext';

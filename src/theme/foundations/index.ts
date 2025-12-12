@@ -5,3 +5,4 @@ export {radii} from './radii';
 export {shadows} from './shadows';
 export {sizes} from './sizes';
 export {breakpoints} from './breakpoints';
+export {zIndex} from './zIndex';

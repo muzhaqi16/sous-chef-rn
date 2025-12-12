@@ -223,12 +223,12 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.sm,
   },
   locationIcon: {
-    fontSize: 24,
+    fontSize: theme.typography.fontSize.xl,
     width: 32,
     textAlign: 'center',
   },
   addNewIcon: {
-    fontSize: 24,
+    fontSize: theme.typography.fontSize.xl,
     width: 32,
     textAlign: 'center',
     color: theme.colors.primary,

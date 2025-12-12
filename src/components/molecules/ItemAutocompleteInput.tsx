@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useCallback } from 'react';
 import { View, Text, Image, TouchableOpacity } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useAutocompleteItemsLazyQuery, ItemSuggestion } from '#generated';
 import { BottomSheetAutocompleteInput } from './BottomSheetAutocompleteInput';
-import { useAppStore } from '#store/useAppStore';
+import { useAutocompleteInput } from '#hooks/ui/useAutocompleteInput';
 import { getItemImageUrl } from '#utils/imageUtils';
 
 interface ItemAutocompleteInputProps {
@@ -28,49 +28,32 @@ export const ItemAutocompleteInput: React.FC<ItemAutocompleteInputProps> = ({
   onSelectItem,
   testID,
 }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-
-  // PERFORMANCE: Use selective subscription instead of full store
-  const isOnline = useAppStore(state => state.isOnline);
-
-  // PERFORMANCE: Debounce timer to prevent request floods
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
-
   const [fetchItems, { data, loading }] = useAutocompleteItemsLazyQuery({
     fetchPolicy: 'cache-and-network',
   });
 
-  // PERFORMANCE: Debounce autocomplete queries to prevent request floods (250ms)
-  useEffect(() => {
-    // Clear existing timer on term/online change
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-      debounceTimerRef.current = null;
-    }
-
-    // Only query when online and search term is long enough
-    if (searchTerm.length >= 2 && isOnline) {
-      debounceTimerRef.current = setTimeout(() => {
-        fetchItems({
-          variables: { input: { query: searchTerm } },
-        });
-      }, 250); // 250ms debounce
-    }
-
-    // Cleanup on unmount or term change
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-        debounceTimerRef.current = null;
-      }
-    };
-  }, [searchTerm, fetchItems, isOnline]);
+  // Use the shared autocomplete hook for debouncing and state management
+  const {
+    inputValue,
+    handleTextChange: hookHandleTextChange,
+    shouldSearch,
+  } = useAutocompleteInput<ItemSuggestion>({
+    minChars: 2,
+    debounceMs: 250,
+    onChangeText: useCallback((text: string) => {
+      // This is called after debounce - trigger the GraphQL query
+      fetchItems({
+        variables: { input: { query: text } },
+      });
+    }, [fetchItems]),
+    getDisplayValue: (item) => item.name,
+  });
 
   const items = data?.autocompleteItems?.suggestions || [];
 
   const handleTextChange = (text: string) => {
     onChangeText(text);
-    setSearchTerm(text);
+    hookHandleTextChange(text);
   };
 
   const handleSelectItem = (item: ItemSuggestion) => {
@@ -103,12 +86,8 @@ export const ItemAutocompleteInput: React.FC<ItemAutocompleteInputProps> = ({
           )}
           <View style={styles.itemDetails}>
             <Text style={styles.itemName}>{item.name}</Text>
-            {item.brands && item.brands.length > 0 && (
-              <Text style={styles.itemBrand}>
-                {item.brands.length === 1
-                  ? `Brand: ${item.brands[0].name}`
-                  : `Brands: ${item.brands.map(b => b.name).join(', ')}`}
-              </Text>
+            {item.brands && item.brands.length === 1 && (
+              <Text style={styles.itemBrand}>{item.brands[0].name}</Text>
             )}
           </View>
         </View>
@@ -134,11 +113,11 @@ export const ItemAutocompleteInput: React.FC<ItemAutocompleteInputProps> = ({
       onSelectItem={handleSelectItem}
       emptyText="No items found"
       emptySubtext={
-        searchTerm.length >= 2
-          ? `Continue typing to add "${searchTerm}"`
+        shouldSearch
+          ? `Continue typing to add "${inputValue}"`
           : 'Type at least 2 characters to search'
       }
-      onSearchChange={setSearchTerm}
+      onSearchChange={hookHandleTextChange}
       testID={testID}
     />
   );
@@ -171,7 +150,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
   },
   itemImagePlaceholderText: {
-    fontSize: 20,
+    fontSize: theme.typography.fontSize.lg,
   },
   itemDetails: {
     flex: 1,

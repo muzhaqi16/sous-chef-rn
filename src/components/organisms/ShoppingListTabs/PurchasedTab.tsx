@@ -87,7 +87,7 @@ const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
   // This prevents the skeleton from showing on subsequent navigations back to the screen
   if ((loading || !isReady) && items.length === 0) {
     return (
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 8 }}>
+      <ScrollView contentContainerStyle={styles.skeletonContainer}>
         {[1, 2, 3, 4, 5, 6].map(key => (
           <ShoppingListItemSkeleton key={key} />
         ))}
@@ -98,7 +98,7 @@ const PurchasedTabComponent: React.FC<PurchasedTabProps> = ({
   // After transition complete, show skeleton only during initial load with no cached data
   if (loading && items.length === 0) {
     return (
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 8 }}>
+      <ScrollView contentContainerStyle={styles.skeletonContainer}>
         {[1, 2, 3, 4, 5, 6].map(key => (
           <ShoppingListItemSkeleton key={key} />
         ))}
@@ -186,6 +186,10 @@ MemoizedPurchasedTab.displayName = 'PurchasedTab';
 export const PurchasedTab = PurchasedTabComponent;
 
 const styles = StyleSheet.create(theme => ({
+  skeletonContainer: {
+    padding: theme.spacing.md,
+    gap: theme.spacing.sm,
+  },
   emptyContainer: {
     flex: 1,
     alignItems: 'center',
@@ -194,14 +198,14 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.md,
   },
   emptyTitle: {
-    fontSize: 20,
+    fontSize: theme.typography.fontSize.lg + 2,
     fontWeight: '600',
     textAlign: 'center',
   },
   emptyDescription: {
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.md,
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: theme.typography.lineHeight.normal,
   },
   footer: {
     padding: theme.spacing.lg,
@@ -214,10 +218,10 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.sm,
     paddingVertical: theme.spacing.md,
     paddingHorizontal: theme.spacing.lg,
-    borderRadius: theme.spacing.sm,
+    borderRadius: theme.radii.sm,
   },
   clearButtonText: {
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.md,
     fontWeight: '600',
   },
 }));

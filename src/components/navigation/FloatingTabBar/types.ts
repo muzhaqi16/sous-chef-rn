@@ -1,5 +1,6 @@
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import type { SharedValue } from 'react-native-reanimated';
+import type { IconLibrary } from '#/utils/iconUtils';
 
 export interface FloatingTabBarProps extends BottomTabBarProps {}
 
@@ -28,4 +29,6 @@ export interface FloatingTabItemProps {
 export interface AddButtonProps {
   onPress: () => void;
   isActive?: boolean;
+  icon?: string;
+  iconLibrary?: IconLibrary;
 }

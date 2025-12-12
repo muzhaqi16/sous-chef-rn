@@ -133,7 +133,11 @@ export const createAuthSlice: StateCreator<
 
   setAuth: (user, accessToken, refreshToken) => {
     set(state => {
-      state.user = user;
+      // Normalize email to prevent validation issues (trim whitespace, lowercase)
+      state.user = {
+        ...user,
+        email: user.email?.trim().toLowerCase() ?? user.email,
+      };
       state.accessToken = accessToken;
       state.refreshToken = refreshToken;
       state.isAutoLoggingIn = false; // Clear auto-login state on success
@@ -150,7 +154,11 @@ export const createAuthSlice: StateCreator<
   updateUser: updates => {
     set(state => {
       if (state.user) {
-        Object.assign(state.user, updates);
+        // Normalize email if present in updates
+        const normalizedUpdates = updates.email
+          ? { ...updates, email: updates.email.trim().toLowerCase() }
+          : updates;
+        Object.assign(state.user, normalizedUpdates);
       }
     });
   },

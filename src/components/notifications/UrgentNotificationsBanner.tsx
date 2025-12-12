@@ -1,6 +1,6 @@
 import React from 'react';
 import {View, Text} from 'react-native';
-import {StyleSheet} from 'react-native-unistyles';
+import {StyleSheet, useUnistyles} from 'react-native-unistyles';
 import {Icon} from '#utils';
 import {NotificationItem} from '#store/slices/notificationSlice';
 
@@ -11,6 +11,7 @@ interface UrgentNotificationsBannerProps {
 export const UrgentNotificationsBanner: React.FC<
   UrgentNotificationsBannerProps
 > = ({urgentNotifications}) => {
+  const { theme } = useUnistyles();
   const unreadUrgentCount = urgentNotifications.filter(n => !n.isRead).length;
 
   if (unreadUrgentCount === 0) {
@@ -19,7 +20,7 @@ export const UrgentNotificationsBanner: React.FC<
 
   return (
     <View style={styles.urgentBanner}>
-      <Icon name="warning" size={20} color="#FFF" />
+      <Icon name="warning" size={20} color={theme.colors.white} />
       <Text style={styles.urgentText}>
         {unreadUrgentCount} urgent notification
         {unreadUrgentCount !== 1 ? 's' : ''}
@@ -32,13 +33,13 @@ const styles = StyleSheet.create(theme => ({
   urgentBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.colors.error || '#FF3B30',
+    backgroundColor: theme.colors.error,
     padding: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
   },
   urgentText: {
-    color: '#FFFFFF',
-    fontSize: 14,
+    color: theme.colors.white,
+    fontSize: theme.typography.fontSize.sm,
     fontWeight: 'bold',
     marginLeft: theme.spacing.sm,
   },

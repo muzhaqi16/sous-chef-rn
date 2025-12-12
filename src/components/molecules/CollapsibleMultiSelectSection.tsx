@@ -239,7 +239,7 @@ const styles = StyleSheet.create((theme) => ({
   emptyText: {
     padding: theme.spacing.sm,
     paddingLeft: theme.spacing.md,
-    fontSize: 13,
+    fontSize: theme.typography.fontSize.sm - 1,
   },
   expandedContent: {
     marginTop: theme.spacing.sm,
@@ -270,10 +270,10 @@ const styles = StyleSheet.create((theme) => ({
   },
   removeButton: {
     position: 'absolute',
-    top: -6,
-    right: -6,
+    top: -theme.spacing.xs - 2,
+    right: -theme.spacing.xs - 2,
     backgroundColor: theme.colors.surface,
-    borderRadius: 10,
+    borderRadius: theme.radii.full,
   },
   divider: {
     height: 1,

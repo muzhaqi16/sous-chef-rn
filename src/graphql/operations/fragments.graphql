@@ -499,6 +499,7 @@ fragment PantryItemFragment on PantryItem {
     symbol
   }
   packageWeight
+  packageWeightUnitId
   packageWeightUnit {
     id
     name
@@ -513,6 +514,9 @@ fragment PantryItemFragment on PantryItem {
     id
     name
   }
+  lowStockAlert
+  minQuantity
+  restockQuantity
   lastUsedAt
   wasteAmount
   wasteDate

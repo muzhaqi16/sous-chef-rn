@@ -22,6 +22,7 @@ import { PantryStackParamList } from '#navigation/stacks/PantryStack';
 import { getItemImageUrl } from '#utils/imageUtils';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Header } from '#components/molecules/Header';
 import { Icon } from '#/utils';
 import { spoonacularService } from '#/services/recipeApi';
 import type { RecipeInformation } from '#/services/recipeApi/types';
@@ -243,20 +244,7 @@ export const PantryItemDetail: React.FC<{
   if (!item) {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={goBack}
-            style={styles.headerButton}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Icon
-              name="arrow-back"
-              size={24}
-              color={theme.colors.textPrimary}
-              library="Ionicons"
-            />
-          </TouchableOpacity>
-        </View>
+        <Header variant="detail" onBack={goBack} borderless />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
         </View>
@@ -267,59 +255,34 @@ export const PantryItemDetail: React.FC<{
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={goBack}
-          style={styles.headerButton}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Icon
-            name="arrow-back"
-            size={24}
-            color={theme.colors.textPrimary}
-            library="Ionicons"
-          />
-        </TouchableOpacity>
-        <View style={styles.headerActions}>
-          <TouchableOpacity
-            onPress={handleAddToShoppingList}
-            style={styles.headerButton}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            disabled={addToListStatus === 'loading'}
-          >
-            <Icon
-              name={addToListStatus === 'success' ? 'cart' : 'cart-outline'}
-              size={24}
-              color={addToListStatus === 'success' ? theme.colors.success : theme.colors.primary}
-              library="Ionicons"
-            />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={handleEdit}
-            style={styles.headerButton}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Icon
-              name="create-outline"
-              size={24}
-              color={theme.colors.textPrimary}
-              library="Ionicons"
-            />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={handleDelete}
-            style={styles.headerButton}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Icon
-              name="trash-outline"
-              size={24}
-              color={theme.colors.error}
-              library="Ionicons"
-            />
-          </TouchableOpacity>
-        </View>
-      </View>
+      <Header
+        variant="detail"
+        onBack={goBack}
+        borderless
+        rightActions={[
+          {
+            icon: addToListStatus === 'success' ? 'cart' : 'cart-outline',
+            onPress: handleAddToShoppingList,
+            variant: addToListStatus === 'success' ? 'success' : 'primary',
+            loading: addToListStatus === 'loading',
+            library: 'Ionicons',
+            testID: 'pantry-item-add-to-list-button',
+          },
+          {
+            icon: 'create-outline',
+            onPress: handleEdit,
+            library: 'Ionicons',
+            testID: 'pantry-item-edit-button',
+          },
+          {
+            icon: 'trash-outline',
+            onPress: handleDelete,
+            variant: 'error',
+            library: 'Ionicons',
+            testID: 'pantry-item-delete-button',
+          },
+        ]}
+      />
 
       <ScrollView
         style={styles.scrollView}
@@ -667,20 +630,6 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-  },
-  headerButton: {
-    padding: theme.spacing.xs,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    gap: theme.spacing.sm,
   },
   scrollView: {
     flex: 1,

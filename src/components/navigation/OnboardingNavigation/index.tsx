@@ -102,21 +102,21 @@ export const OnboardingNavigation: React.FC<OnboardingNavigationProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
   },
   skipContainer: {
     alignItems: 'flex-end',
-    marginBottom: 12,
+    marginBottom: theme.spacing['3'],
   },
   skipButton: {
     backgroundColor: 'transparent',
     height: 40,
-    paddingHorizontal: 16,
+    paddingHorizontal: theme.spacing.md,
   },
   skipText: {
     color: theme.colors.textSecondary,
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.md,
     fontWeight: '500',
   },
   navigationContainer: {

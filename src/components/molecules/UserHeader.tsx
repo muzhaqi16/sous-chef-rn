@@ -1,19 +1,19 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Image } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
-import { useProfileData, useAppNavigation } from '#/hooks';
-import { Icon } from '#utils';
-import { useStore } from '#store';
+import {View, Text, TouchableOpacity, Image} from 'react-native';
+import {StyleSheet} from 'react-native-unistyles';
+import {useProfileData, useAppNavigation} from '#/hooks';
+import {Icon} from '#utils';
+import {useStore} from '#store';
 
 export const UserHeader: React.FC = () => {
-  const { navigateTo } = useAppNavigation();
-  const { profile } = useProfileData();
+  const {navigateTo} = useAppNavigation();
+  const {profile} = useProfileData();
   const unreadCount = useStore(state => state.unreadCount);
+
   return (
     <View style={styles.header}>
       <Text style={styles.headerTitle}>
-        Hello,{' '}
-        <Text style={{ fontWeight: 'bold' }}>
+        Hello, <Text style={styles.headerTitleBold}>
           {profile?.displayName
             ? profile.displayName.split(' ')[0]
             : profile?.firstName || 'User'}
@@ -25,13 +25,12 @@ export const UserHeader: React.FC = () => {
         <TouchableOpacity
           onPress={() => {
             navigateTo.notificationList();
-          }}
-        >
+          }}>
           <View style={styles.avatar}>
             {profile?.avatar ? (
               <Image
                 alt=""
-                source={{ uri: profile.avatar }}
+                source={{uri: profile.avatar}}
                 style={styles.avatarImg}
               />
             ) : (
@@ -67,6 +66,9 @@ const styles = StyleSheet.create(theme => ({
     fontWeight: '400',
     color: theme.colors.textOnSurfaceVariant,
   },
+  headerTitleBold: {
+    fontWeight: 'bold',
+  },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -75,10 +77,10 @@ const styles = StyleSheet.create(theme => ({
   headerNotifications: {
     width: 48,
     height: 48,
-    borderRadius: 9999,
+    borderRadius: theme.radii.full,
     borderWidth: 1,
-    borderColor: '#e1e1e1',
-    marginRight: 12,
+    borderColor: theme.colors.borderLight,
+    marginRight: theme.spacing['3'],
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -89,14 +91,14 @@ const styles = StyleSheet.create(theme => ({
   avatarImg: {
     width: 48,
     height: 48,
-    borderRadius: 9999,
+    borderRadius: theme.radii.full,
     borderWidth: 2,
     borderColor: theme.colors.primary,
   },
   avatarPlaceholder: {
     width: 48,
     height: 48,
-    borderRadius: 9999,
+    borderRadius: theme.radii.full,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,
@@ -108,13 +110,13 @@ const styles = StyleSheet.create(theme => ({
   },
   avatarNotification: {
     position: 'absolute',
-    borderRadius: 9999,
+    borderRadius: theme.radii.full,
     borderWidth: 2,
-    borderColor: '#fff',
+    borderColor: theme.colors.white,
     top: 0,
     right: -2,
     width: 14,
     height: 14,
-    backgroundColor: '#f77171',
+    backgroundColor: theme.colors.error,
   },
 }));

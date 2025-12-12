@@ -2,30 +2,42 @@
 # QUERIES
 # ============================================
 
-query GetMyDevices($filters: DeviceFiltersInput) {
-  myDevices(filters: $filters) {
-    id
-    deviceId
-    deviceName
-    deviceType
-    platform
-    osName
-    osVersion
-    appVersion
-    userAgent
-    browserName
-    browserVersion
-    screenResolution
-    timezone
-    language
-    isActive
-    isTrusted
-    isVerified
-    loginCount
-    lastLoginAt
-    lastSeenAt
-    createdAt
-    updatedAt
+query GetMyDevices($input: DevicesQueryInput!) {
+  devices(input: $input) {
+    edges {
+      node {
+        id
+        deviceId
+        deviceName
+        deviceType
+        platform
+        osName
+        osVersion
+        appVersion
+        userAgent
+        browserName
+        browserVersion
+        screenResolution
+        timezone
+        language
+        isActive
+        isTrusted
+        isVerified
+        loginCount
+        lastLoginAt
+        lastSeenAt
+        createdAt
+        updatedAt
+      }
+      cursor
+    }
+    pageInfo {
+      hasNextPage
+      hasPreviousPage
+      startCursor
+      endCursor
+    }
+    totalCount
   }
 }
 
@@ -73,7 +85,7 @@ mutation RegisterDevice($input: DeviceRegistrationInput!) {
 }
 
 mutation UpdateDeviceLastSeen($id: ID!) {
-  updateDeviceLastSeen(id: $id) {
+  updateDevice(id: $id, input: { touchLastSeen: true }) {
     id
     deviceId
     lastSeenAt
@@ -82,7 +94,7 @@ mutation UpdateDeviceLastSeen($id: ID!) {
 }
 
 mutation TrustDevice($id: ID!) {
-  trustDevice(id: $id) {
+  updateDevice(id: $id, input: { isTrusted: true }) {
     id
     deviceId
     deviceName
@@ -92,7 +104,7 @@ mutation TrustDevice($id: ID!) {
 }
 
 mutation UntrustDevice($id: ID!) {
-  untrustDevice(id: $id) {
+  updateDevice(id: $id, input: { isTrusted: false }) {
     id
     deviceId
     deviceName
@@ -102,7 +114,7 @@ mutation UntrustDevice($id: ID!) {
 }
 
 mutation VerifyDevice($id: ID!) {
-  verifyDevice(id: $id) {
+  updateDevice(id: $id, input: { isVerified: true }) {
     id
     deviceId
     deviceName
@@ -112,7 +124,7 @@ mutation VerifyDevice($id: ID!) {
 }
 
 mutation DeactivateDevice($id: ID!) {
-  deactivateDevice(id: $id) {
+  updateDevice(id: $id, input: { isActive: false }) {
     id
     deviceId
     deviceName
